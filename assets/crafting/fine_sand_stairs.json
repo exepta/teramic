@@ -1,0 +1,57 @@
+{
+  "id": "teramic::fine_sand_stairs",
+  "name": "Fine Sand Stairs",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "block": 79
+    },
+    "count": 4
+  },
+  "pattern": {
+    "kind": "shaped",
+    "width": 3,
+    "height": 3,
+    "cells": [
+      {
+        "item": {
+          "block": 4
+        },
+        "count": 1
+      },
+      null,
+      null,
+      {
+        "item": {
+          "block": 4
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "block": 4
+        },
+        "count": 1
+      },
+      null,
+      {
+        "item": {
+          "block": 4
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "block": 4
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "block": 4
+        },
+        "count": 1
+      }
+    ]
+  }
+}

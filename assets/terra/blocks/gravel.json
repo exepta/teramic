@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": 42,
+  "name": "Gravel",
+  "description": "A dense mix of warm grey pebbles and small angular stones.",
+  "creative_category": "terrain",
+  "render_kind": "cube",
+  "surface": "earth",
+  "bevel_width": 0.045,
+  "materials": {
+    "Rounded gravel": {
+      "texture_pattern": "gravel",
+      "roughness": 1.0,
+      "reflectance": 0.1
+    }
+  },
+  "face_materials": ["Rounded gravel", "Rounded gravel", "Rounded gravel", "Rounded gravel", "Rounded gravel", "Rounded gravel"],
+  "hardness": 0.65,
+  "resistance": 0.6,
+  "required_tool": null,
+  "mining_level": 0
+}

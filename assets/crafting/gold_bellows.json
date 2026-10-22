@@ -1,0 +1,10 @@
+{
+  "id": "teramic::gold_bellows", "name": "Gold Bellows", "station": "hand",
+  "output": { "item": { "bellows": "gold" }, "count": 1 },
+  "pattern": { "kind": "shaped", "width": 2, "height": 2, "cells": [
+    { "item": { "block": 16 }, "wood": true, "count": 1 },
+    { "item": { "animal": "leather" }, "count": 1 },
+    { "item": { "block": 16 }, "wood": true, "count": 1 },
+    { "item": { "mineral": "gold_ingot" }, "count": 1 }
+  ] }
+}

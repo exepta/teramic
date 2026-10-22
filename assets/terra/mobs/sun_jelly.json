@@ -1,0 +1,5 @@
+{
+  "id": "sun_jelly", "title": "Sun Jelly", "health": 4.0, "food": 0.0, "water": 0.0,
+  "size": [0.35, 0.95, 0.35], "minimum_size": [0.15, 0.35, 0.15], "speed": 0.26, "group_size": 3, "sleeps": false,
+  "spawn": {"aquatic": {"ocean_weight": 6, "lake_weight": 0, "river_weight": 0, "water_depth": [0, 2048]}}
+}

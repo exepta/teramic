@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "id": 36,
+  "name": "Spruce Log",
+  "description": "Dark, deeply furrowed spruce timber. Crafts into four spruce planks.",
+  "creative_category": "wood",
+  "render_kind": "cube",
+  "surface": "wood",
+  "bevel_width": 0.09,
+  "materials": {
+    "Spruce bark": { "texture_pattern": "spruce_bark" },
+    "Spruce end grain": { "texture_pattern": "spruce_end" }
+  },
+  "face_materials": ["Spruce bark", "Spruce bark", "Spruce end grain", "Spruce end grain", "Spruce bark", "Spruce bark"],
+  "hardness": 0.8,
+  "resistance": 3.0,
+  "required_tool": null,
+  "mining_level": 0
+}

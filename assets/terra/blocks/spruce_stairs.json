@@ -1,0 +1,63 @@
+{
+  "schema_version": 1,
+  "id": 76,
+  "name": "Spruce Stairs",
+  "description": "Spruce stairs with shaped edges. Built from the same material as its full block.",
+  "creative_category": "building",
+  "render_kind": "boxes",
+  "bevel_width": 0.018,
+  "collision_boxes": [
+    {
+      "minimum": [
+        0,
+        0,
+        0
+      ],
+      "maximum": [
+        1,
+        0.3333333333333333,
+        1
+      ]
+    },
+    {
+      "minimum": [
+        0,
+        0.3333333333333333,
+        0.3333333333333333
+      ],
+      "maximum": [
+        1,
+        0.6666666666666666,
+        1
+      ]
+    },
+    {
+      "minimum": [0, 0.6666666666666666, 0.6666666666666666],
+      "maximum": [1, 1, 1]
+    }
+  ],
+  "materials": {
+    "Spruce boards": {
+      "base_color": [
+        0.3,
+        0.24,
+        0.16,
+        1
+      ],
+      "texture_pattern": "planks"
+    }
+  },
+  "face_materials": [
+    "Spruce boards",
+    "Spruce boards",
+    "Spruce boards",
+    "Spruce boards",
+    "Spruce boards",
+    "Spruce boards"
+  ],
+  "hardness": 0.8,
+  "resistance": 3,
+  "required_tool": null,
+  "mining_level": 0,
+  "struct_block": false
+}

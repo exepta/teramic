@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": 43,
+  "name": "Structure Stone",
+  "description": "Pale handworked stone with softened edges and fine cracks for building.",
+  "creative_category": "building",
+  "render_kind": "cube",
+  "surface": "rock",
+  "bevel_width": 0.065,
+  "materials": {
+    "Handworked stone": {
+      "texture_pattern": "structure_stone",
+      "roughness": 0.98,
+      "reflectance": 0.1
+    }
+  },
+  "face_materials": ["Handworked stone", "Handworked stone", "Handworked stone", "Handworked stone", "Handworked stone", "Handworked stone"],
+  "hardness": 1.5,
+  "resistance": 6.0,
+  "required_tool": "pickaxe",
+  "mining_level": 1
+}

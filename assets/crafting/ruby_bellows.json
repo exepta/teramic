@@ -1,0 +1,10 @@
+{
+  "id": "teramic::ruby_bellows", "name": "Ruby Bellows", "station": "hand",
+  "output": { "item": { "bellows": "ruby" }, "count": 1 },
+  "pattern": { "kind": "shaped", "width": 2, "height": 2, "cells": [
+    { "item": { "block": 16 }, "wood": true, "count": 1 },
+    { "item": { "animal": "leather" }, "count": 1 },
+    { "item": { "block": 16 }, "wood": true, "count": 1 },
+    { "item": { "mineral": "ruby" }, "count": 1 }
+  ] }
+}

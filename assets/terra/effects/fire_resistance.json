@@ -1,0 +1,13 @@
+{
+  "kind": "fire_resistance",
+  "id": "teramic::fire_resistance",
+  "name": "Fire Resistance",
+  "description": "Protects against fire damage.",
+  "beneficial": true,
+  "max_duration_seconds": 3600,
+  "max_level": 3,
+  "stacking": "refresh_strongest",
+  "modifiers": {
+    "fire_damage_multiplier": 0
+  }
+}

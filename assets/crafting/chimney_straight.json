@@ -1,0 +1,9 @@
+{
+  "id": "teramic::chimney_straight", "name": "Adaptive Chimney Pipe", "station": "workbench",
+  "output": { "item": { "block": 60 }, "count": 2 },
+  "pattern": { "kind": "shaped", "width": 3, "height": 3, "cells": [
+    { "item": { "block": 3 }, "count": 1 }, null, { "item": { "block": 3 }, "count": 1 },
+    { "item": { "block": 3 }, "count": 1 }, null, { "item": { "block": 3 }, "count": 1 },
+    { "item": { "block": 3 }, "count": 1 }, null, { "item": { "block": 3 }, "count": 1 }
+  ] }
+}

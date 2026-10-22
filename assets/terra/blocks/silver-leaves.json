@@ -1,0 +1,32 @@
+{
+  "creative_category": "nature",
+  "description": "Fresh green birch foliage with small, delicate hanging leaf clusters.",
+  "schema_version": 1,
+  "id": 9,
+  "name": "Birch Foliage",
+  "render_kind": "cube",
+  "bevel_width": 0.22,
+  "materials": {
+    "Silver crown": {
+      "texture_pattern": "birch_canopy",
+      "base_color": [
+        0.62,
+        0.72,
+        0.26,
+        1.0
+      ]
+    }
+  },
+  "face_materials": [
+    "Silver crown",
+    "Silver crown",
+    "Silver crown",
+    "Silver crown",
+    "Silver crown",
+    "Silver crown"
+  ],
+  "hardness": 0.3,
+  "resistance": 0.5,
+  "required_tool": null,
+  "mining_level": 0
+}

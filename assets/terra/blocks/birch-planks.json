@@ -1,0 +1,32 @@
+{
+  "creative_category": "wood",
+  "description": "Light birch boards cut for building.",
+  "schema_version": 1,
+  "id": 17,
+  "name": "Birch Planks",
+  "render_kind": "cube",
+  "bevel_width": 0.018,
+  "materials": {
+    "Birch boards": {
+      "base_color": [
+        0.96,
+        0.86,
+        0.63,
+        1.0
+      ],
+      "texture_pattern": "planks"
+    }
+  },
+  "face_materials": [
+    "Birch boards",
+    "Birch boards",
+    "Birch boards",
+    "Birch boards",
+    "Birch boards",
+    "Birch boards"
+  ],
+  "hardness": 0.8,
+  "resistance": 3.0,
+  "required_tool": null,
+  "mining_level": 0
+}

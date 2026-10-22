@@ -1,0 +1,11 @@
+{
+  "item": { "animal": "honey" },
+  "name": "Honey",
+  "description": "Golden honey from a bee nest.",
+  "food": {
+    "nutrition": 30.0,
+    "saturation": 8.0,
+    "eat_seconds": 1.2,
+    "regeneration": { "health_per_second": 1.0, "duration_seconds": 6.0 }
+  }
+}

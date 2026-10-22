@@ -1,0 +1,11 @@
+.modal-backdrop { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: #07100bd9; display: flex; align-items: center; justify-content: center; z-index: 200; pointer-events: auto; }
+.modal-panel { position: relative; display: flex; flex-direction: column; gap: 10px; padding: 28px; width: 580px; max-width: 90%; max-height: 94%; overflow-y: auto; border: 2px solid #665a40; border-radius: 8px; background-color: #1b211eee; }
+.modal-panel headline { margin: 0 0 6px; font-size: 26px; color: #f5e5bf; }
+.modal-panel label { font-size: 14px; color: #c2c8ad; }
+.modal-panel p { margin: 0; font-size: 14px; color: #d1d9ca; }
+.modal-panel .error-text { color: #f1b29b; }
+.modal-panel input, .modal-panel choice-box { width: 100%; min-height: 40px; }
+.modal-panel .action-bar { margin-top: 14px; }
+.modal-panel.minimap-options { width: 720px; height: 640px; overflow-y: hidden; }
+.minimap-settings-list { min-height: 0; flex-grow: 1; flex-shrink: 1; overflow-y: auto; display: flex; flex-direction: column; padding-right: 12px; }
+.minimap-options > .action-bar, .minimap-options > headline { flex-shrink: 0; }

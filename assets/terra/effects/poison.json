@@ -1,0 +1,13 @@
+{
+  "kind": "poison",
+  "id": "teramic::poison",
+  "name": "Poison",
+  "description": "Toxic exposure damages health over time.",
+  "beneficial": false,
+  "max_duration_seconds": 3600,
+  "max_level": 3,
+  "stacking": "refresh_strongest",
+  "modifiers": {
+    "damage_per_second": 1.5
+  }
+}

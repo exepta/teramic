@@ -1,0 +1,77 @@
+[package]
+name = "tilt-ui-runtime"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Bevy runtime integration for TiltUI"
+readme = "README.md"
+
+[lib]
+path = "src/lib.rs"
+
+[features]
+default = ["component", "file-dialog", "svg"]
+
+component = ["html", "css", "bevy/bevy_ui", "bevy/bevy_core_pipeline", "bevy/bevy_render", "bevy/bevy_shader", "bevy/bevy_ui_render", "bevy/ghost_nodes", "bevy/ui_picking", "bevy/system_clipboard", "bevy/default_font", "dep:bevy_window"]
+
+html = [
+    "dep:tilt-ui-html",
+]
+
+css = [
+    "dep:tilt-ui-css",
+]
+
+hot-reload = ["bevy/file_watcher"]
+file-dialog = ["dep:rfd", "dep:wasm-bindgen-futures"]
+fluent = ["component", "dep:fluent-bundle", "dep:unic-langid", "dep:sys-locale"]
+svg = ["dep:resvg", "bevy/bevy_image"]
+tilt-icons = ["component", "svg", "dep:tilt-ui-icons"]
+
+[dependencies]
+bevy = { workspace = true, features = ["bevy_asset", "bevy_log"] }
+wgpu-types = "29"
+image = { version = "0.25", default-features = false }
+
+tilt-ui-core.workspace = true
+tilt-ui-icons = { workspace = true, optional = true }
+
+tilt-ui-html = {
+    workspace = true,
+    optional = true,
+}
+
+tilt-ui-css = {
+    workspace = true,
+    optional = true,
+}
+
+thiserror.workspace = true
+smallvec.workspace = true
+inventory.workspace = true
+parley.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+regex = "1"
+selectors.workspace = true
+bevy_input_focus = "0.19"
+bevy_picking = "0.19"
+rfd = { version = "0.17", optional = true, features = ["file-handle-inner"] }
+fluent-bundle = { version = "0.16", optional = true }
+unic-langid = { version = "0.9", optional = true }
+resvg = { version = "0.47", optional = true }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wasm-bindgen-futures = { version = "0.4", optional = true }
+web-sys = { version = "0.3", features = ["Window", "Navigator"] }
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+sys-locale = { version = "0.3", optional = true }
+
+[dependencies.bevy_window]
+version = "0.19"
+optional = true
+default-features = false
+features = ["custom_cursor"]

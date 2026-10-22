@@ -1,0 +1,27 @@
+{
+  "creative_category": "terrain",
+  "description": "Dressed stone for clean building surfaces.",
+  "schema_version": 1,
+  "id": 12,
+  "name": "Smooth Stone",
+  "render_kind": "cube",
+  "bevel_width": 0.015,
+  "materials": {
+    "Polished stone": {
+      "texture_pattern": "smooth_stone",
+      "roughness": 0.52
+    }
+  },
+  "face_materials": [
+    "Polished stone",
+    "Polished stone",
+    "Polished stone",
+    "Polished stone",
+    "Polished stone",
+    "Polished stone"
+  ],
+  "hardness": 1.25,
+  "resistance": 6.0,
+  "required_tool": "pickaxe",
+  "mining_level": 1
+}

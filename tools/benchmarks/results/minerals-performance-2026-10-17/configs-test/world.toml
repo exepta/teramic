@@ -1,0 +1,4 @@
+seed = 42042
+[time]
+start_hour = 10.0
+paused = true

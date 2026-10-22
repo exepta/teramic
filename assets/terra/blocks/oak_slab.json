@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "id": 82,
+  "name": "Oak Half Slab",
+  "description": "Oak half slab with shaped edges. Built from the same material as its full block.",
+  "creative_category": "building",
+  "render_kind": "boxes",
+  "bevel_width": 0.025,
+  "collision_boxes": [
+    {
+      "minimum": [
+        0,
+        0,
+        0
+      ],
+      "maximum": [
+        1,
+        0.5,
+        1
+      ]
+    }
+  ],
+  "materials": {
+    "Oak boards": {
+      "base_color": [
+        0.68,
+        0.43,
+        0.21,
+        1
+      ],
+      "texture_pattern": "planks"
+    }
+  },
+  "face_materials": [
+    "Oak boards",
+    "Oak boards",
+    "Oak boards",
+    "Oak boards",
+    "Oak boards",
+    "Oak boards"
+  ],
+  "hardness": 0.8,
+  "resistance": 3,
+  "required_tool": null,
+  "mining_level": 0,
+  "struct_block": false
+}

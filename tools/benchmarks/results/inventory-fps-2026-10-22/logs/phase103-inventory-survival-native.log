@@ -1,0 +1,31 @@
+2026-10-22T11:55:11.394799Z  INFO bevy_render::renderer: AdapterInfo { name: "AMD Radeon RX 6950 XT (RADV NAVI21)", vendor: 4098, device: 29605, device_type: DiscreteGpu, device_pci_bus_id: "0000:0c:00.0", driver: "radv", driver_info: "Mesa 26.2.4-arch3.1", backend: Vulkan, subgroup_min_size: 32, subgroup_max_size: 64, transient_saves_memory: false }
+2026-10-22T11:55:11.525743Z  INFO bevy_pbr::cluster: GPU clustering is supported on this device.
+2026-10-22T11:55:11.525792Z  INFO bevy_render::batching::gpu_preprocessing: GPU preprocessing is fully supported on this device.
+2026-10-22T11:55:11.526679Z  INFO bevy_winit::system: Creating new window TERAMIC (149v0)
+2026-10-22T11:55:12.053509Z  INFO lightyear_netcode::client: client connecting to server 127.0.0.1:37171 [1/1]
+2026-10-22T11:55:12.053595Z  INFO lightyear_udp: UDP socket bound to 0.0.0.0:0
+2026-10-22T11:55:12.090863Z  INFO terra_client::creature_audio::scene: Recorded animal/environment audio decoded clips=91
+2026-10-22T11:55:12.114410Z  INFO lightyear_udp::server: Received UDP packet from new address 127.0.0.1:58419, Spawn new LinkOf entity=229v0 server_entity=208v0
+2026-10-22T11:55:12.146769Z  INFO terra_render::water::raymarch: Water SSR hardware depth filtering ready; multisampled views retain the original path
+2026-10-22T11:55:12.146987Z  INFO terra_render::scene::caves::lights::soft_core: Torch soft-core attenuation installed in existing clustered PBR path
+2026-10-22T11:55:12.170861Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/stone-strata-hd.png mip_levels=11 rebound_materials=1
+2026-10-22T11:55:12.170886Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/oak-crafted-hd.png mip_levels=11 rebound_materials=0
+2026-10-22T11:55:12.170892Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/wood.png mip_levels=10 rebound_materials=1
+2026-10-22T11:55:12.177132Z  INFO terra_render::blocks::loading: Block template library ready blocks=98 materials=210
+2026-10-22T11:55:12.315183Z  INFO lightyear_netcode::server_plugin: New connection on netcode from 1 (229v0)
+2026-10-22T11:55:12.365297Z  INFO lightyear_netcode::client_plugin: Client Netcode(1) connected
+2026-10-22T11:55:12.522882Z  INFO terra_network::server: Player profile accepted (local, not verified online) player=1 uuid=1678db0c-3f82-4ebd-8cab-07c3b145acdb name=Player-1678db0c
+2026-10-22T11:55:12.544594Z  INFO terra_network::client: Authoritative world synchronized player=Some(PlayerId(1))
+2026-10-22T11:55:28.930237Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/tools/benchmarks/results/inventory-fps-2026-10-22/native/survival/inventory-open.png
+2026-10-22T11:55:31.691512Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/tools/benchmarks/results/inventory-fps-2026-10-22/native/survival/inventory-survival-browser-tooltip.png
+2026-10-22T11:55:33.731838Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/tools/benchmarks/results/inventory-fps-2026-10-22/native/survival/inventory-survival-compact.png
+2026-10-22T11:55:34.250401Z  INFO terra_client::inventory_smoke: Native scroll fixture before constraining its test viewport ui_scale=0.3243243098258972 inverse_scale=2.055555582046509 viewport=Vec2(150.0, 288.0) content=Vec2(154.0, 288.0)
+2026-10-22T11:55:34.250516Z  INFO terra_client::inventory_smoke: Native scroll fixture child layout element="inventory-equipment" size=Vec2(27.0, 55.0) content=Vec2(13.0, 13.0)
+2026-10-22T11:55:34.250522Z  INFO terra_client::inventory_smoke: Native scroll fixture child layout element="inventory-grid" size=Vec2(145.0, 31.0) content=Vec2(15.0, 15.0)
+2026-10-22T11:55:34.250527Z  INFO terra_client::inventory_smoke: Native scroll fixture child layout element="inventory-hotbar" size=Vec2(143.0, 16.0) content=Vec2(15.0, 16.0)
+2026-10-22T11:55:37.060731Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/tools/benchmarks/results/inventory-fps-2026-10-22/native/survival/inventory-scroll-reachable.png
+2026-10-22T11:55:38.742457Z  INFO terra_client::inventory_smoke: Native inventory rebuilt active slots on reopening and releases them when closed; backdrop and world HUD remain retained
+2026-10-22T11:55:39.769581Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/tools/benchmarks/results/inventory-fps-2026-10-22/native/survival/hud-pause-overlay.png
+2026-10-22T11:55:40.912265Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/tools/benchmarks/results/inventory-fps-2026-10-22/native/survival/hud-options-overlay.png
+2026-10-22T11:55:41.468824Z  INFO terra_client::inventory_smoke: Native pause/options retained the same hotbar entities and visible minimap
+2026-10-22T11:55:41.468847Z  INFO terra_client::inventory_smoke: Native inventory mode/layout acceptance completed captures=6 creative_interaction=false

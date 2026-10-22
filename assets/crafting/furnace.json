@@ -1,0 +1,9 @@
+{
+  "id": "teramic::furnace", "name": "Furnace", "station": "workbench",
+  "output": { "item": { "block": 59 }, "count": 1 },
+  "pattern": { "kind": "shaped", "width": 3, "height": 3, "cells": [
+    { "item": { "block": 3 }, "count": 1 }, { "item": { "block": 3 }, "count": 1 }, { "item": { "block": 3 }, "count": 1 },
+    { "item": { "block": 3 }, "count": 1 }, null, { "item": { "block": 3 }, "count": 1 },
+    { "item": { "block": 3 }, "count": 1 }, { "item": { "block": 3 }, "count": 1 }, { "item": { "block": 3 }, "count": 1 }
+  ] }
+}

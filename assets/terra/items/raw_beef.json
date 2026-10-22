@@ -1,0 +1,6 @@
+{
+  "item": { "animal": "beef" },
+  "name": "Cow Beef",
+  "description": "Raw meat from cattle.",
+  "food": { "nutrition": 24.0, "saturation": 4.0, "eat_seconds": 1.6 }
+}

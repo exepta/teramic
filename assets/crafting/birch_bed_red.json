@@ -1,0 +1,31 @@
+{
+  "id": "teramic::birch_bed_red",
+  "name": "Red Birch Bed",
+  "station": "hand",
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "block": 72
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "dye": "red"
+        },
+        "count": 1
+      }
+    ]
+  },
+  "output": {
+    "item": {
+      "dyed_bed": {
+        "material": 72,
+        "color": "red"
+      }
+    },
+    "count": 1
+  }
+}

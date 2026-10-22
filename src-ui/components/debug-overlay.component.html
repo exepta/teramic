@@ -1,0 +1,33 @@
+@if (debugOverlay.visible) {
+<div class="debug-overlay">
+  <div class="debug-heading"><div class="voxel-mark"></div><p class="project-title">TERAMIC</p></div>
+  <div class="debug-row"><p class="debug-label">FPS</p><p class="debug-value fps-value">{{ debugOverlay.fps }}</p></div>
+  <div class="debug-row"><p class="debug-label">CPU App</p><p class="debug-value">{{ debugOverlay.cpu }}</p></div>
+  <div class="debug-row"><p class="debug-label">RAM App</p><p class="debug-value">{{ debugOverlay.ram }}</p></div>
+  <div class="debug-divider"></div>
+  <div class="debug-row"><p class="debug-label">Chunk</p><p class="debug-value">{{ debugOverlay.chunk }}</p></div>
+  <div class="debug-row"><p class="debug-label">XYZ</p><p class="debug-value">{{ debugOverlay.xyz }}</p></div>
+  <div class="debug-row"><p class="debug-label">Biome</p><p class="debug-value">{{ debugOverlay.biome }}</p></div>
+  @if (debugOverlay.cave_visible) {
+  <div class="debug-divider"></div>
+  <div class="debug-row"><p class="debug-label">Cave</p><p class="debug-value">{{ debugOverlay.cave_biome }}</p></div>
+  <div class="debug-row"><p class="debug-label">Region</p><p class="debug-value">{{ debugOverlay.cave_region }}</p></div>
+  <div class="debug-row"><p class="debug-label">Mix / Wet</p><p class="debug-value">{{ debugOverlay.cave_conditions }}</p></div>
+  <div class="debug-row"><p class="debug-label">Boundary</p><p class="debug-value">{{ debugOverlay.cave_boundary }}</p></div>
+  <div class="debug-row"><p class="debug-label">Path</p><p class="debug-value">{{ debugOverlay.cave_connector }}</p></div>
+  <div class="debug-row"><p class="debug-label">T / P / C</p><p class="debug-value">{{ debugOverlay.cave_local }}</p></div>
+  <div class="debug-row"><p class="debug-label">Fluid tick</p><p class="debug-value">{{ debugOverlay.cave_fluid }}</p></div>
+  }
+  <div class="debug-row target-row"><p class="debug-label">Blick</p><p class="debug-value target-value">{{ debugOverlay.block_name }}</p></div>
+</div>
+}
+@if (debugOverlay.animal_visible) {
+<div class="creature-overlay">
+  <p class="animal-heading">{{ debugOverlay.animal_name }}</p>
+  <div class="debug-row"><p class="debug-label">Leben</p><p class="debug-value">{{ debugOverlay.animal_health }}</p></div>
+  <div class="debug-row"><p class="debug-label">Hunger</p><p class="debug-value">{{ debugOverlay.animal_food }}</p></div>
+  <div class="debug-row"><p class="debug-label">Durst</p><p class="debug-value">{{ debugOverlay.animal_water }}</p></div>
+  <div class="debug-divider"></div>
+  <p class="animal-behavior">{{ debugOverlay.animal_behavior }}</p>
+</div>
+}

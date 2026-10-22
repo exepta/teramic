@@ -1,0 +1,7 @@
+<div [class]="slot.selected ? 'hud-slot selected' : 'hud-slot'">
+  @if (!slot.empty) {
+    <img class="hud-slot-image" [alt]="slot.preview_key" />
+    @if (slot.count != '') { <p class="hud-slot-count">{{ slot.count }}</p> }
+  }
+  @if (slot.hotkey != '') { <p class="hud-slot-key">{{ slot.hotkey }}</p> }
+</div>

@@ -1,0 +1,14 @@
+.game-menu-panel { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 880px; max-width: 92%; max-height: 86%; overflow-y: auto; display: flex; flex-direction: column; gap: 24px; padding: 28px; background-color: #111b16f2; border: 2px solid #a39161; border-radius: 8px; }
+.pause-heading { display: flex; flex-direction: column; align-items: center; gap: 5px; color: #c5d393; }
+.pause-heading headline { font-family: serif; color: #eddfb6; font-size: 40px; margin: 0; }
+.pause-heading p { color: #d9c794; font-size: 17px; margin: 0; }
+.pause-layout { display: flex; flex-direction: row; gap: 26px; }
+.pause-actions { display: flex; flex-direction: column; gap: 10px; flex-grow: 1; min-width: 0; }
+.session-details { display: flex; flex-direction: column; gap: 8px; width: 250px; min-width: 0; flex-shrink: 0; padding-left: 24px; border-left: 1px solid #8b815b; }
+.session-details headline { margin: 0; font-size: 22px; color: #efe2be; }
+.session-details p { margin: 0; font-size: 13px; color: #c8cbb3; }
+.session-details .session-eyebrow { color: #dac58a; font-size: 15px; }
+.world-symbol { display: flex; align-items: center; justify-content: center; height: 72px; color: #a6c381; background-color: #293b2b; border-radius: 4px; }
+.session-rule { height: 1px; width: 100%; background-color: #716c4d; margin: 6px 0; }
+.session-details .session-uuid { font-size: 10px; color: #a5b29a; }
+.session-details .identity-label { font-size: 11px; color: #bacb8e; }

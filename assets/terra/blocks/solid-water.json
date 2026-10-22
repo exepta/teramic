@@ -1,0 +1,31 @@
+{
+  "creative_category": "building",
+  "description": "Solid decorative water with an animated surface; does not flow.",
+  "schema_version": 1,
+  "id": 14,
+  "name": "Solid Water",
+  "render_kind": "cube",
+  "materials": {
+    "Animated water": {
+      "base_color": [
+        0.03,
+        0.24,
+        0.21,
+        0.65
+      ],
+      "roughness": 0.16
+    }
+  },
+  "face_materials": [
+    "Animated water",
+    "Animated water",
+    "Animated water",
+    "Animated water",
+    "Animated water",
+    "Animated water"
+  ],
+  "hardness": 0.55,
+  "resistance": 0.5,
+  "required_tool": null,
+  "mining_level": 0
+}

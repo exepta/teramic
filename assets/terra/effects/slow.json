@@ -1,0 +1,13 @@
+{
+  "kind": "slow",
+  "id": "teramic::slow",
+  "name": "Slowness",
+  "description": "Movement speed is reduced.",
+  "beneficial": false,
+  "max_duration_seconds": 3600,
+  "max_level": 3,
+  "stacking": "refresh_strongest",
+  "modifiers": {
+    "movement_multiplier": 0.7
+  }
+}

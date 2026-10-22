@@ -1,0 +1,9 @@
+@for (tag of multiplayerHud.names; track tag.id) {
+  <div class="player-name" [style]="tag.style"><p>{{ tag.name }}</p></div>
+}
+@for (cursor of multiplayerHud.cursors; track cursor.id) {
+  <div class="shared-cursor" [style]="cursor.style">
+    <div class="shared-cursor-top"><img class="shared-cursor-glyph" [alt]="cursor.color" />@if (cursor.item) { <div class="shared-cursor-item"><img [alt]="cursor.preview" /><p>{{ cursor.count }}</p></div> }</div>
+    <p class="shared-cursor-name">{{ cursor.name }}</p>
+  </div>
+}

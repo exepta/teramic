@@ -1,0 +1,29 @@
+TERAMIC survival HUD atlas
+
+Asset: src-ui/assets/survival-atlas.png
+Generated with the built-in image_gen tool, transparent_background=true.
+The user's supplied survival UI image served as visual direction, not as a
+background texture. This is one shared bitmap atlas, not a copied interface.
+
+Final prompt specification / reproduction prompt:
+
+Use case: stylized-concept
+Asset type: transparent game HUD icon atlas for TERAMIC.
+Primary request: polished pixel-art fantasy survival symbols matching a
+faceted red heart, warm golden lightning bolt and a chicken drumstick that
+is gradually eaten to the bone.
+Composition: exactly 4 columns by 2 rows of equally sized square cells.
+Row 1: red faceted heart with gold edge; golden lightning bolt; cyan breath
+bubbles; complete cooked chicken drumstick.
+Row 2: the same drumstick with a small bite; half eaten; mostly eaten with a
+little meat remaining; bare ivory bone. Preserve orientation, bone placement
+and scale across all five food states. Separate icons with generous transparent
+padding. Each icon centered in its own cell.
+Style: crisp detailed pixel art, readable silhouettes at small HUD sizes,
+warm highlights, subtle dark outlines, independent fantasy/sandbox identity.
+Constraints: genuine transparent background, no panels, labels, numbers,
+text, watermarks, Minecraft symbols or interface background.
+
+Stored size: 1774 x 887 RGBA pixels. Equal cells occupy one quarter of the
+width and one half of the height; TiltUI's existing ImageNodes select the rect.
+Do not bake a checkerboard into the image or remove the alpha channel.

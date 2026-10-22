@@ -1,0 +1,6 @@
+{
+  "item": { "animal": "fish" },
+  "name": "Raw Fish",
+  "description": "Freshwater fish.",
+  "food": { "nutrition": 24.0, "saturation": 3.0, "eat_seconds": 1.6 }
+}

@@ -1,0 +1,16 @@
+heartbeat = true
+
+[minimap]
+enabled = true
+size = 260
+zoom = 1
+fps = 30
+icon_scale = 1.0
+mode = "auto"
+rotate = false
+relief = true
+mobs = true
+players = true
+coordinates = true
+biome = true
+clock = true

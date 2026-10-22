@@ -1,0 +1,9 @@
+<toast id="network-warning-toast" type="warning" title="Aktion nicht ausgefuehrt" duration="5000"><p>{{ networkNotice.warning }}</p></toast>
+<toast id="network-error-toast" type="error" title="Aktion nicht ausgefuehrt" duration="5000"><p>{{ networkNotice.error }}</p></toast>
+@if (networkNotice.visible) {
+  <div class="network-notice">
+    <ornate-frame></ornate-frame>
+    <p>{{ networkNotice.message }}</p>
+    @if (networkNotice.retry) { <button id="network-retry" onclick="network_retry">Erneut verbinden</button> }
+  </div>
+}

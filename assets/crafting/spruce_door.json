@@ -1,0 +1,9 @@
+{
+  "id": "teramic::spruce_door", "name": "Spruce Door", "station": "workbench",
+  "output": { "item": { "block": 67 }, "count": 1 },
+  "pattern": { "kind": "shaped", "width": 2, "height": 3, "cells": [
+    { "item": { "block": 18 }, "count": 1 }, { "item": { "block": 18 }, "count": 1 },
+    { "item": { "block": 18 }, "count": 1 }, { "item": { "block": 18 }, "count": 1 },
+    { "item": { "block": 18 }, "count": 1 }, { "item": { "block": 18 }, "count": 1 }
+  ] }
+}

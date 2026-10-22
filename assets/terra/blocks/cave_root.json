@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "id": 55,
+  "name": "Cave Root",
+  "description": "Branching roots descending into a sheltered upper cave.",
+  "creative_category": "decoration",
+  "render_kind": "segment",
+  "struct_block": true,
+  "materials": {
+    "Living surface": {
+      "base_color": [
+        0.64,
+        0.42,
+        0.24,
+        1
+      ],
+      "roughness": 0.88
+    }
+  },
+  "face_materials": [
+    "Living surface",
+    "Living surface",
+    "Living surface",
+    "Living surface",
+    "Living surface",
+    "Living surface"
+  ],
+  "hardness": 0.45,
+  "resistance": 1,
+  "required_tool": null,
+  "mining_level": 0
+}

@@ -1,0 +1,13 @@
+{
+  "kind": "regeneration",
+  "id": "teramic::regeneration",
+  "name": "Regeneration",
+  "description": "Restores health over time.",
+  "beneficial": true,
+  "max_duration_seconds": 3600,
+  "max_level": 3,
+  "stacking": "refresh_strongest",
+  "modifiers": {
+    "health_per_second": 2
+  }
+}

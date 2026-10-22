@@ -1,0 +1,6 @@
+bind_address = "127.0.0.1:50644"
+require_verified_accounts = false
+lan_discovery = false
+log_filter = "info"
+simulation_distance = 1
+game_mode = "creative"

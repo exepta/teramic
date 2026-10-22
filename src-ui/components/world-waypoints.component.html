@@ -1,0 +1,8 @@
+<div class="world-waypoints">
+  @for (point of worldWaypointView.points; track point.id) {
+    <div class="world-waypoint" [style]="point.style">
+      <div class="world-waypoint-symbol" [style]="point.icon_style"><waypoint-symbol></waypoint-symbol></div>
+      <div class="world-waypoint-caption"><p class="world-waypoint-name">{{ point.name }}</p><p class="world-waypoint-distance">[{{ point.distance }}]</p></div>
+    </div>
+  }
+</div>

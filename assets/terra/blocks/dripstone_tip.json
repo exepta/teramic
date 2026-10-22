@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "id": 52,
+  "name": "Pointed Dripstone",
+  "description": "A sculpted calcite segment, attached to a floor, ceiling or mineral column.",
+  "creative_category": "decoration",
+  "render_kind": "segment",
+  "struct_block": true,
+  "collision_boxes": [{"minimum": [0.075, 0.0, 0.075], "maximum": [0.925, 1.0, 0.925]}],
+  "materials": {
+    "Living surface": {
+      "base_color": [
+        0.63,
+        0.43,
+        0.28,
+        1
+      ],
+      "roughness": 0.88
+    }
+  },
+  "face_materials": [
+    "Living surface",
+    "Living surface",
+    "Living surface",
+    "Living surface",
+    "Living surface",
+    "Living surface"
+  ],
+  "hardness": 0.45,
+  "resistance": 1,
+  "required_tool": null,
+  "mining_level": 0
+}

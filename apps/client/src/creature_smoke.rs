@@ -1,0 +1,553 @@
+//! Explicit model/animation inspection, separate from authoritative network tests.
+use bevy::{
+    prelude::*,
+    render::view::screenshot::{Screenshot, ScreenshotCaptured, save_to_disk},
+};
+use std::{
+    path::PathBuf,
+    time::{Duration, Instant},
+};
+use terra_core::creatures::*;
+use terra_network::client::{CreatureTrack, ReplicatedCreatures};
+
+#[derive(Resource)]
+struct Inspection {
+    start: Instant,
+    requested: usize,
+    captured: usize,
+    last: Instant,
+    ready_frames: usize,
+    failed: bool,
+}
+pub(crate) fn install(app: &mut App) {
+    if !std::env::args().any(|a| a == "--smoke-test-creatures") {
+        return;
+    }
+    app.init_resource::<ReplicatedCreatures>()
+        .insert_resource(Inspection {
+            start: Instant::now(),
+            requested: 0,
+            captured: 0,
+            last: Instant::now(),
+            ready_frames: 0,
+            failed: false,
+        })
+        .add_systems(PostStartup, setup)
+        .add_systems(
+            Update,
+            run.after(terra_player::PlayerSet::Movement)
+                .before(terra_player::PlayerSet::Targeting),
+        );
+}
+fn setup(mut creatures: ResMut<ReplicatedCreatures>) {
+    if std::env::var_os("TERRA_HORSE_INSPECT").is_some() {
+        for variant in 0..16 {
+            let home = [i64::from(variant), 0];
+            let Some(id) = creature_id(home, 0) else {
+                continue;
+            };
+            let animal = Creature {
+                id,
+                kind: CreatureKind::Horse,
+                home,
+                position: [
+                    4.0 + f64::from(variant % 4) * 3.8,
+                    32.0,
+                    14.0 + f64::from(variant / 4) * 3.8,
+                ],
+                velocity: [0.0; 3],
+                yaw: 0.42,
+                health: 20.0,
+                behavior: CreatureBehavior::Rest,
+                timer: 1.0,
+                age: 0.0,
+                variant,
+                needs: CreatureNeeds::full(CreatureKind::Horse),
+            };
+            creatures.creatures.insert(
+                id,
+                CreatureTrack {
+                    interval: 0.1,
+                    previous: animal.clone(),
+                    current: animal,
+                    received: Instant::now(),
+                },
+            );
+        }
+        return;
+    }
+    let aquatic = std::env::var_os("TERRA_AQUATIC_INSPECT").is_some();
+    for (i, kind) in CreatureKind::ALL
+        .into_iter()
+        .filter(|kind| {
+            if aquatic {
+                kind.is_aquatic() && *kind != CreatureKind::Fish
+            } else {
+                (!kind.is_aquatic() || *kind == CreatureKind::Fish) && *kind != CreatureKind::Horse
+            }
+        })
+        .enumerate()
+    {
+        let home = [i as i64, 0];
+        let Some(id) = (if kind == CreatureKind::Bee {
+            bee_id(home, 0)
+        } else {
+            creature_id(home, 0)
+        }) else {
+            continue;
+        };
+        let position = [
+            if kind == CreatureKind::Bear {
+                19.4
+            } else {
+                3.5 + i as f64 * 2.6
+            },
+            32.0 + if aquatic {
+                0.4
+            } else if kind == CreatureKind::Fish {
+                0.7
+            } else {
+                0.0
+            },
+            24.0,
+        ];
+        let animal = Creature {
+            id,
+            home,
+            kind,
+            position,
+            velocity: [0.9, 0.0, 0.0],
+            yaw: std::f32::consts::PI,
+            health: kind.health(),
+            behavior: if kind == CreatureKind::Bee {
+                CreatureBehavior::Fly
+            } else if kind.is_aquatic() {
+                CreatureBehavior::Swim
+            } else {
+                CreatureBehavior::Wander
+            },
+            timer: 3.0,
+            age: 0.0,
+            variant: 0,
+            needs: CreatureNeeds::full(kind),
+        };
+        creatures.creatures.insert(
+            id,
+            CreatureTrack {
+                interval: 0.1,
+                previous: animal.clone(),
+                current: animal,
+                received: Instant::now(),
+            },
+        );
+    }
+    if let Some(mut river) = creatures
+        .creatures
+        .values()
+        .find(|a| a.current.kind == CreatureKind::Fish)
+        .cloned()
+        && let Some(id) = creature_id([CreatureKind::ALL.len() as i64, 0], 0)
+    {
+        river.current.id = id;
+        river.current.home = [CreatureKind::ALL.len() as i64, 0];
+        river.current.variant = 2;
+        river.current.position = [16.5, 32.7, 24.0];
+        river.previous = river.current.clone();
+        creatures.creatures.insert(id, river);
+    }
+}
+fn run(world: &mut World) {
+    if std::env::var_os("TERRA_HORSE_INSPECT").is_some() {
+        horse_run(world);
+        return;
+    }
+    let aquatic = std::env::var_os("TERRA_AQUATIC_INSPECT").is_some();
+    let life = std::env::var_os("TERRA_LIFE_INSPECT").is_some();
+    let inspect = std::env::var_os("TERRA_CREATURE_INSPECT").is_some();
+    let bee = std::env::var_os("TERRA_BEE_INSPECT").is_some();
+    let bear = std::env::var_os("TERRA_BEAR_INSPECT").is_some();
+    let stage = world.resource::<Inspection>().captured;
+    if aquatic {
+        for track in world
+            .resource_mut::<ReplicatedCreatures>()
+            .creatures
+            .values_mut()
+        {
+            track.current.behavior = match stage {
+                9 if track.current.kind == CreatureKind::Squid => CreatureBehavior::Hold,
+                10 if track.current.kind == CreatureKind::Squid => CreatureBehavior::Ink,
+                11 if track.current.kind.is_jelly() => CreatureBehavior::Rest,
+                12 if track.current.kind.is_shark() => CreatureBehavior::Attack,
+                _ => CreatureBehavior::Swim,
+            };
+            track.current.velocity = if matches!(
+                track.current.behavior,
+                CreatureBehavior::Rest | CreatureBehavior::Hold
+            ) {
+                [0.0; 3]
+            } else {
+                [0.0, 0.05, 0.65]
+            };
+            track.previous = track.current.clone();
+        }
+    }
+    if !aquatic && (bear || stage >= 8) && !life && !inspect && !bee {
+        let pose = if bear { stage } else { stage - 8 };
+        for track in world
+            .resource_mut::<ReplicatedCreatures>()
+            .creatures
+            .values_mut()
+        {
+            if track.current.kind != CreatureKind::Bear {
+                continue;
+            }
+            track.current.behavior = match pose {
+                0 => CreatureBehavior::Rest,
+                1 => CreatureBehavior::Hunt,
+                2 => CreatureBehavior::Attack,
+                3 => CreatureBehavior::Sleep,
+                _ => CreatureBehavior::Climb,
+            };
+            track.current.velocity = match pose {
+                1 => [1.5, 0.0, 0.0],
+                4 => [0.0, 0.6, 0.0],
+                _ => [0.0; 3],
+            };
+            track.current.timer = if pose == 2 { 0.04 } else { 3.0 };
+            track.current.position[1] = if pose == 4 { 32.6 } else { 32.0 };
+            track.previous = track.current.clone();
+        }
+    }
+    if life {
+        let stage = world.resource::<Inspection>().captured;
+        for track in world
+            .resource_mut::<ReplicatedCreatures>()
+            .creatures
+            .values_mut()
+        {
+            track.current.behavior = if track.current.kind == CreatureKind::Bee {
+                CreatureBehavior::Nectar
+            } else if stage > 0 && track.current.kind != CreatureKind::Fish {
+                CreatureBehavior::Sleep
+            } else {
+                track.current.behavior
+            };
+            track.current.velocity = [0.0; 3];
+        }
+    }
+    if !aquatic && !life && !inspect && !bee && !bear && stage == 7 {
+        for track in world
+            .resource_mut::<ReplicatedCreatures>()
+            .creatures
+            .values_mut()
+        {
+            if track.current.kind == CreatureKind::Bee {
+                track.current.behavior = CreatureBehavior::Nectar;
+            } else if track.current.kind != CreatureKind::Fish {
+                track.current.behavior = CreatureBehavior::Sleep;
+            }
+            track.current.velocity = [0.0; 3];
+        }
+    }
+    let eye = if aquatic {
+        aquatic_camera(world, stage)
+    } else if bear || (!life && !inspect && !bee && stage >= 8) {
+        detail_camera(world, 8)
+    } else if life && world.resource::<Inspection>().captured == 2 {
+        Transform::from_xyz(17.2, 33.2, 25.3).looking_at(Vec3::new(16.5, 32.87, 24.0), Vec3::Y)
+    } else if (life && world.resource::<Inspection>().captured == 0) || bee {
+        Transform::from_xyz(14.25, 32.20, 24.45).looking_at(Vec3::new(13.9, 32.06, 24.0), Vec3::Y)
+    } else if inspect {
+        world
+            .resource_mut::<terra_core::DebugSettings>()
+            .creature_inspection = true;
+        Transform::from_xyz(6.3, 33.5, 27.5).looking_at(Vec3::new(6.1, 33.0, 24.0), Vec3::Y)
+    } else if (1..=6).contains(&stage) {
+        detail_camera(world, stage)
+    } else {
+        Transform::from_xyz(11.0, 36.5, 36.5).looking_at(Vec3::new(10.5, 32.8, 24.0), Vec3::Y)
+    };
+    if inspect || life {
+        for mut body in world
+            .query_filtered::<&mut Transform, With<terra_player::PlayerBody>>()
+            .iter_mut(world)
+        {
+            body.translation =
+                eye.translation - Vec3::Y * terra_physics::character::PLAYER_EYE_OFFSET;
+        }
+    }
+    for mut camera in world
+        .query_filtered::<&mut Transform, With<terra_player::TerraCamera>>()
+        .iter_mut(world)
+    {
+        *camera = eye;
+    }
+    world.resource_mut::<terra_world::streaming::ChunkFocus>().0 = [8.0, 33.0, 24.0];
+    let status = world.resource::<terra_render::RenderStatus>();
+    let ready = status.ready
+        && world
+            .resource::<terra_world::streaming::WorldGeneration>()
+            .status
+            == terra_world::streaming::GenerationStatus::Ready;
+    {
+        let mut state = world.resource_mut::<Inspection>();
+        state.ready_frames = if ready { state.ready_frames + 1 } else { 0 };
+    }
+    let state = world.resource::<Inspection>();
+    if state.failed {
+        world.write_message(AppExit::error());
+        return;
+    }
+    if state.start.elapsed() > Duration::from_secs(90) {
+        error!("Creature model inspection timeout");
+        world.write_message(AppExit::error());
+        return;
+    }
+    if state.captured
+        == if aquatic {
+            13
+        } else if life {
+            3
+        } else if inspect || bee {
+            2
+        } else if bear {
+            5
+        } else {
+            13
+        }
+    {
+        if aquatic {
+            info!(
+                "Aquatic creature model inspection passed: squid, five named jellies, three sharks, shared meshes, swim/hold/ink/rest/bite poses; model-only fixture, not an AI/swimming integration test"
+            );
+        } else {
+            info!(
+                "Creature model inspection passed: six species, two fish variants, shared meshes, closeups and bear rest/hunt/attack/sleep/climb poses; model-only fixture"
+            );
+        }
+        world.write_message(AppExit::Success);
+        return;
+    }
+    if !ready
+        || state.ready_frames < 120
+        || state.start.elapsed() < Duration::from_secs(8)
+        || state.requested != state.captured
+        || state.last.elapsed() < Duration::from_secs(2)
+    {
+        return;
+    }
+    if inspect && !world.resource::<terra_ui::DebugOverlay>().animal_visible {
+        return;
+    }
+    if inspect
+        && !world
+            .query::<&Text>()
+            .iter(world)
+            .any(|text| text.0 == terra_core::creatures::definitions::get(CreatureKind::Cow).title)
+    {
+        return;
+    }
+    let count = world
+        .query::<&terra_render::creatures::CreatureAvatar>()
+        .iter(world)
+        .count();
+    if count != if aquatic { 9 } else { 7 } {
+        return;
+    }
+    let folder = PathBuf::from(
+        std::env::var("TERRA_CAPTURE_DIR").unwrap_or_else(|_| "/tmp/terra-creatures".into()),
+    );
+    if let Err(error) = std::fs::create_dir_all(&folder) {
+        error!(%error);
+        world.write_message(AppExit::error());
+        return;
+    }
+    let stage = world.resource::<Inspection>().requested;
+    world.resource_mut::<Inspection>().requested += 1;
+    world
+        .spawn(Screenshot::primary_window())
+        .observe(save_to_disk(folder.join(format!("creatures-{stage}.png"))))
+        .observe(
+            |event: On<ScreenshotCaptured>, mut state: ResMut<Inspection>| {
+                let nonblank = event.image.data.as_ref().is_some_and(|data| {
+                    let samples = data.chunks_exact(4).step_by(16);
+                    let count = samples.len();
+                    samples.filter(|p| p[..3].iter().any(|v| *v > 16)).count() > count / 100
+                });
+                if nonblank {
+                    state.captured += 1;
+                    state.last = Instant::now();
+                } else {
+                    state.failed = true;
+                    error!("Creature screenshot is blank; refusing a visual-test pass");
+                }
+            },
+        );
+}
+
+fn horse_run(world: &mut World) {
+    let stage = world.resource::<Inspection>().captured;
+    if stage >= 4 {
+        info!(
+            "Horse inspection passed: sixteen coats, idle, walking and sleeping poses; shared real creature meshes"
+        );
+        world.write_message(AppExit::Success);
+        return;
+    }
+    if world.resource::<Inspection>().start.elapsed() > Duration::from_secs(120) {
+        error!("Horse gallery timed out");
+        world.write_message(AppExit::error());
+        return;
+    }
+    let eye = match stage {
+        0 => Transform::from_xyz(24.0, 45.0, 43.0).looking_at(Vec3::new(9.7, 32.8, 19.7), Vec3::Y),
+        _ => Transform::from_xyz(14.4, 34.5, 26.4).looking_at(Vec3::new(11.6, 33.0, 21.6), Vec3::Y),
+    };
+    for mut body in world
+        .query_filtered::<&mut Transform, With<terra_player::PlayerBody>>()
+        .iter_mut(world)
+    {
+        body.translation = eye.translation - Vec3::Y * terra_physics::character::PLAYER_EYE_OFFSET;
+    }
+    for mut camera in world
+        .query_filtered::<&mut Transform, With<terra_player::TerraCamera>>()
+        .iter_mut(world)
+    {
+        *camera = eye;
+    }
+    world.resource_mut::<terra_world::streaming::ChunkFocus>().0 = [10.0, 33.0, 20.0];
+    for track in world
+        .resource_mut::<ReplicatedCreatures>()
+        .creatures
+        .values_mut()
+    {
+        track.current.behavior = match stage {
+            2 => CreatureBehavior::Wander,
+            3 => CreatureBehavior::Sleep,
+            _ => CreatureBehavior::Rest,
+        };
+        track.current.velocity = if stage == 2 {
+            [0.0, 0.0, 1.6]
+        } else {
+            [0.0; 3]
+        };
+        track.previous = track.current.clone();
+    }
+    let ready = world.resource::<terra_render::RenderStatus>().ready
+        && world
+            .resource::<terra_world::streaming::WorldGeneration>()
+            .status
+            == terra_world::streaming::GenerationStatus::Ready;
+    let count = world
+        .query::<&terra_render::creatures::CreatureAvatar>()
+        .iter(world)
+        .count();
+    if !ready || count != 16 {
+        return;
+    }
+    let state = world.resource::<Inspection>();
+    if state.failed {
+        world.write_message(AppExit::error());
+        return;
+    }
+    if state.start.elapsed() < Duration::from_secs(8)
+        || state.requested != state.captured
+        || state.last.elapsed() < Duration::from_secs(3)
+    {
+        return;
+    }
+    let folder = PathBuf::from(
+        std::env::var("TERRA_CAPTURE_DIR").unwrap_or_else(|_| "/tmp/terra-horses".into()),
+    );
+    if std::fs::create_dir_all(&folder).is_err() {
+        world.write_message(AppExit::error());
+        return;
+    }
+    world.resource_mut::<Inspection>().requested += 1;
+    world
+        .spawn(Screenshot::primary_window())
+        .observe(save_to_disk(folder.join(format!("horses-{stage}.png"))))
+        .observe(
+            |event: On<ScreenshotCaptured>, mut state: ResMut<Inspection>| {
+                let good = event.image.data.as_ref().is_some_and(|data| {
+                    data.chunks_exact(4)
+                        .step_by(16)
+                        .filter(|p| p[..3].iter().any(|v| *v > 20))
+                        .count()
+                        > 1000
+                });
+                if good {
+                    state.captured += 1;
+                    state.last = Instant::now();
+                } else {
+                    state.failed = true;
+                }
+            },
+        );
+}
+
+fn detail_camera(world: &World, stage: usize) -> Transform {
+    let (kind, variant) = match stage {
+        1 => (CreatureKind::Sheep, 0),
+        2 => (CreatureKind::Cow, 0),
+        3 => (CreatureKind::Pig, 0),
+        4 => (CreatureKind::Fish, 0),
+        5 => (CreatureKind::Bee, 0),
+        8 => (CreatureKind::Bear, 0),
+        _ => (CreatureKind::Fish, 2),
+    };
+    let position = world
+        .resource::<ReplicatedCreatures>()
+        .creatures
+        .values()
+        .find(|track| track.current.kind == kind && track.current.variant == variant)
+        .map(|track| Vec3::from_array(track.current.position.map(|v| v as f32)))
+        .unwrap_or(Vec3::new(8.0, 32.0, 24.0));
+    let (eye, target) = match kind {
+        CreatureKind::Bee => (Vec3::new(0.17, 0.16, 0.26), Vec3::new(0.0, 0.055, 0.0)),
+        CreatureKind::Fish => (Vec3::new(0.65, 0.48, 0.72), Vec3::new(0.0, 0.17, 0.02)),
+        CreatureKind::Cow => (Vec3::new(1.35, 1.65, 2.30), Vec3::new(0.0, 0.83, 0.0)),
+        CreatureKind::Sheep => (Vec3::new(1.2, 1.35, 1.95), Vec3::new(0.0, 0.69, 0.0)),
+        CreatureKind::Pig => (Vec3::new(1.0, 1.1, 1.65), Vec3::new(0.0, 0.47, 0.0)),
+        CreatureKind::Bear => (Vec3::new(1.95, 1.65, 2.5), Vec3::new(0.0, 0.67, 0.0)),
+        _ => (Vec3::new(1.5, 1.5, 2.5), Vec3::new(0.0, 0.5, 0.0)),
+    };
+    Transform::from_translation(position + eye).looking_at(position + target, Vec3::Y)
+}
+
+fn aquatic_camera(world: &World, stage: usize) -> Transform {
+    let kinds = [
+        CreatureKind::Squid,
+        CreatureKind::MoonJelly,
+        CreatureKind::FireJelly,
+        CreatureKind::VoidJelly,
+        CreatureKind::SunJelly,
+        CreatureKind::CrystalJelly,
+        CreatureKind::ReefShark,
+        CreatureKind::HammerheadShark,
+        CreatureKind::WhaleShark,
+    ];
+    let kind = match stage {
+        9 | 10 => CreatureKind::Squid,
+        11 => CreatureKind::CrystalJelly,
+        12 => CreatureKind::ReefShark,
+        _ => kinds[stage.min(kinds.len() - 1)],
+    };
+    let creature = world
+        .resource::<ReplicatedCreatures>()
+        .creatures
+        .values()
+        .find(|track| track.current.kind == kind);
+    let (position, size) = creature.map_or((Vec3::new(8.0, 32.4, 24.0), Vec3::ONE), |track| {
+        (
+            Vec3::from_array(track.current.position.map(|v| v as f32)),
+            Vec3::from_array(track.current.size().map(|v| v as f32)),
+        )
+    });
+    let distance = size.max_element().max(0.7);
+    let target = position + Vec3::Y * size.y * 0.48;
+    Transform::from_translation(
+        target + Vec3::new(distance * 0.75, distance * 0.43, distance * 1.25),
+    )
+    .looking_at(target, Vec3::Y)
+}

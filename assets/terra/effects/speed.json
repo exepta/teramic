@@ -1,0 +1,13 @@
+{
+  "kind": "speed",
+  "id": "teramic::speed",
+  "name": "Speed",
+  "description": "Movement speed is increased.",
+  "beneficial": true,
+  "max_duration_seconds": 3600,
+  "max_level": 3,
+  "stacking": "refresh_strongest",
+  "modifiers": {
+    "movement_multiplier": 1.3
+  }
+}

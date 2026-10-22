@@ -1,0 +1,24 @@
+{
+  "id": "fish",
+  "title": "Fish",
+  "variant_titles": ["Clownfish", "Clownfish", "Riverfin", "Riverfin"],
+  "health": 3,
+  "food": 0,
+  "water": 0,
+  "size": [
+    0.3,
+    0.35,
+    0.7
+  ],
+  "speed": 0.7,
+  "group_size": 4,
+  "sleeps": false,
+  "spawn": {
+    "aquatic": {
+      "ocean_weight": 47,
+      "lake_weight": 23,
+      "river_weight": 1,
+      "water_depth": [0, 2048]
+    }
+  }
+}

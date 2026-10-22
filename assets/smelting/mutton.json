@@ -1,0 +1,1 @@
+{"id":3,"key":"teramic::smelt_mutton","name":"Cooked Mutton","input":{"animal":"mutton"},"output":{"item":{"animal":"cooked_mutton"},"count":1},"seconds":8.0}

@@ -1,0 +1,28 @@
+{
+  "id": "teramic::purple_dye",
+  "name": "Purple Dye",
+  "station": "hand",
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "dye": "red"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "dye": "blue"
+        },
+        "count": 1
+      }
+    ]
+  },
+  "output": {
+    "item": {
+      "dye": "purple"
+    },
+    "count": 1
+  }
+}

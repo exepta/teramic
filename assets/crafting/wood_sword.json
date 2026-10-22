@@ -1,0 +1,9 @@
+{
+  "id": "teramic::wood_sword", "name": "Wood Sword", "station": "workbench",
+  "output": { "item": { "tool": "wood_sword" }, "count": 1 },
+  "pattern": { "kind": "shaped", "width": 1, "height": 3, "cells": [
+    { "item": { "block": 16 }, "wood": true, "count": 1 },
+    { "item": { "block": 16 }, "wood": true, "count": 1 },
+    { "item": "stick", "count": 1 }
+  ] }
+}

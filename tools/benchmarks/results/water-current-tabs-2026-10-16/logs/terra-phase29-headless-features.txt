@@ -1,0 +1,697 @@
+terra-server v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/apps/server)
+├── bevy v0.19.1
+│   └── bevy_internal v0.19.1
+│       ├── bevy_app v0.19.1
+│       │   ├── bevy_derive v0.19.1 (proc-macro)
+│       │   │   ├── bevy_macro_utils v0.19.1
+│       │   │   │   ├── proc-macro2 v1.0.107
+│       │   │   │   │   └── unicode-ident v1.0.27
+│       │   │   │   ├── quote v1.0.47
+│       │   │   │   │   └── proc-macro2 v1.0.107 (*)
+│       │   │   │   ├── syn v2.0.119
+│       │   │   │   │   ├── proc-macro2 v1.0.107 (*)
+│       │   │   │   │   ├── quote v1.0.47 (*)
+│       │   │   │   │   └── unicode-ident v1.0.27
+│       │   │   │   └── toml_edit v0.25.17+spec-1.1.0
+│       │   │   │       ├── indexmap v2.14.2
+│       │   │   │       │   ├── equivalent v1.0.2
+│       │   │   │       │   └── hashbrown v0.17.1
+│       │   │   │       ├── toml_datetime v1.1.2+spec-1.1.0
+│       │   │   │       ├── toml_parser v1.1.5+spec-1.1.0
+│       │   │   │       │   └── winnow v1.0.4
+│       │   │   │       └── winnow v1.0.4
+│       │   │   ├── quote v1.0.47 (*)
+│       │   │   └── syn v2.0.119 (*)
+│       │   ├── bevy_ecs v0.19.1
+│       │   │   ├── arrayvec v0.7.8
+│       │   │   ├── bevy_ecs_macros v0.19.1 (proc-macro)
+│       │   │   │   ├── bevy_ecs_macro_logic v0.19.1
+│       │   │   │   │   ├── bevy_macro_utils v0.19.1 (*)
+│       │   │   │   │   ├── proc-macro2 v1.0.107 (*)
+│       │   │   │   │   ├── quote v1.0.47 (*)
+│       │   │   │   │   └── syn v2.0.119 (*)
+│       │   │   │   ├── bevy_macro_utils v0.19.1 (*)
+│       │   │   │   ├── proc-macro2 v1.0.107 (*)
+│       │   │   │   ├── quote v1.0.47 (*)
+│       │   │   │   └── syn v2.0.119 (*)
+│       │   │   ├── bevy_platform v0.19.1
+│       │   │   │   ├── foldhash v0.2.0
+│       │   │   │   ├── futures-lite v2.6.1
+│       │   │   │   │   ├── fastrand v2.5.0
+│       │   │   │   │   ├── futures-core v0.3.34
+│       │   │   │   │   ├── futures-io v0.3.34
+│       │   │   │   │   ├── parking v2.2.1
+│       │   │   │   │   └── pin-project-lite v0.2.17
+│       │   │   │   ├── hashbrown v0.16.1
+│       │   │   │   │   ├── allocator-api2 v0.2.21
+│       │   │   │   │   ├── equivalent v1.0.2
+│       │   │   │   │   ├── foldhash v0.2.0
+│       │   │   │   │   └── serde_core v1.0.229
+│       │   │   │   ├── serde v1.0.229
+│       │   │   │   │   ├── serde_core v1.0.229
+│       │   │   │   │   └── serde_derive v1.0.229 (proc-macro)
+│       │   │   │   │       ├── proc-macro2 v1.0.107 (*)
+│       │   │   │   │       ├── quote v1.0.47 (*)
+│       │   │   │   │       └── syn v3.0.9
+│       │   │   │   │           ├── proc-macro2 v1.0.107 (*)
+│       │   │   │   │           ├── quote v1.0.47 (*)
+│       │   │   │   │           └── unicode-ident v1.0.27
+│       │   │   │   └── spin v0.10.1
+│       │   │   ├── bevy_ptr v0.19.1
+│       │   │   ├── bevy_reflect v0.19.1
+│       │   │   │   ├── assert_type_match v0.1.1 (proc-macro)
+│       │   │   │   │   ├── proc-macro2 v1.0.107 (*)
+│       │   │   │   │   ├── quote v1.0.47 (*)
+│       │   │   │   │   └── syn v2.0.119 (*)
+│       │   │   │   ├── bevy_platform v0.19.1 (*)
+│       │   │   │   ├── bevy_ptr v0.19.1
+│       │   │   │   ├── bevy_reflect_derive v0.19.1 (proc-macro)
+│       │   │   │   │   ├── bevy_macro_utils v0.19.1 (*)
+│       │   │   │   │   ├── indexmap v2.14.2 (*)
+│       │   │   │   │   ├── proc-macro2 v1.0.107 (*)
+│       │   │   │   │   ├── quote v1.0.47 (*)
+│       │   │   │   │   └── syn v2.0.119 (*)
+│       │   │   │   ├── bevy_utils v0.19.1
+│       │   │   │   │   ├── async-channel v2.5.0
+│       │   │   │   │   │   ├── concurrent-queue v2.5.0
+│       │   │   │   │   │   │   └── crossbeam-utils v0.8.23
+│       │   │   │   │   │   ├── event-listener-strategy v0.5.4
+│       │   │   │   │   │   │   ├── event-listener v5.4.2
+│       │   │   │   │   │   │   │   ├── parking v2.2.1
+│       │   │   │   │   │   │   │   └── pin-project-lite v0.2.17
+│       │   │   │   │   │   │   └── pin-project-lite v0.2.17
+│       │   │   │   │   │   ├── futures-core v0.3.34
+│       │   │   │   │   │   └── pin-project-lite v0.2.17
+│       │   │   │   │   ├── bevy_platform v0.19.1 (*)
+│       │   │   │   │   ├── disqualified v1.1.0
+│       │   │   │   │   ├── indexmap v2.14.2
+│       │   │   │   │   │   ├── equivalent v1.0.2
+│       │   │   │   │   │   ├── hashbrown v0.17.1
+│       │   │   │   │   │   └── serde_core v1.0.229
+│       │   │   │   │   └── thread_local v1.1.10
+│       │   │   │   │       └── cfg-if v1.0.5
+│       │   │   │   ├── derive_more v2.1.1
+│       │   │   │   │   └── derive_more-impl v2.1.1 (proc-macro)
+│       │   │   │   │       ├── convert_case v0.10.0
+│       │   │   │   │       │   └── unicode-segmentation v1.13.3
+│       │   │   │   │       ├── proc-macro2 v1.0.107 (*)
+│       │   │   │   │       ├── quote v1.0.47 (*)
+│       │   │   │   │       ├── syn v2.0.119 (*)
+│       │   │   │   │       └── unicode-xid v0.2.6
+│       │   │   │   ├── disqualified v1.1.0
+│       │   │   │   ├── downcast-rs v2.0.2
+│       │   │   │   ├── erased-serde v0.4.10
+│       │   │   │   │   ├── serde_core v1.0.229
+│       │   │   │   │   └── typeid v1.0.3
+│       │   │   │   ├── foldhash v0.2.0
+│       │   │   │   ├── glam v0.32.1
+│       │   │   │   │   ├── approx v0.5.1
+│       │   │   │   │   │   └── num-traits v0.2.19
+│       │   │   │   │   │       └── libm v0.2.16
+│       │   │   │   │   ├── bytemuck v1.25.2
+│       │   │   │   │   │   └── bytemuck_derive v1.12.1 (proc-macro)
+│       │   │   │   │   │       ├── proc-macro2 v1.0.107 (*)
+│       │   │   │   │   │       ├── quote v1.0.47 (*)
+│       │   │   │   │   │       └── syn v3.0.9 (*)
+│       │   │   │   │   ├── libm v0.2.16
+│       │   │   │   │   ├── rand v0.10.3
+│       │   │   │   │   │   ├── chacha20 v0.10.2
+│       │   │   │   │   │   │   ├── cfg-if v1.0.5
+│       │   │   │   │   │   │   ├── cpufeatures v0.3.1
+│       │   │   │   │   │   │   └── rand_core v0.10.1
+│       │   │   │   │   │   ├── getrandom v0.4.3
+│       │   │   │   │   │   │   ├── cfg-if v1.0.5
+│       │   │   │   │   │   │   ├── libc v0.2.190
+│       │   │   │   │   │   │   └── rand_core v0.10.1
+│       │   │   │   │   │   └── rand_core v0.10.1
+│       │   │   │   │   └── serde_core v1.0.229
+│       │   │   │   ├── indexmap v2.14.2 (*)
+│       │   │   │   ├── inventory v0.3.25
+│       │   │   │   ├── serde v1.0.229 (*)
+│       │   │   │   ├── smallvec v1.16.3
+│       │   │   │   │   └── serde v1.0.229 (*)
+│       │   │   │   ├── thiserror v2.0.21
+│       │   │   │   │   └── thiserror-impl v2.0.21 (proc-macro)
+│       │   │   │   │       ├── proc-macro2 v1.0.107 (*)
+│       │   │   │   │       ├── quote v1.0.47 (*)
+│       │   │   │   │       └── syn v3.0.9 (*)
+│       │   │   │   └── variadics_please v1.1.0 (proc-macro)
+│       │   │   │       ├── proc-macro2 v1.0.107 (*)
+│       │   │   │       ├── quote v1.0.47 (*)
+│       │   │   │       └── syn v2.0.119 (*)
+│       │   │   ├── bevy_tasks v0.19.1
+│       │   │   │   ├── async-channel v2.5.0 (*)
+│       │   │   │   ├── async-executor v1.14.0
+│       │   │   │   │   ├── async-task v4.7.1
+│       │   │   │   │   ├── concurrent-queue v2.5.0 (*)
+│       │   │   │   │   ├── fastrand v2.5.0
+│       │   │   │   │   ├── futures-lite v2.6.1 (*)
+│       │   │   │   │   ├── pin-project-lite v0.2.17
+│       │   │   │   │   └── slab v0.4.12
+│       │   │   │   ├── async-task v4.7.1
+│       │   │   │   ├── atomic-waker v1.1.2
+│       │   │   │   ├── bevy_platform v0.19.1 (*)
+│       │   │   │   ├── concurrent-queue v2.5.0 (*)
+│       │   │   │   ├── crossbeam-queue v0.3.14
+│       │   │   │   │   └── crossbeam-utils v0.8.23
+│       │   │   │   ├── derive_more v2.1.1 (*)
+│       │   │   │   └── futures-lite v2.6.1 (*)
+│       │   │   ├── bevy_utils v0.19.1 (*)
+│       │   │   ├── bitflags v2.13.2
+│       │   │   ├── bumpalo v3.20.3
+│       │   │   ├── concurrent-queue v2.5.0 (*)
+│       │   │   ├── derive_more v2.1.1 (*)
+│       │   │   ├── fixedbitset v0.5.7
+│       │   │   ├── indexmap v2.14.2 (*)
+│       │   │   ├── log v0.4.34
+│       │   │   ├── nonmax v0.5.5
+│       │   │   ├── serde v1.0.229 (*)
+│       │   │   ├── slotmap v1.1.1
+│       │   │   ├── smallvec v1.16.3 (*)
+│       │   │   ├── thiserror v2.0.21 (*)
+│       │   │   └── variadics_please v1.1.0 (proc-macro) (*)
+│       │   ├── bevy_platform v0.19.1 (*)
+│       │   ├── bevy_reflect v0.19.1 (*)
+│       │   ├── bevy_tasks v0.19.1 (*)
+│       │   ├── bevy_utils v0.19.1 (*)
+│       │   ├── ctrlc v3.5.2
+│       │   │   └── nix v0.31.3
+│       │   │       ├── bitflags v2.13.2
+│       │   │       ├── cfg-if v1.0.5
+│       │   │       └── libc v0.2.190
+│       │   ├── downcast-rs v2.0.2
+│       │   ├── log v0.4.34
+│       │   ├── thiserror v2.0.21 (*)
+│       │   └── variadics_please v1.1.0 (proc-macro) (*)
+│       ├── bevy_derive v0.19.1 (proc-macro) (*)
+│       ├── bevy_diagnostic v0.19.1
+│       │   ├── atomic-waker v1.1.2
+│       │   ├── bevy_app v0.19.1 (*)
+│       │   ├── bevy_ecs v0.19.1 (*)
+│       │   ├── bevy_platform v0.19.1 (*)
+│       │   ├── bevy_tasks v0.19.1 (*)
+│       │   ├── bevy_time v0.19.1
+│       │   │   ├── bevy_app v0.19.1 (*)
+│       │   │   ├── bevy_ecs v0.19.1 (*)
+│       │   │   ├── bevy_platform v0.19.1 (*)
+│       │   │   ├── bevy_reflect v0.19.1 (*)
+│       │   │   ├── crossbeam-channel v0.5.17
+│       │   │   │   └── crossbeam-utils v0.8.23
+│       │   │   └── log v0.4.34
+│       │   ├── const-fnv1a-hash v1.1.0
+│       │   └── log v0.4.34
+│       ├── bevy_ecs v0.19.1 (*)
+│       ├── bevy_input v0.19.1
+│       │   ├── bevy_app v0.19.1 (*)
+│       │   ├── bevy_ecs v0.19.1 (*)
+│       │   ├── bevy_math v0.19.1
+│       │   │   ├── approx v0.5.1 (*)
+│       │   │   ├── arrayvec v0.7.8
+│       │   │   ├── bevy_reflect v0.19.1 (*)
+│       │   │   ├── derive_more v2.1.1 (*)
+│       │   │   ├── glam v0.32.1 (*)
+│       │   │   ├── itertools v0.14.0
+│       │   │   │   └── either v1.19.0
+│       │   │   ├── libm v0.2.16
+│       │   │   ├── rand v0.10.3 (*)
+│       │   │   ├── rand_distr v0.6.0
+│       │   │   │   ├── num-traits v0.2.19 (*)
+│       │   │   │   └── rand v0.10.3 (*)
+│       │   │   ├── thiserror v2.0.21 (*)
+│       │   │   └── variadics_please v1.1.0 (proc-macro) (*)
+│       │   ├── bevy_platform v0.19.1 (*)
+│       │   ├── bevy_reflect v0.19.1 (*)
+│       │   ├── derive_more v2.1.1 (*)
+│       │   ├── log v0.4.34
+│       │   └── thiserror v2.0.21 (*)
+│       ├── bevy_log v0.19.1
+│       │   ├── bevy_app v0.19.1 (*)
+│       │   ├── bevy_ecs v0.19.1 (*)
+│       │   ├── bevy_platform v0.19.1 (*)
+│       │   ├── bevy_utils v0.19.1 (*)
+│       │   ├── tracing v0.1.44
+│       │   │   ├── pin-project-lite v0.2.17
+│       │   │   ├── tracing-attributes v0.1.31 (proc-macro)
+│       │   │   │   ├── proc-macro2 v1.0.107 (*)
+│       │   │   │   ├── quote v1.0.47 (*)
+│       │   │   │   └── syn v2.0.119 (*)
+│       │   │   └── tracing-core v0.1.36
+│       │   │       └── once_cell v1.21.4
+│       │   ├── tracing-log v0.2.0
+│       │   │   ├── log v0.4.34
+│       │   │   ├── once_cell v1.21.4
+│       │   │   └── tracing-core v0.1.36 (*)
+│       │   └── tracing-subscriber v0.3.23
+│       │       ├── matchers v0.2.0
+│       │       │   └── regex-automata v0.4.18
+│       │       │       └── regex-syntax v0.8.11
+│       │       ├── nu-ansi-term v0.50.3
+│       │       ├── once_cell v1.21.4
+│       │       ├── regex-automata v0.4.18 (*)
+│       │       ├── sharded-slab v0.1.7
+│       │       │   └── lazy_static v1.5.1
+│       │       ├── smallvec v1.16.3 (*)
+│       │       ├── thread_local v1.1.10 (*)
+│       │       ├── tracing v0.1.44 (*)
+│       │       ├── tracing-core v0.1.36 (*)
+│       │       └── tracing-log v0.2.0 (*)
+│       ├── bevy_math v0.19.1 (*)
+│       ├── bevy_platform v0.19.1 (*)
+│       ├── bevy_ptr v0.19.1
+│       ├── bevy_reflect v0.19.1 (*)
+│       ├── bevy_tasks v0.19.1 (*)
+│       ├── bevy_time v0.19.1 (*)
+│       ├── bevy_transform v0.19.1
+│       │   ├── bevy_app v0.19.1 (*)
+│       │   ├── bevy_ecs v0.19.1 (*)
+│       │   ├── bevy_math v0.19.1 (*)
+│       │   ├── bevy_reflect v0.19.1 (*)
+│       │   ├── bevy_tasks v0.19.1 (*)
+│       │   ├── bevy_utils v0.19.1 (*)
+│       │   ├── derive_more v2.1.1 (*)
+│       │   └── thiserror v2.0.21 (*)
+│       └── bevy_utils v0.19.1 (*)
+├── ctrlc v3.5.2 (*)
+├── terra-core v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-core)
+│   ├── bevy v0.19.1 (*)
+│   ├── serde v1.0.229 (*)
+│   ├── terra-voxel v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-voxel)
+│   │   ├── block-mesh v0.2.0
+│   │   │   ├── ilattice v0.1.0
+│   │   │   │   └── glam v0.19.0
+│   │   │   ├── ndcopy v0.3.0
+│   │   │   │   └── ndshape v0.3.0
+│   │   │   │       └── static_assertions v1.1.0
+│   │   │   └── ndshape v0.3.0 (*)
+│   │   ├── serde v1.0.229 (*)
+│   │   ├── thiserror v2.0.21 (*)
+│   │   └── voxel-traversal v0.4.0
+│   │       └── num-traits v0.2.19 (*)
+│   ├── thiserror v2.0.21 (*)
+│   ├── toml v0.9.12+spec-1.1.0
+│   │   ├── serde_core v1.0.229
+│   │   ├── serde_spanned v1.1.2
+│   │   │   └── serde_core v1.0.229
+│   │   ├── toml_datetime v0.7.5+spec-1.1.0
+│   │   │   └── serde_core v1.0.229
+│   │   ├── toml_parser v1.1.5+spec-1.1.0
+│   │   │   └── winnow v1.0.4
+│   │   ├── toml_writer v1.1.3+spec-1.1.0
+│   │   └── winnow v0.7.15
+│   └── uuid v1.28.0
+│       ├── getrandom v0.4.3 (*)
+│       └── serde_core v1.0.229
+├── terra-network v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-network)
+│   ├── avian3d v0.7.0
+│   │   ├── approx v0.5.1 (*)
+│   │   ├── avian_derive v0.2.3 (proc-macro)
+│   │   │   ├── proc-macro-error3 v3.1.1
+│   │   │   │   ├── proc-macro-error-attr3 v3.1.1 (proc-macro)
+│   │   │   │   │   ├── proc-macro2 v1.0.107 (*)
+│   │   │   │   │   └── quote v1.0.47 (*)
+│   │   │   │   ├── proc-macro2 v1.0.107 (*)
+│   │   │   │   ├── quote v1.0.47 (*)
+│   │   │   │   └── syn v3.0.9 (*)
+│   │   │   ├── proc-macro2 v1.0.107 (*)
+│   │   │   ├── quote v1.0.47 (*)
+│   │   │   └── syn v2.0.119 (*)
+│   │   ├── bevy v0.19.1 (*)
+│   │   ├── bevy_heavy v0.5.0
+│   │   │   ├── bevy_math v0.19.1 (*)
+│   │   │   ├── bevy_reflect v0.19.1 (*)
+│   │   │   └── glam_matrix_extras v0.3.0
+│   │   │       ├── bevy_reflect v0.19.1 (*)
+│   │   │       └── glam v0.32.1 (*)
+│   │   ├── bevy_math v0.19.1 (*)
+│   │   ├── bevy_transform_interpolation v0.5.0
+│   │   │   └── bevy v0.19.1 (*)
+│   │   ├── bitflags v2.13.2
+│   │   ├── derive_more v2.1.1 (*)
+│   │   ├── disqualified v1.1.0
+│   │   ├── glam_matrix_extras v0.3.0 (*)
+│   │   ├── itertools v0.15.0
+│   │   │   └── either v1.19.0
+│   │   ├── obvhs v0.3.3
+│   │   │   ├── bytemuck v1.25.2 (*)
+│   │   │   ├── glam v0.33.12
+│   │   │   │   └── bytemuck v1.25.2 (*)
+│   │   │   ├── half v2.7.1
+│   │   │   │   ├── cfg-if v1.0.5
+│   │   │   │   └── zerocopy v0.8.62
+│   │   │   │       └── zerocopy-derive v0.8.62 (proc-macro)
+│   │   │   │           ├── proc-macro2 v1.0.107 (*)
+│   │   │   │           ├── quote v1.0.47 (*)
+│   │   │   │           └── syn v2.0.119 (*)
+│   │   │   ├── log v0.4.34
+│   │   │   ├── rdst v0.20.14
+│   │   │   │   ├── arbitrary-chunks v0.4.1
+│   │   │   │   └── partition v0.1.2
+│   │   │   └── static_assertions v1.1.0
+│   │   ├── parry3d v0.27.0
+│   │   │   ├── approx v0.5.1 (*)
+│   │   │   ├── arrayvec v0.7.8
+│   │   │   ├── bitflags v2.13.2
+│   │   │   ├── downcast-rs v2.0.2
+│   │   │   ├── either v1.19.0
+│   │   │   ├── ena v0.14.4
+│   │   │   │   └── log v0.4.34
+│   │   │   ├── foldhash v0.2.0
+│   │   │   ├── glamx v0.2.0
+│   │   │   │   ├── approx v0.5.1 (*)
+│   │   │   │   ├── glam v0.32.1 (*)
+│   │   │   │   ├── num-traits v0.2.19 (*)
+│   │   │   │   └── simba v0.9.1
+│   │   │   │       ├── approx v0.5.1 (*)
+│   │   │   │       ├── num-complex v0.4.6
+│   │   │   │       │   └── num-traits v0.2.19 (*)
+│   │   │   │       ├── num-traits v0.2.19 (*)
+│   │   │   │       ├── paste v1.0.15 (proc-macro)
+│   │   │   │       └── wide v0.7.33
+│   │   │   │           ├── bytemuck v1.25.2 (*)
+│   │   │   │           └── safe_arch v0.7.4
+│   │   │   │               └── bytemuck v1.25.2 (*)
+│   │   │   ├── hashbrown v0.16.1 (*)
+│   │   │   ├── log v0.4.34
+│   │   │   ├── num-derive v0.4.2 (proc-macro)
+│   │   │   │   ├── proc-macro2 v1.0.107 (*)
+│   │   │   │   ├── quote v1.0.47 (*)
+│   │   │   │   └── syn v2.0.119 (*)
+│   │   │   ├── num-traits v0.2.19 (*)
+│   │   │   ├── ordered-float v5.5.0
+│   │   │   │   └── num-traits v0.2.19 (*)
+│   │   │   ├── rayon v1.12.0
+│   │   │   │   ├── either v1.19.0
+│   │   │   │   └── rayon-core v1.13.0
+│   │   │   │       ├── crossbeam-deque v0.8.8
+│   │   │   │       │   ├── crossbeam-epoch v0.9.21
+│   │   │   │       │   │   └── crossbeam-utils v0.8.23
+│   │   │   │       │   └── crossbeam-utils v0.8.23
+│   │   │   │       └── crossbeam-utils v0.8.23
+│   │   │   ├── rstar v0.12.2
+│   │   │   │   ├── heapless v0.8.0
+│   │   │   │   │   ├── hash32 v0.3.1
+│   │   │   │   │   │   └── byteorder v1.5.0
+│   │   │   │   │   └── stable_deref_trait v1.2.1
+│   │   │   │   ├── num-traits v0.2.19 (*)
+│   │   │   │   └── smallvec v1.16.3 (*)
+│   │   │   ├── simba v0.9.1 (*)
+│   │   │   ├── slab v0.4.12
+│   │   │   ├── smallvec v1.16.3 (*)
+│   │   │   ├── spade v2.15.1
+│   │   │   │   ├── hashbrown v0.16.1 (*)
+│   │   │   │   ├── num-traits v0.2.19 (*)
+│   │   │   │   ├── robust v1.2.0
+│   │   │   │   └── smallvec v1.16.3 (*)
+│   │   │   ├── static_assertions v1.1.0
+│   │   │   └── thiserror v2.0.21 (*)
+│   │   ├── smallvec v1.16.3 (*)
+│   │   ├── thiserror v2.0.21 (*)
+│   │   └── thread_local v1.1.10 (*)
+│   ├── bevy v0.19.1 (*)
+│   ├── lightyear v0.30.1
+│   │   ├── aeronet_io v0.21.0
+│   │   │   ├── anyhow v1.0.104
+│   │   │   ├── bevy_app v0.19.1 (*)
+│   │   │   ├── bevy_ecs v0.19.1 (*)
+│   │   │   ├── bevy_platform v0.19.1 (*)
+│   │   │   ├── bevy_reflect v0.19.1 (*)
+│   │   │   ├── bytes v1.12.1
+│   │   │   │   └── serde v1.0.229 (*)
+│   │   │   ├── derive_more v2.1.1 (*)
+│   │   │   └── log v0.4.34
+│   │   ├── bevy_app v0.19.1 (*)
+│   │   ├── bevy_ecs v0.19.1 (*)
+│   │   ├── document-features v0.2.12 (proc-macro)
+│   │   │   └── litrs v1.0.1
+│   │   ├── lightyear_connection v0.30.1
+│   │   │   ├── bevy_app v0.19.1 (*)
+│   │   │   ├── bevy_ecs v0.19.1 (*)
+│   │   │   ├── bevy_platform v0.19.1 (*)
+│   │   │   ├── bevy_reflect v0.19.1 (*)
+│   │   │   ├── bytes v1.12.1 (*)
+│   │   │   ├── lightyear_core v0.30.1
+│   │   │   │   ├── bevy_app v0.19.1 (*)
+│   │   │   │   ├── bevy_derive v0.19.1 (proc-macro) (*)
+│   │   │   │   ├── bevy_ecs v0.19.1 (*)
+│   │   │   │   ├── bevy_platform v0.19.1 (*)
+│   │   │   │   ├── bevy_reflect v0.19.1 (*)
+│   │   │   │   ├── bevy_time v0.19.1 (*)
+│   │   │   │   ├── bytes v1.12.1 (*)
+│   │   │   │   ├── chrono v0.4.45
+│   │   │   │   │   ├── iana-time-zone v0.1.65
+│   │   │   │   │   └── num-traits v0.2.19 (*)
+│   │   │   │   ├── fixed v1.31.0
+│   │   │   │   │   ├── az v1.3.0
+│   │   │   │   │   ├── bytemuck v1.25.2 (*)
+│   │   │   │   │   ├── half v2.7.1 (*)
+│   │   │   │   │   ├── serde v1.0.229 (*)
+│   │   │   │   │   └── typenum v1.20.1
+│   │   │   │   ├── lightyear_serde v0.30.1
+│   │   │   │   │   ├── bevy_derive v0.19.1 (proc-macro) (*)
+│   │   │   │   │   ├── bevy_ecs v0.19.1 (*)
+│   │   │   │   │   ├── bevy_platform v0.19.1 (*)
+│   │   │   │   │   ├── bevy_ptr v0.19.1
+│   │   │   │   │   ├── bevy_reflect v0.19.1 (*)
+│   │   │   │   │   ├── bevy_utils v0.19.1 (*)
+│   │   │   │   │   ├── bytes v1.12.1 (*)
+│   │   │   │   │   ├── no_std_io2 v0.9.4
+│   │   │   │   │   │   └── memchr v2.8.3
+│   │   │   │   │   ├── postcard v1.1.3
+│   │   │   │   │   │   ├── cobs v0.3.0
+│   │   │   │   │   │   │   └── thiserror v2.0.21 (*)
+│   │   │   │   │   │   └── serde v1.0.229 (*)
+│   │   │   │   │   ├── serde v1.0.229 (*)
+│   │   │   │   │   ├── smallvec v1.16.3 (*)
+│   │   │   │   │   ├── thiserror v2.0.21 (*)
+│   │   │   │   │   ├── tracing v0.1.44 (*)
+│   │   │   │   │   └── variadics_please v2.0.0 (proc-macro)
+│   │   │   │   │       ├── quote v1.0.47 (*)
+│   │   │   │   │       └── unsynn v0.3.0
+│   │   │   │   │           ├── mutants v0.0.3 (proc-macro)
+│   │   │   │   │           ├── proc-macro2 v1.0.107 (*)
+│   │   │   │   │           └── rustc-hash v2.1.3
+│   │   │   │   ├── lightyear_utils v0.30.1
+│   │   │   │   │   ├── bevy_ecs v0.19.1 (*)
+│   │   │   │   │   ├── bevy_platform v0.19.1 (*)
+│   │   │   │   │   ├── bevy_reflect v0.19.1 (*)
+│   │   │   │   │   ├── bevy_utils v0.19.1 (*)
+│   │   │   │   │   ├── hashbrown v0.17.1
+│   │   │   │   │   ├── pastey v0.2.3 (proc-macro)
+│   │   │   │   │   ├── seahash v4.1.0
+│   │   │   │   │   └── tracing v0.1.44 (*)
+│   │   │   │   ├── serde v1.0.229 (*)
+│   │   │   │   └── tracing v0.1.44 (*)
+│   │   │   ├── lightyear_link v0.30.1
+│   │   │   │   ├── bevy_app v0.19.1 (*)
+│   │   │   │   ├── bevy_ecs v0.19.1 (*)
+│   │   │   │   ├── bevy_reflect v0.19.1 (*)
+│   │   │   │   ├── bevy_utils v0.19.1 (*)
+│   │   │   │   ├── bytes v1.12.1 (*)
+│   │   │   │   ├── lightyear_core v0.30.1 (*)
+│   │   │   │   ├── lightyear_utils v0.30.1 (*)
+│   │   │   │   ├── rand v0.10.3 (*)
+│   │   │   │   └── tracing v0.1.44 (*)
+│   │   │   ├── lightyear_serde v0.30.1 (*)
+│   │   │   ├── serde v1.0.229 (*)
+│   │   │   ├── smallvec v1.16.3 (*)
+│   │   │   ├── thiserror v2.0.21 (*)
+│   │   │   └── tracing v0.1.44 (*)
+│   │   ├── lightyear_core v0.30.1 (*)
+│   │   ├── lightyear_link v0.30.1 (*)
+│   │   ├── lightyear_messages v0.30.1
+│   │   │   ├── bevy_app v0.19.1 (*)
+│   │   │   ├── bevy_ecs v0.19.1 (*)
+│   │   │   ├── bevy_reflect v0.19.1 (*)
+│   │   │   ├── bevy_utils v0.19.1 (*)
+│   │   │   ├── bytes v1.12.1 (*)
+│   │   │   ├── lightyear_connection v0.30.1 (*)
+│   │   │   ├── lightyear_core v0.30.1 (*)
+│   │   │   ├── lightyear_link v0.30.1 (*)
+│   │   │   ├── lightyear_serde v0.30.1 (*)
+│   │   │   ├── lightyear_transport v0.30.1
+│   │   │   │   ├── bevy_app v0.19.1 (*)
+│   │   │   │   ├── bevy_ecs v0.19.1 (*)
+│   │   │   │   ├── bevy_platform v0.19.1 (*)
+│   │   │   │   ├── bevy_reflect v0.19.1 (*)
+│   │   │   │   ├── bevy_time v0.19.1 (*)
+│   │   │   │   ├── bevy_utils v0.19.1 (*)
+│   │   │   │   ├── bytes v1.12.1 (*)
+│   │   │   │   ├── crossbeam-channel v0.5.17 (*)
+│   │   │   │   ├── governor v0.10.4
+│   │   │   │   │   ├── cfg-if v1.0.5
+│   │   │   │   │   ├── dashmap v6.2.1
+│   │   │   │   │   │   ├── cfg-if v1.0.5
+│   │   │   │   │   │   ├── crossbeam-utils v0.8.23
+│   │   │   │   │   │   ├── hashbrown v0.14.5
+│   │   │   │   │   │   ├── lock_api v0.4.14
+│   │   │   │   │   │   │   └── scopeguard v1.2.0
+│   │   │   │   │   │   ├── once_cell v1.21.4
+│   │   │   │   │   │   └── parking_lot_core v0.9.12
+│   │   │   │   │   │       ├── cfg-if v1.0.5
+│   │   │   │   │   │       ├── libc v0.2.190
+│   │   │   │   │   │       └── smallvec v1.16.3 (*)
+│   │   │   │   │   ├── futures-sink v0.3.34
+│   │   │   │   │   ├── futures-timer v3.0.4
+│   │   │   │   │   ├── futures-util v0.3.34
+│   │   │   │   │   │   ├── futures-core v0.3.34
+│   │   │   │   │   │   ├── futures-sink v0.3.34
+│   │   │   │   │   │   ├── futures-task v0.3.34
+│   │   │   │   │   │   ├── pin-project-lite v0.2.17
+│   │   │   │   │   │   └── slab v0.4.12
+│   │   │   │   │   ├── getrandom v0.3.4
+│   │   │   │   │   │   ├── cfg-if v1.0.5
+│   │   │   │   │   │   └── libc v0.2.190
+│   │   │   │   │   ├── hashbrown v0.16.1 (*)
+│   │   │   │   │   ├── nonzero_ext v0.3.0
+│   │   │   │   │   ├── parking_lot v0.12.5
+│   │   │   │   │   │   ├── lock_api v0.4.14 (*)
+│   │   │   │   │   │   └── parking_lot_core v0.9.12 (*)
+│   │   │   │   │   ├── portable-atomic v1.15.0
+│   │   │   │   │   ├── quanta v0.12.6
+│   │   │   │   │   │   ├── crossbeam-utils v0.8.23
+│   │   │   │   │   │   ├── libc v0.2.190
+│   │   │   │   │   │   ├── once_cell v1.21.4
+│   │   │   │   │   │   └── raw-cpuid v11.6.0
+│   │   │   │   │   │       └── bitflags v2.13.2
+│   │   │   │   │   ├── rand v0.9.5
+│   │   │   │   │   │   ├── rand_chacha v0.9.0
+│   │   │   │   │   │   │   ├── ppv-lite86 v0.2.21
+│   │   │   │   │   │   │   │   └── zerocopy v0.8.62 (*)
+│   │   │   │   │   │   │   └── rand_core v0.9.5
+│   │   │   │   │   │   │       └── getrandom v0.3.4 (*)
+│   │   │   │   │   │   └── rand_core v0.9.5 (*)
+│   │   │   │   │   ├── smallvec v1.16.3 (*)
+│   │   │   │   │   ├── spinning_top v0.3.0
+│   │   │   │   │   │   └── lock_api v0.4.14 (*)
+│   │   │   │   │   └── web-time v1.1.0
+│   │   │   │   ├── indexmap v2.14.2 (*)
+│   │   │   │   ├── lightyear_connection v0.30.1 (*)
+│   │   │   │   ├── lightyear_core v0.30.1 (*)
+│   │   │   │   ├── lightyear_link v0.30.1 (*)
+│   │   │   │   ├── lightyear_serde v0.30.1 (*)
+│   │   │   │   ├── lightyear_utils v0.30.1 (*)
+│   │   │   │   ├── no_std_io2 v0.9.4 (*)
+│   │   │   │   ├── nonzero_ext v0.3.0
+│   │   │   │   ├── ringbuffer v0.16.0
+│   │   │   │   ├── serde v1.0.229 (*)
+│   │   │   │   ├── thiserror v2.0.21 (*)
+│   │   │   │   └── tracing v0.1.44 (*)
+│   │   │   ├── lightyear_utils v0.30.1 (*)
+│   │   │   ├── serde v1.0.229 (*)
+│   │   │   ├── thiserror v2.0.21 (*)
+│   │   │   └── tracing v0.1.44 (*)
+│   │   ├── lightyear_netcode v0.30.1
+│   │   │   ├── aeronet_io v0.21.0 (*)
+│   │   │   ├── bevy_app v0.19.1 (*)
+│   │   │   ├── bevy_ecs v0.19.1 (*)
+│   │   │   ├── bevy_time v0.19.1 (*)
+│   │   │   ├── bytes v1.12.1 (*)
+│   │   │   ├── chacha20poly1305 v0.10.1
+│   │   │   │   ├── aead v0.5.2
+│   │   │   │   │   ├── crypto-common v0.1.7
+│   │   │   │   │   │   ├── generic-array v0.14.7
+│   │   │   │   │   │   │   └── typenum v1.20.1
+│   │   │   │   │   │   ├── rand_core v0.6.4
+│   │   │   │   │   │   │   └── getrandom v0.2.17
+│   │   │   │   │   │   │       ├── cfg-if v1.0.5
+│   │   │   │   │   │   │       └── libc v0.2.190
+│   │   │   │   │   │   └── typenum v1.20.1
+│   │   │   │   │   └── generic-array v0.14.7 (*)
+│   │   │   │   ├── chacha20 v0.9.1
+│   │   │   │   │   ├── cfg-if v1.0.5
+│   │   │   │   │   ├── cipher v0.4.4
+│   │   │   │   │   │   ├── crypto-common v0.1.7 (*)
+│   │   │   │   │   │   ├── inout v0.1.4
+│   │   │   │   │   │   │   └── generic-array v0.14.7 (*)
+│   │   │   │   │   │   └── zeroize v1.9.1
+│   │   │   │   │   └── cpufeatures v0.2.17
+│   │   │   │   ├── cipher v0.4.4 (*)
+│   │   │   │   ├── poly1305 v0.8.0
+│   │   │   │   │   ├── cpufeatures v0.2.17
+│   │   │   │   │   ├── opaque-debug v0.3.1
+│   │   │   │   │   └── universal-hash v0.5.1
+│   │   │   │   │       ├── crypto-common v0.1.7 (*)
+│   │   │   │   │       └── subtle v2.6.1
+│   │   │   │   └── zeroize v1.9.1
+│   │   │   ├── lightyear_connection v0.30.1 (*)
+│   │   │   ├── lightyear_core v0.30.1 (*)
+│   │   │   ├── lightyear_link v0.30.1 (*)
+│   │   │   ├── lightyear_serde v0.30.1 (*)
+│   │   │   ├── lightyear_transport v0.30.1 (*)
+│   │   │   ├── lightyear_utils v0.30.1 (*)
+│   │   │   ├── no_std_io2 v0.9.4 (*)
+│   │   │   ├── rand v0.10.3 (*)
+│   │   │   ├── thiserror v2.0.21 (*)
+│   │   │   └── tracing v0.1.44 (*)
+│   │   ├── lightyear_serde v0.30.1 (*)
+│   │   ├── lightyear_sync v0.30.1
+│   │   │   ├── bevy_app v0.19.1 (*)
+│   │   │   ├── bevy_derive v0.19.1 (proc-macro) (*)
+│   │   │   ├── bevy_diagnostic v0.19.1 (*)
+│   │   │   ├── bevy_ecs v0.19.1 (*)
+│   │   │   ├── bevy_reflect v0.19.1 (*)
+│   │   │   ├── bevy_time v0.19.1 (*)
+│   │   │   ├── bevy_utils v0.19.1 (*)
+│   │   │   ├── lightyear_connection v0.30.1 (*)
+│   │   │   ├── lightyear_core v0.30.1 (*)
+│   │   │   ├── lightyear_link v0.30.1 (*)
+│   │   │   ├── lightyear_messages v0.30.1 (*)
+│   │   │   ├── lightyear_serde v0.30.1 (*)
+│   │   │   ├── lightyear_transport v0.30.1 (*)
+│   │   │   ├── lightyear_utils v0.30.1 (*)
+│   │   │   ├── serde v1.0.229 (*)
+│   │   │   └── tracing v0.1.44 (*)
+│   │   ├── lightyear_transport v0.30.1 (*)
+│   │   ├── lightyear_udp v0.30.1
+│   │   │   ├── aeronet_io v0.21.0 (*)
+│   │   │   ├── bevy_app v0.19.1 (*)
+│   │   │   ├── bevy_ecs v0.19.1 (*)
+│   │   │   ├── bevy_platform v0.19.1 (*)
+│   │   │   ├── bytes v1.12.1 (*)
+│   │   │   ├── lightyear_core v0.30.1 (*)
+│   │   │   ├── lightyear_link v0.30.1 (*)
+│   │   │   ├── lightyear_utils v0.30.1 (*)
+│   │   │   ├── thiserror v2.0.21 (*)
+│   │   │   └── tracing v0.1.44 (*)
+│   │   ├── lightyear_utils v0.30.1 (*)
+│   │   ├── serde v1.0.229 (*)
+│   │   ├── thiserror v2.0.21 (*)
+│   │   └── tracing v0.1.44 (*)
+│   ├── serde v1.0.229 (*)
+│   ├── serde_json v1.0.154
+│   │   ├── itoa v1.0.18
+│   │   ├── memchr v2.8.3
+│   │   ├── serde_core v1.0.229
+│   │   └── zmij v1.0.23
+│   ├── socket2 v0.6.5
+│   │   └── libc v0.2.190
+│   ├── terra-core v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-core) (*)
+│   ├── terra-physics v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-physics)
+│   │   ├── avian3d v0.7.0 (*)
+│   │   ├── bevy v0.19.1 (*)
+│   │   ├── terra-core v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-core) (*)
+│   │   ├── terra-voxel v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-voxel) (*)
+│   │   └── terra-world v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-world)
+│   │       ├── bevy v0.19.1 (*)
+│   │       ├── noise v0.9.0
+│   │       │   ├── num-traits v0.2.19 (*)
+│   │       │   ├── rand v0.8.8
+│   │       │   │   └── rand_core v0.6.4 (*)
+│   │       │   └── rand_xorshift v0.3.0
+│   │       │       └── rand_core v0.6.4 (*)
+│   │       ├── serde v1.0.229 (*)
+│   │       ├── terra-core v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-core) (*)
+│   │       ├── terra-voxel v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-voxel) (*)
+│   │       ├── thiserror v2.0.21 (*)
+│   │       └── tracing v0.1.44 (*)
+│   ├── terra-voxel v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-voxel) (*)
+│   ├── terra-world v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-world) (*)
+│   └── tracing v0.1.44 (*)
+├── terra-physics v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-physics) (*)
+├── terra-storage v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-storage)
+│   ├── serde v1.0.229 (*)
+│   ├── terra-core v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-core) (*)
+│   ├── terra-world v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-world) (*)
+│   └── toml v0.9.12+spec-1.1.0 (*)
+├── terra-world v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-world) (*)
+└── tracing v0.1.44 (*)

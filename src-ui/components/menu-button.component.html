@@ -1,0 +1,15 @@
+<button id="menu-action" [class]="menuView.main ? (button.primary ? 'menu-button large primary' : 'menu-button large') : (button.primary ? 'menu-button primary' : 'menu-button')" [disabled]="!button.enabled" onclick="$set(menuIntent.command, button.id); menu_command">
+  @if (button.icon == 'compass') { <icon name="compass" size="24" /> }
+  @if (button.icon == 'users-round') { <icon name="users-round" size="24" /> }
+  @if (button.icon == 'settings') { <icon name="settings" size="24" /> }
+  @if (button.icon == 'log-out') { <icon name="log-out" size="24" /> }
+  @if (button.icon == 'play') { <icon name="play" size="24" /> }
+  @if (button.icon == 'home') { <icon name="home" size="24" /> }
+  @if (button.icon == 'save') { <icon name="archive" size="24" /> }
+  @if (button.icon == 'plus') { <icon name="plus" size="24" /> }
+  @if (button.icon == 'trash-2') { <icon name="trash" size="24" /> }
+  @if (button.icon == 'arrow-left') { <icon name="arrow-left" size="24" /> }
+  @if (button.icon == 'check') { <icon name="check" size="24" /> }
+  @if (button.icon == 'rotate-ccw') { <icon name="rotate-ccw" size="24" /> }
+  <div class="button-copy"><p class="button-title">{{ button.title }}</p></div>
+</button>

@@ -1,0 +1,32 @@
+{
+  "creative_category": "wood",
+  "description": "Warm oak boards cut for building.",
+  "schema_version": 1,
+  "id": 16,
+  "name": "Oak Planks",
+  "render_kind": "cube",
+  "bevel_width": 0.018,
+  "materials": {
+    "Oak boards": {
+      "base_color": [
+        0.68,
+        0.43,
+        0.21,
+        1.0
+      ],
+      "texture_pattern": "planks"
+    }
+  },
+  "face_materials": [
+    "Oak boards",
+    "Oak boards",
+    "Oak boards",
+    "Oak boards",
+    "Oak boards",
+    "Oak boards"
+  ],
+  "hardness": 0.8,
+  "resistance": 3.0,
+  "required_tool": null,
+  "mining_level": 0
+}

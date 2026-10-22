@@ -1,0 +1,57 @@
+{
+  "id": "teramic::dirt_stairs",
+  "name": "Dirt Stairs",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "block": 78
+    },
+    "count": 4
+  },
+  "pattern": {
+    "kind": "shaped",
+    "width": 3,
+    "height": 3,
+    "cells": [
+      {
+        "item": {
+          "block": 2
+        },
+        "count": 1
+      },
+      null,
+      null,
+      {
+        "item": {
+          "block": 2
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "block": 2
+        },
+        "count": 1
+      },
+      null,
+      {
+        "item": {
+          "block": 2
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "block": 2
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "block": 2
+        },
+        "count": 1
+      }
+    ]
+  }
+}

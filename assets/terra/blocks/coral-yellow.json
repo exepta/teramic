@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": 46,
+  "name": "Yellow Coral Block",
+  "description": "A golden reef cube built from small layered coral plates with bright scalloped edges.",
+  "creative_category": "nature",
+  "render_kind": "cube",
+  "surface": "coral_yellow",
+  "bevel_width": 0.025,
+  "materials": {
+    "Yellow reef coral": {
+      "texture_pattern": "coral_yellow",
+      "roughness": 0.94,
+      "reflectance": 0.10
+    }
+  },
+  "face_materials": ["Yellow reef coral", "Yellow reef coral", "Yellow reef coral", "Yellow reef coral", "Yellow reef coral", "Yellow reef coral"],
+  "hardness": 0.8,
+  "resistance": 1.2,
+  "required_tool": null,
+  "mining_level": 0
+}

@@ -1,0 +1,57 @@
+{
+  "id": "teramic::glass_stairs",
+  "name": "Glass Stairs",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "block": 80
+    },
+    "count": 4
+  },
+  "pattern": {
+    "kind": "shaped",
+    "width": 3,
+    "height": 3,
+    "cells": [
+      {
+        "item": {
+          "block": 15
+        },
+        "count": 1
+      },
+      null,
+      null,
+      {
+        "item": {
+          "block": 15
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "block": 15
+        },
+        "count": 1
+      },
+      null,
+      {
+        "item": {
+          "block": 15
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "block": 15
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "block": 15
+        },
+        "count": 1
+      }
+    ]
+  }
+}

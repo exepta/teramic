@@ -1,0 +1,14 @@
+title = "TERAMIC Native Interaction Acceptance"
+width = 1280
+height = 800
+vsync = false
+debug_overlay = false
+log_filter = "info"
+view_distance = 4
+vertical_view_distance = 2
+max_chunk_jobs = 4
+max_mesh_jobs = 16
+mesh_uploads_per_frame = 12
+lod_near_distance = 96.0
+lod_far_distance = 160.0
+lod_hysteresis = 12.0

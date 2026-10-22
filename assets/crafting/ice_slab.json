@@ -1,0 +1,36 @@
+{
+  "id": "teramic::ice_slab",
+  "name": "Ice Half Slab",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "block": 89
+    },
+    "count": 6
+  },
+  "pattern": {
+    "kind": "shaped",
+    "width": 3,
+    "height": 1,
+    "cells": [
+      {
+        "item": {
+          "block": 49
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "block": 49
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "block": 49
+        },
+        "count": 1
+      }
+    ]
+  }
+}

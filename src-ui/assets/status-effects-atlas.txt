@@ -1,0 +1,20 @@
+Status effects atlas, 1254 x 1254 RGBA, four columns/four rows.
+Generated with the built-in image generation tool on 2026-10-22.
+No runtime dependency on the generator. The PNG is included with the game.
+
+Order (row major): Poison, Freeze, Bleeding, Rotten, Slow, Speed, Strength,
+Water Affinity, On Fire, Fire Resistance, Freeze Resistance, Regeneration,
+Shield Power, empty, empty, empty. Regeneration depicts exactly two pink hearts.
+Rects use fractional image dimensions / 4; no resampling or image editing.
+
+Prompt: Production game UI status icon atlas on genuine transparent background,
+exactly four columns and four equal rows. Fantasy voxel RPG, polished hand-painted
+pixel/voxel gem art, beveled block shapes, rich jewel colors and clear silhouettes.
+Match a lavish gold-and-black fantasy health HUD, without frames, cards, labels,
+numbers or backgrounds. Center isolated equal-size icons with transparent padding:
+toxic green skull/crossbones with slime; cyan snowflake/ice shards; three ruby blood
+drops; rotten purple-green leaf/vapor; heavy iron boot; leather boot/cyan speed
+streaks; golden fist; turquoise water droplet/pale lungs; orange flame; silver
+shield/red flame; silver shield/blue snowflake; exactly two adjacent overlapping
+bright pink hearts and sparkles; blue-silver magic shield; three transparent cells.
+Readable at 40 pixels, consistent style, no text or scenery.

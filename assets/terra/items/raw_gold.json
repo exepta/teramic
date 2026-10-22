@@ -1,0 +1,7 @@
+{
+  "item": {
+    "mineral": "raw_gold"
+  },
+  "name": "Raw Gold",
+  "description": "Unrefined gold. Combine two pieces and coal at a workbench to refine an ingot."
+}

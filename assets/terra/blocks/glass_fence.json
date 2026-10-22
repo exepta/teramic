@@ -1,0 +1,176 @@
+{
+  "schema_version": 1,
+  "id": 96,
+  "name": "Glass Fence",
+  "description": "Glass fence with shaped edges. Built from the same material as its full block.",
+  "creative_category": "building",
+  "render_kind": "boxes",
+  "bevel_width": 0.018,
+  "collision_boxes": [
+    {
+      "minimum": [
+        0.35,
+        0,
+        0.35
+      ],
+      "maximum": [
+        0.65,
+        0.91,
+        0.65
+      ]
+    },
+    {
+      "minimum": [
+        0.32,
+        0.91,
+        0.32
+      ],
+      "maximum": [
+        0.68,
+        0.98,
+        0.68
+      ]
+    },
+    {
+      "minimum": [
+        0.34,
+        0.98,
+        0.34
+      ],
+      "maximum": [
+        0.66,
+        1,
+        0.66
+      ]
+    },
+    {
+      "minimum": [
+        0,
+        0.3,
+        0.44
+      ],
+      "maximum": [
+        0.5,
+        0.43,
+        0.56
+      ]
+    },
+    {
+      "minimum": [
+        0,
+        0.6699999999999999,
+        0.44
+      ],
+      "maximum": [
+        0.5,
+        0.8,
+        0.56
+      ]
+    },
+    {
+      "minimum": [
+        0.5,
+        0.3,
+        0.44
+      ],
+      "maximum": [
+        1,
+        0.43,
+        0.56
+      ]
+    },
+    {
+      "minimum": [
+        0.5,
+        0.6699999999999999,
+        0.44
+      ],
+      "maximum": [
+        1,
+        0.8,
+        0.56
+      ]
+    },
+    {
+      "minimum": [
+        0.44,
+        0.3,
+        0
+      ],
+      "maximum": [
+        0.56,
+        0.43,
+        0.5
+      ]
+    },
+    {
+      "minimum": [
+        0.44,
+        0.6699999999999999,
+        0
+      ],
+      "maximum": [
+        0.56,
+        0.8,
+        0.5
+      ]
+    },
+    {
+      "minimum": [
+        0.44,
+        0.3,
+        0.5
+      ],
+      "maximum": [
+        0.56,
+        0.43,
+        1
+      ]
+    },
+    {
+      "minimum": [
+        0.44,
+        0.6699999999999999,
+        0.5
+      ],
+      "maximum": [
+        0.56,
+        0.8,
+        1
+      ]
+    }
+  ],
+  "materials": {
+    "Pane": {
+      "base_color": [
+        0.75,
+        0.89,
+        0.87,
+        0.1
+      ],
+      "roughness": 0.1
+    },
+    "Wood frame": {
+      "base_color": [
+        0.36,
+        0.22,
+        0.1,
+        1
+      ],
+      "texture_pattern": "planks"
+    }
+  },
+  "face_materials": [
+    "Pane",
+    "Pane",
+    "Pane",
+    "Pane",
+    "Pane",
+    "Pane"
+  ],
+  "hardness": 0.55,
+  "resistance": 0.5,
+  "required_tool": null,
+  "mining_level": 0,
+  "struct_block": true
+}

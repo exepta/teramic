@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "id": 39,
+  "name": "Dripstone Formation",
+  "description": "Tapered mineral body of a natural stalactite or stalagmite, with a broad faceted point.",
+  "creative_category": "decoration",
+  "render_kind": "cube",
+  "surface": "rock",
+  "bevel_width": 0.095,
+  "materials": { "Dripstone": { "texture_pattern": "dripstone", "roughness": 0.99, "reflectance": 0.08 } },
+  "face_materials": ["Dripstone", "Dripstone", "Dripstone", "Dripstone", "Dripstone", "Dripstone"],
+  "crystal_material": "Dripstone",
+  "hardness": 1.25,
+  "resistance": 6.0,
+  "required_tool": null,
+  "mining_level": 0
+}

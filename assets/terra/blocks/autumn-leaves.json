@@ -1,0 +1,32 @@
+{
+  "creative_category": "nature",
+  "description": "Warm autumn leaves stirred by the woodland breeze.",
+  "schema_version": 1,
+  "id": 8,
+  "name": "Autumn Foliage",
+  "render_kind": "cube",
+  "bevel_width": 0.22,
+  "materials": {
+    "Autumn crown": {
+      "texture_pattern": "canopy",
+      "base_color": [
+        1.0,
+        0.35,
+        0.055,
+        1.0
+      ]
+    }
+  },
+  "face_materials": [
+    "Autumn crown",
+    "Autumn crown",
+    "Autumn crown",
+    "Autumn crown",
+    "Autumn crown",
+    "Autumn crown"
+  ],
+  "hardness": 0.3,
+  "resistance": 0.5,
+  "required_tool": null,
+  "mining_level": 0
+}

@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "id": 38,
+  "name": "Salt Formation",
+  "description": "Pale mineral body of a natural salt stalactite or stalagmite.",
+  "creative_category": "decoration",
+  "render_kind": "cube",
+  "surface": "rock",
+  "bevel_width": 0.065,
+  "materials": {
+    "Salt body": {
+      "texture_pattern": "mineral",
+      "base_color": [0.94, 0.92, 0.87, 1.0],
+      "roughness": 0.92,
+      "reflectance": 0.12
+    }
+  },
+  "face_materials": ["Salt body", "Salt body", "Salt body", "Salt body", "Salt body", "Salt body"],
+  "crystal_material": "Salt body",
+  "hardness": 0.9,
+  "resistance": 8,
+  "required_tool": "pickaxe",
+  "mining_level": 1
+}

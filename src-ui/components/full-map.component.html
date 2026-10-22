@@ -1,0 +1,49 @@
+@if (fullMapView.visible) {
+<div id="full-map-panel" [class]="fullMapView.compact ? 'full-map-panel compact' : 'full-map-panel'" [style]="fullMapView.style">
+  <ornate-frame></ornate-frame>
+  <div class="full-map-header"><div class="full-map-brand"><h1>TERAMIC</h1><p>WORLD MAP</p></div><button id="fullmap-close" class="map-icon-button full-map-close" title="Close map" onclick="fullmap_action"><icon name="close" size="32" /></button></div>
+  <div class="full-map-tool-rail">
+    <button id="fullmap-add" class="map-tool" title="Create waypoint" [disabled]="!fullMapView.available" onclick="fullmap_action"><icon name="map-pin" size="32" /></button>
+    <button id="fullmap-grid" [class]="fullMapView.grid ? 'map-tool selected' : 'map-tool'" title="Toggle grid" onclick="fullmap_action"><icon name="grid" size="32" /></button>
+    <button id="fullmap-layer" [class]="fullMapView.cave ? 'map-tool selected' : 'map-tool'" title="Caves / Overworld" onclick="fullmap_action"><icon name="mountain" size="32" /></button>
+    <button id="fullmap-mobs" [class]="fullMapView.mobs ? 'map-tool selected' : 'map-tool'" title="Show / hide mobs" onclick="fullmap_action"><icon name="eye" size="32" /></button>
+    <button id="fullmap-mode" [class]="fullMapView.three_dimensional_available ? (fullMapView.three_dimensional ? 'map-tool selected' : 'map-tool') : 'map-tool unavailable'" title="2.5D / 3D" [disabled]="!fullMapView.three_dimensional_available" onclick="fullmap_action"><icon name="layers" size="32" /></button>
+    <button id="fullmap-center" class="map-tool" title="Center on player" onclick="fullmap_action"><icon name="target" size="32" /></button>
+    <button id="fullmap-list" [class]="fullMapView.book_open ? 'map-tool selected' : 'map-tool'" title="Waypoints" onclick="fullmap_action"><icon name="flag" size="32" /></button>
+  </div>
+  <tooltip for="fullmap-add" trigger="hover" variant="follow" class="map-tool-tooltip"><p>Create waypoint</p></tooltip>
+  <tooltip for="fullmap-grid" trigger="hover" variant="follow" class="map-tool-tooltip" id="fullmap-grid-tooltip"><p>Show / hide grid</p></tooltip>
+  <tooltip for="fullmap-layer" trigger="hover" variant="follow" class="map-tool-tooltip"><p>Switch caves / overworld</p></tooltip>
+  <tooltip for="fullmap-mobs" trigger="hover" variant="follow" class="map-tool-tooltip"><p>Show / hide mobs</p></tooltip>
+  <tooltip for="fullmap-mode" trigger="hover" variant="follow" class="map-tool-tooltip"><p>{{ fullMapView.three_dimensional_available ? 'Switch 2.5D / 3D' : 'Cave maps are always 2D' }}</p></tooltip>
+  <tooltip for="fullmap-center" trigger="hover" variant="follow" class="map-tool-tooltip"><p>Center on player</p></tooltip>
+  <tooltip for="fullmap-list" trigger="hover" variant="follow" class="map-tool-tooltip"><p>Waypoints</p></tooltip>
+  <div id="full-map-viewport" class="full-map-viewport" [style]="fullMapView.surface_style">
+    <img id="full-map-surface" class="full-map-surface" alt="World map" />
+    @for (point of fullMapView.markers; track point.id) { <waypoint-marker></waypoint-marker> }
+    @for (peer of fullMapView.peers; track peer.id) { <p class="map-peer-name" [style]="peer.style">{{ peer.name }}</p> }
+    <div class="full-map-compass"><p class="map-compass-n">N</p><p class="map-compass-w">W</p><icon name="compass" size="64" /><p class="map-compass-e">E</p><p class="map-compass-s">S</p></div>
+    @if (fullMapView.loading) { <div class="full-map-loading"><icon name="loading-spin" size="16" /><p>Mapping</p></div> }
+  </div>
+  <div class="full-map-footer">
+    <div class="map-footer-biome"><icon name="trees" size="32" /><div><p>{{ fullMapView.biome }}</p><label>Biome</label></div></div>
+    <div class="map-footer-coordinates"><p>{{ fullMapView.coordinates }}</p><label>Coordinates</label></div>
+    <div class="map-footer-zoom"><button id="fullmap-out" class="map-icon-button" title="Zoom out" [disabled]="fullMapView.farthest" onclick="fullmap_action"><icon name="minus" size="32" /></button><p>Zoom: {{ fullMapView.zoom }}</p><button id="fullmap-in" class="map-icon-button" title="Zoom in" [disabled]="fullMapView.nearest" onclick="fullmap_action"><icon name="plus" size="32" /></button></div>
+    <div class="map-footer-height"><icon name="mountain" size="32" /><p>Height: {{ fullMapView.height }}</p></div>
+  </div>
+  @if (fullMapView.book_open) {
+    <div id="full-map-sidebar" class="full-map-sidebar" [style]="fullMapView.sidebar_style">
+      <div class="full-map-waypoint-title"><h2>Waypoints</h2><button id="fullmap-list-close" class="map-icon-button" title="Close waypoint list" onclick="fullmap_action"><icon name="close" size="32" /></button></div>
+      @if (fullMapView.error) { <p class="full-map-error">{{ fullMapView.error }}</p> }
+      @if (!fullMapView.available) { <button id="fullmap-retry" class="map-command" onclick="fullmap_action"><icon name="refresh" size="16" />Retry</button> }
+      <div class="full-map-waypoints">
+        @for (point of fullMapView.waypoints; track point.id) {
+          <button id="fullmap-point" [class]="point.selected ? 'full-map-waypoint selected' : 'full-map-waypoint'" onclick="$set(fullMapIntent.id, point.id); fullmap_action"><div class="waypoint-row-symbol" [style]="point.marker_style"><waypoint-symbol></waypoint-symbol></div><div><p class="waypoint-name">{{ point.name }}</p><p class="waypoint-position">{{ point.coordinates }}</p><p class="waypoint-distance">{{ point.distance }}</p></div></button>
+        }
+      </div>
+      @if (fullMapView.selected) { <div class="full-map-editor-actions"><button id="fullmap-edit" class="map-command" onclick="fullmap_action"><icon name="edit" size="16" />Edit</button><button id="fullmap-delete" class="map-icon-button" title="Delete waypoint" onclick="fullmap_action"><icon name="trash" size="16" /></button></div> }
+    </div>
+  }
+</div>
+}
+@if (fullMapView.editing || fullMapView.deleting) { <waypoint-dialog></waypoint-dialog> }

@@ -1,0 +1,16 @@
+@if (menuView.in_game || !menuView.visible) { <game></game> }
+@if (menuView.visible) {
+<div id="menu-shell" class="menu-shell" [style]="menuView.style">
+  @if (menuView.in_game) { <div class="game-shade"></div> } @else { <menu-background></menu-background> }
+  @if (!menuView.in_game) { <div class="menu-topbar"><div class="small-brand"><icon name="leaf" size="22" /><p>TERAMIC</p></div><p class="build-label">{{ menuView.version }}</p></div> }
+  @if (menuView.main) { <main-menu></main-menu> }
+  @if (menuView.worlds) { <singleplayer></singleplayer> }
+  @if (menuView.servers) { <multiplayer></multiplayer> }
+  @if (menuView.options) { <options></options> }
+  @if (menuView.pause) { <game-menu></game-menu> }
+  @if (menuView.loading) { <loading-screen></loading-screen> }
+  @if (!menuView.loading) { <div class="page-message"><p class="error-text">{{ menuView.error }}</p><p>{{ menuView.status }}</p></div> }
+  @if (!menuView.in_game) { <div class="menu-footer"><p>EXPLORE  /  BUILD  /  BELONG</p><icon name="leaf" size="20" /></div> }
+  <modal-dialog></modal-dialog>
+</div>
+}

@@ -1,0 +1,9 @@
+{
+  "id": "teramic::spruce_window", "name": "Spruce Window", "station": "workbench",
+  "output": { "item": { "block": 70 }, "count": 1 },
+  "pattern": { "kind": "shaped", "width": 3, "height": 3, "cells": [
+    null, { "item": { "block": 18 }, "count": 1 }, null,
+    { "item": { "block": 18 }, "count": 1 }, { "item": { "block": 15 }, "count": 1 }, { "item": { "block": 18 }, "count": 1 },
+    null, { "item": { "block": 18 }, "count": 1 }, null
+  ] }
+}

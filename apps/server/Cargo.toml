@@ -1,0 +1,21 @@
+[package]
+name = "terra-server"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+bevy.workspace = true
+terra-core = { workspace = true, features = ["bevy"] }
+terra-world = { workspace = true, features = ["bevy"] }
+terra-physics.workspace = true
+terra-network = { workspace = true, features = ["server"] }
+terra-storage.workspace = true
+ctrlc.workspace = true
+tracing.workspace = true
+
+[[test]]
+name = "headless"
+path = "../../tests/headless.rs"

@@ -1,0 +1,74 @@
+.survival-hud { position: absolute; left: 12px; top: 12px; width: 420px; height: 178px; box-sizing: border-box; padding: 0; display: flex; flex-direction: column; background-color: transparent; border: 0px solid transparent; pointer-events: none; z-index: 120; }
+.vital-chrome { position: absolute; left: 0; top: 0; width: 100%; height: 83.71%; pointer-events: none; }
+.vital-meter { position: absolute; display: flex; align-items: center; min-width: 0; background-color: transparent; }
+.vital-meter progress-bar { box-sizing: border-box; width: 100%; height: 100%; min-width: 0; padding: 0; border: 0px solid transparent; background-color: transparent; }
+.vital-meter progress-bar::track { height: 100%; border: 0px solid transparent; background-color: transparent; border-radius: 1px; }
+.vital-meter progress-bar::fill { box-sizing: border-box; height: 100%; border-radius: 1px; }
+.vital-label { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; pointer-events: none; z-index: 8; }
+.vital-label p { margin: 0; color: #fff1df; font-size: 11px; text-wrap: nowrap; text-shadow: 0px 1px #160002; }
+.health-meter { left: 25.83%; top: 28.46%; width: 66.10%; height: 14.34%; }
+.health-bar::fill { background-color: transparent; background-image: none; border: 0px solid transparent; }
+.stamina-meter { left: 28.49%; top: 49.53%; width: 59.50%; height: 7.50%; }
+.stamina-bar::fill, .oxygen-bar::fill { background-color: transparent; background-image: none; border: 0px solid transparent; }
+.vital-statuses { position: absolute; left: 24%; top: 64%; width: 76%; height: 33.71%; display: flex; align-items: center; gap: 4px; }
+.food-status { position: relative; width: 18.8%; height: 100%; flex-shrink: 0; background-color: transparent; }
+.food-frame { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; }
+.food-icon { position: absolute; left: 19%; top: 14%; width: 62%; height: 62%; pointer-events: none; }
+.status-effect-card { position: relative; width: 18.6%; height: 100%; flex-shrink: 0; background-color: #11191df5; pointer-events: auto; }
+.status-effect-icon { position: absolute; left: 17%; top: 10%; width: 66%; height: 62%; pointer-events: none; }
+.effect-details { position: absolute; left: 9%; top: 70%; width: 82%; height: 26%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; pointer-events: none; }
+.effect-details p { margin: 0; color: #d8edf5; font-size: 9px; text-wrap: nowrap; text-align: center; text-shadow: 0px 1px #081117; }
+.effect-level { display: flex; align-items: center; justify-content: center; gap: 4%; height: 3px; width: 100%; }
+.effect-level div { width: 12%; height: 3px; background-color: #3c4248; }
+.effect-level .active { background-color: #98dcf4; }
+.effect-expanded { width: 36.5%; }
+.effect-expanded .status-effect-icon { left: 7%; top: 15%; width: 37%; height: 70%; }
+.effect-expanded .effect-details { left: 45%; top: 15%; width: 48%; height: 70%; gap: 5px; }
+.effect-expanded .effect-name { width: 100%; font-size: 9px; text-wrap: wrap; text-align: center; }
+.effect-0 .effect-time { color: #bdff59; }
+.effect-0 .effect-level .active { background-color: #99ea34; }
+.effect-1 .effect-time { color: #98eaff; }
+.effect-11 .effect-time { color: #ff9ddc; }
+.effect-11 .effect-level .active { background-color: #ff71cc; }
+.effect-overflow { display: flex; align-items: center; justify-content: center; }
+.effect-overflow p { margin: 0; color: #f6d179; font-size: 19px; text-shadow: 0px 1px #161006; }
+.regeneration-heart { position: absolute; left: 13%; top: 37%; width: 3.2%; height: 7.6%; pointer-events: none; z-index: 12; }
+.vital-shield { position: absolute; left: 25.8%; top: 10%; width: 66%; height: 14%; background-color: #101820; pointer-events: none; display: flex; align-items: center; justify-content: center; }
+.vital-shield progress-bar { position: absolute; left: 3%; top: 22%; width: 94%; height: 56%; padding: 0; border: 0px solid transparent; }
+.shield-power-bar::track { background-color: #111b23; border: 0px solid transparent; }
+.shield-power-bar::fill { height: 100%; background-image: linear-gradient(to bottom, #d9f2ff, #809db5); border: 0px solid transparent; }
+.shield-power-icon { position: absolute; left: 0; top: 5%; width: 9%; height: 90%; }
+.vital-shield p { margin: 0; color: #f4f8ff; font-size: 10px; text-shadow: 0px 1px #10202d; z-index: 4; }
+.hunger-bar { position: absolute; box-sizing: border-box; left: 18%; top: 79.5%; width: 64%; height: 4.5%; min-width: 0; min-height: 0; padding: 0; border: 0px solid transparent; background-color: transparent; }
+.hunger-bar::track { height: 100%; background-color: transparent; border: 0px solid transparent; border-radius: 0; }
+.hunger-bar::fill { height: 100%; border-radius: 0; background-color: #ffc331; background-image: linear-gradient(to bottom, #ffe68a, #f1ac0d); }
+.breath-icon { position: absolute; left: 21.4%; top: 45.3%; width: 6.5%; height: 12.5%; background-color: #171b1e; pointer-events: none; }
+.hud-editable { pointer-events: auto; outline: 2px solid #84b78c; cursor: move; }
+.hud-editor-toolbar { position: absolute; bottom: 112px; right: 16px; box-sizing: border-box; display: flex; flex-direction: column; gap: 12px; padding: 16px; background-color: #202b25f5; border: 1px solid #76987b; border-radius: 6px; pointer-events: auto; }
+.hud-editor-toolbar h2 { margin: 0; font-size: 18px; color: #e5eade; }
+.hud-editor-actions { display: flex; gap: 8px; }
+.hud-editor-actions button { display: flex; box-sizing: border-box; align-items: center; justify-content: center; gap: 8px; padding: 10px; width: 112px; min-width: 112px; height: 48px; flex-shrink: 0; text-wrap: nowrap; color: #e5eade; background-color: #34453a; border-radius: 4px; }
+.hud-editor-actions button icon { width: 18px; height: 18px; flex-shrink: 0; }
+.hud-editor-actions button:hover { background-color: #49634e; }
+.hud-editor-actions .hud-save { background-color: #416d49; }
+.hud-editor-toolbar p { margin: 0; max-width: 280px; font-size: 13px; color: #eea9a0; }
+.survival-edges { position: absolute; top: 0; bottom: 0; left: 0; right: 0; pointer-events: none; }
+.damage-edge { position: absolute; pointer-events: none; }
+.edge-left, .edge-right { top: 0; bottom: 0; width: 9%; max-width: 160px; }
+.edge-top, .edge-bottom { left: 0; right: 0; height: 10%; max-height: 110px; }
+.edge-left { left: 0; background-image: linear-gradient(to right, #c842422e, #c8424200); }
+.edge-right { right: 0; background-image: linear-gradient(to left, #c842422e, #c8424200); }
+.edge-top { top: 0; background-image: linear-gradient(to bottom, #c842422e, #c8424200); }
+.edge-bottom { bottom: 0; background-image: linear-gradient(to top, #c842422e, #c8424200); }
+.survival-critical-glow { animation: critical-edge-pulse 1500ms ease-in-out infinite alternate; }
+@keyframes critical-edge-pulse { from { opacity: 0.20; } to { opacity: 0.40; } }
+.survival-critical { position: absolute; top: 0; bottom: 0; left: 0; right: 0; animated-filter: signal-lost(0.04, 0.30); effect-quality: low; pointer-events: none; }
+.death-backdrop { position: absolute; top: 0; bottom: 0; left: 0; right: 0; display: flex; justify-content: center; align-items: center; background-color: #0d100ead; pointer-events: auto; }
+.death-panel { position: relative; display: flex; flex-direction: column; align-items: center; gap: 18px; width: 440px; max-width: 88%; padding: 32px; border: 1px solid #ae9360; border-radius: 6px; background-color: #161d18f5; }
+.death-panel h2 { font-family: serif; font-size: 34px; color: #f4dfb1; margin: 0; }
+.death-panel p { font-size: 16px; color: #e0d7c5; text-align: center; margin: 0; }
+.death-panel .death-error { color: #e9a89c; font-size: 14px; }
+.death-panel button { display: flex; gap: 10px; justify-content: center; align-items: center; min-height: 48px; width: 100%; color: #f6e8c4; background-color: #3b5e3b; border: 1px solid #a0b276; border-radius: 4px; font-size: 17px; }
+.death-panel button:hover { background-color: #4e7448; }
+.death-panel button:focus { border-color: #f4dc97; }
+.death-panel button:disabled { color: #b1b39e; background-color: #303b32; }

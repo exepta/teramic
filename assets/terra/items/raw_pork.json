@@ -1,0 +1,6 @@
+{
+  "item": { "animal": "pork" },
+  "name": "Pig Beef",
+  "description": "Raw pork.",
+  "food": { "nutrition": 24.0, "saturation": 4.0, "eat_seconds": 1.6 }
+}

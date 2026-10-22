@@ -1,0 +1,7 @@
+width = 960
+height = 640
+view_distance = 4
+vertical_view_distance = 2
+vsync = false
+debug_overlay = false
+log_filter = "info"

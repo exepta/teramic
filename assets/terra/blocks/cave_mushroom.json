@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "id": 56,
+  "name": "Amber Cave Mushroom",
+  "description": "A small luminous mushroom adapted to damp sheltered ledges.",
+  "creative_category": "decoration",
+  "render_kind": "segment",
+  "struct_block": true,
+  "materials": {
+    "Living surface": {
+      "base_color": [
+        1,
+        0.85,
+        0.65,
+        1
+      ],
+      "roughness": 0.88,
+      "emission": [
+        0.28,
+        0.14,
+        0.035
+      ]
+    }
+  },
+  "face_materials": [
+    "Living surface",
+    "Living surface",
+    "Living surface",
+    "Living surface",
+    "Living surface",
+    "Living surface"
+  ],
+  "hardness": 0.45,
+  "resistance": 1,
+  "required_tool": null,
+  "mining_level": 0,
+  "light": {
+    "color": [
+      1,
+      0.57,
+      0.22
+    ],
+    "range": 4,
+    "intensity": 300,
+    "shadows": false
+  }
+}

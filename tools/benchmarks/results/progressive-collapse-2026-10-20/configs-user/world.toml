@@ -1,0 +1,15 @@
+seed = 2262437629133911810
+rivers = true
+ocean_revision = 1
+bounded_world = true
+ravine_revision = 1
+geology_revision = 4
+landscape_revision = 1
+cave_structure_revision = 4
+[ores]
+enabled = true
+revision = 1
+[time]
+day_length_seconds = 1200.0
+start_hour = 10.0
+paused = false

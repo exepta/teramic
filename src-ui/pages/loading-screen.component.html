@@ -1,0 +1,8 @@
+<div class="world-loading">
+  <div class="loading-brand"><icon name="leaf" size="44" /><h1>TERAMIC</h1></div>
+  <div class="loading-status-panel"><ornate-frame></ornate-frame><h2>{{ sessionView.title }}</h2><p>{{ menuView.status }}</p>
+    @if (sessionView.show_progress) { <div class="progress-row"><progress-bar min="0" max="100" [value]="sessionView.progress" /><p>{{ sessionView.progress_label }}</p></div> }
+    <p class="error-text">{{ menuView.error }}</p>
+  </div>
+  @if (menuView.cancel_connect) { <button id="cancel-connect" onclick="menu_command"><icon name="arrow-left" size="20" />Back to Menu</button> }
+</div>

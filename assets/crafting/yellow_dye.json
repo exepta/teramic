@@ -1,0 +1,28 @@
+{
+  "id": "teramic::yellow_dye",
+  "name": "Yellow Dye",
+  "station": "hand",
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "prop": "flower"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "prop": "grass"
+        },
+        "count": 1
+      }
+    ]
+  },
+  "output": {
+    "item": {
+      "dye": "yellow"
+    },
+    "count": 1
+  }
+}

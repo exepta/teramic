@@ -1,0 +1,32 @@
+{
+  "id": "teramic::stone_shovel",
+  "name": "Stone Shovel",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "tool": "stone_shovel"
+    },
+    "count": 1
+  },
+  "pattern": {
+    "kind": "shaped",
+    "width": 1,
+    "height": 3,
+    "cells": [
+      {
+        "item": {
+          "block": 3
+        },
+        "count": 1
+      },
+      {
+        "item": "stick",
+        "count": 1
+      },
+      {
+        "item": "stick",
+        "count": 1
+      }
+    ]
+  }
+}

@@ -1,0 +1,14 @@
+natural_mob_limit = 256
+title = "TERAMIC Server"
+description = "A shared voxel world"
+lan_discovery = false
+require_verified_accounts = false
+bind_address = "127.0.0.1:5000"
+tick_rate = 60
+max_players = 32
+log_filter = "info"
+simulation_distance = 6
+allow_flight = false
+game_mode = "creative"
+
+[player_permissions]

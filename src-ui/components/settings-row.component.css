@@ -1,0 +1,11 @@
+.settings-row { min-height: 58px; width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 10px 0; border-bottom: 1px solid #62665170; flex-shrink: 0; }
+.setting-title { width: 260px; font-size: 16px; color: #eee4cf; margin: 0; flex-shrink: 0; }
+.setting-control { display: flex; flex-grow: 1; min-width: 0; align-items: center; justify-content: flex-end; gap: 12px; }
+.setting-value { width: 100px; font-size: 14px; text-align: right; color: #d2d9c2; flex-shrink: 0; }
+.binding-button { min-width: 210px; justify-content: center; }
+.resolution-options { width: 100%; display: flex; flex-direction: column; flex-shrink: 0; }
+color-picker { width: 210px; min-height: 40px; background-color: #101b16; color: #eee4cf; border: 1px solid #687b58; border-radius: 4px; }
+color-picker::popup { background-color: #18251ff5; color: #eee4cf; border-color: #8a9870; border-radius: 4px; z-index: 300; }
+color-picker::format { background-color: #263c2c; color: #e4dfcb; }
+color-picker::selected-format { background-color: #526c3d; color: #f4e7b9; }
+color-picker:hover, color-picker:focus, color-picker:open { border-color: #9cb578; }

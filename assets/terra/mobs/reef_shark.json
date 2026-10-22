@@ -1,0 +1,6 @@
+{
+  "id": "reef_shark", "title": "Reef Shark", "health": 22.0, "food": 30.0, "water": 0.0,
+  "size": [1.45, 1.45, 2.75], "minimum_size": [1.1, 1.1, 1.35], "speed": 1.9, "group_size": 1, "sleeps": false,
+  "combat": {"damage": 4.0, "aggro_radius": 10.0, "reach": 1.8, "cooldown": 1.6},
+  "spawn": {"aquatic": {"ocean_weight": 6, "lake_weight": 0, "river_weight": 0, "water_depth": [0, 2048]}}
+}

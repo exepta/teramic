@@ -1,0 +1,16 @@
+width = 3840
+height = 2160
+fov_degrees = 90.0
+vsync = false
+debug_overlay = true
+view_distance = 12
+vertical_view_distance = 3
+fog_distance = 1.25
+chunk_animation = "rise"
+lod_near_distance = 153.6
+lod_far_distance = 256.0
+water_quality = "high"
+water_reflections = true
+water_volumetric_mist = true
+weather = "rain"
+weather_quality = "ultra"

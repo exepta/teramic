@@ -1,0 +1,21 @@
+2026-10-15T16:54:54.519580Z  INFO bevy_render::renderer: AdapterInfo { name: "AMD Radeon RX 6950 XT (RADV NAVI21)", vendor: 4098, device: 29605, device_type: DiscreteGpu, device_pci_bus_id: "0000:0c:00.0", driver: "radv", driver_info: "Mesa 26.2.4-arch3.1", backend: Vulkan, subgroup_min_size: 32, subgroup_max_size: 64, transient_saves_memory: false }
+2026-10-15T16:54:54.634002Z  INFO bevy_pbr::cluster: GPU clustering is supported on this device.
+2026-10-15T16:54:54.634033Z  INFO bevy_render::batching::gpu_preprocessing: GPU preprocessing is fully supported on this device.
+2026-10-15T16:54:54.634735Z  INFO bevy_winit::system: Creating new window TERAMIC (75v0)
+2026-10-15T16:54:54.662086Z  INFO terra_client::hydrology_smoke: Native river fixture view anchor (automatic mode uses a generated reach) point=Vec3(-978.5, 32.5751, -1151.5) upper=32.57509994506836 baseline_view=false tunnel=false bifurcation=Some([Vec3(-970.5, 32.5751, -1151.5), Vec3(-974.5, 33.15037, -1151.5)])
+2026-10-15T16:54:54.688615Z DEBUG terra_world::streaming::interest: Chunk interest changed centers=[SectionPos { x: -61, y: 3, z: -74 }] requested=7623
+2026-10-15T16:54:54.739559Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/dirt.png mip_levels=10 rebound_materials=1
+2026-10-15T16:54:54.740559Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/stone.png mip_levels=10 rebound_materials=2
+2026-10-15T16:54:54.740567Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/wood.png mip_levels=10 rebound_materials=2
+2026-10-15T16:54:54.769647Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/grass-neutral.png mip_levels=11 rebound_materials=1
+2026-10-15T16:54:54.790481Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/canopy-stylized.png mip_levels=11 rebound_materials=3
+2026-10-15T16:54:54.790811Z  INFO terra_render::blocks::loading: Block template library ready blocks=10 materials=22
+2026-10-15T16:54:59.463215Z  INFO terra_world::streaming::jobs: Chunk streaming ready sections=7805 cached_columns=1089
+2026-10-15T16:54:59.496470Z  INFO terra_client::hydrology_smoke: Native river bifurcation has two rendered channels and solid dry island main=Vec3(-978.5, 32.5751, -1151.5) side=Vec3(-970.5, 32.5751, -1151.5) island=Vec3(-974.5, 33.15037, -1151.5)
+2026-10-15T16:54:59.568831Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /tmp/terra-living-water-native/bifurcation/river-bifurcation.png
+2026-10-15T16:55:02.582143Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /tmp/terra-living-water-native/bifurcation/river-motion.png
+2026-10-15T16:55:05.544028Z DEBUG terra_world::streaming::interest: Chunk interest changed centers=[SectionPos { x: -62, y: 1, z: -72 }] requested=7637
+2026-10-15T16:55:10.090060Z  INFO terra_world::streaming::jobs: Chunk streaming ready sections=7637 cached_columns=1089
+2026-10-15T16:55:10.226486Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /tmp/terra-living-water-native/bifurcation/river-underwater.png
+2026-10-15T16:55:16.250795Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /tmp/terra-living-water-native/bifurcation/river-surface.png
+2026-10-15T16:55:19.191839Z  INFO terra_client::hydrology_smoke: Native river fixture passed: generated river/fall, underwater fog and environment restoration

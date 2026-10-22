@@ -1,0 +1,5 @@
+{
+  "id": "crystal_jelly", "title": "Crystal Jelly", "health": 5.0, "food": 0.0, "water": 0.0,
+  "size": [0.35, 0.95, 0.35], "minimum_size": [0.15, 0.35, 0.15], "speed": 0.22, "group_size": 2, "sleeps": false,
+  "spawn": {"aquatic": {"ocean_weight": 5, "lake_weight": 0, "river_weight": 0, "water_depth": [0, 2048]}}
+}

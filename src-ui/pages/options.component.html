@@ -1,0 +1,13 @@
+<div class="options-page">
+  <div class="page-heading"><icon name="settings" size="32" /><h1>Options</h1></div>
+  <div class="tabs">
+    <button id="graphics" [class]="optionsView.graphics ? 'tab selected' : 'tab'" onclick="menu_command"><icon name="monitor" size="20" />Graphics</button>
+    <button id="gameplay-options" [class]="optionsView.gameplay ? 'tab selected' : 'tab'" onclick="menu_command"><icon name="gamepad-2" size="20" />Gameplay</button>
+    <button id="controls" [class]="optionsView.controls ? 'tab selected' : 'tab'" onclick="menu_command"><icon name="keyboard" size="20" />Controls</button>
+    <button id="audio" [class]="optionsView.audio ? 'tab selected' : 'tab'" onclick="menu_command"><icon name="headphones" size="20" />Audio</button>
+    <button id="multiplayer-options" [class]="optionsView.multiplayer ? 'tab selected' : 'tab'" onclick="menu_command"><icon name="users-round" size="20" />Multiplayer</button>
+  </div>
+  <div class="options-panel"><ornate-frame></ornate-frame><div class="settings-list">@for (row of optionsView.rows; track row.id) { <settings-row></settings-row> }</div></div>
+  @if (optionsView.listening) { <p class="binding-prompt">{{ optionsView.prompt }}</p> }
+  <div class="action-bar options-actions">@for (button of optionsView.buttons; track button.id) { <menu-button></menu-button> }</div>
+</div>

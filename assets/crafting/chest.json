@@ -1,0 +1,67 @@
+{
+  "id": "teramic::chest",
+  "name": "Chest",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "block": 29
+    },
+    "count": 1
+  },
+  "pattern": {
+    "kind": "shaped",
+    "width": 3,
+    "height": 3,
+    "cells": [
+      {
+        "item": {
+          "block": 16
+        },
+        "wood": true, "count": 1
+      },
+      {
+        "item": {
+          "block": 16
+        },
+        "wood": true, "count": 1
+      },
+      {
+        "item": {
+          "block": 16
+        },
+        "wood": true, "count": 1
+      },
+      {
+        "item": {
+          "block": 16
+        },
+        "wood": true, "count": 1
+      },
+      null,
+      {
+        "item": {
+          "block": 16
+        },
+        "wood": true, "count": 1
+      },
+      {
+        "item": {
+          "block": 16
+        },
+        "wood": true, "count": 1
+      },
+      {
+        "item": {
+          "block": 16
+        },
+        "wood": true, "count": 1
+      },
+      {
+        "item": {
+          "block": 16
+        },
+        "wood": true, "count": 1
+      }
+    ]
+  }
+}

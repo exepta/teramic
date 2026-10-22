@@ -1,0 +1,5 @@
+<button id="world-card" [class]="card.selected ? 'world-card selected' : 'world-card'" onclick="$set(menuIntent.command, card.id); menu_command">
+  <div class="world-emblem">@if (card.icon == 'hammer') { <icon name="tool" size="36" /> } @else { <icon name="mountain" size="36" /> }</div>
+  <div class="card-copy"><h2>{{ card.title }}</h2><p>{{ card.subtitle }}</p><p [class]="card.compatible ? 'card-detail' : 'error-text'">{{ card.detail }}</p></div>
+  @if (card.selected) { <icon name="check" size="24" /> }
+</button>

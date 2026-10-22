@@ -1,0 +1,57 @@
+{
+  "id": "teramic::spruce_stairs",
+  "name": "Spruce Stairs",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "block": 76
+    },
+    "count": 4
+  },
+  "pattern": {
+    "kind": "shaped",
+    "width": 3,
+    "height": 3,
+    "cells": [
+      {
+        "item": {
+          "block": 18
+        },
+        "count": 1
+      },
+      null,
+      null,
+      {
+        "item": {
+          "block": 18
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "block": 18
+        },
+        "count": 1
+      },
+      null,
+      {
+        "item": {
+          "block": 18
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "block": 18
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "block": 18
+        },
+        "count": 1
+      }
+    ]
+  }
+}

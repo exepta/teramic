@@ -1,0 +1,38 @@
+{
+  "creative_category": "terrain",
+  "description": "Loose grains from deserts, beaches and river banks.",
+  "schema_version": 1,
+  "id": 4,
+  "name": "Sand",
+  "render_kind": "cube",
+  "surface": "sand",
+  "bevel_width": 0.025,
+  "materials": {
+    "Fine sand": {
+      "texture_pattern": "sand",
+      "roughness": 1.0
+    }
+  },
+  "face_materials": [
+    "Fine sand",
+    "Fine sand",
+    "Fine sand",
+    "Fine sand",
+    "Fine sand",
+    "Fine sand"
+  ],
+  "details": [
+    {
+      "mesh": "ShoreReeds",
+      "probability": 0.06,
+      "water_clearance": [
+        0.05,
+        2.0
+      ]
+    }
+  ],
+  "hardness": 0.55,
+  "resistance": 0.5,
+  "required_tool": null,
+  "mining_level": 0
+}

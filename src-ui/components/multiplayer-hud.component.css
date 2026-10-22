@@ -1,0 +1,9 @@
+.player-name { position: absolute; transform: translate(-50%, -100%); padding: 3px 8px; border-radius: 3px; background-color: #10211985; pointer-events: none; }
+.player-name p { margin: 0; font-size: 17px; color: #ffffff; text-shadow: 1px 1px #000000; }
+.shared-cursor { position: absolute; display: flex; flex-direction: column; pointer-events: none; z-index: 800; }
+.shared-cursor-top { display: flex; align-items: flex-start; gap: 4px; height: 44px; }
+.shared-cursor-glyph { width: 24px; height: 32px; flex-shrink: 0; }
+.shared-cursor-item { position: relative; width: 42px; height: 42px; }
+.shared-cursor-item img { width: 42px; height: 42px; }
+.shared-cursor-item p { position: absolute; right: 0; top: 0; color: white; font-size: 12px; margin: 0; text-shadow: 1px 1px #000000; }
+.shared-cursor-name { font-size: 13px; color: white; margin: 0; padding: 2px 5px; background-color: #102119bf; border-radius: 2px; text-shadow: 1px 1px #000000; }

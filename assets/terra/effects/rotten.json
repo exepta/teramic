@@ -1,0 +1,14 @@
+{
+  "kind": "rotten",
+  "id": "teramic::rotten",
+  "name": "Rotten",
+  "description": "Spoiled food drains hunger and health.",
+  "beneficial": false,
+  "max_duration_seconds": 3600,
+  "max_level": 3,
+  "stacking": "refresh_strongest",
+  "modifiers": {
+    "damage_per_second": 0.4,
+    "hunger_per_second": 1
+  }
+}

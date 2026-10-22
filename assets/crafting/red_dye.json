@@ -1,0 +1,22 @@
+{
+  "id": "teramic::red_dye",
+  "name": "Red Dye",
+  "station": "hand",
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "prop": "flower"
+        },
+        "count": 1
+      }
+    ]
+  },
+  "output": {
+    "item": {
+      "dye": "red"
+    },
+    "count": 2
+  }
+}

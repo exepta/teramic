@@ -1,0 +1,5 @@
+seed = 42042
+[time]
+day_length_seconds = 1440.0
+start_hour = 10.0
+paused = false

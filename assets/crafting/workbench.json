@@ -1,0 +1,20 @@
+{
+  "id": "teramic::workbench",
+  "name": "Workbench",
+  "station": "hand",
+  "output": {
+    "item": {
+      "block": 28
+    },
+    "count": 1
+  },
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {"item": {"block": 16}, "wood": true, "count": 1},
+      {"item": {"block": 16}, "wood": true, "count": 1},
+      {"item": {"block": 16}, "wood": true, "count": 1},
+      {"item": {"block": 16}, "wood": true, "count": 1}
+    ]
+  }
+}

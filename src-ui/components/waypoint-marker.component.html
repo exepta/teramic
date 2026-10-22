@@ -1,0 +1,4 @@
+<div [class]="point.pinned ? 'waypoint-map-marker pinned' : 'waypoint-map-marker'" [style]="point.style" [title]="point.name">
+  <div class="waypoint-map-symbol" [style]="point.icon_style"><waypoint-symbol></waypoint-symbol></div>
+  @if (point.show_label) { <div class="waypoint-map-copy" [style]="point.text_style"><p class="waypoint-map-name">{{ point.name }}</p>@if (point.distance) { <p class="waypoint-map-distance">{{ point.distance }}</p> }</div> }
+</div>

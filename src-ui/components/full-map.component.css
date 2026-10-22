@@ -1,0 +1,65 @@
+.full-map-panel { position: absolute; left: 0; top: 0; background-color: #111b19; z-index: 240; pointer-events: auto; box-sizing: border-box; }
+.full-map-header { position: absolute; left: 108px; top: 7px; right: 18px; height: 57px; display: flex; align-items: center; justify-content: center; border-bottom: 1px solid #a28b55; }
+.full-map-brand { display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 1px 30px 5px; background-color: #16201df2; }
+.full-map-brand h1 { margin: 0; font-size: 25px; color: #eed79c; text-shadow: 1px 1px #080e0d; }
+.full-map-brand p { margin: 0; font-size: 10px; color: #bfa46d; }
+.full-map-panel button, .waypoint-dialog button, .waypoint-icon-picker button { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 6px; color: #e9d8ae; background-color: #1e3027; border: 1px solid #87734d; border-radius: 4px; box-sizing: border-box; }
+.full-map-panel button:hover, .waypoint-dialog button:hover, .waypoint-icon-picker button:hover { color: #fff0c6; background-color: #354a32; border-color: #d2b472; }
+.full-map-panel button:focus, .waypoint-dialog button:focus, .waypoint-icon-picker button:focus { outline: 1px solid #e8c77c; }
+.full-map-panel button:disabled, .waypoint-dialog button:disabled { opacity: 0.4; }
+.full-map-panel button.selected, .waypoint-icon-picker button.selected { background-color: #42583a; border-color: #e1bf73; }
+.map-icon-button { width: 30px; height: 30px; min-width: 30px; min-height: 30px; max-height: 30px; flex-shrink: 0; padding: 5px; }
+.map-icon-button icon { width: 18px; height: 18px; flex-shrink: 0; }
+.full-map-close { position: absolute; right: 8px; top: 10px; }
+.full-map-tool-rail { position: absolute; left: 14px; top: 76px; bottom: 74px; width: 82px; display: flex; flex-direction: column; gap: 9px; align-items: center; overflow-y: auto; }
+.full-map-panel .map-tool { display: flex; width: 64px; height: 64px; min-width: 64px; max-width: 64px; min-height: 64px; max-height: 64px; flex-grow: 0; flex-shrink: 0; flex-basis: 64px; padding: 10px; border-color: #9c8455; background-color: #172b23; }
+.map-tool icon { width: 29px; height: 29px; flex-shrink: 0; color: #b8cfa3; }
+.full-map-panel .map-tool.unavailable, .full-map-panel .map-tool.unavailable:hover { background-color: #242b28; border-color: #535b55; color: #717970; opacity: 0.5; }
+.map-tool.unavailable icon { color: #717970; }
+.map-tool-tooltip { min-width: 0; max-width: 260px; padding: 8px 12px; background-color: #111c18; border: 1px solid #bba66a; border-radius: 4px; overflow: visible; pointer-events: none; z-index: 550; }
+.map-tool-tooltip p { margin: 0; min-width: 0; max-width: 100%; flex-shrink: 0; text-wrap: wrap; overflow: visible; font-size: 13px; color: #f3e6bc; }
+.full-map-viewport { position: absolute; left: 108px; top: 70px; overflow: hidden; background-color: #101719; border: 1px solid #a38a55; border-radius: 3px; box-sizing: border-box; }
+.full-map-surface { width: 100%; height: 100%; pointer-events: none; }
+.full-map-compass { position: absolute; right: 12px; top: 10px; width: 82px; height: 82px; pointer-events: none; }
+.full-map-compass icon { position: absolute; left: 18px; top: 18px; width: 46px; height: 46px; color: #d8bd77; }
+.full-map-compass p { position: absolute; margin: 0; font-size: 12px; color: #e9d6a8; text-shadow: 1px 1px #09130e; }
+.map-compass-n { top: 0; left: 37px; }
+.map-compass-s { bottom: 0; left: 37px; }
+.map-compass-w { top: 34px; left: 0; }
+.map-compass-e { top: 34px; right: 0; }
+.full-map-loading { position: absolute; left: 10px; bottom: 10px; display: flex; align-items: center; gap: 6px; padding: 4px 8px; background-color: #17231edb; border-radius: 3px; pointer-events: none; }
+.full-map-loading icon { width: 16px; height: 16px; color: #e1c487; }
+.full-map-loading p { margin: 0; font-size: 11px; color: #e4d5ad; }
+.full-map-footer { position: absolute; left: 108px; right: 18px; bottom: 14px; height: 44px; display: flex; align-items: center; justify-content: space-around; gap: 10px; border-top: 1px solid #a28b55; padding-top: 6px; box-sizing: border-box; }
+.full-map-footer > div { display: flex; min-width: 0; align-items: center; justify-content: center; gap: 8px; }
+.full-map-footer .map-footer-biome { flex-basis: 22%; }
+.map-footer-biome > div { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; min-width: 0; }
+.full-map-footer .map-footer-coordinates { flex-direction: column; flex-basis: 34%; gap: 1px; }
+.full-map-footer .map-footer-zoom { flex-basis: 27%; }
+.full-map-footer .map-footer-height { flex-basis: 17%; }
+.full-map-footer p { margin: 0; font-size: 13px; text-align: center; text-wrap: nowrap; overflow: hidden; color: #e4cea0; }
+.full-map-footer label { display: flex; align-items: center; justify-content: center; width: 100%; text-align: center; font-size: 10px; color: #a59571; }
+.full-map-footer icon { width: 24px; height: 24px; color: #aab68b; flex-shrink: 0; }
+.full-map-footer .map-icon-button icon { width: 16px; height: 16px; }
+.full-map-sidebar { position: absolute; top: 86px; right: 28px; display: flex; flex-direction: column; min-height: 0; gap: 10px; padding: 14px; background-color: #17231ef5; border: 1px solid #a18d59; border-radius: 5px; box-sizing: border-box; }
+.full-map-waypoint-title { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 30px; flex-shrink: 0; }
+.full-map-waypoint-title h2 { margin: 0; font-size: 16px; color: #eedcb5; }
+.full-map-waypoints { display: flex; flex-direction: column; gap: 6px; overflow-y: auto; min-height: 0; flex-shrink: 1; }
+.full-map-panel .full-map-waypoint { justify-content: flex-start; width: 100%; min-height: 66px; padding: 8px; flex-shrink: 0; text-align: left; overflow: hidden; }
+.full-map-waypoint > div { display: flex; flex-direction: column; gap: 2px; flex-grow: 1; min-width: 0; }
+.full-map-waypoint p { margin: 0; text-wrap: wrap; }
+.waypoint-name { max-width: 100%; overflow: hidden; font-size: 13px; color: #efdfba; }
+.waypoint-position, .waypoint-distance { font-size: 10px; color: #bfc8ad; }
+.full-map-waypoint > .waypoint-row-symbol { width: 22px; height: 22px; flex-grow: 0; flex-shrink: 0; }
+.full-map-editor-actions { display: flex; gap: 8px; flex-shrink: 0; }
+.full-map-editor-actions .map-command { flex-grow: 1; min-height: 34px; }
+.full-map-error { margin: 0; font-size: 12px; color: #e9b3a1; text-wrap: wrap; }
+.full-map-panel.compact .full-map-tool-rail { gap: 5px; }
+.full-map-panel.compact .map-tool { width: 44px; height: 44px; min-width: 44px; max-width: 44px; min-height: 44px; max-height: 44px; flex-basis: 44px; padding: 7px; }
+.full-map-panel.compact .map-tool icon { width: 19px; height: 19px; }
+.full-map-panel.compact .full-map-footer { gap: 2px; flex-wrap: wrap; }
+.full-map-panel.compact .full-map-footer p { font-size: 10px; }
+.full-map-panel.compact .full-map-footer label { display: none; }
+.full-map-panel.compact .full-map-footer > div { gap: 3px; flex-basis: 48%; }
+.full-map-panel.compact .map-footer-biome icon, .full-map-panel.compact .map-footer-height icon { display: none; }
+.map-peer-name { position: absolute; margin: 0; width: 128px; margin-left: -64px; height: 18px; font-size: 12px; line-height: 18px; color: #ffffff; text-shadow: 1px 1px #10191d; text-align: center; text-wrap: nowrap; overflow: hidden; pointer-events: none; background-color: #10191d9c; border-radius: 3px; }

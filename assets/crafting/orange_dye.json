@@ -1,0 +1,28 @@
+{
+  "id": "teramic::orange_dye",
+  "name": "Orange Dye",
+  "station": "hand",
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "dye": "red"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "dye": "yellow"
+        },
+        "count": 1
+      }
+    ]
+  },
+  "output": {
+    "item": {
+      "dye": "orange"
+    },
+    "count": 1
+  }
+}

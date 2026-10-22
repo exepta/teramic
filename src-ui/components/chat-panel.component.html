@@ -1,0 +1,43 @@
+@if (chatView.visible && !settingsView.open) {
+  <div id="chat-panel" class="chat-panel" [class.open]="chatView.open" [style]="chatView.style">
+    @if (chatView.open) {
+      <div class="chat-heading"><p>World Chat</p></div>
+    }
+    <div id="chat-history" class="chat-history">
+      @for (row of chatView.rows; track row.id) {
+        <div class="chat-row">
+          @if (row.locate) {
+            <p>Biome</p><p class="chat-highlight">{{ row.name }}</p><p>found! Locate at</p><p class="chat-highlight">{{ row.coordinates }}</p>
+            @if (row.can_teleport) { <p>or teleport</p><button id="chat-teleport" class="chat-teleport" [disabled]="!chatView.open" onclick="$set(chatIntent.token, row.token); chat_action">[Click Me]</button> }
+          } @else {
+            @if (row.author) { <p class="chat-author">{{ row.author }}</p> }
+            @for (span of row.spans; track $index) { <p class="chat-message" [class.chat-mention]="span.mention">{{ span.text }}</p> }
+          }
+        </div>
+      }
+    </div>
+    @if (chatView.help) {
+      <div class="chat-help">
+        <div class="chat-help-heading"><icon name="compass" size="16"></icon><p>{{ chatView.help_title }}</p></div>
+        @for (entry of chatView.help_entries; track entry.usage) {
+          <div class="chat-help-entry"><p class="chat-help-command">{{ entry.usage }}</p><p class="chat-help-description">{{ entry.description }}</p></div>
+        }
+        <div class="chat-help-pages">
+          <button id="chat-help-previous" class="chat-icon" title="Previous help page" [disabled]="!chatView.open || !chatView.has_help_previous" onclick="$set(chatIntent.help_page, chatView.help_previous); chat_action"><icon name="chevron-left" size="16"></icon></button>
+          <p>{{ chatView.help_page }}</p>
+          <button id="chat-help-next" class="chat-icon" title="Next help page" [disabled]="!chatView.open || !chatView.has_help_next" onclick="$set(chatIntent.help_page, chatView.help_next); chat_action"><icon name="chevron-right" size="16"></icon></button>
+        </div>
+      </div>
+    }
+    @if (chatView.open) {
+      @if (chatView.has_suggestions) {
+        <div id="chat-suggestions" class="chat-suggestions">
+          @for (suggestion of chatView.suggestions; track suggestion.value) {
+            <button id="chat-suggestion" class="chat-suggestion" [class.selected]="suggestion.selected" onclick="$set(chatIntent.suggestion, suggestion.value); chat_action">{{ suggestion.value }}</button>
+          }
+        </div>
+      }
+      <div class="chat-compose"><input id="chat-input" type="text" maxlength="256" [value]="chatView.draft" onchange="chat_change" /><button id="chat-send" class="chat-icon" title="Send message" onclick="chat_action"><icon name="arrow-right" size="20"></icon></button></div>
+    }
+  </div>
+}

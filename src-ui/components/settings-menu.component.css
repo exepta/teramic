@@ -1,0 +1,69 @@
+.settings-backdrop {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #0c1418a8;
+    pointer-events: auto;
+}
+.settings-panel {
+    position: relative;
+    width: 660px;
+    max-width: 96%;
+    max-height: 96%;
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+    background-color: #1c241e;
+    border: 3px solid #7f8e6d;
+    border-radius: 0;
+    color: #f1f5f0;
+    pointer-events: auto;
+}
+.settings-heading { display: flex; flex-shrink: 0; align-items: center; justify-content: space-between; margin-bottom: 10px; padding-bottom: 12px; border-bottom: 3px solid #485640; }
+.settings-titles { display: flex; flex-direction: column; gap: 3px; }
+.settings-brand { font-size: 12px; color: #c5d79e; margin: 0; }
+.settings-title { font-size: 26px; color: #ffffff; margin: 0; }
+.settings-content { display: flex; flex-direction: column; min-height: 0; overflow-y: auto; gap: 9px; padding: 0 22px 0 8px; }
+.settings-content::scrollbar-y-track { width: 6px; background-color: #344340; }
+.settings-content::scrollbar-y-thumb { width: 6px; background-color: #91b29a; }
+.section-title { font-size: 14px; color: #e1c582; margin: 9px 0 2px; padding-left: 9px; border-left: 4px solid #97b967; flex-shrink: 0; }
+.setting { display: flex; flex-direction: column; gap: 5px; flex-shrink: 0; }
+.setting-label { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.setting-line { display: flex; align-items: center; justify-content: space-between; gap: 18px; min-height: 32px; flex-shrink: 0; }
+p { margin: 0; font-size: 14px; color: #edf2ed; }
+.value { color: #b7d6c0; font-size: 13px; }
+slider { width: 100%; height: 22px; min-width: 0; }
+slider::track { background-color: #526461; }
+slider::fill { background-color: #8db795; background-image: none; }
+slider::thumb { background-color: #c8dca5; border: 2px solid #eef0d5; border-radius: 0; }
+slider:hover::thumb, slider:focus::thumb { border-color: #c8dfca; }
+choice-box { width: 190px; min-width: 120px; height: 32px; font-size: 14px; background-color: #354330; color: #f1f5f0; border: 2px solid #778966; border-radius: 0; }
+choice-box:hover, choice-box:focus, choice-box:open { border-color: #b7d6c0; }
+choice-box::value, choice-box::indicator { color: #f1f5f0; }
+choice-box::popup { top: 32px; background-color: #263530; border-color: #6c8579; border-radius: 0; }
+option { color: #f1f5f0; background-color: #263530; }
+option:hover { background-color: #485c55; }
+option:checked { color: #f1f5f0; background-color: #526c59; }
+checkbox { font-size: 14px; min-height: 28px; color: #f1f5f0; }
+checkbox::indicator { background-color: #344340; border: 2px solid #91a99d; border-radius: 0; }
+checkbox:hover::indicator, checkbox:focus::indicator { border-color: #c8dfca; }
+checkbox:checked::indicator { background-color: #91b29a; border-color: #c8dfca; }
+checkbox::mark { color: #142219; }
+.settings-status { min-height: 20px; font-size: 12px; color: #dfc287; margin-top: 10px; flex-shrink: 0; }
+.settings-actions { display: flex; flex-wrap: wrap; gap: 8px; flex-shrink: 0; margin-top: 8px; }
+.surface-actions { display: flex; flex-wrap: wrap; gap: 8px; flex-shrink: 0; }
+.surface-label { font-size: 12px; color: #b7d6c0; margin-top: 4px; flex-shrink: 0; }
+button { display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 34px; padding: 7px 10px; border-radius: 0; background-color: #35432f; color: #f0f5df; font-size: 13px; border: 2px solid #82936d; }
+button:hover { background-color: #485c55; border-color: #b7d6c0; }
+button:active { background-color: #263530; border-color: #b7d6c0; }
+button:focus { border-color: #c8dfca; }
+.primary { background-color: #b7cb8e; color: #1b2919; border-color: #dfe9bd; }
+.primary:hover { background-color: #bed8ba; }
+.close-button { width: 34px; height: 34px; min-height: 34px; padding: 7px; }
+icon { flex-shrink: 0; }
+tooltip { max-width: calc(100vw - 24px); overflow: visible; text-wrap: wrap; }

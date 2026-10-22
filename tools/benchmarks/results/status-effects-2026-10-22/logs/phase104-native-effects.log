@@ -1,0 +1,35 @@
+2026-10-22T15:21:28.049428Z  INFO bevy_render::renderer: AdapterInfo { name: "AMD Radeon RX 6950 XT (RADV NAVI21)", vendor: 4098, device: 29605, device_type: DiscreteGpu, device_pci_bus_id: "0000:0c:00.0", driver: "radv", driver_info: "Mesa 26.2.4-arch3.1", backend: Vulkan, subgroup_min_size: 32, subgroup_max_size: 64, transient_saves_memory: false }
+2026-10-22T15:21:28.188995Z  INFO bevy_pbr::cluster: GPU clustering is supported on this device.
+2026-10-22T15:21:28.189044Z  INFO bevy_render::batching::gpu_preprocessing: GPU preprocessing is fully supported on this device.
+2026-10-22T15:21:28.189961Z  INFO bevy_winit::system: Creating new window TERAMIC (150v0)
+2026-10-22T15:21:28.710936Z  INFO lightyear_netcode::client: client connecting to server 127.0.0.1:42381 [1/1]
+2026-10-22T15:21:28.710997Z  INFO lightyear_udp: UDP socket bound to 0.0.0.0:0
+2026-10-22T15:21:28.744480Z  INFO terra_client::creature_audio::scene: Recorded animal/environment audio decoded clips=91
+2026-10-22T15:21:28.771946Z  INFO lightyear_udp::server: Received UDP packet from new address 127.0.0.1:35126, Spawn new LinkOf entity=219v0 server_entity=208v0
+2026-10-22T15:21:28.804868Z  INFO terra_render::water::raymarch: Water SSR hardware depth filtering ready; multisampled views retain the original path
+2026-10-22T15:21:28.805051Z  INFO terra_render::scene::caves::lights::soft_core: Torch soft-core attenuation installed in existing clustered PBR path
+2026-10-22T15:21:28.824891Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/wood.png mip_levels=10 rebound_materials=1
+2026-10-22T15:21:28.824915Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/oak-crafted-hd.png mip_levels=11 rebound_materials=0
+2026-10-22T15:21:28.824929Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/stone-strata-hd.png mip_levels=11 rebound_materials=1
+2026-10-22T15:21:28.831734Z  INFO terra_render::blocks::loading: Block template library ready blocks=98 materials=210
+2026-10-22T15:21:28.939265Z  INFO lightyear_netcode::server_plugin: New connection on netcode from 1 (219v0)
+2026-10-22T15:21:29.001054Z  INFO lightyear_netcode::client_plugin: Client Netcode(1) connected
+2026-10-22T15:21:29.134162Z  INFO terra_network::server: Player profile accepted (local, not verified online) player=1 uuid=0444b149-ba62-40d0-80c8-fe375162dd80 name=Player-0444b149
+2026-10-22T15:21:29.156447Z  INFO terra_network::client: Authoritative world synchronized player=Some(PlayerId(1))
+2026-10-22T15:21:36.999124Z  INFO terra_client::status_effect_smoke: Native F01 authoritative HUD check passed stage="poison-1280" effects=1 cards=1 nodes=112 health=89.39984130859375 viewport=Vec2(1920.0, 1200.0)
+2026-10-22T15:21:37.058899Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/tools/benchmarks/results/status-effects-2026-10-22/native/status-poison-1280.png
+2026-10-22T15:21:39.977039Z  INFO terra_client::status_effect_smoke: Native F01 authoritative HUD check passed stage="freeze-1280" effects=1 cards=1 nodes=118 health=87.42445373535156 viewport=Vec2(1920.0, 1200.0)
+2026-10-22T15:21:40.031589Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/tools/benchmarks/results/status-effects-2026-10-22/native/status-freeze-1280.png
+2026-10-22T15:21:42.950157Z  INFO terra_client::status_effect_smoke: Native F01 authoritative HUD check passed stage="regeneration-1280" effects=1 cards=1 nodes=120 health=90.70771026611328 viewport=Vec2(1920.0, 1200.0)
+2026-10-22T15:21:43.011470Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/tools/benchmarks/results/status-effects-2026-10-22/native/status-regeneration-1280.png
+2026-10-22T15:21:59.159969Z  INFO terra_client::status_effect_smoke: Native F01 authoritative HUD check passed stage="all-1280" effects=13 cards=4 nodes=154 health=100.0 viewport=Vec2(1920.0, 1200.0)
+2026-10-22T15:21:59.216489Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/tools/benchmarks/results/status-effects-2026-10-22/native/status-all-1280.png
+2026-10-22T15:22:01.027574Z  INFO terra_client::status_effect_smoke: Native F01 authoritative HUD check passed stage="clear-1280" effects=0 cards=0 nodes=102 health=100.0 viewport=Vec2(1920.0, 1200.0)
+2026-10-22T15:22:01.083752Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/tools/benchmarks/results/status-effects-2026-10-22/native/status-clear-1280.png
+2026-10-22T15:22:17.260267Z  INFO terra_client::status_effect_smoke: Native F01 authoritative HUD check passed stage="all-1920" effects=13 cards=4 nodes=154 health=100.0 viewport=Vec2(2880.0, 1620.0)
+2026-10-22T15:22:17.397440Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/tools/benchmarks/results/status-effects-2026-10-22/native/status-all-1920.png
+2026-10-22T15:22:19.204379Z  INFO terra_client::status_effect_smoke: Native F01 authoritative HUD check passed stage="all-compact" effects=13 cards=4 nodes=154 health=100.0 viewport=Vec2(540.0, 1200.0)
+2026-10-22T15:22:19.252225Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/tools/benchmarks/results/status-effects-2026-10-22/native/status-all-compact.png
+2026-10-22T15:22:21.069419Z  INFO terra_client::status_effect_smoke: Native F01 authoritative HUD check passed stage="clear-compact" effects=0 cards=0 nodes=102 health=100.0 viewport=Vec2(540.0, 1200.0)
+2026-10-22T15:22:21.124198Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/tools/benchmarks/results/status-effects-2026-10-22/native/status-clear-compact.png
+2026-10-22T15:22:22.128507Z  INFO terra_client::status_effect_smoke: Native F01 passed: real UDP effects, 13 cards/overflow, atlas icons, clear and three viewports

@@ -1,0 +1,49 @@
+.item-browser { position: absolute; top: 2.5%; left: calc(50% + 452px); right: 16px; height: 95%; min-height: 0; min-width: 0; display: flex; flex-direction: column; gap: 12px; padding: 16px; background-color: #132019ee; border: 1px solid #9b9160; border-radius: 6px; }
+.browser-heading { display: flex; align-items: center; justify-content: center; gap: 9px; min-height: 30px; flex-shrink: 0; color: #d5c488; }
+.browser-heading h3 { margin: 0; font-size: 19px; color: #eee0ba; }
+.browser-category-host { width: 100%; min-width: 0; flex-shrink: 0; }
+.browser-category-select { width: 100%; min-width: 0; color: #eee0ba; }
+.browser-category-options { display: flex; flex-direction: column; min-width: 0; width: 100%; }
+.browser-categories { display: grid; grid-template-columns: repeat(auto-fit, 80px); grid-auto-rows: 80px; justify-content: center; width: 100%; min-width: 0; gap: 6px; min-height: 90px; overflow-x: auto; flex-shrink: 0; padding-bottom: 10px; }
+.browser-categories::scrollbar-x-track { height: 6px; background-color: #15241c; border: 1px solid #42513c; border-radius: 3px; }
+.browser-categories::scrollbar-x-thumb { background-color: #b5a369; border-radius: 2px; }
+.browser-grid { display: grid; grid-template-columns: repeat(auto-fit, 56px); grid-auto-rows: 56px; justify-content: center; gap: 5px; min-height: 0; flex-grow: 1; flex-shrink: 1; overflow-y: auto; padding-left: 9px; padding-right: 9px; }
+.browser-grid::scrollbar-y-track { width: 7px; background-color: #15241c; border: 1px solid #42513c; border-radius: 3px; }
+.browser-grid::scrollbar-y-thumb { background-color: #b5a369; border-radius: 2px; }
+.browser-empty { color: #b9c6ac; font-size: 13px; }
+.browser-search { display: flex; align-items: center; gap: 6px; min-height: 40px; flex-shrink: 0; padding-left: 10px; background-color: #0c1711; border: 1px solid #a99a60; border-radius: 4px; color: #d7c185; }
+.browser-search input { flex-grow: 1; min-width: 0; height: 38px; min-height: 38px; padding: 7px; border: 0; background-color: transparent; color: #e4ddc3; font-size: 14px; }
+.browser-pagination { display: flex; width: 100%; min-width: 0; align-items: center; gap: 8px; min-height: 34px; flex-shrink: 0; }
+.browser-pagination p { text-align: center; text-wrap: nowrap; font-size: 13px; color: #d5c58f; }
+.browser-pagination .pagination-label { flex-grow: 1; flex-shrink: 1; flex-basis: 0px; min-width: 0; display: flex; align-items: center; justify-content: center; }
+.browser-pagination button { width: 32px; min-width: 32px; height: 32px; min-height: 32px; flex-shrink: 0; padding: 4px; border-radius: 4px; }
+.browser-pagination button:disabled { color: #68735f; border-color: #465440; background-color: #17231c; }
+@media (max-width: 1500px) {
+  .item-browser { left: calc(50% + 386px); padding: 12px; gap: 10px; }
+  .browser-grid { grid-template-columns: repeat(auto-fit, 48px); grid-auto-rows: 48px; gap: 4px; }
+}
+@media (max-width: 1150px) {
+  .item-browser { left: calc(50% + 346px); right: 12px; padding: 10px; }
+  .browser-heading h3 { font-size: 16px; }
+  .browser-grid { grid-template-columns: repeat(auto-fit, 44px); grid-auto-rows: 44px; }
+}
+@media (max-width: 950px) {
+  .item-browser { left: calc(50% + 295px); right: 10px; padding: 8px; gap: 6px; }
+  .browser-heading { min-height: 24px; gap: 6px; }
+  .browser-categories { min-height: 90px; padding-bottom: 10px; }
+  .browser-search { min-height: 32px; gap: 4px; padding-left: 6px; }
+  .browser-search input { height: 30px; min-height: 30px; padding: 4px; font-size: 12px; }
+  .browser-pagination { min-height: 28px; gap: 2px; }
+  .browser-pagination p { font-size: 11px; }
+  .browser-pagination button { width: 24px; min-width: 24px; height: 24px; min-height: 24px; padding: 1px; }
+}
+@media (max-width: 780px) {
+  .item-browser { left: calc(50% + 172px); right: 8px; padding: 6px; }
+  .browser-grid { grid-template-columns: repeat(auto-fit, 38px); grid-auto-rows: 38px; gap: 3px; }
+  .browser-heading h3 { font-size: 14px; }
+}
+@media (max-width: 620px) {
+  .item-browser { position: relative; top: auto; left: auto; right: auto; width: 328px; max-width: 100%; height: 420px; min-height: 200px; flex-shrink: 0; }
+  .browser-grid { grid-template-columns: repeat(auto-fit, 48px); grid-auto-rows: 48px; gap: 4px; }
+}
+.browser-category-cell { width: 80px; min-width: 80px; height: 80px; flex: 0 0 80px; }

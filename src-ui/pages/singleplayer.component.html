@@ -1,0 +1,10 @@
+<div class="library-page">
+  <div class="page-heading"><icon name="compass" size="34" /><h1>Singleplayer</h1></div>
+  <div class="library-panel"><ornate-frame></ornate-frame><div class="list-heading"><h2>{{ worldsView.count }}</h2><p>YOUR WORLDS. ENDLESS POSSIBILITIES.</p></div>
+    <div class="card-list">
+    @if (worldsView.empty) { <div class="empty-state"><icon name="mountain" size="44" /><h2>A world of your own</h2><p>No saved worlds yet.</p></div> }
+    @for (card of worldsView.cards; track card.id) { <world-card></world-card> }
+    </div>
+  </div>
+  <div class="action-bar">@for (button of worldsView.buttons; track button.id) { <menu-button></menu-button> }</div>
+</div>

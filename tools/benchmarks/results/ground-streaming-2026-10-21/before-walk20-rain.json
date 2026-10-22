@@ -1,0 +1,3094 @@
+{
+  "source": "/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/tools/benchmarks/results/ground-streaming-2026-10-21/before-walk20-rain.log",
+  "tolerance_seconds": 5.0,
+  "soak_ready_unix_seconds": 1792541577.164594,
+  "ready_offset_seconds": null,
+  "notes": [
+    "FPS and frame-time percentiles summarize the stated interval, not the full run.",
+    "Render-pass diagnostics are latest samples, not interval means or total GPU frame time.",
+    "CPU scope totals/calls are interval values; cumulative_max_ms is a run maximum. Nested scopes must not be summed.",
+    "Checkpoints use the nearest measured interval within the tolerance, without interpolation; actual sample times are retained.",
+    "Resource joins use only preceding samples within tolerance and a common or explicitly supplied clock; unaligned samples remain separate.",
+    "RSS excludes swapped-out process pages. A falling RSS does not prove lower memory use; consult measured swap_kib and major-fault deltas where available."
+  ],
+  "windows": [
+    {
+      "elapsed_seconds": 30.008893708,
+      "interval_seconds": 30.008893708,
+      "frames": 1241,
+      "fps": 41.35440686602735,
+      "median_ms": 23.893637,
+      "p95_ms": 38.143536999999995,
+      "p99_ms": 44.620276,
+      "max_ms": 225.317951,
+      "rss_bytes": 2065797120,
+      "cpu_capacity_percent": 11.556742966690159,
+      "physical_resolution": "(3840, 2160",
+      "entities": 45368,
+      "allocated_entity_indices": 65536,
+      "mesh_entities": 32427,
+      "visible_mesh_entities": 14384,
+      "mesh_assets": 32317,
+      "cpu_mesh_vertices": 312853,
+      "standard_material_assets": 199,
+      "image_assets": 204,
+      "upload_vertices": 26374840,
+      "upload_frames": 781,
+      "dropped_samples": 0,
+      "wall_unix_seconds": 1792541607.174075,
+      "environment": {
+        "hour": 14.328331520827888,
+        "day": 1,
+        "weather": "Rain",
+        "weather_intensity": 0.7799999713897705
+      },
+      "replicated_population": {
+        "creatures": 37,
+        "flowers": 0,
+        "nests": 0,
+        "hungry": 2,
+        "thirsty": 16
+      },
+      "replicated_furnaces": {
+        "furnaces": 0,
+        "lit": 0,
+        "smoke_cells": 0
+      },
+      "world": {
+        "sections": 13052,
+        "stored_props": 83629
+      },
+      "generation": {
+        "status": "Ready",
+        "sections": 13052,
+        "wanted_sections": 13052,
+        "pending_jobs": 0,
+        "prepared_columns": 1681
+      },
+      "terrain": {
+        "ready": true,
+        "jobs": 0,
+        "pending_columns": 0,
+        "completed_jobs": 11921,
+        "composition_seconds": 14.289747054000086,
+        "max_composition_seconds": 0.014445259
+      },
+      "props": {
+        "props": 83574,
+        "batches": 4330,
+        "jobs": 0,
+        "completed_jobs": 6640,
+        "composition_seconds": 0.6190184920000007
+      },
+      "water": {
+        "tiles": 710,
+        "triangles": 315495,
+        "spray": 0,
+        "mist": 0
+      },
+      "uploads": {
+        "deferred_batches": 1649,
+        "peak_frame_vertices": 151159
+      },
+      "journal": {
+        "changed_sections": 203,
+        "surface_conditions": 23352,
+        "drops": 0,
+        "creatures": 0,
+        "flowers": 0,
+        "nests": 0,
+        "furnaces": 0,
+        "fluid": "FluidWorkCounts { active: 0, queued: 0, sleeping: 0, sleeping_sections: 0, recorded_cells: 644, sources: 0, water_epoch_sections: 87 }"
+      },
+      "latest_fluid_step": {
+        "visited": 0,
+        "elapsed_ms": 0.0
+      },
+      "latest_draw_submission": {
+        "snapshot": "DrawCallSnapshot { phase_api_calls: [52, 2, 5, 493, 102, 4, 0, 0, 64], direct_calls: 0, indirect_calls: 722, gpu_counted_calls: 224, ui_api_calls: [28, 1, 0], gpu_color_subdraws: None }"
+      },
+      "render_pass_latest_ms": {
+        "render/clustering/elapsed_cpu": 0.01808,
+        "render/ui/elapsed_cpu": 0.023629999999999998,
+        "render/upscaling/elapsed_gpu": 0.06052,
+        "render/ui/elapsed_gpu": 0.04332,
+        "render/upscaling/elapsed_cpu": 0.00182,
+        "render/sparse buffer update/elapsed_gpu": 0.0098,
+        "render/bin_unpacking/elapsed_gpu": 0.23812,
+        "render/main_opaque_pass_3d/elapsed_cpu": 0.12615200000000001,
+        "render/taa/elapsed_gpu": 0.45328,
+        "render/bin_unpacking/elapsed_cpu": 0.01569,
+        "render/early_mesh_preprocessing/elapsed_cpu": 0.00629,
+        "render/clustering/elapsed_gpu": 0.0446,
+        "render/early_mesh_preprocessing/elapsed_gpu": 0.02764,
+        "render/tonemapping/elapsed_cpu": 0.00216,
+        "render/tonemapping/elapsed_gpu": 0.1892,
+        "render/main_opaque_pass_3d/elapsed_gpu": 2.35716,
+        "render/taa/elapsed_cpu": 0.00191,
+        "render/late_mesh_preprocessing/elapsed_gpu": 0.03736,
+        "render/late_mesh_preprocessing/elapsed_cpu": 0.00232,
+        "render/early prepass/elapsed_cpu": 0.13814200000000001,
+        "render/main_transparent_pass_3d/elapsed_cpu": 0.014411,
+        "render/late prepass/elapsed_cpu": 0.052911,
+        "render/main_transmissive_pass_3d/elapsed_cpu": 1.19019,
+        "render/sparse buffer update/elapsed_cpu": 0.018349999999999998,
+        "render/early prepass/elapsed_gpu": 0.84724,
+        "render/main_transparent_pass_3d/elapsed_gpu": 0.19412,
+        "render/late prepass/elapsed_gpu": 0.35944,
+        "render/main_transmissive_pass_3d/elapsed_gpu": 0.63596
+      },
+      "cpu_scopes": {
+        "benchmark.walk.corridor": {
+          "calls": 1,
+          "total_ms": 0.275805,
+          "mean_ms": 0.275805,
+          "cumulative_max_ms": 0.275805,
+          "over_8_ms": 0
+        },
+        "character.current": {
+          "calls": 5014,
+          "total_ms": 17.47871399999985,
+          "mean_ms": 0.003485982050259244,
+          "cumulative_max_ms": 0.0487,
+          "over_8_ms": 0
+        },
+        "character.ground": {
+          "calls": 5014,
+          "total_ms": 43.105311000000285,
+          "mean_ms": 0.008596990626246567,
+          "cumulative_max_ms": 0.5420200000000001,
+          "over_8_ms": 0
+        },
+        "character.move": {
+          "calls": 5014,
+          "total_ms": 78.98264499999908,
+          "mean_ms": 0.015752422217790003,
+          "cumulative_max_ms": 0.320945,
+          "over_8_ms": 0
+        },
+        "character.step": {
+          "calls": 5014,
+          "total_ms": 166.22025399999933,
+          "mean_ms": 0.03315122736338239,
+          "cumulative_max_ms": 0.5783900000000001,
+          "over_8_ms": 0
+        },
+        "character.water": {
+          "calls": 5014,
+          "total_ms": 10.352724000000151,
+          "mean_ms": 0.0020647634623055747,
+          "cumulative_max_ms": 0.422618,
+          "over_8_ms": 0
+        },
+        "collision.activate": {
+          "calls": 258,
+          "total_ms": 13.805903999999996,
+          "mean_ms": 0.053511255813953475,
+          "cumulative_max_ms": 0.261004,
+          "over_8_ms": 0
+        },
+        "collision.dispatch": {
+          "calls": 3036,
+          "total_ms": 126.35377600000012,
+          "mean_ms": 0.04161850329380768,
+          "cumulative_max_ms": 1.430254,
+          "over_8_ms": 0
+        },
+        "collision.receive": {
+          "calls": 3036,
+          "total_ms": 64.97307599999998,
+          "mean_ms": 0.021400881422924893,
+          "cumulative_max_ms": 0.517219,
+          "over_8_ms": 0
+        },
+        "creatures.navigation.path": {
+          "calls": 5,
+          "total_ms": 1.826021,
+          "mean_ms": 0.3652042,
+          "cumulative_max_ms": 1.20376,
+          "over_8_ms": 0
+        },
+        "creatures.needs.find_water": {
+          "calls": 135,
+          "total_ms": 5.246417000000001,
+          "mean_ms": 0.03886234814814816,
+          "cumulative_max_ms": 0.08683099999999999,
+          "over_8_ms": 0
+        },
+        "creatures.needs.water_surface": {
+          "calls": 19904,
+          "total_ms": 3.7689270000003834,
+          "mean_ms": 0.00018935525522509965,
+          "cumulative_max_ms": 0.022731,
+          "over_8_ms": 0
+        },
+        "creatures.server_tick": {
+          "calls": 299,
+          "total_ms": 114.16224900000006,
+          "mean_ms": 0.3818135418060203,
+          "cumulative_max_ms": 1.622978,
+          "over_8_ms": 0
+        },
+        "integrated.autosave.snapshot": {
+          "calls": 3,
+          "total_ms": 0.9972070000000002,
+          "mean_ms": 0.3324023333333334,
+          "cumulative_max_ms": 0.680901,
+          "over_8_ms": 0
+        },
+        "lights.select": {
+          "calls": 1241,
+          "total_ms": 723.6387970000007,
+          "mean_ms": 0.5831094254633367,
+          "cumulative_max_ms": 6.567443,
+          "over_8_ms": 0
+        },
+        "mapping.index": {
+          "calls": 142,
+          "total_ms": 297.8092979999999,
+          "mean_ms": 2.097248577464788,
+          "cumulative_max_ms": 3.172964,
+          "over_8_ms": 0
+        },
+        "mapping.schedule": {
+          "calls": 142,
+          "total_ms": 669.9071050000002,
+          "mean_ms": 4.7176556690140865,
+          "cumulative_max_ms": 6.46092,
+          "over_8_ms": 0
+        },
+        "mapping.snapshot": {
+          "calls": 568,
+          "total_ms": 6.931454999999991,
+          "mean_ms": 0.012203265845070406,
+          "cumulative_max_ms": 0.06958099999999999,
+          "over_8_ms": 0
+        },
+        "props.contact_shadows": {
+          "calls": 1241,
+          "total_ms": 38.79229599999995,
+          "mean_ms": 0.03125890088638191,
+          "cumulative_max_ms": 0.930855,
+          "over_8_ms": 0
+        },
+        "props.dispatch": {
+          "calls": 1241,
+          "total_ms": 1439.4863690000034,
+          "mean_ms": 1.1599406680096724,
+          "cumulative_max_ms": 15.634447,
+          "over_8_ms": 0
+        },
+        "props.upload": {
+          "calls": 1241,
+          "total_ms": 1058.3882600000009,
+          "mean_ms": 0.8528511361805002,
+          "cumulative_max_ms": 3.509549,
+          "over_8_ms": 0
+        },
+        "storage.save_edits": {
+          "calls": 3,
+          "total_ms": 84.173,
+          "mean_ms": 28.057666666666666,
+          "cumulative_max_ms": 32.427476,
+          "over_8_ms": 3
+        },
+        "streaming.dispatch": {
+          "calls": 3036,
+          "total_ms": 40.4296359999999,
+          "mean_ms": 0.013316744400526976,
+          "cumulative_max_ms": 1.0555569999999999,
+          "over_8_ms": 0
+        },
+        "streaming.interest": {
+          "calls": 3036,
+          "total_ms": 57.08209100000003,
+          "mean_ms": 0.0188017427536232,
+          "cumulative_max_ms": 6.71492,
+          "over_8_ms": 0
+        },
+        "streaming.publish_section": {
+          "calls": 6828,
+          "total_ms": 24.84382299999986,
+          "mean_ms": 0.003638521236086681,
+          "cumulative_max_ms": 2.664114,
+          "over_8_ms": 0
+        },
+        "streaming.receive": {
+          "calls": 3036,
+          "total_ms": 38.448143999999644,
+          "mean_ms": 0.012664079051383281,
+          "cumulative_max_ms": 2.738956,
+          "over_8_ms": 0
+        },
+        "terrain.dispatch": {
+          "calls": 1241,
+          "total_ms": 6303.65433199999,
+          "mean_ms": 5.07949583561643,
+          "cumulative_max_ms": 14.837312,
+          "over_8_ms": 240
+        },
+        "terrain.exposure_snapshot": {
+          "calls": 4429,
+          "total_ms": 498.3774360000017,
+          "mean_ms": 0.11252595077895726,
+          "cumulative_max_ms": 2.354588,
+          "over_8_ms": 0
+        },
+        "terrain.invalidate.animation": {
+          "calls": 324,
+          "total_ms": 0.00904000000000011,
+          "mean_ms": 2.7901234567901577e-05,
+          "cumulative_max_ms": 0.00029,
+          "over_8_ms": 0
+        },
+        "terrain.invalidate.chunks": {
+          "calls": 736,
+          "total_ms": 0.031050000000000945,
+          "mean_ms": 4.218750000000128e-05,
+          "cumulative_max_ms": 0.00054,
+          "over_8_ms": 0
+        },
+        "terrain.invalidate.focus": {
+          "calls": 56,
+          "total_ms": 0.001530000000000002,
+          "mean_ms": 2.7321428571428608e-05,
+          "cumulative_max_ms": 0.00011999999999999999,
+          "over_8_ms": 0
+        },
+        "terrain.invalidate.journal": {
+          "calls": 19,
+          "total_ms": 0.0004200000000000011,
+          "mean_ms": 2.2105263157894794e-05,
+          "cumulative_max_ms": 4e-05,
+          "over_8_ms": 0
+        },
+        "terrain.model_snapshot": {
+          "calls": 5114,
+          "total_ms": 405.96621799987975,
+          "mean_ms": 0.07938330426278446,
+          "cumulative_max_ms": 1.491394,
+          "over_8_ms": 0
+        },
+        "terrain.refresh.appearance": {
+          "calls": 19,
+          "total_ms": 1.5235429999999992,
+          "mean_ms": 0.08018647368421049,
+          "cumulative_max_ms": 0.11916199999999999,
+          "over_8_ms": 0
+        },
+        "terrain.refresh.coastal": {
+          "calls": 736,
+          "total_ms": 560.4166910000005,
+          "mean_ms": 0.7614357214673919,
+          "cumulative_max_ms": 1.415354,
+          "over_8_ms": 0
+        },
+        "terrain.refresh.queue": {
+          "calls": 864,
+          "total_ms": 4009.4945839999955,
+          "mean_ms": 4.640618731481476,
+          "cumulative_max_ms": 9.419146999999999,
+          "over_8_ms": 7
+        },
+        "terrain.refresh.queue.arrivals": {
+          "calls": 476,
+          "total_ms": 1733.895232999998,
+          "mean_ms": 3.6426370441176426,
+          "cumulative_max_ms": 8.822869,
+          "over_8_ms": 1
+        },
+        "terrain.refresh.queue.full": {
+          "calls": 388,
+          "total_ms": 2276.625020000002,
+          "mean_ms": 5.8675902577319645,
+          "cumulative_max_ms": 9.421697,
+          "over_8_ms": 6
+        },
+        "terrain.upload": {
+          "calls": 1241,
+          "total_ms": 461.37727899999936,
+          "mean_ms": 0.371778629331184,
+          "cumulative_max_ms": 1.8971529999999999,
+          "over_8_ms": 0
+        },
+        "transitions.animate": {
+          "calls": 1241,
+          "total_ms": 331.40532900000096,
+          "mean_ms": 0.26704700161160433,
+          "cumulative_max_ms": 6.163605,
+          "over_8_ms": 0
+        },
+        "transitions.cleanup": {
+          "calls": 2065,
+          "total_ms": 38.459428000000294,
+          "mean_ms": 0.018624420338983195,
+          "cumulative_max_ms": 0.767703,
+          "over_8_ms": 0
+        },
+        "transitions.enter_commit": {
+          "calls": 4151,
+          "total_ms": 14.57449399999981,
+          "mean_ms": 0.0035110802216332957,
+          "cumulative_max_ms": 0.138162,
+          "over_8_ms": 0
+        },
+        "transitions.queue_shadows": {
+          "calls": 4157,
+          "total_ms": 9.371491000000102,
+          "mean_ms": 0.0022543880202069047,
+          "cumulative_max_ms": 0.13714200000000001,
+          "over_8_ms": 0
+        },
+        "transitions.retire_commit": {
+          "calls": 4433,
+          "total_ms": 4.761684999999991,
+          "mean_ms": 0.0010741450484998852,
+          "cumulative_max_ms": 0.041111,
+          "over_8_ms": 0
+        },
+        "transitions.retire_meshes": {
+          "calls": 3601,
+          "total_ms": 18.272047999999977,
+          "mean_ms": 0.005074159400166614,
+          "cumulative_max_ms": 0.042191000000000006,
+          "over_8_ms": 0
+        },
+        "water.falling_curtain": {
+          "calls": 31992,
+          "total_ms": 65.68946199999809,
+          "mean_ms": 0.0020533090147536286,
+          "cumulative_max_ms": 0.35632600000000003,
+          "over_8_ms": 0
+        },
+        "water.motion": {
+          "calls": 53567,
+          "total_ms": 80.92856500000431,
+          "mean_ms": 0.0015107914387590179,
+          "cumulative_max_ms": 0.357176,
+          "over_8_ms": 0
+        },
+        "water.upload": {
+          "calls": 1241,
+          "total_ms": 575.720791,
+          "mean_ms": 0.4639168340048348,
+          "cumulative_max_ms": 2.2723679999999997,
+          "over_8_ms": 0
+        },
+        "water_audio.column": {
+          "calls": 803,
+          "total_ms": 1.125936999999996,
+          "mean_ms": 0.0014021631382316263,
+          "cumulative_max_ms": 0.008929999999999999,
+          "over_8_ms": 0
+        },
+        "water_audio.scan": {
+          "calls": 59,
+          "total_ms": 15.033088000000028,
+          "mean_ms": 0.25479810169491574,
+          "cumulative_max_ms": 0.456827,
+          "over_8_ms": 0
+        },
+        "water_audio.update": {
+          "calls": 1241,
+          "total_ms": 7.7665850000000205,
+          "mean_ms": 0.006258327961321531,
+          "cumulative_max_ms": 0.07874199999999999,
+          "over_8_ms": 0
+        }
+      },
+      "entity_count_kind": "explicit_fields",
+      "rss_mib": 1970.09765625
+    },
+    {
+      "elapsed_seconds": 60.023984832,
+      "interval_seconds": 30.015091124,
+      "frames": 1241,
+      "fps": 41.34586814589742,
+      "median_ms": 23.78032,
+      "p95_ms": 37.369161999999996,
+      "p99_ms": 46.250254,
+      "max_ms": 94.817664,
+      "rss_bytes": 2087456768,
+      "cpu_capacity_percent": 16.074010261852056,
+      "physical_resolution": "(3840, 2160",
+      "entities": 44631,
+      "allocated_entity_indices": 65536,
+      "mesh_entities": 32080,
+      "visible_mesh_entities": 15376,
+      "mesh_assets": 31973,
+      "cpu_mesh_vertices": 352480,
+      "standard_material_assets": 220,
+      "image_assets": 216,
+      "upload_vertices": 27516073,
+      "upload_frames": 823,
+      "dropped_samples": 0,
+      "wall_unix_seconds": 1792541637.189189,
+      "environment": {
+        "hour": 14.828369504895726,
+        "day": 1,
+        "weather": "Rain",
+        "weather_intensity": 0.7799999713897705
+      },
+      "replicated_population": {
+        "creatures": 37,
+        "flowers": 0,
+        "nests": 0,
+        "hungry": 3,
+        "thirsty": 17
+      },
+      "replicated_furnaces": {
+        "furnaces": 0,
+        "lit": 0,
+        "smoke_cells": 0
+      },
+      "world": {
+        "sections": 11787,
+        "stored_props": 77732
+      },
+      "generation": {
+        "status": "Pending",
+        "sections": 11787,
+        "wanted_sections": 12838,
+        "pending_jobs": 0,
+        "prepared_columns": 1640
+      },
+      "terrain": {
+        "ready": false,
+        "jobs": 6,
+        "pending_columns": 5,
+        "completed_jobs": 16123,
+        "composition_seconds": 19.625942868000077,
+        "max_composition_seconds": 0.014445259
+      },
+      "props": {
+        "props": 77659,
+        "batches": 4138,
+        "jobs": 3,
+        "completed_jobs": 8853,
+        "composition_seconds": 0.8242149950000006
+      },
+      "water": {
+        "tiles": 741,
+        "triangles": 335419,
+        "spray": 0,
+        "mist": 0
+      },
+      "uploads": {
+        "deferred_batches": 2142,
+        "peak_frame_vertices": 151159
+      },
+      "journal": {
+        "changed_sections": 204,
+        "surface_conditions": 23608,
+        "drops": 0,
+        "creatures": 0,
+        "flowers": 0,
+        "nests": 0,
+        "furnaces": 0,
+        "fluid": "FluidWorkCounts { active: 0, queued: 0, sleeping: 0, sleeping_sections: 0, recorded_cells: 644, sources: 0, water_epoch_sections: 87 }"
+      },
+      "latest_fluid_step": {
+        "visited": 0,
+        "elapsed_ms": 0.0
+      },
+      "latest_draw_submission": {
+        "snapshot": "DrawCallSnapshot { phase_api_calls: [52, 2, 134, 511, 102, 4, 0, 0, 64], direct_calls: 0, indirect_calls: 869, gpu_counted_calls: 224, ui_api_calls: [28, 1, 0], gpu_color_subdraws: None }"
+      },
+      "render_pass_latest_ms": {
+        "render/clustering/elapsed_cpu": 0.017580000000000002,
+        "render/ui/elapsed_cpu": 0.025681,
+        "render/upscaling/elapsed_gpu": 0.06932,
+        "render/ui/elapsed_gpu": 0.04056,
+        "render/upscaling/elapsed_cpu": 0.00401,
+        "render/sparse buffer update/elapsed_gpu": 0.0098,
+        "render/bin_unpacking/elapsed_gpu": 0.28692,
+        "render/main_opaque_pass_3d/elapsed_cpu": 0.07903099999999999,
+        "render/taa/elapsed_gpu": 0.51048,
+        "render/bin_unpacking/elapsed_cpu": 0.030441,
+        "render/early_mesh_preprocessing/elapsed_cpu": 0.00585,
+        "render/clustering/elapsed_gpu": 0.05308,
+        "render/early_mesh_preprocessing/elapsed_gpu": 0.04096,
+        "render/tonemapping/elapsed_cpu": 0.00295,
+        "render/tonemapping/elapsed_gpu": 0.24796,
+        "render/main_opaque_pass_3d/elapsed_gpu": 2.51548,
+        "render/taa/elapsed_cpu": 0.00155,
+        "render/late_mesh_preprocessing/elapsed_gpu": 0.04396,
+        "render/late_mesh_preprocessing/elapsed_cpu": 0.00378,
+        "render/early prepass/elapsed_cpu": 0.151703,
+        "render/main_transparent_pass_3d/elapsed_cpu": 0.303155,
+        "render/late prepass/elapsed_cpu": 0.109852,
+        "render/main_transmissive_pass_3d/elapsed_cpu": 0.734903,
+        "render/sparse buffer update/elapsed_cpu": 0.018349999999999998,
+        "render/early prepass/elapsed_gpu": 0.78732,
+        "render/main_transparent_pass_3d/elapsed_gpu": 0.3052,
+        "render/late prepass/elapsed_gpu": 0.29268,
+        "render/main_transmissive_pass_3d/elapsed_gpu": 0.594
+      },
+      "cpu_scopes": {
+        "character.current": {
+          "calls": 5358,
+          "total_ms": 17.716872999999623,
+          "mean_ms": 0.003306620567375816,
+          "cumulative_max_ms": 0.0487,
+          "over_8_ms": 0
+        },
+        "character.ground": {
+          "calls": 5358,
+          "total_ms": 43.20682600000126,
+          "mean_ms": 0.008063983949235024,
+          "cumulative_max_ms": 0.5420200000000001,
+          "over_8_ms": 0
+        },
+        "character.move": {
+          "calls": 5358,
+          "total_ms": 81.10952999999782,
+          "mean_ms": 0.015138023516236995,
+          "cumulative_max_ms": 0.320945,
+          "over_8_ms": 0
+        },
+        "character.step": {
+          "calls": 5358,
+          "total_ms": 168.75048899999803,
+          "mean_ms": 0.03149505207166817,
+          "cumulative_max_ms": 0.5783900000000001,
+          "over_8_ms": 0
+        },
+        "character.water": {
+          "calls": 5358,
+          "total_ms": 9.965771999999465,
+          "mean_ms": 0.001859979843224984,
+          "cumulative_max_ms": 0.422618,
+          "over_8_ms": 0
+        },
+        "collision.activate": {
+          "calls": 293,
+          "total_ms": 15.863239000000014,
+          "mean_ms": 0.054140747440273085,
+          "cumulative_max_ms": 0.261004,
+          "over_8_ms": 0
+        },
+        "collision.dispatch": {
+          "calls": 3035,
+          "total_ms": 130.49976699999877,
+          "mean_ms": 0.04299827578253666,
+          "cumulative_max_ms": 1.430254,
+          "over_8_ms": 0
+        },
+        "collision.receive": {
+          "calls": 3035,
+          "total_ms": 65.53124200000008,
+          "mean_ms": 0.021591842504118643,
+          "cumulative_max_ms": 0.5859800000000001,
+          "over_8_ms": 0
+        },
+        "creatures.navigation.path": {
+          "calls": 3,
+          "total_ms": 0.11937100000000012,
+          "mean_ms": 0.03979033333333337,
+          "cumulative_max_ms": 1.20376,
+          "over_8_ms": 0
+        },
+        "creatures.needs.find_water": {
+          "calls": 128,
+          "total_ms": 5.157438000000006,
+          "mean_ms": 0.04029248437500005,
+          "cumulative_max_ms": 0.089262,
+          "over_8_ms": 0
+        },
+        "creatures.needs.water_surface": {
+          "calls": 19675,
+          "total_ms": 3.698937000000676,
+          "mean_ms": 0.0001880018805591195,
+          "cumulative_max_ms": 0.022731,
+          "over_8_ms": 0
+        },
+        "creatures.server_tick": {
+          "calls": 299,
+          "total_ms": 108.57283499999966,
+          "mean_ms": 0.3631198494983266,
+          "cumulative_max_ms": 1.622978,
+          "over_8_ms": 0
+        },
+        "integrated.autosave.snapshot": {
+          "calls": 3,
+          "total_ms": 1.012247,
+          "mean_ms": 0.3374156666666666,
+          "cumulative_max_ms": 0.680901,
+          "over_8_ms": 0
+        },
+        "lights.select": {
+          "calls": 1241,
+          "total_ms": 735.4243640000038,
+          "mean_ms": 0.5926062562449669,
+          "cumulative_max_ms": 6.6697049999999996,
+          "over_8_ms": 0
+        },
+        "mapping.index": {
+          "calls": 141,
+          "total_ms": 294.31241599999987,
+          "mean_ms": 2.087322099290779,
+          "cumulative_max_ms": 3.2621260000000003,
+          "over_8_ms": 0
+        },
+        "mapping.schedule": {
+          "calls": 141,
+          "total_ms": 668.923809000001,
+          "mean_ms": 4.744140489361709,
+          "cumulative_max_ms": 6.46092,
+          "over_8_ms": 0
+        },
+        "mapping.snapshot": {
+          "calls": 564,
+          "total_ms": 6.624393000000023,
+          "mean_ms": 0.011745377659574507,
+          "cumulative_max_ms": 0.06958099999999999,
+          "over_8_ms": 0
+        },
+        "props.contact_shadows": {
+          "calls": 1241,
+          "total_ms": 39.64394400000036,
+          "mean_ms": 0.03194516035455307,
+          "cumulative_max_ms": 0.930855,
+          "over_8_ms": 0
+        },
+        "props.dispatch": {
+          "calls": 1241,
+          "total_ms": 1492.4273709999807,
+          "mean_ms": 1.2026006212731513,
+          "cumulative_max_ms": 15.634447,
+          "over_8_ms": 0
+        },
+        "props.upload": {
+          "calls": 1241,
+          "total_ms": 1119.1717489999937,
+          "mean_ms": 0.9018305793714696,
+          "cumulative_max_ms": 3.509549,
+          "over_8_ms": 0
+        },
+        "storage.save_edits": {
+          "calls": 3,
+          "total_ms": 85.44514000000001,
+          "mean_ms": 28.481713333333335,
+          "cumulative_max_ms": 32.573788,
+          "over_8_ms": 3
+        },
+        "streaming.dispatch": {
+          "calls": 3035,
+          "total_ms": 47.50371999999959,
+          "mean_ms": 0.015651967051070706,
+          "cumulative_max_ms": 1.0555569999999999,
+          "over_8_ms": 0
+        },
+        "streaming.interest": {
+          "calls": 3035,
+          "total_ms": 61.70861199999962,
+          "mean_ms": 0.02033232685337714,
+          "cumulative_max_ms": 6.71492,
+          "over_8_ms": 0
+        },
+        "streaming.publish_section": {
+          "calls": 7662,
+          "total_ms": 28.908285999999535,
+          "mean_ms": 0.003772942573740477,
+          "cumulative_max_ms": 2.664114,
+          "over_8_ms": 0
+        },
+        "streaming.receive": {
+          "calls": 3035,
+          "total_ms": 44.04868600000073,
+          "mean_ms": 0.014513570345963997,
+          "cumulative_max_ms": 2.738956,
+          "over_8_ms": 0
+        },
+        "terrain.dispatch": {
+          "calls": 1241,
+          "total_ms": 6621.695010999963,
+          "mean_ms": 5.335773578565643,
+          "cumulative_max_ms": 14.837312,
+          "over_8_ms": 233
+        },
+        "terrain.exposure_snapshot": {
+          "calls": 4588,
+          "total_ms": 489.24924399999213,
+          "mean_ms": 0.10663671403661555,
+          "cumulative_max_ms": 2.354588,
+          "over_8_ms": 0
+        },
+        "terrain.invalidate.animation": {
+          "calls": 362,
+          "total_ms": 0.011040000000000195,
+          "mean_ms": 3.0497237569061313e-05,
+          "cumulative_max_ms": 0.00092,
+          "over_8_ms": 0
+        },
+        "terrain.invalidate.chunks": {
+          "calls": 807,
+          "total_ms": 0.031960000000001765,
+          "mean_ms": 3.960346964064655e-05,
+          "cumulative_max_ms": 0.0007199999999999999,
+          "over_8_ms": 0
+        },
+        "terrain.invalidate.focus": {
+          "calls": 53,
+          "total_ms": 0.0013600000000000036,
+          "mean_ms": 2.5660377358490635e-05,
+          "cumulative_max_ms": 0.00011999999999999999,
+          "over_8_ms": 0
+        },
+        "terrain.invalidate.journal": {
+          "calls": 15,
+          "total_ms": 0.00037000000000000097,
+          "mean_ms": 2.466666666666673e-05,
+          "cumulative_max_ms": 4e-05,
+          "over_8_ms": 0
+        },
+        "terrain.model_snapshot": {
+          "calls": 5450,
+          "total_ms": 445.66072399990276,
+          "mean_ms": 0.08177260990823904,
+          "cumulative_max_ms": 1.491394,
+          "over_8_ms": 0
+        },
+        "terrain.refresh.appearance": {
+          "calls": 15,
+          "total_ms": 1.1527670000000008,
+          "mean_ms": 0.07685113333333339,
+          "cumulative_max_ms": 0.11916199999999999,
+          "over_8_ms": 0
+        },
+        "terrain.refresh.coastal": {
+          "calls": 807,
+          "total_ms": 616.3260879999991,
+          "mean_ms": 0.7637250161090448,
+          "cumulative_max_ms": 1.8103010000000002,
+          "over_8_ms": 0
+        },
+        "terrain.refresh.queue": {
+          "calls": 942,
+          "total_ms": 4231.468082000036,
+          "mean_ms": 4.492004333333371,
+          "cumulative_max_ms": 9.419146999999999,
+          "over_8_ms": 3
+        },
+        "terrain.refresh.queue.arrivals": {
+          "calls": 522,
+          "total_ms": 1845.972811000005,
+          "mean_ms": 3.5363463812260636,
+          "cumulative_max_ms": 8.822869,
+          "over_8_ms": 0
+        },
+        "terrain.refresh.queue.full": {
+          "calls": 420,
+          "total_ms": 2386.572951,
+          "mean_ms": 5.68231655,
+          "cumulative_max_ms": 9.421697,
+          "over_8_ms": 3
+        },
+        "terrain.upload": {
+          "calls": 1241,
+          "total_ms": 475.9623229999993,
+          "mean_ms": 0.38353128364222344,
+          "cumulative_max_ms": 1.8971529999999999,
+          "over_8_ms": 0
+        },
+        "transitions.animate": {
+          "calls": 1241,
+          "total_ms": 346.8496369999991,
+          "mean_ms": 0.2794920523771145,
+          "cumulative_max_ms": 6.833938000000001,
+          "over_8_ms": 0
+        },
+        "transitions.cleanup": {
+          "calls": 2098,
+          "total_ms": 37.093081000000055,
+          "mean_ms": 0.017680210200190685,
+          "cumulative_max_ms": 0.767703,
+          "over_8_ms": 0
+        },
+        "transitions.enter_commit": {
+          "calls": 4580,
+          "total_ms": 16.266672999999876,
+          "mean_ms": 0.00355167532751089,
+          "cumulative_max_ms": 0.292305,
+          "over_8_ms": 0
+        },
+        "transitions.queue_shadows": {
+          "calls": 4586,
+          "total_ms": 10.303645999999873,
+          "mean_ms": 0.0022467610117749394,
+          "cumulative_max_ms": 0.13714200000000001,
+          "over_8_ms": 0
+        },
+        "transitions.retire_commit": {
+          "calls": 4939,
+          "total_ms": 5.032518999999999,
+          "mean_ms": 0.0010189348046163189,
+          "cumulative_max_ms": 0.052091,
+          "over_8_ms": 0
+        },
+        "transitions.retire_meshes": {
+          "calls": 4058,
+          "total_ms": 19.97004299999992,
+          "mean_ms": 0.004921154016757003,
+          "cumulative_max_ms": 0.139333,
+          "over_8_ms": 0
+        },
+        "water.falling_curtain": {
+          "calls": 22978,
+          "total_ms": 41.61059600000195,
+          "mean_ms": 0.0018108885020455196,
+          "cumulative_max_ms": 0.35632600000000003,
+          "over_8_ms": 0
+        },
+        "water.motion": {
+          "calls": 54385,
+          "total_ms": 54.30072299983365,
+          "mean_ms": 0.0009984503631485456,
+          "cumulative_max_ms": 0.357176,
+          "over_8_ms": 0
+        },
+        "water.upload": {
+          "calls": 1241,
+          "total_ms": 621.4004050000045,
+          "mean_ms": 0.5007255479452091,
+          "cumulative_max_ms": 2.2723679999999997,
+          "over_8_ms": 0
+        },
+        "water_audio.column": {
+          "calls": 872,
+          "total_ms": 1.1887789999999936,
+          "mean_ms": 0.0013632786697247634,
+          "cumulative_max_ms": 0.00957,
+          "over_8_ms": 0
+        },
+        "water_audio.scan": {
+          "calls": 58,
+          "total_ms": 13.848880000000001,
+          "mean_ms": 0.2387737931034483,
+          "cumulative_max_ms": 0.456827,
+          "over_8_ms": 0
+        },
+        "water_audio.update": {
+          "calls": 1241,
+          "total_ms": 7.8673230000000025,
+          "mean_ms": 0.006339502820306207,
+          "cumulative_max_ms": 0.081552,
+          "over_8_ms": 0
+        }
+      },
+      "entity_count_kind": "explicit_fields",
+      "rss_mib": 1990.75390625
+    },
+    {
+      "elapsed_seconds": 90.035695397,
+      "interval_seconds": 30.011710565,
+      "frames": 1193,
+      "fps": 39.751149719246264,
+      "median_ms": 24.750840999999998,
+      "p95_ms": 37.112134,
+      "p99_ms": 43.412411,
+      "max_ms": 58.942099999999996,
+      "rss_bytes": 2114473984,
+      "cpu_capacity_percent": 14.827460527477243,
+      "physical_resolution": "(3840, 2160",
+      "entities": 47283,
+      "allocated_entity_indices": 65536,
+      "mesh_entities": 34080,
+      "visible_mesh_entities": 18670,
+      "mesh_assets": 33976,
+      "cpu_mesh_vertices": 319689,
+      "standard_material_assets": 257,
+      "image_assets": 232,
+      "upload_vertices": 27940538,
+      "upload_frames": 881,
+      "dropped_samples": 0,
+      "wall_unix_seconds": 1792541667.200893,
+      "environment": {
+        "hour": 15.328219288147876,
+        "day": 1,
+        "weather": "Rain",
+        "weather_intensity": 0.7799999713897705
+      },
+      "replicated_population": {
+        "creatures": 37,
+        "flowers": 0,
+        "nests": 0,
+        "hungry": 3,
+        "thirsty": 16
+      },
+      "replicated_furnaces": {
+        "furnaces": 0,
+        "lit": 0,
+        "smoke_cells": 0
+      },
+      "world": {
+        "sections": 12536,
+        "stored_props": 77836
+      },
+      "generation": {
+        "status": "Pending",
+        "sections": 12536,
+        "wanted_sections": 12844,
+        "pending_jobs": 0,
+        "prepared_columns": 1656
+      },
+      "terrain": {
+        "ready": false,
+        "jobs": 7,
+        "pending_columns": 5,
+        "completed_jobs": 20749,
+        "composition_seconds": 25.280627233000207,
+        "max_composition_seconds": 0.014445259
+      },
+      "props": {
+        "props": 77715,
+        "batches": 4363,
+        "jobs": 3,
+        "completed_jobs": 11305,
+        "composition_seconds": 1.0487378300000008
+      },
+      "water": {
+        "tiles": 796,
+        "triangles": 364423,
+        "spray": 0,
+        "mist": 0
+      },
+      "uploads": {
+        "deferred_batches": 2659,
+        "peak_frame_vertices": 151159
+      },
+      "journal": {
+        "changed_sections": 206,
+        "surface_conditions": 23608,
+        "drops": 0,
+        "creatures": 0,
+        "flowers": 0,
+        "nests": 0,
+        "furnaces": 0,
+        "fluid": "FluidWorkCounts { active: 0, queued: 0, sleeping: 0, sleeping_sections: 0, recorded_cells: 644, sources: 0, water_epoch_sections: 87 }"
+      },
+      "latest_fluid_step": {
+        "visited": 0,
+        "elapsed_ms": 0.0
+      },
+      "latest_draw_submission": {
+        "snapshot": "DrawCallSnapshot { phase_api_calls: [48, 6, 312, 105, 94, 12, 0, 0, 67], direct_calls: 0, indirect_calls: 644, gpu_counted_calls: 227, ui_api_calls: [33, 1, 0], gpu_color_subdraws: None }"
+      },
+      "render_pass_latest_ms": {
+        "render/clustering/elapsed_cpu": 0.01418,
+        "render/ui/elapsed_cpu": 0.02275,
+        "render/upscaling/elapsed_gpu": 0.07164,
+        "render/ui/elapsed_gpu": 0.04576,
+        "render/upscaling/elapsed_cpu": 0.00208,
+        "render/sparse buffer update/elapsed_gpu": 0.0098,
+        "render/bin_unpacking/elapsed_gpu": 0.26228,
+        "render/main_opaque_pass_3d/elapsed_cpu": 0.091251,
+        "render/taa/elapsed_gpu": 0.52656,
+        "render/bin_unpacking/elapsed_cpu": 0.033561,
+        "render/early_mesh_preprocessing/elapsed_cpu": 0.0069,
+        "render/clustering/elapsed_gpu": 0.05012,
+        "render/early_mesh_preprocessing/elapsed_gpu": 0.04072,
+        "render/tonemapping/elapsed_cpu": 0.00449,
+        "render/tonemapping/elapsed_gpu": 0.24404,
+        "render/main_opaque_pass_3d/elapsed_gpu": 2.79608,
+        "render/taa/elapsed_cpu": 0.00109,
+        "render/late_mesh_preprocessing/elapsed_gpu": 0.05488,
+        "render/late_mesh_preprocessing/elapsed_cpu": 0.00371,
+        "render/early prepass/elapsed_cpu": 0.153532,
+        "render/main_transparent_pass_3d/elapsed_cpu": 0.642001,
+        "render/late prepass/elapsed_cpu": 0.102672,
+        "render/main_transmissive_pass_3d/elapsed_cpu": 0.182873,
+        "render/sparse buffer update/elapsed_cpu": 0.018349999999999998,
+        "render/early prepass/elapsed_gpu": 0.94448,
+        "render/main_transparent_pass_3d/elapsed_gpu": 0.34552,
+        "render/late prepass/elapsed_gpu": 0.14328,
+        "render/main_transmissive_pass_3d/elapsed_gpu": 0.03512
+      },
+      "cpu_scopes": {
+        "character.current": {
+          "calls": 5216,
+          "total_ms": 17.570952999999676,
+          "mean_ms": 0.003368664302147177,
+          "cumulative_max_ms": 0.0487,
+          "over_8_ms": 0
+        },
+        "character.ground": {
+          "calls": 5216,
+          "total_ms": 41.851660000001374,
+          "mean_ms": 0.008023707822086152,
+          "cumulative_max_ms": 0.5420200000000001,
+          "over_8_ms": 0
+        },
+        "character.move": {
+          "calls": 5216,
+          "total_ms": 80.7793670000018,
+          "mean_ms": 0.01548684183282243,
+          "cumulative_max_ms": 0.359236,
+          "over_8_ms": 0
+        },
+        "character.step": {
+          "calls": 5216,
+          "total_ms": 166.99301700000046,
+          "mean_ms": 0.032015532400306836,
+          "cumulative_max_ms": 0.5783900000000001,
+          "over_8_ms": 0
+        },
+        "character.water": {
+          "calls": 5216,
+          "total_ms": 9.950019999999505,
+          "mean_ms": 0.0019075958588956107,
+          "cumulative_max_ms": 0.422618,
+          "over_8_ms": 0
+        },
+        "collision.activate": {
+          "calls": 242,
+          "total_ms": 13.007915000000047,
+          "mean_ms": 0.05375171487603325,
+          "cumulative_max_ms": 0.261004,
+          "over_8_ms": 0
+        },
+        "collision.dispatch": {
+          "calls": 2988,
+          "total_ms": 121.88249699999966,
+          "mean_ms": 0.040790661646586235,
+          "cumulative_max_ms": 1.430254,
+          "over_8_ms": 0
+        },
+        "collision.receive": {
+          "calls": 2988,
+          "total_ms": 65.03109399999974,
+          "mean_ms": 0.021764087684069525,
+          "cumulative_max_ms": 0.5859800000000001,
+          "over_8_ms": 0
+        },
+        "creatures.navigation.path": {
+          "calls": 9,
+          "total_ms": 1.5209459999999995,
+          "mean_ms": 0.16899399999999995,
+          "cumulative_max_ms": 1.20376,
+          "over_8_ms": 0
+        },
+        "creatures.needs.find_water": {
+          "calls": 123,
+          "total_ms": 4.912960000000002,
+          "mean_ms": 0.03994276422764229,
+          "cumulative_max_ms": 0.089262,
+          "over_8_ms": 0
+        },
+        "creatures.needs.water_surface": {
+          "calls": 19003,
+          "total_ms": 3.6177549999996756,
+          "mean_ms": 0.00019037809819500478,
+          "cumulative_max_ms": 0.022731,
+          "over_8_ms": 0
+        },
+        "creatures.server_tick": {
+          "calls": 299,
+          "total_ms": 107.48758499999951,
+          "mean_ms": 0.3594902508361188,
+          "cumulative_max_ms": 1.622978,
+          "over_8_ms": 0
+        },
+        "integrated.autosave.snapshot": {
+          "calls": 3,
+          "total_ms": 1.0987679999999997,
+          "mean_ms": 0.3662559999999999,
+          "cumulative_max_ms": 0.680901,
+          "over_8_ms": 0
+        },
+        "lights.select": {
+          "calls": 1193,
+          "total_ms": 778.8146040000056,
+          "mean_ms": 0.6528202883487054,
+          "cumulative_max_ms": 6.6697049999999996,
+          "over_8_ms": 0
+        },
+        "mapping.index": {
+          "calls": 142,
+          "total_ms": 291.2102840000009,
+          "mean_ms": 2.0507766478873304,
+          "cumulative_max_ms": 3.2621260000000003,
+          "over_8_ms": 0
+        },
+        "mapping.schedule": {
+          "calls": 142,
+          "total_ms": 673.407042000003,
+          "mean_ms": 4.742303112676077,
+          "cumulative_max_ms": 6.46092,
+          "over_8_ms": 0
+        },
+        "mapping.snapshot": {
+          "calls": 568,
+          "total_ms": 6.76227900000001,
+          "mean_ms": 0.011905420774647905,
+          "cumulative_max_ms": 0.06958099999999999,
+          "over_8_ms": 0
+        },
+        "props.contact_shadows": {
+          "calls": 1193,
+          "total_ms": 38.27800600000046,
+          "mean_ms": 0.03208550377200374,
+          "cumulative_max_ms": 0.930855,
+          "over_8_ms": 0
+        },
+        "props.dispatch": {
+          "calls": 1193,
+          "total_ms": 1516.4168609999833,
+          "mean_ms": 1.2710954409052668,
+          "cumulative_max_ms": 15.634447,
+          "over_8_ms": 0
+        },
+        "props.upload": {
+          "calls": 1193,
+          "total_ms": 1224.7339689999985,
+          "mean_ms": 1.0266001416596802,
+          "cumulative_max_ms": 3.509549,
+          "over_8_ms": 0
+        },
+        "storage.save_edits": {
+          "calls": 3,
+          "total_ms": 315.13064099999997,
+          "mean_ms": 105.04354699999999,
+          "cumulative_max_ms": 258.76121,
+          "over_8_ms": 3
+        },
+        "streaming.dispatch": {
+          "calls": 2988,
+          "total_ms": 45.35296599999978,
+          "mean_ms": 0.01517836880856753,
+          "cumulative_max_ms": 1.0555569999999999,
+          "over_8_ms": 0
+        },
+        "streaming.interest": {
+          "calls": 2988,
+          "total_ms": 50.496300000000076,
+          "mean_ms": 0.01689969879518075,
+          "cumulative_max_ms": 6.71492,
+          "over_8_ms": 0
+        },
+        "streaming.publish_section": {
+          "calls": 7526,
+          "total_ms": 27.769659999999718,
+          "mean_ms": 0.003689829922933792,
+          "cumulative_max_ms": 2.664114,
+          "over_8_ms": 0
+        },
+        "streaming.receive": {
+          "calls": 2988,
+          "total_ms": 42.591752000000895,
+          "mean_ms": 0.014254267737617435,
+          "cumulative_max_ms": 2.738956,
+          "over_8_ms": 0
+        },
+        "terrain.dispatch": {
+          "calls": 1193,
+          "total_ms": 6915.747910999988,
+          "mean_ms": 5.796938735121532,
+          "cumulative_max_ms": 14.837312,
+          "over_8_ms": 238
+        },
+        "terrain.exposure_snapshot": {
+          "calls": 5024,
+          "total_ms": 512.9943610000007,
+          "mean_ms": 0.10210875019904472,
+          "cumulative_max_ms": 2.354588,
+          "over_8_ms": 0
+        },
+        "terrain.invalidate.animation": {
+          "calls": 385,
+          "total_ms": 0.009970000000000187,
+          "mean_ms": 2.589610389610438e-05,
+          "cumulative_max_ms": 0.00092,
+          "over_8_ms": 0
+        },
+        "terrain.invalidate.chunks": {
+          "calls": 889,
+          "total_ms": 0.03532100000000177,
+          "mean_ms": 3.973115860517634e-05,
+          "cumulative_max_ms": 0.0007199999999999999,
+          "over_8_ms": 0
+        },
+        "terrain.invalidate.focus": {
+          "calls": 52,
+          "total_ms": 0.0013900000000000002,
+          "mean_ms": 2.6730769230769234e-05,
+          "cumulative_max_ms": 0.00011999999999999999,
+          "over_8_ms": 0
+        },
+        "terrain.invalidate.journal": {
+          "calls": 17,
+          "total_ms": 0.0004100000000000011,
+          "mean_ms": 2.411764705882359e-05,
+          "cumulative_max_ms": 4e-05,
+          "over_8_ms": 0
+        },
+        "terrain.model_snapshot": {
+          "calls": 5827,
+          "total_ms": 487.8303830000791,
+          "mean_ms": 0.08371896052858746,
+          "cumulative_max_ms": 1.491394,
+          "over_8_ms": 0
+        },
+        "terrain.refresh.appearance": {
+          "calls": 17,
+          "total_ms": 1.2906329999999988,
+          "mean_ms": 0.07591958823529404,
+          "cumulative_max_ms": 0.11916199999999999,
+          "over_8_ms": 0
+        },
+        "terrain.refresh.coastal": {
+          "calls": 889,
+          "total_ms": 673.0015660000008,
+          "mean_ms": 0.7570321327334093,
+          "cumulative_max_ms": 1.8103010000000002,
+          "over_8_ms": 0
+        },
+        "terrain.refresh.queue": {
+          "calls": 982,
+          "total_ms": 4313.587905000037,
+          "mean_ms": 4.392655707739345,
+          "cumulative_max_ms": 9.419146999999999,
+          "over_8_ms": 0
+        },
+        "terrain.refresh.queue.arrivals": {
+          "calls": 545,
+          "total_ms": 1922.5610190000025,
+          "mean_ms": 3.527634897247711,
+          "cumulative_max_ms": 8.822869,
+          "over_8_ms": 0
+        },
+        "terrain.refresh.queue.full": {
+          "calls": 437,
+          "total_ms": 2392.1147270000056,
+          "mean_ms": 5.473946743707106,
+          "cumulative_max_ms": 9.421697,
+          "over_8_ms": 0
+        },
+        "terrain.upload": {
+          "calls": 1193,
+          "total_ms": 529.1961060000001,
+          "mean_ms": 0.4435843302598492,
+          "cumulative_max_ms": 1.9221240000000002,
+          "over_8_ms": 0
+        },
+        "transitions.animate": {
+          "calls": 1193,
+          "total_ms": 347.5275400000021,
+          "mean_ms": 0.2913055658005047,
+          "cumulative_max_ms": 7.327916999999999,
+          "over_8_ms": 0
+        },
+        "transitions.cleanup": {
+          "calls": 2137,
+          "total_ms": 39.48327599999999,
+          "mean_ms": 0.018476029948525968,
+          "cumulative_max_ms": 0.767703,
+          "over_8_ms": 0
+        },
+        "transitions.enter_commit": {
+          "calls": 5100,
+          "total_ms": 18.69273599999984,
+          "mean_ms": 0.003665242352941145,
+          "cumulative_max_ms": 0.292305,
+          "over_8_ms": 0
+        },
+        "transitions.queue_shadows": {
+          "calls": 5118,
+          "total_ms": 12.279932999999616,
+          "mean_ms": 0.0023993616647127033,
+          "cumulative_max_ms": 0.274595,
+          "over_8_ms": 0
+        },
+        "transitions.retire_commit": {
+          "calls": 4405,
+          "total_ms": 4.403263999999963,
+          "mean_ms": 0.0009996059023836465,
+          "cumulative_max_ms": 0.052091,
+          "over_8_ms": 0
+        },
+        "transitions.retire_meshes": {
+          "calls": 3560,
+          "total_ms": 17.021081000000066,
+          "mean_ms": 0.004781202528089906,
+          "cumulative_max_ms": 0.139333,
+          "over_8_ms": 0
+        },
+        "water.falling_curtain": {
+          "calls": 23992,
+          "total_ms": 44.43990399999649,
+          "mean_ms": 0.0018522800933643085,
+          "cumulative_max_ms": 0.35632600000000003,
+          "over_8_ms": 0
+        },
+        "water.motion": {
+          "calls": 54077,
+          "total_ms": 57.40572599981272,
+          "mean_ms": 0.0010615553007713577,
+          "cumulative_max_ms": 0.357176,
+          "over_8_ms": 0
+        },
+        "water.upload": {
+          "calls": 1193,
+          "total_ms": 687.8346279999971,
+          "mean_ms": 0.5765587829002491,
+          "cumulative_max_ms": 2.2723679999999997,
+          "over_8_ms": 0
+        },
+        "water_audio.column": {
+          "calls": 938,
+          "total_ms": 1.2755299999999976,
+          "mean_ms": 0.001359840085287844,
+          "cumulative_max_ms": 0.00957,
+          "over_8_ms": 0
+        },
+        "water_audio.scan": {
+          "calls": 59,
+          "total_ms": 14.396082999999983,
+          "mean_ms": 0.24400140677966073,
+          "cumulative_max_ms": 0.456827,
+          "over_8_ms": 0
+        },
+        "water_audio.update": {
+          "calls": 1193,
+          "total_ms": 7.926041999999946,
+          "mean_ms": 0.006643790444258127,
+          "cumulative_max_ms": 0.081552,
+          "over_8_ms": 0
+        }
+      },
+      "entity_count_kind": "explicit_fields",
+      "rss_mib": 2016.51953125
+    },
+    {
+      "elapsed_seconds": 120.038216446,
+      "interval_seconds": 30.002521049,
+      "frames": 1285,
+      "fps": 42.8297341380527,
+      "median_ms": 23.019284000000003,
+      "p95_ms": 37.347434,
+      "p99_ms": 45.043228,
+      "max_ms": 52.480001,
+      "rss_bytes": 2139602944,
+      "cpu_capacity_percent": 10.948133637694873,
+      "physical_resolution": "(3840, 2160",
+      "entities": 46368,
+      "allocated_entity_indices": 65536,
+      "mesh_entities": 33309,
+      "visible_mesh_entities": 18361,
+      "mesh_assets": 33199,
+      "cpu_mesh_vertices": 295728,
+      "standard_material_assets": 224,
+      "image_assets": 246,
+      "upload_vertices": 24566037,
+      "upload_frames": 796,
+      "dropped_samples": 0,
+      "wall_unix_seconds": 1792541697.203483,
+      "environment": {
+        "hour": 15.828607221875494,
+        "day": 1,
+        "weather": "Rain",
+        "weather_intensity": 0.7799999713897705
+      },
+      "replicated_population": {
+        "creatures": 37,
+        "flowers": 0,
+        "nests": 0,
+        "hungry": 3,
+        "thirsty": 18
+      },
+      "replicated_furnaces": {
+        "furnaces": 0,
+        "lit": 0,
+        "smoke_cells": 0
+      },
+      "world": {
+        "sections": 11555,
+        "stored_props": 77230
+      },
+      "generation": {
+        "status": "Pending",
+        "sections": 11555,
+        "wanted_sections": 13041,
+        "pending_jobs": 0,
+        "prepared_columns": 1648
+      },
+      "terrain": {
+        "ready": false,
+        "jobs": 2,
+        "pending_columns": 1,
+        "completed_jobs": 24929,
+        "composition_seconds": 30.270236379000263,
+        "max_composition_seconds": 0.014445259
+      },
+      "props": {
+        "props": 77160,
+        "batches": 4063,
+        "jobs": 4,
+        "completed_jobs": 13532,
+        "composition_seconds": 1.2489454109999982
+      },
+      "water": {
+        "tiles": 746,
+        "triangles": 335827,
+        "spray": 0,
+        "mist": 0
+      },
+      "uploads": {
+        "deferred_batches": 3153,
+        "peak_frame_vertices": 151159
+      },
+      "journal": {
+        "changed_sections": 208,
+        "surface_conditions": 23909,
+        "drops": 0,
+        "creatures": 0,
+        "flowers": 0,
+        "nests": 0,
+        "furnaces": 0,
+        "fluid": "FluidWorkCounts { active: 0, queued: 0, sleeping: 0, sleeping_sections: 0, recorded_cells: 644, sources: 0, water_epoch_sections: 87 }"
+      },
+      "latest_fluid_step": {
+        "visited": 0,
+        "elapsed_ms": 0.0
+      },
+      "latest_draw_submission": {
+        "snapshot": "DrawCallSnapshot { phase_api_calls: [46, 6, 115, 91, 90, 12, 0, 0, 72], direct_calls: 0, indirect_calls: 432, gpu_counted_calls: 226, ui_api_calls: [28, 1, 0], gpu_color_subdraws: None }"
+      },
+      "render_pass_latest_ms": {
+        "render/clustering/elapsed_cpu": 0.013890000000000001,
+        "render/ui/elapsed_cpu": 0.02308,
+        "render/upscaling/elapsed_gpu": 0.071,
+        "render/ui/elapsed_gpu": 0.04192,
+        "render/upscaling/elapsed_cpu": 0.0019,
+        "render/sparse buffer update/elapsed_gpu": 0.0098,
+        "render/bin_unpacking/elapsed_gpu": 0.29196,
+        "render/main_opaque_pass_3d/elapsed_cpu": 0.068181,
+        "render/taa/elapsed_gpu": 0.51912,
+        "render/bin_unpacking/elapsed_cpu": 0.014759999999999999,
+        "render/early_mesh_preprocessing/elapsed_cpu": 0.0044610000000000006,
+        "render/clustering/elapsed_gpu": 0.05304,
+        "render/early_mesh_preprocessing/elapsed_gpu": 0.04648,
+        "render/tonemapping/elapsed_cpu": 0.0030199999999999997,
+        "render/tonemapping/elapsed_gpu": 0.24392,
+        "render/main_opaque_pass_3d/elapsed_gpu": 2.70128,
+        "render/taa/elapsed_cpu": 0.00438,
+        "render/late_mesh_preprocessing/elapsed_gpu": 0.05384,
+        "render/late_mesh_preprocessing/elapsed_cpu": 0.00399,
+        "render/early prepass/elapsed_cpu": 0.128162,
+        "render/main_transparent_pass_3d/elapsed_cpu": 0.10727199999999999,
+        "render/late prepass/elapsed_cpu": 0.072991,
+        "render/main_transmissive_pass_3d/elapsed_cpu": 0.138353,
+        "render/sparse buffer update/elapsed_cpu": 0.018349999999999998,
+        "render/early prepass/elapsed_gpu": 0.85968,
+        "render/main_transparent_pass_3d/elapsed_gpu": 0.26204,
+        "render/late prepass/elapsed_gpu": 0.13396,
+        "render/main_transmissive_pass_3d/elapsed_gpu": 0.01448
+      },
+      "cpu_scopes": {
+        "character.current": {
+          "calls": 5232,
+          "total_ms": 18.1540619999996,
+          "mean_ms": 0.0034698130733944186,
+          "cumulative_max_ms": 0.053221,
+          "over_8_ms": 0
+        },
+        "character.ground": {
+          "calls": 5232,
+          "total_ms": 39.28353000000118,
+          "mean_ms": 0.007508319954128665,
+          "cumulative_max_ms": 0.5420200000000001,
+          "over_8_ms": 0
+        },
+        "character.move": {
+          "calls": 5232,
+          "total_ms": 83.52876900000086,
+          "mean_ms": 0.015964978784403835,
+          "cumulative_max_ms": 0.359236,
+          "over_8_ms": 0
+        },
+        "character.step": {
+          "calls": 5232,
+          "total_ms": 168.67383500000244,
+          "mean_ms": 0.032238882836391904,
+          "cumulative_max_ms": 0.5783900000000001,
+          "over_8_ms": 0
+        },
+        "character.water": {
+          "calls": 5232,
+          "total_ms": 10.482938999999405,
+          "mean_ms": 0.0020036198394494274,
+          "cumulative_max_ms": 0.422618,
+          "over_8_ms": 0
+        },
+        "collision.activate": {
+          "calls": 245,
+          "total_ms": 12.892644000000004,
+          "mean_ms": 0.052623036734693894,
+          "cumulative_max_ms": 0.41496700000000003,
+          "over_8_ms": 0
+        },
+        "collision.dispatch": {
+          "calls": 3079,
+          "total_ms": 126.90264899999886,
+          "mean_ms": 0.041215540435205866,
+          "cumulative_max_ms": 1.430254,
+          "over_8_ms": 0
+        },
+        "collision.receive": {
+          "calls": 3079,
+          "total_ms": 68.44149700000168,
+          "mean_ms": 0.022228482299448418,
+          "cumulative_max_ms": 0.5859800000000001,
+          "over_8_ms": 0
+        },
+        "creatures.navigation.path": {
+          "calls": 5,
+          "total_ms": 1.2500230000000006,
+          "mean_ms": 0.25000460000000013,
+          "cumulative_max_ms": 1.20376,
+          "over_8_ms": 0
+        },
+        "creatures.needs.find_water": {
+          "calls": 127,
+          "total_ms": 5.032623999999998,
+          "mean_ms": 0.03962696062992125,
+          "cumulative_max_ms": 0.089262,
+          "over_8_ms": 0
+        },
+        "creatures.needs.water_surface": {
+          "calls": 19438,
+          "total_ms": 3.677437999998311,
+          "mean_ms": 0.0001891880851938631,
+          "cumulative_max_ms": 0.022731,
+          "over_8_ms": 0
+        },
+        "creatures.server_tick": {
+          "calls": 299,
+          "total_ms": 105.32852700000024,
+          "mean_ms": 0.3522693210702349,
+          "cumulative_max_ms": 1.622978,
+          "over_8_ms": 0
+        },
+        "integrated.autosave.snapshot": {
+          "calls": 3,
+          "total_ms": 0.964637999999999,
+          "mean_ms": 0.32154599999999967,
+          "cumulative_max_ms": 0.680901,
+          "over_8_ms": 0
+        },
+        "lights.select": {
+          "calls": 1285,
+          "total_ms": 722.2423709999903,
+          "mean_ms": 0.5620563198443504,
+          "cumulative_max_ms": 6.6697049999999996,
+          "over_8_ms": 0
+        },
+        "mapping.index": {
+          "calls": 141,
+          "total_ms": 299.8632849999999,
+          "mean_ms": 2.1266899645390063,
+          "cumulative_max_ms": 3.819538,
+          "over_8_ms": 0
+        },
+        "mapping.schedule": {
+          "calls": 141,
+          "total_ms": 684.5732769999977,
+          "mean_ms": 4.8551296241134585,
+          "cumulative_max_ms": 6.590406,
+          "over_8_ms": 0
+        },
+        "mapping.snapshot": {
+          "calls": 564,
+          "total_ms": 6.975638999999969,
+          "mean_ms": 0.012368154255319093,
+          "cumulative_max_ms": 0.215384,
+          "over_8_ms": 0
+        },
+        "props.contact_shadows": {
+          "calls": 1285,
+          "total_ms": 39.26506300000034,
+          "mean_ms": 0.03055646926070065,
+          "cumulative_max_ms": 0.930855,
+          "over_8_ms": 0
+        },
+        "props.dispatch": {
+          "calls": 1285,
+          "total_ms": 1552.5552639999933,
+          "mean_ms": 1.2082142132295668,
+          "cumulative_max_ms": 15.634447,
+          "over_8_ms": 0
+        },
+        "props.upload": {
+          "calls": 1285,
+          "total_ms": 1077.4747019999963,
+          "mean_ms": 0.8385017136186742,
+          "cumulative_max_ms": 3.509549,
+          "over_8_ms": 0
+        },
+        "storage.save_edits": {
+          "calls": 3,
+          "total_ms": 78.571999,
+          "mean_ms": 26.190666333333336,
+          "cumulative_max_ms": 258.76121,
+          "over_8_ms": 3
+        },
+        "streaming.dispatch": {
+          "calls": 3079,
+          "total_ms": 42.841956000000835,
+          "mean_ms": 0.013914243585580004,
+          "cumulative_max_ms": 1.0555569999999999,
+          "over_8_ms": 0
+        },
+        "streaming.interest": {
+          "calls": 3079,
+          "total_ms": 58.31459499999943,
+          "mean_ms": 0.018939459240012807,
+          "cumulative_max_ms": 6.71492,
+          "over_8_ms": 0
+        },
+        "streaming.publish_section": {
+          "calls": 7305,
+          "total_ms": 25.2997320000008,
+          "mean_ms": 0.0034633445585216705,
+          "cumulative_max_ms": 2.664114,
+          "over_8_ms": 0
+        },
+        "streaming.receive": {
+          "calls": 3079,
+          "total_ms": 39.09463300000104,
+          "mean_ms": 0.012697185125040936,
+          "cumulative_max_ms": 2.738956,
+          "over_8_ms": 0
+        },
+        "terrain.dispatch": {
+          "calls": 1285,
+          "total_ms": 6586.700265999985,
+          "mean_ms": 5.125836782879366,
+          "cumulative_max_ms": 14.837312,
+          "over_8_ms": 214
+        },
+        "terrain.exposure_snapshot": {
+          "calls": 4334,
+          "total_ms": 451.5736280000133,
+          "mean_ms": 0.10419326903553607,
+          "cumulative_max_ms": 2.354588,
+          "over_8_ms": 0
+        },
+        "terrain.invalidate.animation": {
+          "calls": 387,
+          "total_ms": 0.012070000000001274,
+          "mean_ms": 3.118863049095936e-05,
+          "cumulative_max_ms": 0.00092,
+          "over_8_ms": 0
+        },
+        "terrain.invalidate.chunks": {
+          "calls": 769,
+          "total_ms": 0.03154100000000079,
+          "mean_ms": 4.101560468140545e-05,
+          "cumulative_max_ms": 0.0007199999999999999,
+          "over_8_ms": 0
+        },
+        "terrain.invalidate.focus": {
+          "calls": 55,
+          "total_ms": 0.0016099999999999942,
+          "mean_ms": 2.927272727272717e-05,
+          "cumulative_max_ms": 0.00011999999999999999,
+          "over_8_ms": 0
+        },
+        "terrain.invalidate.journal": {
+          "calls": 15,
+          "total_ms": 0.0003500000000000009,
+          "mean_ms": 2.3333333333333393e-05,
+          "cumulative_max_ms": 4e-05,
+          "over_8_ms": 0
+        },
+        "terrain.model_snapshot": {
+          "calls": 5481,
+          "total_ms": 467.43953300008025,
+          "mean_ms": 0.08528362214925748,
+          "cumulative_max_ms": 1.491394,
+          "over_8_ms": 0
+        },
+        "terrain.refresh.appearance": {
+          "calls": 15,
+          "total_ms": 1.1412179999999985,
+          "mean_ms": 0.0760811999999999,
+          "cumulative_max_ms": 0.11916199999999999,
+          "over_8_ms": 0
+        },
+        "terrain.refresh.coastal": {
+          "calls": 769,
+          "total_ms": 580.087864999995,
+          "mean_ms": 0.7543405266579909,
+          "cumulative_max_ms": 1.8103010000000002,
+          "over_8_ms": 0
+        },
+        "terrain.refresh.queue": {
+          "calls": 943,
+          "total_ms": 4275.489977000027,
+          "mean_ms": 4.533923623541916,
+          "cumulative_max_ms": 9.419146999999999,
+          "over_8_ms": 6
+        },
+        "terrain.refresh.queue.arrivals": {
+          "calls": 507,
+          "total_ms": 1777.2760549999948,
+          "mean_ms": 3.505475453648905,
+          "cumulative_max_ms": 8.822869,
+          "over_8_ms": 0
+        },
+        "terrain.refresh.queue.full": {
+          "calls": 436,
+          "total_ms": 2499.2233709999855,
+          "mean_ms": 5.732163694954095,
+          "cumulative_max_ms": 9.421697,
+          "over_8_ms": 6
+        },
+        "terrain.upload": {
+          "calls": 1285,
+          "total_ms": 458.79621100000054,
+          "mean_ms": 0.3570398529182884,
+          "cumulative_max_ms": 1.9221240000000002,
+          "over_8_ms": 0
+        },
+        "transitions.animate": {
+          "calls": 1285,
+          "total_ms": 382.97917099999927,
+          "mean_ms": 0.2980382653696492,
+          "cumulative_max_ms": 7.327916999999999,
+          "over_8_ms": 0
+        },
+        "transitions.cleanup": {
+          "calls": 2369,
+          "total_ms": 41.653300999999715,
+          "mean_ms": 0.017582651329674848,
+          "cumulative_max_ms": 0.767703,
+          "over_8_ms": 0
+        },
+        "transitions.enter_commit": {
+          "calls": 4823,
+          "total_ms": 16.315626999999807,
+          "mean_ms": 0.003382879328218911,
+          "cumulative_max_ms": 0.292305,
+          "over_8_ms": 0
+        },
+        "transitions.queue_shadows": {
+          "calls": 4831,
+          "total_ms": 10.501216000000085,
+          "mean_ms": 0.002173714758849117,
+          "cumulative_max_ms": 0.274595,
+          "over_8_ms": 0
+        },
+        "transitions.retire_commit": {
+          "calls": 5840,
+          "total_ms": 5.472602999999991,
+          "mean_ms": 0.0009370895547945189,
+          "cumulative_max_ms": 0.052091,
+          "over_8_ms": 0
+        },
+        "transitions.retire_meshes": {
+          "calls": 4131,
+          "total_ms": 20.384476999999983,
+          "mean_ms": 0.004934513919147902,
+          "cumulative_max_ms": 0.139333,
+          "over_8_ms": 0
+        },
+        "water.falling_curtain": {
+          "calls": 27532,
+          "total_ms": 54.113738999996855,
+          "mean_ms": 0.0019654852172016875,
+          "cumulative_max_ms": 0.35632600000000003,
+          "over_8_ms": 0
+        },
+        "water.motion": {
+          "calls": 54140,
+          "total_ms": 68.58948300000355,
+          "mean_ms": 0.0012668910786849566,
+          "cumulative_max_ms": 0.357176,
+          "over_8_ms": 0
+        },
+        "water.upload": {
+          "calls": 1285,
+          "total_ms": 593.7092219999904,
+          "mean_ms": 0.462030522957191,
+          "cumulative_max_ms": 2.2723679999999997,
+          "over_8_ms": 0
+        },
+        "water_audio.column": {
+          "calls": 848,
+          "total_ms": 1.159616000000006,
+          "mean_ms": 0.0013674716981132147,
+          "cumulative_max_ms": 0.0101,
+          "over_8_ms": 0
+        },
+        "water_audio.scan": {
+          "calls": 58,
+          "total_ms": 14.254560999999981,
+          "mean_ms": 0.24576829310344794,
+          "cumulative_max_ms": 0.456827,
+          "over_8_ms": 0
+        },
+        "water_audio.update": {
+          "calls": 1285,
+          "total_ms": 8.254559000000114,
+          "mean_ms": 0.006423781322957288,
+          "cumulative_max_ms": 0.081552,
+          "over_8_ms": 0
+        }
+      },
+      "entity_count_kind": "explicit_fields",
+      "rss_mib": 2040.484375
+    },
+    {
+      "elapsed_seconds": 150.054719962,
+      "interval_seconds": 30.016503516,
+      "frames": 1454,
+      "fps": 48.44001897905796,
+      "median_ms": 20.694977,
+      "p95_ms": 30.952777,
+      "p99_ms": 37.068695,
+      "max_ms": 49.302976,
+      "rss_bytes": 2166730752,
+      "cpu_capacity_percent": 12.860329926806905,
+      "physical_resolution": "(3840, 2160",
+      "entities": 44170,
+      "allocated_entity_indices": 65536,
+      "mesh_entities": 31645,
+      "visible_mesh_entities": 15888,
+      "mesh_assets": 31524,
+      "cpu_mesh_vertices": 394481,
+      "standard_material_assets": 234,
+      "image_assets": 264,
+      "upload_vertices": 26886333,
+      "upload_frames": 860,
+      "dropped_samples": 0,
+      "wall_unix_seconds": 1792541727.219954,
+      "environment": {
+        "hour": 16.328951645013888,
+        "day": 1,
+        "weather": "Rain",
+        "weather_intensity": 0.7799999713897705
+      },
+      "replicated_population": {
+        "creatures": 38,
+        "flowers": 0,
+        "nests": 0,
+        "hungry": 3,
+        "thirsty": 16
+      },
+      "replicated_furnaces": {
+        "furnaces": 0,
+        "lit": 0,
+        "smoke_cells": 0
+      },
+      "world": {
+        "sections": 11971,
+        "stored_props": 76879
+      },
+      "generation": {
+        "status": "Pending",
+        "sections": 11971,
+        "wanted_sections": 12962,
+        "pending_jobs": 0,
+        "prepared_columns": 1611
+      },
+      "terrain": {
+        "ready": false,
+        "jobs": 16,
+        "pending_columns": 7,
+        "completed_jobs": 28992,
+        "composition_seconds": 35.306060267000525,
+        "max_composition_seconds": 0.014445259
+      },
+      "props": {
+        "props": 76822,
+        "batches": 4025,
+        "jobs": 0,
+        "completed_jobs": 15712,
+        "composition_seconds": 1.4542630159999967
+      },
+      "water": {
+        "tiles": 705,
+        "triangles": 314835,
+        "spray": 0,
+        "mist": 0
+      },
+      "uploads": {
+        "deferred_batches": 3701,
+        "peak_frame_vertices": 151159
+      },
+      "journal": {
+        "changed_sections": 211,
+        "surface_conditions": 24421,
+        "drops": 0,
+        "creatures": 0,
+        "flowers": 0,
+        "nests": 0,
+        "furnaces": 0,
+        "fluid": "FluidWorkCounts { active: 0, queued: 0, sleeping: 0, sleeping_sections: 0, recorded_cells: 644, sources: 0, water_epoch_sections: 87 }"
+      },
+      "latest_fluid_step": {
+        "visited": 0,
+        "elapsed_ms": 0.0
+      },
+      "latest_draw_submission": {
+        "snapshot": "DrawCallSnapshot { phase_api_calls: [47, 6, 230, 82, 92, 12, 0, 0, 65], direct_calls: 0, indirect_calls: 534, gpu_counted_calls: 222, ui_api_calls: [33, 1, 0], gpu_color_subdraws: None }"
+      },
+      "render_pass_latest_ms": {
+        "render/clustering/elapsed_cpu": 0.017689999999999997,
+        "render/ui/elapsed_cpu": 0.043519999999999996,
+        "render/upscaling/elapsed_gpu": 0.07048,
+        "render/ui/elapsed_gpu": 0.04388,
+        "render/upscaling/elapsed_cpu": 0.00586,
+        "render/sparse buffer update/elapsed_gpu": 0.0098,
+        "render/bin_unpacking/elapsed_gpu": 0.2596,
+        "render/main_opaque_pass_3d/elapsed_cpu": 0.131952,
+        "render/taa/elapsed_gpu": 0.51572,
+        "render/bin_unpacking/elapsed_cpu": 0.032920000000000005,
+        "render/early_mesh_preprocessing/elapsed_cpu": 0.00644,
+        "render/clustering/elapsed_gpu": 0.05044,
+        "render/early_mesh_preprocessing/elapsed_gpu": 0.03492,
+        "render/tonemapping/elapsed_cpu": 0.00257,
+        "render/tonemapping/elapsed_gpu": 0.2436,
+        "render/main_opaque_pass_3d/elapsed_gpu": 2.33352,
+        "render/taa/elapsed_cpu": 0.001781,
+        "render/late_mesh_preprocessing/elapsed_gpu": 0.04728,
+        "render/late_mesh_preprocessing/elapsed_cpu": 0.00611,
+        "render/early prepass/elapsed_cpu": 0.13941299999999998,
+        "render/main_transparent_pass_3d/elapsed_cpu": 0.53151,
+        "render/late prepass/elapsed_cpu": 0.06432099999999999,
+        "render/main_transmissive_pass_3d/elapsed_cpu": 0.139552,
+        "render/sparse buffer update/elapsed_cpu": 0.018349999999999998,
+        "render/early prepass/elapsed_gpu": 0.70648,
+        "render/main_transparent_pass_3d/elapsed_gpu": 0.36332,
+        "render/late prepass/elapsed_gpu": 0.02904,
+        "render/main_transmissive_pass_3d/elapsed_gpu": 0.00832
+      },
+      "cpu_scopes": {
+        "character.current": {
+          "calls": 5191,
+          "total_ms": 17.68737599999973,
+          "mean_ms": 0.0034073157387786036,
+          "cumulative_max_ms": 0.076491,
+          "over_8_ms": 0
+        },
+        "character.ground": {
+          "calls": 5191,
+          "total_ms": 39.69912600000251,
+          "mean_ms": 0.007647683683298499,
+          "cumulative_max_ms": 0.5420200000000001,
+          "over_8_ms": 0
+        },
+        "character.move": {
+          "calls": 5191,
+          "total_ms": 80.82494900000103,
+          "mean_ms": 0.01557020785975747,
+          "cumulative_max_ms": 0.442477,
+          "over_8_ms": 0
+        },
+        "character.step": {
+          "calls": 5191,
+          "total_ms": 164.65129500000046,
+          "mean_ms": 0.03171860816798314,
+          "cumulative_max_ms": 0.5783900000000001,
+          "over_8_ms": 0
+        },
+        "character.water": {
+          "calls": 5191,
+          "total_ms": 9.691568000000046,
+          "mean_ms": 0.0018669944134078302,
+          "cumulative_max_ms": 0.422618,
+          "over_8_ms": 0
+        },
+        "collision.activate": {
+          "calls": 274,
+          "total_ms": 14.06267700000003,
+          "mean_ms": 0.0513236386861315,
+          "cumulative_max_ms": 0.41496700000000003,
+          "over_8_ms": 0
+        },
+        "collision.dispatch": {
+          "calls": 3249,
+          "total_ms": 136.7577889999974,
+          "mean_ms": 0.04209227116035623,
+          "cumulative_max_ms": 1.430254,
+          "over_8_ms": 0
+        },
+        "collision.receive": {
+          "calls": 3249,
+          "total_ms": 71.37655500000011,
+          "mean_ms": 0.021968776546629765,
+          "cumulative_max_ms": 0.5859800000000001,
+          "over_8_ms": 0
+        },
+        "creatures.navigation.path": {
+          "calls": 5,
+          "total_ms": 0.6436109999999999,
+          "mean_ms": 0.12872219999999998,
+          "cumulative_max_ms": 1.20376,
+          "over_8_ms": 0
+        },
+        "creatures.needs.find_water": {
+          "calls": 133,
+          "total_ms": 4.934688000000008,
+          "mean_ms": 0.037102917293233145,
+          "cumulative_max_ms": 0.089262,
+          "over_8_ms": 0
+        },
+        "creatures.needs.water_surface": {
+          "calls": 19618,
+          "total_ms": 3.5724389999986528,
+          "mean_ms": 0.00018210006116824615,
+          "cumulative_max_ms": 0.022731,
+          "over_8_ms": 0
+        },
+        "creatures.server_tick": {
+          "calls": 299,
+          "total_ms": 107.49643000000083,
+          "mean_ms": 0.3595198327759225,
+          "cumulative_max_ms": 1.622978,
+          "over_8_ms": 0
+        },
+        "integrated.autosave.snapshot": {
+          "calls": 3,
+          "total_ms": 0.9061660000000007,
+          "mean_ms": 0.30205533333333356,
+          "cumulative_max_ms": 0.680901,
+          "over_8_ms": 0
+        },
+        "lights.select": {
+          "calls": 1454,
+          "total_ms": 764.3917539999748,
+          "mean_ms": 0.52571647455294,
+          "cumulative_max_ms": 6.6697049999999996,
+          "over_8_ms": 0
+        },
+        "mapping.index": {
+          "calls": 142,
+          "total_ms": 298.63262499999996,
+          "mean_ms": 2.103046654929577,
+          "cumulative_max_ms": 3.819538,
+          "over_8_ms": 0
+        },
+        "mapping.schedule": {
+          "calls": 142,
+          "total_ms": 684.7238919999954,
+          "mean_ms": 4.821999239436588,
+          "cumulative_max_ms": 6.590406,
+          "over_8_ms": 0
+        },
+        "mapping.snapshot": {
+          "calls": 568,
+          "total_ms": 6.800833000000033,
+          "mean_ms": 0.011973297535211326,
+          "cumulative_max_ms": 0.215384,
+          "over_8_ms": 0
+        },
+        "props.contact_shadows": {
+          "calls": 1454,
+          "total_ms": 37.38682500000016,
+          "mean_ms": 0.025713084594222942,
+          "cumulative_max_ms": 0.930855,
+          "over_8_ms": 0
+        },
+        "props.dispatch": {
+          "calls": 1454,
+          "total_ms": 1598.4701819999864,
+          "mean_ms": 1.0993605103163593,
+          "cumulative_max_ms": 15.634447,
+          "over_8_ms": 0
+        },
+        "props.upload": {
+          "calls": 1454,
+          "total_ms": 1288.2714670000096,
+          "mean_ms": 0.886018890646499,
+          "cumulative_max_ms": 3.509549,
+          "over_8_ms": 0
+        },
+        "storage.save_edits": {
+          "calls": 3,
+          "total_ms": 369.51911100000007,
+          "mean_ms": 123.17303700000002,
+          "cumulative_max_ms": 317.92306399999995,
+          "over_8_ms": 3
+        },
+        "streaming.dispatch": {
+          "calls": 3249,
+          "total_ms": 51.94715600000188,
+          "mean_ms": 0.015988659895352995,
+          "cumulative_max_ms": 1.0555569999999999,
+          "over_8_ms": 0
+        },
+        "streaming.interest": {
+          "calls": 3249,
+          "total_ms": 66.66381200000305,
+          "mean_ms": 0.02051825546322039,
+          "cumulative_max_ms": 6.71492,
+          "over_8_ms": 0
+        },
+        "streaming.publish_section": {
+          "calls": 8238,
+          "total_ms": 29.636320000001604,
+          "mean_ms": 0.0035975139596991505,
+          "cumulative_max_ms": 2.664114,
+          "over_8_ms": 0
+        },
+        "streaming.receive": {
+          "calls": 3249,
+          "total_ms": 46.024736000001326,
+          "mean_ms": 0.014165815943367598,
+          "cumulative_max_ms": 2.738956,
+          "over_8_ms": 0
+        },
+        "terrain.dispatch": {
+          "calls": 1454,
+          "total_ms": 7163.058350000043,
+          "mean_ms": 4.926450034387925,
+          "cumulative_max_ms": 14.837312,
+          "over_8_ms": 136
+        },
+        "terrain.exposure_snapshot": {
+          "calls": 4866,
+          "total_ms": 536.871392999994,
+          "mean_ms": 0.11033115351417878,
+          "cumulative_max_ms": 2.354588,
+          "over_8_ms": 0
+        },
+        "terrain.invalidate.animation": {
+          "calls": 323,
+          "total_ms": 0.010060000000001207,
+          "mean_ms": 3.114551083591705e-05,
+          "cumulative_max_ms": 0.00092,
+          "over_8_ms": 0
+        },
+        "terrain.invalidate.chunks": {
+          "calls": 942,
+          "total_ms": 0.039640000000001174,
+          "mean_ms": 4.2080679405521416e-05,
+          "cumulative_max_ms": 0.0007199999999999999,
+          "over_8_ms": 0
+        },
+        "terrain.invalidate.focus": {
+          "calls": 57,
+          "total_ms": 0.0014399999999999942,
+          "mean_ms": 2.526315789473674e-05,
+          "cumulative_max_ms": 0.00011999999999999999,
+          "over_8_ms": 0
+        },
+        "terrain.invalidate.journal": {
+          "calls": 15,
+          "total_ms": 0.0003599999999999992,
+          "mean_ms": 2.3999999999999946e-05,
+          "cumulative_max_ms": 4e-05,
+          "over_8_ms": 0
+        },
+        "terrain.model_snapshot": {
+          "calls": 5873,
+          "total_ms": 424.91580800007205,
+          "mean_ms": 0.07235072501278257,
+          "cumulative_max_ms": 1.491394,
+          "over_8_ms": 0
+        },
+        "terrain.refresh.appearance": {
+          "calls": 15,
+          "total_ms": 1.1047770000000021,
+          "mean_ms": 0.07365180000000014,
+          "cumulative_max_ms": 0.11916199999999999,
+          "over_8_ms": 0
+        },
+        "terrain.refresh.coastal": {
+          "calls": 942,
+          "total_ms": 715.960043,
+          "mean_ms": 0.760042508492569,
+          "cumulative_max_ms": 1.852643,
+          "over_8_ms": 0
+        },
+        "terrain.refresh.queue": {
+          "calls": 1084,
+          "total_ms": 4526.732691999987,
+          "mean_ms": 4.1759526678966665,
+          "cumulative_max_ms": 9.419146999999999,
+          "over_8_ms": 0
+        },
+        "terrain.refresh.queue.arrivals": {
+          "calls": 698,
+          "total_ms": 2399.2866959999983,
+          "mean_ms": 3.4373734899713444,
+          "cumulative_max_ms": 8.822869,
+          "over_8_ms": 0
+        },
+        "terrain.refresh.queue.full": {
+          "calls": 386,
+          "total_ms": 2128.5466769999966,
+          "mean_ms": 5.51436962953367,
+          "cumulative_max_ms": 9.421697,
+          "over_8_ms": 0
+        },
+        "terrain.upload": {
+          "calls": 1454,
+          "total_ms": 542.0698159999915,
+          "mean_ms": 0.3728128033012321,
+          "cumulative_max_ms": 1.9221240000000002,
+          "over_8_ms": 0
+        },
+        "transitions.animate": {
+          "calls": 1454,
+          "total_ms": 424.13494699998773,
+          "mean_ms": 0.2917021643741319,
+          "cumulative_max_ms": 8.088204999999999,
+          "over_8_ms": 1
+        },
+        "transitions.cleanup": {
+          "calls": 2357,
+          "total_ms": 45.38106400000012,
+          "mean_ms": 0.01925373949936365,
+          "cumulative_max_ms": 0.767703,
+          "over_8_ms": 0
+        },
+        "transitions.enter_commit": {
+          "calls": 4384,
+          "total_ms": 14.814604999999986,
+          "mean_ms": 0.0033792438412408726,
+          "cumulative_max_ms": 0.292305,
+          "over_8_ms": 0
+        },
+        "transitions.queue_shadows": {
+          "calls": 4397,
+          "total_ms": 9.524499000000205,
+          "mean_ms": 0.002166135774391677,
+          "cumulative_max_ms": 0.274595,
+          "over_8_ms": 0
+        },
+        "transitions.retire_commit": {
+          "calls": 4534,
+          "total_ms": 5.153483000000097,
+          "mean_ms": 0.001136630569033987,
+          "cumulative_max_ms": 0.052091,
+          "over_8_ms": 0
+        },
+        "transitions.retire_meshes": {
+          "calls": 3585,
+          "total_ms": 21.244323999999878,
+          "mean_ms": 0.005925892329149199,
+          "cumulative_max_ms": 1.6565690000000002,
+          "over_8_ms": 0
+        },
+        "water.falling_curtain": {
+          "calls": 22046,
+          "total_ms": 39.5432760000038,
+          "mean_ms": 0.0017936712328768846,
+          "cumulative_max_ms": 0.35632600000000003,
+          "over_8_ms": 0
+        },
+        "water.motion": {
+          "calls": 53837,
+          "total_ms": 51.68134800005572,
+          "mean_ms": 0.0009599596559996976,
+          "cumulative_max_ms": 0.357176,
+          "over_8_ms": 0
+        },
+        "water.upload": {
+          "calls": 1454,
+          "total_ms": 725.0453069999912,
+          "mean_ms": 0.4986556444291549,
+          "cumulative_max_ms": 2.2723679999999997,
+          "over_8_ms": 0
+        },
+        "water_audio.column": {
+          "calls": 1008,
+          "total_ms": 1.3653179999999958,
+          "mean_ms": 0.0013544821428571386,
+          "cumulative_max_ms": 0.011640000000000001,
+          "over_8_ms": 0
+        },
+        "water_audio.scan": {
+          "calls": 59,
+          "total_ms": 14.413436000000047,
+          "mean_ms": 0.24429552542372962,
+          "cumulative_max_ms": 0.456827,
+          "over_8_ms": 0
+        },
+        "water_audio.update": {
+          "calls": 1454,
+          "total_ms": 8.27282000000016,
+          "mean_ms": 0.005689697386520054,
+          "cumulative_max_ms": 0.081552,
+          "over_8_ms": 0
+        }
+      },
+      "entity_count_kind": "explicit_fields",
+      "rss_mib": 2066.35546875
+    },
+    {
+      "elapsed_seconds": 180.062644552,
+      "interval_seconds": 30.00792459,
+      "frames": 1456,
+      "fps": 48.52051649334007,
+      "median_ms": 20.748040999999997,
+      "p95_ms": 30.946512,
+      "p99_ms": 38.146655,
+      "max_ms": 46.271848999999996,
+      "rss_bytes": 2229399552,
+      "cpu_capacity_percent": 14.455225386741544,
+      "physical_resolution": "(3840, 2160",
+      "entities": 46257,
+      "allocated_entity_indices": 65536,
+      "mesh_entities": 33003,
+      "visible_mesh_entities": 19389,
+      "mesh_assets": 32923,
+      "cpu_mesh_vertices": 313314,
+      "standard_material_assets": 199,
+      "image_assets": 278,
+      "upload_vertices": 28227312,
+      "upload_frames": 943,
+      "dropped_samples": 0,
+      "wall_unix_seconds": 1792541757.227791,
+      "environment": {
+        "hour": 16.829381294071148,
+        "day": 1,
+        "weather": "Rain",
+        "weather_intensity": 0.7799999713897705
+      },
+      "replicated_population": {
+        "creatures": 31,
+        "flowers": 0,
+        "nests": 0,
+        "hungry": 3,
+        "thirsty": 17
+      },
+      "replicated_furnaces": {
+        "furnaces": 0,
+        "lit": 0,
+        "smoke_cells": 0
+      },
+      "world": {
+        "sections": 13021,
+        "stored_props": 85717
+      },
+      "generation": {
+        "status": "Ready",
+        "sections": 13021,
+        "wanted_sections": 13021,
+        "pending_jobs": 0,
+        "prepared_columns": 1681
+      },
+      "terrain": {
+        "ready": true,
+        "jobs": 0,
+        "pending_columns": 0,
+        "completed_jobs": 34001,
+        "composition_seconds": 41.091754868000876,
+        "max_composition_seconds": 0.014445259
+      },
+      "props": {
+        "props": 85660,
+        "batches": 4440,
+        "jobs": 0,
+        "completed_jobs": 18310,
+        "composition_seconds": 1.6992509269999976
+      },
+      "water": {
+        "tiles": 673,
+        "triangles": 295035,
+        "spray": 0,
+        "mist": 0
+      },
+      "uploads": {
+        "deferred_batches": 4349,
+        "peak_frame_vertices": 151159
+      },
+      "journal": {
+        "changed_sections": 213,
+        "surface_conditions": 24933,
+        "drops": 0,
+        "creatures": 0,
+        "flowers": 0,
+        "nests": 0,
+        "furnaces": 0,
+        "fluid": "FluidWorkCounts { active: 0, queued: 0, sleeping: 0, sleeping_sections: 0, recorded_cells: 644, sources: 0, water_epoch_sections: 87 }"
+      },
+      "latest_fluid_step": {
+        "visited": 0,
+        "elapsed_ms": 0.0
+      },
+      "latest_draw_submission": {
+        "snapshot": "DrawCallSnapshot { phase_api_calls: [53, 3, 4, 467, 104, 6, 0, 0, 60], direct_calls: 0, indirect_calls: 697, gpu_counted_calls: 226, ui_api_calls: [28, 1, 0], gpu_color_subdraws: None }"
+      },
+      "render_pass_latest_ms": {
+        "render/clustering/elapsed_cpu": 0.022611,
+        "render/ui/elapsed_cpu": 0.03062,
+        "render/upscaling/elapsed_gpu": 0.05764,
+        "render/ui/elapsed_gpu": 0.04004,
+        "render/upscaling/elapsed_cpu": 0.0039700000000000004,
+        "render/sparse buffer update/elapsed_gpu": 0.0098,
+        "render/bin_unpacking/elapsed_gpu": 0.20108,
+        "render/main_opaque_pass_3d/elapsed_cpu": 0.082682,
+        "render/taa/elapsed_gpu": 0.44868,
+        "render/bin_unpacking/elapsed_cpu": 0.023180000000000003,
+        "render/early_mesh_preprocessing/elapsed_cpu": 0.0054399999999999995,
+        "render/clustering/elapsed_gpu": 0.03712,
+        "render/early_mesh_preprocessing/elapsed_gpu": 0.0278,
+        "render/tonemapping/elapsed_cpu": 0.0035,
+        "render/tonemapping/elapsed_gpu": 0.1756,
+        "render/main_opaque_pass_3d/elapsed_gpu": 2.55556,
+        "render/taa/elapsed_cpu": 0.00227,
+        "render/late_mesh_preprocessing/elapsed_gpu": 0.03316,
+        "render/late_mesh_preprocessing/elapsed_cpu": 0.0029000000000000002,
+        "render/early prepass/elapsed_cpu": 0.209283,
+        "render/main_transparent_pass_3d/elapsed_cpu": 0.025051,
+        "render/late prepass/elapsed_cpu": 0.07815200000000001,
+        "render/main_transmissive_pass_3d/elapsed_cpu": 1.152731,
+        "render/sparse buffer update/elapsed_cpu": 0.018349999999999998,
+        "render/early prepass/elapsed_gpu": 0.84812,
+        "render/main_transparent_pass_3d/elapsed_gpu": 0.18056,
+        "render/late prepass/elapsed_gpu": 0.35148,
+        "render/main_transmissive_pass_3d/elapsed_gpu": 0.43156
+      },
+      "cpu_scopes": {
+        "character.current": {
+          "calls": 5125,
+          "total_ms": 18.334466000001527,
+          "mean_ms": 0.0035774567804881027,
+          "cumulative_max_ms": 0.452378,
+          "over_8_ms": 0
+        },
+        "character.ground": {
+          "calls": 5125,
+          "total_ms": 39.426747000004184,
+          "mean_ms": 0.007693023804878865,
+          "cumulative_max_ms": 0.5420200000000001,
+          "over_8_ms": 0
+        },
+        "character.move": {
+          "calls": 5125,
+          "total_ms": 80.99067199999956,
+          "mean_ms": 0.01580305795121943,
+          "cumulative_max_ms": 0.442477,
+          "over_8_ms": 0
+        },
+        "character.step": {
+          "calls": 5125,
+          "total_ms": 166.0786029999938,
+          "mean_ms": 0.03240558107316952,
+          "cumulative_max_ms": 0.5783900000000001,
+          "over_8_ms": 0
+        },
+        "character.water": {
+          "calls": 5125,
+          "total_ms": 9.979309999999955,
+          "mean_ms": 0.0019471824390243815,
+          "cumulative_max_ms": 0.422618,
+          "over_8_ms": 0
+        },
+        "collision.activate": {
+          "calls": 248,
+          "total_ms": 13.155785999999992,
+          "mean_ms": 0.05304752419354836,
+          "cumulative_max_ms": 0.41496700000000003,
+          "over_8_ms": 0
+        },
+        "collision.dispatch": {
+          "calls": 3250,
+          "total_ms": 130.7692460000004,
+          "mean_ms": 0.0402366910769232,
+          "cumulative_max_ms": 1.430254,
+          "over_8_ms": 0
+        },
+        "collision.receive": {
+          "calls": 3250,
+          "total_ms": 73.43698500000113,
+          "mean_ms": 0.022595995384615732,
+          "cumulative_max_ms": 0.5859800000000001,
+          "over_8_ms": 0
+        },
+        "creatures.navigation.path": {
+          "calls": 2,
+          "total_ms": 0.06173099999999998,
+          "mean_ms": 0.03086549999999999,
+          "cumulative_max_ms": 1.20376,
+          "over_8_ms": 0
+        },
+        "creatures.needs.find_water": {
+          "calls": 135,
+          "total_ms": 5.089741000000004,
+          "mean_ms": 0.03770178518518521,
+          "cumulative_max_ms": 0.112362,
+          "over_8_ms": 0
+        },
+        "creatures.needs.water_surface": {
+          "calls": 19334,
+          "total_ms": 3.626219999997673,
+          "mean_ms": 0.00018755663597794936,
+          "cumulative_max_ms": 0.022731,
+          "over_8_ms": 0
+        },
+        "creatures.server_tick": {
+          "calls": 299,
+          "total_ms": 112.0558960000011,
+          "mean_ms": 0.3747688829431475,
+          "cumulative_max_ms": 1.622978,
+          "over_8_ms": 0
+        },
+        "integrated.autosave.snapshot": {
+          "calls": 3,
+          "total_ms": 1.120659999999999,
+          "mean_ms": 0.373553333333333,
+          "cumulative_max_ms": 0.680901,
+          "over_8_ms": 0
+        },
+        "lights.select": {
+          "calls": 1456,
+          "total_ms": 761.4190569999646,
+          "mean_ms": 0.5229526490384372,
+          "cumulative_max_ms": 6.6697049999999996,
+          "over_8_ms": 0
+        },
+        "mapping.index": {
+          "calls": 142,
+          "total_ms": 294.574845000001,
+          "mean_ms": 2.074470739436627,
+          "cumulative_max_ms": 3.819538,
+          "over_8_ms": 0
+        },
+        "mapping.schedule": {
+          "calls": 142,
+          "total_ms": 672.1440789999951,
+          "mean_ms": 4.733409007042219,
+          "cumulative_max_ms": 6.590406,
+          "over_8_ms": 0
+        },
+        "mapping.snapshot": {
+          "calls": 568,
+          "total_ms": 6.741382000000058,
+          "mean_ms": 0.011868630281690244,
+          "cumulative_max_ms": 0.215384,
+          "over_8_ms": 0
+        },
+        "props.contact_shadows": {
+          "calls": 1456,
+          "total_ms": 41.47175700000085,
+          "mean_ms": 0.02848334958791267,
+          "cumulative_max_ms": 1.270343,
+          "over_8_ms": 0
+        },
+        "props.dispatch": {
+          "calls": 1456,
+          "total_ms": 1635.1020390000176,
+          "mean_ms": 1.1230096421703417,
+          "cumulative_max_ms": 15.634447,
+          "over_8_ms": 0
+        },
+        "props.upload": {
+          "calls": 1456,
+          "total_ms": 1294.0370939999793,
+          "mean_ms": 0.8887617403846012,
+          "cumulative_max_ms": 3.509549,
+          "over_8_ms": 0
+        },
+        "storage.save_edits": {
+          "calls": 3,
+          "total_ms": 92.39211599999999,
+          "mean_ms": 30.797371999999996,
+          "cumulative_max_ms": 317.92306399999995,
+          "over_8_ms": 3
+        },
+        "streaming.dispatch": {
+          "calls": 3250,
+          "total_ms": 46.94706000000275,
+          "mean_ms": 0.014445249230770077,
+          "cumulative_max_ms": 1.0555569999999999,
+          "over_8_ms": 0
+        },
+        "streaming.interest": {
+          "calls": 3250,
+          "total_ms": 57.51507300000543,
+          "mean_ms": 0.01769694553846321,
+          "cumulative_max_ms": 6.71492,
+          "over_8_ms": 0
+        },
+        "streaming.publish_section": {
+          "calls": 8125,
+          "total_ms": 28.121263000000226,
+          "mean_ms": 0.003461078523076951,
+          "cumulative_max_ms": 2.664114,
+          "over_8_ms": 0
+        },
+        "streaming.receive": {
+          "calls": 3250,
+          "total_ms": 43.23054900000261,
+          "mean_ms": 0.013301707384616187,
+          "cumulative_max_ms": 2.738956,
+          "over_8_ms": 0
+        },
+        "terrain.dispatch": {
+          "calls": 1456,
+          "total_ms": 7227.280924999999,
+          "mean_ms": 4.963791844093406,
+          "cumulative_max_ms": 14.837312,
+          "over_8_ms": 176
+        },
+        "terrain.exposure_snapshot": {
+          "calls": 5054,
+          "total_ms": 536.7003109999914,
+          "mean_ms": 0.10619317590027531,
+          "cumulative_max_ms": 2.354588,
+          "over_8_ms": 0
+        },
+        "terrain.invalidate.animation": {
+          "calls": 372,
+          "total_ms": 0.010610000000001521,
+          "mean_ms": 2.8521505376348175e-05,
+          "cumulative_max_ms": 0.00092,
+          "over_8_ms": 0
+        },
+        "terrain.invalidate.chunks": {
+          "calls": 899,
+          "total_ms": 0.04641200000000023,
+          "mean_ms": 5.1626251390434074e-05,
+          "cumulative_max_ms": 0.0077800000000000005,
+          "over_8_ms": 0
+        },
+        "terrain.invalidate.focus": {
+          "calls": 58,
+          "total_ms": 0.0015809999999999913,
+          "mean_ms": 2.7258620689655023e-05,
+          "cumulative_max_ms": 0.00013,
+          "over_8_ms": 0
+        },
+        "terrain.invalidate.journal": {
+          "calls": 12,
+          "total_ms": 0.0002699999999999994,
+          "mean_ms": 2.249999999999995e-05,
+          "cumulative_max_ms": 4e-05,
+          "over_8_ms": 0
+        },
+        "terrain.model_snapshot": {
+          "calls": 6396,
+          "total_ms": 535.0818340000742,
+          "mean_ms": 0.08365882332709103,
+          "cumulative_max_ms": 1.491394,
+          "over_8_ms": 0
+        },
+        "terrain.refresh.appearance": {
+          "calls": 12,
+          "total_ms": 0.954976000000002,
+          "mean_ms": 0.0795813333333335,
+          "cumulative_max_ms": 0.11916199999999999,
+          "over_8_ms": 0
+        },
+        "terrain.refresh.coastal": {
+          "calls": 899,
+          "total_ms": 672.5773359999957,
+          "mean_ms": 0.7481394171301399,
+          "cumulative_max_ms": 1.852643,
+          "over_8_ms": 0
+        },
+        "terrain.refresh.queue": {
+          "calls": 1056,
+          "total_ms": 4573.002234000014,
+          "mean_ms": 4.330494539772741,
+          "cumulative_max_ms": 9.419146999999999,
+          "over_8_ms": 1
+        },
+        "terrain.refresh.queue.arrivals": {
+          "calls": 624,
+          "total_ms": 2187.577353000004,
+          "mean_ms": 3.5057329375000066,
+          "cumulative_max_ms": 8.822869,
+          "over_8_ms": 0
+        },
+        "terrain.refresh.queue.full": {
+          "calls": 432,
+          "total_ms": 2386.3846819999817,
+          "mean_ms": 5.524038615740698,
+          "cumulative_max_ms": 9.421697,
+          "over_8_ms": 1
+        },
+        "terrain.upload": {
+          "calls": 1456,
+          "total_ms": 535.4127579999986,
+          "mean_ms": 0.3677285425824166,
+          "cumulative_max_ms": 1.9221240000000002,
+          "over_8_ms": 0
+        },
+        "transitions.animate": {
+          "calls": 1456,
+          "total_ms": 410.0257030000025,
+          "mean_ms": 0.28161105975274897,
+          "cumulative_max_ms": 8.088204999999999,
+          "over_8_ms": 0
+        },
+        "transitions.cleanup": {
+          "calls": 2387,
+          "total_ms": 45.95204099999967,
+          "mean_ms": 0.01925095978215319,
+          "cumulative_max_ms": 0.767703,
+          "over_8_ms": 0
+        },
+        "transitions.enter_commit": {
+          "calls": 5511,
+          "total_ms": 18.757259000001255,
+          "mean_ms": 0.0034036035202324906,
+          "cumulative_max_ms": 0.292305,
+          "over_8_ms": 0
+        },
+        "transitions.queue_shadows": {
+          "calls": 5528,
+          "total_ms": 11.830031999999875,
+          "mean_ms": 0.002140020260492018,
+          "cumulative_max_ms": 0.274595,
+          "over_8_ms": 0
+        },
+        "transitions.retire_commit": {
+          "calls": 4398,
+          "total_ms": 4.386473000000198,
+          "mean_ms": 0.0009973790359254656,
+          "cumulative_max_ms": 0.052091,
+          "over_8_ms": 0
+        },
+        "transitions.retire_meshes": {
+          "calls": 3500,
+          "total_ms": 16.227033999999662,
+          "mean_ms": 0.004636295428571332,
+          "cumulative_max_ms": 1.6565690000000002,
+          "over_8_ms": 0
+        },
+        "water.falling_curtain": {
+          "calls": 21026,
+          "total_ms": 37.07988399999988,
+          "mean_ms": 0.0017635253495671967,
+          "cumulative_max_ms": 0.35632600000000003,
+          "over_8_ms": 0
+        },
+        "water.motion": {
+          "calls": 53707,
+          "total_ms": 49.70385400006188,
+          "mean_ms": 0.0009254632357059952,
+          "cumulative_max_ms": 0.44757800000000003,
+          "over_8_ms": 0
+        },
+        "water.upload": {
+          "calls": 1456,
+          "total_ms": 701.1802959999886,
+          "mean_ms": 0.48157987362636584,
+          "cumulative_max_ms": 2.2723679999999997,
+          "over_8_ms": 0
+        },
+        "water_audio.column": {
+          "calls": 972,
+          "total_ms": 1.3975529999999932,
+          "mean_ms": 0.0014378117283950548,
+          "cumulative_max_ms": 0.012700000000000001,
+          "over_8_ms": 0
+        },
+        "water_audio.scan": {
+          "calls": 59,
+          "total_ms": 15.17179899999995,
+          "mean_ms": 0.2571491355932195,
+          "cumulative_max_ms": 0.507829,
+          "over_8_ms": 0
+        },
+        "water_audio.update": {
+          "calls": 1456,
+          "total_ms": 8.88943799999992,
+          "mean_ms": 0.006105383241758187,
+          "cumulative_max_ms": 0.081552,
+          "over_8_ms": 0
+        }
+      },
+      "entity_count_kind": "explicit_fields",
+      "rss_mib": 2126.12109375
+    }
+  ],
+  "checkpoints": [
+    {
+      "minute": 1,
+      "target_elapsed_seconds": 60,
+      "status": "measured",
+      "sample_elapsed_seconds": 60.023984832,
+      "sample_offset_seconds": 0.02398483199999646,
+      "fps": 41.34586814589742,
+      "median_ms": 23.78032,
+      "p95_ms": 37.369161999999996,
+      "p99_ms": 46.250254,
+      "max_ms": 94.817664,
+      "rss_mib": 1990.75390625
+    },
+    {
+      "minute": 5,
+      "target_elapsed_seconds": 300,
+      "status": "not_measured"
+    },
+    {
+      "minute": 10,
+      "target_elapsed_seconds": 600,
+      "status": "not_measured"
+    },
+    {
+      "minute": 15,
+      "target_elapsed_seconds": 900,
+      "status": "not_measured"
+    },
+    {
+      "minute": 30,
+      "target_elapsed_seconds": 1800,
+      "status": "not_measured"
+    }
+  ],
+  "resources": [
+    {
+      "kind": "resource_timeline",
+      "elapsed_seconds": 30.127,
+      "wall_unix_seconds": 1792541554.245041,
+      "rss_kib": 1863336,
+      "swap_kib": 0,
+      "drm_memory_vram_kib": 5202448,
+      "drm_memory_gtt_kib": 69744,
+      "user_cpu_ticks": 9754,
+      "system_cpu_ticks": 720,
+      "minor_faults": 402929,
+      "major_faults": 128,
+      "minor_faults_delta": 402926,
+      "major_faults_delta": 128,
+      "cpu_ticks_delta": 10474,
+      "cpu_interval_seconds": 30.127,
+      "cpu_percent": 347.664,
+      "soak_elapsed_seconds": -22.91955304145813,
+      "alignment": "absolute_wall_clock"
+    },
+    {
+      "kind": "resource_timeline",
+      "elapsed_seconds": 60.254,
+      "wall_unix_seconds": 1792541584.3724213,
+      "rss_kib": 1898056,
+      "swap_kib": 0,
+      "drm_memory_vram_kib": 4940852,
+      "drm_memory_gtt_kib": 69780,
+      "user_cpu_ticks": 17378,
+      "system_cpu_ticks": 1345,
+      "minor_faults": 430078,
+      "major_faults": 130,
+      "minor_faults_delta": 27149,
+      "major_faults_delta": 2,
+      "cpu_ticks_delta": 8249,
+      "cpu_interval_seconds": 30.127,
+      "cpu_percent": 273.804,
+      "soak_elapsed_seconds": 7.20782732963562,
+      "alignment": "absolute_wall_clock"
+    },
+    {
+      "kind": "resource_timeline",
+      "elapsed_seconds": 90.383,
+      "wall_unix_seconds": 1792541614.5014396,
+      "rss_kib": 2020336,
+      "swap_kib": 0,
+      "drm_memory_vram_kib": 5116236,
+      "drm_memory_gtt_kib": 69780,
+      "user_cpu_ticks": 26810,
+      "system_cpu_ticks": 1869,
+      "minor_faults": 463715,
+      "major_faults": 130,
+      "minor_faults_delta": 33637,
+      "major_faults_delta": 0,
+      "cpu_ticks_delta": 9956,
+      "cpu_interval_seconds": 30.129,
+      "cpu_percent": 330.445,
+      "soak_elapsed_seconds": 37.3368456363678,
+      "alignment": "absolute_wall_clock"
+    },
+    {
+      "kind": "resource_timeline",
+      "elapsed_seconds": 120.511,
+      "wall_unix_seconds": 1792541644.6289444,
+      "rss_kib": 2044752,
+      "swap_kib": 0,
+      "drm_memory_vram_kib": 5118384,
+      "drm_memory_gtt_kib": 69780,
+      "user_cpu_ticks": 36053,
+      "system_cpu_ticks": 2372,
+      "minor_faults": 480030,
+      "major_faults": 130,
+      "minor_faults_delta": 16315,
+      "major_faults_delta": 0,
+      "cpu_ticks_delta": 9746,
+      "cpu_interval_seconds": 30.127,
+      "cpu_percent": 323.492,
+      "soak_elapsed_seconds": 67.46435046195984,
+      "alignment": "absolute_wall_clock"
+    },
+    {
+      "kind": "resource_timeline",
+      "elapsed_seconds": 150.638,
+      "wall_unix_seconds": 1792541674.7560158,
+      "rss_kib": 2065616,
+      "swap_kib": 0,
+      "drm_memory_vram_kib": 5119336,
+      "drm_memory_gtt_kib": 69780,
+      "user_cpu_ticks": 45115,
+      "system_cpu_ticks": 2871,
+      "minor_faults": 491772,
+      "major_faults": 130,
+      "minor_faults_delta": 11742,
+      "major_faults_delta": 0,
+      "cpu_ticks_delta": 9561,
+      "cpu_interval_seconds": 30.127,
+      "cpu_percent": 317.356,
+      "soak_elapsed_seconds": 97.59142184257507,
+      "alignment": "absolute_wall_clock"
+    },
+    {
+      "kind": "resource_timeline",
+      "elapsed_seconds": 180.77,
+      "wall_unix_seconds": 1792541704.8886487,
+      "rss_kib": 2108356,
+      "swap_kib": 0,
+      "drm_memory_vram_kib": 5120860,
+      "drm_memory_gtt_kib": 69780,
+      "user_cpu_ticks": 54383,
+      "system_cpu_ticks": 3423,
+      "minor_faults": 514494,
+      "major_faults": 130,
+      "minor_faults_delta": 22722,
+      "major_faults_delta": 0,
+      "cpu_ticks_delta": 9820,
+      "cpu_interval_seconds": 30.133,
+      "cpu_percent": 325.893,
+      "soak_elapsed_seconds": 127.72405481338501,
+      "alignment": "absolute_wall_clock"
+    },
+    {
+      "kind": "resource_timeline",
+      "elapsed_seconds": 210.898,
+      "wall_unix_seconds": 1792541735.0161173,
+      "rss_kib": 2111048,
+      "swap_kib": 0,
+      "drm_memory_vram_kib": 5122924,
+      "drm_memory_gtt_kib": 69780,
+      "user_cpu_ticks": 63522,
+      "system_cpu_ticks": 4020,
+      "minor_faults": 526178,
+      "major_faults": 130,
+      "minor_faults_delta": 11684,
+      "major_faults_delta": 0,
+      "cpu_ticks_delta": 9736,
+      "cpu_interval_seconds": 30.127,
+      "cpu_percent": 323.16,
+      "soak_elapsed_seconds": 157.85152339935303,
+      "alignment": "absolute_wall_clock"
+    }
+  ],
+  "final_measurement": {
+    "command": [
+      "target/phase92/terra-client-before",
+      "--smoke-test-benchmark",
+      "--gender=f"
+    ],
+    "wall_seconds": 233.996,
+    "peak_rss_kib": 2182656,
+    "user_cpu_seconds": 706.447,
+    "system_cpu_seconds": 44.635,
+    "peak_drm_memory_vram_kib": 5202832,
+    "peak_drm_memory_gtt_kib": 69780,
+    "exit_code": 0
+  }
+}

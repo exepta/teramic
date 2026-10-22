@@ -1,0 +1,22 @@
+Generated with the built-in image_gen tool on 2026-10-14.
+The original grass.png/canopy.png and grass-stylized.png remain authoring sources.
+Active cube definitions use grass-neutral.png and canopy-stylized.png.
+Obsolete cube GLBs and their embedded textures have been removed.
+
+grass-neutral.png
+Edited from grass-stylized.png with image_gen on 2026-10-14. Prompt:
+Convert the attached tileable grass diffuse texture to neutral grayscale, no green
+or yellow. Preserve the existing pattern, square dimensions, flat top-down layout,
+sparse small grass strokes and seamless repeat edges. Light, low-contrast patches,
+no lighting, shadows, new objects, borders, text or watermark. The engine supplies
+all biome, weather and burnt coloring. Native result: 1254 x 1254 PNG.
+
+grass-stylized.png
+Use case: stylized-concept. Asset type: a single seamless repeatable square diffuse albedo texture for a high-quality stylized voxel game's grass-covered terrain blocks. Orthographic top-down flat material swatch, no perspective. Short meadow turf simplified into quiet matte green flat polygonal paint patches and occasional tiny grass strokes. Clean stylized illustrative videogame material, not photographic, not gritty or noisy. Main color fresh muted meadow green approximately RGB 88 132 53, subtle local variation within 15 percent brightness, gentle cool-green and warm-green accents, no yellow clovers or flowers or pebbles. Broad calm areas suitable for many repetitions across terrain, no obvious central composition. All four edges must tile seamlessly. Completely even unlit diffuse color, no ambient occlusion, no shadow, no raised geometry, no highlights, no border, no text, no watermark. Square 256 by 256 pixel texture if possible.
+
+canopy-stylized.png
+Use case: stylized-concept. Asset type: one square seamlessly tileable grayscale diffuse albedo material texture for tiny voxel leaf clusters in a stylized video game. This texture is multiplied by green, orange or silver material colors, so it MUST be neutral grayscale only. Flat top-down unlit texture, pale gray base approximately RGB 190 190 190, soft large angular irregular patches between RGB 173 and 207, low contrast. Suggest sparse simple angular leaf shapes but mostly calm matte polygonal color areas, approximately 12 to 20 broad patch groups across the square. No fine leaf veins, no photorealism, no noise, no grunge, no dots, no baked shadows, no dark crevices, no flowers, no branches, no borders, no highlights, no central design. Seamless repeat on all four edges. This should look restrained and almost flat from a distance so physical voxel geometry supplies the shape. Entire frame filled with texture. No text or watermark. Square 256x256 if possible.
+
+The generator delivered 1254 x 1254 PNGs. They are used at their native size;
+the existing linear-light mipmap builder handles odd texture dimensions.
+Repeat filtering is unchanged. These are separate textures, not atlas cells.

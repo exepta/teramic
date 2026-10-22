@@ -1,0 +1,50 @@
+{
+  "id": "teramic::spruce_fence",
+  "name": "Spruce Fence",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "block": 92
+    },
+    "count": 3
+  },
+  "pattern": {
+    "kind": "shaped",
+    "width": 3,
+    "height": 2,
+    "cells": [
+      {
+        "item": {
+          "block": 18
+        },
+        "count": 1
+      },
+      {
+        "item": "stick",
+        "count": 1
+      },
+      {
+        "item": {
+          "block": 18
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "block": 18
+        },
+        "count": 1
+      },
+      {
+        "item": "stick",
+        "count": 1
+      },
+      {
+        "item": {
+          "block": 18
+        },
+        "count": 1
+      }
+    ]
+  }
+}

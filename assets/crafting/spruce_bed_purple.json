@@ -1,0 +1,31 @@
+{
+  "id": "teramic::spruce_bed_purple",
+  "name": "Purple Spruce Bed",
+  "station": "hand",
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "block": 73
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "dye": "purple"
+        },
+        "count": 1
+      }
+    ]
+  },
+  "output": {
+    "item": {
+      "dyed_bed": {
+        "material": 73,
+        "color": "purple"
+      }
+    },
+    "count": 1
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "id": "teramic::blue_dye",
+  "name": "Blue Dye",
+  "station": "hand",
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "prop": "flower"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "prop": "small_plant"
+        },
+        "count": 1
+      }
+    ]
+  },
+  "output": {
+    "item": {
+      "dye": "blue"
+    },
+    "count": 1
+  }
+}

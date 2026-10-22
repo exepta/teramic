@@ -1,0 +1,1 @@
+{"id":4,"key":"teramic::smelt_fish","name":"Cooked Fish","input":{"animal":"fish"},"output":{"item":{"animal":"cooked_fish"},"count":1},"seconds":6.0}

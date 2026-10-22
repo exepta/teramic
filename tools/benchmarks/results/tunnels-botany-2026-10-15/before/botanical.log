@@ -1,0 +1,19 @@
+2026-10-15T18:02:59.872304Z  INFO bevy_render::renderer: AdapterInfo { name: "AMD Radeon RX 6950 XT (RADV NAVI21)", vendor: 4098, device: 29605, device_type: DiscreteGpu, device_pci_bus_id: "0000:0c:00.0", driver: "radv", driver_info: "Mesa 26.2.4-arch3.1", backend: Vulkan, subgroup_min_size: 32, subgroup_max_size: 64, transient_saves_memory: false }
+2026-10-15T18:02:59.983969Z  INFO bevy_pbr::cluster: GPU clustering is supported on this device.
+2026-10-15T18:02:59.984004Z  INFO bevy_render::batching::gpu_preprocessing: GPU preprocessing is fully supported on this device.
+2026-10-15T18:02:59.985138Z  INFO bevy_winit::system: Creating new window TERAMIC (75v0)
+2026-10-15T18:03:00.034018Z DEBUG terra_world::streaming::interest: Chunk interest changed centers=[SectionPos { x: -16, y: 1, z: 96 }] requested=7623
+2026-10-15T18:03:00.072699Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/wood.png mip_levels=10 rebound_materials=2
+2026-10-15T18:03:00.075555Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/stone.png mip_levels=10 rebound_materials=2
+2026-10-15T18:03:00.098685Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/dirt.png mip_levels=10 rebound_materials=1
+2026-10-15T18:03:00.136561Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/canopy-stylized.png mip_levels=11 rebound_materials=3
+2026-10-15T18:03:00.136589Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/grass-neutral.png mip_levels=11 rebound_materials=1
+2026-10-15T18:03:00.137016Z  INFO terra_render::blocks::loading: Block template library ready blocks=10 materials=22
+2026-10-15T18:03:02.078208Z  INFO terra_world::streaming::jobs: Chunk streaming ready sections=7623 cached_columns=1089
+2026-10-15T18:03:04.933915Z  INFO terra_client::botanical_smoke: Botanical close-up captured label="grass" cpu_percent=Some(7.9124682049851724) resident_bytes=Some(827953152)
+2026-10-15T18:03:05.005993Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /tmp/terra-tunnel-botanical-before/botanical-grass.png
+2026-10-15T18:03:07.938820Z  INFO terra_client::botanical_smoke: Botanical close-up captured label="flowers" cpu_percent=Some(7.908587896310381) resident_bytes=Some(854319104)
+2026-10-15T18:03:08.009606Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /tmp/terra-tunnel-botanical-before/botanical-flowers.png
+2026-10-15T18:03:10.950459Z  INFO terra_client::botanical_smoke: Botanical close-up captured label="terrain" cpu_percent=Some(7.758089646916723) resident_bytes=Some(863322112)
+2026-10-15T18:03:11.023581Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /tmp/terra-tunnel-botanical-before/botanical-terrain.png
+2026-10-15T18:03:11.946734Z  INFO terra_client::botanical_smoke: Botanical smoke completed

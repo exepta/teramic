@@ -1,0 +1,6 @@
+<div class="category-slot">
+  <button id="inventory-category" [class]="category.selected ? 'category-tab selected' : 'category-tab'" onclick="inventory_category"><img class="category-image" [alt]="category.preview_key" /></button>
+  @if (!inventoryCursor.visible) {
+    <tooltip id="inventory-category-tooltip" for="inventory-category" trigger="hover" variant="follow" class="category-tooltip"><p>{{ category.name }}</p></tooltip>
+  }
+</div>

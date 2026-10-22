@@ -1,0 +1,49 @@
+2026-10-15T16:35:55.355720Z  INFO bevy_render::renderer: AdapterInfo { name: "AMD Radeon RX 6950 XT (RADV NAVI21)", vendor: 4098, device: 29605, device_type: DiscreteGpu, device_pci_bus_id: "0000:0c:00.0", driver: "radv", driver_info: "Mesa 26.2.4-arch3.1", backend: Vulkan, subgroup_min_size: 32, subgroup_max_size: 64, transient_saves_memory: false }
+2026-10-15T16:35:55.379127Z  INFO terra_world::streaming::jobs: Chunk streaming ready sections=27 cached_columns=9
+2026-10-15T16:35:55.469163Z  INFO bevy_pbr::cluster: GPU clustering is supported on this device.
+2026-10-15T16:35:55.469193Z  INFO bevy_render::batching::gpu_preprocessing: GPU preprocessing is fully supported on this device.
+2026-10-15T16:35:55.470039Z  INFO bevy_winit::system: Creating new window TERAMIC (75v0)
+2026-10-15T16:35:55.484935Z  INFO lightyear_netcode::client: client connecting to server 127.0.0.1:37505 [1/1]
+2026-10-15T16:35:55.484960Z  INFO lightyear_udp: UDP socket bound to 0.0.0.0:0
+2026-10-15T16:35:55.520219Z  INFO terra_render::diagnostics: Render diagnostics enabled; GPU pass timings are milliseconds, not total frame latency; draw-call counts are unavailable adapter=AMD Radeon RX 6950 XT (RADV NAVI21) backend=Vulkan timestamps=true pass_timestamps=true encoder_timestamps=true pipeline_statistics=true
+2026-10-15T16:35:55.528949Z  INFO lightyear_udp::server: Received UDP packet from new address 127.0.0.1:54071, Spawn new LinkOf entity=207v0 server_entity=189v0
+2026-10-15T16:35:55.578376Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/wood.png mip_levels=10 rebound_materials=2
+2026-10-15T16:35:55.578393Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/dirt.png mip_levels=10 rebound_materials=1
+2026-10-15T16:35:55.578397Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/stone.png mip_levels=10 rebound_materials=2
+2026-10-15T16:35:55.591061Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/canopy-stylized.png mip_levels=11 rebound_materials=3
+2026-10-15T16:35:55.591082Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/grass-neutral.png mip_levels=11 rebound_materials=1
+2026-10-15T16:35:55.591269Z  INFO terra_render::blocks::loading: Block template library ready blocks=10 materials=22
+2026-10-15T16:35:55.676488Z  INFO lightyear_netcode::server_plugin: New connection on netcode from 1 (207v0)
+2026-10-15T16:35:55.682822Z  INFO lightyear_netcode::client_plugin: Client Netcode(1) connected
+2026-10-15T16:35:55.693770Z  INFO terra_network::server: Player profile accepted (local, not verified online) player=1 uuid=fe80167b-ece8-42a9-af8d-b81eec4e0cbd name=Player-fe80167b
+2026-10-15T16:35:55.694793Z  INFO terra_network::client: Authoritative world synchronized player=Some(PlayerId(1))
+2026-10-15T16:35:55.699293Z DEBUG terra_world::streaming::interest: Chunk interest changed centers=[SectionPos { x: 0, y: 2, z: 1 }] requested=7623
+2026-10-15T16:35:57.786875Z  INFO terra_world::streaming::jobs: Chunk streaming ready sections=7623 cached_columns=1089
+2026-10-15T16:36:00.459665Z  INFO terra_client::smoke_test: Scene capture ready water_tiles=0 water_triangles=0
+2026-10-15T16:36:18.962575Z  INFO terra_client::smoke_test: Native smoke benchmark (CPU wall frames; screenshot-adjacent frames excluded; GPU pass timings reported separately when enabled) benchmark_mode=integrated physical_resolution=Some((1920, 1200)) controller_calls=2167 controller_mean_ms=0.033000456852791876 controller_max_ms=0.083442 camera=Some((Vec3(8.0, 34.63, 24.0), Quat(-0.13282566, 0.1587254, 0.021554638, 0.97810996))) sample_frames=2543 sample_window_seconds=18.0 average_fps=141.27056278405033 p95_frame_ms=8.763959999999999 p99_frame_ms=9.503575 initial_load_seconds=3.074455992 resident_memory_kib=791268 loaded_sections=7623 rendered_sections=4515 mesh_assets=9235 terrain_composition_jobs=4515 terrain_composition_worker_seconds=0.6864064429999999 terrain_composition_max_ms=49.663171 visible_mesh_entities=4615 loaded_active_props=86727 represented_props=86727 prop_batches=1248 prop_composition_jobs=1248 prop_composition_worker_seconds=0.22635451900000006 water_tiles=0
+2026-10-15T16:36:18.962611Z  INFO terra_client::diagnostic_report: Native render diagnostic diagnostic=render/bin_unpacking/compute_shader_invocations samples=2542 unit="count" mean=10944.0 p95=10944.0 p99=10944.0
+2026-10-15T16:36:18.962645Z  INFO terra_client::diagnostic_report: Native render diagnostic diagnostic=render/bin_unpacking/elapsed_gpu samples=2542 unit="ms" mean=0.014388245476003111 p95=0.01568 p99=0.01592
+2026-10-15T16:36:18.962681Z  INFO terra_client::diagnostic_report: Native render diagnostic diagnostic=render/clustering/elapsed_gpu samples=2542 unit="ms" mean=0.03427205350118016 p95=0.03548 p99=0.0362
+2026-10-15T16:36:18.962694Z  INFO terra_client::diagnostic_report: Native render diagnostic diagnostic=render/early prepass/clipper_primitives_out samples=2542 unit="count" mean=1189629.7368214005 p95=1189631.0 p99=1189645.0
+2026-10-15T16:36:18.962752Z  INFO terra_client::diagnostic_report: Native render diagnostic diagnostic=render/early prepass/elapsed_gpu samples=2542 unit="ms" mean=0.757075357985835 p95=0.99348 p99=1.19712
+2026-10-15T16:36:18.962759Z  INFO terra_client::diagnostic_report: Native render diagnostic diagnostic=render/early prepass/fragment_shader_invocations samples=2542 unit="count" mean=0.0 p95=0.0 p99=0.0
+2026-10-15T16:36:18.962765Z  INFO terra_client::diagnostic_report: Native render diagnostic diagnostic=render/early prepass/vertex_shader_invocations samples=2542 unit="count" mean=6926733.0 p95=6926733.0 p99=6926733.0
+2026-10-15T16:36:18.962772Z  INFO terra_client::diagnostic_report: Native render diagnostic diagnostic=render/early_mesh_preprocessing/compute_shader_invocations samples=2542 unit="count" mean=10496.0 p95=10496.0 p99=10496.0
+2026-10-15T16:36:18.962802Z  INFO terra_client::diagnostic_report: Native render diagnostic diagnostic=render/early_mesh_preprocessing/elapsed_gpu samples=2542 unit="ms" mean=0.01800176239181747 p95=0.01912 p99=0.01952
+2026-10-15T16:36:18.962815Z  INFO terra_client::diagnostic_report: Native render diagnostic diagnostic=render/main_opaque_pass_3d/clipper_primitives_out samples=2542 unit="count" mean=1189629.7368214005 p95=1189631.0 p99=1189645.0
+2026-10-15T16:36:18.962884Z  INFO terra_client::diagnostic_report: Native render diagnostic diagnostic=render/main_opaque_pass_3d/elapsed_gpu samples=2542 unit="ms" mean=1.110316239181749 p95=1.41468 p99=1.78016
+2026-10-15T16:36:18.962896Z  INFO terra_client::diagnostic_report: Native render diagnostic diagnostic=render/main_opaque_pass_3d/fragment_shader_invocations samples=2542 unit="count" mean=2263932.246656176 p95=2263933.0 p99=2263952.0
+2026-10-15T16:36:18.962902Z  INFO terra_client::diagnostic_report: Native render diagnostic diagnostic=render/main_opaque_pass_3d/vertex_shader_invocations samples=2542 unit="count" mean=6926733.0 p95=6926733.0 p99=6926733.0
+2026-10-15T16:36:18.962908Z  INFO terra_client::diagnostic_report: Native render diagnostic diagnostic=render/main_transparent_pass_3d/clipper_primitives_out samples=2542 unit="count" mean=24.0 p95=24.0 p99=24.0
+2026-10-15T16:36:18.962933Z  INFO terra_client::diagnostic_report: Native render diagnostic diagnostic=render/main_transparent_pass_3d/elapsed_gpu samples=2542 unit="ms" mean=0.0040548859166010965 p95=0.00424 p99=0.00436
+2026-10-15T16:36:18.962945Z  INFO terra_client::diagnostic_report: Native render diagnostic diagnostic=render/main_transparent_pass_3d/fragment_shader_invocations samples=2542 unit="count" mean=8486.47128245476 p95=8487.0 p99=8487.0
+2026-10-15T16:36:18.962951Z  INFO terra_client::diagnostic_report: Native render diagnostic diagnostic=render/main_transparent_pass_3d/vertex_shader_invocations samples=2542 unit="count" mean=78.0 p95=78.0 p99=78.0
+2026-10-15T16:36:18.962981Z  INFO terra_client::diagnostic_report: Native render diagnostic diagnostic=render/tonemapping/elapsed_gpu samples=2542 unit="ms" mean=0.051911738788355755 p95=0.05184 p99=0.05332
+2026-10-15T16:36:18.962987Z  INFO terra_client::diagnostic_report: Native render diagnostic diagnostic=render/ui/clipper_primitives_out samples=2542 unit="count" mean=150.0 p95=150.0 p99=150.0
+2026-10-15T16:36:18.963013Z  INFO terra_client::diagnostic_report: Native render diagnostic diagnostic=render/ui/elapsed_gpu samples=2542 unit="ms" mean=0.006415625491738764 p95=0.00636 p99=0.00784
+2026-10-15T16:36:18.963030Z  INFO terra_client::diagnostic_report: Native render diagnostic diagnostic=render/ui/fragment_shader_invocations samples=2542 unit="count" mean=295859.9268292683 p95=295927.0 p99=295941.0
+2026-10-15T16:36:18.963036Z  INFO terra_client::diagnostic_report: Native render diagnostic diagnostic=render/ui/vertex_shader_invocations samples=2542 unit="count" mean=302.0 p95=302.0 p99=302.0
+2026-10-15T16:36:18.963067Z  INFO terra_client::diagnostic_report: Native render diagnostic diagnostic=render/upscaling/elapsed_gpu samples=2542 unit="ms" mean=0.021306247049567288 p95=0.022 p99=0.02368
+2026-10-15T16:36:18.963070Z  INFO terra_client::diagnostic_report: GPU values describe individual instrumented passes; no total GPU frame time or draw-call count is inferred gpu_timing_series=9
+2026-10-15T16:36:18.963072Z  INFO terra_client::smoke_test: Client smoke test completed
+{"command": ["target/debug/terra-client", "--smoke-test-benchmark"], "wall_seconds": 23.782, "peak_rss_kib": 787480, "user_cpu_seconds": 40.315, "system_cpu_seconds": 7.075, "exit_code": 0}

@@ -1,0 +1,11 @@
+{
+  "item": { "animal": "cooked_fish" },
+  "name": "Cooked Fish",
+  "description": "A browned river fish.",
+  "food": {
+    "nutrition": 40.0,
+    "saturation": 14.0,
+    "eat_seconds": 1.6,
+    "regeneration": { "health_per_second": 0.5, "duration_seconds": 8.0 }
+  }
+}

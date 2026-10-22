@@ -1,0 +1,13 @@
+{
+  "kind": "shield_power",
+  "id": "teramic::shield_power",
+  "name": "Shield Power",
+  "description": "A temporary shield absorbs incoming physical damage.",
+  "beneficial": true,
+  "max_duration_seconds": 3600,
+  "max_level": 3,
+  "stacking": "refresh_strongest",
+  "modifiers": {
+    "shield_points": 20
+  }
+}

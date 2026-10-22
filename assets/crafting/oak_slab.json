@@ -1,0 +1,36 @@
+{
+  "id": "teramic::oak_slab",
+  "name": "Oak Half Slab",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "block": 82
+    },
+    "count": 6
+  },
+  "pattern": {
+    "kind": "shaped",
+    "width": 3,
+    "height": 1,
+    "cells": [
+      {
+        "item": {
+          "block": 16
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "block": 16
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "block": 16
+        },
+        "count": 1
+      }
+    ]
+  }
+}

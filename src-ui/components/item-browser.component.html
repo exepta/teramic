@@ -1,0 +1,15 @@
+<div id="item-browser" class="item-browser">
+  <ornate-frame></ornate-frame>
+  <div class="browser-heading"><icon name="book-open" size="21" /><h3>Items</h3></div>
+  <div id="inventory-categories-host" class="browser-category-host">
+    @if (inventoryView.category_dropdown) {
+      <choice-box id="inventory-category-select" class="browser-category-select" max-visible-items="7" onchange="inventory_category_select"><div class="browser-category-options">@for (category of inventoryView.categories; track category.id) { <option id="inventory-category-option" [value]="category.id" [selected]="category.selected">{{ category.name }}</option> }</div></choice-box>
+    } @else {
+      <div id="inventory-categories" class="browser-categories">@for (category of inventoryView.categories; track category.id) { <div class="browser-category-cell"><inventory-category [category]="category" /></div> }</div>
+    }
+  </div>
+  <div id="inventory-browser-grid" class="browser-grid">@for (slot of inventoryView.browser_items; track slot.id) { <inventory-slot [slot]="slot" /> }</div>
+  @if (inventoryView.empty) { <p class="browser-empty">No matching items</p> }
+  <div class="browser-search"><icon name="search" size="18" /><input id="inventory-search" type="text" placeholder="Search items" [value]="inventoryView.search" onchange="inventory_search" /></div>
+  <div class="browser-pagination"><button id="inventory-page-previous" class="pagination-previous" title="Previous item page" [disabled]="!inventoryView.browser_previous" onclick="inventory_action"><icon name="chevron-left" size="22" /></button><div class="pagination-label"><p id="inventory-browser-page">{{ inventoryView.browser_page }}</p></div><button id="inventory-page-next" class="pagination-next" title="Next item page" [disabled]="!inventoryView.browser_next" onclick="inventory_action"><icon name="chevron-right" size="22" /></button></div>
+</div>

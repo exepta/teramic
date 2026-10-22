@@ -1,0 +1,1 @@
+{"id":1,"key":"teramic::smelt_beef","name":"Cooked Beef","input":{"animal":"beef"},"output":{"item":{"animal":"cooked_beef"},"count":1},"seconds":8.0}

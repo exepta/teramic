@@ -1,0 +1,31 @@
+{
+  "id": "teramic::oak_bed_green",
+  "name": "Green Oak Bed",
+  "station": "hand",
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "block": 71
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "dye": "green"
+        },
+        "count": 1
+      }
+    ]
+  },
+  "output": {
+    "item": {
+      "dyed_bed": {
+        "material": 71,
+        "color": "green"
+      }
+    },
+    "count": 1
+  }
+}

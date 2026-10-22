@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "id": 41,
+  "name": "Grundstein",
+  "description": "The deep foundation of the world. Unbreakable in Survival.",
+  "creative_category": "terrain",
+  "render_kind": "cube",
+  "surface": "rock",
+  "bevel_width": 0.035,
+  "textures": { "Deep foundation": "textures/stone-strata-hd.png" },
+  "materials": { "Deep foundation": { "roughness": 1.0, "reflectance": 0.02 } },
+  "face_materials": ["Deep foundation", "Deep foundation", "Deep foundation", "Deep foundation", "Deep foundation", "Deep foundation"],
+  "hardness": 3600.0,
+  "resistance": 1000000.0,
+  "required_tool": "pickaxe",
+  "mining_level": 3
+}

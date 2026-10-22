@@ -1,0 +1,32 @@
+{
+  "creative_category": "nature",
+  "description": "A golden giant mushroom cap with spotted skin and gills.",
+  "schema_version": 1,
+  "id": 23,
+  "name": "Yellow Mushroom Cap",
+  "render_kind": "cube",
+  "surface": "mushroom",
+  "bevel_width": 0.035,
+  "materials": {
+    "Mushroom cap": {
+      "texture_pattern": "yellow_mushroom_cap",
+      "roughness": 0.86
+    },
+    "Mushroom gills": {
+      "texture_pattern": "mushroom_gills",
+      "roughness": 0.94
+    }
+  },
+  "face_materials": [
+    "Mushroom cap",
+    "Mushroom cap",
+    "Mushroom gills",
+    "Mushroom cap",
+    "Mushroom cap",
+    "Mushroom cap"
+  ],
+  "hardness": 0.55,
+  "resistance": 0.5,
+  "required_tool": null,
+  "mining_level": 0
+}

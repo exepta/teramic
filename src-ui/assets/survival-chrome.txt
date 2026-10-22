@@ -1,0 +1,37 @@
+TERAMIC survival HUD chrome
+
+Assets:
+- src-ui/assets/survival-chrome.png (2106 x 747, RGBA)
+- src-ui/assets/survival-status-frame.png (1254 x 1254, RGBA)
+
+Generated using the built-in image_gen tool with transparent_background=true.
+The user-supplied survival HUD image is the visual reference. These assets
+contain the decorative frame only; health, stamina and hunger remain native
+TiltUI progress-bar widgets driven by the authoritative survival state.
+The five eating stages continue to use survival-atlas.png.
+
+Final chrome prompt:
+Production transparent raster game HUD frame in the reference's black-and-gold
+faceted medieval fantasy style. Large left octagonal black-stone medallion,
+ornate beveled antique gold border and emerald diamond gemstones at its top,
+left and bottom. Large bright red faceted blocky pixel heart almost filling
+the medallion. Seamlessly attached long top health channel, black empty
+interior, thin double gold edge and beveled pointed cap with emerald jewel.
+Shorter empty black stamina channel underneath, gold edge and overlapping
+octagonal golden lightning badge. Crisp warm metal highlights and dark stone
+bevels. Both channels empty, no red/yellow meter fill, no text, no numbers,
+no lower status cards, no scenery, no checkerboard, genuine transparent alpha.
+
+Final status-frame prompt:
+One empty square status icon frame matching the reference's lower chicken
+drumstick card. Chamfered beveled corners, thick charcoal stone outer bevel,
+narrow ornate antique gold rim and gold corner brackets. Almost-black empty
+interior, subtle inner bevel. A narrow empty black horizontal meter groove
+inside the bottom with silver dark bevel. Crisp warm highlights and subtle
+pixel-art facets. Straight orthographic front view, no icons, no food, no
+colored meter fill, no labels, no text, no numbers, no scenery, transparent alpha.
+
+Rendering:
+The chrome retains its exported aspect ratio. Its black channels sit behind
+the dynamic red/yellow fills. The status frame uses ImageNode.rect to remove
+the export padding (80,80)-(1175,1175), preserving the alpha channel.

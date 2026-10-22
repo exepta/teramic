@@ -1,0 +1,16 @@
+<div class="item-slot">
+<button id="inventory-cell" [class]="slot.missing ? 'item-cell missing' : (slot.selected ? 'item-cell selected' : 'item-cell')" [disabled]="(slot.disabled && slot.command != 'preview' && slot.command != 'recipe-preview') || (slot.command == 'craft' && slot.empty)" onmousedown="inventory_pointer" onmouseenter="inventory_pointer" onmouseleave="inventory_pointer">
+  @if (!slot.empty) {
+    <img [class]="slot.missing ? 'item-image missing-image' : 'item-image'" [alt]="slot.preview_key" />
+    @if (slot.count != '') { <p class="item-count">{{ slot.count }}</p> }
+  }
+  @if (slot.hotkey != '') { <p class="item-hotkey">{{ slot.hotkey }}</p> }
+</button>
+  @if (!inventoryCursor.visible && !slot.empty) {
+  <tooltip id="inventory-tooltip" for="inventory-cell" trigger="hover" variant="follow" class="item-tooltip">
+    <p class="tooltip-name">{{ slot.name }}</p>
+    <p class="tooltip-identifier">{{ slot.identifier }}</p>
+    <p class="tooltip-description">{{ slot.description }}</p>
+  </tooltip>
+  }
+</div>

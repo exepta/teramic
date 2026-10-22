@@ -1,0 +1,24 @@
+width = 960
+height = 640
+window_mode = "windowed"
+vsync = true
+fps_limit = 0
+render_distance = 4
+fog_distance = 1.0
+chunk_animation = "none"
+lod_distance = 1.0
+shadow_quality = "high"
+water_quality = "high"
+brightness = 1.0
+ui_scale = 1.5
+hud_position = [
+    0.7658802,
+    0.515873,
+]
+fov = 45.0
+water_reflections = true
+water_volumetric_mist = false
+water_wave_strength = 0.65
+weather = "clear"
+weather_intensity = 1.0
+debug_overlay = true

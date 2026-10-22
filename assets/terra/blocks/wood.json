@@ -1,0 +1,28 @@
+{
+  "creative_category": "wood",
+  "description": "Natural timber. Crafts into four oak planks.",
+  "schema_version": 1,
+  "id": 6,
+  "name": "Bark",
+  "render_kind": "cube",
+  "surface": "wood",
+  "bevel_width": 0.09,
+  "materials": {
+    "Twisted tree bark": {}
+  },
+  "face_materials": [
+    "Twisted tree bark",
+    "Twisted tree bark",
+    "Twisted tree bark",
+    "Twisted tree bark",
+    "Twisted tree bark",
+    "Twisted tree bark"
+  ],
+  "textures": {
+    "Twisted tree bark": "textures/wood.png"
+  },
+  "hardness": 0.8,
+  "resistance": 3.0,
+  "required_tool": null,
+  "mining_level": 0
+}

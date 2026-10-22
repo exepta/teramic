@@ -1,0 +1,27 @@
+.target-card { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); width: 320px; max-width: 80%; padding: 12px 16px; box-sizing: border-box; display: flex; flex-direction: column; gap: 6px; border: 1px solid #80966a; border-radius: 6px; background-color: #18241fe8; color: #e9e8d7; pointer-events: none; overflow: visible; }
+.target-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.target-heading h3 { margin: 0; font-size: 17px; color: #f3e2b9; }
+.target-card p { margin: 0; font-size: 12px; }
+.target-origin { color: #a9bea6; text-wrap: nowrap; }
+.target-tool { display: flex; align-items: center; gap: 8px; min-height: 26px; }
+.target-tool-image { width: 26px; height: 26px; flex-shrink: 0; }
+.target-tool p { flex-grow: 1; }
+.target-allowed { color: #93d59a; }
+.target-denied { color: #ef8079; }
+.target-stat { display: flex; flex-direction: column; gap: 3px; }
+.target-stat-label { display: flex; justify-content: space-between; gap: 12px; }
+.target-card progress-bar { width: 100%; height: 8px; }
+.target-card progress-bar::track { height: 100%; background-color: #334238; border: 0px solid transparent; border-radius: 3px; }
+.target-card progress-bar::fill { height: 100%; background-color: #a5bd6b; border-radius: 3px; }
+.target-health { position: relative; height: 22px; }
+.target-health .target-health-bar { height: 22px; }
+.target-card .target-health-bar::fill { background-color: #a44f58; }
+.target-health-label { position: absolute; top: 0; left: 0; width: 100%; height: 22px; display: flex; align-items: center; justify-content: center; }
+.target-health-label p { color: #fff4df; font-size: 13px; }
+.target-mining::fill { background-color: #e7c376; }
+@media (max-width: 760px) {
+  .target-card { left: auto; right: 12px; width: 240px; transform: translate(0px, 0px); }
+}
+@media (max-width: 630px) {
+  .target-card { top: 196px; left: 50%; right: auto; width: 280px; transform: translateX(-50%); }
+}

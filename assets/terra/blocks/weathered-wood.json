@@ -1,0 +1,33 @@
+{
+  "creative_category": "wood",
+  "description": "Pale timber. Crafts into four birch planks.",
+  "schema_version": 1,
+  "id": 10,
+  "name": "Weathered Wood",
+  "render_kind": "cube",
+  "surface": "wood",
+  "bevel_width": 0.09,
+  "materials": {
+    "Silver bark": {
+      "base_color": [
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "texture_pattern": "birch_bark"
+    }
+  },
+  "face_materials": [
+    "Silver bark",
+    "Silver bark",
+    "Silver bark",
+    "Silver bark",
+    "Silver bark",
+    "Silver bark"
+  ],
+  "hardness": 0.8,
+  "resistance": 3.0,
+  "required_tool": null,
+  "mining_level": 0
+}

@@ -1,0 +1,10 @@
+Generated with the built-in imagegen tool.
+Current assets: grass.png, dirt.png, stone.png and wood.png (627 x 627 each).
+The approved original motifs were mechanically separated into individual PNGs.
+No atlas is shipped or used by the client or Blender export pipeline.
+Original generation prompt:
+Prompt: Mossy meadow turf upper-left, root-rich earth upper-right,
+weathered cool blue-grey stone lower-left, twisting umber bark lower-right.
+Exact quadrant layout, no margins, labels, baked lighting or pixel grid.
+Flat orthographic, independently tileable, hand-painted fantasy environment textures.
+GLB previews embed individual textures. Runtime texture paths come from each block's JSON.

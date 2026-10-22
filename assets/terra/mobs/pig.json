@@ -1,0 +1,15 @@
+{
+  "id": "pig",
+  "title": "Pig",
+  "health": 8,
+  "food": 20,
+  "water": 40,
+  "size": [
+    0.8,
+    1,
+    1.15
+  ],
+  "speed": 1,
+  "group_size": 4,
+  "sleeps": true
+}

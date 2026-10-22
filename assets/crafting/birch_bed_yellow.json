@@ -1,0 +1,31 @@
+{
+  "id": "teramic::birch_bed_yellow",
+  "name": "Yellow Birch Bed",
+  "station": "hand",
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "block": 72
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "dye": "yellow"
+        },
+        "count": 1
+      }
+    ]
+  },
+  "output": {
+    "item": {
+      "dyed_bed": {
+        "material": 72,
+        "color": "yellow"
+      }
+    },
+    "count": 1
+  }
+}

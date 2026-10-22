@@ -1,0 +1,5 @@
+simulation_distance = 6
+natural_mob_limit = 256
+require_verified_accounts = false
+lan_discovery = false
+game_mode = "creative"

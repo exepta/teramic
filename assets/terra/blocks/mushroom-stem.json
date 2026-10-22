@@ -1,0 +1,28 @@
+{
+  "creative_category": "nature",
+  "description": "Pale fibrous stem of a giant mushroom.",
+  "schema_version": 1,
+  "id": 20,
+  "name": "Mushroom Stem",
+  "render_kind": "cube",
+  "surface": "wood",
+  "bevel_width": 0.035,
+  "materials": {
+    "Mushroom stem": {
+      "texture_pattern": "mushroom_stem",
+      "roughness": 0.86
+    }
+  },
+  "face_materials": [
+    "Mushroom stem",
+    "Mushroom stem",
+    "Mushroom stem",
+    "Mushroom stem",
+    "Mushroom stem",
+    "Mushroom stem"
+  ],
+  "hardness": 0.55,
+  "resistance": 0.5,
+  "required_tool": null,
+  "mining_level": 0
+}

@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "id": 50,
+  "name": "Seagrass",
+  "description": "A rooted, water-permeable seagrass segment. Harvest the top or cut the stem.",
+  "creative_category": "decoration",
+  "render_kind": "segment",
+  "struct_block": true,
+  "materials": {
+    "Living surface": {
+      "base_color": [
+        0.38,
+        0.63,
+        0.24,
+        1
+      ],
+      "roughness": 0.88
+    }
+  },
+  "face_materials": [
+    "Living surface",
+    "Living surface",
+    "Living surface",
+    "Living surface",
+    "Living surface",
+    "Living surface"
+  ],
+  "hardness": 0.15,
+  "resistance": 1,
+  "required_tool": null,
+  "mining_level": 0
+}

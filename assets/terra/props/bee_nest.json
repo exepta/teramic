@@ -1,0 +1,6 @@
+{
+  "kind": "bee_nest",
+  "description": "A papery forest nest. Up to four bees forage nearby and shelter here at night.",
+  "hud_stats": { "nectar":"bar", "honey":"bar", "occupants":"text", "processing":"bar" },
+  "creative_category": "nature"
+}

@@ -1,0 +1,17 @@
+{
+  "id": "bear",
+  "title": "Bear",
+  "health": 24.0,
+  "food": 45.0,
+  "water": 20.0,
+  "size": [1.35, 1.6875, 2.295],
+  "speed": 1.5,
+  "group_size": 1,
+  "sleeps": true,
+  "combat": {
+    "damage": 12.0,
+    "aggro_radius": 4.0,
+    "reach": 1.9,
+    "cooldown": 1.4
+  }
+}

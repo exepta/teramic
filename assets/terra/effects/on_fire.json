@@ -1,0 +1,13 @@
+{
+  "kind": "on_fire",
+  "id": "teramic::on_fire",
+  "name": "On Fire",
+  "description": "Flames continuously damage health.",
+  "beneficial": false,
+  "max_duration_seconds": 3600,
+  "max_level": 3,
+  "stacking": "refresh_strongest",
+  "modifiers": {
+    "damage_per_second": 3
+  }
+}

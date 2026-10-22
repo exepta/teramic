@@ -1,0 +1,13 @@
+{
+  "kind": "freeze_resistance",
+  "id": "teramic::freeze_resistance",
+  "name": "Freeze Resistance",
+  "description": "Protects against freezing damage and movement penalties.",
+  "beneficial": true,
+  "max_duration_seconds": 3600,
+  "max_level": 3,
+  "stacking": "refresh_strongest",
+  "modifiers": {
+    "freeze_damage_multiplier": 0
+  }
+}

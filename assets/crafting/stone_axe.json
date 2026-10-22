@@ -1,0 +1,45 @@
+{
+  "id": "teramic::stone_axe",
+  "name": "Stone Axe",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "tool": "stone_axe"
+    },
+    "count": 1
+  },
+  "pattern": {
+    "kind": "shaped",
+    "width": 2,
+    "height": 3,
+    "cells": [
+      {
+        "item": {
+          "block": 3
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "block": 3
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "block": 3
+        },
+        "count": 1
+      },
+      {
+        "item": "stick",
+        "count": 1
+      },
+      null,
+      {
+        "item": "stick",
+        "count": 1
+      }
+    ]
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": 44,
+  "name": "Red Coral Block",
+  "description": "A dense reef cube covered in warm crimson coral branches and small flower-like rosettes.",
+  "creative_category": "nature",
+  "render_kind": "cube",
+  "surface": "coral_red",
+  "bevel_width": 0.025,
+  "materials": {
+    "Red reef coral": {
+      "texture_pattern": "coral_red",
+      "roughness": 0.94,
+      "reflectance": 0.10
+    }
+  },
+  "face_materials": ["Red reef coral", "Red reef coral", "Red reef coral", "Red reef coral", "Red reef coral", "Red reef coral"],
+  "hardness": 0.8,
+  "resistance": 1.2,
+  "required_tool": null,
+  "mining_level": 0
+}

@@ -1,0 +1,36 @@
+{
+  "id": "teramic::stone_slab",
+  "name": "Stone Half Slab",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "block": 85
+    },
+    "count": 6
+  },
+  "pattern": {
+    "kind": "shaped",
+    "width": 3,
+    "height": 1,
+    "cells": [
+      {
+        "item": {
+          "block": 3
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "block": 3
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "block": 3
+        },
+        "count": 1
+      }
+    ]
+  }
+}

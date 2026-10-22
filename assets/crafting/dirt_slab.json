@@ -1,0 +1,36 @@
+{
+  "id": "teramic::dirt_slab",
+  "name": "Dirt Half Slab",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "block": 86
+    },
+    "count": 6
+  },
+  "pattern": {
+    "kind": "shaped",
+    "width": 3,
+    "height": 1,
+    "cells": [
+      {
+        "item": {
+          "block": 2
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "block": 2
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "block": 2
+        },
+        "count": 1
+      }
+    ]
+  }
+}

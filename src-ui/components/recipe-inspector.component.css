@@ -1,0 +1,49 @@
+.recipe-backdrop { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background-color: #06110bb3; z-index: 120; pointer-events: auto; }
+.recipe-dialog { position: relative; width: 650px; max-width: 92%; max-height: 92%; min-height: 0; display: flex; flex-direction: column; gap: 18px; padding: 24px; background-color: #191f1df8; border: 2px solid #665a40; border-radius: 6px; overflow-y: auto; }
+.recipe-heading { display: flex; align-items: flex-start; gap: 12px; padding-bottom: 14px; border-bottom: 1px solid #677158; color: #d7c289; flex-shrink: 0; }
+.recipe-title { display: flex; flex-direction: column; gap: 8px; flex-grow: 1; min-width: 0; }
+.recipe-title h2 { margin: 0; font-size: 25px; color: #f1e5bf; }
+.recipe-title p { font-size: 14px; color: #bfcbb5; }
+.recipe-close { width: 34px; height: 34px; min-height: 34px; padding: 5px; flex-shrink: 0; }
+.recipe-section-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-shrink: 0; }
+.recipe-section-heading h3 { margin: 0; font-size: 17px; color: #e8ddb4; }
+.recipe-section-heading p { font-size: 13px; color: #acbf9c; }
+.recipe-workspace { display: flex; align-items: center; justify-content: center; gap: 36px; color: #c9b77c; padding: 12px 0; flex-shrink: 0; }
+.recipe-grid { display: grid; grid-template-columns: repeat(3, 66px); grid-auto-rows: 66px; gap: 5px; flex-shrink: 0; }
+.recipe-result { width: 104px; height: 104px; flex-shrink: 0; }
+.recipe-smelting-input { width: 104px; height: 104px; flex-shrink: 0; }
+.recipe-smelting-process { display: flex; flex-direction: column; align-items: center; gap: 4px; color: #e9b54d; }
+.recipe-smelting-process p { font-size: 13px; color: #ddc178; }
+.recipe-ingredients { display: flex; flex-direction: column; gap: 8px; padding-top: 14px; border-top: 1px solid #495b48; flex-shrink: 0; }
+.recipe-ingredient { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+.recipe-ingredient p { font-size: 14px; color: #d9d4b7; }
+.recipe-ingredient .ingredient-amount { text-wrap: nowrap; }
+.recipe-ingredient .ingredient-amount.enough { color: #a5ca8e; }
+.recipe-ingredient .ingredient-amount.missing { color: #aebaad; }
+.recipe-message { color: #aebaad; font-size: 13px; }
+.recipe-pagination { display: flex; width: 176px; min-width: 0; align-items: center; gap: 12px; }
+.recipe-pagination p { font-size: 13px; color: #d5c58f; text-align: center; text-wrap: nowrap; }
+.recipe-pagination .pagination-label { flex-grow: 1; flex-shrink: 1; flex-basis: 0px; min-width: 0; display: flex; align-items: center; justify-content: center; }
+.recipe-pagination button { width: 32px; min-width: 32px; height: 32px; min-height: 32px; flex-shrink: 0; padding: 4px; }
+.recipe-pagination button:disabled { color: #68735f; border-color: #465440; background-color: #17231c; }
+.recipe-footer { position: relative; display: flex; justify-content: center; align-items: center; min-height: 42px; flex-shrink: 0; }
+.recipe-footer .recipe-add { position: absolute; right: 0; top: 0; }
+.recipe-add { width: 42px; height: 42px; min-height: 42px; padding: 7px; background-color: #365c36; border: 1px solid #bdad70; border-radius: 4px; }
+.recipe-add:hover { background-color: #497544; }
+.recipe-add:disabled { background-color: #223024; border-color: #56604b; color: #79836a; }
+@media (max-width: 780px) {
+  .recipe-dialog { padding: 18px; }
+  .recipe-workspace { gap: 20px; }
+  .recipe-grid { grid-template-columns: repeat(3, 54px); grid-auto-rows: 54px; }
+  .recipe-result { width: 82px; height: 82px; }
+  .recipe-smelting-input { width: 82px; height: 82px; }
+}
+@media (max-width: 540px) {
+  .recipe-dialog { padding: 14px; gap: 14px; }
+  .recipe-title h2 { font-size: 20px; }
+  .recipe-title p { font-size: 13px; }
+  .recipe-workspace { gap: 12px; }
+  .recipe-grid { grid-template-columns: repeat(3, 44px); grid-auto-rows: 44px; gap: 4px; }
+  .recipe-result { width: 64px; height: 64px; }
+  .recipe-smelting-input { width: 64px; height: 64px; }
+}

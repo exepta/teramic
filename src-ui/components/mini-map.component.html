@@ -1,0 +1,28 @@
+@if (miniMapView.visible) {
+<div id="mini-map" [class]="miniMapView.editing ? 'mini-map map-editable' : (miniMapView.cave ? 'mini-map cave-map' : 'mini-map')" [style]="miniMapView.style">
+  @if (miniMapView.expanded) {
+    <div class="map-viewport" [style]="miniMapView.surface_style">
+      <img id="map-surface" class="map-surface" src="tilt-ui://assets/hand.png" alt="World map" />
+      <img class="map-frame" [style]="miniMapView.frame_style" src="tilt-ui://assets/season-compass-frame.png" alt="" />
+      @if (miniMapView.seasons) {
+        <img id="map-season-ring" class="map-season-ring" src="tilt-ui://assets/map-compass-ring.png" alt="Season cycle" />
+      }
+      @for (point of miniMapView.waypoints; track point.id) { <waypoint-marker></waypoint-marker> }
+      @for (peer of miniMapView.peers; track peer.id) { <p class="map-peer-name" [style]="peer.style">{{ peer.name }}</p> }
+      <div class="map-cardinal" [style]="miniMapView.north"><p>N</p></div>
+      <div class="map-cardinal" [style]="miniMapView.east"><p>E</p></div>
+      <div class="map-cardinal" [style]="miniMapView.south"><p>S</p></div>
+      <div class="map-cardinal" [style]="miniMapView.west"><p>W</p></div>
+      <button id="map-toggle" class="map-collapse" title="Collapse map" onclick="minimap_action"><icon name="chevron-up" size="14" /></button>
+    </div>
+    <div class="map-readouts">
+      @if (miniMapView.coordinates) { <div class="map-readout"><icon name="map-pin" size="14" /><p>{{ miniMapView.coordinates }}</p></div> }
+      @if (miniMapView.biome) { <div class="map-readout"><icon name="mountain" size="14" /><p>{{ miniMapView.biome }}</p></div> }
+      @if (miniMapView.clock) { <div class="map-readout"><icon name="clock" size="14" /><p>{{ miniMapView.clock }}</p></div> }
+    </div>
+    @if (miniMapView.error) { <p class="map-status">{{ miniMapView.error }}</p> }
+  } @else {
+    <button id="map-toggle" class="map-compact" title="Expand map" onclick="minimap_action"><icon name="compass" size="20" />Map<icon name="chevron-down" size="14" /></button>
+  }
+</div>
+}

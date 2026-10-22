@@ -1,0 +1,21 @@
+2026-10-15T18:15:39.144303Z  INFO bevy_render::renderer: AdapterInfo { name: "AMD Radeon RX 6950 XT (RADV NAVI21)", vendor: 4098, device: 29605, device_type: DiscreteGpu, device_pci_bus_id: "0000:0c:00.0", driver: "radv", driver_info: "Mesa 26.2.4-arch3.1", backend: Vulkan, subgroup_min_size: 32, subgroup_max_size: 64, transient_saves_memory: false }
+2026-10-15T18:15:39.865962Z  INFO bevy_pbr::cluster: GPU clustering is supported on this device.
+2026-10-15T18:15:39.865988Z  INFO bevy_render::batching::gpu_preprocessing: GPU preprocessing is fully supported on this device.
+2026-10-15T18:15:39.866911Z  INFO bevy_winit::system: Creating new window TERAMIC (75v0)
+2026-10-15T18:15:40.076334Z  INFO terra_client::hydrology_smoke: Native river fixture view anchor (automatic mode uses a generated reach) point=Vec3(-936.5, 23.298853, -5115.5) upper=54.88442611694336 baseline_view=false tunnel=false bifurcation=None
+2026-10-15T18:15:40.101269Z DEBUG terra_world::streaming::interest: Chunk interest changed centers=[SectionPos { x: -59, y: 3, z: -320 }] requested=7623
+2026-10-15T18:15:40.158656Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/wood.png mip_levels=10 rebound_materials=2
+2026-10-15T18:15:40.158673Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/dirt.png mip_levels=10 rebound_materials=1
+2026-10-15T18:15:40.158677Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/canopy-stylized.png mip_levels=11 rebound_materials=3
+2026-10-15T18:15:40.158680Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/grass-neutral.png mip_levels=11 rebound_materials=1
+2026-10-15T18:15:40.158683Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/stone.png mip_levels=10 rebound_materials=2
+2026-10-15T18:15:40.158919Z  INFO terra_render::blocks::loading: Block template library ready blocks=10 materials=22
+2026-10-15T18:15:42.397474Z  INFO terra_world::streaming::jobs: Chunk streaming ready sections=7901 cached_columns=1089
+2026-10-15T18:15:42.906798Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /tmp/terra-tunnel-botanical-after/waterfall/river-waterfall.png
+2026-10-15T18:15:45.855046Z DEBUG terra_world::streaming::interest: Chunk interest changed centers=[SectionPos { x: -59, y: 1, z: -320 }] requested=7742
+2026-10-15T18:15:45.911108Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /tmp/terra-tunnel-botanical-after/waterfall/river-motion.png
+2026-10-15T18:15:47.371773Z  INFO terra_world::streaming::jobs: Chunk streaming ready sections=7742 cached_columns=1089
+2026-10-15T18:15:48.911255Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /tmp/terra-tunnel-botanical-after/waterfall/river-fall-base.png
+2026-10-15T18:15:54.923804Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /tmp/terra-tunnel-botanical-after/waterfall/river-underwater.png
+2026-10-15T18:16:00.927962Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /tmp/terra-tunnel-botanical-after/waterfall/river-surface.png
+2026-10-15T18:16:03.864357Z  INFO terra_client::hydrology_smoke: Native river fixture passed: generated river/fall, underwater fog and environment restoration

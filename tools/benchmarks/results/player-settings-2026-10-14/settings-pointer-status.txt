@@ -1,0 +1,29 @@
+Pointer validation attempt, 2026-10-14
+
+Status: INCOMPLETE. This is not a passed pointer-interaction test.
+
+Build: cargo build --locked -p terra-client passed after removing the remaining
+default slider gradient and purple hover/focus border.
+
+Process: normal client, no smoke flags; X11 through XWayland on DISPLAY=:1.
+Configuration: isolated /tmp/terra-ui-pointer-Dzczke, copied from repository
+configuration with a unique title. Repository configuration was not saved or
+modified by this run. The final temporary TOML still has FOV45/VSync=true/Clear,
+so it is not evidence of a successful Save action.
+
+xdotool found and focused the process window. Initial ImageMagick X11 captures
+remained pixel-identical despite keyboard input. A later capture showed the
+open settings menu and the corrected green sliders. Window geometry changed
+from 1920x1200 to 3840x2055 during the attempt; subsequent capture showed a
+different camera state, preventing a reliable control-coordinate mapping.
+
+Artifacts settings-pointer-before.png, settings-pointer-open.png,
+settings-pointer-x11.png and settings-pointer-choice.png are diagnostic only.
+They do not prove FOV dragging, checkbox state changes, Rain selection, small
+window scrolling, or a pointer-driven save roundtrip. Those checks remain open.
+The separate --smoke-test-settings result validates actual TiltUI widget values
+and handler-driven behavior, not physical mouse input.
+
+The attempt was time-limited and stopped. X11 windowclose removed the window
+but did not terminate the client process; SIGTERM ended PID109414 (exit143).
+No test client process was left running.

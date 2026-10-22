@@ -1,0 +1,41 @@
+.waypoint-dialog-backdrop, .waypoint-icon-backdrop { position: absolute; top: 0; right: 0; bottom: 0; left: 0; display: flex; align-items: center; justify-content: center; background-color: #060d0bb0; pointer-events: auto; }
+.waypoint-dialog-backdrop { z-index: 520; }
+.waypoint-icon-backdrop { z-index: 560; }
+.waypoint-dialog, .waypoint-icon-picker { position: relative; display: flex; flex-direction: column; gap: 16px; min-width: 0; min-height: 0; padding: 25px; background-color: #18251ff5; border: 1px solid #a68d56; border-radius: 6px; box-sizing: border-box; }
+.waypoint-dialog-header { display: flex; align-items: center; gap: 10px; width: 100%; min-width: 0; min-height: 34px; flex-shrink: 0; padding-right: 42px; box-sizing: border-box; }
+.waypoint-dialog-header h2 { flex-grow: 1; margin: 0; font-size: 20px; color: #edd7a2; }
+.waypoint-dialog-header > icon { width: 27px; height: 27px; color: #c4ac72; }
+.full-map-editor { display: flex; flex-direction: column; gap: 9px; overflow-y: auto; min-width: 0; min-height: 0; }
+.full-map-editor label { font-size: 12px; color: #d4c9ad; }
+.full-map-editor input, .waypoint-icon-search { width: 100%; min-width: 0; max-width: 100%; min-height: 36px; flex-shrink: 0; background-color: #111e18; color: #eee2c5; border: 1px solid #7d875f; border-radius: 3px; padding: 7px; font-size: 13px; box-sizing: border-box; }
+.full-map-coordinate-inputs { display: flex; gap: 9px; width: 100%; min-width: 0; }
+.full-map-coordinate-inputs > div { display: flex; flex-direction: column; gap: 5px; flex-grow: 1; flex-shrink: 1; flex-basis: 0px; min-width: 0; }
+.waypoint-appearance { display: flex; gap: 14px; width: 100%; height: 76px; min-height: 76px; max-height: 76px; flex-shrink: 0; min-width: 0; padding-top: 5px; }
+.waypoint-color { display: flex; flex-direction: column; gap: 7px; flex-grow: 1; min-width: 0; }
+.waypoint-icon { display: flex; flex-direction: column; gap: 7px; width: 104px; flex-shrink: 0; }
+.waypoint-dialog .waypoint-icon-select { width: 104px; height: 40px; flex-shrink: 0; justify-content: space-around; }
+.waypoint-icon-select icon { width: 25px; height: 25px; }
+.waypoint-icon-select icon:last-child { width: 14px; height: 14px; }
+.full-map-editor color-picker { width: 100%; min-width: 0; max-width: 100%; height: 40px; min-height: 40px; max-height: 40px; flex-shrink: 0; background-color: #14221c; color: #eee2c5; border: 1px solid #7d875f; border-radius: 3px; font-size: 12px; box-sizing: border-box; }
+.full-map-editor color-picker::popup { right: 0; left: auto; width: 100%; background-color: #18291ff5; color: #eee2c5; border-color: #9c9565; border-radius: 4px; z-index: 540; box-sizing: border-box; }
+.full-map-editor color-picker::canvas, .full-map-editor color-picker::hue-track, .full-map-editor color-picker::alpha-track { width: 100%; }
+.full-map-editor color-picker::format { background-color: #294132; color: #e7dbb9; }
+.full-map-editor color-picker::selected-format { background-color: #526743; color: #fff0c7; }
+.full-map-world-toggle { display: flex; min-height: 34px; flex-shrink: 0; align-items: center; justify-content: space-between; gap: 10px; padding-top: 5px; }
+.waypoint-dialog .primary { background-color: #496342; border-color: #c8af69; }
+.waypoint-dialog button icon { width: 18px; height: 18px; flex-shrink: 0; }
+.waypoint-dialog .waypoint-icon-select icon { width: 25px; height: 25px; }
+.waypoint-delete-label { margin: 0; font-size: 14px; color: #e2d3b1; }
+.waypoint-icon-grid { display: flex; flex-wrap: wrap; gap: 9px; flex-grow: 1; min-height: 0; overflow-y: auto; }
+.waypoint-icon-picker .waypoint-icon-option { width: 48px; height: 48px; min-width: 48px; min-height: 48px; max-width: 48px; max-height: 48px; flex-shrink: 0; }
+.waypoint-icon-option icon { width: 28px; height: 28px; color: #e6d9b5; }
+.waypoint-dialog button, .waypoint-icon-picker button { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 6px; color: #e9d8ae; background-color: #1e3027; border: 1px solid #87734d; border-radius: 4px; box-sizing: border-box; }
+.waypoint-dialog button:hover, .waypoint-icon-picker button:hover { background-color: #354a32; border-color: #d2b472; }
+.waypoint-dialog button:focus, .waypoint-icon-picker button:focus { outline: 1px solid #e8c77c; }
+.waypoint-dialog button:disabled { opacity: 0.4; }
+.waypoint-icon-picker button.selected { background-color: #42583a; border-color: #e1bf73; }
+.waypoint-dialog .map-icon-button, .waypoint-icon-picker .map-icon-button { width: 30px; height: 30px; min-width: 30px; max-width: 30px; min-height: 30px; max-height: 30px; flex-shrink: 0; padding: 5px; }
+.waypoint-dialog .map-icon-button icon, .waypoint-icon-picker .map-icon-button icon { width: 18px; height: 18px; }
+.waypoint-dialog .waypoint-dialog-close, .waypoint-icon-picker .waypoint-dialog-close { position: absolute; top: 25px; right: 25px; margin: 0; }
+.waypoint-dialog .full-map-editor-actions { display: flex; width: 100%; gap: 8px; flex-shrink: 0; }
+.waypoint-dialog .full-map-editor-actions .map-command { flex-grow: 1; min-height: 34px; }

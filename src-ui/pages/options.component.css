@@ -1,0 +1,7 @@
+.options-page { position: absolute; top: 10%; bottom: 12%; left: 50%; transform: translateX(-50%); width: 960px; max-width: 92%; display: flex; flex-direction: column; gap: 14px; }
+.options-panel { position: relative; flex-grow: 1; min-height: 0; padding: 18px 24px; background-color: #191e1bed; border: 2px solid #665a40; border-radius: 6px; }
+.settings-list { width: 100%; height: 100%; overflow-y: auto; display: flex; flex-direction: column; padding-right: 16px; }
+.tabs { display: flex; justify-content: center; gap: 0; }
+.tab { flex-grow: 1; min-width: 0; height: 46px; justify-content: center; border-radius: 4px; }
+.binding-prompt { color: #dbedb5; text-align: center; margin: 0; }
+.options-actions { justify-content: center; }

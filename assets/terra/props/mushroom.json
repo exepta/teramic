@@ -1,0 +1,6 @@
+{
+  "kind": "mushroom",
+  "creative_category": "food",
+  "description": "An edible woodland mushroom that can also be planted on dry natural ground.",
+  "food": { "nutrition": 18.0, "saturation": 3.0, "eat_seconds": 1.4 }
+}

@@ -1,0 +1,32 @@
+{
+  "creative_category": "wood",
+  "description": "Dark spruce boards cut for building.",
+  "schema_version": 1,
+  "id": 18,
+  "name": "Spruce Planks",
+  "render_kind": "cube",
+  "bevel_width": 0.018,
+  "materials": {
+    "Spruce boards": {
+      "base_color": [
+        0.3,
+        0.24,
+        0.16,
+        1.0
+      ],
+      "texture_pattern": "planks"
+    }
+  },
+  "face_materials": [
+    "Spruce boards",
+    "Spruce boards",
+    "Spruce boards",
+    "Spruce boards",
+    "Spruce boards",
+    "Spruce boards"
+  ],
+  "hardness": 0.8,
+  "resistance": 3.0,
+  "required_tool": null,
+  "mining_level": 0
+}

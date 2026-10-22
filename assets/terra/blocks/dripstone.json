@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "id": 37,
+  "name": "Dripstone",
+  "description": "Dry mineral deposits from broad dripstone chambers. Exposed floor and ceiling deposits form tapered points.",
+  "creative_category": "terrain",
+  "render_kind": "cube",
+  "surface": "rock",
+  "bevel_width": 0.095,
+  "materials": { "Dripstone": { "texture_pattern": "dripstone", "roughness": 0.99, "reflectance": 0.08 } },
+  "face_materials": ["Dripstone", "Dripstone", "Dripstone", "Dripstone", "Dripstone", "Dripstone"],
+  "crystal_material": "Dripstone",
+  "hardness": 1.25,
+  "resistance": 6.0,
+  "required_tool": null,
+  "mining_level": 0
+}

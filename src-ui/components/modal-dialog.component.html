@@ -1,0 +1,20 @@
+@if (dialogView.visible) {
+<div class="modal-backdrop"><div [class]="dialogView.minimap ? 'modal-panel minimap-options' : 'modal-panel'"><ornate-frame></ornate-frame><h1>{{ dialogView.title }}</h1><p>{{ dialogView.message }}</p>
+  @if (dialogView.minimap) {
+    <div class="minimap-settings-list">@for (row of dialogView.rows; track row.id) { <settings-row></settings-row> }</div>
+  }
+  @if (dialogView.create) {
+    <label>World Name</label><input id="world-name" type="text" maxlength="64" [value]="dialogView.name" onchange="menu_change" />
+    <label>World Seed (optional)</label><input id="world-seed" type="text" maxlength="20" placeholder="Random seed" [value]="dialogView.seed" onchange="menu_change" />
+    <label>Natural mobs: {{ dialogView.natural_mob_limit }}</label><slider id="world-mob-limit" min="0" max="1024" step="16" [value]="dialogView.natural_mob_limit" onchange="menu_change"></slider>
+    <label>Game Mode</label><choice-box id="world-mode" onchange="menu_change"><option id="mode-survival" value="survival" [selected]="dialogView.mode == 'survival'">Survival</option><option id="mode-creative" value="creative" [selected]="dialogView.mode == 'creative'">Creative</option></choice-box>
+  }
+  @if (dialogView.server) {
+    <label>Server Name</label><input id="server-name" type="text" maxlength="64" [value]="dialogView.name" onchange="menu_change" />
+    <label>Server Address</label><input id="server-address" type="text" placeholder="127.0.0.1 or a hostname" [value]="dialogView.address" onchange="menu_change" />
+    <label>Port</label><input id="server-port" type="text" maxlength="5" [value]="dialogView.port" onchange="menu_change" />
+  }
+  <p class="error-text">{{ dialogView.error }}</p>
+  <div class="action-bar">@for (button of dialogView.buttons; track button.id) { <menu-button></menu-button> }</div>
+</div></div>
+}

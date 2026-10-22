@@ -1,0 +1,31 @@
+{
+  "id": "teramic::spruce_bed_green",
+  "name": "Green Spruce Bed",
+  "station": "hand",
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "block": 73
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "dye": "green"
+        },
+        "count": 1
+      }
+    ]
+  },
+  "output": {
+    "item": {
+      "dyed_bed": {
+        "material": 73,
+        "color": "green"
+      }
+    },
+    "count": 1
+  }
+}

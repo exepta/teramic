@@ -1,0 +1,537 @@
+//! Opt-in handcrafted lighting fixture. It never changes the production generator or saves.
+use bevy::{
+    prelude::*,
+    render::view::screenshot::{Screenshot, ScreenshotCaptured, save_to_disk},
+};
+use std::{
+    path::PathBuf,
+    time::{Duration, Instant},
+};
+use terra_core::{CaveQuality, GraphicsConfig};
+use terra_voxel::{
+    SectionPos,
+    blocks::BlockSection,
+    meshing::{PADDED_VOLUME, mesh_section},
+};
+use terra_world::streaming::{
+    ChunkFoci, ChunkFocus, ChunkStore, GenerationStatus, LoadedSection, WorldGeneration,
+};
+
+#[derive(Resource)]
+struct Showcase {
+    start: Instant,
+    entered: Instant,
+    built: bool,
+    stage: usize,
+    captured: usize,
+    requested: bool,
+    frames: Vec<f64>,
+    contact_time: f32,
+}
+pub(crate) fn install(app: &mut App) {
+    if !std::env::args().any(|a| a == "--smoke-test-caves") {
+        return;
+    }
+    let now = Instant::now();
+    app.insert_resource(Showcase {
+        start: now,
+        entered: now,
+        built: false,
+        stage: 0,
+        captured: 0,
+        requested: false,
+        frames: Vec::new(),
+        contact_time: 0.0,
+    })
+    .init_resource::<ChunkFoci>()
+    .insert_resource(GraphicsConfig::default())
+    .insert_resource(bevy::winit::WinitSettings::continuous())
+    .insert_resource(terra_player::ControllerMode::Fly)
+    .add_systems(
+        Update,
+        run.after(terra_player::PlayerSet::Movement)
+            .before(terra_world::streaming::StreamingSet::Interest),
+    );
+}
+
+fn eye(stage: usize) -> Transform {
+    if stage >= 14 {
+        Transform::from_xyz(-5.8, -24.4, -36.7).looking_at(Vec3::new(-8.1, -26.8, -40.4), Vec3::Y)
+    } else if stage == 13 {
+        Transform::from_xyz(17.0, 30.0, 19.0).looking_at(Vec3::new(6.0, 19.0, 1.5), Vec3::Y)
+    } else if stage == 12 {
+        Transform::from_xyz(-1.5, 20.5, 3.0).looking_at(Vec3::new(-3.3, 19.6, 0.4), Vec3::Y)
+    } else if stage == 10 {
+        Transform::from_xyz(0.0, 65.0, 58.0).looking_at(Vec3::new(0.5, 19.8, 0.5), Vec3::Y)
+    } else if stage >= 8 {
+        Transform::from_xyz(4.5, 21.3, 6.0).looking_at(Vec3::new(0.5, 19.8, 0.5), Vec3::Y)
+    } else if stage == 7 {
+        Transform::from_xyz(-2.0, -31.6, 4.5).looking_at(Vec3::new(-4.0, -32.3, 0.0), Vec3::Y)
+    } else if stage == 5 {
+        Transform::from_xyz(12.5, -29.1, 5.5).looking_at(Vec3::new(11.5, -29.25, 4.5), Vec3::Y)
+    } else if stage == 6 {
+        Transform::from_xyz(6.4, -28.1, -13.4).looking_at(Vec3::new(5.45, -28.3, -14.5), Vec3::Y)
+    } else if stage == 4 {
+        Transform::from_xyz(0.5, -25.0, -27.0).looking_at(Vec3::new(0.5, -25.0, -43.0), Vec3::Y)
+    } else {
+        Transform::from_xyz(11.0, -26.0, 18.0).looking_at(Vec3::new(-2.0, -25.0, -7.0), Vec3::Y)
+    }
+}
+
+fn block([x, y, z]: [i64; 3]) -> u16 {
+    let xf = x as f64 + 0.5;
+    let yf = y as f64 + 0.5;
+    let zf = z as f64 + 0.5;
+    let relief =
+        (xf * 0.29).sin() * (zf * 0.21).cos() * 0.06 + (yf * 0.51 + zf * 0.13).sin() * 0.025;
+    let chamber =
+        (xf / 24.0).powi(2) + ((yf + 24.0) / 14.0).powi(2) + (zf / 28.0).powi(2) < 1.0 + relief;
+    let tunnel = x.abs() <= 2 && (-28..=-23).contains(&y) && (-43..=-20).contains(&z);
+    // Follow the 10:00 sun direction through the overburden, not a roofed vertical well.
+    let shaft = y >= -25
+        && (xf - (-8.0 + (yf + 25.0) * 0.64)).abs() < 4.0
+        && (zf - (-15.0 + (yf + 25.0) * 0.484)).abs() < 4.0;
+    let mut material = if chamber || tunnel || shaft || y > 18 {
+        0
+    } else {
+        3
+    };
+    // A closed static lake in this fixture, not a claim of multi-interval natural hydrology.
+    if ((xf + 4.0) / 9.0).powi(2) + (zf / 12.0).powi(2) < 1.0 && y <= -33 {
+        material = if y == -33 { 14 } else { 3 };
+    }
+    for (a, b) in [(-13, -7), (9, -12), (-7, 13), (17, 3)] {
+        if x == a && z == b && (-36..=-33).contains(&y) {
+            material = 37;
+        }
+    }
+    if [(-12, -30, 8), (11, -30, 4), (5, -29, -15)].contains(&(x, y, z)) {
+        material = 40;
+    }
+    if [x, y, z] == [0, 19, 0] {
+        material = 40;
+    }
+    if [[-4, 19, 0], [-3, 19, 0]].contains(&[x, y, z]) {
+        material = 28;
+    }
+    for (tx, ty, tz) in [(-12, -30, 8), (11, -30, 4), (5, -29, -15)] {
+        if x == tx && z == tz && y < ty {
+            material = 3;
+        }
+    }
+    if x == 4 && z == -15 && (-30..=-27).contains(&y) {
+        material = 3;
+    }
+    if x <= -19 && (-29..=-25).contains(&y) && (-3..=1).contains(&z) {
+        material = if x == -19 { 34 } else { 3 };
+    }
+    if x >= 15 && (-28..=-25).contains(&y) && (-14..=-11).contains(&z) {
+        material = if x == 15 { 35 } else { 3 };
+    }
+    if y == -13 && [(-9, 2), (5, 8), (12, -6)].contains(&(x, z)) {
+        material = 37;
+    }
+    // A close, fully enclosed alcove exposes camera/torch EV mismatches that
+    // the wide, paused chamber views do not. Stages 14/15 share this geometry.
+    if (-12..=-4).contains(&x) && (-29..=-20).contains(&y) && (-44..=-35).contains(&z) {
+        let interior =
+            (-11..=-5).contains(&x) && (-28..=-21).contains(&y) && (-43..=-36).contains(&z);
+        material = if interior { 0 } else { 3 };
+        if z <= -42 && y <= -27 + (x + 12).rem_euclid(3) {
+            material = 3;
+        }
+        if [x, y, z] == [-8, -28, -40] {
+            material = 3;
+        } else if [x, y, z] == [-8, -27, -40] {
+            material = 40;
+        }
+    }
+    material
+}
+
+fn build(world: &mut World) -> Result<(), String> {
+    {
+        let mut journal = world.resource_mut::<terra_world::edits::EditJournal>();
+        journal
+            .record([5, -29, -15], 40)
+            .map_err(|e| e.to_string())?;
+        // The fixture replaces generated sections after lamp discovery may
+        // already have cached them. Invalidate its new alcove source normally.
+        journal
+            .record([-8, -27, -40], 40)
+            .map_err(|e| e.to_string())?;
+        journal.set_object_state(
+            [5, -29, -15],
+            Some(terra_world::edits::BlockObjectState {
+                facing: 4,
+                ..Default::default()
+            }),
+        )?;
+        for (p, peer, secondary) in [
+            ([-4, 19, 0], [-3, 19, 0], false),
+            ([-3, 19, 0], [-4, 19, 0], true),
+        ] {
+            journal.record(p, 28).map_err(|e| e.to_string())?;
+            journal.set_object_state(
+                p,
+                Some(terra_world::edits::BlockObjectState {
+                    peer: Some(peer),
+                    secondary,
+                    ..default()
+                }),
+            )?;
+        }
+    }
+    let mut sections = Vec::new();
+    for z in -3..=2 {
+        for y in -3..=3 {
+            for x in -2..=1 {
+                let position = SectionPos::new(x, y, z);
+                let origin = position.origin().map_err(|e| e.to_string())?;
+                let mut padded = Vec::with_capacity(PADDED_VOLUME);
+                for z in -1..=16 {
+                    for y in -1..=16 {
+                        for x in -1..=16 {
+                            padded.push(block([origin[0] + x, origin[1] + y, origin[2] + z]));
+                        }
+                    }
+                }
+                let mut mesh = mesh_section(&padded).map_err(|e| e.to_string())?;
+                mesh.mineral_growth =
+                    terra_world::ore_shapes::salt_growth_snapshot(&mesh.faces, origin, |p| {
+                        Some(block(p))
+                    });
+                // Deliberate fixture anchors bypass only the natural rarity roll,
+                // not clearance or the real shared stalactite/stalagmite renderer.
+                for face in &mesh.faces {
+                    if face.material != 37 || !matches!(face.side, 2 | 3) {
+                        continue;
+                    }
+                    let cell = face.minimum.map(|v| v as u8);
+                    let p = std::array::from_fn::<_, 3, _>(|i| origin[i] + i64::from(cell[i]));
+                    let sign = if face.side == 2 { -1 } else { 1 };
+                    let free = (1..=14)
+                        .take_while(|d| block([p[0], p[1] + d * sign, p[2]]) == 0)
+                        .count();
+                    let length = (free as f32 - 0.1).min(if face.side == 2 { 8.0 } else { 3.0 });
+                    if length >= 2.0 {
+                        mesh.mineral_growth
+                            .retain(|(c, s, _)| *c != cell || usize::from(*s) != face.side);
+                        mesh.mineral_growth.push((cell, face.side as u8, length));
+                    }
+                }
+                let mut blocks = Vec::with_capacity(4096);
+                for z in 0..16 {
+                    for y in 0..16 {
+                        for x in 0..16 {
+                            blocks.push(block([origin[0] + x, origin[1] + y, origin[2] + z]));
+                        }
+                    }
+                }
+                let data =
+                    BlockSection::from_blocks(position, 1, blocks).map_err(|e| e.to_string())?;
+                sections.push((
+                    position,
+                    LoadedSection {
+                        data,
+                        mesh: Some(mesh),
+                        mesh_epoch: world
+                            .resource::<terra_world::edits::EditJournal>()
+                            .mesh_epoch(position),
+                        water_epoch: 0,
+                        water: None,
+                        props: Vec::new(),
+                    },
+                ));
+            }
+        }
+    }
+    let positions: Vec<_> = sections.iter().map(|(p, _)| *p).collect();
+    terra_render::meshing::forget_section_snapshots(world, &positions);
+    // Replace only this fixture's prior roots. Keep the real journal epoch;
+    // the upload path correctly refuses fabricated/inconsistent worker epochs.
+    for (position, _) in &sections {
+        if let Some(old) = world
+            .resource_mut::<terra_render::RenderedSections>()
+            .sections
+            .remove(position)
+        {
+            world.despawn(old.entity);
+            for mesh in old.meshes {
+                world.resource_mut::<Assets<Mesh>>().remove(mesh.id());
+            }
+        }
+    }
+    info!(
+        sections = sections.len(),
+        "Handcrafted cave fixture installed without modifying world generation"
+    );
+    world.resource_mut::<ChunkStore>().loaded.extend(sections);
+    Ok(())
+}
+
+fn run(world: &mut World) {
+    world.resource_scope(|world, mut state: Mut<Showcase>| {
+        let stages=if std::env::var_os("TERRA_TORCH_INSPECT").is_some(){16}else{8};
+        if state.stage>=stages {return;}
+        if state.start.elapsed()>Duration::from_secs(180) || world.resource::<terra_render::RenderStatus>().error.is_some() {
+            error!("Cave showcase failed"); state.stage=8; world.write_message(AppExit::error()); return;
+        }
+        let camera=eye(state.stage);
+        for mut transform in world.query_filtered::<&mut Transform,With<terra_player::TerraCamera>>().iter_mut(world) {*transform=camera;}
+        // Keep the authored room and the moving camera resident. Reloading
+        // authored sections would restore procedural terrain, not this room.
+        let focus=camera.translation.to_array().map(f64::from);
+        world.resource_mut::<ChunkFocus>().0=focus;
+        world.resource_mut::<ChunkFoci>().0=Some(vec![[0.0;3],focus]);
+        if !state.built {
+            if world.resource::<WorldGeneration>().status!=GenerationStatus::Ready {return;}
+            if let Err(error)=build(world) {error!(%error); state.stage=8; world.write_message(AppExit::error());return;}
+            state.built=true; state.entered=Instant::now(); return;
+        }
+        // The fixture has its own roof/opening. Procedural mountains outside
+        // its bounds must not cast a second, unrelated roof over this test.
+        let outside:Vec<_>=world.resource::<terra_render::RenderedSections>().sections.iter()
+            .filter(|(p,_)| !(-2..=1).contains(&p.x)|| !(-3..=3).contains(&p.y)|| !(-3..=2).contains(&p.z))
+            .map(|(_,s)|s.entity).collect();
+        for entity in outside {
+            if let Some(mut visibility)=world.get_mut::<Visibility>(entity)
+                && *visibility!=Visibility::Hidden {
+                *visibility=Visibility::Hidden;
+            }
+        }
+        let quality=match state.stage {0=>CaveQuality::Low,2=>CaveQuality::High,3=>CaveQuality::Ultra,_=>CaveQuality::Medium};
+        if state.stage>=14 {
+            let phase=if state.stage==15 {0.5 + f64::from(world.resource::<Time>().elapsed_secs())*0.000001}else{0.5};
+            let mut clock=world.resource_mut::<terra_core::WorldClock>();
+            if clock.phase!=phase {clock.phase=phase;}
+            let paused=state.stage==14;
+            if clock.paused!=paused {clock.paused=paused;}
+        } else if state.stage>=8 {
+            let mut clock=world.resource_mut::<terra_core::WorldClock>();
+            if clock.phase!=0.0 {clock.phase=0.0;}
+            if !clock.paused {clock.paused=true;}
+        }
+        if state.stage==11 && !world.contains_resource::<terra_network::client::ReplicatedPlayers>() {
+            use terra_network::{client::{ReplicatedPlayers,RemoteTrack},protocol::session::PlayerState};
+            let pose=PlayerState{player:terra_core::PlayerId(777),position:[3.0,20.0,1.0],held_torch:true,held_item:Some(terra_core::ItemKind::Block(40)),..default()};
+            let mut players=ReplicatedPlayers::default();
+            players.players.insert(pose.player,RemoteTrack{previous:pose,current:pose,received:Instant::now(),interval:0.05});
+            world.insert_resource(players);
+        }
+        let now=world.resource::<Time>().elapsed_secs();
+        if state.stage==7 && now-state.contact_time>0.25 {
+            use terra_core::footsteps::{WaterMotion,WaterMotionKind};
+            state.contact_time=now;
+            for kind in [WaterMotionKind::Splash,WaterMotionKind::Wake,WaterMotionKind::Bubble] {
+                world.write_message(WaterMotion{position:Vec3::new(-4.0,if kind==WaterMotionKind::Bubble{-32.65}else{-32.02},0.0),velocity:Vec3::new(1.0,-6.0,0.0),strength:1.2,kind});
+            }
+        }
+        if world.resource::<GraphicsConfig>().cave_quality!=quality { world.resource_mut::<GraphicsConfig>().cave_quality=quality; }
+        if !world.resource::<terra_render::RenderStatus>().ready || state.entered.elapsed()<Duration::from_secs(4) {return;}
+        if !world.resource::<terra_render::TorchLightingStatus>().ready {
+            error!("Native Bevy PBR source did not accept the guarded torch attenuation extension");
+            state.stage=stages; world.write_message(AppExit::error()); return;
+        }
+        if !state.requested {
+            state.frames.push(f64::from(world.resource::<Time>().delta_secs())*1000.0);
+            if state.frames.len()<180 {return;}
+            if state.stage==1 {
+                let chunks=world.resource::<ChunkStore>();
+                let mismatches:Vec<_>=chunks.loaded.iter().filter(|(p,_)|(-2..=1).contains(&p.x)&&(-3..=3).contains(&p.y)&&(-3..=2).contains(&p.z)).filter_map(|(p,s)|{
+                    let origin=p.origin().ok()?;
+                    let count=s.data.blocks().iter().enumerate().filter(|(i,m)|**m!=block([origin[0]+(*i%16) as i64,origin[1]+(*i/16%16) as i64,origin[2]+(*i/256) as i64])).count();
+                    (count>0).then_some((*p,count))
+                }).collect();
+                info!(?mismatches,"Cave fixture source integrity");
+                for pixel in [[800.0,540.0],[960.0,540.0]] {
+                    let local=Vec3::new((pixel[0]/1920.0*2.0-1.0)*(65.0_f32.to_radians()*0.5).tan()*1920.0/1080.0,(1.0-pixel[1]/1080.0*2.0)*(65.0_f32.to_radians()*0.5).tan(),-1.0).normalize();
+                    let ray=(camera.rotation*local).to_array().map(f64::from);
+                    let hit=terra_voxel::blocks::raycast_blocks(camera.translation.to_array().map(f64::from),ray,128.0,|p|chunks.block_at(p));
+                    info!(?pixel,?hit,"Cave fixture center-ray geometry probe");
+                    if let Some(hit)=hit {
+                        let owner=terra_voxel::global_to_section(hit.position).0;
+                        let root=world.resource::<terra_render::RenderedSections>().sections.get(&owner).map(|r|(r.entity,r.mesh_epoch,r.meshes.len()));
+                        let visibility=root.and_then(|(entity,_,_)|world.get::<Visibility>(entity)).copied();
+                        info!(?owner,?root,?visibility,epoch=world.resource::<terra_world::edits::EditJournal>().mesh_epoch(owner),"Cave fixture render-root integrity");
+                    }
+                }
+            }
+            let folder=PathBuf::from(std::env::var("TERRA_CAPTURE_DIR").unwrap_or_else(|_|"/tmp/terra-caves".into()));
+            if let Err(error)=std::fs::create_dir_all(&folder) {error!(%error);world.write_message(AppExit::error());state.stage=8;return;}
+            let mut frames=state.frames.clone(); frames.sort_by(f64::total_cmp);
+            let mean=frames.iter().sum::<f64>()/frames.len() as f64;
+            let lights=world.query::<&PointLight>().iter(world).count();
+            let volumes=world.query::<&bevy::light::FogVolume>().iter(world).count();
+            let ssao=world.query::<&bevy::pbr::ScreenSpaceAmbientOcclusion>().iter(world).count();
+            if quality==CaveQuality::Ultra && volumes==0 {
+                error!("Ultra cave fixture did not activate its volumetric path");world.write_message(AppExit::error());state.stage=8;return;
+            }
+            let exposure=world.query_filtered::<&bevy::camera::Exposure,With<terra_player::TerraCamera>>().iter(world).next().map_or(0.0,|e|e.ev100);
+            if state.stage>=14 {
+                let blend=world.resource::<terra_render::CaveState>().blend;
+                let intensities:Vec<_>=world.query::<(&PointLight,&Transform)>().iter(world)
+                    .filter(|(_,t)|t.translation.distance_squared(Vec3::new(-7.5,-26.02,-39.5))<1.0)
+                    .map(|(l,_)|l.intensity).collect();
+                if blend<0.99 || (exposure-6.0).abs()>0.01 || intensities.len()!=1 || !(6200.0..=7800.0).contains(&intensities[0]) {
+                    error!(stage=state.stage,blend,exposure,?intensities,"Deep-cave torch inherited outdoor exposure gain");
+                    state.stage=stages;world.write_message(AppExit::error());return;
+                }
+                info!(stage=state.stage,?intensities,"Deep-cave torch uses final camera exposure with live world clock");
+            }
+            if state.stage==10 && !world.resource::<terra_render::TorchSources>().0.iter().any(|p|p.distance_squared(Vec3::new(0.5,19.98,0.5))<0.1) {
+                error!("Loaded torch emitter disappeared beyond 50m");world.write_message(AppExit::error());state.stage=stages;return;
+            }
+            if state.stage==11 && !world.query::<&Name>().iter(world).any(|n|n.as_str()=="Carried torch light") {
+                error!("Replicated held torch did not create a light");world.write_message(AppExit::error());state.stage=stages;return;
+            }
+            if state.stage==12 && world.query::<&PointLight>().iter(world).filter(|l|(l.range-4.0).abs()<0.01 && !l.shadow_maps_enabled).count()!=1 {
+                error!("Workbench must have exactly one four-meter shadowless lantern");world.write_message(AppExit::error());state.stage=stages;return;
+            }
+            info!(stage=state.stage,?quality,fps=1000.0/mean,p95_ms=frames[170],p99_ms=frames[178],lights,volumes,ssao,exposure,underwater=world.resource::<terra_render::UnderwaterState>().blend,blend=world.resource::<terra_render::CaveState>().blend,"Cave showcase measured frame sample");
+            let stage=state.stage;
+            let probes=if stage==8 || stage==13 {ground_probes(world)}else{Vec::new()};
+            world.spawn((Screenshot::primary_window(), GroundProbes(probes), CaveExposureProbe(stage)))
+                .observe(save_to_disk(folder.join(format!("cave-{stage}-{quality:?}.png"))))
+                .observe(measure_ground)
+                .observe(measure_cave_exposure)
+                .observe(|_:On<ScreenshotCaptured>,mut state:ResMut<Showcase>|state.captured+=1);
+            state.requested=true;
+        } else if state.captured>state.stage {
+            state.stage+=1; state.requested=false; state.entered=Instant::now(); state.frames.clear();
+            if state.stage==stages {info!(stages,"Cave showcase passed: quality levels, floor/wall torches, optional night/retention/carried-light views and live-clock exposure regression");world.write_message(AppExit::Success);}
+        }
+    });
+}
+
+#[derive(Component)]
+struct GroundProbes(Vec<(f32, Vec2)>);
+
+#[derive(Component)]
+struct CaveExposureProbe(usize);
+
+fn measure_cave_exposure(
+    event: On<ScreenshotCaptured>,
+    probes: Query<&CaveExposureProbe>,
+    mut state: ResMut<Showcase>,
+    mut exit: MessageWriter<AppExit>,
+) {
+    let Ok(probe) = probes.get(event.entity) else {
+        return;
+    };
+    if probe.0 < 14 {
+        return;
+    }
+    let size = event.image.size();
+    let mut luminances = Vec::new();
+    for y in (size.y / 10..size.y * 9 / 10).step_by(4) {
+        for x in (size.x / 10..size.x * 9 / 10).step_by(4) {
+            if let Ok(color) = event.image.get_color_at(x, y) {
+                let color = color.to_linear();
+                luminances.push(color.red * 0.2126 + color.green * 0.7152 + color.blue * 0.0722);
+            }
+        }
+    }
+    if luminances.is_empty() {
+        error!("Deep-cave screenshot has no readable pixels");
+        state.stage = usize::MAX;
+        exit.write(AppExit::error());
+        return;
+    }
+    luminances.sort_by(f32::total_cmp);
+    let mean = luminances.iter().sum::<f32>() / luminances.len() as f32;
+    let p95 = luminances[luminances.len() * 95 / 100];
+    let washed_out_fraction =
+        luminances.iter().filter(|v| **v > 0.70).count() as f32 / luminances.len() as f32;
+    let black_fraction =
+        luminances.iter().filter(|v| **v < 0.00001).count() as f32 / luminances.len() as f32;
+    info!(
+        stage = probe.0,
+        mean,
+        p95,
+        washed_out_fraction,
+        black_fraction,
+        "Native enclosed-cave torch photometry (tonemapped capture)"
+    );
+    if mean < 0.002 || washed_out_fraction > 0.06 || black_fraction > 0.75 {
+        error!("Enclosed cave is blank or its stone walls are overexposed");
+        state.stage = usize::MAX;
+        exit.write(AppExit::error());
+    }
+}
+
+fn ground_probes(world: &mut World) -> Vec<(f32, Vec2)> {
+    let scale = world
+        .query::<&Window>()
+        .iter(world)
+        .next()
+        .map_or(1.0, Window::scale_factor);
+    let mut cameras =
+        world.query_filtered::<(&Camera, &GlobalTransform), With<terra_player::TerraCamera>>();
+    let Some((camera, transform)) = cameras.iter(world).next() else {
+        return Vec::new();
+    };
+    [1.0, 3.0, 6.0, 10.0, 16.0]
+        .into_iter()
+        .filter_map(|distance| {
+            camera
+                .world_to_viewport(transform, Vec3::new(0.5 + distance, 19.005, 0.5))
+                .ok()
+                .map(|pixel| (distance, pixel * scale))
+        })
+        .collect()
+}
+
+fn measure_ground(event: On<ScreenshotCaptured>, probes: Query<&GroundProbes>) {
+    let Ok(probes) = probes.get(event.entity) else {
+        return;
+    };
+    for &(distance, pixel) in &probes.0 {
+        let mut sum = 0.0;
+        let mut count = 0;
+        for dy in -3..=3 {
+            for dx in -3..=3 {
+                let x = pixel.x.round() as i32 + dx;
+                let y = pixel.y.round() as i32 + dy;
+                if x < 0 || y < 0 {
+                    continue;
+                }
+                if let Ok(color) = event.image.get_color_at(x as u32, y as u32) {
+                    let color = color.to_linear();
+                    sum += color.red * 0.2126 + color.green * 0.7152 + color.blue * 0.0722;
+                    count += 1;
+                }
+            }
+        }
+        if count > 0 {
+            info!(
+                distance,
+                pixel_x = pixel.x,
+                pixel_y = pixel.y,
+                linear_luminance = sum / count as f32,
+                samples = count,
+                "Native torch ground photometry (tonemapped capture)"
+            );
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn fixture_contains_openings_emitting_blocks_water_and_dark_tunnels() {
+        assert_eq!(block([19, 18, 6]), 0);
+        assert_eq!(block([-12, -30, 8]), 40);
+        assert_eq!(block([4, -29, -15]), 3);
+        assert_eq!(block([-19, -26, 0]), 34);
+        assert_eq!(block([-4, -33, 0]), 14);
+        assert_eq!(block([0, -25, -40]), 0);
+        assert_eq!(block([3, -25, -40]), 3);
+        assert_eq!(block([0, -25, -44]), 3);
+        assert_eq!(block([-8, -27, -40]), 40);
+        assert_eq!(block([-8, -28, -40]), 3);
+        assert_eq!(block([-8, -20, -40]), 3);
+        assert_eq!(block([-8, -25, -40]), 0);
+    }
+}

@@ -1,0 +1,117 @@
+natural_mob_limit = 256
+bounded_world = true
+ravine_revision = 1
+id = 3362483989114207531
+seed = 2262437629133911810
+generator_version = 5
+base_height = 16.0
+hill_amplitude = 12.0
+mountain_amplitude = 48.0
+sea_level = 8.0
+snow_height = 112.0
+caves = true
+geology_revision = 4
+landscape_revision = 1
+ocean_revision = 1
+cave_structure_revision = 4
+trees = true
+water = true
+rivers = true
+tree_density = 0.8
+biome_scale = 2048.0
+ocean_scale = 4096.0
+biomes = true
+terrace_height = 4.0
+terrace_strength = 0.72
+
+[time]
+day_length_seconds = 1200.0
+start_hour = 10.0
+paused = false
+
+[cave_biomes]
+enabled = true
+salt_surfaces = [
+    0.55,
+    0.3,
+    0.1,
+    0.05,
+]
+lush_density = 0.72
+
+[cave_biomes.distribution]
+normal_weight = 0.45
+salt_weight = 0.2
+lush_weight = 0.2
+cascade_weight = 0.15
+
+[cave_biomes.regions]
+normal_diameter = [
+    100.0,
+    400.0,
+]
+salt_diameter = [
+    80.0,
+    250.0,
+]
+lush_diameter = [
+    100.0,
+    300.0,
+]
+cascade_diameter = [
+    120.0,
+    350.0,
+]
+transition_distance = 24.0
+
+[cave_biomes.connectors]
+inherit_biomes = true
+blend_biomes = true
+biome_decorations = true
+density = 0.84
+
+[ores]
+enabled = true
+revision = 1
+
+[ores.salt]
+min_depth = 6.0
+max_depth = 160.0
+frequency = 0.9
+radius = 6.0
+cave_affinity = 0.92
+
+[ores.iron]
+min_depth = 8.0
+max_depth = 240.0
+frequency = 0.85
+radius = 4.2
+cave_affinity = 0.28
+
+[ores.coal]
+min_depth = 5.0
+max_depth = 180.0
+frequency = 0.95
+radius = 4.8
+cave_affinity = 0.18
+
+[ores.gold]
+min_depth = 32.0
+max_depth = 320.0
+frequency = 0.42
+radius = 3.0
+cave_affinity = 0.4
+
+[ores.diamond]
+min_depth = 70.0
+max_depth = 400.0
+frequency = 0.2
+radius = 2.4
+cave_affinity = 0.55
+
+[ores.ruby]
+min_depth = 55.0
+max_depth = 360.0
+frequency = 0.25
+radius = 2.8
+cave_affinity = 0.6

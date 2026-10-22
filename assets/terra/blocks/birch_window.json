@@ -1,0 +1,195 @@
+{
+  "schema_version": 1,
+  "id": 69,
+  "name": "Birch Window",
+  "description": "A framed birch glass window with iron hinges. Opens smoothly and ventilates furnace smoke.",
+  "creative_category": "decoration",
+  "render_kind": "custom_mesh",
+  "struct_block": true,
+  "model_layout": "scene",
+  "model": "models/birch_window.gltf",
+  "hardness": 2,
+  "resistance": 4,
+  "required_tool": "axe",
+  "mining_level": 0,
+  "collision_boxes": [
+    {
+      "minimum": [
+        0.04,
+        0,
+        0.34
+      ],
+      "maximum": [
+        0.15,
+        1,
+        0.66
+      ]
+    },
+    {
+      "minimum": [
+        0.85,
+        0,
+        0.34
+      ],
+      "maximum": [
+        0.96,
+        1,
+        0.66
+      ]
+    },
+    {
+      "minimum": [
+        0.15,
+        0.88,
+        0.34
+      ],
+      "maximum": [
+        0.85,
+        1,
+        0.66
+      ]
+    },
+    {
+      "minimum": [
+        0.15,
+        0,
+        0.34
+      ],
+      "maximum": [
+        0.85,
+        0.075,
+        0.66
+      ]
+    },
+    {
+      "minimum": [
+        0.15,
+        0.085,
+        0.455
+      ],
+      "maximum": [
+        0.2,
+        0.865,
+        0.545
+      ],
+      "hinged": true
+    },
+    {
+      "minimum": [
+        0.8,
+        0.085,
+        0.455
+      ],
+      "maximum": [
+        0.8500000000000001,
+        0.865,
+        0.545
+      ],
+      "hinged": true
+    },
+    {
+      "minimum": [
+        0.2,
+        0.085,
+        0.455
+      ],
+      "maximum": [
+        0.8,
+        0.135,
+        0.545
+      ],
+      "hinged": true
+    },
+    {
+      "minimum": [
+        0.2,
+        0.815,
+        0.455
+      ],
+      "maximum": [
+        0.8,
+        0.865,
+        0.545
+      ],
+      "hinged": true
+    },
+    {
+      "minimum": [
+        0.475,
+        0.135,
+        0.455
+      ],
+      "maximum": [
+        0.525,
+        0.8150000000000001,
+        0.545
+      ],
+      "hinged": true
+    },
+    {
+      "minimum": [
+        0.2,
+        0.465,
+        0.455
+      ],
+      "maximum": [
+        0.8,
+        0.515,
+        0.545
+      ],
+      "hinged": true
+    },
+    {
+      "minimum": [
+        0.2,
+        0.135,
+        0.488
+      ],
+      "maximum": [
+        0.47500000000000003,
+        0.465,
+        0.512
+      ],
+      "hinged": true
+    },
+    {
+      "minimum": [
+        0.2,
+        0.515,
+        0.488
+      ],
+      "maximum": [
+        0.47500000000000003,
+        0.815,
+        0.512
+      ],
+      "hinged": true
+    },
+    {
+      "minimum": [
+        0.525,
+        0.135,
+        0.488
+      ],
+      "maximum": [
+        0.8,
+        0.465,
+        0.512
+      ],
+      "hinged": true
+    },
+    {
+      "minimum": [
+        0.525,
+        0.515,
+        0.488
+      ],
+      "maximum": [
+        0.8,
+        0.815,
+        0.512
+      ],
+      "hinged": true
+    }
+  ]
+}

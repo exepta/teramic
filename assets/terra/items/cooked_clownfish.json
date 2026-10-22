@@ -1,0 +1,11 @@
+{
+  "item": { "animal": "cooked_clownfish" },
+  "name": "Cooked Clown Fish",
+  "description": "Cooked clown fish with golden scales.",
+  "food": {
+    "nutrition": 40.0,
+    "saturation": 14.0,
+    "eat_seconds": 1.6,
+    "regeneration": { "health_per_second": 0.5, "duration_seconds": 8.0 }
+  }
+}

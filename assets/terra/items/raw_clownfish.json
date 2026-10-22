@@ -1,0 +1,6 @@
+{
+  "item": { "animal": "clownfish" },
+  "name": "Raw Clown Fish",
+  "description": "A small orange fish with pale bands.",
+  "food": { "nutrition": 24.0, "saturation": 3.0, "eat_seconds": 1.6 }
+}

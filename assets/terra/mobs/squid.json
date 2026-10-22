@@ -1,0 +1,5 @@
+{
+  "id": "squid", "title": "Squid", "health": 12.0, "food": 0.0, "water": 0.0,
+  "size": [0.95, 0.95, 2.0], "speed": 0.9, "group_size": 2, "sleeps": false,
+  "spawn": {"aquatic": {"ocean_weight": 13, "lake_weight": 1, "river_weight": 0, "water_depth": [0, 2048]}}
+}

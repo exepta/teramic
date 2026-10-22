@@ -1,0 +1,15 @@
+<div class="game-overlay">
+  @if (!settingsView.open && !inventoryView.open && !chatView.open && !survivalView.dead && !survivalView.editing) { <div class="crosshair"><div class="crosshair-h"></div><div class="crosshair-v"></div></div> }
+  <inventory-panel></inventory-panel>
+  <settings-menu></settings-menu>
+  <network-notice></network-notice>
+  <sleep-overlay></sleep-overlay>
+  <chat-panel></chat-panel>
+  <survival-hud></survival-hud>
+  <target-card></target-card>
+  <world-waypoints></world-waypoints>
+  <mini-map></mini-map>
+  <full-map></full-map>
+  <multiplayer-hud></multiplayer-hud>
+  <debug-overlay></debug-overlay>
+</div>

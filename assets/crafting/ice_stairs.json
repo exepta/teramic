@@ -1,0 +1,57 @@
+{
+  "id": "teramic::ice_stairs",
+  "name": "Ice Stairs",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "block": 81
+    },
+    "count": 4
+  },
+  "pattern": {
+    "kind": "shaped",
+    "width": 3,
+    "height": 3,
+    "cells": [
+      {
+        "item": {
+          "block": 49
+        },
+        "count": 1
+      },
+      null,
+      null,
+      {
+        "item": {
+          "block": 49
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "block": 49
+        },
+        "count": 1
+      },
+      null,
+      {
+        "item": {
+          "block": 49
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "block": 49
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "block": 49
+        },
+        "count": 1
+      }
+    ]
+  }
+}

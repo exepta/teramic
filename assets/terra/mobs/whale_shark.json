@@ -1,0 +1,6 @@
+{
+  "id": "whale_shark", "title": "Whale Shark", "health": 40.0, "food": 45.0, "water": 0.0,
+  "size": [2.35, 2.35, 4.0], "minimum_size": [1.45, 1.45, 2.25], "speed": 1.35, "group_size": 1, "sleeps": false,
+  "combat": {"damage": 6.0, "aggro_radius": 9.0, "reach": 2.8, "cooldown": 2.0},
+  "spawn": {"aquatic": {"ocean_weight": 2, "lake_weight": 0, "river_weight": 0, "water_depth": [0, 2048]}}
+}

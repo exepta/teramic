@@ -1,0 +1,8 @@
+seed = 860020
+biomes = false
+trees = false
+caves = false
+water = false
+rivers = false
+hill_amplitude = 0.0
+mountain_amplitude = 0.0

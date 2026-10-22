@@ -1,0 +1,5 @@
+cold: sections=4375, frames=158, seconds=2.626
+one-column move: sections=4375, frames=8, seconds=0.117
+eviction: sections=5273, frames=296, seconds=4.934
+reload: sections=4375, frames=158, seconds=2.626
+{"command": ["target/debug/examples/streaming_benchmark"], "wall_seconds": 10.319, "peak_rss_kib": 201296, "user_cpu_seconds": 4.542, "system_cpu_seconds": 0.098, "exit_code": 0}

@@ -1,0 +1,11 @@
+{
+  "item": { "animal": "cooked_beef" },
+  "name": "Cooked Cow Beef",
+  "description": "Roasted beef with a browned crust.",
+  "food": {
+    "nutrition": 40.0,
+    "saturation": 20.0,
+    "eat_seconds": 1.6,
+    "regeneration": { "health_per_second": 0.5, "duration_seconds": 8.0 }
+  }
+}

@@ -1,0 +1,13 @@
+width = 2552
+height = 1362
+fov_degrees = 65.0
+vsync = false
+debug_overlay = false
+view_distance = 32
+lod_near_distance = 192.0
+lod_far_distance = 320.0
+vertical_view_distance = 3
+log_filter = "info"
+water_quality = "high"
+water_reflections = true
+weather = "clear"

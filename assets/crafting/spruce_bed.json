@@ -1,0 +1,54 @@
+{
+  "id": "teramic::spruce_bed",
+  "name": "Spruce Bed",
+  "station": "workbench",
+  "pattern": {
+    "kind": "shaped",
+    "width": 3,
+    "height": 2,
+    "cells": [
+      {
+        "item": {
+          "animal": "wool"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "animal": "wool"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "animal": "wool"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "block": 18
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "block": 18
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "block": 18
+        },
+        "count": 1
+      }
+    ]
+  },
+  "output": {
+    "item": {
+      "block": 73
+    },
+    "count": 1
+  }
+}

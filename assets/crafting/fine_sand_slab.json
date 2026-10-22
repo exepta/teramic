@@ -1,0 +1,36 @@
+{
+  "id": "teramic::fine_sand_slab",
+  "name": "Fine Sand Half Slab",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "block": 87
+    },
+    "count": 6
+  },
+  "pattern": {
+    "kind": "shaped",
+    "width": 3,
+    "height": 1,
+    "cells": [
+      {
+        "item": {
+          "block": 4
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "block": 4
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "block": 4
+        },
+        "count": 1
+      }
+    ]
+  }
+}

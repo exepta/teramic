@@ -1,0 +1,14 @@
+{
+  "kind": "freeze",
+  "id": "teramic::freeze",
+  "name": "Freezing",
+  "description": "Cold slows movement and damages health.",
+  "beneficial": false,
+  "max_duration_seconds": 3600,
+  "max_level": 3,
+  "stacking": "refresh_strongest",
+  "modifiers": {
+    "damage_per_second": 1,
+    "movement_multiplier": 0.7
+  }
+}

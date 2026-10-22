@@ -1,0 +1,1 @@
+{"id":2,"key":"teramic::smelt_pork","name":"Cooked Pork","input":{"animal":"pork"},"output":{"item":{"animal":"cooked_pork"},"count":1},"seconds":8.0}

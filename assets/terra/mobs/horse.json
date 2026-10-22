@@ -1,0 +1,12 @@
+{
+  "id": "horse",
+  "title": "Horse",
+  "variant_titles": ["Bay Horse", "Black Horse", "Chestnut Horse", "White Horse", "Dapple Gray Horse", "Buckskin Horse", "Palomino Horse", "Roan Horse", "Black Horse with Socks", "Chestnut Horse with Blaze", "Brown Pinto Horse", "Black Pinto Horse", "Appaloosa Horse", "Gray Horse", "Cream Horse", "Brown Horse"],
+  "health": 20.0,
+  "food": 30.0,
+  "water": 25.0,
+  "size": [0.595, 1.95, 2.15],
+  "speed": 2.3,
+  "group_size": 3,
+  "sleeps": true
+}

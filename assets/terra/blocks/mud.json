@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": 48,
+  "name": "Mud",
+  "description": "Soft brown lakebed mud with pale pebbles and sparse patches of water-worn moss.",
+  "creative_category": "terrain",
+  "render_kind": "cube",
+  "surface": "earth",
+  "bevel_width": 0.025,
+  "materials": {
+    "Pebbled river mud": {
+      "texture_pattern": "mud",
+      "roughness": 0.96,
+      "reflectance": 0.10
+    }
+  },
+  "face_materials": ["Pebbled river mud", "Pebbled river mud", "Pebbled river mud", "Pebbled river mud", "Pebbled river mud", "Pebbled river mud"],
+  "hardness": 0.5,
+  "resistance": 0.5,
+  "required_tool": null,
+  "mining_level": 0
+}

@@ -1,0 +1,14 @@
+{
+  "kind": "water_affinity",
+  "id": "teramic::water_affinity",
+  "name": "Water Affinity",
+  "description": "Swim faster and use less oxygen while diving.",
+  "beneficial": true,
+  "max_duration_seconds": 3600,
+  "max_level": 3,
+  "stacking": "refresh_strongest",
+  "modifiers": {
+    "swimming_multiplier": 1.3,
+    "oxygen_multiplier": 0.5
+  }
+}

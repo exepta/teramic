@@ -1,0 +1,31 @@
+{
+  "id": "teramic::oak_bed_blue",
+  "name": "Blue Oak Bed",
+  "station": "hand",
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "block": 71
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "dye": "blue"
+        },
+        "count": 1
+      }
+    ]
+  },
+  "output": {
+    "item": {
+      "dyed_bed": {
+        "material": 71,
+        "color": "blue"
+      }
+    },
+    "count": 1
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "creative_category": "terrain",
+  "description": "Damp natural stone with patches of moss.",
+  "schema_version": 1,
+  "id": 13,
+  "name": "Mossy Stone",
+  "render_kind": "cube",
+  "surface": "rock",
+  "bevel_width": 0.075,
+  "materials": {
+    "Moss patches": {
+      "texture_pattern": "mossy_stone"
+    }
+  },
+  "face_materials": [
+    "Moss patches",
+    "Moss patches",
+    "Moss patches",
+    "Moss patches",
+    "Moss patches",
+    "Moss patches"
+  ],
+  "hardness": 1.25,
+  "resistance": 6.0,
+  "required_tool": "pickaxe",
+  "mining_level": 1
+}

@@ -1,0 +1,1 @@
+{"id":5,"key":"teramic::smelt_clownfish","name":"Cooked Clownfish","input":{"animal":"clownfish"},"output":{"item":{"animal":"cooked_clownfish"},"count":1},"seconds":6.0}

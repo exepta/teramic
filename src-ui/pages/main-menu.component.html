@@ -1,0 +1,5 @@
+<div class="main-menu">
+  <div class="brand-lockup"><icon name="leaf" size="48" /><h1>TERAMIC</h1><div class="brand-rule"></div><p>EXPLORE / BUILD / BELONG</p></div>
+  @if (menuView.pause) { <h2 class="pause-title">Paused</h2> }
+  <div class="main-actions"><ornate-frame></ornate-frame>@for (button of menuView.buttons; track button.id) { <menu-button></menu-button> }</div>
+</div>

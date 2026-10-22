@@ -1,0 +1,22 @@
+[package]
+name = "terra-client"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+bevy = { workspace = true, features = ["bevy_asset", "bevy_audio", "wav", "bevy_winit", "x11", "wayland", "keyboard", "mouse", "bevy_pbr", "bevy_core_pipeline", "bevy_ui_render", "default_font", "system_font_discovery", "png", "tonemapping_luts", "zstd_rust"] }
+terra-core = { workspace = true, features = ["bevy"] }
+terra-world = { workspace = true, features = ["bevy"] }
+terra-voxel.workspace = true
+terra-render.workspace = true
+terra-physics.workspace = true
+terra-player.workspace = true
+terra-network = { workspace = true, features = ["client"] }
+terra-ui.workspace = true
+tracing.workspace = true
+terra-server = { path = "../server" }
+terra-storage.workspace=true
+tilt-ui.workspace=true

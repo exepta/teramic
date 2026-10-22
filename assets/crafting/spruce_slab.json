@@ -1,0 +1,36 @@
+{
+  "id": "teramic::spruce_slab",
+  "name": "Spruce Half Slab",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "block": 84
+    },
+    "count": 6
+  },
+  "pattern": {
+    "kind": "shaped",
+    "width": 3,
+    "height": 1,
+    "cells": [
+      {
+        "item": {
+          "block": 18
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "block": 18
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "block": 18
+        },
+        "count": 1
+      }
+    ]
+  }
+}

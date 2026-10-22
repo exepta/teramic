@@ -1,0 +1,57 @@
+{
+  "id": "teramic::oak_stairs",
+  "name": "Oak Stairs",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "block": 74
+    },
+    "count": 4
+  },
+  "pattern": {
+    "kind": "shaped",
+    "width": 3,
+    "height": 3,
+    "cells": [
+      {
+        "item": {
+          "block": 16
+        },
+        "count": 1
+      },
+      null,
+      null,
+      {
+        "item": {
+          "block": 16
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "block": 16
+        },
+        "count": 1
+      },
+      null,
+      {
+        "item": {
+          "block": 16
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "block": 16
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "block": 16
+        },
+        "count": 1
+      }
+    ]
+  }
+}

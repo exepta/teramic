@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "id": 40,
+  "name": "Torch",
+  "description": "A coal flame in a small iron basket. Casts warm light up to 18 blocks away.",
+  "creative_category": "decoration",
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/torch.gltf",
+  "struct_block": true,
+  "hardness": 0.15,
+  "resistance": 0.2,
+  "required_tool": null,
+  "mining_level": 0,
+  "light": { "color": [1.0, 0.78, 0.50], "intensity": 1812.5, "range": 28.0, "falloff": "soft_core", "flicker": 0.09, "cave_intensity": 0.6 },
+  "collision_boxes": [
+    { "minimum": [0.45, 0.0, 0.45], "maximum": [0.55, 0.53, 0.55] },
+    { "minimum": [0.35, 0.48, 0.35], "maximum": [0.65, 0.71, 0.65] }
+  ]
+}

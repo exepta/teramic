@@ -1,0 +1,16 @@
+Standalone foliage albedo for Project Terra, generated 2026-10-13 using the
+built-in image_gen tool. Saved as textures/canopy.png; no texture atlas.
+
+Prompt:
+Use case: stylized-concept. Asset type: one standalone seamless square albedo
+texture for an opaque voxel tree canopy in Project Terra. Generate a full-frame
+top-down flat painted foliage texture, densely overlapping small recognizably
+veined oval leaves in warm off-white, pale ivory and soft pale olive neutrals so
+the engine can multiply green or autumn tints onto it. Subtle layered botanical
+leaf shapes, gentle brush marks, medium-low contrast, no deep black gaps. Every
+edge is filled with leaves, designed to tile. Diffuse color only, evenly lit,
+no baked directional shadows or highlights. No stones, no rock, no dirt, no
+grass blades, no trunk, no tree silhouette, no borders, no text, no watermark.
+
+This is a painted opaque canopy surface, not leaf-frond geometry. GLB material
+factors supply green, autumn and light-green birch colors. Bark uses wood.png.

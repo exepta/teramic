@@ -1,0 +1,9 @@
+title = "TERAMIC Test Server"
+description = "Local fixture only"
+lan_discovery = false
+require_verified_accounts = false
+bind_address = "127.0.0.1:5000"
+tick_rate = 60
+max_players = 32
+log_filter = "info"
+simulation_distance = 1

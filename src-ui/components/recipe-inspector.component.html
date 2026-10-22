@@ -1,0 +1,22 @@
+<div class="recipe-backdrop">
+  <div id="recipe-inspector" class="recipe-dialog">
+    <ornate-frame></ornate-frame>
+    <div class="recipe-heading"><icon name="settings-wrench" size="24" /><div class="recipe-title"><h2>{{ craftingView.name }}</h2><p>{{ craftingView.description }}</p></div><button id="craft-close-recipe" class="recipe-close" title="Close recipe" onclick="crafting_command"><icon name="close" size="22" /></button></div>
+    @if (craftingView.selected) {
+    <div class="recipe-section-heading"><h3>{{ craftingView.recipe_heading }}</h3><p>{{ craftingView.recipe_station }}</p></div>
+    <div class="recipe-workspace">
+      <div id="recipe-preview-grid" [class]="craftingView.smelting ? 'recipe-smelting-input' : 'recipe-grid'">@for (slot of craftingView.recipe_grid; track slot.id) { <inventory-slot [slot]="slot" /> }</div>
+      @if (craftingView.smelting) { <div class="recipe-smelting-process"><icon name="flame" size="28" /><icon name="arrow-right" size="42" /><p>{{ craftingView.recipe_duration }}</p></div> } @else { <icon name="arrow-right" size="42" /> }
+      <div id="recipe-preview-output" class="recipe-result">@for (slot of craftingView.recipe_output; track slot.id) { <inventory-slot [slot]="slot" /> }</div>
+    </div>
+    <div class="recipe-ingredients">@for (ingredient of craftingView.ingredients; track ingredient.name) {
+      <div class="recipe-ingredient"><p>{{ ingredient.name }}</p><p [class]="ingredient.enough ? 'ingredient-amount enough' : 'ingredient-amount missing'">{{ ingredient.amount }}</p></div>
+    }</div>
+    <div class="recipe-footer">
+      @if (craftingView.recipe_multiple) { <div class="recipe-pagination"><button id="craft-alternative-previous" class="pagination-previous" title="Previous recipe" [disabled]="!craftingView.recipe_previous" onclick="crafting_command"><icon name="chevron-left" size="21" /></button><div class="pagination-label"><p id="craft-recipe-page">{{ craftingView.recipe_page }}</p></div><button id="craft-alternative-next" class="pagination-next" title="Next recipe" [disabled]="!craftingView.recipe_next" onclick="crafting_command"><icon name="chevron-right" size="21" /></button></div> }
+      <button id="craft-apply-recipe" class="recipe-add" [title]="craftingView.apply_title" [disabled]="!craftingView.can_apply_recipe" onclick="crafting_command"><icon name="plus" size="25" /></button>
+    </div>
+    }
+    @if (craftingView.message != '') { <p class="recipe-message">{{ craftingView.message }}</p> }
+  </div>
+</div>

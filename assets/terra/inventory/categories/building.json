@@ -1,0 +1,8 @@
+{
+  "id": "building",
+  "name": "Building",
+  "icon": {
+    "block": 16
+  },
+  "order": 10
+}

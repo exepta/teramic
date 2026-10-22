@@ -1,0 +1,10 @@
+<div class="library-page">
+  <div class="page-heading"><icon name="users-round" size="34" /><h1>Multiplayer</h1></div>
+  <div class="library-panel"><ornate-frame></ornate-frame><div class="list-heading"><h2>{{ serversView.count }}</h2><p>{{ serversView.discovery }}</p></div>
+    <div class="card-list">
+    @if (serversView.empty) { <div class="empty-state"><icon name="users-round" size="44" /><h2>Find your people</h2><p>No saved servers yet.</p></div> }
+    @for (card of serversView.cards; track card.id) { <server-card></server-card> }
+    </div>
+  </div>
+  <div class="action-bar">@for (button of serversView.buttons; track button.id) { <menu-button></menu-button> }</div>
+</div>

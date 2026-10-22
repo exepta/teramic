@@ -1,0 +1,6 @@
+2026-10-15T18:15:38.696038Z  INFO terra_server::bootstrap: Authoritative server initialized seed=42042 generator_version=5 tick_rate=60 save_format_version=1 configured_address=127.0.0.1:5000
+2026-10-15T18:15:38.696115Z  INFO lightyear_udp::server: Server UDP socket bound to 127.0.0.1:59207
+2026-10-15T18:15:38.696340Z  INFO terra_network::server: Authoritative Terra server listening address=Some(127.0.0.1:59207)
+2026-10-15T18:15:38.697120Z DEBUG terra_world::streaming::interest: Chunk interest changed centers=[SectionPos { x: 0, y: 2, z: 1 }] requested=27
+2026-10-15T18:15:38.746820Z  INFO terra_world::streaming::jobs: Chunk streaming ready sections=27 cached_columns=9
+2026-10-15T18:15:38.763461Z  INFO terra_server::smoke_test: Headless server smoke test completed sections=27

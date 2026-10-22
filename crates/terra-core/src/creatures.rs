@@ -1,0 +1,477 @@
+//! Persistent authority data; no renderer or ECS required.
+use serde::{Deserialize, Serialize};
+use std::collections::{BTreeMap, BTreeSet};
+pub mod definitions;
+pub mod ecology;
+pub mod horses;
+pub mod spawning;
+
+pub const MAX_CREATURES: usize = 16_384;
+pub const MAX_SPAWN_CELLS: usize = 65_536;
+pub const MAX_VISIBLE_CREATURES: usize = 128;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum CreatureKind {
+    Sheep,
+    Cow,
+    Pig,
+    Fish,
+    Bee,
+    Bear,
+    Squid,
+    MoonJelly,
+    FireJelly,
+    VoidJelly,
+    SunJelly,
+    CrystalJelly,
+    ReefShark,
+    HammerheadShark,
+    WhaleShark,
+    Horse,
+}
+impl CreatureKind {
+    pub const ALL: [Self; 16] = [
+        Self::Sheep,
+        Self::Cow,
+        Self::Pig,
+        Self::Fish,
+        Self::Bee,
+        Self::Bear,
+        Self::Squid,
+        Self::MoonJelly,
+        Self::FireJelly,
+        Self::VoidJelly,
+        Self::SunJelly,
+        Self::CrystalJelly,
+        Self::ReefShark,
+        Self::HammerheadShark,
+        Self::WhaleShark,
+        Self::Horse,
+    ];
+    pub fn is_aquatic(self) -> bool {
+        self == Self::Fish || self == Self::Squid || self.is_jelly() || self.is_shark()
+    }
+    pub fn is_jelly(self) -> bool {
+        matches!(
+            self,
+            Self::MoonJelly
+                | Self::FireJelly
+                | Self::VoidJelly
+                | Self::SunJelly
+                | Self::CrystalJelly
+        )
+    }
+    pub fn is_shark(self) -> bool {
+        matches!(
+            self,
+            Self::ReefShark | Self::HammerheadShark | Self::WhaleShark
+        )
+    }
+    pub fn hostile_to_players(self) -> bool {
+        matches!(self, Self::Bear | Self::ReefShark | Self::WhaleShark)
+    }
+    pub fn health(self) -> f32 {
+        definitions::get(self).health
+    }
+    pub fn food(self) -> f32 {
+        definitions::get(self).food
+    }
+    pub fn water(self) -> f32 {
+        definitions::get(self).water
+    }
+    pub fn size(self) -> [f64; 3] {
+        definitions::get(self).size
+    }
+    pub fn speed(self) -> f64 {
+        definitions::get(self).speed
+    }
+    pub fn product(self) -> Option<AnimalProduct> {
+        Some(match self {
+            Self::Sheep => AnimalProduct::Mutton,
+            Self::Cow => AnimalProduct::Beef,
+            Self::Pig => AnimalProduct::Pork,
+            Self::Fish => AnimalProduct::Fish,
+            _ => return None,
+        })
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum AnimalProduct {
+    Mutton,
+    Beef,
+    Pork,
+    Fish,
+    Wool,
+    CookedBeef,
+    CookedPork,
+    CookedMutton,
+    CookedFish,
+    Clownfish,
+    CookedClownfish,
+    Leather,
+    Honey,
+}
+impl AnimalProduct {
+    pub const ALL: [Self; 13] = [
+        Self::Mutton,
+        Self::Beef,
+        Self::Pork,
+        Self::Fish,
+        Self::Wool,
+        Self::CookedBeef,
+        Self::CookedPork,
+        Self::CookedMutton,
+        Self::CookedFish,
+        Self::Clownfish,
+        Self::CookedClownfish,
+        Self::Leather,
+        Self::Honey,
+    ];
+    pub fn slug(self) -> &'static str {
+        match self {
+            Self::Mutton => "raw_mutton",
+            Self::Beef => "raw_beef",
+            Self::Pork => "raw_pork",
+            Self::Fish => "raw_fish",
+            Self::Wool => "wool",
+            Self::CookedBeef => "cooked_beef",
+            Self::CookedPork => "cooked_pork",
+            Self::CookedMutton => "cooked_mutton",
+            Self::CookedFish => "cooked_fish",
+            Self::Clownfish => "raw_clownfish",
+            Self::CookedClownfish => "cooked_clownfish",
+            Self::Leather => "leather",
+            Self::Honey => "honey",
+        }
+    }
+    pub fn color(self) -> [f32; 3] {
+        match self {
+            Self::Mutton => [0.65, 0.26, 0.24],
+            Self::Beef => [0.60, 0.12, 0.12],
+            Self::Pork => [0.89, 0.53, 0.48],
+            Self::Fish => [0.36, 0.53, 0.64],
+            Self::Wool => [0.93, 0.90, 0.79],
+            Self::CookedBeef | Self::CookedPork | Self::CookedMutton => [0.57, 0.28, 0.12],
+            Self::CookedFish => [0.65, 0.40, 0.17],
+            Self::Clownfish => [1.0, 0.38, 0.055],
+            Self::CookedClownfish => [0.78, 0.36, 0.09],
+            Self::Leather => [0.49, 0.25, 0.10],
+            Self::Honey => [1.0, 0.65, 0.07],
+        }
+    }
+}
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum CreatureBehavior {
+    #[default]
+    Rest,
+    Wander,
+    Graze,
+    Flee,
+    Swim,
+    Stranded,
+    Dead,
+    SeekFood,
+    SeekWater,
+    Drink,
+    Shake,
+    Fly,
+    Land,
+    Nectar,
+    Crawl,
+    Sleep,
+    InNest,
+    Leap,
+    Hunt,
+    Attack,
+    Climb,
+    Hold,
+    Ink,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum NeedKind {
+    Food,
+    Water,
+    Tree,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct NeedGoal {
+    pub kind: NeedKind,
+    pub position: [i64; 3],
+}
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct CreatureNeeds {
+    pub food: f32,
+    pub water: f32,
+    pub goal: Option<NeedGoal>,
+    /// Seconds until the next bounded resource search or completed bite/sip.
+    pub search_in: f32,
+}
+impl CreatureNeeds {
+    pub fn full(kind: CreatureKind) -> Self {
+        Self {
+            food: kind.food(),
+            water: kind.water(),
+            ..Self::default()
+        }
+    }
+    pub fn valid(&self, kind: CreatureKind) -> bool {
+        self.food.is_finite()
+            && (0.0..=kind.food()).contains(&self.food)
+            && self.water.is_finite()
+            && (0.0..=kind.water()).contains(&self.water)
+            && self.search_in.is_finite()
+            && (0.0..=15.0).contains(&self.search_in)
+            && self.goal.is_none_or(|goal| {
+                !kind.is_aquatic()
+                    && (goal.kind != NeedKind::Tree || kind == CreatureKind::Bear)
+                    && goal.position.iter().all(|v| v.unsigned_abs() <= 999_000)
+            })
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Creature {
+    pub id: u64,
+    pub kind: CreatureKind,
+    pub home: [i64; 2],
+    /// Model base / feet; the occupied volume extends upwards.
+    pub position: [f64; 3],
+    pub velocity: [f32; 3],
+    pub yaw: f32,
+    pub health: f32,
+    pub behavior: CreatureBehavior,
+    pub timer: f32,
+    pub age: f64,
+    pub variant: u8,
+    #[serde(default)]
+    pub needs: CreatureNeeds,
+}
+impl Creature {
+    /// Stable individual proportions; no extra save fields or runtime random IDs.
+    pub fn aquatic_scale(&self) -> [f32; 3] {
+        let Some(minimum) = definitions::get(self.kind).minimum_size else {
+            return [1.0; 3];
+        };
+        let mut hash = self.id ^ 0xa43d_19e8_5cf2_0871;
+        hash = (hash ^ (hash >> 30)).wrapping_mul(0xbf58_476d_1ce4_e5b9);
+        hash = (hash ^ (hash >> 27)).wrapping_mul(0x94d0_49bb_1331_11eb);
+        let t = ((hash ^ (hash >> 31)) & 0xffff) as f64 / 65535.0;
+        let maximum = self.kind.size();
+        std::array::from_fn(|i| ((minimum[i] + (maximum[i] - minimum[i]) * t) / maximum[i]) as f32)
+    }
+    pub fn size(&self) -> [f64; 3] {
+        let scale = self.aquatic_scale();
+        let maximum = self.kind.size();
+        std::array::from_fn(|i| maximum[i] * f64::from(scale[i]))
+    }
+    pub fn product(&self) -> Option<AnimalProduct> {
+        if self.kind == CreatureKind::Fish && self.variant < 2 {
+            Some(AnimalProduct::Clownfish)
+        } else {
+            self.kind.product()
+        }
+    }
+    /// Saved needs remain valid when an administrator lowers a species' limits.
+    pub fn apply_definition(&mut self) {
+        for (value, maximum) in [
+            (&mut self.health, self.kind.health()),
+            (&mut self.needs.food, self.kind.food()),
+            (&mut self.needs.water, self.kind.water()),
+        ] {
+            if value.is_finite() && (0.0..=1000.0).contains(value) {
+                *value = value.min(maximum);
+            }
+        }
+    }
+    pub fn valid(&self) -> bool {
+        self.id != 0
+            && self
+                .position
+                .iter()
+                .all(|v| v.is_finite() && v.abs() <= 999_000.0)
+            && self.home.iter().all(|v| v.unsigned_abs() <= 31_250)
+            && if spawning::is_command_id(self.id) {
+                true
+            } else if self.kind == CreatureKind::Bee {
+                (0..4).any(|slot| bee_id(self.home, slot) == Some(self.id))
+            } else {
+                (0..4).any(|slot| creature_id(self.home, slot) == Some(self.id))
+            }
+            && self
+                .velocity
+                .iter()
+                .all(|v| v.is_finite() && v.abs() <= 32.0)
+            && self.yaw.is_finite()
+            && self.yaw.abs() <= std::f32::consts::TAU + 0.01
+            && self.health.is_finite()
+            && (0.0..=self.kind.health()).contains(&self.health)
+            && self.timer.is_finite()
+            && (0.0..=60.0).contains(&self.timer)
+            && self.age.is_finite()
+            && self.age >= 0.0
+            && self.variant
+                < if self.kind == CreatureKind::Horse {
+                    16
+                } else {
+                    4
+                }
+            && self.needs.valid(self.kind)
+            && (self.health > 0.0 || self.behavior == CreatureBehavior::Dead)
+    }
+}
+
+#[derive(Debug, Default, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CreaturePopulation {
+    /// Ownership is separate from spawn identity; owned animals never consume the wild cap.
+    pub owners: BTreeMap<u64, crate::PlayerUuid>,
+    pub animals: BTreeMap<u64, Creature>,
+    /// Includes empty habitats and dead animals: reload never rerolls a spawn.
+    pub explored: BTreeSet<[i64; 2]>,
+    #[serde(default)]
+    pub ecology: ecology::Ecology,
+}
+impl CreaturePopulation {
+    pub fn natural_count(&self) -> usize {
+        self.animals
+            .values()
+            .filter(|a| a.health > 0.0 && !self.owners.contains_key(&a.id))
+            .count()
+    }
+    pub fn valid(&self) -> bool {
+        self.ecology.valid()
+            && self
+                .owners
+                .iter()
+                .all(|(id, owner)| !owner.is_nil() && self.animals.contains_key(id))
+            && self.ecology.bees.keys().all(|id| {
+                self.animals
+                    .get(id)
+                    .is_some_and(|a| a.kind == CreatureKind::Bee)
+            })
+            && self.animals.len() <= MAX_CREATURES
+            && self.explored.len() <= MAX_SPAWN_CELLS
+            && self
+                .explored
+                .iter()
+                .all(|p| p.iter().all(|v| v.unsigned_abs() <= 31_250))
+            && self.animals.iter().all(|(id, a)| {
+                *id == a.id
+                    && a.valid()
+                    && (spawning::is_command_id(a.id) || self.explored.contains(&a.home))
+            })
+    }
+}
+
+/// Stable injective identity within a world; independent of spawn/reload order.
+pub fn creature_id(cell: [i64; 2], slot: u8) -> Option<u64> {
+    if slot >= 4 || cell.iter().any(|v| v.unsigned_abs() > 31_250) {
+        return None;
+    }
+    Some((((cell[0] + 32768) as u64) << 18 | ((cell[1] + 32768) as u64) << 2 | u64::from(slot)) + 1)
+}
+
+/// Separate namespace keeps every existing animal identity unchanged.
+pub fn bee_id(cell: [i64; 2], slot: u8) -> Option<u64> {
+    (slot < 4)
+        .then(|| creature_id(cell, slot))
+        .flatten()
+        .map(|id| id | (1 << 63))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn aquatic_kind_ids_append_to_existing_species_and_individual_dimensions_are_stable() {
+        assert_eq!(CreatureKind::Sheep as usize, 0);
+        assert_eq!(CreatureKind::Bear as usize, 5);
+        assert_eq!(CreatureKind::Squid as usize, 6);
+        assert_eq!(CreatureKind::WhaleShark as usize, 14);
+        for kind in CreatureKind::ALL.into_iter().filter(|k| k.is_aquatic()) {
+            for n in 0..128 {
+                let a = Creature {
+                    id: creature_id([n, 0], 0).unwrap(),
+                    kind,
+                    home: [n, 0],
+                    position: [0.0, 5.0, 0.0],
+                    velocity: [0.0; 3],
+                    yaw: 0.0,
+                    health: kind.health(),
+                    behavior: CreatureBehavior::Swim,
+                    timer: 0.0,
+                    age: 0.0,
+                    variant: 0,
+                    needs: CreatureNeeds::full(kind),
+                };
+                assert!(a.valid());
+                assert_eq!(a.size(), a.clone().size());
+                for (actual, maximum) in a.size().into_iter().zip(kind.size()) {
+                    assert!(actual > 0.0 && actual <= maximum + 0.000001);
+                }
+                let size = a.size();
+                if kind.is_jelly() {
+                    assert!((0.15..=0.350001).contains(&size[0]));
+                    assert!((0.35..=0.950001).contains(&size[1]));
+                }
+            }
+        }
+        assert!(!CreatureKind::HammerheadShark.hostile_to_players());
+        assert!(CreatureKind::ReefShark.hostile_to_players());
+        assert!(CreatureKind::WhaleShark.hostile_to_players());
+    }
+    #[test]
+    fn bee_ids_do_not_overlap_old_species_and_groups_have_four_members() {
+        for x in -5..=5 {
+            for z in -5..=5 {
+                for slot in 0..4 {
+                    let id = bee_id([x, z], slot).unwrap();
+                    assert_ne!(id, creature_id([x, z], slot).unwrap());
+                    assert_ne!(id & (1 << 63), 0);
+                }
+                assert!(bee_id([x, z], 4).is_none());
+            }
+        }
+        assert_eq!(CreatureKind::Bee.size(), [0.095, 0.095, 0.115]);
+        assert_eq!(CreatureKind::Bee.product(), None);
+    }
+    #[test]
+    fn ids_are_injective_across_negative_cells_and_slots() {
+        let mut ids = BTreeSet::new();
+        for x in -4..4 {
+            for z in -4..4 {
+                for slot in 0..4 {
+                    assert!(ids.insert(creature_id([x, z], slot).unwrap()));
+                }
+            }
+        }
+        assert!(creature_id([0, 0], 4).is_none());
+        assert!(creature_id([31_251, 0], 0).is_none());
+    }
+    #[test]
+    fn requested_species_vitals_and_fish_without_food_or_water_validate() {
+        for (kind, health, food, water) in [
+            (CreatureKind::Cow, 10.0, 30.0, 30.0),
+            (CreatureKind::Sheep, 7.0, 35.0, 25.0),
+            (CreatureKind::Pig, 8.0, 20.0, 40.0),
+            (CreatureKind::Fish, 3.0, 0.0, 0.0),
+        ] {
+            assert_eq!(
+                (kind.health(), kind.food(), kind.water()),
+                (health, food, water)
+            );
+            let mut needs = CreatureNeeds::full(kind);
+            assert!(needs.valid(kind));
+            needs.food = food + 1.0;
+            assert!(!needs.valid(kind));
+            needs.food = f32::NAN;
+            assert!(!needs.valid(kind));
+        }
+    }
+}

@@ -1,0 +1,22 @@
+{
+  "id": "teramic::birch_planks",
+  "name": "Birch Planks",
+  "station": "hand",
+  "output": {
+    "item": {
+      "block": 17
+    },
+    "count": 4
+  },
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "block": 10
+        },
+        "count": 1
+      }
+    ]
+  }
+}

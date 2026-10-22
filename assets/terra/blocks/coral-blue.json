@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": 45,
+  "name": "Blue Coral Block",
+  "description": "A rich blue reef cube with pale tube rims and shadowed hollow coral cups.",
+  "creative_category": "nature",
+  "render_kind": "cube",
+  "surface": "coral_blue",
+  "bevel_width": 0.025,
+  "materials": {
+    "Blue reef coral": {
+      "texture_pattern": "coral_blue",
+      "roughness": 0.94,
+      "reflectance": 0.10
+    }
+  },
+  "face_materials": ["Blue reef coral", "Blue reef coral", "Blue reef coral", "Blue reef coral", "Blue reef coral", "Blue reef coral"],
+  "hardness": 0.8,
+  "resistance": 1.2,
+  "required_tool": null,
+  "mining_level": 0
+}

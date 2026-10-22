@@ -1,0 +1,29 @@
+{
+  "creative_category": "terrain",
+  "description": "Dense riverbed clay found beside sand.",
+  "schema_version": 1,
+  "id": 19,
+  "name": "Clay",
+  "render_kind": "cube",
+  "surface": "earth",
+  "bevel_width": 0.025,
+  "materials": {
+    "River clay": {
+      "texture_pattern": "clay",
+      "roughness": 0.97,
+      "reflectance": 0.12
+    }
+  },
+  "face_materials": [
+    "River clay",
+    "River clay",
+    "River clay",
+    "River clay",
+    "River clay",
+    "River clay"
+  ],
+  "hardness": 0.55,
+  "resistance": 0.5,
+  "required_tool": null,
+  "mining_level": 0
+}

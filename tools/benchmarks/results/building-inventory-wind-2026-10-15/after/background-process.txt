@@ -1,0 +1,2 @@
+    PID                  STARTED     ELAPSED %CPU COMMAND
+ 646582 Thu Oct 15 21:11:01 2026       01:34  121 MIMESIS.exe

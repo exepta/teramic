@@ -1,0 +1,12 @@
+[minimap]
+enabled = true
+size = 260
+zoom = 1
+mode = "auto"
+rotate = false
+relief = true
+mobs = true
+players = true
+coordinates = true
+biome = true
+clock = true

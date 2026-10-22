@@ -1,0 +1,32 @@
+{
+  "asset": { "version": "2.0", "generator": "Terra static-model test fixture" },
+  "scene": 0,
+  "scenes": [{ "name": "PedestalScene", "nodes": [0] }],
+  "nodes": [
+    { "name": "CellOrigin", "translation": [0.5, 0.0, 0.5], "children": [1] },
+    { "name": "CarvedPedestal", "scale": [0.8, 0.75, 0.8], "mesh": 0 }
+  ],
+  "materials": [{ "name": "Pedestal stone", "pbrMetallicRoughness": {
+    "baseColorFactor": [0.62, 0.64, 0.59, 1.0], "roughnessFactor": 0.9, "metallicFactor": 0.0
+  } }],
+  "meshes": [{ "name": "Pedestal", "primitives": [{
+    "attributes": { "POSITION": 0, "NORMAL": 1, "TEXCOORD_0": 2 },
+    "indices": 3, "material": 0
+  }] }],
+  "buffers": [{
+    "uri": "data:application/octet-stream;base64,AAAAvwAAAAAAAAC/AAAAAAAAgD8AAAAAAAAAPwAAAAAAAAC/AAAAPwAAAAAAAAC/AAAAAAAAgD8AAAAAAAAAPwAAAAAAAAA/AAAAPwAAAAAAAAA/AAAAAAAAgD8AAAAAAAAAvwAAAAAAAAA/AAAAvwAAAAAAAAA/AAAAAAAAgD8AAAAAAAAAvwAAAAAAAAC/AAAAvwAAAAAAAAC/AAAAPwAAAAAAAAA/AAAAvwAAAAAAAAA/AAAAvwAAAAAAAAC/AAAAPwAAAAAAAAC/AAAAPwAAAAAAAAA/AAAAAC755D4u+WS/AAAAAC755D4u+WS/AAAAAC755D4u+WS/LvlkPy755D4AAACALvlkPy755D4AAACALvlkPy755D4AAACAAAAAAC755D4u+WQ/AAAAAC755D4u+WQ/AAAAAC755D4u+WQ/Lvlkvy755D4AAAAALvlkvy755D4AAAAALvlkvy755D4AAAAAAAAAAAAAgL8AAAAAAAAAAAAAgL8AAAAAAAAAAAAAgL8AAAAAAAAAAAAAgL8AAAAAAAAAAAAAgL8AAAAAAAAAAAAAgL8AAAAAAAAAAAAAAAAAAAA/AAAAPwAAgD8AAAAAAACAPwAAAAAAAAA/AAAAPwAAgD8AAIA/AACAPwAAgD8AAAA/AAAAPwAAAAAAAIA/AAAAAAAAgD8AAAA/AAAAPwAAAAAAAAAAAAAAAAAAAAAAAIA/AACAPwAAAAAAAIA/AAAAAAAAAAAAAIA/AAAAAAAAgD8AAIA/AAABAAIAAwAEAAUABgAHAAgACQAKAAsADAANAA4ADwAQABEA",
+    "byteLength": 612
+  }],
+  "bufferViews": [
+    { "buffer": 0, "byteOffset": 0, "byteLength": 216, "target": 34962 },
+    { "buffer": 0, "byteOffset": 216, "byteLength": 216, "target": 34962 },
+    { "buffer": 0, "byteOffset": 432, "byteLength": 144, "target": 34962 },
+    { "buffer": 0, "byteOffset": 576, "byteLength": 36, "target": 34963 }
+  ],
+  "accessors": [
+    { "bufferView": 0, "componentType": 5126, "count": 18, "type": "VEC3", "min": [-0.5, 0.0, -0.5], "max": [0.5, 1.0, 0.5] },
+    { "bufferView": 1, "componentType": 5126, "count": 18, "type": "VEC3" },
+    { "bufferView": 2, "componentType": 5126, "count": 18, "type": "VEC2" },
+    { "bufferView": 3, "componentType": 5123, "count": 18, "type": "SCALAR" }
+  ]
+}

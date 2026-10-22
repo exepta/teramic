@@ -1,0 +1,2 @@
+.menu-background { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-image: url("tilt-ui://assets/menu-valley.png"); background-size: cover; background-position: center; }
+.menu-shade { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: #08100c55; }

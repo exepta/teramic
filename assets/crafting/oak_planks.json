@@ -1,0 +1,22 @@
+{
+  "id": "teramic::oak_planks",
+  "name": "Oak Planks",
+  "station": "hand",
+  "output": {
+    "item": {
+      "block": 16
+    },
+    "count": 4
+  },
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "block": 6
+        },
+        "count": 1
+      }
+    ]
+  }
+}

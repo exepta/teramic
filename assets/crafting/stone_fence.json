@@ -1,0 +1,50 @@
+{
+  "id": "teramic::stone_fence",
+  "name": "Stone Fence",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "block": 93
+    },
+    "count": 3
+  },
+  "pattern": {
+    "kind": "shaped",
+    "width": 3,
+    "height": 2,
+    "cells": [
+      {
+        "item": {
+          "block": 3
+        },
+        "count": 1
+      },
+      {
+        "item": "stick",
+        "count": 1
+      },
+      {
+        "item": {
+          "block": 3
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "block": 3
+        },
+        "count": 1
+      },
+      {
+        "item": "stick",
+        "count": 1
+      },
+      {
+        "item": {
+          "block": 3
+        },
+        "count": 1
+      }
+    ]
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "kind": "strength",
+  "id": "teramic::strength",
+  "name": "Strength",
+  "description": "Melee attacks deal more damage.",
+  "beneficial": true,
+  "max_duration_seconds": 3600,
+  "max_level": 3,
+  "stacking": "refresh_strongest",
+  "modifiers": {
+    "attack_multiplier": 1.5
+  }
+}

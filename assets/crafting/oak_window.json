@@ -1,0 +1,9 @@
+{
+  "id": "teramic::oak_window", "name": "Oak Window", "station": "workbench",
+  "output": { "item": { "block": 68 }, "count": 1 },
+  "pattern": { "kind": "shaped", "width": 3, "height": 3, "cells": [
+    null, { "item": { "block": 16 }, "count": 1 }, null,
+    { "item": { "block": 16 }, "count": 1 }, { "item": { "block": 15 }, "count": 1 }, { "item": { "block": 16 }, "count": 1 },
+    null, { "item": { "block": 16 }, "count": 1 }, null
+  ] }
+}

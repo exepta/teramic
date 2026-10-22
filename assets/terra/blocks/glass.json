@@ -1,0 +1,41 @@
+{
+  "creative_category": "building",
+  "description": "Clear glass panes with joined wooden frames.",
+  "schema_version": 1,
+  "id": 15,
+  "name": "Framed Glass",
+  "render_kind": "cube",
+  "frame_material": "Wood frame",
+  "materials": {
+    "Pane": {
+      "base_color": [
+        0.75,
+        0.89,
+        0.87,
+        0.1
+      ],
+      "roughness": 0.1
+    },
+    "Wood frame": {
+      "base_color": [
+        0.36,
+        0.22,
+        0.1,
+        1.0
+      ],
+      "texture_pattern": "planks"
+    }
+  },
+  "face_materials": [
+    "Pane",
+    "Pane",
+    "Pane",
+    "Pane",
+    "Pane",
+    "Pane"
+  ],
+  "hardness": 0.55,
+  "resistance": 0.5,
+  "required_tool": null,
+  "mining_level": 0
+}

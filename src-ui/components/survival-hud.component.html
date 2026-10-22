@@ -1,0 +1,43 @@
+@if (survivalView.visible) {
+  @if (survivalView.hit && !survivalView.editing) {
+    <div id="survival-hit" class="survival-edges survival-hit" [style]="survivalView.hit_style"><div class="damage-edge edge-left"></div><div class="damage-edge edge-right"></div><div class="damage-edge edge-top"></div><div class="damage-edge edge-bottom"></div></div>
+  }
+  @if (survivalView.critical) {
+    <div id="survival-critical" class="survival-critical"></div>
+    <div id="survival-critical-glow" class="survival-edges survival-critical-glow"><div class="damage-edge edge-left"></div><div class="damage-edge edge-right"></div><div class="damage-edge edge-top"></div><div class="damage-edge edge-bottom"></div></div>
+  }
+  <div id="survival-hud" [class]="survivalView.editing ? 'survival-hud hud-editable' : 'survival-hud'" [style]="survivalView.position">
+    <img id="survival-chrome" class="vital-chrome" src="tilt-ui://assets/survival-chrome.png" alt="Health and stamina" />
+    @if (statusEffectView.shield) {
+      <div id="survival-shield" class="vital-shield"><progress-bar class="shield-power-bar" min="0" max="100" [value]="statusEffectView.shield_value" /><ornate-frame></ornate-frame><img class="shield-power-icon" src="tilt-ui://assets/status-effects-atlas.png" alt="Status effect 12" /><p>{{ statusEffectView.shield_label }}</p></div>
+    }
+    <div class="vital-meter health-meter"><progress-bar id="survival-health" class="health-bar" min="0" max="100" [value]="survivalView.health" /><div id="survival-health-label" class="vital-label"><p>{{ survivalView.health_label }}</p></div></div>
+    @if (survivalView.show_oxygen) {
+      <div class="vital-meter stamina-meter"><progress-bar id="survival-oxygen" class="oxygen-bar" min="0" max="100" [value]="survivalView.oxygen" /></div>
+      <img id="survival-breath" class="breath-icon" src="tilt-ui://assets/survival-atlas.png" alt="Oxygen" />
+    } @else {
+      <div class="vital-meter stamina-meter"><progress-bar id="survival-stamina" class="stamina-bar" min="0" max="100" [value]="survivalView.stamina" /></div>
+    }
+    <div class="vital-statuses">
+      <div id="survival-food-status" class="food-status"><img id="survival-food-frame" class="food-frame" src="tilt-ui://assets/survival-status-frame.png" alt="" /><img id="survival-food" class="food-icon" src="tilt-ui://assets/survival-atlas.png" alt="Hunger" /><progress-bar id="survival-hunger" class="hunger-bar" min="0" max="100" [value]="survivalView.hunger" /></div>
+      @for (effect of statusEffectView.cards; track effect.id) {
+        <div id="status-effect-card" [class]="effect.class" [title]="effect.tooltip"><ornate-frame></ornate-frame><img class="status-effect-icon" src="tilt-ui://assets/status-effects-atlas.png" [alt]="effect.icon" /><div class="effect-details">@if (statusEffectView.expanded) { <p class="effect-name">{{ effect.name }}</p> }<div class="effect-level"><div [class.active]="effect.level >= 1"></div><div [class.active]="effect.level >= 2"></div><div [class.active]="effect.level >= 3"></div><div [class.active]="effect.level >= 4"></div><div [class.active]="effect.level >= 5"></div></div><p class="effect-time">{{ effect.time_label }}</p></div></div>
+      }
+      @if (statusEffectView.overflow > 0) {
+        <div id="status-effect-overflow" class="status-effect-card effect-overflow" [title]="statusEffectView.overflow_title"><ornate-frame></ornate-frame><p>+{{ statusEffectView.overflow }}</p></div>
+      }
+    </div>
+    @if (statusEffectView.regeneration) {
+      <img id="regen-heart-0" class="regeneration-heart" src="tilt-ui://assets/status-effects-atlas.png" alt="Status effect 11" />
+      <img id="regen-heart-1" class="regeneration-heart" src="tilt-ui://assets/status-effects-atlas.png" alt="Status effect 11" />
+      <img id="regen-heart-2" class="regeneration-heart" src="tilt-ui://assets/status-effects-atlas.png" alt="Status effect 11" />
+      <img id="regen-heart-3" class="regeneration-heart" src="tilt-ui://assets/status-effects-atlas.png" alt="Status effect 11" />
+    }
+  </div>
+  @if (survivalView.editing) {
+    <div id="hud-layout-tools" class="hud-editor-toolbar" [style]="survivalView.tools_position"><ornate-frame></ornate-frame><h2>HUD Layout</h2><div class="hud-editor-actions"><button id="hud-reset" onclick="menu_command"><icon name="rotate-ccw" size="18" />Reset</button><button id="hud-cancel" onclick="menu_command">Cancel</button><button id="hud-save" class="hud-save" onclick="menu_command"><icon name="save" size="18" />Save</button></div><p class="death-error">{{ survivalView.layout_error }}</p></div>
+  }
+  @if (survivalView.dead && !survivalView.editing) {
+    <div id="death-screen" class="death-backdrop"><div class="death-panel"><ornate-frame></ornate-frame><h2>You Died</h2><p>{{ survivalView.death_message }}</p><p class="death-error">{{ survivalView.error }}</p><button id="survival-respawn" [disabled]="survivalView.respawning" onclick="survival_respawn"><icon name="rotate-ccw" size="20" />@if (survivalView.respawning) { Finding Safe Ground } @else { Respawn }</button></div></div>
+  }
+}

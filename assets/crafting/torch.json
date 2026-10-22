@@ -1,0 +1,13 @@
+{
+  "id": "teramic::torch",
+  "name": "Torch",
+  "station": "hand",
+  "output": { "item": { "block": 40 }, "count": 1 },
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      { "item": "stick", "count": 1 },
+      { "item": { "mineral": "coal" }, "count": 1 }
+    ]
+  }
+}

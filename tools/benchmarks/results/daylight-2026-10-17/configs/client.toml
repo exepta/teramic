@@ -1,0 +1,11 @@
+width = 1280
+height = 800
+fov_degrees = 65.0
+vsync = false
+debug_overlay = false
+view_distance = 8
+vertical_view_distance = 3
+log_filter = "info"
+water_quality = "high"
+water_reflections = true
+weather = "clear"

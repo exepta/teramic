@@ -1,0 +1,8 @@
+seed = 42042
+[ores]
+enabled = true
+revision = 1
+[time]
+day_length_seconds = 1440.0
+start_hour = 10.0
+paused = true

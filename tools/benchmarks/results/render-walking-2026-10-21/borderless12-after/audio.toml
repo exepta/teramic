@@ -1,0 +1,6 @@
+master_volume = 1.0
+ambience_volume = 1.0
+water_volume = 1.0
+river_volume = 1.0
+waterfall_volume = 1.0
+muted = false

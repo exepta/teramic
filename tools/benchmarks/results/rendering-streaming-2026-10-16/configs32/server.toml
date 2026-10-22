@@ -1,0 +1,4 @@
+bind_address = "127.0.0.1:5000"
+require_verified_accounts = false
+lan_discovery = false
+simulation_distance = 1

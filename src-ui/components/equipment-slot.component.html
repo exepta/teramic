@@ -1,0 +1,4 @@
+<div id="equipment-slot" class="equipment-slot" role="img" aria-disabled="true">
+  <div [class]="'equipment-symbol ' + equipment.kind"><div class="equipment-outline"></div><div class="equipment-detail"></div></div>
+  <tooltip id="inventory-tooltip" for="equipment-slot" trigger="hover" variant="follow" class="equipment-tooltip"><p>{{ equipment.name }}</p><p class="equipment-unavailable">Not yet available</p></tooltip>
+</div>

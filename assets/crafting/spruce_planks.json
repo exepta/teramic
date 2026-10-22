@@ -1,0 +1,10 @@
+{
+  "id": "teramic::spruce_planks",
+  "name": "Spruce Planks",
+  "station": "hand",
+  "output": { "item": { "block": 18 }, "count": 4 },
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [{ "item": { "block": 36 }, "count": 1 }]
+  }
+}

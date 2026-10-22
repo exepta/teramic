@@ -1,0 +1,7 @@
+.main-menu { position: absolute; top: 9%; bottom: 9%; left: 50%; transform: translateX(-50%); width: 480px; max-width: 86%; display: flex; flex-direction: column; align-items: stretch; justify-content: center; gap: 24px; }
+.main-actions { position: relative; display: flex; flex-direction: column; gap: 12px; padding: 24px; background-color: #171e1be6; }
+.brand-lockup { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.brand-lockup headline { font-size: 66px; color: #f5e3b5; margin: 0; font-family: serif; }
+.brand-lockup p { font-size: 13px; color: #ead59e; margin: 0; }
+.brand-rule { height: 2px; width: 180px; background-color: #bca16b; }
+.pause-title { text-align: center; color: #f3e4c4; margin: 0; font-size: 24px; }

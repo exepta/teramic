@@ -1,0 +1,31 @@
+{
+  "description": "A flowing water source. Fills nearby empty cells and reacts to changed banks.",
+  "schema_version": 1,
+  "id": 27,
+  "name": "Fluid Water Block",
+  "render_kind": "cube",
+  "creative_category": "building",
+  "materials": {
+    "Flowing water": {
+      "base_color": [
+        0.03,
+        0.24,
+        0.21,
+        0.65
+      ],
+      "roughness": 0.16
+    }
+  },
+  "face_materials": [
+    "Flowing water",
+    "Flowing water",
+    "Flowing water",
+    "Flowing water",
+    "Flowing water",
+    "Flowing water"
+  ],
+  "hardness": 0.55,
+  "resistance": 0.5,
+  "required_tool": null,
+  "mining_level": 0
+}

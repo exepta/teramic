@@ -1,0 +1,6 @@
+width = 1280
+height = 800
+vsync = false
+view_distance = 4
+vertical_view_distance = 3
+debug_overlay = false

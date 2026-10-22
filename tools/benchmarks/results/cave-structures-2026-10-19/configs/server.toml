@@ -1,0 +1,2 @@
+bind_address = "127.0.0.1:34580"
+lan_discovery = false

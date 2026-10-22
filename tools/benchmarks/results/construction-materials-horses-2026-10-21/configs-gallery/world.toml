@@ -1,0 +1,58 @@
+id = 1
+seed = 42042
+generator_version = 5
+base_height = 16.0
+hill_amplitude = 12.0
+mountain_amplitude = 48.0
+sea_level = 8.0
+snow_height = 256.0
+caves = true
+trees = true
+water = true
+# Relative to the same terrain/forest distribution at density 1.0.
+tree_density = 0.8
+biome_scale = 2048.0
+ocean_scale = 4096.0
+biomes = true
+terrace_height = 4.0
+terrace_strength = 0.72
+[time]
+day_length_seconds = 1440.0
+start_hour = 10.0
+paused = false
+
+# Calendar progress uses the saved world day; terrain is never regenerated.
+[seasons]
+enabled = true
+spring_days = 7
+summer_days = 7
+autumn_days = 7
+winter_days = 7
+start_season = "spring"
+transition_days = 2.0
+
+# Saved with new cave-revision-3 worlds; existing world contracts are preserved.
+[cave_biomes]
+enabled = true
+# Stone / salt crust / crystal-rich zones / large formations, not ore rates.
+salt_surfaces = [0.55, 0.30, 0.10, 0.05]
+lush_density = 0.72
+
+[cave_biomes.distribution]
+normal_weight = 0.45
+salt_weight = 0.20
+lush_weight = 0.20
+cascade_weight = 0.15
+
+[cave_biomes.regions]
+normal_diameter = [100.0, 400.0]
+salt_diameter = [80.0, 250.0]
+lush_diameter = [100.0, 300.0]
+cascade_diameter = [120.0, 350.0]
+transition_distance = 24.0
+
+[cave_biomes.connectors]
+inherit_biomes = true
+blend_biomes = true
+biome_decorations = true
+density = 0.84

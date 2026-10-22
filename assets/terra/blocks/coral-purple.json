@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": 47,
+  "name": "Purple Coral Block",
+  "description": "A violet reef cube with clustered lilac coral folds and small pale polyp centres.",
+  "creative_category": "nature",
+  "render_kind": "cube",
+  "surface": "coral_purple",
+  "bevel_width": 0.025,
+  "materials": {
+    "Purple reef coral": {
+      "texture_pattern": "coral_purple",
+      "roughness": 0.94,
+      "reflectance": 0.10
+    }
+  },
+  "face_materials": ["Purple reef coral", "Purple reef coral", "Purple reef coral", "Purple reef coral", "Purple reef coral", "Purple reef coral"],
+  "hardness": 0.8,
+  "resistance": 1.2,
+  "required_tool": null,
+  "mining_level": 0
+}

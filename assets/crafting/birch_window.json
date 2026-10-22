@@ -1,0 +1,9 @@
+{
+  "id": "teramic::birch_window", "name": "Birch Window", "station": "workbench",
+  "output": { "item": { "block": 69 }, "count": 1 },
+  "pattern": { "kind": "shaped", "width": 3, "height": 3, "cells": [
+    null, { "item": { "block": 17 }, "count": 1 }, null,
+    { "item": { "block": 17 }, "count": 1 }, { "item": { "block": 15 }, "count": 1 }, { "item": { "block": 17 }, "count": 1 },
+    null, { "item": { "block": 17 }, "count": 1 }, null
+  ] }
+}

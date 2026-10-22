@@ -1,0 +1,15 @@
+{
+  "id": "cow",
+  "title": "Cow",
+  "health": 10,
+  "food": 30,
+  "water": 30,
+  "size": [
+    0.95,
+    1.65,
+    1.5
+  ],
+  "speed": 0.8,
+  "group_size": 4,
+  "sleeps": true
+}

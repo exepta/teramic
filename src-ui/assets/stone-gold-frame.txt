@@ -1,0 +1,14 @@
+TERAMIC shared ornamental UI frame
+
+Asset: src-ui/assets/stone-gold-frame.png
+Built-in image_gen, transparent_background=true, inspected before integration.
+Source: /home/exepta/.codex/generated_images/01a1512f-7ec5-7183-bea3-3db18b49053d/exec-86f63ed1-d5e1-4bc4-8a5c-74bc9629ce1f.png
+
+Prompt: Production game UI asset, one square fantasy voxel-sandbox ornamental
+panel frame, orthographic, charcoal carved stone/iron border, fine warm gold
+inlay, small emerald faceted studs at the four corners. Straight edge segments
+for nine-slice resizing; transparent center, no text, UI content or background.
+
+The same texture is shared across menus, inventories and HUD bar ornaments.
+TiltUI instantiates the decorative image; Bevy's existing ImageNode slicing
+preserves the corners. No additional material, render pass or UI framework.

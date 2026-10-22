@@ -1,0 +1,1 @@
+{"id":6,"key":"teramic::smelt_iron","name":"Iron Ingot","input":{"mineral":"raw_iron"},"output":{"item":{"mineral":"iron_ingot"},"count":1},"seconds":10.0}

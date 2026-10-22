@@ -1,0 +1,50 @@
+{
+  "id": "teramic::dirt_fence",
+  "name": "Dirt Fence",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "block": 94
+    },
+    "count": 3
+  },
+  "pattern": {
+    "kind": "shaped",
+    "width": 3,
+    "height": 2,
+    "cells": [
+      {
+        "item": {
+          "block": 2
+        },
+        "count": 1
+      },
+      {
+        "item": "stick",
+        "count": 1
+      },
+      {
+        "item": {
+          "block": 2
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "block": 2
+        },
+        "count": 1
+      },
+      {
+        "item": "stick",
+        "count": 1
+      },
+      {
+        "item": {
+          "block": 2
+        },
+        "count": 1
+      }
+    ]
+  }
+}

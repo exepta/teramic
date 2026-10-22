@@ -1,0 +1,36 @@
+{
+  "id": "teramic::birch_slab",
+  "name": "Birch Half Slab",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "block": 83
+    },
+    "count": 6
+  },
+  "pattern": {
+    "kind": "shaped",
+    "width": 3,
+    "height": 1,
+    "cells": [
+      {
+        "item": {
+          "block": 17
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "block": 17
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "block": 17
+        },
+        "count": 1
+      }
+    ]
+  }
+}

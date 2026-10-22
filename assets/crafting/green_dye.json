@@ -1,0 +1,28 @@
+{
+  "id": "teramic::green_dye",
+  "name": "Green Dye",
+  "station": "hand",
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "dye": "yellow"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "dye": "blue"
+        },
+        "count": 1
+      }
+    ]
+  },
+  "output": {
+    "item": {
+      "dye": "green"
+    },
+    "count": 1
+  }
+}

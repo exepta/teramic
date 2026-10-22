@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "id": 81,
+  "name": "Ice Stairs",
+  "description": "Ice stairs with shaped edges. Built from the same material as its full block.",
+  "creative_category": "building",
+  "render_kind": "boxes",
+  "bevel_width": 0.018,
+  "collision_boxes": [
+    {
+      "minimum": [
+        0,
+        0,
+        0
+      ],
+      "maximum": [
+        1,
+        0.3333333333333333,
+        1
+      ]
+    },
+    {
+      "minimum": [
+        0,
+        0.3333333333333333,
+        0.3333333333333333
+      ],
+      "maximum": [
+        1,
+        0.6666666666666666,
+        1
+      ]
+    },
+    {
+      "minimum": [0, 0.6666666666666666, 0.6666666666666666],
+      "maximum": [1, 1, 1]
+    }
+  ],
+  "materials": {
+    "Sea ice": {
+      "base_color": [
+        0.85,
+        0.95,
+        1,
+        0.86
+      ],
+      "texture_pattern": "ice",
+      "roughness": 0.34,
+      "reflectance": 0.28
+    }
+  },
+  "face_materials": [
+    "Sea ice",
+    "Sea ice",
+    "Sea ice",
+    "Sea ice",
+    "Sea ice",
+    "Sea ice"
+  ],
+  "hardness": 0.8,
+  "resistance": 0.6,
+  "required_tool": null,
+  "mining_level": 0,
+  "struct_block": false
+}

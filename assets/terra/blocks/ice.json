@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "id": 49,
+  "name": "Ice",
+  "description": "Pale blue sea ice with cloudy layers and fine frozen seams. Solid, translucent and cool to the touch.",
+  "creative_category": "terrain",
+  "render_kind": "cube",
+  "materials": {
+    "Sea ice": {
+      "base_color": [0.85, 0.95, 1.0, 0.86],
+      "texture_pattern": "ice",
+      "roughness": 0.34,
+      "reflectance": 0.28
+    }
+  },
+  "face_materials": ["Sea ice", "Sea ice", "Sea ice", "Sea ice", "Sea ice", "Sea ice"],
+  "hardness": 0.8,
+  "resistance": 0.6,
+  "required_tool": null,
+  "mining_level": 0
+}
