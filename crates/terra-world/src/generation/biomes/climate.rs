@@ -11,6 +11,7 @@ pub(in crate::generation) struct ClimateSampler {
     clearings: Perlin,
     continents: Perlin,
     mushrooms: Perlin,
+    cherries: Perlin,
     scale: f64,
     ocean_scale: f64,
 }
@@ -29,6 +30,7 @@ impl ClimateSampler {
             clearings: Perlin::new(layer_seed(seed, 10)),
             continents: Perlin::new(layer_seed(seed, 13)),
             mushrooms: Perlin::new(layer_seed(seed, 14)),
+            cherries: Perlin::new(layer_seed(seed, 271)),
             scale,
             ocean_scale,
         }
@@ -67,8 +69,23 @@ impl ClimateSampler {
                 highland,
                 mushroom_park,
                 cliffted_desert: 0.0,
+                cherry_forest: 0.0,
             },
         }
+    }
+
+    /// Coherent humid, temperate woodland regions, sampled in global coordinates.
+    pub fn with_cherries(&self, mut biome: BiomeSample, x: f64, z: f64) -> BiomeSample {
+        let patch = self.cherries.get([x / 720.0 + 11.7, z / 720.0 - 8.3]);
+        let climate = smoothstep(0.25, 0.42, biome.temperature)
+            * (1.0 - smoothstep(0.72, 0.88, biome.temperature))
+            * smoothstep(0.35, 0.57, biome.humidity);
+        let fraction = smoothstep(-0.02, 0.24, patch) * climate;
+        let woodland = biome.weights.forest + biome.weights.plains * 0.85;
+        biome.weights.cherry_forest = woodland * fraction;
+        biome.weights.forest *= 1.0 - fraction;
+        biome.weights.plains *= 1.0 - fraction * 0.85;
+        biome
     }
 
     /// Interior islands in existing hot/dry regions, never isolated desert patches.

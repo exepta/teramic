@@ -1,10 +1,18 @@
 //! Persistent authority data; no renderer or ECS required.
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
+pub mod breeding;
+pub mod sex;
+pub use sex::CreatureSex;
 pub mod definitions;
 pub mod ecology;
+pub mod hitboxes;
 pub mod horses;
+pub mod intentions;
 pub mod spawning;
+pub mod spiders;
+pub mod taming;
+pub mod villagers;
 
 pub const MAX_CREATURES: usize = 16_384;
 pub const MAX_SPAWN_CELLS: usize = 65_536;
@@ -29,9 +37,14 @@ pub enum CreatureKind {
     HammerheadShark,
     WhaleShark,
     Horse,
+    SmallSpider,
+    MediumSpider,
+    LargeSpider,
+    Stalker,
+    Villager,
 }
 impl CreatureKind {
-    pub const ALL: [Self; 16] = [
+    pub const ALL: [Self; 21] = [
         Self::Sheep,
         Self::Cow,
         Self::Pig,
@@ -48,7 +61,18 @@ impl CreatureKind {
         Self::HammerheadShark,
         Self::WhaleShark,
         Self::Horse,
+        Self::SmallSpider,
+        Self::MediumSpider,
+        Self::LargeSpider,
+        Self::Stalker,
+        Self::Villager,
     ];
+    pub fn is_spider(self) -> bool {
+        matches!(
+            self,
+            Self::SmallSpider | Self::MediumSpider | Self::LargeSpider
+        )
+    }
     pub fn is_aquatic(self) -> bool {
         self == Self::Fish || self == Self::Squid || self.is_jelly() || self.is_shark()
     }
@@ -69,7 +93,15 @@ impl CreatureKind {
         )
     }
     pub fn hostile_to_players(self) -> bool {
-        matches!(self, Self::Bear | Self::ReefShark | Self::WhaleShark)
+        matches!(
+            self,
+            Self::Bear
+                | Self::ReefShark
+                | Self::WhaleShark
+                | Self::MediumSpider
+                | Self::LargeSpider
+                | Self::Stalker
+        )
     }
     pub fn health(self) -> f32 {
         definitions::get(self).health
@@ -190,6 +222,8 @@ pub enum CreatureBehavior {
     Climb,
     Hold,
     Ink,
+    Ceiling,
+    Descend,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -197,6 +231,7 @@ pub enum NeedKind {
     Food,
     Water,
     Tree,
+    Shelter,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
@@ -231,6 +266,7 @@ impl CreatureNeeds {
             && self.goal.is_none_or(|goal| {
                 !kind.is_aquatic()
                     && (goal.kind != NeedKind::Tree || kind == CreatureKind::Bear)
+                    && (goal.kind != NeedKind::Shelter || kind.is_spider())
                     && goal.position.iter().all(|v| v.unsigned_abs() <= 999_000)
             })
     }
@@ -254,6 +290,14 @@ pub struct Creature {
     pub needs: CreatureNeeds,
 }
 impl Creature {
+    pub fn title(&self) -> String {
+        let role = definitions::get(self.kind).variant_title(self.variant);
+        if self.kind == CreatureKind::Villager {
+            format!("{} ({role})", villagers::name(self.id))
+        } else {
+            role.to_owned()
+        }
+    }
     /// Stable individual proportions; no extra save fields or runtime random IDs.
     pub fn aquatic_scale(&self) -> [f32; 3] {
         let Some(minimum) = definitions::get(self.kind).minimum_size else {
@@ -267,12 +311,37 @@ impl Creature {
         std::array::from_fn(|i| ((minimum[i] + (maximum[i] - minimum[i]) * t) / maximum[i]) as f32)
     }
     pub fn size(&self) -> [f64; 3] {
+        if self.kind.is_spider() {
+            return spiders::occupied_size(self);
+        }
         let scale = self.aquatic_scale();
         let maximum = self.kind.size();
-        std::array::from_fn(|i| maximum[i] * f64::from(scale[i]))
+        std::array::from_fn(|i| maximum[i] * f64::from(scale[i]) * self.growth_scale())
+    }
+    pub fn growth(&self) -> f32 {
+        if breeding::is_birth_id(self.id) {
+            (self.age / breeding::GROWTH_SECONDS).clamp(0.0, 1.0) as f32
+        } else {
+            1.0
+        }
+    }
+    pub fn sex(&self) -> CreatureSex {
+        CreatureSex::from_spawn_id(self.id)
+    }
+    pub fn juvenile(&self) -> bool {
+        breeding::is_birth_id(self.id) && self.age < breeding::GROWTH_SECONDS
+    }
+    pub fn growth_scale(&self) -> f64 {
+        let growth = f64::from(self.growth());
+        0.45 + 0.55 * growth * growth * (3.0 - 2.0 * growth)
+    }
+    pub fn movement_scale(&self) -> f64 {
+        self.growth_scale().sqrt()
     }
     pub fn product(&self) -> Option<AnimalProduct> {
-        if self.kind == CreatureKind::Fish && self.variant < 2 {
+        if self.juvenile() {
+            None
+        } else if self.kind == CreatureKind::Fish && self.variant < 2 {
             Some(AnimalProduct::Clownfish)
         } else {
             self.kind.product()
@@ -297,10 +366,18 @@ impl Creature {
                 .iter()
                 .all(|v| v.is_finite() && v.abs() <= 999_000.0)
             && self.home.iter().all(|v| v.unsigned_abs() <= 31_250)
-            && if spawning::is_command_id(self.id) {
+            && if breeding::is_birth_id(self.id) {
+                breeding::species(self.kind)
+            } else if spawning::is_command_id(self.id) {
                 true
             } else if self.kind == CreatureKind::Bee {
                 (0..4).any(|slot| bee_id(self.home, slot) == Some(self.id))
+            } else if self.kind.is_spider() {
+                (0..4).any(|slot| spider_id(self.home, slot) == Some(self.id))
+            } else if self.kind == CreatureKind::Stalker {
+                stalker_id(self.home) == Some(self.id)
+            } else if self.kind == CreatureKind::Villager {
+                villagers::slot(self.id, self.home).is_some()
             } else {
                 (0..4).any(|slot| creature_id(self.home, slot) == Some(self.id))
             }
@@ -317,7 +394,9 @@ impl Creature {
             && self.age.is_finite()
             && self.age >= 0.0
             && self.variant
-                < if self.kind == CreatureKind::Horse {
+                < if self.kind == CreatureKind::Villager {
+                    villagers::ROLE_COUNT
+                } else if self.kind == CreatureKind::Horse {
                     16
                 } else {
                     4
@@ -341,7 +420,11 @@ impl CreaturePopulation {
     pub fn natural_count(&self) -> usize {
         self.animals
             .values()
-            .filter(|a| a.health > 0.0 && !self.owners.contains_key(&a.id))
+            .filter(|a| {
+                a.health > 0.0
+                    && a.kind != CreatureKind::Villager
+                    && !self.owners.contains_key(&a.id)
+            })
             .count()
     }
     pub fn valid(&self) -> bool {
@@ -364,7 +447,12 @@ impl CreaturePopulation {
             && self.animals.iter().all(|(id, a)| {
                 *id == a.id
                     && a.valid()
-                    && (spawning::is_command_id(a.id) || self.explored.contains(&a.home))
+                    && (spawning::is_command_id(a.id)
+                        || breeding::is_birth_id(a.id)
+                        || a.kind.is_spider()
+                        || a.kind == CreatureKind::Stalker
+                        || a.kind == CreatureKind::Villager
+                        || self.explored.contains(&a.home))
             })
     }
 }
@@ -383,6 +471,16 @@ pub fn bee_id(cell: [i64; 2], slot: u8) -> Option<u64> {
         .then(|| creature_id(cell, slot))
         .flatten()
         .map(|id| id | (1 << 63))
+}
+
+/// Separate habitat namespace: existing herds, bees and command identities stay unchanged.
+pub fn spider_id(cell: [i64; 2], slot: u8) -> Option<u64> {
+    creature_id(cell, slot).map(|id| id | (1 << 61))
+}
+
+/// Appended habitat namespace; old herds, spiders, bees and births keep their IDs.
+pub fn stalker_id(cell: [i64; 2]) -> Option<u64> {
+    creature_id(cell, 0).map(|id| id | (1 << 59))
 }
 
 #[cfg(test)]

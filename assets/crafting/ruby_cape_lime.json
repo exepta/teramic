@@ -1,0 +1,34 @@
+{
+  "id": "teramic::ruby_cape_lime",
+  "name": "Lime Ruby Cape",
+  "station": "hand",
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "cape": {
+            "material": "ruby",
+            "color": "white"
+          }
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "dye": "lime"
+        },
+        "count": 1
+      }
+    ]
+  },
+  "output": {
+    "item": {
+      "cape": {
+        "material": "ruby",
+        "color": "lime"
+      }
+    },
+    "count": 1
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "id": "teramic::spruce_bed_lime",
+  "name": "Lime Spruce Bed",
+  "station": "hand",
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "block": 73
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "dye": "lime"
+        },
+        "count": 1
+      }
+    ]
+  },
+  "output": {
+    "item": {
+      "dyed_bed": {
+        "material": 73,
+        "color": "lime"
+      }
+    },
+    "count": 1
+  }
+}

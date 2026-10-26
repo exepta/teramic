@@ -16,3 +16,7 @@ terra-network = { workspace = true, features = ["client"] }
 tracing.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+
+[dev-dependencies]
+# The painted-albedo asset test decodes PNG without relying on client features.
+bevy = { workspace = true, features = ["png"] }

@@ -1,0 +1,7 @@
+{
+  "item": {
+    "tool": "iron_watering_can"
+  },
+  "name": "Iron Watering Can",
+  "description": "Refill at water, then water crops. Capacity increases with material tier."
+}

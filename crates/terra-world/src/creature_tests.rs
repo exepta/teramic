@@ -66,6 +66,774 @@ fn animal(kind: CreatureKind) -> Creature {
 }
 
 #[test]
+fn walking_sweeps_reject_intermediate_gaps_walls_and_unknown_cells() {
+    let (terrain, chunks, mut journal) = fixture();
+    let start = [7.5, 3.0, 8.5];
+    let end = [12.5, 3.0, 8.5];
+    for x in 9..=10 {
+        for z in 6..=10 {
+            for y in 0..=2 {
+                journal.record([x, y, z], 0).unwrap();
+            }
+        }
+    }
+    let habitat = Habitat {
+        terrain: &terrain,
+        chunks: &chunks,
+        journal: &journal,
+    };
+    assert!(habitat.ground(end, CreatureKind::Pig).is_some());
+    assert!(
+        habitat
+            .walk_step(start, end, CreatureKind::Pig, 0.0)
+            .is_none()
+    );
+    let mut journal = EditJournal::default();
+    for z in 6..=10 {
+        for y in 3..=6 {
+            journal.record([9, y, z], 3).unwrap();
+        }
+    }
+    let habitat = Habitat {
+        terrain: &terrain,
+        chunks: &chunks,
+        journal: &journal,
+    };
+    assert!(habitat.ground(end, CreatureKind::Pig).is_some());
+    assert!(
+        habitat
+            .walk_step(start, end, CreatureKind::Pig, 0.0)
+            .is_none()
+    );
+    assert!(
+        habitat
+            .walk_step(start, [f64::NAN, 3.0, 8.5], CreatureKind::Pig, 0.0)
+            .is_none()
+    );
+    assert!(
+        habitat
+            .walk_step([63.0, 3.0, 8.0], [65.0, 3.0, 8.0], CreatureKind::Pig, 0.0)
+            .is_none()
+    );
+}
+
+#[test]
+fn mammals_walk_down_consecutive_full_block_steps_without_balancing_on_the_edge() {
+    let (terrain, chunks, mut journal) = fixture();
+    for x in 0..=9 {
+        let height = if x < 8 { 6 } else { 13 - x };
+        for z in 2..=13 {
+            for y in 3..height {
+                journal.record([x, y, z], 3).unwrap();
+            }
+        }
+    }
+    let habitat = Habitat {
+        terrain: &terrain,
+        chunks: &chunks,
+        journal: &journal,
+    };
+    // A 1.5m body spans three stair levels here. Route validation remains
+    // conservative; real movement must retain its two genuine rear contacts.
+    let edge = [8.5, 6.0, 8.0];
+    let yaw = -std::f64::consts::FRAC_PI_2;
+    assert!(
+        habitat
+            .ground_sized(edge, CreatureKind::Cow.size(), yaw)
+            .is_none()
+    );
+    assert_eq!(
+        habitat.supported_sized(edge, CreatureKind::Cow.size(), yaw),
+        Some(edge)
+    );
+    for kind in [CreatureKind::Cow, CreatureKind::Sheep, CreatureKind::Pig] {
+        let mut a = animal(kind);
+        a.position = [6.5, 6.0, 8.0];
+        a.yaw = yaw as f32;
+        a.timer = 50.0;
+        for _ in 0..600 {
+            let before = a.position;
+            step_budgeted(&mut a, &habitat, &[], 1.0 / 60.0, false);
+            assert!(habitat.clear_swimmer_rotated(a.position, a.size(), f64::from(a.yaw)));
+            assert!(
+                a.position[0] >= before[0] - 0.00001,
+                "{kind:?} turned away at {a:?}"
+            );
+            assert!(
+                a.velocity[1].abs() <= 16.0,
+                "a support step is not a vertical impulse"
+            );
+            assert!(a.valid());
+            if a.position[0] >= 12.0 {
+                break;
+            }
+        }
+        assert!(
+            a.position[0] >= 12.0,
+            "{kind:?} stopped on the stairs at {a:?}"
+        );
+        assert!((a.position[1] - 3.0).abs() < 0.001);
+        assert_eq!(a.velocity[1], 0.0);
+    }
+}
+
+#[test]
+fn real_partial_hoof_contact_never_treats_missing_sections_or_removed_floor_as_support() {
+    let (terrain, mut chunks, mut journal) = fixture();
+    let mut a = animal(CreatureKind::Cow);
+    a.position = [8.0, 6.0, 8.0];
+    a.yaw = -std::f32::consts::FRAC_PI_2;
+    a.behavior = CreatureBehavior::Rest;
+    a.timer = 50.0;
+    for z in 6..=10 {
+        journal.record([7, 5, z], 3).unwrap();
+    }
+    {
+        let habitat = Habitat {
+            terrain: &terrain,
+            chunks: &chunks,
+            journal: &journal,
+        };
+        assert_eq!(
+            habitat.supported_sized(a.position, a.size(), f64::from(a.yaw)),
+            Some(a.position)
+        );
+        for _ in 0..10 {
+            step_budgeted(&mut a, &habitat, &[], 1.0 / 60.0, false);
+        }
+        assert_eq!(a.position[1], 6.0);
+    }
+    for z in 6..=10 {
+        journal.record([7, 5, z], 0).unwrap();
+    }
+    {
+        let habitat = Habitat {
+            terrain: &terrain,
+            chunks: &chunks,
+            journal: &journal,
+        };
+        assert!(
+            habitat
+                .supported_sized(a.position, a.size(), f64::from(a.yaw))
+                .is_none()
+        );
+        step_budgeted(&mut a, &habitat, &[], 0.1, false);
+        assert!(a.position[1] < 6.0 && a.velocity[1] < 0.0);
+        for _ in 0..30 {
+            step_budgeted(&mut a, &habitat, &[], 0.1, false);
+        }
+        assert!((a.position[1] - 3.0).abs() < 0.001);
+        assert!(a.valid());
+    }
+    chunks.loaded.remove(&SectionPos::new(0, 0, 0));
+    let habitat = Habitat {
+        terrain: &terrain,
+        chunks: &chunks,
+        journal: &journal,
+    };
+    assert!(
+        habitat
+            .supported_sized(a.position, a.size(), f64::from(a.yaw))
+            .is_none()
+    );
+    assert!(
+        habitat
+            .travel_step(a.position, [9.0, 3.0, 8.0], a.kind, f64::from(a.yaw))
+            .is_none()
+    );
+}
+
+#[test]
+fn genuine_land_animal_overlaps_resolve_locally_onto_real_floor_or_partial_shapes() {
+    for (position, material) in [([8.25, 3.0, 8.5], 3), ([8.5, 3.35, 8.5], 82)] {
+        let (terrain, chunks, mut journal) = fixture();
+        journal.record([8, 3, 8], material).unwrap();
+        if material == 82 {
+            journal
+                .set_object_state([8, 3, 8], Some(crate::edits::BlockObjectState::default()))
+                .unwrap();
+        }
+        let habitat = Habitat {
+            terrain: &terrain,
+            chunks: &chunks,
+            journal: &journal,
+        };
+        let mut a = animal(CreatureKind::Pig);
+        a.position = position;
+        a.behavior = CreatureBehavior::Rest;
+        assert!(!habitat.clear_swimmer_rotated(a.position, a.size(), f64::from(a.yaw)));
+        step_budgeted(&mut a, &habitat, &[], 1.0 / 60.0, false);
+        assert!(
+            habitat.clear_swimmer_rotated(a.position, a.size(), f64::from(a.yaw)),
+            "{a:?}"
+        );
+        assert_eq!(
+            a.velocity, [0.0; 3],
+            "a recovered pose is not a ballistic impulse"
+        );
+        assert!(
+            habitat
+                .supported_sized(a.position, a.size(), f64::from(a.yaw))
+                .is_some()
+        );
+        assert!(distance(position, a.position) <= 1.001_f64.powi(2));
+        assert!(a.valid());
+        if material == 82 {
+            assert_eq!(
+                a.position[1], 3.5,
+                "use the slab surface, not the full block above it"
+            );
+        } else {
+            assert!(a.position[0] < 8.0 && a.position[1] == 3.0);
+        }
+    }
+    let (terrain, chunks, journal) = fixture();
+    let habitat = Habitat {
+        terrain: &terrain,
+        chunks: &chunks,
+        journal: &journal,
+    };
+    let mut a = animal(CreatureKind::Pig);
+    a.position[1] = 2.8;
+    a.behavior = CreatureBehavior::Rest;
+    step_budgeted(&mut a, &habitat, &[], 0.1, false);
+    assert_eq!(a.position[1], 3.0);
+    assert!(a.valid() && habitat.clear_swimmer_rotated(a.position, a.size(), f64::from(a.yaw)));
+}
+
+#[test]
+fn overlap_recovery_cannot_cross_a_thick_wall_roof_or_unknown_section() {
+    let (terrain, mut chunks, mut journal) = fixture();
+    for x in 6..=10 {
+        for z in 6..=10 {
+            journal.record([x, 4, z], 3).unwrap();
+        }
+    }
+    for x in 7..=9 {
+        journal.record([x, 3, 8], 3).unwrap();
+    }
+    let mut a = animal(CreatureKind::Pig);
+    a.position = [8.5, 3.0, 8.5];
+    a.behavior = CreatureBehavior::Rest;
+    let origin = a.position;
+    {
+        let habitat = Habitat {
+            terrain: &terrain,
+            chunks: &chunks,
+            journal: &journal,
+        };
+        for _ in 0..5 {
+            step_budgeted(&mut a, &habitat, &[], 0.1, false);
+            assert_eq!(
+                a.position, origin,
+                "cannot escape through newly encountered solids"
+            );
+        }
+    }
+    chunks.loaded.remove(&SectionPos::new(0, 0, 0));
+    step_budgeted(
+        &mut a,
+        &Habitat {
+            terrain: &terrain,
+            chunks: &chunks,
+            journal: &journal,
+        },
+        &[],
+        0.1,
+        false,
+    );
+    assert_eq!(a.position, origin);
+    assert!(a.valid());
+}
+
+#[test]
+fn owned_animals_ignore_legacy_follow_and_keep_waiting_across_loaded_region_changes() {
+    use terra_core::creatures::taming::CompanionMode;
+    let (terrain, mut chunks, mut journal) = fixture();
+    for z in 6..=10 {
+        for y in 3..=6 {
+            journal.record([11, y, z], 3).unwrap();
+        }
+    }
+    for kind in [
+        CreatureKind::Cow,
+        CreatureKind::Sheep,
+        CreatureKind::Pig,
+        CreatureKind::Horse,
+        CreatureKind::SmallSpider,
+        CreatureKind::MediumSpider,
+    ] {
+        let mut a = animal(kind);
+        if kind.is_spider() {
+            a.position[1] += 0.015;
+        }
+        let mut navigation = navigation::Navigation::default();
+        let owner = Some([22.0, 3.0, 8.0]);
+        navigation::testing::reset_path_calls();
+        {
+            let habitat = Habitat {
+                terrain: &terrain,
+                chunks: &chunks,
+                journal: &journal,
+            };
+            let origin = a.position;
+            for i in 0..50 {
+                let before = a.position;
+                companions::step(
+                    &mut a,
+                    &habitat,
+                    owner,
+                    CompanionMode::Follow,
+                    0.1,
+                    i % 5 == 0,
+                    Some(&mut navigation),
+                );
+                assert_eq!(a.position[0], before[0]);
+                assert_eq!(a.position[2], before[2]);
+                assert!(habitat.clear_rotated(a.position, a.size(), false, f64::from(a.yaw)));
+            }
+            assert_eq!(a.position[0], origin[0]);
+            assert_eq!(a.position[2], origin[2]);
+            assert_eq!(navigation::testing::path_calls(), 0);
+            let intent = navigation.inspection(&a);
+            assert_eq!(
+                intent.reason,
+                terra_core::creatures::intentions::IntentReason::WaitForOwner
+            );
+            assert!(intent.destination.is_none());
+            assert!(intent.path.is_empty());
+            let waiting = a.position;
+            for _ in 0..20 {
+                companions::step(
+                    &mut a,
+                    &habitat,
+                    owner,
+                    CompanionMode::Wait,
+                    0.1,
+                    false,
+                    Some(&mut navigation),
+                );
+            }
+            assert_eq!(a.position, waiting);
+        }
+        let section = terra_voxel::global_to_section(a.position.map(|v| v.floor() as i64)).0;
+        let loaded = chunks.loaded.remove(&section).unwrap();
+        let before = a.position;
+        companions::step(
+            &mut a,
+            &Habitat {
+                terrain: &terrain,
+                chunks: &chunks,
+                journal: &journal,
+            },
+            Some([30.0, 3.0, 8.0]),
+            CompanionMode::Follow,
+            0.1,
+            true,
+            Some(&mut navigation),
+        );
+        assert_eq!(a.position, before);
+        chunks.loaded.insert(section, loaded);
+        companions::step(
+            &mut a,
+            &Habitat {
+                terrain: &terrain,
+                chunks: &chunks,
+                journal: &journal,
+            },
+            Some([30.0, 3.0, 8.0]),
+            CompanionMode::Follow,
+            0.1,
+            true,
+            Some(&mut navigation),
+        );
+        assert_eq!(a.position, before);
+    }
+}
+
+#[test]
+fn tamed_spiders_have_hunger_but_no_thirst_damage_or_owner_attacks_while_waiting() {
+    let (terrain, chunks, journal) = fixture();
+    let habitat = Habitat {
+        terrain: &terrain,
+        chunks: &chunks,
+        journal: &journal,
+    };
+    for kind in [CreatureKind::SmallSpider, CreatureKind::MediumSpider] {
+        let mut a = animal(kind);
+        a.position[1] += 0.015;
+        let health = a.health;
+        for _ in 0..100 {
+            companions::step(
+                &mut a,
+                &habitat,
+                Some([8.0, 3.0, 8.0]),
+                terra_core::creatures::taming::CompanionMode::Wait,
+                0.1,
+                false,
+                None,
+            );
+        }
+        assert_eq!(kind.food(), 50.0);
+        assert_eq!(a.needs.water, 0.0);
+        assert!(a.needs.food < 50.0 && a.needs.food > 49.0);
+        assert_eq!(a.health, health);
+        assert_eq!(a.behavior, CreatureBehavior::Rest);
+    }
+}
+
+#[test]
+fn companion_starvation_and_spider_submersion_keep_dead_entities_valid_in_wait_and_food_modes() {
+    let (terrain, chunks, mut journal) = fixture();
+    let mut a = animal(CreatureKind::Cow);
+    a.health = 0.001;
+    a.needs.food = 0.0;
+    companions::step(
+        &mut a,
+        &Habitat {
+            terrain: &terrain,
+            chunks: &chunks,
+            journal: &journal,
+        },
+        None,
+        terra_core::creatures::taming::CompanionMode::Wait,
+        0.1,
+        false,
+        None,
+    );
+    assert_eq!(a.health, 0.0);
+    assert_eq!(a.behavior, CreatureBehavior::Dead);
+    assert!(a.valid());
+    let terrain = TerraGenerator::new(WorldConfig {
+        water: true,
+        sea_level: -30.0,
+        ..terrain.config().clone()
+    })
+    .unwrap();
+    for x in 5..=11 {
+        for z in 5..=11 {
+            for y in 3..=5 {
+                journal
+                    .set_fluid(
+                        [x, y, z],
+                        crate::water::FluidCell {
+                            amount: 8,
+                            source: true,
+                            flow: [0, 0],
+                        },
+                    )
+                    .unwrap();
+            }
+        }
+    }
+    let habitat = Habitat {
+        terrain: &terrain,
+        chunks: &chunks,
+        journal: &journal,
+    };
+    let mut spider = animal(CreatureKind::MediumSpider);
+    spider.id = terra_core::creatures::spawning::next_command_id(&Default::default()).unwrap();
+    spider.health = 0.04;
+    let mut hunter = spider.clone();
+    companions::step(
+        &mut spider,
+        &habitat,
+        None,
+        terra_core::creatures::taming::CompanionMode::Wait,
+        0.1,
+        false,
+        None,
+    );
+    assert_eq!(spider.health, 0.0);
+    assert_eq!(spider.behavior, CreatureBehavior::Dead);
+    assert_eq!(spider.velocity, [0.0; 3]);
+    assert!(spider.valid());
+    hunter.needs.food = 20.0;
+    let mut food = terra_core::GameplayState::default();
+    food.drop_one(
+        [8.5, 3.4, 8.0],
+        terra_core::ItemKind::Animal(AnimalProduct::Beef),
+    );
+    let index = spider_hunting::FoodIndex::new(std::iter::empty(), food.drops.iter());
+    let result = spider_hunting::step(
+        &mut hunter,
+        &habitat,
+        &index,
+        [8, 2, 8],
+        0.1,
+        true,
+        &mut navigation::Navigation::default(),
+    );
+    assert_eq!(result, Some(None));
+    assert_eq!(hunter.behavior, CreatureBehavior::Dead);
+    assert!(hunter.valid());
+}
+
+#[test]
+fn spider_den_requests_are_stable_and_hungry_search_consumes_real_food_only_inside_twenty_meters() {
+    use terra_core::{
+        GameplayState, ItemKind,
+        creatures::{AnimalProduct, taming::food_gain},
+    };
+    let (terrain, chunks, journal) = fixture();
+    let habitat = Habitat {
+        terrain: &terrain,
+        chunks: &chunks,
+        journal: &journal,
+    };
+    let mut a = animal(CreatureKind::MediumSpider);
+    a.id = terra_core::creatures::spawning::next_command_id(&Default::default()).unwrap();
+    a.position[1] += 0.015;
+    a.needs.food = 20.0;
+    a.timer = 0.0;
+    let den = crate::creatures::spiders::den_request(&a, &habitat).unwrap();
+    a.age = 300.0;
+    assert_eq!(
+        crate::creatures::spiders::den_request(&a, &habitat)
+            .unwrap()
+            .id,
+        den.id
+    );
+    let mut gameplay = GameplayState::default();
+    assert!(gameplay.drop_stack(
+        [8.8, 3.3, 8.0],
+        terra_core::ItemStack {
+            item: ItemKind::Animal(AnimalProduct::Beef),
+            count: 2
+        },
+        [0.0; 3],
+        0.0
+    ));
+    let mut population = CreaturePopulation::default();
+    population.animals.insert(a.id, a.clone());
+    let index = spider_hunting::FoodIndex::new(std::iter::empty(), gameplay.drops.iter());
+    let mut navigation = navigation::Navigation::default();
+    let meal = spider_hunting::step(
+        &mut a,
+        &habitat,
+        &index,
+        den.anchor,
+        0.1,
+        true,
+        &mut navigation,
+    )
+    .flatten()
+    .unwrap();
+    population.animals.insert(a.id, a.clone());
+    assert!(spider_hunting::eat(
+        &mut population,
+        &mut gameplay,
+        &habitat,
+        a.id,
+        meal
+    ));
+    assert_eq!(gameplay.drops[0].stack.count, 1);
+    assert_eq!(population.animals[&a.id].needs.food, a.needs.food + 15.0);
+    assert_eq!(
+        spider_hunting::step(
+            &mut a,
+            &habitat,
+            &index,
+            den.anchor,
+            0.1,
+            true,
+            &mut navigation
+        ),
+        Some(None),
+        "a second bite must respect the existing combat cooldown"
+    );
+    assert!(food_gain(CreatureKind::MediumSpider, ItemKind::Stick).is_none());
+    let mut far = gameplay.drops[0].clone();
+    far.position = [30.0, 3.3, 8.0];
+    let far_index = spider_hunting::FoodIndex::new(std::iter::empty(), std::iter::once(&far));
+    a.needs.goal = None;
+    assert!(
+        spider_hunting::step(
+            &mut a,
+            &habitat,
+            &far_index,
+            den.anchor,
+            0.1,
+            true,
+            &mut navigation
+        )
+        .is_none()
+    );
+    assert!(!spider_hunting::eat(
+        &mut population,
+        &mut gameplay,
+        &habitat,
+        a.id,
+        spider_hunting::Meal::Drop(u64::MAX)
+    ));
+}
+
+#[test]
+fn idle_animals_fall_to_real_loaded_support_after_their_floor_is_removed() {
+    let (terrain, mut chunks, mut journal) = fixture();
+    let p = SectionPos::new(0, -1, 0);
+    let mut lower = BlockSection::empty(p).unwrap();
+    for x in 0..16 {
+        for z in 0..16 {
+            lower.set_block([x, 12, z], 3).unwrap();
+        }
+    }
+    chunks.loaded.insert(
+        p,
+        LoadedSection {
+            data: lower,
+            mesh: None,
+            mesh_epoch: 0,
+            water_epoch: 0,
+            water: None,
+            props: vec![],
+        },
+    );
+    for x in 5..=11 {
+        for z in 5..=11 {
+            for y in 0..=2 {
+                journal.record([x, y, z], 0).unwrap();
+            }
+        }
+    }
+    let habitat = Habitat {
+        terrain: &terrain,
+        chunks: &chunks,
+        journal: &journal,
+    };
+    for kind in [
+        CreatureKind::Cow,
+        CreatureKind::Pig,
+        CreatureKind::Sheep,
+        CreatureKind::Horse,
+        CreatureKind::Bear,
+    ] {
+        let mut a = animal(kind);
+        a.behavior = CreatureBehavior::Rest;
+        a.timer = 5.0;
+        for _ in 0..30 {
+            step_budgeted(&mut a, &habitat, &[], 0.1, false);
+        }
+        assert!(
+            (a.position[1] + 3.0).abs() < 0.02,
+            "{kind:?}: {:?}",
+            a.position
+        );
+        assert!(
+            habitat
+                .ground_rotated(a.position, kind, f64::from(a.yaw))
+                .is_some()
+        );
+    }
+}
+
+#[test]
+fn shaped_support_uses_slab_and_stair_surfaces_and_releases_removed_support() {
+    for (material, height) in [(82, 3.5), (74, 4.0)] {
+        let (terrain, chunks, mut journal) = fixture();
+        for x in 6..=10 {
+            for z in 6..=10 {
+                journal.record([x, 3, z], material).unwrap();
+                journal
+                    .set_object_state([x, 3, z], Some(crate::edits::BlockObjectState::default()))
+                    .unwrap();
+            }
+        }
+        let mut a = animal(CreatureKind::Pig);
+        a.position = [8.5, height, 8.5];
+        a.behavior = CreatureBehavior::Rest;
+        {
+            let habitat = Habitat {
+                terrain: &terrain,
+                chunks: &chunks,
+                journal: &journal,
+            };
+            // An unapplied journal edit must select the same sub-cell profile
+            // as the effective material used by collision and support checks.
+            assert_eq!(chunks.block_at([8, 3, 8]), Some(0));
+            assert_eq!(habitat.block([8, 3, 8]), Some(material));
+            assert_eq!(habitat.ground(a.position, a.kind), Some(a.position));
+            assert!(habitat.clear(a.position, a.kind.size(), false));
+            step_budgeted(&mut a, &habitat, &[], 0.1, false);
+            assert_eq!(a.position[1], height);
+        }
+        for x in 6..=10 {
+            for z in 6..=10 {
+                journal.record([x, 3, z], 0).unwrap();
+            }
+        }
+        let habitat = Habitat {
+            terrain: &terrain,
+            chunks: &chunks,
+            journal: &journal,
+        };
+        for _ in 0..15 {
+            step_budgeted(&mut a, &habitat, &[], 0.1, false);
+        }
+        assert_eq!(a.position[1], 3.0, "material={material}");
+    }
+}
+
+#[test]
+fn walking_mammals_enter_real_water_and_buoyancy_immerses_them() {
+    let (terrain, chunks, mut journal) = fixture();
+    let terrain = TerraGenerator::new(WorldConfig {
+        water: true,
+        sea_level: -30.0,
+        ..terrain.config().clone()
+    })
+    .unwrap();
+    for x in 8..=24 {
+        for z in 3..=12 {
+            for y in 0..=2 {
+                journal.record([x, y, z], 0).unwrap();
+                journal
+                    .set_fluid(
+                        [x, y, z],
+                        crate::water::FluidCell {
+                            amount: 8,
+                            flow: [0, 0],
+                            source: true,
+                        },
+                    )
+                    .unwrap();
+            }
+        }
+    }
+    let habitat = Habitat {
+        terrain: &terrain,
+        chunks: &chunks,
+        journal: &journal,
+    };
+    assert!(
+        habitat
+            .walk_step([6.5, 3.0, 8.0], [9.5, 3.0, 8.0], CreatureKind::Pig, 0.0)
+            .is_none(),
+        "dry-land paths must not invent a floor over water"
+    );
+    for kind in [
+        CreatureKind::Cow,
+        CreatureKind::Sheep,
+        CreatureKind::Pig,
+        CreatureKind::Horse,
+        CreatureKind::Bear,
+    ] {
+        let mut a = animal(kind);
+        a.position = [6.5, 3.0, 8.0];
+        a.yaw = -std::f32::consts::FRAC_PI_2;
+        a.timer = 10.0;
+        for _ in 0..60 {
+            step_budgeted(&mut a, &habitat, &[], 0.1, false);
+            assert!(habitat.clear_swimmer_rotated(a.position, a.size(), f64::from(a.yaw)));
+        }
+        assert!(a.position[0] > 8.6, "{kind:?}: {:?}", a.position);
+        assert!(habitat.wet(a.position), "{kind:?}: {:?}", a.position);
+        assert!(a.position[1] < 2.8, "{kind:?}: {:?}", a.position);
+        assert_eq!(a.behavior, CreatureBehavior::Swim);
+    }
+}
+
+#[test]
 fn mammals_stand_on_actual_snow_layers_without_hovering_or_crossing_the_cap() {
     let (terrain, mut chunks, mut journal) = fixture();
     for state in 1..=8 {
@@ -415,6 +1183,21 @@ fn falling_mammals_do_not_snap_upward_onto_a_nearby_ledge() {
             "{kind:?}: {:?}",
             a.position
         );
+        for _ in 0..5 {
+            step_budgeted(&mut a, &h, &[], 0.1, false);
+            assert!(
+                a.position[1] <= before + 0.001,
+                "{kind:?} lifted onto ledge later: {:?}",
+                a.position
+            );
+        }
+        if kind != CreatureKind::Bear {
+            assert!(
+                a.position[1] < before - 0.1,
+                "{kind:?} must slide clear and continue real gravity"
+            );
+            assert!(h.clear_swimmer_rotated(a.position, a.size(), f64::from(a.yaw)));
+        }
     }
 }
 
@@ -668,6 +1451,13 @@ fn mammals_cross_partial_water_section_seams_and_fall_after_drain() {
             ] {
                 let mut a = animal(kind);
                 a.position = [start, 5.5, 8.0];
+                assert!(!a.juvenile());
+                assert_eq!(a.size(), kind.size());
+                assert_eq!(
+                    crate::water::fluid_motion_at(&t, &c, &j, [start, 4.5, 8.0]).velocity[1],
+                    0.0,
+                    "a calm full pool cell below partial surface water is not a falling shaft"
+                );
                 a.yaw = std::f32::consts::TAU - std::f32::consts::FRAC_PI_2;
                 a.timer = 10.0;
                 for _ in 0..30 {
@@ -678,7 +1468,12 @@ fn mammals_cross_partial_water_section_seams_and_fall_after_drain() {
                 }
                 assert!(a.position[0] > start + 1.0);
                 assert!(h.wet(a.position));
-                assert!((a.position[1] - (5.5 - (kind.size()[1] * 0.68).min(0.9))).abs() < 0.12);
+                assert!(
+                    (a.position[1] - (5.5 - (kind.size()[1] * 0.68).min(0.9))).abs() < 0.12,
+                    "{kind:?} adult at seam {start}: {:?}, size {:?}",
+                    a.position,
+                    a.size()
+                );
                 animals.push(a);
             }
         }
@@ -746,6 +1541,72 @@ fn spawn_is_order_independent_and_reload_does_not_duplicate_dead_animals() {
 }
 
 #[test]
+fn natural_land_spawns_validate_their_saved_heading_instead_of_an_unrotated_body() {
+    let (terrain, chunks, _) = fixture();
+    let mut exercised_corner = false;
+    'seeds: for seed in 0..16 {
+        let mut config = terrain.config().clone();
+        config.seed = terra_core::WorldSeed(seed);
+        let terrain = TerraGenerator::new(config).unwrap();
+        let journal = EditJournal::default();
+        let mut baseline = CreaturePopulation::default();
+        assert!(spawn_cell(
+            &mut baseline,
+            &Habitat {
+                terrain: &terrain,
+                chunks: &chunks,
+                journal: &journal
+            },
+            [0, 0]
+        ));
+        for candidate in baseline.animals.values() {
+            for x in
+                candidate.position[0].floor() as i64 - 2..=candidate.position[0].floor() as i64 + 2
+            {
+                for z in candidate.position[2].floor() as i64 - 2
+                    ..=candidate.position[2].floor() as i64 + 2
+                {
+                    let mut journal = EditJournal::default();
+                    journal.record([x, 3, z], 3).unwrap();
+                    let habitat = Habitat {
+                        terrain: &terrain,
+                        chunks: &chunks,
+                        journal: &journal,
+                    };
+                    if !habitat.clear_rotated(candidate.position, candidate.size(), false, 0.0)
+                        || habitat.clear_rotated(
+                            candidate.position,
+                            candidate.size(),
+                            false,
+                            f64::from(candidate.yaw),
+                        )
+                    {
+                        continue;
+                    }
+                    let mut population = CreaturePopulation::default();
+                    assert!(spawn_cell(&mut population, &habitat, [0, 0]));
+                    assert!(!population.animals.contains_key(&candidate.id));
+                    for actual in population.animals.values() {
+                        assert!(habitat.clear_rotated(
+                            actual.position,
+                            actual.size(),
+                            false,
+                            f64::from(actual.yaw)
+                        ));
+                    }
+                    exercised_corner = true;
+                    break 'seeds;
+                }
+            }
+        }
+    }
+    assert!(
+        exercised_corner,
+        "fixture must exercise a real orientation-only wall collision"
+    );
+}
+
+#[test]
 fn herd_occupancy_does_not_exclude_any_land_species() {
     let (terrain, chunks, journal) = fixture();
     let mut kinds = std::collections::BTreeSet::new();
@@ -790,9 +1651,20 @@ fn navigation_avoids_walls_cliffs_and_unloaded_cells_after_edits() {
         journal: &j,
     };
     let mut a = animal(CreatureKind::Cow);
+    // The former z=8 start overlapped this wall by 0.75m, which is a
+    // penetration-recovery fixture rather than a free navigation start.
+    a.position[2] = 8.75001;
     let before = a.position;
+    assert!(h.clear_swimmer_rotated(a.position, a.size(), f64::from(a.yaw)));
+    assert!(h.walk_step(before, [8.0, 3.0, 6.0], a.kind, 0.0).is_none());
     step(&mut a, &h, &[], 0.1);
-    assert_eq!(a.position, before);
+    let (sin, cos) = f64::from(a.yaw).sin_cos();
+    let front = a.position[2] - (a.size()[0] * sin.abs() + a.size()[2] * cos.abs()) * 0.5;
+    assert!(
+        front >= 8.0 - 0.000001,
+        "navigation cannot cut through the front wall"
+    );
+    assert!(h.clear_swimmer_rotated(a.position, a.size(), f64::from(a.yaw)));
     assert!(a.valid());
     assert!(h.ground([1000.0, 3.0, 1000.0], CreatureKind::Cow).is_none());
     for x in 6..=10 {
@@ -807,7 +1679,11 @@ fn navigation_avoids_walls_cliffs_and_unloaded_cells_after_edits() {
         chunks: &c,
         journal: &j,
     };
+    a.position = before;
     a.yaw = 0.0;
+    a.behavior = CreatureBehavior::Rest;
+    a.timer = 10.0;
+    assert!(h.walk_step(before, [8.0, 3.0, 5.0], a.kind, 0.0).is_none());
     step(&mut a, &h, &[], 0.1);
     assert_eq!(a.position, before);
 }
@@ -869,6 +1745,57 @@ fn sight_ray_checks_range_and_zero_direction_components() {
     assert!(ray_distance(&a, [8.0, 3.5, 5.0], [0.0, 0.0, 1.0], 4.5).is_some());
     assert!(ray_distance(&a, [8.0, 3.5, 0.0], [0.0, 0.0, 1.0], 4.5).is_none());
     assert!(ray_distance(&a, [10.0, 3.5, 5.0], [0.0, 0.0, 1.0], 4.5).is_none());
+}
+
+#[test]
+fn juvenile_horse_routes_and_walks_under_a_real_one_block_passage_using_its_own_size() {
+    let (terrain, chunks, mut journal) = fixture();
+    for x in 9..=13 {
+        for z in 4..=12 {
+            journal.record([x, 4, z], 3).unwrap();
+        }
+    }
+    let habitat = Habitat {
+        terrain: &terrain,
+        chunks: &chunks,
+        journal: &journal,
+    };
+    let mut horse = animal(CreatureKind::Horse);
+    horse.id = terra_core::creatures::breeding::next_birth_id(&Default::default(), 0).unwrap();
+    horse.position = [7.5, 3.0, 8.5];
+    horse.yaw = -std::f32::consts::FRAC_PI_2;
+    horse.timer = 50.0;
+    let target = [12.5, 3.0, 8.5];
+    assert!(
+        habitat
+            .walk_step(horse.position, target, horse.kind, f64::from(horse.yaw))
+            .is_none()
+    );
+    assert!(
+        habitat
+            .walk_step_sized(horse.position, target, horse.size(), f64::from(horse.yaw))
+            .is_some()
+    );
+    for _ in 0..25 {
+        step_budgeted(&mut horse, &habitat, &[], 0.1, false);
+        assert!(horse.valid());
+        assert!(habitat.clear_swimmer_rotated(horse.position, horse.size(), f64::from(horse.yaw)));
+    }
+    assert!(
+        horse.position[0] > 10.0,
+        "juvenile must actually pass the entrance: {:?}",
+        horse.position
+    );
+}
+
+#[test]
+fn authoritative_picking_ignores_horse_side_air_and_keeps_actual_body_and_baby_hits() {
+    let mut horse = animal(CreatureKind::Horse);
+    assert!(ray_distance(&horse, [8.8, 4.0, 5.0], [0.0, 0.0, 1.0], 6.0).is_none());
+    assert!(ray_distance(&horse, [8.0, 4.0, 5.0], [0.0, 0.0, 1.0], 6.0).is_some());
+    horse.id = terra_core::creatures::breeding::next_birth_id(&Default::default(), 0).unwrap();
+    assert!(ray_distance(&horse, [8.0, 4.0, 5.0], [0.0, 0.0, 1.0], 6.0).is_none());
+    assert!(ray_distance(&horse, [8.0, 3.46, 5.0], [0.0, 0.0, 1.0], 6.0).is_some());
 }
 
 #[test]
@@ -996,6 +1923,11 @@ fn grazing_commits_one_prop_without_removing_neighbors_and_pigs_prefer_plants() 
     }
     assert!(cow.needs.food > 15.0);
     assert!(journal.prop_removed(owner, grass.id));
+    assert!(
+        journal
+            .forage_regrowth()
+            .any(|state| state.prop.id == grass.id)
+    );
     assert!(!journal.prop_removed(owner, mushroom.id));
     let mut pig = animal(CreatureKind::Pig);
     pig.needs.food = 1.0;
@@ -1013,4 +1945,71 @@ fn grazing_commits_one_prop_without_removing_neighbors_and_pigs_prefer_plants() 
         apply_forage(effect, &mut pig, &mut chunks, &mut journal).unwrap();
     }
     assert!(pig.needs.food > 5.0 && journal.prop_removed(owner, mushroom.id));
+}
+
+#[test]
+fn actual_hungry_animals_find_ripe_crops_and_graze_without_drops_or_duplicate_plants() {
+    use crate::props::{PropId, WorldProp};
+    use terra_core::{CropKind, block_properties::BlockPropertiesCatalog};
+    for (kind, eater) in [
+        (CropKind::Wheat, CreatureKind::Cow),
+        (CropKind::Wheat, CreatureKind::Horse),
+        (CropKind::Corn, CreatureKind::Pig),
+        (CropKind::Lettuce, CreatureKind::Pig),
+    ] {
+        let (terrain, mut chunks, mut journal) = fixture();
+        let support = [8, 2, 8];
+        let owner = SectionPos::new(0, 0, 0);
+        let prop = WorldProp {
+            id: PropId(919),
+            kind: kind.resource_prop().into(),
+            position: [8.5, 3.0, 8.5],
+            rotation: 0.0,
+            scale: 1.0,
+            variant: 0,
+            section: owner,
+            removed: false,
+        };
+        assert!(
+            crate::farming::plant_crop(
+                &mut chunks,
+                &mut journal,
+                &BlockPropertiesCatalog::default(),
+                prop
+            )
+            .unwrap()
+        );
+        let id = PropId(journal.crop_at(support).unwrap().prop_id);
+        let mut state = *journal.crop_at(support).unwrap();
+        state.progress_seconds = state.growth_duration_seconds;
+        crate::farming::commit_crop_state(&mut chunks, &mut journal, support, state).unwrap();
+        let mut animal = animal(eater);
+        animal.needs.food = 1.0;
+        for _ in 0..65 {
+            let effect = step(
+                &mut animal,
+                &Habitat {
+                    terrain: &terrain,
+                    chunks: &chunks,
+                    journal: &journal,
+                },
+                &[],
+                0.1,
+            );
+            apply_forage(effect, &mut animal, &mut chunks, &mut journal).unwrap();
+        }
+        assert!(animal.needs.food > 5.0, "{eater:?} must eat ripe {kind:?}");
+        assert_eq!(journal.crop_at(support).unwrap().progress_seconds, 0.0);
+        assert!(!journal.prop_removed(owner, id));
+        assert_eq!(
+            chunks.loaded[&owner]
+                .props
+                .iter()
+                .filter(|plant| !plant.removed && plant.id == id && plant.variant == 0)
+                .count(),
+            1
+        );
+        assert!(journal.gameplay().drops.is_empty());
+        assert_eq!(journal.forage_regrowth().count(), 0);
+    }
 }

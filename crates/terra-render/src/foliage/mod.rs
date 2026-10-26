@@ -166,7 +166,7 @@ pub(crate) fn prepare_materials(
             );
         }
     }
-    for id in 7..=9 {
+    for id in terra_voxel::MaterialId::FOLIAGE {
         let Some(block) = templates.blocks.get(&id) else {
             continue;
         };
@@ -186,7 +186,12 @@ pub(crate) fn prepare_materials(
             let handle = materials.add(ExtendedMaterial {
                 base,
                 extension: LeafExtension {
-                    wind: Vec4::new(0.043, 0.010, 0.85, 0.0),
+                    wind: Vec4::new(
+                        0.043,
+                        0.010,
+                        0.85,
+                        if matches!(id, 132 | 133) { -1.0 } else { 0.0 },
+                    ),
                     weather: crate::weather::storage::WEATHER_BUFFER_HANDLE.clone(),
                 },
             });
@@ -327,6 +332,7 @@ mod tests {
             })
         };
         assert_eq!(key(0.0), key(1.0));
+        assert_eq!(key(-1.0), key(0.0));
         assert!(!key(0.0).flame);
         assert!(key(2.0).flame);
         assert_ne!(key(1.0), key(2.0));

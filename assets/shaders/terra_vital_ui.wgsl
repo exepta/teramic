@@ -18,6 +18,30 @@ fn status_hash(p: vec2<f32>) -> f32 {
     return fract(sin(dot(p, vec2<f32>(127.1, 311.7))) * 43758.5453);
 }
 
+fn falling_poison(p: vec2<f32>, seconds: f32) -> f32 {
+    let pixel = floor(p / 3.0) * 3.0;
+    var coverage = 0.0;
+    for (var index = 0u; index < 5u; index += 1u) {
+        let seed = status_hash(vec2<f32>(f32(index), 23.0));
+        let phase = fract(seconds * (0.25 + seed * 0.10) + seed);
+        let x = 195.0 + f32(index) * 61.0 + sin(seconds * 1.3 + seed * 6.28) * 3.0;
+        let edge = 574.0 - abs(x - 318.0) * 0.70;
+        let center = vec2<f32>(x, edge + phase * phase * 132.0);
+        let size = vec2<f32>(4.5 + seed * 2.0, 7.0 + phase * 4.0);
+        let local = abs((pixel - center) / size);
+        let visible = smoothstep(0.04, 0.16, phase) * (1.0 - smoothstep(0.78, 1.0, phase));
+        coverage = max(coverage, (1.0 - smoothstep(0.72, 1.0, max(local.x, local.y))) * visible);
+    }
+    return coverage;
+}
+
+fn stamina_rail_coverage(p: vec2<f32>) -> f32 {
+    let q = abs(p - vec2<f32>(522.0, 476.0));
+    let medallion = max(max(q.x - 104.0, q.y - 78.0), (q.x + q.y - 142.0) * 0.7071);
+    let rail = max(max(586.0 - p.x, p.y - 552.0), max(413.0 - p.y, p.x - (1940.0 - abs(p.y - 476.0))));
+    return 1.0 - smoothstep(-0.5, 0.75, min(medallion, rail));
+}
+
 fn surface_status(p: vec2<f32>, original: vec4<f32>, health_inside: bool) -> vec4<f32> {
     if all(frame.effects == vec4<f32>(0.0)) && frame.timing.z == 0.0 {
         return original;
@@ -34,11 +58,18 @@ fn surface_status(p: vec2<f32>, original: vec4<f32>, health_inside: bool) -> vec
         let on_bar = health_inside && side < 0.14 + grain * 0.075;
         let drip_x = fract(p.x / 38.0) - 0.5;
         let drip_end = 566.0 - abs(p.x - 318.0) * 0.84;
-        let drip = p.x > 155.0 && p.x < 480.0 && p.y > drip_end - 25.0 && p.y < drip_end + 35.0 * (0.5 + grain) && abs(drip_x) < 0.08 + grain * 0.08;
+        let rivulet_seed = status_hash(vec2<f32>(floor(p.x / 38.0), 11.0));
+        let rivulet = 0.5 + 0.5 * sin(frame.timing.x * 2.1 + rivulet_seed * 6.28);
+        let drip = p.x > 155.0 && p.x < 480.0 && p.y > drip_end - 25.0 && p.y < drip_end + 14.0 + 29.0 * rivulet && abs(drip_x) < 0.08 + rivulet_seed * 0.08;
         if on_heart || on_bar || drip {
             let green = mix(vec3<f32>(0.15, 0.40, 0.015), vec3<f32>(0.67, 0.99, 0.06), grain);
             let pulse = 0.84 + sin(frame.timing.x * 2.0 + p.x / 47.0) * 0.06;
             color = vec4<f32>(mix(color.rgb, srgb_to_linear(green) * pulse, select(0.78, 1.0, drip)), 1.0);
+        }
+        let falling = falling_poison(p, frame.timing.x);
+        if falling > 0.0 {
+            let green = srgb_to_linear(vec3<f32>(0.48, 0.83, 0.025));
+            color = vec4<f32>(mix(color.rgb, green, falling), max(color.a, falling));
         }
     }
     if frame.effects.y > 0.0 {
@@ -72,8 +103,42 @@ fn surface_status(p: vec2<f32>, original: vec4<f32>, health_inside: bool) -> vec
 fn fragment(in: UiVertexOutput) -> @location(0) vec4<f32> {
     let values = frame.values;
     let extent = vec2<f32>(2106.0, 747.0);
-    let p = in.uv * extent;
-    var color = textureSample(chrome, chrome_sampler, in.uv);
+    if frame.timing.w > 0.0 {
+        // Reuse the complete stamina rail, including its recessed gold medallion.
+        let p = vec2<f32>(430.0, 390.0) + in.uv * vec2<f32>(1540.0, 176.0);
+        var armor = textureSample(chrome, chrome_sampler, p / extent);
+        if p.y < 472.0 {
+            // The rail shares its source image with the heart's lower-right edge.
+            armor.a *= smoothstep(-1.0, 1.0, p.x - (810.0 - p.y * 0.78));
+        }
+        let left = 608.0 + abs(p.y - 476.0) * 0.66;
+        let right = 1850.0 - max(p.y - 483.0, 0.0) * 0.85;
+        let inside = p.x >= left && p.x <= right && p.y >= 444.0 && p.y <= 508.0;
+        if inside && max(armor.r, max(armor.g, armor.b)) < 0.095 && p.x <= mix(608.0, 1850.0, values.x) && values.x > 0.0 {
+            let t = clamp((p.y - 444.0) / 64.0, 0.0, 1.0);
+            let silver = mix(vec3<f32>(0.98, 0.99, 1.0), vec3<f32>(0.49, 0.57, 0.66), t);
+            armor = vec4<f32>(srgb_to_linear(silver), 1.0);
+        }
+        // Remove only the lightning pigment, preserving the original gold border.
+        if p.x > 476.0 && p.x < 575.0 && p.y > 425.0 && p.y < 519.0 && armor.r > armor.b * 1.8 && armor.g > armor.b * 1.5 {
+            armor = vec4<f32>(srgb_to_linear(vec3<f32>(0.12, 0.11, 0.075)), 1.0);
+        }
+        let q = (p - vec2<f32>(522.0, 475.0)) / vec2<f32>(37.0, 44.0);
+        let width = select(0.84, 0.84 * (1.0 - (q.y - 0.15) / 0.85), q.y > 0.15);
+        if q.y >= -0.82 && q.y <= 1.0 && abs(q.x) <= width {
+            let rim = abs(q.x) > width - 0.10 || q.y < -0.70;
+            let light = select(vec3<f32>(0.72, 0.81, 0.89), vec3<f32>(0.95, 0.98, 1.0), q.x < -0.08);
+            let silver = select(light, vec3<f32>(0.32, 0.40, 0.47), rim);
+            armor = vec4<f32>(srgb_to_linear(silver), 1.0);
+        }
+        // The atlas also contains the HP rail above this crop. Exclude it entirely.
+        armor.a *= stamina_rail_coverage(p);
+        return armor;
+    }
+    // UiMaterial has its own full-node UVs, independent from ImageNode.rect.
+    let uv = in.uv;
+    let p = uv * extent;
+    var color = textureSample(chrome, chrome_sampler, uv);
     // Only the red faceted heart moves. Its medallion and both rails stay fixed.
     let heart_center = vec2<f32>(318.0, 365.0);
     let heart_uv = ((p - heart_center) / values.z + heart_center) / extent;
@@ -92,7 +157,9 @@ fn fragment(in: UiVertexOutput) -> @location(0) vec4<f32> {
     if health_inside && dark_channel && p.x <= mix(544.0, 1936.0, values.x) && values.x > 0.0 {
         let t = clamp((p.y - 255.0) / 126.0, 0.0, 1.0);
         let shine = exp(-t * 13.0) * 0.4;
-        let base = mix(vec3<f32>(1.0, 0.16, 0.21), vec3<f32>(0.66, 0.0, 0.09), t);
+        let health = mix(vec3<f32>(1.0, 0.16, 0.21), vec3<f32>(0.66, 0.0, 0.09), t);
+        let armor = mix(vec3<f32>(0.96, 0.98, 1.0), vec3<f32>(0.54, 0.57, 0.64), t);
+        let base = select(health, armor, frame.timing.w > 0.0);
         color = vec4<f32>(srgb_to_linear(min(base + vec3<f32>(shine), vec3<f32>(1.0))), 1.0);
     }
     if stamina_inside && dark_channel && p.x <= mix(608.0, 1850.0, values.y) && values.y > 0.0 {

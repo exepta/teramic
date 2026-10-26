@@ -1,0 +1,16 @@
+{
+  "item": {
+    "cape": {
+      "material": "iron",
+      "color": "white"
+    }
+  },
+  "name": "Iron Cape",
+  "description": "A layered wool cloak and folded scarf with iron straps and clasp. Recolor the cloth with flower dye.",
+  "equipment": {
+    "slot": "cape",
+    "armor_points": 2,
+    "health_bonus": 2,
+    "stamina_bonus": 2
+  }
+}

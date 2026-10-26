@@ -1,0 +1,39 @@
+{
+  "id": "teramic::flower_pot",
+  "name": "Flower Pot",
+  "station": "workbench",
+  "pattern": {
+    "kind": "shaped",
+    "width": 3,
+    "height": 2,
+    "cells": [
+      {
+        "item": {
+          "block": 19
+        },
+        "count": 1
+      },
+      null,
+      {
+        "item": {
+          "block": 19
+        },
+        "count": 1
+      },
+      null,
+      {
+        "item": {
+          "block": 19
+        },
+        "count": 1
+      },
+      null
+    ]
+  },
+  "output": {
+    "item": {
+      "block": 131
+    },
+    "count": 1
+  }
+}

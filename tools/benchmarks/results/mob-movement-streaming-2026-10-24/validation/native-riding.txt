@@ -1,0 +1,24 @@
+2026-10-24T13:39:56.865997Z  INFO bevy_render::renderer: AdapterInfo { name: "AMD Radeon RX 6950 XT (RADV NAVI21)", vendor: 4098, device: 29605, device_type: DiscreteGpu, device_pci_bus_id: "0000:0c:00.0", driver: "radv", driver_info: "Mesa 26.2.4-arch3.1", backend: Vulkan, subgroup_min_size: 32, subgroup_max_size: 64, transient_saves_memory: false }
+2026-10-24T13:39:56.991093Z  INFO bevy_pbr::cluster: GPU clustering is supported on this device.
+2026-10-24T13:39:56.991119Z  INFO bevy_render::batching::gpu_preprocessing: GPU preprocessing is fully supported on this device.
+2026-10-24T13:39:56.991856Z  INFO bevy_winit::system: Creating new window TERAMIC (152v0)
+2026-10-24T13:39:57.042353Z  INFO lightyear_netcode::client: client connecting to server 127.0.0.1:44227 [1/1]
+2026-10-24T13:39:57.042380Z  INFO lightyear_udp: UDP socket bound to 0.0.0.0:0
+2026-10-24T13:39:57.599226Z  INFO terra_client::creature_audio::scene: Recorded animal/environment audio decoded clips=105
+2026-10-24T13:39:57.621592Z  INFO lightyear_udp::server: Received UDP packet from new address 127.0.0.1:48966, Spawn new LinkOf entity=222v0 server_entity=211v0
+2026-10-24T13:39:57.655100Z  INFO terra_render::water::raymarch: Water SSR hardware depth filtering ready; multisampled views retain the original path
+2026-10-24T13:39:57.655265Z  INFO terra_render::scene::caves::lights::soft_core: Torch soft-core attenuation installed in existing clustered PBR path
+2026-10-24T13:39:57.672945Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/oak-crafted-hd.png mip_levels=11 rebound_materials=0
+2026-10-24T13:39:57.672964Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/stone-strata-hd.png mip_levels=11 rebound_materials=1
+2026-10-24T13:39:57.672968Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/wood.png mip_levels=10 rebound_materials=1
+2026-10-24T13:39:57.672971Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/forged-iron-warm.png mip_levels=11 rebound_materials=0
+2026-10-24T13:39:57.676614Z  INFO terra_render::blocks::loading: Block template library ready blocks=101 materials=236
+2026-10-24T13:39:57.889221Z  INFO lightyear_netcode::server_plugin: New connection on netcode from 1 (222v0)
+2026-10-24T13:39:57.959414Z  INFO lightyear_netcode::client_plugin: Client Netcode(1) connected
+2026-10-24T13:39:58.122431Z  INFO terra_network::server: Player profile accepted (local, not verified online) player=1 uuid=ecdf5b63-3988-415b-8021-283645e4c158 name=Player-ecdf5b63
+2026-10-24T13:39:58.174889Z  INFO terra_network::client: Authoritative world synchronized player=Some(PlayerId(1))
+2026-10-24T13:39:59.814154Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/tools/benchmarks/results/mob-movement-streaming-2026-10-24/native/riding/riding-seated-third-person.png
+2026-10-24T13:40:00.509432Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/tools/benchmarks/results/mob-movement-streaming-2026-10-24/native/riding/riding-seated-first-person.png
+2026-10-24T13:40:00.655337Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/tools/benchmarks/results/mob-movement-streaming-2026-10-24/native/riding/riding-sprint-jump.png
+2026-10-24T13:40:04.215032Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/tools/benchmarks/results/mob-movement-streaming-2026-10-24/native/riding/riding-dismounted.png
+2026-10-24T13:40:04.936483Z  INFO terra_client::riding_smoke: Native riding passed: real UDP mount, pivot-locked third/first-person captures, configured forward/Shift-sprint/jump with authoritative displacement/stamina and X dismount predicted_jump=2.015920804277897 authoritative_jump=2.0135185590855507

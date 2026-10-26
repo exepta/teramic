@@ -1,0 +1,1 @@
+{"id":"teramic::hand_crank","name":"Hand Crank","station":"workbench","output":{"item":{"block":100},"count":1},"pattern":{"kind":"shaped","width":2,"height":2,"cells":[{"item":"stick","count":1},{"item":{"mineral":"iron_ingot"},"count":1},{"item":{"block":16},"wood":true,"count":1},{"item":"stick","count":1}]}}

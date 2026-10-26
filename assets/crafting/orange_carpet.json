@@ -1,0 +1,28 @@
+{
+  "id": "teramic::orange_carpet",
+  "name": "Orange Carpet",
+  "station": "hand",
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "block": 106
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "dye": "orange"
+        },
+        "count": 1
+      }
+    ]
+  },
+  "output": {
+    "item": {
+      "block": 110
+    },
+    "count": 1
+  }
+}

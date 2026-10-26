@@ -1,0 +1,47 @@
+{
+  "id": "teramic::ruby_boots",
+  "name": "Ruby Boots",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "armor": {
+        "material": "ruby",
+        "piece": "boots"
+      }
+    },
+    "count": 1
+  },
+  "pattern": {
+    "kind": "shaped",
+    "width": 3,
+    "height": 2,
+    "cells": [
+      {
+        "item": {
+          "mineral": "ruby"
+        },
+        "count": 1
+      },
+      null,
+      {
+        "item": {
+          "mineral": "ruby"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "mineral": "ruby"
+        },
+        "count": 1
+      },
+      null,
+      {
+        "item": {
+          "mineral": "ruby"
+        },
+        "count": 1
+      }
+    ]
+  }
+}

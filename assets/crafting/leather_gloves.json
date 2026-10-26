@@ -1,0 +1,45 @@
+{
+  "id": "teramic::leather_gloves",
+  "name": "Leather Gloves",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "armor": {
+        "material": "leather",
+        "piece": "gloves"
+      }
+    },
+    "count": 1
+  },
+  "pattern": {
+    "kind": "shaped",
+    "width": 2,
+    "height": 2,
+    "cells": [
+      {
+        "item": {
+          "animal": "leather"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "animal": "leather"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "animal": "leather"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "animal": "leather"
+        },
+        "count": 1
+      }
+    ]
+  }
+}

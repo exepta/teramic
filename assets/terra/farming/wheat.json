@@ -1,0 +1,9 @@
+{
+  "kind": "wheat",
+  "growth_seconds": 600.0,
+  "moisture_evaporation": 0.001,
+  "seasonal_growth": [1.0, 0.95, 0.65, 0.0],
+  "produce_count": 2,
+  "seed_count": 2,
+  "seed_bonus": 1
+}

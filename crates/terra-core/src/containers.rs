@@ -23,20 +23,24 @@ struct View {
     slots: Vec<ItemStack>,
     cursor: Option<ItemStack>,
     reservations: [Option<ItemStack>; INVENTORY_SLOTS],
-    furnace: bool,
+    machine: u8,
 }
 impl View {
     fn capacity(&self, slot: usize, item: crate::ItemKind) -> u16 {
-        if self.furnace && slot >= INVENTORY_SLOTS {
-            return crate::furnace::slot_capacity(slot - INVENTORY_SLOTS, item);
+        if slot >= INVENTORY_SLOTS {
+            match self.machine {
+                1 => return crate::furnace::slot_capacity(slot - INVENTORY_SLOTS, item),
+                2 => return crate::crusher::slot_capacity(slot - INVENTORY_SLOTS, item),
+                _ => {}
+            }
         }
         self.reservations
             .get(slot)
             .copied()
             .flatten()
-            .map_or(STACK_LIMIT, |reserved| {
+            .map_or(item.max_stack(), |reserved| {
                 if reserved.item == item {
-                    STACK_LIMIT - reserved.count
+                    item.max_stack().saturating_sub(reserved.count)
                 } else {
                     0
                 }
@@ -141,7 +145,9 @@ impl View {
         if source.item != cursor.item {
             return false;
         }
-        let moved = limit.min(source.count).min(STACK_LIMIT - cursor.count);
+        let moved = limit
+            .min(source.count)
+            .min(cursor.item.max_stack() - cursor.count);
         if moved == 0 {
             return false;
         }
@@ -223,17 +229,16 @@ impl View {
                     return false;
                 };
                 let original = self.cursor.map_or(0, |s| s.count);
-                if original == STACK_LIMIT {
+                if original == self.cursor.map_or(STACK_LIMIT, |s| s.item.max_stack()) {
                     return false;
                 }
                 self.cursor = Some(self.cursor.unwrap_or(ItemStack { item, count: 0 }));
                 let mut changed = false;
                 for full in [false, true] {
                     for index in 0..self.slots.len() {
-                        if self
-                            .slot(index)
-                            .is_some_and(|s| s.item == item && (s.count == STACK_LIMIT) == full)
-                        {
+                        if self.slot(index).is_some_and(|s| {
+                            s.item == item && (s.count == item.max_stack()) == full
+                        }) {
                             changed |= self.collect_from(index, STACK_LIMIT);
                         }
                     }
@@ -305,17 +310,36 @@ pub(crate) fn apply_filtered(
     reserved: [u16; INVENTORY_SLOTS],
     furnace: bool,
 ) -> bool {
-    let size = if furnace {
-        crate::furnace::SLOTS
-    } else {
-        CHEST_SLOTS
+    apply_filtered_kind(player, halves, gesture, reserved, u8::from(furnace))
+}
+
+pub(crate) fn apply_crusher_filtered(
+    player: &mut Inventory,
+    halves: &mut [Inventory],
+    gesture: ContainerGesture,
+    reserved: [u16; INVENTORY_SLOTS],
+) -> bool {
+    apply_filtered_kind(player, halves, gesture, reserved, 2)
+}
+
+fn apply_filtered_kind(
+    player: &mut Inventory,
+    halves: &mut [Inventory],
+    gesture: ContainerGesture,
+    reserved: [u16; INVENTORY_SLOTS],
+    machine: u8,
+) -> bool {
+    let size = match machine {
+        1 => crate::furnace::SLOTS,
+        2 => crate::crusher::SLOTS,
+        _ => CHEST_SLOTS,
     };
     if !player.valid()
         || !(1..=2).contains(&halves.len())
-        || if furnace {
-            halves.len() != 1 || !halves.iter().all(crate::furnace::valid_inventory)
-        } else {
-            !halves.iter().all(valid_chest)
+        || match machine {
+            1 => halves.len() != 1 || !halves.iter().all(crate::furnace::valid_inventory),
+            2 => halves.len() != 1 || !halves.iter().all(crate::crusher::valid_inventory),
+            _ => !halves.iter().all(valid_chest),
         }
     {
         return false;
@@ -337,7 +361,7 @@ pub(crate) fn apply_filtered(
         }
     }
     let mut view = View {
-        furnace,
+        machine,
         slots,
         cursor: player.cursor,
         reservations: std::array::from_fn(|index| {
@@ -355,7 +379,9 @@ pub(crate) fn apply_filtered(
             continue;
         }
         let slot = &mut view.slots[index];
-        if slot.valid() && slot.item != before[index].item || slot.count > STACK_LIMIT - count {
+        if slot.valid() && slot.item != before[index].item
+            || slot.count > before[index].item.max_stack().saturating_sub(count)
+        {
             return false;
         }
         slot.item = before[index].item;

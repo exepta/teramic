@@ -1,0 +1,16 @@
+{
+  "item": {
+    "armor": {
+      "material": "iron",
+      "piece": "gloves"
+    }
+  },
+  "name": "Iron Gloves",
+  "description": "Iron gloves fitted for protection and comfortable movement.",
+  "equipment": {
+    "slot": "gloves",
+    "armor_points": 2,
+    "health_bonus": 1,
+    "stamina_bonus": 1
+  }
+}

@@ -50,7 +50,12 @@ enum Stage {
     Loading,
     FurnitureGrant,
     FurniturePlace,
+    FurniturePulse,
+    FurnitureCommit,
     FurniturePlaced,
+    ChestOpenStart,
+    ChestOpenWait,
+    ChestCloseWait,
     FurnitureAim,
     FurnitureMine,
     FurnitureRelease,
@@ -105,6 +110,11 @@ struct Fixture {
     fracture_captures: u8,
     furniture: Option<u16>,
     sleep_day: u64,
+    placement_confirmed: Option<Instant>,
+    placement_visible: bool,
+    outline_only: bool,
+    outline_alpha: Option<(f32, f32)>,
+    outline_mesh: Option<AssetId<Mesh>>,
 }
 impl Fixture {
     fn advance(&mut self, stage: Stage) {
@@ -131,6 +141,8 @@ pub(crate) fn install(app: &mut App) {
         return;
     }
     let now = Instant::now();
+    let outline_fixture = std::env::var("TERRA_PLACEMENT_OUTLINE_SMOKE").ok();
+    let furniture_fixture = std::env::var("TERRA_FURNITURE_MINING_SMOKE").ok();
     app.insert_resource(ControllerMode::Walk)
         .insert_resource(Fixture {
             started: now,
@@ -147,14 +159,21 @@ pub(crate) fn install(app: &mut App) {
             centered: false,
             fov: 90.0,
             fracture_captures: 0,
-            furniture: std::env::var("TERRA_FURNITURE_MINING_SMOKE")
-                .ok()
-                .map(|name| match name.as_str() {
+            furniture: outline_fixture.as_ref().or(furniture_fixture.as_ref()).map(
+                |name| match name.as_str() {
+                    "slab" => 82,
+                    "stairs" => 74,
                     "chest" => 29,
                     "bed" => 71,
                     _ => 28,
-                }),
+                },
+            ),
             sleep_day: 0,
+            placement_confirmed: None,
+            placement_visible: false,
+            outline_only: outline_fixture.is_some(),
+            outline_alpha: None,
+            outline_mesh: None,
         })
         .insert_resource(bevy::winit::WinitSettings::continuous())
         .add_systems(PreUpdate, run.after(bevy::input::InputSystems));
@@ -308,10 +327,14 @@ fn advance(world: &mut World, state: &mut Fixture, input: &mut Input) -> Result<
                 if world.resource::<ClientSession>().game_mode != GameMode::Creative {
                     return Err("Furniture mining fixture requires TERRA_BUILD_CREATIVE=1 for its real placement setup".into());
                 }
-                let (position, aim) =
-                    furniture_site(world.resource::<ChunkStore>(), body, material).ok_or(
-                        "No unobstructed, supported furniture site within real interaction reach",
-                    )?;
+                let (position, aim) = furniture_site(
+                    world.resource::<ChunkStore>(),
+                    world.resource::<terra_world::edits::EditJournal>(),
+                    world.resource::<terra_core::block_properties::BlockPropertiesCatalog>(),
+                    body,
+                    material,
+                )
+                .ok_or("No unobstructed, supported furniture site within real interaction reach")?;
                 state.target = position;
                 state.point = aim;
                 state.material = material;
@@ -392,7 +415,7 @@ fn advance(world: &mut World, state: &mut Fixture, input: &mut Input) -> Result<
                 .resource::<terra_player::TargetBlock>()
                 .0
                 .ok_or("Missing actual furniture placement target")?;
-            let (position, expected_material) =
+            let (position, _) =
                 terra_world::targeting::block_placement(world.resource::<ChunkStore>(), hit)
                     .ok_or("Invalid actual furniture placement target")?;
             if position != state.target {
@@ -401,6 +424,82 @@ fn advance(world: &mut World, state: &mut Fixture, input: &mut Input) -> Result<
                     state.target
                 ));
             }
+            let preview = world.resource::<PlacementPreview>();
+            if preview.position != Some(position) || preview.plan.is_none() || !preview.valid {
+                return Err("Shared furniture placement silhouette is missing or disagrees with the actual resolver".into());
+            }
+            if terra_core::construction::is_slab(state.material)
+                && preview.plan.as_ref().is_none_or(|plan| {
+                    !plan.states.iter().any(|(cell, object)| {
+                        *cell == position
+                            && object.is_some_and(|object| (5..=8).contains(&object.facing))
+                    })
+                })
+            {
+                let facings: Vec<_> = preview
+                    .plan
+                    .as_ref()
+                    .into_iter()
+                    .flat_map(|plan| &plan.states)
+                    .map(|(cell, state)| (*cell, state.map(|state| state.facing)))
+                    .collect();
+                let ray_point = world
+                    .query_filtered::<(&Transform, &terra_player::CameraLook), With<TerraCamera>>()
+                    .iter(world)
+                    .next()
+                    .map(|(camera, look)| {
+                        camera.translation + (look.rotation() * Vec3::NEG_Z) * hit.distance as f32
+                    });
+                return Err(format!(
+                    "Actual floor-center slab preview is not vertical: target={position:?}, normal={:?}, aim={:?}, ray_point={ray_point:?}, facings={facings:?}",
+                    hit.normal, state.point
+                ));
+            }
+            let sample = require_visible_outline(world, position, state.material)?;
+            state.outline_alpha = Some((sample.alpha, sample.alpha));
+            state.outline_mesh = Some(sample.mesh);
+            capture(world, &format!("furniture-{}-placement", state.material))?;
+            state.advance(Stage::FurniturePulse);
+        }
+        Stage::FurniturePulse if state.elapsed(0.05) => {
+            let sample = require_visible_outline(world, state.target, state.material)?;
+            if state.outline_mesh != Some(sample.mesh) {
+                return Err("Pulsing placement outline replaced its cached mesh".into());
+            }
+            let alpha = sample.alpha;
+            let (minimum, maximum) = state.outline_alpha.unwrap_or((alpha, alpha));
+            let range = (minimum.min(alpha), maximum.max(alpha));
+            state.outline_alpha = Some(range);
+            if state.elapsed(0.2) && range.1 - range.0 >= 0.025 {
+                tracing::info!(
+                    material = state.material,
+                    minimum_alpha = range.0,
+                    maximum_alpha = range.1,
+                    "Native orange placement outline pulses without filled faces"
+                );
+                capture(
+                    world,
+                    &format!("furniture-{}-outline-pulse", state.material),
+                )?;
+                state.advance(
+                    if state.outline_only && !terra_core::construction::is_slab(state.material) {
+                        Stage::Finish
+                    } else {
+                        Stage::FurnitureCommit
+                    },
+                );
+            } else if state.elapsed(1.5) {
+                return Err(format!(
+                    "Placement outline opacity did not visibly pulse: {range:?}"
+                ));
+            }
+        }
+        Stage::FurnitureCommit if state.elapsed(0.25) => {
+            let position = state.target;
+            let expected_material = world
+                .resource::<ChunkStore>()
+                .block_at(position)
+                .ok_or("Furniture preview section unloaded before commit")?;
             world.write_message(terra_world::streaming::BlockEditRequest {
                 position,
                 expected_material,
@@ -418,15 +517,35 @@ fn advance(world: &mut World, state: &mut Fixture, input: &mut Input) -> Result<
             if !world.resource::<RenderStatus>().ready {
                 return Ok(false);
             }
+            if state.outline_only && terra_core::construction::is_slab(state.material) {
+                let facing = world
+                    .resource::<terra_world::edits::EditJournal>()
+                    .object_state(state.target)
+                    .ok_or("Committed floor slab lost its orientation")?
+                    .facing;
+                if !(5..=8).contains(&facing) {
+                    return Err(format!(
+                        "Authority did not preserve vertical floor placement: {facing}"
+                    ));
+                }
+                capture(world, "slab-floor-center-committed")?;
+                tracing::info!(?state.target, facing, "Native floor-center slab placement committed its vertical preview orientation");
+                state.advance(Stage::Finish);
+                return Ok(false);
+            }
             let peer = world
                 .resource::<terra_world::edits::EditJournal>()
                 .object_state(state.target)
                 .and_then(|state| state.peer);
-            state.point = Vec3::from_array(state.target.map(|v| v as f32 + 0.5));
-            if let Some(peer) = peer {
-                state.point = (state.point + Vec3::from_array(peer.map(|v| v as f32 + 0.5))) * 0.5;
+            if state.material != 29 {
+                state.point = Vec3::from_array(state.target.map(|v| v as f32 + 0.5));
+                if let Some(peer) = peer {
+                    state.point =
+                        (state.point + Vec3::from_array(peer.map(|v| v as f32 + 0.5))) * 0.5;
+                }
+                state.point.y =
+                    state.target[1] as f32 + if state.material == 28 { 0.70 } else { 0.40 };
             }
-            state.point.y = state.target[1] as f32 + if state.material == 28 { 0.70 } else { 0.40 };
             if terra_core::beds::is_bed(state.material) {
                 state.point.y = state.target[1] as f32 + 0.62;
                 capture(world, "bed-intact")?;
@@ -443,6 +562,123 @@ fn advance(world: &mut World, state: &mut Fixture, input: &mut Input) -> Result<
                 state.advance(Stage::BedDyeGrant);
                 return Ok(false);
             }
+            if state.material == 29 {
+                let empty = (0..9)
+                    .find(|&slot| {
+                        world
+                            .resource::<ClientSession>()
+                            .inventory
+                            .slot(slot)
+                            .is_none()
+                    })
+                    .ok_or("Chest visual fixture needs one actually empty hotbar slot")?
+                    as u8;
+                world
+                    .resource_mut::<terra_network::client::SelectedInventorySlot>()
+                    .0 = Some(empty);
+                world.write_message(InventoryAction::Hotbar(empty));
+                world
+                    .resource_mut::<terra_player::interaction::ActiveItem>()
+                    .0 = None;
+                let mut palette = world.resource_mut::<BlockPalette>();
+                palette.selected = palette.choices.len();
+                state.advance(Stage::ChestOpenStart);
+                return Ok(false);
+            }
+            world
+                .resource_mut::<terra_network::client::ClientChatCommands>()
+                .0
+                .push_back(terra_network::client::ChatCommand::Send(
+                    "/gamemode survival".into(),
+                ));
+            state.advance(Stage::FurnitureAim);
+        }
+        Stage::ChestOpenStart if state.elapsed(0.5) => {
+            let selected = world
+                .resource::<terra_network::client::SelectedInventorySlot>()
+                .0
+                .ok_or("Missing empty hotbar selection")?;
+            if world
+                .resource::<ClientSession>()
+                .inventory
+                .slot(usize::from(selected))
+                .is_some()
+                || world
+                    .resource::<terra_player::interaction::ActiveItem>()
+                    .0
+                    .is_some()
+                || world.resource::<PlacementPreview>().position.is_some()
+                || world.resource::<BuildingStatus>().preview_visible
+            {
+                return Err("Empty-hand chest inspection still has a held item or phantom placement silhouette".into());
+            }
+            world.write_message(terra_network::client::InventoryRequest(
+                terra_network::protocol::inventory::InventoryCommand {
+                    revision: world.resource::<ClientSession>().inventory.revision,
+                    action: terra_network::protocol::inventory::InventoryAction::OpenContainer {
+                        position: state.target,
+                    },
+                },
+            ));
+            state.advance(Stage::ChestOpenWait);
+        }
+        Stage::ChestOpenWait if state.elapsed(0.7) => {
+            let session = world.resource::<ClientSession>();
+            if !session.open_chests.contains(&state.target) || session.container.is_none() {
+                if state.elapsed(4.0) {
+                    return Err(
+                        "Authoritative chest viewer state did not open the actual world lid".into(),
+                    );
+                }
+                return Ok(false);
+            }
+            if world
+                .resource::<crate::creature_audio::ChestAudioStatus>()
+                .opened
+                == 0
+            {
+                if state.elapsed(4.0) {
+                    return Err(
+                        "Authoritative chest opening did not enqueue its positional hinge sound"
+                            .into(),
+                    );
+                }
+                return Ok(false);
+            }
+            capture(world, "chest-lid-open")?;
+            world.write_message(terra_network::client::InventoryRequest(
+                terra_network::protocol::inventory::InventoryCommand {
+                    revision: world.resource::<ClientSession>().inventory.revision,
+                    action: terra_network::protocol::inventory::InventoryAction::CloseContainer,
+                },
+            ));
+            state.advance(Stage::ChestCloseWait);
+        }
+        Stage::ChestCloseWait if state.elapsed(0.7) => {
+            let session = world.resource::<ClientSession>();
+            if session.open_chests.contains(&state.target) || session.container.is_some() {
+                if state.elapsed(4.0) {
+                    return Err(
+                        "Chest viewer state did not close after the last viewer left".into(),
+                    );
+                }
+                return Ok(false);
+            }
+            if world
+                .resource::<crate::creature_audio::ChestAudioStatus>()
+                .closed
+                == 0
+            {
+                if state.elapsed(4.0) {
+                    return Err(
+                        "Authoritative chest closing did not enqueue its positional latch sound"
+                            .into(),
+                    );
+                }
+                return Ok(false);
+            }
+            info!(status = ?world.resource::<crate::creature_audio::ChestAudioStatus>(), "Native authoritative chest opening/closing audio cues passed");
+            capture(world, "chest-lid-closed")?;
             world
                 .resource_mut::<terra_network::client::ClientChatCommands>()
                 .0
@@ -669,7 +905,7 @@ fn advance(world: &mut World, state: &mut Fixture, input: &mut Input) -> Result<
             if world.resource::<terra_core::DebugSettings>().enabled
                 || world.resource::<BuildingStatus>().preview_visible
             {
-                return Err("Debug and placement box must start hidden".into());
+                return Err("Debug and the empty-hand placement outline must start hidden".into());
             }
             capture(world, "building-debug-default-off")?;
             input.debug_f1 = true;
@@ -679,7 +915,7 @@ fn advance(world: &mut World, state: &mut Fixture, input: &mut Input) -> Result<
         Stage::DebugEnable if state.elapsed(0.2) => {
             let debug = world.resource::<terra_core::DebugSettings>();
             if !debug.enabled || !debug.block_placement {
-                return Err("F1+B did not enable the opt-in placement box".into());
+                return Err("F1+B did not enable the placement debug setting".into());
             }
             if state.creative {
                 input.mine = true;
@@ -969,11 +1205,8 @@ fn advance(world: &mut World, state: &mut Fixture, input: &mut Input) -> Result<
             {
                 return Err(format!("Replacement preview invalid: {preview:?}"));
             }
-            let status = world.resource::<BuildingStatus>();
-            if !status.preview_visible || !status.preview_valid {
-                return Err("Debug placement preview render batch missing".into());
-            }
-            capture(world, "building-preview-valid")?;
+            require_no_outline(world)?;
+            capture(world, "building-normal-block-no-outline")?;
             state.advance(Stage::Narrow);
         }
         Stage::Narrow if state.elapsed(0.3) => {
@@ -991,11 +1224,8 @@ fn advance(world: &mut World, state: &mut Fixture, input: &mut Input) -> Result<
             state.advance(Stage::NarrowCapture);
         }
         Stage::NarrowCapture if state.elapsed(0.7) => {
-            let status = world.resource::<BuildingStatus>();
-            if !status.preview_visible || !status.preview_valid {
-                return Err("Narrow-FOV debug placement preview disappeared".into());
-            }
-            capture(world, "building-preview-fov45-small")?;
+            require_no_outline(world)?;
+            capture(world, "building-normal-block-no-outline-fov45-small")?;
             state.advance(Stage::NarrowRestore);
         }
         Stage::NarrowRestore if state.elapsed(0.4) => {
@@ -1016,6 +1246,8 @@ fn advance(world: &mut World, state: &mut Fixture, input: &mut Input) -> Result<
         }
         Stage::Place if state.elapsed(0.25) => {
             input.place = true;
+            state.placement_confirmed = None;
+            state.placement_visible = false;
             state.advance(Stage::Placed);
         }
         Stage::Placed => {
@@ -1025,6 +1257,7 @@ fn advance(world: &mut World, state: &mut Fixture, input: &mut Input) -> Result<
                 .inventory
                 .count(ItemKind::Block(state.material));
             if material == Some(state.material) && count == state.count {
+                let confirmed = *state.placement_confirmed.get_or_insert_with(Instant::now);
                 let owner = terra_voxel::global_to_section(state.target).0;
                 let visible = world
                     .resource::<terra_render::RenderedSections>()
@@ -1040,6 +1273,16 @@ fn advance(world: &mut World, state: &mut Fixture, input: &mut Input) -> Result<
                     });
                 if !visible && state.elapsed(5.0) {
                     return Err("Confirmed placement has no visible current terrain mesh".into());
+                }
+                if visible && !state.placement_visible {
+                    tracing::info!(
+                        request_to_visible_ms = state.entered.elapsed().as_secs_f64() * 1000.0,
+                        collision_to_visible_ms = confirmed.elapsed().as_secs_f64() * 1000.0,
+                        ?owner,
+                        material = state.material,
+                        "Native placement latency: authoritative block and current visible mesh"
+                    );
+                    state.placement_visible = true;
                 }
                 if visible && state.elapsed(0.8) {
                     let mut debug = world.resource_mut::<terra_core::DebugSettings>();
@@ -1064,6 +1307,13 @@ fn advance(world: &mut World, state: &mut Fixture, input: &mut Input) -> Result<
             state.advance(Stage::Finish);
         }
         Stage::Finish if state.elapsed(0.7) => {
+            if state.outline_only {
+                tracing::info!(
+                    material = state.material,
+                    "Native oriented placement outline passed: actual resolver, orange unfilled model edges, bounded retained mesh and visible pulse"
+                );
+                return Ok(true);
+            }
             if terra_core::beds::is_bed(state.material) {
                 tracing::info!(
                     "Native bed flow passed: paired placement, one Survival dye, replicated lying pose, and next-day 08:00 wake"
@@ -1096,11 +1346,17 @@ fn advance(world: &mut World, state: &mut Fixture, input: &mut Input) -> Result<
     Ok(false)
 }
 
-fn furniture_site(chunks: &ChunkStore, body: Vec3, material: u16) -> Option<([i64; 3], Vec3)> {
+fn furniture_site(
+    chunks: &ChunkStore,
+    journal: &terra_world::edits::EditJournal,
+    properties: &terra_core::block_properties::BlockPropertiesCatalog,
+    body: Vec3,
+    material: u16,
+) -> Option<([i64; 3], Vec3)> {
     let eye = body + Vec3::Y * terra_physics::character::PLAYER_EYE_OFFSET;
     let center = body.floor().as_i64vec3();
-    for z in center.z - 4..=center.z - 2 {
-        for x in center.x - 2..=center.x + 2 {
+    for z in center.z - 5..=center.z - 1 {
+        for x in center.x - 4..=center.x + 4 {
             for y in (center.y - 3..=center.y).rev() {
                 let ground = [x, y, z];
                 let position = [x, y + 1, z];
@@ -1112,37 +1368,52 @@ fn furniture_site(chunks: &ChunkStore, body: Vec3, material: u16) -> Option<([i6
                 {
                     continue;
                 }
-                for dx in [0.15, 0.5, 0.85] {
-                    for dz in [0.15, 0.5, 0.85] {
+                let offsets = if terra_core::construction::is_slab(material) {
+                    [0.5, 0.15, 0.85]
+                } else {
+                    [0.15, 0.5, 0.85]
+                };
+                for dx in offsets {
+                    for dz in offsets {
                         let aim = Vec3::new(x as f32 + dx, y as f32 + 0.99, z as f32 + dz);
-                        let direction = (aim - eye).normalize_or_zero();
-                        let yaw = (-direction.x).atan2(-direction.z);
-                        let right = terra_world::edits::BlockObjectState::from_yaw(yaw).right();
-                        let facing = terra_world::edits::BlockObjectState::from_yaw(yaw).facing;
-                        let peer_direction = if terra_core::beds::is_bed(material) {
-                            [[0, 0, 1], [1, 0, 0], [0, 0, -1], [-1, 0, 0]][usize::from(facing)]
-                        } else {
-                            right
-                        };
-                        let peer =
-                            std::array::from_fn(|axis| position[axis] + peer_direction[axis]);
-                        if (material == 28 || terra_core::beds::is_bed(material))
-                            && (chunks.block_at(peer) != Some(0)
-                                || !chunks
-                                    .block_at([peer[0], peer[1] - 1, peer[2]])
-                                    .and_then(terra_voxel::MaterialId::from_raw)
-                                    .is_some_and(terra_voxel::MaterialId::is_natural_ground))
-                        {
+                        if aim.distance(eye) > 5.5 {
                             continue;
                         }
-                        let (block, target) = terra_world::targeting::pick_world(
+                        let direction = (aim - eye).normalize_or_zero();
+                        let yaw = (-direction.x).atan2(-direction.z);
+                        let (block, _) = terra_world::targeting::pick_world(
                             chunks,
                             eye.to_array().map(f64::from),
                             direction.to_array().map(f64::from),
                         );
-                        if block
-                            .is_some_and(|hit| hit.position == ground && hit.adjacent() == position)
-                            && matches!(target, Some(terra_world::targeting::WorldTarget::Block(_)))
+                        let Some(hit) = block
+                            .filter(|hit| hit.position == ground && hit.adjacent() == position)
+                        else {
+                            continue;
+                        };
+                        let Ok(plan) = terra_world::placement::propose(
+                            chunks,
+                            journal,
+                            hit,
+                            ItemKind::Block(material),
+                            (
+                                eye.to_array().map(f64::from),
+                                direction.to_array().map(f64::from),
+                            ),
+                            [yaw, direction.y.asin()],
+                        ) else {
+                            continue;
+                        };
+                        if terra_core::construction::is_slab(material)
+                            && !plan.states.iter().any(|(cell, state)| {
+                                *cell == position
+                                    && state.is_some_and(|state| (5..=8).contains(&state.facing))
+                            })
+                        {
+                            continue;
+                        }
+                        if terra_world::placement::environment(&plan, chunks, journal, true).is_ok()
+                            && clear_model_view(chunks, journal, properties, &plan, eye)
                         {
                             return Some((position, aim));
                         }
@@ -1152,6 +1423,250 @@ fn furniture_site(chunks: &ChunkStore, body: Vec3, material: u16) -> Option<([i6
         }
     }
     None
+}
+
+fn clear_model_view(
+    chunks: &ChunkStore,
+    journal: &terra_world::edits::EditJournal,
+    properties: &terra_core::block_properties::BlockPropertiesCatalog,
+    plan: &terra_world::placement::Layout,
+    eye: Vec3,
+) -> bool {
+    let bounds = terra_world::placement::boxes(plan, chunks, journal, properties);
+    if bounds.is_empty() {
+        return false;
+    }
+    let minimum = std::array::from_fn::<_, 3, _>(|i| {
+        bounds
+            .iter()
+            .map(|b| b.minimum[i])
+            .fold(f64::INFINITY, f64::min)
+    });
+    let maximum = std::array::from_fn::<_, 3, _>(|i| {
+        bounds
+            .iter()
+            .map(|b| b.maximum[i])
+            .fold(f64::NEG_INFINITY, f64::max)
+    });
+    // Ground-contact feet are not a visibility requirement; inspect body and roof.
+    let support_top = plan
+        .edits
+        .iter()
+        .filter(|edit| edit.material != 0)
+        .map(|edit| edit.position[1] as f64)
+        .fold(f64::INFINITY, f64::min);
+    let body_bottom = (minimum[1] + 0.18)
+        .max(support_top + 0.18)
+        .min(maximum[1] - 0.08);
+    (0..8).all(|corner| {
+        let point = Vec3::from_array(
+            std::array::from_fn(|i| {
+                if corner & (1 << i) == 0 {
+                    if i == 1 {
+                        body_bottom
+                    } else {
+                        minimum[i] + 0.03
+                    }
+                } else {
+                    maximum[i] - 0.03
+                }
+            })
+            .map(|v| v as f32),
+        );
+        let delta = point - eye;
+        terra_voxel::blocks::raycast_blocks(
+            eye.to_array().map(f64::from),
+            delta.to_array().map(f64::from),
+            f64::from(delta.length() - 0.04),
+            |p| {
+                Some(u16::from(chunks.block_at(p).is_none_or(|m| {
+                    terra_voxel::MaterialId::from_raw(m)
+                        .is_some_and(terra_voxel::MaterialId::is_solid)
+                })))
+            },
+        )
+        .is_none()
+    })
+}
+
+fn require_no_outline(world: &mut World) -> Result<(), String> {
+    use bevy::camera::visibility::ViewVisibility;
+    let status = world.resource::<BuildingStatus>();
+    if status.preview_visible || status.preview_valid {
+        return Err("A normal full block enabled the orientation-only placement outline".into());
+    }
+    let visible = world
+        .query_filtered::<&ViewVisibility, With<terra_render::PlacementOutline>>()
+        .iter(world)
+        .any(|visibility| visibility.get());
+    if visible {
+        return Err("A normal full block retained a render-visible placement outline".into());
+    }
+    Ok(())
+}
+
+struct OutlineSample {
+    alpha: f32,
+    mesh: AssetId<Mesh>,
+}
+
+fn require_visible_outline(
+    world: &mut World,
+    position: [i64; 3],
+    material_id: u16,
+) -> Result<OutlineSample, String> {
+    use bevy::{camera::visibility::ViewVisibility, mesh::VertexAttributeValues};
+    let status = world.resource::<BuildingStatus>();
+    if !status.preview_visible || !status.preview_valid {
+        return Err("The actual oriented placement outline is not enabled and valid".into());
+    }
+    let candidates: Vec<_> = world
+        .query_filtered::<(
+            &Mesh3d,
+            &MeshMaterial3d<terra_render::PlacementOutlineMaterial>,
+            &GlobalTransform,
+            &ViewVisibility,
+        ), With<terra_render::PlacementOutline>>()
+        .iter(world)
+        .map(|(mesh, material, transform, visible)| {
+            (
+                mesh.0.clone(),
+                material.0.clone(),
+                *transform,
+                visible.get(),
+            )
+        })
+        .collect();
+    if candidates.len() != 1 {
+        return Err(format!(
+            "Expected one bounded placement outline entity, found {}",
+            candidates.len()
+        ));
+    }
+    let camera = world
+        .query_filtered::<(&Camera, &GlobalTransform), With<TerraCamera>>()
+        .iter(world)
+        .next()
+        .map(|(camera, transform)| (camera.clone(), *transform))
+        .ok_or("Missing actual placement render camera")?;
+    let materials = world.resource::<Assets<terra_render::PlacementOutlineMaterial>>();
+    let meshes = world.resource::<Assets<Mesh>>();
+    for (mesh, material, transform, visible) in candidates {
+        let material = materials
+            .get(&material)
+            .ok_or("The actual placement outline material is unavailable")?;
+        let tint = Color::from(material.color).to_srgba();
+        if material.alpha_mode() != AlphaMode::Blend
+            || material.parameters.x != 2.0
+            || (tint.red - 1.0).abs() > 0.001
+            || (tint.green - 0.68).abs() > 0.001
+            || (tint.blue - 0.2).abs() > 0.001
+            || !(0.399..=0.951).contains(&tint.alpha)
+        {
+            return Err(format!(
+                "Placement outline is not the orange pulsing unlit material: {tint:?}"
+            ));
+        }
+        if !visible
+            || !transform
+                .translation()
+                .abs_diff_eq(Vec3::from_array(position.map(|v| v as f32 + 0.5)), 0.01)
+        {
+            continue;
+        }
+        let mesh_id = mesh.id();
+        let mesh = meshes
+            .get(&mesh)
+            .ok_or("The actual outline mesh asset is unavailable")?;
+        if mesh.primitive_topology() != bevy::mesh::PrimitiveTopology::TriangleList {
+            return Err("Placement preview is missing its screen-expanded edge strips".into());
+        }
+        if !mesh
+            .asset_usage
+            .contains(bevy::asset::RenderAssetUsages::MAIN_WORLD)
+        {
+            return Err("Placement outline did not retain its reusable CPU mesh".into());
+        }
+        let Some(VertexAttributeValues::Float32x3(points)) =
+            mesh.attribute(Mesh::ATTRIBUTE_POSITION)
+        else {
+            return Err("Placement outline has no actual model positions".into());
+        };
+        let indices = mesh.indices();
+        let endpoints = points.len() / 2;
+        if endpoints < 24
+            || points.len() % 4 != 0
+            || indices.is_none_or(|indices| indices.len() != points.len() / 4 * 6)
+            || indices.is_some_and(|indices| indices.iter().any(|i| i >= points.len()))
+            || points
+                .chunks_exact(4)
+                .any(|quad| quad[0] != quad[1] || quad[2] != quad[3])
+            || points
+                .iter()
+                .flatten()
+                .any(|coordinate| !coordinate.is_finite())
+        {
+            return Err("Placement outline has invalid or incomplete line geometry".into());
+        }
+        let local_low = points.iter().fold(Vec3::splat(f32::INFINITY), |a, &p| {
+            a.min(Vec3::from_array(p))
+        });
+        let local_high = points.iter().fold(Vec3::splat(f32::NEG_INFINITY), |a, &p| {
+            a.max(Vec3::from_array(p))
+        });
+        if terra_core::construction::is_slab(material_id) {
+            if (local_high - local_low).min_element() >= 0.8 {
+                return Err("Half-slab outline incorrectly uses a full-block bounding cube".into());
+            }
+        } else if endpoints <= 24 {
+            return Err("Placement outline uses a fallback box rather than the actual stairs/furniture profile".into());
+        }
+        let projected: Vec<_> = points
+            .iter()
+            .filter_map(|p| {
+                camera
+                    .0
+                    .world_to_viewport(&camera.1, transform.transform_point(Vec3::from_array(*p)))
+                    .ok()
+            })
+            .collect();
+        if projected.len() != points.len() {
+            return Err("Placement model is partly outside the actual render camera".into());
+        }
+        let low = projected
+            .iter()
+            .fold(Vec2::splat(f32::INFINITY), |a, &p| a.min(p));
+        let high = projected
+            .iter()
+            .fold(Vec2::splat(f32::NEG_INFINITY), |a, &p| a.max(p));
+        let viewport = camera
+            .0
+            .logical_viewport_rect()
+            .ok_or("Placement camera has no actual viewport")?;
+        if low.cmplt(viewport.min + Vec2::splat(20.0)).any()
+            || high.cmpgt(viewport.max - Vec2::splat(20.0)).any()
+        {
+            return Err("The placement outline is clipped by the actual viewport".into());
+        }
+        if (high - low).min_element() < 20.0 {
+            return Err("The actual placement outline is too small to inspect".into());
+        }
+        info!(
+            vertices = points.len(),
+            line_segments = endpoints / 2,
+            width_pixels = material.parameters.x,
+            alpha = tint.alpha,
+            ?position,
+            ?low,
+            ?high,
+            "Native orange placement outline is unfilled actual model geometry, render-visible and unobstructed"
+        );
+        return Ok(OutlineSample {
+            alpha: tint.alpha,
+            mesh: mesh_id,
+        });
+    }
+    Err("No valid, render-visible authored placement outline was found".into())
 }
 
 fn interact_with_bed(world: &mut World) -> Result<(), String> {
@@ -1259,4 +1774,94 @@ fn capture(world: &mut World, name: &str) -> Result<(), String> {
             directory.join(format!("{name}.png")),
         ));
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn native_furniture_visibility_accepts_flat_ground_and_low_feet_but_rejects_an_occluding_log() {
+        let section = terra_voxel::SectionPos::default();
+        let mut data = terra_voxel::BlockSection::empty(section).unwrap();
+        for x in 0..16 {
+            for z in 0..16 {
+                data.set_block([x, 0, z], 1).unwrap();
+            }
+        }
+        let mut chunks = ChunkStore::default();
+        chunks.loaded.insert(
+            section,
+            terra_world::streaming::LoadedSection {
+                data,
+                mesh: None,
+                mesh_epoch: 0,
+                water_epoch: 0,
+                water: None,
+                props: Vec::new(),
+            },
+        );
+        let journal = terra_world::edits::EditJournal::default();
+        let mut properties = terra_core::block_properties::BlockPropertiesCatalog::default();
+        let body = Vec3::new(8.5, 1.90, 8.5);
+        let eye = body + Vec3::Y * terra_physics::character::PLAYER_EYE_OFFSET;
+        let plan =
+            terra_world::placement::layout(&chunks, &journal, [8, 1, 5], 0, 29, [0.0; 2], None)
+                .unwrap();
+        assert!(clear_model_view(&chunks, &journal, &properties, &plan, eye));
+        assert!(furniture_site(&chunks, &journal, &properties, body, 29).is_some());
+        let (slab_position, slab_aim) = furniture_site(&chunks, &journal, &properties, body, 82)
+            .expect("flat ground offers a genuinely visible vertical floor slab site");
+        let direction = (slab_aim - eye).normalize();
+        let hit = terra_world::targeting::pick_world(
+            &chunks,
+            eye.to_array().map(f64::from),
+            direction.to_array().map(f64::from),
+        )
+        .0
+        .unwrap();
+        assert_eq!(hit.normal, [0, 1, 0]);
+        let slab = terra_world::placement::propose(
+            &chunks,
+            &journal,
+            hit,
+            ItemKind::Block(82),
+            (
+                eye.to_array().map(f64::from),
+                direction.to_array().map(f64::from),
+            ),
+            [(-direction.x).atan2(-direction.z), direction.y.asin()],
+        )
+        .unwrap();
+        assert!(
+            slab.states
+                .iter()
+                .any(|(cell, state)| *cell == slab_position
+                    && state.is_some_and(|state| (5..=8).contains(&state.facing)))
+        );
+        properties.1.insert(
+            29,
+            std::sync::Arc::from(vec![terra_core::block_shapes::ShapeBox {
+                minimum: [0.075, -0.01, 0.075],
+                maximum: [0.925, 0.842, 0.97],
+                hinged: false,
+            }]),
+        );
+        assert!(
+            clear_model_view(&chunks, &journal, &properties, &plan, eye),
+            "low trim at the floor cannot invalidate a clearly visible body and roof"
+        );
+        for y in 1..=2 {
+            chunks
+                .loaded
+                .get_mut(&section)
+                .unwrap()
+                .data
+                .set_block([8, y, 7], 6)
+                .unwrap();
+        }
+        assert!(
+            !clear_model_view(&chunks, &journal, &properties, &plan, eye),
+            "a real tree in front of the body still rejects the shot"
+        );
+    }
 }

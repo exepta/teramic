@@ -1,0 +1,13 @@
+{
+  "item": {
+    "accessory": "socks"
+  },
+  "name": "Socks",
+  "description": "Soft wool socks for warmth and enduring steps.",
+  "equipment": {
+    "slot": "socks",
+    "armor_points": 0,
+    "health_bonus": 0,
+    "stamina_bonus": 10
+  }
+}

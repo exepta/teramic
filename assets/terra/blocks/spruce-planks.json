@@ -5,7 +5,7 @@
   "id": 18,
   "name": "Spruce Planks",
   "render_kind": "cube",
-  "bevel_width": 0.018,
+  "bevel_width": 0.0,
   "materials": {
     "Spruce boards": {
       "base_color": [

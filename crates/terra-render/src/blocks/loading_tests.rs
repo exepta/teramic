@@ -24,6 +24,66 @@ fn held_torch_material_has_no_emission_or_self_light_response() {
 }
 
 #[test]
+fn painted_machine_albedo_does_not_receive_a_second_dark_vertex_or_material_tint() {
+    use bevy::image::{CompressedImageFormats, ImageSampler, ImageType};
+    let directory = terra_core::asset_directory().join("terra/blocks");
+    let image = Image::from_buffer(
+        &std::fs::read(directory.join("textures/forged-iron-warm.png")).unwrap(),
+        ImageType::Extension("png"),
+        CompressedImageFormats::empty(),
+        true,
+        ImageSampler::default(),
+        bevy::asset::RenderAssetUsages::MAIN_WORLD,
+    )
+    .unwrap();
+    let pixels = image.data.as_ref().unwrap();
+    let luminance = pixels
+        .chunks_exact(4)
+        .map(|p| {
+            (f64::from(p[0]) * 0.2126 + f64::from(p[1]) * 0.7152 + f64::from(p[2]) * 0.0722) / 255.0
+        })
+        .sum::<f64>()
+        / (pixels.len() / 4) as f64;
+    assert!(
+        (0.35..0.75).contains(&luminance),
+        "the albedo must stay readable under ordinary shadow lighting: {luminance}"
+    );
+    for name in ["crusher", "hand_crank"] {
+        let document: serde_json::Value = serde_json::from_str(
+            &std::fs::read_to_string(directory.join(format!("models/{name}.gltf"))).unwrap(),
+        )
+        .unwrap();
+        for material in document["materials"].as_array().unwrap() {
+            if matches!(
+                material["name"].as_str().unwrap(),
+                "oak"
+                    | "iron"
+                    | "iron_edge"
+                    | "crusher_roller_left"
+                    | "crusher_roller_left_edge"
+                    | "crusher_roller_right"
+                    | "crusher_roller_right_edge"
+                    | "crank_rotating"
+                    | "crank_rotating_edge"
+                    | "crank_rotating_grip"
+            ) {
+                let color = material["pbrMetallicRoughness"]["baseColorFactor"]
+                    .as_array()
+                    .unwrap();
+                assert_eq!(color[0], color[1]);
+                assert_eq!(color[1], color[2]);
+                assert!(color[0].as_f64().unwrap() >= 0.78);
+            }
+        }
+        for mesh in document["meshes"].as_array().unwrap() {
+            for primitive in mesh["primitives"].as_array().unwrap() {
+                assert!(primitive["attributes"].get("COLOR_0").is_none());
+            }
+        }
+    }
+}
+
+#[test]
 fn torch_emits_but_ores_only_reflect_existing_light() {
     let library = BlockLibrary::load(&terra_core::asset_directory().join("terra/blocks")).unwrap();
     let mut torch = library.blocks.iter().find(|b| b.id == 40).unwrap().clone();
@@ -49,7 +109,17 @@ fn torch_emits_but_ores_only_reflect_existing_light() {
         library: Some(library),
         ..default()
     };
-    assert_eq!(assets.lights().count(), 3);
+    assert_eq!(
+        assets
+            .lights()
+            .map(|(id, _)| id)
+            .collect::<std::collections::BTreeSet<_>>(),
+        [28, 40, 56, 99].into_iter().collect()
+    );
+    let (_, crusher_lantern) = assets.lights().find(|(id, _)| *id == 99).unwrap();
+    assert_eq!(crusher_lantern.range, 4.0);
+    assert_eq!(crusher_lantern.offset, Some([0.0425, 0.454, 0.896]));
+    assert!(!crusher_lantern.shadows && crusher_lantern.intensity <= 80.0);
     assert_eq!(
         assets.lights().find(|(id, _)| *id == 56).unwrap().1.range,
         4.0
@@ -149,7 +219,21 @@ fn prop_palette_preserves_linear_color_and_restrains_highlights() {
         assert_eq!(color.alpha, 1.0);
         assert!(material.base_color_texture.is_none());
     }
-    assert_eq!(palette.flowers.len(), 6);
+    assert_eq!(palette.flowers.len(), 8);
+    for (slot, expected) in [
+        (palette.flowers[6], [0.94, 0.29, 0.045, 1.0]),
+        (palette.flowers[7], [0.27, 0.69, 0.20, 1.0]),
+    ] {
+        assert_eq!(
+            materials
+                .get(&assets.materials[slot])
+                .expect("flower material")
+                .base_color
+                .to_linear()
+                .to_f32_array(),
+            expected
+        );
+    }
 }
 
 #[test]
@@ -216,7 +300,79 @@ fn shipped_cube_materials_share_soil_but_keep_whole_snow_distinct_from_rock() {
         slots[&(3, "Weathered blue stone")],
         slots[&(5, "Soft snow")]
     );
-    assert_eq!(materials.len(), 50 + terra_core::OreKind::ALL.len());
+    assert_eq!(
+        materials.len(),
+        60 + terra_core::OreKind::ALL.len() + terra_core::beds::DyeColor::ALL.len() + 1
+    );
+    assert_eq!(slots[&(103, "Woven wool")], slots[&(104, "Woven wool")]);
+    assert_eq!(slots[&(103, "Woven wool")], slots[&(105, "Woven wool")]);
+    let mut textile_slots = std::collections::BTreeSet::new();
+    for color in terra_core::beds::DyeColor::ALL {
+        let carpet = terra_core::textiles::dyed(terra_core::textiles::WHITE_CARPET, color).unwrap();
+        let wool = terra_core::textiles::dyed(terra_core::textiles::WHITE_WOOL, color).unwrap();
+        let carpet_slot = slots[&(carpet, "Woven wool")];
+        let wool_slot = slots[&(wool, "Woven wool")];
+        assert!(
+            textile_slots.insert(carpet_slot),
+            "{color:?} needs its own tint"
+        );
+        assert_eq!(
+            materials
+                .get(&assets.materials[carpet_slot])
+                .unwrap()
+                .base_color
+                .to_linear()
+                .to_f32_array(),
+            color.tint()
+        );
+        if color == terra_core::beds::DyeColor::White {
+            assert_ne!(
+                carpet_slot, wool_slot,
+                "legacy white wool keeps its untinted material"
+            );
+            assert_eq!(
+                materials
+                    .get(&assets.materials[wool_slot])
+                    .unwrap()
+                    .base_color
+                    .to_linear()
+                    .to_f32_array(),
+                [1.0; 4]
+            );
+        } else {
+            assert_eq!(
+                carpet_slot, wool_slot,
+                "matching dyed wool and carpet must share a handle"
+            );
+        }
+    }
+    assert_eq!(textile_slots.len(), terra_core::beds::DyeColor::ALL.len());
+    let fired_clay = slots[&(terra_core::flower_pot::MATERIAL, "Fired clay")];
+    assert_ne!(fired_clay, slots[&(19, "River clay")]);
+    assert!(!textile_slots.contains(&fired_clay));
+    assert_eq!(
+        materials
+            .get(&assets.materials[fired_clay])
+            .unwrap()
+            .base_color
+            .to_linear()
+            .to_f32_array(),
+        [0.54, 0.25, 0.15, 1.0]
+    );
+    assert_ne!(
+        slots[&(102, "Compacted path")],
+        slots[&(102, "Packed earth")]
+    );
+    assert_ne!(
+        slots[&(terra_core::farming::FARMLAND, "Cultivated soil")],
+        slots[&(terra_core::farming::FARMLAND, "Rooted cultivated soil")],
+        "Cultivated furrows and rooted sides keep their separate authored textures"
+    );
+    assert_ne!(
+        slots[&(terra_core::farming::FARMLAND, "Cultivated soil")],
+        slots[&(2, "Root-rich earth")],
+        "Cultivated soil keeps its darker, matte material while sharing geometry templates"
+    );
     assert_ne!(slots[&(57, "Mineral rock")], slots[&(58, "Mineral rock")]);
     assert_ne!(slots[&(57, "Mineral rock")], slots[&(30, "Host rock")]);
     assert_ne!(slots[&(49, "Sea ice")], slots[&(5, "Soft snow")]);
@@ -569,6 +725,8 @@ fn shipped_furniture_furnace_and_chimneys_have_valid_non_degenerate_static_geome
         ("terra/blocks/models/oak_bed.gltf", 71),
         ("terra/blocks/models/birch_bed.gltf", 72),
         ("terra/blocks/models/spruce_bed.gltf", 73),
+        ("terra/blocks/models/crusher.gltf", 99),
+        ("terra/blocks/models/hand_crank.gltf", 100),
     ] {
         let model = load_static_scene(path, id);
         let bottom = model
@@ -576,7 +734,7 @@ fn shipped_furniture_furnace_and_chimneys_have_valid_non_degenerate_static_geome
             .flat_map(|p| &p.positions)
             .map(|p| p[1])
             .fold(f32::INFINITY, f32::min);
-        if matches!(id, 28 | 29 | 59 | 65..=73) {
+        if matches!(id, 28 | 29 | 59 | 65..=73 | 99) {
             assert!(
                 bottom.abs() < 0.00001,
                 "Furniture feet must touch the block floor: {path}"
@@ -590,12 +748,33 @@ fn shipped_furniture_furnace_and_chimneys_have_valid_non_degenerate_static_geome
                 .fold(f32::NEG_INFINITY, f32::max);
             assert!((top - 2.0).abs() < 0.00001);
         }
+        if id == 99 {
+            let top = model
+                .iter()
+                .flat_map(|primitive| &primitive.positions)
+                .map(|point| point[1])
+                .fold(f32::NEG_INFINITY, f32::max);
+            assert!((top - 1.23).abs() < 0.00001);
+            assert_eq!(model.len(), 14);
+        }
+        if id == 100 {
+            let top = model
+                .iter()
+                .flat_map(|primitive| &primitive.positions)
+                .map(|point| point[1])
+                .fold(f32::NEG_INFINITY, f32::max);
+            assert!((bottom - 0.205).abs() < 0.00001);
+            assert!((top - 0.715).abs() < 0.00001);
+            assert_eq!(model.len(), 7);
+        }
         assert!(model.iter().map(|p| p.positions.len()).sum::<usize>() < 16_384);
         for primitive in model {
             assert_eq!(primitive.positions.len(), primitive.normals.len());
             for point in &primitive.positions {
                 assert!(point.iter().enumerate().all(|(axis, value)| {
-                    let maximum = if (matches!(id, 59 | 65..=67) && axis == 1)
+                    let maximum = if id == 99 && axis == 1 {
+                        1.25
+                    } else if (matches!(id, 59 | 65..=67) && axis == 1)
                         || (terra_core::beds::is_bed(id) && axis == 2)
                     {
                         2.0
@@ -619,6 +798,75 @@ fn shipped_furniture_furnace_and_chimneys_have_valid_non_degenerate_static_geome
             }
         }
     }
+}
+
+#[test]
+fn crusher_housing_closes_rear_and_sides_but_keeps_output_and_crank_mount_clear() {
+    let model = load_static_scene("terra/blocks/models/crusher.gltf", 99);
+    let face_area = |axis: usize, coordinate: f32, sign: f32| {
+        model
+            .iter()
+            .flat_map(|primitive| {
+                primitive
+                    .indices
+                    .chunks_exact(3)
+                    .filter_map(move |triangle| {
+                        let points = [triangle[0], triangle[1], triangle[2]]
+                            .map(|index| Vec3::from_array(primitive.positions[index as usize]));
+                        let normal = primitive.normals[triangle[0] as usize];
+                        (normal[axis] * sign > 0.9
+                            && points
+                                .iter()
+                                .all(|point| (point[axis] - coordinate).abs() < 0.00001))
+                        .then(|| {
+                            (points[1] - points[0])
+                                .cross(points[2] - points[0])
+                                .length()
+                                * 0.5
+                        })
+                    })
+            })
+            .sum::<f32>()
+    };
+    assert!(
+        face_area(2, 0.20, 1.0) > 0.54,
+        "solid rear face must cover the crushing chamber"
+    );
+    assert!(face_area(0, 0.065, -1.0) > 0.39, "left housing panel");
+    assert!(
+        face_area(0, 0.935, 1.0) > 0.39,
+        "right housing panel behind the gear"
+    );
+    let library = BlockLibrary::load(&terra_core::asset_directory().join("terra/blocks")).unwrap();
+    let block = library.blocks.iter().find(|block| block.id == 99).unwrap();
+    let solid = |point: [f64; 3]| {
+        block.collision_boxes.iter().any(|bounds| {
+            (0..3).all(|axis| {
+                point[axis] >= bounds.minimum[axis] && point[axis] <= bounds.maximum[axis]
+            })
+        })
+    };
+    for point in [
+        [0.5, 0.45, 0.15],
+        [0.08, 0.45, 0.5],
+        [0.92, 0.45, 0.5],
+        [0.5, 0.45, 0.5],
+        [0.2725, 0.73, 0.4],
+        [0.7275, 0.73, 0.4],
+    ] {
+        assert!(
+            solid(point),
+            "closed visible panel needs matching collision at {point:?}"
+        );
+    }
+    assert!(
+        !solid([0.2725, 0.30, 0.90]),
+        "front output mouth must remain open"
+    );
+    assert!(
+        !solid([1.005, 0.455, 0.515]),
+        "housing must not intrude into the crank socket cell"
+    );
 }
 
 #[test]

@@ -7,6 +7,7 @@ pub struct BiomeWeights {
     pub highland: f64,
     pub mushroom_park: f64,
     pub cliffted_desert: f64,
+    pub cherry_forest: f64,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -35,10 +36,11 @@ pub enum BiomeKind {
     Highland,
     MushroomPark,
     ClifftedDesert,
+    CherryForest,
 }
 
 impl BiomeWeights {
-    pub fn values(self) -> [f64; 7] {
+    pub fn values(self) -> [f64; 8] {
         [
             self.ocean,
             self.plains,
@@ -47,6 +49,7 @@ impl BiomeWeights {
             self.highland,
             self.mushroom_park,
             self.cliffted_desert,
+            self.cherry_forest,
         ]
     }
     /// Only for diagnostics; generation always blends every weight.
@@ -66,6 +69,7 @@ impl BiomeWeights {
             BiomeKind::Highland,
             BiomeKind::MushroomPark,
             BiomeKind::ClifftedDesert,
+            BiomeKind::CherryForest,
         ][best]
     }
 }
@@ -97,6 +101,7 @@ impl BiomeSample {
                 + w.highland * highland
                 + w.mushroom_park * mushroom_park
                 + w.cliffted_desert * desert
+                + w.cherry_forest * forest
         };
         TerrainProfile {
             elevation: blend(-40.0, 6.0, 12.0, 10.0, 18.0, 9.0) + w.cliffted_desert * 22.0,

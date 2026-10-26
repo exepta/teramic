@@ -1,0 +1,28 @@
+{
+  "id": "teramic::pink_dye",
+  "name": "Pink Dye",
+  "station": "hand",
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "dye": "red"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "dye": "white"
+        },
+        "count": 1
+      }
+    ]
+  },
+  "output": {
+    "item": {
+      "dye": "pink"
+    },
+    "count": 2
+  }
+}

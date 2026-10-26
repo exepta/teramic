@@ -1,0 +1,16 @@
+{
+  "item": {
+    "armor": {
+      "material": "leather",
+      "piece": "gloves"
+    }
+  },
+  "name": "Leather Gloves",
+  "description": "Leather gloves fitted for protection and comfortable movement.",
+  "equipment": {
+    "slot": "gloves",
+    "armor_points": 1,
+    "health_bonus": 0,
+    "stamina_bonus": 2
+  }
+}

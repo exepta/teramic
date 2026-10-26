@@ -1,0 +1,29 @@
+2026-10-24T13:39:11.131305Z  INFO bevy_render::renderer: AdapterInfo { name: "AMD Radeon RX 6950 XT (RADV NAVI21)", vendor: 4098, device: 29605, device_type: DiscreteGpu, device_pci_bus_id: "0000:0c:00.0", driver: "radv", driver_info: "Mesa 26.2.4-arch3.1", backend: Vulkan, subgroup_min_size: 32, subgroup_max_size: 64, transient_saves_memory: false }
+2026-10-24T13:39:11.250743Z  INFO bevy_pbr::cluster: GPU clustering is supported on this device.
+2026-10-24T13:39:11.250771Z  INFO bevy_render::batching::gpu_preprocessing: GPU preprocessing is fully supported on this device.
+2026-10-24T13:39:11.251558Z  INFO bevy_winit::system: Creating new window TERAMIC (152v0)
+2026-10-24T13:39:11.882602Z  INFO terra_client::creature_audio::scene: Recorded animal/environment audio decoded clips=105
+2026-10-24T13:39:12.036555Z  INFO terra_render::scene::caves::lights::soft_core: Torch soft-core attenuation installed in existing clustered PBR path
+2026-10-24T13:39:12.037698Z  INFO terra_render::water::raymarch: Water SSR hardware depth filtering ready; multisampled views retain the original path
+2026-10-24T13:39:12.088534Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/wood.png mip_levels=10 rebound_materials=1
+2026-10-24T13:39:12.088550Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/oak-crafted-hd.png mip_levels=11 rebound_materials=0
+2026-10-24T13:39:12.088554Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/forged-iron-warm.png mip_levels=11 rebound_materials=0
+2026-10-24T13:39:12.088557Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/stone-strata-hd.png mip_levels=11 rebound_materials=1
+2026-10-24T13:39:12.091932Z  INFO terra_render::blocks::loading: Block template library ready blocks=101 materials=236
+2026-10-24T13:39:18.239686Z  INFO terra_client::mob_health_smoke: Native mob health HUD data and actual UI geometry verified stage=0 bars=1
+2026-10-24T13:39:18.267233Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/tools/benchmarks/results/mob-movement-streaming-2026-10-24/native/health/mob-health-looking-at.png
+2026-10-24T13:39:18.268005Z  INFO terra_client::mob_health_smoke: Native mob health framebuffer ROI pixels stage=0 hostile=false matching=1106 sampled=1134 bounds=Rect { min: Vec2(559.0, 292.0), max: Vec2(640.0, 306.0) }
+2026-10-24T13:39:20.269694Z  INFO terra_client::mob_health_smoke: Native mob health HUD data and actual UI geometry verified stage=1 bars=2
+2026-10-24T13:39:20.293937Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/tools/benchmarks/results/mob-movement-streaming-2026-10-24/native/health/mob-health-in-view.png
+2026-10-24T13:39:20.294750Z  INFO terra_client::mob_health_smoke: Native mob health framebuffer ROI pixels stage=1 hostile=false matching=1106 sampled=1134 bounds=Rect { min: Vec2(559.0, 292.0), max: Vec2(640.0, 306.0) }
+2026-10-24T13:39:20.294761Z  INFO terra_client::mob_health_smoke: Native mob health framebuffer ROI pixels stage=1 hostile=true matching=1090 sampled=1134 bounds=Rect { min: Vec2(312.0, 193.0), max: Vec2(393.0, 207.0) }
+2026-10-24T13:39:22.299629Z  INFO terra_client::mob_health_smoke: Native mob health HUD data and actual UI geometry verified stage=2 bars=1
+2026-10-24T13:39:22.324457Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/tools/benchmarks/results/mob-movement-streaming-2026-10-24/native/health/mob-health-occluded.png
+2026-10-24T13:39:22.325447Z  INFO terra_client::mob_health_smoke: Native mob health framebuffer ROI pixels stage=2 hostile=false matching=1106 sampled=1134 bounds=Rect { min: Vec2(559.0, 292.0), max: Vec2(640.0, 306.0) }
+2026-10-24T13:39:24.327117Z  INFO terra_client::mob_health_smoke: Native mob health HUD data and actual UI geometry verified stage=3 bars=2
+2026-10-24T13:39:24.342473Z  INFO terra_client::mob_health_smoke: Native mob health framebuffer ROI pixels stage=3 hostile=false matching=1106 sampled=1134 bounds=Rect { min: Vec2(559.0, 292.0), max: Vec2(640.0, 306.0) }
+2026-10-24T13:39:24.342497Z  INFO terra_client::mob_health_smoke: Native mob health framebuffer ROI pixels stage=3 hostile=true matching=1090 sampled=1134 bounds=Rect { min: Vec2(312.0, 193.0), max: Vec2(393.0, 207.0) }
+2026-10-24T13:39:24.355002Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/tools/benchmarks/results/mob-movement-streaming-2026-10-24/native/health/mob-health-always.png
+2026-10-24T13:39:26.347018Z  INFO terra_client::mob_health_smoke: Native mob health HUD data and actual UI geometry verified stage=4 bars=0
+2026-10-24T13:39:26.373397Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/tools/benchmarks/results/mob-movement-streaming-2026-10-24/native/health/mob-health-none.png
+2026-10-24T13:39:26.963668Z  INFO terra_client::mob_health_smoke: Native mob health HUD passed: actual projected friendly/hostile bars, aim, wall occlusion, Always and None; five nonblank captures

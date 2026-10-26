@@ -60,7 +60,11 @@ impl EditJournal {
         if !cell.validate() {
             return Err(FluidError::InvalidCell);
         }
-        Ok(self.write_fluid(global, cell)?)
+        Ok(if cell.amount == 0 && self.block(global).is_some() {
+            self.write_fluid_override(global, cell, true, true)?
+        } else {
+            self.write_fluid(global, cell)?
+        })
     }
     pub(super) fn write_fluid(
         &mut self,
@@ -75,8 +79,24 @@ impl EditJournal {
         cell: FluidCell,
         wake_simulation: bool,
     ) -> Result<bool, BlockError> {
-        let previous = self.fluid(global).unwrap_or_default();
-        if previous == cell || (previous.amount == 0 && cell.amount == 0) {
+        self.write_fluid_override(global, cell, wake_simulation, false)
+    }
+    fn write_fluid_override(
+        &mut self,
+        global: [i64; 3],
+        cell: FluidCell,
+        wake_simulation: bool,
+        force_empty: bool,
+    ) -> Result<bool, BlockError> {
+        let recorded = self.fluid(global);
+        let previous = recorded.unwrap_or_default();
+        // A deliberately emptied natural source is a dry override, unlike an
+        // ordinary sleeping/drained cell. It shares the existing saved fluid map.
+        let retain_empty = self.block(global).is_some_and(crate::water::can_hold_fluid)
+            && (recorded.is_some() || force_empty);
+        if (previous == cell || (previous.amount == 0 && cell.amount == 0))
+            && (recorded.is_some() || !retain_empty)
+        {
             return Ok(false);
         }
         let (owner, local) = global_to_section(global);
@@ -87,7 +107,7 @@ impl EditJournal {
         self.invalidate_water(global)?;
         let section = self.sections.entry(owner).or_default();
         section.fluid_epoch = epoch;
-        if cell.amount == 0 {
+        if cell.amount == 0 && !retain_empty {
             section.fluids.remove(&local);
         } else {
             section.fluids.insert(local, cell);

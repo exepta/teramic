@@ -62,9 +62,14 @@ impl DedicatedStore {
         }
         // Existing saves own this contract, even when a new template defaults to 1.
         result.ocean_revision = saved.as_ref().map_or(1, |world| world.ocean_revision);
+        result.ecology_revision = saved.as_ref().map_or(2, |world| world.ecology_revision);
         result.cave_structure_revision = saved
             .as_ref()
-            .map_or(4, |world| world.cave_structure_revision);
+            .map_or(8, |world| world.cave_structure_revision);
+        result.structures_revision = saved.as_ref().map_or(5, |world| world.structures_revision);
+        result.river_terrain_revision = saved
+            .as_ref()
+            .map_or(1, |world| world.river_terrain_revision);
         if let Some(saved) = &saved {
             result.cave_biomes = saved.cave_biomes.clone();
         }
@@ -184,7 +189,9 @@ mod tests {
         assert_eq!(resolved.geology_revision, 4);
         assert_eq!(resolved.landscape_revision, 1);
         assert_eq!(resolved.ocean_revision, 1);
-        assert_eq!(resolved.cave_structure_revision, 4);
+        assert_eq!(resolved.cave_structure_revision, 8);
+        assert_eq!(resolved.structures_revision, 5);
+        assert_eq!(resolved.river_terrain_revision, 1);
         assert_eq!(resolved.seed, requested.seed);
         assert_eq!(resolved.generator_version, requested.generator_version);
         let (store, mut journal) = DedicatedStore::open(&root, &resolved).unwrap();
@@ -198,6 +205,157 @@ mod tests {
         drop(store);
         assert!(!requested.ores.enabled);
         std::fs::remove_dir_all(root).unwrap();
+    }
+    #[test]
+    fn new_connector_clusters_do_not_upgrade_saved_cave_revisions_or_overwrite_edits() {
+        for revision in 0..=7 {
+            let root = fresh_directory();
+            let saved = WorldConfig {
+                cave_structure_revision: revision,
+                ..Default::default()
+            };
+            let (store, mut journal) = DedicatedStore::open(&root, &saved).unwrap();
+            journal.record([-17, -20, -1], 37).unwrap();
+            crate::save_edits(&store.edits_path, saved.id, &journal).unwrap();
+            drop(store);
+            let resolved =
+                DedicatedStore::resolve_world_config(&root, &WorldConfig::default()).unwrap();
+            assert_eq!(resolved.cave_structure_revision, revision);
+            assert_eq!(resolved.generator_version, saved.generator_version);
+            assert_eq!(resolved.id, saved.id);
+            let (store, restored) = DedicatedStore::open(&root, &resolved).unwrap();
+            assert_eq!(restored.block([-17, -20, -1]), Some(37));
+            drop(store);
+            std::fs::remove_dir_all(root).unwrap();
+        }
+    }
+    #[test]
+    fn structures_never_upgrade_a_saved_world_contract_or_change_its_identity() {
+        let root = fresh_directory();
+        let saved = WorldConfig::from_toml("id=171\nseed=91").unwrap();
+        assert_eq!(saved.structures_revision, 0);
+        let (store, mut journal) = DedicatedStore::open(&root, &saved).unwrap();
+        journal.record([-17, 12, -1], 16).unwrap();
+        crate::save_edits(&store.edits_path, saved.id, &journal).unwrap();
+        drop(store);
+        let manifest = root.join("world.toml");
+        let mut legacy: toml::Value =
+            toml::from_str(&std::fs::read_to_string(&manifest).unwrap()).unwrap();
+        legacy
+            .get_mut("world")
+            .unwrap()
+            .as_table_mut()
+            .unwrap()
+            .remove("structures_revision");
+        save_toml(&legacy, &manifest).unwrap();
+        let requested = WorldConfig {
+            structures_revision: 1,
+            ..saved.clone()
+        };
+        let resolved = DedicatedStore::resolve_world_config(&root, &requested).unwrap();
+        assert_eq!(resolved.structures_revision, 0);
+        assert_eq!(resolved.id, saved.id);
+        assert_eq!(resolved.seed, saved.seed);
+        let (store, restored) = DedicatedStore::open(&root, &resolved).unwrap();
+        assert_eq!(restored.block([-17, 12, -1]), Some(16));
+        drop(store);
+        std::fs::remove_dir_all(root).unwrap();
+    }
+    #[test]
+    fn populated_settlements_do_not_replace_saved_revision_one_two_or_three_structures() {
+        for revision in 1..=3 {
+            let root = fresh_directory();
+            let saved = WorldConfig {
+                structures_revision: revision,
+                ..Default::default()
+            };
+            let (store, mut journal) = DedicatedStore::open(&root, &saved).unwrap();
+            journal.record([-17, 12, -1], 16).unwrap();
+            crate::save_edits(&store.edits_path, saved.id, &journal).unwrap();
+            drop(store);
+            let resolved =
+                DedicatedStore::resolve_world_config(&root, &WorldConfig::default()).unwrap();
+            assert_eq!(resolved.structures_revision, revision);
+            assert!(resolved.same_terrain(&saved));
+            let (store, restored) = DedicatedStore::open(&root, &resolved).unwrap();
+            assert_eq!(restored.block([-17, 12, -1]), Some(16));
+            drop(store);
+            std::fs::remove_dir_all(root).unwrap();
+        }
+    }
+    #[test]
+    fn cherry_ecology_preserves_legacy_manifests_and_player_edits() {
+        for revision in 0..=1 {
+            let root = fresh_directory();
+            let saved = WorldConfig {
+                ecology_revision: revision,
+                ..Default::default()
+            };
+            let (store, mut journal) = DedicatedStore::open(&root, &saved).unwrap();
+            journal.record([-17, 12, -1], 16).unwrap();
+            crate::save_edits(&store.edits_path, saved.id, &journal).unwrap();
+            drop(store);
+            if revision == 0 {
+                let path = root.join("world.toml");
+                let mut manifest: toml::Value =
+                    toml::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
+                manifest["world"]
+                    .as_table_mut()
+                    .unwrap()
+                    .remove("ecology_revision");
+                save_toml(&manifest, &path).unwrap();
+            }
+            let requested = WorldConfig {
+                ecology_revision: 1,
+                ..saved.clone()
+            };
+            let resolved = DedicatedStore::resolve_world_config(&root, &requested).unwrap();
+            assert_eq!(resolved.ecology_revision, revision);
+            assert!(resolved.same_terrain(&saved));
+            let (store, journal) = DedicatedStore::open(&root, &resolved).unwrap();
+            assert_eq!(journal.block([-17, 12, -1]), Some(16));
+            drop(store);
+            std::fs::remove_dir_all(root).unwrap();
+        }
+    }
+
+    #[test]
+    fn river_erosion_does_not_reinterpret_legacy_waterfalls_or_player_edits() {
+        for revision in 0..=1 {
+            let root = fresh_directory();
+            let saved = WorldConfig {
+                river_terrain_revision: revision,
+                rivers: true,
+                ..Default::default()
+            };
+            let (store, mut journal) = DedicatedStore::open(&root, &saved).unwrap();
+            journal.record([-17, 12, -1], 16).unwrap();
+            crate::save_edits(&store.edits_path, saved.id, &journal).unwrap();
+            drop(store);
+            if revision == 0 {
+                let manifest = root.join("world.toml");
+                let mut legacy: toml::Value =
+                    toml::from_str(&std::fs::read_to_string(&manifest).unwrap()).unwrap();
+                legacy
+                    .get_mut("world")
+                    .unwrap()
+                    .as_table_mut()
+                    .unwrap()
+                    .remove("river_terrain_revision");
+                save_toml(&legacy, &manifest).unwrap();
+            }
+            let requested = WorldConfig {
+                river_terrain_revision: 1,
+                ..saved.clone()
+            };
+            let resolved = DedicatedStore::resolve_world_config(&root, &requested).unwrap();
+            assert_eq!(resolved.river_terrain_revision, revision);
+            assert!(resolved.same_terrain(&saved));
+            let (store, restored) = DedicatedStore::open(&root, &resolved).unwrap();
+            assert_eq!(restored.block([-17, 12, -1]), Some(16));
+            drop(store);
+            std::fs::remove_dir_all(root).unwrap();
+        }
     }
     #[test]
     fn existing_geology_one_keeps_its_terrain_and_region_edits() {

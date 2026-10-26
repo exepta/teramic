@@ -74,11 +74,12 @@ fn botanical_detail_is_deterministic_with_bounded_lod_cost() {
     let palette = PropMaterials {
         foliage: [0, 1, 2],
         stem: 3,
-        flowers: [4, 5, 6, 7, 8, 9],
+        flowers: [4, 5, 6, 7, 8, 9, 16, 17],
         mushroom: 10,
         stone: 11,
         dry_grass: [12, 13, 14],
         twig: 15,
+        crop: 2,
     };
     for variant in 0..=u8::MAX {
         for (kind, budgets) in [
@@ -93,7 +94,7 @@ fn botanical_detail_is_deterministic_with_bounded_lod_cost() {
             (
                 PropKind::Flower,
                 [
-                    match variant % 7 {
+                    match variant % 8 {
                         0 | 4 => 1260,
                         5 => 1836,
                         6 => 828,
@@ -144,12 +145,7 @@ fn botanical_detail_is_deterministic_with_bounded_lod_cost() {
                 }
                 if kind == PropKind::Flower {
                     assert!(first.iter().any(|batch| {
-                        batch.material
-                            == palette.flowers[if variant % 7 == 6 {
-                                1
-                            } else {
-                                usize::from(variant) % 7
-                            }]
+                        batch.material == palette.flowers[usize::from(variant) % 8]
                     }));
                 }
             }
@@ -162,7 +158,7 @@ fn flower_variants_have_cupped_radial_and_layered_petal_silhouettes() {
     let palette = PropMaterials {
         foliage: [0, 1, 2],
         stem: 3,
-        flowers: [4, 5, 6, 7, 8, 9],
+        flowers: [4, 5, 6, 7, 8, 9, 16, 17],
         mushroom: 10,
         stone: 11,
         ..default()
@@ -219,8 +215,21 @@ fn prop(id: u64, section: SectionPos) -> WorldProp {
 }
 
 fn section(position: SectionPos, props: Vec<WorldProp>) -> LoadedSection {
+    let mut data = BlockSection::empty(position).unwrap();
+    for z in 0..16 {
+        for x in 0..16 {
+            data.set_block([x, 0, z], 3).unwrap();
+        }
+    }
+    for prop in &props {
+        let (owner, local) =
+            terra_voxel::global_to_section(terra_world::props::placement::support(prop));
+        if owner == position {
+            data.set_block(local, 3).unwrap();
+        }
+    }
     LoadedSection {
-        data: BlockSection::empty(position).unwrap(),
+        data,
         mesh: Some(terra_voxel::meshing::BlockMesh {
             positions: vec![[1.0, 2.0, 3.0]],
             ..default()
@@ -279,11 +288,12 @@ fn app() -> App {
         prop_materials: PropMaterials {
             foliage: [0, 1, 2],
             stem: 3,
-            flowers: [4, 5, 6, 7, 4, 7],
+            flowers: [4, 5, 6, 7, 4, 7, 5, 6],
             mushroom: 8,
             stone: 9,
             dry_grass: [4, 5, 6],
             twig: 8,
+            crop: 2,
         },
         ..default()
     }));
@@ -304,6 +314,47 @@ fn settle(app: &mut App) {
         assert!(Instant::now() < deadline, "prop render jobs timed out");
         std::thread::sleep(Duration::from_millis(1));
     }
+}
+
+#[test]
+fn dense_prop_sections_keep_shared_batches_and_release_them_on_unload() {
+    let mut app = app();
+    let owner = SectionPos::default();
+    let props = (1..=64)
+        .map(|id| WorldProp {
+            position: [
+                1.5 + ((id - 1) % 8) as f64 * 1.5,
+                1.0,
+                1.5 + ((id - 1) / 8) as f64 * 1.5,
+            ],
+            ..prop(id, owner)
+        })
+        .collect();
+    app.world_mut()
+        .resource_mut::<ChunkStore>()
+        .loaded
+        .insert(owner, section(owner, props));
+    app.init_resource::<crate::MeshUploadStatus>()
+        .add_systems(First, crate::MeshUploadStatus::reset);
+    settle(&mut app);
+    let rendered = jobs::testing::snapshot(app.world(), owner).unwrap();
+    assert_eq!(rendered.count, 64);
+    assert_eq!(
+        rendered.meshes.len(),
+        1,
+        "one material layout must remain one GPU batch"
+    );
+    assert!(
+        app.world()
+            .resource::<Assets<Mesh>>()
+            .get(rendered.meshes[0])
+            .unwrap()
+            .count_vertices()
+            > crate::upload_budget::PROP_VERTICES
+    );
+    app.world_mut().resource_mut::<ChunkStore>().loaded.clear();
+    settle(&mut app);
+    assert!(app.world().resource::<Assets<Mesh>>().is_empty());
 }
 
 #[test]
@@ -742,6 +793,10 @@ fn all_prop_colors_share_one_mesh_and_material_with_linear_vertex_colors() {
         .prop_materials;
     let mut expected_colors = Vec::new();
     for (i, kind) in kinds.into_iter().enumerate() {
+        let rank = terra_world::props::seasonal::flower_rank(&WorldProp {
+            kind,
+            ..prop(i as u64, owner)
+        });
         for part in shapes::template(
             kind,
             if i == 6 { 128 } else { 0 },
@@ -757,7 +812,12 @@ fn all_prop_colors_share_one_mesh_and_material_with_linear_vertex_colors() {
             };
             for vertex in 0..part.positions.len() {
                 let shade = part.colors.get(vertex).copied().unwrap_or([1.0; 4]);
-                expected_colors.push(std::array::from_fn(|axis| source[axis] * shade[axis]));
+                expected_colors.push([
+                    source[0] * shade[0],
+                    source[1] * shade[1],
+                    source[2] * shade[2],
+                    rank,
+                ]);
             }
         }
     }
@@ -792,7 +852,15 @@ fn all_prop_colors_share_one_mesh_and_material_with_linear_vertex_colors() {
             .find(|part| part.material == material)
             .unwrap();
         let shade = part.colors.first().copied().unwrap_or([1.0; 4]);
-        let expected = std::array::from_fn(|axis| source_colors[material][axis] * shade[axis]);
+        let mut expected = std::array::from_fn(|axis| source_colors[material][axis] * shade[axis]);
+        let index = kinds
+            .iter()
+            .position(|candidate| *candidate == kind)
+            .unwrap();
+        expected[3] = terra_world::props::seasonal::flower_rank(&WorldProp {
+            kind,
+            ..prop(index as u64, owner)
+        });
         assert!(
             colors.iter().any(|color| same_color(color, &expected)),
             "{kind:?} keeps its authored material and local surface shading"
@@ -997,9 +1065,11 @@ fn first_prop_geometry_after_an_empty_batch_enters_the_animation_queue() {
             .loaded
             .insert(owner, section(owner, Vec::new()));
         settle(&mut app);
-        let empty = jobs::testing::snapshot(app.world(), owner).unwrap();
-        assert_eq!(empty.count, 0);
-        assert!(empty.meshes.is_empty());
+        assert!(
+            jobs::testing::snapshot(app.world(), owner)
+                .is_none_or(|empty| empty.count == 0 && empty.meshes.is_empty()),
+            "Untouched empty sections do not need a render-cache entry"
+        );
 
         let placed = prop(9877, owner);
         app.world_mut()
@@ -1482,9 +1552,13 @@ fn local_conditions_rebuild_only_owner_and_persist_at_negative_section_ceiling()
     let mut selected = prop(1, owner);
     selected.position[1] = -16.0;
     let original = vec![selected, prop(2, owner)];
+    let upper = owner.offset([0, 1, 0]).unwrap();
+    let mut root_space = section(upper, Vec::new());
+    root_space.data = BlockSection::empty(upper).unwrap();
     app.world_mut().resource_mut::<ChunkStore>().loaded.extend([
         (owner, section(owner, original.clone())),
         (neighbor, section(neighbor, vec![prop(3, neighbor)])),
+        (upper, root_space),
     ]);
     settle(&mut app);
     let before = jobs::testing::snapshot(app.world(), owner).unwrap();
@@ -1805,7 +1879,7 @@ fn fine_bushes_have_connected_cubic_crowns_and_bounded_berry_details() {
     let palette = PropMaterials {
         foliage: [0; 3],
         twig: 1,
-        flowers: [2; 6],
+        flowers: [2; 8],
         ..default()
     };
     for variant in 0..128 {
@@ -1863,7 +1937,7 @@ fn small_mushrooms_match_the_six_giant_cap_colors() {
     let palette = PropMaterials {
         foliage: [0, 1, 2],
         stem: 3,
-        flowers: [4, 5, 6, 7, 8, 9],
+        flowers: [4, 5, 6, 7, 8, 9, 16, 17],
         mushroom: 10,
         twig: 11,
         ..default()

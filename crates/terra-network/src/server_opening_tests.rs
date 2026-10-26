@@ -11,6 +11,108 @@ fn opening_toggle(
     toggle(position, material, facing, &mut world)
 }
 
+fn resident_opening_toggle(
+    app: &mut App,
+    position: [i64; 3],
+    material: u16,
+    facing: u8,
+    players: &[[f64; 3]],
+) -> Result<bool, String> {
+    let mut system = SystemState::<(
+        ResMut<ChunkStore>,
+        ResMut<EditJournal>,
+        Res<terra_core::block_properties::BlockPropertiesCatalog>,
+    )>::new(app.world_mut());
+    let (mut chunks, mut journal, properties) = system.get_mut(app.world_mut()).unwrap();
+    toggle_with_players(
+        position,
+        material,
+        facing,
+        &mut chunks,
+        &mut journal,
+        &properties,
+        players,
+    )
+}
+
+#[test]
+fn resident_opening_keeps_both_halves_unchanged_when_a_player_blocks_the_hinged_leaf() {
+    for facing in 0_u8..4 {
+        let mut app = app();
+        let anchor = [-16, 15, 8];
+        opening_floor(&mut app, anchor);
+        edit(
+            &mut app,
+            anchor,
+            0,
+            65,
+            f32::from(facing) * std::f32::consts::FRAC_PI_2,
+        )
+        .unwrap();
+        let journal = app.world().resource::<EditJournal>();
+        let state = journal.object_state(anchor).unwrap();
+        let peer = state.peer.unwrap();
+        let paired = journal.object_state(peer).unwrap();
+        let revisions =
+            [anchor, peer].map(|p| journal.revision(terra_voxel::global_to_section(p).0));
+        let destination = BlockObjectState {
+            facing: state.facing ^ 4,
+            ..state
+        };
+        let properties = app
+            .world()
+            .resource::<terra_core::block_properties::BlockPropertiesCatalog>();
+        let bounds = properties.shape(65).iter().find(|b| b.hinged).unwrap();
+        let leaf = terra_world::objects::opening_box(*bounds, anchor, destination);
+        let occupant = std::array::from_fn(|axis| (leaf.minimum[axis] + leaf.maximum[axis]) * 0.5);
+        assert!(resident_opening_toggle(&mut app, anchor, 65, state.facing, &[occupant]).is_err());
+        let journal = app.world().resource::<EditJournal>();
+        assert_eq!(journal.object_state(anchor), Some(state));
+        assert_eq!(journal.object_state(peer), Some(paired));
+        assert_eq!(
+            [anchor, peer].map(|p| journal.revision(terra_voxel::global_to_section(p).0)),
+            revisions
+        );
+        assert!(resident_opening_toggle(&mut app, anchor, 65, state.facing, &[]).unwrap());
+        let journal = app.world().resource::<EditJournal>();
+        assert_eq!(
+            journal.object_state(anchor).unwrap().facing,
+            state.facing ^ 4
+        );
+        assert_eq!(
+            journal.object_state(peer).unwrap().facing,
+            paired.facing ^ 4
+        );
+    }
+}
+
+#[test]
+fn resident_opening_rejects_a_missing_partner_without_opening_the_loaded_half() {
+    let mut app = app();
+    let anchor = [4, 15, 8];
+    opening_floor(&mut app, anchor);
+    edit(&mut app, anchor, 0, 65, 0.0).unwrap();
+    let journal = app.world().resource::<EditJournal>();
+    let state = journal.object_state(anchor).unwrap();
+    let peer = state.peer.unwrap();
+    let paired = journal.object_state(peer).unwrap();
+    let peer_section = terra_voxel::global_to_section(peer).0;
+    app.world_mut()
+        .resource_mut::<ChunkStore>()
+        .loaded
+        .remove(&peer_section);
+    let journal = app.world().resource::<EditJournal>();
+    let revisions = [anchor, peer].map(|p| journal.revision(terra_voxel::global_to_section(p).0));
+    assert!(resident_opening_toggle(&mut app, anchor, 65, state.facing, &[]).is_err());
+    let journal = app.world().resource::<EditJournal>();
+    assert_eq!(journal.object_state(anchor), Some(state));
+    assert_eq!(journal.object_state(peer), Some(paired));
+    assert_eq!(
+        [anchor, peer].map(|p| journal.revision(terra_voxel::global_to_section(p).0)),
+        revisions
+    );
+}
+
 fn opening_floor(app: &mut App, position: [i64; 3]) {
     for cell in [
         [position[0], position[1] - 1, position[2]],
@@ -41,6 +143,162 @@ fn opening_floor(app: &mut App, position: [i64; 3]) {
         .data
         .set_block(local, 3)
         .unwrap();
+}
+
+#[test]
+fn connected_window_toggle_is_atomic_across_sections_all_species_shapes_and_yaws() {
+    for material in 68..=70 {
+        for facing in 0..4 {
+            for (width, height) in [(2, 1), (1, 2), (2, 2)] {
+                let mut app = app();
+                let group = terra_world::objects::windows::Group {
+                    anchor: [-16, 15, -16],
+                    material,
+                    facing,
+                    width,
+                    height,
+                };
+                for p in group.cells() {
+                    let owner = terra_voxel::global_to_section(p).0;
+                    app.world_mut()
+                        .resource_mut::<ChunkStore>()
+                        .loaded
+                        .entry(owner)
+                        .or_insert_with(|| terra_world::streaming::LoadedSection {
+                            data: terra_voxel::BlockSection::empty(owner).unwrap(),
+                            mesh: None,
+                            mesh_epoch: 0,
+                            water_epoch: 0,
+                            water: None,
+                            props: Vec::new(),
+                        });
+                }
+                for p in group.cells().filter(|p| p[1] == group.anchor[1]) {
+                    opening_floor(&mut app, p);
+                }
+                for p in group.cells() {
+                    assert!(
+                        edit(
+                            &mut app,
+                            p,
+                            0,
+                            material,
+                            f32::from(facing) * std::f32::consts::FRAC_PI_2
+                        )
+                        .unwrap()
+                    );
+                }
+                let target = group.cells().last().unwrap();
+                assert!(opening_toggle(&mut app, target, material, facing).unwrap());
+                for p in group.cells() {
+                    assert_eq!(
+                        app.world()
+                            .resource::<EditJournal>()
+                            .object_state(p)
+                            .unwrap()
+                            .facing,
+                        facing + 4
+                    );
+                }
+                assert!(
+                    !opening_toggle(&mut app, target, material, facing).unwrap(),
+                    "stale command cannot reverse whole group"
+                );
+                let removed_owner = terra_voxel::global_to_section(group.anchor).0;
+                let removed = app
+                    .world_mut()
+                    .resource_mut::<ChunkStore>()
+                    .loaded
+                    .remove(&removed_owner)
+                    .unwrap();
+                assert!(opening_toggle(&mut app, target, material, facing + 4).is_err());
+                for p in group.cells() {
+                    assert_eq!(
+                        app.world()
+                            .resource::<EditJournal>()
+                            .object_state(p)
+                            .unwrap()
+                            .facing,
+                        facing + 4
+                    );
+                }
+                app.world_mut()
+                    .resource_mut::<ChunkStore>()
+                    .loaded
+                    .insert(removed_owner, removed);
+                assert!(opening_toggle(&mut app, target, material, facing + 4).unwrap());
+                for p in group.cells() {
+                    assert_eq!(
+                        app.world()
+                            .resource::<EditJournal>()
+                            .object_state(p)
+                            .unwrap()
+                            .facing,
+                        facing
+                    );
+                }
+                assert!(edit(&mut app, target, material, 0, 0.0).unwrap());
+                for p in group.cells().filter(|p| *p != target) {
+                    assert_eq!(
+                        app.world().resource::<ChunkStore>().block_at(p),
+                        Some(material)
+                    );
+                }
+            }
+        }
+    }
+}
+
+#[test]
+fn connected_window_never_rotates_either_leaf_into_a_player() {
+    let mut app = app();
+    for x in 2..=3 {
+        assert!(edit(&mut app, [x, 1, 8], 0, 68, 0.0).unwrap());
+    }
+    let body = app
+        .world_mut()
+        .spawn((
+            ServerCharacter {
+                link: Entity::PLACEHOLDER,
+            },
+            Transform::from_xyz(3.85, 1.8, 9.1),
+        ))
+        .id();
+    assert!(opening_toggle(&mut app, [2, 1, 8], 68, 0).is_err());
+    for x in 2..=3 {
+        assert_eq!(
+            app.world()
+                .resource::<EditJournal>()
+                .object_state([x, 1, 8])
+                .unwrap()
+                .facing,
+            0
+        );
+    }
+    app.world_mut().despawn(body);
+    assert!(opening_toggle(&mut app, [3, 1, 8], 68, 0).unwrap());
+    let body = app
+        .world_mut()
+        .spawn((
+            ServerCharacter {
+                link: Entity::PLACEHOLDER,
+            },
+            Transform::from_xyz(3.45, 1.8, 8.5),
+        ))
+        .id();
+    assert!(opening_toggle(&mut app, [2, 1, 8], 68, 4).is_err());
+    for x in 2..=3 {
+        assert_eq!(
+            app.world()
+                .resource::<EditJournal>()
+                .object_state([x, 1, 8])
+                .unwrap()
+                .facing,
+            4
+        );
+    }
+    app.world_mut().despawn(body);
+    assert!(opening_toggle(&mut app, [2, 1, 8], 68, 4).unwrap());
 }
 
 #[test]
@@ -129,12 +387,23 @@ fn occupied_closing_sweep_and_blocked_upper_cell_are_rejected_atomically() {
         app.world_mut().despawn(player);
         assert!(opening_toggle(&mut app, position, material, 4).unwrap());
         let before = app.world().resource::<EditJournal>().section_delta(section);
-        let player = app.world_mut().spawn((
-            ServerCharacter { link: Entity::PLACEHOLDER },
-            Transform::from_xyz(2.48, 1.9, 9.0),
-        )).id();
-        assert!(opening_toggle(&mut app, position, material, 0).is_err(), "opening must not insert its leaf into a player");
-        assert_eq!(app.world().resource::<EditJournal>().section_delta(section), before);
+        let player = app
+            .world_mut()
+            .spawn((
+                ServerCharacter {
+                    link: Entity::PLACEHOLDER,
+                },
+                Transform::from_xyz(2.48, 1.9, 9.0),
+            ))
+            .id();
+        assert!(
+            opening_toggle(&mut app, position, material, 0).is_err(),
+            "opening must not insert its leaf into a player"
+        );
+        assert_eq!(
+            app.world().resource::<EditJournal>().section_delta(section),
+            before
+        );
         app.world_mut().despawn(player);
         assert!(opening_toggle(&mut app, position, material, 0).unwrap());
     }

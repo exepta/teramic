@@ -3,6 +3,7 @@ mod cave_biomes;
 mod cave_ecology;
 mod cave_structures;
 mod connector_water;
+mod webs;
 pub use cave_biomes::{CaveBiome, CaveBiomeColumn, CaveBiomeSample};
 mod caves;
 pub use cave_structures::{CaveEcology, CaveStructure};
@@ -35,6 +36,7 @@ mod reference_tests;
 mod section_tests;
 pub mod sections;
 mod seed;
+pub mod structures;
 mod surface;
 mod terrain;
 #[cfg(test)]

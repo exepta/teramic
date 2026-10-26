@@ -44,6 +44,8 @@ struct InventoryBenchmark {
     diagnostics: crate::diagnostic_report::NativeDiagnostics,
     scopes: BTreeMap<&'static str, terra_core::profiling::ScopeSample>,
     camera: Option<Transform>,
+    transition_times: Vec<f64>,
+    transition_reported: bool,
 }
 
 pub(crate) fn install(app: &mut App) -> Result<(), String> {
@@ -71,6 +73,8 @@ pub(crate) fn install(app: &mut App) -> Result<(), String> {
         diagnostics: default(),
         scopes: BTreeMap::new(),
         camera: None,
+        transition_times: Vec::with_capacity(64),
+        transition_reported: false,
     })
     .add_systems(Last, sample);
     Ok(())
@@ -112,6 +116,9 @@ fn runtime_ready(world: &World) -> bool {
 }
 
 fn panel_ready(world: &mut World) -> bool {
+    if world.resource::<InventoryView>().layout_style != "opacity: 1; pointer-events: auto;" {
+        return false;
+    }
     world
         .query::<(&terra_ui::ElementId, &ComputedNode)>()
         .iter(world)
@@ -197,11 +204,25 @@ fn sample(world: &mut World) {
         }
         let open = world.resource::<InventoryView>().open;
         if matches!(state.stage, Stage::Opening | Stage::Closing) {
+            if !state.transition_reported && state.transition_times.len() < MAX_SAMPLES {
+                let elapsed = now.duration_since(state.previous).as_secs_f64() * 1000.0;
+                state.transition_times.push(elapsed);
+            }
+            state.previous = now;
             let ready = open == (state.stage == Stage::Opening)
                 && panel_ready(world) == (state.stage == Stage::Opening);
             if !ready {
                 state.stable_since = None;
                 return;
+            }
+            if !state.transition_reported {
+                let summary = frame_summary(&state.transition_times);
+                tracing::info!(stage = ?state.stage,
+                    request_to_visible_ms = now.duration_since(state.entered).as_secs_f64() * 1000.0,
+                    frames = state.transition_times.len(), median_ms = summary[0], p95_ms = summary[1],
+                    p99_ms = summary[2], max_ms = summary[3],
+                    "Inventory benchmark real UI transition; opening includes settled visible slot layout, not only the open flag");
+                state.transition_reported = true;
             }
             let stable_since = *state.stable_since.get_or_insert(now);
             if now.duration_since(stable_since) >= SETTLE {
@@ -239,10 +260,18 @@ fn sample(world: &mut World) {
             Stage::Closed => {
                 world.write_message(InventoryAction::Toggle);
                 state.stage = Stage::Opening;
+                state.entered = now;
+                state.previous = now;
+                state.transition_times.clear();
+                state.transition_reported = false;
             }
             Stage::Open => {
                 world.write_message(InventoryAction::Toggle);
                 state.stage = Stage::Closing;
+                state.entered = now;
+                state.previous = now;
+                state.transition_times.clear();
+                state.transition_reported = false;
             }
             Stage::ClosedAgain => {
                 state.stage = Stage::Finished;

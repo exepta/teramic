@@ -1,0 +1,13 @@
+{
+  "id": "medium_spider",
+  "spawn": { "cave_chance": 0.25 },
+  "title": "Cave Spider",
+  "health": 10.0,
+  "food": 50.0,
+  "water": 0.0,
+  "size": [0.645, 0.5, 0.695],
+  "speed": 1.35,
+  "group_size": 1,
+  "sleeps": false,
+  "combat": { "damage": 2.0, "aggro_radius": 14.0, "reach": 1.35, "cooldown": 1.35, "poison_level": 1, "poison_seconds": 25.0 }
+}

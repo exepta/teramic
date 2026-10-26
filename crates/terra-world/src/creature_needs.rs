@@ -13,6 +13,7 @@ use terra_voxel::{SectionPos, global_to_section};
 pub enum Forage {
     None,
     Prop { section: SectionPos, id: PropId },
+    Pollinate { section: SectionPos, id: PropId },
 }
 
 fn edible(kind: Kind, prop: &WorldProp) -> bool {
@@ -20,10 +21,13 @@ fn edible(kind: Kind, prop: &WorldProp) -> bool {
         && !prop.hidden_growth()
         && !prop.wall_attached()
         && match kind {
-            Kind::Cow | Kind::Sheep | Kind::Horse => prop.kind == PropKind::Grass,
+            Kind::Cow | Kind::Sheep | Kind::Horse => {
+                prop.kind == PropKind::Grass || prop.kind == PropKind::Wheat && prop.variant == 7
+            }
             Kind::Pig => {
                 matches!(prop.kind, PropKind::Mushroom | PropKind::Flower)
                     || (prop.kind == PropKind::SmallPlant && prop.variant < 128)
+                    || matches!(prop.kind, PropKind::Corn | PropKind::Lettuce) && prop.variant == 7
             }
             _ => false,
         }
@@ -144,7 +148,9 @@ pub(super) fn update(animal: &mut Creature, habitat: &Habitat, dt: f32, search: 
     animal.needs.food = (animal.needs.food - dt * (0.012 + moving * 0.003)).max(0.0);
     animal.needs.water = (animal.needs.water - dt * (0.018 + moving * 0.006)).max(0.0);
     animal.needs.search_in = (animal.needs.search_in - dt).max(0.0);
-    if animal.needs.food == 0.0 || animal.needs.water == 0.0 {
+    if animal.kind.food() > 0.0 && animal.needs.food == 0.0
+        || animal.kind.water() > 0.0 && animal.needs.water == 0.0
+    {
         animal.health = (animal.health - dt * 0.025).max(0.0);
     }
     if animal.health <= 0.0 {
@@ -179,7 +185,7 @@ pub(super) fn update(animal: &mut Creature, habitat: &Habitat, dt: f32, search: 
         let available = match goal.kind {
             NeedKind::Water => water_at(habitat, goal.position),
             NeedKind::Food => prop.is_some(),
-            NeedKind::Tree => false,
+            NeedKind::Tree | NeedKind::Shelter => false,
         };
         if !available
             || animal.needs.search_in <= 0.0
@@ -263,11 +269,67 @@ pub fn apply_forage(
     chunks: &mut ChunkStore,
     journal: &mut EditJournal,
 ) -> Result<bool, String> {
+    if let Forage::Pollinate { section, id } = effect {
+        if animal.kind != Kind::Bee {
+            return Ok(false);
+        }
+        let flower = chunks
+            .loaded
+            .get(&section)
+            .and_then(|section| {
+                section
+                    .props
+                    .iter()
+                    .find(|p| p.id == id && p.kind == PropKind::Flower && !p.removed)
+            })
+            .copied();
+        let Some(flower) = flower.filter(|p| {
+            !journal.prop_removed(p.section, p.id)
+                && crate::props::placement::supported(p, |p| chunks.block_at(p)) == Some(true)
+                && distance(p.position, animal.position) < 2.25
+        }) else {
+            return Ok(false);
+        };
+        return crate::farming::pollinate_near(chunks, journal, flower.position);
+    }
     let Forage::Prop { section, id } = effect else {
         return Ok(false);
     };
-    if !commit_prop_removal(chunks, journal, &PropRemoveRequest { section, id })? {
+    let Some(prop) = chunks
+        .loaded
+        .get(&section)
+        .and_then(|section| {
+            section
+                .props
+                .iter()
+                .find(|prop| prop.id == id && edible(animal.kind, prop))
+        })
+        .copied()
+    else {
         return Ok(false);
+    };
+    let support = support(&prop);
+    if prop.kind.crop().is_some() {
+        let Some(mut state) = journal
+            .crop_at(support)
+            .copied()
+            .filter(|state| state.mature())
+        else {
+            return Ok(false);
+        };
+        state.progress_seconds = 0.0;
+        crate::farming::commit_crop_state(chunks, journal, support, state)?;
+    } else {
+        if !commit_prop_removal(chunks, journal, &PropRemoveRequest { section, id })? {
+            return Ok(false);
+        }
+        let delay = 120.0 + (id.0 % 61) as f32;
+        if let Err(error) = journal.set_forage_regrowth(crate::farming::ForageRegrowth {
+            prop,
+            remaining_seconds: delay,
+        }) {
+            tracing::warn!(%error, "Cannot schedule grazed plant regrowth");
+        }
     }
     animal.needs.food = (animal.needs.food + 6.0).min(animal.kind.food());
     if animal.needs.water > animal.kind.water() * 0.3 {

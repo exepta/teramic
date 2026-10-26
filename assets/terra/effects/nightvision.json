@@ -1,0 +1,11 @@
+{
+  "kind": "night_vision",
+  "id": "teramic::nightvision",
+  "name": "Night Vision",
+  "description": "Improves visibility in darkness without creating a light source for other players.",
+  "beneficial": true,
+  "max_duration_seconds": 3600,
+  "max_level": 3,
+  "stacking": "refresh_strongest",
+  "modifiers": {}
+}

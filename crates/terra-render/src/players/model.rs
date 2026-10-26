@@ -59,7 +59,7 @@ impl Builder {
         }
         Ok(())
     }
-    fn bevel_box(
+    pub(crate) fn bevel_box(
         &mut self,
         position: [f32; 3],
         size: [f32; 3],
@@ -159,7 +159,7 @@ impl Builder {
         Ok(())
     }
 
-    fn triangle(&mut self, points: [Vec3; 3], color: [f32; 3]) -> Result<(), String> {
+    pub(crate) fn triangle(&mut self, points: [Vec3; 3], color: [f32; 3]) -> Result<(), String> {
         let batch = self.0.entry(0).or_default();
         let index = u32::try_from(batch.positions.len()).map_err(|_| "Avatar vertex limit")?;
         let normal = (points[1] - points[0])
@@ -258,8 +258,14 @@ impl Builder {
         Ok(())
     }
 
-    pub(crate) fn finish(mut self) -> Result<Mesh, String> {
-        let batch = self.0.remove(&0).ok_or("Empty avatar body part")?;
+    pub(crate) fn finish_batch(mut self) -> Result<MeshBatch, String> {
+        self.0
+            .remove(&0)
+            .ok_or_else(|| "Empty avatar body part".into())
+    }
+
+    pub(crate) fn finish(self) -> Result<Mesh, String> {
+        let batch = self.finish_batch()?;
         Ok(Mesh::new(
             PrimitiveTopology::TriangleList,
             RenderAssetUsages::default(),

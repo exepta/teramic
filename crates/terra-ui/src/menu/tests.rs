@@ -109,6 +109,75 @@ fn view_fog_and_animation_apply_are_persisted_and_unsaved_changes_are_discardabl
     );
     cleanup(app);
 }
+
+#[test]
+fn tree_fall_modes_are_persisted_and_default_to_current() {
+    let mut app = app();
+    assert_eq!(
+        app.world().resource::<GraphicsConfig>().tree_fall_animation,
+        terra_core::TreeFallAnimation::Current
+    );
+    command(&mut app, "options");
+    for (value, mode) in [
+        ("hell_fall", terra_core::TreeFallAnimation::HellFall),
+        ("magic", terra_core::TreeFallAnimation::Magic),
+        ("current", terra_core::TreeFallAnimation::Current),
+    ] {
+        change(&mut app, "graphics-tree-fall", value);
+        command(&mut app, "apply");
+        let file = app
+            .world()
+            .resource::<MenuPaths>()
+            .configs
+            .join("graphics.toml");
+        assert_eq!(
+            GraphicsConfig::load(file).unwrap().tree_fall_animation,
+            mode
+        );
+        assert_eq!(
+            app.world().resource::<GraphicsConfig>().tree_fall_animation,
+            mode
+        );
+    }
+    cleanup(app);
+}
+
+#[test]
+fn graphics_cave_and_tree_controls_have_visible_options_and_persist() {
+    let template = include_str!("../../../../src-ui/components/settings-row.component.html");
+    let mut app = app();
+    command(&mut app, "options");
+    for (control, values) in [
+        ("graphics-caves", &["low", "medium", "high", "ultra"][..]),
+        ("graphics-tree-fall", &["current", "hell_fall", "magic"][..]),
+    ] {
+        let marker = format!("@if (row.id == '{control}')");
+        let start = template.find(&marker).expect("Visible graphics dropdown");
+        let markup = template[start..].lines().next().unwrap();
+        assert!(markup.contains("<choice-box"));
+        assert!(markup.contains("menu_change"));
+        for value in values {
+            assert!(markup.contains(&format!("<option value=\"{value}\"")));
+        }
+    }
+    for (value, mode) in [
+        ("low", terra_core::CaveQuality::Low),
+        ("medium", terra_core::CaveQuality::Medium),
+        ("high", terra_core::CaveQuality::High),
+        ("ultra", terra_core::CaveQuality::Ultra),
+    ] {
+        change(&mut app, "graphics-caves", value);
+        command(&mut app, "apply");
+        let file = app
+            .world()
+            .resource::<MenuPaths>()
+            .configs
+            .join("graphics.toml");
+        assert_eq!(GraphicsConfig::load(file).unwrap().cave_quality, mode);
+        assert_eq!(app.world().resource::<GraphicsConfig>().cave_quality, mode);
+    }
+    cleanup(app);
+}
 fn command(app: &mut App, id: &str) {
     app.world_mut()
         .write_message(MenuAction::Command(id.into()));
@@ -184,6 +253,7 @@ fn gameplay_minimap_popup_stages_apply_reset_and_discard_with_real_config_reload
     );
     change(&mut app, "heartbeat", "false");
     change(&mut app, "view-bobbing", "false");
+    change(&mut app, "mob-health-bars", "in_view");
     assert!(app.world().resource::<GameplayConfig>().heartbeat);
     assert!(app.world().resource::<GameplayConfig>().view_bobbing);
     command(&mut app, "minimap-settings");
@@ -208,6 +278,7 @@ fn gameplay_minimap_popup_stages_apply_reset_and_discard_with_real_config_reload
     assert_eq!(applied.minimap.icon_scale, 2.3);
     assert!(!applied.heartbeat);
     assert!(!applied.view_bobbing);
+    assert_eq!(applied.mob_health_bars, terra_core::MobHealthBars::InView);
     assert!(applied.minimap.rotate && !applied.minimap.mobs);
     assert_eq!(GameplayConfig::load(&path).unwrap(), applied);
     command(&mut app, "minimap-settings");
@@ -234,6 +305,103 @@ fn gameplay_minimap_popup_stages_apply_reset_and_discard_with_real_config_reload
     command(&mut app, "apply");
     assert_eq!(*app.world().resource::<GameplayConfig>(), defaults);
     assert_eq!(GameplayConfig::load(path).unwrap(), defaults);
+    cleanup(app);
+}
+
+#[test]
+fn mob_health_editor_stages_real_color_controls_and_preserves_apply_reset_discard() {
+    use terra_core::{GameplayConfig, MobHealthBars};
+    let mut app = app();
+    let defaults = GameplayConfig::default();
+    let path = app
+        .world()
+        .resource::<MenuPaths>()
+        .configs
+        .join("gameplay.toml");
+    command(&mut app, "options");
+    command(&mut app, "gameplay-options");
+    let rows = view::gameplay_rows(&defaults);
+    assert!(rows.iter().any(|row| row.id == "mob-health-settings"
+        && row.kind == "command"
+        && row.label == "Edit Bars"));
+    assert!(!rows.iter().any(|row| row.id == "mob-health-bars"));
+    command(&mut app, "mob-health-settings");
+    assert_eq!(
+        app.world().resource::<MenuState>().dialog,
+        MenuDialog::MobHealth
+    );
+    let rows = view::mob_health_rows(&defaults);
+    assert_eq!(rows.len(), 4);
+    assert_eq!(
+        rows[0]
+            .choices
+            .iter()
+            .map(|choice| choice.label.as_str())
+            .collect::<Vec<_>>(),
+        ["View Port", "Looking At", "All Time", "None"]
+    );
+    assert!(
+        rows[1..]
+            .iter()
+            .all(|row| row.kind == "color" && row.enabled)
+    );
+    change(&mut app, "mob-health-bars", "in_view");
+    change(&mut app, "mob-health-friendly-color", "#123456");
+    change(&mut app, "mob-health-hostile-color", "#DC6E1E");
+    change(&mut app, "mob-health-font-color", "#eee0d0");
+    let staged = app.world().resource::<OptionsDraft>().gameplay.clone();
+    assert_eq!(staged.mob_health_bars, MobHealthBars::InView);
+    assert_eq!(staged.mob_health_friendly_color, [18, 52, 86]);
+    assert_eq!(staged.mob_health_hostile_color, [220, 110, 30]);
+    assert_eq!(staged.mob_health_font_color, [238, 224, 208]);
+    assert_eq!(*app.world().resource::<GameplayConfig>(), defaults);
+    assert_eq!(GameplayConfig::load(&path).unwrap(), defaults);
+    command(&mut app, "apply");
+    assert_eq!(
+        *app.world().resource::<GameplayConfig>(),
+        defaults,
+        "modal blocks underlying Apply"
+    );
+    command(&mut app, "dialog-cancel");
+    command(&mut app, "apply");
+    assert_eq!(*app.world().resource::<GameplayConfig>(), staged);
+    assert_eq!(GameplayConfig::load(&path).unwrap(), staged);
+    command(&mut app, "mob-health-settings");
+    change(&mut app, "heartbeat", "false");
+    command(&mut app, "mob-health-reset");
+    let reset = &app.world().resource::<OptionsDraft>().gameplay;
+    assert_eq!(reset.mob_health_bars, defaults.mob_health_bars);
+    assert_eq!(
+        reset.mob_health_friendly_color,
+        defaults.mob_health_friendly_color
+    );
+    assert_eq!(
+        reset.mob_health_hostile_color,
+        defaults.mob_health_hostile_color
+    );
+    assert_eq!(reset.mob_health_font_color, defaults.mob_health_font_color);
+    assert!(
+        !reset.heartbeat,
+        "bar-only Reset leaves other Gameplay preferences alone"
+    );
+    assert_eq!(*app.world().resource::<GameplayConfig>(), staged);
+    command(&mut app, "dialog-cancel");
+    command(&mut app, "back");
+    assert_eq!(
+        app.world().resource::<MenuState>().dialog,
+        MenuDialog::Discard
+    );
+    command(&mut app, "discard-confirm");
+    command(&mut app, "options");
+    assert_eq!(app.world().resource::<OptionsDraft>().gameplay, staged);
+    for invalid in ["#12", "#11223344", "#xxff00", "#Ä12345", "##112233"] {
+        assert!(options::change(app.world_mut(), "mob-health-font-color", invalid).is_err());
+        assert_eq!(app.world().resource::<OptionsDraft>().gameplay, staged);
+    }
+    assert!(
+        include_str!("../../../../src-ui/components/settings-row.component.html")
+            .contains("row.id == 'mob-health-bars'")
+    );
     cleanup(app);
 }
 
@@ -864,6 +1032,7 @@ fn ui_fps_and_material_controls_apply_reload_and_discard_in_the_existing_graphic
     change(&mut app, "graphics-leaf-detail", "low");
     change(&mut app, "graphics-micro-distance", "64");
     change(&mut app, "graphics-normal-detail", "false");
+    change(&mut app, "graphics-material-detail", "false");
     assert_eq!(app.world().resource::<GraphicsConfig>().ui_fps, 60);
     command(&mut app, "apply");
     let file = app
@@ -883,6 +1052,7 @@ fn ui_fps_and_material_controls_apply_reload_and_discard_in_the_existing_graphic
     );
     assert_eq!(saved.blocks.micro_geometry_distance, 64.0);
     assert!(!saved.blocks.normal_mapping);
+    assert!(!saved.blocks.material_detail);
     assert_eq!(
         app.world().resource::<GameConfig>().client.blocks,
         saved.blocks

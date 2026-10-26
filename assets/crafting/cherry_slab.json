@@ -1,0 +1,36 @@
+{
+  "id": "teramic::cherry_slab",
+  "name": "Cherry Half Slab",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "block": 137
+    },
+    "count": 6
+  },
+  "pattern": {
+    "kind": "shaped",
+    "width": 3,
+    "height": 1,
+    "cells": [
+      {
+        "item": {
+          "block": 135
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "block": 135
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "block": 135
+        },
+        "count": 1
+      }
+    ]
+  }
+}

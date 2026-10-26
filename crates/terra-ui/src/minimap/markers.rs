@@ -6,6 +6,45 @@ pub(super) const ICON_SIZE: usize = SIDE + 2;
 const OUTLINE: [u8; 4] = [24, 29, 30, 255];
 const ALERT: [u8; 4] = [188, 61, 52, 255];
 type Sprite = [&'static str; SIDE];
+const VILLAGER: Sprite = [
+    "   bbbbb   ",
+    "  bbbbbbb  ",
+    "  bpppppb  ",
+    "  ppepepp  ",
+    "   ppppp   ",
+    "   ppppp   ",
+    "  ggggggg  ",
+    " pgggggggp ",
+    " pgggggggp ",
+    "   bb bb   ",
+    "   bb bb   ",
+];
+const STALKER: Sprite = [
+    "   m b m   ",
+    "  bbbbbbb  ",
+    " bbeebbeeb ",
+    "bb bbbbb bb",
+    "b   bbb   b",
+    "b   bbb   b",
+    "b  bbbbb  b",
+    "b  b   b  b",
+    "b  b   b  b",
+    "bb b   b bb",
+    "  bb   bb  ",
+];
+const SPIDER: Sprite = [
+    "b b     b b",
+    " b b   b b ",
+    "  bbbbbbb  ",
+    "bboobobboob",
+    "  booooob  ",
+    " bbboeobbb ",
+    " b boeob b ",
+    "b  bbbbb  b",
+    "  b bob b  ",
+    " b   b   b ",
+    "b         b",
+];
 const HORSE: Sprite = [
     " bb     bb ",
     " bbb   bbb ",
@@ -219,6 +258,11 @@ pub(super) fn creature(
         CreatureKind::HammerheadShark => &HAMMERHEAD,
         CreatureKind::WhaleShark => &WHALESHARK,
         CreatureKind::Horse => &HORSE,
+        CreatureKind::Stalker => &STALKER,
+        CreatureKind::Villager => &VILLAGER,
+        CreatureKind::SmallSpider | CreatureKind::MediumSpider | CreatureKind::LargeSpider => {
+            &SPIDER
+        }
     };
     let outline = if hostile { ALERT } else { OUTLINE };
     for row in -1..=SIDE as i32 {
@@ -270,6 +314,23 @@ fn sample(sprite: &Sprite, x: i32, y: i32) -> u8 {
 
 fn palette(kind: CreatureKind, variant: u8, glyph: u8) -> [u8; 4] {
     let rgb = match (kind, glyph) {
+        (CreatureKind::Villager, b'p') => [222, 171, 124],
+        (CreatureKind::Villager, b'g') => [78, 132, 69],
+        (CreatureKind::Villager, b'b') => [83, 61, 43],
+        (CreatureKind::Stalker, b'b') => [103, 75, 46],
+        (CreatureKind::Stalker, b'm') => [88, 105, 36],
+        (CreatureKind::Stalker, b'e') => [255, 191, 47],
+        (
+            CreatureKind::SmallSpider | CreatureKind::MediumSpider | CreatureKind::LargeSpider,
+            b'b',
+        ) => [37, 32, 35],
+        (
+            CreatureKind::SmallSpider | CreatureKind::MediumSpider | CreatureKind::LargeSpider,
+            b'e',
+        ) => [255, 48, 24],
+        (CreatureKind::SmallSpider, b'o') => [240, 96, 34],
+        (CreatureKind::MediumSpider, b'o') => [207, 61, 21],
+        (CreatureKind::LargeSpider, b'o') => [170, 44, 24],
         (_, b'e' | b'n') => [30, 28, 29],
         (_, b'w' | b'h') => [231, 230, 211],
         (CreatureKind::Sheep, b'b') => [132, 119, 105],
@@ -346,6 +407,8 @@ mod tests {
         creature(&mut [], usize::MAX, [0, 0], CreatureKind::Bee, 0, false);
         player(&mut pixels[..3], 1, [0, 0]);
         for sprite in [
+            &STALKER,
+            &SPIDER,
             &SHEEP,
             &COW,
             &PIG,

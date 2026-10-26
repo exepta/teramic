@@ -1,0 +1,16 @@
+{
+  "item": {
+    "cape": {
+      "material": "leather",
+      "color": "white"
+    }
+  },
+  "name": "Leather Cape",
+  "description": "A layered wool cloak and folded scarf with leather straps and clasp. Recolor the cloth with flower dye.",
+  "equipment": {
+    "slot": "cape",
+    "armor_points": 1,
+    "health_bonus": 0,
+    "stamina_bonus": 3
+  }
+}

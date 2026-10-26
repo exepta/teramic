@@ -1,0 +1,34 @@
+{
+  "id": "teramic::diamond_cape_light_blue",
+  "name": "Light Blue Diamond Cape",
+  "station": "hand",
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "cape": {
+            "material": "diamond",
+            "color": "white"
+          }
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "dye": "light_blue"
+        },
+        "count": 1
+      }
+    ]
+  },
+  "output": {
+    "item": {
+      "cape": {
+        "material": "diamond",
+        "color": "light_blue"
+      }
+    },
+    "count": 1
+  }
+}

@@ -72,8 +72,14 @@ pub fn step_with_navigation(
     {
         return Forage::None;
     }
+    if animal.kind.is_spider() {
+        super::spiders::step_with_navigation(
+            animal, habitat, players, dt, search, night, navigation,
+        );
+        return Forage::None;
+    }
     if animal.kind == Kind::Bee {
-        bee(
+        return bee(
             animal,
             eco,
             habitat,
@@ -82,7 +88,6 @@ pub fn step_with_navigation(
             search,
             navigation,
         );
-        return Forage::None;
     }
     if animal.kind == Kind::Bear {
         super::bears::step_with_navigation(
@@ -132,7 +137,7 @@ fn bee(
     night: bool,
     search: bool,
     navigation: Option<&mut super::navigation::Navigation>,
-) {
+) -> Forage {
     if !eco.bees.contains_key(&a.id) {
         let nearest = eco
             .nests
@@ -184,13 +189,23 @@ fn bee(
             }
             if a.timer > dt {
                 super::step_with_flowers(a, h, &[], dt, search, Some(eco), navigation);
-                return;
+                return Forage::None;
             }
             let capacity = eco.bees.get(&a.id).map_or(0, |b| 100 - b.carried);
             let amount = eco.take_nectar(f.id.0, f.position, 25.min(capacity));
             if let Some(b) = eco.bees.get_mut(&a.id) {
                 b.carried += amount;
                 b.flower = Some(f.id.0);
+            }
+            if amount > 0 {
+                a.age += f64::from(dt);
+                a.behavior = Behavior::Fly;
+                a.timer = 0.0;
+                a.needs.goal = None;
+                return Forage::Pollinate {
+                    section: f.section,
+                    id: f.id,
+                };
             }
         }
         if a.timer <= dt {
@@ -215,7 +230,7 @@ fn bee(
             a.timer = (a.timer - dt).max(0.0);
             if night || a.timer > 0.0 {
                 a.behavior = Behavior::InNest;
-                return;
+                return Forage::None;
             }
             if h.clear(target, Kind::Bee.size(), false) {
                 a.position = target;
@@ -225,7 +240,7 @@ fn bee(
                     b.inside = false;
                 }
             }
-            return;
+            return Forage::None;
         }
         if night || state.carried >= 50 || distance(a.position, nest.position) > 100.0_f64.powi(2) {
             a.age += f64::from(dt);
@@ -234,7 +249,7 @@ fn bee(
                 if let Some(n) = eco.nests.get_mut(&state.nest) {
                     n.nectar = (n.nectar + u16::from(state.carried)).min(1000);
                 }
-                let room = eco.inside(state.nest) < 10;
+                let room = eco.inside(state.nest) < terra_core::creatures::ecology::NEST_CAPACITY;
                 if let Some(b) = eco.bees.get_mut(&a.id) {
                     b.carried = 0;
                     b.inside = room;
@@ -249,7 +264,7 @@ fn bee(
             } else {
                 super::navigation::fly_cached(a, h, target, dt, navigation);
             }
-            return;
+            return Forage::None;
         }
     } else if let Some(b) = eco.bees.get_mut(&a.id) {
         b.inside = false;
@@ -303,6 +318,7 @@ fn bee(
     if let Some(b) = eco.bees.get_mut(&a.id) {
         b.flower = flower;
     }
+    Forage::None
 }
 fn fish_leap(a: &mut Creature, h: &Habitat, dt: f32) -> bool {
     if a.behavior != Behavior::Leap

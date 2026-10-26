@@ -35,9 +35,12 @@ pub enum GameAction {
     MapZoomOut,
     FullMap,
     QuickWaypoint,
+    Dismount,
+    DebugMobBounds,
+    DebugChunkBorders,
 }
 impl GameAction {
-    pub const ALL: [Self; 29] = [
+    pub const ALL: [Self; 32] = [
         Self::Forward,
         Self::Backward,
         Self::Left,
@@ -67,6 +70,9 @@ impl GameAction {
         Self::MapZoomOut,
         Self::FullMap,
         Self::QuickWaypoint,
+        Self::Dismount,
+        Self::DebugMobBounds,
+        Self::DebugChunkBorders,
     ];
     pub fn label(self) -> &'static str {
         match self {
@@ -75,7 +81,7 @@ impl GameAction {
             Self::Left => "Move Left",
             Self::Right => "Move Right",
             Self::Jump => "Jump / Fly Up",
-            Self::FlyDown => "Fly Down",
+            Self::FlyDown => "Fly Down / Mount Sprint",
             Self::Sprint => "Sprint / Flight Boost / Dive",
             Self::Precision => "Precision Flight",
             Self::Break => "Break Block / Prop",
@@ -99,6 +105,9 @@ impl GameAction {
             Self::MapZoomOut => "Map Zoom Out",
             Self::FullMap => "Open Full Map",
             Self::QuickWaypoint => "Create Waypoint",
+            Self::Dismount => "Dismount",
+            Self::DebugMobBounds => "Mob Hitboxes",
+            Self::DebugChunkBorders => "Chunk Borders",
         }
     }
     pub fn default_binding(self) -> InputBinding {
@@ -120,6 +129,14 @@ impl GameAction {
             Self::MiniMap => KeyCode::KeyJ,
             Self::FullMap => KeyCode::KeyM,
             Self::QuickWaypoint => KeyCode::KeyN,
+            Self::Dismount => KeyCode::KeyX,
+            Self::DebugChunkBorders => KeyCode::F9,
+            Self::DebugMobBounds => {
+                return InputBinding::Chord {
+                    modifier: KeyCode::F1,
+                    key: KeyCode::KeyH,
+                };
+            }
             Self::MapZoomIn => KeyCode::Equal,
             Self::MapZoomOut => KeyCode::Minus,
             Self::DebugOverlay => KeyCode::F1,
@@ -350,6 +367,7 @@ fn read_bindings<'de, D: serde::Deserializer<'de>>(
         GameAction::QuickWaypoint,
         GameAction::MapZoomIn,
         GameAction::MapZoomOut,
+        GameAction::Dismount,
     ] {
         if bindings.contains_key(&action) {
             continue;
@@ -406,12 +424,86 @@ fn read_bindings<'de, D: serde::Deserializer<'de>>(
             })?;
         bindings.insert(GameAction::DebugCreature, binding);
     }
+    if !bindings.contains_key(&GameAction::DebugMobBounds) {
+        let binding = [KeyCode::KeyH, KeyCode::KeyG, KeyCode::KeyJ]
+            .into_iter()
+            .map(|key| InputBinding::Chord {
+                modifier: KeyCode::F1,
+                key,
+            })
+            .find(|candidate| !bindings.values().any(|value| value.conflicts(*candidate)))
+            .ok_or_else(|| serde::de::Error::custom("No free mob hitbox chord; add a binding"))?;
+        bindings.insert(GameAction::DebugMobBounds, binding);
+    }
+    if !bindings.contains_key(&GameAction::DebugChunkBorders) {
+        let binding = [KeyCode::F9, KeyCode::F10, KeyCode::F8, KeyCode::F7]
+            .into_iter()
+            .map(InputBinding::Key)
+            .find(|candidate| !bindings.values().any(|value| value.conflicts(*candidate)))
+            .ok_or_else(|| serde::de::Error::custom("No free chunk border key; add a binding"))?;
+        bindings.insert(GameAction::DebugChunkBorders, binding);
+    }
     Ok(bindings)
 }
 
 #[cfg(test)]
 mod migration_tests {
     use super::*;
+    #[test]
+    fn chunk_border_binding_migrates_without_stealing_an_existing_key() {
+        let mut old = ControlsConfig::default();
+        old.bindings.remove(&GameAction::DebugChunkBorders);
+        let loaded = ControlsConfig::from_toml(&toml::to_string(&old).unwrap()).unwrap();
+        assert_eq!(
+            loaded.binding(GameAction::DebugChunkBorders),
+            InputBinding::Key(KeyCode::F9)
+        );
+        old.bindings
+            .insert(GameAction::Place, InputBinding::Key(KeyCode::F9));
+        let loaded = ControlsConfig::from_toml(&toml::to_string(&old).unwrap()).unwrap();
+        assert_ne!(
+            loaded.binding(GameAction::DebugChunkBorders),
+            InputBinding::Key(KeyCode::F9)
+        );
+        loaded.validate().unwrap();
+    }
+    #[test]
+    fn old_controls_gain_dismount_x_and_nonconflicting_mob_hitbox_chord() {
+        let mut old = ControlsConfig::default();
+        old.bindings.remove(&GameAction::Dismount);
+        old.bindings.remove(&GameAction::DebugMobBounds);
+        let loaded = ControlsConfig::from_toml(&toml::to_string(&old).unwrap()).unwrap();
+        assert_eq!(
+            loaded.binding(GameAction::Dismount),
+            InputBinding::Key(KeyCode::KeyX)
+        );
+        assert_eq!(
+            loaded.binding(GameAction::DebugMobBounds),
+            InputBinding::Chord {
+                modifier: KeyCode::F1,
+                key: KeyCode::KeyH
+            }
+        );
+        old.bindings
+            .insert(GameAction::Place, InputBinding::Key(KeyCode::KeyX));
+        old.bindings.insert(
+            GameAction::DebugBounds,
+            InputBinding::Chord {
+                modifier: KeyCode::F1,
+                key: KeyCode::KeyH,
+            },
+        );
+        let loaded = ControlsConfig::from_toml(&toml::to_string(&old).unwrap()).unwrap();
+        assert_ne!(
+            loaded.binding(GameAction::Dismount),
+            InputBinding::Key(KeyCode::KeyX)
+        );
+        assert_ne!(
+            loaded.binding(GameAction::DebugMobBounds),
+            loaded.binding(GameAction::DebugBounds)
+        );
+        loaded.validate().unwrap();
+    }
     #[test]
     fn auto_climb_is_opt_in_and_round_trips() {
         let legacy = ControlsConfig::from_toml("mouse_sensitivity = 0.002").unwrap();
@@ -544,12 +636,36 @@ impl GameplayInput<'_> {
             .as_ref()
             .map_or_else(|| a.default_binding(), |c| c.binding(a))
     }
+    fn inspection_alias(&self) -> Option<InputBinding> {
+        let alias = InputBinding::Chord {
+            modifier: KeyCode::F1,
+            key: KeyCode::KeyE,
+        };
+        (self.binding(GameAction::DebugCreature) == GameAction::DebugCreature.default_binding()
+            && self.binding(GameAction::DebugOverlay) == GameAction::DebugOverlay.default_binding()
+            && self.binding(GameAction::Inventory) == GameAction::Inventory.default_binding()
+            && !GameAction::ALL
+                .into_iter()
+                .any(|a| a != GameAction::DebugCreature && self.binding(a).conflicts(alias)))
+        .then_some(alias)
+    }
     fn consumed_by_chord(&self, a: GameAction) -> bool {
-        GameAction::ALL
-            .into_iter()
-            .any(|other| other != a && self.binding(other).consumes(self.binding(a), &self.keys))
+        (a != GameAction::DebugCreature
+            && self
+                .inspection_alias()
+                .is_some_and(|alias| alias.consumes(self.binding(a), &self.keys)))
+            || GameAction::ALL.into_iter().any(|other| {
+                other != a && self.binding(other).consumes(self.binding(a), &self.keys)
+            })
     }
     pub fn pressed(&self, a: GameAction) -> bool {
+        if a == GameAction::DebugCreature
+            && self
+                .inspection_alias()
+                .is_some_and(|alias| alias.pressed(&self.keys, self.mouse.as_deref()))
+        {
+            return true;
+        }
         if self.config.is_none()
             && match a {
                 GameAction::Sprint => self.keys.pressed(KeyCode::ControlRight),
@@ -563,6 +679,13 @@ impl GameplayInput<'_> {
         !self.consumed_by_chord(a) && self.binding(a).pressed(&self.keys, self.mouse.as_deref())
     }
     pub fn just_pressed(&self, a: GameAction) -> bool {
+        if a == GameAction::DebugCreature
+            && self
+                .inspection_alias()
+                .is_some_and(|alias| alias.just_pressed(&self.keys, self.mouse.as_deref()))
+        {
+            return true;
+        }
         !self.consumed_by_chord(a)
             && self
                 .binding(a)
@@ -587,6 +710,49 @@ impl GameplayInput<'_> {
 #[cfg(test)]
 mod debug_input_tests {
     use super::*;
+
+    #[test]
+    fn f1_e_alias_consumes_inventory_but_respects_explicit_inspection_rebinding() {
+        #[derive(Resource, Default)]
+        struct Keys(bool, bool);
+        let mut app = App::new();
+        app.init_resource::<ButtonInput<KeyCode>>()
+            .init_resource::<ControlsConfig>()
+            .init_resource::<Keys>()
+            .add_systems(Update, |input: GameplayInput, mut keys: ResMut<Keys>| {
+                keys.0 = input.just_pressed(GameAction::DebugCreature);
+                keys.1 = input.just_pressed(GameAction::Inventory);
+            });
+        app.world_mut()
+            .resource_mut::<ButtonInput<KeyCode>>()
+            .press(KeyCode::F1);
+        app.world_mut()
+            .resource_mut::<ButtonInput<KeyCode>>()
+            .press(KeyCode::KeyE);
+        app.update();
+        assert!(app.world().resource::<Keys>().0 && !app.world().resource::<Keys>().1);
+        app.world_mut()
+            .resource_mut::<ButtonInput<KeyCode>>()
+            .reset_all();
+        app.world_mut()
+            .resource_mut::<ControlsConfig>()
+            .rebind(
+                GameAction::DebugCreature,
+                InputBinding::Chord {
+                    modifier: KeyCode::F4,
+                    key: KeyCode::KeyG,
+                },
+            )
+            .unwrap();
+        app.world_mut()
+            .resource_mut::<ButtonInput<KeyCode>>()
+            .press(KeyCode::F1);
+        app.world_mut()
+            .resource_mut::<ButtonInput<KeyCode>>()
+            .press(KeyCode::KeyE);
+        app.update();
+        assert!(!app.world().resource::<Keys>().0 && app.world().resource::<Keys>().1);
+    }
 
     #[test]
     fn eating_follows_rebound_place_and_use_and_preserves_shift_placement() {

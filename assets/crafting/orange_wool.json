@@ -1,0 +1,28 @@
+{
+  "id": "teramic::orange_wool",
+  "name": "Orange Wool",
+  "station": "hand",
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "block": 103
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "dye": "orange"
+        },
+        "count": 1
+      }
+    ]
+  },
+  "output": {
+    "item": {
+      "block": 122
+    },
+    "count": 1
+  }
+}

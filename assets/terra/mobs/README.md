@@ -59,3 +59,18 @@ Bienengenerierung verwendet. Das ist kein neues Populationssystem und keine
 Gebietsbarriere fuer Tiere. Artspezifische Populationslimits, Nahrungslisten
 und Verbrauchsraten sind noch nicht durch diese Spawnfelder konfigurierbar.
 Kein Hot-Reload: Definitionen vor dem Spiel-/Serverstart anpassen.
+
+## Dorfbewohner
+
+`villager.json` erweitert dieselbe Artenregistry. `variant_titles` entsprechen
+den zehn festen Modellrollen: Arbeitslos, Farmer, Soldat, Bogenschuetze, Wache,
+Kleriker, Pfeilmacher, Medic, Arbeiter und Holzfaeller. HP, Nahrung, Wasser,
+Koerpergroesse und Laufgeschwindigkeit verwenden die normalen Art-Felder.
+
+Bewohner werden aus bereits vorbereiteten Dorf-/Bettdaten erzeugt, nicht durch
+die zufaellige Landtier-Herdenauswahl. Jeder primaere generierte Schlafplatz
+hat genau eine stabile Bewohner-ID. Gespeicherte und tote Bewohner werden nicht
+neu ausgewuerfelt. Sie zaehlen nicht zum natuerlichen Tierlimit. Neue Doerfer
+verwenden Strukturrevision 4; alte gespeicherte Revisionen behalten ihre Gebaeude.
+Nachts laufen Bewohner durch die Haustuer zu ihrem Bett. Rechtsklick spricht
+sie an; Handel und berufliche Produktion sind noch nicht Teil dieses Grundsystems.

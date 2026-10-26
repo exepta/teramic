@@ -6,7 +6,7 @@
   "name": "Sand",
   "render_kind": "cube",
   "surface": "sand",
-  "bevel_width": 0.025,
+  "bevel_width": 0.0,
   "materials": {
     "Fine sand": {
       "texture_pattern": "sand",

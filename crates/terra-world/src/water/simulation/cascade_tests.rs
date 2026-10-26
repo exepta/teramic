@@ -4,6 +4,144 @@ use terra_core::WorldConfig;
 use terra_voxel::SectionPos;
 
 #[test]
+fn stepped_waterfall_crosses_horizontal_and_vertical_sections_partial_outlet_and_recedes_after_closing()
+ {
+    let terrain = TerraGenerator::new(WorldConfig {
+        base_height: -20.0,
+        sea_level: -30.0,
+        hill_amplitude: 0.0,
+        mountain_amplitude: 0.0,
+        caves: false,
+        biomes: false,
+        trees: false,
+        rivers: false,
+        water: true,
+        ..Default::default()
+    })
+    .unwrap();
+    let mut chunks = ChunkStore::default();
+    for x in 0..=1 {
+        for y in 0..=1 {
+            let p = SectionPos::new(x, y, 0);
+            chunks.loaded.insert(
+                p,
+                LoadedSection {
+                    data: terra_voxel::BlockSection::empty(p).unwrap(),
+                    mesh: None,
+                    water: None,
+                    props: vec![],
+                    mesh_epoch: 0,
+                    water_epoch: 0,
+                },
+            );
+        }
+    }
+    let mut put = |p: [i64; 3], material| {
+        let (owner, local) = global_to_section(p);
+        chunks
+            .loaded
+            .get_mut(&owner)
+            .unwrap()
+            .data
+            .set_block(local, material)
+            .unwrap();
+    };
+    for x in 12..=23 {
+        for z in 4..=10 {
+            put([x, 0, z], 3);
+            for y in 1..=23 {
+                if x == 12 || x == 23 || z == 4 || z == 10 {
+                    put([x, y, z], 3);
+                }
+            }
+        }
+    }
+    for x in 13..=16 {
+        for z in 5..=9 {
+            put([x, 20, z], 3);
+        }
+    }
+    for z in 5..=9 {
+        for y in 21..=23 {
+            if z != 7 || y != 21 {
+                put([16, y, z], 3);
+            }
+        }
+    }
+    for x in 17..=19 {
+        for z in 6..=8 {
+            put([x, 10, z], 3);
+        }
+    }
+    put([20, 11, 7], 82);
+    put([18, 11, 6], 74);
+    put([15, 21, 7], 27);
+    let mut journal = EditJournal::default();
+    journal
+        .set_fluid(
+            [15, 21, 7],
+            FluidCell {
+                amount: 8,
+                source: true,
+                flow: [0; 2],
+            },
+        )
+        .unwrap();
+    journal.wake_fluid_neighbors([15, 21, 7]);
+    for _ in 0..240 {
+        let step = simulate_fluid_step(&terrain, &chunks, &mut journal, 256).unwrap();
+        assert!(step.visited <= 256);
+    }
+    assert!(
+        journal
+            .fluid([17, 16, 7])
+            .is_some_and(|cell| cell.amount > 0 && !cell.source),
+        "the upper fall must physically cross the vertical section plane"
+    );
+    assert!(
+        journal
+            .fluid([20, 11, 7])
+            .is_some_and(|cell| cell.amount > 4 && !cell.source),
+        "the middle terrace must feed the real open half of the slab"
+    );
+    assert!(
+        journal
+            .fluid_cells()
+            .any(|(p, c)| p[0] >= 21 && p[1] < 5 && c.amount > 0 && !c.source),
+        "water must leave the stepped terrace and reach the lower basin"
+    );
+    assert_eq!(journal.fluid_cells().filter(|(_, c)| c.source).count(), 1);
+    let below = journal
+        .fluid_cells()
+        .filter(|(p, _)| p[0] >= 17)
+        .map(|(_, c)| u64::from(c.amount))
+        .sum::<u64>();
+    assert!(below > 100);
+    let (owner, local) = global_to_section([16, 21, 7]);
+    chunks
+        .loaded
+        .get_mut(&owner)
+        .unwrap()
+        .data
+        .set_block(local, 3)
+        .unwrap();
+    journal.record([16, 21, 7], 3).unwrap();
+    journal.wake_fluid_neighbors([16, 21, 7]);
+    for _ in 0..240 {
+        simulate_fluid_step(&terrain, &chunks, &mut journal, 256).unwrap();
+    }
+    assert!(
+        journal
+            .fluid_cells()
+            .filter(|(p, _)| p[0] >= 17)
+            .all(|(_, c)| c.amount == 0),
+        "an unsupported waterfall cannot remain after its actual upstream gate closes"
+    );
+    assert_eq!(journal.fluid([15, 21, 7]).unwrap().amount, 8);
+    assert_eq!(journal.fluid_cells().filter(|(_, c)| c.source).count(), 1);
+}
+
+#[test]
 fn generated_cascade_uses_real_gravity_cells_and_survives_delta_reload() {
     let mut config = WorldConfig::default();
     config.cave_biomes.distribution = terra_core::config::CaveDistribution {

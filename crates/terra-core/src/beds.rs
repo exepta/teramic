@@ -11,15 +11,53 @@ pub enum DyeColor {
     Green,
     Purple,
     White,
+    Black,
+    Lime,
+    Pink,
+    Gold,
+    Silver,
+    LightBlue,
 }
 impl DyeColor {
-    pub const ALL: [Self; 6] = [
+    pub const ALL: [Self; 13] = [
         Self::Red,
         Self::Yellow,
         Self::Blue,
         Self::Orange,
         Self::Green,
         Self::Purple,
+        Self::White,
+        Self::Black,
+        Self::Lime,
+        Self::Pink,
+        Self::Gold,
+        Self::Silver,
+        Self::LightBlue,
+    ];
+    // Packed bed poses predate the complete dye palette. Keep their six old slots.
+    pub const BED_COLORS: [Self; 12] = [
+        Self::Red,
+        Self::Yellow,
+        Self::Blue,
+        Self::Orange,
+        Self::Green,
+        Self::Purple,
+        Self::Black,
+        Self::Lime,
+        Self::Pink,
+        Self::Gold,
+        Self::Silver,
+        Self::LightBlue,
+    ];
+    pub const FLOWER_COLORS: [Self; 8] = [
+        Self::Red,
+        Self::Yellow,
+        Self::Blue,
+        Self::Orange,
+        Self::Green,
+        Self::Purple,
+        Self::White,
+        Self::Pink,
     ];
     pub const fn slug(self) -> &'static str {
         match self {
@@ -30,6 +68,12 @@ impl DyeColor {
             Self::Green => "green",
             Self::Purple => "purple",
             Self::White => "white",
+            Self::Black => "black",
+            Self::Lime => "lime",
+            Self::Pink => "pink",
+            Self::Gold => "gold",
+            Self::Silver => "silver",
+            Self::LightBlue => "light_blue",
         }
     }
     pub const fn tint(self) -> [f32; 4] {
@@ -41,9 +85,16 @@ impl DyeColor {
             Self::Green => [0.28, 0.59, 0.075, 1.0],
             Self::Purple => [0.48, 0.10, 0.66, 1.0],
             Self::White => [0.95, 0.94, 0.90, 1.0],
+            Self::Black => [0.035, 0.04, 0.055, 1.0],
+            Self::Lime => [0.56, 0.84, 0.10, 1.0],
+            Self::Pink => [0.97, 0.39, 0.64, 1.0],
+            Self::Gold => [0.90, 0.57, 0.055, 1.0],
+            Self::Silver => [0.64, 0.69, 0.75, 1.0],
+            Self::LightBlue => [0.25, 0.65, 0.94, 1.0],
         }
     }
 }
+pub const BED_FACING_COUNT: u8 = 4 + 4 * DyeColor::BED_COLORS.len() as u8;
 pub const fn default_bed_color(_material: u16) -> DyeColor {
     DyeColor::White
 }
@@ -76,7 +127,7 @@ pub fn supports_bed_floor(material: u16) -> bool {
 pub fn bed_color(material: u16, facing: u8) -> DyeColor {
     facing
         .checked_sub(4)
-        .and_then(|value| DyeColor::ALL.get(usize::from(value / 4)))
+        .and_then(|value| DyeColor::BED_COLORS.get(usize::from(value / 4)))
         .copied()
         .unwrap_or(default_bed_color(material))
 }
@@ -84,7 +135,7 @@ pub fn dyed_facing(facing: u8, color: DyeColor) -> u8 {
     if color == DyeColor::White {
         return facing % 4;
     }
-    4 + 4 * DyeColor::ALL
+    4 + 4 * DyeColor::BED_COLORS
         .iter()
         .position(|value| *value == color)
         .unwrap_or(0) as u8
@@ -94,6 +145,34 @@ pub fn dyed_facing(facing: u8, color: DyeColor) -> u8 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn legacy_bed_color_slots_stay_fixed_and_new_colors_use_distinct_valid_poses() {
+        let old = [
+            DyeColor::Red,
+            DyeColor::Yellow,
+            DyeColor::Blue,
+            DyeColor::Orange,
+            DyeColor::Green,
+            DyeColor::Purple,
+        ];
+        for (index, color) in old.into_iter().enumerate() {
+            for facing in 0..4 {
+                assert_eq!(dyed_facing(facing, color), 4 + index as u8 * 4 + facing);
+            }
+        }
+        let mut packed = std::collections::HashSet::new();
+        for color in DyeColor::ALL {
+            for facing in 0..4 {
+                let value = dyed_facing(facing, color);
+                assert!(value < BED_FACING_COUNT && packed.insert(value));
+                assert_eq!(bed_color(71, value), color);
+            }
+        }
+        assert_eq!(packed.len(), usize::from(BED_FACING_COUNT));
+        for facing in 0..4 {
+            assert_eq!(dyed_facing(facing, DyeColor::White), facing);
+        }
+    }
     #[test]
     fn beds_need_a_full_height_support_surface_not_a_low_or_hollow_model() {
         for material in [1, 2, 3, 4, 14, 15, 16, 20, 49] {

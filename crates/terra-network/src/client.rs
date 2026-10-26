@@ -22,6 +22,7 @@ use terra_world::{
 #[path = "client_chat.rs"]
 mod chat;
 pub use chat::{ChatCommand, ChatEntry, ClientChat, ClientChatCommands, LocateResult};
+pub use creatures::BeeNestActions;
 
 #[derive(Resource, Clone)]
 pub struct ClientLaunch {
@@ -36,6 +37,8 @@ pub struct MiningRequest(pub MiningIntent);
 
 #[derive(Message, Clone, Copy, Debug)]
 pub struct ConsumptionRequest(pub Option<u8>);
+#[derive(Resource, Default)]
+pub struct CrankInput(pub Option<[i64; 3]>);
 
 #[derive(Message, Clone, Copy, Debug)]
 pub struct ObjectInteractionRequest {
@@ -67,6 +70,11 @@ pub struct PropPlaceRequest {
     pub support: [i64; 3],
     pub kind: terra_core::ResourcePropKind,
 }
+#[derive(Message, Clone, Copy, Debug)]
+pub struct FarmToolRequest {
+    pub position: [i64; 3],
+    pub action: terra_core::farming::FarmingAction,
+}
 
 #[derive(Message, Clone, Copy, Debug)]
 pub struct ConfirmedEdit {
@@ -74,6 +82,9 @@ pub struct ConfirmedEdit {
     pub action: EditAction,
     pub outcome: EditOutcome,
 }
+
+#[derive(Message, Clone)]
+pub struct TreeCollapseEvent(pub terra_world::tree_felling::Collapse);
 
 /// Begin a new menu-selected session using the existing replica and protocol.
 pub fn connect_session(world: &mut World, token: Vec<u8>) {
@@ -94,6 +105,7 @@ pub fn connect_session(world: &mut World, token: Vec<u8>) {
     world.insert_resource(ReplicatedPlayers::default());
     world.insert_resource(SocialState::default());
     world.insert_resource(CursorShare::default());
+    world.insert_resource(CrankInput::default());
     world.insert_resource(ClientChat::default());
     world.insert_resource(ClientChatCommands::default());
     world.insert_resource(ClientLaunch { token });
@@ -110,9 +122,14 @@ pub fn disconnect_session(world: &mut World) {
     }
     let mut session = world.resource_mut::<ClientSession>();
     session.ready = false;
+    session.mounted = None;
+    session.dismount_requested = false;
     session.pending.clear();
     session.outbox.clear();
     session.pending_inputs = 0;
+    session.crop_progress.clear();
+    session.open_chests.clear();
+    session.watering_reserve = (0, 0);
     world.resource_mut::<ReplicatedPlayers>().players.clear();
     terra_world::streaming::reset_replica(world);
 }
@@ -136,6 +153,14 @@ pub struct ClientSession {
     consumption_received: Option<Instant>,
     pub consumption_completed: u64,
     pub furnaces: Vec<FurnaceVisual>,
+    pub crushers: Vec<CrusherVisual>,
+    pub crop_progress: std::collections::BTreeMap<[i64; 3], CropProgress>,
+    pub watering_reserve: (u8, u8),
+    pub open_chests: std::collections::BTreeSet<[i64; 3]>,
+    pub stalker_grip: Option<StalkerGrip>,
+    pub mounted: Option<MountedState>,
+    pub dismount_requested: bool,
+    pub(super) stalker_grip_at: Option<Instant>,
     pub inventory: terra_core::Inventory,
     pub stats: terra_core::PlayerStats,
     pub respawn_error: Option<String>,
@@ -144,6 +169,7 @@ pub struct ClientSession {
     pub inventory_response: u64,
     pub drops: Vec<terra_core::WorldDrop>,
     pub spawn: Vec3,
+    pub initial_location: Option<terra_core::PlayerLocation>,
     pub look: [f32; 2],
     pub error: Option<String>,
     pub last_edit: Option<(u64, EditOutcome)>,
@@ -181,6 +207,14 @@ impl Default for ClientSession {
             consumption_received: None,
             consumption_completed: 0,
             furnaces: Vec::new(),
+            crushers: Vec::new(),
+            crop_progress: Default::default(),
+            watering_reserve: (0, 0),
+            open_chests: Default::default(),
+            stalker_grip: None,
+            mounted: None,
+            dismount_requested: false,
+            stalker_grip_at: None,
             inventory: Default::default(),
             stats: Default::default(),
             respawn_error: None,
@@ -189,6 +223,7 @@ impl Default for ClientSession {
             inventory_response: 0,
             drops: Vec::new(),
             spawn: Vec3::ZERO,
+            initial_location: None,
             look: [0.0; 2],
             error: None,
             last_edit: None,
@@ -209,6 +244,17 @@ impl Default for ClientSession {
     }
 }
 impl ClientSession {
+    pub fn active_stalker_grip(&self) -> Option<StalkerGrip> {
+        (self.ready
+            && !self.dead()
+            && !self.teleporting
+            && self.error.is_none()
+            && self.game_mode == terra_core::GameMode::Survival)
+            .then_some(())?;
+        self.stalker_grip_at
+            .filter(|at| at.elapsed() <= Duration::from_millis(350))?;
+        self.stalker_grip
+    }
     pub fn sleeping(&self) -> Option<SleepingPlayer> {
         self.ready.then_some(())?;
         self.sleepers
@@ -265,14 +311,29 @@ impl ClientSession {
             state.velocity = Vec3::ZERO;
             return true;
         }
-        if !simulation.survival_step(
-            entity,
-            collider,
-            state,
-            input,
-            self.game_mode,
-            &mut self.predicted_vitals,
-        ) {
+        let predicted_input = self.active_stalker_grip().map_or(input, |grip| {
+            grip.movement(
+                state.position,
+                simulation.delta_seconds(),
+                self.predicted_vitals
+                    .effects
+                    .movement_multiplier(simulation.swimming_at(state.position)),
+            )
+        });
+        let moved = if let Some(mount) = self.mounted.as_mut() {
+            predict_riding(mount, state, input, simulation);
+            true
+        } else {
+            simulation.survival_step(
+                entity,
+                collider,
+                state,
+                predicted_input,
+                self.game_mode,
+                &mut self.predicted_vitals,
+            )
+        };
+        if !moved {
             return false;
         }
         self.predicted_vitals
@@ -299,6 +360,10 @@ impl ClientSession {
         true
     }
     fn fail(&mut self, error: impl Into<String>) {
+        self.mounted = None;
+        self.dismount_requested = false;
+        self.stalker_grip = None;
+        self.stalker_grip_at = None;
         self.error = Some(error.into());
         self.ready = false;
     }
@@ -323,6 +388,23 @@ pub struct RemoteTrack {
     pub interval: f32,
 }
 impl RemoteTrack {
+    pub fn mounted_yaw(&self) -> Option<f32> {
+        self.mounted_yaw_at(
+            (self.received.elapsed().as_secs_f32() / self.interval.max(0.001)).clamp(0.0, 1.0),
+        )
+    }
+    fn mounted_yaw_at(&self, fraction: f32) -> Option<f32> {
+        let mount = self.current.mounted?;
+        let previous = self
+            .previous
+            .mounted
+            .filter(|m| m.id == mount.id)
+            .unwrap_or(mount);
+        let delta = (mount.yaw - previous.yaw + std::f32::consts::PI)
+            .rem_euclid(std::f32::consts::TAU)
+            - std::f32::consts::PI;
+        Some(previous.yaw + delta * fraction.clamp(0.0, 1.0))
+    }
     pub fn display_consumption(&self) -> Option<ConsumptionProgress> {
         self.current
             .consumption
@@ -351,6 +433,52 @@ fn displayed_consumption(
     progress
 }
 
+#[cfg(test)]
+mod mounted_interpolation_tests {
+    use super::*;
+    #[test]
+    fn new_mount_snapshot_continues_from_the_presented_yaw_and_wraps_the_short_arc() {
+        let kind = terra_core::creatures::CreatureKind::Horse;
+        let horse = terra_core::creatures::Creature {
+            id: (1 << 62) + 502,
+            kind,
+            home: [0, 0],
+            position: [0.0, 1.0, 0.0],
+            velocity: [0.0; 3],
+            yaw: 0.0,
+            health: 20.0,
+            behavior: terra_core::creatures::CreatureBehavior::Rest,
+            timer: 0.0,
+            age: 0.0,
+            variant: 0,
+            needs: terra_core::creatures::CreatureNeeds::full(kind),
+        };
+        let mount = MountedState::new(&horse, 20.0, true);
+        let mut track = RemoteTrack {
+            previous: PlayerState {
+                mounted: Some(mount),
+                ..default()
+            },
+            current: PlayerState {
+                mounted: Some(MountedState { yaw: 1.0, ..mount }),
+                ..default()
+            },
+            received: Instant::now(),
+            interval: 0.1,
+        };
+        let presented = track.mounted_yaw_at(0.4).unwrap();
+        assert!((presented - 0.4).abs() < 0.0001);
+        track.previous = track.current;
+        track.previous.mounted.as_mut().unwrap().yaw = presented;
+        track.current.mounted.as_mut().unwrap().yaw = 1.3;
+        assert_eq!(track.mounted_yaw_at(0.0), Some(presented));
+        assert!(track.mounted_yaw_at(0.1).unwrap() > presented);
+        track.previous.mounted.as_mut().unwrap().yaw = 3.13;
+        track.current.mounted.as_mut().unwrap().yaw = -3.13;
+        assert!((track.mounted_yaw_at(0.5).unwrap().abs() - std::f32::consts::PI).abs() < 0.001);
+    }
+}
+
 #[derive(Resource, Default)]
 pub struct ReplicatedPlayers {
     pub players: HashMap<PlayerId, RemoteTrack>,
@@ -376,6 +504,7 @@ pub(crate) fn install(app: &mut App) {
         .add_message::<ReconnectRequest>()
         .add_message::<MiningRequest>()
         .add_message::<ConsumptionRequest>()
+        .init_resource::<CrankInput>()
         .add_message::<ObjectInteractionRequest>()
         .add_message::<InventoryRequest>()
         .add_message::<ContainerRequest>()
@@ -383,8 +512,10 @@ pub(crate) fn install(app: &mut App) {
         .init_resource::<CursorShare>()
         .add_message::<RespawnRequest>()
         .add_message::<PropPlaceRequest>()
+        .add_message::<FarmToolRequest>()
         .init_resource::<SelectedInventorySlot>()
         .add_message::<ConfirmedEdit>()
+        .add_message::<TreeCollapseEvent>()
         .insert_resource(WorldAccess::Replica { ready: false })
         .add_systems(Startup, start)
         .add_observer(connected)
@@ -400,18 +531,64 @@ pub(crate) fn install(app: &mut App) {
                 .chain()
                 .before(StreamingSet::Focus),
         )
-        .add_systems(Update, send_edits.after(StreamingSet::Edits))
+        .add_systems(
+            Update,
+            send_edits.after(StreamingSet::Edits).after(send_mining),
+        )
         .add_systems(Update, send_mining.after(StreamingSet::Edits))
         .add_systems(Update, send_consumption.after(send_mining))
         .add_systems(Update, send_inventory.after(StreamingSet::Edits))
         .add_systems(Update, send_cursor.after(StreamingSet::Edits))
         .add_systems(Update, send_respawn.after(StreamingSet::Edits))
         .add_systems(PostUpdate, send_inputs.before(MessageSystems::Send));
+    app.add_systems(
+        PostUpdate,
+        send_crank.after(send_inputs).before(MessageSystems::Send),
+    );
+}
+
+type CrankSent = (Option<PlayerId>, u32, Option<[i64; 3]>, Instant);
+fn send_crank(
+    input: Res<CrankInput>,
+    session: Res<ClientSession>,
+    mut sent: Local<Option<CrankSent>>,
+    mut senders: Query<&mut MessageSender<ClientControl>, With<Client>>,
+) {
+    if !session.ready {
+        *sent = None;
+        return;
+    }
+    let target = if session.dead() || session.teleporting {
+        None
+    } else {
+        input.0
+    };
+    let now = Instant::now();
+    if sent
+        .as_ref()
+        .is_some_and(|(player, generation, previous, at)| {
+            *player == session.player
+                && *generation == session.generation
+                && *previous == target
+                && (target.is_none() || now.duration_since(*at) < Duration::from_millis(100))
+        })
+    {
+        return;
+    }
+    if let Ok(mut sender) = senders.single_mut() {
+        sender.send::<ControlChannel>(ClientControl::Crank {
+            position: target,
+            look: session.look,
+        });
+        *sent = Some((session.player, session.generation, target, now));
+    }
 }
 
 #[path = "client_creatures.rs"]
 mod creatures;
-pub use creatures::{CreatureActions, CreatureTrack, ReplicatedCreatures};
+pub use creatures::{
+    CreatureActions, CreatureInspection, CreatureTrack, PetCommands, ReplicatedCreatures,
+};
 
 fn retry(world: &mut World) {
     if world
@@ -500,6 +677,8 @@ fn connected(
         version: PROTOCOL_VERSION,
         generator: GENERATOR_VERSION,
         effect_catalog: terra_core::effect_catalog_fingerprint(),
+        equipment_catalog: terra_core::equipment_catalog_fingerprint(),
+        crushing_catalog: terra_core::crusher::catalog_fingerprint(),
         view_distance: view,
         profile: profile.clone(),
     });
@@ -525,6 +704,7 @@ struct ReplicaWorld<'w> {
     fixed: ResMut<'w, Time<Fixed>>,
     status: ResMut<'w, ConnectionStatus>,
     confirmed: MessageWriter<'w, ConfirmedEdit>,
+    tree_collapse: MessageWriter<'w, TreeCollapseEvent>,
     section_edits: MessageWriter<'w, SectionEditApplied>,
 }
 
@@ -581,6 +761,14 @@ fn receive_controls(
             break;
         };
         let result: Result<(), String> = match message {
+            ServerControl::TreeCollapse(collapse) => {
+                if session.player.is_none() || !collapse.valid() {
+                    Err("Invalid tree collapse snapshot".into())
+                } else {
+                    world.tree_collapse.write(TreeCollapseEvent(collapse));
+                    Ok(())
+                }
+            }
             ServerControl::GameRules(rules) => {
                 if session.player.is_none() || !rules.valid() {
                     Err("Invalid world gamerules".into())
@@ -623,6 +811,7 @@ fn receive_controls(
                 world: config,
                 tick_rate,
                 spawn,
+                location,
                 allow_flight,
                 allow_build,
                 allow_environment,
@@ -638,6 +827,11 @@ fn receive_controls(
                     || uuid != world.profile.uuid
                     || config.validate().is_err()
                     || !(1..=240).contains(&tick_rate)
+                    || location.is_some_and(|location| {
+                        !location.valid()
+                            || location.position != spawn
+                            || location.flying && !allow_flight
+                    })
                     || spawn
                         .iter()
                         .any(|v| !v.is_finite() || v.abs() > 1_000_000.0)
@@ -661,6 +855,7 @@ fn receive_controls(
                             session.allow_environment = allow_environment;
                             session.game_mode = game_mode;
                             session.spawn = Vec3::from_array(spawn);
+                            session.initial_location = location;
                             world.focus.0 = spawn.map(f64::from);
                             Ok(())
                         }
@@ -778,7 +973,8 @@ fn receive_controls(
                 }
             }
             ServerControl::Stats { generation, stats } => {
-                if !stats.survival.valid() {
+                let stats = *stats;
+                if !valid_equipment_vitals(stats.survival, stats.equipment) {
                     Err("Invalid survival snapshot".into())
                 } else {
                     if generation == session.generation {
@@ -817,7 +1013,7 @@ fn receive_controls(
                 allow_flight,
                 tick,
                 state,
-            } => chat::reset_prediction(&mut session, tick, state).map(|()| {
+            } => chat::reset_prediction(&mut session, tick, *state).map(|()| {
                 session.game_mode = mode;
                 session.stats.game_mode = Some(mode);
                 session.allow_flight = allow_flight;
@@ -831,7 +1027,7 @@ fn receive_controls(
             }
             ServerControl::Teleport { tick, state } => {
                 world.focus.0 = state.position.map(f64::from);
-                chat::destination(&mut world.chat, &mut session, tick, state)
+                chat::destination(&mut world.chat, &mut session, tick, *state)
             }
             ServerControl::Reject(reason) => Err(reason),
             ServerControl::InventoryResult { outcome, inventory } => {
@@ -841,6 +1037,16 @@ fn receive_controls(
                     session.inventory = inventory;
                     session.last_inventory = Some(outcome);
                     session.inventory_response = session.inventory_response.saturating_add(1);
+                    Ok(())
+                }
+            }
+            ServerControl::ChestViewers(anchors) => {
+                if anchors.len() > 256
+                    || anchors.iter().flatten().any(|v| v.unsigned_abs() > 990_000)
+                {
+                    Err("Invalid chest viewer snapshot".into())
+                } else {
+                    session.open_chests = anchors.into_iter().collect();
                     Ok(())
                 }
             }
@@ -875,6 +1081,25 @@ fn receive_controls(
                     Ok(())
                 }
             }
+            ServerControl::Crushers(crushers) => {
+                if crushers.len() > 64 || crushers.iter().any(|value| !value.valid()) {
+                    Err("Invalid crusher visual snapshot".into())
+                } else {
+                    session.crushers = crushers;
+                    Ok(())
+                }
+            }
+            ServerControl::CropProgress(crops) => {
+                validate_crop_progress(crops).map(|crops| session.crop_progress = crops)
+            }
+            ServerControl::WateringReserve { units, capacity } => {
+                if capacity == 0 || units > capacity {
+                    Err("Invalid watering can reserve".into())
+                } else {
+                    session.watering_reserve = (units, capacity);
+                    Ok(())
+                }
+            }
             ServerControl::Container(container) => {
                 if container.as_ref().is_some_and(|snapshot| !snapshot.valid()) {
                     Err("Invalid world inventory snapshot".into())
@@ -889,6 +1114,25 @@ fn receive_controls(
             break;
         }
     }
+}
+
+fn validate_crop_progress(
+    crops: Vec<CropProgress>,
+) -> Result<std::collections::BTreeMap<[i64; 3], CropProgress>, String> {
+    let mut ids = std::collections::HashSet::new();
+    let mut samples = std::collections::BTreeMap::new();
+    if crops.len() > 256 {
+        return Err("Crop progress snapshot exceeded limit".into());
+    }
+    for crop in crops {
+        if !crop.valid()
+            || !ids.insert(crop.prop_id)
+            || samples.insert(crop.support, crop).is_some()
+        {
+            return Err("Invalid crop progress snapshot".into());
+        }
+    }
+    Ok(samples)
 }
 
 fn send_cursor(
@@ -1006,8 +1250,9 @@ fn receive_snapshots(
                 continue;
             }
             if packet.players.iter().any(|p| {
-                !p.survival.valid()
+                !valid_equipment_vitals(p.survival, p.equipment)
                     || p.consumption.is_some_and(|progress| !progress.valid())
+                    || p.mounted.is_some_and(|mount| !mount.valid())
                     || p.position
                         .iter()
                         .chain(&p.velocity)
@@ -1038,6 +1283,12 @@ fn receive_snapshots(
                     .map_or(state, |track| track.current);
                 if let Some(track) = players.players.get(&state.player) {
                     previous.position = track.position().to_array();
+                    if let Some(mount) = previous.mounted.as_mut()
+                        && state.mounted.is_some_and(|next| next.id == mount.id)
+                        && let Some(yaw) = track.mounted_yaw()
+                    {
+                        mount.yaw = yaw;
+                    }
                 }
                 players.players.insert(
                     state.player,
@@ -1073,6 +1324,49 @@ fn reconcile(
         session.fail("Invalid input acknowledgement");
         return;
     }
+    let mut state = CharacterState {
+        position: Vec3::from_array(confirmed.position),
+        velocity: Vec3::from_array(confirmed.velocity),
+        grounded: confirmed.grounded,
+    };
+    let mut vitals = confirmed.survival;
+    let mut mounted = confirmed.mounted;
+    for input in session
+        .pending
+        .iter()
+        .filter(|input| input.sequence > confirmed.ack)
+    {
+        if let Some(mount) = mounted.as_mut() {
+            predict_riding(mount, &mut state, input.character(), &simulation);
+            vitals.effects.advance(simulation.delta_seconds());
+            continue;
+        }
+        let replay_input = session.active_stalker_grip().map_or_else(
+            || input.character(),
+            |grip| {
+                grip.movement(
+                    state.position,
+                    simulation.delta_seconds(),
+                    vitals
+                        .effects
+                        .movement_multiplier(simulation.swimming_at(state.position)),
+                )
+            },
+        );
+        if !simulation.survival_step(
+            entity,
+            collider,
+            &mut state,
+            replay_input,
+            session.game_mode,
+            &mut vitals,
+        ) {
+            // Keep the current prediction until all unacknowledged input can
+            // be replayed against fresh colliders, not a partial older pose.
+            return;
+        }
+        vitals.effects.advance(simulation.delta_seconds());
+    }
     session.reconciled = tick;
     while session
         .pending
@@ -1082,32 +1376,40 @@ fn reconcile(
         session.pending.pop_front();
     }
     session.pending_inputs = session.pending.len();
-    let mut state = CharacterState {
-        position: Vec3::from_array(confirmed.position),
-        velocity: Vec3::from_array(confirmed.velocity),
-        grounded: confirmed.grounded,
-    };
-    let mut vitals = confirmed.survival;
-    for input in &session.pending {
-        if !simulation.survival_step(
-            entity,
-            collider,
-            &mut state,
-            input.character(),
-            session.game_mode,
-            &mut vitals,
-        ) {
-            break;
-        }
-        vitals.effects.advance(simulation.delta_seconds());
-    }
     session.predicted_vitals = vitals;
+    session.mounted = mounted;
     if let Some(mut pose) = pose {
         pose.reconcile(transform.translation, state.position);
     }
     transform.translation = state.position;
     velocity.0 = state.velocity;
     grounded.0 = state.grounded;
+}
+
+fn predict_riding(
+    mount: &mut MountedState,
+    state: &mut CharacterState,
+    input: CharacterInput,
+    simulation: &CharacterSimulation,
+) {
+    let mut horse = mount.horse();
+    let grounded = simulation.ride_step(&mut horse, &mut mount.stamina, input);
+    state.position = simulation.riding_position(&horse);
+    state.velocity = Vec3::from_array(horse.velocity);
+    state.grounded = grounded;
+    *mount = MountedState::new(&horse, mount.stamina, grounded);
+}
+
+pub(crate) fn valid_equipment_vitals(
+    vitals: terra_core::SurvivalVitals,
+    equipment: terra_core::EquipmentSlots,
+) -> bool {
+    if !vitals.valid() || !equipment.valid() {
+        return false;
+    }
+    let mut derived = vitals;
+    derived.apply_equipment(equipment);
+    derived == vitals
 }
 
 fn check_link(
@@ -1187,6 +1489,7 @@ struct EditRequests<'w, 's> {
     blocks: MessageReader<'w, 's, BlockEditRequest>,
     props: MessageReader<'w, 's, PropRemoveRequest>,
     planted: MessageReader<'w, 's, PropPlaceRequest>,
+    farming: MessageReader<'w, 's, FarmToolRequest>,
     surfaces: MessageReader<'w, 's, terra_world::environment::SurfaceConditionRequest>,
 }
 
@@ -1230,6 +1533,12 @@ fn send_edits(
             kind: edit.kind,
         });
     }
+    for edit in requests.farming.read() {
+        actions.push(EditAction::Farm {
+            position: edit.position,
+            action: edit.action,
+        });
+    }
     if !session.ready {
         return;
     }
@@ -1248,6 +1557,24 @@ fn send_edits(
             EditAction::Surface { position, .. } => {
                 journal.appearance_epoch(terra_voxel::global_to_section(position).0)
             }
+            EditAction::Farm { position, action } => {
+                let section = terra_voxel::global_to_section(position).0;
+                if matches!(
+                    action,
+                    terra_core::farming::FarmingAction::FillBucket
+                        | terra_core::farming::FarmingAction::EmptyBucket
+                ) {
+                    journal.water_mesh_epoch(section)
+                } else if matches!(
+                    action,
+                    terra_core::farming::FarmingAction::Till
+                        | terra_core::farming::FarmingAction::Refill
+                ) {
+                    journal.revision(section)
+                } else {
+                    journal.prop_epoch(section)
+                }
+            }
         };
         let Some(mut command) = session.edit_command(revision, action) else {
             session.fail("Edit request sequence exhausted");
@@ -1257,8 +1584,9 @@ fn send_edits(
             action,
             EditAction::Block { material: 1.., .. }
                 | EditAction::PlaceProp { .. }
+                | EditAction::Farm { .. }
                 | EditAction::ToggleObject {
-                    expected: 71..=73,
+                    expected: 71..=73 | 131,
                     ..
                 }
         ) {
@@ -1274,6 +1602,10 @@ fn send_edits(
 #[cfg(test)]
 #[path = "client_section_tests.rs"]
 mod section_tests;
+
+#[cfg(test)]
+#[path = "client_reconciliation_tests.rs"]
+mod reconciliation_tests;
 
 #[cfg(test)]
 mod consumption_presentation_tests {
@@ -1315,5 +1647,69 @@ mod consumption_presentation_tests {
         };
         assert_eq!(session.display_consumption(), Some(progress));
         assert!(ClientSession::default().display_consumption().is_none());
+    }
+}
+
+#[cfg(test)]
+mod crop_progress_tests {
+    use super::*;
+    fn sample() -> CropProgress {
+        CropProgress {
+            support: [-17, 15, -1],
+            kind: terra_core::CropKind::Wheat,
+            prop_id: 91,
+            progress: 0.574,
+            moisture: 0.8,
+        }
+    }
+    #[test]
+    fn progress_snapshots_are_bounded_unique_and_preserve_actual_growth() {
+        let crop = sample();
+        let samples = validate_crop_progress(vec![crop]).unwrap();
+        assert_eq!(samples[&crop.support], crop);
+        assert!(validate_crop_progress(Vec::new()).unwrap().is_empty());
+        assert!(validate_crop_progress(vec![crop; 257]).is_err());
+        assert!(validate_crop_progress(vec![crop, crop]).is_err());
+        assert!(
+            validate_crop_progress(vec![
+                crop,
+                CropProgress {
+                    support: [1, 15, 2],
+                    ..crop
+                }
+            ])
+            .is_err()
+        );
+        assert!(
+            validate_crop_progress(vec![
+                crop,
+                CropProgress {
+                    prop_id: 92,
+                    ..crop
+                }
+            ])
+            .is_err()
+        );
+        for invalid in [
+            CropProgress {
+                progress: f32::NAN,
+                ..crop
+            },
+            CropProgress {
+                progress: 1.01,
+                ..crop
+            },
+            CropProgress {
+                moisture: -0.1,
+                ..crop
+            },
+            CropProgress { prop_id: 0, ..crop },
+            CropProgress {
+                support: [i64::MIN, 15, 0],
+                ..crop
+            },
+        ] {
+            assert!(validate_crop_progress(vec![invalid]).is_err());
+        }
     }
 }

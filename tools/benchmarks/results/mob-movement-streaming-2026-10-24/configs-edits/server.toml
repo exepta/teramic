@@ -1,0 +1,11 @@
+title = "TERAMIC Server"
+game_mode = "creative"
+save_directory = "worlds"
+description = "A shared voxel world"
+lan_discovery = true
+require_verified_accounts = false
+bind_address = "127.0.0.1:5000"
+tick_rate = 60
+max_players = 32
+log_filter = "info"
+simulation_distance = 1

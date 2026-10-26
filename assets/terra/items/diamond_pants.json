@@ -1,0 +1,16 @@
+{
+  "item": {
+    "armor": {
+      "material": "diamond",
+      "piece": "pants"
+    }
+  },
+  "name": "Diamond Pants",
+  "description": "Diamond pants fitted for protection and comfortable movement.",
+  "equipment": {
+    "slot": "pants",
+    "armor_points": 7.5,
+    "health_bonus": 4,
+    "stamina_bonus": 4
+  }
+}

@@ -1,0 +1,24 @@
+
+running 7 tests
+test generation::caves::connectors_tests::widened_connector_samples_are_order_independent_and_smooth_at_negative_section_and_region_seams ... ok
+test generation::caves::connectors_tests::clustered_network_is_reload_order_independent_and_continuous_at_negative_boundaries ... ok
+test generation::caves::connectors_tests::legacy_cave_revisions_zero_through_six_keep_their_original_connector_fields ... ok
+seed 7: retained rooms=70, suppressed rooms=53
+seed 42042: retained rooms=67, suppressed rooms=57
+test generation::caves::connectors_tests::wider_connectors_retain_the_same_seeded_network_and_open_additional_real_passage_cells ... ok
+seed 7: solid=0.434, passage_retained=0.561, adjacent=0.932, distant=0.518
+seed 7: longest sampled solid band=124m
+seed 98173: retained rooms=56, suppressed rooms=48
+test generation::caves::connectors_tests::chamber_presence_uses_the_same_clusters_without_shrinking_selected_rooms ... ok
+seed 42042: solid=0.424, passage_retained=0.578, adjacent=0.927, distant=0.514
+seed 42042: longest sampled solid band=160m
+seed 98173: solid=0.423, passage_retained=0.581, adjacent=0.931, distant=0.493
+seed 98173: longest sampled solid band=188m
+test generation::caves::connectors_tests::clustered_connectors_preserve_wide_passages_but_leave_coherent_rock_between_them ... ok
+seed 7: actual open samples 7062->4128, chamber columns 593->374
+seed 42042: actual open samples 7169->4010, chamber columns 373->224
+seed 98173: actual open samples 8090->4813, chamber columns 421->267
+test generation::caves::connectors_tests::actual_underground_air_volume_and_discovered_chambers_are_reduced_across_seeds ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 548 filtered out; finished in 2.23s
+

@@ -1,6 +1,153 @@
 use super::*;
 
 #[test]
+fn village_building_blocks_are_real_obtainable_recipes_in_the_existing_book() {
+    let book = RecipeBook::builtins();
+    for (slug, material) in [
+        ("path", 102),
+        ("wool_block", 103),
+        ("wool_stairs", 104),
+        ("wool_slab", 105),
+    ] {
+        let recipe = book.get(key(slug)).unwrap();
+        assert_eq!(recipe.output.item, ItemKind::Block(material));
+        let mut bag = Inventory::default();
+        for ingredient in recipe.ingredients() {
+            assert_eq!(bag.insert(ingredient.item, ingredient.count), 0);
+        }
+        book.craft(
+            &mut bag,
+            recipe.key(),
+            1,
+            recipe.station,
+            CraftDestination::Cursor,
+        )
+        .unwrap();
+        assert_eq!(bag.cursor, Some(recipe.output));
+        assert_eq!(bag.occupied_slots(), 0);
+    }
+    let catalog = crate::block_properties::BlockPropertiesCatalog::load(
+        &crate::asset_directory().join("terra/blocks"),
+    )
+    .unwrap();
+    assert_eq!(catalog.shape(102), crate::block_shapes::builtin_boxes(102));
+    assert_eq!(catalog.shape(102)[0].maximum[1], 0.9375);
+    assert_eq!(crate::block_shapes::builtin_boxes(104).len(), 3);
+    assert_eq!(crate::block_shapes::builtin_boxes(105)[0].maximum[1], 0.5);
+}
+
+#[test]
+fn all_palette_dyes_have_one_catalog_item_and_a_working_data_defined_recipe() {
+    let book = RecipeBook::builtins();
+    for color in crate::beds::DyeColor::ALL {
+        let item = ItemKind::Dye(color);
+        assert_eq!(
+            ItemKind::EXTRA
+                .iter()
+                .filter(|candidate| **candidate == item)
+                .count(),
+            1
+        );
+        let recipe = book.get(key(&format!("{}_dye", color.slug()))).unwrap();
+        assert_eq!(recipe.output.item, item);
+        let mut inventory = Inventory::default();
+        for ingredient in recipe.ingredients() {
+            assert_eq!(inventory.insert(ingredient.item, ingredient.count), 0);
+        }
+        book.craft(
+            &mut inventory,
+            recipe.key(),
+            1,
+            CraftStation::Hand,
+            CraftDestination::Cursor,
+        )
+        .unwrap();
+        assert_eq!(inventory.cursor, Some(recipe.output));
+        assert_eq!(inventory.occupied_slots(), 0);
+        let definition: serde_json::Value = serde_json::from_str(
+            &std::fs::read_to_string(
+                crate::asset_directory()
+                    .join("terra/items")
+                    .join(format!("{}_dye.json", color.slug())),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(
+            serde_json::from_value::<ItemKind>(definition["item"].clone()).unwrap(),
+            item
+        );
+    }
+}
+
+#[test]
+fn all_tools_have_unique_catalog_entries_and_valid_shaped_workbench_recipes() {
+    let book = RecipeBook::builtins();
+    let mut slugs = std::collections::HashSet::new();
+    for tool in crate::ToolKind::ALL {
+        let item = ItemKind::Tool(tool);
+        assert!(slugs.insert(tool.slug()));
+        assert_eq!(
+            ItemKind::EXTRA
+                .iter()
+                .filter(|candidate| **candidate == item)
+                .count(),
+            1
+        );
+        if tool == crate::ToolKind::WaterBucket {
+            assert!(
+                book.get(key(tool.slug())).is_none(),
+                "water is collected, never crafted for free"
+            );
+            continue;
+        }
+        let recipe = book.get(key(tool.slug())).unwrap();
+        assert_eq!(recipe.output.item, item);
+        assert_eq!(recipe.station, CraftStation::Workbench);
+        assert!(matches!(recipe.pattern, RecipePattern::Shaped { .. }));
+        let mut inventory = Inventory::default();
+        for ingredient in recipe.ingredients() {
+            assert_eq!(inventory.insert(ingredient.item, ingredient.count), 0);
+        }
+        let before = inventory.clone();
+        assert_eq!(
+            book.craft(
+                &mut inventory,
+                recipe.key(),
+                1,
+                CraftStation::Hand,
+                CraftDestination::Cursor
+            ),
+            Err(CraftError::WrongStation)
+        );
+        assert_eq!(inventory, before);
+        book.craft(
+            &mut inventory,
+            recipe.key(),
+            1,
+            CraftStation::Workbench,
+            CraftDestination::Cursor,
+        )
+        .unwrap();
+        assert_eq!(inventory.cursor, Some(recipe.output));
+        assert_eq!(inventory.occupied_slots(), 0);
+        let definition: serde_json::Value = serde_json::from_str(
+            &std::fs::read_to_string(
+                crate::asset_directory()
+                    .join("terra/items")
+                    .join(format!("{}.json", tool.slug())),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(
+            serde_json::from_value::<ItemKind>(definition["item"].clone()).unwrap(),
+            item
+        );
+    }
+}
+
+#[test]
 fn beds_are_white_by_default_and_any_existing_fabric_can_be_recolored_in_a_two_by_two_grid() {
     let book = RecipeBook::builtins();
     for material in 71..=73 {
@@ -82,6 +229,65 @@ fn flower_dyes_mix_and_beds_require_their_own_wood_and_wool() {
         assert_eq!(bag.count(ItemKind::Block(material)), 1);
         assert_eq!(bag.count(ItemKind::Block(wood)), 0);
     }
+}
+
+#[test]
+fn legacy_flower_and_mixed_dye_recipes_preserve_harvested_flower_route() {
+    let book = RecipeBook::builtins();
+    for flower in crate::beds::DyeColor::FLOWER_COLORS {
+        let mut bag = Inventory::default();
+        let input = ItemKind::Flower(flower);
+        let grass = ItemKind::Prop(crate::ResourcePropKind::Grass);
+        let small_plant = ItemKind::Prop(crate::ResourcePropKind::SmallPlant);
+        bag.insert(input, 6);
+        bag.insert(grass, 3);
+        bag.insert(small_plant, 3);
+        let revision = bag.revision;
+        // The primary dyes use flowers; the three secondary dyes mix those outputs.
+        for (step, dye) in crate::beds::DyeColor::BED_COLORS[..6]
+            .iter()
+            .copied()
+            .enumerate()
+        {
+            let batches = if matches!(
+                dye,
+                crate::beds::DyeColor::Yellow | crate::beds::DyeColor::Blue
+            ) {
+                2
+            } else {
+                1
+            };
+            book.craft(
+                &mut bag,
+                key(&format!("{}_dye", dye.slug())),
+                batches,
+                CraftStation::Hand,
+                CraftDestination::Inventory,
+            )
+            .unwrap();
+            assert_eq!(bag.count(input), [5, 3, 1, 1, 1, 1][step]);
+            assert_eq!(bag.count(ItemKind::Dye(dye)), if step < 3 { 2 } else { 1 });
+            assert_eq!(bag.count(grass), if step == 0 { 3 } else { 1 });
+            assert_eq!(bag.count(small_plant), if step < 2 { 3 } else { 1 });
+            assert_eq!(bag.revision, revision + step as u64 + 1);
+            assert!(bag.cursor.is_none());
+        }
+        for dye in [
+            crate::beds::DyeColor::Red,
+            crate::beds::DyeColor::Yellow,
+            crate::beds::DyeColor::Blue,
+        ] {
+            assert_eq!(bag.count(ItemKind::Dye(dye)), 0);
+        }
+    }
+    let exact_flower = Ingredient {
+        item: ItemKind::Flower(crate::beds::DyeColor::Red),
+        count: 1,
+        wood: false,
+    };
+    assert!(exact_flower.matches(ItemKind::Flower(crate::beds::DyeColor::Red)));
+    assert!(!exact_flower.matches(ItemKind::Flower(crate::beds::DyeColor::Blue)));
+    assert!(!exact_flower.matches(ItemKind::Prop(crate::ResourcePropKind::Flower)));
 }
 
 #[test]
@@ -536,7 +742,20 @@ fn reserved_shapeless_crafting_commits_the_validated_assignment_not_full_stack_a
 fn builtin_recipes_are_valid_and_catalog_roundtrip_preserves_keys() {
     let book = RecipeBook::builtins();
     assert_eq!(book.error, None);
-    assert_eq!(book.iter().count(), 79);
+    assert_eq!(
+        book.iter().count(),
+        86 + crate::ArmorItem::ALL.len()
+            + crate::AccessoryKind::ALL.len()
+            + crate::CapeItem::ALL.len()
+            + crate::CapeItem::ALL_WHITE.len()
+            + 2
+            + 39
+            + 5
+            + 16
+            + 4
+            + 2 * crate::beds::DyeColor::ALL.len()
+            + 2
+    );
     for id in [
         "furnace",
         "chimney_straight",
@@ -552,6 +771,77 @@ fn builtin_recipes_are_valid_and_catalog_roundtrip_preserves_keys() {
         "ruby_bellows",
     ] {
         assert!(book.get(key(id)).is_some(), "Missing builtin recipe {id}");
+    }
+    for (base, suffix) in [
+        (crate::textiles::WHITE_WOOL, "wool"),
+        (crate::textiles::WHITE_CARPET, "carpet"),
+    ] {
+        for color in crate::beds::DyeColor::ALL {
+            let id = format!("{}_{}", color.slug(), suffix);
+            let recipe = book.get(key(&id)).unwrap();
+            assert_eq!(recipe.station, CraftStation::Hand);
+            assert!(matches!(recipe.pattern, RecipePattern::Shapeless { .. }));
+            assert_eq!(
+                recipe.output,
+                ItemStack {
+                    item: ItemKind::Block(crate::textiles::dyed(base, color).unwrap()),
+                    count: 1,
+                }
+            );
+            let ingredients = recipe.ingredients();
+            assert_eq!(ingredients.len(), 2);
+            for item in [ItemKind::Block(base), ItemKind::Dye(color)] {
+                assert!(ingredients.contains(&Ingredient {
+                    item,
+                    count: 1,
+                    wood: false,
+                }));
+            }
+        }
+    }
+    for (id, station, source, amount, output, count) in [
+        (
+            "carpet",
+            CraftStation::Hand,
+            crate::textiles::WHITE_WOOL,
+            2,
+            crate::textiles::WHITE_CARPET,
+            3,
+        ),
+        (
+            "flower_pot",
+            CraftStation::Workbench,
+            19,
+            3,
+            crate::flower_pot::MATERIAL,
+            1,
+        ),
+    ] {
+        let recipe = book.get(key(id)).unwrap();
+        assert_eq!(recipe.station, station);
+        assert!(matches!(recipe.pattern, RecipePattern::Shaped { .. }));
+        assert_eq!(
+            recipe.ingredients(),
+            vec![Ingredient {
+                item: ItemKind::Block(source),
+                count: amount,
+                wood: false,
+            }]
+        );
+        assert_eq!(
+            recipe.output,
+            ItemStack {
+                item: ItemKind::Block(output),
+                count,
+            }
+        );
+    }
+    for item in crate::ArmorItem::ALL
+        .map(ItemKind::Armor)
+        .into_iter()
+        .chain(crate::AccessoryKind::ALL.map(ItemKind::Accessory))
+    {
+        assert!(book.iter().any(|recipe| recipe.output.item == item));
     }
     let copy = RecipeBook::from_json(&book.to_json().unwrap()).unwrap();
     assert_eq!(copy.snapshot(), book.snapshot());

@@ -1,0 +1,28 @@
+{
+  "id": "teramic::silver_dye",
+  "name": "Silver Dye",
+  "station": "hand",
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "dye": "white"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "dye": "black"
+        },
+        "count": 1
+      }
+    ]
+  },
+  "output": {
+    "item": {
+      "dye": "silver"
+    },
+    "count": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "id": "teramic::gold_hoe",
+  "name": "Gold Hoe",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "tool": "gold_hoe"
+    },
+    "count": 1
+  },
+  "pattern": {
+    "kind": "shaped",
+    "width": 2,
+    "height": 3,
+    "cells": [
+      {
+        "item": {
+          "mineral": "gold_ingot"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "mineral": "gold_ingot"
+        },
+        "count": 1
+      },
+      null,
+      {
+        "item": "stick",
+        "count": 1
+      },
+      null,
+      {
+        "item": "stick",
+        "count": 1
+      }
+    ]
+  }
+}

@@ -722,6 +722,8 @@ mod tests {
     fn smoke_damage_is_two_per_second_and_uses_survival_damage_and_death_rules() {
         let now = Instant::now();
         let mut peer = Peer {
+            farming: Default::default(),
+            crank: Default::default(),
             chest_cursor: None,
             creature_action_at: now,
             container: None,
@@ -757,8 +759,11 @@ mod tests {
             edits_left: 20.0,
             rate_time: now,
             spawned: true,
+            restored_spawn: false,
+            restore_location: None,
             last_movement: Default::default(),
             vitals: Default::default(),
+            equipment: Default::default(),
             survival: Default::default(),
             stats_sent: None,
         };

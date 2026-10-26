@@ -26,9 +26,18 @@ pub struct Ingredient {
 impl Ingredient {
     pub fn matches(self, item: ItemKind) -> bool {
         if self.wood {
-            matches!(item, ItemKind::Block(16..=18))
+            matches!(item, ItemKind::Block(16..=18 | 135))
         } else if let ItemKind::Block(material @ 71..=73) = self.item {
             item.block_material() == Some(material)
+        } else if let ItemKind::Block(material @ (103 | 106)) = self.item {
+            item.block_material().and_then(crate::textiles::base) == Some(material)
+        } else if let ItemKind::Cape(cape) = self.item {
+            matches!(item, ItemKind::Cape(candidate) if candidate.material == cape.material)
+        } else if self.item == ItemKind::Prop(crate::ResourcePropKind::Flower) {
+            matches!(
+                item,
+                ItemKind::Prop(crate::ResourcePropKind::Flower) | ItemKind::Flower(_)
+            )
         } else {
             self.item == item
         }
@@ -50,9 +59,11 @@ pub struct CraftGridCell {
     pub count: u16,
 }
 
-fn resolved_output(mut output: ItemStack, wood: [u32; 3]) -> ItemStack {
+fn resolved_output(mut output: ItemStack, wood: [u32; 4]) -> ItemStack {
     if let Some(material @ 28..=29) = output.item.block_material() {
-        let species = if wood[1] > wood[0] && wood[1] >= wood[2] {
+        let species = if wood[3] > wood[0].max(wood[1]).max(wood[2]) {
+            crate::WoodSpecies::Cherry
+        } else if wood[1] > wood[0] && wood[1] >= wood[2] {
             crate::WoodSpecies::Birch
         } else if wood[2] > wood[0] && wood[2] > wood[1] {
             crate::WoodSpecies::Spruce
@@ -195,7 +206,7 @@ impl Recipe {
         if ingredients.iter().any(|i| {
             !i.item.valid()
                 || !(1..=STACK_LIMIT).contains(&i.count)
-                || i.wood && !matches!(i.item, ItemKind::Block(16..=18))
+                || i.wood && !matches!(i.item, ItemKind::Block(16..=18 | 135))
         }) {
             return Err(format!("Invalid ingredients: {}", self.id));
         }
@@ -398,7 +409,7 @@ impl RecipeBook {
             return Err(CraftError::WrongStation);
         }
         let mut next = inventory.clone();
-        let mut wood = [0_u32; 3];
+        let mut wood = [0_u32; 4];
         for ingredient in recipe.ingredients() {
             let needed = ingredient
                 .count
@@ -433,7 +444,7 @@ impl RecipeBook {
             CraftDestination::Cursor => {
                 let present = next.cursor.map_or(0, |s| s.count);
                 if next.cursor.is_some_and(|s| s.item != output.item)
-                    || present + amount > STACK_LIMIT
+                    || present + amount > output.item.max_stack()
                 {
                     return Err(CraftError::NoSpace);
                 }
@@ -563,7 +574,7 @@ impl RecipeBook {
         key: u64,
         consumed: &[(u8, u16)],
     ) -> Option<ItemStack> {
-        let mut wood = [0_u32; 3];
+        let mut wood = [0_u32; 4];
         for &(slot, count) in consumed {
             if let Some(species) = inventory.slot(usize::from(slot))?.item.wood_species() {
                 wood[species as usize] += u32::from(count);
@@ -751,7 +762,7 @@ impl RecipeBook {
             return false;
         };
         let mut next = inventory.clone();
-        let mut wood = [0_u32; 3];
+        let mut wood = [0_u32; 4];
         for (slot, needed) in consumed {
             let Some(needed) = needed.checked_mul(count) else {
                 return false;
@@ -778,7 +789,7 @@ impl RecipeBook {
             CraftDestination::Cursor => {
                 let present = next.cursor.map_or(0, |s| s.count);
                 if next.cursor.is_some_and(|s| s.item != output.item)
-                    || present + output.count * count > STACK_LIMIT
+                    || present + output.count * count > output.item.max_stack()
                 {
                     return false;
                 }

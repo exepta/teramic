@@ -45,9 +45,14 @@ pub enum ResourcePropKind {
     PlateCoral,
     SeaAnemone,
     SmallStones,
+    Wheat,
+    Corn,
+    Lettuce,
+    Scarecrow,
+    SpiderWeb,
 }
 impl ResourcePropKind {
-    pub const ALL: [Self; 14] = [
+    pub const ALL: [Self; 19] = [
         Self::Grass,
         Self::Flower,
         Self::Bush,
@@ -62,6 +67,11 @@ impl ResourcePropKind {
         Self::PlateCoral,
         Self::SeaAnemone,
         Self::SmallStones,
+        Self::Wheat,
+        Self::Corn,
+        Self::Lettuce,
+        Self::Scarecrow,
+        Self::SpiderWeb,
     ];
     pub fn slug(self) -> &'static str {
         match self {
@@ -79,6 +89,11 @@ impl ResourcePropKind {
             Self::PlateCoral => "plate_coral",
             Self::SeaAnemone => "sea_anemone",
             Self::SmallStones => "small_stones",
+            Self::Wheat => "wheat_crop",
+            Self::Corn => "corn_crop",
+            Self::Lettuce => "lettuce_crop",
+            Self::Scarecrow => "scarecrow",
+            Self::SpiderWeb => "spider_web",
         }
     }
     pub fn label(self) -> &'static str {
@@ -97,6 +112,11 @@ impl ResourcePropKind {
             Self::PlateCoral => "Plate coral",
             Self::SeaAnemone => "Sea anemone",
             Self::SmallStones => "Small stones",
+            Self::Wheat => "Wheat",
+            Self::Corn => "Corn",
+            Self::Lettuce => "Lettuce",
+            Self::Scarecrow => "Scarecrow",
+            Self::SpiderWeb => "Spider web",
         }
     }
 }
@@ -119,6 +139,12 @@ pub enum ItemKind {
         material: u16,
         color: crate::beds::DyeColor,
     },
+    Armor(crate::ArmorItem),
+    Accessory(crate::AccessoryKind),
+    Cape(crate::CapeItem),
+    Dust(crate::DustKind),
+    Flower(crate::beds::DyeColor),
+    Crop(crate::CropItem),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
@@ -163,6 +189,7 @@ pub enum WoodSpecies {
     Oak,
     Birch,
     Spruce,
+    Cherry,
 }
 impl WoodSpecies {
     pub fn tint(self) -> [f32; 4] {
@@ -171,6 +198,7 @@ impl WoodSpecies {
             // Compensate the warm oak grain in linear space without new materials.
             Self::Birch => [1.35, 3.6, 16.0, 1.0],
             Self::Spruce => [0.57, 0.63, 0.64, 1.0],
+            Self::Cherry => [1.22, 0.82, 1.1, 1.0],
         }
     }
     pub fn slug(self) -> &'static str {
@@ -178,6 +206,7 @@ impl WoodSpecies {
             Self::Oak => "oak",
             Self::Birch => "birch",
             Self::Spruce => "spruce",
+            Self::Cherry => "cherry",
         }
     }
 }
@@ -194,8 +223,75 @@ pub enum ToolKind {
     WoodShovel,
     WoodSword,
     StoneSword,
+    IronSword,
+    IronAxe,
+    GoldSword,
+    GoldAxe,
+    GoldPickaxe,
+    DiamondSword,
+    DiamondAxe,
+    DiamondPickaxe,
+    RubySword,
+    RubyAxe,
+    RubyPickaxe,
+    WoodWateringCan,
+    IronWateringCan,
+    GoldWateringCan,
+    DiamondWateringCan,
+    RubyWateringCan,
+    WoodHoe,
+    IronHoe,
+    GoldHoe,
+    DiamondHoe,
+    RubyHoe,
+    WoodScythe,
+    IronScythe,
+    GoldScythe,
+    DiamondScythe,
+    RubyScythe,
+    Bucket,
+    WaterBucket,
 }
 impl ToolKind {
+    pub const ALL: [Self; 37] = [
+        Self::WoodPickaxe,
+        Self::StonePickaxe,
+        Self::StoneAxe,
+        Self::StoneShovel,
+        Self::IronPickaxe,
+        Self::WoodAxe,
+        Self::WoodShovel,
+        Self::WoodSword,
+        Self::StoneSword,
+        Self::IronSword,
+        Self::IronAxe,
+        Self::GoldSword,
+        Self::GoldAxe,
+        Self::GoldPickaxe,
+        Self::DiamondSword,
+        Self::DiamondAxe,
+        Self::DiamondPickaxe,
+        Self::RubySword,
+        Self::RubyAxe,
+        Self::RubyPickaxe,
+        Self::WoodWateringCan,
+        Self::IronWateringCan,
+        Self::GoldWateringCan,
+        Self::DiamondWateringCan,
+        Self::RubyWateringCan,
+        Self::WoodHoe,
+        Self::IronHoe,
+        Self::GoldHoe,
+        Self::DiamondHoe,
+        Self::RubyHoe,
+        Self::WoodScythe,
+        Self::IronScythe,
+        Self::GoldScythe,
+        Self::DiamondScythe,
+        Self::RubyScythe,
+        Self::Bucket,
+        Self::WaterBucket,
+    ];
     pub fn slug(self) -> &'static str {
         match self {
             Self::WoodPickaxe => "wood_pickaxe",
@@ -207,22 +303,168 @@ impl ToolKind {
             Self::WoodShovel => "wood_shovel",
             Self::WoodSword => "wood_sword",
             Self::StoneSword => "stone_sword",
+            Self::IronSword => "iron_sword",
+            Self::IronAxe => "iron_axe",
+            Self::GoldSword => "gold_sword",
+            Self::GoldAxe => "gold_axe",
+            Self::GoldPickaxe => "gold_pickaxe",
+            Self::DiamondSword => "diamond_sword",
+            Self::DiamondAxe => "diamond_axe",
+            Self::DiamondPickaxe => "diamond_pickaxe",
+            Self::RubySword => "ruby_sword",
+            Self::RubyAxe => "ruby_axe",
+            Self::RubyPickaxe => "ruby_pickaxe",
+            Self::WoodWateringCan => "wood_watering_can",
+            Self::IronWateringCan => "iron_watering_can",
+            Self::GoldWateringCan => "gold_watering_can",
+            Self::DiamondWateringCan => "diamond_watering_can",
+            Self::RubyWateringCan => "ruby_watering_can",
+            Self::WoodHoe => "wood_hoe",
+            Self::IronHoe => "iron_hoe",
+            Self::GoldHoe => "gold_hoe",
+            Self::DiamondHoe => "diamond_hoe",
+            Self::RubyHoe => "ruby_hoe",
+            Self::WoodScythe => "wood_scythe",
+            Self::IronScythe => "iron_scythe",
+            Self::GoldScythe => "gold_scythe",
+            Self::DiamondScythe => "diamond_scythe",
+            Self::RubyScythe => "ruby_scythe",
+            Self::Bucket => "bucket",
+            Self::WaterBucket => "water_bucket",
+        }
+    }
+    pub const fn class(self) -> Option<crate::block_properties::ToolClass> {
+        use crate::block_properties::ToolClass;
+        match self {
+            Self::WoodPickaxe
+            | Self::StonePickaxe
+            | Self::IronPickaxe
+            | Self::GoldPickaxe
+            | Self::DiamondPickaxe
+            | Self::RubyPickaxe => Some(ToolClass::Pickaxe),
+            Self::WoodAxe
+            | Self::StoneAxe
+            | Self::IronAxe
+            | Self::GoldAxe
+            | Self::DiamondAxe
+            | Self::RubyAxe => Some(ToolClass::Axe),
+            Self::WoodShovel | Self::StoneShovel => Some(ToolClass::Shovel),
+            _ => None,
+        }
+    }
+    pub const fn mining_level(self) -> u8 {
+        match self {
+            Self::WoodPickaxe | Self::WoodAxe | Self::WoodShovel | Self::WoodSword => 1,
+            Self::StonePickaxe | Self::StoneAxe | Self::StoneShovel | Self::StoneSword => 2,
+            Self::IronPickaxe
+            | Self::IronAxe
+            | Self::IronSword
+            | Self::GoldPickaxe
+            | Self::GoldAxe
+            | Self::GoldSword => 3,
+            Self::DiamondPickaxe | Self::DiamondAxe | Self::DiamondSword => 4,
+            Self::RubyPickaxe | Self::RubyAxe | Self::RubySword => 5,
+            _ => self.farm_tier(),
+        }
+    }
+    pub const fn efficiency(self) -> f32 {
+        match self {
+            Self::WoodPickaxe | Self::WoodAxe | Self::WoodShovel | Self::WoodSword => 2.0,
+            Self::StonePickaxe | Self::StoneAxe | Self::StoneShovel | Self::StoneSword => 4.0,
+            Self::IronPickaxe | Self::IronAxe | Self::IronSword => 6.0,
+            Self::GoldPickaxe | Self::GoldAxe | Self::GoldSword => 10.0,
+            Self::DiamondPickaxe | Self::DiamondAxe | Self::DiamondSword => 8.0,
+            Self::RubyPickaxe | Self::RubyAxe | Self::RubySword => 12.0,
+            _ => 1.0,
+        }
+    }
+    pub const fn attack_damage(self) -> f32 {
+        match self {
+            Self::WoodSword => 3.0,
+            Self::IronSword | Self::GoldSword | Self::DiamondAxe => 6.0,
+            Self::DiamondSword => 8.0,
+            Self::RubySword => 9.0,
+            Self::RubyAxe => 7.0,
+            _ => 5.0,
         }
     }
     pub fn speed(self, material: u16) -> f32 {
-        match (self, material) {
-            (Self::WoodPickaxe, 3 | 11..=13 | 30..=35 | 37..=39 | 43) => 2.0,
-            (Self::StonePickaxe, 3 | 11..=13 | 30..=35 | 37..=39 | 43) => 4.0,
-            (Self::IronPickaxe, 3 | 11..=13 | 30..=35 | 37..=39 | 43) => 6.0,
-            (Self::StoneAxe, 6 | 10 | 16..=18 | 28..=29 | 36) => 4.0,
-            (Self::WoodAxe, 6 | 10 | 16..=18 | 28..=29 | 36) => 2.0,
-            (Self::StoneShovel, 1..=2 | 4..=5 | 19 | 42 | 48) => 4.0,
-            (Self::WoodShovel, 1..=2 | 4..=5 | 19 | 42 | 48) => 2.0,
+        use crate::block_properties::ToolClass;
+        match (self.class(), material) {
+            (Some(ToolClass::Pickaxe), 3 | 11..=13 | 30..=35 | 37..=39 | 43)
+            | (Some(ToolClass::Axe), 6 | 10 | 16..=18 | 28..=29 | 36 | 134..=140)
+            | (Some(ToolClass::Shovel), 1..=2 | 4..=5 | 19 | 42 | 48 | 101..=102) => {
+                self.efficiency()
+            }
             _ => 1.0,
+        }
+    }
+    pub const fn farm_kind(self) -> Option<crate::farming::FarmToolKind> {
+        use crate::farming::FarmToolKind;
+        match self {
+            Self::WoodWateringCan
+            | Self::IronWateringCan
+            | Self::GoldWateringCan
+            | Self::DiamondWateringCan
+            | Self::RubyWateringCan => Some(FarmToolKind::WateringCan),
+            Self::WoodHoe | Self::IronHoe | Self::GoldHoe | Self::DiamondHoe | Self::RubyHoe => {
+                Some(FarmToolKind::Hoe)
+            }
+            Self::WoodScythe
+            | Self::IronScythe
+            | Self::GoldScythe
+            | Self::DiamondScythe
+            | Self::RubyScythe => Some(FarmToolKind::Scythe),
+            _ => None,
+        }
+    }
+    pub const fn farm_tier(self) -> u8 {
+        match self {
+            Self::WoodWateringCan | Self::WoodHoe | Self::WoodScythe => 1,
+            Self::IronWateringCan | Self::IronHoe | Self::IronScythe => 2,
+            Self::GoldWateringCan | Self::GoldHoe | Self::GoldScythe => 3,
+            Self::DiamondWateringCan | Self::DiamondHoe | Self::DiamondScythe => 4,
+            Self::RubyWateringCan | Self::RubyHoe | Self::RubyScythe => 5,
+            _ => 0,
+        }
+    }
+    pub const fn farm_radius(self) -> i64 {
+        match self.farm_kind() {
+            Some(crate::farming::FarmToolKind::Scythe) if self.farm_tier() >= 4 => 2,
+            Some(crate::farming::FarmToolKind::Scythe) => 1,
+            _ => 0,
+        }
+    }
+    pub const fn watering_capacity(self) -> u8 {
+        if matches!(
+            self.farm_kind(),
+            Some(crate::farming::FarmToolKind::WateringCan)
+        ) {
+            4 + self.farm_tier() * 4
+        } else {
+            0
+        }
+    }
+    pub const fn farm_cooldown(self) -> f32 {
+        match self.farm_tier() {
+            1 => 0.65,
+            2 => 0.55,
+            3 => 0.40,
+            4 => 0.45,
+            _ => 0.35,
         }
     }
 }
 impl ItemKind {
+    pub const fn max_stack(self) -> u16 {
+        match self {
+            Self::Armor(_)
+            | Self::Accessory(_)
+            | Self::Cape(_)
+            | Self::Tool(ToolKind::Bucket | ToolKind::WaterBucket) => 1,
+            _ => STACK_LIMIT,
+        }
+    }
     pub fn block_material(self) -> Option<u16> {
         match self {
             Self::Block(material)
@@ -238,6 +480,7 @@ impl ItemKind {
             Self::Block(6 | 16 | 28 | 29) => Some(WoodSpecies::Oak),
             Self::Block(10 | 17) => Some(WoodSpecies::Birch),
             Self::Block(18 | 36) => Some(WoodSpecies::Spruce),
+            Self::Block(134 | 135) => Some(WoodSpecies::Cherry),
             Self::WoodenBlock { wood, .. } => Some(wood),
             _ => None,
         }
@@ -249,7 +492,83 @@ impl ItemKind {
             Self::WoodenBlock { material, wood }
         }
     }
-    pub const EXTRA: [Self; 41] = [
+    pub const EXTRA: [Self; 131] = [
+        Self::Tool(ToolKind::Bucket),
+        Self::Tool(ToolKind::WaterBucket),
+        Self::Tool(ToolKind::WoodWateringCan),
+        Self::Tool(ToolKind::IronWateringCan),
+        Self::Tool(ToolKind::GoldWateringCan),
+        Self::Tool(ToolKind::DiamondWateringCan),
+        Self::Tool(ToolKind::RubyWateringCan),
+        Self::Tool(ToolKind::WoodHoe),
+        Self::Tool(ToolKind::IronHoe),
+        Self::Tool(ToolKind::GoldHoe),
+        Self::Tool(ToolKind::DiamondHoe),
+        Self::Tool(ToolKind::RubyHoe),
+        Self::Tool(ToolKind::WoodScythe),
+        Self::Tool(ToolKind::IronScythe),
+        Self::Tool(ToolKind::GoldScythe),
+        Self::Tool(ToolKind::DiamondScythe),
+        Self::Tool(ToolKind::RubyScythe),
+        Self::Crop(crate::CropItem::WheatSeeds),
+        Self::Crop(crate::CropItem::CornSeeds),
+        Self::Crop(crate::CropItem::LettuceSeeds),
+        Self::Crop(crate::CropItem::Wheat),
+        Self::Crop(crate::CropItem::Corn),
+        Self::Crop(crate::CropItem::Lettuce),
+        Self::Crop(crate::CropItem::Bread),
+        Self::Tool(ToolKind::IronSword),
+        Self::Tool(ToolKind::IronAxe),
+        Self::Tool(ToolKind::GoldSword),
+        Self::Tool(ToolKind::GoldAxe),
+        Self::Tool(ToolKind::GoldPickaxe),
+        Self::Tool(ToolKind::DiamondSword),
+        Self::Tool(ToolKind::DiamondAxe),
+        Self::Tool(ToolKind::DiamondPickaxe),
+        Self::Tool(ToolKind::RubySword),
+        Self::Tool(ToolKind::RubyAxe),
+        Self::Tool(ToolKind::RubyPickaxe),
+        Self::Dye(crate::beds::DyeColor::Black),
+        Self::Dye(crate::beds::DyeColor::Lime),
+        Self::Dye(crate::beds::DyeColor::Pink),
+        Self::Dye(crate::beds::DyeColor::Gold),
+        Self::Dye(crate::beds::DyeColor::Silver),
+        Self::Dye(crate::beds::DyeColor::LightBlue),
+        Self::Flower(crate::beds::DyeColor::Red),
+        Self::Flower(crate::beds::DyeColor::Yellow),
+        Self::Flower(crate::beds::DyeColor::White),
+        Self::Flower(crate::beds::DyeColor::Blue),
+        Self::Flower(crate::beds::DyeColor::Purple),
+        Self::Flower(crate::beds::DyeColor::Orange),
+        Self::Flower(crate::beds::DyeColor::Green),
+        Self::Flower(crate::beds::DyeColor::Pink),
+        Self::Dye(crate::beds::DyeColor::White),
+        Self::Cape(crate::CapeItem {
+            material: crate::ArmorMaterial::Leather,
+            color: crate::beds::DyeColor::White,
+        }),
+        Self::Cape(crate::CapeItem {
+            material: crate::ArmorMaterial::Iron,
+            color: crate::beds::DyeColor::White,
+        }),
+        Self::Cape(crate::CapeItem {
+            material: crate::ArmorMaterial::Gold,
+            color: crate::beds::DyeColor::White,
+        }),
+        Self::Cape(crate::CapeItem {
+            material: crate::ArmorMaterial::Diamond,
+            color: crate::beds::DyeColor::White,
+        }),
+        Self::Cape(crate::CapeItem {
+            material: crate::ArmorMaterial::Ruby,
+            color: crate::beds::DyeColor::White,
+        }),
+        Self::Dust(crate::DustKind::Iron),
+        Self::Dust(crate::DustKind::Gold),
+        Self::Dust(crate::DustKind::Coal),
+        Self::Dust(crate::DustKind::Diamond),
+        Self::Dust(crate::DustKind::Salt),
+        Self::Dust(crate::DustKind::Ruby),
         Self::Dye(crate::beds::DyeColor::Red),
         Self::Dye(crate::beds::DyeColor::Yellow),
         Self::Dye(crate::beds::DyeColor::Blue),
@@ -291,25 +610,139 @@ impl ItemKind {
         Self::Bellows(BellowsKind::Iron),
         Self::Bellows(BellowsKind::Gold),
         Self::Bellows(BellowsKind::Ruby),
+        Self::Armor(crate::ArmorItem {
+            material: crate::ArmorMaterial::Leather,
+            piece: crate::ArmorPiece::Helmet,
+        }),
+        Self::Armor(crate::ArmorItem {
+            material: crate::ArmorMaterial::Leather,
+            piece: crate::ArmorPiece::Chestplate,
+        }),
+        Self::Armor(crate::ArmorItem {
+            material: crate::ArmorMaterial::Leather,
+            piece: crate::ArmorPiece::Gloves,
+        }),
+        Self::Armor(crate::ArmorItem {
+            material: crate::ArmorMaterial::Leather,
+            piece: crate::ArmorPiece::Pants,
+        }),
+        Self::Armor(crate::ArmorItem {
+            material: crate::ArmorMaterial::Leather,
+            piece: crate::ArmorPiece::Boots,
+        }),
+        Self::Armor(crate::ArmorItem {
+            material: crate::ArmorMaterial::Iron,
+            piece: crate::ArmorPiece::Helmet,
+        }),
+        Self::Armor(crate::ArmorItem {
+            material: crate::ArmorMaterial::Iron,
+            piece: crate::ArmorPiece::Chestplate,
+        }),
+        Self::Armor(crate::ArmorItem {
+            material: crate::ArmorMaterial::Iron,
+            piece: crate::ArmorPiece::Gloves,
+        }),
+        Self::Armor(crate::ArmorItem {
+            material: crate::ArmorMaterial::Iron,
+            piece: crate::ArmorPiece::Pants,
+        }),
+        Self::Armor(crate::ArmorItem {
+            material: crate::ArmorMaterial::Iron,
+            piece: crate::ArmorPiece::Boots,
+        }),
+        Self::Armor(crate::ArmorItem {
+            material: crate::ArmorMaterial::Gold,
+            piece: crate::ArmorPiece::Helmet,
+        }),
+        Self::Armor(crate::ArmorItem {
+            material: crate::ArmorMaterial::Gold,
+            piece: crate::ArmorPiece::Chestplate,
+        }),
+        Self::Armor(crate::ArmorItem {
+            material: crate::ArmorMaterial::Gold,
+            piece: crate::ArmorPiece::Gloves,
+        }),
+        Self::Armor(crate::ArmorItem {
+            material: crate::ArmorMaterial::Gold,
+            piece: crate::ArmorPiece::Pants,
+        }),
+        Self::Armor(crate::ArmorItem {
+            material: crate::ArmorMaterial::Gold,
+            piece: crate::ArmorPiece::Boots,
+        }),
+        Self::Armor(crate::ArmorItem {
+            material: crate::ArmorMaterial::Diamond,
+            piece: crate::ArmorPiece::Helmet,
+        }),
+        Self::Armor(crate::ArmorItem {
+            material: crate::ArmorMaterial::Diamond,
+            piece: crate::ArmorPiece::Chestplate,
+        }),
+        Self::Armor(crate::ArmorItem {
+            material: crate::ArmorMaterial::Diamond,
+            piece: crate::ArmorPiece::Gloves,
+        }),
+        Self::Armor(crate::ArmorItem {
+            material: crate::ArmorMaterial::Diamond,
+            piece: crate::ArmorPiece::Pants,
+        }),
+        Self::Armor(crate::ArmorItem {
+            material: crate::ArmorMaterial::Diamond,
+            piece: crate::ArmorPiece::Boots,
+        }),
+        Self::Armor(crate::ArmorItem {
+            material: crate::ArmorMaterial::Ruby,
+            piece: crate::ArmorPiece::Helmet,
+        }),
+        Self::Armor(crate::ArmorItem {
+            material: crate::ArmorMaterial::Ruby,
+            piece: crate::ArmorPiece::Chestplate,
+        }),
+        Self::Armor(crate::ArmorItem {
+            material: crate::ArmorMaterial::Ruby,
+            piece: crate::ArmorPiece::Gloves,
+        }),
+        Self::Armor(crate::ArmorItem {
+            material: crate::ArmorMaterial::Ruby,
+            piece: crate::ArmorPiece::Pants,
+        }),
+        Self::Armor(crate::ArmorItem {
+            material: crate::ArmorMaterial::Ruby,
+            piece: crate::ArmorPiece::Boots,
+        }),
+        Self::Accessory(crate::AccessoryKind::Earrings),
+        Self::Accessory(crate::AccessoryKind::Necklace),
+        Self::Accessory(crate::AccessoryKind::Belt),
+        Self::Accessory(crate::AccessoryKind::Socks),
     ];
     pub fn can_harvest(self, material: u16) -> bool {
         if let Some(ore) = crate::OreKind::from_material(material) {
             let level = match self {
-                Self::Tool(ToolKind::WoodPickaxe) => 1,
-                Self::Tool(ToolKind::StonePickaxe) => 2,
-                Self::Tool(ToolKind::IronPickaxe) => 3,
+                Self::Tool(tool)
+                    if tool.class() == Some(crate::block_properties::ToolClass::Pickaxe) =>
+                {
+                    tool.mining_level()
+                }
                 _ => 0,
             };
             return level >= ore.mining_level();
         }
         !matches!(material, 12..=13)
-            || matches!(
-                self,
-                Self::Tool(ToolKind::WoodPickaxe | ToolKind::StonePickaxe | ToolKind::IronPickaxe)
-            )
+            || matches!(self, Self::Tool(tool) if tool.class() == Some(crate::block_properties::ToolClass::Pickaxe))
     }
     pub fn identifier(self) -> String {
         match self {
+            Self::Cape(cape) => {
+                let id = format!("teramic::{}_cape", cape.material.slug());
+                if cape.color == crate::beds::DyeColor::White {
+                    id
+                } else {
+                    format!("{id}#{}", cape.color.slug())
+                }
+            }
+            Self::Dust(kind) => format!("teramic::{}", kind.slug()),
+            Self::Crop(kind) => format!("teramic::{}", kind.slug()),
+            Self::Flower(color) => format!("teramic::{}_flower", color.slug()),
             Self::Dye(color) => format!("teramic::{}_dye", color.slug()),
             Self::DyedBed { material, color } => {
                 format!("{}#{}", Self::Block(material).identifier(), color.slug())
@@ -322,6 +755,8 @@ impl ItemKind {
             Self::Mineral(mineral) => format!("teramic::{}", mineral.slug()),
             Self::Animal(product) => format!("teramic::{}", product.slug()),
             Self::Bellows(kind) => format!("teramic::{}", kind.slug()),
+            Self::Armor(armor) => format!("teramic::{}", armor.slug()),
+            Self::Accessory(kind) => format!("teramic::{}", kind.slug()),
             Self::Block(id) => terra_voxel::MaterialId::from_raw(id).map_or_else(
                 || format!("teramic::custom_{id}"),
                 |m| m.identifier().to_owned(),
@@ -332,6 +767,10 @@ impl ItemKind {
     pub fn valid(self) -> bool {
         match self {
             Self::Dye(_) => true,
+            Self::Armor(_) | Self::Accessory(_) | Self::Cape(_) | Self::Dust(_) | Self::Crop(_) => {
+                true
+            }
+            Self::Flower(color) => crate::beds::DyeColor::FLOWER_COLORS.contains(&color),
             Self::DyedBed { material, .. } => crate::beds::is_bed(material),
             Self::WoodenBlock { material, wood } => {
                 matches!(material, 28..=29) && wood != WoodSpecies::Oak
@@ -358,7 +797,7 @@ impl ItemStack {
         count: 0,
     };
     pub fn valid(self) -> bool {
-        self.item.valid() && (1..=STACK_LIMIT).contains(&self.count)
+        self.item.valid() && (1..=self.item.max_stack()).contains(&self.count)
     }
 }
 #[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -389,7 +828,7 @@ impl Inventory {
             || self
                 .slots
                 .iter()
-                .any(|s| s.item == item && s.count < STACK_LIMIT)
+                .any(|s| s.item == item && s.count < item.max_stack())
     }
     fn changed(&mut self) {
         self.revision = self.revision.saturating_add(1);
@@ -429,7 +868,7 @@ impl Inventory {
             self.set(to, source);
         } else {
             let existing = target.map_or(0, |s| s.count);
-            let moved = count.min(STACK_LIMIT - existing);
+            let moved = count.min(source.item.max_stack() - existing);
             if moved == 0 {
                 return false;
             }
@@ -471,7 +910,7 @@ impl Inventory {
             .iter_mut()
             .filter(|s| s.item == item && s.valid())
         {
-            let amount = count.min(STACK_LIMIT - stack.count);
+            let amount = count.min(item.max_stack() - stack.count);
             stack.count += amount;
             count -= amount;
         }
@@ -482,7 +921,7 @@ impl Inventory {
             if self.slot(slot).is_some() {
                 continue;
             }
-            let amount = count.min(STACK_LIMIT);
+            let amount = count.min(item.max_stack());
             self.set(
                 slot,
                 ItemStack {
@@ -589,12 +1028,18 @@ pub struct PlayerStats {
     pub props_harvested: u64,
     pub deaths: u64,
     pub survival: crate::SurvivalVitals,
+    pub equipment: crate::EquipmentSlots,
 }
 
 #[derive(Debug, Default, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct GameplayState {
     pub creatures: crate::creatures::CreaturePopulation,
+    pub animal_bonds: BTreeMap<u64, crate::creatures::taming::AnimalBond>,
+    pub pet_orders: BTreeMap<u64, crate::creatures::taming::CompanionMode>,
+    pub animal_families: BTreeMap<u64, crate::creatures::breeding::AnimalFamily>,
+    pub next_animal_birth: u32,
+    pub spider_dens: BTreeMap<u64, crate::creatures::taming::SpiderDen>,
     pub inventories: BTreeMap<PlayerUuid, Inventory>,
     pub player_stats: BTreeMap<PlayerUuid, PlayerStats>,
     pub drops: Vec<WorldDrop>,
@@ -605,12 +1050,71 @@ impl GameplayState {
     pub fn valid(&self) -> bool {
         let mut ids = HashSet::new();
         self.creatures.valid()
+            && self.pet_orders.len() <= crate::creatures::MAX_CREATURES
+            && self.pet_orders.keys().all(|id| {
+                self.creatures.owners.contains_key(id)
+                    && self
+                        .creatures
+                        .animals
+                        .get(id)
+                        .is_some_and(|a| crate::creatures::taming::tameable(a.kind))
+            })
+            && self.animal_families.len() <= crate::creatures::MAX_CREATURES
+            && self.animal_families.iter().all(|(id, family)| {
+                family.valid(*id)
+                    && self.creatures.animals.get(id).is_some_and(|animal| {
+                        crate::creatures::breeding::species(animal.kind)
+                            && family.parents.is_none_or(|parents| {
+                                crate::creatures::breeding::is_birth_id(*id)
+                                    && parents.into_iter().all(|parent| {
+                                        self.creatures
+                                            .animals
+                                            .get(&parent)
+                                            .is_some_and(|a| a.kind == animal.kind)
+                                    })
+                            })
+                    })
+            })
+            && self.creatures.animals.values().all(|animal| {
+                !crate::creatures::breeding::is_birth_id(animal.id)
+                    || crate::creatures::breeding::birth_serial(animal.id)
+                        .is_some_and(|serial| serial <= self.next_animal_birth)
+                        && self
+                            .animal_families
+                            .get(&animal.id)
+                            .is_some_and(|family| family.parents.is_some())
+                        && (self.creatures.owners.contains_key(&animal.id)
+                            || animal.kind == crate::creatures::CreatureKind::Bee
+                                && self.creatures.ecology.bees.contains_key(&animal.id))
+            })
+            && self.spider_dens.len() <= crate::creatures::MAX_CREATURES
+            && self.spider_dens.iter().all(|(id, den)| {
+                den.valid()
+                    && self
+                        .creatures
+                        .animals
+                        .get(id)
+                        .is_some_and(|a| a.kind.is_spider())
+            })
+            && self.animal_bonds.len() <= crate::creatures::MAX_CREATURES
+            && self.animal_bonds.iter().all(|(id, bond)| {
+                bond.valid()
+                    && self
+                        .creatures
+                        .animals
+                        .get(id)
+                        .is_some_and(|a| crate::creatures::taming::tameable(a.kind))
+                    && if bond.trust == 100 {
+                        self.creatures.owners.get(id) == Some(&bond.player)
+                    } else {
+                        !self.creatures.owners.contains_key(id)
+                    }
+            })
             && self.inventories.len() <= 4096
             && self.player_stats.len() <= 4096
-            && self
-                .player_stats
-                .iter()
-                .all(|(id, stats)| !id.is_nil() && stats.survival.valid())
+            && self.player_stats.iter().all(|(id, stats)| {
+                !id.is_nil() && stats.survival.valid() && stats.equipment.valid()
+            })
             && self
                 .inventories
                 .iter()
@@ -719,6 +1223,22 @@ mod tests {
             super::ItemKind::Block(51).identifier(),
             super::ItemKind::Mineral(crate::MineralItem::SaltCrystal).identifier()
         );
+    }
+    #[test]
+    fn wool_block_does_not_shadow_the_existing_animal_wool_identifier_in_the_item_catalog() {
+        let animal = super::ItemKind::Animal(crate::creatures::AnimalProduct::Wool);
+        let block = super::ItemKind::Block(103);
+        assert_eq!(animal.identifier(), "teramic::wool");
+        assert_eq!(block.identifier(), "teramic::wool_block");
+        assert_ne!(animal.identifier(), block.identifier());
+        for (identifier, expected) in [("teramic::wool", animal), ("teramic::wool_block", block)] {
+            let matches: Vec<_> = (1..=terra_voxel::MaterialId::LAST)
+                .map(super::ItemKind::Block)
+                .chain(super::ItemKind::EXTRA)
+                .filter(|item| item.identifier() == identifier)
+                .collect();
+            assert_eq!(matches, vec![expected]);
+        }
     }
     use super::*;
     #[test]

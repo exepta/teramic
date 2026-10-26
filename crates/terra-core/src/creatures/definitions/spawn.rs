@@ -18,6 +18,8 @@ pub struct MobSpawnSettings {
     pub herd_size: Option<[u8; 2]>,
     pub biome_herds: Vec<SpawnHerd>,
     pub aquatic: Option<AquaticSpawn>,
+    /// Per suitable underground habitat cell; None preserves legacy gates.
+    pub cave_chance: Option<f64>,
 }
 
 impl Default for MobSpawnSettings {
@@ -28,6 +30,7 @@ impl Default for MobSpawnSettings {
             herd_size: None,
             biome_herds: Vec::new(),
             aquatic: None,
+            cave_chance: None,
         }
     }
 }
@@ -66,7 +69,14 @@ impl Default for AquaticSpawn {
 fn biome_valid(name: &str) -> bool {
     matches!(
         name,
-        "ocean" | "plains" | "forest" | "desert" | "highland" | "mushroom_park" | "cliffted_desert"
+        "ocean"
+            | "plains"
+            | "forest"
+            | "desert"
+            | "highland"
+            | "mushroom_park"
+            | "cliffted_desert"
+            | "cherry_forest"
     )
 }
 
@@ -80,7 +90,7 @@ fn herd_valid([min, max]: [u8; 2], limit: u8) -> bool {
 
 impl MobSpawnSettings {
     pub fn valid(&self, limit: u8) -> bool {
-        self.biomes.len() <= 7
+        self.biomes.len() <= 8
             && self.biomes.iter().all(|biome| biome_valid(biome))
             && self
                 .biomes
@@ -88,7 +98,7 @@ impl MobSpawnSettings {
                 .enumerate()
                 .all(|(i, biome)| !self.biomes[..i].contains(biome))
             && self.herd_size.is_none_or(|size| herd_valid(size, limit))
-            && self.biome_herds.len() <= 7
+            && self.biome_herds.len() <= 8
             && self.biome_herds.iter().enumerate().all(|(i, herd)| {
                 biome_valid(&herd.biome)
                     && herd_valid(herd.size, limit)
@@ -97,10 +107,18 @@ impl MobSpawnSettings {
                         .any(|old| old.biome == herd.biome)
             })
             && self.aquatic.is_none_or(AquaticSpawn::valid)
+            && self
+                .cave_chance
+                .is_none_or(|chance| chance.is_finite() && (0.0..=1.0).contains(&chance))
     }
 
     fn permits_biome(&self, biome: &str) -> bool {
-        self.enabled && (self.biomes.is_empty() || self.biomes.iter().any(|name| name == biome))
+        self.enabled
+            && (self.biomes.is_empty()
+                || self
+                    .biomes
+                    .iter()
+                    .any(|name| name == biome || (biome == "cherry_forest" && name == "forest")))
     }
 }
 
@@ -149,6 +167,21 @@ impl AquaticSpawn {
 }
 
 impl MobDefinition {
+    pub fn permits_cave_spawn(&self, seed: u64, legacy_denominator: u64) -> bool {
+        if legacy_denominator == 0 || self.spawn.as_ref().is_some_and(|spawn| !spawn.enabled) {
+            return false;
+        }
+        let Some(chance) = self.spawn.as_ref().and_then(|spawn| spawn.cave_chance) else {
+            return seed.is_multiple_of(legacy_denominator);
+        };
+        // Stratify the existing gate rather than rerolling old eligible IDs.
+        // Increasing its chance retains every legacy cell and opens a stable
+        // fraction of additional cells. No per-frame randomness or new IDs.
+        let bucket = seed % legacy_denominator;
+        let fraction = (seed / legacy_denominator % 10_000) as f64 / 10_000.0;
+        (bucket as f64 + fraction) < chance * legacy_denominator as f64
+    }
+
     pub fn permits_spawn_biome(&self, biome: &str) -> bool {
         self.spawn
             .as_ref()
@@ -309,6 +342,52 @@ mod tests {
                     .is_some()
             );
             assert_eq!(definition.aquatic_spawn(), AquaticSpawn::legacy(kind));
+        }
+    }
+
+    #[test]
+    fn cave_spawn_chances_are_validated_relative_increases_without_rerolling_old_cells() {
+        for (kind, denominator, chance, old_count, new_count) in [
+            (CreatureKind::Stalker, 11_u64, 0.1, 10_000, 11_000),
+            (CreatureKind::MediumSpider, 5, 0.25, 10_000, 12_500),
+            (CreatureKind::LargeSpider, 5, 0.25, 10_000, 12_500),
+        ] {
+            let definition = super::super::get(kind);
+            assert_eq!(definition.spawn.as_ref().unwrap().cave_chance, Some(chance));
+            let mut old = 0;
+            let mut new = 0;
+            for seed in 0..denominator * 10_000 {
+                let allowed = definition.permits_cave_spawn(seed, denominator);
+                assert_eq!(allowed, definition.permits_cave_spawn(seed, denominator));
+                if seed.is_multiple_of(denominator) {
+                    old += 1;
+                    assert!(allowed, "old eligible cell must not be rerolled");
+                }
+                new += usize::from(allowed);
+            }
+            assert_eq!(old, old_count);
+            assert_eq!(new, new_count);
+        }
+        let mut definition = super::super::get(CreatureKind::MediumSpider).clone();
+        for chance in [f64::NAN, f64::INFINITY, -0.01, 1.01] {
+            definition.spawn.as_mut().unwrap().cave_chance = Some(chance);
+            assert!(!definition.valid());
+        }
+        for chance in [0.0, 1.0] {
+            definition.spawn.as_mut().unwrap().cave_chance = Some(chance);
+            assert!(definition.valid());
+            for seed in 0..100 {
+                assert_eq!(definition.permits_cave_spawn(seed, 5), chance == 1.0);
+            }
+        }
+        definition.spawn.as_mut().unwrap().enabled = false;
+        assert!(!definition.permits_cave_spawn(0, 5));
+        definition.spawn = None;
+        for seed in 0..100 {
+            assert_eq!(
+                definition.permits_cave_spawn(seed, 5),
+                seed.is_multiple_of(5)
+            );
         }
     }
 }

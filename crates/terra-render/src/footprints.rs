@@ -182,7 +182,7 @@ fn mesh(tracks: &[Track], now: f32) -> Mesh {
             indices.extend([start, start + 2, start + 1, start, start + 3, start + 2]);
         };
         let sign = if step.alternate { 1.0 } else { -1.0 };
-        if step.walker == Walker::Player {
+        if matches!(step.walker, Walker::Player | Walker::Stalker) {
             // Separate toe and heel leave a small arch, rather than a painted box.
             quad(Vec2::new(sign * 0.13, 0.07), Vec2::new(0.065, 0.105));
             quad(Vec2::new(sign * 0.13, -0.12), Vec2::new(0.055, 0.055));
@@ -235,6 +235,7 @@ mod tests {
             Walker::Sheep,
             Walker::Pig,
             Walker::Bear,
+            Walker::Stalker,
         ] {
             let track = Track {
                 step: Footstep {

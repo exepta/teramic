@@ -1,0 +1,28 @@
+{
+  "id": "teramic::necklace",
+  "name": "Necklace",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "accessory": "necklace"
+    },
+    "count": 1
+  },
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "mineral": "gold_ingot"
+        },
+        "count": 3
+      },
+      {
+        "item": {
+          "mineral": "diamond"
+        },
+        "count": 1
+      }
+    ]
+  }
+}

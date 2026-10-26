@@ -21,13 +21,19 @@ pub(crate) fn item_category(item: ItemKind, declared: Option<&str>) -> String {
         return "food".into();
     }
     match item {
-        ItemKind::Block(28 | 29 | 40 | 59..=73) | ItemKind::Prop(_) | ItemKind::DyedBed { .. } => {
-            "decoration"
-        }
+        ItemKind::Block(28 | 29 | 40 | 59..=73)
+        | ItemKind::Prop(_)
+        | ItemKind::Flower(_)
+        | ItemKind::DyedBed { .. } => "decoration",
         ItemKind::Block(_) | ItemKind::WoodenBlock { .. } => "building",
         ItemKind::Stick | ItemKind::Mineral(_) | ItemKind::Dye(_) => "materials",
         ItemKind::Animal(_) => "animal_materials",
-        ItemKind::Tool(_) | ItemKind::Bellows(_) => "tools",
+        ItemKind::Tool(_)
+        | ItemKind::Bellows(_)
+        | ItemKind::Armor(_)
+        | ItemKind::Accessory(_)
+        | ItemKind::Cape(_) => "tools",
+        ItemKind::Dust(_) | ItemKind::Crop(_) => "materials",
     }
     .into()
 }
@@ -91,6 +97,12 @@ pub(crate) fn load_creative_categories(
             | ItemKind::Mineral(_)
             | ItemKind::Bellows(_)
             | ItemKind::Dye(_)
+            | ItemKind::Armor(_)
+            | ItemKind::Accessory(_)
+            | ItemKind::Cape(_)
+            | ItemKind::Dust(_)
+            | ItemKind::Crop(_)
+            | ItemKind::Flower(_)
             | ItemKind::Animal(_) => item_categories.contains_key(&definition.icon),
         };
         if !valid_category_id(&definition.id)

@@ -20,6 +20,209 @@ pub enum SectionGenerationError {
     #[error("prepared column does not match the section or generator configuration")]
     ColumnMismatch,
 }
+
+#[cfg(test)]
+mod loaded_remesh_tests {
+    use super::*;
+
+    #[test]
+    fn real_cave_foliage_requires_a_contiguous_ceiling_instead_of_per_voxel_noise_islands() {
+        use noise::NoiseFn;
+        let mut config = terra_core::WorldConfig {
+            trees: false,
+            water: false,
+            cave_structure_revision: 5,
+            ..Default::default()
+        };
+        config.cave_biomes.distribution = terra_core::config::CaveDistribution {
+            normal_weight: 0.0,
+            salt_weight: 0.0,
+            lush_weight: 1.0,
+            cascade_weight: 0.0,
+        };
+        config.cave_biomes.lush_density = 1.0;
+        let mut supported = None;
+        let mut island = None;
+        'search: for seed in [42042, 99991, 1] {
+            config.seed = terra_core::WorldSeed(seed);
+            let generator = SectionGenerator::new(TerraGenerator::new(config.clone()).unwrap());
+            for z in (-64..64).step_by(4) {
+                for x in (-64..64).step_by(4) {
+                    let column = generator
+                        .terrain
+                        .surface_column(x as f64 + 0.5, z as f64 + 0.5);
+                    let h = super::super::seed::layer_seed(
+                        seed ^ (x as u64).wrapping_mul(0x9e3779b97f4a7c15)
+                            ^ (z as u64).wrapping_mul(0xbf58476d1ce4e5b9),
+                        304,
+                    );
+                    if !h.is_multiple_of(11) {
+                        continue;
+                    }
+                    let roll = ((h >> 10) & 65535) as f32 / 65535.0;
+                    let probability = |y: i64| {
+                        let w = column.cave_biome.weights_at(y as f64 + 0.5);
+                        let patch = (generator.terrain.valleys.get([
+                            (x as f64 + 0.5) * 0.06,
+                            (y as f64 + 0.5) * 0.025,
+                            (z as f64 + 0.5) * 0.06,
+                        ]) + 0.5)
+                            .clamp(0.0, 1.0) as f32;
+                        (w[2] * 0.65 + w[3] * 0.15 + w[0] * 0.025) * patch / 0.72
+                    };
+                    for y in -112..48 {
+                        let p = [x, y, z];
+                        let material = generator.unchecked_terrain_block(p, column);
+                        if !matches!(material, 54 | 55) {
+                            continue;
+                        }
+                        if crate::segments::hanging_support(p, |p| {
+                            Some(generator.unchecked_terrain_block(p, column))
+                        }) == Some(true)
+                        {
+                            supported = Some((generator.clone(), p, material));
+                        }
+                        let above = [x, y + 1, z];
+                        if !matches!(generator.unchecked_terrain_block(above, column), 54 | 55) {
+                            continue;
+                        }
+                        let lower = probability(y);
+                        let upper = probability(y + 1);
+                        if lower <= upper || upper <= 0.0 || roll <= 0.0 {
+                            continue;
+                        }
+                        // A valid configured density between two actual neighbouring
+                        // noise probabilities reproduces a gap without invented blocks.
+                        let density = (roll / lower + (roll / upper).min(1.0)) * 0.5;
+                        if !(0.0..1.0).contains(&density) {
+                            continue;
+                        }
+                        let mut tuned = config.clone();
+                        tuned.cave_biomes.lush_density = f64::from(density);
+                        let tuned = SectionGenerator::new(TerraGenerator::new(tuned).unwrap());
+                        let c = tuned.terrain.surface_column(x as f64 + 0.5, z as f64 + 0.5);
+                        if matches!(tuned.unchecked_terrain_block(p, c), 54 | 55)
+                            && tuned.unchecked_terrain_block(above, c) == 0
+                            && (2..=crate::segments::MAX_CHAIN).any(|dy| {
+                                crate::props::placement::ground_support(
+                                    tuned.unchecked_terrain_block([x, y + dy, z], c),
+                                )
+                            })
+                        {
+                            island = Some((tuned, p));
+                        }
+                        if supported.is_some() && island.is_some() {
+                            break 'search;
+                        }
+                    }
+                }
+            }
+        }
+        let (positive, p, material) =
+            supported.expect("actual anchored foliage is retained, not globally disabled");
+        let c = positive
+            .terrain
+            .surface_column(p[0] as f64 + 0.5, p[2] as f64 + 0.5);
+        assert_eq!(positive.terrain_block(p, c), material);
+        let (generator, island) = island.expect("reproduces the original per-voxel foliage gap");
+        let c = generator
+            .terrain
+            .surface_column(island[0] as f64 + 0.5, island[2] as f64 + 0.5);
+        assert_eq!(
+            crate::segments::hanging_support(island, |p| Some(
+                generator.unchecked_terrain_block(p, c)
+            )),
+            Some(false)
+        );
+        assert_eq!(generator.terrain_block(island, c), 0);
+        let (owner, local) = terra_voxel::global_to_section(island);
+        let plain = generator
+            .build(owner, 0, &Default::default(), false)
+            .unwrap();
+        let meshed = generator
+            .build(owner, 0, &Default::default(), true)
+            .unwrap();
+        assert_eq!(plain.data, meshed.data);
+        assert_eq!(plain.props, meshed.props);
+        assert_eq!(plain.data.block(local).unwrap(), 0);
+        for prop in &plain.props {
+            assert_eq!(
+                crate::props::placement::supported(prop, |p| generator.block_at(p).ok()),
+                Some(true),
+                "a generated cave prop needs an actual supporting voxel: {prop:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn loaded_remesh_matches_fresh_generation_including_halos_and_segment_details() {
+        for (seed, coordinate, cave_structure_revision) in
+            [(1, [-1, -1], 0), (42042, [2, 3], 5), (99991, [-8, 7], 5)]
+        {
+            let terrain = TerraGenerator::new(terra_core::WorldConfig {
+                seed: terra_core::WorldSeed(seed),
+                cave_structure_revision,
+                ..Default::default()
+            })
+            .unwrap();
+            let height = terrain.surface_height(
+                (coordinate[0] * 16 + 8) as f64,
+                (coordinate[1] * 16 + 8) as f64,
+            );
+            let owner = SectionPos::new(
+                coordinate[0],
+                ((height - 8.0).floor() as i64).div_euclid(16),
+                coordinate[1],
+            );
+            let generator = SectionGenerator::new(terrain);
+            let prepared = generator.prepare_column(coordinate, true).unwrap();
+            let edits = HashMap::from([
+                (owner.global_block([15, 9, 15]).unwrap(), 3),
+                (owner.global_block([3, 7, 3]).unwrap(), 3),
+                (owner.global_block([3, 8, 3]).unwrap(), 51),
+                (owner.global_block([3, 9, 3]).unwrap(), 51),
+                (owner.global_block([3, 10, 3]).unwrap(), 0),
+            ]);
+            let full = generator
+                .build_prepared(owner, 7, &edits, &prepared)
+                .unwrap();
+            let mut known = vec![None; terra_voxel::meshing::PADDED_VOLUME];
+            for z in 0..16 {
+                for y in 0..16 {
+                    for x in 0..16 {
+                        known[x + 1 + 18 * (y + 1 + 18 * (z + 1))] =
+                            Some(full.data.block([x, y, z]).unwrap());
+                    }
+                }
+            }
+            let remeshed = generator
+                .remesh_loaded(&full.data, 7, &edits, &prepared, &known)
+                .unwrap();
+            assert_eq!(remeshed.data, full.data);
+            assert_eq!(remeshed.water, full.water);
+            assert!(
+                remeshed.fluid_wake.is_empty(),
+                "geometry remeshing must not restart sleeping natural falls"
+            );
+            let mesh = remeshed.mesh.unwrap();
+            let original = full.mesh.unwrap();
+            assert_eq!(mesh.positions, original.positions);
+            assert_eq!(mesh.normals, original.normals);
+            assert_eq!(mesh.materials, original.materials);
+            assert_eq!(mesh.uvs, original.uvs);
+            assert_eq!(mesh.indices, original.indices);
+            assert_eq!(mesh.occluders, original.occluders);
+            assert_eq!(mesh.mineral_growth, original.mineral_growth);
+            let segments = |m: &BlockMesh| {
+                m.segments
+                    .iter()
+                    .map(|s| (s.material, s.cell, s.below, s.above, s.hanging))
+                    .collect::<Vec<_>>()
+            };
+            assert_eq!(segments(&mesh), segments(&original));
+        }
+    }
+}
 pub struct GeneratedSection {
     pub data: BlockSection,
     pub mesh: Option<BlockMesh>,
@@ -39,6 +242,146 @@ impl SectionGenerator {
     }
     pub fn terrain(&self) -> &TerraGenerator {
         &self.terrain
+    }
+    /// Remesh an existing section without regenerating its terrain or props.
+    /// Unknown halo cells use the same prepared column as initial generation.
+    pub(crate) fn remesh_loaded(
+        &self,
+        data: &BlockSection,
+        revision: u64,
+        edits: &BlockOverrides,
+        column: &PreparedColumn,
+        known: &[Option<u16>],
+    ) -> Result<GeneratedSection, SectionGenerationError> {
+        let position = data.position();
+        if column.coordinate != [position.x, position.z]
+            || !column.config.same_terrain(self.terrain.config())
+            || column.padding != 1
+        {
+            return Err(SectionGenerationError::ColumnMismatch);
+        }
+        let origin = position.origin()?;
+        let size = terra_voxel::meshing::PADDED_SIZE;
+        if known.len() != terra_voxel::meshing::PADDED_VOLUME {
+            return Err(MeshError::InvalidPadding(known.len()).into());
+        }
+        let start = origin.map(|v| v - 1);
+        let mut padded = vec![0; known.len()];
+        for z in 0..size {
+            for y in 0..size {
+                for x in 0..size {
+                    let index = x + size * (y + size * z);
+                    if known[index].is_some() {
+                        continue;
+                    }
+                    let global = [
+                        start[0] + x as i64,
+                        start[1] + y as i64,
+                        start[2] + z as i64,
+                    ];
+                    let surface = column.columns[x + z * size];
+                    padded[index] = self.terrain_block(global, surface);
+                }
+            }
+        }
+        if known.iter().any(Option::is_none) {
+            self.terrain
+                .stamp_ores(start, size, &column.columns, &mut padded);
+            for tree in &column.trees {
+                tree.stamp_wood(start, size, &mut padded);
+            }
+            for tree in &column.trees {
+                tree.stamp_leaves(start, size, &mut padded);
+            }
+            for site in &column.structures {
+                site.stamp(start, size, &mut padded);
+            }
+        }
+        for z in 0..size {
+            for y in 0..size {
+                for x in 0..size {
+                    let index = x + size * (y + size * z);
+                    let global = [
+                        start[0] + x as i64,
+                        start[1] + y as i64,
+                        start[2] + z as i64,
+                    ];
+                    if let Some(material) = edits.get(&global).copied().or(known[index]) {
+                        padded[index] = material;
+                    }
+                    if self.terrain.config().bounded_world && !(-128..=356).contains(&global[1]) {
+                        padded[index] = 0;
+                    }
+                }
+            }
+        }
+        let mut blocks = Vec::with_capacity(SECTION_VOLUME);
+        for z in 1..=SECTION_SIZE {
+            for y in 1..=SECTION_SIZE {
+                let start = 1 + size * (y + size * z);
+                blocks.extend_from_slice(&padded[start..start + SECTION_SIZE]);
+            }
+        }
+        let mut mesh = mesh_section(&padded)?;
+        for (index, &material) in blocks.iter().enumerate() {
+            if !crate::segments::is_segment(material) {
+                continue;
+            }
+            let cell = [index % 16, index / 16 % 16, index / 256];
+            let global = std::array::from_fn(|axis| origin[axis] + cell[axis] as i64);
+            let surface = column.columns[cell[0] + 1 + (cell[2] + 1) * size];
+            let profile = self.segment_profile(global, material, surface, edits);
+            mesh.segments.push(terra_voxel::meshing::BlockSegment {
+                material,
+                cell: cell.map(|v| v as u8),
+                below: profile.below,
+                above: profile.above,
+                hanging: profile.hanging,
+            });
+        }
+        if self.terrain.config().cave_structure_revision == 0 {
+            mesh.mineral_growth =
+                crate::ore_shapes::salt_growth_snapshot(&mesh.faces, origin, |p| {
+                    if let Some(&material) = edits.get(&p) {
+                        return Some(material);
+                    }
+                    let cell = std::array::from_fn::<_, 3, _>(|axis| p[axis] - start[axis]);
+                    if cell.iter().all(|v| (0..size as i64).contains(v)) {
+                        Some(
+                            padded[cell[0] as usize
+                                + size * (cell[1] as usize + size * cell[2] as usize)],
+                        )
+                    } else {
+                        self.block_at(p).ok()
+                    }
+                });
+        }
+        // Natural shoreline geometry belongs to this exact edited halo. Active
+        // fluid overrides still use the existing water worker/publication path.
+        let water = if self.terrain.config().water {
+            crate::water::build_natural_patch(
+                position,
+                origin,
+                &column.columns,
+                &padded,
+                self.terrain.config().sea_level,
+                self.terrain.config().rivers
+                    || crate::water::local_water_levels(
+                        &column.columns,
+                        self.terrain.config().sea_level,
+                    ),
+            )
+        } else {
+            None
+        };
+        Ok(GeneratedSection {
+            data: BlockSection::from_blocks(position, revision, blocks)?,
+            mesh: Some(mesh),
+            water,
+            props: Vec::new(),
+            fluid_wake: Vec::new(),
+            surface_sections: None,
+        })
     }
     pub fn generate(&self, position: SectionPos) -> Result<BlockSection, SectionGenerationError> {
         Ok(self.build(position, 0, &BlockOverrides::new(), false)?.data)
@@ -78,6 +421,7 @@ impl SectionGenerator {
         let size = column.size;
         let start = origin.map(|v| v - padding as i64);
         let columns = &column.columns;
+        let structure_at = |p| column.structures.iter().find_map(|site| site.block_at(p));
         if edits.is_empty() && start[1] as f64 + 0.5 > column.maximum {
             return Ok(GeneratedSection {
                 data: BlockSection::from_blocks(position, revision, vec![0; SECTION_VOLUME])?,
@@ -113,6 +457,9 @@ impl SectionGenerator {
         for tree in trees {
             tree.stamp_leaves(start, size, &mut padded);
         }
+        for site in &column.structures {
+            site.stamp(start, size, &mut padded);
+        }
         if self.terrain.config().bounded_world {
             for z in 0..size {
                 for y in 0..size {
@@ -143,11 +490,13 @@ impl SectionGenerator {
                     let obstruction = if y as usize + padding + 1 < size {
                         padded[index + size]
                     } else {
-                        trees
-                            .iter()
-                            .find_map(|tree| tree.wood_at(above))
-                            .or_else(|| trees.iter().find_map(|tree| tree.leaves_at(above)))
-                            .map_or(0, |material| material as u16)
+                        structure_at(above).unwrap_or_else(|| {
+                            trees
+                                .iter()
+                                .find_map(|tree| tree.wood_at(above))
+                                .or_else(|| trees.iter().find_map(|tree| tree.leaves_at(above)))
+                                .map_or(0, |material| material as u16)
+                        })
                     };
                     [padded[index], obstruction]
                 })
@@ -162,6 +511,50 @@ impl SectionGenerator {
             }
         }
         let mut blocks = vec![0; SECTION_VOLUME];
+        let mut props = Vec::new();
+        if self.terrain.config().cave_structure_revision >= 4 {
+            props.extend(super::webs::generate(
+                position,
+                self.terrain.config().seed.0,
+                self.terrain.config().bounded_world,
+                |x, z| {
+                    let local = [(x - start[0]) as usize, (z - start[2]) as usize];
+                    let surface = columns[local[0] + local[1] * size];
+                    (surface.height, surface.biome.weights.forest > 0.35)
+                },
+                |global| {
+                    if self.terrain.config().bounded_world && !(-128..=356).contains(&global[1]) {
+                        return None;
+                    }
+                    let local = std::array::from_fn::<_, 3, _>(|axis| global[axis] - start[axis]);
+                    if local.iter().all(|&v| (0..size as i64).contains(&v)) {
+                        return Some(
+                            padded[local[0] as usize
+                                + size * (local[1] as usize + size * local[2] as usize)],
+                        );
+                    }
+                    if let Some(material) =
+                        edits.get(&global).copied().or_else(|| structure_at(global))
+                    {
+                        return Some(material);
+                    }
+                    let surface = self
+                        .terrain
+                        .surface_column(global[0] as f64 + 0.5, global[2] as f64 + 0.5);
+                    Some(edits.get(&global).copied().unwrap_or_else(|| {
+                        let terrain = self.terrain_block(global, surface);
+                        if terrain != 0 {
+                            return terrain;
+                        }
+                        trees
+                            .iter()
+                            .find_map(|tree| tree.wood_at(global))
+                            .or_else(|| trees.iter().find_map(|tree| tree.leaves_at(global)))
+                            .map_or(0, |m| m as u16)
+                    }))
+                },
+            ));
+        }
         for z in 0..SECTION_SIZE {
             for y in 0..SECTION_SIZE {
                 let source = padding + size * (y + padding + size * (z + padding));
@@ -234,6 +627,9 @@ impl SectionGenerator {
                                                     + size * (cell[2] as usize + padding))],
                                     );
                                 }
+                                if let Some(material) = structure_at(p) {
+                                    return Some(material);
+                                }
                                 let material = self.terrain_block(p, surface);
                                 Some(if material == 0 {
                                     trees
@@ -273,7 +669,6 @@ impl SectionGenerator {
         } else {
             None
         };
-        let mut props = Vec::new();
         for z in 0..16 {
             for x in 0..16 {
                 let column = columns[x + padding + (z + padding) * size];
@@ -298,7 +693,7 @@ impl SectionGenerator {
                         let index = x + padding + size * (y + size * (z + padding));
                         // Reuse generated occupancy before evaluating plant noise.
                         // Missing top-border cells still use the world-space path.
-                        if padded[index] == 0
+                        if !crate::props::placement::ground_support(padded[index])
                             || (y + 1 < size && padded[index + size] != 0)
                             || (y + 2 < size && padded[index + size * 2] != 0)
                         {
@@ -313,6 +708,7 @@ impl SectionGenerator {
                             let material = edits
                                 .get(&p)
                                 .copied()
+                                .or_else(|| structure_at(p))
                                 .unwrap_or_else(|| self.terrain_block(p, column));
                             if material != 0 || self.terrain_block(p, column) != 0 {
                                 clear = false;
@@ -320,8 +716,13 @@ impl SectionGenerator {
                             }
                         }
                         if clear
-                            && edits.get(&support).is_none_or(|m| *m != 0)
-                            && self.terrain_block(support, column) != 0
+                            && crate::props::placement::ground_support(
+                                edits
+                                    .get(&support)
+                                    .copied()
+                                    .or_else(|| structure_at(support))
+                                    .unwrap_or_else(|| self.terrain_block(support, column)),
+                            )
                         {
                             props.push(prop);
                         }
@@ -342,6 +743,9 @@ impl SectionGenerator {
                     if local.iter().all(|&v| (0..size as i64).contains(&v)) {
                         return padded[local[0] as usize
                             + size * (local[1] as usize + size * local[2] as usize)];
+                    }
+                    if let Some(material) = structure_at(global) {
+                        return material;
                     }
                     let column = self
                         .terrain
@@ -404,13 +808,18 @@ impl SectionGenerator {
                     padded[index + size] == 0
                 } else {
                     // Headless jobs omit mesh padding but must generate the same logical props.
-                    edits.get(&above).copied().unwrap_or_else(|| {
-                        trees
-                            .iter()
-                            .find_map(|tree| tree.wood_at(above))
-                            .or_else(|| trees.iter().find_map(|tree| tree.leaves_at(above)))
-                            .map_or(0, |material| material as u16)
-                    }) == 0
+                    edits
+                        .get(&above)
+                        .copied()
+                        .or_else(|| structure_at(above))
+                        .unwrap_or_else(|| {
+                            trees
+                                .iter()
+                                .find_map(|tree| tree.wood_at(above))
+                                .or_else(|| trees.iter().find_map(|tree| tree.leaves_at(above)))
+                                .map_or(0, |material| material as u16)
+                        })
+                        == 0
                 };
                 if !exposed {
                     continue;
@@ -482,20 +891,57 @@ impl SectionGenerator {
             }
         }
         let mut fluid_wake = Vec::new();
-        if self.terrain.config().cave_structure_revision >= 4 && self.terrain.config().water {
+        if self.terrain.config().water {
             for z in padding..size - padding {
                 for x in padding..size - padding {
-                    let c = columns[x + size * z].cave;
-                    if let Some(p) = c.fluid_outlet(
-                        (start[0] + x as i64) as f64 + 0.5,
-                        (start[2] + z as i64) as f64 + 0.5,
-                    ) && p[1].div_euclid(16) == position.y
+                    let c = columns[x + size * z];
+                    if !c
+                        .water_columns()
+                        .intervals
+                        .into_iter()
+                        .flatten()
+                        .any(|water| (water.level.ceil() as i64 - 1).div_euclid(16) == position.y)
                     {
-                        fluid_wake.push(p);
+                        continue;
                     }
+                    let global = [start[0] + x as i64, start[2] + z as i64];
+                    let neighbors = crate::water::outlets::HORIZONTAL.map(|[dx, dz]| {
+                        let lx = x as i64 + dx;
+                        let lz = z as i64 + dz;
+                        if (0..size as i64).contains(&lx) && (0..size as i64).contains(&lz) {
+                            columns[lx as usize + size * lz as usize]
+                        } else {
+                            self.terrain.surface_column(
+                                (global[0] + dx) as f64 + 0.5,
+                                (global[1] + dz) as f64 + 0.5,
+                            )
+                        }
+                    });
+                    fluid_wake.extend(crate::water::natural_outlets(
+                        global,
+                        position.y,
+                        c,
+                        neighbors,
+                        |p| {
+                            edits.get(&p).copied().unwrap_or_else(|| {
+                                let local: [i64; 3] = std::array::from_fn(|i| p[i] - start[i]);
+                                if local.iter().all(|v| (0..size as i64).contains(v)) {
+                                    padded[local[0] as usize
+                                        + size * (local[1] as usize + size * local[2] as usize)]
+                                } else {
+                                    let surface = self
+                                        .terrain
+                                        .surface_column(p[0] as f64 + 0.5, p[2] as f64 + 0.5);
+                                    self.terrain_block(p, surface)
+                                }
+                            })
+                        },
+                    ));
                 }
             }
         }
+        fluid_wake.sort_unstable();
+        fluid_wake.dedup();
         Ok(GeneratedSection {
             data: BlockSection::from_blocks(position, revision, blocks)?,
             mesh,
@@ -534,6 +980,9 @@ impl SectionGenerator {
         if self.terrain.config().bounded_world && !(-128..=356).contains(&global[1]) {
             return Ok(0);
         }
+        if let Some(material) = self.terrain.structure_block(global) {
+            return Ok(material);
+        }
         let column = self
             .terrain
             .surface_column(global[0] as f64 + 0.5, global[2] as f64 + 0.5);
@@ -560,6 +1009,18 @@ impl SectionGenerator {
             .map_or(0, |material| material as u16))
     }
     fn terrain_block(&self, global: [i64; 3], column: SurfaceColumn) -> u16 {
+        let material = self.unchecked_terrain_block(global, column);
+        if matches!(material, 54 | 55)
+            && crate::segments::hanging_support(global, |p| {
+                Some(self.unchecked_terrain_block(p, column))
+            }) != Some(true)
+        {
+            return 0;
+        }
+        material
+    }
+
+    fn unchecked_terrain_block(&self, global: [i64; 3], column: SurfaceColumn) -> u16 {
         let p = global.map(|v| v as f64 + 0.5);
         let sample = self.terrain.sample_with_column(p, column);
         if sample.density <= 0.0 {

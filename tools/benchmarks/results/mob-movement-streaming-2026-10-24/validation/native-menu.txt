@@ -1,0 +1,29 @@
+2026-10-24T13:46:12.897242Z  INFO bevy_render::renderer: AdapterInfo { name: "AMD Radeon RX 6950 XT (RADV NAVI21)", vendor: 4098, device: 29605, device_type: DiscreteGpu, device_pci_bus_id: "0000:0c:00.0", driver: "radv", driver_info: "Mesa 26.2.4-arch3.1", backend: Vulkan, subgroup_min_size: 32, subgroup_max_size: 64, transient_saves_memory: false }
+2026-10-24T13:46:13.055188Z  INFO bevy_pbr::cluster: GPU clustering is supported on this device.
+2026-10-24T13:46:13.055214Z  INFO bevy_render::batching::gpu_preprocessing: GPU preprocessing is fully supported on this device.
+2026-10-24T13:46:13.055910Z  INFO bevy_winit::system: Creating new window TERAMIC (152v0)
+2026-10-24T13:46:13.676274Z  INFO terra_client::creature_audio::scene: Recorded animal/environment audio decoded clips=105
+2026-10-24T13:46:13.744162Z  INFO terra_render::water::raymarch: Water SSR hardware depth filtering ready; multisampled views retain the original path
+2026-10-24T13:46:13.744322Z  INFO terra_render::scene::caves::lights::soft_core: Torch soft-core attenuation installed in existing clustered PBR path
+2026-10-24T13:46:13.764222Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/wood.png mip_levels=10 rebound_materials=1
+2026-10-24T13:46:13.764238Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/forged-iron-warm.png mip_levels=11 rebound_materials=0
+2026-10-24T13:46:13.764242Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/stone-strata-hd.png mip_levels=11 rebound_materials=1
+2026-10-24T13:46:13.764245Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/oak-crafted-hd.png mip_levels=11 rebound_materials=0
+2026-10-24T13:46:13.767982Z  INFO terra_render::blocks::loading: Block template library ready blocks=101 materials=236
+2026-10-24T13:46:15.043214Z  INFO terra_client::menu_smoke: Menu smoke advanced stage=800
+2026-10-24T13:46:15.073321Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/tools/benchmarks/results/mob-movement-streaming-2026-10-24/native/menu/main-menu.png
+2026-10-24T13:46:15.497444Z  INFO terra_client::menu_smoke: Menu smoke advanced stage=801
+2026-10-24T13:46:15.950535Z  INFO terra_client::menu_smoke: Menu smoke advanced stage=802
+2026-10-24T13:46:16.402297Z  INFO terra_client::menu_smoke: Menu smoke advanced stage=803
+2026-10-24T13:46:16.427382Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/tools/benchmarks/results/mob-movement-streaming-2026-10-24/native/menu/mob-health-edit-bars.png
+2026-10-24T13:46:16.852401Z  INFO terra_client::menu_smoke: Menu smoke advanced stage=804
+2026-10-24T13:46:17.302630Z  INFO terra_client::menu_smoke: Menu smoke advanced stage=805
+2026-10-24T13:46:17.328012Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/tools/benchmarks/results/mob-movement-streaming-2026-10-24/native/menu/mob-health-color-picker.png
+2026-10-24T13:46:17.752828Z  INFO terra_client::menu_smoke: Menu smoke advanced stage=806
+2026-10-24T13:46:18.205043Z  INFO terra_client::menu_smoke: Menu smoke advanced stage=807
+2026-10-24T13:46:18.657933Z  INFO terra_client::menu_smoke: Menu smoke advanced stage=808
+2026-10-24T13:46:19.108039Z  INFO terra_client::menu_smoke: Menu smoke advanced stage=809
+2026-10-24T13:46:19.560560Z  INFO terra_client::menu_smoke: Menu smoke advanced stage=810
+2026-10-24T13:46:20.012634Z  INFO terra_client::menu_smoke: Menu smoke advanced stage=811
+2026-10-24T13:46:20.464193Z  INFO terra_client::menu_smoke: Native Mob Health editor passed: bound Edit Bars modal, actual choice/color-picker widgets, staged colors, persistent Apply and Reset/Discard
+2026-10-24T13:46:20.464243Z  INFO terra_client::menu_smoke: Menu smoke advanced stage=812

@@ -141,21 +141,22 @@ mod tests {
         let range = (1.0 - (distance / 28.0).powi(4)).clamp(0.0, 1.0).powi(2);
         let t = ((distance - 1.0) / 3.0).clamp(0.0, 1.0);
         let spill = if soft {
-            1.0 + 0.2 * t * t * (3.0 - 2.0 * t)
+            1.0 + 1.34 * t * t * (3.0 - 2.0 * t)
         } else {
             1.0
         };
         spill * range / (distance * distance + if soft { 16.0 } else { 0.0 }).max(0.0001)
     }
     #[test]
-    fn torch_spill_is_twenty_percent_brighter_without_strengthening_the_hotspot() {
+    fn torch_spill_is_fifty_percent_brighter_without_strengthening_the_hotspot() {
         for distance in [0.25_f32, 0.5, 1.0, 4.0, 10.0, 18.0] {
             let original = (1.0 - (distance / 28.0).powi(4)).clamp(0.0, 1.0).powi(2)
                 / (distance * distance + 16.0);
-            let expected = if distance <= 1.0 { 1.0 } else { 1.2 };
-            assert!((attenuation(distance, true) / original - expected).abs() < 0.000_01);
+            let previous = original * if distance <= 1.0 { 1.0 } else { 1.56 };
+            let expected = if distance <= 1.0 { 1.0 } else { 1.5 };
+            assert!((attenuation(distance, true) / previous - expected).abs() < 0.000_01);
         }
-        assert!(WGSL.contains("0.2 * smoothstep(1.0, 4.0, sqrt(distance_squared))"));
+        assert!(WGSL.contains("1.34 * smoothstep(1.0, 4.0, sqrt(distance_squared))"));
     }
     #[test]
     fn broad_spill_reduces_the_hotspot_without_more_lights_or_a_hard_range_edge() {

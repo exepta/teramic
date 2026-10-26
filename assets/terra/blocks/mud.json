@@ -6,7 +6,7 @@
   "creative_category": "terrain",
   "render_kind": "cube",
   "surface": "earth",
-  "bevel_width": 0.025,
+  "bevel_width": 0.0,
   "materials": {
     "Pebbled river mud": {
       "texture_pattern": "mud",

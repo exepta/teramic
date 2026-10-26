@@ -73,6 +73,14 @@ pub(super) fn refresh_interest(
     }
     *previous = centers.clone();
     *previous_range = Some(range);
+    chunks.cave_views = if settings.meshes && environment.terrain.0.config().caves {
+        centers
+            .iter()
+            .map(|&center| (center, settings.radius))
+            .collect()
+    } else {
+        Vec::new()
+    };
     let mut wanted = HashSet::new();
     for &center in &centers {
         wanted.extend(wanted_sections(
@@ -115,6 +123,13 @@ pub(super) fn refresh_interest(
         }
         keep
     });
+    for (&coordinate, column) in &chunks.columns {
+        wanted.extend(cave_sections_for_column(
+            coordinate,
+            column,
+            &chunks.cave_views,
+        ));
+    }
     for (&[x, z], &[low, high]) in &chunks.surface_ranges {
         for y in low..=high {
             wanted.insert(SectionPos::new(x, y, z));
@@ -166,6 +181,34 @@ pub(super) fn refresh_interest(
         requested = chunks.wanted.len(),
         "Chunk interest changed"
     );
+}
+
+pub(super) fn cave_sections_for_column(
+    coordinate: [i64; 2],
+    column: &crate::PreparedColumn,
+    views: &[(SectionPos, i64)],
+) -> Vec<SectionPos> {
+    let mut sections = HashSet::new();
+    for &(center, radius) in views {
+        if (coordinate[0] - center.x).abs() > radius || (coordinate[1] - center.z).abs() > radius {
+            continue;
+        }
+        if let Some([low, high]) = column.cave_view_sections(center.y as f64 * 16.0 + 8.0) {
+            sections.extend((low..=high).map(|y| SectionPos::new(coordinate[0], y, coordinate[1])));
+        }
+    }
+    let mut sections: Vec<_> = sections.into_iter().collect();
+    sections.sort_unstable_by_key(|p| {
+        (
+            views
+                .iter()
+                .map(|(center, _)| distance_squared(*p, *center))
+                .min()
+                .unwrap_or(0),
+            p.y,
+        )
+    });
+    sections
 }
 
 fn extend_cave_interest(

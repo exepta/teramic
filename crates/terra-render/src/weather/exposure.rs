@@ -123,6 +123,41 @@ fn roof_water(
 }
 
 impl Exposure {
+    pub fn coastal(&self, sea: f64) -> bool {
+        self.roofs
+            .iter()
+            .any(|&roof| (f64::from(roof) + 1.0 - sea).abs() <= 0.65)
+    }
+
+    /// Empty sky and deep interior publications cannot change a captured roof.
+    /// Removing/replacing its actual section must still trigger a fresh mask.
+    pub fn section_affects(
+        &self,
+        position: SectionPos,
+        section: Option<&terra_voxel::BlockSection>,
+        sea: f64,
+    ) -> bool {
+        let low = position.y.saturating_mul(16);
+        let high = low.saturating_add(15);
+        if self.roofs.iter().chain(&self.snow_roofs).any(|&roof| {
+            let roof = i64::from(roof);
+            (low..=high).contains(&roof)
+        }) || self.coastal(sea) && (low..=high).contains(&water_cell_y(sea))
+        {
+            return true;
+        }
+        self.roofs
+            .iter()
+            .chain(&self.snow_roofs)
+            .any(|&roof| i64::from(roof) <= high)
+            && section.is_some_and(|section| {
+                section
+                    .blocks()
+                    .iter()
+                    .any(|&block| MaterialId::from_raw(block).is_some_and(MaterialId::is_solid))
+            })
+    }
+
     /// Source Arcs may change without changing any vertex exposure payload.
     pub fn same_masks(&self, other: &Self) -> bool {
         self.roofs == other.roofs
@@ -400,6 +435,44 @@ fn neighbors4(i: usize, n: usize) -> [Option<usize>; 4] {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn empty_sky_publications_do_not_recapture_roofs_but_real_roofs_can_never_be_skipped() {
+        let exposure = Exposure {
+            natural: None,
+            roofs: [8; 256],
+            snow_roofs: [3; 256],
+            coast: [0.0; 256],
+            coast_vertices: [0.0; 289],
+            water: [f32::NEG_INFINITY; 256],
+        };
+        let mut recaptures = 0;
+        for y in 1..=20 {
+            let position = SectionPos::new(-2, y, -3);
+            let empty = terra_voxel::BlockSection::empty(position).unwrap();
+            recaptures += usize::from(exposure.section_affects(position, Some(&empty), 0.0));
+        }
+        assert_eq!(
+            recaptures, 0,
+            "empty streamed sky cannot invalidate the same loaded roof twenty times"
+        );
+        let roof = SectionPos::new(-2, 5, -3);
+        let mut data = terra_voxel::BlockSection::empty(roof).unwrap();
+        data.set_block([7, 3, 7], 3).unwrap();
+        assert!(exposure.section_affects(roof, Some(&data), 0.0));
+        let removed = Exposure {
+            roofs: [83; 256],
+            ..exposure
+        };
+        assert!(
+            removed.section_affects(roof, None, 0.0),
+            "unloading an actual ceiling must recapture lower exposure"
+        );
+        let canopy = SectionPos::new(-2, 0, -3);
+        assert!(
+            removed.section_affects(canopy, None, 0.0),
+            "snow sees a different roof below the crown"
+        );
+    }
     #[test]
     fn snow_ignores_natural_crowns_but_not_player_roofs() {
         use terra_world::generation::TreeAppearance;

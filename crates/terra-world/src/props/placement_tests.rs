@@ -15,6 +15,93 @@ fn plant(id: u64, kind: PropKind, cell: [i64; 3], slot: usize) -> WorldProp {
     prop
 }
 
+#[test]
+fn vegetation_requires_actual_solid_support_not_fluids_or_other_plants() {
+    let cell = [-17, -17, -1];
+    for kind in [
+        PropKind::Grass,
+        PropKind::Flower,
+        PropKind::Bush,
+        PropKind::Fern,
+        PropKind::Mushroom,
+        PropKind::SmallPlant,
+        PropKind::Seagrass,
+        PropKind::SmallStones,
+        PropKind::Corn,
+    ] {
+        let prop = plant(71, kind, cell, 0);
+        let original = prop;
+        for material in [0, 14, 27, 40, 50, 51, 52, 53, 54, 55, 56, 60, 65, 82] {
+            assert_eq!(
+                supported(&prop, |p| Some(if p == cell { material } else { 0 })),
+                Some(false),
+                "{kind:?} must not grow on material {material}"
+            );
+        }
+        for material in [1, 2, 3, 13, 44, 48, 57, 58, 101] {
+            assert_eq!(
+                supported(&prop, |p| Some(if p == cell { material } else { 0 })),
+                Some(true)
+            );
+        }
+        assert_eq!(prop, original, "validation never writes saved prop data");
+    }
+}
+
+#[test]
+fn incomplete_vertical_sections_are_unknown_and_water_and_snow_keep_their_existing_rules() {
+    let cell = [-17, -17, -1];
+    let prop = plant(71, PropKind::Flower, cell, 0);
+    let mut known = std::collections::HashMap::from([(cell, 3)]);
+    assert_eq!(supported(&prop, |p| known.get(&p).copied()), None);
+    let root = prop.position.map(|v| v.floor() as i64);
+    assert_eq!(terra_voxel::global_to_section(root).0.y, -1);
+    assert_eq!(prop.section.y, -2);
+    known.insert(root, 0);
+    assert_eq!(supported(&prop, |p| known.get(&p).copied()), Some(true));
+    known.remove(&cell);
+    assert_eq!(supported(&prop, |p| known.get(&p).copied()), None);
+    known.insert(cell, 3);
+    for material in [5, 98] {
+        known.insert(root, material);
+        assert_eq!(supported(&prop, |p| known.get(&p).copied()), Some(true));
+    }
+    known.insert(root, 27);
+    assert_eq!(supported(&prop, |p| known.get(&p).copied()), Some(false));
+    let aquatic = plant(72, PropKind::Seagrass, cell, 0);
+    let aquatic_root = aquatic.position.map(|v| v.floor() as i64);
+    known.insert(aquatic_root, 27);
+    assert_eq!(supported(&aquatic, |p| known.get(&p).copied()), Some(true));
+    assert!(!prop.removed && !aquatic.removed);
+}
+
+#[test]
+fn saved_webs_wait_for_loaded_strands_and_revalidate_real_anchors_without_tombstones() {
+    let anchor = [-17, -16, -1];
+    let web = super::webs::attached(anchor, [0, -1, 0], 3, PropId(901)).unwrap();
+    let original = web;
+    let rock = |p| Some(if p == anchor { 3 } else { 0 });
+    assert_eq!(supported(&web, rock), Some(true));
+    assert_eq!(
+        supported(&web, |p| if p[1] < -16 { None } else { rock(p) }),
+        None
+    );
+    assert_eq!(supported(&web, |_| None), None);
+    assert_eq!(supported(&web, |_| Some(0)), Some(false));
+    assert_eq!(supported(&web, rock), Some(true));
+    assert_eq!(web, original);
+
+    let large = super::webs::spanning([15, 8, -1], [1, 0, 0], 21, 10, PropId(902)).unwrap();
+    let canyon = |p: [i64; 3]| Some(if matches!(p[0], 15 | 36) { 3 } else { 0 });
+    assert_eq!(supported(&large, canyon), Some(true));
+    assert_eq!(
+        supported(&large, |p| if p[0] >= 32 { None } else { canyon(p) }),
+        None
+    );
+    assert_eq!(supported(&large, canyon), Some(true));
+    assert!(!large.removed);
+}
+
 fn unchanged_identity(before: WorldProp, after: WorldProp) {
     assert_eq!(support(&before), support(&after));
     assert_eq!(

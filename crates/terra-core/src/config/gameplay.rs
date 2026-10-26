@@ -10,6 +10,16 @@ pub enum MapMode {
     Cave,
 }
 
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum MobHealthBars {
+    InView,
+    #[default]
+    LookingAt,
+    Always,
+    None,
+}
+
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct MinimapConfig {
@@ -55,6 +65,23 @@ pub struct GameplayConfig {
     pub minimap: MinimapConfig,
     pub heartbeat: bool,
     pub view_bobbing: bool,
+    pub mob_health_bars: MobHealthBars,
+    #[serde(deserialize_with = "deserialize_rgb")]
+    pub mob_health_friendly_color: [u8; 3],
+    #[serde(deserialize_with = "deserialize_rgb")]
+    pub mob_health_hostile_color: [u8; 3],
+    #[serde(deserialize_with = "deserialize_rgb")]
+    pub mob_health_font_color: [u8; 3],
+}
+
+fn deserialize_rgb<'de, D: serde::Deserializer<'de>>(deserializer: D) -> Result<[u8; 3], D::Error> {
+    // Deserialize a sequence explicitly: TOML's fixed-array tuple path may
+    // accept a valid prefix while leaving additional components unread.
+    Vec::<u8>::deserialize(deserializer)?
+        .try_into()
+        .map_err(|_: Vec<u8>| {
+            serde::de::Error::custom("RGB colors require exactly three components")
+        })
 }
 
 impl Default for GameplayConfig {
@@ -63,6 +90,10 @@ impl Default for GameplayConfig {
             minimap: MinimapConfig::default(),
             heartbeat: true,
             view_bobbing: true,
+            mob_health_bars: MobHealthBars::default(),
+            mob_health_friendly_color: [105, 203, 134],
+            mob_health_hostile_color: [223, 98, 93],
+            mob_health_font_color: [255; 3],
         }
     }
 }
@@ -98,6 +129,51 @@ mod tests {
         assert_eq!(default, GameplayConfig::default());
         assert!(default.heartbeat);
         assert!(default.view_bobbing);
+        assert_eq!(default.mob_health_bars, MobHealthBars::LookingAt);
+        for (value, expected) in [
+            ("in_view", MobHealthBars::InView),
+            ("looking_at", MobHealthBars::LookingAt),
+            ("always", MobHealthBars::Always),
+            ("none", MobHealthBars::None),
+        ] {
+            let config =
+                GameplayConfig::from_toml(&format!("mob_health_bars = '{value}'")).unwrap();
+            assert_eq!(config.mob_health_bars, expected);
+            assert_eq!(
+                GameplayConfig::from_toml(&toml::to_string(&config).unwrap()).unwrap(),
+                config
+            );
+        }
+        assert!(GameplayConfig::from_toml("mob_health_bars = 'invalid'").is_err());
+        for invalid in [
+            "mob_health_friendly_color = [256, 0, 0]",
+            "mob_health_hostile_color = [-1, 0, 0]",
+            "mob_health_font_color = [255, 255]",
+            "mob_health_font_color = [1, 2, 3, 4]",
+            "mob_health_friendly_color = '#69cb86'",
+        ] {
+            assert!(GameplayConfig::from_toml(invalid).is_err(), "{invalid}");
+        }
+        for field in [
+            "mob_health_friendly_color",
+            "mob_health_hostile_color",
+            "mob_health_font_color",
+        ] {
+            for value in ["[]", "[1]", "[1, 2]", "[1, 2, 3, 4]", "[1, 2, 3, 4, 5]"] {
+                let invalid = format!("{field} = {value}");
+                assert!(GameplayConfig::from_toml(&invalid).is_err(), "{invalid}");
+            }
+            let valid = format!("{field} = [0, 128, 255]");
+            assert!(GameplayConfig::from_toml(&valid).is_ok(), "{valid}");
+        }
+        let colored = GameplayConfig::from_toml("mob_health_friendly_color = [12, 34, 56]\nmob_health_hostile_color = [210, 110, 30]\nmob_health_font_color = [240, 230, 220]").unwrap();
+        assert_eq!(colored.mob_health_friendly_color, [12, 34, 56]);
+        assert_eq!(colored.mob_health_hostile_color, [210, 110, 30]);
+        assert_eq!(colored.mob_health_font_color, [240, 230, 220]);
+        assert_eq!(
+            GameplayConfig::from_toml(&toml::to_string(&colored).unwrap()).unwrap(),
+            colored
+        );
         assert!(
             !GameplayConfig::from_toml("view_bobbing = false")
                 .unwrap()

@@ -35,6 +35,7 @@ pub enum TreeAppearance {
     Spruce,
     Palm,
     Mushroom,
+    Cherry,
 }
 
 impl TreeAppearance {
@@ -46,6 +47,7 @@ impl TreeAppearance {
             TreeSpecies::Spruce => Self::Spruce,
             TreeSpecies::Palm => Self::Palm,
             TreeSpecies::Mushroom(_) => Self::Mushroom,
+            TreeSpecies::Cherry(_) => Self::Cherry,
         }
     }
 }
@@ -121,6 +123,9 @@ impl TerraGenerator {
 
 impl TreeAppearanceSnapshot {
     pub fn at(&self, global: [i64; 3], material: u16) -> Option<TreeAppearance> {
+        if matches!(material, 132 | 133) {
+            return Some(TreeAppearance::Cherry);
+        }
         if material == 36 {
             return self.uncached(global, material);
         }
@@ -142,6 +147,7 @@ impl TreeAppearanceSnapshot {
                     5 => Some(TreeAppearance::Spruce),
                     6 => Some(TreeAppearance::Palm),
                     7 => Some(TreeAppearance::Mushroom),
+                    8 => Some(TreeAppearance::Cherry),
                     _ => None,
                 };
             }
@@ -155,8 +161,8 @@ impl TreeAppearanceSnapshot {
     fn uncached(&self, global: [i64; 3], material: u16) -> Option<TreeAppearance> {
         let tree = self.trees.iter().find(|tree| {
             let generated = match material {
-                6 | 10 | 36 => tree.wood_at(global),
-                7..=9 => tree.leaves_at(global),
+                6 | 10 | 36 | 134 => tree.wood_at(global),
+                7..=9 | 132 | 133 => tree.leaves_at(global),
                 _ => None,
             };
             generated.is_some_and(|generated| generated as u16 == material)
@@ -193,6 +199,7 @@ mod tests {
                 })
                 .expect("generated crown");
             let column = crate::PreparedColumn {
+                structures: Vec::new(),
                 config: Default::default(),
                 coordinate: [-1, -1],
                 padding: 0,

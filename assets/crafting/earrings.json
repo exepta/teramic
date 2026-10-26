@@ -1,0 +1,28 @@
+{
+  "id": "teramic::earrings",
+  "name": "Earrings",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "accessory": "earrings"
+    },
+    "count": 1
+  },
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "mineral": "gold_ingot"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "mineral": "ruby"
+        },
+        "count": 1
+      }
+    ]
+  }
+}

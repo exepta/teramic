@@ -1,3 +1,5 @@
+#[cfg(test)]
+mod cherry_tests;
 mod climate;
 mod profile;
 #[cfg(test)]

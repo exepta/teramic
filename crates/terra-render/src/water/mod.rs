@@ -36,7 +36,10 @@ pub(super) fn install(app: &mut App) {
         )
         .add_systems(
             Update,
-            material::update_water_settings.after(crate::weather::WeatherSet::Local),
+            material::update_water_settings
+                .after(crate::weather::WeatherSet::Local)
+                .after(environment::update)
+                .after(contacts::UpdateContacts),
         )
         .add_systems(Update, upload::upload_water.after(StreamingSet::Receive))
         .add_systems(

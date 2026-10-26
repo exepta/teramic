@@ -1,7 +1,10 @@
 @if (dialogView.visible) {
-<div class="modal-backdrop"><div [class]="dialogView.minimap ? 'modal-panel minimap-options' : 'modal-panel'"><ornate-frame></ornate-frame><h1>{{ dialogView.title }}</h1><p>{{ dialogView.message }}</p>
+<div class="modal-backdrop"><div [class]="dialogView.minimap ? 'modal-panel minimap-options' : (dialogView.mob_health ? 'modal-panel mob-health-options' : 'modal-panel')"><ornate-frame></ornate-frame><h1>{{ dialogView.title }}</h1><p>{{ dialogView.message }}</p>
   @if (dialogView.minimap) {
     <div class="minimap-settings-list">@for (row of dialogView.rows; track row.id) { <settings-row></settings-row> }</div>
+  }
+  @if (dialogView.mob_health) {
+    <div class="mob-health-settings-list">@for (row of dialogView.rows; track row.id) { <settings-row></settings-row> }</div>
   }
   @if (dialogView.create) {
     <label>World Name</label><input id="world-name" type="text" maxlength="64" [value]="dialogView.name" onchange="menu_change" />

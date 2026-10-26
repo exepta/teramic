@@ -1,0 +1,9 @@
+width = 1280
+height = 800
+window_mode = "windowed"
+vsync = false
+fps_limit = 0
+render_distance = 8
+shadow_quality = "high"
+water_quality = "high"
+weather_quality = "high"

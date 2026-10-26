@@ -1,0 +1,75 @@
+{
+  "id": "teramic::leather_cape",
+  "name": "Leather Cape",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "cape": {
+        "material": "leather",
+        "color": "white"
+      }
+    },
+    "count": 1
+  },
+  "pattern": {
+    "kind": "shaped",
+    "width": 3,
+    "height": 3,
+    "cells": [
+      {
+        "item": {
+          "animal": "leather"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "animal": "wool"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "animal": "leather"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "animal": "wool"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "animal": "wool"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "animal": "wool"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "animal": "wool"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "animal": "wool"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "animal": "wool"
+        },
+        "count": 1
+      }
+    ]
+  }
+}

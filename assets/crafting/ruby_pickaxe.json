@@ -1,0 +1,48 @@
+{
+  "id": "teramic::ruby_pickaxe",
+  "name": "Ruby Pickaxe",
+  "station": "workbench",
+  "pattern": {
+    "kind": "shaped",
+    "width": 3,
+    "height": 3,
+    "cells": [
+      {
+        "item": {
+          "mineral": "ruby"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "mineral": "ruby"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "mineral": "ruby"
+        },
+        "count": 1
+      },
+      null,
+      {
+        "item": "stick",
+        "count": 1
+      },
+      null,
+      null,
+      {
+        "item": "stick",
+        "count": 1
+      },
+      null
+    ]
+  },
+  "output": {
+    "item": {
+      "tool": "ruby_pickaxe"
+    },
+    "count": 1
+  }
+}

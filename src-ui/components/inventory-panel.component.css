@@ -1,6 +1,6 @@
 .inventory-backdrop { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background-color: #08110d9e; pointer-events: none; opacity: 0; z-index: 160; }
 .inventory-shell { position: relative; width: 100%; height: 100%; min-width: 0; min-height: 0; }
-.inventory-panel { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 704px; height: 684px; max-height: 95%; min-height: 0; display: flex; flex-direction: column; background-color: #17231ff5; border: 2px solid #a29361; border-radius: 6px; padding: 20px; gap: 16px; }
+.inventory-panel { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 704px; height: 840px; max-height: 95%; min-height: 0; display: flex; flex-direction: column; background-color: #17231ff5; border: 2px solid #a29361; border-radius: 6px; padding: 20px; gap: 16px; }
 .inventory-double-container { height: 840px; }
 .inventory-furnace-panel { height: 740px; }
 .workbench-storage { position: absolute; right: calc(50% + 376px); top: 50%; transform: translateY(-50%); width: 457px; max-height: 95%; min-height: 0; display: flex; flex-direction: column; gap: 14px; padding: 16px; background-color: #17231ff5; border: 2px solid #a29361; border-radius: 6px; overflow-y: auto; }
@@ -15,7 +15,7 @@
 .inventory-body::scrollbar-y-thumb { background-color: #b5a369; border-radius: 2px; }
 .furnace-body { overflow: visible; padding-right: 0; }
 .inventory-body h3 { font-size: 15px; color: #ded8b6; margin: 0; }
-.inventory-player-top { min-height: 244px; flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 4px 0 14px; border-bottom: 1px solid #495b48; }
+.inventory-player-top { min-height: 274px; flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 4px 0 14px; border-bottom: 1px solid #495b48; }
 .equipment-grid { width: 101px; flex-shrink: 0; display: grid; grid-template-columns: repeat(2, 48px); grid-auto-rows: 48px; gap: 5px; }
 .inventory-character { width: 156px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
 .avatar-stage { width: 150px; height: 226px; display: flex; align-items: center; justify-content: center; background-color: #111d1880; border: 1px solid #425448; border-radius: 4px; }
@@ -48,6 +48,11 @@
 .furnace-fuel-track { position: absolute; right: -18px; top: 0px; width: 10px; height: 82px; display: flex; flex-direction: column; justify-content: flex-end; background-color: #292e28; border: 1px solid #927e4e; overflow: hidden; }
 .furnace-fuel-fill { width: 100%; background-color: #e78b2c; }
 .furnace-status { min-height: 16px; color: #bdc8b7; font-size: 12px; margin: 0; }
+.crusher-workspace { display: flex; align-items: center; justify-content: center; gap: 28px; padding: 14px 0; min-height: 126px; flex-shrink: 0; }
+.crusher-process { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; color: #c4ad7d; }
+.crusher-gear { width: 34px; height: 34px; }
+.crusher-running { animation: crusher-turn 2200ms linear infinite; }
+@keyframes crusher-turn { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 .inventory-section-heading { display: flex; align-items: center; justify-content: space-between; min-height: 22px; }
 .inventory-section-heading p { font-size: 12px; color: #aeba9f; }
 .inventory-grid { display: grid; grid-template-columns: repeat(9, 66px); grid-auto-rows: 66px; gap: 5px; flex-shrink: 0; }
@@ -183,6 +188,15 @@
   .inventory-heading .inventory-mode { display: none; }
 }
 @media (max-height: 650px) {
+  .inventory-player-panel { height: 95vh; padding-top: 10px; padding-bottom: 10px; gap: 8px; }
+  .inventory-player-panel .inventory-body { gap: 8px; }
+  .inventory-player-panel .inventory-heading { min-height: 32px; padding-bottom: 6px; }
+  .inventory-player-panel .inventory-player-top { min-height: 0px; padding-bottom: 8px; }
+  .inventory-player-panel .equipment-grid { width: 76px; grid-template-columns: repeat(2, 36px); grid-auto-rows: 36px; gap: 4px; }
+  .inventory-player-panel .avatar-stage { height: 162px; }
+  .inventory-player-panel .avatar-image { height: 160px; }
+  .inventory-player-panel .inventory-backpack-section { gap: 6px; }
+  .inventory-player-panel .inventory-hotbar-section { padding-top: 6px; }
   .inventory-furnace-panel { height: 560px; padding-top: 10px; padding-bottom: 10px; gap: 8px; }
   .furnace-body { gap: 8px; }
   .inventory-furnace-panel .furnace-slot { width: 56px; height: 56px; }
@@ -195,6 +209,13 @@
   .inventory-furnace-panel .inventory-hotbar-section { padding-top: 6px; }
 }
 @media (max-height: 540px) {
+  .inventory-player-panel { padding-top: 8px; padding-bottom: 8px; gap: 6px; }
+  .inventory-player-panel .inventory-body { gap: 6px; }
+  .inventory-player-panel .inventory-heading { min-height: 28px; padding-bottom: 4px; }
+  .inventory-player-panel .equipment-grid { width: 59px; grid-template-columns: repeat(2, 28px); grid-auto-rows: 28px; gap: 3px; }
+  .inventory-player-panel .avatar-stage { height: 124px; }
+  .inventory-player-panel .avatar-image { height: 122px; }
+  .inventory-player-panel .inventory-section-heading { min-height: 18px; }
   .inventory-furnace-panel { height: 440px; padding-top: 8px; padding-bottom: 8px; gap: 6px; }
   .furnace-body { gap: 6px; }
   .inventory-furnace-panel .inventory-heading { min-height: 28px; padding-bottom: 4px; }
@@ -204,4 +225,10 @@
   .inventory-furnace-panel .furnace-slot-group { gap: 4px; }
   .inventory-furnace-panel .furnace-slot-group h3 { font-size: 12px; }
   .inventory-furnace-panel .inventory-section-heading { min-height: 18px; }
+}
+@media (max-height: 650px) and (min-width: 1101px) {
+  .inventory-player-panel .inventory-grid, .inventory-player-panel .inventory-hotbar { grid-template-columns: repeat(9, 40px); grid-auto-rows: 40px; gap: 4px; justify-content: center; }
+}
+@media (max-height: 540px) and (min-width: 1101px) {
+  .inventory-player-panel .inventory-grid, .inventory-player-panel .inventory-hotbar { grid-template-columns: repeat(9, 31px); grid-auto-rows: 31px; gap: 3px; }
 }

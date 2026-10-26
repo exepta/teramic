@@ -1,1 +1,1 @@
-// Equipment positions are decorative until wearable item types are available.
+// Equipment cells reuse authoritative inventory gestures and item previews.

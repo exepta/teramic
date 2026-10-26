@@ -1,0 +1,22 @@
+{
+  "id": "teramic::cherry_planks",
+  "name": "Cherry Planks",
+  "station": "hand",
+  "output": {
+    "item": {
+      "block": 135
+    },
+    "count": 4
+  },
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "block": 134
+        },
+        "count": 1
+      }
+    ]
+  }
+}

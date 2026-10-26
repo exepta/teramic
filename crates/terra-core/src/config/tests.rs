@@ -1,18 +1,107 @@
 use super::*;
 
 #[test]
+fn cherry_ecology_is_saved_and_never_retroactively_enabled_in_old_worlds() {
+    let legacy = WorldConfig::from_toml("seed=42042").unwrap();
+    assert_eq!(legacy.ecology_revision, 0);
+    let fresh = WorldConfig::default();
+    assert_eq!(fresh.ecology_revision, 2);
+    let serialized = toml::to_string(&fresh).unwrap();
+    assert_eq!(WorldConfig::from_toml(&serialized).unwrap(), fresh);
+    assert!(!fresh.same_terrain(&WorldConfig {
+        ecology_revision: 0,
+        ..fresh.clone()
+    }));
+    assert_eq!(
+        WorldConfig::from_toml("ecology_revision=1")
+            .unwrap()
+            .ecology_revision,
+        1
+    );
+    assert!(WorldConfig::from_toml("ecology_revision=3").is_err());
+}
+
+#[test]
+fn waterfall_terrain_revision_is_saved_without_changing_legacy_world_contracts() {
+    let legacy = WorldConfig::from_toml("seed=42042\nrivers=true").unwrap();
+    assert_eq!(legacy.river_terrain_revision, 0);
+    let fresh = WorldConfig::default();
+    assert_eq!(fresh.river_terrain_revision, 1);
+    assert_eq!(
+        WorldConfig::from_toml(&toml::to_string(&fresh).unwrap()).unwrap(),
+        fresh
+    );
+    assert!(!fresh.same_terrain(&WorldConfig {
+        river_terrain_revision: 0,
+        ..fresh.clone()
+    }));
+    for revision in 0..=1 {
+        assert_eq!(
+            WorldConfig::from_toml(&format!("river_terrain_revision={revision}"))
+                .unwrap()
+                .river_terrain_revision,
+            revision
+        );
+    }
+    assert!(WorldConfig::from_toml("river_terrain_revision=2").is_err());
+    assert_eq!(
+        WorldConfig::from_toml(include_str!("../../../../configs/world.toml"))
+            .unwrap()
+            .river_terrain_revision,
+        1
+    );
+}
+
+#[test]
 fn ocean_contract_is_saved_without_retroactively_freezing_old_worlds() {
     let legacy = crate::WorldConfig::from_toml("seed = 42042").unwrap();
     assert_eq!(legacy.ocean_revision, 0);
     assert_eq!(legacy.cave_structure_revision, 0);
     let fresh = crate::WorldConfig::default();
     assert_eq!(fresh.ocean_revision, 1);
-    assert_eq!(fresh.cave_structure_revision, 4);
+    assert_eq!(fresh.cave_structure_revision, 8);
     assert_eq!(
         crate::WorldConfig::from_toml(&toml::to_string(&fresh).unwrap()).unwrap(),
         fresh
     );
     assert!(crate::WorldConfig::from_toml("ocean_revision = 2").is_err());
+    for revision in 0..=8 {
+        assert_eq!(
+            crate::WorldConfig::from_toml(&format!("cave_structure_revision={revision}"))
+                .unwrap()
+                .cave_structure_revision,
+            revision
+        );
+    }
+    assert!(crate::WorldConfig::from_toml("cave_structure_revision=9").is_err());
+}
+
+#[test]
+fn structures_contract_is_explicit_for_fresh_worlds_and_absent_in_legacy_manifests() {
+    let legacy = WorldConfig::from_toml("seed=42042").unwrap();
+    assert_eq!(legacy.structures_revision, 0);
+    let fresh = WorldConfig::default();
+    assert_eq!(fresh.structures_revision, 5);
+    assert_eq!(
+        WorldConfig::from_toml(&toml::to_string(&fresh).unwrap()).unwrap(),
+        fresh
+    );
+    assert!(!fresh.same_terrain(&WorldConfig {
+        structures_revision: 0,
+        ..fresh.clone()
+    }));
+    assert!(WorldConfig::from_toml("structures_revision=1").is_ok());
+    assert!(WorldConfig::from_toml("structures_revision=2").is_ok());
+    assert!(WorldConfig::from_toml("structures_revision=3").is_ok());
+    assert!(WorldConfig::from_toml("structures_revision=4").is_ok());
+    assert!(WorldConfig::from_toml("structures_revision=5").is_ok());
+    assert!(WorldConfig::from_toml("structures_revision=6").is_err());
+    assert_eq!(
+        WorldConfig::from_toml(include_str!("../../../../configs/world.toml"))
+            .unwrap()
+            .structures_revision,
+        5
+    );
 }
 
 #[test]
@@ -190,6 +279,7 @@ fn rejects_invalid_values_and_unknown_fields() {
 fn wide_views_fog_and_animations_roundtrip_without_changing_legacy_defaults() {
     let old = GraphicsConfig::from_toml("").unwrap();
     assert_eq!(old.chunk_animation, ChunkAnimation::None);
+    assert_eq!(old.tree_fall_animation, super::TreeFallAnimation::Current);
     assert_eq!(old.fog_distance, 1.0);
     let graphics = GraphicsConfig::from_toml(
         "render_distance = 32\nfog_distance = 0.0\nchunk_animation = 'fade_slow'",
@@ -215,6 +305,13 @@ fn wide_views_fog_and_animations_roundtrip_without_changing_legacy_defaults() {
         graphics.apply_to(&mut client);
         assert!(client.water_volumetric_mist);
     }
+    for mode in ["current", "hell_fall", "magic"] {
+        let graphics =
+            GraphicsConfig::from_toml(&format!("tree_fall_animation = '{mode}'")).unwrap();
+        let saved = toml::to_string(&graphics).unwrap();
+        assert_eq!(GraphicsConfig::from_toml(&saved).unwrap(), graphics);
+    }
+    assert!(GraphicsConfig::from_toml("tree_fall_animation = 'other'").is_err());
 }
 #[test]
 fn natural_population_and_new_terrain_contract_are_saved_without_retrogen() {

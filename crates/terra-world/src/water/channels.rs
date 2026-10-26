@@ -1,17 +1,9 @@
-use super::{MIN_WATERFALL_DROP, WaterPatch};
+use super::{WaterPatch, outlets::MIN_LIP_DROP};
 use crate::SurfaceColumn;
 use terra_voxel::SectionPos;
 
-const EDGES: [[usize; 2]; 4] = [[1, 0], [3, 2], [0, 3], [2, 1]];
-const NORMALS: [[f32; 3]; 4] = [
-    [1.0, 0.0, 0.0],
-    [-1.0, 0.0, 0.0],
-    [0.0, 0.0, 1.0],
-    [0.0, 0.0, -1.0],
-];
-
-/// Corners use only shared padded columns. Falling curtains belong to the lower
-/// cell and use world-aligned height bands, including at vertical section seams.
+/// Natural reservoirs have horizontal surfaces only. Falling volume belongs to
+/// authoritative fluid cells, meshed by the shared liquid-cell renderer.
 pub(crate) fn build_channel_patch(
     position: SectionPos,
     origin: [i64; 3],
@@ -33,7 +25,6 @@ pub(crate) fn build_channel_patch(
             let Some(level) = column.water_level else {
                 continue;
             };
-            let neighbors = [(x, z + 1), (x + 2, z + 1), (x + 1, z), (x + 1, z + 2)];
             let corners = [(x, z), (x, z + 1), (x + 1, z + 1), (x + 1, z)];
             let samples = corners.map(|(cx, cz)| corner(columns, cx, cz, level));
             let points = std::array::from_fn(|i| {
@@ -51,37 +42,10 @@ pub(crate) fn build_channel_patch(
                         &mut patch,
                         points,
                         samples.map(|s| [s.depth, s.shore]),
-                        surface_effects(columns, neighbors, level),
+                        [[0.0; 4]; 4],
                         column.water_flow,
                     );
                 }
-            }
-            for (side, (nx, nz)) in neighbors.into_iter().enumerate() {
-                if column.cave.dynamic_water && level < column.cave.ceiling {
-                    continue;
-                }
-                let Some(upstream) = columns[nx + 18 * nz].water_level else {
-                    continue;
-                };
-                if upstream - level < MIN_WATERFALL_DROP {
-                    continue;
-                }
-                let edge = EDGES[side];
-                let bottom = edge.map(|i| samples[i].height);
-                let top = edge.map(|i| {
-                    let (cx, cz) = corners[i];
-                    corner(columns, cx, cz, upstream).height
-                });
-                let edge_points = edge.map(|i| points[i]);
-                waterfall(
-                    &mut patch,
-                    origin,
-                    edge_points,
-                    bottom,
-                    top,
-                    NORMALS[side],
-                    column.water_flow,
-                );
             }
         }
     }
@@ -130,7 +94,7 @@ fn corner(columns: &[SurfaceColumn], x: usize, z: usize, reference: f64) -> Corn
     let mut start = 0;
     let mut end = wet;
     for i in 1..wet {
-        if levels[i] - levels[i - 1] >= MIN_WATERFALL_DROP {
+        if levels[i] - levels[i - 1] >= MIN_LIP_DROP {
             if reference < levels[i] {
                 end = i;
                 break;
@@ -198,11 +162,10 @@ pub(super) fn shared_wave_weight(columns: &[SurfaceColumn], x: usize, z: usize) 
         return 0.0;
     }
     levels[..count].sort_by(f64::total_cmp);
-    // Both sides of the discontinuity request precisely the same zero weight.
-    // The anchored curtain therefore meets the upper and lower surface exactly.
+    // Both sides of the discontinuity stay pinned where real liquid leaves a lip.
     if levels[..count]
         .windows(2)
-        .any(|pair| pair[1] - pair[0] >= MIN_WATERFALL_DROP)
+        .any(|pair| pair[1] - pair[0] >= MIN_LIP_DROP)
     {
         return 0.0;
     }
@@ -213,175 +176,6 @@ pub(super) fn shared_wave_weight(columns: &[SurfaceColumn], x: usize, z: usize) 
 
 fn bed(column: SurfaceColumn) -> f64 {
     column.water_bed()
-}
-
-fn surface_effects(
-    columns: &[SurfaceColumn],
-    neighbors: [(usize, usize); 4],
-    level: f64,
-) -> [[f32; 4]; 4] {
-    let mut strongest: (f64, usize) = (0.0, 0);
-    for (side, (x, z)) in neighbors.into_iter().enumerate() {
-        if let Some(neighbor) = columns[x + 18 * z].water_level {
-            let delta = neighbor - level;
-            if delta.abs() >= MIN_WATERFALL_DROP && delta.abs() > strongest.0.abs() {
-                strongest = (delta, side);
-            }
-        }
-    }
-    let (delta, side) = strongest;
-    if delta == 0.0 {
-        return [[0.0; 4]; 4];
-    }
-    std::array::from_fn(|i| {
-        let distance = if EDGES[side].contains(&i) { 0.0 } else { 1.0 };
-        [
-            distance,
-            0.0,
-            delta.abs() as f32,
-            if delta > 0.0 { 2.0 } else { 3.0 },
-        ]
-    })
-}
-
-fn waterfall(
-    patch: &mut WaterPatch,
-    origin: [i64; 3],
-    edge: [[f32; 3]; 2],
-    bottom: [f64; 2],
-    top: [f64; 2],
-    normal: [f32; 3],
-    flow: [f32; 2],
-) {
-    let section_bottom = origin[1] as f64;
-    let section_top = section_bottom + 16.0;
-    let low = bottom[0].min(bottom[1]).max(section_bottom);
-    let high = top[0].max(top[1]).min(section_top);
-    if high <= low {
-        return;
-    }
-    let sample = |i: usize, y: f64| {
-        let height = (top[i] - bottom[i]).max(0.001);
-        let y = y.clamp(bottom[i], top[i]);
-        let progress = ((top[i] - y) / height) as f32;
-        let across =
-            origin[0] as f64 + f64::from(edge[i][0]) + origin[2] as f64 + f64::from(edge[i][2]);
-        // Broad streams project from the cliff and fold into narrower runnels.
-        // The zero-ended envelope keeps the exact shared crest and impact edge.
-        let corrugation = 0.56
-            + 0.18 * (across * 1.73).sin() as f32
-            + 0.06 * (across * 3.61 + y * 0.91).sin() as f32;
-        let offset = 0.06 + 0.15 * progress + (progress * std::f32::consts::PI).sin() * corrugation;
-        (
-            [
-                edge[i][0] + normal[0] * offset,
-                (y - section_bottom) as f32,
-                edge[i][2] + normal[2] * offset,
-            ],
-            [
-                (top[i] - y) as f32,
-                (y - bottom[i]) as f32,
-                height as f32,
-                1.0,
-            ],
-        )
-    };
-    let first_band = low.floor() as i64;
-    let last_band = high.ceil() as i64;
-    for band in first_band..last_band {
-        let y0 = (band as f64).max(low);
-        let y1 = ((band + 1) as f64).min(high);
-        let (a, ae) = sample(0, y0);
-        let (b, be) = sample(1, y0);
-        let (c, ce) = sample(1, y1);
-        let (d, de) = sample(0, y1);
-        clipped_quad(
-            patch,
-            [a, b, c, d],
-            [[0.35, 1.0]; 4],
-            [ae, be, ce, de],
-            flow,
-        );
-    }
-    if top[0].max(top[1]) >= section_bottom && top[0].min(top[1]) <= section_top {
-        let (a, ae) = sample(0, top[0]);
-        let (b, be) = sample(1, top[1]);
-        let rim = std::array::from_fn::<_, 2, _>(|i| {
-            [edge[i][0], (top[i] - section_bottom) as f32, edge[i][2]]
-        });
-        clipped_quad(
-            patch,
-            [rim[0], a, b, rim[1]],
-            [[0.35, 0.5]; 4],
-            [ae, ae, be, be],
-            flow,
-        );
-    }
-}
-
-fn clipped_quad(
-    patch: &mut WaterPatch,
-    points: [[f32; 3]; 4],
-    depth: [[f32; 2]; 4],
-    effects: [[f32; 4]; 4],
-    flow: [f32; 2],
-) {
-    if points.iter().all(|p| (0.0..=16.0).contains(&p[1])) {
-        quad(patch, points, depth, effects, flow);
-        return;
-    }
-    // A sloping lip/foot can cross the section plane partway along one edge.
-    // Clip its polygon and attributes together; clamping each vertex would fold it.
-    let mut vertices = [([0.0; 3], [0.0; 2], [0.0; 4]); 8];
-    for i in 0..4 {
-        vertices[i] = (points[i], depth[i], effects[i]);
-    }
-    let mut count = 4;
-    for (plane, above) in [(0.0, true), (16.0, false)] {
-        let mut output = [([0.0; 3], [0.0; 2], [0.0; 4]); 8];
-        let mut length = 0;
-        for i in 0..count {
-            let a = vertices[(i + count - 1) % count];
-            let b = vertices[i];
-            let inside_a = if above {
-                a.0[1] >= plane
-            } else {
-                a.0[1] <= plane
-            };
-            let inside_b = if above {
-                b.0[1] >= plane
-            } else {
-                b.0[1] <= plane
-            };
-            if inside_a != inside_b {
-                let t = (plane - a.0[1]) / (b.0[1] - a.0[1]);
-                let mut point = std::array::from_fn(|j| a.0[j] + t * (b.0[j] - a.0[j]));
-                point[1] = plane;
-                output[length] = (
-                    point,
-                    std::array::from_fn(|j| a.1[j] + t * (b.1[j] - a.1[j])),
-                    std::array::from_fn(|j| a.2[j] + t * (b.2[j] - a.2[j])),
-                );
-                length += 1;
-            }
-            if inside_b {
-                output[length] = b;
-                length += 1;
-            }
-        }
-        vertices = output;
-        count = length;
-    }
-    for i in 1..count.saturating_sub(1) {
-        let triangle = [vertices[0], vertices[i], vertices[i + 1], vertices[i + 1]];
-        quad(
-            patch,
-            triangle.map(|v| v.0),
-            triangle.map(|v| v.1),
-            triangle.map(|v| v.2),
-            flow,
-        );
-    }
 }
 
 fn quad(
@@ -408,7 +202,6 @@ fn quad(
         return;
     }
     let normal = sum.map(|v| v / length);
-    // At most sixteen height bands per side in a 16m section; all details stay batched.
     let base = patch.positions.len() as u32;
     patch.positions.extend(points);
     patch.normals.extend([normal; 4]);
@@ -418,6 +211,73 @@ fn quad(
     for (triangle, area) in [([0, 1, 2], a), ([0, 2, 3], b)] {
         if area.iter().map(|v| v * v).sum::<f32>() > f32::EPSILON {
             patch.indices.extend(triangle.map(|i| base + i));
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn reservoir_lips_split_at_one_block_while_half_block_river_corners_stay_smooth() {
+        let terrain = crate::TerraGenerator::new(terra_core::WorldConfig {
+            base_height: 4.0,
+            sea_level: 8.0,
+            hill_amplitude: 0.0,
+            mountain_amplitude: 0.0,
+            caves: false,
+            trees: false,
+            biomes: false,
+            rivers: false,
+            ..Default::default()
+        })
+        .unwrap();
+        for drop in [0.5, 1.0, 2.0, 4.0] {
+            for (owner, corner_x, high_side) in [
+                (SectionPos::new(-2, 0, -1), 16, true),
+                (SectionPos::new(-1, 0, -1), 0, false),
+            ] {
+                let origin = owner.origin().unwrap();
+                let mut columns = vec![terrain.surface_column(0.5, 0.5); 18 * 18];
+                for z in 0..18 {
+                    for x in 0..18 {
+                        columns[x + 18 * z].water_level = Some(if origin[0] + x as i64 - 1 < -16 {
+                            8.0 + drop
+                        } else {
+                            8.0
+                        });
+                    }
+                }
+                let height = |reference| corner(&columns, corner_x, 8, reference).height;
+                let expected = if drop < MIN_LIP_DROP {
+                    8.0 + drop * 0.5
+                } else if high_side {
+                    8.0 + drop
+                } else {
+                    8.0
+                };
+                if drop < MIN_LIP_DROP {
+                    assert_eq!(height(8.0), height(8.0 + drop));
+                    assert!(shared_wave_weight(&columns, corner_x, 8) > 0.9);
+                } else {
+                    assert_eq!(height(8.0), 8.0);
+                    assert_eq!(height(8.0 + drop), 8.0 + drop);
+                    assert_eq!(shared_wave_weight(&columns, corner_x, 8), 0.0);
+                }
+                let patch =
+                    build_channel_patch(owner, origin, &columns, &vec![0; 18 * 18 * 18]).unwrap();
+                let edge: Vec<_> = patch
+                    .positions
+                    .iter()
+                    .filter(|p| p[0] + origin[0] as f32 == -16.0)
+                    .collect();
+                assert!(!edge.is_empty());
+                assert!(
+                    edge.iter().all(|p| p[1] == expected as f32),
+                    "drop={drop} {owner:?}: no averaged diagonal sheet may bridge a real falling lip"
+                );
+            }
         }
     }
 }

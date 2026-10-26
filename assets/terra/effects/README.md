@@ -30,8 +30,8 @@ the Regeneration effect share one HUD card and use the greater active healing
 rate instead of summing. Food regeneration still respects hunger and the
 existing damage recovery delay; sleep/status regeneration does not.
 
-Timers, levels and the remaining shield pool persist in player record `PLY5`.
-Explicit readers preserve `PLYR`, `PLY2`, `PLY3` and `PLY4` inventories and stats.
+Timers, levels and the remaining shield pool persist in player record `PLY7`.
+Explicit readers preserve `PLYR`, `PLY2`, `PLY3`, `PLY4` and `PLY5` inventories and stats.
 The world/region format and block IDs are unchanged.
 
 On loading a player after intentional JSON edits, effect duration and level are

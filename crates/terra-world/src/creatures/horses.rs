@@ -42,6 +42,17 @@ pub(super) fn launch(animal: &mut Creature, habitat: &Habitat, destination: [f64
 }
 
 pub(super) fn advance(animal: &mut Creature, habitat: &Habitat, dt: f32) {
+    if !dt.is_finite()
+        || dt <= 0.0
+        || dt > 0.25
+        || !super::navigation::valid_point(animal.position)
+        || animal
+            .velocity
+            .iter()
+            .any(|v| !v.is_finite() || v.abs() > 32.0)
+    {
+        return;
+    }
     let before = animal.position;
     let count = (animal
         .velocity
@@ -86,7 +97,7 @@ pub(super) fn advance(animal: &mut Creature, habitat: &Habitat, dt: f32) {
     }
     if animal.timer <= 0.0
         && habitat
-            .ground_rotated(animal.position, animal.kind, f64::from(animal.yaw))
+            .supported_sized(animal.position, animal.size(), f64::from(animal.yaw))
             .is_some_and(|p| (p[1] - animal.position[1]).abs() <= 0.025)
     {
         animal.behavior = Behavior::Rest;
@@ -107,6 +118,37 @@ mod tests {
         creatures::{CreatureKind, CreatureNeeds, creature_id},
     };
     use terra_voxel::{BlockSection, SectionPos};
+
+    #[test]
+    fn invalid_ballistic_tick_is_atomic_instead_of_writing_nan_motion() {
+        let terrain = TerraGenerator::new(terra_core::WorldConfig::default()).unwrap();
+        let chunks = ChunkStore::default();
+        let journal = EditJournal::default();
+        let habitat = Habitat {
+            terrain: &terrain,
+            chunks: &chunks,
+            journal: &journal,
+        };
+        let mut horse = Creature {
+            id: creature_id([0, 0], 0).unwrap(),
+            kind: CreatureKind::Horse,
+            home: [0, 0],
+            position: [8.0, 3.0, 8.0],
+            velocity: [1.0, 2.0, 0.0],
+            yaw: 0.0,
+            health: 20.0,
+            behavior: Behavior::Leap,
+            timer: 1.0,
+            age: 0.0,
+            variant: 0,
+            needs: CreatureNeeds::full(CreatureKind::Horse),
+        };
+        let before = horse.clone();
+        for dt in [0.0, -0.1, f32::NAN, f32::INFINITY, 1.0] {
+            advance(&mut horse, &habitat, dt);
+            assert_eq!(horse, before);
+        }
+    }
 
     #[test]
     fn horse_jump_respects_its_fixed_height_and_lands_without_crossing_solids() {

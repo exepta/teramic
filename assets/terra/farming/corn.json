@@ -1,0 +1,9 @@
+{
+  "kind": "corn",
+  "growth_seconds": 780.0,
+  "moisture_evaporation": 0.0012,
+  "seasonal_growth": [0.85, 1.1, 0.45, 0.0],
+  "produce_count": 2,
+  "seed_count": 2,
+  "seed_bonus": 2
+}

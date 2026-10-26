@@ -5,6 +5,24 @@ use bevy_math::{Vec2, Vec3};
 use terra_voxel::SectionPos;
 
 #[test]
+fn orange_and_green_flowers_preserve_their_own_material_across_all_lods() {
+    let palette = PropPalette {
+        flowers: [20, 21, 22, 23, 24, 25, 26, 27],
+        ..Default::default()
+    };
+    for variant in [6, 7] {
+        for level in [PropDetail::Near, PropDetail::Middle, PropDetail::Far] {
+            let meshes = template(PropKind::Flower, variant, level, &palette).unwrap();
+            assert!(
+                meshes
+                    .iter()
+                    .any(|mesh| mesh.material == palette.flowers[usize::from(variant)])
+            );
+        }
+    }
+}
+
+#[test]
 fn reference_botany_has_square_voxel_surfaces_and_bounded_shared_geometry() {
     for (kind, budget) in [
         (PropKind::Grass, 1168),
@@ -45,7 +63,7 @@ fn attached_tree_fungi_keep_three_shelf_silhouettes_and_precise_pick_surfaces() 
     use crate::props::raycast_props;
     use bevy_math::Quat;
     let palette = PropPalette {
-        flowers: [1, 2, 3, 4, 5, 6],
+        flowers: [1, 2, 3, 4, 5, 6, 11, 12],
         mushroom: 7,
         ..Default::default()
     };
@@ -132,7 +150,7 @@ fn grass_templates_have_valid_bounded_meshes_and_leave_companion_corners_clear()
         foliage: [0, 1, 2],
         stem: 3,
         dry_grass: [4, 5, 6],
-        flowers: [7, 8, 9, 10, 11, 12],
+        flowers: [7, 8, 9, 10, 11, 12, 17, 18],
         ..Default::default()
     };
     for variant in (0..8).chain(128..136) {

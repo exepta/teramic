@@ -127,6 +127,7 @@ struct InventorySmoke {
     category_scrolls: u8,
     category_all_items: Vec<String>,
     cached_backdrop: Option<Entity>,
+    cached_shell: Option<Entity>,
     reopened: bool,
 }
 
@@ -224,6 +225,7 @@ pub(crate) fn install(app: &mut App) {
         category_scrolls: 0,
         category_all_items: Vec::new(),
         cached_backdrop: None,
+        cached_shell: None,
         reopened: false,
     })
     .insert_resource(bevy::winit::WinitSettings::continuous())
@@ -327,8 +329,15 @@ fn advance(world: &mut World, state: &mut InventorySmoke) -> Result<bool, String
             let Some(backdrop) = element(world, "inventory-backdrop") else {
                 return Ok(false);
             };
+            if world.resource::<InventoryView>().prewarming
+                || element(world, "inventory-shell")
+                    .is_none_or(|shell| world.get::<terra_ui::ParkedUi>(shell).is_none())
+            {
+                return Ok(false);
+            }
             require_closed_inventory(world)?;
             state.cached_backdrop = Some(backdrop);
+            state.cached_shell = element(world, "inventory-shell");
             if std::env::var_os("TERRA_INVENTORY_NOTICE").is_some() {
                 world.write_message(terra_world::streaming::BlockEditRequest {
                     position: [990_000, 0, 990_000],
@@ -630,6 +639,11 @@ fn advance(world: &mut World, state: &mut InventorySmoke) -> Result<bool, String
                 .map(|item| format!("Item preview {}", item.identifier()))
                 .collect::<Vec<_>>();
             let view = world.resource::<InventoryView>();
+            let pages = expected.len().div_ceil(view.browser_capacity.max(1));
+            let expected = expected
+                .into_iter()
+                .take(view.browser_capacity)
+                .collect::<Vec<_>>();
             if view.browser_items.iter().any(|item| !item.count.is_empty()) {
                 return Err("Unlimited Creative catalog items display finite stack counts".into());
             }
@@ -638,6 +652,9 @@ fn advance(world: &mut World, state: &mut InventorySmoke) -> Result<bool, String
                 .iter()
                 .any(|category| category.id == "tools" && category.selected)
                 || view.browser_items.is_empty()
+                || view.browser_page != format!("1 / {pages}")
+                || view.browser_previous
+                || view.browser_next != (pages > 1)
                 || view
                     .browser_items
                     .iter()
@@ -1483,7 +1500,19 @@ fn advance(world: &mut World, state: &mut InventorySmoke) -> Result<bool, String
             require_closed_inventory(world)?;
             if !state.reopened {
                 // The scroll stress test shrinks to 960x360. Restore the normal
-                // viewport before checking the full layout on a fresh slot tree.
+                // viewport and its injected height override on the retained tree.
+                if let Some(scroll) = element(world, "inventory-scroll") {
+                    world
+                        .entity_mut(scroll)
+                        .remove::<tilt_ui::WidgetLayoutOverride>();
+                    if let Some(mut node) = world.get_mut::<Node>(scroll) {
+                        node.height = Val::Auto;
+                        node.max_height = Val::Auto;
+                    }
+                    if let Some(mut position) = world.get_mut::<bevy::ui::ScrollPosition>(scroll) {
+                        position.0 = Vec2::ZERO;
+                    }
+                }
                 resize(world, (1280, 800));
                 world.write_message(InventoryAction::Toggle);
                 state.advance(Stage::Reopen);
@@ -1499,13 +1528,14 @@ fn advance(world: &mut World, state: &mut InventorySmoke) -> Result<bool, String
         Stage::Reopen if state.elapsed(0.8) => {
             if !world.resource::<InventoryView>().open
                 || element(world, "inventory-backdrop") != state.cached_backdrop
+                || element(world, "inventory-shell") != state.cached_shell
             {
                 return Err("Reopening the inventory replaced its cached UI".into());
             }
             require_previews(world)?;
             require_layout(world)?;
             info!(
-                "Native inventory rebuilt active slots on reopening and releases them when closed; backdrop and world HUD remain retained"
+                "Native inventory reuses the same prewarmed shell and parks hidden reactivity; backdrop and world HUD remain retained"
             );
             state.reopened = true;
             world.write_message(InventoryAction::Close);
@@ -1564,14 +1594,33 @@ fn advance(world: &mut World, state: &mut InventorySmoke) -> Result<bool, String
 }
 
 fn require_closed_inventory(world: &mut World) -> Result<(), String> {
-    for id in [
-        "inventory-shell",
-        "inventory-panel",
-        "inventory-cell",
-        "inventory-tooltip",
-    ] {
-        if element(world, id).is_some() {
-            return Err(format!("Closed inventory retained active UI content: {id}"));
+    let shell = element(world, "inventory-shell")
+        .ok_or("Closed inventory did not retain its prewarmed shell")?;
+    if world.get::<terra_ui::ParkedUi>(shell).is_none() {
+        return Err("Closed inventory kept its retained shell reactive".into());
+    }
+    let backdrop =
+        element(world, "inventory-backdrop").and_then(|entity| world.get::<Node>(entity));
+    if backdrop.is_none_or(|node| node.display != Display::None) {
+        return Err("Closed inventory remains in layout or pointer picking".into());
+    }
+    if world
+        .query::<&ElementId>()
+        .iter(world)
+        .filter(|id| id.0 == "inventory-shell")
+        .count()
+        != 1
+    {
+        return Err("Inventory cache contains multiple shells".into());
+    }
+    for (entity, owner) in world
+        .query::<(Entity, &terra_ui::TooltipOwner)>()
+        .iter(world)
+    {
+        if world.get::<terra_ui::ParkedUi>(owner.0).is_some()
+            && world.get::<Visibility>(entity) != Some(&Visibility::Hidden)
+        {
+            return Err("Closed inventory left a portalled tooltip visible".into());
         }
     }
     let orphaned = world
@@ -2441,9 +2490,10 @@ fn require_layout(world: &mut World) -> Result<(), String> {
                 }
                 Ok(count + 1)
             })?;
-        if equipment_count != 8 {
+        let expected_equipment = terra_core::EquipmentSlot::ALL.len();
+        if equipment_count != expected_equipment {
             return Err(format!(
-                "Player inventory must show eight equipment positions: got {equipment_count}"
+                "Player inventory must show {expected_equipment} equipment positions: got {equipment_count}"
             ));
         }
         let symbols = world
@@ -2457,7 +2507,7 @@ fn require_layout(world: &mut World) -> Result<(), String> {
             })
             .map(|(classes, node)| (classes.classes.len(), node.size()))
             .collect::<Vec<_>>();
-        if symbols.len() != 8
+        if symbols.len() != expected_equipment
             || symbols
                 .iter()
                 .any(|(classes, size)| *classes < 2 || size.min_element() < 12.0)

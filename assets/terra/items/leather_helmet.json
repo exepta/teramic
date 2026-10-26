@@ -1,0 +1,16 @@
+{
+  "item": {
+    "armor": {
+      "material": "leather",
+      "piece": "helmet"
+    }
+  },
+  "name": "Leather Helmet",
+  "description": "Leather helmet fitted for protection and comfortable movement.",
+  "equipment": {
+    "slot": "helmet",
+    "armor_points": 1.5,
+    "health_bonus": 0,
+    "stamina_bonus": 3
+  }
+}

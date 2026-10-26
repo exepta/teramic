@@ -1,0 +1,47 @@
+2026-10-22T18:37:36.796122Z  INFO bevy_render::renderer: AdapterInfo { name: "AMD Radeon RX 6950 XT (RADV NAVI21)", vendor: 4098, device: 29605, device_type: DiscreteGpu, device_pci_bus_id: "0000:0c:00.0", driver: "radv", driver_info: "Mesa 26.2.4-arch3.1", backend: Vulkan, subgroup_min_size: 32, subgroup_max_size: 64, transient_saves_memory: false }
+2026-10-22T18:37:36.965129Z  INFO bevy_pbr::cluster: GPU clustering is supported on this device.
+2026-10-22T18:37:36.965188Z  INFO bevy_render::batching::gpu_preprocessing: GPU preprocessing is fully supported on this device.
+2026-10-22T18:37:36.966261Z  INFO bevy_winit::system: Creating new window TERAMIC (150v0)
+2026-10-22T18:37:37.572134Z  INFO lightyear_netcode::client: client connecting to server 127.0.0.1:42893 [1/1]
+2026-10-22T18:37:37.572181Z  INFO lightyear_udp: UDP socket bound to 0.0.0.0:0
+2026-10-22T18:37:37.651637Z  INFO terra_client::creature_audio::scene: Recorded animal/environment audio decoded clips=91
+2026-10-22T18:37:37.680022Z  INFO lightyear_udp::server: Received UDP packet from new address 127.0.0.1:45281, Spawn new LinkOf entity=219v0 server_entity=208v0
+2026-10-22T18:37:37.725871Z  INFO terra_render::water::raymarch: Water SSR hardware depth filtering ready; multisampled views retain the original path
+2026-10-22T18:37:37.726064Z  INFO terra_render::scene::caves::lights::soft_core: Torch soft-core attenuation installed in existing clustered PBR path
+2026-10-22T18:37:37.750144Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/wood.png mip_levels=10 rebound_materials=1
+2026-10-22T18:37:37.750174Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/stone-strata-hd.png mip_levels=11 rebound_materials=1
+2026-10-22T18:37:37.750181Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/oak-crafted-hd.png mip_levels=11 rebound_materials=0
+2026-10-22T18:37:37.757797Z  INFO terra_render::blocks::loading: Block template library ready blocks=98 materials=210
+2026-10-22T18:37:37.864094Z  INFO lightyear_netcode::server_plugin: New connection on netcode from 1 (219v0)
+2026-10-22T18:37:37.879968Z  INFO lightyear_netcode::client_plugin: Client Netcode(1) connected
+2026-10-22T18:37:37.898371Z  INFO terra_network::server: Player profile accepted (local, not verified online) player=1 uuid=54769cd5-3269-4b5a-b947-47b048ac7473 name=Player-54769cd5
+2026-10-22T18:37:38.113455Z  INFO terra_network::client: Authoritative world synchronized player=Some(PlayerId(1))
+2026-10-22T18:38:00.427740Z  INFO terra_client::equipment_smoke: Native F02 equipment check passed armor=10.0 carried=20 meshes=2900 inventory=false
+2026-10-22T18:38:00.501425Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/tools/benchmarks/results/equipment-2026-10-22/native/armor-leather-world.png
+2026-10-22T18:38:02.311784Z  INFO terra_client::equipment_smoke: Native F02 equipment check passed armor=10.0 carried=20 meshes=2895 inventory=true
+2026-10-22T18:38:02.386329Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/tools/benchmarks/results/equipment-2026-10-22/native/armor-leather-inventory.png
+2026-10-22T18:38:04.480576Z  INFO terra_client::equipment_smoke: Native F02 equipment check passed armor=20.0 carried=20 meshes=2895 inventory=false
+2026-10-22T18:38:04.556677Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/tools/benchmarks/results/equipment-2026-10-22/native/armor-iron-world.png
+2026-10-22T18:38:06.368796Z  INFO terra_client::equipment_smoke: Native F02 equipment check passed armor=20.0 carried=20 meshes=2895 inventory=true
+2026-10-22T18:38:06.441418Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/tools/benchmarks/results/equipment-2026-10-22/native/armor-iron-inventory.png
+2026-10-22T18:38:08.589336Z  INFO terra_client::equipment_smoke: Native F02 equipment check passed armor=16.0 carried=20 meshes=2895 inventory=false
+2026-10-22T18:38:08.671640Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/tools/benchmarks/results/equipment-2026-10-22/native/armor-gold-world.png
+2026-10-22T18:38:10.484961Z  INFO terra_client::equipment_smoke: Native F02 equipment check passed armor=16.0 carried=20 meshes=2895 inventory=true
+2026-10-22T18:38:10.546772Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/tools/benchmarks/results/equipment-2026-10-22/native/armor-gold-inventory.png
+2026-10-22T18:38:12.733052Z  INFO terra_client::equipment_smoke: Native F02 equipment check passed armor=30.0 carried=20 meshes=2895 inventory=false
+2026-10-22T18:38:12.809726Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/tools/benchmarks/results/equipment-2026-10-22/native/armor-diamond-world.png
+2026-10-22T18:38:14.622467Z  INFO terra_client::equipment_smoke: Native F02 equipment check passed armor=30.0 carried=20 meshes=2895 inventory=true
+2026-10-22T18:38:14.688033Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/tools/benchmarks/results/equipment-2026-10-22/native/armor-diamond-inventory.png
+2026-10-22T18:38:16.835772Z  INFO terra_client::equipment_smoke: Native F02 equipment check passed armor=35.0 carried=20 meshes=2895 inventory=false
+2026-10-22T18:38:16.928230Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/tools/benchmarks/results/equipment-2026-10-22/native/armor-ruby-world.png
+2026-10-22T18:38:18.739946Z  INFO terra_client::equipment_smoke: Native F02 equipment check passed armor=35.0 carried=20 meshes=2895 inventory=true
+2026-10-22T18:38:18.816760Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/tools/benchmarks/results/equipment-2026-10-22/native/armor-ruby-inventory.png
+2026-10-22T18:38:20.826153Z  INFO terra_client::equipment_smoke: Native F02 equipment check passed armor=0.0 carried=25 meshes=2895 inventory=false
+2026-10-22T18:38:20.905192Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/tools/benchmarks/results/equipment-2026-10-22/native/armor-clear-world.png
+2026-10-22T18:38:22.712804Z  INFO terra_client::equipment_smoke: Native F02 equipment check passed armor=0.0 carried=25 meshes=2895 inventory=true
+2026-10-22T18:38:22.791989Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/tools/benchmarks/results/equipment-2026-10-22/native/armor-clear-inventory.png
+2026-10-22T18:38:24.779030Z  INFO terra_client::equipment_smoke: Native F02 equipment check passed armor=35.0 carried=20 meshes=2895 inventory=false
+2026-10-22T18:38:24.828756Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/tools/benchmarks/results/equipment-2026-10-22/native/armor-ruby-compact-world.png
+2026-10-22T18:38:26.643200Z  INFO terra_client::equipment_smoke: Native F02 equipment check passed armor=35.0 carried=20 meshes=2895 inventory=true
+2026-10-22T18:38:26.681318Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/tools/benchmarks/results/equipment-2026-10-22/native/armor-ruby-compact-inventory.png
+2026-10-22T18:38:26.689270Z  INFO terra_client::equipment_smoke: Native F02 passed all five sets, removal, inventory and single-effect heart captures=14 max_meshes=2900

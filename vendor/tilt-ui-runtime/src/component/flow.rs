@@ -1,7 +1,7 @@
 //! Reactive control blocks. Structural work happens only when binding revisions change.
 
 use std::{
-    collections::{BTreeMap, HashMap},
+    collections::{BTreeMap, HashMap, HashSet},
     sync::Arc,
 };
 
@@ -74,6 +74,10 @@ pub(crate) struct FlowNode {
 }
 
 impl FlowNode {
+    pub(super) fn invalidate(&mut self) {
+        self.revision = None;
+    }
+
     pub(crate) fn from_tag(
         name: &str,
         attributes: &[TemplateAttribute],
@@ -125,6 +129,9 @@ impl FlowNode {
 #[derive(Resource, Default)]
 struct LastFlowRevision(Option<(u64, u64)>);
 
+#[derive(Resource, Default)]
+pub(super) struct DeferredTargets(pub HashSet<Entity>);
+
 pub(crate) fn update_flow(world: &mut World) {
     let revision = (
         world.resource::<UiBindingStore>().revision(),
@@ -147,6 +154,10 @@ pub(crate) fn update_flow(world: &mut World) {
     ) else {
         return;
     };
+    // Nested branches and components are materialized as one transaction. Target
+    // resolution scans widgets; doing it after every slot makes opening a large
+    // inventory quadratic and observes only partially constructed component IDs.
+    world.insert_resource(DeferredTargets::default());
     let mut dirty_owners = Vec::new();
     // A newly selected branch can contain another control. Resolve it in this update.
     for _ in 0..64 {
@@ -175,7 +186,16 @@ pub(crate) fn update_flow(world: &mut World) {
     for owner in dirty_owners {
         if world.get_entity(owner).is_ok() {
             rebuild_ids(world, owner);
+            world.resource_mut::<DeferredTargets>().0.insert(owner);
             world.entity_mut(owner).insert(StyleDirty);
+        }
+    }
+    let targets = world
+        .remove_resource::<DeferredTargets>()
+        .unwrap_or_default();
+    for owner in targets.0 {
+        if world.get_entity(owner).is_ok() {
+            resolve_template_targets(world, owner);
         }
     }
     world.insert_resource(LastFlowRevision(Some(revision)));
@@ -513,6 +533,177 @@ mod tests {
     }
 
     #[test]
+    fn retained_subtree_parks_all_reactivity_and_resumes_portals_without_recreation() {
+        use crate::{ParkedUi, ParkedUiBindings, PropertyBindings, TiltText};
+        use bevy::ui::InteractionDisabled;
+
+        let mut world = World::new();
+        let mut stores = UiBindingStore::default();
+        stores.set_store(state(true, "Before", &[]));
+        world.insert_resource(stores);
+        world.init_resource::<UiSharedValues>();
+        world.init_resource::<ComponentCatalog>();
+        world.init_resource::<ComponentAssetStore>();
+        let root = world
+            .spawn((GhostNode, ComponentElementIds::default()))
+            .id();
+        let template = parse_template("<div><button [disabled]=\"state.enabled\"><p>{{ state.word }}</p></button>@if (state.enabled) {<p>Conditional</p>}</div>").unwrap();
+        instantiate_template_nodes(
+            &mut world,
+            &template,
+            ComponentCatalog::default(),
+            &ComponentAssetStore::default(),
+            root,
+            root,
+            &mut Vec::new(),
+        )
+        .unwrap();
+        update_flow(&mut world);
+        super::super::binding_runtime::apply_bindings(&mut world);
+        let button = world
+            .query_filtered::<Entity, bevy::ecs::query::With<InteractionDisabled>>()
+            .iter(&world)
+            .next()
+            .unwrap();
+        let text = world
+            .query::<(Entity, &Text)>()
+            .iter(&world)
+            .find_map(|(entity, text)| (text.0 == "Before").then_some(entity))
+            .unwrap();
+        let overlay = world.spawn_empty().id();
+        let popup = world
+            .spawn((
+                Text::default(),
+                TiltText {
+                    value: "{{ state.word }}".into(),
+                },
+                TemplateParent(button),
+                ChildOf(overlay),
+            ))
+            .id();
+        super::super::binding_runtime::apply_bindings(&mut world);
+        assert_eq!(world.get::<Text>(popup).unwrap().0, "Before");
+        let count = world.entities().len();
+        let parked = ParkedUiBindings::take(&mut world, root);
+        assert_eq!(world.query::<&FlowNode>().iter(&world).count(), 0);
+        assert_eq!(world.query::<&PropertyBindings>().iter(&world).count(), 0);
+        assert!(world.get::<ParkedUi>(popup).is_some());
+        for _ in 0..32 {
+            world
+                .resource_mut::<UiBindingStore>()
+                .set_store(state(false, "After", &[]));
+            update_flow(&mut world);
+            super::super::binding_runtime::apply_bindings(&mut world);
+            assert_eq!(world.get::<Text>(text).unwrap().0, "Before");
+            assert_eq!(world.get::<Text>(popup).unwrap().0, "Before");
+            assert!(world.get::<InteractionDisabled>(button).is_some());
+            assert_eq!(world.entities().len(), count);
+        }
+        // Resume even if the global revision no longer changes in this frame.
+        world.clear_trackers();
+        parked.restore(&mut world);
+        update_flow(&mut world);
+        super::super::binding_runtime::apply_bindings(&mut world);
+        assert!(world.get::<InteractionDisabled>(button).is_none());
+        assert_eq!(world.get::<Text>(text).unwrap().0, "After");
+        assert_eq!(world.get::<Text>(popup).unwrap().0, "After");
+        assert!(
+            !world
+                .query::<&Text>()
+                .iter(&world)
+                .any(|text| text.0 == "Conditional")
+        );
+        assert!(world.query::<&ParkedUi>().iter(&world).next().is_none());
+        let parked = ParkedUiBindings::take(&mut world, root);
+        world.entity_mut(root).despawn();
+        assert!(
+            world.get_entity(popup).is_err(),
+            "Template ownership removes detached portals on world exit"
+        );
+        parked.restore(&mut world);
+        assert!(
+            world
+                .query::<&PropertyBindings>()
+                .iter(&world)
+                .next()
+                .is_none()
+        );
+    }
+
+    #[test]
+    fn nested_inventory_slots_finalize_targets_once_per_component_not_per_branch() {
+        let mut world = World::new();
+        let mut stores = UiBindingStore::default();
+        let rows: Vec<_> = (0..96)
+            .map(|i| (i.to_string(), format!("Item {i}")))
+            .collect();
+        let borrowed: Vec<_> = rows
+            .iter()
+            .map(|(id, name)| (id.as_str(), name.as_str()))
+            .collect();
+        stores.set_store(state(true, "Rust", &borrowed));
+        world.insert_resource(stores);
+        world.init_resource::<UiSharedValues>();
+        world.init_resource::<ComponentCatalog>();
+        world.init_resource::<ComponentAssetStore>();
+        let owner = world
+            .spawn((GhostNode, ComponentElementIds::default()))
+            .id();
+        let template = parse_template("<div>@if (state.enabled) { @for (item of state.items; track item.id) { <div>@if (item.name != '') { <p>{{ item.name }}</p> } @if (state.enabled) { <p>slot</p> }</div> } }</div>").unwrap();
+        instantiate_template_nodes(
+            &mut world,
+            &template,
+            ComponentCatalog::default(),
+            &ComponentAssetStore::default(),
+            owner,
+            owner,
+            &mut Vec::new(),
+        )
+        .unwrap();
+        world.init_resource::<super::super::spawn::TargetResolutionCounts>();
+        update_flow(&mut world);
+        super::super::binding_runtime::apply_bindings(&mut world);
+        assert_eq!(
+            world
+                .resource::<super::super::spawn::TargetResolutionCounts>()
+                .0
+                .get(&owner),
+            Some(&1)
+        );
+        assert_eq!(
+            world
+                .query::<&Text>()
+                .iter(&world)
+                .filter(|text| text.0.starts_with("Item "))
+                .count(),
+            96
+        );
+        let entities = world.entities().len();
+        update_flow(&mut world);
+        assert_eq!(world.entities().len(), entities);
+        assert_eq!(
+            world
+                .resource::<super::super::spawn::TargetResolutionCounts>()
+                .0
+                .get(&owner),
+            Some(&1)
+        );
+        world
+            .resource_mut::<UiBindingStore>()
+            .set_store(state(false, "Rust", &borrowed));
+        update_flow(&mut world);
+        assert!(world.query::<&Text>().iter(&world).next().is_none());
+        assert_eq!(
+            world
+                .resource::<super::super::spawn::TargetResolutionCounts>()
+                .0
+                .get(&owner),
+            Some(&2)
+        );
+        assert!(!world.contains_resource::<DeferredTargets>());
+    }
+
+    #[test]
     fn reactive_controls_and_tracked_items_preserve_identity() {
         let mut world = World::new();
         let mut stores = UiBindingStore::default();
@@ -711,6 +902,35 @@ mod tests {
                 "missing {snippet}"
             );
         }
+        let probe = world
+            .query::<(Entity, &Text)>()
+            .iter(&world)
+            .find_map(|(entity, text)| (text.0 == "I am visible").then_some(entity))
+            .unwrap();
+        let parked = crate::ParkedUiBindings::take(&mut world, owner);
+        assert!(
+            world.get::<crate::ParkedUi>(probe).is_some(),
+            "Nested component template ancestry is retained"
+        );
+        assert!(world.query::<&FlowNode>().iter(&world).next().is_none());
+        assert!(
+            world
+                .query::<&crate::PropertyBindings>()
+                .iter(&world)
+                .next()
+                .is_none()
+        );
+        parked.restore(&mut world);
+        update_flow(&mut world);
+        super::super::binding_runtime::apply_bindings(&mut world);
+        assert_eq!(world.get::<Text>(probe).unwrap().0, "I am visible");
+        assert!(
+            world
+                .query::<&crate::ParkedUi>()
+                .iter(&world)
+                .next()
+                .is_none()
+        );
     }
 
     #[test]

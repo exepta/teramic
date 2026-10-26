@@ -1,5 +1,50 @@
 # TERAMIC Recorded Audio
 
+## Dry Stalker Breathing
+
+`animals/stalker-airway.wav` is the quiet 7.48..8.33-second airway/tail excerpt
+of Scorcher24's **animal_eating_breathing.wav**, **CC0 1.0**, from **Scorchers
+Foley Sounds**, already credited below. No new external recording was downloaded.
+The excerpt is mono 24000 Hz PCM16, filtered at 220..5600 Hz, normalized with
+headroom and edge fades. Reproduce with
+`bash tools/assets/prepare-stalker-breath.sh /path/to/animal_eating_breathing.wav`.
+The runtime derives separate asymmetric inhale/exhale phases on the existing
+loading worker. It does not add a tonal oscillator, bubbling, liquid recordings
+or periodic tremolo to this breath. This is adapted recorded Foley, not a new
+recording of a human actor performing Stalker breathing; final in-game listening
+remains a subjective audio check.
+
+## Chest Hinges And Latches (Phase 113)
+
+Chest opening/closing Foley derives once on the existing loading worker from
+the Ryding CC0 wooden-door hinge/latch takes and the Kenney CC0 wood contacts
+credited below. The closing take adds a soft timber contact at 0.34 seconds;
+both use short edge fades and bounded filtering in `creature_audio/chests.rs`.
+These are contextual chest Foley, not newly recorded chest samples. Playback
+shares the existing positional, volume-controlled 24-voice mixer. No new external
+assets or licenses are introduced.
+
+## Spider And Swimming Foley (Phase 111)
+
+Spider contacts layer shortened Fantozzi stone contacts and TinyWorlds leaf
+recordings credited below (CC0). Quiet idle rubbing also reuses those leaf
+recordings. The large-spider hiss is deterministic, band-limited, envelope-shaped
+noise generated in `creature_audio/spiders.rs`, not a sampled animal vocalization.
+Four revised swimming strokes filter the existing CC0 swim-stroke takes and mix
+a quiet late water tail from jcpmcdonald's recording. Short edge fades and bounded
+levels avoid sharp digital clicks. All derivations run once on the existing audio
+loading worker, with shared clips and the unchanged bounded positional mixer.
+No new external recordings or licenses are introduced.
+
+## Crusher Material Foley (Phase 108)
+
+The manual crusher reuses `footsteps/detail/wood-3.wav`, `wood-4.wav`,
+`wood-5.wav`, `stone-3.wav`, `stone-5.wav`, `gravel-2.wav`, `gravel-4.wav`
+and `gravel-7.wav`. These are the existing CC0 Kenney, Fantozzi and Ali_6868
+recordings credited below, not newly sourced machine recordings. The live
+mix applies bounded pitch/envelope variations and brief synthesized metal
+contacts. No additional external sound assets or licenses are introduced.
+
 ## Furniture Audio Polish (Phase 90)
 
 `player/cough.wav`, `cough-2.wav` and `cough-3.wav` use three distinct natural

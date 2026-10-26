@@ -95,24 +95,12 @@ pub(crate) fn append_fluid_patch<'a>(
     cells.sort_unstable_by_key(|(p, _)| **p);
     for (&p, &cell) in cells {
         let Some(height) = sample(p) else { continue };
-        if options.occluders.is_some_and(|boxes| {
-            std::iter::once(p)
-                .chain(
-                    super::fluid::NEIGHBORS
-                        .into_iter()
-                        .filter_map(|d| super::fluid::adjacent(p, d)),
-                )
-                .any(|q| {
-                    boxes.contains_key(&q) && {
-                        let local: [i64; 3] = std::array::from_fn(|i| q[i] - origin[i] + 1);
-                        local.iter().all(|v| (0..18).contains(v))
-                            && super::space::partial(
-                                padded[local[0] as usize
-                                    + 18 * (local[1] as usize + 18 * local[2] as usize)],
-                            )
-                    }
-                })
-        }) {
+        let local: [usize; 3] = std::array::from_fn(|i| (p[i] - origin[i] + 1) as usize);
+        if options
+            .occluders
+            .is_some_and(|boxes| boxes.contains_key(&p))
+            && super::space::partial(padded[local[0] + 18 * (local[1] + 18 * local[2])])
+        {
             let below = [p[0], p[1] - 1, p[2]];
             let local: [usize; 3] = std::array::from_fn(|i| (below[i] - origin[i] + 1) as usize);
             let open_below =
@@ -184,12 +172,25 @@ pub(crate) fn append_fluid_patch<'a>(
             let mut total = 0.0;
             let mut count = 0;
             let mut natural = None;
+            let mut construction = None::<f64>;
             let mut falling = false;
             for dz in -1..=0 {
                 for dx in -1..=0 {
                     let neighbor = [p[0] + corner[0] + dx, p[1], p[2] + corner[1] + dz];
                     if let Some(level) = sample(neighbor) {
-                        falling |= connected_above(neighbor);
+                        let covered = connected_above(neighbor);
+                        falling |= covered;
+                        let local: [usize; 3] =
+                            std::array::from_fn(|i| (neighbor[i] - origin[i] + 1) as usize);
+                        if super::space::partial(padded[local[0] + 18 * (local[1] + 18 * local[2])])
+                        {
+                            let level = if covered {
+                                neighbor[1] as f64 + 1.0
+                            } else {
+                                level
+                            };
+                            construction = Some(construction.map_or(level, |old| old.max(level)));
+                        }
                         total += level;
                         count += 1;
                         let cx = (neighbor[0] - origin[0] + 1) as usize;
@@ -204,7 +205,7 @@ pub(crate) fn append_fluid_patch<'a>(
                     }
                 }
             }
-            let level = natural.map_or_else(
+            let level = construction.or(natural).map_or_else(
                 || {
                     if count > 0 {
                         total / f64::from(count)
@@ -213,7 +214,7 @@ pub(crate) fn append_fluid_patch<'a>(
                     }
                 },
                 |level| {
-                    if river_surface {
+                    if river_surface && construction.is_none() {
                         super::channels::shared_corner_height(
                             columns,
                             (p[0] - origin[0] + corner[0]) as usize,
@@ -271,8 +272,10 @@ pub(crate) fn append_fluid_patch<'a>(
             let iy = (q[1] - origin[1] + 1) as usize;
             let iz = (q[2] - origin[2] + 1) as usize;
             let occluders = options.occluders.and_then(|boxes| boxes.get(&q));
+            let neighbor_water = sample(q);
+            let partial_neighbor = super::space::partial(padded[ix + 18 * (iy + 18 * iz)]);
             if (!super::can_hold_fluid(padded[ix + 18 * (iy + 18 * iz)]) && occluders.is_none())
-                || sample(q).is_some()
+                || neighbor_water.is_some() && !partial_neighbor
             {
                 continue;
             }
@@ -304,8 +307,22 @@ pub(crate) fn append_fluid_patch<'a>(
             let points = [b, a, [a[0], y, a[2]], [b[0], y, b[2]]];
             let normal = [offset[0] as f32, 0.0, offset[1] as f32];
             if let Some(occluders) = occluders {
+                let mut masks = occluders.clone();
+                if partial_neighbor && let Some(level) = neighbor_water {
+                    let space = super::space::FluidSpace::from_global(occluders, q);
+                    let height = if connected_above(q) {
+                        1.0
+                    } else {
+                        level - q[1] as f64
+                    };
+                    masks.extend(space.wet_boxes(height).into_iter().map(|b| ShapeBox {
+                        minimum: std::array::from_fn(|i| b.minimum[i] + q[i] as f64),
+                        maximum: std::array::from_fn(|i| b.maximum[i] + q[i] as f64),
+                        hinged: false,
+                    }));
+                }
                 let top = a[1].max(b[1]);
-                for fragment in occlusion::fragments(points, normal, origin, occluders) {
+                for fragment in occlusion::fragments(points, normal, origin, &masks) {
                     let mut fragment_effects = effects;
                     if effects[3] == 5.0 {
                         let fragment_top = fragment
@@ -425,6 +442,141 @@ mod tests {
         })
         .unwrap();
         vec![terrain.surface_column(0.5, 0.5); 18 * 18]
+    }
+
+    #[test]
+    fn free_fluid_cells_keep_shared_sloping_corners_beside_a_partial_block_across_sections() {
+        let columns = columns();
+        let p = [15, 7, 8];
+        let q = [16, 7, 8];
+        let slab = [14, 7, 8];
+        let fluids = FluidSnapshot::from([
+            (
+                p,
+                FluidCell {
+                    amount: 8,
+                    ..Default::default()
+                },
+            ),
+            (
+                q,
+                FluidCell {
+                    amount: 2,
+                    ..Default::default()
+                },
+            ),
+        ]);
+        let occluders = FluidOccluders::from([(
+            slab,
+            vec![ShapeBox {
+                minimum: [14.0, 7.0, 8.0],
+                maximum: [15.0, 7.5, 9.0],
+                hinged: false,
+            }],
+        )]);
+        let mut edges = Vec::new();
+        for position in [SectionPos::default(), SectionPos::new(1, 0, 0)] {
+            let origin = position.origin().unwrap();
+            let mut padded = vec![0; 18 * 18 * 18];
+            let local: [i64; 3] = std::array::from_fn(|i| slab[i] - origin[i] + 1);
+            if local.iter().all(|v| (0..18).contains(v)) {
+                padded[local[0] as usize + 18 * (local[1] as usize + 18 * local[2] as usize)] = 82;
+            }
+            let mut patch = None;
+            append_fluid_patch(
+                &mut patch,
+                position,
+                &columns,
+                &padded,
+                &fluids,
+                (false, &occluders),
+            );
+            let patch = patch.unwrap();
+            let mut edge: Vec<_> = patch
+                .positions
+                .iter()
+                .zip(&patch.normals)
+                .filter(|(point, normal)| normal[1] > 0.5 && point[0] + origin[0] as f32 == 16.0)
+                .map(|(point, _)| [point[1], point[2]])
+                .collect();
+            edge.sort_by(|a, b| a[1].total_cmp(&b[1]));
+            assert_eq!(edge.len(), 2);
+            assert!(
+                edge.iter().all(|p| p[0] == 7.625),
+                "construction proximity must not replace one side with a flat box top"
+            );
+            edges.push(edge);
+        }
+        assert_eq!(edges[0], edges[1]);
+    }
+
+    #[test]
+    fn waterlogged_slab_pins_free_surface_edges_and_culls_both_sides_of_the_wet_interface() {
+        let columns = columns();
+        let p = [15, 7, 8];
+        let q = [16, 7, 8];
+        let fluids = FluidSnapshot::from([
+            (
+                p,
+                FluidCell {
+                    amount: 6,
+                    ..Default::default()
+                },
+            ),
+            (
+                q,
+                FluidCell {
+                    amount: 1,
+                    ..Default::default()
+                },
+            ),
+        ]);
+        let occluders = FluidOccluders::from([(
+            p,
+            vec![ShapeBox {
+                minimum: [15.0, 7.0, 8.0],
+                maximum: [16.0, 7.5, 9.0],
+                hinged: false,
+            }],
+        )]);
+        let mut edges = Vec::new();
+        for (position, normal) in [
+            (SectionPos::default(), [1.0, 0.0, 0.0]),
+            (SectionPos::new(1, 0, 0), [-1.0, 0.0, 0.0]),
+        ] {
+            let origin = position.origin().unwrap();
+            let mut padded = vec![0; 18 * 18 * 18];
+            let local: [usize; 3] = std::array::from_fn(|i| (p[i] - origin[i] + 1) as usize);
+            padded[local[0] + 18 * (local[1] + 18 * local[2])] = 82;
+            let mut patch = None;
+            append_fluid_patch(
+                &mut patch,
+                position,
+                &columns,
+                &padded,
+                &fluids,
+                (false, &occluders),
+            );
+            let patch = patch.unwrap();
+            assert_eq!(
+                side_area(&patch, normal),
+                0.0,
+                "connected wet interface cannot expose overlapping interior triangles"
+            );
+            let mut edge: Vec<_> = patch
+                .positions
+                .iter()
+                .zip(&patch.normals)
+                .filter(|(p, n)| n[1] > 0.5 && p[0] + origin[0] as f32 == 16.0)
+                .map(|(p, _)| [p[1], p[2]])
+                .collect();
+            edge.sort_by(|a, b| a[1].total_cmp(&b[1]));
+            edge.dedup();
+            assert_eq!(edge.len(), 2);
+            assert!(edge.iter().all(|p| p[0] == 7.75));
+            edges.push(edge);
+        }
+        assert_eq!(edges[0], edges[1]);
     }
 
     #[test]

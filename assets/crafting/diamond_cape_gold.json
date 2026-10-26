@@ -1,0 +1,34 @@
+{
+  "id": "teramic::diamond_cape_gold",
+  "name": "Gold Diamond Cape",
+  "station": "hand",
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "cape": {
+            "material": "diamond",
+            "color": "white"
+          }
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "dye": "gold"
+        },
+        "count": 1
+      }
+    ]
+  },
+  "output": {
+    "item": {
+      "cape": {
+        "material": "diamond",
+        "color": "gold"
+      }
+    },
+    "count": 1
+  }
+}

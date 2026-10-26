@@ -94,7 +94,10 @@ pub(crate) fn apply_bindings(world: &mut World) {
         ));
     }
     let texts = if revision_changed {
-        let mut query = world.query_filtered::<(Entity, &TiltText, Option<&AppliedTextRevision>), Without<super::content::LiteralInnerText>>();
+        let mut query = world.query_filtered::<(Entity, &TiltText, Option<&AppliedTextRevision>), (
+            Without<super::content::LiteralInnerText>,
+            Without<super::ParkedUi>,
+        )>();
         query
             .iter(world)
             .filter(|(_, text, applied)| {
@@ -108,6 +111,7 @@ pub(crate) fn apply_bindings(world: &mut World) {
         let mut query = world.query_filtered::<(Entity, &TiltText), (
             Or<(Changed<TiltText>, Added<Text>)>,
             Without<super::content::LiteralInnerText>,
+            Without<super::ParkedUi>,
         )>();
         query
             .iter(world)

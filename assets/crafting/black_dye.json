@@ -1,0 +1,22 @@
+{
+  "id": "teramic::black_dye",
+  "name": "Black Dye",
+  "station": "hand",
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "mineral": "coal"
+        },
+        "count": 1
+      }
+    ]
+  },
+  "output": {
+    "item": {
+      "dye": "black"
+    },
+    "count": 2
+  }
+}

@@ -9,6 +9,9 @@ mod clownfish;
 mod horse;
 mod mammal;
 mod shape;
+mod spider;
+mod stalker;
+mod villager;
 
 #[derive(Clone, Copy)]
 pub(super) enum Part {
@@ -23,6 +26,14 @@ pub(super) enum Part {
     Tentacles(f32),
     Fin(f32),
     Jaw,
+    SpiderLeg { side: f32, index: u8 },
+    SpiderEyes,
+    Silk,
+    StalkerArm(f32),
+    StalkerForearm(f32),
+    StalkerHand(f32),
+    StalkerEyes,
+    VillagerArm(f32),
 }
 
 pub(super) fn parts(kind: Kind) -> Result<Vec<(Part, Vec3, Mesh)>, String> {
@@ -45,6 +56,9 @@ pub(super) fn parts_variant(kind: Kind, variant: u8) -> Result<Vec<(Part, Vec3, 
         | Kind::SunJelly
         | Kind::CrystalJelly => aquatic::jelly(kind),
         Kind::ReefShark | Kind::HammerheadShark | Kind::WhaleShark => aquatic::shark(kind),
+        Kind::SmallSpider | Kind::MediumSpider | Kind::LargeSpider => spider::parts(kind),
+        Kind::Stalker => stalker::parts(),
+        Kind::Villager => villager::parts(variant),
     }
 }
 
@@ -163,7 +177,12 @@ mod tests {
     fn all_species_have_bounded_shared_indexed_models() {
         for kind in Kind::ALL {
             let parts = parts(kind).unwrap();
-            assert!(parts.len() <= 8);
+            let (part_limit, extent_limit, vertex_limit) = match kind {
+                Kind::Stalker => (11, 3.0, 64_000),
+                _ if kind.is_spider() => (12, 2.5, 16_000),
+                _ => (8, 2.5, 16_000),
+            };
+            assert!(parts.len() <= part_limit, "{kind:?}");
             let mut total = 0;
             let mut triangles = 0;
             for (_, offset, mesh) in parts {
@@ -184,7 +203,10 @@ mod tests {
                     let position = Vec3::from_array(*position) + offset;
                     let normal = Vec3::from_array(*normal);
                     assert!(position.is_finite() && normal.is_finite(), "{kind:?}");
-                    assert!(position.abs().max_element() < 2.5, "{kind:?}: {position}");
+                    assert!(
+                        position.abs().max_element() < extent_limit,
+                        "{kind:?}: {position}"
+                    );
                     assert!(
                         (normal.length_squared() - 1.0).abs() < 0.001,
                         "{kind:?}: {normal}"
@@ -202,7 +224,7 @@ mod tests {
                     );
                 }
             }
-            assert!(total < 16_000, "{kind:?}: {total}");
+            assert!(total < vertex_limit, "{kind:?}: {total}");
             println!("{kind:?}: {total} vertices, {triangles} triangles");
         }
     }

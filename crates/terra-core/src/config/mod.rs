@@ -21,8 +21,10 @@ pub use audio::AudioConfig;
 pub use client::{ChunkAnimation, ClientConfig, WaterQuality, WeatherKind, WeatherQuality};
 pub use error::ConfigError;
 pub use game::GameConfig;
-pub use gameplay::{GameplayConfig, MapMode, MinimapConfig};
-pub use graphics::{CaveQuality, GraphicsConfig, ShadowQuality, WindowModeSetting};
+pub use gameplay::{GameplayConfig, MapMode, MinimapConfig, MobHealthBars};
+pub use graphics::{
+    CaveQuality, GraphicsConfig, ShadowQuality, TreeFallAnimation, WindowModeSetting,
+};
 pub use load::{Config, config_directory, menu_config_directory};
 pub use multiplayer::MultiplayerConfig;
 pub use persist::save_toml;

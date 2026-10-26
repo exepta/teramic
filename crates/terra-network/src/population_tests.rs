@@ -4,6 +4,248 @@ use terra_core::creatures::{
 };
 
 #[test]
+fn pet_commands_preserve_a_horses_ballistic_ascent_instead_of_resetting_it_to_rest() {
+    let mut horse = Creature {
+        id: creature_id([0, 0], 0).unwrap(),
+        kind: CreatureKind::Horse,
+        home: [0, 0],
+        position: [8.0, 4.0, 8.0],
+        velocity: [1.0, 5.0, 1.0],
+        yaw: 0.0,
+        health: CreatureKind::Horse.health(),
+        behavior: CreatureBehavior::Leap,
+        timer: 1.0,
+        age: 0.0,
+        variant: 0,
+        needs: CreatureNeeds::full(CreatureKind::Horse),
+    };
+    pet_command_pose(&mut horse);
+    assert_eq!(horse.behavior, CreatureBehavior::Leap);
+    assert_eq!(horse.velocity, [0.0, 5.0, 0.0]);
+    assert_eq!(horse.timer, 1.0);
+}
+
+#[test]
+fn feeding_preserves_spider_surface_and_silk_attachments() {
+    use terra_core::creatures::{NeedGoal, NeedKind, spiders};
+    for kind in [
+        CreatureKind::SmallSpider,
+        CreatureKind::MediumSpider,
+        CreatureKind::LargeSpider,
+    ] {
+        for behavior in [
+            CreatureBehavior::Climb,
+            CreatureBehavior::Ceiling,
+            CreatureBehavior::Descend,
+        ] {
+            let mut animal = Creature {
+                id: terra_core::creatures::spider_id([0, 0], 0).unwrap(),
+                kind,
+                home: [0, 0],
+                position: [8.0, -30.0, 8.0],
+                velocity: [0.0, -0.55, 0.0],
+                yaw: std::f32::consts::FRAC_PI_2,
+                health: kind.health(),
+                behavior,
+                timer: 2.0,
+                age: 1.0,
+                variant: 0,
+                needs: CreatureNeeds::full(kind),
+            };
+            let anchor = NeedGoal {
+                kind: NeedKind::Food,
+                position: [8, -25, 8],
+            };
+            animal.needs.goal = Some(anchor);
+            let normal = spiders::surface_normal(&animal);
+            let position = animal.position;
+            let center = spiders::visual_center(&animal);
+            companion_feeding_pose(&mut animal);
+            assert_eq!(animal.behavior, behavior);
+            assert_eq!(spiders::surface_normal(&animal), normal);
+            assert_eq!(spiders::visual_center(&animal), center);
+            assert_eq!(animal.position, position);
+            assert_eq!(animal.needs.goal, Some(anchor));
+            assert!(animal.valid());
+        }
+    }
+    let kind = CreatureKind::Cow;
+    let mut animal = Creature {
+        id: creature_id([0, 0], 0).unwrap(),
+        kind,
+        home: [0, 0],
+        position: [8.0, 3.0, 8.0],
+        velocity: [0.0; 3],
+        yaw: 0.0,
+        health: kind.health(),
+        behavior: CreatureBehavior::Wander,
+        timer: 0.0,
+        age: 0.0,
+        variant: 0,
+        needs: CreatureNeeds::full(kind),
+    };
+    animal.needs.goal = Some(NeedGoal {
+        kind: NeedKind::Food,
+        position: [10, 3, 8],
+    });
+    companion_feeding_pose(&mut animal);
+    assert_eq!(animal.behavior, CreatureBehavior::Graze);
+    assert_eq!(animal.timer, 4.0);
+    assert!(animal.needs.goal.is_some());
+}
+
+#[test]
+fn removed_spider_dens_advance_one_persistent_id_without_reviving_or_scanning_tombstones() {
+    use terra_core::creatures::taming::SpiderDen;
+    use terra_world::{
+        creatures::spiders::WebRequest,
+        props::{PropId, webs},
+    };
+    let mut journal = EditJournal::default();
+    let request = WebRequest {
+        separation: 0,
+        anchor: [-16, -12, 15],
+        face: [0, 1, 0],
+        variant: 5,
+        id: 1 << 60,
+    };
+    let mut prior = None;
+    let mut ids = std::collections::BTreeSet::new();
+    for _ in 0..32 {
+        let next = den_rebuild_request(request, prior, &journal);
+        assert_eq!(
+            next,
+            den_rebuild_request(request, prior, &journal),
+            "failed retries keep one identity"
+        );
+        assert!(ids.insert(next.id));
+        let prop = webs::attached(next.anchor, next.face, next.variant, PropId(next.id)).unwrap();
+        assert!(journal.place_prop(prop).unwrap());
+        assert!(!journal.place_prop(prop).unwrap(), "no duplicate live web");
+        assert!(journal.remove_prop(prop.section, prop.id).unwrap());
+        assert!(
+            !journal.place_prop(prop).unwrap(),
+            "removed player edits stay removed"
+        );
+        prior = Some(SpiderDen {
+            anchor: next.anchor,
+            web_id: next.id,
+        });
+    }
+    assert_eq!(journal.removed_props(), 32);
+}
+
+#[test]
+fn authoritative_spanning_webs_require_loaded_anchors_deduplicate_and_preserve_the_section_cap() {
+    use terra_world::{creatures::spiders::WebRequest, streaming::LoadedSection};
+    let terrain = terra_world::TerraGenerator::new(terra_core::WorldConfig {
+        water: false,
+        ..Default::default()
+    })
+    .unwrap();
+    let mut chunks = ChunkStore::default();
+    for x in 0..=1 {
+        let position = terra_voxel::SectionPos::new(x, 0, 0);
+        let mut data = terra_voxel::BlockSection::empty(position).unwrap();
+        for y in 0..16 {
+            for z in 0..16 {
+                data.set_block([if x == 0 { 0 } else { 5 }, y, z], 3)
+                    .unwrap();
+            }
+        }
+        chunks.loaded.insert(
+            position,
+            LoadedSection {
+                data,
+                mesh: None,
+                mesh_epoch: 0,
+                water_epoch: 0,
+                water: None,
+                props: Vec::new(),
+            },
+        );
+    }
+    let mut journal = EditJournal::default();
+    let request = WebRequest {
+        anchor: [0, 11, 4],
+        face: [1, 0, 0],
+        separation: 21,
+        variant: 10,
+        id: (1 << 60) + 118,
+    };
+    let far = terra_voxel::SectionPos::new(1, 0, 0);
+    let removed = chunks.loaded.remove(&far).unwrap();
+    assert!(spin_web(&mut chunks, &mut journal, &terrain, request).is_none());
+    chunks.loaded.insert(far, removed);
+    for (index, z) in [4, 7, 10, 13].into_iter().enumerate() {
+        let web = WebRequest {
+            anchor: [0, 11, z],
+            id: request.id + index as u64,
+            ..request
+        };
+        let den = spin_web(&mut chunks, &mut journal, &terrain, web).unwrap();
+        assert_eq!(den.anchor, web.anchor);
+        assert!(constructed_den(&chunks, &journal, den));
+        assert_eq!(
+            spin_web(&mut chunks, &mut journal, &terrain, web),
+            Some(den)
+        );
+    }
+    let owner = terra_voxel::SectionPos::default();
+    assert_eq!(chunks.loaded[&owner].props.len(), 4);
+    assert!(
+        chunks.loaded[&owner]
+            .props
+            .iter()
+            .all(terra_world::props::webs::is_construction)
+    );
+    let web = WebRequest {
+        anchor: [0, 11, 15],
+        id: request.id + 5,
+        ..request
+    };
+    spin_web(&mut chunks, &mut journal, &terrain, web);
+    assert_eq!(chunks.loaded[&owner].props.len(), 4);
+    assert_eq!(journal.placed_props(owner).count(), 4);
+    let existing = chunks.loaded[&owner].props[0];
+    let den = terra_core::creatures::taming::SpiderDen {
+        anchor: terra_world::props::webs::support(&existing),
+        web_id: existing.id.0,
+    };
+    journal.remove_prop(owner, existing.id).unwrap();
+    assert!(
+        !constructed_den(&chunks, &journal, den),
+        "a retired large web cannot start the wait/hunt cycle"
+    );
+}
+
+#[test]
+fn a_small_decorative_web_never_counts_as_a_completed_spider_construction() {
+    use terra_world::{
+        props::{PropId, webs},
+        streaming::LoadedSection,
+    };
+    let prop = webs::attached([7, 5, 7], [1, 0, 0], 0, PropId(121)).unwrap();
+    let mut chunks = ChunkStore::default();
+    chunks.loaded.insert(
+        prop.section,
+        LoadedSection {
+            data: terra_voxel::BlockSection::empty(prop.section).unwrap(),
+            mesh: None,
+            mesh_epoch: 0,
+            water_epoch: 0,
+            water: None,
+            props: vec![prop],
+        },
+    );
+    let den = terra_core::creatures::taming::SpiderDen {
+        anchor: [7, 5, 7],
+        web_id: prop.id.0,
+    };
+    assert!(!constructed_den(&chunks, &EditJournal::default(), den));
+}
+
+#[test]
 fn every_jelly_stings_on_body_contact_not_from_a_distance_or_after_death() {
     for kind in CreatureKind::ALL.into_iter().filter(|kind| kind.is_jelly()) {
         let mut jelly = Creature {
@@ -90,6 +332,52 @@ fn active_bears_only_request_the_shared_search_budget_for_real_pending_detours()
     assert!(search_due(&bear, 0.1, false));
     bear.kind = CreatureKind::Cow;
     assert!(search_due(&bear, 0.1, false));
+}
+
+#[test]
+fn spider_combat_only_requests_a_grant_for_a_real_blocked_surface_route_and_never_silk() {
+    let kind = CreatureKind::MediumSpider;
+    let mut animal = Creature {
+        id: terra_core::creatures::spider_id([0, 0], 1).unwrap(),
+        kind,
+        home: [0, 0],
+        position: [8.0, 3.0, 8.0],
+        velocity: [0.0; 3],
+        yaw: 0.0,
+        health: kind.health(),
+        behavior: CreatureBehavior::Rest,
+        timer: 0.0,
+        age: 0.0,
+        variant: 0,
+        needs: CreatureNeeds::full(kind),
+    };
+    for behavior in [
+        CreatureBehavior::Hunt,
+        CreatureBehavior::Attack,
+        CreatureBehavior::Descend,
+    ] {
+        animal.behavior = behavior;
+        assert!(!search_due(&animal, 0.1, false));
+        assert_eq!(
+            search_due(&animal, 0.1, true),
+            behavior != CreatureBehavior::Descend
+        );
+    }
+    animal.needs.search_in = 1.0;
+    for behavior in [CreatureBehavior::Climb, CreatureBehavior::Ceiling] {
+        animal.behavior = behavior;
+        assert!(!search_due(&animal, 0.1, false));
+    }
+    animal.behavior = CreatureBehavior::Crawl;
+    animal.needs.goal = Some(terra_core::creatures::NeedGoal {
+        kind: terra_core::creatures::NeedKind::Shelter,
+        position: [10, 3, 8],
+    });
+    animal.needs.search_in = 0.0;
+    assert!(search_due(&animal, 0.1, false));
+    animal.needs.search_in = 10.0;
+    assert!(!search_due(&animal, 0.1, false));
+    assert!(search_due(&animal, 0.1, true));
 }
 
 #[test]

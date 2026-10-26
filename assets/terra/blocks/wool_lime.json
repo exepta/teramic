@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "id": 126,
+  "name": "Lime Wool",
+  "description": "Densely woven colored wool. Recolor with flower dye.",
+  "creative_category": "building",
+  "render_kind": "cube",
+  "bevel_width": 0,
+  "materials": {
+    "Woven wool": {
+      "texture_pattern": "wool",
+      "base_color": [
+        0.56,
+        0.84,
+        0.1,
+        1
+      ],
+      "roughness": 1,
+      "reflectance": 0.08
+    }
+  },
+  "face_materials": [
+    "Woven wool",
+    "Woven wool",
+    "Woven wool",
+    "Woven wool",
+    "Woven wool",
+    "Woven wool"
+  ],
+  "hardness": 0.45,
+  "resistance": 0.8,
+  "required_tool": null,
+  "mining_level": 0,
+  "surface": "wool"
+}

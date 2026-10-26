@@ -1,10 +1,12 @@
 //! One-time, isolated renders of the real block meshes and materials for TiltUI.
 mod bellows;
+mod crops;
+mod dust;
 mod hardware;
 mod products;
 mod sculpt;
 mod showcase;
-mod tools;
+pub(crate) mod tools;
 use std::{
     collections::{HashMap, VecDeque},
     time::{Duration, Instant},
@@ -91,7 +93,10 @@ pub(crate) fn install(app: &mut App) {
     if std::env::args().any(|a| {
         matches!(
             a.as_str(),
-            "--smoke-test-items" | "--smoke-test-furnaces" | "--smoke-test-construction"
+            "--smoke-test-items"
+                | "--smoke-test-furnaces"
+                | "--smoke-test-construction"
+                | "--smoke-test-material-reference"
         )
     }) {
         showcase::install(app);
@@ -135,7 +140,8 @@ fn prepare(
     let Some(foliage) = assets.foliage.as_ref() else {
         return;
     };
-    if (7..=9)
+    if terra_voxel::MaterialId::FOLIAGE
+        .into_iter()
         .filter_map(|id| templates.blocks.get(&id))
         .flat_map(|block| block.face_materials)
         .any(|slot| !foliage.materials.contains_key(&slot))
@@ -157,6 +163,12 @@ fn prepare(
         .map(ItemKind::Block)
         .chain(ResourcePropKind::ALL.into_iter().map(ItemKind::Prop))
         .chain(ItemKind::EXTRA)
+        .chain(
+            terra_core::CapeItem::ALL
+                .into_iter()
+                .filter(|cape| cape.color != terra_core::beds::DyeColor::White)
+                .map(ItemKind::Cape),
+        )
         .chain((71..=73).flat_map(|material| {
             terra_core::beds::DyeColor::ALL.map(move |color| ItemKind::DyedBed { material, color })
         }))
@@ -164,6 +176,7 @@ fn prepare(
             [
                 terra_core::WoodSpecies::Birch,
                 terra_core::WoodSpecies::Spruce,
+                terra_core::WoodSpecies::Cherry,
             ]
             .map(move |wood| ItemKind::for_wood(material, wood))
         }));
@@ -179,6 +192,12 @@ fn prepare(
             ItemKind::Mineral(kind) => mineral_batches(kind, &templates),
             ItemKind::Animal(kind) => animal_batches(kind, &templates),
             ItemKind::Bellows(kind) => bellows_batches(kind, &templates),
+            ItemKind::Armor(_) | ItemKind::Accessory(_) | ItemKind::Cape(_) => {
+                crate::armor::item_batches(item, templates.item_materials.opaque)
+            }
+            ItemKind::Dust(kind) => dust::batches(kind, templates.item_materials.opaque),
+            ItemKind::Crop(kind) => crop_batches(kind, &templates),
+            ItemKind::Flower(color) => flower_batches(color, &templates),
             ItemKind::Tool(_) | ItemKind::Stick => tool_batches(item, &templates),
         } {
             Ok(batches) => batches,
@@ -312,6 +331,12 @@ fn render_next(
                     | ItemKind::Bellows(_)
                     | ItemKind::Dye(_)
                     | ItemKind::DyedBed { .. }
+                    | ItemKind::Armor(_)
+                    | ItemKind::Accessory(_)
+                    | ItemKind::Cape(_)
+                    | ItemKind::Dust(_)
+                    | ItemKind::Crop(_)
+                    | ItemKind::Flower(_)
                     | ItemKind::Animal(_) => {
                         item_previews.images.insert(job.item, job.image);
                     }
@@ -382,7 +407,17 @@ fn render_next(
         .id();
     if let Some(folder) = std::env::var_os("TERRA_PREVIEW_CAPTURE_DIR")
         .filter(|_| std::env::args().any(|a| a.starts_with("--smoke-test")))
-        && matches!(item, ItemKind::Animal(_) | ItemKind::Tool(_))
+        && matches!(
+            item,
+            ItemKind::Animal(_)
+                | ItemKind::Tool(_)
+                | ItemKind::Armor(_)
+                | ItemKind::Accessory(_)
+                | ItemKind::Cape(_)
+                | ItemKind::Dust(_)
+                | ItemKind::Crop(_)
+                | ItemKind::Flower(_)
+        )
     {
         let folder = std::path::PathBuf::from(folder);
         match std::fs::create_dir_all(&folder) {
@@ -416,8 +451,27 @@ pub(crate) fn prop_batches(
     templates: &TemplateSet,
 ) -> Result<Vec<MeshBatch>, String> {
     let kind = kind.into();
+    prop_variant_batches(kind, 0, templates)
+}
+
+pub(crate) fn flower_batches(
+    color: terra_core::beds::DyeColor,
+    templates: &TemplateSet,
+) -> Result<Vec<MeshBatch>, String> {
+    prop_variant_batches(
+        terra_world::props::PropKind::Flower,
+        terra_core::crusher::flower_variant(color),
+        templates,
+    )
+}
+
+fn prop_variant_batches(
+    kind: terra_world::props::PropKind,
+    variant: u8,
+    templates: &TemplateSet,
+) -> Result<Vec<MeshBatch>, String> {
     let mut batches =
-        crate::props::template(kind, 0, DetailLevel::Near, &templates.prop_materials)?;
+        crate::props::template(kind, variant, DetailLevel::Near, &templates.prop_materials)?;
     let mut minimum = Vec3::splat(f32::INFINITY);
     let mut maximum = Vec3::splat(f32::NEG_INFINITY);
     for vertex in batches.iter().flat_map(|batch| &batch.positions) {
@@ -448,6 +502,20 @@ pub(crate) fn bellows_batches(
     templates: &TemplateSet,
 ) -> Result<Vec<MeshBatch>, String> {
     bellows::batches(kind, templates.item_materials.opaque)
+}
+
+pub(crate) fn dust_batches(
+    kind: terra_core::crusher::DustKind,
+    templates: &TemplateSet,
+) -> Result<Vec<MeshBatch>, String> {
+    dust::batches(kind, templates.item_materials.opaque)
+}
+
+pub(crate) fn crop_batches(
+    kind: terra_core::CropItem,
+    templates: &TemplateSet,
+) -> Result<Vec<MeshBatch>, String> {
+    crops::batches(kind, templates.item_materials.opaque)
 }
 
 pub(crate) fn block_batches(
@@ -483,7 +551,7 @@ pub(crate) fn block_batches(
     let mut data = BlockSection::empty(section).map_err(|e| e.to_string())?;
     data.set_block([0; 3], material)
         .map_err(|e| e.to_string())?;
-    let mut batches = if (65..=70).contains(&material) {
+    let mut batches = if terra_world::objects::is_opening(material) {
         templates
             .blocks
             .get(&material)
@@ -499,6 +567,15 @@ pub(crate) fn block_batches(
                 ..default()
             })
             .collect()
+    } else if material == 29 && templates.animated_chests {
+        crate::meshing::custom::model_geometry(
+            material,
+            Default::default(),
+            Default::default(),
+            [None; 6],
+            [0; 6],
+            templates,
+        )?
     } else if let Some(snapshot) = crate::meshing::custom::capture(
         &data,
         templates,
@@ -546,7 +623,19 @@ pub(crate) fn block_batches(
             }
         }
     }
-    if matches!(material, 59 | 65..=67 | 71..=73)
+    if material == terra_core::crusher::MATERIAL {
+        for batch in &mut batches {
+            for point in &mut batch.positions {
+                point[0] *= 2.0;
+            }
+            for normal in &mut batch.normals {
+                *normal = (Vec3::from_array(*normal) / Vec3::new(2.0, 1.0, 1.0))
+                    .normalize_or_zero()
+                    .to_array();
+            }
+        }
+    }
+    if matches!(material, 59 | 65..=67 | 71..=73 | 99..=100 | 139)
         || terra_core::OreKind::from_material(material).is_some()
     {
         fit_unit(&mut batches)?;
@@ -674,6 +763,34 @@ pub(crate) fn batch_mesh(batch: &MeshBatch) -> Mesh {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn all_thirteen_dyes_have_distinct_solid_shared_material_previews() {
+        let templates = TemplateSet::default();
+        let mut colors = std::collections::BTreeSet::new();
+        let reference = dye_batches(terra_core::beds::DyeColor::Red, &templates)
+            .unwrap()
+            .remove(0);
+        for color in terra_core::beds::DyeColor::ALL {
+            colors.insert(color.tint().map(f32::to_bits));
+            let batches = dye_batches(color, &templates).unwrap();
+            assert_eq!(batches.len(), 1);
+            let batch = &batches[0];
+            assert_eq!(batch.material, templates.item_materials.opaque);
+            assert!(batch.positions.len() < 12_000);
+            assert_eq!(batch.positions, reference.positions);
+            assert_eq!(batch.indices, reference.indices);
+            assert_eq!(batch.positions.len(), batch.colors.len());
+            assert!(batch.positions.iter().flatten().all(|v| v.is_finite()));
+            assert!(
+                batch
+                    .indices
+                    .iter()
+                    .all(|&i| (i as usize) < batch.positions.len())
+            );
+        }
+        assert_eq!(colors.len(), 13);
+    }
 
     #[test]
     fn neutral_grass_previews_are_green_independent_of_the_preview_world_origin() {

@@ -5,12 +5,14 @@ use crate::protocol::social::SharedCursor;
 pub(super) struct Schedule {
     next: f64,
     sent: HashMap<PlayerId, (Vec<(PlayerId, String)>, bool)>,
+    chests: HashMap<PlayerId, Vec<[i64; 3]>>,
 }
 
 pub(super) fn broadcast(
     time: Res<Time>,
     profiles: Res<ConnectedProfiles>,
     journal: Res<EditJournal>,
+    chunks: Res<ChunkStore>,
     mut peers: Query<(&Peer, &mut MessageSender<ServerControl>), With<Connected>>,
     mut schedule: Local<Schedule>,
 ) {
@@ -20,6 +22,22 @@ pub(super) fn broadcast(
     }
     schedule.next = now + 0.1;
     schedule.sent.retain(|id, _| profiles.0.contains_key(id));
+    schedule.chests.retain(|id, _| profiles.0.contains_key(id));
+    let open: std::collections::BTreeSet<_> = peers
+        .iter()
+        .filter_map(|(peer, _)| {
+            let container = peer.container.as_ref()?;
+            (peer.synced
+                && !peer.vitals.dead()
+                && container.furnace.is_none()
+                && container.crusher.is_none()
+                && journal
+                    .block(container.anchor)
+                    .or_else(|| chunks.block_at(container.anchor))
+                    == Some(29))
+            .then_some(container.anchor)
+        })
+        .collect();
     let mut names: Vec<_> = profiles
         .0
         .iter()
@@ -57,6 +75,24 @@ pub(super) fn broadcast(
         if !peer.synced {
             continue;
         }
+        let visible_chests: Vec<_> = open
+            .iter()
+            .filter(|position| {
+                chest_in_view(**position, &journal, |section| {
+                    peer.known.contains_key(&section)
+                }) || peer
+                    .container
+                    .as_ref()
+                    .is_some_and(|container| container.anchor == **position)
+            })
+            .take(256)
+            .copied()
+            .collect();
+        let previous_chests = schedule.chests.entry(peer.id).or_default();
+        if *previous_chests != visible_chests {
+            previous_chests.clone_from(&visible_chests);
+            sender.send::<ControlChannel>(ServerControl::ChestViewers(visible_chests));
+        }
         let visible: Vec<_> = cursors
             .iter()
             .filter(|c| {
@@ -82,5 +118,56 @@ pub(super) fn broadcast(
             names: roster,
             cursors: visible,
         });
+    }
+}
+
+fn chest_in_view(
+    position: [i64; 3],
+    journal: &EditJournal,
+    known: impl Fn(terra_voxel::SectionPos) -> bool,
+) -> bool {
+    known(terra_voxel::global_to_section(position).0)
+        || journal
+            .object_state(position)
+            .and_then(|s| s.peer)
+            .is_some_and(|peer| known(terra_voxel::global_to_section(peer).0))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn connected_chest_viewer_state_reaches_an_observer_that_only_knows_the_secondary_section() {
+        let owner = [-1, 2, -17];
+        let peer = [0, 2, -17];
+        let mut journal = EditJournal::default();
+        for position in [owner, peer] {
+            journal.record(position, 29).unwrap();
+        }
+        journal
+            .set_object_state(
+                owner,
+                Some(terra_world::edits::BlockObjectState {
+                    peer: Some(peer),
+                    ..default()
+                }),
+            )
+            .unwrap();
+        journal
+            .set_object_state(
+                peer,
+                Some(terra_world::edits::BlockObjectState {
+                    peer: Some(owner),
+                    secondary: true,
+                    ..default()
+                }),
+            )
+            .unwrap();
+        let first = terra_voxel::global_to_section(owner).0;
+        let second = terra_voxel::global_to_section(peer).0;
+        assert_ne!(first, second);
+        assert!(chest_in_view(owner, &journal, |p| p == first));
+        assert!(chest_in_view(owner, &journal, |p| p == second));
+        assert!(!chest_in_view(owner, &journal, |_| false));
     }
 }

@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "id": 105,
+  "name": "Wool Half Slab",
+  "description": "Half-height woven wool, also placeable upright and combinable with other slab materials.",
+  "creative_category": "building",
+  "render_kind": "boxes",
+  "bevel_width": 0.0,
+  "collision_boxes": [{"minimum": [0, 0, 0], "maximum": [1, 0.5, 1]}],
+  "materials": {"Woven wool": {"texture_pattern": "wool", "roughness": 1.0, "reflectance": 0.08}},
+  "face_materials": ["Woven wool", "Woven wool", "Woven wool", "Woven wool", "Woven wool", "Woven wool"],
+  "hardness": 0.45,
+  "resistance": 0.8,
+  "required_tool": null,
+  "mining_level": 0
+}

@@ -1,0 +1,6 @@
+{
+  "item": { "crop": "lettuce" },
+  "name": "Lettuce",
+  "description": "A crisp green head. Eat fresh, or keep some seed for the next planting.",
+  "food": { "nutrition": 12.0, "saturation": 6.0, "eat_seconds": 1.2 }
+}

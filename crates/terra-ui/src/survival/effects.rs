@@ -12,6 +12,7 @@ pub struct EffectCardView {
     pub time_label: String,
     pub level: u8,
     pub icon: String,
+    pub night_vision: bool,
     pub tooltip: String,
     pub class: String,
 }
@@ -94,6 +95,7 @@ fn describe(vitals: SurvivalVitals, compact: bool) -> StatusEffectView {
             time_label,
             level: effect.level,
             icon: format!("Status effect {}", effect.kind.index()),
+            night_vision: effect.kind == EffectKind::NightVision,
             tooltip,
             class: format!(
                 "status-effect-card {} {} effect-{}",
@@ -114,20 +116,22 @@ fn describe(vitals: SurvivalVitals, compact: bool) -> StatusEffectView {
     let shield = vitals.effects.shield_points();
     let capacity = vitals.effects.shield_capacity();
     StatusEffectView {
-        regeneration: vitals
-            .active_effects()
-            .any(|e| e.kind == EffectKind::Regeneration),
+        regeneration: super::chrome::primary_effect(vitals, true) == Some(EffectKind::Regeneration),
         cards,
         overflow: overflow.len(),
         overflow_title: overflow.join("\n\n"),
         expanded,
-        shield: capacity > 0.0,
+        shield: capacity > 0.0 && shield > 0.0,
         shield_value: if capacity > 0.0 {
             shield / capacity * 100.0
         } else {
             0.0
         },
-        shield_label: format!("{} / {}", shield.ceil() as u16, capacity.ceil() as u16),
+        shield_label: format!(
+            "Shield Power: {} / {}",
+            shield.ceil() as u16,
+            capacity.ceil() as u16
+        ),
     }
 }
 
@@ -240,9 +244,9 @@ mod tests {
         }
         let view = describe(vitals, false);
         assert_eq!(view.cards.len(), 3);
-        assert_eq!(view.overflow, 10);
+        assert_eq!(view.overflow, terra_core::effects::EFFECT_COUNT - 3);
         assert!(!view.expanded);
-        assert!(view.regeneration && view.shield);
+        assert!(!view.regeneration && view.shield);
         assert!(view.overflow_title.contains("Regeneration"));
         assert_eq!(view.cards[0].id, "teramic::poison");
         assert_eq!(view.cards[0].time_label, "00:30");
@@ -258,10 +262,12 @@ mod tests {
         vitals.effects.set_smoke_exposure(true);
         let view = describe(vitals, false);
         assert_eq!(view.cards.len(), 2);
-        assert!(view.expanded && view.regeneration);
+        assert!(view.expanded && !view.regeneration);
         assert_eq!(view.cards[0].time_label, "--:--");
         assert!(view.cards[0].tooltip.contains("While in smoke"));
         assert_eq!(view.cards[1].icon, "Status effect 11");
+        vitals.effects.set_smoke_exposure(false);
+        assert!(describe(vitals, false).regeneration);
         assert_eq!(duration_label(0.05, false), "00:01");
         assert_eq!(duration_label(90.0, false), "01:30");
     }
@@ -274,6 +280,21 @@ mod tests {
         assert!(start.1 > middle.1 && middle.1 > end.1);
         assert!(start.2 > middle.2 && end.2 < 0.00001);
         assert_eq!(heart_particle(1.0, 0), start);
+    }
+
+    #[test]
+    fn exhausted_shield_keeps_its_status_card_without_an_empty_overlay() {
+        let mut vitals = SurvivalVitals::default();
+        assert!(vitals.effects.apply(EffectKind::ShieldPower, 30.0, 1));
+        let charged = describe(vitals, false);
+        assert!(charged.shield);
+        assert_eq!(charged.shield_value, 100.0);
+        vitals.effects.absorb_damage(20.0);
+        let exhausted = describe(vitals, false);
+        assert!(!exhausted.shield);
+        assert_eq!(exhausted.shield_value, 0.0);
+        assert_eq!(exhausted.cards.len(), 1);
+        assert_eq!(exhausted.cards[0].id, "teramic::shield_power");
     }
 
     #[test]

@@ -1,0 +1,9 @@
+{
+  "kind": "lettuce",
+  "growth_seconds": 480.0,
+  "moisture_evaporation": 0.0015,
+  "seasonal_growth": [1.0, 0.8, 0.8, 0.0],
+  "produce_count": 2,
+  "seed_count": 2,
+  "seed_bonus": 1
+}

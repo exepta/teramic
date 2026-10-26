@@ -1,0 +1,28 @@
+{
+  "id": "teramic::light_blue_carpet",
+  "name": "Light Blue Carpet",
+  "station": "hand",
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "block": 106
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "dye": "light_blue"
+        },
+        "count": 1
+      }
+    ]
+  },
+  "output": {
+    "item": {
+      "block": 118
+    },
+    "count": 1
+  }
+}

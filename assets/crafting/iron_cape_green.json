@@ -1,0 +1,34 @@
+{
+  "id": "teramic::iron_cape_green",
+  "name": "Green Iron Cape",
+  "station": "hand",
+  "output": {
+    "item": {
+      "cape": {
+        "material": "iron",
+        "color": "green"
+      }
+    },
+    "count": 1
+  },
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "cape": {
+            "material": "iron",
+            "color": "white"
+          }
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "dye": "green"
+        },
+        "count": 1
+      }
+    ]
+  }
+}

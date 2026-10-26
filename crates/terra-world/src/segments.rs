@@ -10,6 +10,23 @@ pub const fn is_crystal(material: u16) -> bool {
     matches!(material, 51..=53)
 }
 
+/// Hanging plants require an unbroken chain to a real ceiling. Unknown sections
+/// are not missing support and must never cause persisted plant removal.
+pub fn hanging_support(
+    position: [i64; 3],
+    mut block: impl FnMut([i64; 3]) -> Option<u16>,
+) -> Option<bool> {
+    for distance in 1..=MAX_CHAIN + 1 {
+        let p = [position[0], position[1].checked_add(distance)?, position[2]];
+        let material = block(p)?;
+        if matches!(material, 54 | 55) {
+            continue;
+        }
+        return Some(crate::props::placement::ground_support(material));
+    }
+    Some(false)
+}
+
 #[derive(Debug, Clone, Copy, Default)]
 pub struct Profile {
     pub below: u8,
@@ -130,28 +147,13 @@ pub fn visit(
 ) {
     let h = seed(position);
     if is_crystal(material) {
-        let sides = 8;
-        let angle = (h & 255) as f32 * std::f32::consts::TAU / 255.0;
+        let sides = 4;
+        let angle = (h & 3) as f32 * std::f32::consts::FRAC_PI_2;
         let ring = |y: f32, i: usize| {
-            // Bevelled square salt / ice prisms; limestone has uneven ribs.
-            let bevel = if material == 53 { 0.46 } else { 0.28 };
-            let corners = [
-                [1.0, bevel],
-                [bevel, 1.0],
-                [-bevel, 1.0],
-                [-1.0, bevel],
-                [-1.0, -bevel],
-                [-bevel, -1.0],
-                [bevel, -1.0],
-                [1.0, -bevel],
-            ];
+            // Broad square mineral bodies, never octagonal rounded columns.
+            let corners = [[1.0, 1.0], [-1.0, 1.0], [-1.0, -1.0], [1.0, -1.0]];
             let [u, v] = corners[i];
-            let r = radius(profile, y) / (1.0_f32 + bevel * bevel).sqrt()
-                * if material == 52 && i.is_multiple_of(3) {
-                    0.83
-                } else {
-                    1.0
-                };
+            let r = radius(profile, y);
             [
                 0.5 + (u * angle.cos() - v * angle.sin()) * r,
                 y,
@@ -391,6 +393,7 @@ pub(crate) fn raycast(
     );
     let time = match pose {
         crate::props::PropPose::Wind(t) | crate::props::PropPose::WeatherWind { time: t, .. } => t,
+        crate::props::PropPose::Seasonal { time: Some(t), .. } => t,
         _ => 0.0,
     };
     for phase in 0..if swept && material == 50 { 16 } else { 1 } {

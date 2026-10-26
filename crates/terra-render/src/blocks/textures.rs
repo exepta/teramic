@@ -2,6 +2,7 @@
 use super::definitions::TexturePattern;
 mod reference;
 mod underwater;
+mod village;
 use bevy::{
     asset::RenderAssetUsages,
     image::{ImageAddressMode, ImageSampler, ImageSamplerDescriptor},
@@ -14,8 +15,9 @@ pub(super) fn generate(pattern: TexturePattern) -> Image {
     let mut pixels = Vec::with_capacity((SIZE * SIZE * 4) as usize);
     for py in 0..SIZE {
         for px in 0..SIZE {
-            if let Some(color) =
-                reference::sample(pattern, px, py).or_else(|| underwater::sample(pattern, px, py))
+            if let Some(color) = reference::sample(pattern, px, py)
+                .or_else(|| underwater::sample(pattern, px, py))
+                .or_else(|| village::sample(pattern, px, py))
             {
                 pixels.extend(color.map(|v| v.clamp(0.0, 255.0).round() as u8));
                 pixels.push(255);
@@ -29,9 +31,15 @@ pub(super) fn generate(pattern: TexturePattern) -> Image {
                 .sin();
             let (base, shade) = match pattern {
                 TexturePattern::Turf
+                | TexturePattern::Wool
+                | TexturePattern::PathTop
+                | TexturePattern::PathSide
                 | TexturePattern::Earth
+                | TexturePattern::Farmland
+                | TexturePattern::FarmlandSide
                 | TexturePattern::Canopy
                 | TexturePattern::BirchCanopy
+                | TexturePattern::BlossomCanopy
                 | TexturePattern::Gravel
                 | TexturePattern::StructureStone
                 | TexturePattern::CoralRed
@@ -49,6 +57,25 @@ pub(super) fn generate(pattern: TexturePattern) -> Image {
                     let dy = py as f32 / 512.0 - 0.5;
                     let ring = (dx.hypot(dy) * 91.0 + grain * 0.8).sin();
                     ([160., 130., 88.], 0.88 + ring * 0.065 + fine * 0.025)
+                }
+                TexturePattern::CherryBark => {
+                    let row = y / 7;
+                    let line =
+                        y % 7 == 0 && (x + hash(row, 417) % 64) % 64 < 10 + hash(row, 21) % 23;
+                    (
+                        [230., 225., 224.],
+                        if line {
+                            1.04
+                        } else {
+                            0.77 + grain * 0.06 + fine * 0.025
+                        },
+                    )
+                }
+                TexturePattern::CherryEnd => {
+                    let dx = px as f32 / SIZE as f32 - 0.5;
+                    let dy = py as f32 / SIZE as f32 - 0.5;
+                    let ring = (dx.hypot(dy) * 85. + grain * 0.5).sin();
+                    ([248., 241., 237.], 0.90 + ring * 0.07 + fine * 0.015)
                 }
                 TexturePattern::Dripstone => {
                     let column = hash(x / 5, 39) % 7;
@@ -103,7 +130,7 @@ pub(super) fn generate(pattern: TexturePattern) -> Image {
                             - if seam { 0.11 } else { 0.0 },
                     )
                 }
-                TexturePattern::SmoothStone => ([167., 173., 174.], 0.98 + fine * 0.04),
+                TexturePattern::SmoothStone => smooth_stone(x, y, fine),
                 TexturePattern::Planks => {
                     let seam = y % 16 == 0 || (x + (y / 16) * 32) % 64 == 0;
                     let grain = (x as f32 * 0.09817477 + (y as f32 * 0.7).sin()).sin();
@@ -194,7 +221,7 @@ pub(super) fn generate(pattern: TexturePattern) -> Image {
     // if the mip generator ever gains additional restrictions.
     if matches!(
         pattern,
-        TexturePattern::Canopy | TexturePattern::BirchCanopy
+        TexturePattern::Canopy | TexturePattern::BirchCanopy | TexturePattern::BlossomCanopy
     ) {
         crate::foliage::masked_canopy(image.clone()).unwrap_or(image)
     } else {
@@ -208,14 +235,58 @@ fn hash(x: u32, y: u32) -> u32 {
     (h ^ (h >> 15)).wrapping_mul(0x846ca68b)
 }
 
+fn smooth_stone(x: u32, y: u32, fine: f32) -> ([f32; 3], f32) {
+    // Broad dressed mineral planes retain their character in the mip chain.
+    // The 8px painted grid matches the other blocks; fine noise is only grain.
+    let band = y / 8;
+    let offset = hash(band, 109) % 16;
+    let plane = hash((x + offset) / 16, band);
+    let mineral = hash(x / 4, y / 4) % 7;
+    let seam = y.is_multiple_of(8) && (x + offset) % 16 < 11;
+    let edge = x.min(63 - x).min(y.min(63 - y));
+    let tone = 0.86 + (plane % 11) as f32 * 0.011 + mineral as f32 * 0.006;
+    let base = if plane.is_multiple_of(5) {
+        [169., 173., 170.]
+    } else {
+        [177., 178., 174.]
+    };
+    (
+        base,
+        tone + fine * 0.012 - if seam { 0.075 } else { 0.0 } + if edge == 0 { 0.055 } else { 0.0 },
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn smooth_stone_has_painted_mineral_planes_instead_of_only_single_pixel_noise() {
+        let mut coarse_tones = std::collections::BTreeSet::new();
+        let mut low = f32::MAX;
+        let mut high = f32::MIN;
+        for y in 0..64 {
+            for x in 0..64 {
+                let (base, shade) = smooth_stone(x, y, 0.5);
+                let tone = base[0] * shade;
+                low = low.min(tone);
+                high = high.max(tone);
+                coarse_tones.insert(tone.round() as u8);
+                assert!((130.0..200.0).contains(&tone));
+            }
+        }
+        assert!(high - low > 25.0);
+        assert!(coarse_tones.len() > 20);
+        let image = generate(TexturePattern::SmoothStone);
+        assert!(image.texture_descriptor.mip_level_count > 1);
+        assert!(image.data.unwrap().chunks_exact(4).all(|p| p[3] == 255));
+    }
     #[test]
     fn detailed_terrain_stays_opaque_and_leaf_gaps_preserve_the_coverage_budget() {
         for pattern in [
             TexturePattern::Turf,
             TexturePattern::Earth,
+            TexturePattern::Farmland,
+            TexturePattern::FarmlandSide,
             TexturePattern::Stone,
             TexturePattern::Sand,
             TexturePattern::Clay,
@@ -228,14 +299,20 @@ mod tests {
             TexturePattern::Mud,
             TexturePattern::Canopy,
             TexturePattern::BirchCanopy,
+            TexturePattern::BlossomCanopy,
         ] {
             let image = generate(pattern);
             let data = image.data.as_ref().unwrap();
             let base = &data[..512 * 512 * 4];
             let leaf = matches!(
                 pattern,
-                TexturePattern::Canopy | TexturePattern::BirchCanopy
+                TexturePattern::Canopy
+                    | TexturePattern::BirchCanopy
+                    | TexturePattern::BlossomCanopy
             );
+            if pattern == TexturePattern::BlossomCanopy {
+                assert!(base.chunks_exact(4).all(|p| p[0] == p[1] && p[1] == p[2]));
+            }
             if leaf {
                 let coverage = base.chunks_exact(4).filter(|p| p[3] >= 128).count() as f32
                     / (512 * 512) as f32;
@@ -251,6 +328,8 @@ mod tests {
         let patterns = [
             TexturePattern::Turf,
             TexturePattern::Earth,
+            TexturePattern::Farmland,
+            TexturePattern::FarmlandSide,
             TexturePattern::Canopy,
             TexturePattern::BirchCanopy,
             TexturePattern::Gravel,

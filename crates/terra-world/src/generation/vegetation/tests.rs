@@ -28,6 +28,79 @@ fn raster(tree: &Tree) -> Vec<u16> {
 }
 
 #[test]
+fn cherry_wood_revision_preserves_existing_tree_locations_and_old_world_materials() {
+    let old = TerraGenerator::new(WorldConfig {
+        seed: WorldSeed(42042),
+        ecology_revision: 1,
+        structures_revision: 4,
+        ..Default::default()
+    })
+    .unwrap();
+    let new = TerraGenerator::new(WorldConfig {
+        ecology_revision: 2,
+        ..old.config().clone()
+    })
+    .unwrap();
+    let start = [-2224, -16, -3232];
+    let previous = trees_in_region(&old, start, 96);
+    let current = trees_in_region(&new, start, 96);
+    assert_eq!(previous.len(), current.len());
+    let mut cherry = 0;
+    for (old, new) in previous.iter().zip(&current) {
+        let mut expected = old.clone();
+        if matches!(old.species, TreeSpecies::Cherry(_)) {
+            assert_eq!(old.wood_material, MaterialId::Wood);
+            assert_eq!(new.wood_material, MaterialId::CherryLog);
+            expected.wood_material = MaterialId::CherryLog;
+            cherry += 1;
+        }
+        assert_eq!(expected, *new);
+    }
+    assert!(cherry > 0, "fixture must include generated cherry trees");
+}
+
+#[cfg(feature = "bevy")]
+#[test]
+fn whole_tree_shape_matches_every_stamped_root_trunk_and_branch_across_species_and_seeds() {
+    for species in [
+        TreeSpecies::Green,
+        TreeSpecies::Autumn,
+        TreeSpecies::Birch,
+        TreeSpecies::Spruce,
+        TreeSpecies::Palm,
+    ] {
+        for seed in [1, 71, 42042, u64::MAX] {
+            let tree =
+                Tree::with_species([-17, 12, -33], mix(seed), [-2.0, 0.0, 2.0, 1.0], species);
+            let shape = tree.felling_shape().expect("bounded natural tree");
+            let start = std::array::from_fn(|i| tree.origin[i] + i64::from(tree.bounds.min[i]));
+            let size = (0..3)
+                .map(|i| (tree.bounds.max[i] - tree.bounds.min[i]) as usize)
+                .max()
+                .unwrap();
+            let mut blocks = vec![0; size.pow(3)];
+            tree.stamp_wood(start, size, &mut blocks);
+            let mut stamped = HashSet::new();
+            for (index, material) in blocks.into_iter().enumerate() {
+                if material == tree.wood_material as u16 {
+                    stamped.insert([
+                        start[0] + (index % size) as i64,
+                        start[1] + (index / size % size) as i64,
+                        start[2] + (index / size / size) as i64,
+                    ]);
+                }
+            }
+            assert_eq!(
+                shape.wood.into_iter().collect::<HashSet<_>>(),
+                stamped,
+                "{species:?} seed {seed}"
+            );
+            assert!(stamped.len() > 10);
+        }
+    }
+}
+
+#[test]
 fn styles_are_varied_reproducible_and_inside_the_search_envelope() {
     let mut species = HashSet::new();
     let mut forms = HashSet::new();

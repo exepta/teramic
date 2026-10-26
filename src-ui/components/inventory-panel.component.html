@@ -1,6 +1,5 @@
 @if (inventoryView.visible) {
-    <div id="inventory-backdrop" class="inventory-backdrop" [style]="inventoryView.open ? inventoryView.layout_style : 'display: none;'" onmousedown="inventory_outside">
-      @if (inventoryView.open) {
+    <div id="inventory-backdrop" class="inventory-backdrop" [style]="inventoryView.open ? inventoryView.layout_style : (inventoryView.prewarming ? 'opacity: 0; pointer-events: none;' : 'display: none;')" onmousedown="inventory_outside">
       <div id="inventory-shell" [class]="inventoryView.linked_container ? 'inventory-shell inventory-shell-linked' : 'inventory-shell'">
         @if (inventoryView.linked_container) {
           <div id="workbench-storage" class="workbench-storage">
@@ -9,15 +8,21 @@
             <div id="workbench-container-grid" class="linked-container-grid">@for (slot of inventoryView.container_items; track slot.id) { <inventory-slot [slot]="slot" /> }</div>
           </div>
         }
-        <div id="inventory-panel" [class]="inventoryView.furnace ? 'inventory-panel inventory-furnace-panel' : (inventoryView.double_container ? 'inventory-panel inventory-double-container' : 'inventory-panel')">
+        <div id="inventory-panel" [class]="(inventoryView.furnace || inventoryView.crusher) ? 'inventory-panel inventory-furnace-panel' : (inventoryView.double_container ? 'inventory-panel inventory-double-container' : ((inventoryView.container || inventoryView.assembly) ? 'inventory-panel' : 'inventory-panel inventory-player-panel'))">
           <ornate-frame></ornate-frame>
           <div class="inventory-heading">
-            @if (inventoryView.furnace) { <icon name="flame" size="25" /> } @else if (inventoryView.container) { <icon name="archive" size="25" /> } @else { <icon name="leaf" size="25" /> }<h2>{{ inventoryView.title }}</h2>
+            @if (inventoryView.crusher) { <icon name="settings" size="25" /> } @else if (inventoryView.furnace) { <icon name="flame" size="25" /> } @else if (inventoryView.container) { <icon name="archive" size="25" /> } @else { <icon name="leaf" size="25" /> }<h2>{{ inventoryView.title }}</h2>
             <p class="inventory-mode">{{ inventoryView.mode }}</p>
             <button id="inventory-close" class="inventory-close" title="Close inventory" onclick="inventory_action"><icon id="inventory-close-glyph" name="close" size="22" /></button>
           </div>
-          <div id="inventory-scroll" [class]="inventoryView.furnace ? 'inventory-body furnace-body' : 'inventory-body'">
-            @if (inventoryView.furnace) {
+          <div id="inventory-scroll" [class]="(inventoryView.furnace || inventoryView.crusher) ? 'inventory-body furnace-body' : 'inventory-body'">
+            @if (inventoryView.crusher) {
+              <div id="crusher-workspace" class="crusher-workspace">
+                <div id="crusher-input" class="furnace-slot">@for (slot of inventoryView.crusher_input; track slot.id) { <inventory-slot [slot]="slot" /> @if (slot.empty) { <icon class="furnace-placeholder" name="layers" size="30" /> } }</div>
+                <div class="crusher-process"><icon [class]="inventoryView.crusher_working ? 'crusher-gear crusher-running' : 'crusher-gear'" name="settings" size="34" /><div class="furnace-progress-track"><div class="furnace-progress-fill" [style]="inventoryView.crusher_progress_style"></div></div><icon name="arrow-right" size="24" /></div>
+                <div id="crusher-output" class="furnace-slot furnace-result">@for (slot of inventoryView.crusher_output; track slot.id) { <inventory-slot [slot]="slot" /> }</div>
+              </div>
+            } @else if (inventoryView.furnace) {
               <div id="furnace-workspace" class="furnace-workspace">
                 <div class="furnace-material-row">
                   <div class="furnace-slot-group"><div id="furnace-bellows" class="furnace-slot">@for (slot of inventoryView.furnace_bellows; track slot.id) { <inventory-slot [slot]="slot" /> @if (slot.empty) { <icon class="furnace-placeholder" name="wind" size="30" /> } }</div></div>
@@ -62,13 +67,12 @@
           </div>
           <div class="inventory-status">
             @if (inventoryView.error != '') { <p class="inventory-error">{{ inventoryView.error }}</p> }
-            @if (inventoryView.creative) { <button id="inventory-trash" class="inventory-trash" title="Delete held or selected stack" [disabled]="!inventoryView.trash_available" onclick="inventory_action"><icon name="trash" size="22" /></button> }
+            @if (inventoryView.creative) { <button id="inventory-trash" class="inventory-trash" title="Delete stack / Ctrl: clear inventory" [disabled]="!inventoryView.trash_available" onclick="inventory_action"><icon name="trash" size="22" /></button> }
           </div>
         </div>
         <item-browser></item-browser>
       </div>
-      @if (craftingView.recipe_open) { <recipe-inspector></recipe-inspector> }
-      }
+      @if (inventoryView.open && craftingView.recipe_open) { <recipe-inspector></recipe-inspector> }
     </div>
     @if (inventoryView.open && inventoryCursor.visible) { <div id="inventory-cursor" class="inventory-cursor" [style]="inventoryCursor.position"><img class="cursor-item-image" [alt]="inventoryCursor.preview" /><p class="cursor-item-count">{{ inventoryCursor.count }}</p></div> }
     <div class="inventory-hud">

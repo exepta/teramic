@@ -14,8 +14,12 @@ const BANK_REACH: f64 = 64.0;
 // cached path, not in each voxel/column query.
 const SUPPORT_REACH: i32 = 20;
 
+#[cfg(test)]
+mod brook_tests;
+mod erosion;
+
 #[derive(Default)]
-pub(super) struct RiverCache(Mutex<HashMap<[i64; 2], Option<Arc<RiverPath>>>>);
+pub(super) struct RiverCache(Mutex<HashMap<[i64; 3], Option<Arc<RiverPath>>>>);
 struct RiverPath {
     points: [[f64; 3]; POINTS],
     ground: [f64; POINTS],
@@ -23,6 +27,7 @@ struct RiverPath {
     width: f64,
     phase: f64,
     branch: Option<RiverBranch>,
+    brook: bool,
 }
 
 #[derive(Clone, Copy)]
@@ -115,6 +120,8 @@ pub struct RiverSample {
     pub(super) bank_reach: f64,
     pub(super) bank_level: f64,
     pub(super) bank_erosion: f64,
+    /// Local cataract amphitheatre, absent from the saved legacy terrain contract.
+    pub(super) fall_erosion: f64,
 }
 
 impl RiverSample {
@@ -150,32 +157,48 @@ impl RiverSample {
 impl TerraGenerator {
     /// Small bounded immutable drainage paths, shared by all vertical jobs and clones.
     pub fn river_at(&self, x: f64, z: f64) -> Option<RiverSample> {
-        if !self.config().water || !self.config().rivers || !x.is_finite() || !z.is_finite() {
+        if !self.config().water || !x.is_finite() || !z.is_finite() {
             return None;
         }
+        let main = self
+            .config()
+            .rivers
+            .then(|| self.drainage_at(x, z, false))
+            .flatten();
+        if main.is_some_and(|r| r.distance <= r.width + 1.0) {
+            return main;
+        }
+        let brook = (self.config().ecology_revision > 0)
+            .then(|| self.drainage_at(x, z, true))
+            .flatten();
+        brook.or(main)
+    }
+
+    fn drainage_at(&self, x: f64, z: f64, brook: bool) -> Option<RiverSample> {
         let cell = [
             ((x + SPACING * 0.5) / SPACING).floor() as i64,
             ((z + SPACING * 0.5) / SPACING).floor() as i64,
         ];
         let local_x = x - cell[0] as f64 * SPACING;
-        if !(-96.0..=224.0).contains(&local_x) {
+        if !(if brook { -156.0..=-8.0 } else { -96.0..=224.0 }).contains(&local_x) {
             return None;
         }
+        let key = [cell[0], cell[1], i64::from(brook)];
         let cached = self
             .rivers
             .0
             .lock()
             .ok()
-            .and_then(|cache| cache.get(&cell).cloned());
+            .and_then(|cache| cache.get(&key).cloned());
         let path = cached.unwrap_or_else(|| {
             let path = self
-                .river_enabled(cell)
-                .then(|| Arc::new(self.build_river(cell)));
+                .drainage_enabled(cell, brook)
+                .then(|| Arc::new(self.build_drainage(cell, brook)));
             if let Ok(mut cache) = self.rivers.0.lock() {
                 if cache.len() >= 256 {
                     cache.clear();
                 }
-                cache.entry(cell).or_insert_with(|| path.clone()).clone()
+                cache.entry(key).or_insert_with(|| path.clone()).clone()
             } else {
                 path
             }
@@ -202,7 +225,7 @@ impl TerraGenerator {
             * (1.0
                 + 0.26 * (core_t * 0.024 + path.phase).sin()
                 + 0.12 * (core_t * 0.067 + path.phase * 0.4).sin())
-            + pool * 4.0;
+            + pool * if path.brook { 1.2 } else { 4.0 };
         let mut flow_dx = dx;
         let mut branch_depth = 1.0;
         let mut island_height = None;
@@ -223,18 +246,32 @@ impl TerraGenerator {
                 branch_depth = 0.76;
             }
         }
-        (distance <= width + BANK_REACH).then(|| {
+        let bank_reach = if path.brook { 12.0 } else { BANK_REACH };
+        (distance <= width + bank_reach).then(|| {
             let length = flow_dx.hypot(1.0);
             let level = path.level(index, along);
             let bank_level = path.bank_level(index, core_t, level, lateral);
             let ground = path.ground[index] + (path.ground[next] - path.ground[index]) * along;
             let erosion = (core_t * 0.075 + lateral * 0.055 + path.phase).sin() * 1.6
                 + (lateral * 0.09 + path.phase * 1.7).sin() * 0.5;
-            let roof_blend = super::biomes::smoothstep(8.0, 23.0, ground - bank_level + erosion);
-            let depth = (1.15
-                + 2.3 * (0.5 + 0.5 * (core_t * 0.033 + path.phase).sin()).powi(2)
-                + 1.6 * (0.5 + 0.5 * (core_t * 0.071 + path.phase * 0.4).sin()))
-                * branch_depth;
+            let mut roof_blend =
+                super::biomes::smoothstep(8.0, 23.0, ground - bank_level + erosion);
+            let fall_erosion = if self.config().river_terrain_revision > 0 && !path.brook {
+                path.fall_erosion(index, core_t, lateral, width)
+            } else {
+                0.0
+            };
+            if fall_erosion > 0.0 {
+                roof_blend *= 1.0 - fall_erosion;
+            }
+            let depth = if path.brook {
+                0.8 + 0.5 * (0.5 + 0.5 * (core_t * 0.055 + path.phase).sin())
+            } else {
+                (1.15
+                    + 2.3 * (0.5 + 0.5 * (core_t * 0.033 + path.phase).sin()).powi(2)
+                    + 1.6 * (0.5 + 0.5 * (core_t * 0.071 + path.phase * 0.4).sin()))
+                    * branch_depth
+            };
             RiverSample {
                 level,
                 distance,
@@ -248,11 +285,12 @@ impl TerraGenerator {
                 bed_detail: (core_t * 0.21 + lateral * 0.75 + path.phase).sin() * 0.24,
                 island_height,
                 bank_reach: (SPACING * 0.5 - (center_z - cell[1] as f64 * SPACING).abs() - width)
-                    .clamp(1.0, BANK_REACH),
+                    .clamp(1.0, bank_reach),
                 bank_level,
                 bank_erosion: (core_t * 0.13 + lateral * 0.23 + path.phase).sin() * 0.9
                     + (core_t * 0.047 - lateral * 0.11 + path.phase * 0.6).sin() * 1.3,
                 cascade_height: path.cascade_height(index, core_t, level, lateral),
+                fall_erosion,
             }
         })
     }
@@ -278,7 +316,31 @@ impl TerraGenerator {
         seed.is_multiple_of(7)
     }
 
+    fn drainage_enabled(&self, cell: [i64; 2], brook: bool) -> bool {
+        if brook && !self.config().biomes {
+            return false;
+        }
+        if !brook {
+            return self.river_enabled(cell);
+        }
+        // Select whole courses from the same climate field as the trees. Never
+        // clip a flowing reach at an individual voxel/biome boundary.
+        [-128.0, 0.0, 128.0].into_iter().any(|dz| {
+            let biome = self.climate_biome_at(
+                cell[0] as f64 * SPACING - 80.0,
+                cell[1] as f64 * SPACING + dz,
+            );
+            let w = biome.weights;
+            w.forest + w.cherry_forest + w.highland > 0.45 && biome.aridity() < 0.35
+        })
+    }
+
+    #[cfg(test)]
     fn build_river(&self, cell: [i64; 2]) -> RiverPath {
+        self.build_drainage(cell, false)
+    }
+
+    fn build_drainage(&self, cell: [i64; 2], brook: bool) -> RiverPath {
         let seed = layer_seed(
             self.config().seed.0
                 ^ (cell[0] as u64).wrapping_mul(0x9e3779b97f4a7c15)
@@ -286,8 +348,12 @@ impl TerraGenerator {
             71,
         );
         let phase = f64::from(seed % 1024) / 1024.0 * std::f64::consts::TAU;
-        let offset = 40.0 + f64::from(seed % 45);
-        let branch = seed.is_multiple_of(3).then(|| {
+        let offset = if brook {
+            -100.0 + f64::from(seed % 40)
+        } else {
+            40.0 + f64::from(seed % 45)
+        };
+        let branch = (!brook && seed.is_multiple_of(3)).then(|| {
             let start = f64::from(6 + ((seed >> 4) % 16)) * STEP;
             RiverBranch {
                 start,
@@ -304,9 +370,15 @@ impl TerraGenerator {
                 + (index as f64 * STEP * 0.014 + phase).sin() * 22.0
                 + (index as f64 * STEP * 0.032 + phase * 0.7).sin() * 8.0;
             let end = index == 0 || index == POINTS - 1;
-            let longitudinal = if end { SUPPORT_REACH } else { STEP as i32 / 2 };
+            let longitudinal = if end && !brook {
+                SUPPORT_REACH
+            } else {
+                STEP as i32 / 2
+            };
             let mut spill = f64::INFINITY;
-            let support = if branch.is_some_and(|branch| {
+            let support = if brook {
+                4
+            } else if branch.is_some_and(|branch| {
                 (branch.start - STEP..=branch.end + STEP).contains(&(index as f64 * STEP))
             }) {
                 32
@@ -328,7 +400,8 @@ impl TerraGenerator {
             // Respect the surrounding spill elevation, including rounded end caps.
             // The margin covers voxel quantization and the space between samples.
             // Retain fractional heights: small descents become continuous flowing reaches.
-            previous = previous.min((spill - 1.0).max(self.config().sea_level));
+            previous =
+                previous.min((spill - if brook { 0.8 } else { 1.0 }).max(self.config().sea_level));
             [x, previous, z]
         });
         let ground = points
@@ -338,7 +411,7 @@ impl TerraGenerator {
         // above its original bank support. Limit this to one <=44m cataract per path.
         for index in 0..POINTS - 1 {
             let outlet = points[(index + 8).min(POINTS - 1)][1];
-            if (30.0..=44.0).contains(&(points[index][1] - outlet)) {
+            if !brook && (30.0..=44.0).contains(&(points[index][1] - outlet)) {
                 for point in &mut points[index + 1..] {
                     point[1] = point[1].min(outlet);
                 }
@@ -347,7 +420,7 @@ impl TerraGenerator {
         }
         let extensions = std::array::from_fn(|end| {
             let index = if end == 0 { 0 } else { POINTS - 1 };
-            if ground[index] - points[index][1] < 14.0 {
+            if brook || ground[index] - points[index][1] < 14.0 {
                 return 0.0;
             }
             let direction = if end == 0 { -1.0 } else { 1.0 };
@@ -373,9 +446,14 @@ impl TerraGenerator {
             points,
             ground,
             extensions,
-            width: 4.0 + f64::from(seed % 4),
+            width: if brook {
+                1.15 + f64::from(seed % 5) * 0.14
+            } else {
+                4.0 + f64::from(seed % 4)
+            },
             phase,
             branch,
+            brook,
         }
     }
 }
@@ -740,6 +818,7 @@ mod tests {
                 width: 5.0,
                 phase: 0.0,
                 branch: None,
+                brook: false,
             };
             if drop < MIN_WATERFALL_DROP {
                 assert_eq!(path.level(0, 0.25), 20.0 - drop * 0.25);
@@ -762,6 +841,7 @@ mod tests {
             width: 5.0,
             phase: 0.3,
             branch: None,
+            brook: false,
         };
         let edge = STEP * 0.5;
         for lateral in [-45.0, -17.0, 0.0, 19.0, 43.0] {
@@ -832,6 +912,7 @@ mod tests {
             width: 5.0,
             phase: 0.0,
             branch: None,
+            brook: false,
         };
         assert_eq!(path.cascade_height(0, 4.5, 10.0, 0.0), 36.0);
         let middle = path.cascade_height(2, 16.0, 10.0, 0.0);
@@ -1126,39 +1207,6 @@ mod tests {
             .water_column(x as f64 + 0.5, z as f64 - 0.5)
             .unwrap();
         assert!(upstream.level - downstream.level >= 30.0);
-        #[cfg(feature = "bevy")]
-        {
-            let y = (upstream.level + downstream.level) * 0.5;
-            let owner = terra_voxel::global_to_section([x, y.floor() as i64, z]).0;
-            let section = generator
-                .build(owner, 0, &Default::default(), false)
-                .unwrap();
-            let mut chunks = crate::streaming::ChunkStore::default();
-            chunks.loaded.insert(
-                owner,
-                crate::streaming::LoadedSection {
-                    data: section.data,
-                    mesh: None,
-                    mesh_epoch: 0,
-                    water_epoch: 0,
-                    water: None,
-                    props: section.props,
-                },
-            );
-            let journal = crate::edits::EditJournal::default();
-            let moving = (0..=18).find_map(|step| {
-                let position = [x as f64+0.5,y,z as f64+0.06+f64::from(step)*0.05];
-                let motion = crate::water::fluid_motion_at(&terrain,&chunks,&journal,position);
-                (motion.velocity[1] < 0.0 && motion.immersion > 0.0).then_some(position)
-            }).expect("the middle of a real high falling curtain must move bodies above the lower pool");
-            let p = moving.map(|v| v.floor() as i64);
-            assert_eq!(
-                crate::water::fluid_cell_at(&terrain, &journal, p, chunks.block_at(p).unwrap())
-                    .amount,
-                0,
-                "fall current must not rely on submerged lower-pool occupancy"
-            );
-        }
         for y in downstream.level.ceil() as i64..=upstream.level.floor() as i64 + 1 {
             assert_eq!(
                 generator.block_at([x, y, z]).unwrap(),
@@ -1166,29 +1214,102 @@ mod tests {
                 "blocked fall shaft at {x},{y},{z}"
             );
         }
-        let mut falling_sections = 0;
-        for sy in (downstream.level.floor() as i64).div_euclid(16)
-            ..=(upstream.level.floor() as i64).div_euclid(16)
-        {
-            let p = terra_voxel::SectionPos::new(x.div_euclid(16), sy, z.div_euclid(16));
-            let section = generator.build(p, 0, &Default::default(), true).unwrap();
-            let water = section
-                .water
-                .expect("every section of the generated fall needs its water mesh");
-            assert!(
-                water
-                    .surface_effects
-                    .iter()
-                    .any(|e| e[3] == 1.0 && e[2] >= 30.0)
-            );
-            falling_sections += 1;
+        let low = (downstream.level.floor() as i64).div_euclid(16);
+        let high = (upstream.level.floor() as i64).div_euclid(16);
+        let mut wakes = Vec::new();
+        #[cfg(feature = "bevy")]
+        let mut chunks = crate::streaming::ChunkStore::default();
+        for dz in -1..=1 {
+            for dx in -1..=1 {
+                for sy in low..=high {
+                    let owner = terra_voxel::SectionPos::new(
+                        x.div_euclid(16) + dx,
+                        sy,
+                        z.div_euclid(16) + dz,
+                    );
+                    let section = generator
+                        .build(owner, 0, &Default::default(), true)
+                        .unwrap();
+                    wakes.extend(section.fluid_wake.iter().copied());
+                    if let Some(water) = &section.water {
+                        assert!(
+                            water.surface_effects.iter().all(|e| e[3] != 1.0),
+                            "reservoirs must never fabricate a falling sheet"
+                        );
+                    }
+                    #[cfg(feature = "bevy")]
+                    chunks.loaded.insert(
+                        owner,
+                        crate::streaming::LoadedSection {
+                            data: section.data,
+                            mesh: None,
+                            mesh_epoch: 0,
+                            water_epoch: 0,
+                            water: section.water,
+                            props: section.props,
+                        },
+                    );
+                }
+            }
         }
-        assert!(falling_sections >= 2);
-        eprintln!(
-            "long river fall fixture: x={x} z={z} upper={} lower={} drop={}",
-            upstream.level,
-            downstream.level,
-            upstream.level - downstream.level
+        let outlet = [x, upstream.level.ceil() as i64 - 1, z];
+        let outlet_owner = terra_voxel::global_to_section([x, outlet[1], z - 1]).0;
+        assert_eq!(
+            generator
+                .build(outlet_owner, 0, &Default::default(), true)
+                .unwrap()
+                .fluid_wake,
+            generator
+                .build(outlet_owner, 0, &Default::default(), false)
+                .unwrap()
+                .fluid_wake,
+            "headless and meshed generation must activate identical source lips"
         );
+        assert!(
+            wakes.contains(&outlet),
+            "a real open source lip must seed the gravity scheduler: {outlet:?}"
+        );
+        #[cfg(feature = "bevy")]
+        {
+            let mut journal = crate::edits::EditJournal::default();
+            let middle = [
+                x as f64 + 0.5,
+                (upstream.level + downstream.level) * 0.5,
+                z as f64 + 0.5,
+            ];
+            assert_eq!(
+                crate::water::fluid_motion_at(&terrain, &chunks, &journal, middle),
+                crate::water::FluidMotion::default(),
+                "dry air has no projected waterfall force"
+            );
+            for p in wakes {
+                journal.wake_fluid_neighbors(p);
+            }
+            let shaft = downstream.level.ceil() as i64..upstream.level.floor() as i64;
+            for _ in 0..240 {
+                crate::water::simulate_fluid_step(&terrain, &chunks, &mut journal, 1024).unwrap();
+                if shaft
+                    .clone()
+                    .all(|y| journal.fluid([x, y, z]).is_some_and(|c| c.amount > 0))
+                {
+                    break;
+                }
+            }
+            assert!(
+                shaft
+                    .clone()
+                    .all(|y| journal.fluid([x, y, z]).is_some_and(|c| c.amount > 0)),
+                "all vertical sections must contain real persistent nonsource flow"
+            );
+            let motion = crate::water::fluid_motion_at(&terrain, &chunks, &journal, middle);
+            assert!(motion.immersion > 0.0 && motion.velocity[1] < 0.0);
+            let mut restored = crate::edits::EditJournal::default();
+            for owner in journal.changed_sections() {
+                restored.import_delta(journal.section_delta(owner)).unwrap();
+            }
+            for y in shaft {
+                assert_eq!(restored.fluid([x, y, z]), journal.fluid([x, y, z]));
+            }
+        }
     }
 }

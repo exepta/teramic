@@ -1,0 +1,7 @@
+{
+  "item": {
+    "tool": "ruby_scythe"
+  },
+  "name": "Ruby Scythe",
+  "description": "Harvests ripe crops in a bounded area. Diamond and ruby blades sweep a wider area."
+}

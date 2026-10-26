@@ -1,0 +1,45 @@
+{
+  "id": "teramic::gold_gloves",
+  "name": "Gold Gloves",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "armor": {
+        "material": "gold",
+        "piece": "gloves"
+      }
+    },
+    "count": 1
+  },
+  "pattern": {
+    "kind": "shaped",
+    "width": 2,
+    "height": 2,
+    "cells": [
+      {
+        "item": {
+          "mineral": "gold_ingot"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "mineral": "gold_ingot"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "mineral": "gold_ingot"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "mineral": "gold_ingot"
+        },
+        "count": 1
+      }
+    ]
+  }
+}

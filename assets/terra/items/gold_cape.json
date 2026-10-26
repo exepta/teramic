@@ -1,0 +1,16 @@
+{
+  "item": {
+    "cape": {
+      "material": "gold",
+      "color": "white"
+    }
+  },
+  "name": "Gold Cape",
+  "description": "A layered wool cloak and folded scarf with gold straps and clasp. Recolor the cloth with flower dye.",
+  "equipment": {
+    "slot": "cape",
+    "armor_points": 1.5,
+    "health_bonus": 1,
+    "stamina_bonus": 4
+  }
+}

@@ -32,7 +32,7 @@
     right: 16px;
     display: flex;
     flex-direction: column;
-    width: 246px;
+    width: 320px;
     max-width: 90%;
     padding: 13px 15px;
     background-color: #18211ded;
@@ -42,6 +42,8 @@
 }
 .animal-heading { color: #e3c68a; font-size: 17px; margin-bottom: 8px; }
 .animal-behavior { color: #c6df98; }
+.animal-intention { color: #e3c68a; margin-top: 6px; }
+.animal-path { color: #b8c5d0; margin-top: 6px; font-size: 11px; }
 p {
     flex-shrink: 0;
     font-size: 13px;

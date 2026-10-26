@@ -18,6 +18,8 @@ struct TerraWeather {
     tint: vec4<f32>,
     leaves: vec4<f32>,
     grass: vec4<f32>,
+    vegetation: vec4<f32>,
+    flowers: array<vec4<f32>, 64>,
 };
 @group(#{MATERIAL_BIND_GROUP}) @binding(101) var<storage, read> terra_weather: TerraWeather;
 
@@ -135,7 +137,10 @@ fn vertex(input: Vertex) -> VertexOutput {
         out.color.a = 1.0 - shed;
     }
     if rooted.y >= 0.0 {
-        let seasonal = select(terra_weather.leaves.rgb, terra_weather.grass.rgb, wind.w > 0.5);
+        var seasonal = select(terra_weather.leaves.rgb, terra_weather.grass.rgb, wind.w > 0.5);
+        if wind.w < -0.5 {
+            seasonal = vec3<f32>(1.0);
+        }
         // Dark spruce crown metadata keeps evergreen foliage mostly green.
         let deciduous = select(smoothstep(0.35, 0.85, out.color.r), 1.0, wind.w > 0.5);
         out.color = vec4<f32>(out.color.rgb * mix(vec3<f32>(1.0), seasonal, deciduous), out.color.a);
@@ -149,14 +154,14 @@ fn vertex(input: Vertex) -> VertexOutput {
 #ifdef VERTEX_NORMALS
         upward = smoothstep(0.15, 0.65, input.normal.y);
 #endif
-        let snow = smoothstep(0.0, 0.95, terra_weather.grass.w * frost) * upward;
+        let snow = smoothstep(0.0, 0.95, terra_weather.grass.w * frost * clamp(terra_weather.vegetation.y, 0.0, 1.0)) * upward;
         out.color = vec4<f32>(mix(out.color.rgb, snow_albedo(), snow), 1.0);
     }
     if wind.w > 0.5 {
         out.color.a = 1.0;
         if rooted.y > 0.0 && input.color.a > 0.001 && input.color.a < 0.999 {
             let temperature = ((input.color.a * 255.0 - 2.0) / 251.0) * 128.0 - 64.0 + terra_weather.tint.w;
-            let snow = smoothstep(0.0, 0.95, terra_weather.grass.w * (1.0 - smoothstep(-1.0, 3.0, temperature)));
+            let snow = smoothstep(0.0, 0.95, terra_weather.grass.w * (1.0 - smoothstep(-1.0, 3.0, temperature)) * clamp(terra_weather.vegetation.y, 0.0, 1.0));
             out.color = vec4<f32>(mix(out.color.rgb, snow_albedo(), snow), 1.0);
         }
     }

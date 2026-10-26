@@ -1,0 +1,16 @@
+{
+  "item": {
+    "armor": {
+      "material": "diamond",
+      "piece": "helmet"
+    }
+  },
+  "name": "Diamond Helmet",
+  "description": "Diamond helmet fitted for protection and comfortable movement.",
+  "equipment": {
+    "slot": "helmet",
+    "armor_points": 4.5,
+    "health_bonus": 3,
+    "stamina_bonus": 3
+  }
+}

@@ -1,0 +1,11 @@
+    Checking terra-core v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-core)
+    Checking terra-world v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-world)
+    Checking terra-physics v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-physics)
+    Checking terra-network v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-network)
+    Checking terra-storage v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-storage)
+    Checking terra-player v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-player)
+    Checking terra-server v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/apps/server)
+    Checking terra-ui v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-ui)
+    Checking terra-render v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-render)
+    Checking terra-client v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/apps/client)
+    Finished `dev` profile [optimized + debuginfo] target(s) in 27.86s

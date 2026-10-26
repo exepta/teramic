@@ -1,0 +1,28 @@
+{
+  "id": "teramic::purple_carpet",
+  "name": "Purple Carpet",
+  "station": "hand",
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "block": 106
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "dye": "purple"
+        },
+        "count": 1
+      }
+    ]
+  },
+  "output": {
+    "item": {
+      "block": 112
+    },
+    "count": 1
+  }
+}

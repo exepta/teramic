@@ -29,6 +29,10 @@ pub(crate) struct WeatherGpuData {
     pub leaves: Vec4,
     /// Grass RGB multiplier and continuous snow reserve.
     pub grass: Vec4,
+    /// Flower dormancy, explicit local-gallery cosmetic snow, real flower clock, reserved.
+    pub vegetation: Vec4,
+    /// Fixed 256-rank flower death timestamps, packed into 64 storage vectors.
+    pub flowers: [Vec4; 64],
 }
 
 impl Default for WeatherGpuData {
@@ -39,12 +43,22 @@ impl Default for WeatherGpuData {
             tint: Vec3::ONE.extend(0.0),
             leaves: Vec3::ONE.extend(0.0),
             grass: Vec3::ONE.extend(0.0),
+            vegetation: Vec4::ZERO,
+            flowers: [Vec4::splat(-1.0); 64],
         }
     }
 }
 
 #[derive(Resource, Clone, Copy, Default, ExtractResource)]
 pub(crate) struct WeatherPayload(pub WeatherGpuData);
+
+type SnowContext<'w> = (
+    Option<Res<'w, terra_core::WorldWeather>>,
+    Option<Res<'w, terra_world::streaming::WorldAccess>>,
+    Option<Res<'w, super::CosmeticSnowPreview>>,
+    Option<Res<'w, terra_world::edits::EditJournal>>,
+    Option<Res<'w, Time<Real>>>,
+);
 
 pub(crate) fn install(app: &mut App) {
     app.init_resource::<Assets<ShaderBuffer>>()
@@ -79,8 +93,12 @@ pub(crate) fn update(
     growth: Option<Res<crate::props::PropGrowthStatus>>,
     clock: Option<Res<terra_core::WorldClock>>,
     time: Option<Res<Time>>,
-    authority: Option<Res<terra_core::WorldWeather>>,
-    (mut payload, mut snow): (ResMut<WeatherPayload>, Local<snow::SnowVisual>),
+    (authority, access, preview, journal, real): SnowContext,
+    (mut payload, mut snow, mut flowers): (
+        ResMut<WeatherPayload>,
+        Local<snow::SnowVisual>,
+        Local<terra_world::props::seasonal::FlowerLifecycle>,
+    ),
 ) {
     let mut data = snapshot(
         config.as_deref(),
@@ -109,11 +127,40 @@ pub(crate) fn update(
     );
     data.tint.w = snow.temperature_offset;
     data.grass.w = snow.reserve;
+    data.vegetation.y = if preview.is_some()
+        && access
+            .as_deref()
+            .is_none_or(|access| matches!(access, terra_world::streaming::WorldAccess::Local))
+    {
+        1.0
+    } else {
+        0.0
+    };
     if let Some(season) = season {
         data.leaves =
             Vec3::from_array(season.leaf_tint()).extend(season.leaf_loss().max(snow.reserve));
         data.grass = Vec3::from_array(season.grass_tint()).extend(snow.reserve);
+        data.vegetation.x = season.flower_loss();
     }
+    // Isolated galleries have no world plugin. Real worlds share their exact
+    // lifecycle with authority picking and bee ecology through the journal.
+    let lifecycle = journal
+        .as_deref()
+        .map(|journal| &journal.flowers)
+        .filter(|flowers| flowers.initialized())
+        .unwrap_or_else(|| {
+            flowers.advance(
+                data.vegetation.x,
+                real.as_deref().map_or(0.0, Time::delta_secs),
+            );
+            &flowers
+        });
+    data.vegetation.z = lifecycle.shader_time();
+    data.flowers = std::array::from_fn(|index| {
+        Vec4::from_array(std::array::from_fn(|channel| {
+            lifecycle.shader_times()[index * 4 + channel]
+        }))
+    });
     if payload.0 != data {
         payload.0 = data;
     }
@@ -154,11 +201,13 @@ fn snapshot(
         tint: Vec3::from_array(tint).extend(0.0),
         leaves: Vec3::ONE.extend(0.0),
         grass: Vec3::ONE.extend(0.0),
+        vegetation: Vec4::ZERO,
+        flowers: [Vec4::splat(-1.0); 64],
     }
 }
 
 fn encode(data: &WeatherGpuData) -> Option<Vec<u8>> {
-    let mut buffer = encase::StorageBuffer::new(Vec::with_capacity(80));
+    let mut buffer = encase::StorageBuffer::new(Vec::with_capacity(1120));
     if let Err(error) = buffer.write(data) {
         tracing::error!(%error, "Shared weather payload encoding failed");
         return None;
@@ -194,6 +243,64 @@ mod tests {
     use super::*;
 
     #[test]
+    fn cosmetic_snow_requires_an_explicit_gallery_and_is_impossible_for_replicas_or_servers() {
+        use terra_world::streaming::WorldAccess;
+        let mut app = App::new();
+        app.add_plugins((MinimalPlugins, AssetPlugin::default()))
+            .init_asset::<ShaderBuffer>()
+            .init_resource::<GameConfig>()
+            .insert_resource(terra_core::WorldClock {
+                day: 21,
+                ..Default::default()
+            });
+        install(&mut app);
+        app.update();
+        assert_eq!(app.world().resource::<WeatherPayload>().0.vegetation.y, 0.0);
+        for access in [
+            WorldAccess::Local,
+            WorldAccess::Server,
+            WorldAccess::Replica { ready: false },
+            WorldAccess::Replica { ready: true },
+        ] {
+            app.insert_resource(access);
+            app.update();
+            assert_eq!(app.world().resource::<WeatherPayload>().0.vegetation.y, 0.0);
+            app.insert_resource(super::super::CosmeticSnowPreview);
+            app.update();
+            assert_eq!(
+                app.world().resource::<WeatherPayload>().0.vegetation.y,
+                if access == WorldAccess::Local {
+                    1.0
+                } else {
+                    0.0
+                }
+            );
+            app.world_mut()
+                .remove_resource::<super::super::CosmeticSnowPreview>();
+            app.update();
+            assert_eq!(app.world().resource::<WeatherPayload>().0.vegetation.y, 0.0);
+        }
+        assert_eq!(app.world().resource::<Assets<ShaderBuffer>>().len(), 1);
+        let shader = include_str!("../../../../assets/shaders/terra_wet_surface.wgsl");
+        assert!(shader.contains("let preview_snow = terra_weather.grass.w * frost * snow_sky * clamp(terra_weather.vegetation.y, 0.0, 1.0);"));
+        assert!(
+            shader
+                .contains("let snow_amount = max(saved_snow, preview_snow) * (1.0 - sheds_snow);")
+        );
+        let foliage = include_str!("../../../../assets/shaders/terra_foliage.wgsl");
+        let global_snow_lines: Vec<_> = foliage
+            .lines()
+            .filter(|line| line.contains("let snow ="))
+            .collect();
+        assert_eq!(global_snow_lines.len(), 2);
+        assert!(
+            global_snow_lines
+                .iter()
+                .all(|line| line.contains("clamp(terra_weather.vegetation.y, 0.0, 1.0)"))
+        );
+    }
+
+    #[test]
     fn season_changes_update_only_the_shared_payload_and_keep_loaded_assets() {
         let mut app = App::new();
         app.add_plugins((MinimalPlugins, AssetPlugin::default()))
@@ -223,22 +330,68 @@ mod tests {
     }
 
     #[test]
-    fn storage_layout_matches_five_wgsl_vectors_and_preserves_all_channels() {
+    fn storage_layout_matches_six_vectors_and_fixed_256_rank_times_in_every_shader() {
         let data = WeatherGpuData {
             wind: Vec4::new(1.0, 2.0, 3.0, 4.0),
             surface: Vec4::new(5.0, 6.0, 7.0, 8.0),
             tint: Vec4::new(9.0, 10.0, 11.0, 12.0),
             leaves: Vec4::new(13.0, 14.0, 15.0, 16.0),
             grass: Vec4::new(17.0, 18.0, 19.0, 20.0),
+            vegetation: Vec4::new(21.0, 22.0, 23.0, 24.0),
+            flowers: std::array::from_fn(|index| {
+                Vec4::from_array(std::array::from_fn(|channel| {
+                    (25 + index * 4 + channel) as f32
+                }))
+            }),
         };
         let bytes = encode(&data).unwrap();
-        assert_eq!(bytes.len(), 80);
+        assert_eq!(bytes.len(), 1120);
         for (index, bytes) in bytes.chunks_exact(4).enumerate() {
             assert_eq!(
                 f32::from_le_bytes(bytes.try_into().unwrap()),
                 index as f32 + 1.0
             );
         }
+        for shader in [
+            include_str!("../../../../assets/shaders/terra_props.wgsl"),
+            include_str!("../../../../assets/shaders/terra_prop_fragment.wgsl"),
+            include_str!("../../../../assets/shaders/terra_foliage.wgsl"),
+            include_str!("../../../../assets/shaders/terra_wet_surface.wgsl"),
+        ] {
+            assert!(shader.contains("vegetation: vec4<f32>,\n    flowers: array<vec4<f32>, 64>,"));
+        }
+    }
+
+    #[test]
+    fn flower_payload_uses_the_exact_picking_clock_without_mutating_meshes_or_materials() {
+        let mut app = App::new();
+        app.add_plugins((MinimalPlugins, AssetPlugin::default()))
+            .init_asset::<ShaderBuffer>();
+        let mut journal = terra_world::edits::EditJournal::default();
+        journal.flowers.advance(0.0, 0.0);
+        journal.flowers.advance(1.0, 0.0);
+        journal.flowers.advance(1.0, 3.0);
+        let times = *journal.flowers.shader_times();
+        app.insert_resource(journal);
+        install(&mut app);
+        app.update();
+        let data = app.world().resource::<WeatherPayload>().0;
+        assert_eq!(data.vegetation.z, 3.0);
+        for (rank, timestamp) in times.into_iter().enumerate() {
+            assert_eq!(data.flowers[rank / 4][rank % 4], timestamp);
+        }
+        assert_eq!(app.world().resource::<Assets<ShaderBuffer>>().len(), 1);
+        app.world_mut()
+            .resource_mut::<Messages<AssetEvent<ShaderBuffer>>>()
+            .clear();
+        app.update();
+        assert_eq!(app.world().resource::<WeatherPayload>().0, data);
+        assert!(
+            app.world_mut()
+                .resource_mut::<Messages<AssetEvent<ShaderBuffer>>>()
+                .drain()
+                .all(|event| !event.is_modified(WEATHER_BUFFER_HANDLE.id()))
+        );
     }
 
     #[test]
@@ -318,6 +471,6 @@ mod tests {
             BufferUsages::STORAGE | BufferUsages::COPY_DST
         );
         assert_eq!(buffer.buffer_description.size, initial.size);
-        assert_eq!(buffer.buffer_description.size, 80);
+        assert_eq!(buffer.buffer_description.size, 1120);
     }
 }

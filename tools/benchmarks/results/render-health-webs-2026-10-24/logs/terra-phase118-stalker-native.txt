@@ -1,0 +1,18 @@
+2026-10-24T11:37:54.762612Z  INFO bevy_render::renderer: AdapterInfo { name: "AMD Radeon RX 6950 XT (RADV NAVI21)", vendor: 4098, device: 29605, device_type: DiscreteGpu, device_pci_bus_id: "0000:0c:00.0", driver: "radv", driver_info: "Mesa 26.2.4-arch3.1", backend: Vulkan, subgroup_min_size: 32, subgroup_max_size: 64, transient_saves_memory: false }
+2026-10-24T11:37:54.888427Z  INFO bevy_pbr::cluster: GPU clustering is supported on this device.
+2026-10-24T11:37:54.888457Z  INFO bevy_render::batching::gpu_preprocessing: GPU preprocessing is fully supported on this device.
+2026-10-24T11:37:54.889201Z  INFO bevy_winit::system: Creating new window TERAMIC (135v0)
+2026-10-24T11:37:55.501627Z  INFO terra_client::creature_audio::scene: Recorded animal/environment audio decoded clips=105
+2026-10-24T11:37:55.558222Z  INFO terra_render::scene::caves::lights::soft_core: Torch soft-core attenuation installed in existing clustered PBR path
+2026-10-24T11:37:55.559542Z  INFO terra_render::water::raymarch: Water SSR hardware depth filtering ready; multisampled views retain the original path
+2026-10-24T11:37:55.578733Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/wood.png mip_levels=10 rebound_materials=1
+2026-10-24T11:37:55.578750Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/stone-strata-hd.png mip_levels=11 rebound_materials=1
+2026-10-24T11:37:55.578754Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/oak-crafted-hd.png mip_levels=11 rebound_materials=0
+2026-10-24T11:37:55.578757Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/forged-iron-warm.png mip_levels=11 rebound_materials=0
+2026-10-24T11:37:55.581073Z  INFO terra_render::blocks::loading: Block template library ready blocks=101 materials=236
+2026-10-24T11:38:01.945789Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/tools/benchmarks/results/render-health-webs-2026-10-24/native/stalker/stalker-0.png
+2026-10-24T11:38:03.964955Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/tools/benchmarks/results/render-health-webs-2026-10-24/native/stalker/stalker-1.png
+2026-10-24T11:38:06.027263Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/tools/benchmarks/results/render-health-webs-2026-10-24/native/stalker/stalker-2.png
+2026-10-24T11:38:08.095709Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/tools/benchmarks/results/render-health-webs-2026-10-24/native/stalker/stalker-3.png
+2026-10-24T11:38:10.119098Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/tools/benchmarks/results/render-health-webs-2026-10-24/native/stalker/stalker-4.png
+2026-10-24T11:38:10.682545Z  INFO terra_client::stalker_smoke: Stalker native gallery passed: front/side/back, articulated grab and angry run; model-only visual fixture

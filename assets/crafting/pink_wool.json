@@ -1,0 +1,28 @@
+{
+  "id": "teramic::pink_wool",
+  "name": "Pink Wool",
+  "station": "hand",
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "block": 103
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "dye": "pink"
+        },
+        "count": 1
+      }
+    ]
+  },
+  "output": {
+    "item": {
+      "block": 127
+    },
+    "count": 1
+  }
+}

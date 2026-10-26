@@ -1,0 +1,16 @@
+{
+  "item": {
+    "armor": {
+      "material": "diamond",
+      "piece": "boots"
+    }
+  },
+  "name": "Diamond Boots",
+  "description": "Diamond boots fitted for protection and comfortable movement.",
+  "equipment": {
+    "slot": "boots",
+    "armor_points": 4.5,
+    "health_bonus": 3,
+    "stamina_bonus": 3
+  }
+}

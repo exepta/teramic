@@ -23,7 +23,7 @@ impl UiMaterial for VitalMaterial {
 }
 
 #[derive(Resource, Default)]
-struct Chrome(Handle<VitalMaterial>);
+struct Chrome(Handle<VitalMaterial>, Handle<VitalMaterial>);
 
 #[derive(Resource, Default, Debug)]
 pub struct VitalRenderStatus {
@@ -35,6 +35,16 @@ pub struct VitalRenderStatus {
     pub poison: bool,
     pub freeze: bool,
     pub regeneration: bool,
+    pub primary_effect: Option<terra_core::EffectKind>,
+}
+
+pub(super) fn primary_effect(
+    vitals: terra_core::SurvivalVitals,
+    enabled: bool,
+) -> Option<terra_core::EffectKind> {
+    enabled
+        .then(|| vitals.active_effects().next().map(|effect| effect.kind))
+        .flatten()
 }
 
 struct ChromePlugin;
@@ -131,7 +141,8 @@ fn bind(
     let vitals = session
         .as_ref()
         .map_or_else(terra_core::SurvivalVitals::default, |s| s.stats.survival);
-    let active = |kind| !view.editing && !view.dead && vitals.effects.contains(kind);
+    let primary = primary_effect(vitals, !view.editing && !view.dead);
+    let active = |kind| primary == Some(kind);
     let flag = |value| if value { 1.0 } else { 0.0 };
     let effects = Vec4::new(
         flag(active(terra_core::EffectKind::Poison)),
@@ -139,11 +150,7 @@ fn bind(
         flag(active(terra_core::EffectKind::OnFire)),
         flag(active(terra_core::EffectKind::Bleeding)),
     );
-    let regeneration = !view.editing
-        && !view.dead
-        && vitals
-            .active_effects()
-            .any(|e| e.kind == terra_core::EffectKind::Regeneration);
+    let regeneration = active(terra_core::EffectKind::Regeneration);
     let timing = Vec4::new(
         if effects.x > 0.0 || effects.z > 0.0 {
             time.elapsed_secs()
@@ -155,6 +162,30 @@ fn bind(
         0.0,
     );
     for (entity, id, mut image, material) in &mut images {
+        if id.0 == "survival-armor-frame" {
+            let value = VitalMaterial {
+                values: Vec4::new(fraction("survival-armor-meter", view.armor), 0.0, 1.0, 0.0),
+                effects: Vec4::ZERO,
+                timing: Vec4::W,
+                chrome: image.image.clone(),
+            };
+            if let Some(mut current) = materials.get_mut(&state.1) {
+                if *current != value {
+                    *current = value;
+                }
+            } else {
+                state.1 = materials.add(value);
+            }
+            if image.color != Color::NONE {
+                image.color = Color::NONE;
+            }
+            if material.is_none_or(|material| material.0 != state.1) {
+                commands
+                    .entity(entity)
+                    .insert(MaterialNode(state.1.clone()));
+            }
+            continue;
+        }
         if id.0 != "survival-chrome" {
             continue;
         }
@@ -188,6 +219,7 @@ fn bind(
             poison: effects.x > 0.0,
             freeze: effects.y > 0.0,
             regeneration,
+            primary_effect: primary,
         };
     }
 }
@@ -195,6 +227,29 @@ fn bind(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn only_the_first_card_effect_reaches_the_heart() {
+        use terra_core::EffectKind;
+        let mut vitals = terra_core::SurvivalVitals::default();
+        for kind in [
+            EffectKind::Regeneration,
+            EffectKind::Freeze,
+            EffectKind::Poison,
+        ] {
+            assert!(vitals.effects.apply(kind, 30.0, 1));
+        }
+        assert_eq!(primary_effect(vitals, true), Some(EffectKind::Poison));
+        vitals.effects.remove(EffectKind::Poison);
+        assert_eq!(primary_effect(vitals, true), Some(EffectKind::Freeze));
+        vitals.effects.remove(EffectKind::Freeze);
+        assert_eq!(primary_effect(vitals, true), Some(EffectKind::Regeneration));
+        assert_eq!(primary_effect(vitals, false), None);
+        assert_eq!(
+            vitals.active_effects().next().unwrap().kind,
+            EffectKind::Regeneration
+        );
+    }
 
     #[test]
     fn heartbeat_thresholds_are_strict_and_can_be_disabled() {

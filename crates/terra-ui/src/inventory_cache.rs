@@ -1,0 +1,130 @@
+use super::*;
+use tilt_ui::TiltUiComponentRuntimeSet;
+use tilt_ui_runtime::ParkedUiBindings;
+
+#[derive(Resource, Default)]
+struct InventoryDomCache {
+    root: Option<Entity>,
+    parked: Option<ParkedUiBindings>,
+    viewport: Option<UVec2>,
+}
+
+pub(super) fn install(app: &mut App) {
+    app.init_resource::<InventoryDomCache>().add_systems(
+        Update,
+        restore_before_bindings
+            .after(view::update_view)
+            .before(TiltUiComponentRuntimeSet::Reactivity),
+    );
+}
+
+fn restore_before_bindings(world: &mut World) {
+    world.resource_scope(|world, mut cache: Mut<InventoryDomCache>| {
+        let visible = world.resource::<InventoryView>().visible;
+        if !visible
+            || cache
+                .root
+                .is_some_and(|root| world.get_entity(root).is_err())
+        {
+            *cache = InventoryDomCache::default();
+        }
+        if !visible {
+            return;
+        }
+        let viewport = world
+            .query_filtered::<&Window, With<bevy::window::PrimaryWindow>>()
+            .iter(world)
+            .next()
+            .map(Window::physical_size);
+        let resized = cache.viewport.is_some() && cache.viewport != viewport;
+        cache.viewport = viewport;
+        if resized && !world.resource::<InventoryView>().open {
+            world.resource_mut::<InventoryView>().prewarming = true;
+        }
+        let view = world.resource::<InventoryView>();
+        if view.open || view.prewarming {
+            if let Some(parked) = cache.parked.take() {
+                parked.restore(world);
+            }
+            return;
+        }
+        if cache.parked.is_none() {
+            let root = world
+                .query::<(Entity, &ElementId)>()
+                .iter(world)
+                .find_map(|(entity, id)| (id.0 == "inventory-shell").then_some(entity));
+            if let Some(root) = root {
+                cache.root = Some(root);
+                cache.parked = Some(ParkedUiBindings::take(world, root));
+            }
+        }
+    });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tilt_ui_runtime::ParkedUi;
+
+    #[test]
+    fn inventory_cache_retains_one_shell_but_releases_it_on_world_exit() {
+        let mut world = World::new();
+        world.init_resource::<InventoryDomCache>();
+        world.insert_resource(InventoryView {
+            visible: true,
+            ..default()
+        });
+        let shell = world
+            .spawn((
+                ElementId("inventory-shell".into()),
+                Node::default(),
+                tilt_ui::PropertyBindings::default(),
+            ))
+            .id();
+        restore_before_bindings(&mut world);
+        assert!(world.get::<ParkedUi>(shell).is_some());
+        assert!(world.get::<tilt_ui::PropertyBindings>(shell).is_none());
+        let retained_entities = world.entities().count_spawned();
+        for _ in 0..16 {
+            world.resource_mut::<InventoryView>().open = true;
+            restore_before_bindings(&mut world);
+            assert!(world.get::<ParkedUi>(shell).is_none());
+            assert!(world.get::<tilt_ui::PropertyBindings>(shell).is_some());
+            world.resource_mut::<InventoryView>().open = false;
+            restore_before_bindings(&mut world);
+            assert_eq!(world.entities().count_spawned(), retained_entities);
+            assert_eq!(
+                world
+                    .query::<&ElementId>()
+                    .iter(&world)
+                    .filter(|id| id.0 == "inventory-shell")
+                    .count(),
+                1
+            );
+        }
+        world.resource_mut::<InventoryView>().visible = false;
+        world.entity_mut(shell).despawn();
+        restore_before_bindings(&mut world);
+        assert!(world.resource::<InventoryDomCache>().parked.is_none());
+        assert_eq!(world.entities().count_spawned(), retained_entities - 1);
+        assert_eq!(world.query::<&ElementId>().iter(&world).count(), 0);
+        let replacement = world
+            .spawn((
+                ElementId("inventory-shell".into()),
+                Node::default(),
+                tilt_ui::PropertyBindings::default(),
+            ))
+            .id();
+        world.resource_mut::<InventoryView>().visible = true;
+        restore_before_bindings(&mut world);
+        assert!(world.get::<ParkedUi>(replacement).is_some());
+        world.resource_mut::<InventoryView>().open = true;
+        restore_before_bindings(&mut world);
+        assert!(
+            world
+                .get::<tilt_ui::PropertyBindings>(replacement)
+                .is_some()
+        );
+        assert_ne!(shell, replacement);
+    }
+}

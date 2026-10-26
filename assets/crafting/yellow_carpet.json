@@ -1,0 +1,28 @@
+{
+  "id": "teramic::yellow_carpet",
+  "name": "Yellow Carpet",
+  "station": "hand",
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "block": 106
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "dye": "yellow"
+        },
+        "count": 1
+      }
+    ]
+  },
+  "output": {
+    "item": {
+      "block": 108
+    },
+    "count": 1
+  }
+}

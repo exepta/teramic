@@ -1,0 +1,6 @@
+{
+  "item": { "crop": "corn" },
+  "name": "Corn",
+  "description": "A ripe, sweet yellow cob. Can be eaten or separated into planting seeds.",
+  "food": { "nutrition": 20.0, "saturation": 12.0, "eat_seconds": 1.5 }
+}

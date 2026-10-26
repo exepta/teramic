@@ -13,6 +13,7 @@ pub struct TerraGenerator {
     pub(super) lakes: std::sync::Arc<super::lakes::LakeCache>,
     pub(super) landscape: super::landscape::LandscapeSampler,
     pub(super) tree_appearances: std::sync::Arc<super::vegetation::TreeAppearanceCache>,
+    pub(super) structures: std::sync::Arc<super::structures::StructureCache>,
     config: WorldConfig,
     pub(super) hills: Perlin,
     pub(super) mountains: Perlin,
@@ -35,6 +36,7 @@ impl TerraGenerator {
             lakes: Default::default(),
             landscape: super::landscape::LandscapeSampler::new(seed),
             tree_appearances: Default::default(),
+            structures: Default::default(),
             config,
             hills: Perlin::new(layer_seed(seed, 1)),
             mountains: Perlin::new(layer_seed(seed, 2)),
@@ -277,6 +279,7 @@ impl TerraGenerator {
             }
         };
         ((shape.tunnel_width - (a * a + b * b).sqrt()) * 20.0)
+            .min(shape.connector_limit)
             .max(shape.chamber_density(y) + (a + b) * relief)
     }
 }
@@ -286,6 +289,14 @@ impl TerrainGenerator for TerraGenerator {
         GENERATOR_VERSION
     }
     fn sample(&self, position: [f64; 3]) -> VoxelSample {
+        if position.iter().all(|v| v.is_finite())
+            && let Some(material) = self.structure_block(position.map(|v| v.floor() as i64))
+        {
+            return VoxelSample {
+                density: if material == 0 { 1.0 } else { -1.0 },
+                material,
+            };
+        }
         let column = self.surface_column(position[0], position[2]);
         let mut sample = self.sample_with_column(position, column);
         if (sample.material == 3

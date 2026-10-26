@@ -96,6 +96,28 @@ fn interior_edits_do_not_invalidate_unrelated_sections() {
 }
 
 #[test]
+fn roof_corner_edits_invalidate_a_recorded_chimney_two_cells_across_the_boundary() {
+    for sign in [-1_i64, 1] {
+        let mut journal = EditJournal::default();
+        let chimney = if sign < 0 {
+            [-16, -1, -16]
+        } else {
+            [-1, -1, -1]
+        };
+        let roof_corner = [chimney[0] + sign * 2, chimney[1], chimney[2]];
+        journal.record(chimney, 60).unwrap();
+        let owner = terra_voxel::global_to_section(chimney).0;
+        let before = journal.mesh_epoch(owner);
+        let affected = journal.record(roof_corner, 77).unwrap();
+        assert!(affected.contains(&owner));
+        assert!(journal.mesh_epoch(owner) > before);
+        assert!(affected.len() <= 8);
+        let unrelated = owner.offset([0, 1, 0]).unwrap();
+        assert!(!affected.contains(&unrelated));
+    }
+}
+
+#[test]
 fn registered_materials_and_custom_ids_survive_generic_section_delta_reload() {
     let mut host = EditJournal::default();
     for id in 1..=terra_voxel::MaterialId::LAST {

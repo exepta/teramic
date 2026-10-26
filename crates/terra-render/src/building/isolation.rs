@@ -20,6 +20,7 @@ struct Key {
     material: u16,
     model: bool,
     object: terra_world::edits::BlockObjectState,
+    half: Option<terra_world::slabs::HalfRemoval>,
     section: SectionPos,
     original: Entity,
     epoch: u64,
@@ -110,6 +111,7 @@ fn requested(world: &BuildingWorld, scene: &Scene) -> Option<Key> {
         material: expected,
         model,
         object,
+        half: world.mining.slab_half(),
         section,
         original: rendered.entity,
         epoch: rendered.mesh_epoch,
@@ -142,7 +144,14 @@ pub(super) fn update(
             && world.active()
             && world.chunks.loaded.contains_key(&active.key.section)
             && (active.target_root.is_none()
-                || world.chunks.block_at(active.key.position) == Some(0))
+                || world.chunks.block_at(active.key.position) == Some(0)
+                || active.key.half.is_some_and(|half| {
+                    world.chunks.block_at(active.key.position) == Some(half.remaining)
+                        && scene.journal.as_ref().is_some_and(|journal| {
+                            journal.object_state(active.key.position)
+                                == Some(half.remaining_state(active.key.object))
+                        })
+                }))
         {
             // Authority committed before the next ordinary mesh upload. Keep the
             // replacement terrain, but remove every cosmetic part of the target.
@@ -355,6 +364,7 @@ pub(super) fn update(
                     key.section,
                     &options,
                     cell,
+                    key.half,
                 )?;
                 // A double chest shares its rendered shell, not its logical
                 // selection. Keep the unmined half in the replacement terrain.

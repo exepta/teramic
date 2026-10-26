@@ -63,6 +63,7 @@ pub(super) enum LoadedSpawn {
 
 #[derive(SystemParam)]
 pub(super) struct SpawnEnvironment<'w> {
+    pub properties: Res<'w, terra_core::block_properties::BlockPropertiesCatalog>,
     pub config: Res<'w, terra_core::GameConfig>,
     pub chunks: Res<'w, ChunkStore>,
     pub terrain: Res<'w, WorldTerrain>,

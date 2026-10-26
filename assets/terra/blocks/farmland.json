@@ -1,0 +1,29 @@
+{
+  "creative_category": "terrain",
+  "description": "Dark cultivated earth. Seeds grow here with light and moisture from nearby water or rain.",
+  "schema_version": 1,
+  "id": 101,
+  "name": "Farmland",
+  "render_kind": "cube",
+  "surface": "farmland",
+  "bevel_width": 0.0,
+  "materials": {
+    "Cultivated soil": {
+      "texture_pattern": "farmland",
+      "base_color": [1.0, 1.0, 1.0, 1.0],
+      "roughness": 1.0,
+      "reflectance": 0.1
+    },
+    "Rooted cultivated soil": {
+      "texture_pattern": "farmland_side",
+      "base_color": [1.0, 1.0, 1.0, 1.0],
+      "roughness": 1.0,
+      "reflectance": 0.1
+    }
+  },
+  "face_materials": ["Rooted cultivated soil", "Rooted cultivated soil", "Rooted cultivated soil", "Cultivated soil", "Rooted cultivated soil", "Rooted cultivated soil"],
+  "hardness": 0.55,
+  "resistance": 0.5,
+  "required_tool": null,
+  "mining_level": 0
+}

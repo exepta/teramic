@@ -1,4 +1,10 @@
-use bevy::{prelude::*, ui::UiGlobalTransform};
+use bevy::{
+    camera::RenderTarget,
+    picking::pointer::{PointerId, PointerLocation},
+    prelude::*,
+    ui::{InteractionDisabled, UiGlobalTransform},
+    window::WindowRef,
+};
 use tilt_ui::{ElementId, ElementKind, TiltElement, WidgetLayoutOverride};
 
 #[derive(Component)]
@@ -48,15 +54,29 @@ pub(super) fn fit_contents(world: &mut World) {
             world.entity_mut(entity).despawn();
             continue;
         }
+        if world.get::<tilt_ui_runtime::ParkedUi>(owner).is_some() {
+            if world.get::<Visibility>(entity) != Some(&Visibility::Hidden) {
+                world.entity_mut(entity).insert(Visibility::Hidden);
+            }
+            if let Some(mut state) = world.get_mut::<TooltipPresentation>(entity)
+                && (!state.owner_hidden || state.open)
+            {
+                state.owner_hidden = true;
+                state.open = false;
+            }
+            continue;
+        }
         let mut parent = Some(owner);
         let mut hidden = false;
         while let Some(node) = parent {
             hidden |= world
                 .get::<Node>(node)
                 .is_some_and(|n| n.display == Display::None);
+            hidden |= world.get::<Visibility>(node) == Some(&Visibility::Hidden);
             parent = world.get::<ChildOf>(node).map(ChildOf::parent);
         }
         let open = !hidden
+            && world.get::<InteractionDisabled>(entity).is_none()
             && world
                 .get::<Node>(entity)
                 .is_some_and(|n| n.display != Display::None);
@@ -80,6 +100,9 @@ pub(super) fn fit_contents(world: &mut World) {
         .filter_map(|(entity, element)| (element.kind == ElementKind::ToolTip).then_some(entity))
         .collect::<Vec<_>>();
     for popup in popups {
+        if world.get::<tilt_ui_runtime::ParkedUi>(popup).is_some() {
+            continue;
+        }
         portal(world, popup);
         if world
             .get::<Node>(popup)
@@ -114,14 +137,43 @@ pub(super) fn fit_contents(world: &mut World) {
 }
 
 pub(super) fn position(world: &mut World) {
-    let Some(pointer) = world
-        .query_filtered::<&Window, With<bevy::window::PrimaryWindow>>()
+    let window = world
+        .query_filtered::<(Entity, &Window), With<bevy::window::PrimaryWindow>>()
         .iter(world)
         .next()
-        .and_then(Window::physical_cursor_position)
-    else {
+        .map(|(entity, window)| {
+            (
+                RenderTarget::Window(WindowRef::Entity(entity)).normalize(Some(entity)),
+                Vec2::new(
+                    window.physical_width() as f32,
+                    window.physical_height() as f32,
+                ),
+            )
+        });
+    let pointer = world
+        .query::<(&PointerId, &PointerLocation)>()
+        .iter(world)
+        .find_map(|(id, pointer)| {
+            (*id == PointerId::Mouse)
+                .then(|| pointer.location())
+                .flatten()
+                .filter(|location| location.position.is_finite())
+                .filter(|location| {
+                    window
+                        .as_ref()
+                        .is_none_or(|(target, _)| target.as_ref() == Some(&location.target))
+                })
+                .map(|location| location.position)
+        });
+    let Some(pointer) = pointer else {
         return;
     };
+    let ui_scale = world
+        .get_resource::<bevy::ui::UiScale>()
+        .map_or(1.0, |scale| scale.0);
+    if !ui_scale.is_finite() || ui_scale <= 0.0 {
+        return;
+    }
     let open = world
         .query::<(
             Entity,
@@ -134,7 +186,9 @@ pub(super) fn position(world: &mut World) {
         .iter(world)
         .filter_map(|(entity, element, node, computed, target, presentation)| {
             (element.kind == ElementKind::ToolTip
+                && world.get::<tilt_ui_runtime::ParkedUi>(entity).is_none()
                 && node.display != Display::None
+                && world.get::<InteractionDisabled>(entity).is_none()
                 && !presentation.is_some_and(|p| p.owner_hidden)
                 && !computed.is_empty())
             .then_some((
@@ -142,14 +196,29 @@ pub(super) fn position(world: &mut World) {
                 computed.size(),
                 computed.inverse_scale_factor,
                 target.physical_size().as_vec2(),
+                target.scale_factor() / ui_scale,
             ))
         })
         .collect::<Vec<_>>();
-    for (entity, size, inverse_scale, viewport) in open {
+    for (entity, size, inverse_scale, viewport, pointer_scale) in open {
         if !inverse_scale.is_finite() || inverse_scale <= 0.0 {
             continue;
         }
-        let top_left = placement(pointer, size, viewport, 10.0 / inverse_scale);
+        let viewport = if viewport.min_element() > 0.0 {
+            viewport
+        } else {
+            window.as_ref().map_or(Vec2::ZERO, |(_, size)| *size)
+        };
+        if viewport.min_element() <= 0.0 || !pointer_scale.is_finite() || pointer_scale <= 0.0 {
+            continue;
+        }
+        // The target scale includes UiScale; picking coordinates only need window DPI.
+        let top_left = placement(
+            pointer * pointer_scale,
+            size,
+            viewport,
+            10.0 / inverse_scale,
+        );
         // Conditional TiltUI templates may insert GhostNodes between popup and layout parent.
         let mut parent = world.get::<ChildOf>(entity).map(ChildOf::parent);
         let layout_parent = loop {
@@ -312,6 +381,219 @@ pub(super) fn fit_identifier(world: &mut World) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn picking_coordinates_use_window_dpi_without_multiplying_the_ui_scale() {
+        use bevy::{
+            app::Propagate,
+            camera::{ComputedCameraValues, RenderTargetInfo},
+            ecs::system::RunSystemOnce,
+            picking::pointer::Location,
+            ui::{UiScale, UiTargetCamera},
+        };
+        for ui_scale in [0.8, 1.5] {
+            for dpi in [1.0, 2.0] {
+                let mut world = World::new();
+                world.insert_resource(UiScale(ui_scale));
+                let viewport = Vec2::new(800.0, 600.0) * dpi;
+                let mut window = Window::default();
+                window.resolution.set_scale_factor_override(Some(dpi));
+                window.resolution.set(800.0, 600.0);
+                let window = world.spawn((window, bevy::window::PrimaryWindow)).id();
+                let pointer = Vec2::new(100.0, 120.0);
+                world.spawn((
+                    PointerId::Mouse,
+                    PointerLocation::new(Location {
+                        target: RenderTarget::Window(WindowRef::Entity(window))
+                            .normalize(Some(window))
+                            .unwrap(),
+                        position: pointer,
+                    }),
+                ));
+                let camera = world
+                    .spawn(Camera {
+                        computed: ComputedCameraValues {
+                            target_info: Some(RenderTargetInfo {
+                                physical_size: viewport.as_uvec2(),
+                                scale_factor: dpi,
+                            }),
+                            ..default()
+                        },
+                        ..default()
+                    })
+                    .id();
+                let root = world
+                    .spawn((
+                        Node::default(),
+                        UiTargetCamera(camera),
+                        ComputedNode {
+                            size: viewport,
+                            ..default()
+                        },
+                        UiGlobalTransform::from(bevy::math::Affine2::from_translation(
+                            viewport * 0.5,
+                        )),
+                    ))
+                    .id();
+                world
+                    .run_system_once(bevy::ui::update::propagate_ui_target_cameras)
+                    .unwrap();
+                let target = world
+                    .get::<Propagate<ComputedUiRenderTargetInfo>>(root)
+                    .unwrap()
+                    .0;
+                assert_eq!(target.scale_factor(), dpi * ui_scale);
+                let scale = dpi * ui_scale;
+                let size = Vec2::new(180.0, 80.0) * scale;
+                let popup = world
+                    .spawn((
+                        TiltElement {
+                            kind: ElementKind::ToolTip,
+                        },
+                        Node::default(),
+                        ComputedNode {
+                            size,
+                            inverse_scale_factor: 1.0 / scale,
+                            ..default()
+                        },
+                        target,
+                        UiGlobalTransform::default(),
+                        ChildOf(root),
+                    ))
+                    .id();
+                position(&mut world);
+                let top_left = world
+                    .get::<UiGlobalTransform>(popup)
+                    .unwrap()
+                    .affine()
+                    .transform_point2(-size * 0.5);
+                let expected = pointer * dpi + Vec2::splat(10.0 * scale);
+                assert!((top_left - expected).length() < 0.001);
+                world.clear_trackers();
+                for _ in 0..2 {
+                    position(&mut world);
+                    assert!(!world.entity(popup).get_ref::<Node>().unwrap().is_changed());
+                    assert!(
+                        !world
+                            .entity(popup)
+                            .get_ref::<WidgetLayoutOverride>()
+                            .unwrap()
+                            .is_changed()
+                    );
+                    assert!(
+                        !world
+                            .entity(popup)
+                            .get_ref::<UiGlobalTransform>()
+                            .unwrap()
+                            .is_changed()
+                    );
+                }
+            }
+        }
+    }
+    #[test]
+    fn picking_position_reveals_measured_tooltip_without_a_window_cursor_or_idle_dirtying() {
+        use bevy::picking::pointer::Location;
+        let mut world = World::new();
+        let mut window = Window::default();
+        window.resolution.set(800.0, 600.0);
+        assert!(window.physical_cursor_position().is_none());
+        let window = world.spawn((window, bevy::window::PrimaryWindow)).id();
+        world.spawn((
+            PointerId::Mouse,
+            PointerLocation::new(Location {
+                target: RenderTarget::Window(WindowRef::Entity(window))
+                    .normalize(Some(window))
+                    .unwrap(),
+                position: Vec2::new(100.0, 120.0),
+            }),
+        ));
+        let root = world
+            .spawn((
+                Node::default(),
+                ComputedNode {
+                    size: Vec2::new(800.0, 600.0),
+                    ..default()
+                },
+                UiGlobalTransform::from(bevy::math::Affine2::from_translation(Vec2::new(
+                    400.0, 300.0,
+                ))),
+            ))
+            .id();
+        let owner = world.spawn((Node::default(), ChildOf(root))).id();
+        let popup = world
+            .spawn((
+                TiltElement {
+                    kind: ElementKind::ToolTip,
+                },
+                Node::default(),
+                ComputedNode {
+                    size: Vec2::new(180.0, 80.0),
+                    inverse_scale_factor: 1.0,
+                    ..default()
+                },
+                ComputedUiRenderTargetInfo::default(),
+                UiGlobalTransform::default(),
+                ChildOf(owner),
+            ))
+            .id();
+        fit_contents(&mut world);
+        fit_contents(&mut world);
+        assert_eq!(world.get::<Visibility>(popup), Some(&Visibility::Hidden));
+        position(&mut world);
+        assert_eq!(world.get::<Visibility>(popup), Some(&Visibility::Inherited));
+        let transform = world.get::<UiGlobalTransform>(popup).unwrap();
+        assert!(
+            (transform.affine().transform_point2(Vec2::new(-90.0, -40.0))
+                - Vec2::new(110.0, 130.0))
+            .length()
+                < 0.001
+        );
+        world.clear_trackers();
+        position(&mut world);
+        assert!(!world.entity(popup).get_ref::<Node>().unwrap().is_changed());
+        assert!(
+            !world
+                .entity(popup)
+                .get_ref::<Visibility>()
+                .unwrap()
+                .is_changed()
+        );
+        assert!(
+            !world
+                .entity(popup)
+                .get_ref::<UiGlobalTransform>()
+                .unwrap()
+                .is_changed()
+        );
+    }
+
+    #[test]
+    fn an_empty_or_carried_slot_cannot_reveal_its_persistent_tooltip() {
+        let mut world = World::new();
+        let root = world.spawn(Node::default()).id();
+        let owner = world.spawn((Node::default(), ChildOf(root))).id();
+        let popup = world
+            .spawn((
+                TiltElement {
+                    kind: ElementKind::ToolTip,
+                },
+                Node::default(),
+                InteractionDisabled,
+                ChildOf(owner),
+            ))
+            .id();
+        for _ in 0..3 {
+            fit_contents(&mut world);
+        }
+        assert!(!world.get::<TooltipPresentation>(popup).unwrap().open);
+        assert_eq!(world.get::<Visibility>(popup), Some(&Visibility::Hidden));
+        assert!(world.get_entity(owner).is_ok());
+        world.entity_mut(popup).remove::<InteractionDisabled>();
+        fit_contents(&mut world);
+        assert!(world.get::<TooltipPresentation>(popup).unwrap().open);
+        // Only a measured post-layout position may reveal a newly opened tip.
+        assert_eq!(world.get::<Visibility>(popup), Some(&Visibility::Hidden));
+    }
     #[test]
     fn hidden_cached_tooltips_do_not_dirty_visibility_or_presentation_every_frame() {
         let mut world = World::new();

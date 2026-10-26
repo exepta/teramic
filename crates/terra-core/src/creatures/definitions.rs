@@ -35,18 +35,26 @@ pub struct MobCombat {
     pub aggro_radius: f64,
     pub reach: f64,
     pub cooldown: f32,
+    #[serde(default)]
+    pub poison_level: u8,
+    #[serde(default)]
+    pub poison_seconds: f32,
 }
 impl MobCombat {
     fn valid(self) -> bool {
         self.damage.is_finite()
             && (0.1..=100.0).contains(&self.damage)
             && self.aggro_radius.is_finite()
-            && (1.0..=24.0).contains(&self.aggro_radius)
+            && (1.0..=64.0).contains(&self.aggro_radius)
             && self.reach.is_finite()
             && (0.5..=3.0).contains(&self.reach)
             && self.reach <= self.aggro_radius
             && self.cooldown.is_finite()
             && (0.5..=10.0).contains(&self.cooldown)
+            && self.poison_seconds.is_finite()
+            && (self.poison_level == 0 && self.poison_seconds == 0.0
+                || (1..=3).contains(&self.poison_level)
+                    && (0.1..=600.0).contains(&self.poison_seconds))
     }
 }
 impl MobDefinition {
@@ -156,6 +164,26 @@ pub fn get(kind: CreatureKind) -> &'static MobDefinition {
             (
                 "horse",
                 include_str!("../../../../assets/terra/mobs/horse.json"),
+            ),
+            (
+                "small_spider",
+                include_str!("../../../../assets/terra/mobs/small_spider.json"),
+            ),
+            (
+                "medium_spider",
+                include_str!("../../../../assets/terra/mobs/medium_spider.json"),
+            ),
+            (
+                "large_spider",
+                include_str!("../../../../assets/terra/mobs/large_spider.json"),
+            ),
+            (
+                "stalker",
+                include_str!("../../../../assets/terra/mobs/stalker.json"),
+            ),
+            (
+                "villager",
+                include_str!("../../../../assets/terra/mobs/villager.json"),
             ),
         ]
         .into_iter()

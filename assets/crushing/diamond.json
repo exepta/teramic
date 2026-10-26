@@ -1,0 +1,15 @@
+{
+  "id": 10604,
+  "key": "teramic::crush_diamond",
+  "name": "Crush diamond",
+  "input": {
+    "mineral": "diamond"
+  },
+  "output": {
+    "item": {
+      "dust": "diamond"
+    },
+    "count": 1
+  },
+  "seconds": 4
+}

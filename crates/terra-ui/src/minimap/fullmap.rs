@@ -235,8 +235,10 @@ struct Context<'w, 's> {
     menu: Option<Res<'w, crate::menu::MenuState>>,
     inventory: Option<Res<'w, crate::inventory::InventoryState>>,
     chat: Option<Res<'w, crate::chat::ChatState>>,
+    pets: Option<Res<'w, crate::pets::PetMenuState>>,
     settings: Res<'w, GameplayConfig>,
     atlas: Res<'w, Atlas>,
+    config: Option<Res<'w, terra_core::GameConfig>>,
     chunks: Option<Res<'w, ChunkStore>>,
     journal: Option<Res<'w, terra_world::edits::EditJournal>>,
     time: Option<Res<'w, Time>>,
@@ -282,7 +284,8 @@ fn update(
         .as_ref()
         .is_some_and(|s| s.ready && !s.teleporting && !s.dead());
     let occupied = context.inventory.as_ref().is_some_and(|s| s.blocks_input())
-        || context.chat.as_ref().is_some_and(|s| s.blocks_input());
+        || context.chat.as_ref().is_some_and(|s| s.blocks_input())
+        || context.pets.as_ref().is_some_and(|p| p.blocks_input());
     let pose = context.session.as_ref().and_then(|s| s.confirmed_state());
     let player = context
         .atlas
@@ -501,9 +504,13 @@ fn update(
         .as_ref()
         .and_then(|chunks| chunks.prepared_column(center.map(|v| v.div_euclid(16))))
         .and_then(|column| {
-            column
-                .surface_at(center[0], center[1])
-                .map(|surface| super::biome_name(surface.biome.weights.dominant()).into())
+            column.surface_at(center[0], center[1]).map(|surface| {
+                super::biome_name(surface.biome_kind(context.config.as_ref().map_or_else(
+                    || terra_core::WorldConfig::default().sea_level,
+                    |config| config.world.sea_level,
+                )))
+                .into()
+            })
         })
         .unwrap_or_else(|| "Unexplored".into());
     next.markers.clone_from(&view.markers);

@@ -7,6 +7,8 @@ use crate::{
     menu::{MenuPage, MenuState},
 };
 
+pub(crate) mod fps;
+
 #[derive(Default)]
 struct DebugChord {
     pending: bool,
@@ -23,6 +25,7 @@ struct DebugContext<'w> {
 }
 
 pub(crate) fn install(app: &mut App) {
+    fps::install(app);
     app.init_resource::<DebugSettings>().add_systems(
         Update,
         keyboard
@@ -69,6 +72,14 @@ fn keyboard(
         debug.creature_inspection = !debug.creature_inspection;
         chord.used = true;
     }
+    if input.just_pressed(GameAction::DebugMobBounds) {
+        debug.creature_bounds = !debug.creature_bounds;
+        chord.used = true;
+    }
+    if input.just_pressed(GameAction::DebugChunkBorders) {
+        debug.chunk_borders = !debug.chunk_borders;
+        chord.used = true;
+    }
     // Delay the overlay until release so a shared chord never toggles it off first.
     if overlay.just_released(keys, mouse) {
         if chord.pending && !chord.used {
@@ -94,6 +105,58 @@ mod tests {
             })
             .add_systems(Update, keyboard);
         app
+    }
+
+    #[test]
+    fn default_f1_e_inspection_alias_does_not_toggle_the_general_overlay() {
+        let mut app = app();
+        press(&mut app, KeyCode::F1);
+        press(&mut app, KeyCode::KeyE);
+        assert!(app.world().resource::<DebugSettings>().creature_inspection);
+        release(&mut app, KeyCode::KeyE);
+        release(&mut app, KeyCode::F1);
+        assert!(!app.world().resource::<DebugSettings>().enabled);
+        press(&mut app, KeyCode::F3);
+        press(&mut app, KeyCode::KeyE);
+        assert!(!app.world().resource::<DebugSettings>().creature_inspection);
+    }
+
+    #[test]
+    fn f9_toggles_chunk_borders_without_general_debug_and_never_while_typing() {
+        let mut app = app();
+        press(&mut app, KeyCode::F9);
+        assert!(app.world().resource::<DebugSettings>().chunk_borders);
+        assert!(!app.world().resource::<DebugSettings>().enabled);
+        release(&mut app, KeyCode::F9);
+        press(&mut app, KeyCode::F9);
+        assert!(!app.world().resource::<DebugSettings>().chunk_borders);
+        release(&mut app, KeyCode::F9);
+        app.world_mut().resource_mut::<crate::SettingsView>().open = true;
+        press(&mut app, KeyCode::F9);
+        assert!(!app.world().resource::<DebugSettings>().chunk_borders);
+    }
+
+    #[test]
+    fn f1_h_toggles_only_mob_bounds_and_is_blocked_while_typing() {
+        let mut app = app();
+        press(&mut app, KeyCode::F1);
+        press(&mut app, KeyCode::KeyH);
+        assert!(app.world().resource::<DebugSettings>().creature_bounds);
+        release(&mut app, KeyCode::KeyH);
+        release(&mut app, KeyCode::F1);
+        assert!(!app.world().resource::<DebugSettings>().enabled);
+        app.world_mut().resource_mut::<crate::SettingsView>().open = true;
+        press(&mut app, KeyCode::F1);
+        press(&mut app, KeyCode::KeyH);
+        assert!(app.world().resource::<DebugSettings>().creature_bounds);
+        release(&mut app, KeyCode::KeyH);
+        release(&mut app, KeyCode::F1);
+        app.world_mut().resource_mut::<crate::SettingsView>().open = false;
+        press(&mut app, KeyCode::F1);
+        press(&mut app, KeyCode::KeyH);
+        release(&mut app, KeyCode::F1);
+        assert!(!app.world().resource::<DebugSettings>().creature_bounds);
+        assert!(!app.world().resource::<DebugSettings>().enabled);
     }
 
     fn press(app: &mut App, key: KeyCode) {

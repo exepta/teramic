@@ -1,5 +1,6 @@
 //! A bounded pool of real PBR lights, discovered only when section geometry changes.
 mod soft_core;
+mod sunlight;
 use crate::blocks::{BlockAssets, definitions::BlockLight};
 use bevy::prelude::*;
 pub use soft_core::TorchLightingStatus;
@@ -60,13 +61,19 @@ pub(super) fn install(app: &mut App) {
     configure_light_updates(app);
     app.init_resource::<Lamps>()
         .init_resource::<TorchSources>()
+        .init_resource::<sunlight::State>()
         .add_systems(
             Update,
             (shadow_resolution, select)
                 .chain()
                 .after(terra_player::PlayerSet::Movement),
         )
-        .add_systems(PostUpdate, (held, flicker).chain().in_set(ApplyLocalLights));
+        .add_systems(
+            PostUpdate,
+            (held, sunlight::update, flicker)
+                .chain()
+                .in_set(ApplyLocalLights),
+        );
 }
 fn shadow_resolution(
     graphics: Option<Res<GraphicsConfig>>,
@@ -222,12 +229,8 @@ fn select_emitters(
             .total_cmp(&Vec3::from_array(b.map(|v| v as f32)).distance_squared(focus))
             .then(a.cmp(b))
     });
-    // One emitter per logical object, within the existing quality budget.
-    let mut selected = BTreeMap::new();
+    let mut ranked = Vec::with_capacity(64);
     for (p, light) in candidates.into_iter().take(64) {
-        if selected.len() >= budget {
-            break;
-        }
         let source = emitter_location(
             journal,
             p,
@@ -238,16 +241,31 @@ fn select_emitters(
                 |p| chunks.block_at(p).map(|m| journal.block(p).unwrap_or(m)),
             ),
         );
-        // Do not spend cubemap shadows on another sealed chamber. Nearby lights
-        // remain admitted around corners so their spill does not vanish at a doorway.
-        if source.distance_squared(focus) > (light.range + 2.0).powi(2)
-            && !visible(focus, source, |p| {
-                chunks.block_at(p).map(|m| journal.block(p).unwrap_or(m))
-            })
-        {
+        let exposed = visible(focus, source, |p| {
+            chunks.block_at(p).map(|m| journal.block(p).unwrap_or(m))
+        });
+        if !exposed && source.distance_squared(focus) > (light.range + 2.0).powi(2) {
             continue;
         }
+        // Hidden household lamps must not exhaust the pool before a visible
+        // street light. Keep nearby corner lights eligible, rather than hard
+        // culling them whenever a doorway briefly blocks the camera ray.
+        let distance = Vec3::from_array(p.map(|v| v as f32)).distance_squared(focus);
+        let penalty = if exposed {
+            0.0
+        } else {
+            (light.range * 0.65).powi(2)
+        };
+        ranked.push((distance + penalty, p, light));
+    }
+    ranked.sort_by(|a, b| a.0.total_cmp(&b.0).then(a.1.cmp(&b.1)));
+    // One emitter per logical object, within the existing quality budget.
+    let mut selected = BTreeMap::new();
+    for (_, p, light) in ranked {
         selected.insert(p, light);
+        if selected.len() >= budget {
+            break;
+        }
     }
     selected
 }
@@ -275,7 +293,8 @@ fn discover(
         }
         let epoch = journal
             .mesh_epoch(section)
-            .wrapping_add(data.data.revision().rotate_left(32));
+            .wrapping_add(data.data.revision().rotate_left(32))
+            .wrapping_add(journal.prop_epoch(section).rotate_left(17));
         if let Some(old) = cache.sections.get_mut(&section)
             && old.epoch == epoch
         {
@@ -309,11 +328,14 @@ fn discover(
     }
     for (section, epoch, _) in immediate.into_iter().chain(discoveries) {
         let data = &chunks.loaded[&section].data;
-        let Ok(sources) = discover_sources(data, journal, definitions) else {
+        let Ok(mut sources) = discover_sources(data, journal, definitions) else {
             cache.sections.remove(&section);
             cache.dirty = true;
             continue;
         };
+        let mut props = chunks.loaded[&section].props.clone();
+        journal.apply_prop_removals(section, &mut props);
+        sources.extend(props.iter().filter_map(scarecrow_source));
         let neighbors = if sources.is_empty() {
             0
         } else {
@@ -347,6 +369,31 @@ fn retain_definition(lamp: &mut VoxelLamp, selected: &mut BTreeMap<[i64; 3], Blo
     };
     lamp.1 = definition;
     true
+}
+
+fn scarecrow_source(prop: &terra_world::props::WorldProp) -> Option<([i64; 3], u16, BlockLight)> {
+    if prop.kind != terra_world::props::PropKind::Scarecrow || prop.removed {
+        return None;
+    }
+    let support = terra_world::props::placement::support(prop);
+    let local =
+        Quat::from_rotation_y(prop.rotation) * Vec3::new(0.64, 0.84, 0.0) * prop.visual_scale();
+    let position = Vec3::from_array(prop.position.map(|v| v as f32)) + local;
+    let offset = (position - Vec3::from_array(support.map(|v| v as f32))).to_array();
+    Some((
+        support,
+        u16::MAX,
+        BlockLight {
+            color: [1.0, 0.76, 0.45],
+            intensity: 55.0,
+            range: 4.0,
+            falloff: Default::default(),
+            flicker: 0.0,
+            cave_intensity: 1.0,
+            shadows: false,
+            offset: Some(offset),
+        },
+    ))
 }
 
 fn emitter_location(journal: &EditJournal, p: [i64; 3], light: BlockLight, ordinary: Vec3) -> Vec3 {
@@ -515,6 +562,7 @@ fn flicker(
     cave: Res<super::CaveState>,
     soft_core: Res<TorchLightingStatus>,
     graphics: Option<Res<GraphicsConfig>>,
+    sunlight: Option<Res<sunlight::State>>,
 ) {
     let gain = exposure_gain(cameras.iter().next().map_or(6.0, |e| e.ev100));
     for (lamp, mut light, mut transform) in &mut lamps {
@@ -530,7 +578,8 @@ fn flicker(
         light.color = Color::srgb_from_array(lamp.1.color);
         light.range = lamp.1.range;
         light.radius = soft_core.radius(lamp.1);
-        light.shadow_maps_enabled = source_shadows(lamp.1, true, graphics.as_deref());
+        light.shadow_maps_enabled = source_shadows(lamp.1, true, graphics.as_deref())
+            && sunlight.as_ref().is_none_or(|state| state.shadows(lamp.0));
         transform.translation = lamp.2
             + Vec3::new(
                 (t * 2.7 + phase).sin() * 0.045,
@@ -695,6 +744,104 @@ mod tests {
         .into_iter()
         .filter_map(|b| b.light.map(|l| (b.id, l)))
         .collect()
+    }
+
+    #[test]
+    fn machine_and_scarecrow_lanterns_use_authored_rotated_anchors_and_cached_prop_lifetimes() {
+        use terra_world::props::{PropId, PropKind, WorldProp};
+        let definitions = light_definitions();
+        let crusher = definitions[&99];
+        assert_eq!(crusher.range, 4.0);
+        assert!(!crusher.shadows && crusher.intensity <= 80.0);
+        let support = [4, 2, 4];
+        let mut journal = EditJournal::default();
+        let mut chunks = ChunkStore::default();
+        let mut data = terra_voxel::BlockSection::empty(SectionPos::default()).unwrap();
+        data.set_block(support.map(|v| v as usize), 3).unwrap();
+        chunks.loaded.insert(
+            SectionPos::default(),
+            terra_world::streaming::LoadedSection {
+                data,
+                mesh: None,
+                mesh_epoch: 0,
+                water_epoch: 0,
+                water: None,
+                props: Vec::new(),
+            },
+        );
+        let mut cache = Lamps::default();
+        discover(
+            &mut cache,
+            &chunks,
+            &journal,
+            &definitions,
+            Vec3::ZERO,
+            32.0,
+        );
+        assert!(cache.emitters.is_empty());
+        for facing in 0..4 {
+            let prop = WorldProp {
+                id: PropId(facing + 1),
+                kind: PropKind::Scarecrow,
+                position: [4.5, 3.0, 4.5],
+                rotation: facing as f32 * std::f32::consts::FRAC_PI_2,
+                scale: 1.0,
+                variant: 0,
+                section: SectionPos::default(),
+                removed: false,
+            };
+            let (p, _, light) = scarecrow_source(&prop).unwrap();
+            let expected = Vec3::from_array(prop.position.map(|v| v as f32))
+                + Quat::from_rotation_y(prop.rotation)
+                    * Vec3::new(0.64, 0.84, 0.0)
+                    * prop.visual_scale();
+            assert!(emitter_location(&journal, p, light, Vec3::ZERO).abs_diff_eq(expected, 0.0001));
+            assert!(!light.shadows && light.flicker == 0.0 && light.range == 4.0);
+            assert!(journal.place_prop(prop).unwrap());
+            discover(
+                &mut cache,
+                &chunks,
+                &journal,
+                &definitions,
+                Vec3::ZERO,
+                32.0,
+            );
+            assert_eq!(
+                cache.emitters.len(),
+                1,
+                "placed prop epoch invalidates an empty cached section"
+            );
+            let retained = cache.sections[&SectionPos::default()].epoch;
+            discover(
+                &mut cache,
+                &chunks,
+                &journal,
+                &definitions,
+                Vec3::ZERO,
+                32.0,
+            );
+            assert_eq!(cache.sections[&SectionPos::default()].epoch, retained);
+            journal.remove_prop(prop.section, prop.id).unwrap();
+            discover(
+                &mut cache,
+                &chunks,
+                &journal,
+                &definitions,
+                Vec3::ZERO,
+                32.0,
+            );
+            assert!(cache.emitters.is_empty());
+        }
+        chunks.loaded.clear();
+        discover(
+            &mut cache,
+            &chunks,
+            &journal,
+            &definitions,
+            Vec3::ZERO,
+            32.0,
+        );
+        assert!(cache.sections.is_empty() && cache.emitters.is_empty());
     }
 
     #[test]
@@ -905,6 +1052,51 @@ mod tests {
     }
 
     #[test]
+    fn visible_street_lights_are_not_starved_by_closer_sealed_household_lamps() {
+        let definition = light_definitions()[&40];
+        let position = SectionPos::default();
+        let mut data = terra_voxel::BlockSection::empty(position).unwrap();
+        for x in 0..16 {
+            for y in 0..6 {
+                data.set_block([x, y, 4], 3).unwrap();
+            }
+        }
+        let street = [14, 1, 1];
+        let mut emitters: Vec<_> = (2..10).map(|x| ([x, 1, 7], definition)).collect();
+        emitters.push((street, definition));
+        for (p, _) in &emitters {
+            data.set_block(p.map(|v| v as usize), 40).unwrap();
+        }
+        let mut chunks = ChunkStore::default();
+        chunks.loaded.insert(
+            position,
+            terra_world::streaming::LoadedSection {
+                data,
+                mesh: None,
+                mesh_epoch: 0,
+                water_epoch: 0,
+                water: None,
+                props: Vec::new(),
+            },
+        );
+        for budget in [4, 8] {
+            let selected = select_emitters(
+                &emitters,
+                &chunks,
+                &EditJournal::default(),
+                Vec3::new(0.5, 1.9, 0.5),
+                budget,
+            );
+            assert_eq!(selected.len(), budget);
+            assert!(selected.contains_key(&street));
+            assert!(
+                selected.contains_key(&[2, 1, 7]),
+                "nearby corner light remains eligible"
+            );
+        }
+    }
+
+    #[test]
     fn discovery_borrows_pristine_sections_but_detects_imported_and_pending_lamps() {
         let definitions = light_definitions();
         let mut data = terra_voxel::BlockSection::empty(SectionPos::new(-1, 0, 0)).unwrap();
@@ -1089,8 +1281,10 @@ mod tests {
                     let actual = app.world().get::<PointLight>(lamp).unwrap().intensity;
                     assert!((actual - expected).abs() < expected * 0.0001);
                     if blend == 1.0 && brightness == 1.0 {
-                        assert!((ev - 6.0).abs() < 0.0001);
-                        assert!((actual - 8700.0).abs() < 0.01);
+                        assert!((ev - super::super::CAVE_EXPOSURE).abs() < 0.0001);
+                        // Darkening the unlit cave must not alter the perceived
+                        // local lamp energy or reintroduce outdoor EV gain.
+                        assert!((actual * 2.0_f32.powf(-ev) - 8700.0 / 64.0).abs() < 0.0001);
                     }
                     // Pausing the clock cannot silently repair a different
                     // brightness than the same cave rendered while time moves.

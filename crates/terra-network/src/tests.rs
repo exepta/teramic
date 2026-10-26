@@ -7,6 +7,17 @@ use terra_world::{
     streaming::{ChunkStore, WorldAccess},
 };
 
+#[path = "bee_tests.rs"]
+mod bee_tests;
+#[path = "location_tests.rs"]
+mod location_tests;
+#[path = "pet_command_tests.rs"]
+mod pet_command_tests;
+#[path = "riding_tests.rs"]
+mod riding_tests;
+#[path = "tree_felling_tests.rs"]
+mod tree_felling_tests;
+
 fn base(mode: WorldMode, role: connection::NetworkRole) -> App {
     let mut config = GameConfig::default();
     config.server.game_mode = terra_core::GameMode::Creative;
@@ -683,12 +694,16 @@ mod container_tests;
 mod creature_tests;
 #[path = "effect_tests.rs"]
 mod effect_tests;
+#[path = "equipment_tests.rs"]
+mod equipment_tests;
 #[path = "gameplay_tests.rs"]
 mod gameplay_tests;
 #[path = "inventory_tests.rs"]
 mod inventory_tests;
 #[path = "spawn_tests.rs"]
 mod spawn_tests;
+#[path = "stalker_bridge_tests.rs"]
+mod stalker_bridge_tests;
 #[path = "survival_tests.rs"]
 mod survival_tests;
 
@@ -1086,6 +1101,78 @@ fn delayed_input_burst_is_acknowledged_without_extra_simulation_ticks() {
         after.position[0] - before.position[0]
             <= ticks as f32 * terra_physics::character::WALK_SPEED / 60.0 + 0.01
     );
+}
+
+#[test]
+fn real_udp_server_keeps_a_jump_unacknowledged_until_collision_is_ready() {
+    use lightyear::prelude::MessageSender;
+    use protocol::session::*;
+    use terra_world::streaming::ChunkStore;
+    let (mut host, mut a, mut b) = pair();
+    wait(&mut host, &mut [&mut a, &mut b], |_, clients| {
+        clients[0]
+            .world()
+            .resource::<client::ClientSession>()
+            .confirmed_state()
+            .is_some_and(|state| state.grounded)
+    });
+    let before = a
+        .world()
+        .resource::<client::ClientSession>()
+        .confirmed_state()
+        .unwrap();
+    let position = terra_voxel::global_to_section(before.position.map(|v| v.floor() as i64)).0;
+    let epoch = host.world().resource::<ChunkStore>().loaded[&position].mesh_epoch;
+    host.world_mut()
+        .resource_mut::<ChunkStore>()
+        .loaded
+        .get_mut(&position)
+        .unwrap()
+        .mesh_epoch = epoch.wrapping_add(1000);
+    let world = a.world_mut();
+    world
+        .query_filtered::<&mut MessageSender<MovementInput>, With<lightyear::prelude::client::Client>>()
+        .single_mut(world)
+        .unwrap()
+        .send::<InputChannel>(MovementInput {
+            generation: 0,
+            sequence: 1,
+            direction: [0.0; 3],
+            look: [0.0; 2],
+            jump: true,
+            sprint: false,
+            auto_climb: false,
+            flight_speed: None,
+        });
+    for _ in 0..12 {
+        host.update();
+        a.update();
+        b.update();
+        std::thread::sleep(Duration::from_millis(1));
+    }
+    let blocked = a
+        .world()
+        .resource::<client::ClientSession>()
+        .confirmed_state()
+        .unwrap();
+    assert_eq!(
+        blocked.ack, before.ack,
+        "an unsimulated jump must not be acknowledged"
+    );
+    assert!((blocked.position[1] - before.position[1]).abs() < 0.01);
+    host.world_mut()
+        .resource_mut::<ChunkStore>()
+        .loaded
+        .get_mut(&position)
+        .unwrap()
+        .mesh_epoch = epoch;
+    wait(&mut host, &mut [&mut a, &mut b], |_, clients| {
+        clients[0]
+            .world()
+            .resource::<client::ClientSession>()
+            .confirmed_state()
+            .is_some_and(|state| state.ack == 1 && state.position[1] > before.position[1] + 0.1)
+    });
 }
 
 #[test]

@@ -1,0 +1,13 @@
+{
+  "item": {
+    "accessory": "belt"
+  },
+  "name": "Belt",
+  "description": "A strong leather belt supporting long journeys.",
+  "equipment": {
+    "slot": "belt",
+    "armor_points": 0,
+    "health_bonus": 0,
+    "stamina_bonus": 15
+  }
+}

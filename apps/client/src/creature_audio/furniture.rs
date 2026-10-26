@@ -7,10 +7,49 @@ use super::{
 use bevy::prelude::*;
 use std::{collections::HashMap, sync::atomic::Ordering};
 use terra_network::client::ClientSession;
+use terra_voxel::{SectionPos, global_to_section};
 use terra_world::{
     edits::EditJournal,
     streaming::{ChunkStore, WorldAccess},
 };
+
+const OPENING_RANGE: f32 = 20.0;
+
+fn listener_sections(listener: Vec3) -> impl Iterator<Item = SectionPos> {
+    let bounds = listener.is_finite().then(|| {
+        let low = listener
+            .to_array()
+            .map(|v| (f64::from(v) - f64::from(OPENING_RANGE)).floor() as i64);
+        let high = listener
+            .to_array()
+            .map(|v| (f64::from(v) + f64::from(OPENING_RANGE)).floor() as i64);
+        (global_to_section(low).0, global_to_section(high).0)
+    });
+    bounds.into_iter().flat_map(|(low, high)| {
+        (low.z..=high.z).flat_map(move |z| {
+            (low.y..=high.y)
+                .flat_map(move |y| (low.x..=high.x).map(move |x| SectionPos::new(x, y, z)))
+        })
+    })
+}
+
+fn nearby_openings<'a>(
+    journal: &'a EditJournal,
+    chunks: &'a ChunkStore,
+    listener: Vec3,
+) -> impl Iterator<Item = ([i64; 3], u16, terra_world::edits::BlockObjectState)> + 'a {
+    listener_sections(listener)
+        .filter(move |section| chunks.loaded.contains_key(section))
+        .flat_map(move |section| journal.object_states_in_section(section))
+        .filter(move |(cell, material, state)| {
+            terra_world::objects::is_opening(*material)
+                && !state.secondary
+                && chunks.block_at(*cell) == Some(*material)
+                && (Vec3::from_array(cell.map(|v| v as f32)) + Vec3::splat(0.5))
+                    .distance_squared(listener)
+                    <= OPENING_RANGE.powi(2)
+        })
+}
 
 #[derive(Default)]
 pub(super) struct Timing {
@@ -18,6 +57,7 @@ pub(super) struct Timing {
     cough_at: Option<f32>,
     last_cough: Option<usize>,
     openings: HashMap<[i64; 3], (u16, u8)>,
+    chests: super::chests::Transitions,
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -32,12 +72,14 @@ pub(super) fn update(
     bodies: Query<&Transform, With<terra_player::PlayerBody>>,
     cameras: Query<&Transform, With<terra_player::TerraCamera>>,
     mut timing: Local<Timing>,
+    mut chest_status: ResMut<super::ChestAudioStatus>,
 ) {
     let active = access.ready()
         && menu.as_ref().is_none_or(|menu| menu.world_audio_active())
         && sounds.entity.is_some();
     let Some(body) = bodies.iter().next().filter(|_| active) else {
         *timing = Timing::default();
+        *chest_status = super::ChestAudioStatus::default();
         for gain in &sounds.controls.furnace {
             gain.store(0, Ordering::Relaxed);
         }
@@ -68,20 +110,29 @@ pub(super) fn update(
         }
     };
     let mut current = HashMap::new();
-    for (cell, material, state) in journal.object_states().filter(|(_, material, state)| {
-        terra_world::objects::is_opening(*material) && !state.secondary
-    }) {
+    let mut sounded = std::collections::HashSet::new();
+    for (cell, material, state) in nearby_openings(&journal, &chunks, listener) {
         let position = Vec3::from_array(cell.map(|v| v as f32)) + Vec3::splat(0.5);
-        if position.distance_squared(listener) > 20.0_f32.powi(2)
-            || chunks.block_at(cell) != Some(material)
-        {
-            continue;
-        }
         if let Some(&(old_material, old_facing)) = timing.openings.get(&cell)
             && old_material == material
             && (old_facing >= 4) != (state.facing >= 4)
         {
             let window = terra_world::objects::is_window(material);
+            let anchor = if window {
+                terra_world::objects::windows::group(cell, material, state.facing, |p| {
+                    Some((
+                        chunks.block_at(p).or_else(|| journal.block(p))?,
+                        journal.object_state(p)?.facing,
+                    ))
+                })
+                .anchor
+            } else {
+                cell
+            };
+            if !sounded.insert(anchor) {
+                current.insert(cell, (material, state.facing));
+                continue;
+            }
             emit(
                 if state.facing >= 4 {
                     clips::DOOR_OPEN_CLIP
@@ -96,6 +147,27 @@ pub(super) fn update(
         current.insert(cell, (material, state.facing));
     }
     timing.openings = current;
+    for (anchor, open) in timing
+        .chests
+        .update(&chunks, &journal, session.as_deref(), listener)
+    {
+        emit(
+            if open {
+                clips::CHEST_OPEN_CLIP
+            } else {
+                clips::CHEST_CLOSE_CLIP
+            },
+            Vec3::from_array(anchor.map(|v| v as f32)) + Vec3::splat(0.5),
+            0.55,
+            1.0,
+        );
+        if open {
+            chest_status.opened = chest_status.opened.saturating_add(1);
+        } else {
+            chest_status.closed = chest_status.closed.saturating_add(1);
+        }
+    }
+    chest_status.tracked = timing.chests.len();
     let mut energy = [0.0_f32; 2];
     if let Some(session) = session.as_ref() {
         for furnace in session.furnaces.iter().filter(|f| f.lit).take(32) {
@@ -156,6 +228,135 @@ fn body_in_smoke(body: Vec3, cell: [i64; 3]) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use terra_voxel::BlockSection;
+    use terra_world::{edits::BlockObjectState, streaming::LoadedSection};
+
+    fn load(chunks: &mut ChunkStore, position: [i64; 3], material: u16) {
+        let (section, local) = global_to_section(position);
+        chunks
+            .loaded
+            .entry(section)
+            .or_insert_with(|| LoadedSection {
+                data: BlockSection::empty(section).unwrap(),
+                mesh: None,
+                mesh_epoch: 0,
+                water_epoch: 0,
+                water: None,
+                props: Vec::new(),
+            })
+            .data
+            .set_block(local, material)
+            .unwrap();
+    }
+
+    fn opening(
+        journal: &mut EditJournal,
+        position: [i64; 3],
+        material: u16,
+        state: BlockObjectState,
+    ) {
+        journal.record(position, material).unwrap();
+        journal.set_object_state(position, Some(state)).unwrap();
+    }
+
+    #[test]
+    fn listener_window_is_bounded_and_covers_negative_twenty_meter_section_edges() {
+        for coordinate in -33..=33 {
+            let listener = Vec3::splat(coordinate as f32 + 0.375);
+            let sections: Vec<_> = listener_sections(listener).collect();
+            assert!(sections.len() <= 64);
+            for delta in [-20.0, 0.0, 20.0] {
+                let cell = (listener + Vec3::splat(delta))
+                    .floor()
+                    .as_i64vec3()
+                    .to_array();
+                assert!(sections.contains(&global_to_section(cell).0));
+            }
+        }
+        for listener in [Vec3::NAN, Vec3::splat(f32::INFINITY)] {
+            assert_eq!(listener_sections(listener).count(), 0);
+        }
+    }
+
+    #[test]
+    fn opening_audio_tracks_near_loaded_poses_but_ignores_far_unloaded_and_stale_history() {
+        let listener = Vec3::new(-0.5, 2.5, -0.5);
+        let near = [-1, 2, -1];
+        let edge = [19, 2, -1];
+        let outside = [20, 2, -1];
+        let far = [1024, 2, -1];
+        let unloaded = [-1, 2, 1];
+        let stale = [-2, 2, -1];
+        let mut journal = EditJournal::default();
+        let mut chunks = ChunkStore::default();
+        for position in [near, edge, outside, far, unloaded, stale] {
+            opening(&mut journal, position, 68, BlockObjectState::default());
+            if ![unloaded, stale].contains(&position) {
+                load(&mut chunks, position, 68);
+            }
+        }
+        let mut before: Vec<_> = nearby_openings(&journal, &chunks, listener).collect();
+        before.sort_by_key(|entry| entry.0);
+        assert_eq!(
+            before.iter().map(|entry| entry.0).collect::<Vec<_>>(),
+            vec![near, edge]
+        );
+        assert!(before.iter().all(|entry| entry.2.facing == 0));
+        journal
+            .set_object_state(
+                near,
+                Some(BlockObjectState {
+                    facing: 4,
+                    ..Default::default()
+                }),
+            )
+            .unwrap();
+        assert!(
+            nearby_openings(&journal, &chunks, listener).any(|(position, material, state)| {
+                position == near && material == 68 && state.facing == 4
+            }),
+            "confirmed nearby open/close transitions retain their original audio inputs"
+        );
+    }
+
+    #[test]
+    fn opening_audio_retains_primary_only_loaded_contract_for_straddling_doors() {
+        let primary = [-1, 15, -1];
+        let peer = [-1, 16, -1];
+        let mut journal = EditJournal::default();
+        opening(
+            &mut journal,
+            primary,
+            65,
+            BlockObjectState {
+                peer: Some(peer),
+                ..Default::default()
+            },
+        );
+        opening(
+            &mut journal,
+            peer,
+            65,
+            BlockObjectState {
+                peer: Some(primary),
+                secondary: true,
+                ..Default::default()
+            },
+        );
+        let mut chunks = ChunkStore::default();
+        load(&mut chunks, peer, 65);
+        let listener = Vec3::new(-0.5, 16.5, -0.5);
+        assert!(
+            nearby_openings(&journal, &chunks, listener)
+                .next()
+                .is_none()
+        );
+        load(&mut chunks, primary, 65);
+        let entries: Vec<_> = nearby_openings(&journal, &chunks, listener).collect();
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].0, primary);
+    }
+
     #[test]
     fn recorded_coughs_use_three_distinct_takes_without_consecutive_repeats() {
         let mut previous = None;

@@ -1,0 +1,57 @@
+{
+  "id": "teramic::gold_watering_can",
+  "name": "Gold Watering Can",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "tool": "gold_watering_can"
+    },
+    "count": 1
+  },
+  "pattern": {
+    "kind": "shaped",
+    "width": 3,
+    "height": 3,
+    "cells": [
+      null,
+      {
+        "item": {
+          "mineral": "gold_ingot"
+        },
+        "count": 1
+      },
+      null,
+      {
+        "item": {
+          "mineral": "gold_ingot"
+        },
+        "count": 1
+      },
+      null,
+      {
+        "item": {
+          "mineral": "gold_ingot"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "mineral": "gold_ingot"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "mineral": "gold_ingot"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "mineral": "gold_ingot"
+        },
+        "count": 1
+      }
+    ]
+  }
+}

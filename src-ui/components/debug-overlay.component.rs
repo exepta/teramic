@@ -11,6 +11,8 @@ use tilt_ui::html_shared;
 pub struct DebugOverlay {
     pub visible: bool,
     pub fps: String,
+    pub fps_min: String,
+    pub fps_max: String,
     pub cpu: String,
     pub ram: String,
     pub chunk: String,
@@ -31,12 +33,15 @@ pub struct DebugOverlay {
     pub animal_food: String,
     pub animal_water: String,
     pub animal_behavior: String,
+    pub animal_intention: String,
+    pub animal_destination: String,
+    pub animal_path: String,
 }
 
 pub fn update_debug_overlay(
     time: Res<Time>,
     diagnostics: Res<DiagnosticsStore>,
-    state: OverlayState,
+    mut state: OverlayState,
     camera: Query<&Transform, With<TerraCamera>>,
     player: Query<&Transform, With<terra_player::PlayerBody>>,
     mut overlay: ResMut<DebugOverlay>,
@@ -51,6 +56,9 @@ pub fn update_debug_overlay(
         .and_then(|id| state.creatures.as_ref()?.creatures.get(&id))
         .map(|track| &track.current);
     let animal_visible = allowed && state.debug.creature_inspection && animal.is_some();
+    if let Some(inspection) = state.inspection.as_deref_mut() {
+        inspection.0 = animal.filter(|_| animal_visible).map(|animal| animal.id);
+    }
     if overlay.animal_visible != animal_visible {
         overlay.animal_visible = animal_visible;
     }
@@ -92,12 +100,19 @@ pub fn update_debug_overlay(
             terra_core::creatures::CreatureBehavior::Sleep => "Schlaeft",
             terra_core::creatures::CreatureBehavior::InNest => "Im Nest",
             terra_core::creatures::CreatureBehavior::Leap => "Springt",
+            terra_core::creatures::CreatureBehavior::Hunt if animal.kind.is_spider() => "Verfolgt Ziel",
             terra_core::creatures::CreatureBehavior::Hunt => "Jagt Fische",
             terra_core::creatures::CreatureBehavior::Attack => "Greift an",
             terra_core::creatures::CreatureBehavior::Climb => "Klettert",
             terra_core::creatures::CreatureBehavior::Hold => "Haelt sich fest",
             terra_core::creatures::CreatureBehavior::Ink => "Versprueht Tinte",
+            terra_core::creatures::CreatureBehavior::Ceiling => "An der Decke",
+            terra_core::creatures::CreatureBehavior::Descend => "Seilt sich ab",
         }.into();
+        let (intention, destination, path) = inspection_labels(state.creatures.as_ref().and_then(|creatures| creatures.intentions.get(&animal.id)));
+        overlay.animal_intention = intention;
+        overlay.animal_destination = destination;
+        overlay.animal_path = path;
         if let Some(traits) = animal.horse_traits() {
             overlay.animal_behavior = format!("{} / Ausdauer {} / Sprung {:.2} m", overlay.animal_behavior, traits.stamina, traits.jump_height);
         }
@@ -139,6 +154,10 @@ pub fn update_debug_overlay(
         .and_then(|d| d.smoothed())
         .map(|fps| format!("{fps:.0}"))
         .unwrap_or_else(|| "--".into());
+    overlay.fps_min = state.session_fps.as_ref().and_then(|fps| fps.minimum)
+        .map(|fps| format!("{fps:.1}")).unwrap_or_else(|| "--".into());
+    overlay.fps_max = state.session_fps.as_ref().and_then(|fps| fps.maximum)
+        .map(|fps| format!("{fps:.1}")).unwrap_or_else(|| "--".into());
     overlay.cpu = state
         .process
         .cpu_percent
@@ -187,11 +206,7 @@ pub fn update_debug_overlay(
             || "--".into(),
             |terrain| {
                 use terra_world::generation::biomes::BiomeKind;
-                match terrain
-                    .0
-                    .biome_at(f64::from(pos.x), f64::from(pos.z))
-                    .weights
-                    .dominant()
+                match terrain.0.surface_biome(&terrain.0.surface_column(f64::from(pos.x), f64::from(pos.z)))
                 {
                     BiomeKind::Ocean => "Ocean",
                     BiomeKind::Plains => "Plains",
@@ -200,6 +215,7 @@ pub fn update_debug_overlay(
                     BiomeKind::Highland => "Highland",
                     BiomeKind::MushroomPark => "Mushroom Park",
                     BiomeKind::ClifftedDesert => "Cliffted Desert",
+                    BiomeKind::CherryForest => "Cherry Forest",
                 }
                 .into()
             },
@@ -207,8 +223,20 @@ pub fn update_debug_overlay(
     }
 }
 
+fn inspection_labels(intent: Option<&terra_core::creatures::intentions::CreatureIntent>) -> (String, String, String) {
+    let point = |p: [f64; 3]| format!("{:.1}, {:.1}, {:.1}", p[0], p[1], p[2]);
+    let Some(intent) = intent.filter(|intent| intent.valid()) else {
+        return ("Warte auf Serverentscheidung".into(), "--".into(), "--".into());
+    };
+    let route = if intent.path.is_empty() {
+        if intent.blocked { "Blockiert / Umleitung wartet" } else { "Kein gespeicherter Graphpfad" }.into()
+    } else { intent.path.iter().copied().map(point).collect::<Vec<_>>().join(" > ") };
+    (intent.reason.label().into(), intent.destination.map_or_else(|| "Kein festes Ziel".into(), point), route)
+}
+
 #[derive(bevy::ecs::system::SystemParam)]
 pub struct OverlayState<'w> {
+    session_fps: Option<Res<'w, crate::debug::fps::SessionFps>>,
     debug: Res<'w, terra_core::DebugSettings>,
     menu: Option<Res<'w, crate::menu::MenuState>>,
     palette: Res<'w, terra_player::interaction::BlockPalette>,
@@ -220,6 +248,7 @@ pub struct OverlayState<'w> {
     access: Option<Res<'w, terra_world::streaming::WorldAccess>>,
     creature_target: Option<Res<'w, terra_player::interaction::TargetCreature>>,
     creatures: Option<Res<'w, terra_network::client::ReplicatedCreatures>>,
+    inspection: Option<ResMut<'w, terra_network::client::CreatureInspection>>,
 }
 
 #[cfg(test)]
@@ -228,6 +257,17 @@ mod tests {
     use terra_player::interaction::{BlockChoice, BlockPalette};
     use terra_voxel::{BlockSection, SectionPos, blocks::BlockHit};
     use terra_world::streaming::{ChunkStore, LoadedSection};
+    #[test]
+    fn mob_intentions_format_only_authoritative_targets_and_real_route_points() {
+        use terra_core::creatures::intentions::{CreatureIntent, IntentReason};
+        let intent = CreatureIntent { id: 4, reason: IntentReason::DayRefuge, destination: Some([-16.5, -20.0, 3.5]), path: vec![[-15.5, -20.0, 3.5]], blocked: false };
+        let (reason, target, route) = inspection_labels(Some(&intent));
+        assert!(reason.contains("Unterschlupf"));
+        assert_eq!(target, "-16.5, -20.0, 3.5");
+        assert_eq!(route, "-15.5, -20.0, 3.5");
+        let (_, target, route) = inspection_labels(None);
+        assert_eq!((target.as_str(), route.as_str()), ("--", "--"));
+    }
     #[test]
     fn targeted_animal_vitals_render_without_general_debug_and_hide_with_target_loss() {
         use terra_core::creatures::*;
@@ -247,7 +287,7 @@ mod tests {
             behavior: CreatureBehavior::Drink, timer: 2.0, age: 1.0, variant: 0,
             needs: CreatureNeeds::full(CreatureKind::Sheep) };
         app.world_mut().resource_mut::<ReplicatedCreatures>().creatures.insert(id,
-            CreatureTrack { previous: animal.clone(), current: animal, received: std::time::Instant::now(), interval: 0.1 });
+            CreatureTrack { playback: Default::default(), previous: animal.clone(), current: animal, received: std::time::Instant::now(), interval: 0.1 });
         app.world_mut().resource_mut::<terra_player::interaction::TargetCreature>().0 = Some(id);
         app.update(); app.update();
         let view = app.world().resource::<DebugOverlay>();
@@ -304,6 +344,7 @@ mod tests {
                 std::time::Duration::from_secs_f64(1.0 / 60.0),
             ))
             .init_resource::<DebugOverlay>()
+            .init_resource::<crate::debug::fps::SessionFps>()
             .insert_resource(terra_core::DebugSettings {
                 enabled: true,
                 ..default()
@@ -331,6 +372,11 @@ mod tests {
                 ..default()
             })
             .add_systems(Update, update_debug_overlay);
+        {
+            let mut fps = app.world_mut().resource_mut::<crate::debug::fps::SessionFps>();
+            fps.minimum = Some(2.0);
+            fps.maximum = Some(144.0);
+        }
         let position = SectionPos::new(-1, 0, -1);
         let mut data = BlockSection::empty(position).unwrap();
         data.set_block([15, 0, 15], 1).unwrap();
@@ -360,6 +406,8 @@ mod tests {
         assert_eq!(overlay.chunk, "-1, 0, -1");
         assert_eq!(overlay.xyz, "-0.5  2.0  -0.5");
         assert!(overlay.visible);
+        assert_eq!(overlay.fps_min, "2.0");
+        assert_eq!(overlay.fps_max, "144.0");
         app.world_mut()
             .resource_mut::<terra_core::DebugSettings>()
             .enabled = false;

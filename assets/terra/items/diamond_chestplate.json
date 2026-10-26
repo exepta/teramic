@@ -1,0 +1,16 @@
+{
+  "item": {
+    "armor": {
+      "material": "diamond",
+      "piece": "chestplate"
+    }
+  },
+  "name": "Diamond Chestplate",
+  "description": "Diamond chestplate fitted for protection and comfortable movement.",
+  "equipment": {
+    "slot": "chestplate",
+    "armor_points": 10.5,
+    "health_bonus": 8,
+    "stamina_bonus": 8
+  }
+}

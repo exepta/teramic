@@ -223,6 +223,170 @@ fn mineral_chain_cut_replicates_only_detached_cells_and_remains_removed_for_a_la
 }
 
 #[test]
+fn mixed_slab_half_mining_replicates_the_retained_pose_to_both_udp_clients_and_a_late_join() {
+    let (mut host, mut client, position, _) = fixture();
+    host.insert_resource(
+        terra_core::block_properties::BlockPropertiesCatalog::load(
+            &terra_core::asset_directory().join("terra/blocks"),
+        )
+        .unwrap(),
+    );
+    // Configured requirements deliberately differ: the stone half's mechanics
+    // must win even though the shared cell's primary material is oak.
+    {
+        let mut properties = host
+            .world_mut()
+            .resource_mut::<terra_core::block_properties::BlockPropertiesCatalog>();
+        let stone = properties.0.get_mut(&85).unwrap();
+        stone.required_tool = Some(terra_core::block_properties::ToolClass::Pickaxe);
+        stone.mining_level = 1;
+    }
+    let combined = terra_core::construction::merged_slab(82, 5, 85).unwrap();
+    host.world_mut()
+        .resource_scope(|world, mut journal: Mut<EditJournal>| {
+            commit_block_edit(
+                &mut world.resource_mut::<ChunkStore>(),
+                &mut journal,
+                &BlockEditRequest {
+                    position,
+                    expected_material: 3,
+                    material: 82,
+                },
+                &Default::default(),
+            )
+            .unwrap();
+            journal
+                .set_object_state(
+                    position,
+                    Some(terra_world::edits::BlockObjectState {
+                        facing: combined,
+                        ..Default::default()
+                    }),
+                )
+                .unwrap();
+        });
+    let address = host
+        .world()
+        .resource::<server::ServerRuntime>()
+        .address
+        .unwrap();
+    let mut observer = profile_client(address, terra_core::PlayerProfile::default());
+    let pose = |app: &App, facing| {
+        app.world().resource::<ChunkStore>().block_at(position) == Some(82)
+            && app
+                .world()
+                .resource::<EditJournal>()
+                .object_state(position)
+                .is_some_and(|state| state.facing == facing)
+    };
+    wait(
+        &mut host,
+        &mut [&mut client, &mut observer],
+        |_, clients| clients.iter().all(|client| pose(client, combined)),
+    );
+    let eye = Vec3::from_array(
+        client
+            .world()
+            .resource::<client::ClientSession>()
+            .confirmed_state()
+            .unwrap()
+            .position,
+    ) + Vec3::Y * terra_physics::character::PLAYER_EYE_OFFSET;
+    let target = Vec3::new(
+        position[0] as f32 + 0.80,
+        position[1] as f32 + 0.5,
+        position[2] as f32 + 0.99,
+    );
+    let direction = (target - eye).normalize();
+    let look = [(-direction.x).atan2(-direction.z), direction.y.asin()];
+    client
+        .world_mut()
+        .resource_mut::<client::ClientSession>()
+        .look = look;
+    let intent = MiningIntent {
+        target: Some(MiningTarget::Block {
+            position,
+            expected: 82,
+        }),
+        look,
+        fell_tree: false,
+    };
+    held(&mut host, &mut client, intent, Duration::from_millis(180));
+    assert!(
+        pose(&host, combined),
+        "stone half must require its own pickaxe, not the oak half's requirements"
+    );
+    assert!(
+        client
+            .world()
+            .resource::<client::ClientSession>()
+            .mining
+            .is_none()
+    );
+    let uuid = client
+        .world()
+        .resource::<client::ClientSession>()
+        .uuid
+        .unwrap();
+    let mut inventory = terra_core::Inventory::default();
+    inventory.insert(ItemKind::Tool(terra_core::ToolKind::WoodPickaxe), 1);
+    host.world_mut()
+        .resource_mut::<EditJournal>()
+        .gameplay_mut()
+        .inventories
+        .insert(uuid, inventory.clone());
+    client
+        .world_mut()
+        .resource_mut::<client::ClientSession>()
+        .inventory = inventory;
+    client
+        .world_mut()
+        .resource_mut::<client::SelectedInventorySlot>()
+        .0 = Some(0);
+    let end = Instant::now() + Duration::from_millis(1550);
+    while Instant::now() < end && pose(&host, combined) {
+        client
+            .world_mut()
+            .write_message(client::MiningRequest(intent));
+        tick_for(
+            &mut host,
+            &mut [&mut client, &mut observer],
+            Duration::from_millis(70),
+        );
+    }
+    wait(
+        &mut host,
+        &mut [&mut client, &mut observer],
+        |host, clients| pose(host, 5) && clients.iter().all(|client| pose(client, 5)),
+    );
+    let mut late = profile_client(address, terra_core::PlayerProfile::default());
+    wait(
+        &mut host,
+        &mut [&mut client, &mut observer, &mut late],
+        |_, clients| {
+            clients[2].world().resource::<client::ClientSession>().ready && pose(clients[2], 5)
+        },
+    );
+    assert!(
+        host.world()
+            .resource::<EditJournal>()
+            .gameplay()
+            .drops
+            .iter()
+            .any(|drop| drop.stack.item == ItemKind::Block(85) && drop.stack.count == 1)
+    );
+    assert!(
+        !host
+            .world()
+            .resource::<EditJournal>()
+            .gameplay()
+            .drops
+            .iter()
+            .any(|drop| drop.stack.item == ItemKind::Block(82))
+    );
+}
+
+#[test]
 fn dense_masonry_requires_a_real_held_pickaxe_and_uses_its_server_speed() {
     let (mut host, mut a, position, look) = fixture();
     host.world_mut()
@@ -253,6 +417,7 @@ fn dense_masonry_requires_a_real_held_pickaxe_and_uses_its_server_speed() {
             expected: 12,
         }),
         look,
+        fell_tree: false,
     };
     held(&mut host, &mut a, intent, Duration::from_millis(200));
     assert_eq!(
@@ -333,6 +498,7 @@ fn ore_mining_requires_the_right_level_and_drops_resources_not_host_blocks() {
                 expected: material,
             }),
             look,
+            fell_tree: false,
         };
         for (tool, duration) in [(insufficient, 150), (correct, 900)] {
             let mut inventory = terra_core::Inventory::default();
@@ -422,6 +588,7 @@ fn survival_is_timed_cancellable_and_direct_removal_cannot_bypass_authority() {
             expected: 3,
         }),
         look,
+        fell_tree: false,
     };
     held(&mut host, &mut a, intent, Duration::from_millis(450));
     assert!(
@@ -431,7 +598,11 @@ fn survival_is_timed_cancellable_and_direct_removal_cannot_bypass_authority() {
             .is_some_and(|m| m.progress > 0.0 && m.progress < 1.0)
     );
     a.world_mut()
-        .write_message(client::MiningRequest(MiningIntent { target: None, look }));
+        .write_message(client::MiningRequest(MiningIntent {
+            target: None,
+            look,
+            fell_tree: false,
+        }));
     tick_for(&mut host, &mut [&mut a], Duration::from_millis(900));
     assert_eq!(
         host.world().resource::<ChunkStore>().block_at(position),
@@ -1068,6 +1239,7 @@ fn target_switch_out_of_reach_and_full_drop_budget_preserve_blocks() {
             expected: 3,
         }),
         look,
+        fell_tree: false,
     };
     held(&mut host, &mut a, first, Duration::from_millis(500));
     let far = MiningIntent {
@@ -1076,6 +1248,7 @@ fn target_switch_out_of_reach_and_full_drop_budget_preserve_blocks() {
             expected: 3,
         }),
         look,
+        fell_tree: false,
     };
     a.world_mut().write_message(client::MiningRequest(far));
     tick_for(&mut host, &mut [&mut a], Duration::from_millis(900));
@@ -1227,6 +1400,7 @@ fn survival_prop_mining_creates_one_resource_without_removing_neighbors() {
             id: prop.id,
         }),
         look,
+        fell_tree: false,
     };
     held(&mut host, &mut a, intent, Duration::from_millis(400));
     wait(&mut host, &mut [&mut a], |_, clients| {

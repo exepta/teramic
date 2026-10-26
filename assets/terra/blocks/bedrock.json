@@ -6,7 +6,7 @@
   "creative_category": "terrain",
   "render_kind": "cube",
   "surface": "rock",
-  "bevel_width": 0.035,
+  "bevel_width": 0.0,
   "textures": { "Deep foundation": "textures/stone-strata-hd.png" },
   "materials": { "Deep foundation": { "roughness": 1.0, "reflectance": 0.02 } },
   "face_materials": ["Deep foundation", "Deep foundation", "Deep foundation", "Deep foundation", "Deep foundation", "Deep foundation"],

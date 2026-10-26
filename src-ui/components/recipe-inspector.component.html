@@ -5,8 +5,8 @@
     @if (craftingView.selected) {
     <div class="recipe-section-heading"><h3>{{ craftingView.recipe_heading }}</h3><p>{{ craftingView.recipe_station }}</p></div>
     <div class="recipe-workspace">
-      <div id="recipe-preview-grid" [class]="craftingView.smelting ? 'recipe-smelting-input' : 'recipe-grid'">@for (slot of craftingView.recipe_grid; track slot.id) { <inventory-slot [slot]="slot" /> }</div>
-      @if (craftingView.smelting) { <div class="recipe-smelting-process"><icon name="flame" size="28" /><icon name="arrow-right" size="42" /><p>{{ craftingView.recipe_duration }}</p></div> } @else { <icon name="arrow-right" size="42" /> }
+      <div id="recipe-preview-grid" [class]="(craftingView.smelting || craftingView.crushing) ? 'recipe-smelting-input' : 'recipe-grid'">@for (slot of craftingView.recipe_grid; track slot.id) { <inventory-slot [slot]="slot" /> }</div>
+      @if (craftingView.smelting || craftingView.crushing) { <div class="recipe-smelting-process">@if (craftingView.crushing) { <icon name="settings" size="28" /> } @else { <icon name="flame" size="28" /> }<icon name="arrow-right" size="42" /><p>{{ craftingView.recipe_duration }}</p></div> } @else { <icon name="arrow-right" size="42" /> }
       <div id="recipe-preview-output" class="recipe-result">@for (slot of craftingView.recipe_output; track slot.id) { <inventory-slot [slot]="slot" /> }</div>
     </div>
     <div class="recipe-ingredients">@for (ingredient of craftingView.ingredients; track ingredient.name) {

@@ -1,0 +1,16 @@
+{
+  "item": {
+    "armor": {
+      "material": "ruby",
+      "piece": "pants"
+    }
+  },
+  "name": "Ruby Pants",
+  "description": "Ruby pants fitted for protection and comfortable movement.",
+  "equipment": {
+    "slot": "pants",
+    "armor_points": 8.75,
+    "health_bonus": 6,
+    "stamina_bonus": 3
+  }
+}

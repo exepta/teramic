@@ -3,6 +3,49 @@ use crate::{edits::BlockObjectState, streaming::LoadedSection};
 use terra_voxel::{BlockSection, global_to_section};
 
 #[test]
+fn chimney_roof_seal_collision_matches_the_partial_slab_height() {
+    let origin = [-16, 15, -16];
+    for pose in [0, 4] {
+        let (mut chunks, mut journal, properties) = empty_world(origin);
+        put(&mut chunks, &mut journal, origin, 60);
+        for offset in [[-1, 0, 0], [1, 0, 0], [0, 0, -1]] {
+            let neighbor = std::array::from_fn(|axis| origin[axis] + offset[axis]);
+            put(&mut chunks, &mut journal, neighbor, 85);
+            journal
+                .set_object_state(
+                    neighbor,
+                    Some(BlockObjectState {
+                        facing: pose,
+                        ..Default::default()
+                    }),
+                )
+                .unwrap();
+        }
+        let mut boxes = Vec::new();
+        assert!(visit_boxes(
+            &chunks,
+            &journal,
+            &properties,
+            origin,
+            |bounds| boxes.push(bounds)
+        ));
+        for (height, filled) in [(0.25, pose == 0), (0.75, pose == 4)] {
+            let point = [
+                origin[0] as f64 + 0.1,
+                origin[1] as f64 + height,
+                origin[2] as f64 + 0.5,
+            ];
+            assert_eq!(
+                boxes
+                    .iter()
+                    .any(|bounds| bounds.intersects(point, point.map(|value| value + 0.001))),
+                filled
+            );
+        }
+    }
+}
+
+#[test]
 fn dyed_beds_share_the_exact_head_and_foot_picking_volumes_in_every_orientation() {
     for material in 71..=73 {
         for facing in 0..4 {

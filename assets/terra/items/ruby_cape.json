@@ -1,0 +1,16 @@
+{
+  "item": {
+    "cape": {
+      "material": "ruby",
+      "color": "white"
+    }
+  },
+  "name": "Ruby Cape",
+  "description": "A layered wool cloak and folded scarf with ruby straps and clasp. Recolor the cloth with flower dye.",
+  "equipment": {
+    "slot": "cape",
+    "armor_points": 3.5,
+    "health_bonus": 6,
+    "stamina_bonus": 2
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "item": {
+    "armor": {
+      "material": "ruby",
+      "piece": "helmet"
+    }
+  },
+  "name": "Ruby Helmet",
+  "description": "Ruby helmet fitted for protection and comfortable movement.",
+  "equipment": {
+    "slot": "helmet",
+    "armor_points": 5.25,
+    "health_bonus": 4.5,
+    "stamina_bonus": 2.25
+  }
+}

@@ -2,6 +2,31 @@
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
+pub const NEST_CAPACITY: usize = 10;
+
+/// Inventory space and the real mature-honey count commit atomically.
+pub fn collect_honey(
+    state: &mut crate::GameplayState,
+    player: crate::PlayerUuid,
+    nest: u64,
+    position: [f64; 3],
+) -> bool {
+    if player.is_nil()
+        || state.inventories.len() >= 4096 && !state.inventories.contains_key(&player)
+    {
+        return false;
+    }
+    let item = crate::ItemKind::Animal(super::AnimalProduct::Honey);
+    let mut inventory = state.inventories.get(&player).cloned().unwrap_or_default();
+    if !inventory.has_capacity(item) || !state.creatures.ecology.harvest_honey(nest, position) {
+        return false;
+    }
+    assert_eq!(inventory.insert(item, 1), 0, "reserved honey slot");
+    state.inventories.insert(player, inventory);
+    state.revision = state.revision.wrapping_add(1);
+    true
+}
+
 #[derive(Debug, Default, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Ecology {
     pub seconds: f64,
@@ -35,7 +60,7 @@ impl Ecology {
         for bee in self.bees.values().filter(|b| b.inside) {
             let count = occupants.entry(bee.nest).or_default();
             *count += 1;
-            if *count > 10 {
+            if *count > NEST_CAPACITY {
                 return false;
             }
         }
@@ -73,6 +98,18 @@ impl Ecology {
             .values()
             .filter(|b| b.nest == nest && b.inside)
             .count()
+    }
+    /// Mature honey is removed only after the caller reserved inventory space.
+    pub fn harvest_honey(&mut self, nest: u64, position: [f64; 3]) -> bool {
+        let Some(state) = self
+            .nests
+            .get_mut(&nest)
+            .filter(|n| n.position == position && n.honey > 0)
+        else {
+            return false;
+        };
+        state.honey -= 1;
+        true
     }
     pub fn tick(&mut self, dt: f32) {
         if !dt.is_finite() || !(0.0..=0.25).contains(&dt) {
@@ -158,6 +195,44 @@ impl Ecology {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn real_honey_collection_is_atomic_and_never_invents_a_missing_or_empty_nest() {
+        let player = crate::PlayerUuid::from_u128(121);
+        let mut state = crate::GameplayState::default();
+        let honey = crate::ItemKind::Animal(super::super::AnimalProduct::Honey);
+        assert!(!collect_honey(&mut state, player, 7, [-16.5, 3.0, -0.5]));
+        assert!(state.inventories.is_empty());
+        state.creatures.ecology.nests.insert(
+            7,
+            NestState {
+                position: [-16.5, 3.0, -0.5],
+                nectar: 345,
+                honey: 2,
+                progress: 0.75,
+            },
+        );
+        assert!(!collect_honey(&mut state, player, 7, [16.5, 3.0, -0.5]));
+        assert!(collect_honey(&mut state, player, 7, [-16.5, 3.0, -0.5]));
+        assert_eq!(state.inventories[&player].count(honey), 1);
+        let nest = &state.creatures.ecology.nests[&7];
+        assert_eq!((nest.nectar, nest.honey, nest.progress), (345, 1, 0.75));
+        state.inventories.get_mut(&player).unwrap().slots = vec![
+            crate::ItemStack {
+                item: crate::ItemKind::Block(3),
+                count: crate::ItemKind::Block(3).max_stack()
+            };
+            crate::INVENTORY_SLOTS
+        ];
+        let before = state.clone();
+        assert!(!collect_honey(&mut state, player, 7, [-16.5, 3.0, -0.5]));
+        assert_eq!(state, before);
+        state.inventories.clear();
+        assert!(collect_honey(&mut state, player, 7, [-16.5, 3.0, -0.5]));
+        let before = state.clone();
+        assert!(!collect_honey(&mut state, player, 7, [-16.5, 3.0, -0.5]));
+        assert_eq!(state, before);
+        assert!(state.valid());
+    }
     #[test]
     fn nectar_regenerates_after_three_minutes_and_honey_uses_occupied_nest_rate() {
         let mut eco = Ecology::default();

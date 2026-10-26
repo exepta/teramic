@@ -13,7 +13,11 @@ use terra_world::streaming::ChunkStore;
 
 #[derive(SystemParam)]
 pub(crate) struct RenderWorld<'w, 's> {
+    visibility: Option<Res<'w, super::visibility::TerrainVisibility>>,
     cache: Option<Res<'w, super::GeometryCache>>,
+    far: Option<Res<'w, super::FarCache>>,
+    materials: Option<Res<'w, Assets<StandardMaterial>>>,
+    shadow_material: Option<Res<'w, super::shadows::OpaqueShadowMaterial>>,
     budget: Option<ResMut<'w, crate::MeshUploadStatus>>,
     chunks: Res<'w, ChunkStore>,
     journal: Res<'w, EditJournal>,
@@ -38,10 +42,33 @@ pub(crate) fn upload_sections(
     mut status: ResMut<RenderStatus>,
 ) {
     let _scope = terra_core::profiling::ScopeTimer::new("terrain.upload");
-    if jobs.0.is_empty() && !world.chunks.is_changed() && !rendered.is_changed() {
+    let visibility_changed = world.visibility.as_ref().is_some_and(|v| v.is_changed());
+    if jobs.0.is_empty()
+        && !world.chunks.is_changed()
+        && !rendered.is_changed()
+        && !visibility_changed
+    {
         return;
     }
     let chunks = &world.chunks;
+    if visibility_changed {
+        let hidden: Vec<_> = rendered
+            .sections
+            .keys()
+            .copied()
+            .filter(|p| world.visibility.as_ref().is_some_and(|v| v.hidden(*p)))
+            .collect();
+        for p in hidden {
+            if let Some(old) = rendered.sections.remove(&p) {
+                crate::transitions::retire(
+                    &mut commands,
+                    old.entity,
+                    old.meshes,
+                    terra_core::ChunkAnimation::None,
+                );
+            }
+        }
+    }
     let animation = world
         .config
         .as_ref()
@@ -66,9 +93,20 @@ pub(crate) fn upload_sections(
     }
     let mut completed = Vec::new();
     let focus = world.focus.as_ref().map_or([0.0; 3], |f| f.0);
+    let fallback = world
+        .config
+        .is_none()
+        .then(terra_core::ClientConfig::default);
+    let client = world
+        .config
+        .as_ref()
+        .map(|c| &c.client)
+        .or(fallback.as_ref())
+        .unwrap();
     let mut positions: Vec<_> = jobs.0.keys().copied().collect();
     positions.sort_by_key(|p| {
         (
+            !super::jobs::interactive_edit(*p, &world.journal, &rendered),
             super::lod::distance_squared(*p, focus) as u64,
             p.y,
             p.z,
@@ -76,6 +114,14 @@ pub(crate) fn upload_sections(
         )
     });
     for position in positions {
+        if world
+            .visibility
+            .as_ref()
+            .is_some_and(|v| v.hidden(position))
+        {
+            jobs.0.remove(&position);
+            continue;
+        }
         if completed.len()
             == world
                 .config
@@ -88,21 +134,79 @@ pub(crate) fn upload_sections(
             continue;
         };
         if let Some((mut result, seconds)) = poll_job(job) {
+            let previous = rendered.sections.get(&position);
+            let stale_detail = world.focus.as_ref().is_some_and(|focus| {
+                super::lod::select_configured_micro_detail(
+                    position,
+                    focus.0,
+                    previous.map(|r| r.micro_detail),
+                    client.blocks,
+                ) != job.micro_detail
+                    || super::lod::select_level(
+                        position,
+                        focus.0,
+                        previous.map(|r| r.detail_level),
+                        client,
+                    ) != job.level
+            });
+            if stale_detail
+                || job.epoch != world.journal.mesh_epoch(position)
+                || job.appearance_epoch
+                    != world.cache.as_ref().map_or_else(
+                        || world.journal.appearance_epoch(position),
+                        |cache| cache.appearance_epoch(position, &world.journal),
+                    )
+                || chunks
+                    .loaded
+                    .get(&position)
+                    .is_none_or(|s| s.mesh_epoch != job.epoch)
+            {
+                jobs.0.remove(&position);
+                jobs.1.push(position);
+                status.completed_mesh_jobs += 1;
+                status.composition_seconds += seconds;
+                continue;
+            }
             if !super::shadows::enabled(world.graphics.as_deref())
                 && let Ok(batches) = &mut result
             {
                 batches.retain(|batch| !batch.shadow_only);
             }
-            let vertices = result
-                .as_ref()
-                .map_or(0, |batches| batches.iter().map(|b| b.positions.len()).sum());
-            if world
-                .budget
-                .as_mut()
-                .is_some_and(|b| !b.reserve(crate::upload_budget::UploadKind::Terrain, vertices))
-            {
+            let vertices = result.as_ref().map_or(0, |batches| {
+                batches.iter().map(|batch| batch.positions.len()).sum()
+            });
+            if world.budget.as_mut().is_some_and(|budget| {
+                !budget.reserve(crate::upload_budget::UploadKind::Terrain, vertices)
+            }) {
                 job.ready = Some((result, seconds));
                 break;
+            }
+            if let (Ok(batches), Ok(origin)) = (&mut result, position.origin()) {
+                let tint = world
+                    .terrain
+                    .as_ref()
+                    .filter(|_| {
+                        world.water.is_some()
+                            && assets.templates.as_ref().is_some_and(|templates| {
+                                batches
+                                    .iter()
+                                    .any(|batch| templates.water_material(batch.material))
+                            })
+                    })
+                    .map(|terrain| crate::water::biome::WaterTint::new(&terrain.0, origin));
+                for batch in batches.iter_mut().filter(|batch| batch.staged.is_none()) {
+                    if batch.positions.is_empty() || !batch.has_indices() {
+                        continue;
+                    }
+                    prepare_batch(
+                        batch,
+                        &world,
+                        &assets,
+                        tint.as_ref(),
+                        &mut meshes,
+                        job.level == super::DetailLevel::Far,
+                    );
+                }
             }
             status.completed_mesh_jobs += 1;
             status.composition_seconds += seconds;
@@ -132,29 +236,6 @@ pub(crate) fn upload_sections(
                     || world.journal.appearance_epoch(position),
                     |cache| cache.appearance_epoch(position, &world.journal),
                 )
-            || world.focus.as_ref().is_some_and(|f| {
-                if super::lod::select_configured_micro_detail(
-                    position,
-                    f.0,
-                    rendered.sections.get(&position).map(|r| r.micro_detail),
-                    world
-                        .config
-                        .as_ref()
-                        .map_or_else(Default::default, |c| c.client.blocks),
-                ) != micro_detail
-                {
-                    return true;
-                }
-                super::lod::select_level(
-                    position,
-                    f.0,
-                    rendered.sections.get(&position).map(|r| r.detail_level),
-                    &world
-                        .config
-                        .as_ref()
-                        .map_or_else(Default::default, |c| c.client.clone()),
-                ) != level
-            })
             || chunks
                 .loaded
                 .get(&position)
@@ -173,7 +254,7 @@ pub(crate) fn upload_sections(
         };
         // Bevy's mesh allocator must not receive an empty vertex/index buffer.
         // Empty section results still retire an obsolete mesh below.
-        batches.retain(|batch| !batch.positions.is_empty() && batch.has_indices());
+        batches.retain(|batch| batch.staged.is_some());
         // A newly generated neighbor can invalidate this section while its
         // first mesh is still queued/fading. That is still an initial reveal,
         // even with a newer epoch; never expose its replacement fully opaque.
@@ -258,86 +339,18 @@ pub(crate) fn upload_sections(
             .flat_map(|batch| batch.shadow_sources.iter().copied())
             .collect();
         let mut handles = Vec::with_capacity(batches.len());
-        let water_tint = world
-            .terrain
-            .as_ref()
-            .filter(|_| {
-                world.water.is_some()
-                    && assets.templates.as_ref().is_some_and(|templates| {
-                        batches
-                            .iter()
-                            .any(|batch| templates.water_material(batch.material))
-                    })
-            })
-            .map(|terrain| crate::water::biome::WaterTint::new(&terrain.0, origin));
         for mut batch in batches {
             let shadow_only = batch.shadow_only;
-            let rooted_fibre = !batch.rooted_wind.is_empty();
-            let damp = !batch.surface_water.is_empty() && !rooted_fibre && !shadow_only;
+            let mut prepared = batch.staged.take().expect("complete upload is atomic");
+            let rooted_fibre = prepared.rooted;
+            let damp = prepared.damp;
             let water = world.water.as_ref().filter(|_| {
                 assets
                     .templates
                     .as_ref()
                     .is_some_and(|t| t.water_material(batch.material))
             });
-            let coastal_quads = if water.is_some() {
-                batch
-                    .colors
-                    .chunks_exact(4)
-                    .filter(|quad| (quad[0][3] - 6.0).abs() < 0.001)
-                    .count()
-            } else {
-                0
-            };
-            let biome_tints = water.and(water_tint.as_ref()).map(|tint| {
-                batch
-                    .positions
-                    .iter()
-                    .map(|&p| tint.at(p))
-                    .collect::<Vec<_>>()
-            });
-            let indices = batch.take_indices();
-            let mut mesh = Mesh::new(
-                PrimitiveTopology::TriangleList,
-                RenderAssetUsages::RENDER_WORLD,
-            )
-            .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, batch.positions)
-            .with_inserted_indices(indices);
-            if !batch.uvs.is_empty() {
-                mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, batch.uvs);
-            }
-            if rooted_fibre {
-                insert_rooted_wind(&mut mesh, batch.rooted_wind);
-            } else if damp {
-                let mut values = batch.surface_water;
-                values.resize(mesh.count_vertices(), [0.0; 2]);
-                mesh.insert_attribute(Mesh::ATTRIBUTE_UV_1, values);
-            }
-            if let Some(tints) = biome_tints {
-                mesh.insert_attribute(crate::water::biome::ATTRIBUTE_BIOME_TINT, tints);
-            }
-            if !batch.packed_normals.is_empty() {
-                mesh.insert_attribute(
-                    bevy::mesh::MeshVertexAttribute {
-                        format: bevy::render::render_resource::VertexFormat::Snorm8x4,
-                        ..Mesh::ATTRIBUTE_NORMAL
-                    },
-                    bevy::mesh::VertexAttributeValues::Snorm8x4(batch.packed_normals),
-                );
-            } else if !batch.normals.is_empty() {
-                mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, batch.normals);
-            }
-            if !batch.packed_colors.is_empty() {
-                mesh.insert_attribute(
-                    bevy::mesh::MeshVertexAttribute {
-                        format: bevy::render::render_resource::VertexFormat::Unorm8x4,
-                        ..Mesh::ATTRIBUTE_COLOR
-                    },
-                    bevy::mesh::VertexAttributeValues::Unorm8x4(batch.packed_colors),
-                );
-            } else if !batch.colors.is_empty() {
-                mesh.insert_attribute(Mesh::ATTRIBUTE_COLOR, batch.colors);
-            }
+            let coastal_quads = prepared.coastal_quads;
             let foliage = world
                 .foliage
                 .as_ref()
@@ -351,15 +364,8 @@ pub(crate) fn upload_sections(
                 .as_ref()
                 .filter(|_| rooted_fibre)
                 .and_then(|assets| assets.fibres.get(&batch.material));
-            let bounds = foliage
-                .or(fibre)
-                .or(flame)
-                .and_then(|_| mesh.compute_aabb())
-                .map(|mut bounds| {
-                    bounds.half_extents += Vec3A::splat(crate::foliage::WIND_BOUNDS);
-                    bounds
-                });
-            let handle = meshes.add(mesh);
+            let bounds = prepared.bounds;
+            let handle = prepared.handle;
             let mut entity =
                 commands.spawn((Mesh3d(handle.clone()), Transform::default(), ChildOf(root)));
             if shadow_only {
@@ -373,7 +379,11 @@ pub(crate) fn upload_sections(
                     terra_core::miniature::MiniatureMesh::Terrain,
                 ));
             }
-            if let Some(water) = water {
+            if prepared.opaque_shadow
+                && let Some(material) = world.shadow_material.as_ref()
+            {
+                entity.insert(MeshMaterial3d(material.0.clone()));
+            } else if let Some(water) = water {
                 if coastal_quads > 0 {
                     entity.insert(super::CoastalWashQuads(coastal_quads));
                 }
@@ -431,6 +441,26 @@ pub(crate) fn upload_sections(
             if replaced_caster || permanently_shadowless {
                 entity.insert(bevy::light::NotShadowCaster);
             }
+            if let Some(geometry) = prepared.far.take() {
+                let material = world
+                    .wet
+                    .as_ref()
+                    .filter(|_| damp)
+                    .and_then(|wet| wet.0.get(&batch.material))
+                    .map(|m| super::far_batches::Material::Wet(m.clone()))
+                    .unwrap_or_else(|| {
+                        super::far_batches::Material::Standard(
+                            assets.materials[batch.material].clone(),
+                        )
+                    });
+                entity.insert(super::far_batches::Source {
+                    geometry,
+                    position,
+                    root,
+                    material,
+                    shadowless: replaced_caster || permanently_shadowless,
+                });
+            }
             handles.push(handle);
         }
         if first_upload {
@@ -448,6 +478,121 @@ pub(crate) fn upload_sections(
             },
         );
     }
+}
+
+fn prepare_batch(
+    batch: &mut super::builder::MeshBatch,
+    world: &RenderWorld,
+    assets: &BlockAssets,
+    tint: Option<&crate::water::biome::WaterTint>,
+    meshes: &mut Assets<Mesh>,
+    far: bool,
+) {
+    let opaque_shadow =
+        batch.shadow_only && batch.normals.is_empty() && batch.packed_normals.is_empty();
+    let rooted = !batch.rooted_wind.is_empty();
+    let damp = !batch.surface_water.is_empty() && !rooted && !batch.shadow_only;
+    let water = world.water.is_some()
+        && assets
+            .templates
+            .as_ref()
+            .is_some_and(|t| t.water_material(batch.material));
+    let coastal_quads = if water {
+        batch
+            .colors
+            .chunks_exact(4)
+            .filter(|q| (q[0][3] - 6.0).abs() < 0.001)
+            .count()
+    } else {
+        0
+    };
+    let tints = if water {
+        tint.map(|t| batch.positions.iter().map(|&p| t.at(p)).collect::<Vec<_>>())
+    } else {
+        None
+    };
+    let indices = batch.take_indices();
+    let mut mesh = Mesh::new(
+        PrimitiveTopology::TriangleList,
+        RenderAssetUsages::RENDER_WORLD,
+    )
+    .with_inserted_attribute(
+        Mesh::ATTRIBUTE_POSITION,
+        std::mem::take(&mut batch.positions),
+    )
+    .with_inserted_indices(indices);
+    if !batch.uvs.is_empty() {
+        mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, std::mem::take(&mut batch.uvs));
+    }
+    if rooted {
+        insert_rooted_wind(&mut mesh, std::mem::take(&mut batch.rooted_wind));
+    } else if damp {
+        let mut values = std::mem::take(&mut batch.surface_water);
+        values.resize(mesh.count_vertices(), [0.; 2]);
+        mesh.insert_attribute(Mesh::ATTRIBUTE_UV_1, values);
+    }
+    if let Some(tints) = tints {
+        mesh.insert_attribute(crate::water::biome::ATTRIBUTE_BIOME_TINT, tints);
+    }
+    if !batch.packed_normals.is_empty() {
+        mesh.insert_attribute(
+            bevy::mesh::MeshVertexAttribute {
+                format: bevy::render::render_resource::VertexFormat::Snorm8x4,
+                ..Mesh::ATTRIBUTE_NORMAL
+            },
+            bevy::mesh::VertexAttributeValues::Snorm8x4(std::mem::take(&mut batch.packed_normals)),
+        );
+    } else if !batch.normals.is_empty() {
+        mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, std::mem::take(&mut batch.normals));
+    }
+    if !batch.packed_colors.is_empty() {
+        mesh.insert_attribute(
+            bevy::mesh::MeshVertexAttribute {
+                format: bevy::render::render_resource::VertexFormat::Unorm8x4,
+                ..Mesh::ATTRIBUTE_COLOR
+            },
+            bevy::mesh::VertexAttributeValues::Unorm8x4(std::mem::take(&mut batch.packed_colors)),
+        );
+    } else if !batch.colors.is_empty() {
+        mesh.insert_attribute(Mesh::ATTRIBUTE_COLOR, std::mem::take(&mut batch.colors));
+    }
+    let wind = world.foliage.as_ref().is_some_and(|a| {
+        a.materials.contains_key(&batch.material)
+            || a.flames.contains_key(&batch.material)
+            || a.reference.contains_key(&batch.material)
+            || rooted && a.fibres.contains_key(&batch.material)
+    });
+    let bounds = wind
+        .then(|| mesh.compute_aabb())
+        .flatten()
+        .map(|mut bounds| {
+            bounds.half_extents += Vec3A::splat(crate::foliage::WIND_BOUNDS);
+            bounds
+        });
+    let far = if world.far.is_some()
+        && far
+        && !batch.shadow_only
+        && !wind
+        && !water
+        && world
+            .materials
+            .as_ref()
+            .and_then(|materials| materials.get(&assets.materials[batch.material]))
+            .is_some_and(|m| m.alpha_mode == AlphaMode::Opaque)
+    {
+        world.far.as_ref().and_then(|cache| cache.capture(&mesh))
+    } else {
+        None
+    };
+    batch.staged = Some(super::staging::StagedMesh {
+        opaque_shadow,
+        handle: meshes.add(mesh),
+        bounds,
+        rooted,
+        damp,
+        coastal_quads,
+        far,
+    });
 }
 
 fn insert_rooted_wind(mesh: &mut Mesh, mut weights: Vec<[f32; 2]>) {
@@ -486,6 +631,225 @@ fn remove_section(old: RenderedSection, commands: &mut Commands) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn staging_preserves_shadow_kind_after_draining_vertex_attributes() {
+        use bevy::ecs::system::RunSystemOnce;
+        let mut app = App::new();
+        app.init_resource::<Assets<Mesh>>()
+            .init_resource::<BlockAssets>()
+            .init_resource::<ChunkStore>()
+            .init_resource::<EditJournal>();
+        app.world_mut()
+            .run_system_once(
+                |world: RenderWorld, assets: Res<BlockAssets>, mut meshes: ResMut<Assets<Mesh>>| {
+                    for (shadow, normals, packed, expected) in [
+                        (true, false, false, true),
+                        (true, true, false, false),
+                        (true, false, true, false),
+                        (false, false, false, false),
+                    ] {
+                        let mut batch = super::super::builder::MeshBatch {
+                            shadow_only: shadow,
+                            positions: vec![[0.; 3]; 3],
+                            indices: vec![0, 1, 2],
+                            normals: if normals {
+                                vec![[0., 1., 0.]; 3]
+                            } else {
+                                vec![]
+                            },
+                            packed_normals: if packed {
+                                vec![[0, 127, 0, 0]; 3]
+                            } else {
+                                vec![]
+                            },
+                            ..default()
+                        };
+                        prepare_batch(&mut batch, &world, &assets, None, &mut meshes, false);
+                        assert!(batch.normals.is_empty());
+                        assert!(batch.packed_normals.is_empty());
+                        assert_eq!(batch.staged.unwrap().opaque_shadow, expected);
+                    }
+                },
+            )
+            .unwrap();
+    }
+
+    #[test]
+    fn multi_material_section_reserves_once_and_keeps_old_geometry_while_deferred() {
+        use super::super::{builder::MeshBatch, jobs::RenderJob};
+        for (vertices, count) in [(crate::upload_budget::TERRAIN_VERTICES, 2), (3, 12)] {
+            let mut app = App::new();
+            app.add_plugins(MinimalPlugins)
+                .init_resource::<Assets<Mesh>>()
+                .init_resource::<Assets<StandardMaterial>>()
+                .init_resource::<BlockAssets>()
+                .init_resource::<RenderedSections>()
+                .init_resource::<RenderStatus>()
+                .init_resource::<EditJournal>()
+                .init_resource::<ChunkStore>()
+                .init_resource::<RenderJobs>()
+                .init_resource::<crate::MeshUploadStatus>()
+                .add_systems(Update, upload_sections);
+            let material = app
+                .world_mut()
+                .resource_mut::<Assets<StandardMaterial>>()
+                .add(StandardMaterial::default());
+            app.world_mut()
+                .resource_mut::<BlockAssets>()
+                .materials
+                .push(material);
+            let position = terra_voxel::SectionPos::default();
+            app.world_mut().resource_mut::<ChunkStore>().loaded.insert(
+                position,
+                terra_world::streaming::LoadedSection {
+                    data: terra_voxel::BlockSection::empty(position).unwrap(),
+                    mesh: None,
+                    mesh_epoch: 0,
+                    water_epoch: 0,
+                    water: None,
+                    props: Vec::new(),
+                },
+            );
+            let old = app.world_mut().spawn_empty().id();
+            app.world_mut()
+                .resource_mut::<RenderedSections>()
+                .sections
+                .insert(
+                    position,
+                    RenderedSection {
+                        micro_detail: false,
+                        appearance_epoch: 0,
+                        entity: old,
+                        meshes: Vec::new(),
+                        mesh_epoch: 0,
+                        detail_level: super::super::DetailLevel::Near,
+                    },
+                );
+            let batch = || MeshBatch {
+                positions: vec![[0.; 3]; vertices],
+                indices: vec![0, 1, 2],
+                ..default()
+            };
+            let task =
+                bevy::tasks::AsyncComputeTaskPool::get().spawn(async { (Ok(Vec::new()), 0.) });
+            app.world_mut().resource_mut::<RenderJobs>().0.insert(
+                position,
+                RenderJob {
+                    ready: Some((Ok(std::iter::repeat_with(batch).take(count).collect()), 0.)),
+                    micro_detail: false,
+                    epoch: 0,
+                    appearance_epoch: 0,
+                    level: super::super::DetailLevel::Near,
+                    task,
+                },
+            );
+            assert!(
+                app.world_mut()
+                    .resource_mut::<crate::MeshUploadStatus>()
+                    .reserve(
+                        crate::upload_budget::UploadKind::Terrain,
+                        crate::upload_budget::TERRAIN_VERTICES,
+                    )
+            );
+            app.update();
+            assert_eq!(
+                app.world()
+                    .resource::<crate::MeshUploadStatus>()
+                    .admitted_vertices,
+                crate::upload_budget::TERRAIN_VERTICES
+            );
+            assert_eq!(
+                app.world().resource::<RenderedSections>().sections[&position].entity,
+                old
+            );
+            assert!(app.world().get_entity(old).is_ok());
+            assert_eq!(app.world().resource::<Assets<Mesh>>().len(), 0);
+            app.world_mut()
+                .insert_resource(crate::MeshUploadStatus::default());
+            app.update();
+            assert_eq!(
+                app.world()
+                    .resource::<crate::MeshUploadStatus>()
+                    .admitted_vertices,
+                count * vertices
+            );
+            let root = app.world().resource::<RenderedSections>().sections[&position].entity;
+            assert_ne!(root, old);
+            assert!(app.world().get_entity(old).is_err());
+            assert_eq!(
+                app.world().resource::<RenderedSections>().sections[&position]
+                    .meshes
+                    .len(),
+                count
+            );
+            assert!(app.world().resource::<RenderJobs>().0.is_empty());
+        }
+    }
+
+    #[test]
+    fn stale_lod_results_do_not_allocate_meshes_or_consume_upload_budget() {
+        use super::super::{builder::MeshBatch, jobs::RenderJob};
+        let position = terra_voxel::SectionPos::default();
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .init_resource::<Assets<Mesh>>()
+            .init_resource::<BlockAssets>()
+            .init_resource::<RenderedSections>()
+            .init_resource::<RenderStatus>()
+            .init_resource::<EditJournal>()
+            .init_resource::<ChunkStore>()
+            .init_resource::<RenderJobs>()
+            .init_resource::<crate::MeshUploadStatus>()
+            .insert_resource(terra_world::streaming::ChunkFocus([1000.; 3]))
+            .add_systems(Update, upload_sections);
+        app.world_mut().resource_mut::<ChunkStore>().loaded.insert(
+            position,
+            terra_world::streaming::LoadedSection {
+                data: terra_voxel::BlockSection::empty(position).unwrap(),
+                mesh: None,
+                mesh_epoch: 0,
+                water_epoch: 0,
+                water: None,
+                props: Vec::new(),
+            },
+        );
+        app.world_mut().resource_mut::<RenderJobs>().0.insert(
+            position,
+            RenderJob {
+                ready: Some((
+                    Ok(vec![MeshBatch {
+                        positions: vec![[0.; 3]; 3],
+                        indices: vec![0, 1, 2],
+                        ..default()
+                    }]),
+                    0.,
+                )),
+                micro_detail: true,
+                epoch: 0,
+                appearance_epoch: 0,
+                level: super::super::DetailLevel::Near,
+                task: bevy::tasks::AsyncComputeTaskPool::get().spawn(std::future::pending()),
+            },
+        );
+        app.update();
+        assert!(app.world().resource::<Assets<Mesh>>().is_empty());
+        assert!(
+            app.world()
+                .resource::<RenderedSections>()
+                .sections
+                .is_empty()
+        );
+        assert_eq!(
+            app.world()
+                .resource::<crate::MeshUploadStatus>()
+                .admitted_vertices,
+            0
+        );
+        let jobs = app.world().resource::<RenderJobs>();
+        assert!(jobs.0.is_empty());
+        assert_eq!(jobs.1, [position]);
+    }
 
     #[test]
     fn neighbor_revisions_keep_generation_hidden_but_placements_publish_immediately() {

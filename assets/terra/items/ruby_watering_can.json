@@ -1,0 +1,7 @@
+{
+  "item": {
+    "tool": "ruby_watering_can"
+  },
+  "name": "Ruby Watering Can",
+  "description": "Refill at water, then water crops. Capacity increases with material tier."
+}

@@ -23,10 +23,63 @@ struct Particles {
 }
 #[derive(Component)]
 struct Batch;
+
+#[derive(SystemSet, Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub(super) struct UpdateContacts;
+
+pub(super) const WAKE_CAPACITY: usize = 16;
+const WAKE_LIFETIME: f32 = 3.2;
+
+#[derive(Resource, Default)]
+pub(super) struct WakeField {
+    pub positions: [Vec4; WAKE_CAPACITY],
+    pub motions: [Vec4; WAKE_CAPACITY],
+    cursor: usize,
+}
+
+impl WakeField {
+    fn push(&mut self, event: &WaterMotion, now: f32) {
+        let direction = event.velocity.xz().normalize_or_zero();
+        let speed = event.velocity.xz().length().min(12.0);
+        if !event.position.is_finite()
+            || !event.velocity.is_finite()
+            || !event.strength.is_finite()
+            || !direction.is_finite()
+            || speed < 0.25
+        {
+            return;
+        }
+        let i = self.cursor % WAKE_CAPACITY;
+        self.cursor = (i + 1) % WAKE_CAPACITY;
+        self.positions[i] = Vec4::new(event.position.x, event.position.y, event.position.z, now);
+        self.motions[i] = Vec4::new(
+            direction.x,
+            direction.y,
+            speed,
+            event.strength.clamp(0.0, 2.0),
+        );
+    }
+
+    fn expire(&mut self, now: f32) {
+        for (position, motion) in self.positions.iter_mut().zip(&mut self.motions) {
+            if now - position.w >= WAKE_LIFETIME {
+                *position = Vec4::ZERO;
+                *motion = Vec4::ZERO;
+            }
+        }
+    }
+}
+
 pub(super) fn install(app: &mut App) {
     app.init_resource::<Particles>()
+        .init_resource::<WakeField>()
         .add_systems(Startup, setup)
-        .add_systems(Update, update.after(terra_core::footsteps::WaterMotionSet));
+        .add_systems(
+            Update,
+            update
+                .after(terra_core::footsteps::WaterMotionSet)
+                .in_set(UpdateContacts),
+        );
 }
 fn setup(
     mut commands: Commands,
@@ -64,6 +117,7 @@ fn update(
     mut meshes: ResMut<Assets<Mesh>>,
     camera: Query<&GlobalTransform, With<terra_player::TerraCamera>>,
     mut batch: Query<&mut Visibility, With<Batch>>,
+    mut wakes: ResMut<WakeField>,
 ) {
     let (time, access, config) = environment;
     let dt = time.delta_secs().min(0.1);
@@ -71,6 +125,7 @@ fn update(
         p.age += dt;
     }
     state.items.retain(|p| p.age < p.life);
+    wakes.expire(time.elapsed_secs());
     let limit = match config.client.water_quality {
         terra_core::WaterQuality::Low => 64,
         terra_core::WaterQuality::Medium => 192,
@@ -79,6 +134,9 @@ fn update(
     for event in events.read().take(32) {
         if !access.ready() {
             continue;
+        }
+        if event.kind == Kind::Wake {
+            wakes.push(event, time.elapsed_secs());
         }
         let count = match event.kind {
             Kind::Splash => (event.strength * 16.0) as usize + 6,
@@ -111,11 +169,13 @@ fn update(
                 age: 0.0,
                 life: if event.kind == Kind::Bubble {
                     1.8
+                } else if event.kind == Kind::Wake {
+                    1.6
                 } else {
                     0.8 + event.strength * 0.2
                 },
                 size: if event.kind == Kind::Wake {
-                    0.09
+                    0.16 + event.strength * 0.10
                 } else {
                     0.015 + event.strength * 0.012
                 },
@@ -131,6 +191,7 @@ fn update(
     };
     if !access.ready() {
         state.items.clear();
+        *wakes = WakeField::default();
     }
     if state.items.is_empty() {
         *visible = Visibility::Hidden;
@@ -193,6 +254,34 @@ fn update(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn shader_wakes_keep_forward_motion_bound_history_and_expire_after_leaving_water() {
+        let mut wakes = WakeField::default();
+        for i in 0..100 {
+            wakes.push(
+                &WaterMotion {
+                    position: Vec3::new(i as f32, 4.0, -8.0),
+                    velocity: Vec3::new(3.0, 0.0, 4.0),
+                    strength: 0.6,
+                    kind: Kind::Wake,
+                },
+                i as f32 * 0.18,
+            );
+        }
+        assert_eq!(
+            wakes.motions.iter().filter(|m| m.w > 0.0).count(),
+            WAKE_CAPACITY
+        );
+        for (position, motion) in wakes.positions.iter().zip(wakes.motions) {
+            assert!(position.x >= 84.0);
+            assert!((motion.x - 0.6).abs() < 0.00001);
+            assert!((motion.y - 0.8).abs() < 0.00001);
+            assert_eq!(motion.z, 5.0);
+        }
+        wakes.expire(100.0);
+        assert!(wakes.motions.iter().all(|m| *m == Vec4::ZERO));
+        assert!(wakes.positions.iter().all(|p| *p == Vec4::ZERO));
+    }
     #[test]
     fn contact_particles_reuse_one_mesh_and_entities_and_obey_vertex_budget() {
         let mut app = App::new();

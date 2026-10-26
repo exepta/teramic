@@ -35,6 +35,45 @@
 @group(#{MATERIAL_BIND_GROUP}) @binding(102) var<uniform> effects: vec4<f32>;
 @group(#{MATERIAL_BIND_GROUP}) @binding(103) var<uniform> reflections: vec4<f32>;
 @group(#{MATERIAL_BIND_GROUP}) @binding(104) var<uniform> weather: vec4<f32>;
+@group(#{MATERIAL_BIND_GROUP}) @binding(105) var<uniform> environment: vec4<f32>;
+@group(#{MATERIAL_BIND_GROUP}) @binding(106) var<uniform> wake_positions: array<vec4<f32>, 16>;
+@group(#{MATERIAL_BIND_GROUP}) @binding(107) var<uniform> wake_motions: array<vec4<f32>, 16>;
+
+// A fixed shared history disturbs the actual water normals. Each stroke leaves
+// widening Kelvin-like arms and a softer expanding crest, not a tiny white disc.
+fn actor_wake(position: vec3<f32>, footprint: f32) -> vec3<f32> {
+    var slope = vec2<f32>(0.0);
+    var foam = 0.0;
+    for (var i = 0u; i < min(u32(environment.y), 16u); i += 1u) {
+        let source = wake_positions[i];
+        let motion = wake_motions[i];
+        var age = globals.time - source.w;
+        if age < 0.0 { age += environment.z; }
+        let offset = position.xz - source.xz;
+        if age < 0.0 || age > 3.2 || abs(position.y - source.y) > 0.4
+            || dot(offset, offset) > 42.25 { continue; }
+        let direction = motion.xy;
+        let sideways = vec2<f32>(-direction.y, direction.x);
+        let behind = -dot(offset, direction);
+        let across = dot(offset, sideways);
+        let width = 0.085 + age * 0.028 + min(footprint, 0.16);
+        let arm_distance = abs(across) - (0.20 + max(behind, 0.0) * 0.43 + age * 0.19);
+        let arms = exp(-arm_distance * arm_distance / (width * width));
+        let trail = smoothstep(-0.25, 0.15, behind)
+            * (1.0 - smoothstep(1.3 + age * 0.8, 2.4 + age, behind));
+        let radius = 0.22 + age * 0.75;
+        let ring_distance = length(offset) - radius;
+        let ring = exp(-ring_distance * ring_distance / (width * width * 1.8)) * 0.32;
+        let fade = pow(1.0 - age / 3.2, 1.6) * min(motion.w * 1.5, 1.0)
+            * (1.0 - smoothstep(0.18, 0.65, footprint));
+        let turn = sign(across) * (-arm_distance / width) * arms * trail;
+        slope += sideways * turn * fade * 0.13;
+        slope += offset / max(length(offset), 0.001) * (-ring_distance / width) * ring * fade * 0.10;
+        let breakup = 0.70 + 0.30 * sin(across * 17.0 + behind * 9.0 + age * 2.1);
+        foam = max(foam, (arms * trail * breakup * 0.48 + ring * 0.26) * fade);
+    }
+    return vec3<f32>(clamp(slope, vec2<f32>(-0.3), vec2<f32>(0.3)), min(foam, 0.48));
+}
 
 // Keep the stock forward fields so lighting and chunk fades use the same path.
 // The extra varying leaves all depth/current/foam metadata intact.
@@ -300,6 +339,7 @@ fn fragment(input: WaterVertexOutput, @builtin(front_facing) front: bool) -> Fra
     let moving_position = input.world_position.xz - vec2<f32>(0.0, time * 1.5);
     let face = select(-1.0, 1.0, front);
     var normal_offset = vec3<f32>(0.0);
+    var actor_foam = 0.0;
     if falling {
         let across = vec3<f32>(-input.world_normal.z, 0.0, input.world_normal.x);
         let tangent = select(vec3<f32>(1.0, 0.0, 0.0), across / max(length(across), 0.001), length(across) > 0.001);
@@ -319,6 +359,11 @@ fn fragment(input: WaterVertexOutput, @builtin(front_facing) front: bool) -> Fra
             slope += current_slope(input.world_position.xz, flow, time, footprint);
         }
         slope *= shore_calm;
+        if !solid_block && input.world_normal.y > 0.5 && environment.y > 0.0 {
+            let wake = actor_wake(input.world_position.xyz, footprint);
+            slope += wake.xy;
+            actor_foam = wake.z;
+        }
         normal_offset = vec3<f32>(-slope.x, 0.0, -slope.y);
         pbr.N = normalize(input.world_normal + normal_offset) * face;
     }
@@ -328,12 +373,12 @@ fn fragment(input: WaterVertexOutput, @builtin(front_facing) front: bool) -> Fra
     if !falling && (coast > 0.0 || coastal_wash || (surface_effect.w > 2.5 && !solid_block)) {
         bubbles = smoothstep(0.3, 0.78, noise(moving_position * 3.0 + vec2<f32>(time * 0.12, -time * 0.08)));
     }
-    var foam = 0.0;
+    var foam = actor_foam;
     if !falling && !coastal_wash && coast > 0.0 {
         // Traveling shallow-water bands advance toward the bank and break into patches.
         let wash = 0.5 + 0.5 * sin(depth * 15.0 + time * 2.8
             + noise(input.world_position.xz * 0.35) * 3.0);
-        foam = clamp(coast * (0.25 + bubbles * 0.75) * (0.35 + wash * 0.65) * effects.w, 0.0, effects.w);
+        foam = max(foam, clamp(coast * (0.25 + bubbles * 0.75) * (0.35 + wash * 0.65) * effects.w, 0.0, effects.w));
     }
     // Depth contours steer these low, incoming crests towards the actual bank;
     // the sea-only vertex weight excludes inland lakes and placed water cubes.
@@ -414,7 +459,7 @@ fn fragment(input: WaterVertexOutput, @builtin(front_facing) front: bool) -> Fra
         let ribbons = abs(sin(bed.x * 1.7 + sin(bed.z * 1.3 + time * 0.8))
             + sin(bed.z * 1.6 - time * 0.6));
         caustics = (1.0 - smoothstep(0.03, max(0.08, footprint), ribbons))
-            * exp(-depth * 0.5) * (1.0 - smoothstep(0.1, 0.8, footprint)) * effects.z;
+            * exp(-depth * 0.5) * (1.0 - smoothstep(0.1, 0.8, footprint)) * effects.z * environment.x;
     }
     let fresnel = 0.02 + 0.98 * pow(1.0 - clamp(dot(pbr.N, pbr.V), 0.0, 1.0), 5.0);
     let transmission = transmitted * (1.0 - fresnel) * (1.0 - foam) * scene.a;

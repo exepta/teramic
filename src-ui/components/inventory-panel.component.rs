@@ -145,10 +145,12 @@ fn materialized_slot(
         let id = elements.get(current).ok().map(|id| id.0.as_str());
         let (command, offset) = match id {
             Some("inventory-grid") => ("slot", 9),
-            Some("container-grid" | "workbench-container-grid" | "furnace-input") => {
+            Some("inventory-equipment") => ("equipment", 0),
+            Some("container-grid" | "workbench-container-grid" | "furnace-input" | "crusher-input") => {
                 ("container", 0)
             }
             Some("furnace-fuel") => ("container", 1),
+            Some("crusher-output") => ("container", 1),
             Some("furnace-output") => ("container", 2),
             Some("furnace-bellows") => ("container", 3),
             Some("inventory-browser-grid") => ("catalog", 0),

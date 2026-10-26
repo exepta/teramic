@@ -1,0 +1,9 @@
+width = 1280
+height = 800
+view_distance = 8
+vertical_view_distance = 4
+vsync = false
+max_chunk_jobs = 4
+max_mesh_jobs = 16
+mesh_uploads_per_frame = 12
+fov_degrees = 55.0

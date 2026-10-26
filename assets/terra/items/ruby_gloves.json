@@ -1,0 +1,16 @@
+{
+  "item": {
+    "armor": {
+      "material": "ruby",
+      "piece": "gloves"
+    }
+  },
+  "name": "Ruby Gloves",
+  "description": "Ruby gloves fitted for protection and comfortable movement.",
+  "equipment": {
+    "slot": "gloves",
+    "armor_points": 3.5,
+    "health_bonus": 3,
+    "stamina_bonus": 1.5
+  }
+}

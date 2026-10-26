@@ -31,6 +31,11 @@ pub(crate) struct GaitFrame {
 }
 
 impl WalkCameraMotion {
+    pub(crate) fn reset_step(&mut self, body: Entity, position: Vec3) {
+        self.step_previous = Some((body, position));
+        self.step_offset = 0.0;
+    }
+
     pub(crate) fn step_height(
         &mut self,
         body: Entity,
@@ -209,6 +214,19 @@ mod tests {
         }
         assert_eq!(motion.phase, phase);
         assert!(motion.current_offset().length() < 0.00001);
+    }
+
+    #[test]
+    fn mounting_resets_walk_step_smoothing_without_a_later_camera_height_kick() {
+        let body = Entity::PLACEHOLDER;
+        let mut motion = WalkCameraMotion::default();
+        motion.step_height(body, Vec3::ZERO, true, 1.0 / 60.0);
+        assert!(motion.step_height(body, Vec3::Y * 0.5, true, 1.0 / 60.0) < -0.1);
+        motion.reset_step(body, Vec3::Y * 2.0);
+        assert_eq!(
+            motion.step_height(body, Vec3::Y * 2.0, false, 1.0 / 60.0),
+            0.0
+        );
     }
 
     #[test]

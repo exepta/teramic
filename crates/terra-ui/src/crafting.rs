@@ -30,12 +30,14 @@ pub(super) struct CraftingState {
     cells: [Option<CraftGridCell>; 9],
     selected: Option<u64>,
     selected_smelting: bool,
+    selected_crushing: bool,
     recipe_item: Option<ItemKind>,
     recipe_open: bool,
     search: String,
     error: String,
     context: Option<Option<[i64; 3]>>,
     furnace_context: Option<[i64; 3]>,
+    crusher_context: Option<[i64; 3]>,
     pending: Option<PendingGrid>,
     pointer: grid_pointer::GridPointer,
 }
@@ -92,6 +94,7 @@ pub struct CraftingView {
     pub recipe_multiple: bool,
     pub can_apply_recipe: bool,
     pub smelting: bool,
+    pub crushing: bool,
     pub recipe_duration: String,
     pub recipe_heading: String,
     pub apply_title: String,
@@ -170,12 +173,14 @@ fn arrange(
 enum RecipeChoice<'a> {
     Craft(&'a Recipe),
     Smelt(&'a terra_core::furnace::SmeltingRecipe),
+    Crush(&'a terra_core::crusher::CrusherRecipe),
 }
 impl RecipeChoice<'_> {
-    fn selection(self) -> (u64, bool) {
+    fn selection(self) -> (u64, bool, bool) {
         match self {
-            Self::Craft(recipe) => (recipe.key(), false),
-            Self::Smelt(recipe) => (recipe.id, true),
+            Self::Craft(recipe) => (recipe.key(), false, false),
+            Self::Smelt(recipe) => (recipe.id, true, false),
+            Self::Crush(recipe) => (recipe.id, false, true),
         }
     }
 }
@@ -200,6 +205,12 @@ fn alternatives(book: &RecipeBook, item: Option<ItemKind>) -> Vec<RecipeChoice<'
                 .filter(|recipe| item == Some(recipe.output.item))
                 .map(RecipeChoice::Smelt),
         )
+        .chain(
+            terra_core::crusher::recipes()
+                .iter()
+                .filter(|recipe| item == Some(recipe.output.item))
+                .map(RecipeChoice::Crush),
+        )
         .collect()
 }
 fn select_recipe(
@@ -210,6 +221,7 @@ fn select_recipe(
 ) {
     state.selected = Some(recipe.key());
     state.selected_smelting = false;
+    state.selected_crushing = false;
     state.recipe_open = true;
     state.error.clear();
     if recipe.station == CraftStation::Workbench && inventory.station.is_none() {
@@ -227,11 +239,22 @@ fn furnace_anchor(session: &ClientSession) -> Option<[i64; 3]> {
         .map(|container| container.anchor)
 }
 
-fn storage_only(session: &ClientSession) -> bool {
+fn crusher_anchor(session: &ClientSession) -> Option<[i64; 3]> {
     session
         .container
         .as_ref()
-        .is_some_and(|container| container.workbench.is_none() && container.furnace.is_none())
+        .filter(|container| container.crusher.is_some())
+        .map(|container| container.anchor)
+}
+
+fn machine_open(session: &ClientSession) -> bool {
+    furnace_anchor(session).is_some() || crusher_anchor(session).is_some()
+}
+
+fn storage_only(session: &ClientSession) -> bool {
+    session.container.as_ref().is_some_and(|container| {
+        container.workbench.is_none() && container.furnace.is_none() && container.crusher.is_none()
+    })
 }
 
 fn can_load_smelting(
@@ -262,13 +285,14 @@ fn select_choice(
     match recipe {
         RecipeChoice::Craft(recipe) => {
             select_recipe(state, recipe, inventory, &session.inventory);
-            if furnace_anchor(session).is_some() {
+            if machine_open(session) {
                 state.error = "Requires a crafting grid.".into();
             }
         }
         RecipeChoice::Smelt(recipe) => {
             state.selected = Some(recipe.id);
             state.selected_smelting = true;
+            state.selected_crushing = false;
             state.recipe_open = true;
             state.error = if furnace_anchor(session).is_none() {
                 "Requires a furnace."
@@ -281,7 +305,39 @@ fn select_choice(
             }
             .into();
         }
+        RecipeChoice::Crush(recipe) => {
+            state.selected = Some(recipe.id);
+            state.selected_smelting = false;
+            state.selected_crushing = true;
+            state.recipe_open = true;
+            state.error = if crusher_anchor(session).is_none() {
+                "Requires a crusher."
+            } else if session.inventory.count(recipe.input) == 0 {
+                "Missing material."
+            } else if !can_load_crushing(recipe, session) {
+                "The crusher material slot is occupied."
+            } else {
+                ""
+            }
+            .into();
+        }
     }
+}
+
+fn can_load_crushing(recipe: &terra_core::crusher::CrusherRecipe, session: &ClientSession) -> bool {
+    session.inventory.count(recipe.input) > 0
+        && session
+            .container
+            .as_ref()
+            .filter(|container| container.crusher.is_some())
+            .and_then(|container| container.halves.first())
+            .is_some_and(|half| {
+                half.inventory
+                    .slot(terra_core::crusher::INPUT)
+                    .is_none_or(|stack| {
+                        stack.item == recipe.input && stack.count < recipe.input.max_stack()
+                    })
+            })
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -318,11 +374,14 @@ fn actions(
         wheel.clear();
         return;
     }
-    if state.context != Some(inventory.station) || state.furnace_context != furnace_anchor(&session)
+    if state.context != Some(inventory.station)
+        || state.furnace_context != furnace_anchor(&session)
+        || state.crusher_context != crusher_anchor(&session)
     {
         *state = CraftingState {
             context: Some(inventory.station),
             furnace_context: furnace_anchor(&session),
+            crusher_context: crusher_anchor(&session),
             ..default()
         };
     }
@@ -376,7 +435,7 @@ fn actions(
     let mut craft = None;
     for event in slots.read() {
         if !storage_only(&session)
-            && furnace_anchor(&session).is_none()
+            && !machine_open(&session)
             && grid_pointer::handle(
                 &mut state,
                 &inventory,
@@ -412,11 +471,12 @@ fn actions(
                 .find(|r| match r {
                     RecipeChoice::Craft(r) => {
                         !storage_only(&session)
-                            && furnace_anchor(&session).is_none()
+                            && !machine_open(&session)
                             && (r.station == CraftStation::Hand || inventory.station.is_some())
                             && arrange(r, &session.inventory, size(&inventory)).is_some()
                     }
                     RecipeChoice::Smelt(r) => can_load_smelting(r, &session),
+                    RecipeChoice::Crush(r) => can_load_crushing(r, &session),
                 })
                 .copied()
                 .or_else(|| recipes.first().copied());
@@ -426,6 +486,7 @@ fn actions(
                 state.selected = None;
                 state.recipe_open = true;
                 state.selected_smelting = false;
+                state.selected_crushing = false;
                 state.error = "No recipe is registered for this item.".into();
             }
             continue;
@@ -478,6 +539,16 @@ fn actions(
                         &inventory,
                         &session,
                     );
+                } else if let Some(recipe) =
+                    terra_core::crusher::recipes().iter().find(|r| r.id == *key)
+                {
+                    state.recipe_item = Some(recipe.output.item);
+                    select_choice(
+                        &mut state,
+                        RecipeChoice::Crush(recipe),
+                        &inventory,
+                        &session,
+                    );
                 }
             }
             CraftingAction::Search(search) => {
@@ -504,12 +575,46 @@ fn actions(
                         &inventory,
                         &session,
                     );
+                } else if let Some(recipe) = terra_core::crusher::recipes().iter().find(|r| {
+                    r.key.contains(&state.search)
+                        || r.name.to_lowercase().contains(&state.search.to_lowercase())
+                }) {
+                    state.recipe_item = Some(recipe.output.item);
+                    select_choice(
+                        &mut state,
+                        RecipeChoice::Crush(recipe),
+                        &inventory,
+                        &session,
+                    );
                 }
             }
             CraftingAction::CloseRecipe => state.recipe_open = false,
             CraftingAction::ApplyRecipe => {
                 if session.inventory.cursor.is_some() || !queue.is_empty() {
                     state.error = "Empty the cursor before adding a recipe.".into();
+                } else if state.selected_crushing {
+                    if let Some(recipe) = terra_core::crusher::recipes()
+                        .iter()
+                        .find(|r| Some(r.id) == state.selected)
+                    {
+                        if let Some(station) = crusher_anchor(&session)
+                            && can_load_crushing(recipe, &session)
+                        {
+                            queue.push(ServerAction::LoadCrushingRecipe {
+                                recipe: recipe.id,
+                                station,
+                            });
+                            state.recipe_open = false;
+                            state.error.clear();
+                        } else {
+                            select_choice(
+                                &mut state,
+                                RecipeChoice::Crush(recipe),
+                                &inventory,
+                                &session,
+                            );
+                        }
+                    }
                 } else if state.selected_smelting {
                     if let Some(recipe) = terra_core::furnace::recipes()
                         .iter()
@@ -533,7 +638,7 @@ fn actions(
                             );
                         }
                     }
-                } else if storage_only(&session) || furnace_anchor(&session).is_some() {
+                } else if storage_only(&session) || machine_open(&session) {
                     state.error = "Requires a crafting grid.".into();
                 } else if let Some(recipe) = state.selected.and_then(|key| book.get(key)) {
                     if recipe.station == CraftStation::Workbench && inventory.station.is_none() {
@@ -557,7 +662,9 @@ fn actions(
                         .iter()
                         .position(|r| {
                             Some(r.selection())
-                                == state.selected.map(|key| (key, state.selected_smelting))
+                                == state.selected.map(|key| {
+                                    (key, state.selected_smelting, state.selected_crushing)
+                                })
                         })
                         .unwrap_or(0);
                     let next = (current as i32 + direction.signum())
@@ -586,7 +693,7 @@ fn actions(
         state.pending.is_none()
             && queue.is_empty()
             && !storage_only(&session)
-            && furnace_anchor(&session).is_none()
+            && !machine_open(&session)
     }) {
         let destination = if cursor {
             CraftDestination::Cursor
@@ -857,7 +964,7 @@ fn update(
     );
     let recipe = state
         .selected
-        .filter(|_| !state.selected_smelting)
+        .filter(|_| !state.selected_smelting && !state.selected_crushing)
         .and_then(|key| book.get(key));
     let grid = displayed_cells
         .iter()
@@ -943,7 +1050,10 @@ fn update(
     let page = recipes
         .iter()
         .position(|r| {
-            Some(r.selection()) == state.selected.map(|key| (key, state.selected_smelting))
+            Some(r.selection())
+                == state
+                    .selected
+                    .map(|key| (key, state.selected_smelting, state.selected_crushing))
         })
         .unwrap_or(0);
     let mut next = CraftingView {
@@ -1027,7 +1137,7 @@ fn update(
         recipe_multiple: recipes.len() > 1,
         can_apply_recipe: recipe.is_some_and(|r| {
             !storage_only(&session)
-                && furnace_anchor(&session).is_none()
+                && !machine_open(&session)
                 && (r.station == CraftStation::Hand || inventory.station.is_some())
                 && arrange(r, &session.inventory, grid_size).is_some()
         }) && state.pending.is_none()
@@ -1073,6 +1183,40 @@ fn update(
         next.recipe_output = vec![output];
         next.can_apply_recipe =
             can_load_smelting(recipe, &session) && session.inventory.cursor.is_none();
+    }
+    if state.selected_crushing
+        && let Some(recipe) = terra_core::crusher::recipes()
+            .iter()
+            .find(|r| Some(r.id) == state.selected)
+    {
+        let count = session.inventory.count(recipe.input);
+        let mut input = view::item_view(recipe.input, 1, &palette);
+        input.command = "recipe-preview".into();
+        input.id = "crushing-input".into();
+        input.missing = count == 0;
+        let mut output = view::item_view(recipe.output.item, recipe.output.count, &palette);
+        output.command = "recipe-preview".into();
+        output.id = "crushing-result".into();
+        next.crushing = true;
+        next.selected = true;
+        next.empty = false;
+        next.name = recipe.name.clone();
+        next.description = output.description.clone();
+        next.recipe_station = "Crusher".into();
+        next.recipe_heading = "Crushing Recipe".into();
+        next.recipe_duration = format!("{} s", recipe.seconds);
+        next.apply_title = "Add material to crusher".into();
+        next.missing = input.missing;
+        next.ingredients = vec![IngredientView {
+            slots: vec![input.clone()],
+            name: input.name.clone(),
+            amount: format!("{count} / 1"),
+            enough: count > 0,
+        }];
+        next.recipe_grid = vec![input];
+        next.recipe_output = vec![output];
+        next.can_apply_recipe =
+            can_load_crushing(recipe, &session) && session.inventory.cursor.is_none();
     }
     if *view != next {
         *view = next;

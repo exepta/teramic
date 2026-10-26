@@ -2,7 +2,11 @@
 use super::*;
 use crate::protocol::chat::{ChatEntry, LocateResult, sanitize};
 use bevy::tasks::{AsyncComputeTaskPool, Task, futures_lite::future};
-use terra_world::{TerraGenerator, generation::biomes::BiomeKind, spawn::WorldSpawn};
+use terra_world::{
+    TerraGenerator,
+    generation::{biomes::BiomeKind, structures::StructureKind},
+    spawn::WorldSpawn,
+};
 
 const SEARCH_STEP: i64 = 96;
 const SEARCH_RINGS: i64 = 64;
@@ -62,16 +66,22 @@ pub(super) struct PendingTeleport {
     started: Instant,
     pub deltas_ready: bool,
     require_ground: bool,
+    creative_only: bool,
     respawn: bool,
     privileged: bool,
 }
 impl PendingTeleport {
+    fn allows_mode(&self, mode: terra_core::GameMode) -> bool {
+        !self.creative_only || mode == terra_core::GameMode::Creative
+    }
+
     pub(super) fn respawn(position: Vec3) -> Self {
         Self {
             position,
             started: Instant::now(),
             deltas_ready: false,
             require_ground: true,
+            creative_only: false,
             respawn: true,
             privileged: false,
         }
@@ -86,7 +96,7 @@ pub(super) struct PeerChat {
     rate_time: Instant,
     limited: bool,
     last_limit_reply: Option<Instant>,
-    pub targets: VecDeque<(u64, WorldSpawn)>,
+    targets: VecDeque<(u64, LocateLanding)>,
     pub teleport: Option<PendingTeleport>,
 }
 
@@ -131,9 +141,61 @@ struct LocateJob {
 }
 
 struct Located {
-    biome: BiomeKind,
+    target: LocateTarget,
     position: [i64; 3],
     spawn: Option<WorldSpawn>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum LocateTarget {
+    Biome(BiomeKind),
+    Structure(StructureKind),
+}
+
+impl LocateTarget {
+    fn name(self) -> &'static str {
+        match self {
+            Self::Biome(kind) => biome_name(kind),
+            Self::Structure(StructureKind::Village) => "Village",
+            Self::Structure(StructureKind::Ruin) => "Ruin",
+            Self::Structure(StructureKind::Mine) => "Mine",
+        }
+    }
+}
+
+#[derive(Clone, Copy)]
+enum LocateLanding {
+    Dry(WorldSpawn),
+    Creative([i64; 3]),
+}
+
+impl LocateLanding {
+    fn permits(self, mode: terra_core::GameMode) -> bool {
+        !matches!(self, Self::Creative(_)) || mode == terra_core::GameMode::Creative
+    }
+
+    fn feet(self) -> [i64; 3] {
+        match self {
+            Self::Dry(spawn) => [spawn.ground[0], spawn.ground[1] + 1, spawn.ground[2]],
+            Self::Creative(feet) => feet,
+        }
+    }
+
+    fn is_valid(self, terrain: &TerraGenerator, journal: &EditJournal) -> bool {
+        match self {
+            Self::Dry(spawn) => spawn.is_valid(terrain, journal),
+            Self::Creative(feet) => creative_clearance(terrain, journal, feet),
+        }
+    }
+}
+
+struct PendingEffect {
+    actor: PlayerId,
+    target: PlayerId,
+    kind: terra_core::EffectKind,
+    seconds: f32,
+    level: u8,
+    console: bool,
 }
 
 #[derive(Resource, Default)]
@@ -143,6 +205,7 @@ pub(super) struct ChatRuntime {
     console_reply: bool,
     console_lines: VecDeque<String>,
     console_job: Option<LocateJob>,
+    effects: Vec<PendingEffect>,
 }
 
 impl ChatRuntime {
@@ -295,8 +358,8 @@ pub(super) fn tick(
                         }
                         Ok(None) => {}
                     }
-                    let biome = match parse_command(&text) {
-                        Ok(Some(biome)) => biome,
+                    let target = match parse_command(&text) {
+                        Ok(Some(target)) => target,
                         Ok(None) => {
                             reply(
                                 &mut world.runtime,
@@ -314,7 +377,7 @@ pub(super) fn tick(
                         reply(
                             &mut world.runtime,
                             &mut sender,
-                            "A biome search is already running.",
+                            "A locate search is already running.",
                         );
                         continue;
                     }
@@ -338,7 +401,7 @@ pub(super) fn tick(
                         peer.id,
                         LocateJob {
                             task: AsyncComputeTaskPool::get()
-                                .spawn(async move { locate(&terrain, origin, biome) }),
+                                .spawn(async move { locate(&terrain, origin, target) }),
                             started: Instant::now(),
                             console: peer.chat.console_active,
                         },
@@ -346,7 +409,7 @@ pub(super) fn tick(
                     reply(
                         &mut world.runtime,
                         &mut sender,
-                        format!("Searching for {}...", biome_name(biome)),
+                        format!("Searching for {}...", target.name()),
                     );
                 }
                 ChatRequest::Teleport(token) => {
@@ -376,15 +439,17 @@ pub(super) fn tick(
                         reply(
                             &mut world.runtime,
                             &mut sender,
-                            "This teleport target has expired. Locate the biome again.",
+                            "This teleport target has expired. Run locate again.",
                         );
                         continue;
                     };
-                    if !target.is_valid(&world.terrain.0, &world.journal) {
+                    if !target.permits(peer.game_mode(&world.config))
+                        || !target.is_valid(&world.terrain.0, &world.journal)
+                    {
                         reply(
                             &mut world.runtime,
                             &mut sender,
-                            "The destination is no longer safe. Locate the biome again.",
+                            "The destination is no longer safe. Run locate again.",
                         );
                         continue;
                     }
@@ -392,10 +457,12 @@ pub(super) fn tick(
                     peer.chat.teleport = Some(PendingTeleport {
                         respawn: false,
                         position: Vec3::from_array(target.feet().map(|p| p as f32))
+                            + Vec3::new(0.5, 0.0, 0.5)
                             + Vec3::Y * (terra_physics::character::PLAYER_HALF_HEIGHT + 0.02),
                         started: Instant::now(),
                         deltas_ready: false,
-                        require_ground: true,
+                        require_ground: matches!(target, LocateLanding::Dry(_)),
+                        creative_only: matches!(target, LocateLanding::Creative(_)),
                         privileged: peer.chat.console_active,
                     });
                     peer.mining = None;
@@ -418,6 +485,7 @@ pub(super) fn tick(
             .is_some_and(|pending| pending.privileged);
         finish_teleport(&mut peer, &mut sender, &mut world);
     }
+    apply_pending_effects(&mut peers, &mut world);
     world.runtime.console_reply = false;
     finish_console_search(&mut world);
     while let Some(line) = world.runtime.console_lines.pop_front() {
@@ -451,9 +519,9 @@ fn finish_search(
             &mut world.runtime,
             sender,
             if expired {
-                "Biome search timed out. Try again from another area."
+                "Locate search timed out. Try again from another area."
             } else {
-                "No matching biome was found within 6144 blocks. Try another location or world settings."
+                "No matching biome or structure was found within 6144 blocks. Try another location or world settings."
             },
         );
         return;
@@ -462,30 +530,37 @@ fn finish_search(
     let safe = found
         .spawn
         .filter(|spawn| spawn.is_valid(&world.terrain.0, &world.journal));
+    let landing = safe.map(LocateLanding::Dry).or_else(|| {
+        (peer.game_mode(&world.config) == terra_core::GameMode::Creative).then(|| {
+            LocateLanding::Creative(creative_landing(
+                &world.terrain.0,
+                &world.journal,
+                found.position,
+            ))
+        })
+    });
     let token = if can_teleport(peer, &world.config) {
-        safe.map(|spawn| {
+        landing.map(|landing| {
             if peer.chat.targets.len() == 8 {
                 peer.chat.targets.pop_front();
             }
-            peer.chat.targets.push_back((entry.id, spawn));
+            peer.chat.targets.push_back((entry.id, landing));
             entry.id
         })
     } else {
         None
     };
     entry.locate = Some(LocateResult {
-        name: biome_name(found.biome).into(),
-        position: safe.map_or(found.position, |s| {
-            [s.ground[0], s.ground[1] + 1, s.ground[2]]
-        }),
+        name: found.target.name().into(),
+        position: landing.map_or(found.position, LocateLanding::feet),
         token,
     });
     if world.runtime.console_reply {
         let [x, y, z] = found.position;
-        world.runtime.console_lines.push_back(format!(
-            "Biome {} found at {x}, {y}, {z}.",
-            biome_name(found.biome)
-        ));
+        world
+            .runtime
+            .console_lines
+            .push_back(format!("{} found at {x}, {y}, {z}.", found.target.name()));
     }
     sender.send::<ControlChannel>(ServerControl::Chat(entry));
     if token.is_none() {
@@ -518,11 +593,11 @@ fn finish_teleport(
     let require_ground = pending.require_ground;
     let respawn = pending.respawn;
     let expired = pending.started.elapsed() > Duration::from_secs(25);
-    let permitted = if respawn {
+    let permitted = (if respawn {
         peer.vitals.dead()
     } else {
         pending.privileged || can_teleport(peer, &world.config)
-    };
+    }) && pending.allows_mode(peer.game_mode(&world.config));
     if expired || matches!(state, spawn::LoadedSpawn::Invalid) || !permitted {
         peer.chat.teleport = None;
         sender.send::<ControlChannel>(ServerControl::TeleportCancelled);
@@ -553,11 +628,14 @@ fn finish_teleport(
     peer.survival.teleported(respawn);
     if respawn {
         peer.vitals = Default::default();
+        peer.vitals.apply_equipment(peer.equipment);
+        peer.vitals.health = peer.vitals.max_health;
+        peer.vitals.stamina = peer.vitals.max_stamina;
     }
     peer.chat.teleport = None;
     sender.send::<ControlChannel>(ServerControl::Teleport {
         tick: world.server.tick,
-        state: PlayerState {
+        state: Box::new(PlayerState {
             gender: peer.gender,
             generation,
             player: peer.id,
@@ -565,8 +643,9 @@ fn finish_teleport(
             grounded: require_ground,
             look: peer.look,
             survival: peer.vitals,
+            equipment: peer.equipment,
             ..default()
-        },
+        }),
     });
     if !respawn {
         reply(&mut world.runtime, sender, "Teleported.");
@@ -625,20 +704,44 @@ fn execute(
     }
     match command {
         Command::EffectGive(kind, seconds, level) => {
-            if peer.game_mode(&world.config) != terra_core::GameMode::Survival || peer.vitals.dead()
-            {
-                reply(
+            let result = give_effect(peer, &world.config, kind, seconds, level);
+            reply(
+                &mut world.runtime,
+                sender,
+                result.unwrap_or_else(str::to_owned),
+            );
+            return;
+        }
+        Command::EffectPlayer(ref name, kind, seconds, level) => {
+            let target = effect_target(name, &world.identities);
+            match target {
+                Ok(target)
+                    if target != peer.id
+                        && !peer.chat.console_active
+                        && !peer.permissions.environment =>
+                {
+                    reply(
+                        &mut world.runtime,
+                        sender,
+                        "Affecting another player requires environment permission.",
+                    );
+                }
+                Ok(target) if world.runtime.effects.len() < 64 => {
+                    world.runtime.effects.push(PendingEffect {
+                        actor: peer.id,
+                        target,
+                        kind,
+                        seconds,
+                        level,
+                        console: peer.chat.console_active,
+                    })
+                }
+                Ok(_) => reply(
                     &mut world.runtime,
                     sender,
-                    "Status effects require a living Survival player.",
-                );
-            } else {
-                peer.vitals.effects.apply(kind, seconds, level);
-                reply(
-                    &mut world.runtime,
-                    sender,
-                    format!("Applied {} {level} for {seconds}s.", kind.identifier()),
-                );
+                    "The effect queue is busy. Try again shortly.",
+                ),
+                Err(error) => reply(&mut world.runtime, sender, error),
             }
             return;
         }
@@ -799,6 +902,7 @@ fn execute(
         | Command::Help(_)
         | Command::Spawn(_)
         | Command::EffectGive(..)
+        | Command::EffectPlayer(..)
         | Command::EffectClear(_) => return,
     };
     peer.chat.teleport = Some(PendingTeleport {
@@ -807,11 +911,81 @@ fn execute(
         started: Instant::now(),
         deltas_ready: false,
         require_ground: false,
+        creative_only: false,
         privileged: peer.chat.console_active,
     });
     peer.mining = None;
     sender.send::<ControlChannel>(ServerControl::Mining(None));
     sender.send::<ControlChannel>(ServerControl::TeleportPreparing);
+}
+
+fn effect_target(name: &str, identities: &ConnectedProfiles) -> Result<PlayerId, &'static str> {
+    let mut players = identities
+        .0
+        .iter()
+        .filter(|(_, profile)| profile.name.eq_ignore_ascii_case(name));
+    let id = players
+        .next()
+        .map(|(id, _)| *id)
+        .ok_or("Player is not online.")?;
+    if players.next().is_some() {
+        return Err("Player name is ambiguous.");
+    }
+    Ok(id)
+}
+
+fn give_effect(
+    peer: &mut Peer,
+    config: &GameConfig,
+    kind: terra_core::EffectKind,
+    seconds: f32,
+    level: u8,
+) -> Result<String, &'static str> {
+    if peer.vitals.dead()
+        || (peer.game_mode(config) != terra_core::GameMode::Survival
+            && kind != terra_core::EffectKind::NightVision)
+    {
+        return Err(
+            "Status effects require a living Survival player; Night Vision also works in Creative and Spectator.",
+        );
+    }
+    peer.vitals.effects.apply(kind, seconds, level);
+    Ok(format!(
+        "Applied {} {level} for {seconds}s.",
+        kind.identifier()
+    ))
+}
+
+fn apply_pending_effects(
+    peers: &mut Query<(&mut Peer, &mut MessageSender<ServerControl>), With<Connected>>,
+    world: &mut ChatWorld,
+) {
+    for effect in std::mem::take(&mut world.runtime.effects) {
+        let mut result = Err("Player is not online or is still loading.");
+        for (mut peer, _) in peers.iter_mut() {
+            if peer.id == effect.target && peer.synced {
+                result = give_effect(
+                    &mut peer,
+                    &world.config,
+                    effect.kind,
+                    effect.seconds,
+                    effect.level,
+                );
+                break;
+            }
+        }
+        world.runtime.console_reply = effect.console;
+        for (peer, mut sender) in peers.iter_mut() {
+            if peer.id == effect.actor {
+                reply(
+                    &mut world.runtime,
+                    &mut sender,
+                    result.unwrap_or_else(str::to_owned),
+                );
+                break;
+            }
+        }
+    }
 }
 
 fn teleport_space(chunks: &ChunkStore, position: Vec3) -> spawn::LoadedSpawn {
@@ -908,6 +1082,7 @@ fn change_mode(
         velocity.0 = Vec3::ZERO;
         if mode != terra_core::GameMode::Survival {
             peer.vitals = Default::default();
+            peer.vitals.apply_equipment(peer.equipment);
         }
         let mut stats = world
             .journal
@@ -918,6 +1093,7 @@ fn change_mode(
             .unwrap_or_default();
         stats.game_mode = Some(mode);
         stats.survival = peer.vitals;
+        stats.equipment = peer.equipment;
         world
             .journal
             .bypass_change_detection()
@@ -928,7 +1104,7 @@ fn change_mode(
             mode,
             allow_flight: peer.can_fly(&world.config),
             tick: world.server.tick,
-            state: PlayerState {
+            state: Box::new(PlayerState {
                 gender: peer.gender,
                 generation,
                 player: peer.id,
@@ -936,8 +1112,9 @@ fn change_mode(
                 grounded: grounded.0,
                 look: peer.look,
                 survival: peer.vitals,
+                equipment: peer.equipment,
                 ..default()
-            },
+            }),
         });
     }
     reply(
@@ -956,47 +1133,68 @@ fn biome_name(kind: BiomeKind) -> &'static str {
         BiomeKind::Highland => "Highland",
         BiomeKind::MushroomPark => "Mushroom Park",
         BiomeKind::ClifftedDesert => "Cliffted Desert",
+        BiomeKind::CherryForest => "Cherry Forest",
     }
 }
 
-fn parse_command(text: &str) -> Result<Option<BiomeKind>, &'static str> {
+fn parse_command(text: &str) -> Result<Option<LocateTarget>, &'static str> {
     let parts: Vec<_> = text.split_whitespace().collect();
     if parts == ["/help"] {
         return Ok(None);
     }
-    if parts.len() < 3 || parts[0] != "/locate" || parts[1] != "biome" {
-        return Err("Usage: /locate biome <name>. Use /help for biome names.");
+    if parts.len() < 3 || parts[0] != "/locate" {
+        return Err("Usage: /locate biome <name> | /locate struct <teramic::village|ruin|mine>.");
     }
-    match parts[2..].join("_").to_ascii_lowercase().as_str() {
-        "ocean" => Ok(Some(BiomeKind::Ocean)),
-        "plains" => Ok(Some(BiomeKind::Plains)),
-        "forest" => Ok(Some(BiomeKind::Forest)),
-        "desert" => Ok(Some(BiomeKind::Desert)),
-        "highland" => Ok(Some(BiomeKind::Highland)),
-        "mushroom_park" | "mushroompark" => Ok(Some(BiomeKind::MushroomPark)),
-        "cliffted_desert" | "cliffteddesert" => Ok(Some(BiomeKind::ClifftedDesert)),
-        _ => Err("Unknown biome. Use /help for biome names."),
+    if parts[1] == "struct" {
+        if parts.len() != 3 {
+            return Err("Usage: /locate struct <teramic::village|teramic::ruin|teramic::mine>.");
+        }
+        return match parts[2].to_ascii_lowercase().as_str() {
+            "teramic::village" => Ok(Some(LocateTarget::Structure(StructureKind::Village))),
+            "teramic::ruin" => Ok(Some(LocateTarget::Structure(StructureKind::Ruin))),
+            "teramic::mine" => Ok(Some(LocateTarget::Structure(StructureKind::Mine))),
+            _ => Err("Unknown structure. Use teramic::village, teramic::ruin or teramic::mine."),
+        };
+    }
+    if parts[1] != "biome" {
+        return Err("Usage: /locate biome <name> | /locate struct <teramic::village|ruin|mine>.");
+    }
+    let biome = match parts[2..].join("_").to_ascii_lowercase().as_str() {
+        "ocean" => BiomeKind::Ocean,
+        "plains" => BiomeKind::Plains,
+        "forest" => BiomeKind::Forest,
+        "desert" => BiomeKind::Desert,
+        "highland" => BiomeKind::Highland,
+        "mushroom_park" | "mushroompark" => BiomeKind::MushroomPark,
+        "cliffted_desert" | "cliffteddesert" => BiomeKind::ClifftedDesert,
+        "cherry_forest" | "cherryforest" => BiomeKind::CherryForest,
+        _ => return Err("Unknown biome. Use /help for biome names."),
+    };
+    Ok(Some(LocateTarget::Biome(biome)))
+}
+
+fn locate(terrain: &TerraGenerator, origin: [i64; 2], target: LocateTarget) -> Option<Located> {
+    match target {
+        LocateTarget::Biome(biome) => locate_biome(terrain, origin, biome),
+        LocateTarget::Structure(kind) => locate_structure(terrain, origin, kind),
     }
 }
 
-fn locate(terrain: &TerraGenerator, origin: [i64; 2], biome: BiomeKind) -> Option<Located> {
+fn locate_biome(terrain: &TerraGenerator, origin: [i64; 2], biome: BiomeKind) -> Option<Located> {
     if !terrain.config().biomes && biome != BiomeKind::Forest {
         return None;
     }
     let sample = |x: i64, z: i64| {
         if x.abs() > 990_000
             || z.abs() > 990_000
-            || terrain
-                .biome_at(x as f64 + 0.5, z as f64 + 0.5)
-                .weights
-                .dominant()
+            || terrain.surface_biome(&terrain.surface_column(x as f64 + 0.5, z as f64 + 0.5))
                 != biome
         {
             return None;
         }
         let height = terrain.surface_height(x as f64 + 0.5, z as f64 + 0.5);
         let mut found = Located {
-            biome,
+            target: LocateTarget::Biome(biome),
             position: [x, height.ceil() as i64, z],
             spawn: None,
         };
@@ -1011,9 +1209,7 @@ fn locate(terrain: &TerraGenerator, origin: [i64; 2], biome: BiomeKind) -> Optio
                     let sx = x + dx * 4;
                     let sz = z + dz * 4;
                     if terrain
-                        .biome_at(sx as f64 + 0.5, sz as f64 + 0.5)
-                        .weights
-                        .dominant()
+                        .surface_biome(&terrain.surface_column(sx as f64 + 0.5, sz as f64 + 0.5))
                         != biome
                     {
                         continue;
@@ -1057,6 +1253,135 @@ fn locate(terrain: &TerraGenerator, origin: [i64; 2], biome: BiomeKind) -> Optio
     None
 }
 
+fn locate_structure(
+    terrain: &TerraGenerator,
+    origin: [i64; 2],
+    kind: StructureKind,
+) -> Option<Located> {
+    use terra_world::generation::structures::REGION_SIZE;
+    if terrain.config().structures_revision == 0
+        || origin.iter().any(|v| v.unsigned_abs() > 990_000)
+    {
+        return None;
+    }
+    let region = origin.map(|v| v.div_euclid(REGION_SIZE));
+    let radius = SEARCH_STEP * SEARCH_RINGS;
+    let deadline = Instant::now() + Duration::from_secs(12);
+    let mut best: Option<(i64, [i64; 3])> = None;
+    'search: for ring in 0_i64..=radius / REGION_SIZE + 1 {
+        for dz in -ring..=ring {
+            for dx in -ring..=ring {
+                if dx.abs().max(dz.abs()) != ring {
+                    continue;
+                }
+                // Planning is immutable, cached and off the main thread. Even a
+                // sparse/disabled kind must not leave a cancelled worker scanning.
+                if Instant::now() >= deadline {
+                    break 'search;
+                }
+                let Some(site) = terrain.structure_site([region[0] + dx, region[1] + dz]) else {
+                    continue;
+                };
+                if site.kind != kind
+                    || site.center[0].unsigned_abs() > 990_000
+                    || site.center[2].unsigned_abs() > 990_000
+                {
+                    continue;
+                }
+                let distance =
+                    (site.center[0] - origin[0]).pow(2) + (site.center[2] - origin[1]).pow(2);
+                if distance <= radius.pow(2)
+                    && best
+                        .as_ref()
+                        .is_none_or(|(previous, _)| distance < *previous)
+                {
+                    let position = site
+                        .buildings
+                        .first()
+                        .map_or(site.center, |building| building.entrance);
+                    best = Some((distance, position));
+                }
+            }
+        }
+        // Any unvisited region is at least this far from the origin. This
+        // conservatively checks neighboring regions before returning a winner.
+        if best
+            .is_some_and(|(distance, _)| ring > 1 && distance < ((ring - 1) * REGION_SIZE).pow(2))
+        {
+            break;
+        }
+    }
+    let (_, position) = best?;
+    let spawn = nearby_dry_landing(terrain, position);
+    Some(Located {
+        target: LocateTarget::Structure(kind),
+        position,
+        spawn,
+    })
+}
+
+fn nearby_dry_landing(terrain: &TerraGenerator, position: [i64; 3]) -> Option<WorldSpawn> {
+    let journal = EditJournal::default();
+    for ring in 0_i64..=6 {
+        for dz in -ring..=ring {
+            for dx in -ring..=ring {
+                if dx.abs().max(dz.abs()) != ring {
+                    continue;
+                }
+                let [x, z] = [position[0] + dx * 4, position[2] + dz * 4];
+                let height = terrain.surface_height(x as f64 + 0.5, z as f64 + 0.5);
+                let spawn = WorldSpawn {
+                    ground: [x, (height - 0.5).floor() as i64, z],
+                };
+                if spawn.is_valid(terrain, &journal) {
+                    return Some(spawn);
+                }
+            }
+        }
+    }
+    None
+}
+
+fn creative_clearance(terrain: &TerraGenerator, journal: &EditJournal, feet: [i64; 3]) -> bool {
+    let generator = terra_world::SectionGenerator::new(terrain.clone());
+    (0..3).all(|height| {
+        let p = [feet[0], feet[1] + height, feet[2]];
+        journal
+            .block(p)
+            .or_else(|| generator.block_at(p).ok())
+            .and_then(terra_voxel::MaterialId::from_raw)
+            .is_some_and(|material| !material.is_solid())
+    })
+}
+
+fn creative_landing(
+    terrain: &TerraGenerator,
+    journal: &EditJournal,
+    position: [i64; 3],
+) -> [i64; 3] {
+    for rise in 0..=128 {
+        let feet = [position[0], position[1] + rise, position[2]];
+        if creative_clearance(terrain, journal, feet) {
+            return feet;
+        }
+    }
+    // A creative result always retains its capability. This high-air fallback
+    // still goes through loaded clearance validation before moving the player.
+    [
+        position[0],
+        if terrain.config().bounded_world {
+            358
+        } else {
+            (terrain
+                .surface_height(position[0] as f64 + 0.5, position[2] as f64 + 0.5)
+                .ceil() as i64)
+                .max(position[1])
+                + 128
+        },
+        position[2],
+    ]
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1065,11 +1390,11 @@ mod tests {
     fn commands_are_explicit_and_support_multiword_biomes() {
         assert_eq!(
             parse_command("/locate biome desert"),
-            Ok(Some(BiomeKind::Desert))
+            Ok(Some(LocateTarget::Biome(BiomeKind::Desert)))
         );
         assert_eq!(
             parse_command("/locate biome Mushroom Park"),
-            Ok(Some(BiomeKind::MushroomPark))
+            Ok(Some(LocateTarget::Biome(BiomeKind::MushroomPark)))
         );
         assert!(parse_command("/locate desert").is_err());
         assert!(parse_command("/teleport 1 2 3").is_err());
@@ -1088,11 +1413,113 @@ mod tests {
             ..default()
         })
         .unwrap();
-        let a = locate(&terrain, [-32, -48], BiomeKind::Forest).unwrap();
-        let b = locate(&terrain, [-32, -48], BiomeKind::Forest).unwrap();
+        let a = locate(&terrain, [-32, -48], LocateTarget::Biome(BiomeKind::Forest)).unwrap();
+        let b = locate(&terrain, [-32, -48], LocateTarget::Biome(BiomeKind::Forest)).unwrap();
         assert_eq!(a.position, b.position);
         assert_eq!(a.spawn, b.spawn);
         assert!(a.spawn.is_some());
-        assert!(locate(&terrain, [-32, -48], BiomeKind::Desert).is_none());
+        assert!(locate(&terrain, [-32, -48], LocateTarget::Biome(BiomeKind::Desert)).is_none());
+    }
+
+    #[test]
+    fn structure_commands_share_explicit_namespaced_ids_and_bounded_generation() {
+        for (id, kind) in [
+            ("teramic::village", StructureKind::Village),
+            ("teramic::ruin", StructureKind::Ruin),
+            ("teramic::mine", StructureKind::Mine),
+        ] {
+            assert_eq!(
+                parse_command(&format!("/locate struct {id}")),
+                Ok(Some(LocateTarget::Structure(kind)))
+            );
+        }
+        for command in [
+            "/locate struct village",
+            "/locate struct teramic::missing",
+            "/locate struct teramic::village extra",
+            "/locate struct",
+        ] {
+            assert!(parse_command(command).is_err(), "{command}");
+        }
+        let terrain = TerraGenerator::new(terra_core::WorldConfig {
+            structures_revision: 0,
+            ..default()
+        })
+        .unwrap();
+        assert!(locate_structure(&terrain, [-385, -1], StructureKind::Village).is_none());
+        assert!(locate_structure(&terrain, [i64::MIN, 0], StructureKind::Mine).is_none());
+    }
+
+    #[test]
+    fn structure_results_use_real_plans_and_are_stable_at_negative_coordinates() {
+        let terrain = TerraGenerator::new(terra_core::WorldConfig {
+            seed: terra_core::WorldSeed(42042),
+            caves: false,
+            trees: false,
+            structures_revision: 2,
+            ..default()
+        })
+        .unwrap();
+        let site = terrain
+            .structure_site([2, -2])
+            .expect("seeded village plan");
+        assert_eq!(site.kind, StructureKind::Village);
+        let origin = [site.center[0], site.center[2]];
+        let a = locate_structure(&terrain, origin, StructureKind::Village).unwrap();
+        let b = locate_structure(&terrain, origin, StructureKind::Village).unwrap();
+        assert_eq!(a.position, site.buildings[0].entrance);
+        assert_eq!(a.position, b.position);
+        assert_eq!(a.spawn, b.spawn);
+    }
+
+    #[test]
+    fn creative_locate_landings_accept_water_but_revalidate_edited_clearance() {
+        let terrain = TerraGenerator::new(terra_core::WorldConfig {
+            base_height: 0.0,
+            hill_amplitude: 0.0,
+            mountain_amplitude: 0.0,
+            biomes: false,
+            caves: false,
+            trees: false,
+            structures_revision: 0,
+            water: true,
+            sea_level: 12.0,
+            ..default()
+        })
+        .unwrap();
+        let journal = EditJournal::default();
+        let found = locate_biome(&terrain, [-32, -48], BiomeKind::Forest).unwrap();
+        assert!(found.spawn.is_none(), "no dry land in this flooded world");
+        let landing = LocateLanding::Creative(creative_landing(&terrain, &journal, found.position));
+        assert!(landing.is_valid(&terrain, &journal));
+        assert_eq!([landing.feet()[0], landing.feet()[2]], [-32, -48]);
+        assert!(landing.feet()[1] < 12, "Creative may land in water");
+        let mut journal = journal;
+        journal.record(landing.feet(), 3).unwrap();
+        assert!(!landing.is_valid(&terrain, &journal));
+    }
+
+    #[test]
+    fn creative_air_capabilities_are_not_reusable_after_a_mode_change_or_during_loading() {
+        use terra_core::GameMode;
+        let air = LocateLanding::Creative([-17, 12, -1]);
+        assert!(air.permits(GameMode::Creative));
+        assert!(!air.permits(GameMode::Survival));
+        assert!(!air.permits(GameMode::Spectator));
+        let dry = LocateLanding::Dry(WorldSpawn {
+            ground: [-17, 11, -1],
+        });
+        assert!(
+            dry.permits(GameMode::Survival),
+            "ordinary permission checks still apply separately"
+        );
+        let mut pending = PendingTeleport::respawn(Vec3::ZERO);
+        pending.respawn = false;
+        pending.creative_only = true;
+        assert!(pending.allows_mode(GameMode::Creative));
+        assert!(!pending.allows_mode(GameMode::Survival));
+        assert!(!pending.allows_mode(GameMode::Spectator));
+        pending.creative_only = false;
+        assert!(pending.allows_mode(GameMode::Survival));
     }
 }

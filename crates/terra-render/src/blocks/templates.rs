@@ -40,11 +40,12 @@ pub(crate) struct SideCap {
 
 #[derive(Clone, Copy, Debug, Default)]
 pub(crate) struct PropMaterials {
+    pub crop: usize,
     pub foliage: [usize; 3],
     pub stem: usize,
     pub dry_grass: [usize; 3],
     pub twig: usize,
-    pub flowers: [usize; 6],
+    pub flowers: [usize; 8],
     pub mushroom: usize,
     pub stone: usize,
 }
@@ -59,6 +60,7 @@ pub(crate) struct ItemMaterials {
 
 #[derive(Default, Clone)]
 pub(crate) struct TemplateSet {
+    pub animated_chests: bool,
     pub block_details: terra_core::BlockDetailConfig,
     pub blocks: HashMap<u16, BlockTemplate>,
     pub frame_materials: HashMap<u16, usize>,
@@ -69,6 +71,8 @@ pub(crate) struct TemplateSet {
     pub wood_materials: std::collections::HashSet<usize>,
     /// Authored moving door/window leaf primitives; their fixed frame stays put.
     pub hinge_materials: std::collections::HashSet<usize>,
+    /// Rigid crusher parts: left roller, right roller and side drive cog.
+    pub crusher_moving_materials: HashMap<usize, u8>,
     pub blanket_materials: std::collections::HashSet<usize>,
 }
 

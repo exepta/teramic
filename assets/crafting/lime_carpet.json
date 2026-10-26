@@ -1,0 +1,28 @@
+{
+  "id": "teramic::lime_carpet",
+  "name": "Lime Carpet",
+  "station": "hand",
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "block": 106
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "dye": "lime"
+        },
+        "count": 1
+      }
+    ]
+  },
+  "output": {
+    "item": {
+      "block": 114
+    },
+    "count": 1
+  }
+}

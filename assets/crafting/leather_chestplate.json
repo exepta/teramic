@@ -1,0 +1,70 @@
+{
+  "id": "teramic::leather_chestplate",
+  "name": "Leather Chestplate",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "armor": {
+        "material": "leather",
+        "piece": "chestplate"
+      }
+    },
+    "count": 1
+  },
+  "pattern": {
+    "kind": "shaped",
+    "width": 3,
+    "height": 3,
+    "cells": [
+      {
+        "item": {
+          "animal": "leather"
+        },
+        "count": 1
+      },
+      null,
+      {
+        "item": {
+          "animal": "leather"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "animal": "leather"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "animal": "leather"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "animal": "leather"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "animal": "leather"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "animal": "leather"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "animal": "leather"
+        },
+        "count": 1
+      }
+    ]
+  }
+}

@@ -56,6 +56,9 @@ pub struct SurvivalVitals {
     pub regeneration_seconds: f32,
     pub regeneration_rate: f32,
     pub effects: StatusEffects,
+    pub max_health: f32,
+    pub max_stamina: f32,
+    pub armor_points: f32,
 }
 impl Default for SurvivalVitals {
     fn default() -> Self {
@@ -72,6 +75,9 @@ impl Default for SurvivalVitals {
             regeneration_seconds: 0.0,
             regeneration_rate: 0.0,
             effects: StatusEffects::default(),
+            max_health: MAX_VITAL,
+            max_stamina: MAX_VITAL,
+            armor_points: 0.0,
         }
     }
 }
@@ -93,15 +99,22 @@ pub struct SurvivalLifeOutcome {
 
 impl SurvivalVitals {
     pub fn valid(self) -> bool {
-        [
-            self.health,
-            self.stamina,
-            self.hunger,
-            self.oxygen,
-            self.saturation,
-        ]
-        .into_iter()
-        .all(|value| value.is_finite() && (0.0..=MAX_VITAL).contains(&value))
+        [self.hunger, self.oxygen, self.saturation]
+            .into_iter()
+            .all(|value| value.is_finite() && (0.0..=MAX_VITAL).contains(&value))
+            && [self.max_health, self.max_stamina]
+                .into_iter()
+                .all(|value| {
+                    value.is_finite()
+                        && (MAX_VITAL..=MAX_VITAL + crate::equipment::MAX_EQUIPMENT_BONUS)
+                            .contains(&value)
+                })
+            && self.health.is_finite()
+            && (0.0..=self.max_health).contains(&self.health)
+            && self.stamina.is_finite()
+            && (0.0..=self.max_stamina).contains(&self.stamina)
+            && self.armor_points.is_finite()
+            && (0.0..=crate::MAX_ARMOR_POINTS).contains(&self.armor_points)
             && [self.stamina_delay, self.recovery_delay]
                 .into_iter()
                 .all(|value| value.is_finite() && (0.0..=10.0).contains(&value))
@@ -114,6 +127,19 @@ impl SurvivalVitals {
     }
     pub fn dead(self) -> bool {
         self.health <= 0.0
+    }
+    /// Always recompute from the server-validated loadout; equipping never restores spent vitals.
+    pub fn apply_equipment(&mut self, equipment: crate::EquipmentSlots) {
+        let bonuses = if equipment.valid() {
+            equipment.bonuses()
+        } else {
+            Default::default()
+        };
+        self.max_health = MAX_VITAL + bonuses.health_bonus;
+        self.max_stamina = MAX_VITAL + bonuses.stamina_bonus;
+        self.armor_points = bonuses.armor_points;
+        self.health = self.health.min(self.max_health);
+        self.stamina = self.stamina.min(self.max_stamina);
     }
     pub fn can_sprint(self) -> bool {
         !self.dead() && !self.exhausted && self.stamina > 0.0
@@ -155,7 +181,7 @@ impl SurvivalVitals {
             0.0
         };
         if effort.submerged {
-            self.stamina = MAX_VITAL;
+            self.stamina = self.max_stamina;
             self.stamina_delay = 0.0;
             self.exhausted = false;
         } else if strenuous {
@@ -166,7 +192,7 @@ impl SurvivalVitals {
         } else {
             let recovery = (dt - self.stamina_delay).max(0.0);
             self.stamina_delay = (self.stamina_delay - dt).max(0.0);
-            self.stamina = (self.stamina + recovery * 18.0).min(MAX_VITAL);
+            self.stamina = (self.stamina + recovery * 18.0).min(self.max_stamina);
         }
         if self.stamina <= 0.01 {
             self.exhausted = true;
@@ -210,8 +236,9 @@ impl SurvivalVitals {
         }
         if self.hunger <= 0.0 {
             self.hurt(dt, DamageCause::Starvation);
-        } else if self.health < MAX_VITAL && self.hunger >= 75.0 && self.recovery_delay <= 0.0 {
-            self.health = (self.health + dt * 1.25).min(MAX_VITAL);
+        } else if self.health < self.max_health && self.hunger >= 75.0 && self.recovery_delay <= 0.0
+        {
+            self.health = (self.health + dt * 1.25).min(self.max_health);
             self.spend_food(dt * 0.16);
         }
         let mut food_recovery = 0.0;
@@ -246,10 +273,10 @@ impl SurvivalVitals {
             status_recovery = status_recovery.max(modifiers.health_per_second * scale);
         }
         if !self.dead() {
-            self.health = (self.health + food_recovery.max(status_recovery)).min(MAX_VITAL);
+            self.health = (self.health + food_recovery.max(status_recovery)).min(self.max_health);
         }
         self.effects.advance(dt);
-        outcome.non_starvation_damage = outcome.non_starvation_damage.clamp(0.0, MAX_VITAL);
+        outcome.non_starvation_damage = outcome.non_starvation_damage.clamp(0.0, self.max_health);
         outcome
     }
     fn spend_food(&mut self, amount: f32) {
@@ -265,6 +292,14 @@ impl SurvivalVitals {
             DamageCause::Fire => amount * self.effects.fire_damage_multiplier(),
             DamageCause::Freeze => amount * self.effects.freeze_damage_multiplier(),
             _ => amount,
+        };
+        let amount = if matches!(
+            cause,
+            DamageCause::Animal | DamageCause::Lightning | DamageCause::FallingMineral
+        ) {
+            amount * (1.0 - (self.armor_points * 0.02).clamp(0.0, 0.8))
+        } else {
+            amount
         };
         let amount = if matches!(
             cause,

@@ -13,11 +13,72 @@ pub fn visit_boxes(
     visit_boxes_with(journal, properties, position, |p| chunks.block_at(p), visit)
 }
 
-pub(crate) fn visit_boxes_with(
+/// Same authored collision shapes against a prepared or loaded voxel lookup.
+pub fn visit_boxes_with(
     journal: &EditJournal,
     properties: &BlockPropertiesCatalog,
     position: [i64; 3],
     mut block_at: impl FnMut([i64; 3]) -> Option<u16>,
+    visit: impl FnMut(ShapeBox),
+) -> bool {
+    visit_boxes_with_state(journal, properties, position, &mut block_at, None, visit)
+}
+
+/// Test a proposed block with the same authored shape and orientation as collision.
+pub fn visit_placement_boxes(
+    chunks: &ChunkStore,
+    journal: &EditJournal,
+    properties: &BlockPropertiesCatalog,
+    position: [i64; 3],
+    material: u16,
+    facing: u8,
+    visit: impl FnMut(ShapeBox),
+) -> bool {
+    visit_proposed_boxes(
+        chunks,
+        journal,
+        properties,
+        position,
+        material,
+        crate::edits::BlockObjectState {
+            facing,
+            ..Default::default()
+        },
+        visit,
+    )
+}
+
+pub fn visit_proposed_boxes(
+    chunks: &ChunkStore,
+    journal: &EditJournal,
+    properties: &BlockPropertiesCatalog,
+    position: [i64; 3],
+    material: u16,
+    state: crate::edits::BlockObjectState,
+    visit: impl FnMut(ShapeBox),
+) -> bool {
+    visit_boxes_with_state(
+        journal,
+        properties,
+        position,
+        |cell| {
+            if cell == position {
+                Some(material)
+            } else {
+                chunks.block_at(cell)
+            }
+        },
+        Some(state),
+        visit,
+    )
+}
+
+fn visit_boxes_with_state(
+    journal: &EditJournal,
+    properties: &BlockPropertiesCatalog,
+    position: [i64; 3],
+    mut block_at: impl FnMut([i64; 3]) -> Option<u16>,
+    override_state: Option<crate::edits::BlockObjectState>,
     mut visit: impl FnMut(ShapeBox),
 ) -> bool {
     let Some(material) = block_at(position) else {
@@ -47,13 +108,57 @@ pub(crate) fn visit_boxes_with(
         }
         return true;
     }
-    let selected = journal.object_state(position).unwrap_or_default();
+    let selected =
+        override_state.unwrap_or_else(|| journal.object_state(position).unwrap_or_default());
+    if crate::objects::is_window(material) {
+        let group = crate::objects::windows::group(position, material, selected.facing, |p| {
+            let id = block_at(p).or_else(|| journal.block(p))?;
+            let facing = if p == position {
+                selected.facing
+            } else {
+                journal.object_state(p)?.facing
+            };
+            Some((id, facing))
+        });
+        if group.width > 1 || group.height > 1 {
+            for piece in crate::objects::windows::pieces(group.width, group.height)
+                .into_iter()
+                .filter(|p| p.solid)
+            {
+                visit(crate::objects::windows::world_box(
+                    piece,
+                    group,
+                    f64::from(u8::from(group.facing >= 4)),
+                ));
+            }
+            return true;
+        }
+    }
     let owner = if selected.secondary {
         selected.peer.unwrap_or(position)
     } else {
         position
     };
-    let state = journal.object_state(owner).unwrap_or_default();
+    let state = if owner == position {
+        selected
+    } else {
+        journal.object_state(owner).unwrap_or_default()
+    };
+    if material == terra_core::crusher::CRANK_MATERIAL {
+        let boxes = properties.shape(material);
+        if boxes.is_empty() {
+            return false;
+        }
+        for source in boxes {
+            let mut bounds = source.rotated_y(state.facing);
+            for (axis, value) in owner.iter().enumerate() {
+                bounds.minimum[axis] += *value as f64;
+                bounds.maximum[axis] += *value as f64;
+            }
+            visit(bounds);
+        }
+        return true;
+    }
     if material == 98 {
         let mut bounds = terra_core::construction::snow_bounds(state.facing);
         for (axis, value) in position.iter().enumerate() {
@@ -88,7 +193,7 @@ pub(crate) fn visit_boxes_with(
     if boxes.is_empty() {
         return false;
     }
-    let width = if matches!(material, 28 | 29) && state.peer.is_some() {
+    let width = if matches!(material, 28 | 29 | 99) && state.peer.is_some() {
         2.0
     } else {
         1.0
@@ -99,10 +204,14 @@ pub(crate) fn visit_boxes_with(
         (owner, material, state.facing)
     };
     for (mut bounds, _) in
-        crate::objects::chimney_infill(infill_material, infill_facing, |direction| {
-            block_at(std::array::from_fn(|axis| {
-                infill_owner[axis] + direction[axis]
-            }))
+        crate::objects::chimney_infill_with_states(infill_material, infill_facing, |direction| {
+            let position = std::array::from_fn(|axis| infill_owner[axis] + direction[axis]);
+            block_at(position).map(|id| {
+                (
+                    id,
+                    journal.object_state(position).unwrap_or_default().facing,
+                )
+            })
         })
     {
         for (axis, value) in infill_owner.iter().enumerate() {
@@ -254,6 +363,10 @@ fn cast(
         reach,
         |position| {
             let material = chunks.block_at(position).unwrap_or(1);
+            let below = [position[0], position[1] - 1, position[2]];
+            if chunks.block_at(below) == Some(99) {
+                openings.insert(below);
+            }
             // Hinged leaves can extend a fraction of a cell beyond their anchor.
             for dx in -1..=1 {
                 for dz in -1..=1 {
@@ -363,10 +476,14 @@ fn cast(
                             .map(|axis| (point[axis] - position[axis] as f64 - 0.5).powi(2))
                             .sum::<f64>()
                     };
-                    let position = primary
+                    let mut position = primary
                         .peer
                         .filter(|peer| squared(*peer) < squared(owner))
                         .unwrap_or(owner);
+                    if crate::objects::is_window(material) {
+                        position =
+                            window_hit_cell(chunks, journal, cell_hit.position, material, point);
+                    }
                     nearest = Some(BlockHit {
                         position,
                         normal,
@@ -384,7 +501,20 @@ fn cast(
                 && nearest.is_none_or(|hit| distance < hit.distance)
             {
                 nearest = Some(BlockHit {
-                    position,
+                    position: if chunks
+                        .block_at(position)
+                        .is_some_and(crate::objects::is_window)
+                    {
+                        window_hit_cell(
+                            chunks,
+                            journal,
+                            position,
+                            chunks.block_at(position).unwrap(),
+                            std::array::from_fn(|a| origin[a] + direction[a] * distance),
+                        )
+                    } else {
+                        position
+                    },
                     normal,
                     distance,
                 });
@@ -457,6 +587,23 @@ fn cast(
     nearest
 }
 
+fn window_hit_cell(
+    chunks: &ChunkStore,
+    journal: &EditJournal,
+    position: [i64; 3],
+    material: u16,
+    point: [f64; 3],
+) -> [i64; 3] {
+    let facing = journal.object_state(position).unwrap_or_default().facing;
+    crate::objects::windows::group(position, material, facing, |p| {
+        Some((
+            chunks.block_at(p).or_else(|| journal.block(p))?,
+            journal.object_state(p)?.facing,
+        ))
+    })
+    .nearest_cell(point)
+}
+
 pub fn space_intersects(
     chunks: &ChunkStore,
     journal: &EditJournal,
@@ -478,5 +625,7 @@ pub fn space_intersects(
     }
 }
 
+#[cfg(test)]
+mod connected_windows;
 #[cfg(test)]
 mod tests;

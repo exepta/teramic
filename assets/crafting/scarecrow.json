@@ -1,0 +1,46 @@
+{
+  "id": "teramic::scarecrow",
+  "name": "Scarecrow",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "prop": "scarecrow"
+    },
+    "count": 1
+  },
+  "pattern": {
+    "kind": "shaped",
+    "width": 3,
+    "height": 3,
+    "cells": [
+      null,
+      {
+        "item": {
+          "crop": "wheat"
+        },
+        "count": 3
+      },
+      null,
+      {
+        "item": "stick",
+        "count": 1
+      },
+      {
+        "item": {
+          "crop": "wheat"
+        },
+        "count": 3
+      },
+      {
+        "item": "stick",
+        "count": 1
+      },
+      null,
+      {
+        "item": "stick",
+        "count": 1
+      },
+      null
+    ]
+  }
+}

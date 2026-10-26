@@ -1,0 +1,10 @@
+{
+  "id": "teramic::farmland",
+  "name": "Farmland",
+  "station": "hand",
+  "output": { "item": { "block": 101 }, "count": 1 },
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [{ "item": { "block": 2 }, "count": 1 }]
+  }
+}

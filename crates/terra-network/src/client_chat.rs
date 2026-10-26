@@ -158,7 +158,8 @@ pub(super) fn reset_prediction(
     tick: u64,
     state: PlayerState,
 ) -> Result<(), String> {
-    if !state.survival.valid()
+    if !valid_equipment_vitals(state.survival, state.equipment)
+        || state.mounted.is_some_and(|mount| !mount.valid())
         || Some(state.player) != session.player
         || state.generation != session.generation.saturating_add(1)
         || state
@@ -169,7 +170,10 @@ pub(super) fn reset_prediction(
         return Err("Invalid server teleport destination".into());
     }
     session.generation = state.generation;
+    session.mounted = state.mounted;
+    session.dismount_requested = false;
     session.stats.survival = state.survival;
+    session.stats.equipment = state.equipment;
     session.predicted_vitals = state.survival;
     session.respawn_error = None;
     session.sequence = 0;

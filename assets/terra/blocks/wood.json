@@ -6,7 +6,7 @@
   "name": "Bark",
   "render_kind": "cube",
   "surface": "wood",
-  "bevel_width": 0.09,
+  "bevel_width": 0.0,
   "materials": {
     "Twisted tree bark": {}
   },

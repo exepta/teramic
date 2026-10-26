@@ -1,0 +1,12 @@
+{
+  "id": "small_spider",
+  "title": "Small Spider",
+  "health": 3.0,
+  "food": 50.0,
+  "water": 0.0,
+  "size": [0.145, 0.1, 0.195],
+  "speed": 0.65,
+  "group_size": 1,
+  "sleeps": false,
+  "combat": { "damage": 0.5, "aggro_radius": 4.0, "reach": 0.8, "cooldown": 1.8, "poison_level": 2, "poison_seconds": 16.0 }
+}

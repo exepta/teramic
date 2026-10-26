@@ -1,0 +1,34 @@
+{
+  "id": "teramic::gold_cape_green",
+  "name": "Green Gold Cape",
+  "station": "hand",
+  "output": {
+    "item": {
+      "cape": {
+        "material": "gold",
+        "color": "green"
+      }
+    },
+    "count": 1
+  },
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "cape": {
+            "material": "gold",
+            "color": "white"
+          }
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "dye": "green"
+        },
+        "count": 1
+      }
+    ]
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "id": "teramic::birch_bed_light_blue",
+  "name": "Light Blue Birch Bed",
+  "station": "hand",
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "block": 72
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "dye": "light_blue"
+        },
+        "count": 1
+      }
+    ]
+  },
+  "output": {
+    "item": {
+      "dyed_bed": {
+        "material": 72,
+        "color": "light_blue"
+      }
+    },
+    "count": 1
+  }
+}

@@ -1,0 +1,45 @@
+{
+  "id": "teramic::iron_gloves",
+  "name": "Iron Gloves",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "armor": {
+        "material": "iron",
+        "piece": "gloves"
+      }
+    },
+    "count": 1
+  },
+  "pattern": {
+    "kind": "shaped",
+    "width": 2,
+    "height": 2,
+    "cells": [
+      {
+        "item": {
+          "mineral": "iron_ingot"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "mineral": "iron_ingot"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "mineral": "iron_ingot"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "mineral": "iron_ingot"
+        },
+        "count": 1
+      }
+    ]
+  }
+}

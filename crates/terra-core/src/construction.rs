@@ -6,16 +6,16 @@ use std::{collections::BTreeMap, sync::OnceLock};
 pub const FIRST: u16 = 74;
 pub const LAST: u16 = 97;
 pub fn is_shape(material: u16) -> bool {
-    (FIRST..=LAST).contains(&material)
+    (FIRST..=LAST).contains(&material) || matches!(material, 104..=105 | 136..=138)
 }
 pub fn is_fence(material: u16) -> bool {
-    (90..=97).contains(&material)
+    (90..=97).contains(&material) || material == 138
 }
 pub fn is_slab(material: u16) -> bool {
-    (82..=89).contains(&material)
+    (82..=89).contains(&material) || matches!(material, 105 | 137)
 }
 pub fn is_stair(material: u16) -> bool {
-    (74..=81).contains(&material)
+    (74..=81).contains(&material) || matches!(material, 104 | 136)
 }
 /// Saved sand fences keep their ID and shape, but cannot be obtained anymore.
 pub fn obtainable(material: u16) -> bool {
@@ -24,7 +24,8 @@ pub fn obtainable(material: u16) -> bool {
 
 pub const DOUBLE_SLAB: u8 = 9;
 const HALF_FACINGS: [u8; 6] = [0, 4, 5, 6, 7, 8];
-pub const LAST_MIXED_SLAB: u8 = 57;
+pub const SLAB_MATERIALS: [u16; 10] = [82, 83, 84, 85, 86, 87, 88, 89, 105, 137];
+pub const LAST_MIXED_SLAB: u8 = 69;
 
 pub fn snow_bounds(state: u8) -> ShapeBox {
     ShapeBox {
@@ -40,18 +41,41 @@ pub fn merged_slab(first: u16, facing: u8, second: u16) -> Option<u8> {
     if !is_slab(first) || !is_slab(second) || full_slab(facing) {
         return None;
     }
-    if first == second {
-        return Some(DOUBLE_SLAB);
-    }
     let half = HALF_FACINGS
         .iter()
         .position(|&f| f == facing.min(8))
         .or_else(|| (facing < 4).then_some(0))?;
-    Some(10 + (second - 82) as u8 * 6 + half as u8)
+    let second = SLAB_MATERIALS.iter().position(|&m| m == second)?;
+    Some(10 + second as u8 * 6 + half as u8)
 }
 
 pub fn full_slab(facing: u8) -> bool {
     (DOUBLE_SLAB..=LAST_MIXED_SLAB).contains(&facing)
+}
+
+/// Both halves of a combined cell. Legacy state 9 did not retain its split
+/// plane and is interpreted as the original horizontal lower/upper pair.
+pub fn slab_halves(material: u16, facing: u8) -> Option<[(u16, u8); 2]> {
+    if !is_slab(material) || !full_slab(facing) {
+        return None;
+    }
+    if facing == DOUBLE_SLAB {
+        return Some([(material, 0), (material, 4)]);
+    }
+    let code = facing - 10;
+    let first = HALF_FACINGS[usize::from(code % 6)];
+    let opposite = match first {
+        0 => 4,
+        4 => 0,
+        5 => 6,
+        6 => 5,
+        7 => 8,
+        _ => 7,
+    };
+    Some([
+        (material, first),
+        (SLAB_MATERIALS[usize::from(code / 6)], opposite),
+    ])
 }
 
 pub fn slab_parts(material: u16, facing: u8) -> Vec<(u16, ShapeBox)> {
@@ -68,16 +92,31 @@ pub fn slab_parts(material: u16, facing: u8) -> Vec<(u16, ShapeBox)> {
         };
         vec![
             (material, slab_bounds(half)),
-            (82 + u16::from(code / 6), slab_bounds(opposite)),
+            (SLAB_MATERIALS[usize::from(code / 6)], slab_bounds(opposite)),
         ]
     } else {
         vec![(material, slab_bounds(facing))]
     }
 }
 
-/// Side faces use their upper/lower edge for horizontal placement. The central
-/// band attaches a vertical half; top/bottom clicks always stack horizontally.
+/// Edge clicks keep horizontal stacking available. The center of a floor or
+/// ceiling places a vertical half facing the player, just like a wall's center.
 pub fn placement_at(material: u16, normal: [i8; 3], direction: [f64; 3], hit: [f64; 3]) -> u8 {
+    if is_slab(material) && normal[1] != 0 {
+        let edge = [hit[0], hit[2]].into_iter().any(|v| {
+            let local = v.rem_euclid(1.0);
+            local <= 0.15 || local >= 0.85
+        });
+        if !edge {
+            return if direction[0].abs() > direction[2].abs() {
+                if direction[0] >= 0.0 { 5 } else { 6 }
+            } else if direction[2] >= 0.0 {
+                7
+            } else {
+                8
+            };
+        }
+    }
     if is_slab(material) && normal[1] == 0 {
         let height = hit[1].rem_euclid(1.0);
         if height <= 0.15 {
@@ -371,7 +410,15 @@ pub fn placed_boxes(material: u16, facing: u8, neighbors: [Option<(u16, u8)>; 6]
     result
 }
 pub fn base_material(material: u16) -> Option<u16> {
-    is_shape(material).then(|| [16, 17, 18, 3, 2, 4, 15, 49][usize::from((material - FIRST) % 8)])
+    if matches!(material, 136..=138) {
+        Some(135)
+    } else if matches!(material, 104..=105) {
+        Some(103)
+    } else {
+        (FIRST..=LAST)
+            .contains(&material)
+            .then(|| [16, 17, 18, 3, 2, 4, 15, 49][usize::from((material - FIRST) % 8)])
+    }
 }
 pub fn boxes(material: u16) -> &'static [ShapeBox] {
     #[derive(Deserialize)]
@@ -383,6 +430,9 @@ pub fn boxes(material: u16) -> &'static [ShapeBox] {
     PROFILES
         .get_or_init(|| {
             [
+                include_str!("../../../assets/terra/blocks/cherry_stairs.json"),
+                include_str!("../../../assets/terra/blocks/cherry_slab.json"),
+                include_str!("../../../assets/terra/blocks/cherry_fence.json"),
                 include_str!("../../../assets/terra/blocks/oak_stairs.json"),
                 include_str!("../../../assets/terra/blocks/birch_stairs.json"),
                 include_str!("../../../assets/terra/blocks/spruce_stairs.json"),
@@ -407,6 +457,8 @@ pub fn boxes(material: u16) -> &'static [ShapeBox] {
                 include_str!("../../../assets/terra/blocks/fine_sand_fence.json"),
                 include_str!("../../../assets/terra/blocks/glass_fence.json"),
                 include_str!("../../../assets/terra/blocks/ice_fence.json"),
+                include_str!("../../../assets/terra/blocks/wool_stairs.json"),
+                include_str!("../../../assets/terra/blocks/wool_slab.json"),
             ]
             .into_iter()
             .filter_map(|source| {
@@ -456,8 +508,8 @@ mod tests {
     }
     #[test]
     fn mixed_slab_pairs_preserve_both_materials_and_all_split_planes() {
-        for first in 82..=89 {
-            for second in 82..=89 {
+        for first in SLAB_MATERIALS {
+            for second in SLAB_MATERIALS {
                 for facing in HALF_FACINGS {
                     let saved = merged_slab(first, facing, second).unwrap();
                     assert!(valid_facing(first, saved));
@@ -502,6 +554,55 @@ mod tests {
                     placement_at(82, normal, [0.0; 3], [0.5, base + 0.5, 0.5]),
                     middle
                 );
+            }
+        }
+    }
+
+    #[test]
+    fn floor_and_ceiling_centers_place_vertical_slabs_but_all_edges_remain_horizontal() {
+        for base in [-17.0, 0.0, 32.0] {
+            for normal in [[0, 1, 0], [0, -1, 0]] {
+                for (direction, facing) in [
+                    ([0.6, -0.8, 0.0], 5),
+                    ([-0.6, 0.8, 0.0], 6),
+                    ([0.0, -0.8, 0.6], 7),
+                    ([0.0, 0.8, -0.6], 8),
+                ] {
+                    assert_eq!(
+                        placement_at(82, normal, direction, [base + 0.5, 2.0, base + 0.5]),
+                        facing
+                    );
+                    for edge in [0.05, 0.95] {
+                        for axis in [0, 2] {
+                            let mut hit = [base + 0.5, 2.0, base + 0.5];
+                            hit[axis] = base + edge;
+                            assert_eq!(
+                                placement_at(82, normal, direction, hit),
+                                if normal[1] > 0 { 0 } else { 4 }
+                            );
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn new_identical_slab_pairs_retain_the_split_plane_and_legacy_pairs_remain_readable() {
+        for material in 82..=89 {
+            assert_eq!(
+                slab_halves(material, DOUBLE_SLAB),
+                Some([(material, 0), (material, 4)])
+            );
+            for facing in HALF_FACINGS {
+                let merged = merged_slab(material, facing, material).unwrap();
+                let halves = slab_halves(material, merged).unwrap();
+                assert_eq!(halves[0], (material, facing));
+                assert_eq!(halves[1].0, material);
+                assert!(!slab_bounds(halves[0].1).intersects(
+                    slab_bounds(halves[1].1).minimum,
+                    slab_bounds(halves[1].1).maximum
+                ));
             }
         }
     }
@@ -596,7 +697,7 @@ mod tests {
     }
     #[test]
     fn all_construction_profiles_are_valid_and_keep_material_identity() {
-        for id in FIRST..=LAST {
+        for id in (FIRST..=LAST).chain([104, 105]) {
             assert!(!boxes(id).is_empty(), "missing shape {id}");
             assert!(boxes(id).iter().all(|shape| shape.valid_for(id)));
             assert!(base_material(id).is_some());
@@ -605,6 +706,21 @@ mod tests {
         assert_eq!(boxes(74).len(), 3);
         assert_eq!(boxes(90).len(), 11);
         assert_eq!(base_material(81), Some(49));
+        assert_eq!(base_material(104), Some(103));
+        assert_eq!(base_material(105), Some(103));
+        assert!(!is_shape(102));
+        assert!(!is_shape(103));
+        for material in 82..=89 {
+            for facing in HALF_FACINGS {
+                assert_eq!(
+                    merged_slab(82, facing, material),
+                    Some(
+                        10 + (material - 82) as u8 * 6
+                            + HALF_FACINGS.iter().position(|v| *v == facing).unwrap() as u8
+                    )
+                );
+            }
+        }
         assert!(!connects(Some(27)));
         assert!(!connects(Some(65)));
         assert!(connects(Some(3)));

@@ -30,8 +30,14 @@
 /tools/benchmarks/results/**/*.png
 !/tools/benchmarks/results/inventory-fps-2026-10-22/native/**/*.png
 !/tools/benchmarks/results/status-effects-2026-10-22/native/**/*.png
+!/tools/benchmarks/results/equipment-2026-10-22/native/**/*.png
+!/tools/benchmarks/results/capes-crusher-2026-10-22/native/**/*.png
+!/tools/benchmarks/results/manual-crusher-2026-10-22/native/**/*.png
 !/tools/benchmarks/results/inventory-fps-2026-10-22/logs/*.log
 !/tools/benchmarks/results/status-effects-2026-10-22/logs/*.log
+!/tools/benchmarks/results/equipment-2026-10-22/logs/*.log
+!/tools/benchmarks/results/capes-crusher-2026-10-22/logs/*.log
+!/tools/benchmarks/results/manual-crusher-2026-10-22/logs/*.log
 
 __pycache__/
 *.py[cod]

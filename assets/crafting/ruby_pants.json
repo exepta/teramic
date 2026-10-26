@@ -1,0 +1,65 @@
+{
+  "id": "teramic::ruby_pants",
+  "name": "Ruby Pants",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "armor": {
+        "material": "ruby",
+        "piece": "pants"
+      }
+    },
+    "count": 1
+  },
+  "pattern": {
+    "kind": "shaped",
+    "width": 3,
+    "height": 3,
+    "cells": [
+      {
+        "item": {
+          "mineral": "ruby"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "mineral": "ruby"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "mineral": "ruby"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "mineral": "ruby"
+        },
+        "count": 1
+      },
+      null,
+      {
+        "item": {
+          "mineral": "ruby"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "mineral": "ruby"
+        },
+        "count": 1
+      },
+      null,
+      {
+        "item": {
+          "mineral": "ruby"
+        },
+        "count": 1
+      }
+    ]
+  }
+}

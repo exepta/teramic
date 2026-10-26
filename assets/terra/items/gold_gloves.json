@@ -1,0 +1,16 @@
+{
+  "item": {
+    "armor": {
+      "material": "gold",
+      "piece": "gloves"
+    }
+  },
+  "name": "Gold Gloves",
+  "description": "Gold gloves fitted for protection and comfortable movement.",
+  "equipment": {
+    "slot": "gloves",
+    "armor_points": 1.6,
+    "health_bonus": 0.5,
+    "stamina_bonus": 2.5
+  }
+}

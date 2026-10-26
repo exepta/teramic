@@ -5,6 +5,10 @@ use std::sync::Arc;
 use terra_voxel::meshing::BlockMesh;
 use terra_voxel::{BlockSection, SectionPos, global_to_section};
 
+#[cfg(test)]
+#[path = "confirmed_delta_tests.rs"]
+mod confirmed_delta_tests;
+
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub enum GenerationStatus {
     #[default]
@@ -128,8 +132,25 @@ pub struct ChunkStore {
     pub(super) queue: super::queue::SectionQueue,
     pub(super) surface_ranges: HashMap<[i64; 2], [i64; 2]>,
     pub(super) columns: HashMap<[i64; 2], Arc<crate::PreparedColumn>>,
+    pub(super) cave_views: Vec<(SectionPos, i64)>,
 }
 impl ChunkStore {
+    pub(crate) fn invalidate_sections(&mut self, positions: impl IntoIterator<Item = SectionPos>) {
+        for position in positions {
+            if self.is_wanted(position) {
+                self.dirty.insert(position);
+            }
+        }
+    }
+
+    pub(crate) fn request_sections(&mut self, positions: impl IntoIterator<Item = SectionPos>) {
+        for position in positions {
+            if self.wanted.insert(position) && !self.loaded.contains_key(&position) {
+                self.queue.push_back(position);
+            }
+        }
+    }
+
     pub fn cave_structures_enabled(&self) -> bool {
         self.columns
             .values()
@@ -144,6 +165,15 @@ impl ChunkStore {
     /// Shared immutable generation data for low-priority cartography workers.
     pub fn prepared_column(&self, coordinate: [i64; 2]) -> Option<Arc<crate::PreparedColumn>> {
         self.columns.get(&coordinate).cloned()
+    }
+
+    /// Settlement metadata already prepared by streaming; never schedules generation.
+    pub fn village_residents(
+        &self,
+    ) -> impl Iterator<Item = &crate::generation::structures::ResidentSite> {
+        self.columns
+            .values()
+            .flat_map(|column| column.village_residents())
     }
 
     #[cfg(test)]
@@ -194,13 +224,17 @@ impl ChunkStore {
         delta: crate::edits::SectionDelta,
     ) -> Result<(), String> {
         let owner = delta.position;
+        let previous_prop_epoch = journal.prop_epoch(owner);
         let affected = journal.import_replica_delta(delta)?;
         for position in affected {
             if self.is_wanted(position) {
                 self.dirty.insert(position);
             }
         }
-        if let Some(section) = self.loaded.get_mut(&owner) {
+        if let Some(section) = self.loaded.get_mut(&owner)
+            && (journal.prop_epoch(owner) != previous_prop_epoch
+                || journal.props_need_sync(owner, &section.props))
+        {
             journal.apply_prop_removals(owner, &mut section.props);
         }
         for z in -1..=1 {
@@ -366,6 +400,7 @@ pub(super) struct SectionJob {
 }
 pub(super) struct ColumnOutput {
     pub coordinate: [i64; 2],
+    pub remesh: bool,
     pub prepared: Option<Arc<crate::PreparedColumn>>,
     pub sections: Vec<(SectionPos, u64, u64, Result<GeneratedSection, String>)>,
 }

@@ -33,12 +33,16 @@ impl TerraGenerator {
         let cover = ((0.24 + patch * 0.76) * path * land * glade * (0.65 + tufts * 0.55)) as f32;
         GroundCover {
             grass: (cover * (0.88 + biome.plains as f32 * 0.12)).clamp(0.0, 1.0),
-            bushes: cover * shrubs as f32 * (0.18 + biome.forest as f32 * 0.82),
+            bushes: cover
+                * shrubs as f32
+                * (0.18 + (biome.forest + biome.cherry_forest) as f32 * 0.82),
             flowers: cover
                 * meadow as f32
-                * (0.12 + biome.plains as f32 * 0.88)
+                * (0.12 + (biome.plains + biome.cherry_forest) as f32 * 0.88)
                 * (1.0 - biome.mushroom_park as f32 * 0.8),
-            ferns: cover * biome.forest as f32 * (0.35 + shrubs as f32 * 0.65),
+            ferns: cover
+                * (biome.forest + biome.cherry_forest * 0.4) as f32
+                * (0.35 + shrubs as f32 * 0.65),
             path_clearance: (path * glade) as f32,
         }
     }
@@ -175,6 +179,22 @@ impl TerraGenerator {
                     && mix(prop.id.0 ^ 0x7468_696e_5072_6f70) & 3 != 0
             }) {
                 *prop = None;
+            }
+        }
+        if column.biome.weights.cherry_forest > 0.3
+            || column.biome_kind(self.config().sea_level)
+                == crate::generation::biomes::BiomeKind::CherryForest
+        {
+            for prop in props
+                .iter_mut()
+                .flatten()
+                .filter(|p| p.kind == PropKind::Flower)
+            {
+                prop.variant = if mix(prop.id.0 ^ 0x5069_6e6b) & 3 == 0 {
+                    2
+                } else {
+                    4
+                };
             }
         }
         crate::props::placement::reflow_group(props.iter_mut().flatten());
@@ -666,6 +686,7 @@ mod tests {
                 highland: 0.0,
                 mushroom_park: park,
                 cliffted_desert: 0.0,
+                cherry_forest: 0.0,
             };
             let mut counts = [[0_usize; 2]; 2];
             for z in -64..64 {
@@ -819,6 +840,7 @@ mod tests {
             highland: 0.0,
             mushroom_park: 0.0,
             cliffted_desert: 0.0,
+            cherry_forest: 0.0,
         };
         let mut dense = 0;
         let mut clear = 0;
@@ -900,6 +922,7 @@ mod tests {
             highland: 0.0,
             mushroom_park: 0.0,
             cliffted_desert: 0.0,
+            cherry_forest: 0.0,
         };
         let mut bushes = 0;
         let mut grasses = 0;
@@ -948,6 +971,7 @@ mod tests {
             highland: 0.0,
             mushroom_park: 1.0,
             cliffted_desert: 0.0,
+            cherry_forest: 0.0,
         };
         let mut colors = HashSet::new();
         let mut count = 0;

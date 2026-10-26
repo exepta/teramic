@@ -1,0 +1,40 @@
+{
+  "id": "teramic::diamond_hoe",
+  "name": "Diamond Hoe",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "tool": "diamond_hoe"
+    },
+    "count": 1
+  },
+  "pattern": {
+    "kind": "shaped",
+    "width": 2,
+    "height": 3,
+    "cells": [
+      {
+        "item": {
+          "mineral": "diamond"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "mineral": "diamond"
+        },
+        "count": 1
+      },
+      null,
+      {
+        "item": "stick",
+        "count": 1
+      },
+      null,
+      {
+        "item": "stick",
+        "count": 1
+      }
+    ]
+  }
+}

@@ -28,7 +28,7 @@ pub struct MapSample {
     pub water_depth: u8,
     pub known: bool,
     pub canopy: bool,
-    pub biome_weights: [f32; 7],
+    pub biome_weights: [f32; 8],
     pub shore: f32,
     pub snow: f32,
 }
@@ -41,7 +41,7 @@ impl Default for MapSample {
             water_depth: 0,
             known: false,
             canopy: false,
-            biome_weights: [0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            biome_weights: [0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
             shore: 0.0,
             snow: 0.0,
         }
@@ -131,6 +131,7 @@ fn color(surface: &SurfaceColumn) -> [u8; 4] {
         [133.0, 145.0, 133.0],
         [159.0, 119.0, 167.0],
         [183.0, 151.0, 104.0],
+        [145.0, 207.0, 99.0],
     ];
     let mut rgb: [f64; 3] =
         std::array::from_fn(|i| weights.iter().zip(palette).map(|(w, c)| w * c[i]).sum());
@@ -144,6 +145,10 @@ fn color(surface: &SurfaceColumn) -> [u8; 4] {
         let mushroom = surface.biome.weights.mushroom_park;
         for i in 0..3 {
             rgb[i] += ([157.0, 137.0, 192.0][i] - rgb[i]) * mushroom;
+        }
+        for i in 0..3 {
+            rgb[i] +=
+                ([151.0, 118.0, 145.0][i] - rgb[i]) * surface.biome.weights.cherry_forest * 0.35;
         }
     } else {
         let snow = if surface.biome.aridity() <= 0.5 {
@@ -187,5 +192,39 @@ mod tests {
         shore.biome.weights.desert = 1.0;
         shore.snow_cover = 1.0;
         assert_eq!(color(&shore), sand, "dry desert shores do not become snow");
+    }
+
+    #[test]
+    fn cherry_exploration_tiles_keep_grass_and_subtle_pink_water_colors() {
+        let generator = crate::SectionGenerator::new(
+            crate::TerraGenerator::new(terra_core::WorldConfig::default()).unwrap(),
+        );
+        let column = generator.prepare_column([-1, -1], true).unwrap();
+        let mut surface = *column.surface_at(-1, -1).unwrap();
+        surface.biome.weights = crate::generation::biomes::BiomeWeights {
+            ocean: 0.0,
+            plains: 0.0,
+            forest: 0.0,
+            desert: 0.0,
+            highland: 0.0,
+            mushroom_park: 0.0,
+            cliffted_desert: 0.0,
+            cherry_forest: 1.0,
+        };
+        surface.shore_cover = 0.0;
+        surface.snow_cover = 0.0;
+        surface.water_level = None;
+        let grass = color(&surface);
+        assert!(grass[1] > 100 && grass[1] > grass[0] && grass[0] > grass[2]);
+        surface.water_level = Some(surface.height + 2.0);
+        let pink = color(&surface);
+        surface.biome.weights.cherry_forest = 0.0;
+        surface.biome.weights.forest = 1.0;
+        let blue = color(&surface);
+        assert!(
+            pink[0] > blue[0] && pink[2] > pink[0],
+            "subtle tint, not opaque pink"
+        );
+        assert_eq!(pink[3], 255);
     }
 }

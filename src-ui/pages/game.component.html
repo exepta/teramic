@@ -1,5 +1,5 @@
 <div class="game-overlay">
-  @if (!settingsView.open && !inventoryView.open && !chatView.open && !survivalView.dead && !survivalView.editing) { <div class="crosshair"><div class="crosshair-h"></div><div class="crosshair-v"></div></div> }
+  @if (!settingsView.open && !inventoryView.open && !chatView.open && !petMenuView.visible && !survivalView.dead && !survivalView.editing) { <div class="crosshair"><div class="crosshair-h"></div><div class="crosshair-v"></div></div> }
   <inventory-panel></inventory-panel>
   <settings-menu></settings-menu>
   <network-notice></network-notice>
@@ -11,5 +11,7 @@
   <mini-map></mini-map>
   <full-map></full-map>
   <multiplayer-hud></multiplayer-hud>
+  <mob-health></mob-health>
+  <pet-menu></pet-menu>
   <debug-overlay></debug-overlay>
 </div>

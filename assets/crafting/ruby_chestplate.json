@@ -1,0 +1,70 @@
+{
+  "id": "teramic::ruby_chestplate",
+  "name": "Ruby Chestplate",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "armor": {
+        "material": "ruby",
+        "piece": "chestplate"
+      }
+    },
+    "count": 1
+  },
+  "pattern": {
+    "kind": "shaped",
+    "width": 3,
+    "height": 3,
+    "cells": [
+      {
+        "item": {
+          "mineral": "ruby"
+        },
+        "count": 1
+      },
+      null,
+      {
+        "item": {
+          "mineral": "ruby"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "mineral": "ruby"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "mineral": "ruby"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "mineral": "ruby"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "mineral": "ruby"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "mineral": "ruby"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "mineral": "ruby"
+        },
+        "count": 1
+      }
+    ]
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "id": "teramic::leather_cape_gold",
+  "name": "Gold Leather Cape",
+  "station": "hand",
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "cape": {
+            "material": "leather",
+            "color": "white"
+          }
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "dye": "gold"
+        },
+        "count": 1
+      }
+    ]
+  },
+  "output": {
+    "item": {
+      "cape": {
+        "material": "leather",
+        "color": "gold"
+      }
+    },
+    "count": 1
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "id": "teramic::red_carpet",
+  "name": "Red Carpet",
+  "station": "hand",
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "block": 106
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "dye": "red"
+        },
+        "count": 1
+      }
+    ]
+  },
+  "output": {
+    "item": {
+      "block": 107
+    },
+    "count": 1
+  }
+}

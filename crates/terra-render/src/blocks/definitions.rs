@@ -12,6 +12,8 @@ struct ToolMetadata {
     description: String,
     #[serde(default)]
     food: Option<terra_core::FoodDefinition>,
+    #[serde(default)]
+    equipment: Option<terra_core::EquipmentDefinition>,
 }
 pub(super) fn load_tool_metadata(
     path: &Path,
@@ -28,6 +30,11 @@ pub(super) fn load_tool_metadata(
             || definition
                 .food
                 .is_some_and(|food| !food.valid() || food.remainder == Some(definition.item))
+            || definition.equipment.is_some_and(|equipment| {
+                !equipment.valid()
+                    || terra_core::equipment_definition(definition.item)
+                        .is_none_or(|registered| registered.slot != equipment.slot)
+            })
         {
             return Err("Invalid tool metadata".into());
         }
@@ -229,6 +236,7 @@ pub enum BlockRenderKind {
 #[derive(Clone, Copy, Debug, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum CubeSurface {
+    Wool,
     Turf,
     Earth,
     Rock,
@@ -240,6 +248,7 @@ pub enum CubeSurface {
     CoralBlue,
     CoralYellow,
     CoralPurple,
+    Farmland,
 }
 
 #[derive(Clone, Copy, Debug, Default, Deserialize, PartialEq, Eq)]
@@ -274,8 +283,13 @@ pub struct CubeMaterialDefinition {
 #[derive(Clone, Copy, Debug, Deserialize, PartialEq, Eq, Hash)]
 #[serde(rename_all = "snake_case")]
 pub enum TexturePattern {
+    Wool,
+    PathTop,
+    PathSide,
     Turf,
     Earth,
+    Farmland,
+    FarmlandSide,
     Canopy,
     BirchCanopy,
     Gravel,
@@ -306,6 +320,9 @@ pub enum TexturePattern {
     CoralPurple,
     Mud,
     Ice,
+    BlossomCanopy,
+    CherryBark,
+    CherryEnd,
 }
 
 fn white() -> [f32; 4] {

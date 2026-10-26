@@ -149,18 +149,16 @@ mod requests {
         app
     }
 
+    fn material_cell(material: usize) -> [usize; 3] {
+        let row = material / 16;
+        [material % 16, 8 + row / 7, 9 + row % 7]
+    }
+
     fn loaded_section(owner: SectionPos) -> LoadedSection {
         let mut data = BlockSection::empty(owner).unwrap();
         for material in 1..=terra_voxel::MaterialId::LAST {
-            data.set_block(
-                [
-                    usize::from(material) % 16,
-                    8,
-                    9 + usize::from(material) / 16,
-                ],
-                material,
-            )
-            .unwrap();
+            data.set_block(material_cell(usize::from(material)), material)
+                .unwrap();
         }
         LoadedSection {
             data,
@@ -185,9 +183,7 @@ mod requests {
         let condition = SurfaceCondition::new(0.5, 0.75).unwrap();
         for material in 0..=usize::from(terra_voxel::MaterialId::LAST) {
             app.world_mut().write_message(SurfaceConditionRequest {
-                position: owner
-                    .global_block([material % 16, 8, 9 + material / 16])
-                    .unwrap(),
+                position: owner.global_block(material_cell(material)).unwrap(),
                 condition,
             });
         }
@@ -199,9 +195,7 @@ mod requests {
         app.update();
         let journal = app.world().resource::<EditJournal>();
         for material in 0..=usize::from(terra_voxel::MaterialId::LAST) {
-            let position = owner
-                .global_block([material % 16, 8, 9 + material / 16])
-                .unwrap();
+            let position = owner.global_block(material_cell(material)).unwrap();
             assert_eq!(
                 journal.surface_condition(position),
                 if terra_voxel::MaterialId::from_raw(material as u16)

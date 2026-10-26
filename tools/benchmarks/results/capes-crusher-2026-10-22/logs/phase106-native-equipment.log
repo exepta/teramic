@@ -1,0 +1,52 @@
+2026-10-22T20:30:47.431826Z  INFO bevy_render::renderer: AdapterInfo { name: "AMD Radeon RX 6950 XT (RADV NAVI21)", vendor: 4098, device: 29605, device_type: DiscreteGpu, device_pci_bus_id: "0000:0c:00.0", driver: "radv", driver_info: "Mesa 26.2.4-arch3.1", backend: Vulkan, subgroup_min_size: 32, subgroup_max_size: 64, transient_saves_memory: false }
+2026-10-22T20:30:47.575732Z  INFO bevy_pbr::cluster: GPU clustering is supported on this device.
+2026-10-22T20:30:47.575779Z  INFO bevy_render::batching::gpu_preprocessing: GPU preprocessing is fully supported on this device.
+2026-10-22T20:30:47.576620Z  INFO bevy_winit::system: Creating new window TERAMIC (150v0)
+2026-10-22T20:30:48.082697Z  INFO lightyear_netcode::client: client connecting to server 127.0.0.1:42309 [1/1]
+2026-10-22T20:30:48.082761Z  INFO lightyear_udp: UDP socket bound to 0.0.0.0:0
+2026-10-22T20:30:48.153049Z  INFO terra_client::creature_audio::scene: Recorded animal/environment audio decoded clips=91
+2026-10-22T20:30:48.171148Z  INFO lightyear_udp::server: Received UDP packet from new address 127.0.0.1:47303, Spawn new LinkOf entity=219v0 server_entity=208v0
+2026-10-22T20:30:48.213830Z  INFO terra_render::water::raymarch: Water SSR hardware depth filtering ready; multisampled views retain the original path
+2026-10-22T20:30:48.214017Z  INFO terra_render::scene::caves::lights::soft_core: Torch soft-core attenuation installed in existing clustered PBR path
+2026-10-22T20:30:48.237207Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/stone-strata-hd.png mip_levels=11 rebound_materials=1
+2026-10-22T20:30:48.237235Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/wood.png mip_levels=10 rebound_materials=1
+2026-10-22T20:30:48.237241Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/oak-crafted-hd.png mip_levels=11 rebound_materials=0
+2026-10-22T20:30:48.241512Z  INFO terra_render::blocks::loading: Block template library ready blocks=99 materials=226
+2026-10-22T20:30:48.422052Z  INFO lightyear_netcode::server_plugin: New connection on netcode from 1 (219v0)
+2026-10-22T20:30:48.539337Z  INFO lightyear_netcode::client_plugin: Client Netcode(1) connected
+2026-10-22T20:30:48.690824Z  INFO terra_network::server: Player profile accepted (local, not verified online) player=1 uuid=54769cd5-3269-4b5a-b947-47b048ac7473 name=Player-54769cd5
+2026-10-22T20:30:48.786117Z  WARN lightyear_messages::receive: Unhandled messages "terra_network::protocol::session::CreatureStates". Clearing to avoid accumulating messages...
+2026-10-22T20:30:48.799837Z  INFO terra_network::client: Authoritative world synchronized player=Some(PlayerId(1))
+2026-10-22T20:31:06.510041Z  INFO terra_client::equipment_smoke: Native equipment/cape check passed armor=11.0 carried=26 meshes=2923 inventory=false
+2026-10-22T20:31:06.577592Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/tools/benchmarks/results/capes-crusher-2026-10-22/native/equipment/armor-leather-world.png
+2026-10-22T20:31:08.385203Z  INFO terra_client::equipment_smoke: Native equipment/cape check passed armor=11.0 carried=26 meshes=2918 inventory=true
+2026-10-22T20:31:08.443941Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/tools/benchmarks/results/capes-crusher-2026-10-22/native/equipment/armor-leather-inventory.png
+2026-10-22T20:31:10.609118Z  INFO terra_client::equipment_smoke: Native equipment/cape check passed armor=22.0 carried=26 meshes=2922 inventory=false
+2026-10-22T20:31:10.669003Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/tools/benchmarks/results/capes-crusher-2026-10-22/native/equipment/armor-iron-world.png
+2026-10-22T20:31:12.473509Z  INFO terra_client::equipment_smoke: Native equipment/cape check passed armor=22.0 carried=26 meshes=2922 inventory=true
+2026-10-22T20:31:12.523739Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/tools/benchmarks/results/capes-crusher-2026-10-22/native/equipment/armor-iron-inventory.png
+2026-10-22T20:31:14.671556Z  INFO terra_client::equipment_smoke: Native equipment/cape check passed armor=17.5 carried=26 meshes=2925 inventory=false
+2026-10-22T20:31:14.730721Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/tools/benchmarks/results/capes-crusher-2026-10-22/native/equipment/armor-gold-world.png
+2026-10-22T20:31:16.536618Z  INFO terra_client::equipment_smoke: Native equipment/cape check passed armor=17.5 carried=26 meshes=2925 inventory=true
+2026-10-22T20:31:16.593112Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/tools/benchmarks/results/capes-crusher-2026-10-22/native/equipment/armor-gold-inventory.png
+2026-10-22T20:31:18.696376Z  INFO terra_client::equipment_smoke: Native equipment/cape check passed armor=33.0 carried=26 meshes=2928 inventory=false
+2026-10-22T20:31:18.757406Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/tools/benchmarks/results/capes-crusher-2026-10-22/native/equipment/armor-diamond-world.png
+2026-10-22T20:31:20.567603Z  INFO terra_client::equipment_smoke: Native equipment/cape check passed armor=33.0 carried=26 meshes=2928 inventory=true
+2026-10-22T20:31:20.623610Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/tools/benchmarks/results/capes-crusher-2026-10-22/native/equipment/armor-diamond-inventory.png
+2026-10-22T20:31:22.811685Z  INFO terra_client::equipment_smoke: Native equipment/cape check passed armor=38.5 carried=26 meshes=2931 inventory=false
+2026-10-22T20:31:22.870619Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/tools/benchmarks/results/capes-crusher-2026-10-22/native/equipment/armor-ruby-world.png
+2026-10-22T20:31:24.681768Z  INFO terra_client::equipment_smoke: Native equipment/cape check passed armor=38.5 carried=26 meshes=2931 inventory=true
+2026-10-22T20:31:24.736523Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/tools/benchmarks/results/capes-crusher-2026-10-22/native/equipment/armor-ruby-inventory.png
+2026-10-22T20:31:26.610095Z  INFO terra_client::equipment_smoke: Native equipment/cape check passed armor=38.5 carried=26 meshes=2934 inventory=false
+2026-10-22T20:31:26.667545Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/tools/benchmarks/results/capes-crusher-2026-10-22/native/equipment/armor-ruby-blue-world.png
+2026-10-22T20:31:28.475268Z  INFO terra_client::equipment_smoke: Native equipment/cape check passed armor=38.5 carried=26 meshes=2934 inventory=true
+2026-10-22T20:31:28.522279Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/tools/benchmarks/results/capes-crusher-2026-10-22/native/equipment/armor-ruby-blue-inventory.png
+2026-10-22T20:31:30.383022Z  INFO terra_client::equipment_smoke: Native equipment/cape check passed armor=38.5 carried=26 meshes=2937 inventory=false
+2026-10-22T20:31:30.408249Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/tools/benchmarks/results/capes-crusher-2026-10-22/native/equipment/armor-ruby-purple-compact-world.png
+2026-10-22T20:31:32.214769Z  INFO terra_client::equipment_smoke: Native equipment/cape check passed armor=38.5 carried=26 meshes=2937 inventory=true
+2026-10-22T20:31:32.240769Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/tools/benchmarks/results/capes-crusher-2026-10-22/native/equipment/armor-ruby-purple-compact-inventory.png
+2026-10-22T20:31:34.082856Z  INFO terra_client::equipment_smoke: Native equipment/cape check passed armor=35.0 carried=27 meshes=2937 inventory=false
+2026-10-22T20:31:34.109911Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/tools/benchmarks/results/capes-crusher-2026-10-22/native/equipment/armor-ruby-no-cape-world.png
+2026-10-22T20:31:35.914643Z  INFO terra_client::equipment_smoke: Native equipment/cape check passed armor=35.0 carried=27 meshes=2937 inventory=true
+2026-10-22T20:31:35.939316Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/tools/benchmarks/results/capes-crusher-2026-10-22/native/equipment/armor-ruby-no-cape-inventory.png
+2026-10-22T20:31:35.943859Z  INFO terra_client::equipment_smoke: Native equipment passed all five sets, white/dyed capes, cape removal, ten slots and bounded caches captures=16 max_meshes=2937

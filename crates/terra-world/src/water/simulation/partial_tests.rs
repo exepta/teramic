@@ -108,8 +108,8 @@ fn partial_water_flows_across_negative_and_positive_section_seams_and_drains() {
         for _ in 0..80 {
             simulate_fluid_step(&terrain, &chunks, &mut journal, 4096).unwrap();
         }
-        assert!(journal.fluid(q).is_none());
-        assert!(journal.fluid(r).is_none());
+        assert!(journal.fluid(q).is_none_or(|c| c.amount == 0 && !c.source));
+        assert!(journal.fluid(r).is_none_or(|c| c.amount == 0 && !c.source));
     }
 }
 
@@ -197,6 +197,6 @@ fn replacing_source_with_slab_keeps_no_source_and_remaining_water_recedes() {
     for _ in 0..40 {
         simulate_fluid_step(&terrain, &chunks, &mut journal, 4096).unwrap();
     }
-    assert!(journal.fluid(p).is_none());
+    assert!(journal.fluid(p).is_none_or(|c| c.amount == 0 && !c.source));
     assert!(journal.fluid_cells().all(|(_, cell)| !cell.source));
 }

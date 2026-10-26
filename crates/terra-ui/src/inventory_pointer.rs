@@ -126,6 +126,20 @@ impl InventoryPointer {
                     } else if session
                         .container
                         .as_ref()
+                        .is_some_and(|c| c.crusher.is_some())
+                    {
+                        terra_core::crusher::apply_gesture_reserved(
+                            &mut preview.player,
+                            &mut preview.halves[0],
+                            terra_core::containers::ContainerGesture::Click {
+                                slot,
+                                secondary: true,
+                            },
+                            crafting::reserved_counts(reservations),
+                        )
+                    } else if session
+                        .container
+                        .as_ref()
                         .is_some_and(|c| c.furnace.is_some())
                     {
                         terra_core::furnace::apply_gesture_reserved(
@@ -158,6 +172,20 @@ impl InventoryPointer {
                 *target = Some(*slot);
             }
             preview.player.drag(targets, false)
+        } else if session
+            .container
+            .as_ref()
+            .is_some_and(|c| c.crusher.is_some())
+        {
+            terra_core::crusher::apply_gesture_reserved(
+                &mut preview.player,
+                &mut preview.halves[0],
+                terra_core::containers::ContainerGesture::Drag {
+                    slots: slots.clone(),
+                    secondary: false,
+                },
+                crafting::reserved_counts(reservations),
+            )
         } else if session
             .container
             .as_ref()
@@ -435,10 +463,33 @@ pub(super) fn press(
                 session,
                 ServerAction::CreativeQuickMove {
                     item,
-                    count: if shift { STACK_LIMIT } else { 1 },
+                    count: if shift { item.max_stack() } else { 1 },
                 },
             );
         }
+        return;
+    }
+    if command == "equipment" {
+        let Some(slot) =
+            index.filter(|index| usize::from(*index) < terra_core::EquipmentSlot::ALL.len())
+        else {
+            return;
+        };
+        state.source = None;
+        state.focused = session
+            .stats
+            .equipment
+            .slot(usize::from(slot))
+            .map(|stack| stack.item)
+            .or_else(|| session.inventory.cursor.map(|stack| stack.item));
+        selection.request(
+            session,
+            if shift {
+                ServerAction::EquipmentQuickMove { slot }
+            } else {
+                ServerAction::EquipmentClick { slot, secondary }
+            },
+        );
         return;
     }
     let Some(slot) = virtual_index(command, index) else {
@@ -752,6 +803,12 @@ fn container_gesture(action: ServerAction) -> Option<terra_core::containers::Con
 }
 
 fn context_matches(action: QueuedAction, session: &ClientSession) -> bool {
+    if let ServerAction::LoadCrushingRecipe { station, .. } = action.action {
+        return session
+            .container
+            .as_ref()
+            .is_some_and(|container| container.anchor == station && container.crusher.is_some());
+    }
     if let ServerAction::LoadSmeltingRecipe { station, .. } = action.action {
         return session
             .container
@@ -822,6 +879,11 @@ fn empty_action(action: ServerAction, session: &ClientSession) -> bool {
             Some(slot) => inventory.slot(usize::from(slot)).is_none(),
             None => inventory.cursor.is_none(),
         },
+        ServerAction::CreativeClear => {
+            inventory.cursor.is_none()
+                && inventory.occupied_slots() == 0
+                && session.stats.equipment.iter().next().is_none()
+        }
         _ => false,
     }
 }
@@ -942,6 +1004,7 @@ mod tests {
             anchor,
             workbench: None,
             furnace: None,
+            crusher: None,
             halves: [anchor, [-3, 60, 8]]
                 .into_iter()
                 .map(|position| ContainerHalf {
@@ -986,6 +1049,7 @@ mod tests {
                 smoke_cells: 0,
                 vented: false,
             }),
+            crusher: None,
             halves: vec![ContainerHalf {
                 position: anchor,
                 inventory: default(),

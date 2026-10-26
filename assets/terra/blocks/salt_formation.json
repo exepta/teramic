@@ -6,7 +6,7 @@
   "creative_category": "decoration",
   "render_kind": "cube",
   "surface": "rock",
-  "bevel_width": 0.065,
+  "bevel_width": 0.0,
   "materials": {
     "Salt body": {
       "texture_pattern": "mineral",

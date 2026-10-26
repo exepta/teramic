@@ -20,11 +20,13 @@ fn anchored(chunks: &ChunkStore, p: [i64; 3], material: u16, direction: i64) -> 
 }
 
 fn unsupported(chunks: &ChunkStore, p: [i64; 3], m: u16) -> bool {
+    if matches!(m, 54 | 55) {
+        return segments::hanging_support(p, |p| chunks.block_at(p)) == Some(false);
+    }
     let down = anchored(chunks, p, m, -1);
     let up = anchored(chunks, p, m, 1);
     match m {
         50 | 56 => down == Some(false),
-        54 | 55 => up == Some(false),
         51..=53 => down == Some(false) && up == Some(false),
         _ => false,
     }
@@ -109,50 +111,84 @@ pub(super) fn loaded(
     journal: &EditJournal,
     position: terra_voxel::SectionPos,
 ) {
-    if !(-2..=2).any(|dy| {
-        position
-            .offset([0, dy, 0])
-            .is_ok_and(|p| journal.revision(p) > 0)
-    }) {
-        return;
-    }
-    let Ok(origin) = position.origin() else {
-        return;
-    };
     let mut work = Vec::new();
-    if let Some(section) = chunks.loaded.get(&position) {
-        for (i, &material) in section.data.blocks().iter().enumerate() {
-            if !segments::is_segment(material) && material != 98 {
+    // Old sections may contain foliage selected per voxel, leaving gaps within
+    // a hanging chain. Inspect only newly arrived data, never the entire world.
+    // A missing neighbouring section remains unknown and is not persisted away.
+    if let Some(section) = chunks.loaded.get(&position)
+        && let Ok(origin) = position.origin()
+    {
+        for (index, &material) in section.data.blocks().iter().enumerate() {
+            if !matches!(material, 54 | 55) {
                 continue;
             }
-            let cell = [i % 16, (i / 16) % 16, i / 256];
-            if cell[1] != 0 && section.data.blocks()[i - 16] == material {
-                continue;
+            let p = [
+                origin[0] + (index % 16) as i64,
+                origin[1] + (index / 16 % 16) as i64,
+                origin[2] + (index / 256) as i64,
+            ];
+            if !chunks
+                .block_at([p[0], p[1] + 1, p[2]])
+                .is_some_and(|m| matches!(m, 54 | 55))
+                && unsupported(chunks, p, material)
+            {
+                work.push(p);
             }
-            work.push(std::array::from_fn(|a| origin[a] + cell[a] as i64));
         }
-    }
-    // A detached chain may have arrived before its now-empty support section.
-    for y in [origin[1] - 1, origin[1] + 16] {
+        // The ceiling of a previously incomplete chain can arrive last.
         for z in 0..16 {
             for x in 0..16 {
-                let p = [origin[0] + x, y, origin[2] + z];
-                if chunks
-                    .block_at(p)
-                    .is_some_and(|m| segments::is_segment(m) || m == 98)
+                let p = [origin[0] + x, origin[1] - 1, origin[2] + z];
+                if let Some(material) = chunks.block_at(p).filter(|m| matches!(m, 54 | 55))
+                    && unsupported(chunks, p, material)
                 {
                     work.push(p);
                 }
             }
         }
     }
+    // Reconcile only chains touched by persisted support loss. A revision in
+    // this column is not evidence that every natural formation lost its root.
+    for dy in -2..=2 {
+        let Ok(edited) = position.offset([0, dy, 0]) else {
+            continue;
+        };
+        let Ok(origin) = edited.origin() else {
+            continue;
+        };
+        for (local, material) in journal.blocks_in_section(edited) {
+            if MaterialId::from_raw(material).is_some_and(MaterialId::is_solid) {
+                continue;
+            }
+            let changed = std::array::from_fn::<_, 3, _>(|axis| origin[axis] + local[axis] as i64);
+            for direction in [-1, 1] {
+                let p = [changed[0], changed[1] + direction, changed[2]];
+                let Some(material) = chunks
+                    .block_at(p)
+                    .filter(|m| segments::is_segment(*m) || *m == 98)
+                else {
+                    continue;
+                };
+                work.push(p);
+                for step in 1..=segments::MAX_CHAIN {
+                    let next = [p[0], p[1] + step * direction, p[2]];
+                    if chunks.block_at(next) != Some(material) {
+                        break;
+                    }
+                    work.push(next);
+                }
+            }
+        }
+    }
+    work.sort_unstable();
+    work.dedup();
     chunks.support_queue.extend(work);
 }
 
 #[cfg(test)]
 mod tests;
 
-/// Reload reconciliation is bounded; unchanged natural columns enqueue no work.
+/// Reload reconciliation is bounded; valid natural columns enqueue no work.
 pub(super) fn tick(
     access: Res<WorldAccess>,
     mut chunks: ResMut<ChunkStore>,

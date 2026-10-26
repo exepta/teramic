@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "id": 133,
+  "name": "White Cherry Blossoms",
+  "description": "Soft white sakura blossom clusters with a faint warm pink tint.",
+  "creative_category": "nature",
+  "render_kind": "cube",
+  "bevel_width": 0.0,
+  "materials": {
+    "White sakura blossoms": {
+      "texture_pattern": "blossom_canopy",
+      "base_color": [1.0, 1.0, 1.0, 1.0]
+    }
+  },
+  "face_materials": ["White sakura blossoms", "White sakura blossoms", "White sakura blossoms", "White sakura blossoms", "White sakura blossoms", "White sakura blossoms"],
+  "hardness": 0.3,
+  "resistance": 0.5,
+  "required_tool": null,
+  "mining_level": 0
+}

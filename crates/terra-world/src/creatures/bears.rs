@@ -156,6 +156,13 @@ pub fn step_with_navigation(
             let before = a.behavior;
             a.needs.goal = None;
             a.behavior = Behavior::Attack;
+            if let Some(nav) = navigation.as_deref_mut() {
+                nav.intend(
+                    a,
+                    terra_core::creatures::intentions::IntentReason::Hunt,
+                    Some(player),
+                );
+            }
             if before != Behavior::Attack {
                 a.timer = 0.5;
             }
@@ -394,6 +401,13 @@ fn travel(
     search: bool,
     mut navigation: Option<&mut navigation::Navigation>,
 ) -> bool {
+    if let Some(nav) = navigation.as_deref_mut() {
+        nav.intend(
+            a,
+            terra_core::creatures::intentions::CreatureIntent::state(a).reason,
+            Some(target),
+        );
+    }
     if super::support::swimming(a, h) {
         let behavior = a.behavior;
         let moved = super::support::swim_toward(a, h, target, dt, speed);
@@ -405,7 +419,7 @@ fn travel(
         }
         return moved;
     }
-    if h.ground_rotated(a.position, Kind::Bear, f64::from(a.yaw))
+    if h.supported_sized(a.position, a.size(), f64::from(a.yaw))
         .is_none_or(|p| p[1] > a.position[1] + 0.001)
     {
         a.velocity[0] = 0.0;
@@ -425,7 +439,7 @@ fn travel(
             before[2] + dz / length * amount,
         ];
         let yaw = (before[0] - p[0]).atan2(before[2] - p[2]);
-        if let Some(ground) = h.ground_rotated(p, Kind::Bear, yaw) {
+        if let Some(ground) = h.travel_step(before, p, Kind::Bear, yaw) {
             return Some(ground);
         }
         None
@@ -463,7 +477,7 @@ fn travel(
 }
 
 fn log(h: &Habitat, p: [i64; 3]) -> bool {
-    matches!(h.block(p), Some(6 | 10 | 36))
+    matches!(h.block(p), Some(6 | 10 | 36 | 134))
 }
 fn find_tree(a: &Creature, h: &Habitat) -> Option<[i64; 3]> {
     let p = a.position.map(|v| v.floor() as i64);

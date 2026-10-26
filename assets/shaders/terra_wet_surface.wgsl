@@ -21,6 +21,8 @@ struct TerraWeather {
     tint: vec4<f32>,
     leaves: vec4<f32>,
     grass: vec4<f32>,
+    vegetation: vec4<f32>,
+    flowers: array<vec4<f32>, 64>,
 };
 @group(#{MATERIAL_BIND_GROUP}) @binding(101) var<storage, read> terra_weather: TerraWeather;
 // One parameter block per shared material, not per terrain cell.
@@ -60,33 +62,26 @@ fn block_profile(p: vec2<f32>, family: f32) -> vec3<f32> {
     var contact = 1.0;
     var tint = 1.0;
     if family < 1.5 {
-        let row = floor(p.y * 4.0);
-        let q = p * vec2<f32>(3.0,4.0) + vec2<f32>(wet_hash(vec2<f32>(row,13.0)) * 1.3,0.0);
-        let cell = floor(q);
-        let tile = fract(q);
-        let mineral = wet_hash(cell);
-        let edge = min(min(tile.x,1.0-tile.x),min(tile.y,1.0-tile.y));
-        let ridge = smoothstep(0.005,0.055+mineral*0.045,edge);
-        let fault = (1.0 - smoothstep(0.004,0.018,
-            abs(tile.y-0.32-mineral*0.25-tile.x*(0.10+mineral*0.22))))
-            * step(0.54,mineral);
-        let pit = 1.0 - smoothstep(0.025,0.10,
-            length(tile-vec2<f32>(0.28+mineral*0.28,0.63-mineral*0.20)));
-        height = ridge * (0.015 + mineral * 0.014) - fault * 0.004 - pit*0.003;
-        contact = mix(0.86,1.0,ridge) - fault*0.04 - pit*0.025;
-        tint = 0.94 + mineral*0.12;
+        // Low-contrast mineral grain, not a brick grid drawn over the painted stone.
+        let mineral = wet_noise(p * 2.7 + vec2<f32>(17.2, 8.6));
+        let fracture = abs(wet_noise(p * 6.3 + vec2<f32>(mineral * 0.65)) - 0.5);
+        let fault = (1.0 - smoothstep(0.008, 0.035, fracture))
+            * smoothstep(0.5, 0.75, mineral);
+        height = mineral * 0.005 - fault * 0.001;
+        contact = 1.0 - fault * 0.035;
+        tint = 0.975 + mineral * 0.05;
     } else if family < 2.5 {
         let q = p * 9.0;
         let soil = wet_hash(floor(q));
         let clod = 1.0 - smoothstep(0.23,0.55,
             length((fract(q)-vec2<f32>(0.5))*vec2<f32>(1.0,0.75+soil*0.5)));
-        height = clod * (0.008+soil*0.005) + grain*0.001;
-        contact = 0.93 + clod*0.07;
-        tint = 0.95 + soil*0.10;
+        height = clod * (0.002+soil*0.0015) + grain*0.0003;
+        contact = 0.98 + clod*0.02;
+        tint = 0.98 + soil*0.04;
     } else if family < 3.5 {
         let turf = wet_noise(p*15.0);
-        height = turf*0.006 + grain*0.0007;
-        tint = 0.95 + turf*0.10;
+        height = turf*0.0008 + grain*0.00015;
+        tint = 0.985 + turf*0.03;
     } else if family < 4.5 {
         let ripple = sin(p.y*31.0+sin(p.x*7.0)*0.6);
         height = ripple*0.0012 + grain*0.00035;
@@ -188,7 +183,9 @@ fn fragment(input: VertexOutput, @builtin(front_facing) front: bool) -> Fragment
 #endif
     // Natural deciduous crowns can shed while the original rain roof remains intact.
     let snow_sky = max(exposed, snow_sky_override);
-    let snow_amount = max(saved_snow, terra_weather.grass.w * frost * snow_sky) * (1.0 - sheds_snow);
+    // Real worlds use local authority only. Global frost is an explicit isolated-gallery preview.
+    let preview_snow = terra_weather.grass.w * frost * snow_sky * clamp(terra_weather.vegetation.y, 0.0, 1.0);
+    let snow_amount = max(saved_snow, preview_snow) * (1.0 - sheds_snow);
     let grass_fringe = select(0.0, 1.0, abs(terra_detail.x) == 3.0
         && pbr.material.base_color.g > pbr.material.base_color.r * 1.12);
     let snow_cover = max(smoothstep(0.0, 0.95, snow_amount) * smoothstep(0.15, 0.65, pbr.N.y),

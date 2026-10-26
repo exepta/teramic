@@ -1,0 +1,57 @@
+{
+  "id": "teramic::diamond_watering_can",
+  "name": "Diamond Watering Can",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "tool": "diamond_watering_can"
+    },
+    "count": 1
+  },
+  "pattern": {
+    "kind": "shaped",
+    "width": 3,
+    "height": 3,
+    "cells": [
+      null,
+      {
+        "item": {
+          "mineral": "diamond"
+        },
+        "count": 1
+      },
+      null,
+      {
+        "item": {
+          "mineral": "diamond"
+        },
+        "count": 1
+      },
+      null,
+      {
+        "item": {
+          "mineral": "diamond"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "mineral": "diamond"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "mineral": "diamond"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "mineral": "diamond"
+        },
+        "count": 1
+      }
+    ]
+  }
+}

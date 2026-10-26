@@ -1,0 +1,28 @@
+{
+  "id": "teramic::light_blue_wool",
+  "name": "Light Blue Wool",
+  "station": "hand",
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "block": 103
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "dye": "light_blue"
+        },
+        "count": 1
+      }
+    ]
+  },
+  "output": {
+    "item": {
+      "block": 130
+    },
+    "count": 1
+  }
+}

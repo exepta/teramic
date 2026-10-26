@@ -1,0 +1,40 @@
+{
+  "id": "teramic::ruby_hoe",
+  "name": "Ruby Hoe",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "tool": "ruby_hoe"
+    },
+    "count": 1
+  },
+  "pattern": {
+    "kind": "shaped",
+    "width": 2,
+    "height": 3,
+    "cells": [
+      {
+        "item": {
+          "mineral": "ruby"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "mineral": "ruby"
+        },
+        "count": 1
+      },
+      null,
+      {
+        "item": "stick",
+        "count": 1
+      },
+      null,
+      {
+        "item": "stick",
+        "count": 1
+      }
+    ]
+  }
+}

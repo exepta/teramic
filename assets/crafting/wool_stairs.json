@@ -1,0 +1,11 @@
+{
+  "id": "teramic::wool_stairs",
+  "name": "Wool Stairs",
+  "station": "workbench",
+  "output": {"item": {"block": 104}, "count": 4},
+  "pattern": {"kind": "shaped", "width": 3, "height": 3, "cells": [
+    {"item": {"block": 103}, "count": 1}, null, null,
+    {"item": {"block": 103}, "count": 1}, {"item": {"block": 103}, "count": 1}, null,
+    {"item": {"block": 103}, "count": 1}, {"item": {"block": 103}, "count": 1}, {"item": {"block": 103}, "count": 1}
+  ]}
+}

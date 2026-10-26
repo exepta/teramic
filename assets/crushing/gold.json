@@ -1,0 +1,15 @@
+{
+  "id": 10602,
+  "key": "teramic::crush_gold",
+  "name": "Crush gold",
+  "input": {
+    "mineral": "raw_gold"
+  },
+  "output": {
+    "item": {
+      "dust": "gold"
+    },
+    "count": 1
+  },
+  "seconds": 4
+}

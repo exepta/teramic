@@ -1,4 +1,35 @@
 use super::*;
+
+#[test]
+fn suppressed_chambers_remain_solid_and_keep_their_original_roof_and_floor_guards() {
+    let old = CaveStructure {
+        kind: CaveEcology::Salt,
+        radius: 35.0,
+        height: 20.0,
+        floor: -45.5,
+        ceiling: -20.5,
+        radial: 0.3,
+        revision: 6,
+        ..Default::default()
+    };
+    let closed = CaveStructure {
+        suppressed: true,
+        revision: 7,
+        ..old
+    };
+    assert!(old.active() && !closed.active());
+    for step in 0..=124 {
+        let y = old.floor - 3.0 + f64::from(step) * 0.25;
+        for tunnel in [-8.0, -1.0, 0.5, 2.0] {
+            let before = old.carve(y, tunnel, 20.0);
+            let after = closed.carve(y, tunnel, 20.0);
+            assert!(
+                after <= before && after < 0.0,
+                "guard at {y}: {before}->{after}"
+            );
+        }
+    }
+}
 use crate::SectionGenerator;
 use terra_core::{Config, WorldConfig};
 use terra_voxel::global_to_section;
@@ -7,6 +38,158 @@ fn revision_two() -> WorldConfig {
     WorldConfig {
         cave_structure_revision: 2,
         ..Default::default()
+    }
+}
+
+#[test]
+fn revision_five_rooms_have_irregular_seeded_outlines_and_non_radial_channels() {
+    let base = CaveStructure {
+        kind: CaveEcology::Salt,
+        center: [-192.0, -55.0, -384.0],
+        radius: 48.0,
+        height: 28.0,
+        seed: 0,
+        revision: 5,
+        ..Default::default()
+    };
+    let profile = |room: CaveStructure| {
+        (0..24)
+            .map(|i| {
+                let a = f64::from(i) * std::f64::consts::TAU / 24.0;
+                let x = room.center[0] + a.cos() * room.radius * 0.7;
+                let z = room.center[2] + a.sin() * room.radius * 0.7;
+                let value = room.radial_at(x, z);
+                assert_eq!(value, room.radial_at(x, z));
+                (value * 1000.0) as i64
+            })
+            .collect::<Vec<_>>()
+    };
+    let a = profile(base);
+    assert!(a.iter().max().unwrap() - a.iter().min().unwrap() > 100);
+    assert_ne!(a, profile(CaveStructure { seed: 219, ..base }));
+    let mut wet = 0;
+    let mut dry = 0;
+    for u in -36..=36 {
+        for v in -36..=36 {
+            let x = base.center[0] + f64::from(u) + 0.5;
+            let z = base.center[2] + f64::from(v) + 0.5;
+            if base.radial_at(x, z) >= 0.85 {
+                continue;
+            }
+            if base.channel_mask(f64::from(u) + 0.5, f64::from(v) + 0.5) > 0.5 {
+                wet += 1;
+            } else {
+                dry += 1;
+            }
+            assert!(
+                base.radial_at(x, z) + 1e-12
+                    >= (x - base.center[0]).hypot(z - base.center[2]) / (base.radius * 0.985)
+            );
+        }
+    }
+    assert!(
+        wet > 100 && dry > wet * 3,
+        "narrow stream beds retain extensive dry shelves: {wet}/{dry}"
+    );
+}
+
+#[test]
+fn revision_five_small_streams_have_valid_sources_and_real_downstream_wake_cells() {
+    for kind in [
+        CaveEcology::Stone,
+        CaveEcology::Salt,
+        CaveEcology::Lush,
+        CaveEcology::Waterfall,
+    ] {
+        let room = CaveStructure {
+            kind,
+            center: [-192.0, -55.0, -384.0],
+            radius: 48.0,
+            height: 28.0,
+            seed: 0,
+            revision: 5,
+            dynamic_water: true,
+            ..Default::default()
+        };
+        let mut pools = 0;
+        let mut outlets = 0;
+        for u in -42..42 {
+            for v in -24..24 {
+                let x = room.center[0] + f64::from(u) + 0.5;
+                let z = room.center[2] + f64::from(v) + 0.5;
+                let Some(water) = room.cascade_water(x, z) else {
+                    continue;
+                };
+                pools += 1;
+                let [floor, ceiling] = room.geometry(x, z);
+                assert!(water.bed >= floor - 0.5 && water.level > water.bed);
+                assert!(water.level + 2.0 < ceiling);
+                let sample = CaveStructure {
+                    water: Some(water),
+                    radial: room.radial_at(x, z),
+                    floor,
+                    ceiling,
+                    ..room
+                };
+                if let Some(p) = sample.fluid_outlet(x, z) {
+                    outlets += 1;
+                    assert_eq!(
+                        (p[0] - x.floor() as i64).abs() + (p[2] - z.floor() as i64).abs(),
+                        1
+                    );
+                    assert!(
+                        room.cascade_water(p[0] as f64 + 0.5, p[2] as f64 + 0.5)
+                            .is_none()
+                    );
+                    assert!(
+                        room.geometry(p[0] as f64 + 0.5, p[2] as f64 + 0.5)[0] < water.level - 1.5
+                    );
+                    assert_eq!(p[1], water.level.ceil() as i64 - 1);
+                }
+            }
+        }
+        assert!(
+            pools > 50 && outlets > 0,
+            "{kind:?} must seed actual fluid updates: pools={pools}, outlets={outlets}"
+        );
+    }
+}
+
+#[test]
+fn revision_four_salt_terraces_keep_the_saved_world_profile() {
+    let room = CaveStructure {
+        kind: CaveEcology::Salt,
+        center: [-192.0, -55.0, -384.0],
+        radius: 48.0,
+        height: 28.0,
+        seed: 91,
+        revision: 4,
+        ..Default::default()
+    };
+    for z in -20..20 {
+        for x in -20..20 {
+            let u = f64::from(x) + 0.5;
+            let v = f64::from(z) + 0.5;
+            let r = room.radial_at(room.center[0] + u, room.center[2] + v);
+            let phase = f64::from(room.seed % 628) * 0.01;
+            let rough = (u * 0.19 + v * 0.11 + phase).sin() * 0.72
+                + (v * 0.27 - u * 0.13 - phase).sin() * 0.50;
+            let channel =
+                (u * 0.055 + f64::from(room.seed % 19)).sin() * 8.0 + (u * 0.12).sin() * 2.0;
+            let width = 4.5 + (u * 0.07).sin() * 1.8;
+            let basin = 1.0 - smoothstep(width, width + 3.0, (v - channel).abs());
+            let wave = (u * 0.042 + phase).sin() * 3.0 + (v * 0.051 - phase).cos() * 2.0;
+            let expected = room.center[1] - room.height * 0.72
+                + smoothstep(0.62, 1.02, r) * room.height * 1.55
+                - basin * 2.5
+                + ((r * 5.0 + wave * 0.12).max(0.0)).floor() * 1.8
+                + rough * 0.3;
+            assert!(
+                (room.geometry(room.center[0] + u, room.center[2] + v)[0] - expected.max(-118.5))
+                    .abs()
+                    < 1e-12
+            );
+        }
     }
 }
 
@@ -52,12 +235,18 @@ fn revision_four_ecologies_have_distinct_terraces_and_safe_basin_bounds() {
 
 #[test]
 fn new_cave_contract_is_explicit_validated_and_absent_in_existing_worlds() {
-    assert_eq!(WorldConfig::default().cave_structure_revision, 4);
+    assert_eq!(WorldConfig::default().cave_structure_revision, 8);
     assert_eq!(
         WorldConfig::from_toml("").unwrap().cave_structure_revision,
         0
     );
-    assert!(WorldConfig::from_toml("cave_structure_revision=5").is_err());
+    assert_eq!(
+        WorldConfig::from_toml("cave_structure_revision=7")
+            .unwrap()
+            .cave_structure_revision,
+        7
+    );
+    assert!(WorldConfig::from_toml("cave_structure_revision=9").is_err());
     let old = TerraGenerator::new(WorldConfig {
         cave_structure_revision: 0,
         ..Default::default()
@@ -226,7 +415,7 @@ fn corridor_decoration_is_sparse_rooted_and_deterministic() {
 }
 
 #[test]
-fn highland_basins_have_connected_eight_meter_overflows_and_real_foam_curtains() {
+fn legacy_highland_basins_preserve_their_geometry_and_seed_real_block_overflows() {
     let terrain = TerraGenerator::new(revision_two()).unwrap();
     let room = terrain.cave_structure_at(-13344.0, -18336.0);
     assert_eq!(room.kind, CaveEcology::Waterfall);
@@ -249,7 +438,7 @@ fn highland_basins_have_connected_eight_meter_overflows_and_real_foam_curtains()
         pair.1.floor() as i64,
     ])
     .0;
-    let mut foam = 0;
+    let mut wakes = Vec::new();
     for dy in 0..=1 {
         let generated = generator
             .build(
@@ -259,6 +448,7 @@ fn highland_basins_have_connected_eight_meter_overflows_and_real_foam_curtains()
                 true,
             )
             .unwrap();
+        wakes.extend(generated.fluid_wake);
         if let Some(water) = generated.water {
             assert!(
                 water
@@ -266,16 +456,15 @@ fn highland_basins_have_connected_eight_meter_overflows_and_real_foam_curtains()
                     .iter()
                     .all(|&i| (i as usize) < water.positions.len())
             );
-            foam += water
-                .surface_effects
-                .iter()
-                .filter(|effect| effect[3] > 0.5)
-                .count();
+            assert!(
+                water.surface_effects.iter().all(|effect| effect[3] == 0.0),
+                "reservoirs cannot invent waterfall foam before actual gravity flow exists"
+            );
         }
     }
     assert!(
-        foam > 0,
-        "generated waterfalls must actually reach the existing foam shader"
+        !wakes.is_empty(),
+        "legacy saved basins must wake the existing real liquid scheduler without regenerating their geometry"
     );
 }
 

@@ -171,6 +171,45 @@ pub(super) fn sample(pattern: TexturePattern, px: u32, py: u32) -> Option<[f32; 
                 ([161.0, 108.0, 68.0], 0.93 + relief + grain * 0.10)
             }
         }
+        TexturePattern::Farmland | TexturePattern::FarmlandSide => {
+            // Large quiet clods and fine warm chips remain legible through mips;
+            // rootlets are sparse and only appear on the vertical soil texture.
+            let cell_x = px / 24;
+            let cell_y = py / 20;
+            let seed = hash(cell_x, cell_y);
+            let edge_x = px % 24;
+            let edge_y = py % 20;
+            let seam = edge_x < 2 || edge_y < 2;
+            let pebble =
+                seed.is_multiple_of(17) && edge_x > 6 && edge_x < 18 && edge_y > 5 && edge_y < 15;
+            let root_lane = (cell_y / 2 + seed % 3) % 4;
+            let root = pattern == TexturePattern::FarmlandSide
+                && hash(cell_x / 2, cell_y / 4).is_multiple_of(11)
+                && ((edge_x < 4 && edge_y < 15) || (edge_y > 9 && edge_y < 13 && edge_x < 12))
+                && root_lane < 3;
+            let base = if root {
+                if seed.is_multiple_of(3) {
+                    [106.0, 118.0, 40.0]
+                } else {
+                    [135.0, 112.0, 56.0]
+                }
+            } else if pebble {
+                [126.0, 117.0, 104.0]
+            } else {
+                match seed % 5 {
+                    0 => [123.0, 76.0, 42.0],
+                    1 => [153.0, 95.0, 48.0],
+                    2 => [112.0, 68.0, 42.0],
+                    3 => [145.0, 88.0, 46.0],
+                    _ => [133.0, 81.0, 43.0],
+                }
+            };
+            let highlight = if edge_y > 2 && edge_y < 5 { 0.13 } else { 0.0 };
+            (
+                base,
+                0.91 + highlight + grain * 0.055 - if seam { 0.21 } else { 0.0 },
+            )
+        }
         TexturePattern::Sand => {
             let pore = hash((x * 2.0) as u32, (y * 2.0) as u32).is_multiple_of(43);
             (
@@ -206,11 +245,13 @@ pub(super) fn sample(pattern: TexturePattern, px: u32, py: u32) -> Option<[f32; 
                 0.94 + clump + grain * 0.035 - if stalk { 0.06 } else { 0.0 },
             )
         }
-        TexturePattern::Canopy | TexturePattern::BirchCanopy => {
+        TexturePattern::Canopy | TexturePattern::BirchCanopy | TexturePattern::BlossomCanopy => {
             let birch = pattern == TexturePattern::BirchCanopy;
             let leaf = leaf(x, y);
             let light_leaf = birch && leaf.is_some_and(|p| p.seed % 7 < 2);
-            let base = if light_leaf {
+            let base = if pattern == TexturePattern::BlossomCanopy {
+                [238.0; 3]
+            } else if light_leaf {
                 [249.0, 247.0, 220.0]
             } else {
                 [222.0, 228.0, 198.0]

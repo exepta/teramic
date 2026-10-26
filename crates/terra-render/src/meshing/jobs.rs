@@ -88,6 +88,7 @@ pub(crate) struct RenderJob {
 pub(crate) struct RenderJobs(pub HashMap<SectionPos, RenderJob>, pub Vec<SectionPos>);
 #[derive(Default)]
 pub(crate) struct MeshQueue {
+    visibility_revision: u64,
     focus: Option<[f64; 3]>,
     positions: Vec<SectionPos>,
     queued: HashSet<SectionPos>,
@@ -183,9 +184,32 @@ impl MeshQueue {
         }
     }
 
+    #[cfg(test)]
     fn prioritize(&mut self, focus: [f64; 3]) {
         self.positions.sort_unstable_by_key(|p| {
             std::cmp::Reverse((distance_squared(*p, focus) as u64, p.y, p.z, p.x))
+        });
+    }
+
+    fn prioritize_edits(
+        &mut self,
+        focus: [f64; 3],
+        journal: &EditJournal,
+        rendered: &RenderedSections,
+    ) {
+        let _scope = terra_core::profiling::ScopeTimer::new("terrain.prioritize_queue");
+        self.prioritize_cached(focus, |p| interactive_edit(p, journal, rendered));
+    }
+
+    fn prioritize_cached(&mut self, focus: [f64; 3], mut edited: impl FnMut(SectionPos) -> bool) {
+        self.positions.sort_by_cached_key(|p| {
+            std::cmp::Reverse((
+                !edited(*p),
+                distance_squared(*p, focus) as u64,
+                p.y,
+                p.z,
+                p.x,
+            ))
         });
     }
 
@@ -199,6 +223,19 @@ impl MeshQueue {
         self.queued.remove(&position);
         Some(position)
     }
+}
+
+pub(super) fn interactive_edit(
+    position: SectionPos,
+    journal: &EditJournal,
+    rendered: &RenderedSections,
+) -> bool {
+    journal.revision(position)
+        != rendered
+            .block_revisions
+            .get(&position)
+            .copied()
+            .unwrap_or(0)
 }
 #[derive(Default)]
 pub(crate) struct AppearanceInputs {
@@ -356,24 +393,56 @@ pub(crate) fn refresh_stream_exposure(
     }
     let mut changed = HashSet::new();
     if let Some(publications) = publications {
-        changed.extend(
-            inputs
-                .publications
-                .read(&publications)
-                .map(|m| [m.position.x, m.position.z]),
-        );
+        for message in inputs.publications.read(&publications) {
+            let position = message.position;
+            let column = [position.x, position.z];
+            if cache.5.columns.get(&column).is_some_and(|state| {
+                state.snapshot.as_ref().is_none_or(|snapshot| {
+                    snapshot.section_affects(
+                        position,
+                        chunks.loaded.get(&position).map(|s| &s.data),
+                        config.world.sea_level,
+                    )
+                })
+            }) {
+                changed.insert(column);
+            }
+        }
     }
     if let Some(removals) = removals {
         for message in inputs.removals.read(&removals) {
             let position = message.position;
-            changed.insert([position.x, position.z]);
+            let column = [position.x, position.z];
+            if cache.5.columns.get(&column).is_some_and(|state| {
+                state.snapshot.as_ref().is_none_or(|snapshot| {
+                    snapshot.section_affects(position, None, config.world.sea_level)
+                })
+            }) {
+                changed.insert(column);
+            }
             if !chunks.loaded.contains_key(&position) {
                 cache.forget(position);
             }
         }
     }
     if let Some(columns) = columns {
-        changed.extend(inputs.columns.read(&columns).map(|m| m.coordinate));
+        for message in inputs.columns.read(&columns) {
+            for z in -1..=1 {
+                for x in -1..=1 {
+                    let column = [message.coordinate[0] + x, message.coordinate[1] + z];
+                    if column == message.coordinate
+                        || cache.5.columns.get(&column).is_some_and(|state| {
+                            state
+                                .snapshot
+                                .as_ref()
+                                .is_some_and(|snapshot| snapshot.coastal(config.world.sea_level))
+                        })
+                    {
+                        changed.insert(column);
+                    }
+                }
+            }
+        }
     }
     for column in changed {
         if cache.5.mark_pending(column) {
@@ -455,6 +524,25 @@ fn neighboring_columns(columns: &HashSet<[i64; 2]>) -> HashSet<[i64; 2]> {
 }
 
 impl GeometryCache {
+    fn update_column_revisions(&mut self, revisions: HashMap<[i64; 2], u64>) {
+        let changed: HashSet<_> = revisions
+            .iter()
+            .filter_map(|(&column, &revision)| {
+                (self.1.get(&column).copied().unwrap_or(0) != revision).then_some(column)
+            })
+            .chain(
+                self.1
+                    .keys()
+                    .filter(|column| !revisions.contains_key(*column))
+                    .copied(),
+            )
+            .collect();
+        for column in neighboring_columns(&changed) {
+            self.4.remove(&column);
+        }
+        self.1 = revisions;
+    }
+
     pub(crate) fn invalidate_details(&mut self) {
         self.6 = self.6.wrapping_add(1);
     }
@@ -590,6 +678,7 @@ impl GeometryCache {
 
 #[derive(SystemParam)]
 pub(crate) struct MeshWorld<'w, 's> {
+    visibility: Option<Res<'w, super::visibility::TerrainVisibility>>,
     chunks: ResMut<'w, ChunkStore>,
     generation: Option<Res<'w, terra_world::streaming::WorldGeneration>>,
     publications: Option<Res<'w, Messages<SectionPublished>>>,
@@ -616,6 +705,13 @@ fn needs_mesh(
     jobs: &RenderJobs,
     cache: &GeometryCache,
 ) -> bool {
+    if world
+        .visibility
+        .as_ref()
+        .is_some_and(|v| v.hidden(position))
+    {
+        return false;
+    }
     let Some(section) = world.chunks.loaded.get(&position) else {
         return false;
     };
@@ -692,6 +788,9 @@ pub(crate) fn dispatch_meshes(
     >,
 ) {
     let _scope = terra_core::profiling::ScopeTimer::new("terrain.dispatch");
+    let visibility_revision = world.visibility.as_ref().map_or(0, |v| v.revision);
+    let visibility_changed = queue.visibility_revision != visibility_revision;
+    queue.visibility_revision = visibility_revision;
     let published: Vec<_> = world
         .publications
         .as_ref()
@@ -709,7 +808,7 @@ pub(crate) fn dispatch_meshes(
             .map(|message| message.position)
             .collect()
     });
-    let mut changed_columns: HashSet<_> =
+    let prepared_changes: HashSet<_> =
         world
             .prepared_columns
             .as_ref()
@@ -720,6 +819,7 @@ pub(crate) fn dispatch_meshes(
                     .map(|message| message.coordinate)
                     .collect()
             });
+    let mut changed_columns = prepared_changes.clone();
     changed_columns.extend(published.iter().chain(&removed).map(|p| [p.x, p.z]));
     let water_published = world
         .water
@@ -736,12 +836,6 @@ pub(crate) fn dispatch_meshes(
         || edits_applied;
     // Fixtures and exceptional store mutations still use the conservative path.
     let arrival_scan = (world.chunks.is_changed() && !notified) || world.terrain.is_changed();
-    queue.arrivals.extend(published);
-    queue.arrivals.extend(cache.5.changed.drain());
-    queue.arrival_scan |= arrival_scan;
-    appearance_inputs
-        .columns
-        .extend(changed_columns.iter().copied());
     let initial_ready = !queue.initial_ready
         && status.ready
         && !world.rendered.sections.is_empty()
@@ -753,7 +847,33 @@ pub(crate) fn dispatch_meshes(
             .loaded
             .values()
             .all(|section| section.mesh.is_none());
+    // Clear state from the previous world before recording this world's first
+    // publications. Otherwise a full worker pool can permanently lose an edit.
     queue.update_initial_ready(world.terrain.is_changed(), initial_ready);
+    // A confirmed block is already solid for gameplay. Its published remesh must
+    // not wait for a time-sliced full-world LOD sweep or obsolete render workers.
+    for &position in &published {
+        if interactive_edit(position, &world.journal, &world.rendered) {
+            queue.enqueue(position);
+        }
+    }
+    queue.arrivals.extend(published);
+    let stale: Vec<_> = jobs
+        .0
+        .iter()
+        .filter_map(|(&position, job)| {
+            (job.epoch != world.journal.mesh_epoch(position)).then_some(position)
+        })
+        .collect();
+    for position in stale {
+        jobs.0.remove(&position);
+        queue.arrivals.insert(position);
+    }
+    queue.arrivals.extend(cache.5.changed.drain());
+    queue.arrival_scan |= arrival_scan;
+    appearance_inputs
+        .columns
+        .extend(changed_columns.iter().copied());
     let finished: Vec<_> = world
         .entering_removed
         .read()
@@ -799,6 +919,7 @@ pub(crate) fn dispatch_meshes(
         && !world.terrain.is_changed()
         && !assets.is_changed()
         && !animation_finished
+        && !visibility_changed
         && !notified
         && queue.positions.is_empty()
         && !queue.has_selection_work()
@@ -806,7 +927,8 @@ pub(crate) fn dispatch_meshes(
         return;
     }
     let dispatch_started = Instant::now();
-    queue.selection_dirty |= focus_changed
+    queue.selection_dirty |= visibility_changed
+        || focus_changed
         || world.journal.is_changed()
         || world.config.is_changed()
         || world.terrain.is_changed()
@@ -821,7 +943,7 @@ pub(crate) fn dispatch_meshes(
         }
     }
     if animation_finished && !queue.dirty {
-        queue.prioritize(world.focus.0);
+        queue.prioritize_edits(world.focus.0, &world.journal, &world.rendered);
     }
     // Retain invalidations while all workers are occupied. Moving the camera
     // alone cannot change column revisions, submerged roofs or coastal halos.
@@ -829,16 +951,12 @@ pub(crate) fn dispatch_meshes(
     appearance_inputs.chunks_dirty |=
         arrival_scan || world.config.is_changed() || world.terrain.is_changed();
     // A visual LOD change does not change roofs, rain exposure or shorelines.
-    // Invalidate conservatively for edits, fluid updates and streaming arrivals/removals.
-    if arrival_scan
-        || world.journal.is_changed()
-        || world.config.is_changed()
-        || world.terrain.is_changed()
-    {
+    // Per-column revisions below retain masks through unrelated wetness/gameplay edits.
+    if arrival_scan || world.config.is_changed() || world.terrain.is_changed() {
         cache.4.clear();
     } else {
-        for column in neighboring_columns(&changed_columns) {
-            if !changed_columns.contains(&column) || !cache.5.columns.contains_key(&column) {
+        for column in neighboring_columns(&prepared_changes) {
+            if !prepared_changes.contains(&column) || !cache.5.columns.contains_key(&column) {
                 cache.4.remove(&column);
             }
         }
@@ -880,17 +998,22 @@ pub(crate) fn dispatch_meshes(
             }
         }
     }
+    let edit_waiting = queue
+        .positions
+        .iter()
+        .any(|&p| interactive_edit(p, &world.journal, &world.rendered));
+    let job_limit = world.config.client.max_mesh_jobs + usize::from(edit_waiting);
     if let Some(templates) = assets
         .templates
         .as_ref()
-        .filter(|_| jobs.0.len() < world.config.client.max_mesh_jobs)
+        .filter(|_| jobs.0.len() < job_limit)
     {
         if appearance_inputs.journal_dirty {
             let _scope = terra_core::profiling::ScopeTimer::new("terrain.refresh.appearance");
-            cache.1.clear();
+            let mut revisions = HashMap::new();
             appearance_inputs.fluid_revisions.clear();
             for section in world.journal.changed_sections() {
-                let epoch = cache.1.entry([section.x, section.z]).or_default();
+                let epoch = revisions.entry([section.x, section.z]).or_insert(0_u64);
                 *epoch = epoch.wrapping_add(world.journal.revision(section));
                 let fluid = appearance_inputs
                     .fluid_revisions
@@ -898,7 +1021,10 @@ pub(crate) fn dispatch_meshes(
                     .or_default();
                 *fluid = fluid.wrapping_add(world.journal.fluid_epoch(section));
             }
+            cache.update_column_revisions(revisions);
+            let mut water_changed = Vec::new();
             for (&column, state) in &mut cache.3 {
+                let before = state.epoch;
                 state.refresh(
                     &world.chunks,
                     column,
@@ -910,6 +1036,12 @@ pub(crate) fn dispatch_meshes(
                         .copied()
                         .unwrap_or(0),
                 );
+                if state.epoch != before {
+                    water_changed.push(column);
+                }
+            }
+            for column in water_changed {
+                cache.4.remove(&column);
             }
             appearance_inputs.journal_dirty = false;
         }
@@ -1035,25 +1167,31 @@ pub(crate) fn dispatch_meshes(
             }
             queue.dirty = false;
         }
-        if added || focus_changed {
-            queue.prioritize(world.focus.0);
+        if added || focus_changed || edit_waiting {
+            queue.prioritize_edits(world.focus.0, &world.journal, &world.rendered);
         }
         let _preparation_scope = terra_core::profiling::ScopeTimer::new("terrain.prepare_jobs");
-        let available = world
-            .config
-            .client
-            .max_mesh_jobs
-            .saturating_sub(jobs.0.len());
+        let available = job_limit.saturating_sub(jobs.0.len());
         let mut dispatched = 0;
         for _ in 0..available {
             let Some(position) = queue.pop_for_dispatch(dispatched, dispatch_started.elapsed())
             else {
                 break;
             };
-            if jobs.0.len() >= world.config.client.max_mesh_jobs {
+            if jobs.0.len() >= world.config.client.max_mesh_jobs
+                && !interactive_edit(position, &world.journal, &world.rendered)
+            {
+                queue.enqueue(position);
                 break;
             }
             if jobs.0.contains_key(&position) {
+                continue;
+            }
+            if world
+                .visibility
+                .as_ref()
+                .is_some_and(|v| v.hidden(position))
+            {
                 continue;
             }
             if cache.5.pending(position) {
@@ -1087,6 +1225,7 @@ pub(crate) fn dispatch_meshes(
                 continue;
             }
             let models = if has_models && section.mesh.is_some() {
+                let _scope = terra_core::profiling::ScopeTimer::new("terrain.custom_snapshot");
                 let edits = match world.journal.snapshot(position) {
                     Ok(edits) => edits,
                     Err(error) => {
@@ -1104,37 +1243,6 @@ pub(crate) fn dispatch_meshes(
             } else {
                 None
             };
-            let exposure = cache
-                .4
-                .entry([position.x, position.z])
-                .or_insert_with(|| {
-                    crate::weather::surfaces::exposure::Exposure::capture(
-                        &world.chunks,
-                        [position.x, position.z],
-                        world.config.world.sea_level,
-                        world.config.world.bounded_world,
-                        &world.terrain.0,
-                        &world.journal,
-                    )
-                })
-                .clone();
-            cache.5.watch(position, exposure.clone());
-            if let Some(exposure) = &exposure {
-                let column = [position.x, position.z];
-                let epoch = cache.3.get(&column).map_or(0, |water| water.epoch);
-                cache.3.insert(
-                    column,
-                    crate::weather::surfaces::exposure::RoofWaterState::captured(
-                        exposure,
-                        appearance_inputs
-                            .fluid_revisions
-                            .get(&column)
-                            .copied()
-                            .unwrap_or(0),
-                        epoch,
-                    ),
-                );
-            }
             let coastal = coastal_section(position, world.config.world.sea_level);
             if coastal {
                 let column = [position.x, position.z];
@@ -1194,11 +1302,45 @@ pub(crate) fn dispatch_meshes(
                 continue;
             }
             let mut geometry = cached.geometry.clone();
+            let models = cached.models.clone();
+            let epoch = cached.epoch;
+            let salt = cached.salt;
             let seasonal_foliage = geometry
                 .faces
                 .iter()
-                .any(|face| matches!(face.material, 7..=9));
-            let mineral_edits = if cached.salt || seasonal_foliage {
+                .any(|face| matches!(face.material, 7..=9 | 132 | 133));
+            let exposure = cache
+                .4
+                .entry([position.x, position.z])
+                .or_insert_with(|| {
+                    crate::weather::surfaces::exposure::Exposure::capture(
+                        &world.chunks,
+                        [position.x, position.z],
+                        world.config.world.sea_level,
+                        world.config.world.bounded_world,
+                        &world.terrain.0,
+                        &world.journal,
+                    )
+                })
+                .clone();
+            cache.5.watch(position, exposure.clone());
+            if let Some(exposure) = &exposure {
+                let column = [position.x, position.z];
+                let water_epoch = cache.3.get(&column).map_or(0, |water| water.epoch);
+                cache.3.insert(
+                    column,
+                    crate::weather::surfaces::exposure::RoofWaterState::captured(
+                        exposure,
+                        appearance_inputs
+                            .fluid_revisions
+                            .get(&column)
+                            .copied()
+                            .unwrap_or(0),
+                        water_epoch,
+                    ),
+                );
+            }
+            let mineral_edits = if salt || seasonal_foliage {
                 match world.journal.snapshot(position) {
                     Ok(edits) => Some(edits),
                     Err(error) => {
@@ -1209,7 +1351,6 @@ pub(crate) fn dispatch_meshes(
             } else {
                 None
             };
-            let models = cached.models.clone();
             let templates = if micro_detail {
                 templates.clone()
             } else {
@@ -1218,7 +1359,6 @@ pub(crate) fn dispatch_meshes(
                     .map(|(_, coarse)| coarse.clone())
                     .unwrap_or_else(|| templates.clone())
             };
-            let epoch = cached.epoch;
             let material_edges = if micro_detail && world.config.client.blocks.surface_variation {
                 world
                     .chunks
@@ -1312,7 +1452,8 @@ pub(crate) fn dispatch_meshes(
                     }
                     if pack_foliage {
                         for batch in &mut batches {
-                            if (7..=9)
+                            if terra_voxel::MaterialId::FOLIAGE
+                                .into_iter()
                                 .filter_map(|id| templates.blocks.get(&id))
                                 .any(|block| block.face_materials.contains(&batch.material))
                             {
@@ -1342,6 +1483,7 @@ pub(crate) fn dispatch_meshes(
         }
     }
     status.pending_jobs = jobs.0.len();
+    status.occluded_sections = world.visibility.as_ref().map_or(0, |v| v.len());
     status.pending_columns.clear();
     status
         .pending_columns
@@ -1352,7 +1494,9 @@ pub(crate) fn dispatch_meshes(
         && jobs.1.is_empty()
         && queue.positions.is_empty()
         && !queue.has_selection_work()
-        && world.chunks.loaded.values().all(|s| s.mesh.is_none());
+        && world.chunks.loaded.iter().all(|(p, s)| {
+            s.mesh.is_none() || world.visibility.as_ref().is_some_and(|v| v.hidden(*p))
+        });
 }
 pub(crate) fn poll_job(job: &mut RenderJob) -> Option<(Result<Vec<MeshBatch>, String>, f64)> {
     job.ready
@@ -1369,6 +1513,39 @@ pub(crate) fn focus_bucket(focus: [f64; 3]) -> [i64; 3] {
 #[cfg(test)]
 mod dispatch_tests {
     use super::*;
+
+    #[test]
+    fn large_backlog_priority_looks_up_each_candidate_once_without_changing_dispatch_order() {
+        let mut queue = MeshQueue {
+            positions: (-4_096..4_096)
+                .rev()
+                .map(|x| SectionPos::new(x, x.rem_euclid(9), -3))
+                .collect(),
+            ..Default::default()
+        };
+        let mut expected = queue.positions.clone();
+        let focus = [24.0, 3.0, -8.0];
+        let edited = |p: SectionPos| p.x.rem_euclid(79) == 0;
+        expected.sort_unstable_by_key(|p| {
+            std::cmp::Reverse((
+                !edited(*p),
+                distance_squared(*p, focus) as u64,
+                p.y,
+                p.z,
+                p.x,
+            ))
+        });
+        let mut lookups = 0;
+        queue.prioritize_cached(focus, |p| {
+            lookups += 1;
+            edited(p)
+        });
+        assert_eq!(queue.positions, expected);
+        assert!(
+            lookups <= queue.positions.len(),
+            "HashMap-backed edit keys must not be recomputed per comparison: {lookups}"
+        );
+    }
 
     #[test]
     fn incremental_candidates_keep_pending_work_and_deduplicate_publications() {
@@ -1485,6 +1662,33 @@ mod dispatch_tests {
         assert!(
             queue.enqueue(position),
             "a failed later revision can retry again"
+        );
+    }
+
+    #[test]
+    fn interactive_edits_precede_nearer_streaming_and_neighbor_epoch_only_changes() {
+        let near = SectionPos::new(-1, 10, -1);
+        let far = SectionPos::new(-3, 10, -1);
+        let halo = far.offset([1, 0, 0]).unwrap();
+        let mut journal = EditJournal::default();
+        journal
+            .record(far.global_block([15, 8, 8]).unwrap(), 3)
+            .unwrap();
+        let mut rendered = RenderedSections::default();
+        assert!(interactive_edit(far, &journal, &rendered));
+        assert!(!interactive_edit(halo, &journal, &rendered));
+        let mut queue = MeshQueue::default();
+        for position in [near, far, halo] {
+            queue.enqueue(position);
+        }
+        queue.prioritize_edits([-8.0, 168.0, -8.0], &journal, &rendered);
+        assert_eq!(queue.pop_for_dispatch(0, Duration::ZERO), Some(far));
+        assert_eq!(queue.pop_for_dispatch(1, Duration::ZERO), Some(near));
+        assert_eq!(queue.pop_for_dispatch(2, Duration::ZERO), Some(halo));
+        rendered.block_revisions.insert(far, journal.revision(far));
+        assert!(
+            !interactive_edit(far, &journal, &rendered),
+            "priority ends after the actual revision is visible"
         );
     }
 
@@ -1726,6 +1930,33 @@ mod stream_exposure_tests {
             coast_vertices: [0.0; 289],
             water: [f32::NEG_INFINITY; 256],
         })
+    }
+
+    #[test]
+    fn appearance_only_journal_updates_retain_exposure_and_block_edits_invalidate_only_their_halo()
+    {
+        let mut cache = GeometryCache::default();
+        let local = [-2, -3];
+        let neighbor = [-1, -3];
+        let distant = [20, 30];
+        let snapshot = mask(32);
+        for column in [local, neighbor, distant] {
+            cache.4.insert(column, Some(snapshot.clone()));
+        }
+        cache.1.insert(local, 7);
+        for _ in 0..128 {
+            cache.update_column_revisions(HashMap::from([(local, 7)]));
+            assert_eq!(
+                cache.4.len(),
+                3,
+                "rain wetness or remote inventory state must not flush all captured roofs"
+            );
+            assert!(Arc::ptr_eq(cache.4[&local].as_ref().unwrap(), &snapshot));
+        }
+        cache.update_column_revisions(HashMap::from([(local, 8)]));
+        assert!(!cache.4.contains_key(&local));
+        assert!(!cache.4.contains_key(&neighbor));
+        assert!(Arc::ptr_eq(cache.4[&distant].as_ref().unwrap(), &snapshot));
     }
 
     #[test]

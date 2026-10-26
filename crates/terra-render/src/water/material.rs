@@ -30,6 +30,13 @@ pub(crate) struct WaterExtension {
     /// Wind direction, storm energy and wind speed. Shared by every water batch.
     #[uniform(104)]
     pub weather: Vec4,
+    /// Solar access, wake count and the static shader-clock wrap period.
+    #[uniform(105)]
+    pub environment: Vec4,
+    #[uniform(106)]
+    pub wake_positions: [Vec4; super::contacts::WAKE_CAPACITY],
+    #[uniform(107)]
+    pub wake_motions: [Vec4; super::contacts::WAKE_CAPACITY],
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -158,9 +165,19 @@ impl WaterExtension {
                 0.55,
             ),
             weather: Vec4::new(0.86, 0.51, 0.0, 0.0),
+            environment: Vec4::new(1.0, 0.0, 3600.0, 0.0),
+            wake_positions: [Vec4::ZERO; super::contacts::WAKE_CAPACITY],
+            wake_motions: [Vec4::ZERO; super::contacts::WAKE_CAPACITY],
         }
     }
 }
+
+type WaterEnvironment<'w> = (
+    Option<Res<'w, crate::scene::daylight::Daylight>>,
+    Option<Res<'w, crate::scene::caves::CaveState>>,
+    Option<Res<'w, super::contacts::WakeField>>,
+    Option<Res<'w, Time>>,
+);
 
 pub(super) fn update_water_settings(
     config: Res<GameConfig>,
@@ -168,15 +185,49 @@ pub(super) fn update_water_settings(
     mut materials: ResMut<Assets<WaterMaterial>>,
     visual: Option<Res<crate::weather::WeatherVisual>>,
     raymarch: Option<Res<super::raymarch::WaterRaymarch>>,
+    environment: WaterEnvironment,
 ) {
     let weather = water_weather(visual.as_deref());
     let native_depth_filter = raymarch.as_ref().is_some_and(|state| state.ready);
+    let (daylight, cave, wakes, time) = environment;
+    let solar = daylight.as_ref().map_or(1.0, |day| day.daylight)
+        * cave
+            .as_ref()
+            .map_or(1.0, |cave| crate::scene::caves::sky_visibility(cave.blend));
+    let solar = (solar.clamp(0.0, 1.0) * 128.0).round() / 128.0;
+    // Match Bevy's globals.time without changing this material just to advance
+    // animation. Its existing global uniform already updates once per frame.
+    let wrap = time
+        .as_ref()
+        .map_or(3600.0, |time| time.wrap_period().as_secs_f32());
+    let mut wake_positions = [Vec4::ZERO; super::contacts::WAKE_CAPACITY];
+    let mut wake_motions = [Vec4::ZERO; super::contacts::WAKE_CAPACITY];
+    let mut count = 0;
+    if let Some(wakes) = wakes {
+        for (position, motion) in wakes.positions.iter().zip(wakes.motions) {
+            if motion.w <= 0.0 {
+                continue;
+            }
+            wake_positions[count] = Vec4::new(
+                position.x,
+                position.y,
+                position.z,
+                position.w.rem_euclid(wrap),
+            );
+            wake_motions[count] = motion;
+            count += 1;
+        }
+    }
+    let environment = Vec4::new(solar, count as f32, wrap, 0.0);
     let Some(current) = materials.get(&assets.0) else {
         return;
     };
     if (config.is_changed()
         || current.extension.weather != weather
-        || current.extension.native_depth_filter != native_depth_filter)
+        || current.extension.native_depth_filter != native_depth_filter
+        || current.extension.environment != environment
+        || current.extension.wake_positions != wake_positions
+        || current.extension.wake_motions != wake_motions)
         && let Some(mut material) = materials.get_mut(&assets.0)
     {
         if config.is_changed() {
@@ -184,6 +235,9 @@ pub(super) fn update_water_settings(
         }
         material.extension.weather = weather;
         material.extension.native_depth_filter = native_depth_filter;
+        material.extension.environment = environment;
+        material.extension.wake_positions = wake_positions;
+        material.extension.wake_motions = wake_motions;
     }
 }
 

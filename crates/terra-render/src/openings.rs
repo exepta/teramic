@@ -8,6 +8,7 @@ use bevy::{
 };
 use std::collections::{HashMap, HashSet};
 use terra_world::{edits::EditJournal, streaming::ChunkStore};
+mod windows;
 
 const HINGE: Vec3 = Vec3::new(0.15, 0.0, 0.5);
 const CENTER: Vec3 = Vec3::new(0.5, 0.0, 0.5);
@@ -20,12 +21,21 @@ struct Part {
     material: Handle<StandardMaterial>,
     moving: bool,
     glass: bool,
+    leaf: u8,
+}
+
+struct Placed {
+    root: Entity,
+    leaves: Vec<Entity>,
+    material: u16,
+    facing: u8,
+    size: [u8; 2],
 }
 
 #[derive(Resource, Default)]
 struct Openings {
-    templates: HashMap<u16, Vec<Part>>,
-    placed: HashMap<[i64; 3], (Entity, Entity, u16, u8)>,
+    templates: HashMap<(u16, u8, u8), Vec<Part>>,
+    placed: HashMap<[i64; 3], Placed>,
     next_scan: f32,
 }
 
@@ -35,6 +45,7 @@ struct Leaf {
     start: f32,
     target: f32,
     elapsed: f32,
+    angle: f32,
 }
 impl Leaf {
     fn new(open: bool) -> Self {
@@ -44,6 +55,7 @@ impl Leaf {
             start: fraction,
             target: fraction,
             elapsed: DURATION,
+            angle: OPEN_ANGLE,
         }
     }
 
@@ -79,6 +91,39 @@ fn has_loaded_part(
         || object
             .peer
             .is_some_and(|peer| chunks.block_at(peer) == Some(material))
+}
+
+fn loaded_openings<'a>(
+    journal: &'a EditJournal,
+    chunks: &'a ChunkStore,
+) -> impl Iterator<Item = ([i64; 3], u16, terra_world::edits::BlockObjectState)> + 'a {
+    let mut seen = HashSet::new();
+    chunks
+        .loaded
+        .keys()
+        .flat_map(move |&section| journal.object_states_in_section(section))
+        .filter_map(move |(position, material, object)| {
+            if !terra_world::objects::is_opening(material)
+                || chunks.block_at(position) != Some(material)
+            {
+                return None;
+            }
+            let (position, object) = if object.secondary {
+                let primary = object.peer?;
+                let state = journal.object_state(primary)?;
+                if state.secondary
+                    || state.peer != Some(position)
+                    || journal.block(primary) != Some(material)
+                {
+                    return None;
+                }
+                (primary, state)
+            } else {
+                (position, object)
+            };
+            (has_loaded_part(chunks, position, material, object) && seen.insert(position))
+                .then_some((position, material, object))
+        })
 }
 
 fn parts(
@@ -117,6 +162,7 @@ fn parts(
             material,
             moving,
             glass,
+            leaf: 0,
         });
     }
     Some(result)
@@ -140,33 +186,50 @@ fn synchronize(
     }
     state.next_scan = now + 0.1;
     let mut live = HashSet::new();
-    for (position, material, object) in journal.object_states() {
-        if !(65..=70).contains(&material) || object.secondary {
+    let mut seen = HashSet::new();
+    for (position, material, object) in loaded_openings(&journal, &chunks) {
+        let group = terra_world::objects::is_window(material).then(|| {
+            terra_world::objects::windows::group(position, material, object.facing, |p| {
+                let id = chunks.block_at(p).or_else(|| journal.block(p))?;
+                Some((id, journal.object_state(p)?.facing))
+            })
+        });
+        let position = group.map_or(position, |g| g.anchor);
+        if !seen.insert(position) {
             continue;
         }
+        let size = group.map_or([1, 1], |g| [g.width, g.height]);
         // A two-cell door can straddle a vertical section boundary. Its shared
         // model remains visible while either occupied half is still loaded.
-        if !has_loaded_part(&chunks, position, material, object) {
-            continue;
-        }
         live.insert(position);
-        if let Some(&(root, leaf, old_material, old_facing)) = state.placed.get(&position) {
-            if old_material == material && old_facing % 4 == object.facing % 4 {
-                if let Ok(mut leaf) = leaves.get_mut(leaf) {
-                    leaf.target(object.facing >= 4);
+        if let Some(placed) = state.placed.get(&position) {
+            if placed.material == material
+                && placed.facing % 4 == object.facing % 4
+                && placed.size == size
+            {
+                for &entity in &placed.leaves {
+                    if let Ok(mut leaf) = leaves.get_mut(entity) {
+                        leaf.target(object.facing >= 4);
+                    }
                 }
                 continue;
             }
-            commands.entity(root).despawn();
+            commands.entity(placed.root).despawn();
             state.placed.remove(&position);
         }
-        if let std::collections::hash_map::Entry::Vacant(entry) = state.templates.entry(material) {
-            let Some(parts) = parts(material, &assets, &mut meshes, &materials) else {
+        let key = (material, size[0], size[1]);
+        if let std::collections::hash_map::Entry::Vacant(entry) = state.templates.entry(key) {
+            let parts = if size != [1, 1] {
+                windows::parts(material, size, &assets, &mut meshes, &materials)
+            } else {
+                parts(material, &assets, &mut meshes, &materials)
+            };
+            let Some(parts) = parts else {
                 continue;
             };
             entry.insert(parts);
         }
-        let Some(parts) = state.templates.get(&material) else {
+        let Some(parts) = state.templates.get(&key) else {
             continue;
         };
         let open = object.facing >= 4;
@@ -180,37 +243,59 @@ fn synchronize(
                 Visibility::Inherited,
             ))
             .id();
-        let leaf = commands
-            .spawn((
-                Name::new("Hinged leaf"),
-                Leaf::new(open),
-                Transform::from_translation(HINGE - CENTER)
-                    .with_rotation(Quat::from_rotation_y(if open { OPEN_ANGLE } else { 0.0 })),
-                Visibility::Inherited,
-                ChildOf(root),
-            ))
-            .id();
+        let mut leaf_entities = Vec::with_capacity(usize::from(size[0]));
+        for index in 0..size[0] {
+            let hinge = group.map_or(HINGE, |g| {
+                Vec3::from_array(g.hinge(index).map(|v| v as f32))
+            });
+            let angle = if index == 0 { OPEN_ANGLE } else { -OPEN_ANGLE };
+            let leaf = commands
+                .spawn((
+                    Name::new("Hinged leaf"),
+                    Leaf {
+                        angle,
+                        ..Leaf::new(open)
+                    },
+                    Transform::from_translation(hinge - CENTER)
+                        .with_rotation(Quat::from_rotation_y(if open { angle } else { 0.0 })),
+                    Visibility::Inherited,
+                    ChildOf(root),
+                ))
+                .id();
+            leaf_entities.push(leaf);
+        }
         for part in parts {
             let mut entity = commands.spawn((
                 Mesh3d(part.mesh.clone()),
                 MeshMaterial3d(part.material.clone()),
                 Transform::default(),
                 Visibility::Inherited,
-                ChildOf(if part.moving { leaf } else { root }),
+                ChildOf(if part.moving {
+                    leaf_entities[usize::from(part.leaf)]
+                } else {
+                    root
+                }),
             ));
             if part.glass {
                 entity.insert(NotShadowCaster);
             }
         }
-        state
-            .placed
-            .insert(position, (root, leaf, material, object.facing));
+        state.placed.insert(
+            position,
+            Placed {
+                root,
+                leaves: leaf_entities,
+                material,
+                facing: object.facing,
+                size,
+            },
+        );
     }
     state.placed.retain(|position, entry| {
         if live.contains(position) {
             true
         } else {
-            commands.entity(entry.0).despawn();
+            commands.entity(entry.root).despawn();
             false
         }
     });
@@ -222,7 +307,7 @@ fn animate(time: Res<Time>, mut leaves: Query<(&mut Leaf, &mut Transform)>) {
             continue;
         }
         leaf.advance(time.delta_secs());
-        transform.rotation = Quat::from_rotation_y(OPEN_ANGLE * leaf.fraction);
+        transform.rotation = Quat::from_rotation_y(leaf.angle * leaf.fraction);
     }
 }
 
@@ -285,6 +370,26 @@ mod tests {
             },
         );
         assert_eq!(chunks.block_at(owner), None);
+        let mut journal = EditJournal::default();
+        for (position, state) in [
+            (owner, object),
+            (
+                peer,
+                BlockObjectState {
+                    peer: Some(owner),
+                    secondary: true,
+                    ..default()
+                },
+            ),
+        ] {
+            journal.record(position, 65).unwrap();
+            journal.set_object_state(position, Some(state)).unwrap();
+        }
+        assert_eq!(
+            loaded_openings(&journal, &chunks).collect::<Vec<_>>(),
+            vec![(owner, 65, object)],
+            "a loaded secondary must discover its unloaded primary without scanning journal history"
+        );
         assert!(has_loaded_part(&chunks, owner, 65, object));
         assert!(!has_loaded_part(&chunks, owner, 66, object));
         assert!(!has_loaded_part(
@@ -301,6 +406,75 @@ mod tests {
             .set_block(local, 0)
             .unwrap();
         assert!(!has_loaded_part(&chunks, owner, 65, object));
+        assert!(loaded_openings(&journal, &chunks).next().is_none());
+    }
+
+    #[test]
+    fn loaded_opening_scan_ignores_unloaded_history_stale_cells_and_duplicate_door_halves() {
+        let primary = [-1, 15, -16];
+        let peer = [-1, 16, -16];
+        let state = BlockObjectState {
+            facing: 5,
+            peer: Some(peer),
+            ..default()
+        };
+        let mut journal = EditJournal::default();
+        let mut chunks = ChunkStore::default();
+        for (position, object) in [
+            (primary, state),
+            (
+                peer,
+                BlockObjectState {
+                    facing: 5,
+                    peer: Some(primary),
+                    secondary: true,
+                    ..default()
+                },
+            ),
+        ] {
+            journal.record(position, 65).unwrap();
+            journal.set_object_state(position, Some(object)).unwrap();
+            let (section, local) = terra_voxel::global_to_section(position);
+            let mut data = BlockSection::empty(section).unwrap();
+            data.set_block(local, 65).unwrap();
+            chunks.loaded.insert(
+                section,
+                LoadedSection {
+                    data,
+                    mesh: None,
+                    mesh_epoch: 0,
+                    water_epoch: 0,
+                    water: None,
+                    props: Vec::new(),
+                },
+            );
+        }
+        for x in 0..128 {
+            let position = [1024 + x * 32, 2, -1];
+            journal.record(position, 68).unwrap();
+            journal
+                .set_object_state(position, Some(BlockObjectState::default()))
+                .unwrap();
+        }
+        let stale = [-2, 15, -16];
+        journal.record(stale, 68).unwrap();
+        journal
+            .set_object_state(stale, Some(BlockObjectState::default()))
+            .unwrap();
+        assert_eq!(chunks.block_at(stale), Some(0));
+        assert_eq!(
+            loaded_openings(&journal, &chunks).collect::<Vec<_>>(),
+            vec![(primary, 65, state)]
+        );
+        chunks
+            .loaded
+            .remove(&terra_voxel::global_to_section(primary).0);
+        assert_eq!(
+            loaded_openings(&journal, &chunks).collect::<Vec<_>>(),
+            vec![(primary, 65, state)]
+        );
+        chunks.loaded.clear();
+        assert!(loaded_openings(&journal, &chunks).next().is_none());
     }
 
     #[test]

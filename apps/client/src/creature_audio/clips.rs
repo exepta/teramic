@@ -3,7 +3,21 @@ use std::{io::Cursor, sync::Arc};
 
 pub const RAIN_CLIP: usize = 73;
 pub const RAIN_DETAIL_CLIP: usize = 74;
-pub const SWIM_CLIPS: [usize; 4] = [31, 75, 76, 77];
+pub const SWIM_CLIPS: [usize; 4] = [
+    PATHS.len() + 5,
+    PATHS.len() + 6,
+    PATHS.len() + 7,
+    PATHS.len() + 8,
+];
+pub const SPIDER_STEP_CLIP: usize = PATHS.len() + 9;
+pub const SPIDER_IDLE_CLIP: usize = PATHS.len() + 10;
+pub const SPIDER_HISS_CLIP: usize = PATHS.len() + 11;
+pub const CHEST_OPEN_CLIP: usize = PATHS.len() + 12;
+pub const CHEST_CLOSE_CLIP: usize = PATHS.len() + 13;
+pub const STALKER_BREATH_CLIP: usize = PATHS.len() + 14;
+pub const STALKER_SCRATCH_CLIP: usize = PATHS.len() + 15;
+pub const STALKER_SCREAM_CLIP: usize = PATHS.len() + 16;
+pub const STALKER_FAST_BREATH_CLIP: usize = PATHS.len() + 17;
 pub const WET_CONTACT_CLIPS: [usize; 2] = [78, 79];
 pub const SQUID_JET_CLIP: usize = PATHS.len() + 1;
 pub const JELLY_PULSE_CLIP: usize = PATHS.len() + 2;
@@ -13,7 +27,8 @@ pub const DOOR_OPEN_CLIP: usize = 80;
 pub const DOOR_CLOSE_CLIP: usize = 81;
 pub const COUGH_CLIPS: [usize; 3] = [82, 84, 85];
 pub const FURNACE_CLIP: usize = 83;
-pub const PATHS: [&str; 86] = [
+pub const STALKER_AIRWAY_CLIP: usize = 86;
+pub const PATHS: [&str; 87] = [
     "animals/sheep-bleat.wav",
     "animals/sheep-bleat-2.wav",
     "animals/cow-moo.wav",
@@ -100,6 +115,7 @@ pub const PATHS: [&str; 86] = [
     "objects/furnace-fire.wav",
     "player/cough-2.wav",
     "player/cough-3.wav",
+    "animals/stalker-airway.wav",
 ];
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -118,31 +134,40 @@ impl Surface {
     pub(super) fn material(raw: u16) -> Self {
         use terra_voxel::MaterialId::*;
         match terra_voxel::MaterialId::from_raw(raw) {
+            Some(material)
+                if terra_core::textiles::is_wool(material as u16)
+                    || terra_core::textiles::is_carpet(material as u16) =>
+            {
+                Self::Dirt
+            }
             Some(Grass) => Self::Grass,
             Some(Sand) => Self::Sand,
             Some(
-                Dirt | Clay | Mud | MushroomStem | PurpleMushroomCap | RedMushroomCap
-                | YellowMushroomCap | GreenMushroomCap | BlueMushroomCap | WhiteMushroomCap,
+                Dirt | Farmland | Path | Clay | Mud | MushroomStem | PurpleMushroomCap
+                | RedMushroomCap | YellowMushroomCap | GreenMushroomCap | BlueMushroomCap
+                | WhiteMushroomCap,
             ) => Self::Dirt,
             Some(Snow | SnowLayer) => Self::Snow,
             Some(
                 Wood | WeatheredWood | OakPlanks | BirchPlanks | SprucePlanks | Workbench | Chest
                 | SpruceLog | Torch | OakDoor | BirchDoor | SpruceDoor | OakWindow | BirchWindow
-                | SpruceWindow | OakBed | BirchBed | SpruceBed,
+                | SpruceWindow | OakBed | BirchBed | SpruceBed | HandCrank | CherryLog
+                | CherryPlanks | CherryDoor | CherryWindow,
             ) => Self::Wood,
             Some(Gravel) => Self::Gravel,
             Some(Glass | Ice | SaltCrystal | IceCrystal) => Self::Glass,
-            Some(Leaves | AutumnLeaves | SilverLeaves | Seagrass | CaveVine | CaveMushroom) => {
-                Self::Leaves
-            }
+            Some(
+                Leaves | AutumnLeaves | SilverLeaves | CherryLeaves | WhiteCherryLeaves | Seagrass
+                | CaveVine | CaveMushroom,
+            ) => Self::Leaves,
             Some(CaveRoot) => Self::Wood,
-            Some(DripstoneTip) => Self::Stone,
+            Some(DripstoneTip | terra_voxel::MaterialId::FlowerPot) => Self::Stone,
             Some(
                 Air | Stone | Sandstone | SmoothStone | MossyStone | SolidWater | FluidWater
                 | SaltOre | IronOre | CoalOre | GoldOre | DiamondOre | RubyOre | Dripstone
                 | SaltFormation | DripstoneFormation | Bedrock | StructureStone | CoralRed
                 | CoralBlue | CoralYellow | CoralPurple | Furnace | ChimneyStraight | ChimneyElbow
-                | ChimneyHorizontal | ChimneyBendUp | ChimneyBendDown,
+                | ChimneyHorizontal | ChimneyBendUp | ChimneyBendDown | Crusher,
             )
             | Some(terra_voxel::MaterialId::SaltStone | terra_voxel::MaterialId::PinkSaltStone)
             | None => Self::Stone,
@@ -254,6 +279,26 @@ pub fn load() -> Result<Bank, String> {
     ] {
         clips.push(aquatic_foley(&clips[9], start, duration, cutoff, gain));
     }
+    for (variant, source) in [31, 75, 76, 77].into_iter().enumerate() {
+        clips.push(super::spiders::swim(&clips[source], &clips[9], variant));
+    }
+    clips.push(super::spiders::step(&clips[18], &clips[71]));
+    clips.push(super::spiders::idle(&clips[72]));
+    clips.push(super::spiders::hiss());
+    clips.push(super::chests::foley(
+        &clips[DOOR_OPEN_CLIP],
+        &clips[53],
+        true,
+    ));
+    clips.push(super::chests::foley(
+        &clips[DOOR_CLOSE_CLIP],
+        &clips[54],
+        false,
+    ));
+    clips.push(super::stalker::breath(&clips[STALKER_AIRWAY_CLIP], false));
+    clips.push(super::stalker::scratch(&clips[53], &clips[72]));
+    clips.push(super::stalker::scream());
+    clips.push(super::stalker::breath(&clips[STALKER_AIRWAY_CLIP], true));
     Ok(Arc::new(clips))
 }
 
@@ -296,6 +341,14 @@ mod tests {
             expected.extend([Wood, Wood, Wood, Stone, Dirt, Sand, Glass, Glass]);
         }
         expected.push(Snow);
+        expected.push(Stone); // Crusher's stone hoppers and metal drive.
+        expected.push(Wood); // Hand crank grip and timber mounting plate.
+        expected.push(Dirt); // Cultivated soil retains earth contact sounds.
+        expected.extend([Dirt; 4]); // Packed paths and muffled wool, including its shaped forms.
+        expected.extend([Dirt; 25]); // All carpet and dyed wool use the same soft textile contacts.
+        expected.push(Stone); // The flower pot is hard fired ceramic, not loose raw clay.
+        expected.extend([Leaves; 2]);
+        expected.extend([Wood; 7]);
         assert_eq!(
             expected.len(),
             usize::from(terra_voxel::MaterialId::LAST) + 1
@@ -308,6 +361,32 @@ mod tests {
             );
         }
         assert_eq!(Surface::material(u16::MAX), Stone);
+    }
+
+    #[test]
+    fn all_textile_colors_keep_soft_wool_contacts_and_fired_pots_keep_hard_contacts() {
+        for base in [
+            terra_core::textiles::WHITE_WOOL,
+            terra_core::textiles::WHITE_CARPET,
+        ] {
+            for color in terra_core::beds::DyeColor::ALL {
+                let material = terra_core::textiles::dyed(base, color).unwrap();
+                assert_eq!(Surface::material(material), Surface::material(103));
+                assert_ne!(Surface::material(material), Surface::Stone);
+                let mut variation = ContactVariation::default();
+                for alternate in [false, true] {
+                    assert!(
+                        Surface::Dirt
+                            .clips()
+                            .contains(&variation.next(material, alternate).sound)
+                    );
+                }
+            }
+        }
+        assert_eq!(
+            Surface::material(terra_core::flower_pot::MATERIAL),
+            Surface::Stone
+        );
     }
 
     #[test]
@@ -335,7 +414,7 @@ mod tests {
     #[test]
     fn every_shipped_recording_decodes_and_contains_real_sample_energy() {
         let clips = load().unwrap();
-        assert_eq!(clips.len(), PATHS.len() + 5);
+        assert_eq!(clips.len(), PATHS.len() + 18);
         for (name, clip) in PATHS.iter().zip(clips.iter()) {
             let rms = (clip.iter().map(|s| s * s).sum::<f32>() / clip.len() as f32).sqrt();
             assert!(rms > 0.001 && rms < 0.5, "{name}: {rms}");
@@ -367,5 +446,17 @@ mod tests {
             assert!(clip.iter().any(|sample| sample.abs() > 0.001));
             assert!(clip[0].abs() < 0.001 && clip.last().unwrap().abs() < 0.001);
         }
+        for index in [CHEST_OPEN_CLIP, CHEST_CLOSE_CLIP] {
+            let clip = &clips[index];
+            assert!((11_000..=12_000).contains(&clip.len()));
+            assert!(
+                clip.iter()
+                    .all(|sample| sample.is_finite() && sample.abs() <= 0.60)
+            );
+            assert!(clip.iter().any(|sample| sample.abs() > 0.001));
+            assert_eq!(clip[0], 0.0);
+            assert_eq!(*clip.last().unwrap(), 0.0);
+        }
+        assert_ne!(clips[CHEST_OPEN_CLIP], clips[CHEST_CLOSE_CLIP]);
     }
 }

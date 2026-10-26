@@ -119,10 +119,13 @@ impl WorldLibrary {
             world.id = id;
             world.seed = WorldSeed(seed.unwrap_or_else(|| id.0.rotate_left(17)));
             world.geology_revision = 4;
+            world.ecology_revision = 2;
             world.landscape_revision = 1;
             world.ocean_revision = 1;
-            world.cave_structure_revision = 4;
+            world.cave_structure_revision = 8;
+            world.structures_revision = 5;
             world.ravine_revision = 1;
+            world.river_terrain_revision = 1;
             if world.ores.revision == 0 {
                 world.ores.enabled = true;
             }
@@ -312,6 +315,8 @@ mod tests {
             )
             .unwrap();
         assert_eq!(entry.manifest.world.landscape_revision, 1);
+        assert_eq!(entry.manifest.world.structures_revision, 5);
+        assert_eq!(entry.manifest.world.river_terrain_revision, 1);
         assert_eq!(library.list().unwrap().0.len(), 1);
         assert_eq!(
             library

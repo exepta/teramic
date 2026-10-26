@@ -14,7 +14,7 @@ pub(super) fn split_edited_faces(
 ) -> Option<Vec<BlockFace>> {
     let mut result: Option<Vec<BlockFace>> = None;
     for (face_index, &face) in faces.iter().enumerate() {
-        if !matches!(face.material, 7..=9) {
+        if !matches!(face.material, 7..=9 | 132 | 133) {
             if let Some(result) = &mut result {
                 result.push(face);
             }
@@ -56,7 +56,12 @@ fn deciduous(kind: Option<TreeAppearance>, edited: bool) -> bool {
     !edited
         && matches!(
             kind,
-            Some(TreeAppearance::Oak | TreeAppearance::Autumn | TreeAppearance::Birch)
+            Some(
+                TreeAppearance::Oak
+                    | TreeAppearance::Autumn
+                    | TreeAppearance::Birch
+                    | TreeAppearance::Cherry
+            )
         )
 }
 
@@ -76,7 +81,7 @@ pub(super) fn annotate(
     snow_exposed: impl Fn([u32; 3]) -> bool,
 ) {
     // Crown micro-quads and shadow shells share one provenance lookup per cell.
-    let mut tags = [0.0_f32; 3 * 4096];
+    let mut tags = [0.0_f32; terra_voxel::MaterialId::FOLIAGE.len() * 4096];
     for batch in batches {
         if batch.foliage_owners.is_empty() {
             continue;
@@ -84,13 +89,18 @@ pub(super) fn annotate(
         batch.colors.resize(batch.positions.len(), [1.0; 4]);
         for owner in &batch.foliage_owners {
             let cell = owner.cell;
-            if !matches!(owner.material, 7..=9) || cell.iter().any(|&coordinate| coordinate >= 16) {
+            if cell.iter().any(|&coordinate| coordinate >= 16) {
                 continue;
             }
+            let Some(slot) = terra_voxel::MaterialId::FOLIAGE
+                .iter()
+                .position(|&id| id == owner.material)
+            else {
+                continue;
+            };
             let global = std::array::from_fn(|axis| origin[axis] + i64::from(cell[axis]));
-            let index = (owner.material as usize - 7) * 4096
-                + cell[0] as usize
-                + 16 * (cell[1] as usize + 16 * cell[2] as usize);
+            let index =
+                slot * 4096 + cell[0] as usize + 16 * (cell[1] as usize + 16 * cell[2] as usize);
             if tags[index] == 0.0 {
                 tags[index] = if edits.contains_key(&global) {
                     1.0
@@ -119,6 +129,38 @@ pub(super) fn annotate(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn sparse_cherry_material_ids_use_dense_bounded_provenance_slots() {
+        use super::super::builder::FoliageOwner;
+        let mut batch = MeshBatch::default();
+        for material in terra_voxel::MaterialId::FOLIAGE {
+            let start = batch.positions.len();
+            batch.positions.extend([[15.5; 3]; 4]);
+            batch.foliage_owners.push(FoliageOwner {
+                vertices: start..start + 4,
+                cell: [15; 3],
+                material,
+            });
+        }
+        let mut batches = [batch];
+        annotate(
+            &mut batches,
+            &TemplateSet::default(),
+            [-16; 3],
+            &Default::default(),
+            |_, _| Some(TreeAppearance::Cherry),
+            |_| 12.0,
+            |_| false,
+        );
+        assert_eq!(batches[0].colors.len(), 20);
+        assert!(
+            batches[0]
+                .colors
+                .iter()
+                .all(|color| (0.125..0.375).contains(&color[3]))
+        );
+    }
     use crate::blocks::{BlockTemplate, definitions::BlockRenderKind};
 
     #[test]

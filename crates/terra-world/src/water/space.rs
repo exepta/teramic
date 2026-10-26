@@ -6,7 +6,9 @@ use terra_core::{block_shapes::ShapeBox, construction};
 const EPS: f64 = 1e-8;
 
 pub(crate) fn partial(material: u16) -> bool {
-    construction::is_slab(material) || construction::is_stair(material)
+    construction::is_slab(material)
+        || construction::is_stair(material)
+        || material == terra_core::crusher::CRANK_MATERIAL
 }
 
 #[derive(Clone, Debug)]
@@ -21,6 +23,14 @@ impl FluidSpace {
         mut block_at: impl FnMut([i64; 3]) -> Option<u16>,
     ) -> Self {
         let material = block_at(p).unwrap_or(u16::MAX);
+        if material == terra_core::crusher::CRANK_MATERIAL {
+            let facing = journal.object_state(p).unwrap_or_default().facing;
+            let solids = terra_core::block_shapes::builtin_boxes(material)
+                .iter()
+                .map(|bounds| bounds.rotated_y(facing))
+                .collect();
+            return Self { solids };
+        }
         if !partial(material) {
             return Self {
                 solids: if super::can_hold_fluid(material) {
@@ -172,6 +182,80 @@ fn subtract(mut water: ShapeBox, solid: ShapeBox) -> Vec<ShapeBox> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn water_uses_the_rotated_thin_crank_geometry_instead_of_a_solid_cell() {
+        use crate::edits::BlockObjectState;
+        let p = [-2, 7, -3];
+        for facing in 0..4 {
+            let state = BlockObjectState {
+                facing,
+                ..Default::default()
+            };
+            let anchor = std::array::from_fn(|axis| p[axis] - state.right()[axis] * 2);
+            let mut journal = EditJournal::default();
+            journal.record(p, 100).unwrap();
+            journal
+                .set_object_state(
+                    p,
+                    Some(BlockObjectState {
+                        peer: Some(anchor),
+                        ..state
+                    }),
+                )
+                .unwrap();
+            let space = FluidSpace::at(&journal, p, |cell| Some(if cell == p { 100 } else { 0 }));
+            assert_eq!(space.solids.len(), 4);
+            #[cfg(feature = "bevy")]
+            {
+                let mut collision = Vec::new();
+                assert!(crate::interaction_shapes::visit_boxes_with(
+                    &journal,
+                    &terra_core::block_properties::BlockPropertiesCatalog::default(),
+                    p,
+                    |q| Some(if q == p { 100 } else { 0 }),
+                    |mut shape| {
+                        for (axis, value) in p.iter().enumerate() {
+                            shape.minimum[axis] -= *value as f64;
+                            shape.maximum[axis] -= *value as f64;
+                        }
+                        collision.push(shape);
+                    }
+                ));
+                assert_eq!(space.solids.len(), collision.len());
+                for (water, collision) in space.solids.iter().zip(&collision) {
+                    assert_eq!(water.hinged, collision.hinged);
+                    for axis in 0..3 {
+                        assert!(
+                            (water.minimum[axis] - collision.minimum[axis]).abs() < 1e-12
+                                && (water.maximum[axis] - collision.maximum[axis]).abs() < 1e-12,
+                            "pure water geometry must match authoritative runtime collision: {water:?} != {collision:?}"
+                        );
+                    }
+                }
+            }
+            let water = FluidCell {
+                amount: 8,
+                source: false,
+                flow: [0; 2],
+            };
+            assert!(space.contains(water, [0.5, 0.99, 0.5]));
+            let plate = space.solids[0];
+            let center =
+                std::array::from_fn(|axis| (plate.minimum[axis] + plate.maximum[axis]) * 0.5);
+            assert!(!space.contains(water, center));
+            let empty = FluidSpace { solids: Vec::new() };
+            for direction in [
+                [1, 0, 0],
+                [-1, 0, 0],
+                [0, 1, 0],
+                [0, -1, 0],
+                [0, 0, 1],
+                [0, 0, -1],
+            ] {
+                assert!(space.connected(water, &empty, water, direction));
+            }
+        }
+    }
 
     #[test]
     fn every_construction_rotation_excludes_exact_solid_volume() {

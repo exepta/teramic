@@ -1,0 +1,16 @@
+{
+  "item": {
+    "armor": {
+      "material": "gold",
+      "piece": "pants"
+    }
+  },
+  "name": "Gold Pants",
+  "description": "Gold pants fitted for protection and comfortable movement.",
+  "equipment": {
+    "slot": "pants",
+    "armor_points": 4,
+    "health_bonus": 1,
+    "stamina_bonus": 5
+  }
+}

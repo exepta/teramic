@@ -6,6 +6,9 @@ const HALF_WIDTH: f64 = 0.25;
 const SLOT_ORDER: [usize; CAPACITY] = [0, 3, 1, 2];
 
 pub fn support(prop: &WorldProp) -> [i64; 3] {
+    if prop.kind == PropKind::SpiderWeb {
+        return super::webs::support(prop);
+    }
     if prop.wall_attached() {
         let (sin, cos) = f64::from(prop.rotation).sin_cos();
         return [
@@ -21,18 +24,69 @@ pub fn support(prop: &WorldProp) -> [i64; 3] {
     ]
 }
 
+/// A ground anchor must have a complete top surface, not a fluid, thin mineral
+/// shaft, or oriented furniture whose logical solid cell is mostly empty.
+pub fn ground_support(material: u16) -> bool {
+    terra_voxel::MaterialId::from_raw(material).is_some_and(|m| {
+        m.is_solid()
+            && !crate::segments::is_segment(material)
+            && !matches!(material, 14 | 28 | 29 | 59..=100)
+    })
+}
+
+/// Nonpersistent visibility/interaction validation against actual loaded cells.
+/// `None` means incomplete streaming, not a reason to tombstone a saved prop.
+pub fn supported(prop: &WorldProp, mut block: impl FnMut([i64; 3]) -> Option<u16>) -> Option<bool> {
+    if prop.kind == PropKind::SpiderWeb {
+        let mut unknown = false;
+        let fits = super::webs::fits(prop, |cell| {
+            let material = block(cell);
+            unknown |= material.is_none();
+            material
+        });
+        return (!unknown).then_some(fits);
+    }
+    let material = block(support(prop))?;
+    let anchor = if prop.wall_attached() {
+        matches!(material, 6 | 10 | 36 | 134)
+    } else {
+        ground_support(material)
+    };
+    if !anchor {
+        return Some(false);
+    }
+    let root = prop.position.map(|v| v.floor() as i64);
+    let material = block(root)?;
+    Some(matches!(material, 0 | 5 | 98) || prop.water_tolerant() && matches!(material, 27 | 50))
+}
+
 pub fn cost(kind: PropKind) -> usize {
-    if kind == PropKind::Grass { 2 } else { 1 }
+    if kind.crop().is_some() || matches!(kind, PropKind::Scarecrow | PropKind::SpiderWeb) {
+        CAPACITY
+    } else if kind == PropKind::Grass {
+        2
+    } else {
+        1
+    }
 }
 
 pub fn align(prop: &mut WorldProp, support: [i64; 3], slot: usize) {
-    prop.rotation = ((prop.id.0 >> 32) & 3) as f32 * std::f32::consts::FRAC_PI_2;
+    if prop.kind == PropKind::SpiderWeb {
+        return;
+    }
+    if prop.kind != PropKind::Scarecrow {
+        prop.rotation = ((prop.id.0 >> 32) & 3) as f32 * std::f32::consts::FRAC_PI_2;
+    }
     prop.position = [
         support[0] as f64 + 0.5,
         support[1] as f64 + 1.0,
         support[2] as f64 + 0.5,
     ];
-    if prop.kind == PropKind::Grass || prop.kind.aquatic() {
+    if prop.kind == PropKind::Grass
+        || prop.kind.aquatic()
+        || prop.kind.crop().is_some()
+        || prop.kind == PropKind::Scarecrow
+    {
         return;
     }
     let variation = ((prop.id.0 ^ (prop.id.0 >> 23)) & 0xffff) as f32 / 65535.0;
@@ -57,9 +111,14 @@ pub fn generated_slot(rank: usize) -> usize {
     SLOT_ORDER[rank.min(CAPACITY - 1)]
 }
 
-fn compatible(prop: &WorldProp, cell: [i64; 3]) -> bool {
-    if prop.wall_attached() {
+pub(crate) fn compatible(prop: &WorldProp, cell: [i64; 3]) -> bool {
+    if prop.wall_attached() || prop.kind == PropKind::SpiderWeb {
         return false;
+    }
+    if prop.kind.crop().is_some() || prop.kind == PropKind::Scarecrow {
+        return [0, 2]
+            .into_iter()
+            .all(|axis| (prop.position[axis] - cell[axis] as f64 - 0.5).abs() <= 0.001);
     }
     if prop.kind == PropKind::Grass {
         let turns = prop.rotation / std::f32::consts::FRAC_PI_2;

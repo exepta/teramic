@@ -1,4 +1,6 @@
 mod editing;
+pub(crate) use editing::commit_weather_cap;
+pub(crate) use editing::ensure_block_record;
 pub use editing::{
     commit_block_edit, commit_object_state, commit_prop_placement, commit_prop_removal,
 };

@@ -186,6 +186,8 @@ pub(super) fn tick(mut world: LightningWorld, mut previous: Local<Option<u64>>) 
                     | terra_voxel::MaterialId::Leaves
                     | terra_voxel::MaterialId::AutumnLeaves
                     | terra_voxel::MaterialId::SilverLeaves
+                    | terra_voxel::MaterialId::CherryLeaves
+                    | terra_voxel::MaterialId::WhiteCherryLeaves
             )
         })
     {

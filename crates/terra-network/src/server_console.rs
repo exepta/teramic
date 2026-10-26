@@ -95,6 +95,15 @@ pub(super) fn console_commands(
                     }
                     world.console.line("Console: list | stop | as <player> <command>; tp <player> <x y z|target>; gamemode <mode> <player>");
                 }
+                Ok(Some(Command::EffectPlayer(name, kind, seconds, level))) => {
+                    let result = effect_target(&name, &world.identities).and_then(|id| {
+                        let Some((mut peer, _)) = peers.iter_mut().find(|(peer, _)| peer.id == id && peer.synced) else {
+                            return Err("Player is still loading.");
+                        };
+                        give_effect(&mut peer, &world.config, kind, seconds, level)
+                    });
+                    world.console.line(result.unwrap_or_else(str::to_owned));
+                }
                 Ok(Some(_)) => world.console.line("Console commands need a player: as <player> <command>. Example: as Alice tp 10 80 20"),
                 Err(error) => world.console.line(error),
                 Ok(None) => {
@@ -128,10 +137,10 @@ fn actor_command(text: &str) -> Option<(&str, String)> {
 }
 
 fn console_locate(text: &str, world: &mut ChatWorld) {
-    let biome = match parse_command(&format!("/{text}")) {
-        Ok(Some(biome)) => biome,
+    let target = match parse_command(&format!("/{text}")) {
+        Ok(Some(target)) => target,
         _ => {
-            world.console.line("Usage: locate biome <name>. Origin is the world spawn; use as <player> locate biome <name> to search near a player.");
+            world.console.line("Usage: locate biome <name> | locate struct <teramic::village|teramic::ruin|teramic::mine>. Origin is the world spawn; use as <player> locate ... to search near a player.");
             return;
         }
     };
@@ -144,13 +153,13 @@ fn console_locate(text: &str, world: &mut ChatWorld) {
     let terrain = world.terrain.0.clone();
     let origin = [world.spawn.ground[0], world.spawn.ground[2]];
     world.runtime.console_job = Some(LocateJob {
-        task: AsyncComputeTaskPool::get().spawn(async move { locate(&terrain, origin, biome) }),
+        task: AsyncComputeTaskPool::get().spawn(async move { locate(&terrain, origin, target) }),
         started: Instant::now(),
         console: true,
     });
     world.console.line(format!(
         "Searching for {} near world spawn...",
-        biome_name(biome)
+        target.name()
     ));
 }
 
@@ -166,15 +175,14 @@ pub(super) fn finish_console_search(world: &mut ChatWorld) {
     world.runtime.console_job = None;
     if let Some(found) = result.flatten() {
         let [x, y, z] = found.position;
-        world.console.line(format!(
-            "Biome {} found at {x}, {y}, {z}.",
-            biome_name(found.biome)
-        ));
+        world
+            .console
+            .line(format!("{} found at {x}, {y}, {z}.", found.target.name()));
     } else {
         world.console.line(if expired {
-            "Biome search timed out."
+            "Locate search timed out."
         } else {
-            "No matching biome found within 6144 blocks."
+            "No matching biome or structure found within 6144 blocks."
         });
     }
 }

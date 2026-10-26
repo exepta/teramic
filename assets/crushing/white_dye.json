@@ -1,0 +1,15 @@
+{
+  "id": 10802,
+  "key": "teramic::crush_white_dye",
+  "name": "Crush salt pigment",
+  "input": {
+    "dust": "salt"
+  },
+  "output": {
+    "item": {
+      "dye": "white"
+    },
+    "count": 2
+  },
+  "seconds": 4
+}

@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "id": 137,
+  "name": "Cherry Half Slab",
+  "description": "Rose-colored cherry timber with fine natural grain.",
+  "creative_category": "building",
+  "render_kind": "boxes",
+  "bevel_width": 0,
+  "collision_boxes": [
+    {
+      "minimum": [
+        0,
+        0,
+        0
+      ],
+      "maximum": [
+        1,
+        0.5,
+        1
+      ]
+    }
+  ],
+  "materials": {
+    "Cherry boards": {
+      "base_color": [
+        0.88,
+        0.57,
+        0.58,
+        1
+      ],
+      "texture_pattern": "planks"
+    }
+  },
+  "face_materials": [
+    "Cherry boards",
+    "Cherry boards",
+    "Cherry boards",
+    "Cherry boards",
+    "Cherry boards",
+    "Cherry boards"
+  ],
+  "hardness": 0.8,
+  "resistance": 3,
+  "required_tool": null,
+  "mining_level": 0,
+  "struct_block": false
+}

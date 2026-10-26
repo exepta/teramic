@@ -1,0 +1,15 @@
+{
+  "id": 10607,
+  "key": "teramic::crush_red_dye",
+  "name": "Crush red dye",
+  "input": {
+    "prop": "flower"
+  },
+  "output": {
+    "item": {
+      "dye": "red"
+    },
+    "count": 2
+  },
+  "seconds": 4
+}

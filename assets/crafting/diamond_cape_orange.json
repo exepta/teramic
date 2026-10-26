@@ -1,0 +1,34 @@
+{
+  "id": "teramic::diamond_cape_orange",
+  "name": "Orange Diamond Cape",
+  "station": "hand",
+  "output": {
+    "item": {
+      "cape": {
+        "material": "diamond",
+        "color": "orange"
+      }
+    },
+    "count": 1
+  },
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "cape": {
+            "material": "diamond",
+            "color": "white"
+          }
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "dye": "orange"
+        },
+        "count": 1
+      }
+    ]
+  }
+}

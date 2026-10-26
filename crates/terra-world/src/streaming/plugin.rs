@@ -85,6 +85,7 @@ impl Plugin for TerraWorldPlugin {
             .add_systems(
                 Update,
                 (
+                    crate::props::seasonal::tick,
                     apply_block_edits,
                     super::support::tick,
                     apply_prop_removals,
@@ -92,6 +93,7 @@ impl Plugin for TerraWorldPlugin {
                     crate::weather::tick,
                     crate::fire::tick,
                     crate::growth::tick,
+                    crate::farming::tick,
                     crate::water::tick_fluids,
                 )
                     .chain()

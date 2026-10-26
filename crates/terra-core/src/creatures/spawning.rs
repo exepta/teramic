@@ -28,6 +28,11 @@ pub const MOBS: &[(&str, SpawnMob)] = &[
     ),
     ("teramic::whale_shark", mob(CreatureKind::WhaleShark, 0)),
     ("teramic::horse", mob(CreatureKind::Horse, 0)),
+    ("teramic::small_spider", mob(CreatureKind::SmallSpider, 0)),
+    ("teramic::medium_spider", mob(CreatureKind::MediumSpider, 0)),
+    ("teramic::large_spider", mob(CreatureKind::LargeSpider, 0)),
+    ("teramic::stalker", mob(CreatureKind::Stalker, 0)),
+    ("teramic::villager", mob(CreatureKind::Villager, 0)),
 ];
 
 const fn mob(kind: CreatureKind, variant: u8) -> SpawnMob {

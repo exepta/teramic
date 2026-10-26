@@ -1,0 +1,10 @@
+{
+  "id": "teramic::wheat_seeds",
+  "name": "Wheat Seeds",
+  "station": "hand",
+  "output": { "item": { "crop": "wheat_seeds" }, "count": 3 },
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [{ "item": { "crop": "wheat" }, "count": 1 }]
+  }
+}

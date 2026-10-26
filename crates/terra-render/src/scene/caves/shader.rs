@@ -148,6 +148,7 @@ fn draw(
     // The same optional pass serves caves, underwater optics and short ink hits.
     // Dry outdoor views and Low water quality without ink have no extra pass.
     if settings.parameters.x <= 0.001
+        && settings.parameters.z <= 0.001
         && settings.underwater.x <= 0.001
         && settings.ink.x <= 0.001
         && settings.smoke.x <= 0.001

@@ -15,6 +15,10 @@ pub(crate) mod surfaces;
 pub use precipitation::{WeatherPreview, WeatherRenderStatus};
 pub(crate) use precipitation::{WeatherSet, WeatherVisual};
 
+/// Opt-in cosmetic frost for isolated visual galleries, never a networked world.
+#[derive(Resource)]
+pub struct CosmeticSnowPreview;
+
 pub(crate) fn foliage_wind(weather: Option<&WeatherVisual>) -> Vec4 {
     let Some(weather) = weather else {
         return Vec4::new(0.86, 0.51, 1.0, 1.0);

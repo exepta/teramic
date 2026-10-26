@@ -1133,10 +1133,9 @@ fn validate_fullmap(world: &mut World, smoke: &mut Smoke) -> Result<bool, String
     if !view.error.is_empty() {
         return Err(view.error.clone());
     }
-    if !world.resource::<terra_player::PlayerInputBlock>().0
-        || world.resource::<MiniMapView>().visible
-    {
-        return Err("FullMap must hide the MiniMap and block gameplay input".into());
+    // HUD visibility is retained beneath overlays; the map must still capture input.
+    if !world.resource::<terra_player::PlayerInputBlock>().0 {
+        return Err("FullMap must block gameplay input".into());
     }
     let editing = view.editing;
     let expected_size = Vec2::new(view.map_width, view.map_height);
@@ -1315,19 +1314,39 @@ fn validate_fullmap(world: &mut World, smoke: &mut Smoke) -> Result<bool, String
     }
     if matches!(smoke.stage, 10 | 28) {
         let glyphs: Vec<_> = world
-            .query::<(&ElementId, &ComputedNode)>()
+            .query::<(Entity, &ElementId, &ComputedNode)>()
             .iter(world)
-            .filter(|(id, _)| id.0 == "waypoint-glyph")
-            .map(|(_, node)| node.size() * node.inverse_scale_factor)
+            .filter(|(_, id, _)| id.0 == "waypoint-glyph")
+            .map(|(entity, _, node)| (entity, node.size() * node.inverse_scale_factor))
             .collect();
         if glyphs.is_empty()
-            || glyphs.iter().any(|size| {
-                ((size.x - 14.0).abs() > 1.1 && (size.x - 18.0).abs() > 1.1)
-                    || (size.x - size.y).abs() > 1.1
+            || glyphs.iter().any(|(entity, size)| {
+                let mut ancestor = Some(*entity);
+                let mut in_world = false;
+                while let Some(entity) = ancestor {
+                    if world
+                        .get::<tilt_ui::ElementClasses>(entity)
+                        .is_some_and(|classes| {
+                            classes
+                                .classes
+                                .iter()
+                                .any(|class| class == "world-waypoints")
+                        })
+                    {
+                        in_world = true;
+                        break;
+                    }
+                    ancestor = world.get::<ChildOf>(entity).map(ChildOf::parent);
+                }
+                (if in_world {
+                    (size.x - 36.0).abs() > 1.1
+                } else {
+                    (size.x - 14.0).abs() > 1.1 && (size.x - 18.0).abs() > 1.1
+                }) || (size.x - size.y).abs() > 1.1
             })
         {
             return Err(format!(
-                "Waypoint symbols must be14px on maps or18px in list rows: {glyphs:?}"
+                "Waypoint symbols must be14px on maps,18px in list rows or36px in the world HUD: {glyphs:?}"
             ));
         }
     }

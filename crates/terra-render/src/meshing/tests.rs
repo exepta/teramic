@@ -123,6 +123,8 @@ fn templates() -> TemplateSet {
         material: 0,
     };
     TemplateSet {
+        animated_chests: false,
+        crusher_moving_materials: Default::default(),
         block_details: Default::default(),
         blocks: [(
             1,
@@ -1289,6 +1291,149 @@ fn published_terrain_arrivals_survive_full_workers_and_message_expiry() {
             .mesh
             .is_none()
     }));
+}
+
+#[test]
+fn edited_section_becomes_visible_while_all_ordinary_composition_workers_are_blocked() {
+    use super::DetailLevel;
+    use bevy::prelude::*;
+    use std::{
+        sync::Arc,
+        time::{Duration, Instant},
+    };
+    use terra_world::{
+        edits::EditJournal,
+        streaming::{ChunkFocus, ChunkStore, LoadedSection, SectionPublished, WorldTerrain},
+    };
+    let mut config = terra_core::GameConfig::default();
+    config.client.max_mesh_jobs = 1;
+    config.client.chunk_animation = terra_core::ChunkAnimation::Fade;
+    let mut app = App::new();
+    app.add_plugins(MinimalPlugins)
+        .insert_resource(config)
+        .init_resource::<Assets<Mesh>>()
+        .init_resource::<Assets<StandardMaterial>>()
+        .init_resource::<crate::blocks::BlockAssets>()
+        .init_resource::<super::RenderedSections>()
+        .init_resource::<super::RenderStatus>()
+        .init_resource::<super::jobs::RenderJobs>()
+        .init_resource::<super::GeometryCache>()
+        .init_resource::<ChunkStore>()
+        .init_resource::<EditJournal>()
+        .add_message::<SectionPublished>()
+        .insert_resource(ChunkFocus([8.0, 168.0, 8.0]))
+        .insert_resource(WorldTerrain(
+            terra_world::TerraGenerator::new(Default::default()).unwrap(),
+        ))
+        .add_systems(
+            Update,
+            (super::upload_sections, super::dispatch_meshes).chain(),
+        );
+    crate::transitions::install(&mut app);
+    let material = app
+        .world_mut()
+        .resource_mut::<Assets<StandardMaterial>>()
+        .add(StandardMaterial::default());
+    {
+        let mut assets = app.world_mut().resource_mut::<crate::blocks::BlockAssets>();
+        assets.materials.push(material);
+        assets.templates = Some(Arc::new(templates()));
+    }
+    let owner = SectionPos::new(0, 10, 0);
+    let blocked = SectionPos::new(-1, 10, -1);
+    // The empty section was already composed before the player placed a block.
+    // A never-seen saved section must still use its first chunk entrance.
+    app.world_mut()
+        .resource_mut::<super::RenderedSections>()
+        .block_revisions
+        .insert(owner, 0);
+    app.world_mut()
+        .resource_mut::<EditJournal>()
+        .record(owner.global_block([8, 8, 8]).unwrap(), 1)
+        .unwrap();
+    for position in [blocked, owner] {
+        let mut data = terra_voxel::BlockSection::empty(position).unwrap();
+        data.set_block([8, 8, 8], 1).unwrap();
+        app.world_mut().resource_mut::<ChunkStore>().loaded.insert(
+            position,
+            LoadedSection {
+                data,
+                props: Vec::new(),
+                water: None,
+                water_epoch: 0,
+                mesh_epoch: u64::from(position == owner),
+                mesh: (position == owner).then(|| terra_voxel::meshing::BlockMesh {
+                    faces: vec![BlockFace {
+                        minimum: [8, 8, 8],
+                        width: 1,
+                        height: 1,
+                        u_axis: 0,
+                        v_axis: 2,
+                        side: 3,
+                        material: 1,
+                        occupied_neighbor: false,
+                        edge_mask: 15,
+                    }],
+                    ..default()
+                }),
+            },
+        );
+    }
+    app.world_mut()
+        .resource_mut::<super::jobs::RenderJobs>()
+        .0
+        .insert(
+            blocked,
+            super::jobs::RenderJob {
+                ready: None,
+                micro_detail: true,
+                epoch: 0,
+                appearance_epoch: 0,
+                level: DetailLevel::Near,
+                task: bevy::tasks::AsyncComputeTaskPool::get().spawn(std::future::pending()),
+            },
+        );
+    app.world_mut()
+        .write_message(SectionPublished { position: owner });
+    let deadline = Instant::now() + Duration::from_secs(5);
+    loop {
+        app.update();
+        let jobs = app.world().resource::<super::jobs::RenderJobs>();
+        assert!(
+            jobs.0.len() <= 2,
+            "one bounded interactive slot, never unbounded parallel jobs"
+        );
+        assert!(
+            jobs.0.contains_key(&blocked),
+            "the unrelated job must still be blocked"
+        );
+        if let Some(section) = app
+            .world()
+            .resource::<super::RenderedSections>()
+            .sections
+            .get(&owner)
+        {
+            assert_eq!(section.mesh_epoch, 1);
+            assert!(!section.meshes.is_empty());
+            assert!(
+                app.world()
+                    .get::<crate::transitions::QueuedChunk>(section.entity)
+                    .is_none(),
+                "first placed block is not another generated chunk entrance"
+            );
+            assert!(
+                app.world()
+                    .get::<crate::transitions::ChunkFade>(section.entity)
+                    .is_none()
+            );
+            break;
+        }
+        assert!(
+            Instant::now() < deadline,
+            "a confirmed placement waited for an unrelated composition worker"
+        );
+        std::thread::sleep(Duration::from_millis(1));
+    }
 }
 
 #[test]

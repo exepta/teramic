@@ -3,6 +3,710 @@ use terra_core::creatures::*;
 use terra_world::edits::EditJournal;
 
 #[test]
+fn real_udp_villagers_replicate_named_roles_greet_only_the_actor_and_keep_identity_on_late_join() {
+    use terra_core::{CropItem, ItemKind};
+    let (mut host, mut a, mut b) = pair();
+    let owner = a.world().resource::<client::ClientSession>().uuid.unwrap();
+    let player = a
+        .world()
+        .resource::<client::ClientSession>()
+        .confirmed_state()
+        .unwrap()
+        .position;
+    let home = [
+        (f64::from(player[0]).floor() as i64).div_euclid(32),
+        (f64::from(player[2]).floor() as i64).div_euclid(32),
+    ];
+    let food = ItemKind::Crop(CropItem::Wheat);
+    let target_role = 7;
+    let target = villagers::id(home, u16::from(target_role)).unwrap();
+    let ids: Vec<_> = (0..villagers::ROLE_COUNT)
+        .map(|role| villagers::id(home, u16::from(role)).unwrap())
+        .collect();
+    host.world_mut()
+        .resource_mut::<GameConfig>()
+        .server
+        .natural_mob_limit = Some(0);
+    {
+        let mut journal = host.world_mut().resource_mut::<EditJournal>();
+        let state = journal.gameplay_mut();
+        state.creatures = CreaturePopulation::default();
+        state.animal_bonds.clear();
+        state.inventories.entry(owner).or_default().insert(food, 3);
+        for role in 0..villagers::ROLE_COUNT {
+            let id = ids[usize::from(role)];
+            let x = if role == target_role {
+                f64::from(player[0])
+            } else {
+                f64::from(player[0]) + 5.0 + f64::from(role)
+            };
+            let resident = Creature {
+                id,
+                kind: CreatureKind::Villager,
+                home,
+                position: [
+                    x,
+                    f64::from(player[1] - terra_physics::character::PLAYER_HALF_HEIGHT),
+                    f64::from(player[2]) - 3.5,
+                ],
+                velocity: [0.0; 3],
+                yaw: 1.25,
+                health: CreatureKind::Villager.health(),
+                behavior: CreatureBehavior::Rest,
+                timer: 0.0,
+                age: 0.0,
+                variant: role,
+                needs: CreatureNeeds::full(CreatureKind::Villager),
+            };
+            assert!(resident.valid());
+            state.creatures.animals.insert(id, resident);
+        }
+        state.revision = state.revision.wrapping_add(1);
+    }
+    a.world_mut()
+        .resource_mut::<client::SelectedInventorySlot>()
+        .0 = Some(0);
+    a.world_mut().resource_mut::<client::ClientSession>().look = [0.0, -0.1];
+    wait(&mut host, &mut [&mut a, &mut b], |_, clients| {
+        clients.iter().all(|c| {
+            let residents = c.world().resource::<client::ReplicatedCreatures>();
+            ids.iter().enumerate().all(|(role, id)| {
+                residents.creatures.get(id).is_some_and(|track| {
+                    track.current.valid()
+                        && track.current.kind == CreatureKind::Villager
+                        && track.current.variant == role as u8
+                        && track.current.title().starts_with(villagers::name(*id))
+                })
+            })
+        }) && clients[0]
+            .world()
+            .resource::<client::ClientSession>()
+            .inventory
+            .count(food)
+            == 3
+    });
+    assert_eq!(
+        host.world()
+            .resource::<EditJournal>()
+            .gameplay()
+            .creatures
+            .natural_count(),
+        0,
+        "residents must not consume the configurable natural mob budget"
+    );
+    for c in [&mut a, &mut b] {
+        c.world_mut().resource_mut::<client::ClientChat>().clear();
+    }
+    // Real interactions start with the same 450 ms cooldown as session setup.
+    std::thread::sleep(Duration::from_millis(500));
+    a.world_mut()
+        .resource_mut::<client::CreatureActions>()
+        .0
+        .push_back((target, true));
+    let greeting = villagers::greeting(target, target_role, false);
+    wait(&mut host, &mut [&mut a, &mut b], |_, clients| {
+        clients[0]
+            .world()
+            .resource::<client::ClientChat>()
+            .entries
+            .iter()
+            .any(|entry| entry.text == greeting)
+    });
+    assert!(
+        b.world()
+            .resource::<client::ClientChat>()
+            .entries
+            .iter()
+            .all(|entry| entry.text != greeting),
+        "private greetings must not be broadcast to observers"
+    );
+    {
+        let state = host.world().resource::<EditJournal>().gameplay();
+        let resident = &state.creatures.animals[&target];
+        assert_eq!(state.inventories[&owner].count(food), 3);
+        assert!(state.creatures.owners.is_empty());
+        assert!(state.animal_bonds.is_empty());
+        assert_eq!(resident.health, CreatureKind::Villager.health());
+        assert_eq!(resident.behavior, CreatureBehavior::Rest);
+        assert!(
+            resident.timer > 2.0,
+            "conversation must pause the resident's route"
+        );
+        assert!(
+            (resident.yaw.abs() - std::f32::consts::PI).abs() < 0.1,
+            "resident should turn toward its visitor"
+        );
+        assert_eq!(state.creatures.natural_count(), 0);
+    }
+    let dead = ids[0];
+    {
+        let mut journal = host.world_mut().resource_mut::<EditJournal>();
+        let state = journal.gameplay_mut();
+        let resident = state.creatures.animals.get_mut(&dead).unwrap();
+        resident.health = 0.0;
+        resident.behavior = CreatureBehavior::Dead;
+        state.revision = state.revision.wrapping_add(1);
+    }
+    wait(&mut host, &mut [&mut a, &mut b], |_, clients| {
+        clients.iter().all(|c| {
+            !c.world()
+                .resource::<client::ReplicatedCreatures>()
+                .creatures
+                .contains_key(&dead)
+        })
+    });
+    let token = host
+        .world()
+        .resource::<server::ServerRuntime>()
+        .issue_token(126_010)
+        .unwrap();
+    let mut late = client(token);
+    wait(&mut host, &mut [&mut a, &mut b, &mut late], |_, clients| {
+        let residents = clients[2].world().resource::<client::ReplicatedCreatures>();
+        residents.creatures.get(&target).is_some_and(|track| {
+            track.current.valid()
+                && track.current.id == target
+                && track.current.variant == target_role
+                && track.current.title().starts_with(villagers::name(target))
+        }) && !residents.creatures.contains_key(&dead)
+    });
+    assert_eq!(
+        host.world()
+            .resource::<EditJournal>()
+            .gameplay()
+            .creatures
+            .animals[&dead]
+            .health,
+        0.0,
+        "late joins must keep the persistent death tombstone"
+    );
+}
+
+#[test]
+fn wild_cave_spider_commits_and_replicates_a_real_web_before_eating_nearby_food() {
+    cave_spider_web_and_food(false);
+}
+
+#[test]
+fn owned_cave_spider_keeps_autonomous_web_and_food_behavior_without_following() {
+    cave_spider_web_and_food(true);
+}
+
+fn cave_spider_web_and_food(owned: bool) {
+    use terra_core::{ItemKind, ItemStack};
+    use terra_world::props::{PropId, PropKind};
+    let (mut host, mut a, mut b) = pair();
+    // Advance real server/physics/network ticks, not the cycle's private state.
+    // This keeps the intentionally long nest wait a short integration test.
+    for app in [&mut host, &mut a, &mut b] {
+        app.insert_resource(TimeUpdateStrategy::ManualDuration(Duration::from_millis(
+            100,
+        )));
+    }
+    let owner = a.world().resource::<client::ClientSession>().uuid.unwrap();
+    let player = a
+        .world()
+        .resource::<client::ClientSession>()
+        .confirmed_state()
+        .unwrap()
+        .position;
+    host.world_mut()
+        .resource_mut::<GameConfig>()
+        .server
+        .natural_mob_limit = Some(0);
+    let x = f64::from(player[0]).floor() as i64;
+    let z = f64::from(player[2]).floor() as i64 - 3;
+    let floor =
+        f64::from(player[1] - terra_physics::character::PLAYER_HALF_HEIGHT).round() as i64 - 12;
+    let corners: Vec<_> = [-4, 4]
+        .into_iter()
+        .flat_map(|dx| {
+            [-4, 4].into_iter().flat_map(move |dz| {
+                [0, 11]
+                    .into_iter()
+                    .map(move |dy| [x + dx, floor + dy, z + dz])
+            })
+        })
+        .collect();
+    wait(&mut host, &mut [&mut a, &mut b], |h, _| {
+        corners
+            .iter()
+            .all(|p| h.world().resource::<ChunkStore>().block_at(*p).is_some())
+    });
+    let id = spawning::next_command_id(&CreaturePopulation::default()).unwrap();
+    let origin = [x as f64 + 0.5, floor as f64 + 1.015, z as f64 + 0.5];
+    let drop_id;
+    {
+        let mut journal = host.world_mut().resource_mut::<EditJournal>();
+        for dx in -4..=4 {
+            for dz in -4..=4 {
+                for dy in 0..=11 {
+                    // A real large web needs tall wall anchors and a clear
+                    // passage below its sagging strands; a four-metre room
+                    // can only support the legacy decorative web.
+                    let block = if matches!(dy, 0 | 10 | 11) { 3 } else { 0 };
+                    journal.record([x + dx, floor + dy, z + dz], block).unwrap();
+                }
+            }
+        }
+        let state = journal.gameplay_mut();
+        state.creatures = CreaturePopulation::default();
+        state.animal_bonds.clear();
+        state.spider_dens.clear();
+        let mut needs = CreatureNeeds::full(CreatureKind::MediumSpider);
+        needs.food = 35.0;
+        state.creatures.animals.insert(
+            id,
+            Creature {
+                id,
+                kind: CreatureKind::MediumSpider,
+                home: [0, 0],
+                position: origin,
+                velocity: [0.0; 3],
+                yaw: 0.0,
+                health: CreatureKind::MediumSpider.health(),
+                behavior: CreatureBehavior::Rest,
+                timer: 0.0,
+                age: 0.0,
+                variant: 0,
+                needs,
+            },
+        );
+        if owned {
+            state.creatures.owners.insert(id, owner);
+            state
+                .animal_bonds
+                .insert(id, terra_core::creatures::taming::AnimalBond::owned(owner));
+        }
+        assert!(state.drop_stack(
+            [origin[0] + 2.5, origin[1] + 0.25, origin[2]],
+            ItemStack {
+                item: ItemKind::Animal(AnimalProduct::Beef),
+                count: 1
+            },
+            [0.0; 3],
+            0.0
+        ));
+        drop_id = state.next_drop;
+        state.revision = state.revision.wrapping_add(1);
+    }
+    wait(&mut host, &mut [&mut a, &mut b], |h, _| {
+        h.world()
+            .resource::<EditJournal>()
+            .gameplay()
+            .spider_dens
+            .contains_key(&id)
+    });
+    let (den, built_at) = {
+        let journal = host.world().resource::<EditJournal>();
+        let state = journal.gameplay();
+        assert_eq!(state.creatures.owners.contains_key(&id), owned);
+        assert_eq!(state.animal_bonds.contains_key(&id), owned);
+        assert!(
+            state.drops.iter().any(|drop| drop.id == drop_id),
+            "food cannot be consumed before the first web commit"
+        );
+        assert!(state.creatures.animals[&id].needs.food <= 35.0);
+        (state.spider_dens[&id], state.creatures.animals[&id].age)
+    };
+    let section = terra_voxel::global_to_section(den.anchor).0;
+    {
+        let journal = host.world().resource::<EditJournal>();
+        let chunks = host.world().resource::<ChunkStore>();
+        let prop = journal
+            .section_delta(section)
+            .placed_props
+            .into_iter()
+            .find(|prop| prop.id == PropId(den.web_id))
+            .expect("the server must commit a real prop before starting the nest cycle");
+        assert!(terra_world::props::webs::is_construction(&prop));
+        assert!(terra_world::props::webs::fits(&prop, |p| {
+            chunks
+                .block_at(p)
+                .map(|block| journal.block(p).unwrap_or(block))
+        }));
+    }
+    let wait_seconds = terra_world::creatures::spiders::cycle::wait_seconds(id, den.web_id, 0);
+    assert!((30.0..=90.0).contains(&wait_seconds));
+    wait(&mut host, &mut [&mut a, &mut b], |host, _| {
+        let state = host.world().resource::<EditJournal>().gameplay();
+        assert!(
+            state.drops.iter().any(|drop| drop.id == drop_id),
+            "food must remain untouched during the completed nest's real wait"
+        );
+        assert!(state.creatures.animals[&id].needs.food <= 35.0);
+        state.creatures.animals[&id].age >= built_at + wait_seconds - 0.25
+    });
+    wait(&mut host, &mut [&mut a, &mut b], |h, clients| {
+        let state = h.world().resource::<EditJournal>().gameplay();
+        state.creatures.animals[&id].needs.food > 45.0
+            && !state.drops.iter().any(|drop| drop.id == drop_id)
+            && clients.iter().all(|c| {
+                c.world()
+                    .resource::<EditJournal>()
+                    .section_delta(section)
+                    .placed_props
+                    .iter()
+                    .any(|prop| {
+                        prop.id == PropId(den.web_id)
+                            && prop.kind == PropKind::SpiderWeb
+                            && terra_world::props::webs::is_construction(prop)
+                            && !prop.removed
+                    })
+            })
+    });
+    let journal = host.world().resource::<EditJournal>();
+    let state = journal.gameplay();
+    assert!(
+        state.creatures.animals[&id].position[0] > origin[0] + 0.1,
+        "hungry spider must physically reach its food without an owner destination"
+    );
+    assert_eq!(state.creatures.animals[&id].needs.water, 0.0);
+    assert_eq!(
+        journal
+            .section_delta(section)
+            .placed_props
+            .iter()
+            .filter(|p| p.id == PropId(den.web_id))
+            .count(),
+        1,
+        "one real web, no duplicate entities/props"
+    );
+}
+
+#[test]
+fn two_udp_clients_share_taming_but_cannot_enable_follow_even_with_a_legacy_saved_mode() {
+    use terra_core::{
+        CropItem, ItemKind,
+        creatures::taming::{AnimalBond, CompanionMode},
+    };
+    let (mut host, mut a, mut b) = pair();
+    let player = a.world().resource::<client::ClientSession>().uuid.unwrap();
+    let stranger = b.world().resource::<client::ClientSession>().uuid.unwrap();
+    let p = a
+        .world()
+        .resource::<client::ClientSession>()
+        .confirmed_state()
+        .unwrap()
+        .position;
+    let id = spawning::next_command_id(&CreaturePopulation::default()).unwrap();
+    let food = ItemKind::Crop(CropItem::Wheat);
+    host.world_mut()
+        .resource_mut::<GameConfig>()
+        .server
+        .natural_mob_limit = Some(0);
+    {
+        let mut journal = host.world_mut().resource_mut::<EditJournal>();
+        let state = journal.gameplay_mut();
+        state.creatures = CreaturePopulation::default();
+        state.creatures.animals.insert(
+            id,
+            Creature {
+                id,
+                kind: CreatureKind::Cow,
+                home: [0, 0],
+                position: [
+                    f64::from(p[0]),
+                    f64::from(p[1] - terra_physics::character::PLAYER_HALF_HEIGHT),
+                    f64::from(p[2]) - 3.5,
+                ],
+                velocity: [0.0; 3],
+                yaw: 0.0,
+                health: CreatureKind::Cow.health(),
+                behavior: CreatureBehavior::Rest,
+                timer: 60.0,
+                age: 0.0,
+                variant: 0,
+                needs: CreatureNeeds::full(CreatureKind::Cow),
+            },
+        );
+        state.animal_bonds.insert(
+            id,
+            AnimalBond {
+                player,
+                trust: 75,
+                mode: CompanionMode::Wait,
+                last_fed_age: None,
+            },
+        );
+        for uuid in [player, stranger] {
+            state.inventories.entry(uuid).or_default().insert(food, 3);
+        }
+        state.revision = state.revision.wrapping_add(1);
+    }
+    for client in [&mut a, &mut b] {
+        client
+            .world_mut()
+            .resource_mut::<client::SelectedInventorySlot>()
+            .0 = Some(0);
+        client
+            .world_mut()
+            .resource_mut::<client::ClientSession>()
+            .look = [0.0, -0.1];
+    }
+    wait(&mut host, &mut [&mut a, &mut b], |_, clients| {
+        clients.iter().all(|c| {
+            c.world()
+                .resource::<client::ReplicatedCreatures>()
+                .bonds
+                .get(&id)
+                .is_some_and(|bond| bond.trust == 75)
+                && c.world()
+                    .resource::<client::ClientSession>()
+                    .inventory
+                    .count(food)
+                    == 3
+        })
+    });
+    // Connection setup starts the same 450 ms action cooldown as real interactions.
+    std::thread::sleep(Duration::from_millis(500));
+    a.world_mut()
+        .resource_mut::<client::CreatureActions>()
+        .0
+        .push_back((id, true));
+    wait(&mut host, &mut [&mut a, &mut b], |_, clients| {
+        clients.iter().all(|c| {
+            c.world()
+                .resource::<client::ReplicatedCreatures>()
+                .bonds
+                .get(&id)
+                .is_some_and(|bond| {
+                    bond.trust == 100
+                        && bond.owner == Some(player)
+                        && bond.mode == CompanionMode::Wait
+                })
+        }) && clients[0]
+            .world()
+            .resource::<client::ClientSession>()
+            .inventory
+            .count(food)
+            == 2
+    });
+    assert_eq!(
+        host.world()
+            .resource::<EditJournal>()
+            .gameplay()
+            .creatures
+            .natural_count(),
+        0
+    );
+    b.world_mut()
+        .resource_mut::<client::CreatureActions>()
+        .0
+        .push_back((id, true));
+    for _ in 0..35 {
+        host.update();
+        a.update();
+        b.update();
+        std::thread::sleep(Duration::from_millis(2));
+    }
+    assert_eq!(
+        host.world()
+            .resource::<EditJournal>()
+            .gameplay()
+            .inventories[&stranger]
+            .count(food),
+        3
+    );
+    assert_eq!(
+        host.world()
+            .resource::<EditJournal>()
+            .gameplay()
+            .animal_bonds[&id]
+            .player,
+        player
+    );
+    b.world_mut()
+        .resource_mut::<client::SelectedInventorySlot>()
+        .0 = None;
+    for _ in 0..25 {
+        host.update();
+        a.update();
+        b.update();
+        std::thread::sleep(Duration::from_millis(2));
+    }
+    b.world_mut()
+        .resource_mut::<client::CreatureActions>()
+        .0
+        .push_back((id, true));
+    for _ in 0..35 {
+        host.update();
+        a.update();
+        b.update();
+        std::thread::sleep(Duration::from_millis(2));
+    }
+    assert_eq!(
+        host.world()
+            .resource::<EditJournal>()
+            .gameplay()
+            .animal_bonds[&id]
+            .mode,
+        CompanionMode::Wait
+    );
+    // Old saves keep their original mode field, but it must never drive AI again.
+    let before = {
+        let mut journal = host.world_mut().resource_mut::<EditJournal>();
+        let state = journal.gameplay_mut();
+        state.animal_bonds.get_mut(&id).unwrap().mode = CompanionMode::Follow;
+        state.revision = state.revision.wrapping_add(1);
+        state.creatures.animals[&id].position
+    };
+    a.world_mut()
+        .resource_mut::<client::SelectedInventorySlot>()
+        .0 = None;
+    for _ in 0..25 {
+        host.update();
+        a.update();
+        b.update();
+        std::thread::sleep(Duration::from_millis(2));
+    }
+    std::thread::sleep(Duration::from_millis(500));
+    a.world_mut()
+        .resource_mut::<client::CreatureActions>()
+        .0
+        .push_back((id, true));
+    for _ in 0..120 {
+        host.update();
+        a.update();
+        b.update();
+        std::thread::sleep(Duration::from_millis(2));
+    }
+    for c in [&a, &b] {
+        let bond = c.world().resource::<client::ReplicatedCreatures>().bonds[&id];
+        assert_eq!(bond.owner, Some(player));
+        assert_eq!(bond.mode, CompanionMode::Wait);
+    }
+    let state = host.world().resource::<EditJournal>().gameplay();
+    assert_eq!(
+        state.animal_bonds[&id].mode,
+        CompanionMode::Follow,
+        "empty-hand commands must not mutate saved ownership data"
+    );
+    assert_eq!(state.creatures.animals[&id].position[0], before[0]);
+    assert_eq!(state.creatures.animals[&id].position[2], before[2]);
+    assert_eq!(state.creatures.owners.get(&id), Some(&player));
+    assert_eq!(
+        host.world()
+            .resource::<EditJournal>()
+            .gameplay()
+            .inventories[&player]
+            .count(food),
+        2
+    );
+}
+
+#[test]
+fn creature_intentions_are_opt_in_per_udp_viewer_and_cleared_when_inspection_ends() {
+    let (mut host, mut a, mut b) = pair();
+    let p = a
+        .world()
+        .resource::<client::ClientSession>()
+        .confirmed_state()
+        .unwrap()
+        .position
+        .map(f64::from);
+    let home = [(p[0] as i64).div_euclid(32), (p[2] as i64).div_euclid(32)];
+    let id = creature_id(home, 0).unwrap();
+    {
+        let mut journal = host.world_mut().resource_mut::<EditJournal>();
+        journal.gameplay_mut().creatures.explored.insert(home);
+        journal.gameplay_mut().creatures.animals.insert(
+            id,
+            Creature {
+                id,
+                home,
+                kind: CreatureKind::Cow,
+                position: [p[0] + 2.0, p[1], p[2] - 4.0],
+                velocity: [0.0; 3],
+                yaw: 0.0,
+                health: CreatureKind::Cow.health(),
+                behavior: CreatureBehavior::Rest,
+                timer: 60.0,
+                age: 0.0,
+                variant: 0,
+                needs: CreatureNeeds::full(CreatureKind::Cow),
+            },
+        );
+    }
+    a.world_mut().resource_mut::<client::CreatureInspection>().0 = Some(id);
+    wait(&mut host, &mut [&mut a, &mut b], |_, clients| {
+        clients[0]
+            .world()
+            .resource::<client::ReplicatedCreatures>()
+            .intentions
+            .contains_key(&id)
+    });
+    assert!(
+        b.world()
+            .resource::<client::ReplicatedCreatures>()
+            .intentions
+            .is_empty()
+    );
+    let view = &a
+        .world()
+        .resource::<client::ReplicatedCreatures>()
+        .intentions[&id];
+    assert!(view.valid() && view.path.len() <= 8);
+    a.world_mut().resource_mut::<client::CreatureInspection>().0 = None;
+    wait(&mut host, &mut [&mut a, &mut b], |_, clients| {
+        clients.iter().all(|client| {
+            client
+                .world()
+                .resource::<client::ReplicatedCreatures>()
+                .intentions
+                .is_empty()
+        })
+    });
+}
+
+#[test]
+fn creature_snapshots_received_before_session_ready_are_consumed_before_lightyear_clears() {
+    use lightyear::prelude::{MessageReceiver, MessageSystems, client::Client};
+    #[derive(Resource, Default)]
+    struct Delivered(usize);
+    let (mut host, mut a, _) = pair();
+    a.init_resource::<Delivered>()
+        .add_systems(
+            PreUpdate,
+            (|receivers: Query<
+                &MessageReceiver<protocol::session::CreatureStates>,
+                With<Client>,
+            >,
+              mut delivered: ResMut<Delivered>| {
+                delivered.0 += receivers
+                    .iter()
+                    .map(MessageReceiver::num_messages)
+                    .sum::<usize>();
+            })
+            .after(MessageSystems::Receive),
+        )
+        .add_systems(
+            PostUpdate,
+            |receivers: Query<
+                &MessageReceiver<protocol::session::CreatureStates>,
+                With<Client>,
+            >| {
+                assert!(
+                    receivers
+                        .iter()
+                        .all(|receiver| receiver.num_messages() == 0),
+                    "Pre-ready creature packets must not reach Lightyear's Last cleanup unhandled"
+                );
+            },
+        );
+    a.world_mut().resource_mut::<client::ClientSession>().ready = false;
+    wait(&mut host, &mut [&mut a], |_, clients| {
+        clients[0].world().resource::<Delivered>().0 > 0
+    });
+    assert!(
+        a.world()
+            .resource::<client::ReplicatedCreatures>()
+            .creatures
+            .is_empty()
+    );
+}
+
+#[test]
 fn two_udp_clients_receive_every_new_aquatic_species_without_changing_stable_ids() {
     let (mut host, mut a, mut b) = pair();
     let p = a

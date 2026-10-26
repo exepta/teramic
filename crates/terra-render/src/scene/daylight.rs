@@ -38,7 +38,9 @@ impl Daylight {
                 * 2.0_f32.powf(self.exposure - super::SURFACE_EXPOSURE)
         } else {
             2200.0
-                * smooth(0.0, 0.25, -self.sun.y)
+                // Hand over before the sun's last afterglow reaches zero. Waiting
+                // for the moon to clear the horizon created a dark trough at dawn/dusk.
+                * (1.0 - smooth(-0.07, 0.10, self.sun.y))
                 * 2.0_f32.powf(self.exposure - (super::SURFACE_EXPOSURE - 3.0))
         }
     }
@@ -186,6 +188,36 @@ pub(super) fn moon(commands: &mut Commands, range: f32) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn celestial_handoff_never_drops_below_the_adapted_night_light_floor() {
+        let exposed = |day: Daylight| {
+            (day.illuminance(true) + day.illuminance(false)) * 2.0_f32.powf(-day.exposure)
+        };
+        let night = exposed(Daylight::at(0.0));
+        let mut previous = exposed(Daylight::at(0.5));
+        for minute in 12 * 60..=24 * 60 {
+            let day = Daylight::at(f64::from(minute) / (24.0 * 60.0));
+            let energy = exposed(day);
+            assert!(
+                energy >= night - 0.00001,
+                "minute {minute}: {energy} < {night}"
+            );
+            assert!(
+                energy <= previous + 0.00001,
+                "minute {minute}: {previous} -> {energy}"
+            );
+            previous = energy;
+        }
+        for minute in 0..=12 * 60 {
+            let day = Daylight::at(f64::from(minute) / (24.0 * 60.0));
+            let energy = exposed(day);
+            assert!(
+                energy >= previous - 0.00001,
+                "minute {minute}: {previous} -> {energy}"
+            );
+            previous = energy;
+        }
+    }
     #[test]
     fn exposed_sunlight_fades_monotonically_without_a_twilight_brightness_pulse() {
         let mut previous = f32::MAX;

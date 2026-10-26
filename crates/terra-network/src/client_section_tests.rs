@@ -6,6 +6,38 @@ use terra_world::{
     streaming::LoadedSection,
 };
 
+#[test]
+fn client_edits_are_explicitly_ordered_after_the_held_slot_publication() {
+    use bevy::ecs::schedule::{IntoSystemSet, NodeId, Schedules, SystemSet};
+
+    let mut app = App::new();
+    install(&mut app);
+    let schedules = app.world().resource::<Schedules>();
+    let graph = schedules.get(Update).unwrap().graph();
+    let held = graph
+        .system_sets
+        .get_key(send_mining.into_system_set().intern())
+        .unwrap();
+    let edits = graph
+        .system_sets
+        .get_key(send_edits.into_system_set().intern())
+        .unwrap();
+    let edit_systems: Vec<_> = graph
+        .hierarchy()
+        .graph()
+        .edges(NodeId::Set(edits))
+        .map(|(_, child)| child)
+        .collect();
+    assert_eq!(edit_systems.len(), 1);
+    assert!(
+        graph
+            .dependency()
+            .graph()
+            .contains_edge(NodeId::Set(held), edit_systems[0]),
+        "the newly selected slot must reach the server before its pot/farm edit"
+    );
+}
+
 #[derive(Resource, Default)]
 struct Incoming(Vec<SectionDelta>);
 

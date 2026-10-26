@@ -59,6 +59,13 @@ pub fn build_app() -> Result<App, Box<dyn Error>> {
     let survival_fixture = std::env::args().any(|arg| arg == "--smoke-test-survival");
     let calendar_fixture = std::env::args().any(|arg| arg == "--smoke-test-calendar-hud");
     let effects_fixture = std::env::args().any(|arg| arg == "--smoke-test-effects");
+    let taming_fixture = std::env::args().any(|arg| arg == "--smoke-test-taming");
+    let breeding_fixture = std::env::args().any(|arg| arg == "--smoke-test-breeding");
+    let riding_fixture = std::env::args().any(|arg| arg == "--smoke-test-riding");
+    let pet_fixture = std::env::args().any(|arg| arg == "--smoke-test-pet-commands");
+    let equipment_fixture = std::env::args().any(|arg| arg == "--smoke-test-equipment");
+    let crusher_fixture = std::env::args().any(|arg| arg == "--smoke-test-crusher");
+    let farming_fixture = std::env::args().any(|arg| arg == "--smoke-test-farming");
     let food_fixture = std::env::args().any(|arg| arg == "--smoke-test-food");
     let furnace_gameplay_fixture =
         std::env::args().any(|arg| arg == "--smoke-test-furnace-gameplay");
@@ -76,6 +83,13 @@ pub fn build_app() -> Result<App, Box<dyn Error>> {
                 && argument != "--smoke-test-survival"
                 && argument != "--smoke-test-calendar-hud"
                 && argument != "--smoke-test-effects"
+                && argument != "--smoke-test-taming"
+                && argument != "--smoke-test-breeding"
+                && argument != "--smoke-test-riding"
+                && argument != "--smoke-test-pet-commands"
+                && argument != "--smoke-test-equipment"
+                && argument != "--smoke-test-crusher"
+                && argument != "--smoke-test-farming"
                 && argument != "--smoke-test-food"
                 && argument != "--smoke-test-furnace-gameplay"
                 && argument != "--smoke-test-loading"
@@ -110,10 +124,45 @@ pub fn build_app() -> Result<App, Box<dyn Error>> {
     };
     let mut world =
         load_config::<WorldConfig>(&directory.join("world.toml"), frontend, &mut startup_errors)?;
+    if std::env::args().any(|arg| arg == "--smoke-test-waterfalls") {
+        world.base_height = 16.0;
+        world.hill_amplitude = 0.0;
+        world.mountain_amplitude = 0.0;
+        world.biomes = false;
+        world.trees = false;
+        world.caves = false;
+        world.rivers = false;
+        world.water = true;
+        world.sea_level = 0.0;
+        client.view_distance = 3;
+        client.vertical_view_distance = 3;
+    }
+    if std::env::args().any(|arg| arg == "--smoke-test-tree-collapse") {
+        world.base_height = 16.0;
+        world.hill_amplitude = 0.0;
+        world.mountain_amplitude = 0.0;
+        world.biomes = false;
+        world.trees = true;
+        world.tree_density = 0.08;
+        world.caves = false;
+        world.rivers = false;
+        world.water = false;
+        client.fov_degrees = 60.0;
+        client.view_distance = 3;
+        client.vertical_view_distance = 3;
+    }
+    if std::env::args().any(|arg| arg == "--smoke-test-cave-structures")
+        && std::env::var_os("TERRA_CAVE_SHELL_INSPECT").is_some()
+    {
+        world = WorldConfig::default();
+    }
     if std::env::args().any(|arg| arg == "--smoke-test-biomes") {
         world = WorldConfig::default();
         // These fixed native regression views predate the opt-in landscape field.
-        world.landscape_revision = 0;
+        if !std::env::var("TERRA_BIOME_SCENE").is_ok_and(|scene| scene.starts_with("cherry")) {
+            world.landscape_revision = 0;
+            world.ecology_revision = 0;
+        }
         world.rivers =
             std::env::var("TERRA_BIOME_SCENE").is_ok_and(|scene| scene.starts_with("water-"));
     }
@@ -139,21 +188,31 @@ pub fn build_app() -> Result<App, Box<dyn Error>> {
     // Match the opt-in handcrafted cave fixture's Y=18 surface before creating
     // generators or column caches. Production world configuration is untouched.
     if std::env::args().any(|a| a == "--smoke-test-caves")
-        && std::env::var_os("TERRA_TORCH_INSPECT").is_some()
+        && (std::env::var_os("TERRA_TORCH_INSPECT").is_some()
+            || std::env::var_os("TERRA_CAVE_LIGHT_INSPECT").is_some())
     {
         world.base_height = 18.0;
         world.hill_amplitude = 0.0;
         world.mountain_amplitude = 0.0;
         world.biomes = false;
         world.caves = false;
-        world.water = false;
+        world.water = std::env::var_os("TERRA_CAVE_LIGHT_INSPECT").is_some();
         world.rivers = false;
         world.trees = false;
     }
     let connect_address = {
-        if std::env::args()
-            .any(|a| matches!(a.as_str(), "--smoke-test-creatures" | "--smoke-test-tracks"))
-        {
+        if std::env::args().any(|a| {
+            matches!(
+                a.as_str(),
+                "--smoke-test-creatures"
+                    | "--smoke-test-tracks"
+                    | "--smoke-test-spiders"
+                    | "--smoke-test-web-constructions"
+                    | "--smoke-test-stalker"
+                    | "--smoke-test-mob-health"
+                    | "--smoke-test-flower-wither"
+            )
+        }) {
             world.base_height = 32.0;
             world.hill_amplitude = 0.0;
             world.mountain_amplitude = 0.0;
@@ -193,6 +252,12 @@ pub fn build_app() -> Result<App, Box<dyn Error>> {
     }
     if effects_fixture && connect_address.is_some() {
         return Err("The status-effect fixture requires its own temporary integrated world".into());
+    }
+    if taming_fixture && connect_address.is_some() {
+        return Err("The taming fixture requires its own temporary integrated world".into());
+    }
+    if breeding_fixture && connect_address.is_some() {
+        return Err("Breeding fixture requires its isolated integrated server".into());
     }
     if furnace_gameplay_fixture && connect_address.is_some() {
         return Err("The furnace fixture requires its own temporary integrated world".into());
@@ -261,6 +326,41 @@ pub fn build_app() -> Result<App, Box<dyn Error>> {
             } else if calendar_fixture {
                 let (host, token, profile) =
                     crate::hud_smoke::prepare(host_config).map_err(std::io::Error::other)?;
+                survival_profile = Some(profile);
+                (host, token)
+            } else if crusher_fixture {
+                let (host, token, profile) =
+                    crate::crusher_smoke::prepare(host_config).map_err(std::io::Error::other)?;
+                survival_profile = Some(profile);
+                (host, token)
+            } else if farming_fixture {
+                let (host, token, profile) =
+                    crate::farming_smoke::prepare(host_config).map_err(std::io::Error::other)?;
+                survival_profile = Some(profile);
+                (host, token)
+            } else if equipment_fixture {
+                let (host, token, profile) =
+                    crate::equipment_smoke::prepare(host_config).map_err(std::io::Error::other)?;
+                survival_profile = Some(profile);
+                (host, token)
+            } else if pet_fixture {
+                let (host, token, profile) = crate::pet_commands_smoke::prepare(host_config)
+                    .map_err(std::io::Error::other)?;
+                survival_profile = Some(profile);
+                (host, token)
+            } else if riding_fixture {
+                let (host, token, profile) =
+                    crate::riding_smoke::prepare(host_config).map_err(std::io::Error::other)?;
+                survival_profile = Some(profile);
+                (host, token)
+            } else if breeding_fixture {
+                let (host, token, profile) =
+                    crate::breeding_smoke::prepare(host_config).map_err(std::io::Error::other)?;
+                survival_profile = Some(profile);
+                (host, token)
+            } else if taming_fixture {
+                let (host, token, profile) =
+                    crate::taming_smoke::prepare(host_config).map_err(std::io::Error::other)?;
                 survival_profile = Some(profile);
                 (host, token)
             } else if effects_fixture {
@@ -390,8 +490,9 @@ pub fn build_app() -> Result<App, Box<dyn Error>> {
         TerraPlayerPlugin,
         TerraRenderPlugin,
         crate::water_audio::WaterAudioPlugin,
+        crate::crusher_audio::CrusherAudioPlugin,
     ))
-    .add_systems(Update, sync_block_previews);
+    .add_systems(Update, (sync_block_previews, sync_pet_portrait));
     crate::creature_audio::install(&mut app);
     if fixture && std::env::var("TERRA_FOLIAGE_REFERENCE").is_ok_and(|value| value == "1") {
         app.add_plugins(terra_render::FoliageReferenceBenchmark);
@@ -457,8 +558,19 @@ pub fn build_app() -> Result<App, Box<dyn Error>> {
     crate::settings_smoke::install(&mut app);
     crate::appearance_smoke::install(&mut app);
     crate::botanical_smoke::install(&mut app);
+    crate::flower_wither_smoke::install(&mut app);
     crate::hud_smoke::install(&mut app);
     crate::status_effect_smoke::install(&mut app);
+    crate::taming_smoke::install(&mut app);
+    crate::breeding_smoke::install(&mut app);
+    crate::riding_smoke::install(&mut app);
+    crate::pet_commands_smoke::install(&mut app);
+    crate::waterfall_smoke::install(&mut app);
+    crate::tree_collapse_smoke::install(&mut app);
+    crate::village_smoke::install(&mut app);
+    crate::equipment_smoke::install(&mut app);
+    crate::crusher_smoke::install(&mut app);
+    crate::farming_smoke::install(&mut app);
     crate::reef_smoke::install(&mut app);
     crate::ecology_smoke::install(&mut app);
     crate::ore_smoke::install(&mut app);
@@ -466,6 +578,11 @@ pub fn build_app() -> Result<App, Box<dyn Error>> {
     crate::cave_showcase::install(&mut app);
     crate::cave_structures_smoke::install(&mut app);
     crate::creature_smoke::install(&mut app);
+    crate::spider_smoke::install(&mut app);
+    crate::web_constructions_smoke::install(&mut app);
+    crate::window_gallery_smoke::install(&mut app);
+    crate::stalker_smoke::install(&mut app);
+    crate::mob_health_smoke::install(&mut app);
     crate::track_smoke::install(&mut app);
     crate::surface_smoke::install(&mut app);
     crate::network_smoke::install(&mut app);
@@ -807,6 +924,7 @@ fn parse_benchmark_point(value: &str) -> Result<Vec3, String> {
 #[derive(bevy::ecs::system::SystemParam)]
 struct BenchmarkWorld<'w, 's> {
     session: Option<Res<'w, terra_network::client::ClientSession>>,
+    ui: Option<Res<'w, BenchmarkUi>>,
     config: Res<'w, GameConfig>,
     chat: Option<ResMut<'w, terra_network::client::ClientChatCommands>>,
     weather: ResMut<'w, terra_core::WorldWeather>,
@@ -828,6 +946,11 @@ fn benchmark_scenario_update(
     use terra_network::client::ChatCommand;
     let networked = world.session.is_some();
     if world.session.as_ref().is_some_and(|session| !session.ready) {
+        return;
+    }
+    // Do not load a distant destination alongside the initial HUD/spawn region.
+    // This uses the same real command once the optional integrated HUD is ready.
+    if !scenario.submitted && networked && world.ui.as_ref().is_some_and(|ui| !ui.ready) {
         return;
     }
     if !scenario.submitted {
@@ -906,6 +1029,23 @@ fn benchmark_scenario_update(
             }
     });
     scenario.ready = position_ready && weather_ready;
+}
+
+fn sync_pet_portrait(
+    view: Res<terra_ui::PetMenuView>,
+    mut rendered: ResMut<terra_render::creatures::RenderPetPortrait>,
+    mut ui: ResMut<terra_ui::PetPortrait>,
+) {
+    let request = view.visible.then_some(view.id);
+    if rendered.request != request {
+        rendered.request = request;
+    }
+    let ready = rendered.ready && rendered.id == request && request.is_some();
+    if ui.id != rendered.id || ui.image != rendered.image || ui.ready != ready {
+        ui.id = rendered.id;
+        ui.image = rendered.image.clone();
+        ui.ready = ready;
+    }
 }
 
 fn sync_block_previews(

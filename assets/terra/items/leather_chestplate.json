@@ -1,0 +1,16 @@
+{
+  "item": {
+    "armor": {
+      "material": "leather",
+      "piece": "chestplate"
+    }
+  },
+  "name": "Leather Chestplate",
+  "description": "Leather chestplate fitted for protection and comfortable movement.",
+  "equipment": {
+    "slot": "chestplate",
+    "armor_points": 3.5,
+    "health_bonus": 0,
+    "stamina_bonus": 8
+  }
+}

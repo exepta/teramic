@@ -15,7 +15,7 @@ fn nesting_biome(biome: crate::generation::biomes::BiomeKind) -> bool {
     use crate::generation::biomes::BiomeKind;
     matches!(
         biome,
-        BiomeKind::Forest | BiomeKind::Plains | BiomeKind::Highland
+        BiomeKind::Forest | BiomeKind::CherryForest | BiomeKind::Plains | BiomeKind::Highland
     )
 }
 
@@ -73,7 +73,7 @@ pub fn spawn(
             else {
                 return Ok(false);
             };
-            if !matches!(material, 6 | 10 | 36) {
+            if !matches!(material, 6 | 10 | 36 | 134) {
                 continue;
             }
             let side = ((r >> 16) % 4) as usize;
@@ -187,6 +187,11 @@ pub(super) fn nearby<'a>(
     habitat: &'a Habitat,
 ) -> impl Iterator<Item = &'a WorldProp> {
     let owner = terra_voxel::global_to_section(animal.position.map(|v| v.floor() as i64)).0;
+    let season = habitat
+        .journal
+        .clock
+        .unwrap_or_default()
+        .season(habitat.terrain.config().seasons);
     (-1..=1)
         .flat_map(|y| (-1..=1).flat_map(move |z| (-1..=1).map(move |x| [x, y, z])))
         .filter_map(move |d| {
@@ -196,7 +201,14 @@ pub(super) fn nearby<'a>(
                 .and_then(|p| habitat.chunks.loaded.get(&p))
         })
         .flat_map(|s| s.props.iter())
-        .filter(|p| !p.removed && !habitat.journal.prop_removed(p.section, p.id))
+        .filter(move |p| {
+            !p.removed
+                && !habitat.journal.prop_removed(p.section, p.id)
+                && habitat.journal.flowers.coverage(p, season) > 0.0
+                && crate::props::placement::supported(p, |p| habitat.chunks.block_at(p))
+                    == Some(true)
+                && !crate::props::seasonal::snow_buried(p, habitat.chunks, habitat.journal)
+        })
 }
 
 pub(super) fn step(
@@ -352,7 +364,7 @@ pub(super) fn step(
                 [0, 0, -1],
             ] {
                 let support = std::array::from_fn(|i| cell[i] + d[i]);
-                if matches!(habitat.block(support), Some(6 | 10 | 36)) {
+                if matches!(habitat.block(support), Some(6 | 10 | 36 | 134)) {
                     animal.behavior = Behavior::Land;
                     animal.timer = 0.3;
                     animal.needs.goal = Some(NeedGoal {
@@ -519,6 +531,13 @@ mod tests {
         let owner = SectionPos::default();
         let mut chunks = ChunkStore::default();
         empty(&mut chunks, [0, 0, 0]);
+        chunks
+            .loaded
+            .get_mut(&owner)
+            .unwrap()
+            .data
+            .set_block([3, 0, 2], 3)
+            .unwrap();
         chunks
             .loaded
             .get_mut(&owner)

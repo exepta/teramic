@@ -6,7 +6,7 @@
   "name": "Red Mushroom Cap",
   "render_kind": "cube",
   "surface": "mushroom",
-  "bevel_width": 0.035,
+  "bevel_width": 0.0,
   "materials": {
     "Mushroom cap": {
       "texture_pattern": "red_mushroom_cap",

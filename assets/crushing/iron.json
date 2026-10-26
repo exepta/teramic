@@ -1,0 +1,15 @@
+{
+  "id": 10601,
+  "key": "teramic::crush_iron",
+  "name": "Crush iron",
+  "input": {
+    "mineral": "raw_iron"
+  },
+  "output": {
+    "item": {
+      "dust": "iron"
+    },
+    "count": 1
+  },
+  "seconds": 4
+}

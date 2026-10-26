@@ -40,17 +40,40 @@ struct TerraWeather {
     tint: vec4<f32>,
     leaves: vec4<f32>,
     grass: vec4<f32>,
+    vegetation: vec4<f32>,
+    flowers: array<vec4<f32>, 64>,
 };
 @group(#{MATERIAL_BIND_GROUP}) @binding(101) var<storage, read> terra_weather: TerraWeather;
 
+fn flower_progress(input: Vertex, seconds_ago: f32) -> f32 {
+#ifdef VERTEX_COLORS
+    if input.color.a < 1.0 {
+        let rank = u32(round(input.color.a * 255.0));
+        let start = terra_weather.flowers[rank / 4u][rank % 4u];
+        if start == -1.0 { return 0.0; }
+        if start == -2.0 { return 1.0; }
+        return clamp((terra_weather.vegetation.z - seconds_ago - start) / 10.0, 0.0, 1.0);
+    }
+#endif
+    return 0.0;
+}
+
+fn flower_scale(input: Vertex, seconds_ago: f32) -> f32 {
+    let progress = flower_progress(input, seconds_ago);
+    return 1.0 - progress * progress * (3.0 - 2.0 * progress);
+}
+
 #ifdef PROP_GROWTH
 fn growth_factor(input: Vertex, time: f32) -> f32 {
+    if input.uv_b.y < -2.5 { return 1.0; }
+    let ratio = select(input.uv_b.y, -1.0 - input.uv_b.y, input.uv_b.y < -0.5);
     let elapsed = clamp((time - input.uv_b.x) / 2.4, 0.0, 1.0);
-    return mix(input.uv_b.y, 1.0, elapsed * elapsed * (3.0 - 2.0 * elapsed));
+    return mix(ratio, 1.0, elapsed * elapsed * (3.0 - 2.0 * elapsed));
 }
 
 fn grown_local(input: Vertex, time: f32) -> vec4<f32> {
-    let scale = growth_factor(input, time);
+    let seconds_ago = max(0.0, terra_weather.surface.w - time);
+    let scale = growth_factor(input, time) * flower_scale(input, seconds_ago);
     return vec4<f32>(input.growth_anchor + (input.position - input.growth_anchor) * scale, 1.0);
 }
 #endif
@@ -83,21 +106,6 @@ fn wind_position(world: vec4<f32>, weights: vec2<f32>, time: f32) -> vec4<f32> {
     return world + vec4<f32>(sway * direction.x, 0.0, sway * direction.y, 0.0);
 }
 
-fn prop_snow(input: Vertex) -> f32 {
-#ifdef VERTEX_COLORS
-#ifdef VERTEX_UVS_A
-    // Zero is sheltered; one is untagged. Negative flexibility belongs underwater.
-    if input.uv.y > 0.0 && input.color.a > 0.0 && input.color.a < 1.0 {
-        let temperature = ((input.color.a * 255.0 - 2.0) / 251.0) * 128.0 - 64.0
-            + terra_weather.tint.w;
-        let cold = 1.0 - smoothstep(-1.0, 3.0, temperature);
-        return smoothstep(0.0, 0.95, terra_weather.grass.w * cold);
-    }
-#endif
-#endif
-    return 0.0;
-}
-
 @vertex
 fn vertex(input: Vertex) -> VertexOutput {
     var out: VertexOutput;
@@ -107,15 +115,6 @@ fn vertex(input: Vertex) -> VertexOutput {
     var position = mesh_functions::mesh_position_local_to_world(model, grown_local(input, terra_weather.surface.w));
 #else
     var position = mesh_functions::mesh_position_local_to_world(model, vec4<f32>(input.position, 1.0));
-#endif
-    let snow_cover = prop_snow(input);
-#ifdef PROP_GROWTH
-    let snow_root = mesh_functions::mesh_position_local_to_world(model, vec4<f32>(input.growth_anchor, 1.0));
-    position.y = mix(position.y, snow_root.y + 0.012, snow_cover * 0.98);
-#else
-#ifdef VERTEX_UVS_A
-    position.y -= sqrt(max(input.uv.x, 0.0)) * snow_cover * 0.18;
-#endif
 #endif
 #ifdef PREPASS_PIPELINE
     let time = prop_globals.time;
@@ -128,6 +127,7 @@ fn vertex(input: Vertex) -> VertexOutput {
 #endif
 #ifdef PROP_GROWTH
     weights.y *= growth_factor(input, terra_weather.surface.w);
+    weights.y *= flower_scale(input, 0.0);
 #endif
     out.world_position = wind_position(position, weights, time);
     out.position = position_world_to_clip(out.world_position.xyz);
@@ -155,13 +155,9 @@ fn vertex(input: Vertex) -> VertexOutput {
     let previous_clock = terra_weather.surface.w - prop_globals.delta_time;
     var previous = mesh_functions::mesh_position_local_to_world(previous_model, grown_local(input, previous_clock));
     previous_weights.y *= growth_factor(input, previous_clock);
-    let previous_snow_root = mesh_functions::mesh_position_local_to_world(previous_model, vec4<f32>(input.growth_anchor, 1.0));
-    previous.y = mix(previous.y, previous_snow_root.y + 0.012, snow_cover * 0.98);
+    previous_weights.y *= flower_scale(input, prop_globals.delta_time);
 #else
     var previous = mesh_functions::mesh_position_local_to_world(previous_model, vec4<f32>(input.position, 1.0));
-#ifdef VERTEX_UVS_A
-    previous.y -= sqrt(max(input.uv.x, 0.0)) * snow_cover * 0.18;
-#endif
 #endif
     out.previous_world_position = wind_position(previous, previous_weights, time - prop_globals.delta_time);
 #endif
@@ -187,9 +183,17 @@ fn vertex(input: Vertex) -> VertexOutput {
     out.color = vec4<f32>(out.color.rgb * terra_weather.tint.rgb, out.color.a);
     if weights.y > 0.0 {
         out.color = vec4<f32>(out.color.rgb * terra_weather.grass.rgb, out.color.a);
-        out.color = vec4<f32>(mix(out.color.rgb, vec3<f32>(0.88, 0.91, 0.95), snow_cover), out.color.a);
     }
     out.color.a = 1.0;
+    if input.color.a < 1.0 {
+        let progress = flower_progress(input, 0.0);
+        let dry = smoothstep(0.0, 0.45, progress);
+        let brightness = dot(out.color.rgb, vec3<f32>(0.30, 0.59, 0.11));
+        // Fully replace saturated petals by halfway, rather than retaining
+        // blue/green pigment that turns a darkening plant grey or olive.
+        let dried = vec3<f32>(0.40, 0.19, 0.055) * (0.85 + clamp(brightness, 0.0, 1.0) * 0.35);
+        out.color = vec4<f32>(mix(out.color.rgb, dried, dry), flower_scale(input, 0.0));
+    }
 #endif
 #ifdef VERTEX_OUTPUT_INSTANCE_INDEX
     out.instance_index = input.instance_index;

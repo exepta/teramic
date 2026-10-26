@@ -1,0 +1,16 @@
+{
+  "item": {
+    "armor": {
+      "material": "iron",
+      "piece": "pants"
+    }
+  },
+  "name": "Iron Pants",
+  "description": "Iron pants fitted for protection and comfortable movement.",
+  "equipment": {
+    "slot": "pants",
+    "armor_points": 5,
+    "health_bonus": 2,
+    "stamina_bonus": 2
+  }
+}

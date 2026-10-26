@@ -6,7 +6,7 @@
   "name": "Mushroom Stem",
   "render_kind": "cube",
   "surface": "wood",
-  "bevel_width": 0.035,
+  "bevel_width": 0.0,
   "materials": {
     "Mushroom stem": {
       "texture_pattern": "mushroom_stem",

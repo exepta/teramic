@@ -116,11 +116,13 @@ impl IntegratedServer {
                 }
                 if let Some(task) = save_task { let _ = future::block_on(task); }
                 if let Some(path) = &save_path {
+                    let felling = crate::persistence::finish_tree_felling(app.world_mut());
                     terra_storage::save_edits(
                         path,
                         world_id,
                         app.world().resource::<terra_world::edits::EditJournal>(),
                     )?;
+                    felling?;
                 }
                 Ok(())
             })

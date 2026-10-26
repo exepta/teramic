@@ -1,0 +1,28 @@
+{
+  "id": "teramic::lime_dye",
+  "name": "Lime Dye",
+  "station": "hand",
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "dye": "green"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "dye": "yellow"
+        },
+        "count": 1
+      }
+    ]
+  },
+  "output": {
+    "item": {
+      "dye": "lime"
+    },
+    "count": 2
+  }
+}

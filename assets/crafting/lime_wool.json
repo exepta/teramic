@@ -1,0 +1,28 @@
+{
+  "id": "teramic::lime_wool",
+  "name": "Lime Wool",
+  "station": "hand",
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "block": 103
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "dye": "lime"
+        },
+        "count": 1
+      }
+    ]
+  },
+  "output": {
+    "item": {
+      "block": 126
+    },
+    "count": 1
+  }
+}

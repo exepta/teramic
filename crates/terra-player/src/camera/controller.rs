@@ -44,9 +44,9 @@ pub(crate) fn sync_controller(
     mut commands: Commands,
     mut mode: ResMut<ControllerMode>,
     chunks: Res<ChunkStore>,
-    cameras: Query<(&Transform, &CameraLook), With<TerraCamera>>,
+    mut cameras: Query<(&mut Transform, &mut CameraLook), With<TerraCamera>>,
     bodies: Query<Entity, With<PlayerBody>>,
-    session: Option<Res<ClientSession>>,
+    session: Option<ResMut<ClientSession>>,
     mut status: ResMut<PlayerControllerStatus>,
 ) {
     if session
@@ -55,7 +55,10 @@ pub(crate) fn sync_controller(
     {
         *mode = ControllerMode::Fly;
     }
-    if session.as_ref().is_some_and(|s| s.ready && !s.allow_flight) && *mode == ControllerMode::Fly
+    if session
+        .as_ref()
+        .is_some_and(|s| s.ready && (!s.allow_flight || s.mounted.is_some()))
+        && *mode == ControllerMode::Fly
     {
         *mode = ControllerMode::Walk;
     }
@@ -77,8 +80,22 @@ pub(crate) fn sync_controller(
         return;
     }
     status.waiting_for_terrain = true;
-    if let Some(session) = session {
+    if let Some(mut session) = session {
         if session.ready {
+            if let Some(location) = session.initial_location.take() {
+                *mode = if location.flying && session.allow_flight {
+                    ControllerMode::Fly
+                } else {
+                    ControllerMode::Walk
+                };
+                session.look = location.look;
+                for (mut camera, mut look) in &mut cameras {
+                    camera.translation = session.spawn + Vec3::Y * PLAYER_EYE_OFFSET;
+                    camera.rotation =
+                        Quat::from_euler(EulerRot::YXZ, location.look[0], location.look[1], 0.0);
+                    look.aim(camera.rotation);
+                }
+            }
             commands.spawn(body_bundle(session.spawn));
         }
         return;
@@ -123,6 +140,9 @@ pub(crate) fn read_walk_input(
     if let Some(session) = control.session.as_mut() {
         let (yaw, pitch, _) = rotation.to_euler(EulerRot::YXZ);
         session.look = [yaw, pitch];
+        if gameplay_active && session.mounted.is_some() && keys.just_pressed(Action::Dismount) {
+            session.dismount_requested = true;
+        }
         if session.sleeping().is_some() {
             if gameplay_active
                 && [
@@ -142,7 +162,10 @@ pub(crate) fn read_walk_input(
             return;
         }
     }
-    let network_flight = control.session.as_ref().is_some_and(|s| s.allow_flight)
+    let network_flight = control
+        .session
+        .as_ref()
+        .is_some_and(|s| s.allow_flight && s.mounted.is_none())
         && *control.mode == ControllerMode::Fly;
     if (*control.mode != ControllerMode::Walk && !network_flight)
         || control.blocked.0
@@ -160,7 +183,11 @@ pub(crate) fn read_walk_input(
     let vertical = f32::from(u8::from(keys.pressed(Action::Forward)))
         - f32::from(u8::from(keys.pressed(Action::Backward)));
     intent.direction = (forward * vertical + right * horizontal).normalize_or_zero();
-    intent.sprint = keys.pressed(Action::Sprint);
+    let mounted = control
+        .session
+        .as_ref()
+        .is_some_and(|s| s.mounted.is_some());
+    intent.sprint = keys.pressed(Action::Sprint) || mounted && keys.pressed(Action::FlyDown);
     intent.jump |= keys.just_pressed(Action::Jump);
     intent.flight_speed = None;
     intent.swimming = false;
@@ -169,18 +196,20 @@ pub(crate) fn read_walk_input(
         &control.terrain,
         &control.chunks,
         &control.journal,
-    ) && terra_physics::character::in_water(
-        &config.world,
-        &terrain.0,
-        chunks,
-        journal,
-        bodies
-            .iter()
-            .next()
-            .map_or(camera.translation - Vec3::Y * PLAYER_EYE_OFFSET, |body| {
-                body.translation
-            }),
-    ) {
+    ) && !mounted
+        && terra_physics::character::in_water(
+            &config.world,
+            &terrain.0,
+            chunks,
+            journal,
+            bodies
+                .iter()
+                .next()
+                .map_or(camera.translation - Vec3::Y * PLAYER_EYE_OFFSET, |body| {
+                    body.translation
+                }),
+        )
+    {
         intent.swimming = true;
         if keys.just_pressed(Action::Sprint) {
             intent.diving = !intent.diving;
@@ -235,7 +264,10 @@ pub(crate) fn walk_step(
 ) {
     let accepts = control.input.captured && !control.blocked.0;
     let flight = *control.mode == ControllerMode::Fly
-        && control.session.as_ref().is_some_and(|s| s.allow_flight);
+        && control
+            .session
+            .as_ref()
+            .is_some_and(|s| s.allow_flight && s.mounted.is_none());
     let input = CharacterInput {
         direction: if accepts {
             intent.direction
@@ -251,9 +283,7 @@ pub(crate) fn walk_step(
             0.0
         }),
     };
-    if !intent.swimming {
-        intent.jump = false;
-    }
+    let mut consumed_input = false;
     for (entity, mut transform, mut velocity, collider, mut grounded, pose) in &mut bodies {
         if let Some(mut pose) = pose {
             pose.previous = transform.translation;
@@ -269,9 +299,13 @@ pub(crate) fn walk_step(
             simulation.step(entity, collider, &mut state, input)
         };
         status.waiting_for_terrain = !moved;
+        consumed_input |= moved;
         transform.translation = state.position;
         velocity.0 = state.velocity;
         grounded.0 = state.grounded;
+    }
+    if consumed_input && !intent.swimming {
+        intent.jump = false;
     }
 }
 
@@ -324,13 +358,21 @@ pub(crate) fn follow_player_camera(
     let Some((entity, body, pose, grounded, velocity)) = bodies.iter_mut().next() else {
         return;
     };
-    let visual = if let Some(mut pose) = pose {
+    let mut visual = if let Some(mut pose) = pose {
         pose.correction *= (-18.0 * control.time.delta_secs()).exp();
         pose.visual_position(body.translation, control.fixed.overstep_fraction())
     } else {
         body.translation
     };
+    if control
+        .session
+        .as_ref()
+        .is_some_and(|s| s.mounted.is_some())
+    {
+        visual.y -= 0.60;
+    }
     let enabled = *control.mode == ControllerMode::Walk
+        && control.session.as_ref().is_none_or(|s| s.mounted.is_none())
         && control
             .session
             .as_ref()
@@ -348,12 +390,21 @@ pub(crate) fn follow_player_camera(
             .as_deref()
             .is_none_or(|settings| settings.view_bobbing);
     for (mut camera, look, mut motion) in &mut cameras {
-        let step_offset = motion.step_height(
-            entity,
-            visual,
-            grounded.is_some_and(|grounded| grounded.0),
-            control.time.delta_secs(),
-        );
+        let step_offset = if control
+            .session
+            .as_ref()
+            .is_some_and(|s| s.mounted.is_some())
+        {
+            motion.reset_step(entity, visual);
+            0.0
+        } else {
+            motion.step_height(
+                entity,
+                visual,
+                grounded.is_some_and(|grounded| grounded.0),
+                control.time.delta_secs(),
+            )
+        };
         let offset = motion.offset(GaitFrame {
             body: entity,
             position: visual,

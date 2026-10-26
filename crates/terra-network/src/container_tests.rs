@@ -32,6 +32,82 @@ fn inventory(host: &mut App, client: &mut App, action: InventoryAction) -> Inven
         .unwrap()
 }
 
+#[test]
+fn chest_lids_replicate_to_non_viewing_observers_and_close_only_after_last_viewer_leaves() {
+    for double in [false, true] {
+        let (mut host, mut a, mut b) = pair();
+        let [anchor, other] = fixture(&mut host, &a, double);
+        assert_eq!(
+            inventory(
+                &mut host,
+                &mut a,
+                InventoryAction::OpenContainer { position: anchor }
+            ),
+            InventoryOutcome::Applied
+        );
+        wait(&mut host, &mut [&mut a, &mut b], |_, clients| {
+            clients.iter().all(|client| {
+                client
+                    .world()
+                    .resource::<client::ClientSession>()
+                    .open_chests
+                    .contains(&anchor)
+            })
+        });
+        assert!(
+            b.world()
+                .resource::<client::ClientSession>()
+                .container
+                .is_none(),
+            "world lid state is visible without opening the inventory"
+        );
+        assert_eq!(
+            inventory(
+                &mut host,
+                &mut b,
+                InventoryAction::OpenContainer {
+                    position: if double { other } else { anchor }
+                }
+            ),
+            InventoryOutcome::Applied
+        );
+        assert_eq!(
+            inventory(&mut host, &mut a, InventoryAction::CloseContainer),
+            InventoryOutcome::Applied
+        );
+        for _ in 0..30 {
+            host.update();
+            a.update();
+            b.update();
+        }
+        assert!(
+            a.world()
+                .resource::<client::ClientSession>()
+                .open_chests
+                .contains(&anchor)
+        );
+        assert!(
+            b.world()
+                .resource::<client::ClientSession>()
+                .open_chests
+                .contains(&anchor)
+        );
+        assert_eq!(
+            inventory(&mut host, &mut b, InventoryAction::CloseContainer),
+            InventoryOutcome::Applied
+        );
+        wait(&mut host, &mut [&mut a, &mut b], |_, clients| {
+            clients.iter().all(|client| {
+                client
+                    .world()
+                    .resource::<client::ClientSession>()
+                    .open_chests
+                    .is_empty()
+            })
+        });
+    }
+}
+
 fn gesture(client: &App, action: ContainerGesture) -> ContainerCommand {
     let session = client.world().resource::<client::ClientSession>();
     let snapshot = session.container.as_ref().unwrap();
@@ -323,6 +399,394 @@ fn furnace_fixture(host: &mut App, client: &App) -> [[i64; 3]; 2] {
         .set_furnace(anchor, default())
         .unwrap();
     [anchor, upper]
+}
+
+#[test]
+fn every_bed_dye_pose_accepts_authoritative_sleep_interaction_over_udp() {
+    use terra_core::beds::{DyeColor, dyed_facing};
+    let (mut host, mut a, mut b) = pair();
+    let [anchor, peer] = fixture(&mut host, &a, true);
+    for position in [anchor, peer] {
+        put(&mut host, position, 71);
+    }
+    {
+        let mut clock = host.world_mut().resource_mut::<terra_core::WorldClock>();
+        clock.phase = 21.0 / 24.0;
+        clock.paused = true;
+    }
+    let body = a
+        .world()
+        .resource::<client::ClientSession>()
+        .confirmed_state()
+        .unwrap()
+        .position;
+    let eye = Vec3::from_array(body) + Vec3::Y * terra_physics::character::PLAYER_EYE_OFFSET;
+    let target = Vec3::from_array(anchor.map(|value| value as f32)) + Vec3::new(0.5, 0.4, 0.5);
+    let direction = (target - eye).normalize();
+    a.world_mut().resource_mut::<client::ClientSession>().look =
+        [(-direction.x).atan2(-direction.z), direction.y.asin()];
+    for color in DyeColor::ALL {
+        let facing = dyed_facing(1, color);
+        for (position, other, secondary) in [(anchor, peer, false), (peer, anchor, true)] {
+            host.world_mut()
+                .resource_mut::<EditJournal>()
+                .set_object_state(
+                    position,
+                    Some(BlockObjectState {
+                        facing,
+                        peer: Some(other),
+                        secondary,
+                        ..default()
+                    }),
+                )
+                .unwrap();
+        }
+        wait(&mut host, &mut [&mut a, &mut b], |_, clients| {
+            clients[0]
+                .world()
+                .resource::<EditJournal>()
+                .object_state(anchor)
+                .is_some_and(|state| state.facing == facing)
+                && clients[0].world().resource::<ChunkStore>().block_at(anchor) == Some(71)
+        });
+        let previous = a
+            .world()
+            .resource::<client::ClientSession>()
+            .last_edit
+            .map_or(0, |(request, _)| request);
+        a.world_mut()
+            .write_message(client::ObjectInteractionRequest {
+                position: anchor,
+                expected: 71,
+                facing,
+            });
+        wait(&mut host, &mut [&mut a, &mut b], |_, clients| {
+            clients[0]
+                .world()
+                .resource::<client::ClientSession>()
+                .last_edit
+                .is_some_and(|(request, _)| request > previous)
+        });
+        assert_eq!(
+            a.world()
+                .resource::<client::ClientSession>()
+                .last_edit
+                .unwrap()
+                .1,
+            crate::protocol::session::EditOutcome::Applied,
+            "bed color {color:?}"
+        );
+        wait(&mut host, &mut [&mut a, &mut b], |_, clients| {
+            clients[0]
+                .world()
+                .resource::<client::ClientSession>()
+                .sleeping()
+                .is_some_and(|sleep| sleep.anchor == anchor && sleep.facing == facing % 4)
+        });
+        send(&mut a, crate::protocol::session::ClientControl::LeaveBed);
+        wait(&mut host, &mut [&mut a, &mut b], |_, clients| {
+            clients[0]
+                .world()
+                .resource::<client::ClientSession>()
+                .sleeping()
+                .is_none()
+        });
+    }
+}
+
+#[test]
+fn crusher_pair_opens_one_private_inventory_autofills_and_processes_over_real_udp() {
+    use terra_core::{MineralItem, crusher};
+    let (mut host, mut a, mut b) = pair();
+    // Teleports complete only after a real predicted character reaches loaded terrain.
+    a.init_resource::<Desired>()
+        .add_systems(
+            Update,
+            avatar_driver.before(terra_world::streaming::StreamingSet::Interest),
+        )
+        .add_systems(
+            FixedUpdate,
+            prediction_driver.after(avian3d::prelude::PhysicsSystems::Writeback),
+        );
+    let [anchor, peer] = fixture(&mut host, &a, true);
+    for (position, other, secondary) in [(anchor, peer, false), (peer, anchor, true)] {
+        put(&mut host, position, 99);
+        host.world_mut()
+            .resource_mut::<EditJournal>()
+            .set_object_state(
+                position,
+                Some(BlockObjectState {
+                    peer: Some(other),
+                    secondary,
+                    ..default()
+                }),
+            )
+            .unwrap();
+    }
+    host.world_mut()
+        .resource_mut::<EditJournal>()
+        .set_crusher(anchor, default())
+        .unwrap();
+    let recipe = crusher::recipe_for(ItemKind::Mineral(MineralItem::RawIron)).unwrap();
+    assert_eq!(
+        inventory(
+            &mut host,
+            &mut a,
+            InventoryAction::CreativeSet {
+                slot: 0,
+                item: recipe.input,
+                count: 2
+            }
+        ),
+        InventoryOutcome::Applied
+    );
+    for (client, position) in [(&mut a, peer), (&mut b, anchor)] {
+        assert_eq!(
+            inventory(
+                &mut host,
+                client,
+                InventoryAction::OpenContainer { position }
+            ),
+            InventoryOutcome::Applied
+        );
+        let snapshot = client
+            .world()
+            .resource::<client::ClientSession>()
+            .container
+            .as_ref()
+            .unwrap();
+        assert!(snapshot.crusher.is_some() && snapshot.furnace.is_none() && snapshot.valid());
+        assert_eq!(snapshot.anchor, anchor);
+        assert_eq!(snapshot.halves.len(), 1);
+    }
+    let stale = gesture(
+        &b,
+        ContainerGesture::QuickMove {
+            slot: terra_core::INVENTORY_SLOTS as u8,
+        },
+    );
+    assert_eq!(
+        inventory(
+            &mut host,
+            &mut a,
+            InventoryAction::LoadCrushingRecipe {
+                recipe: recipe.id,
+                station: anchor
+            }
+        ),
+        InventoryOutcome::Applied
+    );
+    assert_eq!(
+        transfer(&mut host, &mut b, stale),
+        InventoryOutcome::Conflict
+    );
+    assert_eq!(total(&host, recipe.input), 2);
+    let idle_until = Instant::now() + Duration::from_millis(300);
+    while Instant::now() < idle_until {
+        host.update();
+        a.update();
+        b.update();
+        std::thread::sleep(Duration::from_millis(1));
+    }
+    assert_eq!(
+        host.world()
+            .resource::<EditJournal>()
+            .crusher_at(anchor)
+            .unwrap()
+            .progress_seconds,
+        0.0
+    );
+    let crank = [anchor[0] + 2, anchor[1], anchor[2]];
+    put(&mut host, crank, 100);
+    host.world_mut()
+        .resource_mut::<EditJournal>()
+        .set_object_state(
+            crank,
+            Some(BlockObjectState {
+                peer: Some(anchor),
+                ..default()
+            }),
+        )
+        .unwrap();
+    let original = a
+        .world()
+        .resource::<client::ClientSession>()
+        .confirmed_state()
+        .unwrap()
+        .position;
+    for x in crank[0]..=crank[0] + 3 {
+        for z in crank[2] - 1..=crank[2] + 1 {
+            put(&mut host, [x, anchor[1] - 1, z], 3);
+            for y in anchor[1]..=anchor[1] + 3 {
+                if [x, y, z] != crank {
+                    put(&mut host, [x, y, z], 0);
+                }
+            }
+        }
+    }
+    assert_eq!(
+        inventory(&mut host, &mut a, InventoryAction::CloseContainer),
+        InventoryOutcome::Applied
+    );
+    let teleport = |host: &mut App, a: &mut App, b: &mut App, position: [f32; 3]| {
+        let generation = a
+            .world()
+            .resource::<client::ClientSession>()
+            .confirmed_state()
+            .unwrap()
+            .generation;
+        a.world_mut()
+            .resource_mut::<client::ClientChatCommands>()
+            .0
+            .push_back(client::ChatCommand::Send(format!(
+                "/tp {} {} {}",
+                position[0],
+                position[1] - terra_physics::character::PLAYER_HALF_HEIGHT,
+                position[2]
+            )));
+        wait(host, &mut [a, b], |_, clients| {
+            let session = clients[0].world().resource::<client::ClientSession>();
+            session.ready
+                && !session.teleporting
+                && session
+                    .confirmed_state()
+                    .is_some_and(|state| state.generation > generation && state.grounded)
+        });
+    };
+    teleport(
+        &mut host,
+        &mut a,
+        &mut b,
+        [
+            crank[0] as f32 + 1.5,
+            anchor[1] as f32 + terra_physics::character::PLAYER_HALF_HEIGHT,
+            crank[2] as f32 + 0.515,
+        ],
+    );
+    let body = a
+        .world()
+        .resource::<client::ClientSession>()
+        .confirmed_state()
+        .unwrap()
+        .position;
+    let eye = Vec3::from_array(body) + Vec3::Y * terra_physics::character::PLAYER_EYE_OFFSET;
+    let target = Vec3::new(
+        crank[0] as f32 + 0.6,
+        crank[1] as f32 + 0.64,
+        crank[2] as f32 + 0.515,
+    );
+    let direction = (target - eye).normalize();
+    a.world_mut().resource_mut::<client::ClientSession>().look =
+        [(-direction.x).atan2(-direction.z), direction.y.asin()];
+    a.world_mut().resource_mut::<client::CrankInput>().0 = Some(crank);
+    wait(&mut host, &mut [&mut a, &mut b], |host, _| {
+        host.world()
+            .resource::<EditJournal>()
+            .crusher_at(anchor)
+            .is_some_and(|state| state.progress_seconds >= 0.5)
+    });
+    a.world_mut().resource_mut::<client::CrankInput>().0 = None;
+    wait(&mut host, &mut [&mut a, &mut b], |host, _| {
+        !host
+            .world()
+            .resource::<EditJournal>()
+            .crusher_driven(anchor)
+    });
+    let paused = host
+        .world()
+        .resource::<EditJournal>()
+        .crusher_at(anchor)
+        .cloned()
+        .unwrap();
+    let until = Instant::now() + Duration::from_millis(300);
+    while Instant::now() < until {
+        host.update();
+        a.update();
+        b.update();
+        std::thread::sleep(Duration::from_millis(1));
+    }
+    assert_eq!(
+        host.world().resource::<EditJournal>().crusher_at(anchor),
+        Some(&paused)
+    );
+    a.world_mut().resource_mut::<client::CrankInput>().0 = Some(crank);
+    wait(&mut host, &mut [&mut a, &mut b], |host, _| {
+        host.world()
+            .resource::<EditJournal>()
+            .container_at(anchor)
+            .is_some_and(|inventory| inventory.count(recipe.output.item) == 1)
+    });
+    a.world_mut().resource_mut::<client::CrankInput>().0 = None;
+    teleport(&mut host, &mut a, &mut b, original);
+    assert_eq!(
+        inventory(
+            &mut host,
+            &mut a,
+            InventoryAction::OpenContainer { position: anchor }
+        ),
+        InventoryOutcome::Applied
+    );
+    assert_eq!(total(&host, recipe.input), 1);
+    assert_eq!(total(&host, recipe.output.item), 1);
+    assert_eq!(
+        inventory(
+            &mut host,
+            &mut a,
+            InventoryAction::CreativeCursor {
+                item: recipe.output.item,
+                count: 1
+            }
+        ),
+        InventoryOutcome::Applied
+    );
+    let command = gesture(
+        &a,
+        ContainerGesture::Click {
+            slot: (terra_core::INVENTORY_SLOTS + crusher::OUTPUT) as u8,
+            secondary: false,
+        },
+    );
+    assert_eq!(
+        transfer(&mut host, &mut a, command),
+        InventoryOutcome::Invalid
+    );
+    assert_eq!(
+        host.world()
+            .resource::<EditJournal>()
+            .container_at(anchor)
+            .unwrap()
+            .count(recipe.output.item),
+        1
+    );
+    assert_eq!(
+        inventory(
+            &mut host,
+            &mut a,
+            InventoryAction::LoadCrushingRecipe {
+                recipe: u64::MAX,
+                station: anchor
+            }
+        ),
+        InventoryOutcome::UnknownRecipe
+    );
+    assert_eq!(
+        inventory(
+            &mut host,
+            &mut a,
+            InventoryAction::LoadCrushingRecipe {
+                recipe: recipe.id,
+                station: [0; 3]
+            }
+        ),
+        InventoryOutcome::WrongStation
+    );
+    assert!(
+        a.world()
+            .resource::<client::ClientSession>()
+            .crushers
+            .iter()
+            .all(|visual| visual.valid())
+    );
 }
 
 #[test]

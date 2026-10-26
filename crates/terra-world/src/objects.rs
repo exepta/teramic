@@ -1,5 +1,6 @@
 //! Shared poses for interactive openings and the single adaptive chimney item.
 use crate::edits::BlockObjectState;
+pub mod windows;
 
 pub type Direction = [i64; 3];
 pub const DIRECTIONS: [Direction; 6] = [
@@ -12,10 +13,10 @@ pub const DIRECTIONS: [Direction; 6] = [
 ];
 
 pub fn is_door(material: u16) -> bool {
-    (65..=67).contains(&material)
+    matches!(material, 65..=67 | 139)
 }
 pub fn is_window(material: u16) -> bool {
-    (68..=70).contains(&material)
+    matches!(material, 68..=70 | 140)
 }
 pub fn is_opening(material: u16) -> bool {
     is_door(material) || is_window(material)
@@ -145,6 +146,19 @@ pub fn chimney_infill(
     facing: u8,
     mut neighbor: impl FnMut(Direction) -> Option<u16>,
 ) -> Vec<(terra_core::block_shapes::ShapeBox, u16)> {
+    chimney_infill_with_states(material, facing, |direction| {
+        neighbor(direction).map(|id| (id, 0))
+    })
+}
+
+/// Extend each touching roof profile into the pipe cell. The lookup includes
+/// diagonal cells so connected stair corners use the same profile as collision.
+pub fn chimney_infill_with_states(
+    material: u16,
+    facing: u8,
+    mut neighbor: impl FnMut(Direction) -> Option<(u16, u8)>,
+) -> Vec<(terra_core::block_shapes::ShapeBox, u16)> {
+    use terra_core::{block_shapes::ShapeBox, construction};
     let Some([a, b]) = chimney_ports(material, facing) else {
         return Vec::new();
     };
@@ -157,55 +171,135 @@ pub fn chimney_infill(
     // The shared straight tube has radius 0.24; mortar touches its outer wall.
     let inner_low = 0.26;
     let inner_high = 0.74;
-    let directions = [(u, -1), (u, 1), (v, -1), (v, 1)];
-    let materials: Vec<_> = directions
-        .iter()
-        .map(|&(axis, sign)| {
-            let mut direction = [0; 3];
-            direction[axis] = sign;
-            neighbor(direction).filter(|m| {
-                terra_voxel::MaterialId::from_raw(*m)
-                    .is_some_and(terra_voxel::MaterialId::is_opaque)
-            })
-        })
-        .collect();
-    if materials.iter().flatten().count() < 3 {
-        return Vec::new();
-    }
-    directions
-        .into_iter()
-        .zip(materials.iter().copied())
-        .filter_map(|(direction, material)| material.map(|material| (direction, material)))
-        .map(|((side, sign), material)| {
-            let mut low = [0.0; 3];
-            let mut high = [1.0; 3];
-            if side == v {
-                low[u] = if materials[0].is_some() {
-                    inner_low
-                } else {
-                    0.0
-                };
-                high[u] = if materials[1].is_some() {
-                    inner_high
-                } else {
-                    1.0
-                };
-            }
-            if sign < 0 {
-                high[side] = inner_low;
-            } else {
-                low[side] = inner_high;
-            }
-            (
-                terra_core::block_shapes::ShapeBox {
-                    minimum: low,
-                    maximum: high,
+    let mut touching_sides = 0;
+    let mut roof_sides = [false; 4];
+    let mut candidates = Vec::new();
+    let mut roof_profiles = Vec::new();
+    for (index, (side, sign)) in [(u, -1), (u, 1), (v, -1), (v, 1)].into_iter().enumerate() {
+        let mut direction = [0; 3];
+        direction[side] = sign;
+        let Some((id, pose)) = neighbor(direction) else {
+            continue;
+        };
+        let profiles = if construction::is_slab(id) {
+            construction::slab_parts(id, pose)
+                .into_iter()
+                .filter_map(|(id, bounds)| construction::base_material(id).map(|id| (bounds, id)))
+                .collect::<Vec<_>>()
+        } else if construction::is_stair(id) {
+            let neighbors = std::array::from_fn(|i| {
+                let mut offset = direction;
+                offset[i / 2] += if i % 2 == 0 { -1 } else { 1 };
+                neighbor(offset)
+            });
+            construction::placed_boxes(id, pose, neighbors)
+                .into_iter()
+                .map(|bounds| (bounds, construction::base_material(id).unwrap_or(id)))
+                .collect()
+        } else if terra_voxel::MaterialId::from_raw(id)
+            .is_some_and(terra_voxel::MaterialId::is_opaque)
+        {
+            vec![(
+                ShapeBox {
+                    minimum: [0.0; 3],
+                    maximum: [1.0; 3],
                     hinged: false,
                 },
-                material,
-            )
-        })
-        .collect()
+                id,
+            )]
+        } else {
+            Vec::new()
+        };
+        let before = candidates.len();
+        for (mut bounds, material) in profiles {
+            if !terra_voxel::MaterialId::from_raw(material)
+                .is_some_and(terra_voxel::MaterialId::is_opaque)
+            {
+                continue;
+            }
+            let touches = if sign < 0 {
+                bounds.maximum[side] >= 1.0 - 1.0e-9
+            } else {
+                bounds.minimum[side] <= 1.0e-9
+            };
+            if !touches {
+                continue;
+            }
+            bounds.minimum[side] = if sign < 0 { 0.0 } else { inner_high };
+            bounds.maximum[side] = if sign < 0 { inner_low } else { 1.0 };
+            candidates.push((bounds, material));
+            if axis == 1 && (construction::is_slab(id) || construction::is_stair(id)) {
+                roof_profiles.push((bounds, material, side, sign));
+            }
+        }
+        touching_sides += usize::from(candidates.len() != before);
+        roof_sides[index] = axis == 1
+            && candidates.len() != before
+            && (construction::is_slab(id) || construction::is_stair(id));
+    }
+    // A ridge has only two opposing roof slopes. Continue their real profiles
+    // into the flashing while ordinary wall infill still needs three sides.
+    let ridge = roof_sides[0] && roof_sides[1] || roof_sides[2] && roof_sides[3];
+    if touching_sides < 3 && !ridge {
+        return Vec::new();
+    }
+    if touching_sides == 2 && ridge {
+        for (mut bounds, material, side, sign) in roof_profiles {
+            let across = if side == u { v } else { u };
+            if sign < 0 {
+                bounds.maximum[side] = 0.5;
+            } else {
+                bounds.minimum[side] = 0.5;
+            }
+            for (low, high) in [(0.0, inner_low), (inner_high, 1.0)] {
+                let mut cap = bounds;
+                cap.minimum[across] = cap.minimum[across].max(low);
+                cap.maximum[across] = cap.maximum[across].min(high);
+                if cap.maximum[across] > cap.minimum[across] {
+                    candidates.push((cap, material));
+                }
+            }
+        }
+    }
+    let mut pieces: Vec<(ShapeBox, u16)> = Vec::new();
+    for (bounds, material) in candidates {
+        let mut remaining = vec![bounds];
+        for (owned, _) in &pieces {
+            remaining = remaining
+                .into_iter()
+                .flat_map(|bounds| subtract_infill(bounds, *owned))
+                .collect();
+        }
+        pieces.extend(remaining.into_iter().map(|bounds| (bounds, material)));
+    }
+    pieces
+}
+
+fn subtract_infill(
+    mut bounds: terra_core::block_shapes::ShapeBox,
+    owned: terra_core::block_shapes::ShapeBox,
+) -> Vec<terra_core::block_shapes::ShapeBox> {
+    let low: [f64; 3] = std::array::from_fn(|axis| bounds.minimum[axis].max(owned.minimum[axis]));
+    let high: [f64; 3] = std::array::from_fn(|axis| bounds.maximum[axis].min(owned.maximum[axis]));
+    if (0..3).any(|axis| low[axis] >= high[axis] - 1.0e-9) {
+        return vec![bounds];
+    }
+    let mut result = Vec::new();
+    for axis in 0..3 {
+        if bounds.minimum[axis] < low[axis] - 1.0e-9 {
+            let mut piece = bounds;
+            piece.maximum[axis] = low[axis];
+            result.push(piece);
+            bounds.minimum[axis] = low[axis];
+        }
+        if bounds.maximum[axis] > high[axis] + 1.0e-9 {
+            let mut piece = bounds;
+            piece.minimum[axis] = high[axis];
+            result.push(piece);
+            bounds.maximum[axis] = high[axis];
+        }
+    }
+    result
 }
 
 #[cfg(test)]
@@ -290,6 +384,133 @@ mod tests {
             }
         }
     }
+
+    #[test]
+    fn pipe_infill_follows_lower_upper_and_mixed_roof_slabs() {
+        let volume = |pieces: &[(terra_core::block_shapes::ShapeBox, u16)]| {
+            pieces
+                .iter()
+                .map(|(bounds, _)| {
+                    (0..3)
+                        .map(|axis| bounds.maximum[axis] - bounds.minimum[axis])
+                        .product::<f64>()
+                })
+                .sum::<f64>()
+        };
+        for pose in [0, 4] {
+            let pieces = chimney_infill_with_states(60, 0, |_| Some((85, pose)));
+            assert!(!pieces.is_empty());
+            assert!(pieces.iter().all(|(bounds, material)| {
+                *material == 3
+                    && if pose == 0 {
+                        bounds.maximum[1] <= 0.5
+                    } else {
+                        bounds.minimum[1] >= 0.5
+                    }
+            }));
+            assert!((volume(&pieces) - (1.0 - 0.48 * 0.48) * 0.5).abs() < 1.0e-9);
+        }
+        let mixed = terra_core::construction::merged_slab(82, 0, 85).unwrap();
+        let pieces = chimney_infill_with_states(60, 0, |_| Some((82, mixed)));
+        assert!((volume(&pieces) - (1.0 - 0.48 * 0.48)).abs() < 1.0e-9);
+        assert!(
+            pieces
+                .iter()
+                .any(|(bounds, material)| *material == 16 && bounds.maximum[1] <= 0.5)
+        );
+        assert!(
+            pieces
+                .iter()
+                .any(|(bounds, material)| *material == 3 && bounds.minimum[1] >= 0.5)
+        );
+        for (index, (bounds, _)) in pieces.iter().enumerate() {
+            assert!(!bounds.intersects([0.27; 3], [0.73; 3]));
+            assert!(
+                pieces[index + 1..]
+                    .iter()
+                    .all(|(other, _)| !bounds.intersects(other.minimum, other.maximum))
+            );
+        }
+        assert!(
+            chimney_infill_with_states(60, 0, |_| Some((88, 0))).is_empty(),
+            "Glass slabs must not form a solid surround"
+        );
+    }
+
+    #[test]
+    fn pipe_stair_infill_uses_rotated_profiles_and_requires_actual_contact() {
+        use terra_core::construction;
+        for pose in 0..24 {
+            let pieces = chimney_infill_with_states(60, 0, |direction| {
+                if direction == [1, 0, 0] {
+                    Some((77, pose))
+                } else if direction.iter().map(|value| value.abs()).sum::<i64>() == 1 {
+                    Some((16, 0))
+                } else {
+                    None
+                }
+            });
+            let profile = construction::placed_boxes(77, pose, [None; 6]);
+            for y in 0..12 {
+                for z in 4..8 {
+                    let point = [
+                        0.9,
+                        (f64::from(y) + 0.5) / 12.0,
+                        (f64::from(z) + 0.5) / 12.0,
+                    ];
+                    let roof = [0.001, point[1], point[2]];
+                    let touches = profile
+                        .iter()
+                        .any(|bounds| bounds.intersects(roof, roof.map(|value| value + 0.0001)));
+                    let filled = pieces.iter().any(|(bounds, material)| {
+                        *material == 3
+                            && bounds.intersects(point, point.map(|value| value + 0.0001))
+                    });
+                    assert_eq!(filled, touches, "stair pose {pose}, point {point:?}");
+                }
+            }
+        }
+        assert!(
+            chimney_infill_with_states(60, 0, |direction| match direction {
+                // This half is against the far edge of its cell, not against the pipe.
+                [-1, 0, 0] => Some((85, 5)),
+                [1, 0, 0] | [0, 0, 1] => Some((3, 0)),
+                _ => None,
+            })
+            .is_empty()
+        );
+    }
+    #[test]
+    fn roof_ridge_flashing_closes_two_opposing_profiles_without_filling_the_pipe() {
+        for id in [77, 85] {
+            let pieces = chimney_infill_with_states(60, 0, |direction| {
+                (direction[0].abs() == 1 && direction[1] == 0 && direction[2] == 0)
+                    .then_some((id, 0))
+            });
+            assert!(!pieces.is_empty());
+            for x in 0..20 {
+                for z in 0..20 {
+                    let p = [(x as f64 + 0.5) / 20.0, 0.1, (z as f64 + 0.5) / 20.0];
+                    let covered = pieces
+                        .iter()
+                        .any(|(b, _)| b.intersects(p, p.map(|v| v + 0.0001)));
+                    let lumen = (0.26..0.74).contains(&p[0]) && (0.26..0.74).contains(&p[2]);
+                    assert_eq!(covered, !lumen, "material {id}, {p:?}");
+                }
+            }
+            for (i, (b, _)) in pieces.iter().enumerate() {
+                assert!(
+                    pieces[i + 1..]
+                        .iter()
+                        .all(|(other, _)| !b.intersects(other.minimum, other.maximum))
+                );
+            }
+        }
+        assert!(
+            chimney_infill_with_states(60, 0, |d| (d[0].abs() == 1).then_some((3, 0))).is_empty()
+        );
+    }
+
     #[test]
     fn chimney_pairs_roundtrip_without_changing_legacy_poses() {
         let mut seen = std::collections::BTreeSet::new();

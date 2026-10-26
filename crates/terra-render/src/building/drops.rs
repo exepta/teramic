@@ -92,6 +92,12 @@ impl DropAssets<'_> {
             ItemKind::Mineral(kind) => crate::previews::mineral_batches(kind, templates),
             ItemKind::Animal(kind) => crate::previews::animal_batches(kind, templates),
             ItemKind::Bellows(kind) => crate::previews::bellows_batches(kind, templates),
+            ItemKind::Armor(_) | ItemKind::Accessory(_) | ItemKind::Cape(_) => {
+                crate::armor::item_batches(item, templates.item_materials.opaque)
+            }
+            ItemKind::Dust(kind) => crate::previews::dust_batches(kind, templates),
+            ItemKind::Crop(kind) => crate::previews::crop_batches(kind, templates),
+            ItemKind::Flower(color) => crate::previews::flower_batches(color, templates),
             ItemKind::Dye(color) => crate::previews::dye_batches(color, templates),
             ItemKind::DyedBed { material, color } => {
                 crate::previews::dyed_bed_batches(material, color, templates, &options)
@@ -108,7 +114,7 @@ impl DropAssets<'_> {
                 return false;
             }
         };
-        if matches!(item, ItemKind::Prop(_)) {
+        if matches!(item, ItemKind::Prop(_) | ItemKind::Flower(_)) {
             let bottom = batches
                 .iter()
                 .flat_map(|b| &b.positions)
@@ -136,7 +142,8 @@ impl DropAssets<'_> {
                 }
             }
             for vertex in &mut batch.positions {
-                *vertex = ((Vec3::from_array(*vertex) - Vec3::splat(0.5)) * 0.24).to_array();
+                *vertex = crate::previews::tools::cache_vertex(item, Vec3::from_array(*vertex))
+                    .to_array();
                 minimum = minimum.min(Vec3::from_array(*vertex));
                 maximum = maximum.max(Vec3::from_array(*vertex));
             }
@@ -205,6 +212,10 @@ fn drop_transform(drop: &terra_core::WorldDrop) -> Transform {
         .with_scale(Vec3::splat(
             if !drop.grounded && matches!(drop.stack.item, ItemKind::Block(51..=53)) {
                 1.0 / 0.24
+            } else if let Some(length) = crate::previews::tools::world_length(drop.stack.item) {
+                // Pickups keep the existing 24 cm collision proxy. Equipped
+                // tools reuse this mesh at its true 1.25 / 1.5 metre length.
+                0.24 / length
             } else {
                 1.0
             },
@@ -269,6 +280,57 @@ pub(super) fn animate(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn repeated_tool_cache_requests_reuse_one_mesh_per_item_and_no_new_materials() {
+        let mut world = World::new();
+        world.init_resource::<Assets<Mesh>>();
+        world.init_resource::<Assets<StandardMaterial>>();
+        world.init_resource::<DropModels>();
+        let mut blocks = crate::blocks::BlockAssets::default();
+        blocks.templates = Some(std::sync::Arc::new(crate::blocks::TemplateSet::default()));
+        let mut state = bevy::ecs::system::SystemState::<DropAssets>::new(&mut world);
+        let initial_entities = world.entities().len();
+        for _ in 0..128 {
+            let mut assets = state.get_mut(&mut world).expect("drop asset resources");
+            for tool in terra_core::ToolKind::ALL {
+                assert!(assets.prepare(ItemKind::Tool(tool), &blocks));
+            }
+        }
+        assert_eq!(
+            world.resource::<Assets<Mesh>>().len(),
+            terra_core::ToolKind::ALL.len()
+        );
+        assert_eq!(world.resource::<Assets<StandardMaterial>>().len(), 0);
+        let cache = world.resource::<DropModels>();
+        assert_eq!(cache.meshes.len(), terra_core::ToolKind::ALL.len());
+        assert_eq!(cache.bounds.len(), terra_core::ToolKind::ALL.len());
+        assert!(cache.meshes.values().all(|parts| parts.len() == 1));
+        assert!(cache.foliage.is_empty());
+        assert_eq!(world.entities().len(), initial_entities);
+    }
+
+    #[test]
+    fn full_size_equipped_mesh_keeps_the_existing_small_physical_pickup_size() {
+        for tool in terra_core::ToolKind::ALL {
+            let item = ItemKind::Tool(tool);
+            let length = crate::previews::tools::world_length(item).unwrap();
+            let drop = terra_core::WorldDrop {
+                id: 1,
+                position: [1.0, 2.12, 3.0],
+                stack: terra_core::ItemStack { item, count: 1 },
+                velocity: [0.0; 3],
+                age_seconds: 10.0,
+                rotation: Quat::IDENTITY.to_array(),
+                angular_velocity: [0.0; 3],
+                grounded: true,
+                pickup_delay_seconds: 0.0,
+            };
+            let transform = drop_transform(&drop);
+            assert!((transform.scale.y * length - 0.24).abs() < 1e-6);
+            assert_eq!(transform.translation, Vec3::new(1.0, 2.12, 3.0));
+        }
+    }
     #[test]
     fn grounded_drops_drifting_in_current_interpolate_without_hover_or_extrapolation() {
         let mut drop = terra_core::WorldDrop {

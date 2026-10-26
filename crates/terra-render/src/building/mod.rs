@@ -1,11 +1,14 @@
 //! Client presentation only; removal, resources and placement remain authoritative.
 mod drops;
 mod effects;
+mod felling;
 mod fracture;
+mod ghost;
 mod held;
 mod isolation;
 mod mining_geometry;
-mod model_pieces;
+pub(crate) mod model_pieces;
+mod outline;
 #[cfg(test)]
 mod tests;
 
@@ -18,6 +21,9 @@ use terra_player::{
     interaction::{InteractionMotion, PlacementPreview},
 };
 use terra_world::streaming::ChunkStore;
+
+pub use felling::TreeFallStatus;
+pub use outline::PlacementOutlineMaterial;
 
 #[derive(Resource, Default, Debug)]
 pub struct BuildingStatus {
@@ -33,7 +39,7 @@ pub struct BuildingStatus {
 struct BuildingAssets {
     cube: Handle<Mesh>,
     turf_cube: Handle<Mesh>,
-    ghost: [Handle<StandardMaterial>; 2],
+    outline: Handle<PlacementOutlineMaterial>,
     fallback: Handle<StandardMaterial>,
     fracture: Handle<StandardMaterial>,
 }
@@ -49,7 +55,7 @@ struct BuildingWorld<'w> {
     mining: Res<'w, terra_player::interaction::MiningVisual>,
     chunks: Res<'w, ChunkStore>,
     time: Res<'w, Time>,
-    debug: Res<'w, DebugSettings>,
+    journal: Option<Res<'w, terra_world::edits::EditJournal>>,
 }
 impl BuildingWorld<'_> {
     fn mesh(&self, item: ItemKind) -> Handle<Mesh> {
@@ -82,7 +88,17 @@ impl BuildingWorld<'_> {
                     templates.ore_materials.get(&kind.ore().material()).copied()
                 }
                 ItemKind::Animal(_) => Some(templates.prop_materials.flowers[2]),
-                ItemKind::Bellows(_) | ItemKind::Dye(_) => Some(templates.item_materials.opaque),
+                ItemKind::Flower(color) => Some(
+                    templates.prop_materials.flowers
+                        [usize::from(terra_core::crusher::flower_variant(color))],
+                ),
+                ItemKind::Bellows(_)
+                | ItemKind::Dye(_)
+                | ItemKind::Armor(_)
+                | ItemKind::Accessory(_)
+                | ItemKind::Cape(_)
+                | ItemKind::Crop(_)
+                | ItemKind::Dust(_) => Some(templates.item_materials.opaque),
                 ItemKind::Prop(kind) => Some(match kind {
                     ResourcePropKind::Flower => templates.prop_materials.flowers[0],
                     ResourcePropKind::Mushroom => templates.prop_materials.mushroom,
@@ -96,14 +112,26 @@ impl BuildingWorld<'_> {
 }
 
 #[derive(Component)]
-struct BuildGhost;
+pub struct PlacementOutline;
+
+fn orientation_preview(material: u16) -> bool {
+    terra_world::placement::furniture(material) || material == 40
+}
+
+fn outline_color(seconds: f32) -> Color {
+    let pulse = 0.5 + 0.5 * (seconds * std::f32::consts::TAU / 1.6).sin();
+    Color::srgba(1.0, 0.68, 0.2, 0.4 + 0.55 * pulse)
+}
 
 pub(crate) fn install(app: &mut App) {
-    app.init_resource::<BuildingStatus>()
+    felling::install(app);
+    app.init_resource::<Assets<PlacementOutlineMaterial>>()
+        .init_resource::<BuildingStatus>()
         .init_resource::<effects::Effects>()
         .init_resource::<fracture::FractureState>()
         .init_resource::<drops::DropModels>()
         .init_resource::<isolation::Isolation>()
+        .init_resource::<ghost::Silhouette>()
         .init_resource::<DebugSettings>()
         .add_message::<terra_network::client::ConfirmedEdit>()
         .add_systems(Startup, setup)
@@ -113,6 +141,8 @@ pub(crate) fn install(app: &mut App) {
                 surfaces,
                 isolation::update,
                 isolation::animate,
+                felling::update,
+                felling::animate,
                 fracture::animate,
                 effects::animate,
                 drops::animate,
@@ -133,6 +163,7 @@ fn setup(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
+    mut outlines: ResMut<Assets<PlacementOutlineMaterial>>,
 ) {
     // Grass uses a neutral texture; small inventory/feedback cubes need a tint
     // too. Share one colored mesh without altering the terrain material.
@@ -145,17 +176,9 @@ fn setup(
     commands.insert_resource(BuildingAssets {
         cube: meshes.add(Cuboid::new(1.0, 1.0, 1.0)),
         turf_cube: meshes.add(turf_cube),
-        ghost: [
-            Color::srgba(0.85, 0.16, 0.12, 0.17),
-            Color::srgba(0.32, 0.80, 0.30, 0.17),
-        ]
-        .map(|base_color| {
-            materials.add(StandardMaterial {
-                base_color,
-                alpha_mode: AlphaMode::Blend,
-                unlit: true,
-                ..default()
-            })
+        outline: outlines.add(PlacementOutlineMaterial {
+            color: outline_color(0.0).to_linear(),
+            parameters: Vec4::new(2.0, 0.0, 0.0, 0.0),
         }),
         fallback: materials.add(StandardMaterial {
             base_color: Color::srgb(0.57, 0.58, 0.54),
@@ -175,49 +198,70 @@ fn surfaces(
     mut commands: Commands,
     world: BuildingWorld,
     preview: Res<PlacementPreview>,
-    mut ghost: Query<
+    mut outline: Query<
         (
             Entity,
             &mut Transform,
-            &mut MeshMaterial3d<StandardMaterial>,
+            &mut MeshMaterial3d<PlacementOutlineMaterial>,
+            &mut Mesh3d,
         ),
-        With<BuildGhost>,
+        With<PlacementOutline>,
     >,
-    mut gizmos: Gizmos,
     mut status: ResMut<BuildingStatus>,
+    (mut silhouette, mut meshes): (ResMut<ghost::Silhouette>, ResMut<Assets<Mesh>>),
+    mut materials: ResMut<Assets<PlacementOutlineMaterial>>,
 ) {
     let interactive = world.active() && world.input.captured && !world.blocked.0;
     let preview_active =
-        interactive && world.debug.enabled && world.debug.block_placement && !world.motion.swinging;
-    status.preview_visible = preview_active && preview.position.is_some();
+        interactive && !world.motion.swinging && orientation_preview(preview.material);
+    let shape = preview
+        .position
+        .filter(|_| preview_active)
+        .and_then(|position| {
+            preview
+                .plan
+                .as_ref()
+                .zip(world.journal.as_ref())
+                .and_then(|(plan, journal)| {
+                    world.blocks.templates.as_ref().and_then(|templates| {
+                        silhouette.prepare(
+                            plan,
+                            position,
+                            &world.chunks,
+                            journal,
+                            templates,
+                            &mut meshes,
+                        )
+                    })
+                })
+                .map(|mesh| (position, mesh))
+        });
+    status.preview_visible = shape.is_some();
     status.preview_valid = status.preview_visible && preview.valid;
-    if let Some(position) = preview.position.filter(|_| preview_active) {
+    if let Some((position, mesh)) = shape {
         let transform =
             Transform::from_translation(Vec3::from_array(position.map(|v| v as f32 + 0.5)))
                 .with_scale(Vec3::splat(1.004));
-        let material = world.assets.ghost[usize::from(preview.valid)].clone();
-        if let Ok((_, mut t, mut m)) = ghost.single_mut() {
+        let material = world.assets.outline.clone();
+        if let Some(mut surface) = materials.get_mut(&material) {
+            surface.color = outline_color(world.time.elapsed_secs_wrapped()).to_linear();
+        }
+        if let Ok((_, mut t, mut m, mut current_mesh)) = outline.single_mut() {
             *t = transform;
             m.0 = material;
-        } else if ghost.is_empty() {
+            current_mesh.0 = mesh;
+        } else if outline.is_empty() {
             commands.spawn((
-                BuildGhost,
-                Mesh3d(world.assets.cube.clone()),
+                PlacementOutline,
+                Mesh3d(mesh),
                 MeshMaterial3d(material),
                 transform,
                 NotShadowCaster,
+                bevy::camera::visibility::NoFrustumCulling,
             ));
         }
-        gizmos.cube(
-            transform,
-            if preview.valid {
-                Color::srgb(0.50, 0.85, 0.30)
-            } else {
-                Color::srgb(0.95, 0.25, 0.17)
-            },
-        );
     } else {
-        for (entity, _, _) in &ghost {
+        for (entity, _, _, _) in &outline {
             commands.entity(entity).despawn();
         }
     }

@@ -1,0 +1,52 @@
+{
+  "id": "teramic::leather_helmet",
+  "name": "Leather Helmet",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "armor": {
+        "material": "leather",
+        "piece": "helmet"
+      }
+    },
+    "count": 1
+  },
+  "pattern": {
+    "kind": "shaped",
+    "width": 3,
+    "height": 2,
+    "cells": [
+      {
+        "item": {
+          "animal": "leather"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "animal": "leather"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "animal": "leather"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "animal": "leather"
+        },
+        "count": 1
+      },
+      null,
+      {
+        "item": {
+          "animal": "leather"
+        },
+        "count": 1
+      }
+    ]
+  }
+}

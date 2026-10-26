@@ -1,0 +1,22 @@
+{
+  "id": "teramic::socks",
+  "name": "Socks",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "accessory": "socks"
+    },
+    "count": 1
+  },
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "animal": "wool"
+        },
+        "count": 2
+      }
+    ]
+  }
+}

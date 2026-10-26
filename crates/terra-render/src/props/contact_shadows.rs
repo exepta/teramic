@@ -97,6 +97,7 @@ fn update(
             !p.removed
                 && !p.hidden_growth()
                 && !p.wall_attached()
+                && p.kind != terra_world::props::PropKind::SpiderWeb
                 && !journal.prop_removed(p.section, p.id)
         })
         .filter(|p| {

@@ -45,7 +45,43 @@ pub fn commit_block_edit(
     request: &BlockEditRequest,
     properties: &BlockPropertiesCatalog,
 ) -> Result<bool, String> {
-    commit(chunks, journal, request, properties, true)
+    commit(chunks, journal, request, properties, true, true)
+}
+
+pub(crate) fn commit_weather_cap(
+    chunks: &mut ChunkStore,
+    journal: &mut EditJournal,
+    request: &BlockEditRequest,
+    properties: &BlockPropertiesCatalog,
+) -> Result<bool, String> {
+    if !matches!(request.material, 0 | 5 | 98) {
+        return Err("Invalid weather cap material".into());
+    }
+    commit(chunks, journal, request, properties, true, false)
+}
+
+/// Pins already-generated support for persistent gameplay without changing its material.
+pub(crate) fn ensure_block_record(
+    chunks: &mut ChunkStore,
+    journal: &mut EditJournal,
+    position: [i64; 3],
+    material: u16,
+) -> Result<bool, String> {
+    if chunks.block_at(position) != Some(material) {
+        return Ok(false);
+    }
+    if journal.block(position) == Some(material) {
+        return Ok(true);
+    }
+    for section in journal
+        .record(position, material)
+        .map_err(|error| error.to_string())?
+    {
+        if chunks.is_wanted(section) {
+            chunks.dirty.insert(section);
+        }
+    }
+    Ok(true)
 }
 
 pub(super) fn commit_segment_edit(
@@ -54,7 +90,7 @@ pub(super) fn commit_segment_edit(
     request: &BlockEditRequest,
     properties: &BlockPropertiesCatalog,
 ) -> Result<bool, String> {
-    commit(chunks, journal, request, properties, false)
+    commit(chunks, journal, request, properties, false, true)
 }
 
 fn commit(
@@ -63,6 +99,7 @@ fn commit(
     request: &BlockEditRequest,
     properties: &BlockPropertiesCatalog,
     reconcile: bool,
+    retire_props: bool,
 ) -> Result<bool, String> {
     if chunks.block_at(request.position) != Some(request.expected_material)
         || request.material == request.expected_material
@@ -89,8 +126,9 @@ fn commit(
         .data
         .set_block(local, request.material)
         .map_err(|e| e.to_string())?;
-    if request.expected_material != MaterialId::Dirt as u16
-        || request.material != MaterialId::Grass as u16
+    if retire_props
+        && (request.expected_material != MaterialId::Dirt as u16
+            || request.material != MaterialId::Grass as u16)
     {
         retire_affected_props(request, chunks, journal);
     }
@@ -171,6 +209,43 @@ fn retire_affected_props(
 ) {
     let (owner, local) = global_to_section(request.position);
     let mut owners = vec![owner];
+    // The remote anchor may be edited after the first anchor owner unloaded.
+    // Retire the sparse saved record as well, so reload cannot resurrect silk
+    // whose load-bearing rock was removed while it was outside streaming range.
+    for dx in -2..=2 {
+        for dz in -2..=2 {
+            for dy in 0..=1 {
+                let Ok(position) = owner.offset([dx, dy, dz]) else {
+                    continue;
+                };
+                if chunks.loaded.contains_key(&position) {
+                    continue;
+                }
+                let removed: Vec<_> = journal
+                    .placed_props(position)
+                    .filter(|prop| {
+                        if !crate::props::webs::is_construction(prop) {
+                            return false;
+                        }
+                        let bounds = prop.bounds();
+                        crate::props::webs::anchors(prop)
+                            .is_some_and(|anchors| anchors.contains(&request.position))
+                            || request.material != 0
+                                && (0..3).all(|axis| {
+                                    bounds[1][axis] > request.position[axis] as f64 + 0.001
+                                        && bounds[0][axis] < request.position[axis] as f64 + 0.999
+                                })
+                    })
+                    .map(|prop| prop.id)
+                    .collect();
+                for id in removed {
+                    if let Err(error) = journal.remove_prop(position, id) {
+                        tracing::error!(%error, "Cannot retire spanning silk with an unloaded owner");
+                    }
+                }
+            }
+        }
+    }
     for axis in 0..3 {
         if matches!(local[axis], 0 | 15) {
             let mut offset = [0; 3];
@@ -201,6 +276,38 @@ fn retire_affected_props(
             }
         }
     }
+    // A spanning silk construction can be anchored two sections away. Only
+    // inspect that bounded halo for large webs affected by this exact edit.
+    for dx in -2..=2 {
+        for dz in -2..=2 {
+            for dy in 0..=1 {
+                let Ok(position) = owner.offset([dx, dy, dz]) else {
+                    continue;
+                };
+                if owners.contains(&position) {
+                    continue;
+                }
+                if chunks.loaded.get(&position).is_some_and(|section| {
+                    section.props.iter().any(|prop| {
+                        if prop.removed || !crate::props::webs::is_construction(prop) {
+                            return false;
+                        }
+                        let anchor_removed = crate::props::webs::anchors(prop)
+                            .is_some_and(|anchors| anchors.contains(&request.position));
+                        let bounds = prop.bounds();
+                        anchor_removed
+                            || request.material != 0
+                                && (0..3).all(|axis| {
+                                    bounds[1][axis] > request.position[axis] as f64 + 0.001
+                                        && bounds[0][axis] < request.position[axis] as f64 + 0.999
+                                })
+                    })
+                }) {
+                    owners.push(position);
+                }
+            }
+        }
+    }
     for position in owners {
         let Some(section) = chunks.loaded.get_mut(&position) else {
             continue;
@@ -212,7 +319,21 @@ fn retire_affected_props(
             let support = crate::props::placement::support(prop);
             let covered = request.material != 0
                 && !(prop.water_tolerant() && request.material == MaterialId::FluidWater as u16)
-                && if prop.wall_attached() || prop.kind.aquatic() {
+                && if prop.kind.crop().is_some() {
+                    request.position[0] == support[0]
+                        && request.position[2] == support[2]
+                        && (support[1] + 1
+                            ..=support[1]
+                                + if prop.kind == crate::props::PropKind::Lettuce {
+                                    1
+                                } else {
+                                    2
+                                })
+                            .contains(&request.position[1])
+                } else if prop.wall_attached()
+                    || prop.kind.aquatic()
+                    || prop.kind == crate::props::PropKind::SpiderWeb
+                {
                     let bounds = prop.bounds();
                     (0..3).all(|axis| {
                         bounds[1][axis] > request.position[axis] as f64 + 0.001
@@ -221,7 +342,9 @@ fn retire_affected_props(
                 } else {
                     request.position == [support[0], support[1] + 1, support[2]]
                 };
-            if support != request.position && !covered {
+            let web_anchor = crate::props::webs::anchors(prop)
+                .is_some_and(|anchors| anchors.contains(&request.position));
+            if support != request.position && !covered && !web_anchor {
                 continue;
             }
             match journal.remove_prop(position, prop.id) {
@@ -304,6 +427,73 @@ mod attached_tests {
         streaming::LoadedSection,
     };
     use terra_voxel::{BlockSection, SectionPos};
+
+    #[test]
+    fn pinning_prepared_support_invalidates_only_interested_halos_once() {
+        let support = [-1, 15, -1];
+        let (owner, local) = global_to_section(support);
+        let halo = owner.offset([1, 1, 1]).unwrap();
+        let unrelated = owner.offset([-1, 0, 0]).unwrap();
+        let mut chunks = ChunkStore::default();
+        let mut data = BlockSection::empty(owner).unwrap();
+        data.set_block(local, terra_core::farming::FARMLAND)
+            .unwrap();
+        chunks.loaded.insert(
+            owner,
+            LoadedSection {
+                data,
+                mesh: None,
+                mesh_epoch: 0,
+                water_epoch: 0,
+                water: None,
+                props: vec![],
+            },
+        );
+        chunks.wanted.extend([owner, halo, unrelated]);
+        let mut journal = EditJournal::default();
+        assert!(
+            !ensure_block_record(&mut chunks, &mut journal, support, MaterialId::Stone as u16)
+                .unwrap()
+        );
+        assert_eq!(journal.revision(owner), 0);
+        assert!(chunks.dirty.is_empty());
+        assert!(
+            ensure_block_record(
+                &mut chunks,
+                &mut journal,
+                support,
+                terra_core::farming::FARMLAND
+            )
+            .unwrap()
+        );
+        assert_eq!(journal.block(support), Some(terra_core::farming::FARMLAND));
+        assert_eq!(journal.revision(owner), 1);
+        assert_eq!(journal.mesh_epoch(owner), 1);
+        assert_eq!(journal.mesh_epoch(halo), 1);
+        assert_eq!(chunks.dirty, [owner, halo].into_iter().collect());
+        chunks.dirty.clear();
+        assert!(
+            ensure_block_record(
+                &mut chunks,
+                &mut journal,
+                support,
+                terra_core::farming::FARMLAND
+            )
+            .unwrap()
+        );
+        assert!(chunks.dirty.is_empty());
+        assert_eq!(journal.revision(owner), 1);
+        assert_eq!(journal.mesh_epoch(owner), 1);
+        assert!(
+            !ensure_block_record(
+                &mut chunks,
+                &mut journal,
+                [100, 15, 100],
+                terra_core::farming::FARMLAND
+            )
+            .unwrap()
+        );
+    }
 
     #[test]
     fn removing_support_or_covering_wall_fungi_retires_only_that_cluster_across_section_edges() {

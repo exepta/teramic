@@ -1,0 +1,16 @@
+{
+  "item": {
+    "armor": {
+      "material": "ruby",
+      "piece": "chestplate"
+    }
+  },
+  "name": "Ruby Chestplate",
+  "description": "Ruby chestplate fitted for protection and comfortable movement.",
+  "equipment": {
+    "slot": "chestplate",
+    "armor_points": 12.25,
+    "health_bonus": 12,
+    "stamina_bonus": 6
+  }
+}

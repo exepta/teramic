@@ -4,6 +4,8 @@ use super::{
     wind_displacement, wind_parameters,
 };
 use std::sync::OnceLock;
+#[cfg(test)]
+mod performance_tests;
 
 struct PickMesh {
     positions: Vec<[f32; 3]>,
@@ -37,8 +39,12 @@ fn mesh(prop: &WorldProp) -> Option<&'static PickMesh> {
 }
 
 fn point(prop: &WorldProp, p: [f32; 3], pose: PropPose) -> [f64; 3] {
+    point_scaled(prop, p, pose, 1.0)
+}
+
+fn point_scaled(prop: &WorldProp, p: [f32; 3], pose: PropPose, factor: f32) -> [f64; 3] {
     let (sin, cos) = f64::from(prop.rotation).sin_cos();
-    let scale = f64::from(prop.visual_scale());
+    let scale = f64::from(prop.visual_scale() * factor);
     let [x, y, z] = p.map(f64::from);
     let mut world = [
         prop.position[0] + (cos * x + sin * z) * scale,
@@ -48,10 +54,16 @@ fn point(prop: &WorldProp, p: [f32; 3], pose: PropPose) -> [f64; 3] {
     let wind = match pose {
         PropPose::Wind(time) => Some((time, [0.86, 0.51, 1.0, 1.0])),
         PropPose::WeatherWind { time, frame } => Some((time, frame)),
+        PropPose::Seasonal {
+            time: Some(time),
+            frame,
+            swept: false,
+            ..
+        } => Some((time, frame)),
         _ => None,
     };
     if let Some((time, frame)) = wind {
-        let weights = wind_parameters(prop.kind, prop.variant, p[1], prop.visual_scale());
+        let weights = wind_parameters(prop.kind, prop.variant, p[1], prop.visual_scale() * factor);
         let displacement = wind_displacement(world, time, weights, frame);
         world[0] += displacement[0];
         world[2] += displacement[1];
@@ -76,6 +88,17 @@ pub(super) fn hit(
     reach: f64,
     pose: PropPose,
 ) -> Option<f64> {
+    hit_scaled(prop, origin, direction, reach, pose, 1.0)
+}
+
+pub(super) fn hit_scaled(
+    prop: &WorldProp,
+    origin: [f64; 3],
+    direction: [f64; 3],
+    reach: f64,
+    pose: PropPose,
+    factor: f32,
+) -> Option<f64> {
     use bevy_math::DVec3;
     let mesh = mesh(prop)?;
     let origin = DVec3::from_array(origin) - DVec3::from_array(prop.position);
@@ -83,19 +106,29 @@ pub(super) fn hit(
     let positions: Vec<_> = mesh
         .positions
         .iter()
-        .map(|&p| DVec3::from_array(point(prop, p, pose)) - DVec3::from_array(prop.position))
+        .map(|&p| {
+            DVec3::from_array(point_scaled(prop, p, pose, factor))
+                - DVec3::from_array(prop.position)
+        })
         .collect();
-    let offsets: Vec<_> = if matches!(pose, PropPose::Swept | PropPose::WeatherSwept { .. }) {
+    let offsets: Vec<_> = if matches!(
+        pose,
+        PropPose::Swept | PropPose::WeatherSwept { .. } | PropPose::Seasonal { swept: true, .. }
+    ) {
         mesh.positions
             .iter()
             .map(|p| {
-                let [h, f] = wind_parameters(prop.kind, prop.variant, p[1], prop.visual_scale());
+                let [h, f] =
+                    wind_parameters(prop.kind, prop.variant, p[1], prop.visual_scale() * factor);
                 if f < 0.0 {
                     return DVec3::new(f64::from(0.86_f32), 0.0, f64::from(0.51_f32))
                         * f64::from(h * f.abs() * (WIND_AMPLITUDE + WIND_FLUTTER));
                 }
                 match pose {
-                    PropPose::WeatherSwept { frame } => {
+                    PropPose::WeatherSwept { frame }
+                    | PropPose::Seasonal {
+                        frame, swept: true, ..
+                    } => {
                         DVec3::new(f64::from(frame[0]), 0.0, f64::from(frame[1]))
                             * f64::from(
                                 h * f
@@ -138,7 +171,12 @@ pub(super) fn hit(
     };
     for triangle in mesh.indices.chunks_exact(3) {
         let vertices = [triangle[0], triangle[1], triangle[2]].map(|i| positions[i as usize]);
-        if matches!(pose, PropPose::Swept | PropPose::WeatherSwept { .. }) {
+        if matches!(
+            pose,
+            PropPose::Swept
+                | PropPose::WeatherSwept { .. }
+                | PropPose::Seasonal { swept: true, .. }
+        ) {
             // Only the actual current wind can occlude another target. Reserving
             // the maximum storm envelope in calm weather creates phantom hits.
             let high: [DVec3; 3] =

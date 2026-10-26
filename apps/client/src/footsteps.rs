@@ -189,6 +189,8 @@ fn update(
                 CreatureKind::Sheep => Walker::Sheep,
                 CreatureKind::Pig => Walker::Pig,
                 CreatureKind::Bear => Walker::Bear,
+                CreatureKind::Stalker => Walker::Stalker,
+                CreatureKind::Villager => Walker::Player,
                 CreatureKind::Fish
                 | CreatureKind::Bee
                 | CreatureKind::Squid
@@ -200,6 +202,9 @@ fn update(
                 | CreatureKind::ReefShark
                 | CreatureKind::HammerheadShark
                 | CreatureKind::WhaleShark => continue,
+                CreatureKind::SmallSpider
+                | CreatureKind::MediumSpider
+                | CreatureKind::LargeSpider => continue,
             };
             let p = track.position();
             if listener.is_some_and(|l| l.distance_squared(p) <= 48.0 * 48.0) {
@@ -208,7 +213,11 @@ fn update(
                     p,
                     track.current.velocity[1].abs() < 0.1,
                     walker,
-                    0.65,
+                    if walker == Walker::Stalker {
+                        1.05
+                    } else {
+                        0.65
+                    },
                 );
             }
         }

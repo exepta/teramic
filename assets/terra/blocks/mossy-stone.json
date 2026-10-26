@@ -6,7 +6,7 @@
   "name": "Mossy Stone",
   "render_kind": "cube",
   "surface": "rock",
-  "bevel_width": 0.075,
+  "bevel_width": 0.0,
   "materials": {
     "Moss patches": {
       "texture_pattern": "mossy_stone"

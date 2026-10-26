@@ -25,12 +25,13 @@ pub struct CaveStructure {
     pub radial: f64,
     pub water: Option<WaterColumn>,
     pub dampness: f32,
-    /// Revision-4 cascades use the authority's fluid cells, never curtain meshes.
+    /// Cascades and revision-5 streams use authoritative fluid cells, never curtain meshes.
     pub dynamic_water: bool,
     connector_flow: [f32; 2],
     seed: u32,
     revision: u8,
     salt_allowed: bool,
+    suppressed: bool,
 }
 
 #[cfg(test)]
@@ -56,14 +57,24 @@ impl CaveStructure {
         }
     }
     pub fn active(self) -> bool {
-        self.kind != CaveEcology::None && self.radial < 1.0 && self.ceiling - self.floor > 3.0
+        !self.suppressed
+            && self.kind != CaveEcology::None
+            && self.radial < 1.0
+            && self.ceiling - self.floor > 3.0
     }
     pub fn open_to_sky(self) -> bool {
-        self.kind == CaveEcology::Lush && self.seed.is_multiple_of(3) && self.radial < 0.14
+        !self.suppressed
+            && self.kind == CaveEcology::Lush
+            && self.seed.is_multiple_of(3)
+            && self.radial < 0.14
     }
 
     pub fn river_flow(self, x: f64) -> [f32; 2] {
         if self.dynamic_water && self.active() {
+            if self.revision >= 5 {
+                let phase = f64::from(self.seed % 628) * 0.01;
+                return [(-0.45 * phase.cos()) as f32, (-0.45 * phase.sin()) as f32];
+            }
             return [-0.45, 0.0];
         }
         if !self.active() {
@@ -82,6 +93,30 @@ impl CaveStructure {
     }
 
     fn radial_at(self, x: f64, z: f64) -> f64 {
+        if self.revision >= 5 {
+            let (u, v) = self.organic_axes(x, z);
+            let u = u / self.radius;
+            let v = v / self.radius;
+            let phase = f64::from(self.seed % 628) * 0.01;
+            let aspect = 0.66 + f64::from((self.seed >> 8) % 39) * 0.01;
+            let warp_u = u + (v * 4.2 + phase).sin() * 0.055;
+            let warp_v = v + (u * 5.1 - phase).sin() * 0.045;
+            let angle = warp_v.atan2(warp_u);
+            let contour =
+                0.92 + (angle * 3.0 + phase).sin() * 0.04 + (angle * 5.0 - phase).cos() * 0.025;
+            let main = (warp_u.powi(2) + (warp_v / aspect).powi(2)).sqrt() / contour;
+            let lobe = (((warp_u - 0.22).powi(2) / 0.68_f64.powi(2))
+                + ((warp_v + 0.14) / (aspect * 0.76)).powi(2))
+            .sqrt();
+            let organic = if self.seed & 2 == 0 {
+                main.min(lobe)
+            } else {
+                main
+            };
+            // Descriptors still fit their original region; adjacent region
+            // sampling cannot clip a new lobe at a 192 m boundary.
+            return organic.max((u * u + v * v).sqrt() / 0.985);
+        }
         if self.revision >= 3 {
             let phase = f64::from(self.seed % 628) * 0.01;
             let dx = x - self.center[0];
@@ -117,6 +152,46 @@ impl CaveStructure {
         }
     }
 
+    fn organic_axes(self, x: f64, z: f64) -> (f64, f64) {
+        let phase = f64::from(self.seed % 628) * 0.01;
+        let dx = x - self.center[0];
+        let dz = z - self.center[2];
+        (
+            dx * phase.cos() + dz * phase.sin(),
+            dz * phase.cos() - dx * phase.sin(),
+        )
+    }
+
+    fn channel_mask(self, u: f64, v: f64) -> f64 {
+        let phase = f64::from(self.seed % 628) * 0.01;
+        let center = (u * 0.045 + phase).sin() * self.radius * 0.12
+            + (u * 0.12 - phase).sin() * self.radius * 0.035;
+        let width = 1.6
+            + f64::from((self.seed >> 12) % 5) * 0.3
+            + (-((u / self.radius + 0.25) / 0.18).powi(2)).exp() * 1.8
+            + (-((u / self.radius - 0.32) / 0.16).powi(2)).exp() * 1.2;
+        1.0 - smoothstep(width, width + 1.5, (v - center).abs())
+    }
+
+    fn cascade_edges(self) -> [f64; 2] {
+        if self.revision >= 5 {
+            [
+                -self.radius * (0.18 + f64::from((self.seed >> 3) % 14) * 0.01),
+                self.radius * (0.16 + f64::from((self.seed >> 11) % 16) * 0.01),
+            ]
+        } else {
+            [-self.radius * 0.24, self.radius * 0.22]
+        }
+    }
+
+    fn cascade_step(self) -> f64 {
+        if self.revision >= 5 && self.kind != CaveEcology::Waterfall {
+            1.5 + f64::from((self.seed >> 6) % 4) * 0.5
+        } else {
+            6.0 + f64::from(self.seed % 5)
+        }
+    }
+
     fn waterfall_shelf(self, u: f64, v: f64) -> [f64; 2] {
         let lip = u + (v * 0.13).sin() * 1.6 + (v * 0.31).sin() * 0.7;
         let channel = v + f64::from(self.seed % 11) - 5.0;
@@ -131,8 +206,11 @@ impl CaveStructure {
 
     fn geometry(self, x: f64, z: f64) -> [f64; 2] {
         let r = self.radial_at(x, z);
-        let u = x - self.center[0];
-        let v = z - self.center[2];
+        let (u, v) = if self.revision >= 5 {
+            self.organic_axes(x, z)
+        } else {
+            (x - self.center[0], z - self.center[2])
+        };
         let base = self.center[1] - self.height * 0.72;
         let phase = if self.revision >= 3 {
             f64::from(self.seed % 628) * 0.01
@@ -147,16 +225,18 @@ impl CaveStructure {
         } else {
             0.61
         };
-        let basin =
-            if self.revision >= 2 && matches!(self.kind, CaveEcology::Salt | CaveEcology::Stone) {
-                // A meandering river with locally wider pools, bounded by dry shelves.
-                let center =
-                    (u * 0.055 + f64::from(self.seed % 19)).sin() * 8.0 + (u * 0.12).sin() * 2.0;
-                let width = 4.5 + (u * 0.07).sin() * 1.8;
-                1.0 - smoothstep(width, width + 3.0, (v - center).abs())
-            } else {
-                1.0 - smoothstep(basin_r - 0.09, basin_r + 0.09, r)
-            };
+        let basin = if self.revision >= 5 {
+            self.channel_mask(u, v)
+        } else if self.revision >= 2 && matches!(self.kind, CaveEcology::Salt | CaveEcology::Stone)
+        {
+            // A meandering river with locally wider pools, bounded by dry shelves.
+            let center =
+                (u * 0.055 + f64::from(self.seed % 19)).sin() * 8.0 + (u * 0.12).sin() * 2.0;
+            let width = 4.5 + (u * 0.07).sin() * 1.8;
+            1.0 - smoothstep(width, width + 3.0, (v - center).abs())
+        } else {
+            1.0 - smoothstep(basin_r - 0.09, basin_r + 0.09, r)
+        };
         let shelf = if self.kind == CaveEcology::Waterfall {
             self.waterfall_shelf(u, v)[1]
         } else {
@@ -184,18 +264,31 @@ impl CaveStructure {
                 0.0
             };
         if self.revision >= 4 {
-            let shelf = match self.kind {
-                CaveEcology::Salt => {
-                    let wave = (u * 0.042 + phase).sin() * 3.0 + (v * 0.051 - phase).cos() * 2.0;
-                    let terraces = ((r * 5.0 + wave * 0.12).max(0.0)).floor() * 1.8;
-                    base + rim - basin * 2.5 + terraces + rough * 0.3
+            let shelf = if self.revision >= 5 && self.dynamic_water {
+                self.cascade_floor(x, z)
+            } else {
+                match self.kind {
+                    CaveEcology::Salt => {
+                        let wave =
+                            (u * 0.042 + phase).sin() * 3.0 + (v * 0.051 - phase).cos() * 2.0;
+                        let terraces = if self.revision >= 5 {
+                            ((u * 0.065 + v * 0.037 + phase).sin() * 1.6
+                                + (v * 0.055 - phase).cos() * 0.8
+                                + r * 1.1)
+                                .floor()
+                                * 1.35
+                        } else {
+                            ((r * 5.0 + wave * 0.12).max(0.0)).floor() * 1.8
+                        };
+                        base + rim - basin * 2.5 + terraces + rough * 0.3
+                    }
+                    CaveEcology::Lush => {
+                        let islands = (u * 0.082 + phase).sin() * (v * 0.067).cos();
+                        base + rim - basin * 2.0 + (islands * 3.0).floor() * 1.4 + rough * 0.4
+                    }
+                    CaveEcology::Waterfall => self.cascade_floor(x, z),
+                    _ => floor,
                 }
-                CaveEcology::Lush => {
-                    let islands = (u * 0.082 + phase).sin() * (v * 0.067).cos();
-                    base + rim - basin * 2.0 + (islands * 3.0).floor() * 1.4 + rough * 0.4
-                }
-                CaveEcology::Waterfall => self.cascade_floor(x, z),
-                _ => floor,
             };
             return [shelf.max(-118.5), ceiling];
         }
@@ -203,35 +296,68 @@ impl CaveStructure {
     }
 
     fn cascade_stage(self, x: f64, z: f64) -> (f64, f64, f64) {
-        let u = x - self.center[0];
-        let v = z - self.center[2];
+        let (u, v) = if self.revision >= 5 {
+            self.organic_axes(x, z)
+        } else {
+            (x - self.center[0], z - self.center[2])
+        };
         let bend = (v * 0.085 + f64::from(self.seed % 11)).sin() * 2.0;
         let along = u + bend;
-        let step = 6.0 + f64::from(self.seed % 5);
-        let stage = if along > self.radius * 0.22 {
+        let step = self.cascade_step();
+        let edges = self.cascade_edges();
+        let stage = if along > edges[1] {
             2.0
-        } else if along > -self.radius * 0.24 {
+        } else if along > edges[0] {
             1.0
         } else {
             0.0
         };
         let level = (self.center[1] - self.height * 0.72).floor() + stage * step;
-        let cross = v - (u * 0.045 + f64::from(self.seed % 7)).sin() * self.radius * 0.12;
+        let cross = v
+            - (u * 0.045 + f64::from(self.seed % 7)).sin() * self.radius * 0.12
+            - if self.revision >= 5 {
+                (u * 0.12 - f64::from(self.seed % 628) * 0.01).sin() * self.radius * 0.035
+            } else {
+                0.0
+            };
         (along, level, cross)
     }
 
     fn cascade_floor(self, x: f64, z: f64) -> f64 {
         let (along, level, cross) = self.cascade_stage(x, z);
         let r = self.radial_at(x, z);
-        let bank = smoothstep(2.5, self.radius * 0.35, cross.abs()) * 7.0;
+        let width = if self.revision >= 5 {
+            2.1 + f64::from((self.seed >> 14) % 4) * 0.35
+                + (-((along / self.radius + 0.22) / 0.20).powi(2)).exp() * 1.7
+        } else {
+            2.5
+        };
+        let bank = smoothstep(
+            width,
+            if self.revision >= 5 {
+                width + 4.5
+            } else {
+                self.radius * 0.35
+            },
+            cross.abs(),
+        ) * 7.0;
         let base = (self.center[1] - self.height * 0.72).floor();
         let shoulder = base
-            + (6.0 + f64::from(self.seed % 5))
-                * [-self.radius * 0.24, self.radius * 0.22]
+            + self.cascade_step()
+                * self
+                    .cascade_edges()
                     .into_iter()
                     .map(|edge| smoothstep(edge - 5.0, edge + 5.0, along))
                     .sum::<f64>();
-        let side = smoothstep(3.0, self.radius * 0.30, cross.abs());
+        let side = smoothstep(
+            if self.revision >= 5 { width } else { 3.0 },
+            if self.revision >= 5 {
+                width + 4.0
+            } else {
+                self.radius * 0.30
+            },
+            cross.abs(),
+        );
         level + (shoulder - level) * side - 2.5
             + bank
             + smoothstep(0.65, 1.02, r) * self.height * 1.55
@@ -241,9 +367,16 @@ impl CaveStructure {
     fn cascade_water(self, x: f64, z: f64) -> Option<WaterColumn> {
         let (along, level, _) = self.cascade_stage(x, z);
         // Dry receiving strips leave room for real falling cells between pools.
-        let falling = [-self.radius * 0.24, self.radius * 0.22]
-            .iter()
-            .any(|edge| along < *edge && along > *edge - 3.0);
+        let falling = self.cascade_edges().iter().any(|edge| {
+            along < *edge
+                && along
+                    > *edge
+                        - if self.revision >= 5 && self.kind != CaveEcology::Waterfall {
+                            1.0
+                        } else {
+                            3.0
+                        }
+        });
         let [floor, ceiling] = self.geometry(x, z);
         let bed = (floor - 0.5).floor() + 1.0;
         (!falling && self.radial_at(x, z) < 0.92 && bed < level && level + 2.0 < ceiling).then_some(
@@ -261,6 +394,25 @@ impl CaveStructure {
             return None;
         }
         let water = self.water?;
+        if self.revision >= 5 {
+            let phase = f64::from(self.seed % 628) * 0.01;
+            for [dx, dz] in [[-1, 0], [0, -1], [1, 0], [0, 1]] {
+                if -(dx as f64) * phase.cos() - (dz as f64) * phase.sin() < 0.25 {
+                    continue;
+                }
+                if self.cascade_water(x + dx as f64, z + dz as f64).is_none()
+                    && self.geometry(x + dx as f64, z + dz as f64)[0] < water.level - 1.5
+                    && self.radial_at(x + dx as f64, z + dz as f64) < 0.85
+                {
+                    return Some([
+                        x.floor() as i64 + dx,
+                        water.level.ceil() as i64 - 1,
+                        z.floor() as i64 + dz,
+                    ]);
+                }
+            }
+            return None;
+        }
         if self.cascade_water(x - 1.0, z).is_none()
             && self.geometry(x - 1.0, z)[0] < water.level - 4.0
             && self.radial_at(x - 1.0, z) < 0.85
@@ -276,6 +428,16 @@ impl CaveStructure {
     }
 
     pub(super) fn carve(self, y: f64, old: f64, surface: f64) -> f64 {
+        if self.suppressed
+            && self.radial < 1.0
+            && self.ceiling - self.floor > 3.0
+            && surface - y >= 5.0
+            && (self.floor - 3.0..=self.ceiling + 3.0).contains(&y)
+        {
+            // Removing a room must not reopen the connector cells formerly
+            // sealed by its floor/ceiling. Keep those guards and close its volume.
+            return old.min((y - self.floor).min(self.ceiling - y)).min(-0.5);
+        }
         if self.open_to_sky() && y > self.floor && y <= surface + 2.0 {
             return old.max((y - self.floor).min((0.14 - self.radial) * self.radius));
         }
@@ -414,14 +576,14 @@ impl CaveStructure {
                 281,
             );
             let tree = [cx as f64 * 13.0 + 6.5, cz as f64 * 13.0 + 6.5];
-            let tree_floor = (self.geometry(tree[0], tree[1])[0] - 0.5).floor() + 1.0;
-            let tx = x - tree[0];
-            let tz = z - tree[1];
-            let ty = y - tree_floor;
             if ticket.is_multiple_of(7)
-                && self.radial_at(tree[0], tree[1]) < 0.77
                 && self.water.is_none()
+                && self.radial_at(tree[0], tree[1]) < 0.77
             {
+                let tree_floor = (self.geometry(tree[0], tree[1])[0] - 0.5).floor() + 1.0;
+                let tx = x - tree[0];
+                let tz = z - tree[1];
+                let ty = y - tree_floor;
                 let height = 3.5 + f64::from((ticket >> 8) % 3) * 0.5;
                 if (0.0..height).contains(&ty) && tx.abs() < 0.5 && tz.abs() < 0.5 {
                     return Some(MaterialId::Wood);
@@ -579,12 +741,23 @@ impl TerraGenerator {
             seed,
             revision: self.config().cave_structure_revision,
             salt_allowed,
+            suppressed: region.presence <= 0.0,
             dynamic_water: self.config().cave_structure_revision >= 4
-                && kind == CaveEcology::Waterfall,
+                && (kind == CaveEcology::Waterfall
+                    || self.config().cave_structure_revision >= 5
+                        && matches!(
+                            kind,
+                            CaveEcology::Stone | CaveEcology::Salt | CaveEcology::Lush
+                        )
+                        && seed.is_multiple_of(4)),
             ..Default::default()
         };
         sample.radial = sample.radial_at(x, z);
         [sample.floor, sample.ceiling] = sample.geometry(x, z);
+        if sample.suppressed {
+            sample.dynamic_water = false;
+            return sample;
+        }
         sample.dampness = match kind {
             CaveEcology::Salt => 0.55,
             CaveEcology::Waterfall => 0.65,

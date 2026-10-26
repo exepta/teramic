@@ -26,6 +26,34 @@ fn all_dyes_are_real_server_inventory_stacks_and_replicate_to_the_client() {
     }
 }
 
+#[test]
+fn all_tool_tiers_are_authoritative_catalog_items_and_replicate_over_udp() {
+    // Each fresh session stays below the real 20-operation burst budget and
+    // the 27-slot inventory while still exercising every registered tool.
+    for tools in terra_core::ToolKind::ALL.chunks(12) {
+        let (mut host, mut client, _) = pair();
+        for &tool in tools {
+            let item = ItemKind::Tool(tool);
+            assert_eq!(
+                inventory_command(
+                    &mut host,
+                    &mut client,
+                    InventoryAction::CreativeQuickMove { item, count: 1 }
+                ),
+                InventoryOutcome::Applied
+            );
+            assert_eq!(
+                client
+                    .world()
+                    .resource::<client::ClientSession>()
+                    .inventory
+                    .count(item),
+                1
+            );
+        }
+    }
+}
+
 fn inventory_command(
     host: &mut App,
     client: &mut App,
@@ -141,6 +169,106 @@ fn creative_trash_removes_only_the_players_real_stack_without_spawning_a_drop() 
 }
 
 #[test]
+fn creative_clear_deletes_the_own_bag_and_cursor_without_affecting_other_players_or_drops() {
+    let (mut host, mut a, b) = pair();
+    let item = ItemKind::Block(3);
+    let helmet = ItemKind::Armor(terra_core::ArmorItem {
+        material: terra_core::ArmorMaterial::Iron,
+        piece: terra_core::ArmorPiece::Helmet,
+    });
+    for action in [
+        InventoryAction::CreativeCursor {
+            item: helmet,
+            count: 1,
+        },
+        InventoryAction::EquipmentClick {
+            slot: terra_core::EquipmentSlot::Helmet.index() as u8,
+            secondary: false,
+        },
+        InventoryAction::CreativeSet {
+            slot: 0,
+            item,
+            count: 128,
+        },
+        InventoryAction::CreativeSet {
+            slot: (terra_core::INVENTORY_SLOTS - 1) as u8,
+            item,
+            count: 73,
+        },
+        InventoryAction::CreativeCursor { item, count: 19 },
+    ] {
+        assert_eq!(
+            inventory_command(&mut host, &mut a, action),
+            InventoryOutcome::Applied,
+            "Invalid setup action: {action:?}"
+        );
+    }
+    assert_eq!(
+        a.world()
+            .resource::<client::ClientSession>()
+            .stats
+            .equipment
+            .get(terra_core::EquipmentSlot::Helmet),
+        Some(helmet)
+    );
+    let before = a
+        .world()
+        .resource::<client::ClientSession>()
+        .inventory
+        .clone();
+    let other = b
+        .world()
+        .resource::<client::ClientSession>()
+        .inventory
+        .clone();
+    let drops = host
+        .world()
+        .resource::<EditJournal>()
+        .gameplay()
+        .drops
+        .clone();
+    let uuid = a.world().resource::<client::ClientSession>().uuid.unwrap();
+    assert_eq!(
+        inventory_command(&mut host, &mut a, InventoryAction::CreativeClear),
+        InventoryOutcome::Applied
+    );
+    wait(&mut host, &mut [&mut a], |_, clients| {
+        clients[0]
+            .world()
+            .resource::<client::ClientSession>()
+            .stats
+            .equipment
+            .iter()
+            .next()
+            .is_none()
+    });
+    let bag = &a.world().resource::<client::ClientSession>().inventory;
+    assert_eq!(bag.revision, before.revision + 1);
+    assert_eq!(bag.occupied_slots(), 0);
+    assert!(bag.cursor.is_none());
+    assert_eq!(
+        &host
+            .world()
+            .resource::<EditJournal>()
+            .gameplay()
+            .inventories[&uuid],
+        bag
+    );
+    assert_eq!(
+        b.world().resource::<client::ClientSession>().inventory,
+        other
+    );
+    assert_eq!(
+        host.world().resource::<EditJournal>().gameplay().drops,
+        drops
+    );
+    assert_eq!(
+        inventory_command(&mut host, &mut a, InventoryAction::CreativeClear),
+        InventoryOutcome::Invalid
+    );
+}
+
+#[test]
 fn survival_and_spectator_cannot_use_creative_trash_packets() {
     let (mut host, mut a, _) = pair();
     let item = ItemKind::Block(3);
@@ -180,6 +308,14 @@ fn survival_and_spectator_cannot_use_creative_trash_packets() {
                 before
             );
         }
+        assert_eq!(
+            inventory_command(&mut host, &mut a, InventoryAction::CreativeClear),
+            InventoryOutcome::Denied
+        );
+        assert_eq!(
+            a.world().resource::<client::ClientSession>().inventory,
+            before
+        );
     }
 }
 

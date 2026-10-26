@@ -75,6 +75,7 @@ fn build(
                 || high[u] - low[u] < 0.35
                 || high[v] - low[v] < 0.35
                 || side == 2
+                || (matches!(style, CubeSurface::Turf) && side == 3)
             {
                 let normal = Vec3::from_array(primitive.normals[index * 4]);
                 push(&mut result, primitive.material, points, normal, 1.0, (u, v));
@@ -83,6 +84,7 @@ fn build(
             let fine = matches!(
                 style,
                 CubeSurface::Turf
+                    | CubeSurface::Farmland
                     | CubeSurface::Sand
                     | CubeSurface::Snow
                     | CubeSurface::CoralRed
@@ -126,6 +128,16 @@ fn build(
                 if x == 0 || y == 0 || x == count - 1 || y == count - 1 {
                     return 0.0;
                 }
+                if matches!(style, CubeSurface::Farmland) && side == 3 {
+                    return if x.is_multiple_of(2) { 0.075 } else { 0.012 };
+                }
+                if matches!(style, CubeSurface::Wool) {
+                    return if (x + y + variant).is_multiple_of(3) {
+                        0.026
+                    } else {
+                        0.009
+                    };
+                }
                 if let Some(depth) = underwater::depth(style, x, y, variant) {
                     return depth;
                 }
@@ -151,9 +163,10 @@ fn build(
                     }
                 };
                 let maximum = match style {
+                    CubeSurface::Wool => 0.026,
                     CubeSurface::Turf if side == 3 => 0.025,
                     CubeSurface::Turf => 0.035,
-                    CubeSurface::Earth => 0.055,
+                    CubeSurface::Earth | CubeSurface::Farmland => 0.055,
                     CubeSurface::Rock => 0.075,
                     CubeSurface::Wood => 0.025,
                     CubeSurface::Mushroom => 0.06,
@@ -175,6 +188,9 @@ fn build(
                     - outward * depth
             };
             let shade = |x: usize, y: usize| {
+                if matches!(style, CubeSurface::Farmland) && side == 3 {
+                    return if depth(x, y) > 0.04 { 0.82 } else { 1.06 };
+                }
                 if depth(x, y) == 0.0 {
                     1.0
                 } else if side == 3 {
@@ -452,6 +468,25 @@ mod tests {
     }
 
     #[test]
+    fn cultivated_soil_has_long_shallow_furrows_without_changing_block_edges() {
+        let template = SurfaceTemplate::new(CubeSurface::Farmland);
+        let source = cube_faces(0.0, [0; 6], None);
+        let patches = template.face(&source[3], 3, 0, 63, |point| point);
+        let positions: Vec<_> = patches
+            .iter()
+            .flat_map(|patch| &patch.primitive.positions)
+            .collect();
+        assert!(positions.iter().any(|p| (p[1] - 0.925).abs() < 0.0001));
+        assert!(positions.iter().any(|p| (p[1] - 0.988).abs() < 0.0001));
+        assert!(positions.iter().all(|p| {
+            p[1] >= 0.9249
+                && p[1] <= 1.0
+                && (!(p[0] == 0.0 || p[0] == 1.0 || p[2] == 0.0 || p[2] == 1.0) || p[1] == 1.0)
+        }));
+        assert!(patches.iter().any(|patch| patch.shade < 0.9));
+    }
+
+    #[test]
     fn neighbor_flattening_keeps_a_valid_triangle_when_the_other_half_collapses() {
         let mut patches = Vec::new();
         push(
@@ -476,8 +511,10 @@ mod tests {
     #[test]
     fn every_style_and_variant_has_bounded_inward_detail_and_valid_front_faces() {
         for style in [
+            CubeSurface::Wool,
             CubeSurface::Turf,
             CubeSurface::Earth,
+            CubeSurface::Farmland,
             CubeSurface::Rock,
             CubeSurface::Sand,
             CubeSurface::Snow,
@@ -547,11 +584,24 @@ mod tests {
                             }
                         }
                     }
-                    if side != 2 {
+                    if side != 2 && !(matches!(style, CubeSurface::Turf) && side == 3) {
                         assert!(inset_points > 0, "detail must not silently be flat");
                     }
                 }
             }
+        }
+    }
+
+    #[test]
+    fn meadow_tops_keep_one_continuous_plane_instead_of_repeating_recessed_tiles() {
+        let template = SurfaceTemplate::new(CubeSurface::Turf);
+        let faces = cube_faces(0.0, [0; 6], None);
+        for variant in 0..12 {
+            let patches = template.face(&faces[3], 3, variant, 63, |p| p);
+            assert_eq!(patches.len(), 1);
+            assert_eq!(patches[0].primitive.indices.len(), 6);
+            assert!(patches[0].primitive.positions.iter().all(|p| p[1] == 1.0));
+            assert_eq!(patches[0].shade, 1.0);
         }
     }
 

@@ -76,12 +76,36 @@ pub(super) fn append(
                 if let Some(height) = sample(q) {
                     let neighbor =
                         FluidSpace::from_global(occluders.get(&q).map_or(&[], Vec::as_slice), q);
-                    masks.extend(
-                        neighbor
-                            .wet_boxes(height - q[1] as f64)
-                            .iter()
-                            .map(|b| global(b, q)),
-                    );
+                    let upper_position = [q[0], q[1] + 1, q[2]];
+                    let neighbor_covered = sample(upper_position).is_some_and(|upper_height| {
+                        let upper = FluidSpace::from_global(
+                            occluders.get(&upper_position).map_or(&[], Vec::as_slice),
+                            upper_position,
+                        );
+                        neighbor.connected(
+                            FluidCell { amount: 8, ..cell },
+                            &upper,
+                            FluidCell {
+                                amount: ((upper_height - upper_position[1] as f64) * 8.0).ceil()
+                                    as u8,
+                                ..cell
+                            },
+                            [0, 1, 0],
+                        )
+                    });
+                    let height = if neighbor_covered {
+                        1.0
+                    } else {
+                        height - q[1] as f64
+                    };
+                    // Free neighbors share pinned construction corners. Their
+                    // rendered edge cannot fall below this waterlogged cell.
+                    let height = if neighbor.solids.is_empty() && axis != 1 {
+                        height.max(f64::from(surface) - (p[1] - origin[1]) as f64)
+                    } else {
+                        height
+                    };
+                    masks.extend(neighbor.wet_boxes(height).iter().map(|b| global(b, q)));
                 }
             }
             for fragment in occlusion::fragments(face, normal, origin, &masks) {
@@ -122,6 +146,51 @@ pub(super) fn append(
 mod tests {
     use super::*;
     use crate::water::{FluidCell, space::FluidSpace};
+
+    #[test]
+    fn covered_neighbor_uses_the_same_falling_height_for_occlusion_as_its_actual_mesh() {
+        let p = [8, 7, 8];
+        let q = [9, 7, 8];
+        let occluders = FluidOccluders::from([(
+            p,
+            vec![ShapeBox {
+                minimum: [8.0, 7.0, 8.0],
+                maximum: [9.0, 7.5, 9.0],
+                hinged: false,
+            }],
+        )]);
+        let mut patch = None;
+        append(
+            &mut patch,
+            p,
+            FluidCell {
+                amount: 8,
+                ..Default::default()
+            },
+            [0; 3],
+            &occluders,
+            [0.0, 8.0, 1.0, 5.0],
+            |position| {
+                if position == p {
+                    Some(8.0)
+                } else if position == q {
+                    Some(7.125)
+                } else if position == [9, 8, 8] {
+                    Some(8.125)
+                } else {
+                    None
+                }
+            },
+        );
+        let patch = patch.unwrap();
+        assert!(
+            patch
+                .normals
+                .iter()
+                .all(|normal| *normal != [1.0, 0.0, 0.0]),
+            "a connected falling neighbor fills its visible cell; do not emit overlapping internal half-faces"
+        );
+    }
 
     #[test]
     fn every_waterlogged_rotation_has_valid_exposed_geometry_without_solid_intersections() {

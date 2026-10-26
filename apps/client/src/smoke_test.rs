@@ -29,7 +29,10 @@ struct SmokeTest {
     frame_times: Vec<f64>,
     skip_frames: u8,
     sample_seconds: f64,
+    load_grace_seconds: f64,
     diagnostics: crate::diagnostic_report::NativeDiagnostics,
+    sample_scope_start: Option<Vec<(&'static str, terra_core::profiling::ScopeSample)>>,
+    sample_scope_end: Option<Vec<(&'static str, terra_core::profiling::ScopeSample)>>,
     flythrough: bool,
     flight_origin: Option<Transform>,
     flight_captures: u8,
@@ -108,6 +111,11 @@ pub(crate) fn install(app: &mut App) {
         })
     {
         let now = Instant::now();
+        if std::env::var("TERRA_BENCH_DEBUG_OVERLAY").is_ok_and(|value| value == "1") {
+            app.add_systems(Startup, |mut debug: ResMut<terra_core::DebugSettings>| {
+                debug.enabled = true;
+            });
+        }
         app.insert_resource(SmokeTest {
             elapsed: Duration::ZERO,
             captured: false,
@@ -129,7 +137,15 @@ pub(crate) fn install(app: &mut App) {
                 .filter(|v| v.is_finite())
                 .unwrap_or(if flythrough { 48.0 } else { 3.0 })
                 .clamp(if flythrough { 24.0 } else { 3.0 }, 1800.0),
+            load_grace_seconds: std::env::var("TERRA_BENCH_LOAD_SECONDS")
+                .ok()
+                .and_then(|value| value.parse::<f64>().ok())
+                .filter(|value| value.is_finite())
+                .map(|value| value.clamp(30.0, 240.0))
+                .unwrap_or(if flythrough { 180.0 } else { 90.0 }),
             diagnostics: default(),
+            sample_scope_start: None,
+            sample_scope_end: None,
             flythrough,
             flight_origin: None,
             flight_captures: 0,
@@ -274,8 +290,11 @@ struct SmokeWorld<'w, 's> {
     inventory: Res<'w, terra_ui::InventoryView>,
     minimap: Res<'w, terra_ui::minimap::MiniMapView>,
     survival: Res<'w, terra_ui::SurvivalView>,
+    debug_overlay: Res<'w, terra_ui::DebugOverlay>,
     integrated: Option<Res<'w, terra_server::IntegratedServer>>,
     session: Option<Res<'w, terra_network::client::ClientSession>>,
+    creatures: Option<Res<'w, terra_network::client::ReplicatedCreatures>>,
+    creature_models: Query<'w, 's, &'static terra_render::creatures::CreatureAvatar>,
     upload: Res<'w, terra_render::MeshUploadStatus>,
     draws: Option<Res<'w, terra_render::DrawCallStatus>>,
     windows: Query<'w, 's, &'static Window, With<bevy::window::PrimaryWindow>>,
@@ -290,6 +309,7 @@ struct SmokeWorld<'w, 's> {
     rendered: Res<'w, RenderedSections>,
     meshes: Res<'w, Assets<Mesh>>,
     visible_meshes: Query<'w, 's, &'static ViewVisibility, With<Mesh3d>>,
+    point_lights: Query<'w, 's, &'static PointLight>,
     ranges: Query<'w, 's, &'static bevy::camera::visibility::VisibilityRange, With<Mesh3d>>,
     prop_smoke: Option<Res<'w, PropSmoke>>,
     diagnostics: Res<'w, bevy::diagnostic::DiagnosticsStore>,
@@ -328,6 +348,9 @@ fn smoke_test(
         && smoke.elapsed - smoke.captured_at > Duration::from_millis(500)
         && (smoke.elapsed - smoke.captured_at).as_secs_f64() <= smoke.sample_seconds + 0.5
     {
+        if smoke.sample_scope_start.is_none() {
+            smoke.sample_scope_start = Some(terra_core::profiling::snapshot());
+        }
         smoke.frame_times.push(frame_seconds);
         smoke.diagnostics.observe(&scene.diagnostics);
         let worst = FrameSpike {
@@ -347,6 +370,12 @@ fn smoke_test(
                 .sort_by(|a, b| b.seconds.total_cmp(&a.seconds));
             smoke.worst_frames.truncate(12);
         }
+    }
+    if smoke.sample_scope_start.is_some()
+        && smoke.sample_scope_end.is_none()
+        && (smoke.elapsed - smoke.captured_at).as_secs_f64() > smoke.sample_seconds + 0.5
+    {
+        smoke.sample_scope_end = Some(terra_core::profiling::snapshot());
     }
     smoke.previous_context = FrameContext {
         generation_jobs: scene.generation.pending_jobs,
@@ -420,7 +449,7 @@ fn smoke_test(
     let readiness_period = (smoke.elapsed.as_secs() / 30) as u32;
     if !smoke.captured && readiness_period > smoke.readiness_logged {
         smoke.readiness_logged = readiness_period;
-        tracing::info!(generation = ?world.status, terrain_ready = scene.renderer.ready, props_ready, ui_ready, animations = ?scene.animations.as_ref(), "Benchmark initial scene readiness");
+        tracing::info!(generation = ?world.status, terrain_ready = scene.renderer.ready, props_ready, water_ready, uploaded, scenario_ready, ui_ready, camera = ?scene.camera.iter().next().map(|t| t.translation), animations = ?scene.animations.as_ref(), "Benchmark initial scene readiness");
     }
     if world.status == GenerationStatus::Ready
         && uploaded
@@ -516,9 +545,7 @@ fn smoke_test(
         }
         tracing::info!("Client smoke test completed");
         exit.write(AppExit::Success);
-    } else if smoke.elapsed.as_secs_f64()
-        > smoke.sample_seconds + if smoke.flythrough { 180.0 } else { 90.0 }
-    {
+    } else if smoke.elapsed.as_secs_f64() > smoke.sample_seconds + smoke.load_grace_seconds {
         tracing::error!("Client smoke test timed out");
         exit.write(AppExit::error());
     }
@@ -562,7 +589,47 @@ fn report_metrics(
         smoke.elapsed,
         true,
     )?;
+    let residents: Vec<_> = scene
+        .creatures
+        .as_ref()
+        .into_iter()
+        .flat_map(|c| c.creatures.values())
+        .filter(|t| t.current.kind == terra_core::creatures::CreatureKind::Villager)
+        .collect();
+    let sleeping_residents = residents
+        .iter()
+        .filter(|t| t.current.behavior == terra_core::creatures::CreatureBehavior::Sleep)
+        .count();
+    let rendered_residents = scene
+        .creature_models
+        .iter()
+        .filter(|avatar| residents.iter().any(|t| t.current.id == avatar.0))
+        .count();
+    if let Ok(require) = std::env::var("TERRA_BENCH_REQUIRE_VILLAGERS") {
+        if residents.is_empty()
+            || rendered_residents != residents.len()
+            || require == "sleep" && sleeping_residents == 0
+        {
+            return Err(format!(
+                "Generated villagers were not demonstrated: replicated={}, rendered={rendered_residents}, sleeping={sleeping_residents}",
+                residents.len()
+            ));
+        }
+        tracing::info!(residents = residents.len(), rendered_residents, sleeping_residents, names = ?residents.iter().map(|t| t.current.title()).collect::<Vec<_>>(), "Generated settlement residents verified through authoritative streaming and client rendering");
+    }
     let mut samples = smoke.frame_times.clone();
+    if std::env::var("TERRA_BENCH_DEBUG_OVERLAY").is_ok_and(|value| value == "1") {
+        let minimum = scene.debug_overlay.fps_min.parse::<f64>().ok();
+        let maximum = scene.debug_overlay.fps_max.parse::<f64>().ok();
+        if !scene.debug_overlay.visible
+            || !minimum.zip(maximum).is_some_and(|(low, high)| {
+                low.is_finite() && high.is_finite() && low > 0.0 && high >= low
+            })
+        {
+            return Err("Session FPS extrema were not displayed in the debug overlay".into());
+        }
+        tracing::info!(?minimum, ?maximum, "Session FPS overlay verified");
+    }
     samples.sort_by(f64::total_cmp);
     let sampled_seconds: f64 = samples.iter().sum();
     let average_fps = samples.len() as f64 / sampled_seconds.max(f64::EPSILON);
@@ -617,17 +684,26 @@ fn report_metrics(
         sample_frames = samples.len(),
         sample_window_seconds = smoke.sample_seconds,
         average_fps,
+        minimum_fps = ?samples.last().filter(|seconds| **seconds > 0.0).map(|seconds| seconds.recip()),
+        maximum_fps = ?samples.first().filter(|seconds| **seconds > 0.0).map(|seconds| seconds.recip()),
+        worst_frame_ms = ?samples.last().map(|seconds| seconds * 1000.0),
         p95_frame_ms = percentile(&samples, 0.95) * 1000.0,
         p99_frame_ms = percentile(&samples, 0.99) * 1000.0,
         initial_load_seconds = smoke.initial_ready.map(|elapsed| elapsed.as_secs_f64()),
         resident_memory_kib = resident_memory_kib(),
         loaded_sections = chunks.loaded.len(),
         rendered_sections = scene.rendered.sections.len(),
+        occluded_sections = scene.renderer.occluded_sections,
         mesh_assets = scene.meshes.len(),
         terrain_composition_jobs = scene.renderer.completed_mesh_jobs,
+        far_groups = scene.renderer.far_groups,
+        far_source_batches = scene.renderer.far_source_batches,
+        far_cache_bytes = scene.renderer.far_cache_bytes,
         terrain_composition_worker_seconds = scene.renderer.composition_seconds,
         terrain_composition_max_ms = scene.renderer.max_composition_seconds * 1000.0,
         visible_mesh_entities = scene.visible_meshes.iter().filter(|v| v.get()).count(),
+        point_lights = scene.point_lights.iter().count(),
+        shadowed_point_lights = scene.point_lights.iter().filter(|light| light.shadow_maps_enabled && light.intensity > 0.0).count(),
         loaded_active_props = active_props,
         represented_props = scene.props.visible_props,
         prop_batches = scene.props.batches,
@@ -641,6 +717,26 @@ fn report_metrics(
         "Native smoke benchmark (CPU wall frames; screenshot-adjacent frames excluded; GPU pass timings reported separately when enabled)"
     );
     smoke.diagnostics.report();
+    if let (Some(start), Some(end)) = (&smoke.sample_scope_start, &smoke.sample_scope_end) {
+        for &(name, sample) in end {
+            let before = start
+                .iter()
+                .find(|(key, _)| *key == name)
+                .map(|(_, value)| *value)
+                .unwrap_or_default();
+            let calls = sample.calls.saturating_sub(before.calls);
+            let total_ms = sample.total_ms - before.total_ms;
+            if calls > 0 {
+                tracing::info!(
+                    scope = name,
+                    calls,
+                    total_ms,
+                    mean_ms = total_ms / calls as f64,
+                    "CPU scope within native sampling window (wall intervals may overlap)"
+                );
+            }
+        }
+    }
     for (scope, sample) in terra_core::profiling::snapshot() {
         tracing::info!(
             scope,

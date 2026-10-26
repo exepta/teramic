@@ -1,0 +1,47 @@
+{
+  "id": "teramic::leather_boots",
+  "name": "Leather Boots",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "armor": {
+        "material": "leather",
+        "piece": "boots"
+      }
+    },
+    "count": 1
+  },
+  "pattern": {
+    "kind": "shaped",
+    "width": 3,
+    "height": 2,
+    "cells": [
+      {
+        "item": {
+          "animal": "leather"
+        },
+        "count": 1
+      },
+      null,
+      {
+        "item": {
+          "animal": "leather"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "animal": "leather"
+        },
+        "count": 1
+      },
+      null,
+      {
+        "item": {
+          "animal": "leather"
+        },
+        "count": 1
+      }
+    ]
+  }
+}

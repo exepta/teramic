@@ -1,0 +1,47 @@
+{
+  "id": "teramic::diamond_boots",
+  "name": "Diamond Boots",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "armor": {
+        "material": "diamond",
+        "piece": "boots"
+      }
+    },
+    "count": 1
+  },
+  "pattern": {
+    "kind": "shaped",
+    "width": 3,
+    "height": 2,
+    "cells": [
+      {
+        "item": {
+          "mineral": "diamond"
+        },
+        "count": 1
+      },
+      null,
+      {
+        "item": {
+          "mineral": "diamond"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "mineral": "diamond"
+        },
+        "count": 1
+      },
+      null,
+      {
+        "item": {
+          "mineral": "diamond"
+        },
+        "count": 1
+      }
+    ]
+  }
+}

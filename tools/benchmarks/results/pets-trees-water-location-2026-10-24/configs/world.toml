@@ -1,0 +1,6 @@
+# Isolated short native fixtures; production world files are never touched.
+landscape_revision = 0
+
+[time]
+paused = true
+start_hour = 12.0

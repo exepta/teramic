@@ -33,6 +33,15 @@ pub enum CaveQuality {
     Ultra,
 }
 
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum TreeFallAnimation {
+    #[default]
+    Current,
+    HellFall,
+    Magic,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 #[cfg_attr(feature = "bevy", derive(bevy::prelude::Resource))]
@@ -47,6 +56,7 @@ pub struct GraphicsConfig {
     /// Surface haze distance relative to the streamed radius; zero disables surface fog.
     pub fog_distance: f32,
     pub chunk_animation: ChunkAnimation,
+    pub tree_fall_animation: TreeFallAnimation,
     pub lod_distance: f32,
     pub shadow_quality: ShadowQuality,
     pub cave_quality: CaveQuality,
@@ -88,6 +98,7 @@ impl GraphicsConfig {
             render_distance: client.view_distance.clamp(2, 32),
             fog_distance: client.fog_distance,
             chunk_animation: client.chunk_animation,
+            tree_fall_animation: TreeFallAnimation::default(),
             lod_distance: (client.lod_near_distance / 96.0).clamp(0.75, 2.0),
             shadow_quality: ShadowQuality::High,
             cave_quality: CaveQuality::default(),

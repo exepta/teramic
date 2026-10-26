@@ -1,4 +1,12 @@
-<div id="equipment-slot" class="equipment-slot" role="img" aria-disabled="true">
-  <div [class]="'equipment-symbol ' + equipment.kind"><div class="equipment-outline"></div><div class="equipment-detail"></div></div>
-  <tooltip id="inventory-tooltip" for="equipment-slot" trigger="hover" variant="follow" class="equipment-tooltip"><p>{{ equipment.name }}</p><p class="equipment-unavailable">Not yet available</p></tooltip>
+<div id="equipment-slot" class="equipment-slot">
+  <button id="inventory-cell" class="item-cell" onmousedown="inventory_pointer" onmouseenter="inventory_pointer" onmouseleave="inventory_pointer">
+    @if (equipment.empty) {
+      <div [class]="'equipment-symbol ' + equipment.kind"><div class="equipment-outline"></div><div class="equipment-detail"></div></div>
+    } @else {
+      <img class="item-image" [alt]="equipment.preview_key" />
+    }
+  </button>
+    <tooltip id="inventory-tooltip" for="inventory-cell" trigger="hover" variant="follow" class="item-tooltip equipment-tooltip" [disabled]="inventoryCursor.visible || equipment.empty">
+        <p class="tooltip-name">{{ equipment.name }}</p><p class="tooltip-identifier">{{ equipment.identifier }}</p><p class="tooltip-description">{{ equipment.description }}</p>
+    </tooltip>
 </div>

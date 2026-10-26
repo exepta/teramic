@@ -9,3 +9,5 @@
 .modal-panel.minimap-options { width: 720px; height: 640px; overflow-y: hidden; }
 .minimap-settings-list { min-height: 0; flex-grow: 1; flex-shrink: 1; overflow-y: auto; display: flex; flex-direction: column; padding-right: 12px; }
 .minimap-options > .action-bar, .minimap-options > headline { flex-shrink: 0; }
+.modal-panel.mob-health-options { width: 660px; min-height: 370px; overflow: visible; }
+.mob-health-settings-list { display: flex; flex-direction: column; gap: 8px; }

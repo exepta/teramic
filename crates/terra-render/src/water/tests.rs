@@ -65,6 +65,139 @@ fn water_quality_changes_reuse_the_material_and_preserve_transmission() {
 }
 
 #[test]
+fn cave_water_disables_only_solar_caustics_and_wakes_reuse_the_shared_material() {
+    let mut app = app();
+    app.init_resource::<crate::scene::daylight::Daylight>()
+        .init_resource::<crate::scene::caves::CaveState>()
+        .init_resource::<super::contacts::WakeField>()
+        .init_resource::<Time>();
+    app.update();
+    let handle = app.world().resource::<WaterAssets>().0.clone();
+    for blend in [0.0, 0.5, 1.0, 0.5, 0.0] {
+        app.world_mut()
+            .resource_mut::<crate::scene::caves::CaveState>()
+            .blend = blend;
+        {
+            let mut wakes = app.world_mut().resource_mut::<super::contacts::WakeField>();
+            wakes.positions[0] = Vec4::new(2.0, 4.0, 6.0, 1.0);
+            wakes.motions[0] = Vec4::new(1.0, 0.0, 2.0, 0.5);
+        }
+        app.update();
+        let materials = app.world().resource::<Assets<WaterMaterial>>();
+        assert_eq!(materials.len(), 1);
+        let material = materials.get(&handle).unwrap();
+        let expected = app
+            .world()
+            .resource::<crate::scene::daylight::Daylight>()
+            .daylight
+            * crate::scene::caves::sky_visibility(blend);
+        let expected = (expected * 128.0).round() / 128.0;
+        assert_eq!(material.extension.environment.x, expected);
+        assert_eq!(material.extension.environment.y, 1.0);
+        assert_eq!(
+            material.extension.wake_positions[0],
+            Vec4::new(2.0, 4.0, 6.0, 1.0)
+        );
+        assert_eq!(material.base.specular_transmission, 1.0);
+    }
+}
+
+#[test]
+fn animated_wakes_advance_on_the_global_clock_without_modifying_the_water_material() {
+    let mut app = App::new();
+    app.add_plugins((MinimalPlugins, AssetPlugin::default()))
+        .init_asset::<WaterMaterial>()
+        .init_resource::<GameConfig>()
+        .init_resource::<super::contacts::WakeField>()
+        .insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
+            std::time::Duration::from_millis(16),
+        ))
+        .add_systems(Startup, setup_water)
+        .add_systems(Update, update_water_settings);
+    {
+        let mut wakes = app.world_mut().resource_mut::<super::contacts::WakeField>();
+        wakes.positions[0] = Vec4::new(2.0, 4.0, 6.0, 0.0);
+        wakes.motions[0] = Vec4::new(1.0, 0.0, 2.0, 0.5);
+    }
+    app.update();
+    let handle = app.world().resource::<WaterAssets>().0.clone();
+    let baseline = app
+        .world()
+        .resource::<Assets<WaterMaterial>>()
+        .get(&handle)
+        .unwrap()
+        .extension
+        .clone();
+    app.world_mut()
+        .resource_mut::<Messages<AssetEvent<WaterMaterial>>>()
+        .clear();
+    let mut previous = app.world().resource::<Time>().elapsed_secs();
+    for _ in 0..64 {
+        app.update();
+        let now = app.world().resource::<Time>().elapsed_secs();
+        assert!(now > previous);
+        previous = now;
+        assert_eq!(
+            app.world_mut()
+                .resource_mut::<Messages<AssetEvent<WaterMaterial>>>()
+                .drain()
+                .filter(|event| event.is_modified(handle.id()))
+                .count(),
+            0,
+            "advancing a live wake must not trigger material slab copies every frame"
+        );
+        let materials = app.world().resource::<Assets<WaterMaterial>>();
+        let extension = &materials.get(&handle).unwrap().extension;
+        assert_eq!(extension.environment, baseline.environment);
+        assert_eq!(extension.wake_positions, baseline.wake_positions);
+        assert_eq!(extension.wake_motions, baseline.wake_motions);
+        assert_eq!(materials.len(), 1);
+    }
+}
+
+#[test]
+fn shader_wake_timestamps_survive_the_bevy_global_clock_hour_wrap() {
+    use std::time::Duration;
+    assert_eq!(
+        Time::<()>::default().wrap_period(),
+        Duration::from_secs(3600)
+    );
+    for period in [3600, 120] {
+        let mut app = app();
+        app.init_resource::<super::contacts::WakeField>();
+        let start = period as f32 * 2.0 - 0.25;
+        let mut time = Time::<()>::default();
+        time.set_wrap_period(Duration::from_secs(period));
+        time.advance_by(Duration::from_secs_f32(start + 0.5));
+        app.insert_resource(time);
+        {
+            let mut wakes = app.world_mut().resource_mut::<super::contacts::WakeField>();
+            wakes.positions[0] = Vec4::new(2.0, 4.0, 6.0, start);
+            wakes.motions[0] = Vec4::new(1.0, 0.0, 2.0, 0.5);
+        }
+        app.update();
+        let handle = &app.world().resource::<WaterAssets>().0;
+        let material = app
+            .world()
+            .resource::<Assets<WaterMaterial>>()
+            .get(handle)
+            .unwrap();
+        assert_eq!(material.extension.environment.z, period as f32);
+        assert_eq!(material.extension.wake_positions[0].w, period as f32 - 0.25);
+        let globals_time = app.world().resource::<Time>().elapsed_secs_wrapped();
+        let mut shader_age = globals_time - material.extension.wake_positions[0].w;
+        if shader_age < 0.0 {
+            shader_age += material.extension.environment.z;
+        }
+        assert_eq!(shader_age, 0.5);
+        assert!(
+            shader_age < 3.2,
+            "an active wake must not disappear at the hour boundary"
+        );
+    }
+}
+
+#[test]
 fn storms_change_one_shared_water_uniform_without_recreating_materials() {
     let mut app = app();
     app.insert_resource(crate::weather::WeatherVisual {

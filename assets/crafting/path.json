@@ -1,0 +1,7 @@
+{
+  "id": "teramic::path",
+  "name": "Compacted Path",
+  "station": "hand",
+  "output": {"item": {"block": 102}, "count": 2},
+  "pattern": {"kind": "shapeless", "ingredients": [{"item": {"block": 2}, "count": 1}, {"item": {"block": 42}, "count": 1}]}
+}

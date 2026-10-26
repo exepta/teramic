@@ -1,0 +1,34 @@
+{
+  "id": "teramic::iron_cape_lime",
+  "name": "Lime Iron Cape",
+  "station": "hand",
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "cape": {
+            "material": "iron",
+            "color": "white"
+          }
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "dye": "lime"
+        },
+        "count": 1
+      }
+    ]
+  },
+  "output": {
+    "item": {
+      "cape": {
+        "material": "iron",
+        "color": "lime"
+      }
+    },
+    "count": 1
+  }
+}

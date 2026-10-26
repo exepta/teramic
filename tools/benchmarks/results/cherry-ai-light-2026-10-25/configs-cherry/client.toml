@@ -1,0 +1,6 @@
+width = 1280
+height = 800
+view_distance = 8
+vertical_view_distance = 4
+vsync = false
+fov_degrees = 55.0

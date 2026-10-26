@@ -1,0 +1,16 @@
+{
+  "item": {
+    "armor": {
+      "material": "iron",
+      "piece": "chestplate"
+    }
+  },
+  "name": "Iron Chestplate",
+  "description": "Iron chestplate fitted for protection and comfortable movement.",
+  "equipment": {
+    "slot": "chestplate",
+    "armor_points": 7,
+    "health_bonus": 4,
+    "stamina_bonus": 4
+  }
+}

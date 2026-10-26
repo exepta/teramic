@@ -149,6 +149,68 @@ mod tests {
     use super::*;
 
     #[test]
+    fn surface_shader_switch_reuses_materials_and_leaves_weather_binding_enabled() {
+        use crate::blocks::{BlockTemplate, TemplateSet, definitions::BlockRenderKind};
+        let mut app = App::new();
+        app.init_resource::<crate::blocks::BlockAssets>()
+            .init_resource::<Assets<StandardMaterial>>()
+            .init_resource::<Assets<WetMaterial>>()
+            .init_resource::<WetMaterials>()
+            .init_resource::<super::super::WeatherRenderStatus>()
+            .add_message::<AssetEvent<StandardMaterial>>()
+            .add_systems(Update, prepare);
+        let handle = app
+            .world_mut()
+            .resource_mut::<Assets<StandardMaterial>>()
+            .add(StandardMaterial::default());
+        let mut templates = TemplateSet::default();
+        templates.blocks.insert(
+            1,
+            BlockTemplate {
+                surface: None,
+                model: Vec::new(),
+                render_kind: BlockRenderKind::Cube,
+                face_materials: [0; 6],
+                side_cap: None,
+                bevel_width: 0.0,
+                faces: Default::default(),
+                details: Vec::new(),
+            },
+        );
+        {
+            let mut blocks = app.world_mut().resource_mut::<crate::blocks::BlockAssets>();
+            blocks.materials.push(handle);
+            blocks.templates = Some(std::sync::Arc::new(templates));
+        }
+        app.update();
+        let wet = app.world().resource::<WetMaterials>().0[&0].clone();
+        for enabled in [false, true, false, true] {
+            std::sync::Arc::make_mut(
+                app.world_mut()
+                    .resource_mut::<crate::blocks::BlockAssets>()
+                    .templates
+                    .as_mut()
+                    .unwrap(),
+            )
+            .block_details
+            .material_detail = enabled;
+            app.update();
+            let assets = app.world().resource::<Assets<WetMaterial>>();
+            let material = assets.get(&wet).unwrap();
+            assert_eq!(
+                material.extension.detail.x,
+                if enabled { 3.0 } else { -3.0 }
+            );
+            assert_eq!(
+                material.extension.weather,
+                super::super::storage::WEATHER_BUFFER_HANDLE
+            );
+            assert_eq!(assets.len(), 1);
+            assert_eq!(app.world().resource::<WetMaterials>().0[&0], wet);
+        }
+    }
+
+    #[test]
     fn changing_rain_does_not_invalidate_shared_surface_materials() {
         let mut app = App::new();
         app.add_plugins((MinimalPlugins, AssetPlugin::default()))

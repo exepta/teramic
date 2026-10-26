@@ -1,0 +1,34 @@
+{
+  "id": "teramic::iron_cape_black",
+  "name": "Black Iron Cape",
+  "station": "hand",
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "cape": {
+            "material": "iron",
+            "color": "white"
+          }
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "dye": "black"
+        },
+        "count": 1
+      }
+    ]
+  },
+  "output": {
+    "item": {
+      "cape": {
+        "material": "iron",
+        "color": "black"
+      }
+    },
+    "count": 1
+  }
+}

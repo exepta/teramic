@@ -1,0 +1,34 @@
+{
+  "id": "teramic::diamond_cape_green",
+  "name": "Green Diamond Cape",
+  "station": "hand",
+  "output": {
+    "item": {
+      "cape": {
+        "material": "diamond",
+        "color": "green"
+      }
+    },
+    "count": 1
+  },
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "cape": {
+            "material": "diamond",
+            "color": "white"
+          }
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "dye": "green"
+        },
+        "count": 1
+      }
+    ]
+  }
+}

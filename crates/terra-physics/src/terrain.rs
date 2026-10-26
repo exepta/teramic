@@ -218,7 +218,9 @@ fn dispatch(
             .1
             .keys()
             .copied()
-            .chain([28, 29, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70])
+            .chain([
+                28, 29, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 99, 100,
+            ])
             .collect();
         jobs.0.insert(
             position,
@@ -299,6 +301,16 @@ fn model_shapes(
         let cell = [index % 16, index / 16 % 16, index / 256];
         let global = std::array::from_fn(|axis| origin[axis] + cell[axis] as i64);
         append(global, material);
+    }
+    // Crusher hoppers extend 0.23 blocks beyond their two-cell footprint.
+    // The section above owns the clipped lip just as the lower section owns its base.
+    for x in 0..16 {
+        for z in 0..16 {
+            let below = [origin[0] + x, origin[1] - 1, origin[2] + z];
+            if chunks.block_at(below) == Some(terra_core::crusher::MATERIAL) {
+                append(below, terra_core::crusher::MATERIAL);
+            }
+        }
     }
     // A neighboring hinge may swing into this section without occupying a voxel here.
     for axis in [0, 2] {
@@ -445,7 +457,7 @@ fn build_collider_with_models(
     shapes: &[terra_core::block_shapes::ShapeBox],
     masked: &[u16],
 ) -> Result<Option<Collider>, String> {
-    if section.is_empty() {
+    if section.is_empty() && shapes.is_empty() {
         return Ok(None);
     }
     let mut padded = vec![0; PADDED_VOLUME];

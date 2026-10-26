@@ -1,0 +1,15 @@
+{
+  "id": 10801,
+  "key": "teramic::crush_black_dye",
+  "name": "Crush coal pigment",
+  "input": {
+    "dust": "coal"
+  },
+  "output": {
+    "item": {
+      "dye": "black"
+    },
+    "count": 2
+  },
+  "seconds": 4
+}

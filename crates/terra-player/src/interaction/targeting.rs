@@ -65,6 +65,11 @@ pub(crate) fn target_block(
     perspective: Option<Res<crate::CameraPerspective>>,
     bodies: Query<&Transform, (With<crate::PlayerBody>, Without<TerraCamera>)>,
     active: Option<Res<super::ActiveItem>>,
+    input: terra_core::GameplayInput,
+    calendar: (
+        Option<Res<terra_core::GameConfig>>,
+        Option<Res<terra_core::WorldClock>>,
+    ),
 ) {
     let Some((camera, look)) = camera.iter().next() else {
         target.0 = None;
@@ -81,10 +86,14 @@ pub(crate) fn target_block(
     } else {
         camera.translation
     };
-    let picker = if active
-        .as_ref()
-        .is_some_and(|item| matches!(item.0, Some(terra_core::ItemKind::Prop(_))))
-    {
+    let picker = if !input.pressed(terra_core::GameAction::Break)
+        && active.as_ref().is_some_and(|item| {
+            item.0.is_some_and(|item| match item {
+                terra_core::ItemKind::Prop(_) | terra_core::ItemKind::Flower(_) => true,
+                terra_core::ItemKind::Crop(seed) => seed.crop_kind().is_some(),
+                _ => false,
+            })
+        }) {
         terra_world::targeting::pick_world_for_planting
     } else {
         terra_world::targeting::pick_world_with_context
@@ -102,7 +111,15 @@ pub(crate) fn target_block(
                     terra_world::props::weather_wind_frame(weather.wind())
                 }),
             }
-        }),
+        })
+        .with_season(
+            calendar.1.as_deref().copied().unwrap_or_default().season(
+                calendar
+                    .0
+                    .as_deref()
+                    .map_or_else(Default::default, |config| config.world.seasons),
+            ),
+        ),
     );
 }
 
@@ -132,6 +149,13 @@ mod tests {
             );
         }
         let owner = SectionPos::new(-1, 0, -1);
+        chunks
+            .loaded
+            .get_mut(&owner)
+            .unwrap()
+            .data
+            .set_block([12, 15, 15], MaterialId::Farmland as u16)
+            .unwrap();
         chunks
             .loaded
             .get_mut(&owner)
@@ -185,5 +209,54 @@ mod tests {
             pick_world(&chunks, [-0.5, 16.3, -0.5], [-1.0, 0.0, 0.0]),
             (None, None)
         );
+    }
+
+    #[test]
+    fn seeds_in_hand_do_not_hide_crops_from_the_break_action() {
+        let mut chunks = scene();
+        let crop = &mut chunks
+            .loaded
+            .get_mut(&SectionPos::new(-1, 0, -1))
+            .unwrap()
+            .props[0];
+        crop.kind = PropKind::Wheat;
+        crop.variant = 7;
+        let origin = (1..20)
+            .map(|step| [-0.5, 16.0 + f64::from(step) * 0.1, -0.5])
+            .find(|origin| {
+                matches!(pick_world(&chunks, *origin, [-1.0, 0.0, 0.0]).1,
+                Some(WorldTarget::Prop(hit)) if hit.prop.id == PropId(1))
+            })
+            .expect("ripe wheat must be selectable");
+        let transform = Transform::from_translation(Vec3::from_array(origin.map(|v| v as f32)))
+            .looking_to(Vec3::NEG_X, Vec3::Y);
+        let mut look = crate::CameraLook::default();
+        look.aim(transform.rotation);
+        let mut app = App::new();
+        app.insert_resource(chunks)
+            .init_resource::<terra_world::edits::EditJournal>()
+            .init_resource::<terra_core::block_properties::BlockPropertiesCatalog>()
+            .init_resource::<ButtonInput<KeyCode>>()
+            .init_resource::<ButtonInput<MouseButton>>()
+            .init_resource::<TargetBlock>()
+            .init_resource::<TargetWorld>()
+            .insert_resource(super::super::ActiveItem(Some(terra_core::ItemKind::Crop(
+                terra_core::CropKind::Wheat.seed(),
+            ))))
+            .add_systems(Update, target_block);
+        app.world_mut().spawn((TerraCamera, transform, look));
+        app.update();
+        assert!(app.world().resource::<TargetWorld>().0.is_none());
+        app.world_mut()
+            .resource_mut::<ButtonInput<MouseButton>>()
+            .press(MouseButton::Left);
+        app.update();
+        assert!(matches!(app.world().resource::<TargetWorld>().0,
+            Some(WorldTarget::Prop(hit)) if hit.prop.id == PropId(1)));
+        app.world_mut()
+            .resource_mut::<ButtonInput<MouseButton>>()
+            .release(MouseButton::Left);
+        app.update();
+        assert!(app.world().resource::<TargetWorld>().0.is_none());
     }
 }

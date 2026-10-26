@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "id": 102,
+  "name": "Path Block",
+  "description": "A shallow, compacted ochre village path with inset pale pebbles and earthy sides.",
+  "creative_category": "building",
+  "render_kind": "boxes",
+  "bevel_width": 0.0,
+  "collision_boxes": [{"minimum": [0, 0, 0], "maximum": [1, 0.9375, 1]}],
+  "materials": {
+    "Compacted path": {"texture_pattern": "path_top", "roughness": 1.0, "reflectance": 0.1},
+    "Packed earth": {"texture_pattern": "path_side", "roughness": 1.0, "reflectance": 0.1}
+  },
+  "face_materials": ["Packed earth", "Packed earth", "Packed earth", "Compacted path", "Packed earth", "Packed earth"],
+  "hardness": 0.65,
+  "resistance": 0.6,
+  "required_tool": null,
+  "mining_level": 0
+}

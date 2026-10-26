@@ -6,8 +6,8 @@ pub struct MapPalette {
     /// Indexed by the existing block ID. Empty until block assets are ready.
     pub colors: Vec<[f32; 3]>,
     /// The renderer's grass tint, in `BiomeWeights::values()` order.
-    pub biome_colors: [[f32; 3]; 7],
+    pub biome_colors: [[f32; 3]; 8],
     /// The water shader's linear scattering tint, in the same biome order.
-    pub water_colors: [[f32; 3]; 7],
+    pub water_colors: [[f32; 3]; 8],
     pub revision: u64,
 }

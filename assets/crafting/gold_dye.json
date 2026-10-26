@@ -1,0 +1,28 @@
+{
+  "id": "teramic::gold_dye",
+  "name": "Gold Dye",
+  "station": "hand",
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "dye": "yellow"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "dye": "orange"
+        },
+        "count": 1
+      }
+    ]
+  },
+  "output": {
+    "item": {
+      "dye": "gold"
+    },
+    "count": 2
+  }
+}

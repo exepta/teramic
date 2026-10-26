@@ -7,10 +7,12 @@ pub(super) struct SessionViewStamp {
     ready: bool,
     mode: GameMode,
     revision: u64,
+    equipment: terra_core::EquipmentSlots,
     outcome: Option<terra_network::protocol::inventory::InventoryOutcome>,
     container_anchor: Option<[i64; 3]>,
     container_workbench: Option<[i64; 3]>,
     furnace: Option<terra_core::furnace::FurnaceView>,
+    crusher: Option<terra_core::crusher::CrusherView>,
     container_revisions: [Option<([i64; 3], u64)>; 2],
 }
 
@@ -45,13 +47,16 @@ pub struct CategoryView {
 #[derive(Clone, Debug, Serialize, PartialEq)]
 pub struct EquipmentSlotView {
     pub kind: &'static str,
-    pub name: &'static str,
+    pub slot_name: &'static str,
+    #[serde(flatten)]
+    pub item: InventoryItemView,
 }
 
 #[html_shared]
 #[derive(Resource, Default, Debug, Serialize, PartialEq)]
 pub struct InventoryView {
     pub layout_style: String,
+    pub prewarming: bool,
     pub open: bool,
     pub assembly: bool,
     pub container: bool,
@@ -69,6 +74,11 @@ pub struct InventoryView {
     pub furnace_fuel_style: String,
     pub furnace_progress: String,
     pub furnace_status: String,
+    pub crusher: bool,
+    pub crusher_input: Vec<InventoryItemView>,
+    pub crusher_output: Vec<InventoryItemView>,
+    pub crusher_progress_style: String,
+    pub crusher_working: bool,
     pub visible: bool,
     pub creative: bool,
     pub trash_available: bool,
@@ -102,6 +112,7 @@ pub struct InventoryView {
     pub category_dropdown: bool,
     pub equipment: Vec<EquipmentSlotView>,
     pub browser_items: Vec<InventoryItemView>,
+    pub browser_capacity: usize,
     pub browser_page: String,
     pub browser_previous: bool,
     pub browser_next: bool,
@@ -126,12 +137,28 @@ fn item_category(item: ItemKind, palette: &BlockPalette) -> &str {
 }
 
 fn item_metadata(item: ItemKind, palette: &BlockPalette) -> (String, String, String) {
+    if let ItemKind::Cape(cape) = item
+        && cape.color != terra_core::beds::DyeColor::White
+    {
+        let (name, _, description) = item_metadata(ItemKind::Cape(cape.undyed()), palette);
+        return (
+            format!("{name} ({})", cape.color.slug()),
+            item.identifier(),
+            description,
+        );
+    }
     match item {
         ItemKind::Tool(_)
         | ItemKind::Stick
         | ItemKind::Mineral(_)
         | ItemKind::Animal(_)
         | ItemKind::Bellows(_)
+        | ItemKind::Armor(_)
+        | ItemKind::Accessory(_)
+        | ItemKind::Cape(_)
+        | ItemKind::Dust(_)
+        | ItemKind::Crop(_)
+        | ItemKind::Flower(_)
         | ItemKind::Dye(_) => {
             let (name, description) =
                 palette
@@ -200,6 +227,32 @@ fn item_metadata(item: ItemKind, palette: &BlockPalette) -> (String, String, Str
 
 pub(super) fn item_view(item: ItemKind, count: u16, palette: &BlockPalette) -> InventoryItemView {
     let (name, identifier, mut description) = item_metadata(item, palette);
+    if let Some(equipment) = terra_core::equipment_definition(item) {
+        use std::fmt::Write;
+        if !description.is_empty() {
+            description.push('\n');
+        }
+        let _ = write!(
+            description,
+            "{} | Armor: {:.1}",
+            equipment.slot.name(),
+            equipment.armor_points
+        );
+        if equipment.health_bonus > 0.0 {
+            let _ = write!(
+                description,
+                "\nMaximum health: +{:.0}",
+                equipment.health_bonus
+            );
+        }
+        if equipment.stamina_bonus > 0.0 {
+            let _ = write!(
+                description,
+                "\nMaximum stamina: +{:.0}",
+                equipment.stamina_bonus
+            );
+        }
+    }
     if let ItemKind::Bellows(kind) = item {
         use terra_core::furnace::BellowsKind;
         if !description.is_empty() {
@@ -269,6 +322,69 @@ fn slot_view(
     view
 }
 
+#[derive(Default)]
+pub(super) struct CatalogViewCache {
+    entries: Vec<(ItemKind, InventoryItemView, String, String)>,
+    ready: bool,
+}
+
+impl CatalogViewCache {
+    fn rebuild(&mut self, palette: &BlockPalette) {
+        self.entries = available_items(
+            GameMode::Creative,
+            &terra_core::Inventory::default(),
+            palette,
+        )
+        .into_iter()
+        .filter(|&item| catalog_item(item))
+        .map(|item| {
+            let mut view = item_view(item, STACK_LIMIT, palette);
+            view.command = "catalog".into();
+            view.count.clear();
+            let name = view.name.to_lowercase();
+            let identifier = view.identifier.to_lowercase();
+            (item, view, name, identifier)
+        })
+        .collect();
+        self.ready = true;
+    }
+
+    fn page(
+        &self,
+        category: &str,
+        query: &str,
+        size: usize,
+        page: usize,
+        selected: Option<ItemKind>,
+    ) -> (Vec<InventoryItemView>, usize, usize) {
+        let matches = |entry: &&(ItemKind, InventoryItemView, String, String)| {
+            (category == "all" || entry.1.category == category)
+                && (query.is_empty() || entry.2.contains(query) || entry.3.contains(query))
+        };
+        let pages = self
+            .entries
+            .iter()
+            .filter(matches)
+            .count()
+            .div_ceil(size)
+            .max(1);
+        let page = page.min(pages - 1);
+        let items = self
+            .entries
+            .iter()
+            .filter(matches)
+            .skip(page * size)
+            .take(size)
+            .map(|(item, view, _, _)| {
+                let mut view = view.clone();
+                view.selected = Some(*item) == selected;
+                view
+            })
+            .collect();
+        (items, pages, page)
+    }
+}
+
 #[allow(clippy::too_many_arguments)]
 pub(super) fn update_view(
     state: Res<InventoryState>,
@@ -280,6 +396,7 @@ pub(super) fn update_view(
     pointer: Option<Res<pointer::InventoryPointer>>,
     queue: Option<Res<pointer::InventoryQueue>>,
     mut stamp: Local<Option<SessionViewStamp>>,
+    mut catalog: Local<CatalogViewCache>,
     mut view: ResMut<InventoryView>,
 ) {
     let session = context.session.as_ref();
@@ -289,6 +406,7 @@ pub(super) fn update_view(
         ready: session.ready,
         mode: session.game_mode,
         revision: session.inventory.revision,
+        equipment: session.stats.equipment,
         outcome: session.last_inventory,
         container_anchor: session.container.as_ref().map(|container| container.anchor),
         container_workbench: session
@@ -299,6 +417,10 @@ pub(super) fn update_view(
             .container
             .as_ref()
             .and_then(|container| container.furnace.clone()),
+        crusher: session
+            .container
+            .as_ref()
+            .and_then(|container| container.crusher.clone()),
         container_revisions: std::array::from_fn(|index| {
             session
                 .container
@@ -338,6 +460,7 @@ pub(super) fn update_view(
         .map_or(&session.inventory, |p| &p.player);
     let container = session.container.as_ref();
     let furnace = container.and_then(|container| container.furnace.as_ref());
+    let crusher = container.and_then(|container| container.crusher.as_ref());
     let container_items = container.map_or_else(Vec::new, |container| {
         container
             .halves
@@ -350,6 +473,8 @@ pub(super) fn update_view(
                     .unwrap_or(&half.inventory);
                 let slots = if furnace.is_some() {
                     4
+                } else if crusher.is_some() {
+                    2
                 } else {
                     terra_core::containers::CHEST_SLOTS as u8
                 };
@@ -373,35 +498,16 @@ pub(super) fn update_view(
         .find(|category| category.id == state.category)
         .map_or("all", |category| category.id.as_str());
     let query = state.search.to_lowercase();
-    let browser: Vec<_> = available_items(GameMode::Creative, &session.inventory, &palette)
-        .into_iter()
-        .filter(|item| catalog_item(*item))
-        .map(|item| {
-            let mut slot = item_view(item, STACK_LIMIT, &palette);
-            slot.command = "catalog".into();
-            slot.count.clear();
-            slot.selected = Some(item) == selected;
-            slot
-        })
-        .filter(|slot| {
-            (category == "all" || slot.category == category)
-                && (query.is_empty()
-                    || slot.name.to_lowercase().contains(&query)
-                    || slot.identifier.to_lowercase().contains(&query))
-        })
-        .collect();
+    if !catalog.ready || palette.is_changed() {
+        catalog.rebuild(&palette);
+    }
     let page_size = if state.page_capacity == 0 {
         45
     } else {
         state.page_capacity
     };
-    let pages = browser.len().div_ceil(page_size).max(1);
-    let page = state.page.min(pages - 1);
-    let browser_items: Vec<_> = browser
-        .into_iter()
-        .skip(page * page_size)
-        .take(page_size)
-        .collect();
+    let (browser_items, pages, page) =
+        catalog.page(category, &query, page_size, state.page, selected);
     let items: Vec<_> = (9..terra_core::INVENTORY_SLOTS as u8)
         .map(|index| {
             let mut slot = slot_view(
@@ -474,6 +580,7 @@ pub(super) fn update_view(
         });
     let can_craft = crafting.can_cursor;
     let next = InventoryView {
+        prewarming: view.prewarming || !view.visible,
         layout_style: if state.open && !view.open {
             "opacity: 0; pointer-events: none;".into()
         } else {
@@ -481,8 +588,25 @@ pub(super) fn update_view(
         },
         open: state.open,
         assembly: state.assembly,
-        container: container
-            .is_some_and(|container| container.workbench.is_none() && container.furnace.is_none()),
+        container: container.is_some_and(|container| {
+            container.workbench.is_none()
+                && container.furnace.is_none()
+                && container.crusher.is_none()
+        }),
+        crusher: crusher.is_some(),
+        crusher_input: crusher
+            .and_then(|_| container_items.first().cloned())
+            .into_iter()
+            .collect(),
+        crusher_output: crusher
+            .and_then(|_| container_items.get(1).cloned())
+            .into_iter()
+            .collect(),
+        crusher_progress_style: format!(
+            "width: {:.1}%;",
+            crusher.map_or(0.0, |c| c.progress.clamp(0.0, 1.0) * 100.0)
+        ),
+        crusher_working: crusher.is_some_and(|c| c.working),
         furnace: furnace.is_some(),
         furnace_input: furnace
             .and_then(|_| container_items.first().cloned())
@@ -556,17 +680,16 @@ pub(super) fn update_view(
         creative,
         trash_available: creative
             && (session.inventory.cursor.is_some()
-                || session
-                    .inventory
-                    .slot(usize::from(
-                        state.source.or(state.active_slot).unwrap_or(state.hotbar),
-                    ))
-                    .is_some()),
+                || session.inventory.occupied_slots() > 0
+                || session.stats.equipment.iter().next().is_some()),
         empty: browser_items.is_empty(),
         title: container
             .map_or("Inventory", |container| {
                 if container.furnace.is_some() {
                     return "Furnace";
+                }
+                if container.crusher.is_some() {
+                    return "Crusher";
                 }
                 if container.workbench.is_some() {
                     return "Workbench";
@@ -591,7 +714,7 @@ pub(super) fn update_view(
         selected_count: selected
             .map(|item| {
                 if creative {
-                    STACK_LIMIT.to_string()
+                    item.max_stack().to_string()
                 } else {
                     session.inventory.count(item).to_string()
                 }
@@ -636,22 +759,31 @@ pub(super) fn update_view(
         craft_results: vec![craft_result.clone()],
         craft_result,
         browser_items,
+        browser_capacity: page_size,
         browser_page: format!("{} / {}", page + 1, pages),
         browser_previous: page > 0,
         browser_next: page + 1 < pages,
-        equipment: [
-            ("helmet", "Helmet"),
-            ("earring", "Earring"),
-            ("chestplate", "Chestplate"),
-            ("necklace", "Necklace"),
-            ("trousers", "Trousers"),
-            ("belt", "Belt"),
-            ("boots", "Boots"),
-            ("socks", "Socks"),
-        ]
-        .into_iter()
-        .map(|(kind, name)| EquipmentSlotView { kind, name })
-        .collect(),
+        equipment: terra_core::EquipmentSlot::ALL
+            .into_iter()
+            .map(|slot| EquipmentSlotView {
+                kind: slot.slug(),
+                slot_name: slot.name(),
+                item: {
+                    let mut item = session.stats.equipment.slot(slot.index()).map_or_else(
+                        || InventoryItemView {
+                            empty: true,
+                            ..default()
+                        },
+                        |stack| item_view(stack.item, stack.count, &palette),
+                    );
+                    item.id = format!("equipment-{}", slot.index());
+                    item.index = slot.index().to_string();
+                    item.command = "equipment".into();
+                    item.count.clear();
+                    item
+                },
+            })
+            .collect(),
         category_dropdown: state.category_dropdown,
         categories: std::iter::once(CategoryView {
             id: "all".into(),
@@ -682,6 +814,43 @@ pub(super) fn update_view(
 mod tests {
     use super::*;
     use terra_network::protocol::inventory::{ContainerHalf, ContainerSnapshot};
+
+    #[test]
+    fn catalog_metadata_is_reused_and_only_the_visible_filtered_page_is_cloned() {
+        let mut palette = BlockPalette {
+            choices: (1..=300)
+                .map(|id| terra_player::interaction::BlockChoice {
+                    id,
+                    name: format!("Material {id}"),
+                    identifier: format!("teramic::material_{id}"),
+                    description: "A detailed description".repeat(20),
+                })
+                .collect(),
+            ..Default::default()
+        };
+        let mut cache = CatalogViewCache::default();
+        cache.rebuild(&palette);
+        let pointer = cache.entries.as_ptr();
+        for selected in [None, Some(ItemKind::Block(3)), Some(ItemKind::Block(18))] {
+            let (page, pages, index) = cache.page("all", "material", 17, 1, selected);
+            assert_eq!(page.len(), 17);
+            assert_eq!(index, 1);
+            assert!(pages > 10);
+            assert_eq!(page[0].identifier, "teramic::material_18");
+            assert_eq!(page[0].selected, selected == Some(ItemKind::Block(18)));
+            assert_eq!(cache.entries.as_ptr(), pointer);
+            assert!(cache.entries.iter().all(|(_, view, _, _)| !view.selected));
+        }
+        let (page, pages, index) = cache.page("all", "does-not-exist", 17, 500, None);
+        assert!(page.is_empty());
+        assert_eq!((pages, index), (1, 0));
+        palette.choices[17].name = "Renamed Block".into();
+        cache.rebuild(&palette);
+        let (page, _, _) = cache.page("all", "renamed", 17, 0, None);
+        assert_eq!(page.len(), 1);
+        assert_eq!(page[0].name, item_metadata(ItemKind::Block(18), &palette).0);
+        assert_eq!(page[0].name, "Renamed Block (spruce)");
+    }
 
     #[test]
     fn food_tooltips_show_the_shared_nutrition_and_timed_regeneration() {
@@ -742,6 +911,7 @@ mod tests {
             anchor,
             workbench: None,
             furnace: None,
+            crusher: None,
             halves: vec![ContainerHalf {
                 position: anchor,
                 inventory: default(),
@@ -780,6 +950,7 @@ mod tests {
             anchor,
             workbench: Some([-11, 60, 8]),
             furnace: None,
+            crusher: None,
             halves: vec![ContainerHalf {
                 position: anchor,
                 inventory: default(),
@@ -810,6 +981,7 @@ mod tests {
             anchor,
             workbench: None,
             furnace: None,
+            crusher: None,
             halves: vec![ContainerHalf {
                 position: anchor,
                 inventory: default(),
@@ -854,6 +1026,7 @@ mod tests {
                 smoke_cells: 0,
                 vented: true,
             }),
+            crusher: None,
             halves: vec![ContainerHalf {
                 position: anchor,
                 inventory: default(),
@@ -962,7 +1135,7 @@ mod tests {
     }
 
     #[test]
-    fn equipment_ghosts_use_supported_css_and_declare_all_eight_positions() {
+    fn equipment_cells_use_supported_css_and_declare_all_positions() {
         tilt_ui::tilt_ui_css::parse_stylesheet(include_str!(
             "../../../src-ui/components/equipment-slot.component.css"
         ))
@@ -974,18 +1147,12 @@ mod tests {
         let mut app = view_app();
         app.update();
         let equipment = &app.world().resource::<InventoryView>().equipment;
-        assert_eq!(equipment.len(), 8);
-        for (slot, kind) in equipment.iter().zip([
-            "helmet",
-            "earring",
-            "chestplate",
-            "necklace",
-            "trousers",
-            "belt",
-            "boots",
-            "socks",
-        ]) {
-            assert_eq!(slot.kind, kind);
+        assert_eq!(equipment.len(), terra_core::EquipmentSlot::ALL.len());
+        for (view, slot) in equipment.iter().zip(terra_core::EquipmentSlot::ALL) {
+            assert_eq!(view.kind, slot.slug());
+            assert_eq!(view.item.command, "equipment");
+            assert_eq!(view.item.index, slot.index().to_string());
+            assert!(view.item.empty);
         }
     }
 }

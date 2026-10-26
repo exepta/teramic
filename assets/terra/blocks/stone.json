@@ -6,7 +6,7 @@
   "name": "Weathered Stone",
   "render_kind": "cube",
   "surface": "rock",
-  "bevel_width": 0.095,
+  "bevel_width": 0.0,
   "materials": {
     "Weathered blue stone": {
       "texture_pattern": "stone",

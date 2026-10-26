@@ -1,5 +1,5 @@
 //! Renderer-independent mechanics read from the same per-block asset JSON.
-use crate::{ItemKind, ToolKind};
+use crate::ItemKind;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
@@ -88,17 +88,7 @@ impl BlockProperties {
         let Some(ItemKind::Tool(tool)) = item else {
             return false;
         };
-        let (class, level) = match tool {
-            ToolKind::WoodPickaxe => (ToolClass::Pickaxe, 1),
-            ToolKind::StonePickaxe => (ToolClass::Pickaxe, 2),
-            ToolKind::IronPickaxe => (ToolClass::Pickaxe, 3),
-            ToolKind::StoneAxe => (ToolClass::Axe, 2),
-            ToolKind::StoneShovel => (ToolClass::Shovel, 2),
-            ToolKind::WoodAxe => (ToolClass::Axe, 1),
-            ToolKind::WoodShovel => (ToolClass::Shovel, 1),
-            ToolKind::WoodSword | ToolKind::StoneSword => return false,
-        };
-        class == required && level >= self.mining_level
+        tool.class() == Some(required) && tool.mining_level() >= self.mining_level
     }
 }
 #[derive(Clone, Debug, Default)]
@@ -161,6 +151,61 @@ impl BlockPropertiesCatalog {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::ToolKind;
+    #[test]
+    fn every_tool_tier_obeys_the_shared_class_and_existing_ore_levels() {
+        for tool in ToolKind::ALL {
+            for class in [ToolClass::Pickaxe, ToolClass::Axe, ToolClass::Shovel] {
+                for level in 1..=3 {
+                    let block = BlockProperties {
+                        required_tool: Some(class),
+                        mining_level: level,
+                        ..Default::default()
+                    };
+                    assert_eq!(
+                        block.can_harvest(Some(ItemKind::Tool(tool))),
+                        tool.class() == Some(class) && tool.mining_level() >= level,
+                        "{tool:?}/{class:?}/{level}"
+                    );
+                }
+            }
+            for ore in crate::OreKind::ALL {
+                assert_eq!(
+                    ItemKind::Tool(tool).can_harvest(ore.material()),
+                    tool.class() == Some(ToolClass::Pickaxe)
+                        && tool.mining_level() >= ore.mining_level()
+                );
+            }
+            assert_eq!(
+                tool.speed(3),
+                if tool.class() == Some(ToolClass::Pickaxe) {
+                    tool.efficiency()
+                } else {
+                    1.0
+                }
+            );
+            assert_eq!(
+                tool.speed(16),
+                if tool.class() == Some(ToolClass::Axe) {
+                    tool.efficiency()
+                } else {
+                    1.0
+                }
+            );
+            assert_eq!(
+                tool.speed(1),
+                if tool.class() == Some(ToolClass::Shovel) {
+                    tool.efficiency()
+                } else {
+                    1.0
+                }
+            );
+        }
+        assert_eq!(ToolKind::IronPickaxe.mining_level(), 3);
+        assert_eq!(ToolKind::IronPickaxe.speed(3), 6.0);
+        assert_eq!(ToolKind::WoodSword.attack_damage(), 3.0);
+        assert_eq!(ToolKind::StoneSword.attack_damage(), 5.0);
+    }
     #[test]
     fn configured_stone_tier_is_not_satisfied_by_wood_or_wrong_tool() {
         let properties = BlockProperties {

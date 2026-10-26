@@ -1,5 +1,7 @@
 //! The world avatar and inventory portrait share articulated meshes.
 pub(crate) mod model;
+mod riding;
+pub(crate) use riding::{MountedPresentation, MountedPresentationSet};
 
 use bevy::{camera::visibility::RenderLayers, prelude::*};
 use terra_core::{PlayerGender, PlayerId, PlayerProfile};
@@ -10,9 +12,9 @@ pub struct RemoteAvatar(pub PlayerId);
 #[derive(Component)]
 pub(crate) struct LocalAvatar;
 #[derive(Component)]
-pub(crate) struct WorldAvatarPart(Entity);
+pub(crate) struct WorldAvatarPart(pub(crate) Entity);
 #[derive(Component)]
-struct AvatarGender(PlayerGender);
+pub(crate) struct AvatarGender(pub(crate) PlayerGender);
 type LocalBodyFilter = (
     With<terra_player::PlayerBody>,
     Without<LocalAvatar>,
@@ -31,15 +33,15 @@ pub(crate) enum AvatarPart {
 
 #[derive(Component)]
 pub(crate) struct AvatarJoint {
-    root: Entity,
-    rest: Vec3,
+    pub(crate) root: Entity,
+    pub(crate) rest: Vec3,
 }
 
 #[derive(Resource)]
 pub(crate) struct AvatarAssets {
-    parts: [Vec<(AvatarPart, Vec3, Handle<Mesh>)>; 2],
-    eyelids: Option<Handle<Mesh>>,
-    material: Handle<StandardMaterial>,
+    pub(crate) parts: [Vec<(AvatarPart, Vec3, Handle<Mesh>)>; 2],
+    pub(crate) eyelids: Option<Handle<Mesh>>,
+    pub(crate) material: Handle<StandardMaterial>,
 }
 
 #[derive(Resource, Default)]
@@ -119,6 +121,10 @@ impl Default for AvatarBlink {
 #[derive(Component)]
 pub(crate) struct AvatarMotion {
     sleeping: bool,
+    mounted: bool,
+    seat: f32,
+    head_yaw: f32,
+    riding_pitch: f32,
     previous: Vec3,
     speed: f32,
     phase: f32,
@@ -133,6 +139,10 @@ impl AvatarMotion {
     fn new(position: Vec3) -> Self {
         Self {
             sleeping: false,
+            mounted: false,
+            seat: 0.0,
+            head_yaw: 0.0,
+            riding_pitch: 0.0,
             previous: position,
             speed: 0.0,
             phase: 0.0,
@@ -169,17 +179,26 @@ impl AvatarMotion {
 }
 
 pub(crate) fn install(app: &mut App) {
-    app.insert_resource(HandSwing {
-        elapsed: 0.32,
-        ..default()
-    })
-    .add_systems(Startup, assets)
-    .add_systems(
-        Update,
-        (swing, render, local_avatar, animate, blink)
-            .chain()
-            .after(terra_player::PlayerSet::Interaction),
-    );
+    app.init_resource::<MountedPresentation>()
+        .insert_resource(HandSwing {
+            elapsed: 0.32,
+            ..default()
+        })
+        .add_systems(Startup, assets)
+        .add_systems(
+            Update,
+            riding::prepare
+                .in_set(MountedPresentationSet)
+                .after(terra_player::PlayerSet::Movement),
+        )
+        .add_systems(
+            Update,
+            (swing, render, local_avatar, animate, blink)
+                .chain()
+                .after(MountedPresentationSet)
+                .after(terra_player::PlayerSet::Interaction),
+        );
+    crate::armor::install(app);
     crate::player_preview::install(app);
 }
 
@@ -225,27 +244,29 @@ pub(crate) fn assets(
     });
 }
 
-fn render(
+pub(crate) fn render(
     mut commands: Commands,
     players: Option<Res<ReplicatedPlayers>>,
     assets: Res<AvatarAssets>,
     session: Option<Res<terra_network::client::ClientSession>>,
+    mounts: Option<Res<MountedPresentation>>,
     mut roots: Query<(
         Entity,
         &RemoteAvatar,
         &AvatarGender,
         &mut Transform,
         &mut AvatarMotion,
+        &mut crate::armor::AvatarEquipment,
     )>,
 ) {
     let Some(players) = players else {
-        for (entity, _, _, _, _) in &roots {
+        for (entity, _, _, _, _, _) in &roots {
             commands.entity(entity).despawn();
         }
         return;
     };
     let mut present = std::collections::HashSet::new();
-    for (entity, avatar, gender, mut transform, mut motion) in &mut roots {
+    for (entity, avatar, gender, mut transform, mut motion, mut equipment) in &mut roots {
         let Some(track) = players.players.get(&avatar.0) else {
             commands.entity(entity).despawn();
             continue;
@@ -255,8 +276,31 @@ fn render(
             continue;
         }
         present.insert(avatar.0);
+        let desired = crate::armor::AvatarEquipment::from(track.current.equipment);
+        if *equipment != desired {
+            *equipment = desired;
+        }
         transform.translation = track.position();
         transform.rotation = Quat::from_rotation_y(track.current.look[0]);
+        motion.mounted = track.current.mounted.is_some();
+        motion.riding_pitch = mounts
+            .as_ref()
+            .and_then(|m| m.remote(avatar.0))
+            .map_or(0.0, |p| p.jump.pitch * 0.65);
+        let mounted_yaw = mounts
+            .as_ref()
+            .and_then(|m| m.remote(avatar.0))
+            .map(|p| p.horse.yaw)
+            .or_else(|| track.current.mounted.map(|m| m.yaw));
+        motion.head_yaw =
+            mounted_yaw.map_or(0.0, |yaw| riding::relative_yaw(track.current.look[0], yaw));
+        if let Some(yaw) = mounted_yaw {
+            transform.translation = mounts
+                .as_ref()
+                .and_then(|m| m.remote(avatar.0))
+                .map_or(transform.translation, |p| p.center);
+            transform.rotation = Quat::from_rotation_y(yaw);
+        }
         motion.pitch = track.current.look[1];
         let sleep = session
             .as_ref()
@@ -280,19 +324,37 @@ fn render(
             .as_ref()
             .and_then(|session| session.sleepers.iter().find(|sleep| sleep.player == id))
             .copied();
-        let position = track.position();
+        let position = mounts
+            .as_ref()
+            .and_then(|m| m.remote(id))
+            .map_or_else(|| track.position(), |p| p.center);
         let mut motion = AvatarMotion::new(position);
         motion.sleeping = sleep.is_some();
+        motion.mounted = track.current.mounted.is_some();
+        motion.riding_pitch = mounts
+            .as_ref()
+            .and_then(|m| m.remote(id))
+            .map_or(0.0, |p| p.jump.pitch * 0.65);
+        motion.seat = if motion.mounted { 1.0 } else { 0.0 };
+        let mounted_yaw = mounts
+            .as_ref()
+            .and_then(|m| m.remote(id))
+            .map(|p| p.horse.yaw)
+            .or_else(|| track.current.mounted.map(|m| m.yaw));
+        motion.head_yaw =
+            mounted_yaw.map_or(0.0, |yaw| riding::relative_yaw(track.current.look[0], yaw));
         let root = commands
             .spawn((
                 RemoteAvatar(id),
                 AvatarGender(track.current.gender),
+                crate::armor::AvatarEquipment::from(track.current.equipment),
                 motion,
                 Name::new(format!("Player {}", id.0)),
                 sleep.map_or_else(
                     || {
-                        Transform::from_translation(position)
-                            .with_rotation(Quat::from_rotation_y(track.current.look[0]))
+                        Transform::from_translation(position).with_rotation(Quat::from_rotation_y(
+                            mounted_yaw.unwrap_or(track.current.look[0]),
+                        ))
                     },
                     sleep_transform,
                 ),
@@ -394,7 +456,7 @@ pub(crate) fn spawn_parts(
 }
 
 #[allow(clippy::too_many_arguments)]
-fn local_avatar(
+pub(crate) fn local_avatar(
     mut commands: Commands,
     assets: Res<AvatarAssets>,
     perspective: Res<terra_player::CameraPerspective>,
@@ -402,12 +464,21 @@ fn local_avatar(
     fixed: Res<Time<Fixed>>,
     profile: Option<Res<PlayerProfile>>,
     session: Option<Res<terra_network::client::ClientSession>>,
+    mounts: Option<Res<MountedPresentation>>,
     bodies: Query<(&Transform, Option<&terra_player::CharacterPresentation>), LocalBodyFilter>,
     cameras: Query<
         &terra_player::CameraLook,
         (With<terra_player::TerraCamera>, Without<LocalAvatar>),
     >,
-    mut roots: Query<(Entity, &mut Transform, &mut AvatarMotion), With<LocalAvatar>>,
+    mut roots: Query<
+        (
+            Entity,
+            &mut Transform,
+            &mut AvatarMotion,
+            &mut crate::armor::AvatarEquipment,
+        ),
+        With<LocalAvatar>,
+    >,
     mut parts: Query<(&WorldAvatarPart, &mut RenderLayers)>,
 ) {
     let body = bodies.iter().next();
@@ -420,7 +491,7 @@ fn local_avatar(
             .is_some_and(|s| s.game_mode == terra_core::GameMode::Spectator)
         || (first_person && !miniature.is_some_and(|view| view.active))
     {
-        for (entity, _, _) in &roots {
+        for (entity, _, _, _) in &roots {
             commands.entity(entity).despawn();
         }
         return;
@@ -431,11 +502,24 @@ fn local_avatar(
     let (yaw, pitch, _) = cameras.iter().next().map_or((0.0, 0.0, 0.0), |camera| {
         camera.rotation().to_euler(EulerRot::YXZ)
     });
-    let position = presentation.map_or(body.translation, |presentation| {
-        presentation.visual_position(body.translation, fixed.overstep_fraction())
-    });
+    let position = mounts.as_ref().and_then(|m| m.local()).map_or_else(
+        || {
+            presentation.map_or(body.translation, |presentation| {
+                presentation.visual_position(body.translation, fixed.overstep_fraction())
+            })
+        },
+        |p| p.center,
+    );
+    let mounted_yaw = mounts
+        .as_ref()
+        .and_then(|m| m.local())
+        .map(|p| p.horse.yaw)
+        .or_else(|| session.as_ref().and_then(|s| s.mounted).map(|m| m.yaw));
     let transform = sleep.map_or_else(
-        || Transform::from_translation(position).with_rotation(Quat::from_rotation_y(yaw)),
+        || {
+            Transform::from_translation(position)
+                .with_rotation(Quat::from_rotation_y(mounted_yaw.unwrap_or(yaw)))
+        },
         sleep_transform,
     );
     let layers = if first_person {
@@ -446,9 +530,28 @@ fn local_avatar(
     if roots.is_empty() {
         let mut motion = AvatarMotion::new(position);
         motion.sleeping = sleep.is_some();
+        motion.mounted = mounted_yaw.is_some();
+        motion.riding_pitch = mounts
+            .as_ref()
+            .and_then(|m| m.local())
+            .map_or(0.0, |p| p.jump.pitch * 0.65);
+        motion.seat = if motion.mounted { 1.0 } else { 0.0 };
+        motion.head_yaw = mounted_yaw.map_or(0.0, |horse| riding::relative_yaw(yaw, horse));
         let root = commands
             .spawn((
                 LocalAvatar,
+                AvatarGender(
+                    profile
+                        .as_ref()
+                        .map_or(PlayerGender::default(), |p| p.gender),
+                ),
+                crate::armor::AvatarEquipment::from(
+                    session
+                        .as_ref()
+                        .map_or(terra_core::EquipmentSlots::default(), |session| {
+                            session.stats.equipment
+                        }),
+                ),
                 motion,
                 transform,
                 Visibility::default(),
@@ -465,10 +568,26 @@ fn local_avatar(
                 .map_or(PlayerGender::default(), |p| p.gender),
         );
     } else {
-        for (root, mut current, mut motion) in &mut roots {
+        for (root, mut current, mut motion, mut equipment) in &mut roots {
+            let desired = crate::armor::AvatarEquipment::from(
+                session
+                    .as_ref()
+                    .map_or(terra_core::EquipmentSlots::default(), |session| {
+                        session.stats.equipment
+                    }),
+            );
+            if *equipment != desired {
+                *equipment = desired;
+            }
             *current = transform;
             motion.pitch = pitch;
             motion.sleeping = sleep.is_some();
+            motion.mounted = mounted_yaw.is_some();
+            motion.riding_pitch = mounts
+                .as_ref()
+                .and_then(|m| m.local())
+                .map_or(0.0, |p| p.jump.pitch * 0.65);
+            motion.head_yaw = mounted_yaw.map_or(0.0, |horse| riding::relative_yaw(yaw, horse));
             for (part, mut current_layers) in &mut parts {
                 if part.0 == root && *current_layers != layers {
                     *current_layers = layers.clone();
@@ -497,6 +616,8 @@ pub(crate) fn animate(
 ) {
     let dt = time.delta_secs().clamp(0.0, 0.1);
     for (entity, mut transform, mut motion) in &mut roots {
+        let seat = if motion.mounted { 1.0 } else { 0.0 };
+        motion.seat += (seat - motion.seat) * (1.0 - (-dt * 12.0).exp());
         if motion.sleeping {
             motion.previous = transform.translation;
             motion.speed = 0.0;
@@ -507,6 +628,12 @@ pub(crate) fn animate(
             continue;
         }
         motion.advance(transform.translation, dt);
+        if motion.mounted {
+            motion.swim = 0.0;
+            motion.stroke = 0.0;
+            riding::sit(&mut transform, motion.riding_pitch);
+            continue;
+        }
         let wet = match (&terrain, &chunks, &journal) {
             (Some(t), Some(c), Some(j)) => terra_world::creatures::Habitat {
                 terrain: &t.0,
@@ -599,7 +726,7 @@ pub(crate) fn animate(
         };
         let (eating, bite) =
             consumption.map_or((0.0, 0.0), |c| eating_motion(c.progress, c.duration));
-        transform.rotation = match part {
+        let standing = match part {
             AvatarPart::Head => Quat::from_euler(
                 EulerRot::YXZ,
                 motion.idle_phase.sin() * 0.012 * (1.0 - motion.swim),
@@ -628,7 +755,11 @@ pub(crate) fn animate(
                 -motion.phase.sin() * (motion.speed / 5.0).min(1.0) * 0.035 * (1.0 - motion.swim),
             ),
         };
+        transform.rotation = standing.slerp(seated_pose(*part, motion, attack), motion.seat);
         transform.translation = joint.rest;
+        if let AvatarPart::Leg(side) = part {
+            transform.translation.x += f32::from(*side) * 0.08 * motion.seat;
+        }
         if matches!(
             part,
             AvatarPart::Body | AvatarPart::Head | AvatarPart::Arm(_)
@@ -638,6 +769,29 @@ pub(crate) fn animate(
         if *part == AvatarPart::Body {
             transform.scale = Vec3::new(1.0, 1.0 + motion.idle_phase.sin() * 0.004, 1.0);
         }
+    }
+}
+
+fn seated_pose(part: AvatarPart, motion: &AvatarMotion, attack: f32) -> Quat {
+    match part {
+        AvatarPart::Leg(side) => {
+            Quat::from_rotation_z(f32::from(side) * 0.65) * Quat::from_rotation_x(0.95)
+        }
+        AvatarPart::Calf(_) => Quat::from_rotation_x(-1.15),
+        AvatarPart::Arm(side) => Quat::from_euler(
+            EulerRot::XYZ,
+            0.65 + if side == 1 { attack * 0.8 } else { 0.0 },
+            0.0,
+            f32::from(side) * 0.10,
+        ),
+        AvatarPart::Forearm(_) => Quat::from_rotation_x(1.05),
+        AvatarPart::Head => Quat::from_euler(
+            EulerRot::YXZ,
+            motion.head_yaw,
+            motion.pitch.clamp(-0.65, 0.65),
+            0.0,
+        ),
+        AvatarPart::Body => Quat::IDENTITY,
     }
 }
 
@@ -748,6 +902,32 @@ fn blink(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn riding_pose_straddles_the_horse_with_bent_knees_instead_of_a_walking_cycle() {
+        let mut motion = AvatarMotion::new(Vec3::ZERO);
+        motion.mounted = true;
+        motion.seat = 1.0;
+        motion.head_yaw = 0.7;
+        for side in [-1, 1] {
+            let hip = Vec3::new(f32::from(side) * (0.115 + 0.08), -0.23, 0.0);
+            let upper = seated_pose(AvatarPart::Leg(side), &motion, 0.0);
+            let knee = hip + upper * Vec3::new(0.0, model::KNEE, 0.0);
+            let calf = seated_pose(AvatarPart::Calf(side), &motion, 0.0);
+            let foot = knee + upper * calf * Vec3::new(0.0, -0.30, 0.0);
+            assert!(knee.z < -0.20 && knee.x.abs() > 0.28);
+            assert!(foot.x.abs() > 0.40 && foot.y < knee.y);
+            motion.phase = 2.4;
+            motion.speed = 10.0;
+            assert!(upper.abs_diff_eq(seated_pose(AvatarPart::Leg(side), &motion, 0.0), 0.0001));
+        }
+        let pelvis_over_back = terra_player::PLAYER_HALF_HEIGHT - riding::SEATED_DROP - 0.285;
+        assert!((0.0..0.03).contains(&pelvis_over_back));
+        let head = seated_pose(AvatarPart::Head, &motion, 0.0)
+            .to_euler(EulerRot::YXZ)
+            .0;
+        assert!((head - 0.7).abs() < 0.0001);
+    }
 
     #[test]
     fn sleeping_pose_lies_face_up_with_its_head_on_the_pillow_in_every_direction() {

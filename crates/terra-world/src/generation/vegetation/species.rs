@@ -8,6 +8,7 @@ pub(crate) enum TreeSpecies {
     Birch,
     Spruce,
     Palm,
+    Cherry(bool),
     Mushroom(u8),
 }
 
@@ -24,6 +25,7 @@ impl TreeSpecies {
         match self {
             Self::Birch => MaterialId::WeatheredWood,
             Self::Spruce => MaterialId::SpruceLog,
+            Self::Cherry(_) => MaterialId::CherryLog,
             Self::Mushroom(_) => MaterialId::MushroomStem,
             _ => MaterialId::Wood,
         }
@@ -33,6 +35,8 @@ impl TreeSpecies {
             Self::Green | Self::Spruce | Self::Palm => MaterialId::Leaves,
             Self::Autumn => MaterialId::AutumnLeaves,
             Self::Birch => MaterialId::SilverLeaves,
+            Self::Cherry(false) => MaterialId::CherryLeaves,
+            Self::Cherry(true) => MaterialId::WhiteCherryLeaves,
             Self::Mushroom(variant) => [
                 MaterialId::PurpleMushroomCap,
                 MaterialId::RedMushroomCap,
@@ -50,10 +54,14 @@ impl TreeSpecies {
             Self::Birch => (14.0, 22.0),
             Self::Spruce => (21.0, 33.6),
             Self::Palm => (8.0, 14.0),
+            Self::Cherry(_) => (9.0, 17.0),
             Self::Mushroom(_) => (6.0, 14.0),
         }
     }
     pub fn in_biome(seed: u64, biome: BiomeSample) -> Self {
+        if f64::from(super::random(seed, 271)) < (biome.weights.cherry_forest * 1.7).min(1.0) {
+            return Self::Cherry(super::random(seed, 272) < 0.24);
+        }
         if f64::from(super::random(seed, 221)) < biome.weights.mushroom_park {
             return Self::Mushroom((super::random(seed, 222) * 6.0) as u8);
         }

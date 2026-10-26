@@ -1,7 +1,7 @@
 [workspace]
 resolver = "3"
 members = ["apps/client", "apps/server", "crates/*"]
-exclude = ["vendor/tilt-ui-runtime"]
+exclude = ["vendor/tilt-ui-runtime", "vendor/bevy_render"]
 default-members = ["apps/client", "apps/server"]
 
 [workspace.package]
@@ -16,6 +16,7 @@ bevy = { version = "~0.19.1", default-features = false, features = ["std", "asyn
 avian3d = { version = "~0.7.0", default-features = false, features = ["3d", "f32", "parry-f32", "parallel"] }
 lightyear = { version = "~0.30.1", default-features = false, features = ["std"] }
 tilt-ui = { version = "=0.1.0" }
+tilt-ui-runtime = { version = "=0.1.0" }
 tilt-ui-build = "=0.1.0"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
@@ -42,6 +43,7 @@ terra-ui = { path = "crates/terra-ui" }
 
 [patch.crates-io]
 tilt-ui-runtime = { path = "vendor/tilt-ui-runtime" }
+bevy_render = { path = "vendor/bevy_render" }
 
 [profile.dev]
 opt-level = 1

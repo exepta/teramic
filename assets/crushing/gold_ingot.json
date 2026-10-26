@@ -1,0 +1,1 @@
+{"id":10616,"key":"teramic::crush_gold_ingot","name":"Gold Dust","input":{"mineral":"gold_ingot"},"output":{"item":{"dust":"gold"},"count":1},"seconds":4}

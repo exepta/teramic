@@ -139,6 +139,9 @@ fn candidates(terrain: &TerraGenerator, start: [i64; 3], size: usize, vertical: 
                 continue;
             }
             let mut tree = Tree::with_species(origin, seed, roots, species);
+            if terrain.config().ecology_revision < 2 && matches!(species, TreeSpecies::Cherry(_)) {
+                tree.wood_material = terra_voxel::MaterialId::Wood;
+            }
             if terrain.config().geology_revision == 0 && species == TreeSpecies::Spruce {
                 tree.wood_material = terra_voxel::MaterialId::Wood;
             }
@@ -150,7 +153,7 @@ fn candidates(terrain: &TerraGenerator, start: [i64; 3], size: usize, vertical: 
                         && origin[i] + i64::from(tree.bounds.min[i]) < start[i] + size as i64
                 })
             };
-            if intersects {
+            if intersects && !terrain.structure_clears_tree(origin) {
                 trees.push(tree);
             }
         }

@@ -1,0 +1,52 @@
+{
+  "id": "teramic::iron_helmet",
+  "name": "Iron Helmet",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "armor": {
+        "material": "iron",
+        "piece": "helmet"
+      }
+    },
+    "count": 1
+  },
+  "pattern": {
+    "kind": "shaped",
+    "width": 3,
+    "height": 2,
+    "cells": [
+      {
+        "item": {
+          "mineral": "iron_ingot"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "mineral": "iron_ingot"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "mineral": "iron_ingot"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "mineral": "iron_ingot"
+        },
+        "count": 1
+      },
+      null,
+      {
+        "item": {
+          "mineral": "iron_ingot"
+        },
+        "count": 1
+      }
+    ]
+  }
+}

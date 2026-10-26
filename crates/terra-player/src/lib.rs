@@ -9,4 +9,4 @@ pub use camera::{
 pub use interaction::{TargetBlock, TargetCreature, TargetWorld, WorldTarget};
 pub use plugin::{PlayerSet, TerraPlayerPlugin};
 pub use terra_physics::character::CharacterPresentation;
-pub use terra_physics::character::{PLAYER_EYE_OFFSET, PLAYER_RADIUS};
+pub use terra_physics::character::{PLAYER_EYE_OFFSET, PLAYER_HALF_HEIGHT, PLAYER_RADIUS};

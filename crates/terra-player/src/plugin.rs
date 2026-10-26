@@ -35,6 +35,7 @@ impl Plugin for TerraPlayerPlugin {
             .init_resource::<crate::interaction::InteractionMotion>()
             .add_message::<terra_network::client::MiningRequest>()
             .add_message::<terra_network::client::PropPlaceRequest>()
+            .add_message::<terra_network::client::FarmToolRequest>()
             .add_message::<terra_network::client::ConfirmedEdit>()
             .configure_sets(
                 Update,

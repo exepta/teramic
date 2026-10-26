@@ -1,0 +1,6 @@
+{
+  "item": { "crop": "bread" },
+  "name": "Bread",
+  "description": "A nourishing loaf made from harvested wheat.",
+  "food": { "nutrition": 30.0, "saturation": 24.0, "eat_seconds": 1.6 }
+}

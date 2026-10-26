@@ -29,6 +29,8 @@ struct MenuSmoke {
     lan: bool,
     pointer: bool,
     gameplay_only: bool,
+    mob_health_only: bool,
+    graphics_controls_only: bool,
     origin: Vec3,
     edit_count: usize,
     loading_captured: bool,
@@ -78,6 +80,9 @@ pub(crate) fn install(app: &mut App) {
             lan: std::env::args().any(|a| a == "--smoke-test-menu-lan"),
             pointer: std::env::args().any(|a| a == "--smoke-test-menu-pointer"),
             gameplay_only: std::env::args().any(|a| a == "--smoke-test-menu-gameplay"),
+            mob_health_only: std::env::args().any(|a| a == "--smoke-test-menu-mob-health"),
+            graphics_controls_only: std::env::args()
+                .any(|a| a == "--smoke-test-menu-graphics-controls"),
             origin: Vec3::ZERO,
             edit_count: 0,
             loading_captured: false,
@@ -220,6 +225,81 @@ fn scope_distance(world: &World, mut entity: Entity, title: &str) -> Option<usiz
     }
     None
 }
+
+fn setting_scroll_target(world: &mut World, title: &str) -> Result<(Entity, Entity), String> {
+    let control = world
+        .query::<(Entity, &ElementId, &tilt_ui::ChoiceBoxParts)>()
+        .iter(world)
+        .filter(|(_, id, _)| id.0 == "row-select")
+        .filter_map(|(entity, _, _)| {
+            scope_distance(world, entity, title).map(|distance| (distance, entity))
+        })
+        .min_by_key(|(distance, _)| *distance)
+        .map(|(_, entity)| entity)
+        .ok_or_else(|| format!("Graphics control missing for scrolling: {title}"))?;
+    let mut ancestor = control;
+    for _ in 0..24 {
+        if world
+            .get::<tilt_ui::ElementClasses>(ancestor)
+            .is_some_and(|classes| classes.classes.iter().any(|class| class == "settings-list"))
+        {
+            return Ok((control, ancestor));
+        }
+        ancestor = world
+            .get::<ChildOf>(ancestor)
+            .ok_or("Graphics control has no settings-list ancestor")?
+            .parent();
+    }
+    Err("Graphics settings-list ancestor exceeds the fixture's hierarchy limit".into())
+}
+
+fn scroll_setting_into_view(world: &mut World, title: &str) -> Result<(), String> {
+    let (control, list) = setting_scroll_target(world, title)?;
+    let target_y = world
+        .get::<bevy::ui::UiGlobalTransform>(control)
+        .ok_or("Graphics control has no transform")?
+        .translation
+        .y;
+    let list_y = world
+        .get::<bevy::ui::UiGlobalTransform>(list)
+        .ok_or("Graphics scroll list has no transform")?
+        .translation
+        .y;
+    let scale = world
+        .get::<ComputedNode>(list)
+        .ok_or("Graphics scroll list has no layout")?
+        .inverse_scale_factor;
+    world
+        .get_mut::<bevy::ui::ScrollPosition>(list)
+        .ok_or("Graphics list has no real scroll position")?
+        .0
+        .y += (target_y - list_y) * scale;
+    Ok(())
+}
+
+fn require_setting_on_screen(world: &mut World, title: &str) -> Result<(), String> {
+    let (control, list) = setting_scroll_target(world, title)?;
+    let bounds = |entity| -> Result<(Vec2, Vec2), String> {
+        let center = world
+            .get::<bevy::ui::UiGlobalTransform>(entity)
+            .ok_or("Graphics capture element has no transform")?
+            .translation;
+        let half = world
+            .get::<ComputedNode>(entity)
+            .ok_or("Graphics capture element has no layout")?
+            .size()
+            * 0.5;
+        Ok((center - half, center + half))
+    };
+    let (minimum, maximum) = bounds(control)?;
+    let (list_minimum, list_maximum) = bounds(list)?;
+    require(
+        minimum.cmpge(list_minimum - Vec2::ONE).all()
+            && maximum.cmple(list_maximum + Vec2::ONE).all(),
+        &format!("Graphics control remains clipped after scrolling: {title}"),
+    )
+}
+
 fn screenshot(world: &mut World, state: &MenuSmoke, name: &str) {
     world
         .spawn(bevy::render::view::screenshot::Screenshot::primary_window())
@@ -382,7 +462,14 @@ fn run(world: &mut World) {
     let Some(mut state) = world.remove_resource::<MenuSmoke>() else {
         return;
     };
-    let result = if state.started.elapsed() > Duration::from_secs(150) {
+    let result = if state.started.elapsed()
+        > Duration::from_secs(if state.graphics_controls_only {
+            45
+        } else if state.mob_health_only {
+            25
+        } else {
+            150
+        }) {
         Err(format!("Menu smoke timed out at stage {}", state.stage))
     } else if state.advanced.elapsed() < Duration::from_millis(450) {
         Ok(false)
@@ -452,6 +539,16 @@ fn step(world: &mut World, state: &mut MenuSmoke) -> Result<bool, String> {
             if state.gameplay_only {
                 emit(world, "options", None)?;
                 state.stage = 689;
+                return Ok(true);
+            }
+            if state.mob_health_only {
+                emit(world, "options", None)?;
+                state.stage = 799;
+                return Ok(true);
+            }
+            if state.graphics_controls_only {
+                emit(world, "options", None)?;
+                state.stage = 899;
                 return Ok(true);
             }
             emit(world, "singleplayer", None)?;
@@ -1441,6 +1538,250 @@ fn step(world: &mut World, state: &mut MenuSmoke) -> Result<bool, String> {
                 "Native Gameplay menu smoke passed: real TiltUI tab, MiniMap popup, widgets, staged Apply, TOML reload, Reset, bounded footer and Back"
             );
             emit(world, "quit", None)?;
+        }
+        800 if state.mob_health_only => {
+            emit(world, "gameplay-options", None)?;
+        }
+        801 if state.mob_health_only => {
+            require(
+                world.resource::<OptionsView>().rows.iter().any(|row| {
+                    row.id == "mob-health-settings"
+                        && row.label == "Edit Bars"
+                        && row.kind == "command"
+                }),
+                "Gameplay Edit Bars button missing",
+            )?;
+            emit(world, "mob-health-settings", None)?;
+        }
+        802 if state.mob_health_only => {
+            require(
+                world.resource::<MenuState>().dialog == MenuDialog::MobHealth
+                    && world.resource::<DialogView>().mob_health,
+                "Edit Bars did not open its actual popup",
+            )?;
+            let controls: Vec<_> = world
+                .query::<(Entity, &tilt_ui::ColorPickerState, &ComputedNode)>()
+                .iter(world)
+                .filter(|(entity, _, _)| has_ancestor_class(world, *entity, "mob-health-options"))
+                .map(|(entity, _, node)| (entity, node.size()))
+                .collect();
+            require(
+                controls.len() == 3
+                    && controls
+                        .iter()
+                        .all(|(_, size)| size.x >= 100.0 && size.y >= 30.0),
+                "Friendly/Hostile/Font color choosers lack actual widget layout",
+            )?;
+            screenshot(world, state, "mob-health-edit-bars");
+            emit(world, "mob-health-bars", Some("in_view"))?;
+            emit(world, "mob-health-friendly-color", Some("#3aaed8"))?;
+            emit(world, "mob-health-hostile-color", Some("#eb8040"))?;
+            emit(world, "mob-health-font-color", Some("#e3efd5"))?;
+        }
+        803 if state.mob_health_only => {
+            let draft = &world.resource::<OptionsDraft>().gameplay;
+            require(
+                draft.mob_health_bars == terra_core::MobHealthBars::InView
+                    && draft.mob_health_friendly_color == [58, 174, 216]
+                    && draft.mob_health_hostile_color == [235, 128, 64]
+                    && draft.mob_health_font_color == [227, 239, 213],
+                "Actual popup handlers did not stage selected mode/colors",
+            )?;
+            require(
+                *world.resource::<GameplayConfig>() == GameplayConfig::default(),
+                "Popup changes applied before Apply",
+            )?;
+            let picker = world
+                .query::<(Entity, &tilt_ui::ColorPickerState)>()
+                .iter(world)
+                .find(|(entity, _)| has_ancestor_class(world, *entity, "mob-health-options"))
+                .map(|(entity, _)| entity)
+                .ok_or("Color picker missing")?;
+            require(
+                tilt_ui::set_color_picker_open(world, picker, true),
+                "Actual color picker did not open",
+            )?;
+        }
+        804 if state.mob_health_only => {
+            screenshot(world, state, "mob-health-color-picker");
+            let pickers: Vec<_> = world
+                .query::<(Entity, &tilt_ui::ColorPickerState)>()
+                .iter(world)
+                .filter(|(entity, _)| has_ancestor_class(world, *entity, "mob-health-options"))
+                .map(|(entity, _)| entity)
+                .collect();
+            for picker in pickers {
+                tilt_ui::set_color_picker_open(world, picker, false);
+            }
+            emit(world, "dialog-cancel", None)?;
+        }
+        805 if state.mob_health_only => {
+            emit(world, "apply", None)?;
+        }
+        806 if state.mob_health_only => {
+            let saved =
+                GameplayConfig::load(world.resource::<MenuPaths>().configs.join("gameplay.toml"))
+                    .map_err(|error| error.to_string())?;
+            require(
+                saved == *world.resource::<GameplayConfig>()
+                    && saved.mob_health_friendly_color == [58, 174, 216]
+                    && saved.mob_health_hostile_color == [235, 128, 64]
+                    && saved.mob_health_font_color == [227, 239, 213],
+                "Mob-health colors did not persist through normal Apply",
+            )?;
+            emit(world, "mob-health-settings", None)?;
+        }
+        807 if state.mob_health_only => {
+            emit(world, "mob-health-reset", None)?;
+        }
+        808 if state.mob_health_only => {
+            require(
+                world.resource::<OptionsDraft>().gameplay == GameplayConfig::default()
+                    && world.resource::<GameplayConfig>().mob_health_friendly_color
+                        == [58, 174, 216],
+                "Reset did not remain staged inside the popup",
+            )?;
+            emit(world, "dialog-cancel", None)?;
+        }
+        809 if state.mob_health_only => {
+            if world.resource::<MenuState>().dialog != MenuDialog::None
+                || world.resource::<DialogView>().visible
+            {
+                return Ok(false);
+            }
+            emit(world, "back", None)?;
+        }
+        810 if state.mob_health_only => {
+            require(
+                world.resource::<MenuState>().dialog == MenuDialog::Discard,
+                "Unsaved popup reset did not use the normal Discard prompt",
+            )?;
+            emit(world, "discard-confirm", None)?;
+        }
+        811 if state.mob_health_only => {
+            require(
+                world.resource::<MenuState>().page == MenuPage::Main
+                    && world.resource::<GameplayConfig>().mob_health_friendly_color
+                        == [58, 174, 216],
+                "Discard changed applied bar preferences",
+            )?;
+            tracing::info!(
+                "Native Mob Health editor passed: bound Edit Bars modal, actual choice/color-picker widgets, staged colors, persistent Apply and Reset/Discard"
+            );
+            emit(world, "quit", None)?;
+        }
+        900 if state.graphics_controls_only => emit(world, "graphics", None)?,
+        901 if state.graphics_controls_only => {
+            for (title, labels) in [
+                ("Cave Lighting", &["Low", "Medium", "High", "Ultra"][..]),
+                (
+                    "Tree Fall Animation",
+                    &["Current (Default)", "Hell Fall", "Magic"][..],
+                ),
+            ] {
+                let (entity, parts) = world
+                    .query::<(Entity, &ElementId, &tilt_ui::ChoiceBoxParts, &ComputedNode)>()
+                    .iter(world)
+                    .filter(|(_, id, _, node)| {
+                        id.0 == "row-select" && node.size().min_element() > 0.0
+                    })
+                    .filter_map(|(entity, _, parts, _)| {
+                        scope_distance(world, entity, title)
+                            .map(|distance| (distance, entity, *parts))
+                    })
+                    .min_by_key(|(distance, _, _)| *distance)
+                    .map(|(_, entity, parts)| (entity, parts))
+                    .ok_or_else(|| {
+                        format!("Graphics dropdown lacks a materialized widget: {title}")
+                    })?;
+                require(
+                    has_ancestor_class(world, entity, "settings-row"),
+                    "Graphics dropdown detached from its row",
+                )?;
+                require(
+                    world
+                        .get::<bevy::ui::widget::Text>(parts.value)
+                        .is_some_and(|value| labels.contains(&value.0.as_str())),
+                    "Graphics selected option is blank",
+                )?;
+                for label in labels {
+                    require(
+                        subtree_has_text(world, parts.popup, label, 0),
+                        "Graphics dropdown option did not materialize",
+                    )?;
+                }
+            }
+            screenshot(world, state, "graphics-controls");
+            emit(world, "graphics-caves", Some("low"))?;
+            emit(world, "graphics-tree-fall", Some("hell_fall"))?;
+            scroll_setting_into_view(world, "Cave Lighting")?;
+            state.stage = 909;
+        }
+        902 if state.graphics_controls_only => {
+            let draft = &world.resource::<OptionsDraft>().graphics;
+            require(
+                draft.cave_quality == terra_core::CaveQuality::Low
+                    && draft.tree_fall_animation == terra_core::TreeFallAnimation::HellFall,
+                "Graphics widget changes did not reach the draft",
+            )?;
+            emit(world, "apply", None)?;
+        }
+        903 if state.graphics_controls_only => {
+            let saved =
+                GraphicsConfig::load(world.resource::<MenuPaths>().configs.join("graphics.toml"))
+                    .map_err(|error| error.to_string())?;
+            require(
+                saved.cave_quality == terra_core::CaveQuality::Low
+                    && saved.tree_fall_animation == terra_core::TreeFallAnimation::HellFall,
+                "Low/Hell Fall did not persist",
+            )?;
+            emit(world, "graphics-caves", Some("ultra"))?;
+            emit(world, "graphics-tree-fall", Some("magic"))?;
+        }
+        904 if state.graphics_controls_only => emit(world, "apply", None)?,
+        905 if state.graphics_controls_only => {
+            let saved =
+                GraphicsConfig::load(world.resource::<MenuPaths>().configs.join("graphics.toml"))
+                    .map_err(|error| error.to_string())?;
+            require(
+                saved.cave_quality == terra_core::CaveQuality::Ultra
+                    && saved.tree_fall_animation == terra_core::TreeFallAnimation::Magic,
+                "Ultra/Magic did not persist",
+            )?;
+            emit(world, "graphics-caves", Some("medium"))?;
+            emit(world, "graphics-tree-fall", Some("current"))?;
+        }
+        906 if state.graphics_controls_only => emit(world, "apply", None)?,
+        907 if state.graphics_controls_only => {
+            let saved =
+                GraphicsConfig::load(world.resource::<MenuPaths>().configs.join("graphics.toml"))
+                    .map_err(|error| error.to_string())?;
+            require(
+                saved.cave_quality == terra_core::CaveQuality::Medium
+                    && saved.tree_fall_animation == terra_core::TreeFallAnimation::Current,
+                "Medium/Current did not persist",
+            )?;
+            emit(world, "back", None)?;
+        }
+        908 if state.graphics_controls_only => {
+            require(
+                world.resource::<MenuState>().page == MenuPage::Main,
+                "Graphics controls did not return to the main menu",
+            )?;
+            tracing::info!(
+                "Native Graphics controls passed: materialized Cave Lighting and Tree Fall Animation widgets, selected labels, options, actual UI handlers and persistent Apply"
+            );
+            emit(world, "quit", None)?;
+        }
+        910 if state.graphics_controls_only => {
+            require_setting_on_screen(world, "Cave Lighting")?;
+            screenshot(world, state, "graphics-cave-lighting");
+            scroll_setting_into_view(world, "Tree Fall Animation")?;
+        }
+        911 if state.graphics_controls_only => {
+            require_setting_on_screen(world, "Tree Fall Animation")?;
+            screenshot(world, state, "graphics-tree-fall-animation");
+            state.stage = 901;
         }
         1000 => pointer(world, "", "", false)?,
         1001 => {

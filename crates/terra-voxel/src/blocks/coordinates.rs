@@ -7,7 +7,9 @@ pub struct ColumnPos {
     pub x: i64,
     pub z: i64,
 }
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(
+    Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize,
+)]
 pub struct SectionPos {
     pub x: i64,
     pub y: i64,

@@ -1,0 +1,28 @@
+{
+  "id": "teramic::white_carpet",
+  "name": "White Carpet",
+  "station": "hand",
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "block": 106
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "dye": "white"
+        },
+        "count": 1
+      }
+    ]
+  },
+  "output": {
+    "item": {
+      "block": 106
+    },
+    "count": 1
+  }
+}

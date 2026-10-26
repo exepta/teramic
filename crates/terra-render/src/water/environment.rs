@@ -25,6 +25,13 @@ type Cameras<'w, 's> = Query<
     ),
     With<TerraCamera>,
 >;
+type ViewEnvironment<'w> = (
+    Res<'w, Time>,
+    Res<'w, crate::scene::daylight::Daylight>,
+    Res<'w, crate::scene::caves::CaveState>,
+    Option<Res<'w, crate::weather::WeatherVisual>>,
+    Option<Res<'w, terra_network::client::ClientSession>>,
+);
 
 #[derive(Default)]
 pub(crate) struct WaterProbe {
@@ -87,12 +94,7 @@ impl WaterProbe {
 }
 
 pub(crate) fn update(
-    (time, daylight, cave, weather): (
-        Res<Time>,
-        Res<crate::scene::daylight::Daylight>,
-        Res<crate::scene::caves::CaveState>,
-        Option<Res<crate::weather::WeatherVisual>>,
-    ),
+    (time, daylight, cave, weather, session): ViewEnvironment,
     (config, terrain, chunks, journal): (
         Res<GameConfig>,
         Res<WorldTerrain>,
@@ -102,7 +104,23 @@ pub(crate) fn update(
     mut state: ResMut<UnderwaterState>,
     mut cameras: Cameras,
     mut probe: Local<WaterProbe>,
+    mut previous_vision: Local<f32>,
 ) {
+    let vision = session
+        .as_ref()
+        .filter(|session| session.ready)
+        .and_then(|session| {
+            session
+                .stats
+                .survival
+                .effects
+                .get(terra_core::EffectKind::NightVision)
+        })
+        .map_or(0.0, |effect| {
+            (2.0 + f32::from(effect.level) * 2.0) * (effect.remaining_seconds / 3.0).clamp(0.0, 1.0)
+        });
+    let vision_changed = *previous_vision != vision;
+    *previous_vision = vision;
     for (camera, mut fog, mut grading, mut ambient, mut optical) in &mut cameras {
         let p = camera.translation;
         let old_depth = state.depth;
@@ -133,6 +151,7 @@ pub(crate) fn update(
             && !config.is_changed()
             && !daylight.is_changed()
             && !cave.is_changed()
+            && !vision_changed
             && weather.as_ref().is_none_or(|weather| !weather.is_changed());
         state.blend += (target - state.blend) * (1.0 - (-14.0 * time.delta_secs()).exp());
         if (target - state.blend).abs() < 0.001 {
@@ -162,8 +181,8 @@ pub(crate) fn update(
             },
             strength,
         );
-        let medium_color = underwater_color(biome_color) * (0.23 + 0.77 * daylight.daylight);
-        let scattering = medium_color.extend(daylight.daylight);
+        let scattering = medium_scattering(biome_color, daylight.daylight, cave.blend);
+        let medium_color = scattering.truncate();
         let tint_changed = optical.scattering != scattering;
         let world_from_view = if blend > 0.001 {
             Mat4::from_scale_rotation_translation(camera.scale, camera.rotation, camera.translation)
@@ -209,11 +228,34 @@ pub(crate) fn update(
             );
         }
         crate::scene::caves::apply(cave.blend, blend, &mut fog, &mut grading, &mut ambient);
+        apply_night_vision(
+            vision,
+            (1.0 - daylight.daylight).max(cave.blend),
+            &mut ambient,
+        );
+    }
+}
+
+/// View-local fill preserves actual world lights, shadows and other players' night vision.
+fn apply_night_vision(strength: f32, darkness: f32, ambient: &mut AmbientLight) {
+    let strength = strength.clamp(0.0, 8.0) * darkness.clamp(0.0, 1.0);
+    if strength > 0.0 {
+        ambient.brightness *= 1.0 + strength;
+        ambient.color = ambient
+            .color
+            .mix(&Color::srgb(0.83, 0.93, 1.0), strength / 10.0);
     }
 }
 
 fn underwater_color(tint: [f32; 3]) -> Vec3 {
     Vec3::from_array(tint) * 0.62 + Vec3::new(0.010, 0.044, 0.093)
+}
+
+fn medium_scattering(tint: [f32; 3], daylight: f32, cave: f32) -> Vec4 {
+    let skylight = crate::scene::caves::sky_visibility(cave);
+    // A cave lake has no sunlit marine backplate or solar caustics. Real
+    // point lights still illuminate the geometry through the PBR path.
+    (underwater_color(tint) * (0.23 + 0.77 * daylight) * skylight).extend(daylight * skylight)
 }
 
 fn medium_fog(surface_srgb: Vec3, water_linear: Vec3, blend: f32) -> Color {
@@ -254,6 +296,44 @@ fn apply_environment(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn night_vision_is_local_level_scaled_and_does_not_brighten_daytime() {
+        for base in [25.2, 300.0, 760.0] {
+            let initial = AmbientLight {
+                brightness: base,
+                ..default()
+            };
+            let mut daylight = initial.clone();
+            apply_night_vision(6.0, 0.0, &mut daylight);
+            assert_eq!(daylight.brightness, initial.brightness);
+            assert_eq!(daylight.color, initial.color);
+            let mut first = initial.clone();
+            apply_night_vision(4.0, 1.0, &mut first);
+            let mut second = initial.clone();
+            apply_night_vision(6.0, 1.0, &mut second);
+            assert_eq!(first.brightness, base * 5.0);
+            assert_eq!(second.brightness, base * 7.0);
+            let mut expired = initial.clone();
+            apply_night_vision(0.0, 1.0, &mut expired);
+            assert_eq!(expired.brightness, initial.brightness);
+            assert_eq!(expired.color, initial.color);
+        }
+    }
+
+    #[test]
+    fn enclosed_cave_water_has_no_solar_caustics_or_luminous_marine_backplate() {
+        for daylight in [0.0, 0.5, 1.0] {
+            assert_eq!(
+                medium_scattering(super::super::biome::DEFAULT_TINT, daylight, 1.0),
+                Vec4::ZERO
+            );
+            let open = medium_scattering(super::super::biome::DEFAULT_TINT, daylight, 0.0);
+            let entrance = medium_scattering(super::super::biome::DEFAULT_TINT, daylight, 0.5);
+            assert_eq!(entrance, open * 0.5);
+            assert_eq!(open.w, daylight);
+        }
+    }
 
     #[test]
     fn emerging_restores_surface_style_and_fog() {

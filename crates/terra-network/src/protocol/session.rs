@@ -7,8 +7,8 @@ use terra_core::{
 use terra_voxel::SectionPos;
 use terra_world::{edits::SectionDelta, props::PropId};
 
-// Version 56 adds bounded status effects to authoritative player vitals and snapshots.
-pub const PROTOCOL_VERSION: u32 = 56;
+// Version 75 adds cherry joinery and authoritative bucket transfers.
+pub const PROTOCOL_VERSION: u32 = 75;
 pub const PROTOCOL_ID: u64 = 0x5445525241000001;
 pub const MAX_INPUT_BACKLOG: usize = 128;
 
@@ -28,6 +28,8 @@ pub enum ClientControl {
         version: u32,
         generator: u32,
         effect_catalog: u64,
+        equipment_catalog: u64,
+        crushing_catalog: u64,
         view_distance: u8,
         profile: PlayerProfile,
     },
@@ -48,6 +50,21 @@ pub enum ClientControl {
         revision: u64,
     },
     LeaveBed,
+    Crank {
+        position: Option<[i64; 3]>,
+        look: [f32; 2],
+    },
+    InspectCreature(Option<u64>),
+    Dismount,
+    PetCommand {
+        id: u64,
+        mode: terra_core::creatures::taming::CompanionMode,
+    },
+    HarvestHoney {
+        section: SectionPos,
+        id: PropId,
+        look: [f32; 2],
+    },
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -95,6 +112,7 @@ impl MiningTarget {
 pub struct MiningIntent {
     pub target: Option<MiningTarget>,
     pub look: [f32; 2],
+    pub fell_tree: bool,
 }
 #[derive(Clone, Copy, Debug, Serialize, Deserialize)]
 pub struct MiningProgress {
@@ -180,6 +198,10 @@ pub enum EditAction {
         expected: u16,
         facing: u8,
     },
+    Farm {
+        position: [i64; 3],
+        action: terra_core::farming::FarmingAction,
+    },
 }
 #[derive(Clone, Copy, Debug, Serialize, Deserialize)]
 pub struct InventorySource {
@@ -215,7 +237,7 @@ pub enum ServerControl {
         mode: GameMode,
         allow_flight: bool,
         tick: u64,
-        state: PlayerState,
+        state: Box<PlayerState>,
     },
     Welcome {
         player: PlayerId,
@@ -223,6 +245,7 @@ pub enum ServerControl {
         world: Box<WorldConfig>,
         tick_rate: u16,
         spawn: [f32; 3],
+        location: Option<terra_core::PlayerLocation>,
         allow_flight: bool,
         allow_build: bool,
         allow_environment: bool,
@@ -246,7 +269,7 @@ pub enum ServerControl {
     },
     Stats {
         generation: u32,
-        stats: terra_core::PlayerStats,
+        stats: Box<terra_core::PlayerStats>,
     },
     Chat(super::chat::ChatEntry),
     ChatPlayers(Vec<String>),
@@ -258,7 +281,7 @@ pub enum ServerControl {
     TeleportCancelled,
     Teleport {
         tick: u64,
-        state: PlayerState,
+        state: Box<PlayerState>,
     },
     Reject(String),
     Container(Option<super::inventory::ContainerSnapshot>),
@@ -272,6 +295,52 @@ pub enum ServerControl {
     },
     Furnaces(Vec<FurnaceVisual>),
     GameRules(Box<terra_core::WorldRuleSettings>),
+    Crushers(Vec<CrusherVisual>),
+    CropProgress(Vec<CropProgress>),
+    WateringReserve {
+        units: u8,
+        capacity: u8,
+    },
+    ChestViewers(Vec<[i64; 3]>),
+    TreeCollapse(terra_world::tree_felling::Collapse),
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
+pub struct CropProgress {
+    pub support: [i64; 3],
+    pub kind: terra_core::farming::CropKind,
+    pub prop_id: u64,
+    pub progress: f32,
+    pub moisture: f32,
+}
+impl CropProgress {
+    pub fn valid(self) -> bool {
+        self.prop_id != 0
+            && self
+                .support
+                .iter()
+                .all(|value| value.unsigned_abs() <= 1_000_000)
+            && self.progress.is_finite()
+            && (0.0..=1.0).contains(&self.progress)
+            && self.moisture.is_finite()
+            && (0.0..=1.0).contains(&self.moisture)
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct CrusherVisual {
+    pub position: [i64; 3],
+    pub working: bool,
+    pub progress: f32,
+    pub manual_active: bool,
+}
+impl CrusherVisual {
+    pub fn valid(&self) -> bool {
+        self.position.iter().all(|v| v.unsigned_abs() <= 1_000_000)
+            && self.progress.is_finite()
+            && (0.0..=1.0).contains(&self.progress)
+            && (!self.working || self.manual_active)
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -321,10 +390,74 @@ pub struct PlayerState {
     pub grounded: bool,
     pub look: [f32; 2],
     pub survival: terra_core::SurvivalVitals,
+    pub equipment: terra_core::EquipmentSlots,
     pub held_torch: bool,
     pub held_item: Option<terra_core::ItemKind>,
     pub mining: bool,
     pub consumption: Option<ConsumptionProgress>,
+    pub mounted: Option<MountedState>,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
+pub struct MountedState {
+    pub id: u64,
+    pub home: [i64; 2],
+    pub position: [f64; 3],
+    pub velocity: [f32; 3],
+    pub yaw: f32,
+    pub age: f64,
+    pub variant: u8,
+    pub health: f32,
+    pub stamina: f32,
+    pub grounded: bool,
+}
+
+impl MountedState {
+    pub fn new(horse: &terra_core::creatures::Creature, stamina: f32, grounded: bool) -> Self {
+        Self {
+            id: horse.id,
+            home: horse.home,
+            position: horse.position,
+            velocity: horse.velocity,
+            yaw: horse.yaw,
+            age: horse.age,
+            variant: horse.variant,
+            health: horse.health,
+            stamina,
+            grounded,
+        }
+    }
+    pub fn horse(self) -> terra_core::creatures::Creature {
+        use terra_core::creatures::{Creature, CreatureBehavior, CreatureKind, CreatureNeeds};
+        Creature {
+            id: self.id,
+            home: self.home,
+            kind: CreatureKind::Horse,
+            position: self.position,
+            velocity: self.velocity,
+            yaw: self.yaw,
+            age: self.age,
+            variant: self.variant,
+            health: self.health,
+            behavior: if self.grounded {
+                CreatureBehavior::Wander
+            } else {
+                CreatureBehavior::Leap
+            },
+            timer: 0.0,
+            needs: CreatureNeeds::full(CreatureKind::Horse),
+        }
+    }
+    pub fn valid(self) -> bool {
+        let horse = self.horse();
+        horse.valid()
+            && horse.health > 0.0
+            && horse.growth() >= 1.0
+            && self.stamina.is_finite()
+            && horse
+                .horse_traits()
+                .is_some_and(|traits| (0.0..=f32::from(traits.stamina)).contains(&self.stamina))
+    }
 }
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct PlayerStates {
@@ -336,6 +469,71 @@ pub struct CreatureStates {
     pub tick: u64,
     pub creatures: Vec<terra_core::creatures::Creature>,
     pub ecology: terra_core::creatures::ecology::Ecology,
+    #[serde(default)]
+    pub intentions: Vec<terra_core::creatures::intentions::CreatureIntent>,
+    #[serde(default)]
+    pub bonds: Vec<terra_core::creatures::taming::CompanionView>,
+    #[serde(default)]
+    pub families: Vec<terra_core::creatures::breeding::FamilyView>,
+    #[serde(default)]
+    pub stalker_grip: Option<StalkerGrip>,
+}
+
+/// Only sent to the grabbed player. This grants no client-side movement authority.
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
+pub struct StalkerGrip {
+    pub creature: u64,
+    pub destination: [f64; 3],
+    pub remaining_meters: f32,
+}
+
+impl StalkerGrip {
+    pub fn valid(self) -> bool {
+        self.creature != 0
+            && self
+                .destination
+                .into_iter()
+                .all(|v| v.is_finite() && v.abs() <= 1_000_000.0)
+            && self.remaining_meters.is_finite()
+            && (0.0..=40.0).contains(&self.remaining_meters)
+    }
+
+    pub(crate) fn movement(
+        self,
+        position: Vec3,
+        dt: f32,
+        effect_speed: f32,
+    ) -> terra_physics::character::CharacterInput {
+        if !self.valid()
+            || !position.is_finite()
+            || !dt.is_finite()
+            || !(0.0..=0.1).contains(&dt)
+            || dt == 0.0
+            || !effect_speed.is_finite()
+            || effect_speed <= 0.0
+            || self.remaining_meters <= 0.0
+        {
+            return Default::default();
+        }
+        let delta = Vec3::from_array(self.destination.map(|v| v as f32)) - position;
+        let horizontal = Vec3::new(delta.x, 0.0, delta.z);
+        let distance = horizontal.length();
+        if distance <= 0.05 {
+            return Default::default();
+        }
+        let walk_speed = terra_physics::character::WALK_SPEED * effect_speed;
+        if !walk_speed.is_finite() {
+            return Default::default();
+        }
+        let speed = 2.3_f32
+            .min(walk_speed)
+            .min(distance.min(self.remaining_meters) / dt);
+        terra_physics::character::CharacterInput {
+            direction: horizontal / distance * (speed / walk_speed),
+            auto_climb: true,
+            ..Default::default()
+        }
+    }
 }
 
 pub(crate) fn register(app: &mut App) {
@@ -403,12 +601,28 @@ mod layout_tests {
             tick: 1,
             creatures,
             ecology: Default::default(),
+            intentions: Vec::new(),
+            bonds: Vec::new(),
+            families: Vec::new(),
+            stalker_grip: None,
         };
         let source = serde_json::to_vec(&snapshot).unwrap();
         let received: CreatureStates = serde_json::from_slice(&source).unwrap();
         assert_eq!(received.creatures, snapshot.creatures);
+        assert_eq!(
+            received
+                .creatures
+                .iter()
+                .map(|a| a.sex())
+                .collect::<Vec<_>>(),
+            snapshot
+                .creatures
+                .iter()
+                .map(|a| a.sex())
+                .collect::<Vec<_>>()
+        );
         assert_eq!(received.creatures.len(), 10);
-        assert_eq!(PROTOCOL_VERSION, 56);
+        assert_eq!(PROTOCOL_VERSION, 75);
     }
     #[test]
     fn join_only_world_allocation_keeps_control_packets_compact_and_serde_transparent() {
@@ -418,5 +632,77 @@ mod layout_tests {
             serde_json::to_vec(&world).unwrap(),
             serde_json::to_vec(&Box::new(world)).unwrap()
         );
+    }
+
+    #[test]
+    fn equipment_control_payloads_are_boxed_without_changing_their_wire_shape() {
+        use terra_core::{ArmorItem, ArmorMaterial, ArmorPiece, EquipmentSlot, PlayerStats};
+        assert!(std::mem::size_of::<ServerControl>() <= 256);
+        let mut stats = PlayerStats::default();
+        stats.equipment.set(
+            EquipmentSlot::Helmet,
+            Some(terra_core::ItemKind::Armor(ArmorItem {
+                material: ArmorMaterial::Iron,
+                piece: ArmorPiece::Helmet,
+            })),
+        );
+        stats.survival.apply_equipment(stats.equipment);
+        let packet = ServerControl::Stats {
+            generation: 7,
+            stats: Box::new(stats),
+        };
+        let json = serde_json::to_value(&packet).unwrap();
+        assert_eq!(
+            json,
+            serde_json::json!({"Stats": {"generation": 7, "stats": stats}})
+        );
+        let ServerControl::Stats {
+            generation,
+            stats: received,
+        } = serde_json::from_value(json).unwrap()
+        else {
+            panic!("expected stats packet");
+        };
+        assert_eq!(generation, 7);
+        assert_eq!(*received, stats);
+
+        let state = PlayerState {
+            survival: stats.survival,
+            equipment: stats.equipment,
+            ..Default::default()
+        };
+        for (packet, expected) in [
+            (
+                ServerControl::Teleport {
+                    tick: 9,
+                    state: Box::new(state),
+                },
+                serde_json::json!({"Teleport": {"tick": 9, "state": state}}),
+            ),
+            (
+                ServerControl::GameMode {
+                    mode: GameMode::Survival,
+                    allow_flight: false,
+                    tick: 9,
+                    state: Box::new(state),
+                },
+                serde_json::json!({"GameMode": {"mode": GameMode::Survival, "allow_flight": false, "tick": 9, "state": state}}),
+            ),
+        ] {
+            let json = serde_json::to_value(&packet).unwrap();
+            assert_eq!(json, expected);
+            let received: ServerControl = serde_json::from_value(json).unwrap();
+            let (ServerControl::Teleport {
+                state: received, ..
+            }
+            | ServerControl::GameMode {
+                state: received, ..
+            }) = received
+            else {
+                panic!("expected player state packet");
+            };
+            assert_eq!(received.equipment, state.equipment);
+            assert_eq!(received.survival, state.survival);
+        }
     }
 }

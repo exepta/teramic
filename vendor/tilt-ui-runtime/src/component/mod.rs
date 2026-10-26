@@ -15,6 +15,7 @@ mod hot_reload;
 mod inline_actions;
 mod instance;
 mod method;
+mod parking;
 mod plugin;
 mod resolver;
 mod router;
@@ -46,6 +47,7 @@ pub use instance::{
     PendingComponent, StyleDirty,
 };
 pub use method::{HtmlExpressionMethod, HtmlMethodRegistration, UiExpressionMethods};
+pub use parking::{ParkedUi, ParkedUiBindings};
 pub use plugin::{TiltUiComponentRuntimePlugin, TiltUiComponentRuntimeSet, spawn_component};
 pub use resolver::ComponentCatalog;
 pub use router::{

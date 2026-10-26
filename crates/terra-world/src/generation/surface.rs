@@ -30,6 +30,24 @@ pub struct SurfaceColumn {
 }
 
 impl SurfaceColumn {
+    pub fn biome_kind(&self, sea_level: f64) -> super::biomes::BiomeKind {
+        let mut weights = self.biome.weights;
+        let marine = self.water_level.is_some_and(|level| {
+            (level - sea_level).abs() < 0.01
+                && self.height < level
+                && self.water_bed() < level
+                && weights.ocean > 0.45
+        });
+        if marine {
+            return super::biomes::BiomeKind::Ocean;
+        }
+        weights.ocean = 0.0;
+        if weights.values().iter().all(|w| *w <= f64::EPSILON) {
+            super::biomes::BiomeKind::Plains
+        } else {
+            weights.dominant()
+        }
+    }
     pub fn water_columns(self) -> crate::water::WaterColumns {
         crate::water::WaterColumns {
             intervals: [
@@ -88,9 +106,18 @@ impl TerraGenerator {
         climate.at_height(self.height_with_biome(x, z, climate))
     }
 
+    /// Visible surface identity: ocean requires a real marine water column.
+    /// Climate weights stay intact for generation and smooth material blending.
+    pub fn surface_biome(&self, column: &SurfaceColumn) -> super::biomes::BiomeKind {
+        column.biome_kind(self.config().sea_level)
+    }
+
     pub(super) fn climate_biome_at(&self, x: f64, z: f64) -> BiomeSample {
         if self.config().biomes {
-            let biome = self.climate.sample(x, z);
+            let mut biome = self.climate.sample(x, z);
+            if self.config().ecology_revision > 0 {
+                biome = self.climate.with_cherries(biome, x, z);
+            }
             if self.config().geology_revision > 0 {
                 self.climate.with_cliffs(biome, x, z)
             } else {
@@ -108,6 +135,7 @@ impl TerraGenerator {
                     highland: 0.0,
                     mushroom_park: 0.0,
                     cliffted_desert: 0.0,
+                    cherry_forest: 0.0,
                 },
             }
         }
@@ -172,7 +200,7 @@ impl TerraGenerator {
             self.surface_cover(biome, height, level, oasis, water_level.is_none());
         // Materials remain real, integral blocks. The renderer blends their top
         // colors across this contour instead of dithering material IDs per cell.
-        let surface_material = if snow_cover >= 0.5 && biome.aridity() <= 0.5 {
+        let mut surface_material = if snow_cover >= 0.5 && biome.aridity() <= 0.5 {
             MaterialId::Snow
         } else if shore_cover >= 0.5 {
             MaterialId::Sand
@@ -215,6 +243,25 @@ impl TerraGenerator {
         } else {
             f64::INFINITY
         };
+        let mut soil_depth = (biome.profile().soil_depth.max(5.0) + (1.0 - rocky) * 4.0)
+            * (1.0 - exposure)
+            + 4.5 * exposure;
+        if let Some(river) = river.filter(|river| river.fall_erosion > 0.0) {
+            let raw = self.base_height_with_biome(x, z, climate);
+            let stripped = river.fall_erosion
+                * smoothstep(0.75, 4.0, raw - height)
+                * smoothstep(0.5, 1.65, slope);
+            if stripped > 0.0 {
+                soil_depth = soil_depth * (1.0 - stripped).powi(3) + 0.45 * stripped;
+                if stripped > 0.55 {
+                    surface_material = match surface_material {
+                        MaterialId::Grass => MaterialId::Stone,
+                        MaterialId::Sand => MaterialId::Sandstone,
+                        material => material,
+                    };
+                }
+            }
+        }
         let mut column = SurfaceColumn {
             cave_biome: self.cave_biome_column_with_surface(x, z, height),
             cave: self.cave_structure_at(x, z),
@@ -230,9 +277,7 @@ impl TerraGenerator {
             oasis_moisture,
             height,
             slope,
-            soil_depth: (biome.profile().soil_depth.max(5.0) + (1.0 - rocky) * 4.0)
-                * (1.0 - exposure)
-                + 4.5 * exposure,
+            soil_depth,
             biome,
             snow_cover,
             shore_cover,

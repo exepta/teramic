@@ -12,7 +12,7 @@ pub(super) fn add_flowers(
     if level == PropDetail::Near {
         return super::botanical_detail::flower(batches, variant, palette);
     }
-    let species = variant % 7;
+    let species = variant % 8;
     let fine = level == PropDetail::Near;
     let far = level == PropDetail::Far;
     for flower in 0..if far { 1 } else { 2 } {
@@ -41,7 +41,7 @@ pub(super) fn add_flowers(
                 )?;
             }
         }
-        let color = palette.flowers[if species == 6 { 1 } else { species }];
+        let color = palette.flowers[species];
         if !fine {
             voxel(
                 color,
@@ -100,9 +100,6 @@ pub(super) fn add_flowers(
             Vec3::Y * (height + 0.055),
             Vec3::new(0.07, 0.065, 0.07) * scale,
         )?;
-    }
-    if species == 6 {
-        super::botanical_detail::tint_material(batches, palette.flowers[1], [1.1, 0.38, 0.055]);
     }
     Ok(())
 }

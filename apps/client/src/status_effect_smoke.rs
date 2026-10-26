@@ -68,7 +68,7 @@ struct Inspection {
     next_command: Instant,
 }
 
-const STAGES: [&str; 8] = [
+const STAGES: [&str; 10] = [
     "poison-1280",
     "freeze-1280",
     "regeneration-1280",
@@ -77,6 +77,8 @@ const STAGES: [&str; 8] = [
     "all-1920",
     "all-compact",
     "clear-compact",
+    "nightvision-1280",
+    "nightvision-clear-1280",
 ];
 
 fn effects_for_stage(stage: usize) -> &'static [EffectKind] {
@@ -85,6 +87,7 @@ fn effects_for_stage(stage: usize) -> &'static [EffectKind] {
         1 => &[EffectKind::Freeze],
         2 => &[EffectKind::Regeneration],
         3 | 5 | 6 => &EffectKind::ALL,
+        8 => &[EffectKind::NightVision],
         _ => &[],
     }
 }
@@ -172,10 +175,13 @@ fn configure(world: &mut World, stage: usize) {
     // Respect the real server's one-command-per-second token bucket.
     if stage != 6 {
         state.commands.push_back("/effect clear".into());
+        if stage == 8 {
+            state.commands.push_back("/time set night".into());
+        }
         for (effect, level) in requested_effects(stage) {
             state
                 .commands
-                .push_back(format!("/effect give {} 120 {level}", effect.identifier()));
+                .push_back(format!("/effect {} {level} 120", effect.identifier()));
         }
     }
     state.next_command = Instant::now();
@@ -214,9 +220,12 @@ fn check(world: &mut World, stage: usize) -> Result<(), String> {
         ));
     }
     let card_count = view.cards.len();
+    let night_icon = view.cards.iter().any(|card| card.night_vision);
     let has_overflow = view.overflow > 0;
     let rendered = world.resource::<terra_ui::VitalRenderStatus>();
     if !rendered.bound
+        || rendered.primary_effect != actual.first().copied()
+        || (rendered.poison && (rendered.freeze || rendered.regeneration))
         || (stage == 0 && !rendered.poison)
         || (stage == 1 && !rendered.freeze)
         || (stage == 2 && !rendered.regeneration)
@@ -288,8 +297,35 @@ fn check(world: &mut World, stage: usize) -> Result<(), String> {
         })
         .map(|(_, image)| (image.image.clone(), image.rect))
         .collect();
-    if icon_nodes.len() != card_count {
+    if icon_nodes.len() != card_count - usize::from(night_icon) {
         return Err("Effect icons did not bind to the actual card tree".into());
+    }
+    if night_icon {
+        let icon = world
+            .query::<(&tilt_ui::ElementClasses, &ComputedNode)>()
+            .iter(world)
+            .any(|(classes, node)| {
+                classes
+                    .classes
+                    .iter()
+                    .any(|class| class == "night-vision-icon")
+                    && !node.is_empty()
+            });
+        if !icon {
+            return Err("Missing native Night Vision eye icon".into());
+        }
+    }
+    if matches!(stage, 8 | 9) {
+        let brightness = world
+            .query_filtered::<&bevy::light::AmbientLight, With<terra_player::TerraCamera>>()
+            .single(world)
+            .map_err(|error| error.to_string())?
+            .brightness;
+        if stage == 8 && brightness < 1_000.0 || stage == 9 && brightness >= 1_000.0 {
+            return Err(format!(
+                "Night Vision camera fill did not apply/restore: {brightness}"
+            ));
+        }
     }
     for (handle, rect) in icon_nodes {
         let image = world
@@ -304,7 +340,11 @@ fn check(world: &mut World, stage: usize) -> Result<(), String> {
             return Err("Invalid effect atlas rectangle".into());
         }
     }
-    let nodes = world.query::<&Node>().iter(world).count();
+    // The retained inventory has its own lifecycle budget and changes capacity on resize.
+    let nodes = world
+        .query_filtered::<&Node, Without<terra_ui::ParkedUi>>()
+        .iter(world)
+        .count();
     let baseline = world.resource::<Inspection>().baseline_nodes;
     if baseline.is_some_and(|baseline| nodes > baseline + 400) {
         return Err(format!(
@@ -344,7 +384,7 @@ fn run(world: &mut World) {
             && world.resource::<Inspection>().since.elapsed() > Duration::from_secs(1)
         {
             info!(
-                "Native F01 passed: real UDP effects, 13 cards/overflow, atlas icons, clear and three viewports"
+                "Native F01 passed: real UDP effects, bounded cards/overflow, icons, clear and three viewports"
             );
             world.write_message(AppExit::Success);
         }

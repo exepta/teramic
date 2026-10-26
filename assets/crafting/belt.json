@@ -1,0 +1,28 @@
+{
+  "id": "teramic::belt",
+  "name": "Belt",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "accessory": "belt"
+    },
+    "count": 1
+  },
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "animal": "leather"
+        },
+        "count": 3
+      },
+      {
+        "item": {
+          "mineral": "iron_ingot"
+        },
+        "count": 1
+      }
+    ]
+  }
+}

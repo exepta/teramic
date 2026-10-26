@@ -6,6 +6,70 @@ use terra_physics::TerraPhysicsPlugin;
 use terra_voxel::{BlockSection, SectionPos};
 use terra_world::streaming::LoadedSection;
 
+#[test]
+fn restored_join_applies_saved_camera_aim_and_flight_once_before_first_body_frame() {
+    let location = terra_core::PlayerLocation {
+        position: [-17.5, -28.08, 16.5],
+        look: [-1.2, 0.44],
+        flying: true,
+    };
+    let mut app = App::new();
+    let mut session = ClientSession::default();
+    session.ready = true;
+    session.allow_flight = true;
+    session.spawn = Vec3::from_array(location.position);
+    session.initial_location = Some(location);
+    app.init_resource::<ChunkStore>()
+        .init_resource::<ControllerMode>()
+        .init_resource::<PlayerControllerStatus>()
+        .insert_resource(session)
+        .add_systems(Update, sync_controller);
+    let camera = app
+        .world_mut()
+        .spawn((TerraCamera, Transform::default()))
+        .id();
+    app.update();
+    assert_eq!(
+        *app.world().resource::<ControllerMode>(),
+        ControllerMode::Fly
+    );
+    let transform = app.world().get::<Transform>(camera).unwrap();
+    assert_eq!(
+        transform.translation,
+        Vec3::from_array(location.position) + Vec3::Y * PLAYER_EYE_OFFSET
+    );
+    let rotation = Quat::from_euler(EulerRot::YXZ, location.look[0], location.look[1], 0.0);
+    assert!(
+        app.world()
+            .get::<CameraLook>(camera)
+            .unwrap()
+            .rotation()
+            .abs_diff_eq(rotation, 0.00001)
+    );
+    assert_eq!(
+        app.world().resource::<ClientSession>().initial_location,
+        None
+    );
+    assert_eq!(app.world().resource::<ClientSession>().look, location.look);
+    assert_eq!(
+        app.world_mut()
+            .query_filtered::<&Transform, With<PlayerBody>>()
+            .single(app.world())
+            .unwrap()
+            .translation,
+        Vec3::from_array(location.position)
+    );
+    app.world_mut()
+        .get_mut::<Transform>(camera)
+        .unwrap()
+        .translation = Vec3::ONE;
+    app.update();
+    assert_eq!(
+        app.world().get::<Transform>(camera).unwrap().translation,
+        Vec3::ONE
+    );
+}
+
 fn app() -> App {
     let mut app = App::new();
     app.add_plugins((MinimalPlugins, TransformPlugin))
@@ -523,6 +587,68 @@ fn jump_has_a_short_ballistic_arc_without_hovering() {
 }
 
 #[test]
+fn collision_rebuild_does_not_consume_a_queued_jump_or_cancel_its_ascent() {
+    for interrupted_in_air in [false, true] {
+        let mut app = app();
+        let body = body(&mut app);
+        for _ in 0..120 {
+            app.update();
+        }
+        let base = app.world().get::<Transform>(body).unwrap().translation.y;
+        app.world_mut().resource_mut::<WalkIntent>().jump = true;
+        if interrupted_in_air {
+            for _ in 0..6 {
+                app.update();
+            }
+        }
+        let before = app.world().get::<Transform>(body).unwrap().translation;
+        let velocity = app.world().get::<LinearVelocity>(body).unwrap().0;
+        let grounded = app.world().get::<PlayerGrounded>(body).unwrap().0;
+        app.world_mut()
+            .resource_mut::<ChunkStore>()
+            .loaded
+            .get_mut(&SectionPos::default())
+            .unwrap()
+            .mesh_epoch = 999;
+        for _ in 0..6 {
+            app.update();
+        }
+        assert!(
+            app.world()
+                .resource::<PlayerControllerStatus>()
+                .waiting_for_terrain
+        );
+        assert_eq!(
+            app.world().get::<Transform>(body).unwrap().translation,
+            before
+        );
+        assert_eq!(app.world().get::<LinearVelocity>(body).unwrap().0, velocity);
+        assert_eq!(app.world().get::<PlayerGrounded>(body).unwrap().0, grounded);
+        assert_eq!(
+            app.world().resource::<WalkIntent>().jump,
+            !interrupted_in_air
+        );
+        app.world_mut()
+            .resource_mut::<ChunkStore>()
+            .loaded
+            .get_mut(&SectionPos::default())
+            .unwrap()
+            .mesh_epoch = 0;
+        let mut peak = before.y;
+        for _ in 0..55 {
+            app.update();
+            peak = peak.max(app.world().get::<Transform>(body).unwrap().translation.y);
+        }
+        assert!(
+            (1.05..1.4).contains(&(peak - base)),
+            "jump height={}",
+            peak - base
+        );
+        assert!(!app.world().resource::<WalkIntent>().jump);
+    }
+}
+
+#[test]
 fn avian_walk_falls_lands_jumps_and_cannot_walk_through_a_voxel_wall() {
     let mut app = app();
     let body = body(&mut app);
@@ -668,6 +794,61 @@ fn typing_chat_or_search_does_not_wake_a_sleeping_player() {
             expected
         );
         assert_eq!(app.world().resource::<WalkIntent>().direction, Vec3::ZERO);
+    }
+}
+
+#[test]
+fn x_dismounts_and_shift_sprints_only_with_captured_mounted_input() {
+    for (key, blocked) in [
+        (KeyCode::KeyX, false),
+        (KeyCode::KeyX, true),
+        (KeyCode::ShiftLeft, false),
+        (KeyCode::ShiftLeft, true),
+    ] {
+        use terra_core::creatures::{Creature, CreatureBehavior, CreatureKind, CreatureNeeds};
+        let horse = Creature {
+            id: (1 << 62) + 400,
+            home: [0, 0],
+            kind: CreatureKind::Horse,
+            position: [0.0, 1.0, 0.0],
+            velocity: [0.0; 3],
+            yaw: 0.0,
+            age: 0.0,
+            health: 20.0,
+            timer: 0.0,
+            variant: 0,
+            behavior: CreatureBehavior::Rest,
+            needs: CreatureNeeds::full(CreatureKind::Horse),
+        };
+        let mut session = ClientSession::default();
+        session.ready = true;
+        session.mounted = Some(terra_network::protocol::session::MountedState::new(
+            &horse, 20.0, true,
+        ));
+        let mut app = App::new();
+        app.init_resource::<ButtonInput<KeyCode>>()
+            .insert_resource(CameraInputState {
+                captured: true,
+                ..Default::default()
+            })
+            .insert_resource(PlayerInputBlock(blocked))
+            .insert_resource(session)
+            .init_resource::<ControllerMode>()
+            .init_resource::<WalkIntent>()
+            .add_systems(Update, read_walk_input);
+        app.world_mut().spawn((TerraCamera, Transform::default()));
+        app.world_mut()
+            .resource_mut::<ButtonInput<KeyCode>>()
+            .press(key);
+        app.update();
+        assert_eq!(
+            app.world().resource::<ClientSession>().dismount_requested,
+            !blocked && key == KeyCode::KeyX
+        );
+        assert_eq!(
+            app.world().resource::<WalkIntent>().sprint,
+            !blocked && key == KeyCode::ShiftLeft
+        );
     }
 }
 

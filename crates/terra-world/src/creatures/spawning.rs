@@ -67,6 +67,11 @@ pub fn near(
                 let Some(position) = habitat.ground(candidate, mob.kind) else {
                     continue;
                 };
+                if mob.kind == Kind::Stalker
+                    && !super::navigation::caves::covered(habitat, position, size[1])
+                {
+                    continue;
+                }
                 position
             };
             if population

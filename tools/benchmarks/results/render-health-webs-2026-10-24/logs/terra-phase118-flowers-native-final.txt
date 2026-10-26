@@ -1,0 +1,19 @@
+2026-10-24T11:44:51.450839Z  INFO bevy_render::renderer: AdapterInfo { name: "AMD Radeon RX 6950 XT (RADV NAVI21)", vendor: 4098, device: 29605, device_type: DiscreteGpu, device_pci_bus_id: "0000:0c:00.0", driver: "radv", driver_info: "Mesa 26.2.4-arch3.1", backend: Vulkan, subgroup_min_size: 32, subgroup_max_size: 64, transient_saves_memory: false }
+2026-10-24T11:44:51.607886Z  INFO bevy_pbr::cluster: GPU clustering is supported on this device.
+2026-10-24T11:44:51.607915Z  INFO bevy_render::batching::gpu_preprocessing: GPU preprocessing is fully supported on this device.
+2026-10-24T11:44:51.608636Z  INFO bevy_winit::system: Creating new window TERAMIC (135v0)
+2026-10-24T11:44:52.221984Z  INFO terra_client::creature_audio::scene: Recorded animal/environment audio decoded clips=105
+2026-10-24T11:44:52.282500Z  INFO terra_render::scene::caves::lights::soft_core: Torch soft-core attenuation installed in existing clustered PBR path
+2026-10-24T11:44:52.284146Z  INFO terra_render::water::raymarch: Water SSR hardware depth filtering ready; multisampled views retain the original path
+2026-10-24T11:44:52.306401Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/forged-iron-warm.png mip_levels=11 rebound_materials=0
+2026-10-24T11:44:52.306421Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/oak-crafted-hd.png mip_levels=11 rebound_materials=0
+2026-10-24T11:44:52.306427Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/stone-strata-hd.png mip_levels=11 rebound_materials=1
+2026-10-24T11:44:52.306431Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/wood.png mip_levels=10 rebound_materials=1
+2026-10-24T11:44:52.309128Z  INFO terra_render::blocks::loading: Block template library ready blocks=101 materials=236
+2026-10-24T11:44:54.613659Z  INFO terra_client::flower_wither_smoke: Native flower GPU pixels measured stage=0 sample=Pixels { plant: 98058, brown: 71 } live=Pixels { plant: 0, brown: 0 } okay=true
+2026-10-24T11:44:54.634370Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/tools/benchmarks/results/render-health-webs-2026-10-24/native/flowers/flower-0s-alive.png
+2026-10-24T11:44:59.674105Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/tools/benchmarks/results/render-health-webs-2026-10-24/native/flowers/flower-5s-brown-shrunk.png
+2026-10-24T11:44:59.676758Z  INFO terra_client::flower_wither_smoke: Native flower GPU pixels measured stage=1 sample=Pixels { plant: 20910, brown: 20910 } live=Pixels { plant: 98058, brown: 71 } okay=true
+2026-10-24T11:45:04.860870Z  INFO terra_client::flower_wither_smoke: Native flower GPU pixels measured stage=2 sample=Pixels { plant: 0, brown: 0 } live=Pixels { plant: 98058, brown: 71 } okay=true
+2026-10-24T11:45:04.876039Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/tools/benchmarks/results/render-health-webs-2026-10-24/native/flowers/flower-10s-dormant.png
+2026-10-24T11:45:04.887845Z  INFO terra_client::flower_wither_smoke: Native flower withering passed: actual GPU brown/shrink/disappearance, unchanged roots/mesh, bounded 10s real clock state.pixels=[Pixels { plant: 98058, brown: 71 }, Pixels { plant: 20910, brown: 20910 }, Pixels { plant: 0, brown: 0 }]

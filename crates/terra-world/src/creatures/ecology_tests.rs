@@ -254,7 +254,14 @@ fn actual_flower_is_depleted_once_then_bee_returns_to_nest_and_emerges_by_day() 
     );
     a.behavior = Behavior::Nectar;
     a.timer = 0.05;
-    step(&mut a, &mut eco, &h, &[], 0.1, false, false);
+    let pollen = step(&mut a, &mut eco, &h, &[], 0.1, false, false);
+    assert_eq!(
+        pollen,
+        Forage::Pollinate {
+            section: flower.section,
+            id: flower.id
+        }
+    );
     assert_eq!(eco.nectar(123), 75);
     assert_eq!(eco.bees[&a.id].carried, 25);
     step(&mut a, &mut eco, &h, &[], 0.1, false, false);

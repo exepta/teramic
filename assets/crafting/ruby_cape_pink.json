@@ -1,0 +1,34 @@
+{
+  "id": "teramic::ruby_cape_pink",
+  "name": "Pink Ruby Cape",
+  "station": "hand",
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "cape": {
+            "material": "ruby",
+            "color": "white"
+          }
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "dye": "pink"
+        },
+        "count": 1
+      }
+    ]
+  },
+  "output": {
+    "item": {
+      "cape": {
+        "material": "ruby",
+        "color": "pink"
+      }
+    },
+    "count": 1
+  }
+}

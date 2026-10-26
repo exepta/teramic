@@ -1,0 +1,16 @@
+{
+  "item": {
+    "armor": {
+      "material": "ruby",
+      "piece": "boots"
+    }
+  },
+  "name": "Ruby Boots",
+  "description": "Ruby boots fitted for protection and comfortable movement.",
+  "equipment": {
+    "slot": "boots",
+    "armor_points": 5.25,
+    "health_bonus": 4.5,
+    "stamina_bonus": 2.25
+  }
+}

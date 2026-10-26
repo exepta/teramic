@@ -1,0 +1,42 @@
+{
+  "id": "teramic::wood_hoe",
+  "name": "Wood Hoe",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "tool": "wood_hoe"
+    },
+    "count": 1
+  },
+  "pattern": {
+    "kind": "shaped",
+    "width": 2,
+    "height": 3,
+    "cells": [
+      {
+        "item": {
+          "block": 16
+        },
+        "wood": true,
+        "count": 1
+      },
+      {
+        "item": {
+          "block": 16
+        },
+        "wood": true,
+        "count": 1
+      },
+      null,
+      {
+        "item": "stick",
+        "count": 1
+      },
+      null,
+      {
+        "item": "stick",
+        "count": 1
+      }
+    ]
+  }
+}

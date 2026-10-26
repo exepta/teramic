@@ -2,6 +2,8 @@
 <div class="debug-overlay">
   <div class="debug-heading"><div class="voxel-mark"></div><p class="project-title">TERAMIC</p></div>
   <div class="debug-row"><p class="debug-label">FPS</p><p class="debug-value fps-value">{{ debugOverlay.fps }}</p></div>
+  <div class="debug-row"><p class="debug-label">FPS Min</p><p class="debug-value">{{ debugOverlay.fps_min }}</p></div>
+  <div class="debug-row"><p class="debug-label">FPS Max</p><p class="debug-value">{{ debugOverlay.fps_max }}</p></div>
   <div class="debug-row"><p class="debug-label">CPU App</p><p class="debug-value">{{ debugOverlay.cpu }}</p></div>
   <div class="debug-row"><p class="debug-label">RAM App</p><p class="debug-value">{{ debugOverlay.ram }}</p></div>
   <div class="debug-divider"></div>
@@ -29,5 +31,8 @@
   <div class="debug-row"><p class="debug-label">Durst</p><p class="debug-value">{{ debugOverlay.animal_water }}</p></div>
   <div class="debug-divider"></div>
   <p class="animal-behavior">{{ debugOverlay.animal_behavior }}</p>
+  <p class="animal-intention">{{ debugOverlay.animal_intention }}</p>
+  <div class="debug-row"><p class="debug-label">Ziel</p><p class="debug-value">{{ debugOverlay.animal_destination }}</p></div>
+  <p class="animal-path">{{ debugOverlay.animal_path }}</p>
 </div>
 }

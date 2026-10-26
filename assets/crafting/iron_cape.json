@@ -1,0 +1,75 @@
+{
+  "id": "teramic::iron_cape",
+  "name": "Iron Cape",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "cape": {
+        "material": "iron",
+        "color": "white"
+      }
+    },
+    "count": 1
+  },
+  "pattern": {
+    "kind": "shaped",
+    "width": 3,
+    "height": 3,
+    "cells": [
+      {
+        "item": {
+          "mineral": "iron_ingot"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "animal": "wool"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "mineral": "iron_ingot"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "animal": "wool"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "animal": "wool"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "animal": "wool"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "animal": "wool"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "animal": "wool"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "animal": "wool"
+        },
+        "count": 1
+      }
+    ]
+  }
+}

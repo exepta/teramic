@@ -1,3 +1,4 @@
+use super::FluidCell;
 use crate::{TerraGenerator, edits::EditJournal, streaming::ChunkStore};
 
 /// Bodies inherit forty percent of the local current, not its full travel speed.
@@ -40,9 +41,7 @@ pub fn fluid_motion_at(
     }
     let surface = global[1] as f64 + cell.height();
     if cell.amount == 0 || position[1] >= surface {
-        return falling_curtain(terrain, position, block, |x, z| {
-            chunks.surface_column_at(x, z)
-        });
+        return FluidMotion::default();
     }
     let immersion = ((surface - position[1]) / 0.35).clamp(0.0, 1.0) as f32;
     let surface_water = chunks
@@ -79,237 +78,246 @@ pub fn fluid_motion_at(
     } else {
         [0.0; 2]
     };
-    let below = super::fluid::adjacent(global, [0, -1, 0]);
-    let falling_cell = !cell.source
-        && cell.flow == [0, 0]
-        && below.is_some_and(|below| {
-            chunks.block_at(below).is_some_and(|block| {
-                super::can_hold_fluid(block)
-                    && super::fluid_cell_at(terrain, journal, below, block).amount
-                        < super::FLUID_CAPACITY
-            })
-        });
+    let falling_cell = falling_fluid_at(terrain, chunks, journal, global);
     FluidMotion {
         velocity: [
             horizontal[0],
-            if falling_cell
-                || river.is_some_and(|river| river.cascade_height >= super::MIN_WATERFALL_DROP)
-            {
-                -3.2
-            } else {
-                0.0
-            },
+            if falling_cell { -3.2 } else { 0.0 },
             horizontal[1],
         ],
         immersion,
     }
 }
 
-fn falling_curtain<'a>(
+/// Gravity flow is actual connected liquid, never a procedural cliff projection.
+pub fn falling_fluid_at(
     terrain: &TerraGenerator,
-    position: [f64; 3],
-    block: u16,
-    mut prepared: impl FnMut(i64, i64) -> Option<&'a crate::SurfaceColumn>,
-) -> FluidMotion {
-    let _scope = terra_core::profiling::ScopeTimer::new("water.falling_curtain");
-    if !super::can_hold_fluid(block) {
-        return FluidMotion::default();
+    chunks: &ChunkStore,
+    journal: &EditJournal,
+    global: [i64; 3],
+) -> bool {
+    let Some(block) = chunks.block_at(global) else {
+        return false;
+    };
+    let cell = chunks.fluid_cell_at(terrain, journal, global, block);
+    if cell.amount == 0 || cell.source || cell.flow != [0, 0] {
+        return false;
     }
-    let [x, y, z] = position;
-    let river = terrain
-        .river_at(x, z)
-        .filter(|river| river.cascade_height >= super::MIN_WATERFALL_DROP);
-    let [cx, cz] = [x.floor(), z.floor()];
-    if river.is_none() {
-        // Revision 3+ selects ecology per 192 m region, whose boundaries align
-        // with voxel edges. Older revisions still sample their local climate.
-        let cave_kind = (terrain.config().cave_structure_revision >= 3)
-            .then(|| prepared(cx as i64, cz as i64))
-            .flatten()
-            .map_or_else(
-                || terrain.cave_structure_at(x, z).kind,
-                |column| column.cave.kind,
-            );
-        if cave_kind != crate::generation::CaveEcology::Waterfall {
-            return FluidMotion::default();
-        }
+    let Some(down) = super::fluid::adjacent(global, [0, -1, 0]) else {
+        return false;
+    };
+    let Some(below_block) = chunks.block_at(down) else {
+        return false;
+    };
+    if !super::can_hold_fluid(below_block) {
+        return false;
     }
-    let mut columns = |x: f64, z: f64| {
-        prepared(x as i64, z as i64).map_or_else(
-            || terrain.water_columns(x + 0.5, z + 0.5),
-            |column| column.water_columns(),
+    let current = super::space::FluidSpace::at(journal, global, |p| chunks.block_at(p));
+    let below = super::space::FluidSpace::at(journal, down, |p| chunks.block_at(p));
+    if !current.connected(
+        cell,
+        &below,
+        FluidCell {
+            amount: 8,
+            ..Default::default()
+        },
+        [0, -1, 0],
+    ) {
+        return false;
+    }
+    if chunks
+        .fluid_cell_at(terrain, journal, down, below_block)
+        .amount
+        < super::FLUID_CAPACITY
+    {
+        return true;
+    }
+    let Some(above) = super::fluid::adjacent(global, [0, 1, 0]) else {
+        return false;
+    };
+    let Some(above_block) = chunks.block_at(above) else {
+        return false;
+    };
+    let supplied = chunks.fluid_cell_at(terrain, journal, above, above_block);
+    supplied.amount > 0
+        && current.connected(
+            cell,
+            &super::space::FluidSpace::at(journal, above, |p| chunks.block_at(p)),
+            supplied,
+            [0, 1, 0],
         )
+        && [[1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1]]
+            .into_iter()
+            .any(|direction| {
+                exposed_falling_edge(terrain, chunks, journal, global, &current, cell, direction)
+            })
+}
+
+fn exposed_falling_edge(
+    terrain: &TerraGenerator,
+    chunks: &ChunkStore,
+    journal: &EditJournal,
+    global: [i64; 3],
+    current: &super::space::FluidSpace,
+    cell: FluidCell,
+    direction: [i64; 3],
+) -> bool {
+    let Some(side) = super::fluid::adjacent(global, direction) else {
+        return false;
     };
-    let Some(lower) = columns(cx, cz).below(y) else {
-        return FluidMotion::default();
+    let Some(side_block) = chunks
+        .block_at(side)
+        .filter(|block| super::can_hold_fluid(*block))
+    else {
+        return false;
     };
-    for [dx, dz] in [[-1.0, 0.0], [1.0, 0.0], [0.0, -1.0], [0.0, 1.0]] {
-        let Some(upper) = columns(cx + dx, cz + dz).below(y + 32.0) else {
-            continue;
-        };
-        if upper.level - lower.level < super::MIN_WATERFALL_DROP
-            || y < lower.level
-            || y > upper.level
-        {
-            continue;
-        }
-        let progress = ((upper.level - y) / (upper.level - lower.level)).clamp(0.0, 1.0);
-        let distance = if dx < 0.0 {
-            x - cx
-        } else if dx > 0.0 {
-            cx + 1.0 - x
-        } else if dz < 0.0 {
-            z - cz
-        } else {
-            cz + 1.0 - z
-        };
-        // The same zero-ended projection envelope as channels::waterfall.
-        let across = if dx != 0.0 {
-            cx + if dx > 0.0 { 1.0 } else { 0.0 } + z
-        } else {
-            x + cz + if dz > 0.0 { 1.0 } else { 0.0 }
-        };
-        let corrugation =
-            0.56 + 0.18 * (across * 1.73).sin() + 0.06 * (across * 3.61 + y * 0.91).sin();
-        let projection =
-            0.06 + 0.15 * progress + (progress * std::f64::consts::PI).sin() * corrugation;
-        let immersion = (1.0 - ((distance - projection).abs() / 0.24)).clamp(0.0, 1.0) as f32;
-        if immersion > 0.0 {
-            return FluidMotion {
-                velocity: [
-                    river.map_or(-0.4, |r| r.flow[0]) * CURRENT_SPEED,
-                    -3.2,
-                    river.map_or(0.0, |r| r.flow[1]) * CURRENT_SPEED,
-                ],
-                immersion,
-            };
-        }
+    if chunks
+        .fluid_cell_at(terrain, journal, side, side_block)
+        .amount
+        >= cell.amount
+    {
+        return false;
     }
-    FluidMotion::default()
+    let full = FluidCell {
+        amount: super::FLUID_CAPACITY,
+        ..Default::default()
+    };
+    let side_space = super::space::FluidSpace::at(journal, side, |p| chunks.block_at(p));
+    if !current.connected(cell, &side_space, full, direction) {
+        return false;
+    }
+    let Some(down) = super::fluid::adjacent(side, [0, -1, 0]) else {
+        return false;
+    };
+    let Some(block) = chunks
+        .block_at(down)
+        .filter(|block| super::can_hold_fluid(*block))
+    else {
+        return false;
+    };
+    // Water above a full cell is also normal in a deep, sleeping pool. A
+    // supplied full shaft needs a real spill edge with room to fall beside it;
+    // solid basin walls and equally filled neighbors are not downward flow.
+    chunks.fluid_cell_at(terrain, journal, down, block).amount < super::FLUID_CAPACITY
+        && side_space.connected(
+            full,
+            &super::space::FluidSpace::at(journal, down, |p| chunks.block_at(p)),
+            full,
+            [0, -1, 0],
+        )
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::{streaming::LoadedSection, water::FluidCell};
-    use std::collections::HashMap;
     use terra_core::WorldConfig;
     use terra_voxel::{BlockSection, MaterialId, SectionPos};
 
-    fn prepared_neighborhood(
-        terrain: &TerraGenerator,
-        cells: &[[i64; 2]],
-    ) -> HashMap<[i64; 2], crate::SurfaceColumn> {
-        let mut columns = HashMap::new();
-        for &[x, z] in cells {
-            for [dx, dz] in [[0, 0], [-1, 0], [1, 0], [0, -1], [0, 1]] {
-                let p = [x + dx, z + dz];
-                columns.entry(p).or_insert_with(|| {
-                    let column = terrain.surface_column(p[0] as f64 + 0.5, p[1] as f64 + 0.5);
-                    assert_eq!(
-                        column.water_columns(),
-                        terrain.water_columns(p[0] as f64 + 0.5, p[1] as f64 + 0.5)
-                    );
-                    column
-                });
+    #[test]
+    fn full_exposed_waterfall_has_real_downward_current_but_a_deep_calm_pool_does_not() {
+        let terrain = TerraGenerator::new(WorldConfig {
+            water: true,
+            rivers: false,
+            sea_level: -100.0,
+            ..Default::default()
+        })
+        .unwrap();
+        let owner = SectionPos::default();
+        let mut data = BlockSection::empty(owner).unwrap();
+        for x in 0..16 {
+            for z in 0..16 {
+                data.set_block([x, 2, z], 3).unwrap();
             }
         }
-        columns
-    }
-
-    #[test]
-    fn prepared_dry_current_matches_fallback_across_ecology_revisions_and_region_edges() {
-        let cells = [
-            [-193, -193],
-            [-192, -192],
-            [-1, -1],
-            [0, 0],
-            [191, 191],
-            [192, 192],
-            [16800, -17952],
-        ];
-        for revision in [0, 2, 3, 4] {
-            for rivers in [false, true] {
-                let terrain = TerraGenerator::new(WorldConfig {
-                    cave_structure_revision: revision,
-                    rivers,
-                    ..Default::default()
-                })
-                .unwrap();
-                let columns = prepared_neighborhood(&terrain, &cells);
-                for [x, z] in cells {
-                    for fraction in [0.01, 0.49, 0.99] {
-                        let [px, pz] = [x as f64 + fraction, z as f64 + 1.0 - fraction];
-                        if revision >= 3 {
-                            assert_eq!(
-                                columns[&[x, z]].cave.kind,
-                                terrain.cave_structure_at(px, pz).kind
-                            );
-                        }
-                        for y in [-100.0, -48.0, 8.0, 80.0, 361.0] {
-                            let position = [px, y, pz];
-                            let expected = falling_curtain(&terrain, position, 0, |_, _| None);
-                            let all =
-                                falling_curtain(&terrain, position, 0, |x, z| columns.get(&[x, z]));
-                            let local = falling_curtain(&terrain, position, 0, |cx, cz| {
-                                ([cx, cz] == [x, z]).then(|| &columns[&[x, z]])
-                            });
-                            assert_eq!(
-                                all, expected,
-                                "revision={revision} rivers={rivers} {position:?}"
-                            );
-                            assert_eq!(local, expected, "missing neighbors at {position:?}");
-                            assert_eq!(
-                                falling_curtain(&terrain, position, 0, |x, z| columns.get(&[x, z])),
-                                all,
-                                "prediction replay at {position:?}"
-                            );
-                        }
+        for x in 2..=12 {
+            for z in 2..=12 {
+                if x == 2 || x == 12 || z == 2 || z == 12 {
+                    for y in 3..=7 {
+                        data.set_block([x, y, z], 3).unwrap();
                     }
                 }
             }
         }
-    }
-
-    #[test]
-    fn prepared_current_preserves_actual_legacy_waterfall_contact() {
-        let terrain = TerraGenerator::new(WorldConfig {
-            cave_structure_revision: 2,
-            ..Default::default()
-        })
-        .unwrap();
-        let room = terrain.cave_structure_at(-13344.0, -18336.0);
-        let [cx, _, cz] = room.center;
-        let (x, z, high, low) = (-22..=22)
-            .find_map(|dz| {
-                (-4..=10).find_map(|dx| {
-                    let x = cx + f64::from(dx) + 0.5;
-                    let z = cz + f64::from(dz) + 0.5;
-                    let high = terrain.cave_structure_at(x, z).water?;
-                    let low = terrain.cave_structure_at(x - 1.0, z).water?;
-                    (high.level - low.level >= 8.0).then_some((x, z, high, low))
-                })
-            })
-            .expect("legacy waterfall outlet");
-        let cell = [x.floor() as i64 - 1, z.floor() as i64];
-        let columns = prepared_neighborhood(&terrain, &[cell]);
-        let mut contacts = 0;
-        for fraction in [0.05, 0.25, 0.5, 0.75, 0.95] {
-            let position = [cell[0] as f64 + fraction, (high.level + low.level) * 0.5, z];
-            let expected = falling_curtain(&terrain, position, 0, |_, _| None);
-            let actual = falling_curtain(&terrain, position, 0, |x, z| columns.get(&[x, z]));
-            assert_eq!(actual, expected, "waterfall contact at {position:?}");
-            contacts += usize::from(actual.immersion > 0.0);
-            assert_eq!(
-                falling_curtain(&terrain, position, MaterialId::Stone as u16, |x, z| columns
-                    .get(&[x, z])),
-                FluidMotion::default()
-            );
-        }
-        assert!(
-            contacts > 0,
-            "waterfall fixture must include actual current contact"
+        let mut chunks = ChunkStore::default();
+        chunks.loaded.insert(
+            owner,
+            LoadedSection {
+                data,
+                mesh: None,
+                mesh_epoch: 0,
+                water_epoch: 0,
+                water: None,
+                props: vec![],
+            },
         );
+        let mut journal = EditJournal::default();
+        for x in 3..12 {
+            for z in 3..12 {
+                for y in 3..=7 {
+                    journal
+                        .set_fluid(
+                            [x, y, z],
+                            FluidCell {
+                                amount: if y == 7 { 4 } else { 8 },
+                                ..Default::default()
+                            },
+                        )
+                        .unwrap();
+                }
+            }
+        }
+        for y in 3..=11 {
+            journal
+                .set_fluid(
+                    [14, y, 7],
+                    FluidCell {
+                        amount: 8,
+                        source: y == 11,
+                        ..Default::default()
+                    },
+                )
+                .unwrap();
+        }
+        for y in 3..=7 {
+            for [x, z] in [[3, 3], [7, 7], [11, 7]] {
+                let position = [x as f64 + 0.5, y as f64 + 0.25, z as f64 + 0.5];
+                assert!(!falling_fluid_at(&terrain, &chunks, &journal, [x, y, z]));
+                assert_eq!(
+                    fluid_motion_at(&terrain, &chunks, &journal, position).velocity[1],
+                    0.0
+                );
+            }
+        }
+        assert!(falling_fluid_at(&terrain, &chunks, &journal, [14, 6, 7]));
+        assert_eq!(
+            fluid_motion_at(&terrain, &chunks, &journal, [14.5, 6.5, 7.5]).velocity[1],
+            -3.2
+        );
+        // Closing all side spill edges turns this into a full supported column,
+        // not a perpetual suction force merely because its source is above.
+        for [x, z] in [[13, 7], [15, 7], [14, 6], [14, 8]] {
+            for y in 3..=10 {
+                chunks
+                    .loaded
+                    .get_mut(&owner)
+                    .unwrap()
+                    .data
+                    .set_block([x, y, z], 3)
+                    .unwrap();
+            }
+        }
+        assert!(!falling_fluid_at(&terrain, &chunks, &journal, [14, 6, 7]));
+        journal
+            .set_fluid(
+                [14, 5, 7],
+                FluidCell {
+                    amount: 4,
+                    ..Default::default()
+                },
+            )
+            .unwrap();
+        assert!(falling_fluid_at(&terrain, &chunks, &journal, [14, 6, 7]));
     }
 
     #[test]

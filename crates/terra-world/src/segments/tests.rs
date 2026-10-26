@@ -1,6 +1,44 @@
 use super::*;
 
 #[test]
+fn hanging_plants_need_a_contiguous_loaded_ceiling_chain_not_a_distant_rock() {
+    let start = [-17, -17, -1];
+    let mut cells = std::collections::HashMap::from([
+        ([-17, -17, -1], 54),
+        ([-17, -16, -1], 55),
+        ([-17, -15, -1], 54),
+        ([-17, -14, -1], 3),
+    ]);
+    assert_eq!(
+        hanging_support(start, |p| cells.get(&p).copied()),
+        Some(true)
+    );
+    cells.remove(&[-17, -16, -1]);
+    assert_eq!(hanging_support(start, |p| cells.get(&p).copied()), None);
+    cells.insert([-17, -16, -1], 0);
+    assert_eq!(
+        hanging_support(start, |p| cells.get(&p).copied()),
+        Some(false)
+    );
+    for material in [14, 27, 50, 51, 56, 65, 82] {
+        cells.insert([-17, -16, -1], material);
+        assert_eq!(
+            hanging_support(start, |p| cells.get(&p).copied()),
+            Some(false)
+        );
+    }
+    let mut reads = 0;
+    assert_eq!(
+        hanging_support(start, |_| {
+            reads += 1;
+            Some(54)
+        }),
+        Some(false)
+    );
+    assert_eq!(reads, MAX_CHAIN + 1);
+}
+
+#[test]
 fn every_clicked_cell_extends_only_the_free_tip_and_requires_loaded_support() {
     for material in [51, 52, 53] {
         for hanging in [false, true] {
@@ -68,10 +106,42 @@ fn mineral_shafts_remain_broad_until_the_short_terminal_bevel() {
     for material in [51, 52, 53] {
         let mut count = 0;
         visit(material, [0; 3], root, false, |_, _| count += 1);
-        assert_eq!(count, 56, "bounded stepped silhouette in the near batch");
+        assert_eq!(count, 28, "bounded square silhouette in the near batch");
         let mut coarse_count = 0;
         visit(material, [0; 3], root, true, |_, _| coarse_count += 1);
-        assert_eq!(coarse_count, 24, "distant shafts retain the cheap profile");
+        assert_eq!(
+            coarse_count, 12,
+            "distant shafts retain the cheap square profile"
+        );
+    }
+}
+
+#[test]
+fn all_mineral_segment_cross_sections_have_square_not_rounded_faces() {
+    for material in [51, 52, 53] {
+        let mut extent = [f32::INFINITY, f32::NEG_INFINITY];
+        visit(
+            material,
+            [-17, -16, -1],
+            Profile {
+                below: 0,
+                above: 9,
+                hanging: false,
+            },
+            false,
+            |triangle, _| {
+                let normal = crate::ore_shapes::normal(triangle);
+                assert!(
+                    normal[0].abs() < 0.00001 || normal[2].abs() < 0.00001,
+                    "a rounded/octagonal side reappeared: {normal:?}"
+                );
+                for p in triangle {
+                    extent[0] = extent[0].min(p[0]);
+                    extent[1] = extent[1].max(p[0]);
+                }
+            },
+        );
+        assert!(extent[1] - extent[0] > 0.8);
     }
 }
 

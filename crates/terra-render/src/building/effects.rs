@@ -143,7 +143,14 @@ pub(super) fn animate(
                         size,
                     },
                     Mesh3d(world.assets.cube.clone()),
-                    MeshMaterial3d(world.material(ItemKind::Block(expected))),
+                    MeshMaterial3d(
+                        world.material(ItemKind::Block(
+                            world
+                                .mining
+                                .slab_half()
+                                .map_or(expected, |half| half.removed),
+                        )),
+                    ),
                     Transform::from_translation(point + normal * 0.025).with_scale(size),
                     NotShadowCaster,
                 ));

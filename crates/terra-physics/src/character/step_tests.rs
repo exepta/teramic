@@ -308,3 +308,66 @@ fn real_avian_half_step_checks_capsule_headroom_even_with_auto_climb() {
         }
     }
 }
+
+#[test]
+fn stale_collision_rejects_a_tick_without_destroying_jump_or_fall_velocity() {
+    for (height, stairs) in [(0.5, false), (0.5, true), (1.0, false)] {
+        let (mut app, body) = fixture(height, stairs, None);
+        app.world_mut()
+            .resource_mut::<EditJournal>()
+            .record([1, 1, 1], 3)
+            .unwrap();
+        for (vertical_speed, jump, grounded) in
+            [(0.0, true, true), (6.0, false, false), (-4.0, false, false)]
+        {
+            let before = CharacterState {
+                position: app.world().get::<Transform>(body).unwrap().translation,
+                velocity: Vec3::new(1.0, vertical_speed, 0.0),
+                grounded,
+            };
+            let mut state = before;
+            let collider = app.world().get::<Collider>(body).unwrap().clone();
+            let mut params =
+                bevy::ecs::system::SystemState::<CharacterSimulation>::new(app.world_mut());
+            let simulation = params.get_mut(app.world_mut()).unwrap();
+            assert!(!simulation.step(
+                body,
+                &collider,
+                &mut state,
+                CharacterInput {
+                    direction: Vec3::X,
+                    jump,
+                    ..default()
+                },
+            ));
+            assert_eq!(state.position, before.position);
+            assert_eq!(state.velocity, before.velocity);
+            assert_eq!(state.grounded, before.grounded);
+        }
+    }
+}
+
+#[test]
+fn jumps_from_slabs_stair_treads_and_blocks_keep_their_ballistic_ascent() {
+    for (height, stairs, auto_climb) in
+        [(0.5, false, false), (0.5, true, false), (1.0, false, true)]
+    {
+        let (mut app, body) = fixture(height, stairs, None);
+        walk(&mut app, body, auto_climb);
+        let base = app.world().get::<Transform>(body).unwrap().translation.y;
+        app.world_mut().resource_mut::<Drive>().input.jump = true;
+        app.update();
+        app.world_mut().resource_mut::<Drive>().input.jump = false;
+        let mut peak = base;
+        for _ in 0..55 {
+            app.update();
+            peak = peak.max(app.world().get::<Transform>(body).unwrap().translation.y);
+        }
+        assert!(
+            (1.05..1.4).contains(&(peak - base)),
+            "jump height={}",
+            peak - base
+        );
+        assert_eq!(app.world().resource::<Drive>().missing_collision, 0);
+    }
+}

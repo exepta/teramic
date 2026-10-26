@@ -13,7 +13,6 @@ use terra_world::{
     TerraGenerator,
     edits::EditJournal,
     streaming::{ChunkStore, WorldAccess, WorldTerrain},
-    water::MIN_WATERFALL_DROP,
 };
 
 #[derive(Clone, Copy)]
@@ -151,7 +150,13 @@ pub(super) fn update(
         .as_mut()
         .and_then(|task| future::block_on(future::poll_once(task)))
     {
-        include_fluid_sources(&mut sources, listener, &world.chunks, &world.journal);
+        include_fluid_sources(
+            &mut sources,
+            listener,
+            &world.terrain.0,
+            &world.chunks,
+            &world.journal,
+        );
         sounds.sources = sources;
         sounds.scan = None;
         sounds.next_occlusion = 0.0;
@@ -188,6 +193,19 @@ pub(super) fn update(
     }
     let gains = std::array::from_fn(|kind| {
         sounds.sources[kind].map_or([0.0; 2], |source| {
+            if kind == 2 {
+                return if terra_world::water::falling_fluid_at(
+                    &world.terrain.0,
+                    &world.chunks,
+                    &world.journal,
+                    source.position.floor().as_i64vec3().to_array(),
+                ) {
+                    spatial_gains(listener, right, source, kind)
+                        .map(|gain| gain * sounds.transmission[kind])
+                } else {
+                    [0.0; 2]
+                };
+            }
             // A placed solid block or an unloaded region must not emit nearby water sound.
             if !world
                 .chunks
@@ -228,6 +246,7 @@ pub(super) fn update(
 fn include_fluid_sources(
     sources: &mut [Option<Emitter>; 3],
     listener: Vec3,
+    terrain: &TerraGenerator,
     chunks: &ChunkStore,
     journal: &EditJournal,
 ) {
@@ -247,7 +266,13 @@ fn include_fluid_sources(
                         || !chunks
                             .block_at(cell)
                             .is_some_and(terra_world::water::can_hold_fluid)
-                        || journal
+                    {
+                        continue;
+                    }
+                    let falling =
+                        terra_world::water::falling_fluid_at(terrain, chunks, journal, cell);
+                    if !falling
+                        && journal
                             .fluid([cell[0], cell[1] + 1, cell[2]])
                             .is_some_and(|above| above.amount > 0)
                     {
@@ -255,19 +280,31 @@ fn include_fluid_sources(
                     }
                     let position = Vec3::new(
                         cell[0] as f32 + 0.5,
-                        cell[1] as f32 + fluid.height() as f32 + 0.05,
+                        cell[1] as f32
+                            + if falling {
+                                fluid.height() as f32 * 0.5
+                            } else {
+                                fluid.height() as f32 + 0.05
+                            },
                         cell[2] as f32 + 0.5,
                     );
-                    if position.distance_squared(listener) > 30.0 * 30.0 {
+                    let radius = if falling { 44.0 } else { 30.0 };
+                    if position.distance_squared(listener) > radius * radius {
                         continue;
                     }
                     let flowing = fluid.flow != [0, 0];
-                    let kind = usize::from(flowing);
+                    let kind = if falling { 2 } else { usize::from(flowing) };
                     choose_source(
                         &mut sources[kind],
                         Emitter {
                             position,
-                            strength: if flowing { 0.075 } else { 0.045 },
+                            strength: if falling {
+                                0.12
+                            } else if flowing {
+                                0.075
+                            } else {
+                                0.045
+                            },
                         },
                         listener,
                         kind,
@@ -377,28 +414,6 @@ fn scan_sources(terrain: &TerraGenerator, listener: Vec3) -> [Option<Emitter>; 3
                     z + f64::from(river.flow[1]) * 4.0,
                 )
             });
-            // A tall fall's upper bed can be far above the listener. Detect its
-            // lip before selecting the audible layer; the emitter stays below.
-            if let (Some(upper), Some(river), Some(next)) = (columns.intervals[0], river, next)
-                && (river.level - upper.level).abs() < 1.0
-                && upper.level - next.level >= MIN_WATERFALL_DROP
-            {
-                // Refine a coarse candidate to a real adjacent five-block drop.
-                for step in 0..4 {
-                    let z0 = z + f64::from(step);
-                    let upper = terrain.water_column(x, z0);
-                    let lower = terrain.water_column(x, z0 + 1.0);
-                    if let (Some(upper), Some(lower)) = (upper, lower)
-                        && upper.level - lower.level >= MIN_WATERFALL_DROP
-                    {
-                        let position =
-                            Vec3::new(x as f32, lower.level as f32 + 0.15, (z0 + 1.0) as f32);
-                        let strength =
-                            (0.25 + (upper.level - lower.level) as f32 * 0.008).min(0.35);
-                        choose_source(&mut sources[2], Emitter { position, strength }, listener, 2);
-                    }
-                }
-            }
             let Some(water) = columns.below(f64::from(listener.y) + 4.0) else {
                 continue;
             };
@@ -422,28 +437,6 @@ fn scan_sources(terrain: &TerraGenerator, listener: Vec3) -> [Option<Emitter>; 3
                     listener,
                     1,
                 );
-                for step in 0..4 {
-                    let x0 = x + f64::from(step);
-                    let upper = terrain
-                        .water_columns(x0 + 1.0, z)
-                        .below(f64::from(listener.y) + 16.0);
-                    let lower = terrain
-                        .water_columns(x0, z)
-                        .below(f64::from(listener.y) + 8.0);
-                    if let (Some(upper), Some(lower)) = (upper, lower)
-                        && upper.level - lower.level >= MIN_WATERFALL_DROP
-                    {
-                        choose_source(
-                            &mut sources[2],
-                            Emitter {
-                                position: Vec3::new(x0 as f32, lower.level as f32 + 0.15, z as f32),
-                                strength: 0.28,
-                            },
-                            listener,
-                            2,
-                        );
-                    }
-                }
             } else if river.is_none() {
                 let strength = if water.depth < 3.5 { 0.055 } else { 0.04 };
                 choose_source(&mut sources[0], Emitter { position, strength }, listener, 0);
@@ -570,66 +563,75 @@ mod tests {
     }
 
     #[test]
-    fn generated_seed42042_waterfall_is_audible_from_its_lower_pool() {
-        use terra_core::Config;
-
-        // Missing saved revision fields select the real legacy native contract,
-        // not WorldConfig::default()'s opt-in terrain revisions.
-        let config = terra_core::WorldConfig::from_toml("seed = 42042\nrivers = true\n").unwrap();
-        let terrain = TerraGenerator::new(config).unwrap();
-        let listener = Vec3::new(-423.5, 29.883_644, 614.5);
-        let upper = terrain.water_column(-423.5, 611.5).unwrap();
-        let lower = terrain.water_column(-423.5, 612.5).unwrap();
-        assert!((upper.level - 59.716_619_839).abs() < 0.00001);
-        assert!((lower.level - 28.163_644_668).abs() < 0.00001);
-        assert!(
-            upper.bed > f64::from(listener.y) + 4.0,
-            "the reproduced upper bed must be above the old audible-layer filter"
+    fn waterfall_audio_requires_real_loaded_falling_cells_and_is_quieter_than_legacy_roar() {
+        use terra_voxel::{BlockSection, SectionPos};
+        use terra_world::{streaming::LoadedSection, water::FluidCell};
+        let terrain = TerraGenerator::new(terra_core::WorldConfig {
+            base_height: -20.0,
+            hill_amplitude: 0.0,
+            mountain_amplitude: 0.0,
+            biomes: false,
+            sea_level: -100.0,
+            caves: false,
+            rivers: false,
+            ..default()
+        })
+        .unwrap();
+        let owner = SectionPos::default();
+        let mut chunks = ChunkStore::default();
+        chunks.loaded.insert(
+            owner,
+            LoadedSection {
+                data: BlockSection::empty(owner).unwrap(),
+                mesh: None,
+                water: None,
+                mesh_epoch: 0,
+                water_epoch: 0,
+                props: Vec::new(),
+            },
         );
-        assert!(upper.level - lower.level > MIN_WATERFALL_DROP);
-        let sources = scan_sources(&terrain, listener);
-        let source = sources[2].expect("nearby real waterfall must survive the upper-bed filter");
+        let mut journal = EditJournal::default();
+        let listener = Vec3::new(8.5, 5.5, 9.5);
+        let mut sources = [None; 3];
+        include_fluid_sources(&mut sources, listener, &terrain, &chunks, &journal);
         assert!(
-            spatial_gains(listener, Vec3::X, source, 2)
+            sources[2].is_none(),
+            "a terrain waterfall shape without liquid must be silent"
+        );
+        for y in 4..=6 {
+            journal
+                .set_fluid(
+                    [8, y, 8],
+                    FluidCell {
+                        amount: 8,
+                        ..default()
+                    },
+                )
+                .unwrap();
+        }
+        include_fluid_sources(&mut sources, listener, &terrain, &chunks, &journal);
+        let fall = sources[2]
+            .expect("a full vertical flow stack must emit even though the cell below is full");
+        assert!(fall.strength <= 0.12 && fall.strength > 0.0);
+        assert!(
+            spatial_gains(listener, Vec3::X, fall, 2)
                 .iter()
                 .sum::<f32>()
-                > 0.01
+                > 0.02
         );
-        assert!(source.position.distance(listener) < 5.0);
+        for y in 4..=6 {
+            journal.set_fluid([8, y, 8], FluidCell::default()).unwrap();
+        }
+        let mut drained = [None; 3];
+        include_fluid_sources(&mut drained, listener, &terrain, &chunks, &journal);
         assert!(
-            (source.position.y - lower.level as f32 - 0.15).abs() < 0.001,
-            "the emitter belongs at the lower pool, never at the high lip"
+            drained[2].is_none(),
+            "closing and draining a real fall removes its emitter"
         );
-        let generator = terra_world::SectionGenerator::new(terrain.clone());
-        assert!(
-            generator
-                .block_at(source.position.floor().as_i64vec3().to_array())
-                .is_ok_and(terra_world::water::can_hold_fluid)
-        );
-        assert_eq!(
-            acoustic_transmission(listener, source.position, |p| generator.block_at(p).ok()),
-            1.0
-        );
-        let columns =
-            terrain.water_columns(f64::from(source.position.x), f64::from(source.position.z));
-        let y = source.position.y.floor() as i64;
-        let span = columns.at(y).or_else(|| columns.at(y - 1)).unwrap();
-        assert!(
-            (span.level as f32 - source.position.y).abs() < 1.0,
-            "the selected emitter must pass the live liquid-span validation"
-        );
-        let solid_wall_z = 613;
-        assert_eq!(
-            acoustic_transmission(listener, source.position, |p| {
-                if p[2] == solid_wall_z {
-                    Some(3)
-                } else {
-                    generator.block_at(p).ok()
-                }
-            }),
-            0.05,
-            "discovering a tall lip must not bypass the solid-occlusion ray"
-        );
+        chunks.loaded.clear();
+        let mut unloaded = [None; 3];
+        include_fluid_sources(&mut unloaded, listener, &terrain, &chunks, &journal);
+        assert!(unloaded[2].is_none());
     }
 
     #[test]

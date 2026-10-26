@@ -1,0 +1,48 @@
+{
+  "id": "teramic::gold_pickaxe",
+  "name": "Gold Pickaxe",
+  "station": "workbench",
+  "pattern": {
+    "kind": "shaped",
+    "width": 3,
+    "height": 3,
+    "cells": [
+      {
+        "item": {
+          "mineral": "gold_ingot"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "mineral": "gold_ingot"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "mineral": "gold_ingot"
+        },
+        "count": 1
+      },
+      null,
+      {
+        "item": "stick",
+        "count": 1
+      },
+      null,
+      null,
+      {
+        "item": "stick",
+        "count": 1
+      },
+      null
+    ]
+  },
+  "output": {
+    "item": {
+      "tool": "gold_pickaxe"
+    },
+    "count": 1
+  }
+}

@@ -89,7 +89,7 @@ Keine Join-Dateien und keine manuell konfigurierten oder verteilten privaten
 Serverschluessel. Der automatische Handshake handelt intern kurzlebige Netcode-
 Transportcredentials aus; die bewahrte Lightyear-Verschluesselung braucht weiterhin
 einen nur im Serverprozess lebenden Transportschluessel. Das ist kein Account-Key.
-`--connect-token` und `--token-out` sind abgeloest. Protokollstand jetzt **55**:
+`--connect-token` und `--token-out` sind abgeloest. Protokollstand jetzt **73**:
 Client und Server gemeinsam neu bauen/starten. Seeds und Welt-IDs bleiben gleich.
 
 Im LAN den Server mit `--bind 0.0.0.0:5000` starten. **Multiplayer** entdeckt ihn
@@ -276,15 +276,16 @@ Wasserquellen/Fuellstaende, Bodenzustaende, Containerinhalte, Ofenzustaende und 
 32x32 Chunk-Spalten, einschliesslich aller Y-Sections. Negative Koordinaten nutzen
 euklidische Division. `players/<UUID>.data` speichert getrennt Inventar, Cursor,
 Revisionen, echte serverseitige Abbau-/Bau-/Prop-Erntestatistiken, Todeszaehler
-und Gesundheit/Ausdauer/Hunger/Sauerstoff. Neue Spielerdateien verwenden `PLY5`
-einschliesslich Saettigung, Nahrungsregeneration, Status-Effekten und Schildrest;
-explizite Leser fuer `PLY4`, `PLY3`, `PLY2` und `PLYR` erhalten Inventare und alte Zaehler.
-Neue Regionen verwenden `RGA0`; `REG9`, `REG8`, `REG7`, `REG6`, `REG5`, `REG4`, `REG3`, `REG2` und `REGN` bleiben lesbar.
+und Gesundheit/Ausdauer/Hunger/Sauerstoff. Neue Spielerdateien verwenden `PLY7`
+einschliesslich Saettigung, Nahrungsregeneration, Status-Effekten, Schildrest und Ausruestung;
+explizite Leser fuer `PLY6`, `PLY5`, `PLY4`, `PLY3`, `PLY2` und `PLYR` erhalten Inventare und alte Zaehler.
+Neue Regionen verwenden `RGA3` mit Crusher-/Anbauzustaenden, Tiervertrauen und
+Spinnennetz-Zuordnungen; `RGA2`, `RGA1`, `RGA0`, `REG9`, `REG8`, `REG7`, `REG6`, `REG5`, `REG4`, `REG3`, `REG2` und `REGN` bleiben lesbar.
 `level.data` enthaelt nur den kleinen Index und globale Drop-Zaehler/Revisionen.
 Das ist ein versioniertes TERAMIC-Format, keine Minecraft-/NBT-Dateikompatibilitaet.
 Das Welt-Speicherformat ist deshalb jetzt 2, der interne Binaerheader hat Version 1.
 Generatorversion 5, Seeds und Welt-/Block-IDs bleiben gleich. Der aktuelle
-Netzwerkstand ist Protokoll 56; Client und Server gemeinsam aktualisieren.
+Netzwerkstand ist Protokoll 65; Client und Server gemeinsam aktualisieren.
 Version-1-Metadaten werden mit Sicherung vor dem Datentransfer auf 2 gesetzt,
 damit alte Programme die Regionsdateien nicht als leere Editliste missverstehen.
 Die bereits vorhandenen Postcard- und Bevy-Math-Versionen werden direkt genutzt;
@@ -345,7 +346,7 @@ Felder und ungueltige Werte werden abgelehnt.
 | Shift + B | Essbaren Pilz platzieren statt essen; Shift zusaetzlich zur Place-Belegung halten |
 | E | TiltUI-Inventar / Creative-Materialauswahl oeffnen oder schliessen (rebindbar) |
 | F1 | Debug-Overlay ein/aus (standardmaessig aus; Schalten beim Loslassen, rebindbar) |
-| F1 + B | Debug-Platzierungsbox umschalten; aktiviert dazu Debug (rebindbar) |
+| F1 + B | Gespeichertes Debug-Platzierungsflag umschalten; keine Vorschau fuer Vollbloecke (rebindbar) |
 | F | In Creative zwischen Laufen und Fliegen wechseln |
 | F5 | First Person -> Rueckansicht -> Vorderansicht -> First Person (rebindbar) |
 | Escape | Pause/Menu; in Options Back mit Verwerfungsabfrage |
@@ -358,7 +359,9 @@ Essen folgt derselben gespeicherten Place-Belegung, auch einer Maustaste oder
 Tastenkombination; keine Default-Belegung wurde geaendert. Gezieltes Oeffnen
 von Stationen und Fuettern von Tieren hat Vorrang vor Place-Essen.
 Ist Shift bereits Teil der gespeicherten Place-Belegung, bleibt diese zum Essen nutzbar.
-Die transparente Vorschau zeigt gueltige Positionen gruen und ungueltige rot.
+Nur ausrichtbare Bauten erhalten eine pulsierende orange Modellkontur als
+Platzierungsvorschau. Normale Vollbloecke wie Stein oder Dirt erhalten keine;
+gefuellte gruene/rote Vorschauflaechen gibt es nicht mehr, auch nicht mit F1+B.
 In Survival ist dafuer ein Exemplar des ausgewaehlten Blocks im Inventar noetig;
 Creative stellt alle registrierten Baumaterialien ohne Verbrauch bereit.
 Im geoeffneten Inventar sind Blick, Bewegung, Abbau und Platzierung gesperrt;
@@ -378,7 +381,7 @@ Apply aktiviert und speichert `auto_climb` in `configs/controls.toml`; Reset
 schaltet es im Entwurf aus. Der gemeinsame Client-/Server-Controller uebernimmt
 diese Wahl pro Eingabepaket, auch bei Vorhersage und Replay. Ein bewusster
 Schwimmsprung zum Ufer funktioniert unabhaengig davon. Client und Server
-muessen mit demselben Protokollstand (aktuell 55) gemeinsam aktualisiert werden.
+muessen mit demselben Protokollstand (aktuell 65) gemeinsam aktualisiert werden.
 `mouse_sensitivity`, `fly_speed` (jetzt 20 m/s), `fly_boost_multiplier` und
 `fly_precision_multiplier` sind in client.toml konfigurierbar. Beschleunigung
 wird mit einer kurzen exponentiellen Reaktion zeitlich exakt integriert.
@@ -683,8 +686,9 @@ Modelle derselben Section erhalten. Eine verbundene Doppeltruhe zerlegt nur
 die ausgewaehlte Haelfte. Das ist eine kosmetische Darstellung; die logische
 Kollision aendert sich erst beim echten Edit.
 Creative entfernt weiterhin sofort ohne Haltezeit.
-Die rote/gruene Platzierungsbox ist standardmaessig aus und erscheint nur bei
-aktivem Debug plus F1+B-Schalter. Menues und Texteingaben sperren diese Tasten.
+Die fruehere rote/gruene Platzierungsbox ist durch die orange Modellkontur fuer
+ausrichtbare Bauten ersetzt. Normale Vollbloecke bekommen auch mit F1+B keine
+Box. Menues und Texteingaben sperren diese Debug-Tasten.
 Die Kombination aktiviert nicht gleichzeitig eine auf B gebundene Spielaktion.
 Debug-Overlay, Platzierungsbox, Chat und Command sind eigene Controls-Aktionen.
 Neben einzelnen Tasten und Maustasten sind Zwei-Tasten-Kombinationen moeglich;
@@ -5150,3 +5154,574 @@ Bildherkunft und Generierungsprompt: [Status-Atlas](src-ui/assets/status-effects
 Native Kurzpruefung: `target/debug/terra-client --smoke-test-effects`.
 Status, Messungen und Grenzen:
 [Phase-104-Bericht](tools/benchmarks/results/status-effects-2026-10-22/README.md).
+
+### Ruestungen Und Ausruestung (Phase 105 / F02)
+
+Fuenf Sets mit je Helm, Brustpanzer, Handschuhen, Hose und Stiefeln sowie vier
+Accessoires verwenden neun echte, servervalidierte Plaetze. Einzeldefinitionen,
+Rezepte, Schutz- und Werteboni:
+[Armor And Equipment](assets/terra/items/ARMOR.md).
+Klick, Tausch und Shift-Transfer verwenden dieselbe atomare Inventarrevision;
+ein Wechsel heilt nicht. Die bisherige Keep-Inventory-Regel bleibt erhalten.
+PLY6 liest PLY5 und aeltere Spielerdateien explizit; bestehende Welt-/Block-IDs
+und Containerformate bleiben unveraendert. Protokoll 57 prueft beide
+Effekt-/Ausruestungskataloge, Client und Server gemeinsam aktualisieren.
+
+Gemeinsame gebuendelte Meshes folgen den animierten Koerpergelenken und werden
+auch fuer 3D-Itembilder/Drops verwendet. Das Portraet erneuert sich bei einem
+Wechsel mit wiederverwendeten Renderzielen. Die silberne Ruestungsleiste zeigt
+Schutz, nicht Haltbarkeit; Shield Power bleibt separat. HP und Stamina beziehen
+sich auf ihre tatsaechlichen Maxima. Nur der erste Effekt der Kartenreihe liegt
+auf Herz/HP und aktiviert gegebenenfalls die Regenerationsherzen; andere Effekte
+wirken weiter, ohne sich optisch darauf zu mischen.
+
+Native Kurzpruefung: `target/debug/terra-client --smoke-test-equipment`.
+Nachweise und Grenzen:
+[Phase-105-Bericht](tools/benchmarks/results/equipment-2026-10-22/README.md).
+
+### Capes Und Crusher (Phasen 106/107 / F03)
+
+Die Ruestungsanzeige nutzt den schmalen Stamina-Rahmen mit eingelassenem,
+ausgefuelltem Schild und silbernem Schutzkanal. Capes ergaenzen den zehnten
+Ausruestungsplatz: Leather, Iron, Gold, Diamond und Ruby beginnen weiss und
+lassen sich mit einem Dye faerben, ohne ihre Stufe zu aendern. Stoff,
+Materialbeschlaege, Werteboni, Replikation und gespeicherte Farbe verwenden
+die bestehende Ausruestungsarchitektur.
+Der Stoff liegt ausschliesslich am Ruecken; zwei verbundene, geglaettete
+Segmente reagieren auf Laufgeschwindigkeit und den vorhandenen Wetterwind.
+Fremde Atlas-Rahmenpixel oberhalb der Ruestung werden maskiert; Shield Power
+erscheint als schmales blaues Inlay, ohne einen zweiten Rahmen ueber dem HUD.
+Gift tropft zeitversetzt vom Herz, weiterhin nur als erster Effekt der Reihe.
+
+Der horizontale Zweiblock-Crusher verarbeitet Blumen zu Farbstoff und Mineralien
+zu sechs Staubarten. Zwei private Inventarslots, atomare Transfers, vier Sekunden
+Verarbeitung, Fortschritt und Too-Many-Items-Rezepte sind integriert. Einzelne
+Rezepte liegen in `assets/crushing/`; der Generator fuer das gemeinsame
+3D-Modell ist `tools/assets/build_crusher.mjs`. Seit Phase 107 muss eine
+Handkurbel (Block 100) rechts am Zahnrad montiert werden. Inventar befuellen,
+schliessen und an der Kurbel Platzieren/Benutzen gedrueckt halten; Loslassen
+stoppt den Antrieb. Shift behaelt angrenzendes Platzieren bei. Kurbeln und
+Zerkleinern haben getrennte, budgetierte Klanganteile; Spaene fallen zum
+Auswurf. Die Verarbeitung pausiert ungeladen, nutzt begrenzte Arbeitsbudgets
+und erzeugt keine Terrain-Rebuilds. Aktiver Antrieb wird nicht gespeichert.
+Das Spielerinventar nutzt mehr Fensterhoehe und kompakte Hoehenregeln.
+Slot-Tooltips reagieren direkt auf Hover; leere Slots bleiben stumm. Picking-
+Position, Monitor-DPI und UI-Skalierung werden getrennt behandelt, ohne
+gegenseitige Layoutkorrekturen der beiden Positionierungspfade im Stillstand.
+
+Protokoll 60, PLY7 mit expliziter PLY6-Migration und RGA1 mit RGA0-Leser.
+Bestehende Block-/Welt-IDs, Generator und Abwaertskompatibilitaet bleiben erhalten.
+Details, native Kurzpruefungen und Grenzen:
+[Phase-106-Bericht](tools/benchmarks/results/capes-crusher-2026-10-22/README.md).
+Aktuelle Korrekturen und Pruefungen:
+[Phase-107-Bericht](tools/benchmarks/results/manual-crusher-2026-10-22/README.md).
+
+### Materialausbau (Phase 108)
+
+Die Farbstoffpalette umfasst jetzt 13 Farben: Red, Yellow, Blue, Orange, Green,
+Purple, White, Black, Lime, Pink, Gold, Silver und Light Blue. Alle Farben gelten
+fuer Betten und Capes. Bisherige Farb-Tags und Bett-Ausrichtungen bleiben erhalten;
+die sechs angehaengten Farben erweitern die fuenf Cape-Stufen auf 65 Varianten.
+Neue Misch-/Pigmentrezepte und alle sechs Materialstufen fuer Schwert, Axt und
+Spitzhacke sind einzelne JSON-Dateien und im Rezeptbrowser sichtbar.
+[Rezepte und Materialstufen](assets/terra/items/DYES_AND_TOOLS.md).
+
+Die Werkzeuge nutzen ein gemeinsames, facettiertes Modell fuer Vorschau und
+Welt. Ausgeruestete Schwerter sind 1,5 m, Aexte und Spitzhacken 1,25 m lang;
+Inventarbilder passen dieselbe Geometrie in den Slot ein, lose Drops sind
+bewusst verkleinert. Die 69 bisher abgerundeten Blockdefinitionen nutzen gerade
+Kanten. Oberflaechendetails und optionale Mod-Bevels bleiben davon unabhaengig.
+Mixer und Kinetik-System sind unter F25/F26 geplant, nicht bereits implementiert.
+Pruefungen, native Bilder und Hoerprobe:
+[Phase-108-Bericht](tools/benchmarks/results/materials-crusher-2026-10-23/README.md).
+
+### Ernte Und Anbau (Phase 109 / F04)
+
+Weizen, Mais und Salat verwenden das bestehende Prop-System mit acht sichtbaren
+Wachstumsstadien und gemeinsam gebuendelter 3D-Geometrie. Samen sind durch das
+Abernten von wildem Gras, Blumen und kleinen Pflanzen erhaeltlich. Mit der
+vorhandenen Platzieren-/Benutzen-Taste auf eine freie Gras-/Erdflaeche saeen;
+die Autoritaet bereitet dabei Ackerboden (neue Block-ID 101) vor. Ein Feld
+belegt eine Blockflaeche, Mais/Weizen brauchen zwei freie Bloecke darueber.
+Unreife Pflanzen geben einen Samen zurueck; reife Pflanzen geben Ertrag und
+mehrere Samen. Neue Aussaat erfolgt mit denselben normalen Inventarstapeln.
+
+Wasser innerhalb von vier Bloecken und exponierter Regen befeuchten Pflanzen;
+ohne Nachschub trocknet der Boden. Tageslicht und weiche SeasonSample-Gewichte
+bestimmen das Wachstum. Ohne Licht, bei ausgetrocknetem Boden und im Winter
+wachsen diese drei Feldfruechte nicht. Die Basiszeiten bei guten Bedingungen
+sind 600/780/480 Sekunden fuer Weizen/Mais/Salat, saisonale Raten kommen hinzu.
+Mais, Salat und herstellbares Brot verwenden das vorhandene Essenssystem.
+Rezepte und Gegenstaende erscheinen im Too-Many-Items-Browser.
+
+Einzeldefinitionen stehen in `assets/terra/farming/`, `assets/terra/props/`,
+`assets/terra/items/` und `assets/crafting/`. Autoritative Timer, Feuchtigkeit
+und die beim Saeen festgelegte Wachstumsdauer werden gespeichert. Bestehende
+Regionen lesen weiterhin RGA1 und aeltere Formate; neue Regionen verwenden RGA2.
+PLY7, Weltformat 2, Generator 5 und bestehende Block-IDs bleiben erhalten.
+Netzwerkprotokoll 61 erfordert zusammen aktualisierte Clients und Server.
+
+Gefressene Feldfruechte beginnen unter derselben Pflanzen-ID erneut zu wachsen.
+Wildes Futter kehrt nach kontrollierter Abklingzeit unter derselben ID zurueck.
+Hoechstens 128 Feldfruechte und 128 Futter-Timer pro Sekunde werden verarbeitet;
+ungeladene Pflanzen und pausierte Zeit wachsen nicht weiter. Fortschritt allein
+erneuert keine Terrain-/Wasser-Meshes oder Prop-Batches. Fackellicht-Farmen und
+Offline-Wachstum sind nicht Teil dieser Feldanbau-Fassung.
+
+Kurze native Funktions-/Bildpruefung: `target/debug/terra-client --smoke-test-farming`.
+Werkzeug-Griffwinkel: `target/debug/terra-client --smoke-test-hands`.
+
+### Spinnen Und Pflanzenuebergaenge (Phase 111)
+
+`teramic::small_spider`, `teramic::medium_spider` und `teramic::large_spider`
+erganzen die gemeinsame Mob-Registry um unterschiedliche Koerpergroessen,
+natuerliche Tag-/Nacht-/Tiefenregeln, Klettern, Abseilen und Gift. Zehn
+verankerte Spinnennetz-Varianten bleiben normale auswaehlbare, abbaubare Props
+mit gemeinsamer Section-Geometrie. Die Einzeldefinitionen liegen unter
+`assets/terra/mobs`; die bestehende `/spawn`-Vervollstaendigung kennt die Arten.
+
+Aussaat auf bereits vorhandenem Ackerboden bleibt nach Save/Reload gueltig.
+Ueberhaengende Kulturpflanzen blockieren Nachbarfelder beim Pflanzen nicht.
+Ackerboden zeigt den Wachstumsbalken der Kultur oder `Keine Samen erkannt`.
+Sichtbare Stufen wechseln ueber 2,4 Sekunden mit Groesseninterpolation und
+komplementaerer Rasterueberblendung, ohne transparente Einzelpflanzen.
+
+Die Minimap korrigiert ihren lokalen Bodenbezug, ohne die FullMap beim
+Verschieben zurueckzusetzen. Geschlossene Hoehlen behalten beim Tauchen ihre
+dunkle Beleuchtung, erhalten kein direktes Sonnen-/Mondlicht und sind im
+Hintergrund 35 Prozent dunkler. Fackeln bleiben lesbar; Daemmerungsuebergaenge
+besitzen keine abrupte Helligkeitsluecke. Groessere Shader-Schwimmspuren und
+ueberarbeitetes Wasser-Foley ergaenzen die Wasserbewegung.
+
+Netzwerkprotokoll 63 verlangt gemeinsam aktualisierte Clients/Server.
+Weltformat 2, Generator 5, PLY7 und RGA2 bleiben erhalten. Die angefragten
+Rohr-/Ventil-, Wasserhahn- und 2x2-Quellen-Features stehen unter F27/F28/F29 in
+TODO.md, nicht als schon implementierte Technik. Architektur, Bilder,
+Pruefungen und Grenzen: [Phase 111](tools/benchmarks/results/spiders-farming-light-2026-10-23/README.md).
+
+### Zaehmung, Effekte Und Interaktion (Phase 113)
+
+Schafe, Kuehe, Schweine, Pferde und alle drei Spinnenarten lassen sich mit
+artspezifischem Futter ueber die konfigurierte Platzieren-Taste zaehmen. Echtes
+Futter wird serverseitig verbraucht; Vertrauen und Besitzer werden gespeichert,
+repliziert und im Ziel-HUD angezeigt. Folgen und Leerhand-Befehle sind seit
+Phase 114 vorerst deaktiviert und fuer eine spaetere Pet-UI vorgesehen. Alte
+gespeicherte Follow-Werte bleiben lesbar, loesen aber keine Bewegung aus.
+Gezaehmte Tiere bleiben
+vom natuerlichen Spawnlimit ausgenommen. Reiten und Zucht sind weitere Aufgaben.
+
+Hoehlenspinnen priorisieren einen verankerten Netzbau und suchen danach bei
+Hunger innerhalb von 20 Metern um sich und ihr Netz nach Nahrung. Sie haben
+50 Nahrung und keinen Durst. Entfernte Netze koennen neu gebaut werden;
+unpassende Netzanker lassen die Spinne weitersuchen. Fuettern und Befehle
+erhalten Wand-/Decken- und Seilbefestigungen.
+
+`/effect teramic::nightvision 2 100` wirkt auf den eigenen Spieler;
+`/effect @Name teramic::nightvision 2 200` auf einen berechtigten anderen
+Spieler. Namen mit Leerzeichen werden als `@"Name Mit Leerzeichen"` angegeben.
+Hilfe, Konsole, Vervollstaendigung und die bisherigen give/clear-Formen nutzen
+dieselbe Registry. Night Vision erweitert die bestehenden Effekte, ohne deren
+IDs zu verschieben.
+
+Creative-Pick-Block erzeugt ein Item statt 128. Truhengeraeusche folgen
+bestaetigten Oeffnungs-/Schliesswechseln im vorhandenen raeumlichen Audiomixer.
+Geladene Block-Edits bekommen bevorzugte Einzel-Remesh-Jobs und priorisierte
+Render-Publikation, normale Spaltenjobs geben zwischen Sections den Worker frei.
+TiltUI buendelt die Zielaufloesung verschachtelter Slots; der Inventarkatalog
+wird wiederverwendet statt bei jeder Oeffnung komplett aufgebaut. Eine einzelne
+unsichtbar vorgewarmte Inventaroberflaeche bleibt pro Welt erhalten; geschlossen
+sind ihre Bindings geparkt. Neue CSS-Slot-Scopes teilen sich eine Datenerfassung
+je Style-Pass statt je Slot erneut die komplette UI zu durchsuchen.
+Im kurzen nativen Vergleich bei 2880x1620/Sichtweite 12 sank die erste
+Inventaroeffnung von 325 auf 65 ms, der laengste Oeffnungsframe von 166 auf
+25 ms. Die dauerhafte offene UI-FPS blieb etwa gleich; im zusaetzlichen
+4K-/Regenlauf besteht weiterhin eine kleinere messbare Oeffnungsspitze.
+
+Client und Server gemeinsam auf Protokoll 65 aktualisieren. RGA3 erweitert die
+vorhandenen Regionsdaten mit Vertrauen und Netzzuordnung; alte Regionen bleiben
+lesbar. PLY7, Weltformat 2 und Generatorversion 5 bleiben erhalten. Umsetzung,
+Futterliste und Pruefungen:
+[Phase 113](tools/benchmarks/results/taming-effects-interaction-2026-10-23/README.md).
+
+### Blockoberflaechen, Mob-Balken Und Netzkonstruktionen (Phase 118)
+
+Grasoberseiten bilden wieder eine durchgehende Flaeche statt wiederholter
+eingesenkter Rasterkacheln. Dezente weltverankerte Materialdetails ersetzen
+das harte prozedurale Steinraster. **Graphics > Block Surface Shader** schaltet
+den zusaetzlichen Oberflaechenshader aus; es verwendet weiterhin
+`blocks.material_detail` in der vorhandenen `graphics.toml`. Texturen,
+Wetter-/Schneezustaende und logische Bloecke bleiben erhalten, gemeinsame
+Materialhandles werden wiederverwendet.
+
+**Gameplay > Mob Health Bars** bietet `Looking At` (Standard), `All In View`,
+`All Time` und `None`. Die ersten beiden beachten echte Terrain-/Modell-
+Sichtverbindungen; `All Time` zeigt projizierte Balken auch durch Waende.
+Freundliche Tiere/gezaehmte Mobs sind gruen, feindliche rot. Maximal 64 nahe
+Balken innerhalb 64 m, acht fair rotierende Sichtpruefungen pro UI-Tick und
+eine begrenzte Sichtablage halten die Arbeit kontrolliert.
+
+Stalker-Details verwenden getrennte konstruktive Fugen statt koplanar
+ueberlappender Flaechen. Spinnen bauen vier groessere raeumliche Netzvarianten
+mit Fangflaechen und Halteseilen, etwa 7..20 m freie Spannweite. Bestehende
+Prop-Datensaetze, Section-Batches, Besitzersektionen und Entfernungsdaten
+bleiben die Grundlage. Echte Felsanker, freie Seilverlaeufe, geladene Nachbarn
+und Durchgangsraum werden geprueft; auch Abbau/Gegenanker ueber Section-Grenzen.
+
+Neue Welten verwenden Hoehlenstrukturrevision 7: Das bestehende breite
+Hoehlennetz wird regional geclustert, mit groesseren massiven Zwischenzonen.
+Ausgewaehlte Kammern werden nicht verkleinert und aktive Gaenge behalten ihre
+Revision-6-Breite. Bestehende Saves bleiben bei Revision 0..6.
+
+Blumen sterben nach ihrer stabilen saisonalen Schwelle in zehn echten Sekunden
+ab: Braunfaerbung, Schrumpfen an der Wurzel und vollstaendiges Verschwinden.
+Eine feste 256er-Zeittabelle statt Pflanzen-Entities steuert Shader, Picking
+und Bienen. Kein saisonaler Mesh-Rebuild; Fruehlingsrueckkehr und bereits
+dormante Reloads bleiben konsistent. Protokoll 69 erfordert gemeinsam
+aktualisierte Clients/Server. Block-/Welt-IDs und Speicherformate bleiben gleich.
+Pruefungen, Aufnahmen und Grenzen:
+[Phase 118](tools/benchmarks/results/render-health-webs-2026-10-24/README.md).
+
+### Pferde Reiten, Schnee Und Autosaves (Phase 117)
+
+Eigene gezaehmte, erwachsene Pferde lassen sich mit der bestehenden
+Platzier-/Tierinteraktion besteigen, sofern kein passendes Futter angeboten wird.
+WASD steuert, Sprint beschleunigt, Springen verwendet die feste individuelle
+Sprunghoehe, Shift steigt an einer freien, geladenen Bodenstelle ab.
+Ein Pferd hat genau einen Reiter. Server und Vorhersage verwenden denselben
+Voxel-/Pferdemotor; Pferdeausdauer ersetzt waehrenddessen den Stamina-Wert im HUD.
+Sitzpose, Pferd und Kamera teilen dieselbe Darstellung. Aufsitzen ist kein
+Follow-Befehl; die spaetere Pet-Bedienoberflaeche bleibt offen.
+
+Schnee sammelt sich mit stabilen individuellen Blockraten statt gleichmaessig
+pro Chunk. Erst die dritte echte Schneeschicht verbirgt Bodenprops reversibel.
+Regulaere Welten verwenden nur lokale Schneezustaende, keine globale weisse
+Wetterauflage. Ausschliesslich die explizite lokale Saison-Galerie darf diese
+Kosmetik per `CosmeticSnowPreview` anfordern; Server/Replicas ignorieren sie.
+Herbstblumen blenden nach stabilen Pflanzenraengen gestaffelt aus und kehren
+Richtung Fruehling zurueck. Bereits frueher als entfernt gespeicherte Props
+werden nicht pauschal wiederhergestellt: alte Wetterentfernung und echte
+Spielerentfernung sind dort nicht zu unterscheiden.
+
+Neue Welten verwenden Hoehlenstrukturrevision 6 mit breiteren bestehenden
+Verbindungstunneln. Bestehende Saves behalten ihre gespeicherte Revision 0..5
+und ihre Spielerbauten. Generatorversion, Block-IDs und Welt-IDs bleiben gleich.
+Der Stalker-Atem verwendet bearbeitetes CC0-Atem-Foley statt der bisherigen
+Rausch-/Sinussynthese. Natuerliche Hoehlen-Stalker und kinematische
+Spinnen-Kantenwechsel erfuellen jetzt dieselben Speicherinvarianten wie die
+uebrige Population, ohne die Spielstandvalidierung abzuschalten.
+
+Client und Dedicated Server gemeinsam auf Protokoll 68 aktualisieren.
+Der aktuelle Reiter-/Ausdauerstand ist Sitzungszustand; Besitz, Fell,
+Kapazitaet, Sprungvermoegen und die letzte autoritative Tierposition bleiben
+ueber die vorhandenen Weltdaten erhalten.
+Umsetzung, kurze native Aufnahmen, Regressionen und Grenzen:
+[Phase 117](tools/benchmarks/results/riding-snow-autosave-2026-10-24/README.md).
+
+### Stalker, Kletterwege Und Streaming (Phase 116)
+
+Spinnen verwenden echte kontakt-/kollisionsgepruefte Wege ueber Boeden, gestufte
+Waende und Decken. Der Oberflaechen-Routencache ist begrenzt; Zielwechsel und
+blockierte Wege loesen keine unbeschraenkten Suchschleifen aus. Abseilen bleibt
+mit der vorhandenen Seildarstellung verbunden. Pet-Folgen bleibt deaktiviert.
+
+Jedes Tier besitzt ein stabiles, beim Spawn aus seiner persistenten Identitaet
+bestimmtes Geschlecht. F06 paart nur erwachsene Maennchen und Weibchen derselben
+Art und desselben Besitzers; Nachwuchs erhaelt wieder eine unabhaengige Auswahl.
+Alte Tiere und Familien bleiben lesbar, keine Tier-ID wird ersetzt.
+
+`/spawn teramic::stalker` ergaenzt den seltenen, ausschliesslich unterirdischen
+Stalker. Seine begrenzte Navigation verwendet reale geladene Hoehlengaenge;
+Beobachten, Verfolgen, Lichtabwehr und Wegziehen werden serverseitig entschieden.
+Der Griff verwendet die vorhandene kollisionsgepruefte Spielerbewegung, keine
+Flugerlaubnis oder Teleports. Rinden-/Moosmodell, bewegliche Arme/Haende,
+Augen und vier situationsabhaengige Geraeusche ergaenzen den vorhandenen Mobpfad.
+
+Die gemessene Terrain-Queue berechnet Sortierschluessel jetzt einmal je Eintrag.
+Wetter-/Kuestensnapshots werden lokal invalidiert und fuer unveraenderte oder
+leere Geometrie nicht erneut erstellt. Niederschlag folgt dem Boden-/Meerklima
+statt der Kamera-Flughoehe; Fruehlingskuesten sind maritim temperiert, waehrend
+Winter, Highlands und ausdrueckliche Schnee-Kommandos erhalten bleiben.
+
+Client und Dedicated Server gemeinsam auf Protokoll 67 aktualisieren.
+Nativer 120-s-Flugvergleich auf RX 6950 XT: bei 4K/Regen/Sichtweite 20
+39,18 -> 71,33 FPS, p95 43,87 -> 25,16 ms. Der 1080p-Clear-Vergleich bei
+Sichtweite 12 bleibt mit 123,61 -> 121,73 FPS auf aehnlichem Niveau.
+Keine reduzierte Grafikqualitaet, aber auch keine behauptete Langzeitabnahme.
+Messwerte, Screenshots, Regressionen und Grenzen:
+[Phase 116](tools/benchmarks/results/stalker-climbing-streaming-2026-10-24/README.md).
+
+### Nachwuchs, Slabs Und Spinnen (Phase 115)
+
+Die orange Baukontur ist heller und zwei physische Pixel breit. Ein behaltenes
+Kantenmesh wird im WGSL-Vertexshader zu schmalen Kantenstreifen erweitert;
+die Deckkraft pulsiert ohne Geometrie-Rebuild. Vollbloecke bleiben ohne Vorschau.
+
+Slabs stehen beim Treffer auf Boden-/Deckenmitte hochkant; die aeusseren 15
+Prozent bleiben horizontal. Unterschiedliche Materialien lassen sich nach
+anvisierter Haelfte einzeln abbauen. Resthaelfte, Abbauanimation, Drop und
+Hover-HUD stimmen damit ueberein. Identische Paare behalten gemeinsamen Abbau.
+
+Wilde und gezaehmte Spinnen bauen auch auf unebenen Hoehlenflaechen Netze und
+suchen anschliessend Nahrung. Dauerhafte geschuetzte Tagesruhe ist korrigiert.
+Gezaehmte Spinnen handeln autonom ohne Spielerziele; Pets folgen weiterhin nicht.
+
+F06 ergaenzt Nachwuchs fuer gezaehmte Schafe, Kuehe, Schweine, Pferde und
+Spinnen. Zwei gesunde erwachsene Tiere derselben Art und desselben Besitzers
+in hoechstens 5 m Abstand jeweils einmal zusaetzlich mit geeignetem F05-Futter
+fuettern. Das Paar bekommt bei sicherem Platz ein Jungtier und 300 Sekunden
+Abklingzeit. Nachwuchs waechst weich ueber 1200 aktive Wachstumssekunden;
+Groesse, Animation, Zielvolumen und Unterstuetzung passen sich an. Das Ziel-HUD
+zeigt Wachstum und Zuchtzustand. Eltern, Besitzer, Uhren und eine nicht
+wiederverwendbare Geburtsnummer bleiben gespeichert und repliziert.
+
+Client/Server gemeinsam auf Protokoll 66 aktualisieren. Neue Familienregionen
+verwenden RGA4, Welten mit Geburtszaehler IDX7. RGA3/IDX6, die bisherige
+Creature-Struktur, PLY7, Weltformat 2 und Generatorversion 5 bleiben lesbar
+beziehungsweise unveraendert. Regeln, Grenzen und Pruefungen:
+[Phase 115](tools/benchmarks/results/babies-slabs-spiders-2026-10-23/README.md).
+
+### Platzierungskonturen Und Pet-Befehle (Phase 114)
+
+Nur Bauten mit Platzierungsausrichtung zeigen eine Vorschau, einschliesslich
+Treppen, Slabs, Moebeln, Rohren und Wandfackeln. Die Kontur besteht aus echten
+Modellkanten ohne gefuellte Flaechen und ohne Triangulierungsdiagonalen. Ein
+einziges wiederverwendetes Linienmesh bleibt im Cache; nur die Deckkraft der
+orangefarbenen Kontur pulsiert weich. Normale Vollbloecke behalten ihre
+Platzierungslogik, erhalten aber keine Vorschau, auch nicht im Debugmodus.
+
+Gezaehmte Tiere warten vorerst ohne Folge-/Warteumschaltung per leerer Hand.
+Vertrauen, Besitzer und gespeicherte Weltstaende bleiben erhalten. Das Ziel-HUD
+zeigt keinen aktuell nicht bedienbaren Begleitermodus; F33 beschreibt die
+spaetere Befehls-UI. Protokoll 65 und Speicherformate bleiben unveraendert.
+Umsetzung, Regressionen und native Bildpruefungen:
+[Phase 114](tools/benchmarks/results/placement-outlines-pets-2026-10-23/README.md).
+
+### Platzierung, Hoehlenschalen Und Tiernavigation (Phase 112)
+
+Die Acker-/Kultur-HUD zeigt Bodenfeuchte und Wasserbedarf aus dem passenden
+autoritativen Pflanzenzustand. Eine Kollision der alten Pflanzen-ID zwischen
+Art und X-Koordinate ist behoben; alte gespeicherte IDs bleiben erhalten.
+
+Grosse Hoehlen laden ihren realen Dach-/Bodenbereich aus vorbereiteten
+Spaltendaten mit. Neue Weltvertraege nutzen Hoehlenrevision 5 fuer organischere
+Raumkonturen, Felsvorspruenge und kleine Auslaeufe im vorhandenen Wasserfluss.
+Alte Revisionen 0 bis 4 werden nicht migriert. Hoehlen-Hintergrundhelligkeit
+steigt gegenueber Phase 111 um 12,5 Prozent, Fackel-Streulicht um 30 Prozent
+ohne grelleren Nahbereich. Mineralsegmente sind blockig und pruefen ihre echte
+Tragkette statt beliebiger benachbarter Abbaupositionen.
+
+Tierbewegung prueft den durchlaufenen Raum, Hindernisse, Formblock-Untergrund
+und Wassereintritt. Spinnen besitzen mehr Entscheidungen und sind bei Jagd
+und Flucht physisch 60 Prozent schneller. Ihre Baender sind dunkelbraun.
+F1 + E ergaenzt F3 + E fuer Absicht, Ziel und vorhandene Pfadpunkte des
+anvisierten Tiers. Die Daten werden gezielt angefordert und begrenzt
+repliziert, nicht fuer jeden Mob permanent gesendet.
+
+Ausrichtbare Bauten haben eine echte Modell-Platzierungssilhouette aus dem
+gemeinsamen Server-/Client-Resolver mit einem einzigen wiederverwendeten
+Mesh. Truhen bekommen weiche Deckelanimationen anhand berechtigter Betrachter,
+auch Doppeltruhen und fuer andere Spieler. Crusher und Vogelscheuche erhalten
+echtes Laternenlicht im unveraenderten lokalen Lichtbudget.
+
+Protokoll 64 erfordert gemeinsam aktualisierte Clients/Server; PLY7/RGA2,
+Weltformat 2 und Generator 5 bleiben erhalten. Nachweise und Grenzen:
+[Phase 112](tools/benchmarks/results/building-farming-caves-2026-10-23/README.md).
+
+### Farming-Werkzeuge Und HUD (Phase 110)
+
+Giessekannen, Hacken und Sensen gibt es in Holz, Eisen, Gold, Diamant und Rubin.
+Die konfigurierte Platzieren-/Benutzen-Taste bereitet freien Gras-/Erdboden vor,
+fuellt Kannen an echtem Wasser auf, bewaessert Pflanzen oder erntet reife Kulturen
+mit der Sense. Holz/Eisen/Gold ernten 3x3, Diamant/Rubin 5x5 Felder auf gleicher
+Hoehe. Reichweite, Sicht, Inventarquelle und Drop-Kapazitaet werden serverseitig
+geprueft; unreife Kulturen bleiben stehen. Sensen schneiden sichtbar seitlich,
+Kannen kippen beim Benutzen. Die Arbeitskante zeigt in die Welt statt quer zur
+Ego-Kamera.
+
+Kannen halten je Stufe 8/12/16/20/24 Einheiten; eine Bewaesserung setzt die
+gespeicherte Feuchtigkeit auf voll und verbraucht eine Einheit. Der Vorrat
+gehoert derzeit zur Sitzung und muss nach neuem Verbinden aufgefuellt werden.
+15 einzelne Werkzeugdefinitionen und 16 Rezepte verwenden die vorhandenen
+Kataloge und Too Many Items. Eine dekorative Vogelscheuche mit Hut, Schal,
+Stroh und Laterne ist platzierbar; Vogel-KI und Laternenlicht sind noch nicht
+implementiert. Ackerboden besitzt eigene 512px-Top-/Seitentexturen und drei
+75-mm-Furchen, ohne neue logische Blockgroesse.
+
+Das Ziel-HUD zeigt echten Wachstumsfortschritt als Prozentbalken. Einmal pro
+Sekunde sendet die Autoritaet maximal 256 nahe Pflanzenwerte. Der Jahreszeiten-
+zeiger ist eine gefuellte silberne Pfeilspitze mit dunklem Rand. Strg + Klick
+auf die Creative-Muelltonne leert persoenliche Inventarinhalte einschliesslich
+Cursor, Ausruestung und Crafting-Reservierungen, nicht Weltcontainer.
+CreatureStates werden auch vor dem abgeschlossenen Weltbeitritt konsumiert,
+statt in Lightyears Queue unbehandelt zu bleiben. Protokoll 62 erfordert
+zusammen aktualisierte Clients und Server; Speicherformate bleiben PLY7/RGA2.
+Details, native Bilder und Pruefungen:
+[Phase-110-Bericht](tools/benchmarks/results/farming-tools-2026-10-23/README.md).
+
+### Mob-Bewegung, Reiten Und Streaming (Phase 119)
+
+`X` steigt vom Reitobjekt ab; `Shift` sprintet mit dem Pferd. Pferd und Reiter
+benutzen eine gemeinsame Sprungphase und denselben Sattel-Bezugspunkt.
+Beschleunigung/Bremsen sind zeitbasiert, entfernte Reitposen interpolieren ihre
+wirklich angezeigte Rotation weiter. `F1 + H` zeigt reale Mob-Kollisionsboxen
+und die Blickrichtung, ohne das Textoverlay einzublenden.
+
+Landtiere pruefen reale Teilkontakte beim Absteigen und lassen sich aus
+bestehenden Kollisionen nur auf einen nachweislich freien lokalen Weg befreien.
+Spinnen pruefen beim Klettern ihre gedrehten Koerperausmasse. Die natuerliche
+Hoehlen-Spawnchance steigt relativ um 10 Prozent fuer Stalker und 25 Prozent
+fuer Medium/Large Spiders; die bestehenden Populationslimits bleiben bestehen.
+
+**Gameplay > Mob Health Bars > Edit Bars** oeffnet vier Sichtmodi und
+Farbwaehler fuer freundliche/feindliche Balken sowie deren Schrift. Live-Mobs
+auf Mini-/FullMap warten nicht mehr auf Detail-Kartenkacheln. Bekannte Decken
+trennen weiterhin Hoehlenstockwerke; unbekannte Sections sind keine Decke.
+
+Eine begrenzte deduplizierte Prop-Auswahl ersetzt globale LOD-Durchlaeufe ueber
+leere Sections. Echte Edits werden vorgezogen und neue Pflanzen auch bei
+gleichzeitigen Wasser-Publikationen aufgenommen. Reine LOD-Auftraege verwenden
+gueltige Dach-Exposure-Daten erneut. Ranken brauchen eine lueckenlose reale
+Deckenverbindung, Bodenpflanzen tragfaehigen Boden; voruebergehend ungeladene
+Nachbarn verursachen keine dauerhafte Pflanzenentfernung.
+
+Messbedingungen, kurze native Pruefungen, Regressionen und Grenzen:
+[Phase-119-Bericht](tools/benchmarks/results/mob-movement-streaming-2026-10-24/README.md).
+
+### Pets, Ganzbaumfaellen Und Spielerorte (Phase 120)
+
+**F33:** Sneak + Platzieren auf dem eigenen gezaehmten Tier oeffnet ein
+dunkel-goldenes Radialmenue mit Modellportraet, Herzen und Follow/Rest/None.
+Die bestehenden Belegungen sind umbelegbar (Standard Shift + B). Follow nutzt
+die vorhandene Navigation zu einem erreichbaren anwesenden Besitzer innerhalb
+24 m, ohne Teleport. Rest wartet mit weiterlaufender Physik, None erlaubt das
+normale autonome Verhalten. Besitzer, lebendes Tier, Reichweite, geladener
+Sichtweg und Reitzustand werden auf dem Server geprueft. Alte Follow-Felder
+werden nicht aktiviert; explizite Auftraege bleiben ueber RGA5 gespeichert.
+
+**F08:** Beim Survival-Abbau eines natuerlichen Stammfusses mit Sneak dauert der
+gesamte Baum 0,5 s je Holzblock. Exakte Generator-Strukturzuordnung schuetzt
+Spielerbauten und Nachbarbaeume. Holz, gestapelte Drops und verzoegerter
+Laubzerfall werden budgetiert verarbeitet. Noetige obere Stammsections werden
+ueber das vorhandene Streaming nachgeladen. Einzelblock-/Creative-Abbau bleibt
+unveraendert; der regulaere Weltabschluss beendet angenommene Faellarbeiten.
+
+Wasserfall-Ecken verwenden gemeinsame versetzte Kanten. Echte Fluessigkeit
+behaelt neben Slabs/Treppen dieselben Oberflaechenkanten, auch diagonal ueber
+vier Chunks; Wasser und feste Restgeometrie werden gegenseitig verdeckt.
+Simulation, Update-Budgets, Materialien und Shader bleiben erhalten.
+
+Spielerorte werden pro UUID und Welt mit Kapselmitte, Blickrichtung und erlaubtem
+Flugzustand gespeichert. Ortsupdates sind Metadaten und invalidieren kein Terrain.
+Beim Laden werden echte Blockformen und geladener Kollisionsraum geprueft;
+begrenzte Korrekturen duerfen keine neuen Hindernisse durchqueren. Alte Saves
+ohne PLY8-Ortsdaten verwenden weiter den normalen sicheren Spawn. Welt-/Block-IDs,
+Generator- und Welt-Saveversion bleiben gleich; Clients und Server benoetigen
+gemeinsam Protokoll 70.
+
+Pruefungen, Aufnahmen und Grenzen:
+[Phase-120-Bericht](tools/benchmarks/results/pets-trees-water-location-2026-10-24/README.md).
+
+### Phase 121: Baumfall, Mob-KI, Trefferboxen Und Bienen
+
+Abgeschlossener Sneak-Ganzbaumabbau loest eine gebuendelte Fall-/Bruchanimation
+mit nachfallender Krone aus. Die eigentlichen Blockaenderungen und Drops bleiben
+autoritative, begrenzte Arbeiten; kein kosmetischer Baumblock bekommt einen
+eigenen Collider oder eine eigene Entity. Spielerersatzbloecke und Streaming-
+Wechsel besitzen explizite Schutz-/Aufraeumpfade.
+
+Mob-Treffer verwenden anatomische gedrehte Teilvolumen statt quadratischer
+Ganzkoerperhuellen. Korrigiert sind individuelle Jungtier-Navigation, Spinnen-
+Orientierungswechsel, physischer Pferde-Hufkontakt und Stalker-Treppen-/Griff-
+Zustaende. Nichtendliche Ziele und unbeschraenkte lokale Suchsweeps werden
+abgewiesen; F1+H trennt Trefferteile und konservativen Navigationsraum.
+
+Natuerliche Wasserfaelle verwenden echte Block-Fluessigkeitszellen statt
+unabhaengiger Fallplatten, auch bei kleinen abrupten Fallkanten. Geraeusche folgen
+wirklich fallenden geladenen Zellen und sind leiser. Neue Welten verwenden
+Cave-Strukturrevision 8 mit breiteren Gaengen; gespeicherte Revisionen bleiben
+erhalten.
+
+F12 ergaenzt Honigentnahme am echten Nest, Bestaeubung durch Nektarbesuche und
+ressourcenfinanzierten Bienennachwuchs ueber das vorhandene F06-System. Reifung,
+Nestkapazitaet, Familien, Inventare und bestehende Speicherlayouts bleiben
+massgeblich. Client und Server verwenden gemeinsam Protokoll 71.
+
+Pruefungen, Bedienung, Aufnahmen und technische Grenzen:
+[Phase-121-Bericht](tools/benchmarks/results/tree-ai-bees-water-2026-10-24/README.md).
+
+### Phase 122: Doerfer, Spinnennester Und Pet-Menue
+
+Neue Welten erhalten deterministische Doerfer in drei Stilen (Wueste,
+Plains/Forest und Highlands), Ruinen und Minen. Die vorhandene Section-
+Generierung verwendet begrenzte regionale Plaene mit echten Objektzustaenden,
+Truheninhalten und erntbaren Feldern. Fehlendes `structures_revision` in alten
+Weltmanifesten bedeutet weiterhin 0: keine nachtraeglichen Gebaeude in alten
+Spielerwelten. Dorfbewohner und Berufe bleiben der gesonderte Punkt F10.
+
+Neue Baubloecke sind `teramic::path`, `teramic::wool_block`, `teramic::wool_stairs`
+und `teramic::wool_slab`, einschliesslich Rezepten, Kollision und gemischten
+Slab-Haelften. Vorhandene Block-IDs und Mischslab-Codes bleiben erhalten.
+Client und Server benoetigen gemeinsam Protokoll 72.
+
+Ganzbaumabbau zaehlt alle zugeordneten natuerlichen Holzsegmente mit 0,1 s je
+Block. Spinnen bauen zuerst eine grosse Netz-Konstruktion, warten 30 bis 90
+aktive Simulationssekunden und wechseln dann zwischen Jagd/Patrouille und
+Rueckkehr. F9 zeigt vertikale Chunk-Spalten und horizontale Section-Grenzen.
+Das Pet-Radialmenue besitzt den dunkel-goldenen Referenzaufbau mit realem
+Tierportraet und einer kompakten Fensteransicht.
+
+Implementierung, reproduzierbare Standortsuche und Pruefergebnisse:
+[Phase-122-Bericht](tools/benchmarks/results/villages-pets-spiders-2026-10-24/README.md).
+
+### Phase 128: Cherry Forest, Mob-Bewegung Und Lichtauswahl
+
+F34 erweitert die vorhandenen Klima-, Baum-, Prop-, Wasser- und Kartensysteme.
+Ein kontinuierliches seed-basiertes Klimafeld erzeugt Sakura-Regionen statt
+zufaelliger Einzelchunk-Biome. Verzweigte breite Kronen verwenden die neuen
+Blatt-IDs 132 (pink) und 133 (weiss), gemeinsame alpha-geclippte Blattgeometrie
+und neutrale Bluetentexturen. Wind, Schatten und saisonaler Blattverlust bleiben
+erhalten. Pinke/weisse Blumen, pflueckbare pinke Blumen und deren Crusher-Rezept
+sowie dezente rosa Wasser-/Kartenfarben gehoeren dazu.
+
+Schmale Baeche in Cherry Forest, Forest und Highlands erweitern die bestehende
+gecachte Flusspfad-Generierung. Wechselnde Breiten, flache Becken, Gefaellestufen
+und passende Uferschnitte verwenden dieselben Wasserzellen und denselben
+Fluss-Renderer. Kein zweites Wasser-/Prop-System. `/locate biome cherry_forest`
+verwendet die gemeinsame sichtbare Biomkennung. Diese meldet Ocean nur ueber
+einem echten offenen Meereswasserstand, nicht auf trockenem Grasland.
+
+Ecology 1 aktiviert die kleinen Baeche auch bei `rivers = false` (keine grossen
+Flusspfade); `water = false` deaktiviert beide. Gespeicherte Ecology-0-Welten
+erhalten keine neuen Baeche.
+
+Neue Welten speichern `ecology_revision = 1`. Ein fehlendes Feld in alten
+Manifesten bedeutet 0; auch Dedicated Server uebernehmen die Revision aus dem
+Weltvertrag. Alte Welten werden nicht nachtraeglich mit Sakura und Baechen
+umgeneriert. Generatorversion, vorhandene Block-IDs und Spieler-Edits bleiben
+erhalten. Fuer die neue Landschaft eine neue Welt erstellen; Client und Server
+gemeinsam aktualisieren.
+
+Die gemeinsame Wegpruefung validiert auch die Koerperausrichtung am Anfang
+einer Kante. Bewohner geben dauerhaft unerreichbare Ziele auf, koennen
+kollisionsgeprueft seitlich aus Moebeln/Tueren herausgehen und ueber echte
+Schwerkraft von niedrigen Kanten heruntersteigen. Keine Befreiungs-Teleports.
+Ein Test fuehrt alle 17 Bewohner eines tatsaechlich generierten Dorfes durch
+40 simulierte Sekunden mit echten Hausformen und Tueroeffnungen.
+
+Mob-Wiedergabe verwendet hoechstens acht Serverzeit-Snapshots, begrenzte
+Extrapolation und weiche spaete Korrekturen. Mehrere ankommende Voll-Snapshots
+eines Frames werden zusammengefasst. Fehlende Pakete erzeugen keinen endlosen
+Gehzyklus; die dargestellte Ortsveraenderung steuert die Laufanimation.
+
+Fackeln geben ab vier Metern 50 Prozent mehr Umgebungslicht ab, ohne den
+Nahkern heller zu machen oder die Anzahl dynamischer Lichter zu erhoehen.
+Die begrenzte Lichtauswahl bevorzugt sichtbare Weglichter vor verdeckten
+Innenraumfackeln; nahe Ecklichter bleiben zugelassen. Strukturrevision 5 setzt
+bis zu 20 unterstuetzte Fackelpfosten neben Dorfwegen, ausserhalb von Tueren,
+Haeusern und begehbaren Wegspuren. Aeltere gespeicherte Strukturrevisionen
+bleiben unveraendert. Dachtreppen und Slabs
+schliessen auch bei nur zwei gegenueberliegenden Dachseiten am Rohr an, bei
+weiterhin offenem Rauchquerschnitt und erhaltener Materialmischung.
+
+Native Aufnahmen, Tests, Grenzen und umsetzbare weitere FPS-Vorschlaege:
+[Phase-128-Bericht](tools/benchmarks/results/cherry-ai-light-2026-10-25/README.md).

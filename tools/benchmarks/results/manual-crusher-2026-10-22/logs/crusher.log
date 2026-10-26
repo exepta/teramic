@@ -1,0 +1,169 @@
+2026-10-22T21:52:51.533891Z  INFO bevy_render::renderer: AdapterInfo { name: "AMD Radeon RX 6950 XT (RADV NAVI21)", vendor: 4098, device: 29605, device_type: DiscreteGpu, device_pci_bus_id: "0000:0c:00.0", driver: "radv", driver_info: "Mesa 26.2.4-arch3.1", backend: Vulkan, subgroup_min_size: 32, subgroup_max_size: 64, transient_saves_memory: false }
+2026-10-22T21:52:51.695054Z  INFO bevy_pbr::cluster: GPU clustering is supported on this device.
+2026-10-22T21:52:51.695099Z  INFO bevy_render::batching::gpu_preprocessing: GPU preprocessing is fully supported on this device.
+2026-10-22T21:52:51.695879Z  INFO bevy_winit::system: Creating new window TERAMIC (150v0)
+2026-10-22T21:52:52.283153Z  INFO lightyear_netcode::client: client connecting to server 127.0.0.1:37361 [1/1]
+2026-10-22T21:52:52.283220Z  INFO lightyear_udp: UDP socket bound to 0.0.0.0:0
+2026-10-22T21:52:52.353321Z  INFO terra_client::creature_audio::scene: Recorded animal/environment audio decoded clips=91
+2026-10-22T21:52:52.388617Z  INFO lightyear_udp::server: Received UDP packet from new address 127.0.0.1:56484, Spawn new LinkOf entity=219v0 server_entity=208v0
+2026-10-22T21:52:52.411269Z  INFO terra_render::scene::caves::lights::soft_core: Torch soft-core attenuation installed in existing clustered PBR path
+2026-10-22T21:52:52.412449Z  INFO terra_render::water::raymarch: Water SSR hardware depth filtering ready; multisampled views retain the original path
+2026-10-22T21:52:52.430146Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/oak-crafted-hd.png mip_levels=11 rebound_materials=0
+2026-10-22T21:52:52.430180Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/forged-iron-warm.png mip_levels=11 rebound_materials=0
+2026-10-22T21:52:52.430186Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/stone-strata-hd.png mip_levels=11 rebound_materials=1
+2026-10-22T21:52:52.430192Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/wood.png mip_levels=10 rebound_materials=1
+2026-10-22T21:52:52.434830Z  INFO terra_render::blocks::loading: Block template library ready blocks=100 materials=233
+2026-10-22T21:52:52.572608Z  INFO lightyear_netcode::server_plugin: New connection on netcode from 1 (219v0)
+2026-10-22T21:52:52.635020Z  INFO lightyear_netcode::client_plugin: Client Netcode(1) connected
+2026-10-22T21:52:52.784401Z  INFO terra_network::server: Player profile accepted (local, not verified online) player=1 uuid=54769cd5-3269-4b5a-b947-47b048ac7473 name=Player-54769cd5
+2026-10-22T21:52:52.818303Z  INFO terra_network::client: Authoritative world synchronized player=Some(PlayerId(1))
+2026-10-22T21:53:09.856120Z  INFO terra_client::crusher_smoke: Crusher native stage stage=1 recipe=0
+2026-10-22T21:53:10.658926Z  INFO terra_client::crusher_smoke: Crusher native stage stage=2 recipe=0
+2026-10-22T21:53:10.723752Z  INFO terra_client::crusher_smoke: Crusher native stage stage=3 recipe=0
+2026-10-22T21:53:11.527051Z  INFO terra_client::crusher_smoke: Crusher native stage stage=12 recipe=0
+2026-10-22T21:53:12.028724Z  INFO terra_client::crusher_smoke: Crusher native stage stage=13 recipe=0
+2026-10-22T21:53:12.108772Z  INFO terra_client::crusher_smoke: Crusher native stage stage=14 recipe=0
+2026-10-22T21:53:12.844466Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/tools/benchmarks/results/manual-crusher-2026-10-22/native/crusher/crusher-placed.png
+2026-10-22T21:53:12.847029Z  INFO terra_client::crusher_smoke: Crusher native stage stage=22 recipe=0
+2026-10-22T21:53:13.848940Z  INFO terra_client::crusher_smoke: Crusher native stage stage=23 recipe=0
+2026-10-22T21:53:14.154974Z  INFO terra_client::crusher_smoke: Crusher native stage stage=24 recipe=0
+2026-10-22T21:53:14.458273Z  INFO terra_client::crusher_smoke: Crusher native stage stage=4 recipe=0
+2026-10-22T21:53:14.963123Z  INFO terra_client::crusher_smoke: Crusher native stage stage=5 recipe=0
+2026-10-22T21:53:15.494330Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/tools/benchmarks/results/manual-crusher-2026-10-22/native/crusher/crusher-recipe.png
+2026-10-22T21:53:15.499779Z  INFO terra_client::crusher_smoke: Crusher native stage stage=6 recipe=0
+2026-10-22T21:53:16.200545Z  INFO terra_client::crusher_smoke: Crusher native stage stage=15 recipe=0
+2026-10-22T21:53:16.502203Z  INFO terra_client::crusher_smoke: Crusher native stage stage=17 recipe=0
+2026-10-22T21:53:17.538114Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/tools/benchmarks/results/manual-crusher-2026-10-22/native/crusher/crusher-running.png
+2026-10-22T21:53:17.542493Z  INFO terra_client::crusher_smoke: Crusher native stage stage=18 recipe=0
+2026-10-22T21:53:18.198294Z  INFO terra_client::crusher_smoke: Crusher native stage stage=19 recipe=0
+2026-10-22T21:53:18.898967Z  INFO terra_client::crusher_smoke: Crusher native stage stage=20 recipe=0
+2026-10-22T21:53:23.702664Z  INFO terra_client::crusher_smoke: Crusher native stage stage=21 recipe=0
+2026-10-22T21:53:24.106282Z  INFO terra_client::crusher_smoke: Crusher native stage stage=7 recipe=0
+2026-10-22T21:53:24.113000Z  INFO terra_client::crusher_smoke: Crusher native stage stage=8 recipe=0
+2026-10-22T21:53:24.366909Z  INFO terra_client::crusher_smoke: Crusher native stage stage=4 recipe=1
+2026-10-22T21:53:24.870179Z  INFO terra_client::crusher_smoke: Crusher native stage stage=5 recipe=1
+2026-10-22T21:53:25.373418Z  INFO terra_client::crusher_smoke: Crusher native stage stage=6 recipe=1
+2026-10-22T21:53:26.084158Z  INFO terra_client::crusher_smoke: Crusher native stage stage=15 recipe=1
+2026-10-22T21:53:26.388055Z  INFO terra_client::crusher_smoke: Crusher native stage stage=20 recipe=1
+2026-10-22T21:53:31.191026Z  INFO terra_client::crusher_smoke: Crusher native stage stage=21 recipe=1
+2026-10-22T21:53:31.592168Z  INFO terra_client::crusher_smoke: Crusher native stage stage=7 recipe=1
+2026-10-22T21:53:31.598499Z  INFO terra_client::crusher_smoke: Crusher native stage stage=8 recipe=1
+2026-10-22T21:53:31.855574Z  INFO terra_client::crusher_smoke: Crusher native stage stage=4 recipe=2
+2026-10-22T21:53:32.362760Z  INFO terra_client::crusher_smoke: Crusher native stage stage=5 recipe=2
+2026-10-22T21:53:32.867851Z  INFO terra_client::crusher_smoke: Crusher native stage stage=6 recipe=2
+2026-10-22T21:53:33.571362Z  INFO terra_client::crusher_smoke: Crusher native stage stage=15 recipe=2
+2026-10-22T21:53:33.876220Z  INFO terra_client::crusher_smoke: Crusher native stage stage=20 recipe=2
+2026-10-22T21:53:38.676942Z  INFO terra_client::crusher_smoke: Crusher native stage stage=21 recipe=2
+2026-10-22T21:53:39.084140Z  INFO terra_client::crusher_smoke: Crusher native stage stage=7 recipe=2
+2026-10-22T21:53:39.089996Z  INFO terra_client::crusher_smoke: Crusher native stage stage=8 recipe=2
+2026-10-22T21:53:39.344265Z  INFO terra_client::crusher_smoke: Crusher native stage stage=4 recipe=3
+2026-10-22T21:53:39.844767Z  INFO terra_client::crusher_smoke: Crusher native stage stage=5 recipe=3
+2026-10-22T21:53:40.345741Z  INFO terra_client::crusher_smoke: Crusher native stage stage=6 recipe=3
+2026-10-22T21:53:41.046270Z  INFO terra_client::crusher_smoke: Crusher native stage stage=15 recipe=3
+2026-10-22T21:53:41.348472Z  INFO terra_client::crusher_smoke: Crusher native stage stage=20 recipe=3
+2026-10-22T21:53:46.151121Z  INFO terra_client::crusher_smoke: Crusher native stage stage=21 recipe=3
+2026-10-22T21:53:46.552768Z  INFO terra_client::crusher_smoke: Crusher native stage stage=7 recipe=3
+2026-10-22T21:53:46.558789Z  INFO terra_client::crusher_smoke: Crusher native stage stage=8 recipe=3
+2026-10-22T21:53:46.810042Z  INFO terra_client::crusher_smoke: Crusher native stage stage=4 recipe=4
+2026-10-22T21:53:47.318199Z  INFO terra_client::crusher_smoke: Crusher native stage stage=5 recipe=4
+2026-10-22T21:53:47.819404Z  INFO terra_client::crusher_smoke: Crusher native stage stage=6 recipe=4
+2026-10-22T21:53:48.523860Z  INFO terra_client::crusher_smoke: Crusher native stage stage=15 recipe=4
+2026-10-22T21:53:48.826942Z  INFO terra_client::crusher_smoke: Crusher native stage stage=20 recipe=4
+2026-10-22T21:53:53.629350Z  INFO terra_client::crusher_smoke: Crusher native stage stage=21 recipe=4
+2026-10-22T21:53:54.030728Z  INFO terra_client::crusher_smoke: Crusher native stage stage=7 recipe=4
+2026-10-22T21:53:54.038227Z  INFO terra_client::crusher_smoke: Crusher native stage stage=8 recipe=4
+2026-10-22T21:53:54.293610Z  INFO terra_client::crusher_smoke: Crusher native stage stage=4 recipe=5
+2026-10-22T21:53:54.795862Z  INFO terra_client::crusher_smoke: Crusher native stage stage=5 recipe=5
+2026-10-22T21:53:55.297634Z  INFO terra_client::crusher_smoke: Crusher native stage stage=6 recipe=5
+2026-10-22T21:53:56.002538Z  INFO terra_client::crusher_smoke: Crusher native stage stage=15 recipe=5
+2026-10-22T21:53:56.305519Z  INFO terra_client::crusher_smoke: Crusher native stage stage=20 recipe=5
+2026-10-22T21:54:01.110388Z  INFO terra_client::crusher_smoke: Crusher native stage stage=21 recipe=5
+2026-10-22T21:54:01.514224Z  INFO terra_client::crusher_smoke: Crusher native stage stage=7 recipe=5
+2026-10-22T21:54:01.520706Z  INFO terra_client::crusher_smoke: Crusher native stage stage=8 recipe=5
+2026-10-22T21:54:01.775840Z  INFO terra_client::crusher_smoke: Crusher native stage stage=4 recipe=6
+2026-10-22T21:54:02.281018Z  INFO terra_client::crusher_smoke: Crusher native stage stage=5 recipe=6
+2026-10-22T21:54:02.781374Z  INFO terra_client::crusher_smoke: Crusher native stage stage=6 recipe=6
+2026-10-22T21:54:03.485505Z  INFO terra_client::crusher_smoke: Crusher native stage stage=15 recipe=6
+2026-10-22T21:54:03.788071Z  INFO terra_client::crusher_smoke: Crusher native stage stage=20 recipe=6
+2026-10-22T21:54:08.589564Z  INFO terra_client::crusher_smoke: Crusher native stage stage=21 recipe=6
+2026-10-22T21:54:08.991709Z  INFO terra_client::crusher_smoke: Crusher native stage stage=7 recipe=6
+2026-10-22T21:54:08.997169Z  INFO terra_client::crusher_smoke: Crusher native stage stage=8 recipe=6
+2026-10-22T21:54:09.251354Z  INFO terra_client::crusher_smoke: Crusher native stage stage=4 recipe=7
+2026-10-22T21:54:09.753275Z  INFO terra_client::crusher_smoke: Crusher native stage stage=5 recipe=7
+2026-10-22T21:54:10.256652Z  INFO terra_client::crusher_smoke: Crusher native stage stage=6 recipe=7
+2026-10-22T21:54:10.961693Z  INFO terra_client::crusher_smoke: Crusher native stage stage=15 recipe=7
+2026-10-22T21:54:11.262183Z  INFO terra_client::crusher_smoke: Crusher native stage stage=20 recipe=7
+2026-10-22T21:54:16.062726Z  INFO terra_client::crusher_smoke: Crusher native stage stage=21 recipe=7
+2026-10-22T21:54:16.467225Z  INFO terra_client::crusher_smoke: Crusher native stage stage=7 recipe=7
+2026-10-22T21:54:16.472243Z  INFO terra_client::crusher_smoke: Crusher native stage stage=8 recipe=7
+2026-10-22T21:54:16.727207Z  INFO terra_client::crusher_smoke: Crusher native stage stage=4 recipe=8
+2026-10-22T21:54:17.231211Z  INFO terra_client::crusher_smoke: Crusher native stage stage=5 recipe=8
+2026-10-22T21:54:17.732971Z  INFO terra_client::crusher_smoke: Crusher native stage stage=6 recipe=8
+2026-10-22T21:54:18.436864Z  INFO terra_client::crusher_smoke: Crusher native stage stage=15 recipe=8
+2026-10-22T21:54:18.737389Z  INFO terra_client::crusher_smoke: Crusher native stage stage=20 recipe=8
+2026-10-22T21:54:23.538602Z  INFO terra_client::crusher_smoke: Crusher native stage stage=21 recipe=8
+2026-10-22T21:54:23.941162Z  INFO terra_client::crusher_smoke: Crusher native stage stage=7 recipe=8
+2026-10-22T21:54:23.947136Z  INFO terra_client::crusher_smoke: Crusher native stage stage=8 recipe=8
+2026-10-22T21:54:24.201085Z  INFO terra_client::crusher_smoke: Crusher native stage stage=4 recipe=9
+2026-10-22T21:54:24.703330Z  INFO terra_client::crusher_smoke: Crusher native stage stage=5 recipe=9
+2026-10-22T21:54:25.205267Z  INFO terra_client::crusher_smoke: Crusher native stage stage=6 recipe=9
+2026-10-22T21:54:25.908047Z  INFO terra_client::crusher_smoke: Crusher native stage stage=15 recipe=9
+2026-10-22T21:54:26.212913Z  INFO terra_client::crusher_smoke: Crusher native stage stage=20 recipe=9
+2026-10-22T21:54:31.014201Z  INFO terra_client::crusher_smoke: Crusher native stage stage=21 recipe=9
+2026-10-22T21:54:31.418849Z  INFO terra_client::crusher_smoke: Crusher native stage stage=7 recipe=9
+2026-10-22T21:54:31.424120Z  INFO terra_client::crusher_smoke: Crusher native stage stage=8 recipe=9
+2026-10-22T21:54:31.674325Z  INFO terra_client::crusher_smoke: Crusher native stage stage=4 recipe=10
+2026-10-22T21:54:32.176641Z  INFO terra_client::crusher_smoke: Crusher native stage stage=5 recipe=10
+2026-10-22T21:54:32.676926Z  INFO terra_client::crusher_smoke: Crusher native stage stage=6 recipe=10
+2026-10-22T21:54:33.378626Z  INFO terra_client::crusher_smoke: Crusher native stage stage=15 recipe=10
+2026-10-22T21:54:33.679478Z  INFO terra_client::crusher_smoke: Crusher native stage stage=20 recipe=10
+2026-10-22T21:54:38.480652Z  INFO terra_client::crusher_smoke: Crusher native stage stage=21 recipe=10
+2026-10-22T21:54:38.886202Z  INFO terra_client::crusher_smoke: Crusher native stage stage=7 recipe=10
+2026-10-22T21:54:38.892671Z  INFO terra_client::crusher_smoke: Crusher native stage stage=8 recipe=10
+2026-10-22T21:54:39.150824Z  INFO terra_client::crusher_smoke: Crusher native stage stage=4 recipe=11
+2026-10-22T21:54:39.653471Z  INFO terra_client::crusher_smoke: Crusher native stage stage=5 recipe=11
+2026-10-22T21:54:40.155592Z  INFO terra_client::crusher_smoke: Crusher native stage stage=6 recipe=11
+2026-10-22T21:54:40.857200Z  INFO terra_client::crusher_smoke: Crusher native stage stage=15 recipe=11
+2026-10-22T21:54:41.160623Z  INFO terra_client::crusher_smoke: Crusher native stage stage=20 recipe=11
+2026-10-22T21:54:45.961984Z  INFO terra_client::crusher_smoke: Crusher native stage stage=21 recipe=11
+2026-10-22T21:54:46.364039Z  INFO terra_client::crusher_smoke: Crusher native stage stage=7 recipe=11
+2026-10-22T21:54:46.370581Z  INFO terra_client::crusher_smoke: Crusher native stage stage=8 recipe=11
+2026-10-22T21:54:46.625769Z  INFO terra_client::crusher_smoke: Crusher native stage stage=4 recipe=12
+2026-10-22T21:54:47.127284Z  INFO terra_client::crusher_smoke: Crusher native stage stage=5 recipe=12
+2026-10-22T21:54:47.627903Z  INFO terra_client::crusher_smoke: Crusher native stage stage=6 recipe=12
+2026-10-22T21:54:48.332836Z  INFO terra_client::crusher_smoke: Crusher native stage stage=15 recipe=12
+2026-10-22T21:54:48.635027Z  INFO terra_client::crusher_smoke: Crusher native stage stage=20 recipe=12
+2026-10-22T21:54:53.436867Z  INFO terra_client::crusher_smoke: Crusher native stage stage=21 recipe=12
+2026-10-22T21:54:53.844126Z  INFO terra_client::crusher_smoke: Crusher native stage stage=7 recipe=12
+2026-10-22T21:54:53.849773Z  INFO terra_client::crusher_smoke: Crusher native stage stage=8 recipe=12
+2026-10-22T21:54:54.105332Z  INFO terra_client::crusher_smoke: Crusher native stage stage=4 recipe=13
+2026-10-22T21:54:54.611105Z  INFO terra_client::crusher_smoke: Crusher native stage stage=5 recipe=13
+2026-10-22T21:54:55.116097Z  INFO terra_client::crusher_smoke: Crusher native stage stage=6 recipe=13
+2026-10-22T21:54:55.818575Z  INFO terra_client::crusher_smoke: Crusher native stage stage=15 recipe=13
+2026-10-22T21:54:56.122017Z  INFO terra_client::crusher_smoke: Crusher native stage stage=20 recipe=13
+2026-10-22T21:55:00.925610Z  INFO terra_client::crusher_smoke: Crusher native stage stage=21 recipe=13
+2026-10-22T21:55:01.330702Z  INFO terra_client::crusher_smoke: Crusher native stage stage=7 recipe=13
+2026-10-22T21:55:01.337102Z  INFO terra_client::crusher_smoke: Crusher native stage stage=8 recipe=13
+2026-10-22T21:55:01.590880Z  INFO terra_client::crusher_smoke: Crusher native stage stage=4 recipe=14
+2026-10-22T21:55:02.091726Z  INFO terra_client::crusher_smoke: Crusher native stage stage=5 recipe=14
+2026-10-22T21:55:02.596677Z  INFO terra_client::crusher_smoke: Crusher native stage stage=6 recipe=14
+2026-10-22T21:55:03.301114Z  INFO terra_client::crusher_smoke: Crusher native stage stage=15 recipe=14
+2026-10-22T21:55:03.605684Z  INFO terra_client::crusher_smoke: Crusher native stage stage=20 recipe=14
+2026-10-22T21:55:08.411064Z  INFO terra_client::crusher_smoke: Crusher native stage stage=21 recipe=14
+2026-10-22T21:55:08.811201Z  INFO terra_client::crusher_smoke: Crusher native stage stage=7 recipe=14
+2026-10-22T21:55:08.815830Z  INFO terra_client::crusher_smoke: Crusher native stage stage=8 recipe=14
+2026-10-22T21:55:09.072749Z  INFO terra_client::crusher_smoke: Crusher native stage stage=4 recipe=15
+2026-10-22T21:55:09.573930Z  INFO terra_client::crusher_smoke: Crusher native stage stage=5 recipe=15
+2026-10-22T21:55:10.081477Z  INFO terra_client::crusher_smoke: Crusher native stage stage=6 recipe=15
+2026-10-22T21:55:10.781608Z  INFO terra_client::crusher_smoke: Crusher native stage stage=15 recipe=15
+2026-10-22T21:55:11.086172Z  INFO terra_client::crusher_smoke: Crusher native stage stage=20 recipe=15
+2026-10-22T21:55:15.888103Z  INFO terra_client::crusher_smoke: Crusher native stage stage=21 recipe=15
+2026-10-22T21:55:16.296019Z  INFO terra_client::crusher_smoke: Crusher native stage stage=7 recipe=15
+2026-10-22T21:55:16.302102Z  INFO terra_client::crusher_smoke: Crusher native stage stage=8 recipe=15
+2026-10-22T21:55:16.552884Z  INFO terra_client::crusher_smoke: Crusher native stage stage=9 recipe=16
+2026-10-22T21:55:17.389998Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/tools/benchmarks/results/manual-crusher-2026-10-22/native/crusher/crusher-compact.png
+2026-10-22T21:55:17.396064Z  INFO terra_client::crusher_smoke: Crusher native stage stage=10 recipe=16
+2026-10-22T21:55:18.197009Z  INFO terra_client::crusher_smoke: Crusher native stage stage=25 recipe=16
+2026-10-22T21:55:19.437455Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/tools/benchmarks/results/manual-crusher-2026-10-22/native/crusher/crusher-results-world.png
+2026-10-22T21:55:19.440435Z  INFO terra_client::crusher_smoke: Crusher native stage stage=11 recipe=16
+2026-10-22T21:55:19.940831Z  INFO terra_client::crusher_smoke: Native mounted crank, real Place input, release pause, TMI, audio and all recipe outputs passed recipes=16 captures=5

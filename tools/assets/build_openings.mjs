@@ -7,10 +7,13 @@ const species = [
   ['oak', [0.61, 0.32, 0.095]],
   ['birch', [0.80, 0.68, 0.46]],
   ['spruce', [0.30, 0.16, 0.075]],
+  ['cherry', [0.77, 0.40, 0.43]],
 ];
 for (const [index, [wood, tint]] of species.entries()) {
+  const requested = process.argv.find(arg => arg.startsWith('--wood='))?.slice(7);
+  if (requested && requested !== wood) continue;
   for (const window of [false, true]) {
-    const id = (window ? 68 : 65) + index;
+    const id = wood === 'cherry' ? (window ? 140 : 139) : (window ? 68 : 65) + index;
     const name = `${wood}_${window ? 'window' : 'door'}`;
     const height = window ? 1 : 2;
     const colors = [1, .79, 1.16].map(scale => tint.map(c => Math.min(.96, c * scale)));

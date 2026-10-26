@@ -27,6 +27,8 @@ enum Scene {
     WaterDesert,
     WaterHighland,
     WaterTransition,
+    Cherry,
+    CherryBrook,
 }
 
 impl Scene {
@@ -41,13 +43,19 @@ impl Scene {
             Self::WaterDesert => "water-desert",
             Self::WaterHighland => "water-highland",
             Self::WaterTransition => "water-transition",
+            Self::Cherry => "cherry",
+            Self::CherryBrook => "cherry-brook",
         }
     }
 
     fn water(self) -> bool {
         matches!(
             self,
-            Self::WaterMushroom | Self::WaterDesert | Self::WaterHighland | Self::WaterTransition
+            Self::WaterMushroom
+                | Self::WaterDesert
+                | Self::WaterHighland
+                | Self::WaterTransition
+                | Self::CherryBrook
         )
     }
 }
@@ -85,6 +93,8 @@ pub(crate) fn install(app: &mut App) {
         Ok("water-desert") => (Scene::WaterDesert, false),
         Ok("water-highland") => (Scene::WaterHighland, false),
         Ok("water-transition") => (Scene::WaterTransition, false),
+        Ok("cherry") => (Scene::Cherry, false),
+        Ok("cherry-brook") => (Scene::CherryBrook, false),
         _ => (Scene::Cave, true),
     };
     let now = Instant::now();
@@ -111,6 +121,8 @@ fn locate(world: &mut World) {
         Scene::Mushroom => mushroom_views(&terrain),
         Scene::Oasis => oasis_views(&terrain),
         Scene::Highland => highland_views(&terrain),
+        Scene::Cherry => cherry_views(&terrain),
+        Scene::CherryBrook => cherry_brook_views(&terrain),
         Scene::GiantCave => giant_cave_views(&terrain),
         Scene::WaterMushroom
         | Scene::WaterDesert
@@ -327,6 +339,94 @@ fn mushroom_views(terrain: &TerraGenerator) -> Option<Views> {
         anchor: point,
         probes: vec![(stem, MaterialId::MushroomStem as u16)],
     })
+}
+
+fn cherry_views(terrain: &TerraGenerator) -> Option<Views> {
+    for z in (-4096..=4096).step_by(128) {
+        for x in (-4096..=4096).step_by(128) {
+            let column = terrain.surface_column(x as f64, z as f64);
+            if column.biome.weights.cherry_forest < 0.65
+                || column.water_level.is_some()
+                || column.slope > 1.0
+            {
+                continue;
+            }
+            let Some(leaf) =
+                find_material(terrain, [x as f64, z as f64], MaterialId::CherryLeaves, 3)
+            else {
+                continue;
+            };
+            let target = Vec3::from_array(leaf.map(|v| v as f32)) - Vec3::Y * 2.0;
+            let overview = surface_eye(terrain, target + Vec3::new(24.0, 14.0, 30.0));
+            let generator = SectionGenerator::new(terrain.clone());
+            let close = [12.0, 18.0, 24.0]
+                .into_iter()
+                .find_map(|radius| {
+                    (0..8).find_map(|n| {
+                        let angle = n as f32 * std::f32::consts::FRAC_PI_4;
+                        let eye = surface_eye(
+                            terrain,
+                            target + Vec3::new(angle.sin() * radius, 4.0, angle.cos() * radius),
+                        );
+                        (generator.block_at(eye.floor().as_i64vec3().to_array()).ok() == Some(0))
+                            .then_some(eye)
+                    })
+                })
+                .unwrap_or(overview);
+            return Some(Views {
+                overview: Transform::from_translation(overview).looking_at(target, Vec3::Y),
+                close: Transform::from_translation(close).looking_at(target, Vec3::Y),
+                anchor: target,
+                probes: vec![(leaf, MaterialId::CherryLeaves as u16)],
+            });
+        }
+    }
+    None
+}
+
+fn cherry_brook_views(terrain: &TerraGenerator) -> Option<Views> {
+    let generator = SectionGenerator::new(terrain.clone());
+    for z in (-4096..=4096).step_by(16) {
+        for cx in -8..=8 {
+            let origin = cx as f64 * 512.0 - 100.0;
+            if terrain.biome_at(origin, z as f64).weights.cherry_forest < 0.6 {
+                continue;
+            }
+            for dx in (0..100).step_by(4) {
+                let x = origin + f64::from(dx) + 0.5;
+                let z = z as f64 + 0.5;
+                let Some(river) = terrain.river_at(x, z) else {
+                    continue;
+                };
+                if river.width > 3.5
+                    || river.distance > 0.6
+                    || river.level < terrain.config().sea_level + 1.0
+                    || river.roof_blend > 0.1
+                {
+                    continue;
+                }
+                let Some(water) = terrain.water_column(x, z) else {
+                    continue;
+                };
+                let bed = [x.floor() as i64, water.bed as i64 - 1, z.floor() as i64];
+                let air = [bed[0], water.level.ceil() as i64, bed[2]];
+                let material = generator.block_at(bed).ok()?;
+                if material == 0 || generator.block_at(air).ok()? != 0 {
+                    continue;
+                }
+                let target = Vec3::new(x as f32, water.level as f32, z as f32);
+                let overview = surface_eye(terrain, target + Vec3::new(11.0, 12.0, 18.0));
+                let close = surface_eye(terrain, target + Vec3::new(3.0, 2.0, 7.0));
+                return Some(Views {
+                    overview: Transform::from_translation(overview).looking_at(target, Vec3::Y),
+                    close: Transform::from_translation(close).looking_at(target, Vec3::Y),
+                    anchor: target,
+                    probes: vec![(bed, material), (air, 0)],
+                });
+            }
+        }
+    }
+    None
 }
 
 fn highland_views(terrain: &TerraGenerator) -> Option<Views> {
@@ -656,6 +756,8 @@ fn run(world: &mut World) {
         }
         if !render.ready
             || !world.resource::<WaterStatus>().ready
+            || matches!(state.scene, Scene::Cherry | Scene::CherryBrook)
+                && !world.resource::<terra_render::PropRenderStatus>().ready
             || generation.status != GenerationStatus::Ready
         {
             state.since = Instant::now();

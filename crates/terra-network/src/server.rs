@@ -67,6 +67,24 @@ impl ServerRuntime {
     }
 }
 
+#[cfg(test)]
+pub(crate) fn inject_stalker_grip_for_test(
+    world: &mut World,
+    pull: terra_world::creatures::stalker::Pull,
+) {
+    world.resource_mut::<stalkers::Grips>().refresh(pull);
+}
+
+#[cfg(test)]
+pub(crate) fn elapse_tree_mining_timer_for_test(world: &mut World) -> bool {
+    let mut peers = world.query::<&mut Peer>();
+    peers.iter_mut(world).any(|mut peer| {
+        peer.mining
+            .as_mut()
+            .is_some_and(|mining| mining.elapse_tree_timer())
+    })
+}
+
 #[derive(Component)]
 struct ServerCharacter {
     link: Entity,
@@ -74,6 +92,8 @@ struct ServerCharacter {
 
 #[derive(Component)]
 struct Peer {
+    farming: farm_tools::FarmPeer,
+    crank: crushers::CrankPeer,
     chest_cursor: Option<(crate::protocol::social::ChestCursorInput, Instant)>,
     creature_action_at: Instant,
     container: Option<crate::protocol::inventory::ContainerSnapshot>,
@@ -104,8 +124,11 @@ struct Peer {
     edits_left: f64,
     rate_time: Instant,
     spawned: bool,
+    restored_spawn: bool,
+    restore_location: Option<terra_core::PlayerLocation>,
     last_movement: CharacterInput,
     vitals: terra_core::SurvivalVitals,
+    equipment: terra_core::EquipmentSlots,
     survival: survival::SurvivalPeer,
     stats_sent: Option<(u32, terra_core::PlayerStats)>,
 }
@@ -134,9 +157,13 @@ pub(crate) fn install(app: &mut App) {
         .insert_resource(WorldAccess::Server)
         .init_resource::<ServerRuntime>()
         .init_resource::<ConnectedProfiles>()
+        .init_resource::<creatures::InspectionTargets>()
+        .init_resource::<stalkers::Grips>()
+        .init_resource::<riding::Mounts>()
         .init_resource::<beds::SleepRuntime>()
         .init_resource::<chat::ChatRuntime>()
         .init_resource::<ServerConsole>()
+        .init_resource::<terra_world::tree_felling::Queue>()
         .add_systems(
             Startup,
             (
@@ -157,11 +184,13 @@ pub(crate) fn install(app: &mut App) {
                 crate::world_time::advance_server,
                 crate::weather::advance_server,
                 receive_controls,
+                locations::restore,
                 beds::tick,
                 receive_inputs,
                 chat::tick,
                 survival::begin_respawns,
                 furnaces::tick,
+                crushers::tick,
                 gameplay::tick,
                 creatures::tick,
                 lightning::tick,
@@ -175,6 +204,7 @@ pub(crate) fn install(app: &mut App) {
             simulate.after(avian3d::prelude::PhysicsSystems::Writeback),
         )
         .add_systems(FixedUpdate, gameplay::simulate_drops.after(simulate))
+        .add_systems(FixedUpdate, riding::publish.after(simulate))
         .add_systems(
             PostUpdate,
             (
@@ -182,8 +212,10 @@ pub(crate) fn install(app: &mut App) {
                 send_players,
                 gameplay::send_gameplay,
                 survival::commit_and_send,
+                locations::capture,
                 send_clock,
                 social::broadcast,
+                farm_tools::send_progress,
             )
                 .chain()
                 .before(MessageSystems::Send),
@@ -340,6 +372,8 @@ fn connected(
         .id();
     let now = Instant::now();
     commands.entity(event.entity).insert(Peer {
+        farming: Default::default(),
+        crank: Default::default(),
         chest_cursor: None,
         creature_action_at: Instant::now(),
         container: None,
@@ -375,8 +409,11 @@ fn connected(
         edits_left: 20.0,
         rate_time: now,
         spawned: false,
+        restored_spawn: false,
+        restore_location: None,
         last_movement: CharacterInput::default(),
         vitals: Default::default(),
+        equipment: Default::default(),
         survival: Default::default(),
         stats_sent: None,
     });
@@ -408,6 +445,9 @@ fn cleanup(
 
 #[derive(SystemParam)]
 struct ControlWorld<'w, 's> {
+    chat: Option<ResMut<'w, chat::ChatRuntime>>,
+    mounts: ResMut<'w, riding::Mounts>,
+    inspections: Option<ResMut<'w, creatures::InspectionTargets>>,
     sleep: Option<ResMut<'w, beds::SleepRuntime>>,
     block_properties: Res<'w, terra_core::block_properties::BlockPropertiesCatalog>,
     recipes: Res<'w, terra_core::crafting::RecipeBook>,
@@ -446,6 +486,25 @@ fn receive_controls(mut peers: ControlPeers, mut world: ControlWorld) {
                 break;
             }
             match message {
+                ClientControl::Dismount if peer.synced => {
+                    if let Some(mount) = world.mounts.active.get_mut(&peer.uuid) {
+                        mount.leave = true;
+                    }
+                }
+                ClientControl::InspectCreature(target) if peer.synced => {
+                    if let Some(inspections) = world.inspections.as_deref_mut() {
+                        if let Some(id) = target.filter(|id| *id != 0) {
+                            if inspections.0.len() < 128 || inspections.0.contains_key(&peer.uuid) {
+                                inspections.0.insert(peer.uuid, id);
+                            }
+                        } else {
+                            inspections.0.remove(&peer.uuid);
+                        }
+                    }
+                }
+                ClientControl::Crank { position, look } if peer.synced => {
+                    crushers::intent(position, look, &mut peer, &mut sender, &world);
+                }
                 ClientControl::LeaveBed if peer.synced => {
                     if let Some(sleep) = world.sleep.as_mut() {
                         sleep.cancel(peer.id);
@@ -455,7 +514,18 @@ fn receive_controls(mut peers: ControlPeers, mut world: ControlWorld) {
                     if peer.synced && peer.chat.teleport.is_none() =>
                 {
                     consumption::cancel(&mut peer, &mut sender);
-                    creatures::interact(id, feed, look, &mut peer, &mut world);
+                    creatures::interact(id, feed, look, &mut peer, &mut sender, &mut world);
+                }
+                ClientControl::PetCommand { id, mode }
+                    if peer.synced && peer.chat.teleport.is_none() =>
+                {
+                    creatures::pet_command(id, mode, &mut peer, &mut world);
+                }
+                ClientControl::HarvestHoney { section, id, look }
+                    if peer.synced && peer.chat.teleport.is_none() =>
+                {
+                    consumption::cancel(&mut peer, &mut sender);
+                    bees::harvest(section, id, look, &mut peer, &mut sender, &mut world);
                 }
                 ClientControl::HeldSlot(slot)
                     if peer.accepted
@@ -474,6 +544,8 @@ fn receive_controls(mut peers: ControlPeers, mut world: ControlWorld) {
                     version,
                     generator,
                     effect_catalog,
+                    equipment_catalog,
+                    crushing_catalog,
                     view_distance,
                     profile,
                 } => {
@@ -521,6 +593,16 @@ fn receive_controls(mut peers: ControlPeers, mut world: ControlWorld) {
                         ));
                         continue;
                     }
+                    if equipment_catalog != terra_core::equipment_catalog_fingerprint() {
+                        sender.send::<ControlChannel>(ServerControl::Reject(
+                            "Incompatible equipment definitions. Client and server must use the same equipment JSON files.".into(),
+                        ));
+                        continue;
+                    }
+                    if crushing_catalog != terra_core::crusher::catalog_fingerprint() {
+                        sender.send::<ControlChannel>(ServerControl::Reject("Incompatible crushing recipes. Client and server must use the same assets/crushing JSON files.".into()));
+                        continue;
+                    }
                     let Ok(body) = world.bodies.get(peer.body) else {
                         sender.send::<ControlChannel>(ServerControl::Reject(
                             "The player's safe spawn is not available".into(),
@@ -533,7 +615,7 @@ fn receive_controls(mut peers: ControlPeers, mut world: ControlWorld) {
                         ));
                         continue;
                     }
-                    let spawn = body.translation.to_array();
+                    let mut spawn = body.translation.to_array();
                     peer.accepted = true;
                     peer.uuid = profile.uuid;
                     peer.gender = profile.gender;
@@ -545,20 +627,44 @@ fn receive_controls(mut peers: ControlPeers, mut world: ControlWorld) {
                         .copied()
                         .unwrap_or_default();
                     peer.mode = saved.game_mode;
-                    peer.vitals = if peer.game_mode(&world.config) != terra_core::GameMode::Survival
-                    {
-                        Default::default()
-                    } else {
-                        saved.survival
-                    };
+                    peer.equipment = saved.equipment;
+                    peer.vitals = saved.survival;
+                    if peer.game_mode(&world.config) != terra_core::GameMode::Survival {
+                        survival::reset_invulnerable_vitals(&mut peer);
+                    }
+                    let equipment = peer.equipment;
+                    peer.vitals.apply_equipment(equipment);
                     peer.permissions = world.config.server.permissions_for(profile.uuid);
                     peer.view = view_distance;
+                    let location =
+                        world
+                            .journal
+                            .player_location(profile.uuid)
+                            .and_then(|location| {
+                                locations::resolve(
+                                    location,
+                                    &world.terrain.0,
+                                    &world.journal,
+                                    &world.block_properties,
+                                    peer.game_mode(&world.config)
+                                        == terra_core::GameMode::Spectator,
+                                    peer.can_fly(&world.config),
+                                )
+                            });
+                    if let Some(location) = location {
+                        spawn = location.position;
+                        peer.look = location.look;
+                        peer.restore_location = Some(location);
+                        peer.restored_spawn = true;
+                        peer.last_movement.flight_speed = location.flying.then_some(0.0);
+                    }
                     sender.send::<ControlChannel>(ServerControl::Welcome {
                         player: peer.id,
                         uuid: profile.uuid,
                         world: Box::new(world.config.world.clone()),
                         tick_rate: world.config.server.tick_rate,
                         spawn,
+                        location,
                         allow_flight: peer.can_fly(&world.config),
                         allow_build: peer.permissions.build,
                         allow_environment: peer.permissions.environment,
@@ -640,7 +746,11 @@ fn receive_controls(mut peers: ControlPeers, mut world: ControlWorld) {
                     } else {
                         peer.edits_left -= 1.0;
                         peer.last_request = command.request;
-                        validation::apply(command, &peer, &mut world, false)
+                        if matches!(command.action, EditAction::Farm { .. }) {
+                            farm_tools::apply(command, &mut peer, &mut sender, &mut world)
+                        } else {
+                            validation::apply(command, &peer, &mut world, false)
+                        }
                     };
                     sender.send::<ControlChannel>(ServerControl::EditResult {
                         request: command.request,
@@ -705,6 +815,7 @@ fn receive_inputs(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn simulate(
     mut commands: Commands,
     mut runtime: ResMut<ServerRuntime>,
@@ -720,6 +831,8 @@ fn simulate(
     simulation: CharacterSimulation,
     spawn: spawn::SpawnEnvironment,
     mut sleep: Option<ResMut<beds::SleepRuntime>>,
+    mut grips: ResMut<stalkers::Grips>,
+    mut mounts: ResMut<riding::Mounts>,
 ) {
     runtime.tick = runtime.tick.saturating_add(1);
     for (entity, character, mut transform, mut velocity, collider, mut grounded) in &mut bodies {
@@ -730,12 +843,23 @@ fn simulate(
             continue;
         }
         if !peer.spawned {
-            match spawn::loaded_state(
-                &spawn.chunks,
-                &spawn.terrain.0,
-                &spawn.journal,
-                transform.translation,
-            ) {
+            let loaded = if peer.restored_spawn {
+                locations::loaded_state(
+                    &spawn.chunks,
+                    &spawn.journal,
+                    &spawn.properties,
+                    transform.translation,
+                    peer.game_mode(&spawn.config) == terra_core::GameMode::Spectator,
+                )
+            } else {
+                spawn::loaded_state(
+                    &spawn.chunks,
+                    &spawn.terrain.0,
+                    &spawn.journal,
+                    transform.translation,
+                )
+            };
+            match loaded {
                 spawn::LoadedSpawn::Waiting => continue,
                 spawn::LoadedSpawn::Invalid => {
                     tracing::warn!(
@@ -758,12 +882,11 @@ fn simulate(
         // Coalesce delayed packets so a background-window pause cannot leave a permanent backlog.
         let mut jump = false;
         let mut latest = None;
-        for input in peer.inputs.drain(..) {
+        for input in &peer.inputs {
             jump |= input.jump;
-            latest = Some(input);
+            latest = Some(*input);
         }
         if let Some(input) = latest {
-            peer.ack = input.sequence;
             peer.look = input.look;
             peer.last_movement = input.character();
         }
@@ -771,6 +894,8 @@ fn simulate(
             .as_mut()
             .is_some_and(|sleep| sleep.blocks_movement(peer.id, peer.last_movement, jump))
         {
+            acknowledge_movement(&mut peer);
+            mounts.release(peer.uuid);
             velocity.0 = Vec3::ZERO;
             peer.mining = None;
             peer.consumption = None;
@@ -786,6 +911,9 @@ fn simulate(
             continue;
         }
         if peer.chat.teleport.is_some() {
+            acknowledge_movement(&mut peer);
+            mounts.release(peer.uuid);
+            grips.release(peer.uuid);
             velocity.0 = Vec3::ZERO;
             continue;
         }
@@ -799,16 +927,70 @@ fn simulate(
         };
         input.jump = jump || (input.jump && simulation.swimming_at(state.position));
         let mode = peer.game_mode(&spawn.config);
-        if mode != terra_core::GameMode::Survival {
-            peer.vitals = Default::default();
+        if peer.vitals.dead() || mode == terra_core::GameMode::Spectator {
+            mounts.release(peer.uuid);
         }
+        if let Some(mount) = mounts.active.get_mut(&peer.uuid) {
+            acknowledge_movement(&mut peer);
+            grips.release(peer.uuid);
+            peer.mining = None;
+            peer.consumption = None;
+            if mount.leave
+                && let Some(exit) = simulation.dismount(&mount.horse)
+            {
+                transform.translation = exit;
+                velocity.0 = Vec3::ZERO;
+                grounded.0 = true;
+                mounts.release(peer.uuid);
+                continue;
+            }
+            mount.grounded = simulation.ride_step(&mut mount.horse, &mut mount.stamina, input);
+            transform.translation = simulation.riding_position(&mount.horse);
+            velocity.0 = Vec3::from_array(mount.horse.velocity);
+            grounded.0 = mount.grounded;
+            let mounted_state = CharacterState {
+                position: transform.translation,
+                velocity: velocity.0,
+                grounded: grounded.0,
+            };
+            survival::advance_rest(
+                &mut peer,
+                mounted_state,
+                simulation.head_underwater(mounted_state.position),
+                false,
+                mode,
+                simulation.delta_seconds(),
+            );
+            continue;
+        }
+        if mode != terra_core::GameMode::Survival || stalkers::held_light(&peer, &spawn.journal) {
+            grips.release(peer.uuid);
+        }
+        if let Some(grip) = grips.get(peer.uuid) {
+            input = grip.movement(
+                state.position,
+                simulation.delta_seconds(),
+                peer.vitals
+                    .effects
+                    .movement_multiplier(simulation.swimming_at(state.position)),
+            );
+            peer.mining = None;
+            peer.consumption = None;
+        }
+        if mode != terra_core::GameMode::Survival {
+            survival::reset_invulnerable_vitals(&mut peer);
+        }
+        let equipment = peer.equipment;
+        peer.vitals.apply_equipment(equipment);
         if peer.vitals.dead() {
+            acknowledge_movement(&mut peer);
             velocity.0 = Vec3::ZERO;
             peer.mining = None;
             continue;
         }
         let before = state;
         if simulation.survival_step(entity, collider, &mut state, input, mode, &mut peer.vitals) {
+            acknowledge_movement(&mut peer);
             let submerged = simulation.head_underwater(state.position);
             let swimming = simulation.swimming_at(state.position);
             survival::advance(
@@ -825,6 +1007,13 @@ fn simulate(
         velocity.0 = state.velocity;
         grounded.0 = state.grounded;
     }
+}
+
+fn acknowledge_movement(peer: &mut Peer) {
+    if let Some(input) = peer.inputs.back() {
+        peer.ack = input.sequence;
+    }
+    peer.inputs.clear();
 }
 
 fn update_foci(
@@ -932,7 +1121,7 @@ fn send_deltas(
 fn send_players(
     runtime: Res<ServerRuntime>,
     config: Res<GameConfig>,
-    journal: Res<EditJournal>,
+    (journal, mounts): (Res<EditJournal>, Res<riding::Mounts>),
     peers: Query<&Peer, With<Connected>>,
     bodies: Query<
         (
@@ -962,6 +1151,7 @@ fn send_players(
         }
         if let Ok((transform, velocity, grounded)) = bodies.get(peer.body) {
             players.push(PlayerState {
+                mounted: mounts.snapshot(peer.uuid),
                 gender: peer.gender,
                 generation: peer.generation,
                 player: peer.id,
@@ -971,6 +1161,7 @@ fn send_players(
                 grounded: grounded.0,
                 look: peer.look,
                 survival: peer.vitals,
+                equipment: peer.equipment,
                 held_item: peer
                     .held_slot
                     .and_then(|slot| {
@@ -1061,6 +1252,8 @@ fn send_clock(
 
 #[path = "server_beds.rs"]
 mod beds;
+#[path = "server_bees.rs"]
+mod bees;
 #[path = "server_chat.rs"]
 mod chat;
 #[path = "server_consumption.rs"]
@@ -1069,6 +1262,10 @@ mod consumption;
 mod containers;
 #[path = "server_creatures.rs"]
 mod creatures;
+#[path = "server_crushers.rs"]
+mod crushers;
+#[path = "server_farm_tools.rs"]
+mod farm_tools;
 #[path = "server_furnaces.rs"]
 mod furnaces;
 #[path = "server_furniture.rs"]
@@ -1077,10 +1274,16 @@ mod furniture;
 mod gameplay;
 #[path = "server_lightning.rs"]
 mod lightning;
+#[path = "server_locations.rs"]
+mod locations;
+#[path = "server_riding.rs"]
+mod riding;
 #[path = "server_social.rs"]
 mod social;
 #[path = "server_spawn.rs"]
 mod spawn;
+#[path = "server_stalkers.rs"]
+mod stalkers;
 #[path = "server_survival.rs"]
 mod survival;
 #[path = "server_validation.rs"]

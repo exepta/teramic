@@ -459,7 +459,7 @@ mod tests {
         let palette = PropPalette {
             foliage: [0, 1, 2],
             stem: 3,
-            flowers: [4, 5, 6, 7, 8, 9],
+            flowers: [4, 5, 6, 7, 8, 9, 14, 15],
             stone: 10,
             mushroom: 11,
             ..Default::default()

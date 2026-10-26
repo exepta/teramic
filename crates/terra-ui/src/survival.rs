@@ -28,6 +28,9 @@ pub struct SurvivalView {
     pub oxygen_label: String,
     pub hunger_label: String,
     pub hunger_stage: usize,
+    pub armor: f32,
+    pub show_armor: bool,
+    pub armor_tooltip: String,
     pub show_oxygen: bool,
     pub exhausted: bool,
     pub hit: bool,
@@ -128,9 +131,10 @@ fn update(
         && let Some(uuid) = session.uuid
     {
         if let Some((_, health, dead)) = state.previous.filter(|(id, _, _)| *id == uuid) {
-            if v.health < health {
+            let comparable_health = health.min(v.max_health);
+            if v.health < comparable_health {
                 state.flash_until = now + DAMAGE_GLOW_SECONDS;
-                state.flash_strength = (0.25 + (health - v.health) * 0.02).min(0.75);
+                state.flash_strength = (0.25 + (comparable_health - v.health) * 0.02).min(0.75);
             }
             if dead && !v.dead() {
                 state.resume_pending = true;
@@ -156,7 +160,24 @@ fn update(
         }
         state.previous = Some((uuid, v.health, v.dead()));
     }
-    let numbers = |value: f32| format!("{} / 100", value.ceil().clamp(0.0, 100.0) as u16);
+    let numbers = |value: f32, maximum: f32| {
+        format!(
+            "{} / {}",
+            value.ceil().clamp(0.0, maximum) as u16,
+            maximum.ceil() as u16
+        )
+    };
+    let health_fraction = v.health / v.max_health.max(1.0) * 100.0;
+    let (stamina, stamina_capacity) =
+        session
+            .as_ref()
+            .and_then(|s| s.mounted)
+            .map_or((v.stamina, v.max_stamina), |mount| {
+                (
+                    mount.stamina,
+                    f32::from(mount.horse().horse_traits().unwrap().stamina),
+                )
+            });
     let canvas = windows
         .iter()
         .next()
@@ -171,15 +192,23 @@ fn update(
         visible: editing || menu.as_ref().is_none_or(|menu| menu.world_hud_active()),
         dead: v.dead(),
         respawning: session.as_ref().is_some_and(|s| s.teleporting),
-        health: v.health,
-        stamina: v.stamina,
+        health: health_fraction,
+        stamina: stamina / stamina_capacity.max(1.0) * 100.0,
         hunger: v.hunger,
         oxygen: v.oxygen,
-        health_label: numbers(v.health),
-        stamina_label: numbers(v.stamina),
-        oxygen_label: numbers(v.oxygen),
+        health_label: numbers(v.health, v.max_health),
+        stamina_label: numbers(stamina, stamina_capacity),
+        oxygen_label: numbers(v.oxygen, 100.0),
         hunger_label: format!("{} %", v.hunger.ceil().clamp(0.0, 100.0) as u16),
         hunger_stage: v.hunger_stage(),
+        armor: v.armor_points / terra_core::equipment::MAX_ARMOR_POINTS * 100.0,
+        show_armor: editing || v.armor_points > 0.0,
+        armor_tooltip: format!(
+            "Armor: {:.1} / {:.0}\nPhysical damage reduction: {:.0}%",
+            v.armor_points,
+            terra_core::equipment::MAX_ARMOR_POINTS,
+            (v.armor_points * 2.0).min(80.0)
+        ),
         show_oxygen,
         exhausted: v.exhausted,
         hit: now < state.flash_until && !v.dead(),
@@ -187,7 +216,7 @@ fn update(
             "opacity: {:.3};",
             damage_glow_opacity(state.flash_until - now, state.flash_strength)
         ),
-        critical: v.health < 30.0 && !v.dead() && !editing,
+        critical: health_fraction < 30.0 && !v.dead() && !editing,
         death_message: v
             .last_damage
             .map_or("Your journey ended here.", |cause| cause.message())
@@ -212,6 +241,16 @@ fn atlas_frames(
     mut images: Query<(&ElementId, &mut bevy::ui::widget::ImageNode)>,
 ) {
     for (id, mut image) in &mut images {
+        if id.0 == "survival-armor-frame" {
+            let rect = Some(Rect::from_corners(
+                Vec2::new(510.0, 202.0),
+                Vec2::new(2106.0, 421.0),
+            ));
+            if image.rect != rect {
+                image.rect = rect;
+            }
+            continue;
+        }
         if id.0 == "survival-food-frame" {
             // Remove the export padding while retaining the generated frame's alpha.
             let rect = Some(Rect::from_corners(Vec2::splat(80.0), Vec2::splat(1175.0)));
@@ -269,6 +308,42 @@ mod tests {
             "../../../src-ui/components/survival-hud.component.css"
         ))
         .unwrap();
+    }
+    #[test]
+    fn equipment_bonuses_normalize_health_and_stamina_without_overfilling() {
+        let mut app = fixture();
+        {
+            let mut session = app.world_mut().resource_mut::<ClientSession>();
+            session.stats.survival.max_health = 120.0;
+            session.stats.survival.max_stamina = 150.0;
+            session.stats.survival.health = 60.0;
+            session.stats.survival.stamina = 75.0;
+            session.stats.survival.armor_points = 20.0;
+        }
+        app.update();
+        let view = app.world().resource::<SurvivalView>();
+        assert_eq!((view.health, view.stamina, view.armor), (50.0, 50.0, 50.0));
+        assert_eq!(view.health_label, "60 / 120");
+        assert_eq!(view.stamina_label, "75 / 150");
+        assert!(view.show_armor);
+        assert!(!view.critical);
+    }
+    #[test]
+    fn removing_maximum_health_gear_is_not_a_damage_flash() {
+        let mut app = fixture();
+        {
+            let mut session = app.world_mut().resource_mut::<ClientSession>();
+            session.stats.survival.max_health = 120.0;
+            session.stats.survival.health = 120.0;
+        }
+        app.update();
+        {
+            let mut session = app.world_mut().resource_mut::<ClientSession>();
+            session.stats.survival.max_health = 100.0;
+            session.stats.survival.health = 100.0;
+        }
+        app.update();
+        assert!(!app.world().resource::<SurvivalView>().hit);
     }
     #[test]
     fn an_open_inventory_does_not_hide_survival_vitals() {

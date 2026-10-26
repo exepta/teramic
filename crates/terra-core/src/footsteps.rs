@@ -8,6 +8,7 @@ pub enum Walker {
     Cow,
     Pig,
     Bear,
+    Stalker,
 }
 
 #[derive(Message, Debug, Clone, Copy)]

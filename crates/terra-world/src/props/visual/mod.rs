@@ -2,12 +2,15 @@
 mod aquatic;
 mod botanical_detail;
 mod botany;
+mod crops;
 mod flowers;
 mod geometry;
 mod mushrooms;
+mod scarecrow;
 mod shapes;
 mod sizing;
 mod trunk_fungi;
+mod webs;
 pub use shapes::template;
 pub(crate) use sizing::bounds as template_bounds;
 #[cfg(test)]
@@ -32,11 +35,13 @@ pub struct PropMesh {
 
 #[derive(Default, Clone)]
 pub struct PropPalette {
+    /// Neutral shared material for authored crop vertex colors.
+    pub crop: usize,
     pub foliage: [usize; 3],
     pub stem: usize,
     pub dry_grass: [usize; 3],
     pub twig: usize,
-    pub flowers: [usize; 6],
+    pub flowers: [usize; 8],
     pub mushroom: usize,
     pub stone: usize,
 }

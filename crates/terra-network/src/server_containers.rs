@@ -6,7 +6,7 @@ use crate::protocol::inventory::{
 };
 
 fn snapshot(world: &ControlWorld, position: [i64; 3]) -> Option<ContainerSnapshot> {
-    if world.chunks.block_at(position) == Some(59) {
+    if let Some(material @ (59 | 99)) = world.chunks.block_at(position) {
         let selected = world.journal.object_state(position)?;
         let anchor = if selected.secondary {
             selected.peer?
@@ -20,8 +20,10 @@ fn snapshot(world: &ControlWorld, position: [i64; 3]) -> Option<ContainerSnapsho
             || !secondary.secondary
             || secondary.peer != Some(anchor)
             || secondary.facing != primary.facing
-            || world.chunks.block_at(anchor) != Some(59)
-            || world.chunks.block_at(upper) != Some(59)
+            || !primary.valid_for(anchor, material)
+            || !secondary.valid_for(upper, material)
+            || world.chunks.block_at(anchor) != Some(material)
+            || world.chunks.block_at(upper) != Some(material)
             || ![anchor, upper].contains(&position)
         {
             return None;
@@ -29,14 +31,29 @@ fn snapshot(world: &ControlWorld, position: [i64; 3]) -> Option<ContainerSnapsho
         let value = ContainerSnapshot {
             anchor,
             workbench: None,
-            furnace: Some(
+            furnace: (material == 59).then(|| {
                 world
                     .journal
                     .furnace_at(anchor)
                     .cloned()
                     .unwrap_or_default()
-                    .view(),
-            ),
+                    .view()
+            }),
+            crusher: (material == 99).then(|| {
+                let mut view = world
+                    .journal
+                    .crusher_at(anchor)
+                    .cloned()
+                    .unwrap_or_default()
+                    .view(
+                        world
+                            .journal
+                            .container_at(anchor)
+                            .unwrap_or(&terra_core::Inventory::default()),
+                    );
+                view.working &= world.journal.crusher_driven(anchor);
+                view
+            }),
             halves: vec![ContainerHalf {
                 position: anchor,
                 inventory: world
@@ -79,6 +96,7 @@ fn snapshot(world: &ControlWorld, position: [i64; 3]) -> Option<ContainerSnapsho
         anchor,
         workbench: None,
         furnace: None,
+        crusher: None,
         halves: positions
             .into_iter()
             .map(|position| ContainerHalf {
@@ -168,7 +186,7 @@ fn available(peer: &Peer, world: &ControlWorld, snapshot: &ContainerSnapshot) ->
         return workbench_positions(world, workbench)
             .is_some_and(|positions| target_available(peer, world, &positions));
     }
-    if snapshot.furnace.is_some() {
+    if snapshot.furnace.is_some() || snapshot.crusher.is_some() {
         return world
             .journal
             .object_state(snapshot.anchor)
@@ -308,9 +326,18 @@ pub(super) fn transfer(
                 .iter()
                 .map(|half| half.inventory.clone())
                 .collect();
-            if (current.workbench.is_some() || command.reserved == [0; terra_core::INVENTORY_SLOTS])
+            if (current.workbench.is_some()
+                || current.crusher.is_some()
+                || command.reserved == [0; terra_core::INVENTORY_SLOTS])
                 && if current.furnace.is_some() {
                     terra_core::furnace::apply_gesture_reserved(
+                        &mut player,
+                        &mut halves[0],
+                        command.action,
+                        command.reserved,
+                    )
+                } else if current.crusher.is_some() {
+                    terra_core::crusher::apply_gesture_reserved(
                         &mut player,
                         &mut halves[0],
                         command.action,
@@ -377,8 +404,10 @@ pub(super) fn load_recipe(
         .cloned()
         .unwrap_or_default();
     let outcome = (|| {
-        let InventoryAction::LoadSmeltingRecipe { recipe, station } = command.action else {
-            return InventoryOutcome::Invalid;
+        let (recipe, station, crushing) = match command.action {
+            InventoryAction::LoadSmeltingRecipe { recipe, station } => (recipe, station, false),
+            InventoryAction::LoadCrushingRecipe { recipe, station } => (recipe, station, true),
+            _ => return InventoryOutcome::Invalid,
         };
         if !rate(peer) {
             return InventoryOutcome::RateLimited;
@@ -386,17 +415,27 @@ pub(super) fn load_recipe(
         if command.revision != player.revision {
             return InventoryOutcome::Conflict;
         }
-        let Some(current) = peer
-            .container
-            .as_ref()
-            .filter(|s| s.anchor == station && s.furnace.is_some())
-        else {
+        let Some(current) = peer.container.as_ref().filter(|s| {
+            s.anchor == station
+                && if crushing {
+                    s.crusher.is_some()
+                } else {
+                    s.furnace.is_some()
+                }
+        }) else {
             return InventoryOutcome::WrongStation;
         };
-        let Some(recipe) = terra_core::furnace::recipes()
-            .iter()
-            .find(|r| r.id == recipe)
-        else {
+        let Some(input) = (if crushing {
+            terra_core::crusher::recipes()
+                .iter()
+                .find(|r| r.id == recipe)
+                .map(|r| r.input)
+        } else {
+            terra_core::furnace::recipes()
+                .iter()
+                .find(|r| r.id == recipe)
+                .map(|r| r.input)
+        }) else {
             return InventoryOutcome::UnknownRecipe;
         };
         let mut inventory = current.halves[0].inventory.clone();
@@ -405,26 +444,20 @@ pub(super) fn load_recipe(
         }
         if inventory
             .slot(0)
-            .is_some_and(|s| s.item != recipe.input || s.count == terra_core::STACK_LIMIT)
+            .is_some_and(|s| s.item != input || s.count == input.max_stack())
         {
             return InventoryOutcome::NoSpace;
         }
         let Some(slot) = player
             .slots
             .iter()
-            .position(|s| s.valid() && s.item == recipe.input)
+            .position(|s| s.valid() && s.item == input)
         else {
             return InventoryOutcome::MissingIngredients;
         };
         let count = inventory.slot(0).map_or(1, |s| s.count + 1);
-        player.take_from(slot, recipe.input);
-        inventory.creative_set(
-            0,
-            terra_core::ItemStack {
-                item: recipe.input,
-                count,
-            },
-        );
+        player.take_from(slot, input);
+        inventory.creative_set(0, terra_core::ItemStack { item: input, count });
         if world
             .journal
             .commit_container_transaction(peer.uuid, player.clone(), vec![(station, inventory)])
@@ -470,7 +503,8 @@ mod tests {
         .insert_resource(config)
         .init_resource::<terra_core::crafting::RecipeBook>()
         .init_resource::<terra_core::block_properties::BlockPropertiesCatalog>()
-        .init_resource::<ConnectedProfiles>();
+        .init_resource::<ConnectedProfiles>()
+        .init_resource::<riding::Mounts>();
         let anchor = [3, 1, 4];
         let secondary = [4, 1, 4];
         let section = terra_voxel::SectionPos::default();

@@ -1,0 +1,16 @@
+{
+  "item": {
+    "cape": {
+      "material": "diamond",
+      "color": "white"
+    }
+  },
+  "name": "Diamond Cape",
+  "description": "A layered wool cloak and folded scarf with diamond straps and clasp. Recolor the cloth with flower dye.",
+  "equipment": {
+    "slot": "cape",
+    "armor_points": 3,
+    "health_bonus": 4,
+    "stamina_bonus": 3
+  }
+}

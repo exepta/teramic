@@ -264,6 +264,14 @@ pub(super) fn change(world: &mut World, control: &str, value: &str) -> Result<()
                 _ => return Err("Invalid chunk animation".into()),
             };
         }
+        "graphics-tree-fall" => {
+            graphics.tree_fall_animation = match value {
+                "current" => terra_core::TreeFallAnimation::Current,
+                "hell_fall" => terra_core::TreeFallAnimation::HellFall,
+                "magic" => terra_core::TreeFallAnimation::Magic,
+                _ => return Err("Invalid tree fall animation".into()),
+            };
+        }
         "graphics-shadow" => {
             graphics.shadow_quality = match value {
                 "off" => ShadowQuality::Off,
@@ -317,6 +325,23 @@ pub(super) fn change(world: &mut World, control: &str, value: &str) -> Result<()
         "controls-auto-climb" => draft.controls.auto_climb = flag()?,
         "heartbeat" => draft.gameplay.heartbeat = flag()?,
         "view-bobbing" => draft.gameplay.view_bobbing = flag()?,
+        "mob-health-bars" => {
+            draft.gameplay.mob_health_bars = match value {
+                "in_view" => terra_core::MobHealthBars::InView,
+                "looking_at" => terra_core::MobHealthBars::LookingAt,
+                "always" => terra_core::MobHealthBars::Always,
+                "none" => terra_core::MobHealthBars::None,
+                _ => return Err("Invalid mob health bar mode".into()),
+            };
+        }
+        "mob-health-friendly-color" | "mob-health-hostile-color" | "mob-health-font-color" => {
+            let color = rgb(value)?;
+            match control {
+                "mob-health-friendly-color" => draft.gameplay.mob_health_friendly_color = color,
+                "mob-health-hostile-color" => draft.gameplay.mob_health_hostile_color = color,
+                _ => draft.gameplay.mob_health_font_color = color,
+            }
+        }
         "minimap-enabled" => draft.gameplay.minimap.enabled = flag()?,
         "minimap-size" => {
             let size = number()?;
@@ -376,21 +401,26 @@ pub(super) fn change(world: &mut World, control: &str, value: &str) -> Result<()
             draft.multiplayer.cursor_color = if flag()? { None } else { Some([78, 190, 140]) };
         }
         "multiplayer-color" => {
-            let s = value.trim_start_matches('#');
-            if s.len() != 6 || !s.is_ascii() {
-                return Err("Invalid RGB color".into());
-            }
-            let mut color = [0; 3];
-            for (i, v) in color.iter_mut().enumerate() {
-                *v = u8::from_str_radix(&s[i * 2..i * 2 + 2], 16).map_err(|_| "Invalid color")?;
-            }
-            draft.multiplayer.cursor_color = Some(color);
+            draft.multiplayer.cursor_color = Some(rgb(value)?);
         }
         _ => return Err("Unknown setting".into()),
     }
     world.resource_mut::<MenuState>().error.clear();
     world.resource_mut::<MenuState>().status.clear();
     Ok(())
+}
+
+fn rgb(value: &str) -> Result<[u8; 3], String> {
+    let value = value.strip_prefix('#').unwrap_or(value);
+    if value.len() != 6 || !value.is_ascii() {
+        return Err("Expected an RGB color in #RRGGBB format".into());
+    }
+    let mut rgb = [0; 3];
+    for (channel, component) in rgb.iter_mut().enumerate() {
+        *component = u8::from_str_radix(&value[channel * 2..channel * 2 + 2], 16)
+            .map_err(|_| "Invalid RGB color".to_owned())?;
+    }
+    Ok(rgb)
 }
 pub(super) fn apply(world: &mut World) -> Result<(), String> {
     let draft = world.resource::<OptionsDraft>();

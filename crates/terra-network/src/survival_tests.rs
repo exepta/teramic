@@ -641,14 +641,26 @@ fn exhausted_movement_packets_cannot_sprint_or_jump_past_server_rules() {
 
 #[test]
 fn dead_reconnect_and_respawn_keep_inventory_counters_and_uuid_but_reset_prediction_generation() {
+    let mut equipment = terra_core::EquipmentSlots::default();
+    equipment.set(
+        terra_core::EquipmentSlot::Necklace,
+        Some(ItemKind::Accessory(terra_core::AccessoryKind::Necklace)),
+    );
+    equipment.set(
+        terra_core::EquipmentSlot::Belt,
+        Some(ItemKind::Accessory(terra_core::AccessoryKind::Belt)),
+    );
+    let mut vitals = SurvivalVitals {
+        health: 0.0,
+        last_damage: Some(terra_core::DamageCause::Fall),
+        ..default()
+    };
+    vitals.apply_equipment(equipment);
     let stats = PlayerStats {
         blocks_broken: 83,
         deaths: 4,
-        survival: SurvivalVitals {
-            health: 0.0,
-            last_damage: Some(terra_core::DamageCause::Fall),
-            ..default()
-        },
+        survival: vitals,
+        equipment,
         ..default()
     };
     let (mut host, mut a, profile) = survival(stats);
@@ -719,6 +731,19 @@ fn dead_reconnect_and_respawn_keep_inventory_counters_and_uuid_but_reset_predict
     assert_eq!(s.stats.blocks_broken, 83);
     assert_eq!(s.inventory.slot(0).unwrap().count, 3);
     assert_eq!(s.uuid, Some(profile.uuid));
+    assert_eq!(s.stats.equipment, equipment);
+    assert_eq!(s.stats.survival.health, s.stats.survival.max_health);
+    assert_eq!(s.stats.survival.stamina, s.stats.survival.max_stamina);
+    assert_eq!(
+        s.inventory
+            .count(ItemKind::Accessory(terra_core::AccessoryKind::Necklace)),
+        0
+    );
+    assert_eq!(
+        s.inventory
+            .count(ItemKind::Accessory(terra_core::AccessoryKind::Belt)),
+        0
+    );
     send(&mut a, ClientControl::Respawn { generation: 0 });
     for _ in 0..20 {
         frame(&mut host, &mut a);
@@ -733,6 +758,10 @@ fn dead_reconnect_and_respawn_keep_inventory_counters_and_uuid_but_reset_predict
     );
     let journal = host.world().resource::<EditJournal>();
     assert_eq!(journal.gameplay().player_stats[&profile.uuid].deaths, 4);
+    assert_eq!(
+        journal.gameplay().player_stats[&profile.uuid].equipment,
+        equipment
+    );
 }
 
 #[test]

@@ -21,7 +21,7 @@ use bevy::{
     tasks::{AsyncComputeTaskPool, Task, futures_lite::future},
 };
 use std::{
-    collections::{HashMap, HashSet},
+    collections::{HashMap, HashSet, VecDeque},
     sync::Arc,
 };
 use terra_core::GameConfig;
@@ -33,7 +33,7 @@ use terra_world::{
     props::{PropKind, WorldProp},
     streaming::{
         ChunkFocus, ChunkStore, PreparedColumnChanged, SectionPublished, SectionRemoved,
-        StreamingSet, WorldTerrain,
+        StreamingSet, WaterPublished, WorldTerrain,
     },
 };
 
@@ -75,6 +75,14 @@ struct RenderedProps {
     level: DetailLevel,
     count: usize,
     growth: HashMap<terra_world::props::PropId, Pose>,
+    support_pending: bool,
+}
+impl RenderedProps {
+    fn expired_crop_fade(&self, now: f32) -> bool {
+        self.growth.values().any(|pose| {
+            pose.previous_variant.is_some() && !pose.pending && now >= pose.start + growth::SECONDS
+        })
+    }
 }
 #[derive(Resource, Default)]
 struct PropBatches(HashMap<SectionPos, RenderedProps>);
@@ -87,6 +95,7 @@ struct PropJob {
     level: DetailLevel,
     task: Task<(ComposedProps, f64)>,
     growth: HashMap<terra_world::props::PropId, Pose>,
+    support_pending: bool,
 }
 #[derive(Resource, Default)]
 struct PropJobs(HashMap<SectionPos, PropJob>, HashSet<SectionPos>);
@@ -373,6 +382,12 @@ struct PropQueue {
     positions: Vec<(SectionPos, DetailLevel, u64, u64)>,
     changed: HashSet<SectionPos>,
     changes: PropChangeReader,
+    vegetated: HashSet<SectionPos>,
+    web_owners: HashSet<SectionPos>,
+    selection: VecDeque<SectionPos>,
+    selecting: HashSet<SectionPos>,
+    waiting_support: HashSet<SectionPos>,
+    prop_epochs: HashMap<SectionPos, u64>,
 }
 
 #[derive(Default)]
@@ -380,6 +395,7 @@ struct PropChangeReader {
     published: MessageCursor<SectionPublished>,
     removed: MessageCursor<SectionRemoved>,
     columns: MessageCursor<PreparedColumnChanged>,
+    water: MessageCursor<WaterPublished>,
 }
 
 #[derive(Default)]
@@ -387,17 +403,25 @@ struct PropChanges {
     published: Vec<SectionPos>,
     removed: Vec<SectionPos>,
     columns: HashSet<[i64; 2]>,
+    water: bool,
 }
 
 impl PropChanges {
     fn any(&self) -> bool {
-        !self.published.is_empty() || !self.removed.is_empty() || !self.columns.is_empty()
+        !self.published.is_empty()
+            || !self.removed.is_empty()
+            || !self.columns.is_empty()
+            || self.water
     }
 }
 
 impl PropChangeReader {
     fn read(&mut self, world: &PropWorld) -> PropChanges {
         PropChanges {
+            water: world
+                .water
+                .as_ref()
+                .is_some_and(|messages| self.water.read(messages).count() > 0),
             published: world.published.as_ref().map_or_else(Vec::new, |messages| {
                 self.published
                     .read(messages)
@@ -424,6 +448,87 @@ impl PropChangeReader {
 }
 
 impl PropQueue {
+    fn record_web_owner(&mut self, owner: SectionPos, chunks: &ChunkStore) {
+        if chunks.loaded.get(&owner).is_some_and(|section| {
+            section
+                .props
+                .iter()
+                .any(|prop| prop.kind == PropKind::SpiderWeb && !prop.removed)
+        }) {
+            self.web_owners.insert(owner);
+        } else {
+            self.web_owners.remove(&owner);
+        }
+    }
+
+    fn invalidate_web_neighbors(&mut self, changes: impl Iterator<Item = SectionPos>) {
+        if self.web_owners.is_empty() {
+            return;
+        }
+        for changed in changes {
+            // A twenty-metre web may reach two sections beyond its owner.
+            // Only tiny owner-set lookups occur, never scans of loaded props.
+            for z in -2..=2 {
+                for y in -1..=1 {
+                    for x in -2..=2 {
+                        let owner = SectionPos::new(changed.x + x, changed.y + y, changed.z + z);
+                        if self.web_owners.contains(&owner) {
+                            self.changed.insert(owner);
+                            self.waiting_support.insert(owner);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    fn record_prop_edits(&mut self, chunks: &ChunkStore, journal: &EditJournal) {
+        let history = journal.changed_sections();
+        let mut record = |position| {
+            let epoch = journal.prop_epoch(position);
+            if epoch == self.prop_epochs.get(&position).copied().unwrap_or(0) {
+                return;
+            }
+            let Some(section) = chunks.loaded.get(&position) else {
+                return;
+            };
+            self.prop_epochs.insert(position, epoch);
+            self.changed.insert(position);
+            self.record_web_owner(position, chunks);
+            if section.props.iter().any(|p| !p.removed) {
+                self.vegetated.insert(position);
+            } else {
+                self.vegetated.remove(&position);
+            }
+        };
+        // Sparse player edits also arrive alongside unrelated streaming/fluid
+        // publications. They must not depend on a section already having props.
+        if history.size_hint().0 < chunks.loaded.len() {
+            history.for_each(record);
+        } else {
+            chunks.loaded.keys().copied().for_each(&mut record);
+        }
+    }
+
+    fn select(&mut self, position: SectionPos, urgent: bool) {
+        if self.selecting.insert(position) {
+            if urgent {
+                self.selection.push_front(position);
+            } else {
+                self.selection.push_back(position);
+            }
+        } else if urgent {
+            self.selection.retain(|p| *p != position);
+            self.selection.push_front(position);
+        }
+    }
+
+    fn next_selection(&mut self) -> Option<SectionPos> {
+        let position = self.selection.pop_front()?;
+        self.selecting.remove(&position);
+        Some(position)
+    }
+
     fn prioritize(&mut self, focus: [f64; 3]) {
         self.positions.sort_unstable_by_key(|(p, _, _, _)| {
             std::cmp::Reverse((distance_squared(*p, focus) as u64, p.y, p.z, p.x))
@@ -452,6 +557,7 @@ struct PropWorld<'w, 's> {
     published: Option<Res<'w, Messages<SectionPublished>>>,
     removed: Option<Res<'w, Messages<SectionRemoved>>>,
     columns: Option<Res<'w, Messages<PreparedColumnChanged>>>,
+    water: Option<Res<'w, Messages<WaterPublished>>>,
     journal: Res<'w, EditJournal>,
     config: Res<'w, GameConfig>,
     focus: Res<'w, ChunkFocus>,
@@ -534,7 +640,15 @@ fn make_templates(
 ) -> Result<Templates, String> {
     let mut templates = HashMap::new();
     for kind in PropKind::ALL {
-        for variant in (0..8).chain((128..136).filter(|_| !kind.aquatic())) {
+        for variant in (0..if kind == PropKind::SpiderWeb {
+            terra_world::props::webs::VARIANTS as u8
+        } else {
+            8
+        })
+            .chain((128..136).filter(|_| {
+                !kind.aquatic() && kind.crop().is_none() && kind != PropKind::SpiderWeb
+            }))
+        {
             for level in [DetailLevel::Near, DetailLevel::Middle, DetailLevel::Far] {
                 let mut combined = MeshBatch::default();
                 let mut biome_tinted = Vec::new();
@@ -556,6 +670,7 @@ fn make_templates(
                         }));
                     biome_tinted.extend(std::iter::repeat_n(
                         kind != PropKind::Mushroom
+                            && kind.crop().is_none()
                             && (palette.foliage.contains(&part.material)
                                 || part.material == palette.stem),
                         part.positions.len(),
@@ -593,12 +708,78 @@ fn dispatch(
     mut templates: ResMut<PropTemplates>,
     mut rendered: ResMut<PropBatches>,
     (mut jobs, mut snow_exposure): (ResMut<PropJobs>, Option<ResMut<PropSnowExposure>>),
-    (mut status, mut queue): (ResMut<PropRenderStatus>, Local<PropQueue>),
+    (mut status, mut queue, mut growth_status): (
+        ResMut<PropRenderStatus>,
+        Local<PropQueue>,
+        ResMut<PropGrowthStatus>,
+    ),
 ) {
     let _scope = terra_core::profiling::ScopeTimer::new("props.dispatch");
+    let now = world.time.as_deref().map_or(0.0, Time::elapsed_secs);
+    growth_status.crop_cleanup.retain(|position, deadline| {
+        if !world.chunks.loaded.contains_key(position) {
+            return false;
+        }
+        if now >= *deadline {
+            queue.changed.insert(*position);
+            return false;
+        }
+        true
+    });
     let changes = queue.changes.read(&world);
     queue.changed.extend(jobs.1.drain());
+    if world.journal.is_changed() {
+        queue.record_prop_edits(&world.chunks, &world.journal);
+    }
     let untracked_change = world.chunks.is_changed() && !changes.any();
+    // Empty sky/rock sections never acquire a vegetation LOD merely because
+    // the camera moved. Publications maintain the small live selection domain.
+    if untracked_change || world.terrain.is_changed() {
+        queue.vegetated = world
+            .chunks
+            .loaded
+            .iter()
+            .filter_map(|(&p, section)| section.props.iter().any(|prop| !prop.removed).then_some(p))
+            .collect();
+        queue.web_owners = queue
+            .vegetated
+            .iter()
+            .filter(|owner| {
+                world.chunks.loaded[*owner]
+                    .props
+                    .iter()
+                    .any(|prop| prop.kind == PropKind::SpiderWeb && !prop.removed)
+            })
+            .copied()
+            .collect();
+        queue
+            .selection
+            .retain(|p| world.chunks.loaded.contains_key(p));
+        queue
+            .selecting
+            .retain(|p| world.chunks.loaded.contains_key(p));
+        queue
+            .waiting_support
+            .retain(|p| world.chunks.loaded.contains_key(p));
+        queue
+            .prop_epochs
+            .retain(|p, _| world.chunks.loaded.contains_key(p));
+    } else {
+        for position in &changes.published {
+            queue.record_web_owner(*position, &world.chunks);
+            if world
+                .chunks
+                .loaded
+                .get(position)
+                .is_some_and(|s| s.props.iter().any(|p| !p.removed))
+            {
+                queue.vegetated.insert(*position);
+            } else {
+                queue.vegetated.remove(position);
+            }
+        }
+    }
+    queue.invalidate_web_neighbors(changes.published.iter().chain(&changes.removed).copied());
     let journal_selection_changed = world.journal.is_changed()
         && snow_exposure
             .as_deref()
@@ -619,6 +800,19 @@ fn dispatch(
             }
         }
     }
+    let waiting: Vec<_> = queue
+        .waiting_support
+        .iter()
+        .copied()
+        .filter(|owner| {
+            changes.published.iter().any(|p| {
+                owner.x.abs_diff(p.x) <= 1
+                    && owner.y.abs_diff(p.y) <= 1
+                    && owner.z.abs_diff(p.z) <= 1
+            })
+        })
+        .collect();
+    queue.changed.extend(waiting);
     queue.changed.extend(changes.published);
     if !changes.removed.is_empty() {
         let removed: HashSet<_> = changes
@@ -629,7 +823,13 @@ fn dispatch(
         for position in &removed {
             jobs.0.remove(position);
             queue.changed.remove(position);
+            queue.vegetated.remove(position);
+            queue.web_owners.remove(position);
+            queue.selecting.remove(position);
+            queue.waiting_support.remove(position);
+            queue.prop_epochs.remove(position);
         }
+        queue.selection.retain(|p| !removed.contains(p));
         queue
             .positions
             .retain(|(position, ..)| !removed.contains(position));
@@ -663,6 +863,7 @@ fn dispatch(
         && !assets.is_changed()
         && !animation_finished
         && queue.changed.is_empty()
+        && queue.selection.is_empty()
         && snow_exposure
             .as_deref()
             .is_none_or(|state| state.stream_pending.is_empty())
@@ -733,6 +934,9 @@ fn dispatch(
                     base: StandardMaterial {
                         base_color: Color::WHITE,
                         perceptual_roughness: 0.92,
+                        // A zero cutoff preserves climate-tagged vertex alpha,
+                        // but keeps the crop coverage fragment in depth-only passes.
+                        alpha_mode: AlphaMode::Mask(0.0),
                         ..default()
                     },
                     ..default()
@@ -773,22 +977,18 @@ fn dispatch(
                 .chain(queue.changed.iter().copied())
                 .collect()
         };
-        queue.positions.clear();
-        let candidates = world
-            .chunks
-            .loaded
-            .iter()
-            .filter_map(|(&position, section)| {
-                let previous = rendered.0.get(&position);
-                if !queue.selection_dirty
-                    && !pending.contains(&position)
-                    && previous.is_some_and(|p| p.terrain_epoch == section.mesh_epoch)
-                {
-                    return None;
-                }
-                Some(position)
-            })
-            .collect();
+        let mut candidates: Vec<_> = queue.vegetated.iter().copied().collect();
+        candidates.extend(pending);
+        candidates.extend(queue.changed.iter().copied());
+        // An empty section may still own a previous batch that must retire.
+        if untracked_change {
+            candidates.extend(
+                rendered
+                    .0
+                    .iter()
+                    .filter_map(|(&p, old)| old.entity.is_some().then_some(p)),
+            );
+        }
         queue.changed.clear();
         queue.dirty = false;
         queue.selection_dirty = false;
@@ -801,11 +1001,37 @@ fn dispatch(
         changed.into_iter().collect()
     };
     if !candidates.is_empty() {
+        let mut candidates = candidates;
+        candidates
+            .sort_unstable_by_key(|p| (distance_squared(*p, world.focus.0) as u64, p.y, p.z, p.x));
+        candidates.dedup();
         for position in candidates {
+            let urgent = rendered.0.get(&position).is_some_and(|old| {
+                old.prop_epoch != world.journal.prop_epoch(position)
+                    || old.terrain_epoch != world.journal.mesh_epoch(position)
+            });
+            queue.select(position, urgent);
+        }
+    }
+    // Keep a stable deduplicated sweep when fast flight changes focus again.
+    // In particular, one LOD sweep cannot monopolize a frame or lose an edit.
+    {
+        let started = std::time::Instant::now();
+        let _scope = terra_core::profiling::ScopeTimer::new("props.select");
+        for index in 0..96 {
+            if index > 0 && started.elapsed().as_secs_f64() >= 0.0015 {
+                break;
+            }
+            let Some(position) = queue.next_selection() else {
+                break;
+            };
             let Some(section) = world.chunks.loaded.get(&position) else {
                 continue;
             };
-            if let Some(state) = snow_exposure.as_deref_mut() {
+            queue.positions.retain(|(p, ..)| *p != position);
+            if section.props.iter().any(|p| !p.removed)
+                && let Some(state) = snow_exposure.as_deref_mut()
+            {
                 state.watch(position, &world.chunks, &world.terrain.0, &world.journal);
             }
             let previous = rendered.0.get(&position);
@@ -824,7 +1050,9 @@ fn dispatch(
                     && p.terrain_epoch == section.mesh_epoch
                     && p.prop_epoch == prop_epoch
                     && p.appearance_epoch == appearance_epoch
-            }) {
+            }) && !queue.waiting_support.contains(&position)
+                && previous.is_none_or(|p| !p.support_pending)
+            {
                 continue;
             }
             if previous.is_some_and(|p| {
@@ -833,7 +1061,10 @@ fn dispatch(
                     && p.appearance_epoch == appearance_epoch
                     && p.level == level
                     && p.density == 1.0
-            }) {
+                    && !p.expired_crop_fade(now)
+            }) && !queue.waiting_support.contains(&position)
+                && previous.is_none_or(|p| !p.support_pending)
+            {
                 continue;
             }
             if section.props.iter().all(|p| p.removed)
@@ -851,6 +1082,7 @@ fn dispatch(
                         level,
                         count: 0,
                         growth: HashMap::new(),
+                        support_pending: false,
                     },
                 );
                 continue;
@@ -858,6 +1090,9 @@ fn dispatch(
             if jobs.0.contains_key(&position)
                 || section.mesh_epoch != world.journal.mesh_epoch(position)
             {
+                if queue.waiting_support.contains(&position) {
+                    queue.changed.insert(position);
+                }
                 continue;
             }
             queue
@@ -868,6 +1103,7 @@ fn dispatch(
     }
     // Finishing a worker frees capacity, not a reason to scan every loaded
     // section again. Invalidated worker results explicitly request another scan.
+    let _prepare_scope = terra_core::profiling::ScopeTimer::new("props.prepare");
     for _ in 0..available {
         let Some((position, level, prop_epoch, _appearance_epoch)) = queue.positions.pop() else {
             break;
@@ -883,12 +1119,33 @@ fn dispatch(
             continue;
         }
         let density = 1.0;
+        let mut unknown_support = false;
         let props: Vec<_> = section
             .props
             .iter()
-            .filter(|p| terra_world::props::visible_at_density(p, density))
+            .filter(|p| {
+                if p.kind == terra_world::props::PropKind::SpiderWeb
+                    && !terra_world::props::webs::within_world_bounds(
+                        p,
+                        world.terrain.0.config().bounded_world,
+                    )
+                {
+                    return false;
+                }
+                let support =
+                    terra_world::props::placement::supported(p, |cell| world.chunks.block_at(cell));
+                unknown_support |= support.is_none();
+                support == Some(true)
+                    && terra_world::props::visible_at_density(p, density)
+                    && !terra_world::props::seasonal::snow_buried(p, &world.chunks, &world.journal)
+            })
             .copied()
             .collect();
+        if unknown_support {
+            queue.waiting_support.insert(position);
+        } else {
+            queue.waiting_support.remove(&position);
+        }
         let templates = templates.clone();
         let growth = growth::snapshot(
             &props,
@@ -898,14 +1155,32 @@ fn dispatch(
         let task_growth = growth.clone();
         let terrain = world.terrain.0.clone();
         let conditions = world.journal.surface_snapshot(position);
-        let exposure = crate::weather::surfaces::exposure::Exposure::capture(
-            &world.chunks,
-            [position.x, position.z],
-            terrain.config().sea_level,
-            terrain.config().bounded_world,
-            &terrain,
-            &world.journal,
-        );
+        let lod_only = rendered.0.get(&position).is_some_and(|old| {
+            old.terrain_epoch == section.mesh_epoch
+                && old.prop_epoch == prop_epoch
+                && old.appearance_epoch
+                    == prop_appearance_epoch(snow_exposure.as_deref(), position, &world.journal)
+        });
+        let cached_exposure = lod_only
+            .then(|| {
+                snow_exposure.as_deref().and_then(|state| {
+                    state
+                        .stream_snapshots
+                        .get(&[position.x, position.z])
+                        .cloned()
+                })
+            })
+            .flatten();
+        let exposure = cached_exposure.or_else(|| {
+            crate::weather::surfaces::exposure::Exposure::capture(
+                &world.chunks,
+                [position.x, position.z],
+                terrain.config().sea_level,
+                terrain.config().bounded_world,
+                &terrain,
+                &world.journal,
+            )
+        });
         if let Some(state) = snow_exposure.as_deref_mut()
             && let Some(exposure) = exposure.as_deref()
         {
@@ -945,11 +1220,13 @@ fn dispatch(
                 level,
                 task,
                 growth,
+                support_pending: unknown_support,
             },
         );
     }
     status.ready = queue.positions.is_empty()
         && queue.changed.is_empty()
+        && queue.selection.is_empty()
         && !queue.dirty
         && jobs.0.is_empty()
         && jobs.1.is_empty()
@@ -1020,13 +1297,11 @@ fn compose_with_exposure_mode(
     terrain: &TerraGenerator,
     conditions: &SurfaceSnapshot,
     growth: &HashMap<terra_world::props::PropId, Pose>,
-    exposure: Option<&crate::weather::surfaces::exposure::Exposure>,
+    _exposure: Option<&crate::weather::surfaces::exposure::Exposure>,
     packed: bool,
 ) -> Result<(Vec<MeshBatch>, usize), String> {
     let origin = section.origin().map_err(|e| e.to_string())?;
     let tint = GrassTint::new(terrain, origin);
-    let snow_climate =
-        exposure.map(|_| crate::weather::storage::snow::SnowClimate::new(terrain, origin));
     let wind_strength = match level {
         DetailLevel::Near => 1.0,
         DetailLevel::Middle => 0.5,
@@ -1034,14 +1309,28 @@ fn compose_with_exposure_mode(
     };
     let mut batch = MeshBatch::default();
     let mut growing_batch = MeshBatch::default();
-    let mut sizes = [[0; 3]; 2];
+    // A flower-bearing section keeps one shared rooted layout, rather than
+    // adding a draw call solely for seasonal shrinking. Static props use 1x.
+    let rooted_section = props
+        .iter()
+        .any(|prop| !prop.removed && prop.kind == PropKind::Flower);
+    // Keep the old crop stage only for the short shader crossfade, in the same
+    // section batch. It is removed by the bounded cleanup queue afterwards.
+    let mut staged = Vec::with_capacity(props.len());
     for prop in props.iter().filter(|p| !p.removed && !p.hidden_growth()) {
+        staged.push((*prop, false));
+        if let Some(variant) = growth.get(&prop.id).and_then(|pose| pose.previous_variant) {
+            staged.push((WorldProp { variant, ..*prop }, true));
+        }
+    }
+    let mut sizes = [[0; 3]; 2];
+    for (prop, _) in &staged {
         let source = &templates
             .get(&(prop.kind as u8, prop.template_variant(), level))
             .ok_or("Missing prop template")?
             .geometry;
         if !source.indices.is_empty() {
-            let size = &mut sizes[usize::from(prop.growing_grass())];
+            let size = &mut sizes[usize::from(rooted_section || growth::animated(prop))];
             size[0] += source.positions.len();
             size[1] += source.indices.len();
             size[2] += 1;
@@ -1066,9 +1355,9 @@ fn compose_with_exposure_mode(
         }
     }
     let mut count = 0;
-    for prop in props.iter().filter(|p| !p.removed && !p.hidden_growth()) {
+    for (prop, fading_out) in &staged {
         let variant = prop.template_variant();
-        let batch = if prop.growing_grass() {
+        let batch = if rooted_section || growth::animated(prop) {
             &mut growing_batch
         } else {
             &mut batch
@@ -1080,30 +1369,45 @@ fn compose_with_exposure_mode(
         if source.indices.is_empty() {
             continue;
         }
-        count += 1;
+        count += usize::from(!*fading_out);
         let scale = prop.visual_scale();
         let rotation = Quat::from_rotation_y(prop.rotation);
         let offset = Vec3::from_array(std::array::from_fn(|i| {
             (prop.position[i] - origin[i] as f64) as f32
         }));
         let base = u32::try_from(batch.positions.len()).map_err(|_| "Prop batch overflow")?;
-        if prop.growing_grass() {
-            batch.growth_ranges.push((
-                prop.id,
-                batch.positions.len()..batch.positions.len() + source.positions.len(),
-            ));
+        if rooted_section || growth::animated(prop) {
+            if growth::animated(prop) {
+                batch.growth_ranges.push((
+                    prop.id,
+                    batch.positions.len()..batch.positions.len() + source.positions.len(),
+                ));
+            }
             let pose = growth.get(&prop.id).copied().unwrap_or(Pose {
-                scale: prop.visual_scale(),
+                scale: growth::extent(prop),
                 ratio: 1.0,
                 start: 0.0,
                 pending: false,
+                variant: prop.variant,
+                previous_variant: None,
             });
             batch.growth_anchors.extend(std::iter::repeat_n(
                 offset.to_array(),
                 source.positions.len(),
             ));
             batch.rooted_wind.extend(std::iter::repeat_n(
-                [pose.start, pose.ratio],
+                [
+                    pose.start,
+                    if *fading_out {
+                        -3.0
+                    } else if prop.kind.crop().is_some()
+                        && (pose.pending || pose.previous_variant.is_some() || pose.ratio < 1.0)
+                    {
+                        -1.0 - pose.ratio
+                    } else {
+                        pose.ratio
+                    },
+                ],
                 source.positions.len(),
             ));
         }
@@ -1140,22 +1444,6 @@ fn compose_with_exposure_mode(
             Default::default()
         };
         let condition = condition_tint(condition);
-        let snow_tag = exposure
-            .zip(snow_climate.as_ref())
-            .map(|(exposure, climate)| {
-                let cell = [
-                    support[0].rem_euclid(16) as u32,
-                    0,
-                    support[2].rem_euclid(16) as u32,
-                ];
-                if exposure.snow_exposed(cell, support[1]) {
-                    crate::weather::storage::snow::encode_temperature(
-                        climate.temperature(offset.to_array()),
-                    )
-                } else {
-                    0.0
-                }
-            });
         let colors = source
             .colors
             .iter()
@@ -1165,9 +1453,7 @@ fn compose_with_exposure_mode(
                 for channel in 0..3 {
                     color[channel] *= condition[channel] * if green { biome[channel] } else { 1.0 };
                 }
-                if let Some(tag) = snow_tag {
-                    color[3] = tag;
-                }
+                color[3] = terra_world::props::seasonal::flower_rank(prop);
                 color
             });
         if packed {
@@ -1194,9 +1480,20 @@ fn compose_with_exposure_mode(
 
 fn patch_growth(batches: &mut [MeshBatch], growth: &HashMap<terra_world::props::PropId, Pose>) {
     for batch in batches {
+        if batch.staged.is_some() {
+            continue;
+        }
         for (id, range) in &batch.growth_ranges {
             if let Some(pose) = growth.get(id) {
-                batch.rooted_wind[range.clone()].fill([pose.start, pose.ratio]);
+                let tag = batch.rooted_wind[range.start][1];
+                let ratio = if tag < -2.5 {
+                    -3.0
+                } else if tag < -0.5 {
+                    -1.0 - pose.ratio
+                } else {
+                    pose.ratio
+                };
+                batch.rooted_wind[range.clone()].fill([pose.start, ratio]);
             }
         }
     }
@@ -1284,22 +1581,61 @@ fn upload(
         let Some(job) = jobs.0.get_mut(&position) else {
             continue;
         };
-        let Some((result, seconds)) = job
+        let Some((mut result, seconds)) = job
             .ready
             .take()
             .or_else(|| future::block_on(future::poll_once(&mut job.task)))
         else {
             continue;
         };
-        let vertices = result.as_ref().map_or(0, |(batches, _)| {
-            batches.iter().map(|b| b.positions.len()).sum()
-        });
-        if budget
-            .as_mut()
-            .is_some_and(|b| !b.reserve(crate::upload_budget::UploadKind::Props, vertices))
+        let current_level = select_prop_level(
+            position,
+            world.focus.0,
+            rendered.0.get(&position).map(|p| p.level),
+            &world.config.client,
+        );
+        if current_level != job.level
+            || job.prop_epoch != world.journal.prop_epoch(position)
+            || job.terrain_epoch != world.journal.mesh_epoch(position)
+            || job.appearance_epoch
+                != prop_appearance_epoch(snow_exposure.as_deref(), position, &world.journal)
+            || world
+                .chunks
+                .loaded
+                .get(&position)
+                .is_none_or(|s| s.mesh_epoch != job.terrain_epoch)
         {
+            status.completed_jobs += 1;
+            status.composition_seconds += seconds;
+            jobs.0.remove(&position);
+            jobs.1.insert(position);
+            continue;
+        }
+        let vertices = result.as_ref().map_or(0, |(batches, _)| {
+            batches.iter().map(|batch| batch.positions.len()).sum()
+        });
+        if budget.as_mut().is_some_and(|budget| {
+            !budget.reserve(crate::upload_budget::UploadKind::Props, vertices)
+        }) {
             job.ready = Some((result, seconds));
             break;
+        }
+        if let Ok((batches, _)) = &mut result {
+            let now = world.time.as_deref().map_or(0.0, Time::elapsed_secs);
+            let previous = rendered.0.get(&position).map(|r| &r.growth);
+            for (&id, pose) in job.growth.iter_mut().filter(|(_, p)| p.pending) {
+                pose.begin(previous.and_then(|p| p.get(&id)).copied(), now);
+                growth_status.transitions = growth_status.transitions.saturating_add(1);
+                growth_status.active_until = growth_status.active_until.max(now + growth::SECONDS);
+                growth_status.active.insert(id, *pose);
+            }
+            patch_growth(batches, &job.growth);
+            for batch in batches.iter_mut().filter(|b| b.staged.is_none()) {
+                if batch.positions.is_empty() || !batch.has_indices() {
+                    continue;
+                }
+                prepare_prop_batch(batch, &mut meshes);
+            }
         }
         status.composition_seconds += seconds;
         status.completed_jobs += 1;
@@ -1335,13 +1671,14 @@ fn upload(
                 continue;
             }
         };
-        batches.retain(|batch| !batch.positions.is_empty() && batch.has_indices());
+        batches.retain(|batch| batch.staged.is_some());
         if rendered.0.get(&position).is_some_and(|old| {
             old.entity
                 .is_some_and(|entity| world.entering.contains(entity))
                 && old.terrain_epoch == job.terrain_epoch
                 && old.prop_epoch == job.prop_epoch
                 && old.appearance_epoch == job.appearance_epoch
+                && !old.support_pending
         }) {
             continue;
         }
@@ -1371,6 +1708,15 @@ fn upload(
             growth_status.active.insert(id, *pose);
         }
         patch_growth(&mut batches, &job.growth);
+        if let Some(deadline) = job
+            .growth
+            .values()
+            .filter(|pose| pose.previous_variant.is_some())
+            .map(|pose| pose.start + growth::SECONDS)
+            .max_by(f32::total_cmp)
+        {
+            growth_status.crop_cleanup.insert(position, deadline);
+        }
         if let Some(mut old) = rendered.0.remove(&position) {
             if old.entity.is_some()
                 && old.terrain_epoch == job.terrain_epoch
@@ -1392,6 +1738,7 @@ fn upload(
             level,
             count: if batches.is_empty() { 0 } else { count },
             growth: HashMap::new(),
+            support_pending: job.support_pending,
         };
         result.growth = job.growth;
         if !batches.is_empty() {
@@ -1408,42 +1755,9 @@ fn upload(
                 .id();
             result.entity = Some(root);
             for mut batch in batches {
-                let indices = batch.take_indices();
-                let mut mesh = Mesh::new(
-                    PrimitiveTopology::TriangleList,
-                    RenderAssetUsages::RENDER_WORLD,
-                )
-                .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, batch.positions)
-                .with_inserted_attribute(Mesh::ATTRIBUTE_UV_0, batch.uvs)
-                .with_inserted_indices(indices);
-                if batch.packed_normals.is_empty() {
-                    mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, batch.normals);
-                } else {
-                    mesh.insert_attribute(
-                        bevy::mesh::MeshVertexAttribute {
-                            format: bevy::render::render_resource::VertexFormat::Snorm8x4,
-                            ..Mesh::ATTRIBUTE_NORMAL
-                        },
-                        bevy::mesh::VertexAttributeValues::Snorm8x4(batch.packed_normals),
-                    );
-                }
-                if batch.packed_colors.is_empty() {
-                    mesh.insert_attribute(Mesh::ATTRIBUTE_COLOR, batch.colors);
-                } else {
-                    mesh.insert_attribute(
-                        bevy::mesh::MeshVertexAttribute {
-                            format: bevy::render::render_resource::VertexFormat::Unorm8x4,
-                            ..Mesh::ATTRIBUTE_COLOR
-                        },
-                        bevy::mesh::VertexAttributeValues::Unorm8x4(batch.packed_colors),
-                    );
-                }
-                if !batch.growth_anchors.is_empty() {
-                    mesh.insert_attribute(Mesh::ATTRIBUTE_UV_1, batch.rooted_wind);
-                    mesh.insert_attribute(wind::ATTRIBUTE_GROWTH_ANCHOR, batch.growth_anchors);
-                }
-                let bounds = wind::padded_bounds(&mesh);
-                let handle = meshes.add(mesh);
+                let prepared = batch.staged.take().expect("complete prop upload is atomic");
+                let bounds = prepared.bounds;
+                let handle = prepared.handle;
                 let mut entity = commands.spawn((
                     PropMesh,
                     WindProp,
@@ -1475,12 +1789,384 @@ fn upload(
     }
 }
 
+fn prepare_prop_batch(batch: &mut MeshBatch, meshes: &mut Assets<Mesh>) {
+    let indices = batch.take_indices();
+    let mut mesh = Mesh::new(
+        PrimitiveTopology::TriangleList,
+        RenderAssetUsages::RENDER_WORLD,
+    )
+    .with_inserted_attribute(
+        Mesh::ATTRIBUTE_POSITION,
+        std::mem::take(&mut batch.positions),
+    )
+    .with_inserted_attribute(Mesh::ATTRIBUTE_UV_0, std::mem::take(&mut batch.uvs))
+    .with_inserted_indices(indices);
+    if batch.packed_normals.is_empty() {
+        mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, std::mem::take(&mut batch.normals));
+    } else {
+        mesh.insert_attribute(
+            bevy::mesh::MeshVertexAttribute {
+                format: bevy::render::render_resource::VertexFormat::Snorm8x4,
+                ..Mesh::ATTRIBUTE_NORMAL
+            },
+            bevy::mesh::VertexAttributeValues::Snorm8x4(std::mem::take(&mut batch.packed_normals)),
+        );
+    }
+    if batch.packed_colors.is_empty() {
+        mesh.insert_attribute(Mesh::ATTRIBUTE_COLOR, std::mem::take(&mut batch.colors));
+    } else {
+        mesh.insert_attribute(
+            bevy::mesh::MeshVertexAttribute {
+                format: bevy::render::render_resource::VertexFormat::Unorm8x4,
+                ..Mesh::ATTRIBUTE_COLOR
+            },
+            bevy::mesh::VertexAttributeValues::Unorm8x4(std::mem::take(&mut batch.packed_colors)),
+        );
+    }
+    if !batch.growth_anchors.is_empty() {
+        mesh.insert_attribute(Mesh::ATTRIBUTE_UV_1, std::mem::take(&mut batch.rooted_wind));
+        mesh.insert_attribute(
+            wind::ATTRIBUTE_GROWTH_ANCHOR,
+            std::mem::take(&mut batch.growth_anchors),
+        );
+    }
+    batch.staged = Some(crate::meshing::staging::StagedMesh {
+        opaque_shadow: false,
+        bounds: wind::padded_bounds(&mesh),
+        handle: meshes.add(mesh),
+        rooted: false,
+        damp: false,
+        coastal_quads: 0,
+        far: None,
+    });
+}
+
 fn remove(old: &mut RenderedProps, commands: &mut Commands, meshes: &mut Assets<Mesh>) {
     if let Some(entity) = old.entity.take() {
         commands.entity(entity).despawn();
     }
     for handle in old.meshes.drain(..) {
         meshes.remove(handle.id());
+    }
+}
+
+#[cfg(test)]
+mod scheduling_tests {
+    use super::*;
+
+    #[test]
+    fn web_support_publications_and_unloads_invalidate_only_bounded_live_owners() {
+        let web = terra_world::props::webs::spanning(
+            [15, 8, -1],
+            [1, 0, 0],
+            21,
+            10,
+            terra_world::props::PropId(902),
+        )
+        .unwrap();
+        let owner = web.section;
+        let mut chunks = ChunkStore::default();
+        chunks.loaded.insert(
+            owner,
+            terra_world::streaming::LoadedSection {
+                data: terra_voxel::BlockSection::empty(owner).unwrap(),
+                mesh: None,
+                mesh_epoch: 0,
+                water_epoch: 0,
+                water: None,
+                props: vec![web],
+            },
+        );
+        let mut queue = PropQueue::default();
+        queue.record_web_owner(owner, &chunks);
+        assert_eq!(queue.web_owners.len(), 1);
+        // The far anchor belongs to the second neighboring section, not the
+        // ordinary one-section vegetation halo. Publication and removal share it.
+        let far_anchor = global_to_section([36, 8, -1]).0;
+        for _ in 0..3 {
+            queue.invalidate_web_neighbors(std::iter::once(far_anchor));
+            assert_eq!(queue.changed, HashSet::from([owner]));
+            assert!(
+                queue.waiting_support.contains(&owner),
+                "bypass unchanged owner epochs and recheck support"
+            );
+            queue.changed.clear();
+        }
+        queue.invalidate_web_neighbors(std::iter::once(SectionPos::new(3, 0, -1)));
+        assert!(queue.changed.is_empty());
+        chunks.loaded.get_mut(&owner).unwrap().props.clear();
+        queue.record_web_owner(owner, &chunks);
+        assert!(queue.web_owners.is_empty());
+        queue.invalidate_web_neighbors(std::iter::once(far_anchor));
+        assert!(queue.changed.is_empty());
+        assert_eq!(
+            chunks.loaded.len(),
+            1,
+            "support invalidation never generates neighbors"
+        );
+    }
+
+    #[test]
+    fn planting_into_an_empty_section_updates_the_index_despite_other_stream_publications() {
+        let owner = SectionPos::default();
+        let mut chunks = ChunkStore::default();
+        let mut data = terra_voxel::BlockSection::empty(owner).unwrap();
+        data.set_block([8, 0, 8], 3).unwrap();
+        chunks.loaded.insert(
+            owner,
+            terra_world::streaming::LoadedSection {
+                data,
+                mesh: None,
+                mesh_epoch: 0,
+                water_epoch: 0,
+                water: None,
+                props: Vec::new(),
+            },
+        );
+        let mut journal = EditJournal::default();
+        let mut queue = PropQueue::default();
+        queue.record_prop_edits(&chunks, &journal);
+        assert!(queue.vegetated.is_empty());
+        let prop = WorldProp {
+            id: terra_world::props::PropId(119),
+            kind: PropKind::Grass,
+            position: [8.5, 1.0, 8.5],
+            rotation: 0.0,
+            scale: 1.0,
+            variant: 0,
+            section: owner,
+            removed: false,
+        };
+        assert!(
+            terra_world::streaming::commit_prop_placement(&mut chunks, &mut journal, prop).unwrap()
+        );
+        let changes = PropChanges {
+            water: true,
+            published: vec![SectionPos::new(10, 0, 10)],
+            ..Default::default()
+        };
+        assert!(changes.any(), "This is not an untracked chunk mutation");
+        queue.record_prop_edits(&chunks, &journal);
+        assert!(queue.vegetated.contains(&owner));
+        assert!(queue.changed.remove(&owner));
+        queue.record_prop_edits(&chunks, &journal);
+        assert!(
+            queue.changed.is_empty(),
+            "Unchanged edits do not requeue work"
+        );
+        terra_world::streaming::commit_prop_removal(
+            &mut chunks,
+            &mut journal,
+            &terra_world::streaming::PropRemoveRequest {
+                section: owner,
+                id: prop.id,
+            },
+        )
+        .unwrap();
+        queue.record_prop_edits(&chunks, &journal);
+        assert!(!queue.vegetated.contains(&owner));
+        assert!(queue.changed.contains(&owner));
+    }
+
+    #[test]
+    fn streamed_root_space_retries_an_unchanged_prop_batch_without_tombstoning_it() {
+        let owner = SectionPos::default();
+        let root_section = SectionPos::new(0, 1, 0);
+        let prop = WorldProp {
+            id: terra_world::props::PropId(119),
+            kind: PropKind::Grass,
+            position: [8.5, 16.0, 8.5],
+            rotation: 0.0,
+            scale: 1.0,
+            variant: 64,
+            section: owner,
+            removed: false,
+        };
+        let lower = WorldProp {
+            id: terra_world::props::PropId(120),
+            position: [6.5, 1.0, 6.5],
+            ..prop
+        };
+        let mut data = terra_voxel::BlockSection::empty(owner).unwrap();
+        data.set_block([8, 15, 8], 3).unwrap();
+        data.set_block([6, 0, 6], 3).unwrap();
+        let mut chunks = ChunkStore::default();
+        chunks.loaded.insert(
+            owner,
+            terra_world::streaming::LoadedSection {
+                data,
+                mesh: None,
+                mesh_epoch: 0,
+                water_epoch: 0,
+                water: None,
+                props: vec![prop, lower],
+            },
+        );
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .insert_resource(chunks)
+            .init_resource::<EditJournal>()
+            .init_resource::<GameConfig>()
+            .insert_resource(WorldTerrain(
+                TerraGenerator::new(Default::default()).unwrap(),
+            ))
+            .insert_resource(ChunkFocus([8.0; 3]))
+            .init_resource::<Assets<StandardMaterial>>()
+            .init_resource::<Assets<PropMaterial>>()
+            .init_resource::<Assets<Mesh>>()
+            .init_resource::<BlockAssets>()
+            .init_resource::<PropTemplates>()
+            .init_resource::<PropBatches>()
+            .init_resource::<PropJobs>()
+            .init_resource::<PropRenderStatus>()
+            .init_resource::<PropGrowthStatus>()
+            .init_resource::<crate::transitions::LodSwapStatus>()
+            .add_message::<SectionPublished>()
+            .add_systems(Update, dispatch);
+        app.world_mut().resource_mut::<BlockAssets>().templates =
+            Some(Arc::new(Default::default()));
+        app.world_mut().resource_mut::<PropTemplates>().geometry = Some(Arc::new(HashMap::new()));
+        app.world_mut().resource_mut::<PropTemplates>().material = Some(Handle::default());
+        app.update();
+        let first = app
+            .world_mut()
+            .resource_mut::<PropJobs>()
+            .0
+            .remove(&owner)
+            .unwrap();
+        assert_eq!(first.growth.len(), 1);
+        assert!(first.growth.contains_key(&lower.id));
+        let entering = app
+            .world_mut()
+            .spawn((Transform::default(), Visibility::Inherited))
+            .id();
+        crate::transitions::start_test_fade(app.world_mut(), entering);
+        app.world_mut().resource_mut::<PropBatches>().0.insert(
+            owner,
+            RenderedProps {
+                density: 1.0,
+                entity: Some(entering),
+                meshes: Vec::new(),
+                terrain_epoch: 0,
+                prop_epoch: 0,
+                appearance_epoch: 0,
+                level: DetailLevel::Near,
+                count: 1,
+                growth: first.growth,
+                support_pending: true,
+            },
+        );
+        app.world_mut().resource_mut::<ChunkStore>().loaded.insert(
+            root_section,
+            terra_world::streaming::LoadedSection {
+                data: terra_voxel::BlockSection::empty(root_section).unwrap(),
+                mesh: None,
+                mesh_epoch: 0,
+                water_epoch: 0,
+                water: None,
+                props: Vec::new(),
+            },
+        );
+        app.world_mut().write_message(SectionPublished {
+            position: root_section,
+        });
+        app.update();
+        let jobs = app.world().resource::<PropJobs>();
+        assert!(jobs.0[&owner].growth.contains_key(&prop.id));
+        assert!(!app.world().resource::<ChunkStore>().loaded[&owner].props[0].removed);
+        assert_eq!(app.world().resource::<EditJournal>().prop_epoch(owner), 0);
+        app.world_mut()
+            .resource_mut::<PropJobs>()
+            .0
+            .get_mut(&owner)
+            .unwrap()
+            .ready = Some((
+            Ok((
+                vec![MeshBatch {
+                    positions: vec![[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]],
+                    normals: vec![[0.0, 0.0, 1.0]; 3],
+                    colors: vec![[1.0; 4]; 3],
+                    uvs: vec![[0.0; 2]; 3],
+                    indices: vec![0, 1, 2],
+                    ..Default::default()
+                }],
+                2,
+            )),
+            0.0,
+        ));
+        app.add_systems(Update, upload.before(dispatch));
+        app.update();
+        let rendered = &app.world().resource::<PropBatches>().0[&owner];
+        assert_eq!(
+            rendered.count, 2,
+            "An entering partial batch must accept newly supported props"
+        );
+        assert!(rendered.growth.contains_key(&prop.id));
+        assert_ne!(rendered.entity, Some(entering));
+    }
+
+    #[test]
+    fn repeated_focus_sweeps_are_deduplicated_fair_and_edits_take_priority() {
+        let sections: Vec<_> = (0..4096).map(|x| SectionPos::new(x, 0, -1)).collect();
+        let mut queue = PropQueue::default();
+        for &p in &sections {
+            queue.select(p, false);
+        }
+        let edit = *sections.last().unwrap();
+        queue.select(edit, true);
+        assert_eq!(queue.next_selection(), Some(edit));
+        let mut visited = HashSet::from([edit]);
+        for _ in 0..43 {
+            // A new camera bucket cannot restart the old sweep or duplicate it.
+            for &p in sections.iter().rev() {
+                queue.select(p, false);
+            }
+            assert_eq!(queue.selection.len(), sections.len());
+            assert_eq!(queue.selecting.len(), sections.len());
+            for _ in 0..96 {
+                visited.insert(queue.next_selection().unwrap());
+            }
+        }
+        assert_eq!(visited.len(), sections.len());
+        while queue.next_selection().is_some() {}
+        assert!(queue.selecting.is_empty());
+        assert!(queue.selection.is_empty());
+    }
+
+    #[derive(Resource, Default)]
+    struct WaterObservation(bool, bool);
+
+    #[test]
+    fn water_only_publications_are_not_untracked_terrain_or_full_vegetation_lod_sweeps() {
+        let mut app = App::new();
+        app.init_resource::<ChunkStore>()
+            .init_resource::<EditJournal>()
+            .init_resource::<GameConfig>()
+            .insert_resource(WorldTerrain(
+                TerraGenerator::new(Default::default()).unwrap(),
+            ))
+            .insert_resource(ChunkFocus([0.0; 3]))
+            .init_resource::<WaterObservation>()
+            .add_message::<WaterPublished>()
+            .add_systems(
+                Update,
+                |world: PropWorld,
+                 mut reader: Local<PropChangeReader>,
+                 mut result: ResMut<WaterObservation>| {
+                    let changes = reader.read(&world);
+                    result.0 = changes.water;
+                    result.1 = world.chunks.is_changed() && !changes.any();
+                },
+            );
+        app.update();
+        app.world_mut().resource_mut::<ChunkStore>().set_changed();
+        app.world_mut().write_message(WaterPublished {
+            position: SectionPos::new(-1, 0, 2),
+        });
+        app.update();
+        let result = app.world().resource::<WaterObservation>();
+        assert!(result.0);
+        assert!(!result.1);
     }
 }
 
@@ -1638,6 +2324,7 @@ mod growth_tests {
                 level: DetailLevel::Near,
                 task: pool.spawn(std::future::pending()),
                 growth: HashMap::new(),
+                support_pending: false,
             },
         );
         app.update();
@@ -1922,6 +2609,85 @@ mod growth_tests {
     }
 
     #[test]
+    fn crop_crossfade_batches_two_stages_then_releases_the_old_geometry_without_extra_entities() {
+        let terrain = TerraGenerator::new(Default::default()).unwrap();
+        let mut crop_templates = HashMap::new();
+        for stage in 0..2 {
+            for ((_, _, level), template) in templates() {
+                crop_templates.insert((PropKind::Wheat as u8, stage, level), template);
+            }
+        }
+        let prop = WorldProp {
+            kind: PropKind::Wheat,
+            variant: 1,
+            ..sprout(8, 1.0, 0)
+        };
+        let pose = Pose {
+            scale: growth::extent(&prop),
+            ratio: 0.7,
+            start: 10.0,
+            variant: 1,
+            previous_variant: Some(0),
+            pending: false,
+        };
+        let fading = HashMap::from([(prop.id, pose)]);
+        let settled = growth::snapshot(&[prop], Some(&fading), 13.0);
+        for level in [DetailLevel::Near, DetailLevel::Middle, DetailLevel::Far] {
+            let (mut batches, count) = compose_with_growth(
+                &[prop],
+                prop.section,
+                level,
+                &crop_templates,
+                &terrain,
+                &Default::default(),
+                &fading,
+            )
+            .unwrap();
+            assert_eq!(count, 1);
+            assert_eq!(batches.len(), 1);
+            assert_eq!(batches[0].positions.len(), 6);
+            patch_growth(&mut batches, &fading);
+            assert!(
+                batches[0].rooted_wind[..3]
+                    .iter()
+                    .all(|uv| *uv == [10.0, -1.7])
+            );
+            assert!(
+                batches[0].rooted_wind[3..]
+                    .iter()
+                    .all(|uv| *uv == [10.0, -3.0])
+            );
+            let (batches, count) = compose_with_growth(
+                &[prop],
+                prop.section,
+                level,
+                &crop_templates,
+                &terrain,
+                &Default::default(),
+                &settled,
+            )
+            .unwrap();
+            assert_eq!(count, 1);
+            assert_eq!(batches.len(), 1);
+            assert_eq!(batches[0].positions.len(), 3);
+        }
+        let rendered = RenderedProps {
+            density: 1.0,
+            entity: None,
+            meshes: Vec::new(),
+            terrain_epoch: 0,
+            prop_epoch: 0,
+            appearance_epoch: 0,
+            level: DetailLevel::Near,
+            count: 1,
+            growth: fading,
+            support_pending: false,
+        };
+        assert!(!rendered.expired_crop_fade(11.0));
+        assert!(rendered.expired_crop_fade(13.0));
+    }
+
+    #[test]
     fn compiled_wind_weights_match_all_variants_scales_and_keep_underwater_tags() {
         let positions = [-0.2, 0.0, 0.15, 0.5, 1.0, 3.35, 4.0].map(|height| [0.0, height, 0.0]);
         for kind in PropKind::ALL {
@@ -1981,6 +2747,7 @@ mod growth_tests {
                 ratio: 0.42,
                 start: 33.0,
                 pending: false,
+                ..Default::default()
             },
         )]);
         let exposure = crate::weather::surfaces::exposure::Exposure {
@@ -2107,7 +2874,7 @@ mod growth_tests {
     }
 
     #[test]
-    fn seasonal_grass_keeps_climate_and_shelter_tags_at_every_lod() {
+    fn global_snow_reserves_never_hide_or_flatten_grass_before_local_layers_accumulate() {
         let terrain = TerraGenerator::new(Default::default()).unwrap();
         let templates = templates();
         let prop = sprout(99, 1.0, 0);
@@ -2134,26 +2901,69 @@ mod growth_tests {
                 .unwrap();
                 let batch = &mut batches[0];
                 assert!(batch.uvs.iter().all(|uv| uv[1] > 0.0));
-                assert!(batch.colors.iter().all(|color| {
-                    if snow_roof == 0 {
-                        color[3] > 0.0 && color[3] < 1.0
-                    } else {
-                        color[3] == 0.0
-                    }
-                }));
+                assert!(batch.colors.iter().all(|color| color[3] == 1.0));
                 if level == DetailLevel::Far {
                     assert!(batch.uvs.iter().all(|uv| uv[0] == 0.0));
                     crate::foliage::packing::pack(batch);
-                    assert!(batch.packed_colors.iter().all(|color| {
-                        if snow_roof == 0 {
-                            color[3] > 0 && color[3] < 255
-                        } else {
-                            color[3] == 0
-                        }
-                    }));
+                    assert!(batch.packed_colors.iter().all(|color| color[3] == 255));
                 }
             }
         }
+    }
+
+    #[test]
+    fn seasonal_flower_ranks_use_existing_alpha_without_geometry_or_lod_dependent_reselection() {
+        let terrain = TerraGenerator::new(Default::default()).unwrap();
+        let templates: Templates = templates()
+            .into_iter()
+            .map(|((_, variant, level), template)| {
+                ((PropKind::Flower as u8, variant, level), template)
+            })
+            .collect();
+        let mut flower = sprout(712, 0.65, 0);
+        flower.kind = PropKind::Flower;
+        let rank = terra_world::props::seasonal::flower_rank(&flower);
+        for level in [DetailLevel::Near, DetailLevel::Middle, DetailLevel::Far] {
+            let (mut batches, count) = compose_with_growth(
+                &[flower],
+                SectionPos::default(),
+                level,
+                &templates,
+                &terrain,
+                &Default::default(),
+                &HashMap::new(),
+            )
+            .unwrap();
+            assert_eq!(count, 1);
+            assert_eq!(batches.len(), 1, "flowers retain section batching");
+            for batch in &mut batches {
+                assert!(batch.colors.iter().all(|color| color[3] == rank));
+                assert_eq!(batch.growth_anchors.len(), batch.positions.len());
+                assert!(
+                    batch
+                        .growth_anchors
+                        .iter()
+                        .all(|anchor| *anchor == flower.position.map(|v| v as f32))
+                );
+                let vertices = batch.positions.len();
+                crate::foliage::packing::pack(batch);
+                assert_eq!(batch.positions.len(), vertices);
+                assert!(
+                    batch
+                        .packed_colors
+                        .iter()
+                        .all(|color| f32::from(color[3]) / 255.0 == rank)
+                );
+            }
+        }
+        let vertex = include_str!("../../../../assets/shaders/terra_props.wgsl");
+        let fragment = include_str!("../../../../assets/shaders/terra_prop_fragment.wgsl");
+        assert!(vertex.contains("terra_weather.flowers[rank / 4u][rank % 4u]"));
+        assert!(vertex.contains("/ 10.0, 0.0, 1.0)"));
+        assert!(vertex.contains("vec3<f32>(0.40, 0.19, 0.055)"));
+        assert!(vertex.contains("smoothstep(0.0, 0.45, progress)"));
+        assert!(!vertex.contains("fn prop_snow"));
+        assert!(fragment.contains("threshold >= input.color.a"));
     }
 
     #[test]
@@ -2173,6 +2983,7 @@ mod growth_tests {
                     ratio: 0.48,
                     start: 35.5,
                     pending: false,
+                    ..Default::default()
                 },
             ),
             (
@@ -2182,6 +2993,7 @@ mod growth_tests {
                     ratio: 1.0,
                     start: 0.0,
                     pending: false,
+                    ..Default::default()
                 },
             ),
         ]);
@@ -2267,6 +3079,7 @@ mod growth_tests {
             ratio: 0.2,
             start: 20.0,
             pending: false,
+            ..Default::default()
         };
         let mut previous = HashMap::from([(prop.id, old)]);
         app.world_mut().resource_mut::<ChunkStore>().loaded.insert(
@@ -2296,6 +3109,7 @@ mod growth_tests {
                 level: DetailLevel::Near,
                 count: 1,
                 growth: previous.clone(),
+                support_pending: false,
             },
         );
         let templates = templates();
@@ -2323,6 +3137,7 @@ mod growth_tests {
                     level,
                     task: pool.spawn(std::future::pending()),
                     growth,
+                    support_pending: false,
                 },
             );
             app.update();
@@ -2448,6 +3263,7 @@ pub(super) mod testing {
                 level: DetailLevel::Near,
                 task,
                 growth: HashMap::new(),
+                support_pending: false,
             },
         );
     }

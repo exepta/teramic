@@ -30,9 +30,9 @@ pub(super) struct SectionEdits {
     pub(super) objects: HashMap<[usize; 3], super::BlockObjectState>,
     revision: u64,
     pub(super) blocks: HashMap<[usize; 3], u16>,
-    prop_epoch: u64,
-    removed_props: HashSet<PropId>,
-    placed_props: HashMap<PropId, WorldProp>,
+    pub(super) prop_epoch: u64,
+    pub(super) removed_props: HashSet<PropId>,
+    pub(super) placed_props: HashMap<PropId, WorldProp>,
     appearance_epoch: u64,
     surface_conditions: SurfaceSnapshot,
     pub(super) fluid_epoch: u64,
@@ -46,10 +46,20 @@ pub struct EditJournal {
     pub clock: Option<terra_core::WorldClock>,
     pub weather: Option<terra_core::WorldWeather>,
     pub world_rules: Option<terra_core::WorldRuleSettings>,
+    /// Runtime-only shared flower animation; excluded from save/network deltas.
+    pub flowers: crate::props::seasonal::FlowerLifecycle,
     player_state_revision: u64,
+    player_locations: HashMap<terra_core::PlayerUuid, terra_core::PlayerLocation>,
     gameplay: terra_core::GameplayState,
     pub(super) containers: HashMap<[i64; 3], terra_core::Inventory>,
     pub(super) furnaces: HashMap<[i64; 3], terra_core::furnace::FurnaceState>,
+    pub(super) crushers: HashMap<[i64; 3], terra_core::crusher::CrusherState>,
+    pub(super) crusher_sections: HashMap<SectionPos, HashSet<[i64; 3]>>,
+    pub(super) crusher_driven: HashSet<[i64; 3]>,
+    pub(super) crops: HashMap<[i64; 3], terra_core::farming::CropState>,
+    pub(super) crop_sections: HashMap<SectionPos, HashSet<[i64; 3]>>,
+    pub(super) crop_props: HashMap<PropId, [i64; 3]>,
+    pub(crate) forage_regrowth: HashMap<PropId, crate::farming::ForageRegrowth>,
     pub(super) furniture_order: HashMap<[i64; 3], u64>,
     pub(super) next_furniture_order: u64,
     pub(super) sections: HashMap<SectionPos, SectionEdits>,
@@ -65,6 +75,44 @@ pub struct EditJournal {
     pub(super) fluid_sleeping: HashMap<SectionPos, HashSet<[i64; 3]>>,
 }
 impl EditJournal {
+    pub fn player_location(
+        &self,
+        player: terra_core::PlayerUuid,
+    ) -> Option<terra_core::PlayerLocation> {
+        self.player_locations.get(&player).copied()
+    }
+
+    pub fn player_locations(
+        &self,
+    ) -> impl Iterator<Item = (terra_core::PlayerUuid, terra_core::PlayerLocation)> + '_ {
+        self.player_locations
+            .iter()
+            .map(|(&id, &location)| (id, location))
+    }
+
+    pub fn update_player_location(
+        &mut self,
+        player: terra_core::PlayerUuid,
+        location: terra_core::PlayerLocation,
+    ) -> Result<bool, String> {
+        if player.is_nil() || !location.valid() {
+            return Err("Invalid player location".into());
+        }
+        if self.player_locations.get(&player) == Some(&location) {
+            return Ok(false);
+        }
+        if !self.player_locations.contains_key(&player) && self.player_locations.len() >= 4096 {
+            return Err("Player location capacity reached".into());
+        }
+        let next = self
+            .player_state_revision
+            .checked_add(1)
+            .ok_or("Player metadata revision overflow")?;
+        self.player_locations.insert(player, location);
+        self.player_state_revision = next;
+        Ok(true)
+    }
+
     /// Metadata changes must not invalidate terrain, collision or fluid meshes.
     pub fn player_state_revision(&self) -> u64 {
         self.player_state_revision
@@ -76,6 +124,7 @@ impl EditJournal {
     ) -> bool {
         if player.is_nil()
             || !stats.survival.valid()
+            || !stats.equipment.valid()
             || (!self.gameplay.player_stats.contains_key(&player)
                 && self.gameplay.player_stats.len() >= 4096)
             || self.gameplay.player_stats.get(&player) == Some(&stats)
@@ -183,10 +232,6 @@ impl EditJournal {
             || delta.objects.len() > 4096
             || delta.objects.iter().any(|(p, state)| {
                 p.iter().any(|v| *v >= 16)
-                    || !delta
-                        .position
-                        .global_block(p.map(usize::from))
-                        .is_ok_and(|position| state.valid_at(position))
                     || !delta.blocks.iter().any(|(cell, material)| {
                         cell == p
                             && delta
@@ -222,10 +267,11 @@ impl EditJournal {
                 .conditions
                 .iter()
                 .any(|(p, c)| p.iter().any(|&v| v >= 16) || c.validate().is_err())
-            || delta
-                .fluids
-                .iter()
-                .any(|(p, cell)| p.iter().any(|&v| v >= 16) || !cell.validate() || cell.amount == 0)
+            || delta.fluids.iter().any(|(p, cell)| {
+                p.iter().any(|&v| v >= 16)
+                    || !cell.validate()
+                    || cell.amount == 0 && !delta.blocks.iter().any(|(q, _)| q == p)
+            })
             || delta
                 .fluids
                 .iter()
@@ -425,6 +471,55 @@ impl EditJournal {
             .get(&section)
             .is_some_and(|edits| edits.removed_props.contains(&id))
     }
+
+    /// Sparse saved props remain available when their owning section is unloaded.
+    pub fn placed_props(&self, section: SectionPos) -> impl Iterator<Item = &WorldProp> {
+        self.sections
+            .get(&section)
+            .into_iter()
+            .flat_map(|edits| edits.placed_props.values())
+    }
+
+    /// Loaded prop lists have unique IDs, but may be a fresh generated snapshot
+    /// even when the journal already knows this epoch. Inspect without reflowing.
+    pub(crate) fn props_need_sync(&self, section: SectionPos, props: &[WorldProp]) -> bool {
+        let Some(edits) = self.sections.get(&section) else {
+            return false;
+        };
+        if edits.placed_props.is_empty() && edits.removed_props.is_empty() {
+            return false;
+        }
+        let mut placed = 0;
+        for prop in props {
+            if prop.removed != edits.removed_props.contains(&prop.id) {
+                return true;
+            }
+            let Some(saved) = edits.placed_props.get(&prop.id) else {
+                continue;
+            };
+            placed += 1;
+            let mut logical = *prop;
+            logical.position = saved.position;
+            if logical != *saved {
+                return true;
+            }
+            if prop.position != saved.position {
+                // Ground vegetation can acquire an ID-derived group offset.
+                // Reuse the layout rules; unknown placements need hydration.
+                let support = crate::props::placement::support(saved);
+                if prop.growing_grass()
+                    || prop.position[1] != saved.position[1]
+                    || crate::props::placement::support(prop) != support
+                    || !crate::props::placement::compatible(prop, support)
+                    || !crate::props::placement::compatible(saved, support)
+                {
+                    return true;
+                }
+            }
+        }
+        placed != edits.placed_props.len()
+    }
+
     /// Validated by the loaded logical prop list. Does not invalidate terrain/water meshes.
     pub fn remove_prop(&mut self, section: SectionPos, id: PropId) -> Result<bool, BlockError> {
         if self.prop_removed(section, id) {
@@ -438,6 +533,9 @@ impl EditJournal {
         edits.removed_props.insert(id);
         edits.placed_props.remove(&id);
         edits.prop_epoch = epoch;
+        if let Some(position) = self.crop_props.get(&id).copied() {
+            self.remove_crop(position);
+        }
         Ok(true)
     }
     /// Apply after receiving a worker result, including removals made while it was in flight.
@@ -480,7 +578,6 @@ impl EditJournal {
     }
 
     /// Presentation growth updates retain the original identity and save record.
-    #[cfg(feature = "bevy")]
     pub(crate) fn update_placed_prop(&mut self, prop: WorldProp) -> Result<bool, BlockError> {
         if !prop.valid() || prop.removed {
             return Ok(false);
@@ -509,6 +606,97 @@ impl EditJournal {
         material: u16,
     ) -> Result<Vec<SectionPos>, BlockError> {
         self.record_with_order(global, material, true, true)
+    }
+
+    /// Persist metadata for a block already present in a freshly generated section.
+    /// This is not a terrain edit: workers and simulation retain their valid snapshots.
+    pub(super) fn register_generated_block(
+        &mut self,
+        global: [i64; 3],
+        material: u16,
+        state: Option<super::BlockObjectState>,
+    ) -> Result<bool, BlockError> {
+        if self.block(global).is_some() {
+            return Ok(false);
+        }
+        let (owner, local) = global_to_section(global);
+        let revision = self
+            .revision(owner)
+            .checked_add(1)
+            .ok_or(BlockError::RevisionOverflow)?;
+        let furniture_order = matches!(material, 28 | 29)
+            .then(|| {
+                self.next_furniture_order
+                    .checked_add(1)
+                    .ok_or(BlockError::RevisionOverflow)
+            })
+            .transpose()?;
+        let edits = self.sections.entry(owner).or_default();
+        edits.blocks.insert(local, material);
+        if let Some(state) = state {
+            edits.objects.insert(local, state);
+        }
+        edits.revision = revision;
+        if let Some(order) = furniture_order {
+            self.furniture_order.insert(global, order);
+            self.next_furniture_order = order;
+        }
+        Ok(true)
+    }
+
+    /// Only loaded neighbors need new geometry when generated joinery metadata arrives.
+    #[cfg(feature = "bevy")]
+    pub(crate) fn invalidate_structure_meshes(
+        &mut self,
+        sections: &std::collections::BTreeSet<SectionPos>,
+    ) -> Result<(), BlockError> {
+        for &section in sections {
+            self.mesh_epoch(section)
+                .checked_add(1)
+                .ok_or(BlockError::RevisionOverflow)?;
+        }
+        for &section in sections {
+            *self.mesh_epochs.entry(section).or_default() += 1;
+        }
+        Ok(())
+    }
+
+    pub(super) fn invalidate_generated_water_sections(
+        &mut self,
+        sections: &std::collections::BTreeSet<SectionPos>,
+    ) -> Result<(), BlockError> {
+        for &section in sections {
+            self.water_mesh_epoch(section)
+                .checked_add(1)
+                .ok_or(BlockError::RevisionOverflow)?;
+        }
+        for &section in sections {
+            *self.water_mesh_epochs.entry(section).or_default() += 1;
+        }
+        Ok(())
+    }
+
+    /// The caller preflights the complete generated batch and coalesces its
+    /// water halo. Only real new sources wake fluid work, never ordinary roofs.
+    pub(super) fn register_generated_source(&mut self, global: [i64; 3]) -> Result<(), BlockError> {
+        let cell = FluidCell {
+            amount: crate::water::FLUID_CAPACITY,
+            flow: [0; 2],
+            source: true,
+        };
+        if self.fluid(global) == Some(cell) {
+            return Ok(());
+        }
+        let (owner, local) = global_to_section(global);
+        let epoch = self
+            .fluid_epoch(owner)
+            .checked_add(1)
+            .ok_or(BlockError::RevisionOverflow)?;
+        let edits = self.sections.entry(owner).or_default();
+        edits.fluids.insert(local, cell);
+        edits.fluid_epoch = epoch;
+        self.wake_fluid_neighbors(global);
+        Ok(())
     }
     fn record_with_order(
         &mut self,
@@ -539,6 +727,28 @@ impl EditJournal {
                     .take(if offsets[0] == 0 { 1 } else { 2 })
                 {
                     affected.push(owner.offset([x, y, z])?);
+                }
+            }
+        }
+        // Roof-corner profiles sampled by pipe mortar reach two cells. Expand
+        // only for actual recorded chimneys, not every terrain edit's halo.
+        if local.iter().any(|&v| matches!(v, 0 | 1 | 14 | 15)) {
+            for first in crate::objects::DIRECTIONS {
+                for second in crate::objects::DIRECTIONS {
+                    let position =
+                        std::array::from_fn(|axis| global[axis] + first[axis] + second[axis]);
+                    if self.block(position).is_some_and(|id| {
+                        id == 60
+                            || id == 59
+                                && self
+                                    .object_state(position)
+                                    .is_some_and(|state| state.secondary)
+                    }) {
+                        let dependent = global_to_section(position).0;
+                        if !affected.contains(&dependent) {
+                            affected.push(dependent);
+                        }
+                    }
                 }
             }
         }
@@ -577,7 +787,8 @@ impl EditJournal {
         };
         let edits = self.sections.entry(owner).or_default();
         let previous = edits.blocks.insert(local, material);
-        if !matches!(material, 28..=29 | 40 | 59..=97)
+        if !(matches!(material, 28..=29 | 40 | 59..=73 | 99..=100 | 131)
+            || terra_core::construction::is_shape(material))
             || previous.is_some_and(|old| old != material)
         {
             edits.objects.remove(&local);

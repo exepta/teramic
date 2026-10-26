@@ -1,0 +1,13 @@
+{
+  "item": {
+    "accessory": "earrings"
+  },
+  "name": "Earrings",
+  "description": "A matching pair of golden earrings with ruby insets.",
+  "equipment": {
+    "slot": "earrings",
+    "armor_points": 0,
+    "health_bonus": 5,
+    "stamina_bonus": 0
+  }
+}

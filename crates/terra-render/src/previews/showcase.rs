@@ -7,6 +7,7 @@ use terra_core::{ToolKind, creatures::AnimalProduct as Product};
 struct Studio {
     furnaces: bool,
     construction: bool,
+    material_reference: bool,
     initialized: bool,
     stage: usize,
     since: Instant,
@@ -70,6 +71,7 @@ pub(super) fn install(app: &mut App) {
     app.insert_resource(Studio {
         furnaces: std::env::args().any(|a| a == "--smoke-test-furnaces"),
         construction: std::env::args().any(|a| a == "--smoke-test-construction"),
+        material_reference: std::env::args().any(|a| a == "--smoke-test-material-reference"),
         initialized: false,
         stage: 0,
         since: Instant::now(),
@@ -101,7 +103,10 @@ fn prepare(
         camera.is_active = false;
     }
     let construction: Vec<_> = (74..=97).chain(71..=73).map(ItemKind::Block).collect();
-    let items: &[ItemKind] = if state.construction {
+    let reference = material_reference_items();
+    let items: &[ItemKind] = if state.material_reference {
+        &reference
+    } else if state.construction {
         &construction
     } else if state.furnaces {
         &FURNACES
@@ -113,6 +118,7 @@ fn prepare(
             ItemKind::Animal(kind) => animal_batches(kind, templates),
             ItemKind::Mineral(kind) => mineral_batches(kind, templates),
             ItemKind::Bellows(kind) => bellows_batches(kind, templates),
+            ItemKind::Dye(color) => dye_batches(color, templates),
             ItemKind::Block(material) => block_batches(
                 material,
                 templates,
@@ -145,7 +151,9 @@ fn prepare(
         let root = commands
             .spawn((
                 PreviewScene,
-                Transform::from_translation(if state.construction {
+                Transform::from_translation(if state.material_reference {
+                    reference_location(index, 0).unwrap_or(Vec3::ZERO)
+                } else if state.construction {
                     location(index, 8, 4)
                 } else if state.furnaces {
                     location(index, 4, 4)
@@ -156,8 +164,17 @@ fn prepare(
                     Quat::from_rotation_y(std::f32::consts::PI)
                 } else {
                     Quat::IDENTITY
-                }),
-                Visibility::Visible,
+                })
+                .with_scale(Vec3::splat(if state.material_reference {
+                    tools::world_length(item).unwrap_or(1.0)
+                } else {
+                    1.0
+                })),
+                if !state.material_reference || reference_location(index, 0).is_some() {
+                    Visibility::Visible
+                } else {
+                    Visibility::Hidden
+                },
             ))
             .id();
         for batch in batches {
@@ -183,10 +200,14 @@ fn prepare(
             clear_color: ClearColorConfig::Custom(Color::srgb(0.055, 0.065, 0.070)),
             ..default()
         },
-        Transform::from_xyz(8.0, 6.0, 11.0).looking_at(Vec3::ZERO, Vec3::Y),
+        if state.material_reference {
+            reference_camera()
+        } else {
+            Transform::from_xyz(8.0, 6.0, 11.0).looking_at(Vec3::ZERO, Vec3::Y)
+        },
         Projection::Orthographic(OrthographicProjection {
             scaling_mode: bevy::camera::ScalingMode::FixedVertical {
-                viewport_height: 6.0,
+                viewport_height: if state.material_reference { 7.0 } else { 6.0 },
             },
             near: 0.01,
             far: 100.0,
@@ -237,6 +258,58 @@ fn location(index: usize, columns: usize, rows: usize) -> Vec3 {
         + *camera.up() * ((rows - 1) as f32 * 0.5 - (index / columns) as f32) * 1.3
 }
 
+fn material_reference_items() -> Vec<ItemKind> {
+    use ToolKind::*;
+    [
+        WoodSword,
+        StoneSword,
+        IronSword,
+        GoldSword,
+        DiamondSword,
+        RubySword,
+        WoodPickaxe,
+        StonePickaxe,
+        IronPickaxe,
+        GoldPickaxe,
+        DiamondPickaxe,
+        RubyPickaxe,
+        WoodAxe,
+        StoneAxe,
+        IronAxe,
+        GoldAxe,
+        DiamondAxe,
+        RubyAxe,
+    ]
+    .into_iter()
+    .map(ItemKind::Tool)
+    .chain(terra_core::beds::DyeColor::ALL.map(ItemKind::Dye))
+    .chain([1, 2, 3, 4, 5, 7, 8, 9].map(ItemKind::Block))
+    .collect()
+}
+
+fn reference_location(index: usize, stage: usize) -> Option<Vec3> {
+    let position = |slot: usize, columns: usize, rows: usize, spacing: f32| {
+        let camera = reference_camera();
+        *camera.right() * (slot % columns) as f32 * spacing
+            + *camera.up() * ((rows - 1) as f32 * 0.5 - (slot / columns) as f32) * spacing
+            - *camera.right() * (columns - 1) as f32 * 0.5 * spacing
+    };
+    match stage {
+        0 if index < 18 => Some(position(index, 6, 3, 1.9)),
+        1 if (18..31).contains(&index) => Some(position(index - 18, 7, 2, 1.15)),
+        2 if (31..39).contains(&index) => Some(position(index - 31, 4, 2, 1.45)),
+        3 => [2, 8, 14, 17]
+            .iter()
+            .position(|i| *i == index)
+            .map(|slot| position(slot, 2, 2, 1.9)),
+        _ => None,
+    }
+}
+
+fn reference_camera() -> Transform {
+    Transform::from_xyz(2.0, 2.0, 14.0).looking_at(Vec3::ZERO, Vec3::Y)
+}
+
 #[allow(clippy::too_many_arguments, clippy::type_complexity)]
 fn capture(
     mut commands: Commands,
@@ -270,7 +343,9 @@ fn capture(
         state.captured = false;
         state.pending = false;
         if state.stage
-            >= if state.construction {
+            >= if state.material_reference {
+                4
+            } else if state.construction {
                 5
             } else if state.furnaces {
                 14
@@ -282,156 +357,183 @@ fn capture(
             exit.write(AppExit::Success);
             return;
         }
-        let selected: &[usize] = if state.construction {
-            match state.stage {
-                1 => &[0, 1, 2, 3],
-                2 => &[8, 9, 10, 11],
-                3 => &[16, 17, 18, 19],
-                _ => &[24, 25, 26],
-            }
-        } else if state.furnaces {
-            match state.stage {
-                1 => &[0, 1, 2],
-                2 => &[3, 4, 5],
-                3 => &[6, 7, 8, 9],
-                4 => &[10, 11, 12],
-                5 => &[13, 14, 15],
-                9 => &[0, 2, 3],
-                10 | 11 => &[],
-                12 => &[10, 11, 12],
-                13 => &[],
-                _ => &[0],
-            }
-        } else {
-            match state.stage {
-                1 => &[0, 1, 6, 8],
-                2 => &[9, 10, 11, 12],
-                3 => &[13, 14, 15, 16],
-                4 => &[17, 18, 19, 20],
-                _ => &[21, 22, 23],
-            }
-        };
-        for (index, entity) in state.models.iter().enumerate() {
-            if let Ok((mut transform, mut visibility)) = transforms.get_mut(*entity) {
-                if let Some(slot) = selected.iter().position(|i| *i == index) {
-                    *visibility = Visibility::Visible;
-                    transform.translation = if state.stage == 12 {
-                        transform.rotation = Quat::from_rotation_y(std::f32::consts::PI);
-                        location(slot, 2, 2)
-                    } else if state.stage >= 6 {
-                        match index {
-                            0 => Vec3::new(-1.5, 0.5, 0.0),
-                            2 => Vec3::new(-1.5, 2.5, 0.0),
-                            _ => Vec3::new(-1.5, 2.5, 1.0),
-                        }
+        if state.material_reference {
+            for (index, entity) in state.models.iter().enumerate() {
+                if let Ok((mut transform, mut visibility)) = transforms.get_mut(*entity) {
+                    *visibility = if let Some(position) = reference_location(index, state.stage) {
+                        transform.translation = position;
+                        transform.rotation = if state.stage == 3 {
+                            Quat::from_euler(EulerRot::XYZ, 0.16, -0.60, -0.18)
+                        } else {
+                            Quat::IDENTITY
+                        };
+                        Visibility::Visible
                     } else {
-                        location(slot, 2, 2)
+                        Visibility::Hidden
                     };
-                } else {
-                    *visibility = Visibility::Hidden;
                 }
             }
-        }
-        if let Ok((mut projection, mut transform, mut optics)) = camera.single_mut() {
-            if state.furnaces && state.stage >= 6 {
-                *projection = Projection::Perspective(PerspectiveProjection {
-                    fov: 65.0_f32.to_radians(),
-                    near: 0.05,
-                    far: 80.0,
-                    ..default()
-                });
-                *transform = Transform::from_xyz(2.4, 1.8, 2.8)
-                    .looking_at(Vec3::new(-0.7, 1.5, -1.0), Vec3::Y);
-                if let Projection::Perspective(p) = &*projection {
-                    optics.view_from_clip = p.get_clip_from_view().inverse();
-                }
-                optics.smoke = Vec4::new(
-                    match state.stage {
-                        7 => 0.22,
-                        8 => 0.85,
-                        _ => 0.0,
-                    },
-                    0.0,
-                    0.0,
-                    0.0,
-                );
-                if let Some(smoke) = state.smoke.take() {
-                    commands.entity(smoke).despawn();
-                }
-                if state.stage > 6 && state.stage < 10 {
-                    state.smoke = Some(crate::furnaces::showcase_wisps(
-                        &mut commands,
-                        &mut meshes,
-                        &mut smoke_materials,
-                        &transform,
-                        state.stage == 9,
-                        match state.stage {
-                            7 => 16,
-                            8 => 96,
-                            _ => 0,
-                        },
-                        PREVIEW_LAYER,
-                    ));
-                }
-                if matches!(state.stage, 10 | 11 | 13) {
-                    for entity in &room_meshes {
-                        commands.entity(entity).despawn();
-                    }
-                    *transform = Transform::from_xyz(2.8, 4.6, 3.3).looking_at(Vec3::ZERO, Vec3::Y);
-                    if let Err(error) =
-                        fitted_roof_fixture(&mut commands, &mut meshes, &blocks, state.stage)
-                    {
-                        error!(%error, "Fitted roof fixture failed");
-                        exit.write(AppExit::error());
-                        return;
-                    }
-                }
-                if state.stage == 12 {
-                    for entity in &room_meshes {
-                        commands.entity(entity).despawn();
-                    }
-                    *transform =
-                        Transform::from_xyz(8.0, 6.0, 11.0).looking_at(Vec3::ZERO, Vec3::Y);
-                    *projection = Projection::Orthographic(OrthographicProjection {
-                        scaling_mode: bevy::camera::ScalingMode::FixedVertical {
-                            viewport_height: 2.8,
-                        },
-                        near: 0.01,
-                        far: 100.0,
-                        ..OrthographicProjection::default_3d()
-                    });
-                }
-                if state.stage == 6 {
-                    let material = materials.add(StandardMaterial {
-                        base_color: Color::srgb(0.47, 0.44, 0.39),
-                        perceptual_roughness: 0.95,
-                        ..default()
-                    });
-                    for (position, size) in [
-                        (Vec3::new(0.0, -0.1, 0.0), Vec3::new(7.0, 0.2, 7.0)),
-                        (Vec3::new(0.0, 2.1, -3.5), Vec3::new(7.0, 4.2, 0.2)),
-                        (Vec3::new(-3.5, 2.1, 0.0), Vec3::new(0.2, 4.2, 7.0)),
-                        (Vec3::new(3.5, 2.1, 0.0), Vec3::new(0.2, 4.2, 7.0)),
-                        (Vec3::new(0.0, 4.2, 0.0), Vec3::new(7.0, 0.2, 7.0)),
-                        (Vec3::new(1.0, 0.3, -2.0), Vec3::new(1.8, 0.6, 1.0)),
-                        (Vec3::new(1.0, 0.9, -2.5), Vec3::new(1.4, 0.6, 0.7)),
-                    ] {
-                        commands.spawn((
-                            PreviewScene,
-                            Mesh3d(meshes.add(Cuboid::from_size(size))),
-                            MeshMaterial3d(material.clone()),
-                            Transform::from_translation(position),
-                            RenderLayers::layer(PREVIEW_LAYER),
-                        ));
-                    }
-                }
-            } else if let Projection::Orthographic(p) = &mut *projection {
+            if let Ok((mut projection, _, _)) = camera.single_mut()
+                && let Projection::Orthographic(p) = &mut *projection
+            {
                 p.scaling_mode = bevy::camera::ScalingMode::FixedVertical {
-                    viewport_height: if state.construction { 4.6 } else { 2.8 },
+                    viewport_height: if state.stage == 3 { 4.6 } else { 5.5 },
                 };
             }
+            state.since = Instant::now();
+        } else {
+            let selected: &[usize] = if state.construction {
+                match state.stage {
+                    1 => &[0, 1, 2, 3],
+                    2 => &[8, 9, 10, 11],
+                    3 => &[16, 17, 18, 19],
+                    _ => &[24, 25, 26],
+                }
+            } else if state.furnaces {
+                match state.stage {
+                    1 => &[0, 1, 2],
+                    2 => &[3, 4, 5],
+                    3 => &[6, 7, 8, 9],
+                    4 => &[10, 11, 12],
+                    5 => &[13, 14, 15],
+                    9 => &[0, 2, 3],
+                    10 | 11 => &[],
+                    12 => &[10, 11, 12],
+                    13 => &[],
+                    _ => &[0],
+                }
+            } else {
+                match state.stage {
+                    1 => &[0, 1, 6, 8],
+                    2 => &[9, 10, 11, 12],
+                    3 => &[13, 14, 15, 16],
+                    4 => &[17, 18, 19, 20],
+                    _ => &[21, 22, 23],
+                }
+            };
+            for (index, entity) in state.models.iter().enumerate() {
+                if let Ok((mut transform, mut visibility)) = transforms.get_mut(*entity) {
+                    if let Some(slot) = selected.iter().position(|i| *i == index) {
+                        *visibility = Visibility::Visible;
+                        transform.translation = if state.stage == 12 {
+                            transform.rotation = Quat::from_rotation_y(std::f32::consts::PI);
+                            location(slot, 2, 2)
+                        } else if state.stage >= 6 {
+                            match index {
+                                0 => Vec3::new(-1.5, 0.5, 0.0),
+                                2 => Vec3::new(-1.5, 2.5, 0.0),
+                                _ => Vec3::new(-1.5, 2.5, 1.0),
+                            }
+                        } else {
+                            location(slot, 2, 2)
+                        };
+                    } else {
+                        *visibility = Visibility::Hidden;
+                    }
+                }
+            }
+            if let Ok((mut projection, mut transform, mut optics)) = camera.single_mut() {
+                if state.furnaces && state.stage >= 6 {
+                    *projection = Projection::Perspective(PerspectiveProjection {
+                        fov: 65.0_f32.to_radians(),
+                        near: 0.05,
+                        far: 80.0,
+                        ..default()
+                    });
+                    *transform = Transform::from_xyz(2.4, 1.8, 2.8)
+                        .looking_at(Vec3::new(-0.7, 1.5, -1.0), Vec3::Y);
+                    if let Projection::Perspective(p) = &*projection {
+                        optics.view_from_clip = p.get_clip_from_view().inverse();
+                    }
+                    optics.smoke = Vec4::new(
+                        match state.stage {
+                            7 => 0.22,
+                            8 => 0.85,
+                            _ => 0.0,
+                        },
+                        0.0,
+                        0.0,
+                        0.0,
+                    );
+                    if let Some(smoke) = state.smoke.take() {
+                        commands.entity(smoke).despawn();
+                    }
+                    if state.stage > 6 && state.stage < 10 {
+                        state.smoke = Some(crate::furnaces::showcase_wisps(
+                            &mut commands,
+                            &mut meshes,
+                            &mut smoke_materials,
+                            &transform,
+                            state.stage == 9,
+                            match state.stage {
+                                7 => 16,
+                                8 => 96,
+                                _ => 0,
+                            },
+                            PREVIEW_LAYER,
+                        ));
+                    }
+                    if matches!(state.stage, 10 | 11 | 13) {
+                        for entity in &room_meshes {
+                            commands.entity(entity).despawn();
+                        }
+                        *transform =
+                            Transform::from_xyz(2.8, 4.6, 3.3).looking_at(Vec3::ZERO, Vec3::Y);
+                        if let Err(error) =
+                            fitted_roof_fixture(&mut commands, &mut meshes, &blocks, state.stage)
+                        {
+                            error!(%error, "Fitted roof fixture failed");
+                            exit.write(AppExit::error());
+                            return;
+                        }
+                    }
+                    if state.stage == 12 {
+                        for entity in &room_meshes {
+                            commands.entity(entity).despawn();
+                        }
+                        *transform =
+                            Transform::from_xyz(8.0, 6.0, 11.0).looking_at(Vec3::ZERO, Vec3::Y);
+                        *projection = Projection::Orthographic(OrthographicProjection {
+                            scaling_mode: bevy::camera::ScalingMode::FixedVertical {
+                                viewport_height: 2.8,
+                            },
+                            near: 0.01,
+                            far: 100.0,
+                            ..OrthographicProjection::default_3d()
+                        });
+                    }
+                    if state.stage == 6 {
+                        let material = materials.add(StandardMaterial {
+                            base_color: Color::srgb(0.47, 0.44, 0.39),
+                            perceptual_roughness: 0.95,
+                            ..default()
+                        });
+                        for (position, size) in [
+                            (Vec3::new(0.0, -0.1, 0.0), Vec3::new(7.0, 0.2, 7.0)),
+                            (Vec3::new(0.0, 2.1, -3.5), Vec3::new(7.0, 4.2, 0.2)),
+                            (Vec3::new(-3.5, 2.1, 0.0), Vec3::new(0.2, 4.2, 7.0)),
+                            (Vec3::new(3.5, 2.1, 0.0), Vec3::new(0.2, 4.2, 7.0)),
+                            (Vec3::new(0.0, 4.2, 0.0), Vec3::new(7.0, 0.2, 7.0)),
+                            (Vec3::new(1.0, 0.3, -2.0), Vec3::new(1.8, 0.6, 1.0)),
+                            (Vec3::new(1.0, 0.9, -2.5), Vec3::new(1.4, 0.6, 0.7)),
+                        ] {
+                            commands.spawn((
+                                PreviewScene,
+                                Mesh3d(meshes.add(Cuboid::from_size(size))),
+                                MeshMaterial3d(material.clone()),
+                                Transform::from_translation(position),
+                                RenderLayers::layer(PREVIEW_LAYER),
+                            ));
+                        }
+                    }
+                } else if let Projection::Orthographic(p) = &mut *projection {
+                    p.scaling_mode = bevy::camera::ScalingMode::FixedVertical {
+                        viewport_height: if state.construction { 4.6 } else { 2.8 },
+                    };
+                }
+            }
+            state.since = Instant::now();
         }
-        state.since = Instant::now();
     }
     if state.pending || state.since.elapsed() < Duration::from_secs(3) {
         return;
@@ -449,7 +551,9 @@ fn capture(
         .spawn(Screenshot::primary_window())
         .observe(save_to_disk(folder.join(format!(
             "{}-{}.png",
-            if state.construction {
+            if state.material_reference {
+                "material-reference"
+            } else if state.construction {
                 "construction"
             } else if state.furnaces {
                 "furnaces"

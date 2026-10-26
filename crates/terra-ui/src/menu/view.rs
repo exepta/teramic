@@ -138,6 +138,7 @@ pub struct DialogView {
     pub natural_mob_limit: u16,
     pub server: bool,
     pub minimap: bool,
+    pub mob_health: bool,
     pub rows: Vec<SettingRow>,
     pub title: String,
     pub message: String,
@@ -442,7 +443,7 @@ fn graphics_rows(
         ("graphics-micro", "Micro Geometry", g.blocks.micro_geometry),
         (
             "graphics-material-detail",
-            "Material Detail",
+            "Block Surface Shader",
             g.blocks.material_detail,
         ),
         (
@@ -493,6 +494,21 @@ fn graphics_rows(
             ("bounce", "Bounce"),
             ("rise", "Rise"),
             ("slide", "Glide"),
+        ]),
+    ));
+    rows.push(select(
+        "graphics-tree-fall",
+        "Tree Fall Animation",
+        match g.tree_fall_animation {
+            terra_core::TreeFallAnimation::Current => "current",
+            terra_core::TreeFallAnimation::HellFall => "hell_fall",
+            terra_core::TreeFallAnimation::Magic => "magic",
+        }
+        .into(),
+        choices(&[
+            ("current", "Current (Default)"),
+            ("hell_fall", "Hell Fall"),
+            ("magic", "Magic"),
         ]),
     ));
     if g.window_mode == WindowModeSetting::Borderless {
@@ -558,6 +574,7 @@ pub(super) fn gameplay_rows(config: &terra_core::GameplayConfig) -> Vec<SettingR
     let mut rows: Vec<_> = [
         ("hud-edit", "HUD Layout", "Edit Layout"),
         ("minimap-settings", "MiniMap", "Customize"),
+        ("mob-health-settings", "Mob Health Bars", "Edit Bars"),
     ]
     .into_iter()
     .map(|(id, title, label)| {
@@ -590,6 +607,49 @@ pub(super) fn gameplay_rows(config: &terra_core::GameplayConfig) -> Vec<SettingR
     bobbing.kind = "switch".into();
     bobbing.checked = config.view_bobbing;
     rows.push(bobbing);
+    rows
+}
+
+pub(super) fn mob_health_rows(config: &terra_core::GameplayConfig) -> Vec<SettingRow> {
+    let mut rows = vec![select(
+        "mob-health-bars",
+        "Show Bars",
+        match config.mob_health_bars {
+            terra_core::MobHealthBars::InView => "in_view",
+            terra_core::MobHealthBars::LookingAt => "looking_at",
+            terra_core::MobHealthBars::Always => "always",
+            terra_core::MobHealthBars::None => "none",
+        }
+        .into(),
+        choices(&[
+            ("in_view", "View Port"),
+            ("looking_at", "Looking At"),
+            ("always", "All Time"),
+            ("none", "None"),
+        ]),
+    )];
+    for (id, title, rgb) in [
+        (
+            "mob-health-friendly-color",
+            "Friendly",
+            config.mob_health_friendly_color,
+        ),
+        (
+            "mob-health-hostile-color",
+            "Hostile",
+            config.mob_health_hostile_color,
+        ),
+        (
+            "mob-health-font-color",
+            "Font",
+            config.mob_health_font_color,
+        ),
+    ] {
+        let mut row = slider(id, title, 0.0, 0.0, 0.0, 1.0, String::new());
+        row.kind = "color".into();
+        row.value = format!("#{:02x}{:02x}{:02x}", rgb[0], rgb[1], rgb[2]);
+        rows.push(row);
+    }
     rows
 }
 
@@ -1258,6 +1318,14 @@ pub(super) fn update(world: &mut World) {
                 button("dialog-cancel", "Done", "", "check", true, true),
             ],
         ),
+        MenuDialog::MobHealth => (
+            "Mob Health Bars".into(),
+            String::new(),
+            vec![
+                button("mob-health-reset", "Reset", "", "rotate-ccw", true, false),
+                button("dialog-cancel", "Done", "", "check", true, true),
+            ],
+        ),
         MenuDialog::None => (String::new(), String::new(), Vec::new()),
     };
     let dialog_view = DialogView {
@@ -1266,8 +1334,11 @@ pub(super) fn update(world: &mut World) {
         natural_mob_limit: worlds.natural_mob_limit,
         server: *dialog == MenuDialog::EditServer,
         minimap: *dialog == MenuDialog::Minimap,
+        mob_health: *dialog == MenuDialog::MobHealth,
         rows: if *dialog == MenuDialog::Minimap {
             minimap_rows(&draft.gameplay.minimap)
+        } else if *dialog == MenuDialog::MobHealth {
+            mob_health_rows(&draft.gameplay)
         } else {
             Vec::new()
         },

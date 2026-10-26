@@ -84,6 +84,11 @@ fn fragment(in: FullscreenVertexOutput) -> @location(0) vec4<f32> {
         let depth_light = 0.35 + 0.65 * exp(-min(cave.underwater.y, 96.0) * 0.028);
         let marine = cave.scattering.rgb * depth_light * (0.82 + upper * 0.52);
         result = mix(result, marine, water * 0.86);
+    } else {
+        // Beyond the finite cave stream/far plane the empty prepass is not
+        // an opening to the stars. Fade only sky-depth pixels; real geometry
+        // and entrance surfaces retain their PBR illumination.
+        result = mix(result, vec3<f32>(0.006, 0.0065, 0.007), cave.parameters.z);
     }
     // Local furnace smoke reuses this depth pass. It is a smooth participating
     // medium around the viewer, never visible logical cell faces or a flat overlay.

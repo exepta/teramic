@@ -327,6 +327,7 @@ struct Canvas {
     reference: Option<raster::Projection>,
     overlay_reference: Option<raster::Projection>,
     reference_level: i64,
+    overlay_reference_level: i64,
     relief_base: Option<(MapLayer, i64)>,
     relief_pending: bool,
     grid: bool,
@@ -833,19 +834,18 @@ fn update(
         layer,
         center,
         position[1],
+        !fullmap.open,
     );
+    let marker_settings = map_marker_settings(settings, fullmap.open.then_some(fullmap.mobs));
     let mut markers = raster::markers(
         creatures.as_deref(),
         players.as_deref(),
         &projection,
         level,
         cave,
-        settings,
+        &marker_settings,
     );
     markers.retain(|marker| raster::marker_visible(marker, &atlas.entries, layer, &chunks));
-    if fullmap.open && !fullmap.mobs {
-        markers.retain(|marker| marker.player);
-    }
     if fullmap.open {
         if !atlas.error.is_empty() {
             fullview.error = atlas.error.clone();
@@ -918,7 +918,7 @@ fn update(
             .and_then(|column| {
                 column
                     .surface_at(player_center[0], player_center[1])
-                    .map(|s| biome_name(s.biome.weights.dominant()))
+                    .map(|s| biome_name(s.biome_kind(config.world.sea_level)))
             })
             .unwrap_or("Unknown");
         let hour = clock.as_ref().map_or(0.0, |c| c.hour());
@@ -1030,29 +1030,39 @@ fn relief_level(
     layer: MapLayer,
     center: [f64; 2],
     fallback: i64,
+    follow_ground: bool,
 ) -> i64 {
-    // A geographic map keeps its height datum when the player jumps or flies.
-    // Changing it would make clamped relief impossible to reproject exactly.
+    // FullMap keeps a geographic datum while panning. The follow-player map
+    // instead centers the ground actually drawn below its arrow, not the height
+    // of the first visited tile. Flight/jump altitude never becomes its datum.
     if let Some((previous_layer, level)) = canvas.relief_base
         && previous_layer == layer
         && !canvas.relief_pending
+        && !follow_ground
     {
         return level;
     }
     let [x, z] = center.map(|v| v.floor() as i64);
+    let ground = entries
+        .get(&([x.div_euclid(16), z.div_euclid(16)], layer))
+        .and_then(|entry| entry.height_at((z.rem_euclid(16) * 16 + x.rem_euclid(16)) as usize))
+        .map(i64::from);
     let known = match layer {
-        MapLayer::Cave { level } => Some(i64::from(level)),
-        MapLayer::Surface => entries
-            .get(&([x.div_euclid(16), z.div_euclid(16)], layer))
-            .and_then(|entry| entry.height_at((z.rem_euclid(16) * 16 + x.rem_euclid(16)) as usize))
-            .map(i64::from),
+        MapLayer::Cave { level } if !follow_ground => Some(i64::from(level)),
+        _ => ground,
     };
     canvas.relief_pending = known.is_none();
     let level = known.unwrap_or_else(|| {
         canvas
             .relief_base
             .filter(|(old, _)| *old == layer)
-            .map_or(fallback, |(_, level)| level)
+            .map_or_else(
+                || match layer {
+                    MapLayer::Cave { level } => i64::from(level),
+                    MapLayer::Surface => fallback,
+                },
+                |(_, level)| level,
+            )
     });
     canvas.relief_base = Some((layer, level));
     level
@@ -1169,6 +1179,7 @@ fn present(
             false,
         );
         canvas.overlay_reference = Some(projection.clone());
+        canvas.overlay_reference_level = level;
     }
     // Cache texture swaps and both UV transforms are committed in one frame.
     // Movement remains at render cadence while marker rasterization is capped.
@@ -1185,6 +1196,7 @@ fn present(
         overlay_reference,
         level,
         canvas.reference_level,
+        canvas.overlay_reference_level,
         player,
         yaw,
         canvas.grid,
@@ -1201,6 +1213,17 @@ fn frame_due(next: &mut f64, now: f64, fps: u8) -> bool {
         *next + period
     };
     true
+}
+
+fn map_marker_settings(
+    settings: &terra_core::MinimapConfig,
+    fullmap_mobs: Option<bool>,
+) -> terra_core::MinimapConfig {
+    let mut settings = settings.clone();
+    if let Some(enabled) = fullmap_mobs {
+        settings.mobs = enabled;
+    }
+    settings
 }
 fn visible_entries(
     entries: &HashMap<Key, Entry>,
@@ -1488,6 +1511,7 @@ fn biome_name(kind: terra_world::generation::biomes::BiomeKind) -> &'static str 
         BiomeKind::Highland => "Highlands",
         BiomeKind::MushroomPark => "Mushroom Park",
         BiomeKind::ClifftedDesert => "Cliffted Desert",
+        BiomeKind::CherryForest => "Cherry Forest",
     }
 }
 fn layer_root(root: &std::path::Path, layer: MapLayer) -> PathBuf {
@@ -2196,7 +2220,8 @@ mod tests {
                     &entries,
                     MapLayer::Surface,
                     [10.0, 20.0],
-                    altitude
+                    altitude,
+                    true,
                 ),
                 80
             );
@@ -2207,10 +2232,70 @@ mod tests {
                 &entries,
                 MapLayer::Cave { level: -24 },
                 [10.0, 20.0],
-                350
+                350,
+                true,
             ),
             -24
         );
+    }
+
+    #[test]
+    fn minimap_follows_sampled_ground_across_heights_but_fullmap_keeps_its_datum() {
+        use terra_world::cartography::{DetailTile, MapSample};
+        for layer in [MapLayer::Surface, MapLayer::Cave { level: -24 }] {
+            let mut mini = Canvas::default();
+            let mut full = Canvas::default();
+            let mut entries = HashMap::new();
+            let heights = if layer == MapLayer::Surface {
+                [18, 94, -12]
+            } else {
+                [-30, -28, -26]
+            };
+            for (center, height) in [[-17.25_f64, -0.125], [-0.2, 16.25], [32.125, -64.5]]
+                .into_iter()
+                .zip(heights)
+            {
+                let cell = center.map(|v| v.floor() as i64);
+                let coordinate = cell.map(|v| v.div_euclid(16));
+                entries.insert(
+                    (coordinate, layer),
+                    Entry {
+                        tile: None,
+                        detail: Some(Arc::new(DetailTile {
+                            coordinate,
+                            layer,
+                            revision: 1,
+                            cells: [MapSample {
+                                known: true,
+                                height,
+                                material: 3,
+                                ..default()
+                            }; 256],
+                        })),
+                        overview: None,
+                        source_revision: Some(1),
+                        used: 1,
+                    },
+                );
+                for altitude in [-100, 0, 90, 350] {
+                    assert_eq!(
+                        relief_level(&mut mini, &entries, layer, center, altitude, true),
+                        i64::from(height)
+                    );
+                    let full_level =
+                        relief_level(&mut full, &entries, layer, center, altitude, false);
+                    assert_eq!(
+                        full_level,
+                        if layer == MapLayer::Surface { 18 } else { -24 }
+                    );
+                }
+            }
+            let last = mini.relief_base.unwrap().1;
+            assert_eq!(
+                relief_level(&mut mini, &entries, layer, [-400.0; 2], 350, true),
+                last
+            );
+        }
     }
 
     #[test]
@@ -2456,5 +2541,22 @@ mod tests {
         trim(&mut entries);
         assert_eq!(entries.len(), CACHE_LIMIT);
         assert!(!entries.contains_key(&([0, 0], MapLayer::Surface)));
+    }
+
+    #[test]
+    fn fullmap_live_mobs_toggle_is_independent_of_the_minimap_preference() {
+        let mut settings = terra_core::MinimapConfig {
+            mobs: false,
+            ..Default::default()
+        };
+        assert!(!map_marker_settings(&settings, None).mobs);
+        assert!(map_marker_settings(&settings, Some(true)).mobs);
+        settings.mobs = true;
+        assert!(!map_marker_settings(&settings, Some(false)).mobs);
+        assert!(map_marker_settings(&settings, None).mobs);
+        assert_eq!(
+            map_marker_settings(&settings, Some(false)).players,
+            settings.players
+        );
     }
 }

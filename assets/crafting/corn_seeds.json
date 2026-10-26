@@ -1,0 +1,10 @@
+{
+  "id": "teramic::corn_seeds",
+  "name": "Corn Seeds",
+  "station": "hand",
+  "output": { "item": { "crop": "corn_seeds" }, "count": 4 },
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [{ "item": { "crop": "corn" }, "count": 1 }]
+  }
+}

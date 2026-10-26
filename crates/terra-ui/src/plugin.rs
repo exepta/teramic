@@ -16,6 +16,8 @@ impl Plugin for TerraUiPlugin {
         crate::survival::install(app);
         crate::debug::install(app);
         crate::target_hud::install(app);
+        crate::mob_health::install(app);
+        crate::pets::install(app);
         crate::minimap::install(app);
         let benchmark_ui = std::env::var("TERRA_BENCH_UI").is_ok_and(|value| value == "1")
             && std::env::args().any(|argument| argument == "--smoke-test-benchmark")
@@ -33,6 +35,14 @@ impl Plugin for TerraUiPlugin {
                     && a != "--smoke-test-drops"
                     && a != "--smoke-test-survival"
                     && a != "--smoke-test-effects"
+                    && a != "--smoke-test-taming"
+                    && a != "--smoke-test-pet-commands"
+                    && a != "--smoke-test-breeding"
+                    && a != "--smoke-test-riding"
+                    && a != "--smoke-test-mob-health"
+                    && a != "--smoke-test-equipment"
+                    && a != "--smoke-test-crusher"
+                    && a != "--smoke-test-farming"
                     && a != "--smoke-test-food"
                     && a != "--smoke-test-furnace-gameplay"
             })

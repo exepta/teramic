@@ -1,0 +1,28 @@
+{
+  "id": "teramic::light_blue_dye",
+  "name": "Light Blue Dye",
+  "station": "hand",
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "dye": "blue"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "dye": "white"
+        },
+        "count": 1
+      }
+    ]
+  },
+  "output": {
+    "item": {
+      "dye": "light_blue"
+    },
+    "count": 2
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "id": "teramic::pink_carpet",
+  "name": "Pink Carpet",
+  "station": "hand",
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "block": 106
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "dye": "pink"
+        },
+        "count": 1
+      }
+    ]
+  },
+  "output": {
+    "item": {
+      "block": 115
+    },
+    "count": 1
+  }
+}

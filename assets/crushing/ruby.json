@@ -1,0 +1,15 @@
+{
+  "id": 10606,
+  "key": "teramic::crush_ruby",
+  "name": "Crush ruby",
+  "input": {
+    "mineral": "ruby"
+  },
+  "output": {
+    "item": {
+      "dust": "ruby"
+    },
+    "count": 1
+  },
+  "seconds": 4
+}

@@ -1,0 +1,75 @@
+{
+  "id": "teramic::ruby_cape",
+  "name": "Ruby Cape",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "cape": {
+        "material": "ruby",
+        "color": "white"
+      }
+    },
+    "count": 1
+  },
+  "pattern": {
+    "kind": "shaped",
+    "width": 3,
+    "height": 3,
+    "cells": [
+      {
+        "item": {
+          "mineral": "ruby"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "animal": "wool"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "mineral": "ruby"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "animal": "wool"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "animal": "wool"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "animal": "wool"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "animal": "wool"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "animal": "wool"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "animal": "wool"
+        },
+        "count": 1
+      }
+    ]
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "creative_category": "wood",
+  "description": "Dark cherry bark with pale horizontal lenticels and a rose-colored cut end.",
+  "schema_version": 1,
+  "id": 134,
+  "name": "Cherry Log",
+  "render_kind": "cube",
+  "surface": "wood",
+  "bevel_width": 0,
+  "materials": {
+    "Cherry bark": {
+      "base_color": [
+        0.41,
+        0.24,
+        0.27,
+        1
+      ],
+      "texture_pattern": "cherry_bark"
+    },
+    "Cherry end grain": {
+      "base_color": [
+        0.83,
+        0.53,
+        0.55,
+        1
+      ],
+      "texture_pattern": "cherry_end"
+    }
+  },
+  "face_materials": [
+    "Cherry bark",
+    "Cherry bark",
+    "Cherry end grain",
+    "Cherry end grain",
+    "Cherry bark",
+    "Cherry bark"
+  ],
+  "hardness": 0.8,
+  "resistance": 3,
+  "required_tool": null,
+  "mining_level": 0
+}

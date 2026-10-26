@@ -19,6 +19,7 @@ pub(crate) fn template(
         DetailLevel::Far => PropDetail::Far,
     };
     let palette = PropPalette {
+        crop: palette.crop,
         foliage: palette.foliage,
         stem: palette.stem,
         dry_grass: palette.dry_grass,

@@ -135,6 +135,17 @@ pub(crate) fn install(app: &mut App) {
     }
 }
 
+/// Grouped cubemaps bypass Core3d's regular early capture boundary. Drain the
+/// existing collector before a later view can overwrite its indirect data.
+pub(crate) fn capture_grouped_shadow_boundary(world: &mut World) -> Result<(), String> {
+    if world.contains_resource::<gpu::Collector>() {
+        world
+            .run_system_cached(gpu::capture_early)
+            .map_err(|error| error.to_string())?;
+    }
+    Ok(())
+}
+
 struct Counted<C, const PHASE: usize>(std::marker::PhantomData<C>);
 
 impl<P: PhaseItem, C: RenderCommand<P>, const PHASE: usize> RenderCommand<P> for Counted<C, PHASE> {
@@ -209,6 +220,20 @@ fn instrument(world: &mut World) {
     replace::<AlphaMask3d, DrawMaterial, 1>(world);
     replace::<Transparent3d, DrawMaterial, 2>(world);
     replace::<Transmissive3d, DrawMaterial, 3>(world);
+    instrument_diagnostics(world);
+}
+
+fn instrument_diagnostics(world: &mut World) {
+    // Only color passes supply chunk-reveal feedback. All other wrappers are
+    // diagnostic-only and must not replace stock draw commands during play.
+    if !world
+        .resource::<DrawCallStatus>()
+        .0
+        .enabled
+        .load(Ordering::Relaxed)
+    {
+        return;
+    }
     replace::<Opaque3dPrepass, DrawPrepass, 4>(world);
     replace::<Opaque3dPrepass, DrawDepthOnlyPrepass, 4>(world);
     replace::<AlphaMask3dPrepass, DrawPrepass, 5>(world);
@@ -290,6 +315,60 @@ fn finish(status: Res<DrawCallStatus>, gpu: Option<Res<gpu::Collector>>) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn shadow_diagnostic_wrappers_are_not_installed_during_ordinary_gameplay() {
+        use bevy::render::render_phase::{Draw, DrawError};
+        struct StockDraw;
+        impl Draw<Shadow> for StockDraw {
+            fn draw<'w>(
+                &mut self,
+                _: &'w World,
+                _: &mut TrackedRenderPass<'w>,
+                _: Entity,
+                _: &Shadow,
+            ) -> Result<(), DrawError> {
+                unreachable!("registration test does not submit GPU commands")
+            }
+        }
+        fn address(world: &World) -> *const () {
+            let functions = world.resource::<DrawFunctions<Shadow>>().read();
+            let id = functions.id::<DrawPrepass>();
+            &*functions.draw_functions[id.0 as usize] as *const dyn Draw<Shadow> as *const ()
+        }
+        let mut world = World::new();
+        world.init_resource::<DrawCallStatus>();
+        world.init_resource::<DrawFunctions<Shadow>>();
+        world
+            .resource::<DrawFunctions<Shadow>>()
+            .write()
+            .add_with::<DrawPrepass, _>(StockDraw);
+        let stock = address(&world);
+        instrument_diagnostics(&mut world);
+        assert_eq!(address(&world), stock);
+        world
+            .resource::<DrawCallStatus>()
+            .0
+            .enabled
+            .store(true, Ordering::Relaxed);
+        instrument_diagnostics(&mut world);
+        assert_ne!(
+            address(&world),
+            stock,
+            "explicit diagnostics still install the real hook"
+        );
+    }
+
+    #[test]
+    fn grouped_shadow_capture_is_a_noop_without_collector_and_propagates_real_system_errors() {
+        let mut world = World::new();
+        assert!(capture_grouped_shadow_boundary(&mut world).is_ok());
+        world.init_resource::<gpu::Collector>();
+        // RenderContext requires a native RenderDevice. Propagate its absence
+        // to the caller's complete Core3d fallback instead of hiding the error.
+        assert!(capture_grouped_shadow_boundary(&mut world).is_err());
+    }
+
     #[test]
     fn submissions_are_not_confused_with_indirect_subdraws_or_meshes() {
         let status = DrawCallStatus::default();

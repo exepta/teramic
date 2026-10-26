@@ -6,11 +6,9 @@
   }
   @if (slot.hotkey != '') { <p class="item-hotkey">{{ slot.hotkey }}</p> }
 </button>
-  @if (!inventoryCursor.visible && !slot.empty) {
-  <tooltip id="inventory-tooltip" for="inventory-cell" trigger="hover" variant="follow" class="item-tooltip">
+  <tooltip id="inventory-tooltip" for="inventory-cell" trigger="hover" variant="follow" class="item-tooltip" [disabled]="inventoryCursor.visible || slot.empty">
     <p class="tooltip-name">{{ slot.name }}</p>
     <p class="tooltip-identifier">{{ slot.identifier }}</p>
     <p class="tooltip-description">{{ slot.description }}</p>
   </tooltip>
-  }
 </div>

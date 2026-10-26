@@ -33,7 +33,13 @@ pub(crate) fn capture_on_start(mut state: ResMut<CameraInputState>) {
         arg.starts_with("--smoke-test")
             && !matches!(
                 arg.as_str(),
-                "--smoke-test-survival" | "--smoke-test-food" | "--smoke-test-furnace-gameplay"
+                "--smoke-test-survival"
+                    | "--smoke-test-food"
+                    | "--smoke-test-furnace-gameplay"
+                    | "--smoke-test-farming"
+                    | "--smoke-test-taming"
+                    | "--smoke-test-pet-commands"
+                    | "--smoke-test-breeding"
             )
     });
     state.initial_capture_pending = state.accept_input;

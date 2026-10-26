@@ -7,7 +7,7 @@
   "render_kind": "cube",
   "crystal_material": "Coal crystals",
   "surface": "rock",
-  "bevel_width": 0.095,
+  "bevel_width": 0.0,
   "materials": {
     "Host rock": {
       "texture_pattern": "stone",

@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "id": 132,
+  "name": "Cherry Blossoms",
+  "description": "Dense pink sakura blossoms with small gaps between the clusters.",
+  "creative_category": "nature",
+  "render_kind": "cube",
+  "bevel_width": 0.0,
+  "materials": {
+    "Pink sakura blossoms": {
+      "texture_pattern": "blossom_canopy",
+      "base_color": [1.0, 0.32, 0.58, 1.0]
+    }
+  },
+  "face_materials": ["Pink sakura blossoms", "Pink sakura blossoms", "Pink sakura blossoms", "Pink sakura blossoms", "Pink sakura blossoms", "Pink sakura blossoms"],
+  "hardness": 0.3,
+  "resistance": 0.5,
+  "required_tool": null,
+  "mining_level": 0
+}

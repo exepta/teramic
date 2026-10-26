@@ -1,0 +1,16 @@
+{
+  "item": {
+    "armor": {
+      "material": "gold",
+      "piece": "helmet"
+    }
+  },
+  "name": "Gold Helmet",
+  "description": "Gold helmet fitted for protection and comfortable movement.",
+  "equipment": {
+    "slot": "helmet",
+    "armor_points": 2.4,
+    "health_bonus": 0.75,
+    "stamina_bonus": 3.75
+  }
+}

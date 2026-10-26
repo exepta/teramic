@@ -88,7 +88,11 @@ fn update(
     }
     let biome_colors = crate::appearance::LINEAR_COLORS.map(|c| [c[0], c[1], c[2]]);
     let water_colors = std::array::from_fn(|index| {
-        crate::water::biome::COLORS[if index == 6 { 3 } else { index }]
+        if index == 7 {
+            crate::water::biome::CHERRY_TINT
+        } else {
+            crate::water::biome::COLORS[if index == 6 { 3 } else { index }]
+        }
     });
     if palette.colors != colors
         || palette.biome_colors != biome_colors

@@ -12,6 +12,13 @@ use terra_world::streaming::StreamingSet;
 pub struct TerraRenderPlugin;
 impl Plugin for TerraRenderPlugin {
     fn build(&self, app: &mut App) {
+        crate::preprocess_cache::install(app);
+        crate::meshing::install_far_batches(app);
+        crate::meshing::visibility::install(app);
+        crate::diagnostics::install_cpu_schedules(app);
+        crate::render_schedule::install(app);
+        crate::mesh_buffers::install(app);
+        crate::grouped_point_shadows::install(app);
         crate::draw_calls::install(app);
         crate::map_palette::install(app);
         crate::transitions::install(app);
@@ -25,9 +32,13 @@ impl Plugin for TerraRenderPlugin {
         crate::weather::install(app);
         crate::foliage::install(app);
         crate::footprints::install(app);
+        app.add_plugins(MaterialPlugin::<crate::PlacementOutlineMaterial>::default());
         crate::building::install(app);
         crate::furnaces::install(app);
+        crate::crushers::install(app);
         crate::openings::install(app);
+        crate::chests::install(app);
+        crate::chunk_borders::install(app);
         crate::previews::install(app);
         app.insert_resource(ClearColor(Color::srgb(
             crate::scene::SURFACE_FOG.x,
@@ -46,6 +57,7 @@ impl Plugin for TerraRenderPlugin {
         .init_resource::<crate::MeshUploadStatus>()
         .add_systems(First, crate::MeshUploadStatus::reset)
         .add_systems(Startup, (load_blocks, setup_scene))
+        .add_systems(Startup, crate::meshing::shadows::prepare_material)
         .add_systems(
             Update,
             (
@@ -60,7 +72,12 @@ impl Plugin for TerraRenderPlugin {
                 .chain()
                 .after(StreamingSet::Receive),
         )
-        .add_systems(Update, draw_selection.after(PlayerSet::Targeting))
+        .add_systems(
+            Update,
+            draw_selection
+                .after(PlayerSet::Targeting)
+                .after(crate::chests::animate),
+        )
         .add_systems(
             Update,
             crate::scene::update_view_distance.before(crate::water::environment::update),

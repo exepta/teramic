@@ -9,7 +9,9 @@ mod hud_layout;
 mod inventory;
 pub mod menu;
 pub mod minimap;
+mod mob_health;
 mod multiplayer;
+mod pets;
 mod plugin;
 mod process_stats;
 mod settings;
@@ -17,6 +19,8 @@ mod sleep;
 mod survival;
 mod target_hud;
 mod text_editing;
+pub use mob_health::MobHealthHud;
+pub use pets::{PetMenuAction, PetMenuView, PetPortrait};
 pub use sleep::SleepView;
 pub use survival::{EffectCardView, StatusEffectView, SurvivalView, VitalRenderStatus};
 pub use target_hud::TargetView;
@@ -37,3 +41,4 @@ pub use settings::{SettingsAction, SettingsConfigPath};
 pub use tilt_ui::{
     ControlChecked, ElementId, HtmlEvent, NumericRange, OptionData, UiDocumentState, UiLoadState,
 };
+pub use tilt_ui_runtime::ParkedUi;

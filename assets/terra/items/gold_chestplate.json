@@ -1,0 +1,16 @@
+{
+  "item": {
+    "armor": {
+      "material": "gold",
+      "piece": "chestplate"
+    }
+  },
+  "name": "Gold Chestplate",
+  "description": "Gold chestplate fitted for protection and comfortable movement.",
+  "equipment": {
+    "slot": "chestplate",
+    "armor_points": 5.6,
+    "health_bonus": 2,
+    "stamina_bonus": 10
+  }
+}

@@ -1,0 +1,70 @@
+{
+  "id": "teramic::diamond_chestplate",
+  "name": "Diamond Chestplate",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "armor": {
+        "material": "diamond",
+        "piece": "chestplate"
+      }
+    },
+    "count": 1
+  },
+  "pattern": {
+    "kind": "shaped",
+    "width": 3,
+    "height": 3,
+    "cells": [
+      {
+        "item": {
+          "mineral": "diamond"
+        },
+        "count": 1
+      },
+      null,
+      {
+        "item": {
+          "mineral": "diamond"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "mineral": "diamond"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "mineral": "diamond"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "mineral": "diamond"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "mineral": "diamond"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "mineral": "diamond"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "mineral": "diamond"
+        },
+        "count": 1
+      }
+    ]
+  }
+}

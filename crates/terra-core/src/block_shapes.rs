@@ -10,6 +10,24 @@ pub struct ShapeBox {
     pub hinged: bool,
 }
 impl ShapeBox {
+    /// Authored unit-cell boxes use the same clockwise cardinal yaw everywhere,
+    /// including pure world/persistence builds without the runtime ECS.
+    pub fn rotated_y(self, facing: u8) -> Self {
+        let [x, y, z] = self.minimum;
+        let [u, v, w] = self.maximum;
+        let (minimum, maximum) = match facing % 4 {
+            0 => ([x, y, z], [u, v, w]),
+            1 => ([z, y, 1.0 - u], [w, v, 1.0 - x]),
+            2 => ([1.0 - u, y, 1.0 - w], [1.0 - x, v, 1.0 - z]),
+            _ => ([1.0 - w, y, x], [1.0 - z, v, u]),
+        };
+        Self {
+            minimum,
+            maximum,
+            ..self
+        }
+    }
+
     pub fn valid(&self) -> bool {
         self.valid_for(0)
     }
@@ -19,7 +37,9 @@ impl ShapeBox {
                 && self.maximum[axis].is_finite()
                 && self.minimum[axis] >= -0.01
                 && self.maximum[axis]
-                    <= if matches!(material, 59 | 65..=67) && axis == 1
+                    <= if material == 99 && axis == 1 {
+                        1.25
+                    } else if matches!(material, 59 | 65..=67 | 139) && axis == 1
                         || matches!(material, 71..=73) && axis == 2
                     {
                         2.01
@@ -65,12 +85,29 @@ impl ShapeBox {
 }
 
 pub fn builtin_boxes(material: u16) -> &'static [ShapeBox] {
+    if material == 139 {
+        return builtin_boxes(65);
+    }
+    if material == 140 {
+        return builtin_boxes(68);
+    }
     static SNOW: [ShapeBox; 1] = [ShapeBox {
         minimum: [0.0; 3],
         maximum: [1.0, 0.125, 1.0],
         hinged: false,
     }];
+    static PATH: [ShapeBox; 1] = [ShapeBox {
+        minimum: [0.0; 3],
+        maximum: [1.0, 0.9375, 1.0],
+        hinged: false,
+    }];
+    if material == 102 {
+        return &PATH;
+    }
     if material == 98 {
+        return &SNOW;
+    }
+    if crate::textiles::is_carpet(material) {
         return &SNOW;
     }
     if crate::construction::is_shape(material) {
@@ -92,6 +129,8 @@ pub fn builtin_boxes(material: u16) -> &'static [ShapeBox] {
     static CHEST: OnceLock<Vec<ShapeBox>> = OnceLock::new();
     static TORCH: OnceLock<Vec<ShapeBox>> = OnceLock::new();
     static FURNACE: OnceLock<Vec<ShapeBox>> = OnceLock::new();
+    static CRUSHER: OnceLock<Vec<ShapeBox>> = OnceLock::new();
+    static CRANK: OnceLock<Vec<ShapeBox>> = OnceLock::new();
     static STRAIGHT: OnceLock<Vec<ShapeBox>> = OnceLock::new();
     static ELBOW: OnceLock<Vec<ShapeBox>> = OnceLock::new();
     static HORIZONTAL: OnceLock<Vec<ShapeBox>> = OnceLock::new();
@@ -104,7 +143,26 @@ pub fn builtin_boxes(material: u16) -> &'static [ShapeBox] {
     static BIRCH_WINDOW: OnceLock<Vec<ShapeBox>> = OnceLock::new();
     static SPRUCE_WINDOW: OnceLock<Vec<ShapeBox>> = OnceLock::new();
     static BED: OnceLock<Vec<ShapeBox>> = OnceLock::new();
+    static POT: OnceLock<Vec<ShapeBox>> = OnceLock::new();
     match material {
+        131 => POT.get_or_init(|| {
+            read(
+                include_str!("../../../assets/terra/blocks/flower_pot.json"),
+                131,
+            )
+        }),
+        100 => CRANK.get_or_init(|| {
+            read(
+                include_str!("../../../assets/terra/blocks/hand_crank.json"),
+                100,
+            )
+        }),
+        99 => CRUSHER.get_or_init(|| {
+            read(
+                include_str!("../../../assets/terra/blocks/crusher.json"),
+                99,
+            )
+        }),
         71..=73 => BED.get_or_init(|| {
             read(
                 include_str!("../../../assets/terra/blocks/oak_bed.json"),

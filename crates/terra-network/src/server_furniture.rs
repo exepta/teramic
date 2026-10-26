@@ -9,6 +9,20 @@ pub(super) struct Plan {
     states: Vec<([i64; 3], Option<BlockObjectState>)>,
 }
 impl Plan {
+    pub(super) fn with_slab_half(
+        mut self,
+        position: [i64; 3],
+        half: terra_world::slabs::HalfRemoval,
+        previous: BlockObjectState,
+    ) -> Self {
+        if let Some(edit) = self.edits.iter_mut().find(|edit| edit.position == position) {
+            edit.material = half.remaining;
+        }
+        self.states.retain(|(cell, _)| *cell != position);
+        self.states
+            .push((position, Some(half.remaining_state(previous))));
+        self
+    }
     pub(super) fn with_construction_facing(mut self, facing: Option<u8>) -> Self {
         if let Some(facing) = facing {
             if terra_core::construction::full_slab(facing) {
@@ -55,10 +69,25 @@ impl Plan {
         self
     }
 }
+#[cfg(test)]
 fn offset(p: [i64; 3], d: [i64; 3], sign: i64) -> [i64; 3] {
     std::array::from_fn(|i| p[i] + d[i] * sign)
 }
 pub(super) fn plan(command: EditCommand, world: &ControlWorld) -> Result<Option<Plan>, String> {
+    plan_with_crank(command, world, None)
+}
+pub(super) fn plan_crank(
+    command: EditCommand,
+    world: &ControlWorld,
+    anchor: [i64; 3],
+) -> Result<Option<Plan>, String> {
+    plan_with_crank(command, world, Some(anchor))
+}
+fn plan_with_crank(
+    command: EditCommand,
+    world: &ControlWorld,
+    crank_owner: Option<[i64; 3]>,
+) -> Result<Option<Plan>, String> {
     let EditAction::Block {
         position,
         expected,
@@ -67,15 +96,15 @@ pub(super) fn plan(command: EditCommand, world: &ControlWorld) -> Result<Option<
     else {
         return Ok(None);
     };
-    if !(matches!(material, 28..=29 | 59..=97)
-        || material == 0 && matches!(expected, 28..=29 | 59..=97))
+    if !(terra_world::placement::furniture(material)
+        || material == 0 && terra_world::placement::furniture(expected))
     {
         return Ok(None);
     }
     if position.iter().any(|p| p.unsigned_abs() > 990_000) {
         return Err("Object outside world bounds".into());
     }
-    if material == 59 && world.journal.gameplay().revision > u64::MAX - 16 {
+    if matches!(material, 59 | 99) && world.journal.gameplay().revision > u64::MAX - 16 {
         return Err("Furnace state revision exhausted".into());
     }
     let mut plan = Plan {
@@ -87,7 +116,7 @@ pub(super) fn plan(command: EditCommand, world: &ControlWorld) -> Result<Option<
         states: Vec::new(),
     };
     if material == 0 {
-        if expected == 59 {
+        if matches!(expected, 59 | 99) {
             let state = world
                 .journal
                 .object_state(position)
@@ -97,11 +126,26 @@ pub(super) fn plan(command: EditCommand, world: &ControlWorld) -> Result<Option<
             } else {
                 position
             };
+            let crank = (expected == 99)
+                .then(|| world.journal.crusher_crank_position(anchor))
+                .flatten()
+                .filter(|cell| world.journal.crank_anchor(*cell) == Some(anchor));
+            if let Some(cell) = crank {
+                if world.chunks.block_at(cell) != Some(100) {
+                    return Err("Mounted crank is not loaded".into());
+                }
+                plan.edits.push(BlockEditRequest {
+                    position: cell,
+                    expected_material: 100,
+                    material: 0,
+                });
+            }
             let count = world
                 .journal
                 .container_at(anchor)
                 .map_or(0, |bag| bag.occupied_slots())
-                + 1;
+                + 1
+                + usize::from(crank.is_some());
             let game = world.journal.gameplay();
             if game.drops.len() + count > terra_core::MAX_WORLD_DROPS
                 || game.next_drop.checked_add(count as u64).is_none()
@@ -113,7 +157,8 @@ pub(super) fn plan(command: EditCommand, world: &ControlWorld) -> Result<Option<
         if expected == 29 && world.journal.container_nonempty(position) {
             return Err("Empty this chest before removing it".into());
         }
-        if let Some(state) = world.journal.object_state(position)
+        if expected != 100
+            && let Some(state) = world.journal.object_state(position)
             && let Some(peer) = state.peer
         {
             let other = world
@@ -123,7 +168,7 @@ pub(super) fn plan(command: EditCommand, world: &ControlWorld) -> Result<Option<
             if other.peer != Some(position) || world.chunks.block_at(peer) != Some(expected) {
                 return Err("Invalid object peer".into());
             }
-            if matches!(expected, 28 | 59 | 65..=67 | 71..=73) {
+            if matches!(expected, 28 | 59 | 65..=67 | 71..=73 | 99 | 139) {
                 plan.edits.push(BlockEditRequest {
                     position: peer,
                     expected_material: expected,
@@ -141,131 +186,50 @@ pub(super) fn plan(command: EditCommand, world: &ControlWorld) -> Result<Option<
             }
         }
     } else {
-        let mut state = BlockObjectState::from_yaw(command.look[0]);
-        // Furniture fronts face the player; a bed's pillow extends away along -Z.
-        if terra_core::beds::is_bed(material) {
-            state.facing = (state.facing + 2) % 4;
-        }
-        if matches!(material, 28 | 59 | 65..=67 | 71..=73) {
-            let peer = offset(
-                position,
-                if terra_core::beds::is_bed(material) {
-                    [[0, 0, 1], [1, 0, 0], [0, 0, -1], [-1, 0, 0]][usize::from(state.facing % 4)]
-                } else if material != 28 {
-                    [0, 1, 0]
-                } else {
-                    state.right()
-                },
-                1,
-            );
-            if world.chunks.block_at(peer) != Some(0) {
-                return Err("Station needs two free cells".into());
-            }
-            state.peer = Some(peer);
-            plan.edits.push(BlockEditRequest {
-                position: peer,
-                expected_material: 0,
-                material,
-            });
-            plan.states.push((
-                peer,
-                Some(BlockObjectState {
-                    peer: Some(position),
-                    secondary: true,
-                    ..state
-                }),
-            ));
-        } else if material == 29 {
-            let mut neighbors = Vec::new();
-            for sign in [-1, 1] {
-                let peer = offset(position, state.right(), sign);
-                if world.chunks.block_at(peer) == Some(29) {
-                    let other = world.journal.object_state(peer).unwrap_or_default();
-                    if other.facing == state.facing {
-                        if other.peer.is_some() {
-                            return Err("A double chest cannot merge again".into());
-                        }
-                        neighbors.push((peer, sign, other));
-                    }
-                }
-            }
-            if neighbors.len() > 1 {
-                return Err("Chest would create a triple merge".into());
-            }
-            if let Some((peer, sign, other)) = neighbors.pop() {
-                state.peer = Some(peer);
-                state.secondary = sign < 0;
-                plan.states.push((
-                    peer,
-                    Some(BlockObjectState {
-                        peer: Some(position),
-                        secondary: sign > 0,
-                        ..other
-                    }),
-                ));
-            }
-        }
-        if material == 60 {
-            state.facing = chimney_placement(position, command.look, world, &mut plan)?;
-        }
-        plan.states.push((position, Some(state)));
+        let shared = terra_world::placement::layout(
+            &world.chunks,
+            &world.journal,
+            position,
+            expected,
+            material,
+            command.look,
+            crank_owner,
+        )?;
+        plan.edits = shared.edits;
+        plan.states = shared.states;
     }
-    for edit in &plan.edits {
-        if world.config.world.bounded_world && !(-128..=356).contains(&edit.position[1]) {
-            return Err("Object exceeds world height bounds".into());
-        }
-        if world.chunks.block_at(edit.position) != Some(edit.expected_material) {
-            return Err("Object cell unavailable".into());
-        }
-        if edit.material != 0 && !(74..=97).contains(&edit.material) {
-            let below = [edit.position[0], edit.position[1] - 1, edit.position[2]];
-            if terra_core::beds::is_bed(edit.material)
-                && !world.chunks.block_at(below).is_some_and(|material| {
-                    terra_core::beds::supports_bed_floor(material)
-                        || terra_core::construction::is_slab(material)
-                            && world.journal.object_state(below).is_some_and(|state| {
-                                state.facing == 4
-                                    || terra_core::construction::full_slab(state.facing)
-                            })
-                })
-            {
-                return Err("Bed requires a full-height supporting floor".into());
-            }
-            let supported_by_plan = plan
-                .edits
-                .iter()
-                .any(|other| other.position == below && matches!(other.material, 59 | 65..=67));
-            let wall_supported = terra_world::objects::is_window(edit.material)
-                && terra_world::objects::DIRECTIONS.iter().any(|direction| {
-                    world
-                        .chunks
-                        .block_at(offset(edit.position, *direction, 1))
-                        .and_then(terra_voxel::MaterialId::from_raw)
-                        .is_some_and(terra_voxel::MaterialId::is_solid)
-                });
-            if !matches!(edit.material, 60..=64)
-                && !supported_by_plan
-                && !wall_supported
-                && !world
-                    .chunks
-                    .block_at(below)
-                    .and_then(terra_voxel::MaterialId::from_raw)
-                    .is_some_and(terra_voxel::MaterialId::is_solid)
-            {
-                return Err("Object requires solid floor".into());
-            }
-            let low = Vec3::from_array(edit.position.map(|p| p as f32));
-            if world.bodies.iter().any(|body| {
-                let half = Vec3::new(
-                    terra_physics::character::PLAYER_RADIUS,
-                    terra_physics::character::PLAYER_HALF_HEIGHT,
-                    terra_physics::character::PLAYER_RADIUS,
-                );
-                (body.translation + half).cmpgt(low).all()
-                    && (body.translation - half).cmplt(low + Vec3::ONE).all()
-            }) {
-                return Err("Object would intersect a player".into());
-            }
+    let shared = terra_world::placement::Layout {
+        edits: plan.edits.clone(),
+        states: plan.states.clone(),
+    };
+    terra_world::placement::environment(
+        &shared,
+        &world.chunks,
+        &world.journal,
+        world.config.world.bounded_world,
+    )?;
+    // Construction orientation is resolved by the clicked face in shared validation.
+    if material != 0 && !terra_core::construction::is_shape(material) {
+        let boxes = terra_world::placement::boxes(
+            &shared,
+            &world.chunks,
+            &world.journal,
+            &world.block_properties,
+        );
+        if world.bodies.iter().any(|body| {
+            let half = Vec3::new(
+                terra_physics::character::PLAYER_RADIUS,
+                terra_physics::character::PLAYER_HALF_HEIGHT,
+                terra_physics::character::PLAYER_RADIUS,
+            );
+            boxes.iter().any(|bounds| {
+                bounds.intersects(
+                    (body.translation - half).to_array().map(f64::from),
+                    (body.translation + half).to_array().map(f64::from),
+                )
+            })
+        }) {
+            return Err("Object would intersect a player".into());
         }
     }
     if !world.journal.can_record_furniture(
@@ -313,115 +277,74 @@ pub(super) fn plan(command: EditCommand, world: &ControlWorld) -> Result<Option<
     Ok(Some(plan))
 }
 
-fn chimney_placement(
-    position: [i64; 3],
-    look: [f32; 2],
-    world: &ControlWorld,
-    plan: &mut Plan,
-) -> Result<u8, String> {
-    use terra_world::objects::{DIRECTIONS, chimney_ports, chimney_pose};
-    let connects = |cell: [i64; 3], direction: [i64; 3]| {
-        let other = offset(cell, direction, 1);
-        let id = world.chunks.block_at(other)?;
-        if id == 59
-            && direction == [0, -1, 0]
-            && world
-                .journal
-                .object_state(other)
-                .is_some_and(|s| s.secondary)
-        {
-            return Some(());
-        }
-        let facing = world.journal.object_state(other).unwrap_or_default().facing;
-        chimney_ports(id, facing)?
-            .contains(&direction.map(|v| -v))
-            .then_some(())
-    };
-    let mut incoming: Vec<_> = DIRECTIONS
-        .into_iter()
-        .filter(|direction| connects(position, *direction).is_some())
-        .collect();
-    // Turning an unconnected end keeps its upstream port, never cuts a live junction.
-    if incoming.is_empty() {
-        for direction in DIRECTIONS {
-            let neighbor = offset(position, direction, 1);
-            if world.chunks.block_at(neighbor) != Some(60) {
-                continue;
-            }
-            let old = world.journal.object_state(neighbor).unwrap_or_default();
-            let Some(ports) = chimney_ports(60, old.facing) else {
-                continue;
-            };
-            let linked: Vec<_> = ports
-                .into_iter()
-                .filter(|d| connects(neighbor, *d).is_some())
-                .collect();
-            if let [upstream] = linked.as_slice()
-                && let Some(pose) = chimney_pose([*upstream, direction.map(|v| -v)])
-            {
-                plan.states.push((
-                    neighbor,
-                    Some(BlockObjectState {
-                        facing: pose,
-                        ..old
-                    }),
-                ));
-                incoming.push(direction);
-                break;
-            }
-        }
-    }
-    if incoming.len() > 2 {
-        return Err("Chimney cannot form a three-way junction".into());
-    }
-    let ray = Quat::from_euler(EulerRot::YXZ, look[0], look[1], 0.0) * Vec3::NEG_Z;
-    let preferred = if ray.y.abs() > 0.65 {
-        [0, if ray.y > 0.0 { 1 } else { -1 }, 0]
-    } else if ray.x.abs() > ray.z.abs() {
-        [if ray.x > 0.0 { 1 } else { -1 }, 0, 0]
-    } else {
-        [0, 0, if ray.z > 0.0 { 1 } else { -1 }]
-    };
-    let ports = match incoming.as_slice() {
-        [a, b] => [*a, *b],
-        [a] => [
-            *a,
-            if preferred == *a {
-                a.map(|v| -v)
-            } else {
-                preferred
-            },
-        ],
-        _ => [preferred.map(|v| -v), preferred],
-    };
-    let pose = chimney_pose(ports).ok_or_else(|| "Invalid chimney connection".to_owned())?;
-    let sloped = (0.25..0.85).contains(&look[1].abs()) && ports[0] != ports[1].map(|v| -v);
-    Ok(pose + if sloped { 32 } else { 0 })
-}
-
 pub(super) fn toggle(
     position: [i64; 3],
     expected: u16,
     facing: u8,
     world: &mut ControlWorld,
 ) -> Result<bool, String> {
+    let players: Vec<_> = world
+        .bodies
+        .iter()
+        .map(|body| body.translation.to_array().map(f64::from))
+        .collect();
+    toggle_with_players(
+        position,
+        expected,
+        facing,
+        &mut world.chunks,
+        &mut world.journal,
+        &world.block_properties,
+        &players,
+    )
+}
+
+pub(super) fn toggle_with_players(
+    position: [i64; 3],
+    expected: u16,
+    facing: u8,
+    chunks: &mut ChunkStore,
+    journal: &mut EditJournal,
+    properties: &terra_core::block_properties::BlockPropertiesCatalog,
+    players: &[[f64; 3]],
+) -> Result<bool, String> {
     if !terra_world::objects::is_opening(expected) {
         return Err("Not an opening".into());
     }
-    let state = world
-        .journal
+    let state = journal
         .object_state(position)
         .ok_or("Missing opening state")?;
     if state.facing != facing {
         return Ok(false);
     }
-    let mut cells = vec![(position, state)];
-    if let Some(peer) = state.peer {
-        let other = world
-            .journal
+    let window = terra_world::objects::is_window(expected)
+        .then(|| {
+            terra_world::objects::windows::group(position, expected, state.facing, |p| {
+                let material = chunks.block_at(p).or_else(|| journal.block(p))?;
+                Some((material, journal.object_state(p)?.facing))
+            })
+        })
+        .filter(|group| group.width > 1 || group.height > 1);
+    let mut cells = if let Some(group) = window {
+        group
+            .cells()
+            .map(|p| {
+                journal
+                    .object_state(p)
+                    .map(|state| (p, state))
+                    .ok_or_else(|| "Missing connected window state".to_string())
+            })
+            .collect::<Result<Vec<_>, _>>()?
+    } else {
+        vec![(position, state)]
+    };
+    if window.is_none()
+        && let Some(peer) = state.peer
+    {
+        let other = journal
             .object_state(peer)
             .ok_or("Unloaded opening partner")?;
-        if world.chunks.block_at(peer) != Some(expected)
+        if chunks.block_at(peer) != Some(expected)
             || other.peer != Some(position)
             || other.facing != facing
             || other.secondary == state.secondary
@@ -432,10 +355,10 @@ pub(super) fn toggle(
     }
     for (cell, _) in &cells {
         let section = terra_voxel::global_to_section(*cell).0;
-        if world.chunks.block_at(*cell) != Some(expected)
-            || world.journal.revision(section) > u64::MAX - 16
-            || world.journal.appearance_epoch(section) > u64::MAX - 16
-            || world.journal.fluid_epoch(section) > u64::MAX - 16
+        if chunks.block_at(*cell) != Some(expected)
+            || journal.revision(section) > u64::MAX - 16
+            || journal.appearance_epoch(section) > u64::MAX - 16
+            || journal.fluid_epoch(section) > u64::MAX - 16
         {
             return Err("Opening state cannot advance".into());
         }
@@ -443,8 +366,8 @@ pub(super) fn toggle(
             for dy in -1..=1 {
                 for dz in -1..=1 {
                     let neighbor = section.offset([dx, dy, dz]).map_err(|e| e.to_string())?;
-                    if world.journal.mesh_epoch(neighbor) > u64::MAX - 32
-                        || world.journal.water_mesh_epoch(neighbor) > u64::MAX - 32
+                    if journal.mesh_epoch(neighbor) > u64::MAX - 32
+                        || journal.water_mesh_epoch(neighbor) > u64::MAX - 32
                     {
                         return Err("Opening neighbor revision exhausted".into());
                     }
@@ -463,22 +386,36 @@ pub(super) fn toggle(
             secondary: false,
             ..state
         };
-        for source in world
-            .block_properties
-            .shape(expected)
-            .iter()
-            .filter(|b| b.hinged)
-        {
-            let bounds = terra_world::objects::opening_box(*source, owner, destination);
-            if world.bodies.iter().any(|body| {
-                let half = Vec3::new(
-                    terra_physics::character::PLAYER_RADIUS,
-                    terra_physics::character::PLAYER_HALF_HEIGHT,
-                    terra_physics::character::PLAYER_RADIUS,
-                );
+        let boxes: Vec<_> = if let Some(group) = window {
+            terra_world::objects::windows::pieces(group.width, group.height)
+                .into_iter()
+                .filter(|p| p.solid && p.leaf.is_some())
+                .map(|p| {
+                    terra_world::objects::windows::world_box(
+                        p,
+                        group,
+                        f64::from(u8::from(destination.facing >= 4)),
+                    )
+                })
+                .collect()
+        } else {
+            properties
+                .shape(expected)
+                .iter()
+                .filter(|b| b.hinged)
+                .map(|source| terra_world::objects::opening_box(*source, owner, destination))
+                .collect()
+        };
+        for bounds in boxes {
+            if players.iter().any(|body| {
+                let half = [
+                    f64::from(terra_physics::character::PLAYER_RADIUS),
+                    f64::from(terra_physics::character::PLAYER_HALF_HEIGHT),
+                    f64::from(terra_physics::character::PLAYER_RADIUS),
+                ];
                 bounds.intersects(
-                    (body.translation - half).to_array().map(f64::from),
-                    (body.translation + half).to_array().map(f64::from),
+                    std::array::from_fn(|axis| body[axis] - half[axis]),
+                    std::array::from_fn(|axis| body[axis] + half[axis]),
                 )
             }) {
                 return Err("A player blocks this opening".into());
@@ -487,8 +424,8 @@ pub(super) fn toggle(
     }
     for (cell, state) in cells {
         commit_object_state(
-            &mut world.chunks,
-            &mut world.journal,
+            chunks,
+            journal,
             cell,
             Some(BlockObjectState {
                 facing: state.facing ^ 4,
@@ -514,8 +451,22 @@ pub(super) fn commit(plan: Plan, world: &mut ControlWorld) -> Result<bool, Strin
             }
         }
     }
+    let removing_crusher = plan
+        .edits
+        .iter()
+        .any(|edit| edit.expected_material == 99 && edit.material != 99);
     for edit in &plan.edits {
-        if edit.expected_material == 59 && edit.material != 59 {
+        if removing_crusher
+            && edit.expected_material == 100
+            && edit.material == 0
+            && !world.journal.gameplay_mut().drop_one(
+                edit.position.map(|value| value as f64 + 0.5),
+                terra_core::ItemKind::Block(100),
+            )
+        {
+            return Err("Crank drop capacity exhausted".into());
+        }
+        if matches!(edit.expected_material, 59 | 99) && edit.material != edit.expected_material {
             if let Some(contents) = world.journal.remove_container(edit.position)? {
                 for stack in contents.slots.into_iter().filter(|s| s.valid()) {
                     if !world.journal.gameplay_mut().drop_stack(
@@ -529,6 +480,7 @@ pub(super) fn commit(plan: Plan, world: &mut ControlWorld) -> Result<bool, Strin
                 }
             }
             world.journal.remove_furnace(edit.position);
+            world.journal.remove_crusher(edit.position);
         }
     }
     for edit in plan.edits {
@@ -563,6 +515,9 @@ pub(super) fn commit(plan: Plan, world: &mut ControlWorld) -> Result<bool, Strin
                 },
             )?;
         }
+        if world.journal.block(position) == Some(99) && state.is_some_and(|s| !s.secondary) {
+            world.journal.set_crusher(position, Default::default())?;
+        }
     }
     Ok(true)
 }
@@ -571,6 +526,211 @@ pub(super) fn commit(plan: Plan, world: &mut ControlWorld) -> Result<bool, Strin
 mod tests {
     use super::*;
     use bevy::ecs::system::SystemState;
+    #[test]
+    fn hand_crank_mounts_without_floor_and_detaches_without_corrupting_the_machine_pair() {
+        for facing in 0..4 {
+            let mut app = app();
+            let anchor = [4, 1, 8];
+            let yaw = facing as f32 * std::f32::consts::FRAC_PI_2;
+            edit(&mut app, anchor, 0, 99, yaw).unwrap();
+            let crank = app
+                .world()
+                .resource::<EditJournal>()
+                .crusher_crank_position(anchor)
+                .unwrap();
+            let below = [crank[0], 0, crank[2]];
+            let (owner, local) = terra_voxel::global_to_section(below);
+            app.world_mut()
+                .resource_mut::<ChunkStore>()
+                .loaded
+                .get_mut(&owner)
+                .unwrap()
+                .data
+                .set_block(local, 0)
+                .unwrap();
+            app.world_mut()
+                .resource_mut::<EditJournal>()
+                .record(below, 0)
+                .unwrap();
+            edit(&mut app, crank, 0, 100, yaw).unwrap();
+            assert_eq!(
+                app.world().resource::<EditJournal>().crank_anchor(crank),
+                Some(anchor)
+            );
+            edit(&mut app, crank, 100, 0, yaw).unwrap();
+            assert!(app.world().resource::<EditJournal>().valid_crusher(anchor));
+            assert_eq!(
+                app.world().resource::<ChunkStore>().block_at(crank),
+                Some(0)
+            );
+            edit(&mut app, crank, 0, 100, yaw).unwrap();
+            app.world_mut()
+                .resource_mut::<EditJournal>()
+                .gameplay_mut()
+                .next_drop = u64::MAX;
+            assert!(edit(&mut app, anchor, 99, 0, yaw).is_err());
+            assert_eq!(
+                app.world().resource::<ChunkStore>().block_at(crank),
+                Some(100)
+            );
+            assert!(app.world().resource::<EditJournal>().valid_crusher(anchor));
+            app.world_mut()
+                .resource_mut::<EditJournal>()
+                .gameplay_mut()
+                .next_drop = 1;
+            edit(&mut app, anchor, 99, 0, yaw).unwrap();
+            let journal = app.world().resource::<EditJournal>();
+            assert_eq!(
+                app.world().resource::<ChunkStore>().block_at(crank),
+                Some(0)
+            );
+            assert_eq!(
+                journal
+                    .gameplay()
+                    .drops
+                    .iter()
+                    .filter(|drop| drop.stack.item == terra_core::ItemKind::Block(100))
+                    .map(|drop| drop.stack.count)
+                    .sum::<u16>(),
+                1
+            );
+        }
+    }
+    #[test]
+    fn unloading_a_mounted_crank_prevents_partial_machine_removal_and_content_loss() {
+        for anchor in [[14, 1, 8], [-2, 1, 8]] {
+            for secondary in [false, true] {
+                let mut app = app();
+                edit(&mut app, anchor, 0, 99, 0.0).unwrap();
+                let journal = app.world().resource::<EditJournal>();
+                let peer = journal.object_state(anchor).unwrap().peer.unwrap();
+                let crank = journal.crusher_crank_position(anchor).unwrap();
+                edit(&mut app, crank, 0, 100, 0.0).unwrap();
+                let item = terra_core::ItemKind::Mineral(terra_core::MineralItem::Coal);
+                let mut inventory = terra_core::Inventory {
+                    slots: vec![terra_core::ItemStack { item, count: 3 }],
+                    ..Default::default()
+                };
+                let mut processing = terra_core::crusher::CrusherState::default();
+                assert!(terra_core::crusher::advance(
+                    &mut processing,
+                    &mut inventory,
+                    1.0
+                ));
+                app.world_mut()
+                    .resource_mut::<EditJournal>()
+                    .commit_crusher(anchor, processing.clone(), inventory.clone())
+                    .unwrap();
+                let section = terra_voxel::global_to_section(crank).0;
+                assert_ne!(section, terra_voxel::global_to_section(peer).0);
+                let unloaded = app
+                    .world_mut()
+                    .resource_mut::<ChunkStore>()
+                    .loaded
+                    .remove(&section)
+                    .unwrap();
+                let journal = app.world().resource::<EditJournal>();
+                let revision = journal.gameplay().revision;
+                let next_drop = journal.gameplay().next_drop;
+                let delta = journal.section_delta(section);
+                let selected = if secondary { peer } else { anchor };
+                assert!(edit(&mut app, selected, 99, 0, 0.0).is_err());
+                let journal = app.world().resource::<EditJournal>();
+                assert!(journal.valid_crusher(anchor));
+                assert_eq!(journal.crank_anchor(crank), Some(anchor));
+                assert_eq!(journal.crusher_at(anchor), Some(&processing));
+                assert_eq!(journal.container_at(anchor), Some(&inventory));
+                assert_eq!(journal.gameplay().revision, revision);
+                assert_eq!(journal.gameplay().next_drop, next_drop);
+                assert!(journal.gameplay().drops.is_empty());
+                assert_eq!(journal.section_delta(section), delta);
+                for position in [anchor, peer] {
+                    assert_eq!(
+                        app.world().resource::<ChunkStore>().block_at(position),
+                        Some(99)
+                    );
+                }
+                app.world_mut()
+                    .resource_mut::<ChunkStore>()
+                    .loaded
+                    .insert(section, unloaded);
+                edit(&mut app, selected, 99, 0, 0.0).unwrap();
+                let journal = app.world().resource::<EditJournal>();
+                assert!(journal.crusher_at(anchor).is_none());
+                assert!(journal.container_at(anchor).is_none());
+                for position in [anchor, peer, crank] {
+                    assert_eq!(
+                        app.world().resource::<ChunkStore>().block_at(position),
+                        Some(0)
+                    );
+                }
+                for (item, count) in [(item, 3), (terra_core::ItemKind::Block(100), 1)] {
+                    assert_eq!(
+                        journal
+                            .gameplay()
+                            .drops
+                            .iter()
+                            .filter(|drop| drop.stack.item == item)
+                            .map(|drop| drop.stack.count)
+                            .sum::<u16>(),
+                        count
+                    );
+                }
+            }
+        }
+    }
+    #[test]
+    fn crusher_pairs_rotate_and_breaking_either_cell_drops_contents_once() {
+        for facing in 0..4 {
+            for secondary in [false, true] {
+                let mut app = app();
+                let anchor = [4, 1, 8];
+                let yaw = facing as f32 * std::f32::consts::FRAC_PI_2;
+                edit(&mut app, anchor, 0, 99, yaw).unwrap();
+                let peer = app
+                    .world()
+                    .resource::<EditJournal>()
+                    .object_state(anchor)
+                    .unwrap()
+                    .peer
+                    .unwrap();
+                let state = app
+                    .world()
+                    .resource::<EditJournal>()
+                    .object_state(anchor)
+                    .unwrap();
+                assert_eq!(peer, offset(anchor, state.right(), 1));
+                let inventory = terra_core::Inventory {
+                    slots: vec![terra_core::ItemStack {
+                        item: terra_core::ItemKind::Mineral(terra_core::MineralItem::Coal),
+                        count: 3,
+                    }],
+                    ..Default::default()
+                };
+                app.world_mut()
+                    .resource_mut::<EditJournal>()
+                    .set_container(anchor, inventory)
+                    .unwrap();
+                edit(&mut app, if secondary { peer } else { anchor }, 99, 0, 0.0).unwrap();
+                let journal = app.world().resource::<EditJournal>();
+                assert!(
+                    journal.crusher_at(anchor).is_none() && journal.container_at(anchor).is_none()
+                );
+                assert_eq!(
+                    journal
+                        .gameplay()
+                        .drops
+                        .iter()
+                        .map(|drop| drop.stack.count)
+                        .sum::<u16>(),
+                    3
+                );
+                for cell in [anchor, peer] {
+                    assert_eq!(app.world().resource::<ChunkStore>().block_at(cell), Some(0));
+                }
+            }
+        }
+    }
     fn app() -> App {
         let mut app = App::new();
         let config = GameConfig::default();
@@ -584,7 +744,8 @@ mod tests {
         .init_resource::<terra_core::block_properties::BlockPropertiesCatalog>()
         .init_resource::<ChunkStore>()
         .init_resource::<EditJournal>()
-        .init_resource::<ConnectedProfiles>();
+        .init_resource::<ConnectedProfiles>()
+        .init_resource::<riding::Mounts>();
         for x in -1..=1 {
             let position = terra_voxel::SectionPos::new(x, 0, 0);
             let mut data = terra_voxel::BlockSection::empty(position).unwrap();
@@ -702,6 +863,8 @@ mod tests {
         let look = [(-direction.x).atan2(-direction.z), direction.y.asin()];
         let now = Instant::now();
         let peer = Peer {
+            farming: Default::default(),
+            crank: Default::default(),
             chest_cursor: None,
             creature_action_at: now,
             container: None,
@@ -737,8 +900,11 @@ mod tests {
             edits_left: 20.0,
             rate_time: now,
             spawned: true,
+            restored_spawn: false,
+            restore_location: None,
             last_movement: Default::default(),
             vitals: Default::default(),
+            equipment: Default::default(),
             survival: Default::default(),
             stats_sent: None,
         };
@@ -1030,6 +1196,140 @@ mod tests {
                     matches!(facing, 4 | 9),
                     "material={material} facing={facing}"
                 );
+            }
+        }
+    }
+
+    #[test]
+    fn wool_construction_authority_keeps_every_pose_and_each_ray_selected_mixed_half() {
+        fn apply(
+            app: &mut App,
+            position: [i64; 3],
+            expected: u16,
+            material: u16,
+            facing: Option<u8>,
+            half: Option<terra_world::slabs::HalfRemoval>,
+        ) {
+            let mut system = SystemState::<ControlWorld>::new(app.world_mut());
+            let mut world = system.get_mut(app.world_mut()).unwrap();
+            let command = EditCommand {
+                request: 0,
+                revision: 0,
+                look: [0.0; 2],
+                source: None,
+                action: EditAction::Block {
+                    position,
+                    expected,
+                    material,
+                },
+            };
+            let mut proposed = plan(command, &world)
+                .unwrap()
+                .expect("new wool shapes must use the authoritative furniture transaction")
+                .with_construction_facing(facing);
+            if let Some(half) = half {
+                proposed = proposed.with_slab_half(
+                    position,
+                    half,
+                    world.journal.object_state(position).unwrap(),
+                );
+            }
+            assert!(commit(proposed, &mut world).unwrap());
+        }
+
+        let position = [-1, 1, 8];
+        for facing in 0..24 {
+            let mut app = app();
+            apply(&mut app, position, 0, 104, Some(facing), None);
+            let journal = app.world().resource::<EditJournal>();
+            assert_eq!(journal.block(position), Some(104));
+            assert_eq!(journal.object_state(position).unwrap().facing, facing);
+            assert_eq!(
+                app.world().resource::<ChunkStore>().block_at(position),
+                Some(104)
+            );
+        }
+        for (first, second) in [(105, 82), (105, 85), (82, 105), (85, 105)] {
+            for facing in [0, 4, 5, 6, 7, 8] {
+                for selected in 0..2 {
+                    let mut app = app();
+                    apply(&mut app, position, 0, first, Some(facing), None);
+                    let combined =
+                        terra_core::construction::merged_slab(first, facing, second).unwrap();
+                    if second == 105 {
+                        assert!((58..=63).contains(&combined));
+                    }
+                    apply(&mut app, position, first, second, Some(combined), None);
+                    let halves = terra_core::construction::slab_halves(first, combined).unwrap();
+                    let bounds = terra_core::construction::slab_bounds(halves[selected].1);
+                    let axis = (0..3)
+                        .find(|&i| bounds.maximum[i] - bounds.minimum[i] == 0.5)
+                        .unwrap();
+                    let sign = if bounds.minimum[axis] == 0.5 {
+                        1.0
+                    } else {
+                        -1.0
+                    };
+                    let mut origin = position.map(|v| v as f64 + 0.5);
+                    origin[axis] += sign * 3.0;
+                    let mut direction = [0.0; 3];
+                    direction[axis] = -sign;
+                    let half = {
+                        let chunks = app.world().resource::<ChunkStore>();
+                        let journal = app.world().resource::<EditJournal>();
+                        assert_eq!(chunks.block_at(position), Some(first));
+                        assert_eq!(journal.block(position), Some(first));
+                        assert_eq!(journal.object_state(position).unwrap().facing, combined);
+                        terra_world::slabs::targeted_half(
+                            chunks,
+                            journal,
+                            position,
+                            (origin, direction),
+                        )
+                        .unwrap()
+                    };
+                    assert_eq!(half.selected as usize, selected);
+                    assert_eq!((half.removed, half.removed_facing), halves[selected]);
+                    assert_eq!(
+                        (half.remaining, half.remaining_facing),
+                        halves[1 - selected]
+                    );
+                    apply(&mut app, position, first, 0, None, Some(half));
+                    let journal = app.world().resource::<EditJournal>();
+                    assert_eq!(journal.block(position), Some(half.remaining));
+                    let saved = journal.object_state(position).unwrap();
+                    assert_eq!(saved.facing, half.remaining_facing);
+                    assert!(saved.valid_for(position, half.remaining));
+                    assert_eq!(
+                        app.world().resource::<ChunkStore>().block_at(position),
+                        Some(half.remaining)
+                    );
+                    let mut actual_boxes = Vec::new();
+                    assert!(terra_world::interaction_shapes::visit_boxes(
+                        app.world().resource::<ChunkStore>(),
+                        journal,
+                        &Default::default(),
+                        position,
+                        |bounds| actual_boxes.push(bounds),
+                    ));
+                    assert_eq!(
+                        actual_boxes,
+                        terra_core::construction::placed_boxes(
+                            half.remaining,
+                            half.remaining_facing,
+                            [None; 6],
+                        )
+                        .into_iter()
+                        .map(|mut b| {
+                            for (axis, value) in position.iter().enumerate() {
+                                b.minimum[axis] += *value as f64;
+                                b.maximum[axis] += *value as f64;
+                            }
+                            b
+                        })
+                        .collect::<Vec<_>>()
+                    );
+                }
             }
         }
     }

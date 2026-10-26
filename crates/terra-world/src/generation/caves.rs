@@ -6,6 +6,10 @@ const SPACING: f64 = 128.0;
 const LENGTH: f64 = 48.0;
 
 #[cfg(test)]
+#[path = "caves/connectors_tests.rs"]
+mod connectors_tests;
+
+#[cfg(test)]
 mod ravine_tests {
     use super::*;
     use terra_core::{Config, WorldConfig};
@@ -56,6 +60,7 @@ pub(super) struct CaveRegion {
     pub center: [f64; 3],
     pub radius: f64,
     pub height: f64,
+    pub presence: f64,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -76,6 +81,7 @@ struct FormationColumn {
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub(crate) struct CaveShape {
     pub tunnel_width: f64,
+    pub connector_limit: f64,
     pub fissure: f64,
     pub kind: CaveKind,
     pub salt: bool,
@@ -445,6 +451,11 @@ impl TerraGenerator {
         } else {
             0.0
         };
+        let center = [
+            cx + (f64::from((seed >> 4) % 101) / 50.0 - 1.0) * jitter,
+            (surface - height - 14.0).min(-12.0) - f64::from((seed >> 22) % 36),
+            cz + (f64::from((seed >> 12) % 101) / 50.0 - 1.0) * jitter,
+        ];
         let region = CaveRegion {
             ecology,
             surface,
@@ -453,11 +464,8 @@ impl TerraGenerator {
             salt,
             radius,
             height,
-            center: [
-                cx + (f64::from((seed >> 4) % 101) / 50.0 - 1.0) * jitter,
-                (surface - height - 14.0).min(-12.0) - f64::from((seed >> 22) % 36),
-                cz + (f64::from((seed >> 12) % 101) / 50.0 - 1.0) * jitter,
-            ],
+            center,
+            presence: self.connector_presence(center[0], center[2]),
         };
         if let Ok(mut cache) = self.cave_portals.1.lock() {
             if cache.len() >= 2048 {
@@ -477,7 +485,7 @@ impl TerraGenerator {
             return None;
         }
         let region = self.cave_region([(x / 192.0).floor() as i64, (z / 192.0).floor() as i64]);
-        region.salt.then_some(region.center)
+        (region.salt && region.presence > 0.0).then_some(region.center)
     }
 
     pub fn cave_chamber_center(&self, x: f64, z: f64) -> Option<[f64; 3]> {
@@ -485,7 +493,7 @@ impl TerraGenerator {
             return None;
         }
         let region = self.cave_region([(x / 192.0).floor() as i64, (z / 192.0).floor() as i64]);
-        (region.kind != CaveKind::Spaghetti).then(|| {
+        (region.kind != CaveKind::Spaghetti && region.presence > 0.0).then(|| {
             if self.config().cave_structure_revision >= 2 {
                 self.cave_structure_at(x, z).center
             } else {
@@ -529,6 +537,7 @@ impl TerraGenerator {
         });
         CaveShape {
             tunnel_width: 0.105 + super::biomes::smoothstep(-0.35, 0.4, variety) * 0.09,
+            connector_limit: f64::INFINITY,
             fissure: super::biomes::smoothstep(0.12, 0.48, variety),
             kind: if chamber.is_some() {
                 CaveKind::Cheese
@@ -559,8 +568,21 @@ impl TerraGenerator {
         } else {
             0.095 + super::biomes::smoothstep(-0.35, 0.4, variety) * 0.08
         };
+        // Widen the existing implicit connector field without another tunnel
+        // network or new per-voxel work. Saved revisions retain their exact field.
+        let tunnel_width = if self.config().cave_structure_revision >= 6 {
+            tunnel_width * 1.4
+        } else {
+            tunnel_width
+        };
+        let tunnel_width = if self.config().cave_structure_revision >= 8 {
+            tunnel_width * 1.12
+        } else {
+            tunnel_width
+        };
         CaveShape {
             tunnel_width,
+            connector_limit: self.connector_presence(x, z),
             fissure: super::biomes::smoothstep(0.12, 0.48, variety),
             kind: region.kind,
             salt: region.salt
@@ -572,6 +594,17 @@ impl TerraGenerator {
                 .then_some([radial, region.center[1], region.height]),
             formation: None,
         }
+    }
+
+    // Prepared with the horizontal column, not for every voxel. A signed cap
+    // groups the existing wide network without narrowing its active passages.
+    fn connector_presence(&self, x: f64, z: f64) -> f64 {
+        if self.config().cave_structure_revision < 7 || self.config().geology_revision == 0 {
+            return f64::INFINITY;
+        }
+        let local = self.hills.get([x / 56.0 + 71.3, z / 56.0 - 28.9]);
+        let regional = self.valleys.get([x / 128.0 - 19.7, z / 128.0 + 55.9]);
+        (local * 0.80 + regional * 0.20 + 0.06) * 24.0
     }
 
     fn cave_formation(&self, x: f64, z: f64, region: CaveRegion) -> Option<Formation> {

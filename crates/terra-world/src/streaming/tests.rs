@@ -7,6 +7,103 @@ use terra_core::{GameConfig, TerraCorePlugin};
 use terra_voxel::{MaterialId, SectionPos, global_to_section};
 
 #[test]
+fn spanning_web_retires_when_its_remote_anchor_is_removed_and_stays_removed_after_reload() {
+    use crate::props::{PropId, webs};
+    let prop = webs::spanning([-1, 11, 8], [1, 0, 0], 21, 10, PropId(4120)).unwrap();
+    let remote = webs::anchors(&prop).unwrap()[1];
+    assert_eq!(global_to_section(remote).0.x - prop.section.x, 2);
+    let mut chunks = ChunkStore::default();
+    for x in -1..=1 {
+        let position = SectionPos::new(x, 0, 0);
+        chunks.loaded.insert(
+            position,
+            LoadedSection {
+                data: terra_voxel::BlockSection::empty(position).unwrap(),
+                mesh: None,
+                mesh_epoch: 0,
+                water_epoch: 0,
+                water: None,
+                props: if position == prop.section {
+                    vec![prop]
+                } else {
+                    Vec::new()
+                },
+            },
+        );
+    }
+    let mut journal = EditJournal::default();
+    assert!(journal.place_prop(prop).unwrap());
+    for anchor in webs::anchors(&prop).unwrap() {
+        let (owner, local) = global_to_section(anchor);
+        chunks
+            .loaded
+            .get_mut(&owner)
+            .unwrap()
+            .data
+            .set_block(local, 3)
+            .unwrap();
+        journal.record(anchor, 3).unwrap();
+    }
+    assert!(
+        commit_block_edit(
+            &mut chunks,
+            &mut journal,
+            &BlockEditRequest {
+                position: remote,
+                expected_material: 3,
+                material: 0,
+            },
+            &Default::default()
+        )
+        .unwrap()
+    );
+    assert!(chunks.loaded[&prop.section].props[0].removed);
+    assert!(journal.prop_removed(prop.section, prop.id));
+    let mut replica = EditJournal::default();
+    for section in journal.changed_sections() {
+        replica
+            .import_replica_delta(journal.section_delta(section))
+            .unwrap();
+    }
+    let mut reloaded = vec![prop];
+    replica.apply_prop_removals(prop.section, &mut reloaded);
+    assert!(reloaded[0].removed);
+    let mut journal = EditJournal::default();
+    journal.place_prop(prop).unwrap();
+    chunks.loaded.remove(&prop.section);
+    let (remote_owner, local) = global_to_section(remote);
+    chunks
+        .loaded
+        .get_mut(&remote_owner)
+        .unwrap()
+        .data
+        .set_block(local, 3)
+        .unwrap();
+    journal.record(remote, 3).unwrap();
+    assert!(
+        commit_block_edit(
+            &mut chunks,
+            &mut journal,
+            &BlockEditRequest {
+                position: remote,
+                expected_material: 3,
+                material: 0,
+            },
+            &Default::default()
+        )
+        .unwrap()
+    );
+    assert!(journal.prop_removed(prop.section, prop.id));
+    assert_eq!(journal.placed_props(prop.section).count(), 0);
+    let mut reloaded = vec![prop];
+    journal.apply_prop_removals(prop.section, &mut reloaded);
+    assert!(
+        reloaded[0].removed,
+        "an unloaded owner cannot resurrect a cut attachment"
+    );
+}
+
+#[test]
 fn opening_pose_commits_rebuild_loaded_halos_without_another_block_edit() {
     use crate::edits::BlockObjectState;
     for material in 65..=70 {
@@ -465,7 +562,12 @@ fn wait(app: &mut App, predicate: impl Fn(&World) -> bool) {
     let deadline = Instant::now() + Duration::from_secs(15);
     loop {
         app.update();
-        assert!(app.world().resource::<PendingSections>().0.len() <= 4);
+        let settings = app.world().resource::<StreamingSettings>();
+        assert!(
+            app.world().resource::<PendingSections>().0.len()
+                <= settings.max_jobs + usize::from(settings.meshes),
+            "ordinary workers plus at most one bounded interactive edit slot"
+        );
         if predicate(app.world()) {
             break;
         }

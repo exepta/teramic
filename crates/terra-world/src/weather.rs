@@ -7,7 +7,7 @@ pub fn retains_snow(material: u16) -> bool {
     !matches!(material, 28 | 29 | 59 | 71..=73)
 }
 
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct LocalWeather {
     pub rain: f32,
     pub snow: f32,
@@ -70,7 +70,9 @@ pub fn from_climate_seasonal(
     sea_level: f64,
     season: terra_core::SeasonSample,
 ) -> LocalWeather {
-    let temperature = ((biome.temperature - 0.5) * 22.0 + 12.0
+    let continental = (biome.temperature - 0.5) * 22.0 + 12.0;
+    let maritime = biome.weights.ocean.clamp(0.0, 1.0);
+    let temperature = (continental + (continental.max(8.0) - continental) * maritime
         - (altitude - sea_level).max(0.0) * 0.11) as f32
         + season.temperature_offset();
     let cold = ((2.0 - temperature) / 3.0).clamp(0.0, 1.0);
@@ -122,6 +124,91 @@ pub fn from_climate_seasonal(
     }
 }
 
+/// Precipitation belongs to the geographic surface, not the height of an observer.
+pub fn from_surface(
+    weather: &WorldWeather,
+    surface: &crate::SurfaceColumn,
+    sea_level: f64,
+    season: terra_core::SeasonSample,
+) -> LocalWeather {
+    from_climate_seasonal(
+        weather,
+        surface.biome,
+        surface
+            .height
+            .max(surface.water_level.unwrap_or(surface.height)),
+        sea_level,
+        season,
+    )
+}
+
+#[cfg(feature = "bevy")]
+#[derive(Clone, Copy)]
+struct FallbackClimate {
+    world: terra_core::WorldId,
+    seed: terra_core::WorldSeed,
+    column: [i64; 2],
+    biome: BiomeSample,
+    altitude: f64,
+}
+
+/// One bounded fallback for not-yet-streamed columns; prepared data always wins.
+#[cfg(feature = "bevy")]
+#[derive(Default)]
+pub struct SurfaceWeatherProbe {
+    fallback: Option<FallbackClimate>,
+    #[cfg(test)]
+    fallback_samples: usize,
+}
+
+#[cfg(feature = "bevy")]
+impl SurfaceWeatherProbe {
+    pub fn sample(
+        &mut self,
+        weather: &WorldWeather,
+        terrain: &TerraGenerator,
+        chunks: &crate::streaming::ChunkStore,
+        position: [f64; 3],
+        clock: terra_core::WorldClock,
+    ) -> LocalWeather {
+        let x = position[0].floor() as i64;
+        let z = position[2].floor() as i64;
+        let config = terrain.config();
+        let season = clock.season(config.seasons);
+        if let Some(surface) = chunks.surface_column_at(x, z) {
+            return from_surface(weather, surface, config.sea_level, season);
+        }
+        let column = [x.div_euclid(16), z.div_euclid(16)];
+        if self.fallback.is_none_or(|cached| {
+            cached.world != config.id || cached.seed != config.seed || cached.column != column
+        }) {
+            let surface = terrain
+                .surface_column(column[0] as f64 * 16.0 + 8.0, column[1] as f64 * 16.0 + 8.0);
+            self.fallback = Some(FallbackClimate {
+                world: config.id,
+                seed: config.seed,
+                column,
+                biome: surface.biome,
+                altitude: surface
+                    .height
+                    .max(surface.water_level.unwrap_or(surface.height)),
+            });
+            #[cfg(test)]
+            {
+                self.fallback_samples += 1;
+            }
+        }
+        let cached = self.fallback.expect("Sampled surface climate");
+        from_climate_seasonal(
+            weather,
+            cached.biome,
+            cached.altitude,
+            config.sea_level,
+            season,
+        )
+    }
+}
+
 #[cfg(feature = "bevy")]
 mod surface;
 #[cfg(feature = "bevy")]
@@ -130,6 +217,183 @@ pub(crate) use surface::tick;
 #[cfg(test)]
 mod tests {
     use super::*;
+    fn wet_weather() -> WorldWeather {
+        let mut weather = WorldWeather::new(116);
+        weather.from_intensity = 1.0;
+        weather.target_intensity = 1.0;
+        weather
+    }
+
+    #[test]
+    fn cold_ocean_and_coasts_are_maritime_in_spring_but_still_snow_in_winter() {
+        use crate::generation::biomes::{BiomeSample, BiomeWeights};
+        let terrain = TerraGenerator::new(terra_core::WorldConfig {
+            biomes: false,
+            caves: false,
+            trees: false,
+            rivers: false,
+            landscape_revision: 0,
+            ..Default::default()
+        })
+        .unwrap();
+        let mut surface = terrain.surface_column(0.0, 0.0);
+        surface.height = -30.0;
+        surface.water_level = Some(8.0);
+        let spring = terra_core::WorldClock::default().season(terrain.config().seasons);
+        let weather = wet_weather();
+        let mut previous: Option<f32> = None;
+        for step in 0..=100 {
+            let ocean = f64::from(step) / 100.0;
+            surface.biome = BiomeSample {
+                temperature: 0.0,
+                humidity: 0.8,
+                weights: BiomeWeights {
+                    ocean,
+                    forest: 1.0 - ocean,
+                    plains: 0.0,
+                    desert: 0.0,
+                    highland: 0.0,
+                    mushroom_park: 0.0,
+                    cliffted_desert: 0.0,
+                    cherry_forest: 0.0,
+                },
+            };
+            let local = from_surface(&weather, &surface, 8.0, spring);
+            if let Some(before) = previous {
+                assert!((local.temperature - before).abs() < 0.071);
+            }
+            previous = Some(local.temperature);
+            if ocean >= 0.25 {
+                assert!(local.rain > 0.99 && local.snow == 0.0);
+            }
+        }
+        let winter = terra_core::WorldClock {
+            day: 21,
+            ..Default::default()
+        }
+        .season(terrain.config().seasons);
+        let winter_weather = from_surface(&weather, &surface, 8.0, winter);
+        assert!(winter_weather.temperature < 0.0 && winter_weather.snow > 0.99);
+        assert_eq!(winter_weather.rain, 0.0);
+        let mut explicit = weather;
+        explicit.set_pattern(WeatherPattern::Snow);
+        explicit.advance(8.0, 116);
+        let forced = from_surface(&explicit, &surface, 8.0, spring);
+        assert!(forced.snow > 0.8 && forced.rain == 0.0);
+        surface.biome.temperature = 1.0;
+        surface.biome.weights.ocean = 0.0;
+        surface.biome.weights.highland = 1.0;
+        let highland = from_surface(&weather, &surface, 8.0, spring);
+        assert!(highland.snow > 0.99 && highland.rain == 0.0);
+    }
+
+    #[cfg(feature = "bevy")]
+    #[test]
+    fn surface_probe_ignores_camera_height_and_never_repeats_fallback_noise_while_flying_vertically()
+     {
+        let terrain = TerraGenerator::new(terra_core::WorldConfig {
+            biomes: false,
+            caves: false,
+            trees: false,
+            rivers: false,
+            landscape_revision: 0,
+            base_height: 20.0,
+            hill_amplitude: 0.0,
+            mountain_amplitude: 0.0,
+            ..Default::default()
+        })
+        .unwrap();
+        let weather = wet_weather();
+        let chunks = crate::streaming::ChunkStore::default();
+        let mut probe = SurfaceWeatherProbe::default();
+        let low = probe.sample(
+            &weather,
+            &terrain,
+            &chunks,
+            [-4.5, 20.0, -4.5],
+            Default::default(),
+        );
+        for altitude in [-128.0, 50.0, 200.0, 312.0, 356.0] {
+            assert_eq!(
+                probe.sample(
+                    &weather,
+                    &terrain,
+                    &chunks,
+                    [-4.5, altitude, -4.5],
+                    Default::default()
+                ),
+                low
+            );
+        }
+        assert!(low.rain > 0.99 && low.snow == 0.0);
+        assert_eq!(probe.fallback_samples, 1);
+        let border_left = probe.sample(
+            &weather,
+            &terrain,
+            &chunks,
+            [-0.001, 240.0, -4.5],
+            Default::default(),
+        );
+        let border_right = probe.sample(
+            &weather,
+            &terrain,
+            &chunks,
+            [0.001, 240.0, -4.5],
+            Default::default(),
+        );
+        assert_eq!(border_left, border_right);
+        assert_eq!(probe.fallback_samples, 2);
+    }
+
+    #[cfg(feature = "bevy")]
+    #[test]
+    fn prepared_surface_weather_uses_exact_cached_column_without_generation_and_respects_seasons() {
+        let terrain = TerraGenerator::new(terra_core::WorldConfig {
+            biomes: false,
+            caves: false,
+            trees: false,
+            rivers: false,
+            landscape_revision: 0,
+            base_height: 20.0,
+            hill_amplitude: 0.0,
+            mountain_amplitude: 0.0,
+            ..Default::default()
+        })
+        .unwrap();
+        let prepared = crate::SectionGenerator::new(terrain.clone())
+            .prepare_column([-1, -1], true)
+            .unwrap();
+        let mut chunks = crate::streaming::ChunkStore::default();
+        chunks.set_prepared_column_for_test([-1, -1], Some(std::sync::Arc::new(prepared)));
+        let weather = wet_weather();
+        let mut probe = SurfaceWeatherProbe::default();
+        let clock = terra_core::WorldClock::default();
+        let near = probe.sample(&weather, &terrain, &chunks, [-1.0, 20.0, -1.0], clock);
+        assert_eq!(
+            probe.sample(&weather, &terrain, &chunks, [-1.0, 356.0, -1.0], clock),
+            near
+        );
+        assert_eq!(
+            near,
+            from_surface(
+                &weather,
+                chunks.surface_column_at(-1, -1).unwrap(),
+                terrain.config().sea_level,
+                clock.season(terrain.config().seasons)
+            )
+        );
+        assert_eq!(probe.fallback_samples, 0);
+        let winter = probe.sample(
+            &weather,
+            &terrain,
+            &chunks,
+            [-1.0, 356.0, -1.0],
+            terra_core::WorldClock { day: 21, ..clock },
+        );
+        assert!(winter.snow > 0.99 && winter.rain == 0.0);
+        assert_eq!(probe.fallback_samples, 0);
+    }
+
     #[test]
     fn highlands_always_receive_snow_instead_of_rain_even_during_summer_storms() {
         let terrain = TerraGenerator::new(Default::default()).unwrap();

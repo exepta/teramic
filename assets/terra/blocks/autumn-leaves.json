@@ -5,7 +5,7 @@
   "id": 8,
   "name": "Autumn Foliage",
   "render_kind": "cube",
-  "bevel_width": 0.22,
+  "bevel_width": 0.0,
   "materials": {
     "Autumn crown": {
       "texture_pattern": "canopy",

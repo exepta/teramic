@@ -284,10 +284,15 @@ fn local_weather(
     authority: Option<Res<WorldWeather>>,
     clock: Option<Res<terra_core::WorldClock>>,
     preview: Option<Res<WeatherPreview>>,
-    terrain: Res<WorldTerrain>,
+    world: (
+        Res<WorldTerrain>,
+        Res<ChunkStore>,
+        Local<terra_world::weather::SurfaceWeatherProbe>,
+    ),
     cameras: Query<&Transform, With<TerraCamera>>,
     mut visual: ResMut<WeatherVisual>,
 ) {
+    let (terrain, chunks, mut weather_probe) = world;
     let Some(camera) = cameras.iter().next() else {
         return;
     };
@@ -332,9 +337,10 @@ fn local_weather(
             flash,
         }
     } else if let Some(authority) = authority {
-        let local = terra_world::weather::sample_at(
+        let local = weather_probe.sample(
             &authority,
             &terrain.0,
+            &chunks,
             camera.translation.to_array().map(f64::from),
             clock.as_deref().copied().unwrap_or_default(),
         );

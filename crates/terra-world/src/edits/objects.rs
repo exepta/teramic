@@ -10,6 +10,7 @@ pub struct BlockObjectState {
     #[serde(default)]
     pub wood: terra_core::WoodSpecies,
 }
+
 impl BlockObjectState {
     pub fn from_yaw(yaw: f32) -> Self {
         Self {
@@ -32,17 +33,34 @@ impl BlockObjectState {
             })
     }
     pub fn valid_for(self, position: [i64; 3], material: u16) -> bool {
+        if material == terra_core::crusher::CRANK_MATERIAL {
+            return self.facing < 4
+                && !self.secondary
+                && position
+                    .iter()
+                    .all(|value| value.unsigned_abs() <= 1_000_000)
+                && self.peer.is_some_and(|anchor| {
+                    anchor.iter().all(|value| value.unsigned_abs() <= 1_000_000)
+                        && position
+                            == std::array::from_fn(|axis| anchor[axis] + self.right()[axis] * 2)
+                });
+        }
         self.valid_at(position)
             && match material {
+                131 => {
+                    self.facing < terra_core::flower_pot::STATES
+                        && self.peer.is_none()
+                        && !self.secondary
+                }
                 98 => self.facing <= 7 && self.peer.is_none() && !self.secondary,
                 5 => self.facing == 8 && self.peer.is_none() && !self.secondary,
-                74..=97 => {
+                id if terra_core::construction::is_shape(id) => {
                     terra_core::construction::valid_facing(material, self.facing)
                         && self.peer.is_none()
                         && !self.secondary
                 }
                 71..=73 => {
-                    self.facing < 28
+                    self.facing < terra_core::beds::BED_FACING_COUNT
                         && self.peer.is_some_and(|peer| {
                             let forward = [[0, 0, 1], [1, 0, 0], [0, 0, -1], [-1, 0, 0]]
                                 [usize::from(self.facing % 4)];
@@ -52,7 +70,16 @@ impl BlockObjectState {
                         })
                 }
                 28 | 29 => self.facing < 4 && self.peer.is_none_or(|peer| peer[1] == position[1]),
-                59 | 65..=67 => {
+                99 => {
+                    self.facing < 4
+                        && self.peer.is_some_and(|peer| {
+                            peer == std::array::from_fn(|axis| {
+                                position[axis]
+                                    + self.right()[axis] * if self.secondary { -1 } else { 1 }
+                            })
+                        })
+                }
+                59 | 65..=67 | 139 => {
                     self.facing < if material == 59 { 4 } else { 8 }
                         && self.peer.is_some_and(|peer| {
                             peer == [
@@ -70,7 +97,7 @@ impl BlockObjectState {
                         && !self.secondary
                 }
                 61..=64 => self.facing < 4 && self.peer.is_none() && !self.secondary,
-                68..=70 => self.facing < 8 && self.peer.is_none() && !self.secondary,
+                68..=70 | 140 => self.facing < 8 && self.peer.is_none() && !self.secondary,
                 40 => {
                     (self.facing == 0 || (4..8).contains(&self.facing))
                         && self.peer.is_none()
@@ -81,6 +108,25 @@ impl BlockObjectState {
     }
 }
 impl EditJournal {
+    /// Public placement metadata without cloning a complete section delta or
+    /// inspecting private machine inventories. Suitable for loaded-area renderers.
+    pub fn object_states_in_section(
+        &self,
+        section: terra_voxel::SectionPos,
+    ) -> impl Iterator<Item = ([i64; 3], u16, BlockObjectState)> + '_ {
+        let origin = section.origin().ok();
+        self.sections
+            .get(&section)
+            .into_iter()
+            .flat_map(move |edits| {
+                edits.objects.iter().filter_map(move |(local, state)| {
+                    let origin = origin?;
+                    let position = std::array::from_fn(|axis| origin[axis] + local[axis] as i64);
+                    Some((position, *edits.blocks.get(local)?, *state))
+                })
+            })
+    }
+
     pub fn object_states(&self) -> impl Iterator<Item = ([i64; 3], u16, BlockObjectState)> + '_ {
         self.sections.iter().flat_map(|(section, edits)| {
             edits.objects.iter().filter_map(move |(local, state)| {
@@ -99,9 +145,6 @@ impl EditJournal {
         position: [i64; 3],
         state: Option<BlockObjectState>,
     ) -> Result<Vec<terra_voxel::SectionPos>, String> {
-        if state.is_some_and(|state| !state.valid_at(position)) {
-            return Err("Invalid block object state".into());
-        }
         if self.object_state(position) == state {
             return Ok(Vec::new());
         }
@@ -122,3 +165,7 @@ impl EditJournal {
         Ok(affected)
     }
 }
+
+#[cfg(test)]
+#[path = "objects_pot_tests.rs"]
+mod flower_pot_tests;

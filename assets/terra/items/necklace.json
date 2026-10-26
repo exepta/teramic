@@ -1,0 +1,13 @@
+{
+  "item": {
+    "accessory": "necklace"
+  },
+  "name": "Necklace",
+  "description": "A polished pendant worn close to the heart.",
+  "equipment": {
+    "slot": "necklace",
+    "armor_points": 0,
+    "health_bonus": 10,
+    "stamina_bonus": 0
+  }
+}

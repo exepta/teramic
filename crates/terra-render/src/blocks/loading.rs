@@ -129,6 +129,7 @@ pub(crate) fn load_blocks(
                     }
                 }
                 Err(error) => {
+                    tracing::error!(%error, "Cannot load item metadata");
                     assets.error = Some(error);
                     return;
                 }
@@ -344,6 +345,7 @@ fn load_prop_materials(
         )
     };
     PropMaterials {
+        crop: material([1.0, 1.0, 1.0, 1.0]),
         foliage: [
             material([0.128, 0.256, 0.060, 1.0]),
             material([0.224, 0.368, 0.096, 1.0]),
@@ -363,6 +365,8 @@ fn load_prop_materials(
             material([0.065, 0.24, 0.70, 1.0]),
             material([0.69, 0.33, 0.51, 1.0]),
             material([0.38, 0.20, 0.57, 1.0]),
+            material([0.94, 0.29, 0.045, 1.0]),
+            material([0.27, 0.69, 0.20, 1.0]),
         ],
         mushroom: material([0.60, 0.16, 0.09, 1.0]),
         stone: material([0.46, 0.49, 0.43, 1.0]),
@@ -654,6 +658,18 @@ fn collect_templates(
         }
         if definition.model_layout == ModelLayout::Scene {
             for (name, handle) in &gltf.named_materials {
+                if matches!(
+                    definition.id,
+                    terra_core::crusher::MATERIAL | terra_core::crusher::HAND_CRANK_MATERIAL
+                ) && let Some(rotor) = crate::crushers::rotor_material(name)
+                    && let Some(index) = gltf
+                        .materials
+                        .iter()
+                        .position(|material| material == handle)
+                    && let Some(slot) = assets.material_slots.get(&(definition.id, index))
+                {
+                    templates.crusher_moving_materials.insert(*slot, rotor);
+                }
                 if (71..=73).contains(&definition.id)
                     && name.starts_with("blanket_")
                     && let Some(index) = gltf
@@ -664,7 +680,7 @@ fn collect_templates(
                 {
                     templates.blanket_materials.insert(*slot);
                 }
-                if (65..=70).contains(&definition.id)
+                if terra_world::objects::is_opening(definition.id)
                     && name.starts_with("leaf_")
                     && let Some(index) = gltf
                         .materials
@@ -685,6 +701,7 @@ fn collect_templates(
                 }
             }
             let model = read_scene(definition.id, gltf, source, assets)?;
+            templates.animated_chests |= definition.id == 29;
             if definition.id == 40 {
                 for primitive in &model {
                     let material = assets
@@ -990,7 +1007,9 @@ fn bake_transform(
             .transform_point3(Vec3::from_array(*position))
             .to_array();
         if position.iter().enumerate().any(|(axis, value)| {
-            let maximum = if (matches!(id, 59 | 65..=67) && axis == 1)
+            let maximum = if id == terra_core::crusher::MATERIAL && axis == 1 {
+                1.25
+            } else if (matches!(id, 59 | 65..=67 | 139) && axis == 1)
                 || (terra_core::beds::is_bed(id) && axis == 2)
             {
                 2.0

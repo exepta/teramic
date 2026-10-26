@@ -29,7 +29,7 @@ pub(super) fn bounds(batches: &[MeshBatch]) -> Option<(Vec3, Vec3)> {
     }))
 }
 
-pub(super) fn clip(
+pub(crate) fn clip(
     batches: &[MeshBatch],
     axis: usize,
     plane: f32,

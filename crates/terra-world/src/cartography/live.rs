@@ -459,7 +459,7 @@ impl DetailTileSnapshot {
             height: (position[1] + 1).clamp(i64::from(i16::MIN), i64::from(i16::MAX)) as i16,
             water_depth: depth,
             known: true,
-            canopy: matches!(material, 7..=9),
+            canopy: matches!(material, 7..=9 | 132 | 133),
             ..Default::default()
         };
         if let Some(surface) = self
@@ -560,7 +560,11 @@ fn opaque_floor(material: u16) -> bool {
         material.is_solid()
             && !matches!(
                 material,
-                MaterialId::Leaves | MaterialId::AutumnLeaves | MaterialId::SilverLeaves
+                MaterialId::Leaves
+                    | MaterialId::AutumnLeaves
+                    | MaterialId::SilverLeaves
+                    | MaterialId::CherryLeaves
+                    | MaterialId::WhiteCherryLeaves
             )
     })
 }

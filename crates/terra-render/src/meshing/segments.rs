@@ -9,7 +9,7 @@ struct PreviousTriangle {
     color: [f32; 3],
 }
 
-pub(super) fn append(
+pub(crate) fn append(
     batches: &mut BTreeMap<usize, MeshBatch>,
     material_slot: usize,
     material: u16,

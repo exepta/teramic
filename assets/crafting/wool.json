@@ -1,0 +1,10 @@
+{
+  "id": "teramic::wool_block",
+  "name": "Wool Block",
+  "station": "hand",
+  "output": {"item": {"block": 103}, "count": 1},
+  "pattern": {"kind": "shaped", "width": 2, "height": 2, "cells": [
+    {"item": {"animal": "wool"}, "count": 1}, {"item": {"animal": "wool"}, "count": 1},
+    {"item": {"animal": "wool"}, "count": 1}, {"item": {"animal": "wool"}, "count": 1}
+  ]}
+}

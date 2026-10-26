@@ -6,4 +6,6 @@ pub struct DebugSettings {
     pub enabled: bool,
     pub block_placement: bool,
     pub creature_inspection: bool,
+    pub creature_bounds: bool,
+    pub chunk_borders: bool,
 }

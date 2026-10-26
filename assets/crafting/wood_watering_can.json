@@ -1,0 +1,63 @@
+{
+  "id": "teramic::wood_watering_can",
+  "name": "Wood Watering Can",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "tool": "wood_watering_can"
+    },
+    "count": 1
+  },
+  "pattern": {
+    "kind": "shaped",
+    "width": 3,
+    "height": 3,
+    "cells": [
+      null,
+      {
+        "item": {
+          "block": 16
+        },
+        "wood": true,
+        "count": 1
+      },
+      null,
+      {
+        "item": {
+          "block": 16
+        },
+        "wood": true,
+        "count": 1
+      },
+      null,
+      {
+        "item": {
+          "block": 16
+        },
+        "wood": true,
+        "count": 1
+      },
+      {
+        "item": {
+          "block": 16
+        },
+        "wood": true,
+        "count": 1
+      },
+      {
+        "item": {
+          "block": 16
+        },
+        "wood": true,
+        "count": 1
+      },
+      {
+        "item": {
+          "block": 16
+        },
+        "wood": true,
+        "count": 1
+      }
+    ]
+  }
+}

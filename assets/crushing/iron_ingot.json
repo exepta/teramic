@@ -1,0 +1,1 @@
+{"id":10615,"key":"teramic::crush_iron_ingot","name":"Iron Dust","input":{"mineral":"iron_ingot"},"output":{"item":{"dust":"iron"},"count":1},"seconds":4}

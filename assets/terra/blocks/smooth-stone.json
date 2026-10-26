@@ -5,7 +5,7 @@
   "id": 12,
   "name": "Smooth Stone",
   "render_kind": "cube",
-  "bevel_width": 0.015,
+  "bevel_width": 0.0,
   "materials": {
     "Polished stone": {
       "texture_pattern": "smooth_stone",

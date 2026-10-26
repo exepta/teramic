@@ -2,7 +2,7 @@ use super::*;
 use crate::{DamageCause, ItemKind, SurvivalVitals, creatures::AnimalProduct};
 
 #[test]
-fn all_thirteen_effect_definitions_have_valid_stable_unique_identities() {
+fn all_effect_definitions_have_valid_stable_unique_identities() {
     for (index, kind) in EffectKind::ALL.into_iter().enumerate() {
         let definition = effect_definition(kind);
         assert!(definition.valid());
@@ -20,6 +20,31 @@ fn all_thirteen_effect_definitions_have_valid_stable_unique_identities() {
         assert_eq!(state.iter().count(), 1);
     }
     assert!(std::mem::size_of::<SurvivalVitals>() <= 256);
+}
+
+#[test]
+fn night_vision_is_an_append_only_registered_effect_with_legacy_slot_compatibility() {
+    assert_eq!(EffectKind::ShieldPower.index(), 12);
+    assert_eq!(EffectKind::NightVision.index(), 13);
+    assert_eq!(EffectKind::NightVision.identifier(), "teramic::nightvision");
+    let mut effects = StatusEffects::default();
+    for kind in EffectKind::ALL
+        .into_iter()
+        .filter(|kind| *kind != EffectKind::NightVision)
+    {
+        effects.apply(kind, 30.0, 1);
+    }
+    let old = serde_json::to_string(&effects).unwrap();
+    let mut loaded: StatusEffects = serde_json::from_str(&old).unwrap();
+    assert_eq!(loaded.iter().count(), 13);
+    assert!(!loaded.contains(EffectKind::NightVision));
+    assert!(loaded.apply(EffectKind::NightVision, 200.0, 2));
+    assert!(loaded.valid());
+    let bytes = serde_json::to_vec(&loaded).unwrap();
+    assert_eq!(
+        serde_json::from_slice::<StatusEffects>(&bytes).unwrap(),
+        loaded
+    );
 }
 
 #[test]

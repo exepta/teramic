@@ -9,6 +9,10 @@ impl EditJournal {
                 self.object_state(position).is_some_and(|s| !s.secondary)
                     && terra_core::furnace::valid_inventory(inventory)
             }
+            Some(99) => {
+                self.object_state(position).is_some_and(|s| !s.secondary)
+                    && terra_core::crusher::valid_inventory(inventory)
+            }
             _ => false,
         }
     }
@@ -41,6 +45,126 @@ impl EditJournal {
     }
     pub fn remove_furnace(&mut self, position: [i64; 3]) {
         self.furnaces.remove(&position);
+    }
+    pub fn crushers(
+        &self,
+    ) -> impl Iterator<Item = ([i64; 3], &terra_core::crusher::CrusherState)> + '_ {
+        self.crushers
+            .iter()
+            .map(|(&position, state)| (position, state))
+    }
+    pub fn crusher_at(&self, position: [i64; 3]) -> Option<&terra_core::crusher::CrusherState> {
+        self.crushers.get(&position)
+    }
+    /// Live drive state is never written into region records or terrain deltas.
+    pub fn crusher_driven(&self, position: [i64; 3]) -> bool {
+        self.crusher_driven.contains(&position)
+    }
+    pub fn replace_crusher_drives(&mut self, driven: std::collections::HashSet<[i64; 3]>) {
+        self.crusher_driven = driven;
+    }
+    pub fn valid_crusher(&self, position: [i64; 3]) -> bool {
+        self.block(position) == Some(99)
+            && self.object_state(position).is_some_and(|state| {
+                !state.secondary
+                    && state.valid_for(position, 99)
+                    && state.peer.is_some_and(|peer| {
+                        self.block(peer) == Some(99)
+                            && self.object_state(peer).is_some_and(|other| {
+                                other.secondary
+                                    && other.peer == Some(position)
+                                    && other.facing == state.facing
+                                    && other.valid_for(peer, 99)
+                            })
+                    })
+            })
+    }
+    pub fn crusher_primary(&self, position: [i64; 3]) -> Option<[i64; 3]> {
+        let selected = self.object_state(position)?;
+        let anchor = if selected.secondary {
+            selected.peer?
+        } else {
+            position
+        };
+        self.valid_crusher(anchor).then_some(anchor)
+    }
+    pub fn crusher_crank_position(&self, anchor: [i64; 3]) -> Option<[i64; 3]> {
+        self.valid_crusher(anchor).then(|| {
+            let right = self.object_state(anchor).unwrap_or_default().right();
+            std::array::from_fn(|axis| anchor[axis] + right[axis] * 2)
+        })
+    }
+    pub fn crank_anchor(&self, position: [i64; 3]) -> Option<[i64; 3]> {
+        let state = self.object_state(position)?;
+        let anchor = state.peer?;
+        (self.block(position) == Some(terra_core::crusher::CRANK_MATERIAL)
+            && state.valid_for(position, terra_core::crusher::CRANK_MATERIAL)
+            && self.valid_crusher(anchor)
+            && self
+                .object_state(anchor)
+                .is_some_and(|crusher| crusher.facing == state.facing))
+        .then_some(anchor)
+    }
+    pub fn crushers_in_section(
+        &self,
+        section: terra_voxel::SectionPos,
+    ) -> impl Iterator<Item = [i64; 3]> + '_ {
+        self.crusher_sections
+            .get(&section)
+            .into_iter()
+            .flatten()
+            .copied()
+    }
+    pub fn set_crusher(
+        &mut self,
+        position: [i64; 3],
+        state: terra_core::crusher::CrusherState,
+    ) -> Result<(), String> {
+        let inventory = self.container_at(position).cloned().unwrap_or_default();
+        self.commit_crusher(position, state, inventory).map(|_| ())
+    }
+    /// A completion consumes input and publishes its output in the same save revision.
+    pub fn commit_crusher(
+        &mut self,
+        position: [i64; 3],
+        state: terra_core::crusher::CrusherState,
+        inventory: Inventory,
+    ) -> Result<bool, String> {
+        if !state.valid()
+            || !self.valid_crusher(position)
+            || !self.valid_container(position, &inventory)
+        {
+            return Err("Invalid or orphaned crusher state".into());
+        }
+        if self.crushers.get(&position) == Some(&state)
+            && self.container_at(position) == Some(&inventory)
+        {
+            return Ok(false);
+        }
+        let revision = self
+            .gameplay()
+            .revision
+            .checked_add(1)
+            .ok_or("Crusher revision overflow")?;
+        self.crushers.insert(position, state);
+        self.crusher_sections
+            .entry(terra_voxel::global_to_section(position).0)
+            .or_default()
+            .insert(position);
+        self.containers.insert(position, inventory);
+        self.gameplay_mut().revision = revision;
+        Ok(true)
+    }
+    pub fn remove_crusher(&mut self, position: [i64; 3]) {
+        self.crushers.remove(&position);
+        self.crusher_driven.remove(&position);
+        let section = terra_voxel::global_to_section(position).0;
+        if let Some(positions) = self.crusher_sections.get_mut(&section) {
+            positions.remove(&position);
+            if positions.is_empty() {
+                self.crusher_sections.remove(&section);
+            }
+        }
     }
     pub fn can_record_furniture(&self, count: usize) -> bool {
         u64::try_from(count)

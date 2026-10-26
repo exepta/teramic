@@ -6,7 +6,7 @@
   "creative_category": "wood",
   "render_kind": "cube",
   "surface": "wood",
-  "bevel_width": 0.09,
+  "bevel_width": 0.0,
   "materials": {
     "Spruce bark": { "texture_pattern": "spruce_bark" },
     "Spruce end grain": { "texture_pattern": "spruce_end" }

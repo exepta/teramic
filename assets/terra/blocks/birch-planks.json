@@ -5,7 +5,7 @@
   "id": 17,
   "name": "Birch Planks",
   "render_kind": "cube",
-  "bevel_width": 0.018,
+  "bevel_width": 0.0,
   "materials": {
     "Birch boards": {
       "base_color": [

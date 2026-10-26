@@ -21,6 +21,11 @@ struct Fixture {
     requested: bool,
 }
 const CENTER: Vec3 = Vec3::new(0.5, 201.0, 0.5);
+const STAGES: usize = 18;
+
+fn third_person(stage: usize) -> bool {
+    matches!(stage, 4 | 14 | 15)
+}
 
 pub(crate) fn install(app: &mut App) {
     if !std::env::args().any(|a| a == "--smoke-test-hands") {
@@ -70,6 +75,14 @@ fn setup(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
+    commands.spawn((
+        DirectionalLight {
+            illuminance: 200.0,
+            ..default()
+        },
+        Transform::from_xyz(2.0, 4.0, 3.0).looking_at(Vec3::ZERO, Vec3::Y),
+        bevy::camera::visibility::RenderLayers::from_layers(&(0..32).collect::<Vec<_>>()),
+    ));
     commands.spawn((PlayerBody, Transform::from_translation(CENTER)));
     commands.spawn((
         Mesh3d(meshes.add(Cuboid::new(12.0, 0.05, 12.0))),
@@ -86,7 +99,14 @@ fn drive(world: &mut World) {
     let item = match stage {
         0 => ItemKind::Block(3),
         1 => ItemKind::Tool(ToolKind::StonePickaxe),
-        2 | 3 => ItemKind::Tool(ToolKind::WoodSword),
+        2 | 3 => ItemKind::Tool(ToolKind::IronSword),
+        7 => ItemKind::Tool(ToolKind::IronAxe),
+        8 => ItemKind::Tool(ToolKind::DiamondPickaxe),
+        9 => ItemKind::Tool(ToolKind::IronHoe),
+        10 | 13 | 15 => ItemKind::Tool(ToolKind::IronWateringCan),
+        11 | 12 | 14 => ItemKind::Tool(ToolKind::IronScythe),
+        16 => ItemKind::Tool(ToolKind::Bucket),
+        17 => ItemKind::Tool(ToolKind::WaterBucket),
         _ => ItemKind::Block(40),
     };
     let mut session = world.resource_mut::<ClientSession>();
@@ -98,15 +118,15 @@ fn drive(world: &mut World) {
     world.resource_mut::<terra_player::PlayerInputBlock>().0 = false;
     world
         .resource_mut::<CameraPerspective>()
-        .clone_from(&if stage == 4 {
+        .clone_from(&if third_person(stage) {
             CameraPerspective::ThirdPerson
         } else {
             CameraPerspective::FirstPerson
         });
     world
         .resource_mut::<terra_player::interaction::InteractionMotion>()
-        .swinging = stage == 3;
-    let eye = if stage == 4 {
+        .swinging = matches!(stage, 3 | 12..=15);
+    let eye = if third_person(stage) {
         Transform::from_translation(CENTER + Vec3::new(2.0, 1.0, -3.7)).looking_at(CENTER, Vec3::Y)
     } else {
         Transform::from_translation(CENTER + Vec3::Y * 0.72)
@@ -139,7 +159,7 @@ fn inspect(world: &mut World) {
         let f = world.resource::<Fixture>();
         (f.stage, f.entered.elapsed(), f.requested, f.captures)
     };
-    if stage >= 7 {
+    if stage >= STAGES {
         return;
     }
     if world.resource::<Fixture>().start.elapsed() > Duration::from_secs(90) {
@@ -153,7 +173,7 @@ fn inspect(world: &mut World) {
             f.stage += 1;
             f.requested = false;
             f.entered = Instant::now();
-            if f.stage >= 7 {
+            if f.stage >= STAGES {
                 info!("Native equipped-item fixture passed");
                 world.write_message(AppExit::Success);
             }
@@ -186,7 +206,7 @@ fn inspect(world: &mut World) {
         world.write_message(AppExit::error());
         return;
     }
-    if stage != 4 && stage != 6 && !edge_anchored(world, &held) {
+    if !third_person(stage) && stage != 6 && !edge_anchored(world, &held) {
         error!(
             stage,
             "Equipped geometry must remain visible and cross the lower screen edge"

@@ -1,10 +1,130 @@
 use super::*;
+
+#[test]
+fn tmi_offers_only_white_textile_bases_but_keeps_the_pot_and_existing_bed_contract() {
+    for base in [
+        terra_core::textiles::WHITE_WOOL,
+        terra_core::textiles::WHITE_CARPET,
+    ] {
+        assert!(catalog_item(ItemKind::Block(base)));
+        for color in terra_core::beds::DyeColor::ALL {
+            let id = terra_core::textiles::dyed(base, color).unwrap();
+            assert_eq!(
+                catalog_item(ItemKind::Block(id)),
+                color == terra_core::beds::DyeColor::White
+            );
+        }
+    }
+    assert!(catalog_item(ItemKind::Block(
+        terra_core::flower_pot::MATERIAL
+    )));
+    assert!(catalog_item(ItemKind::Block(71)));
+}
+
+#[test]
+fn farming_browser_shows_real_seed_and_food_items_without_internal_growth_props() {
+    let palette = BlockPalette::default();
+    let items = available_items(
+        GameMode::Creative,
+        &terra_core::Inventory::default(),
+        &palette,
+    );
+    for crop in terra_core::CropItem::ALL {
+        let item = ItemKind::Crop(crop);
+        assert_eq!(
+            items.iter().filter(|&&candidate| candidate == item).count(),
+            1
+        );
+        assert!(preview_key(item).starts_with("Item preview teramic::"));
+        let view = view::item_view(item, 1, &palette);
+        assert!(!view.empty && !view.name.is_empty() && !view.preview_key.is_empty());
+    }
+    assert!(!items.iter().any(|item| matches!(item, ItemKind::Prop(kind) if terra_core::CropKind::from_prop(*kind).is_some())));
+}
 use terra_core::{ControlsConfig, InputBinding};
 use terra_network::{
     client::ContainerRequest,
     protocol::inventory::{ContainerCommand, ContainerHalf, ContainerSnapshot, InventoryCommand},
 };
 use terra_player::interaction::BlockChoice;
+
+#[test]
+fn equipment_clicks_and_shift_removal_use_real_inventory_commands() {
+    let mut app = app(GameMode::Survival);
+    action(&mut app, InventoryAction::Toggle);
+    action(
+        &mut app,
+        InventoryAction::Pointer {
+            command: "equipment".into(),
+            index: Some(8),
+            item: String::new(),
+            secondary: true,
+        },
+    );
+    assert!(matches!(
+        requests(&mut app).as_slice(),
+        [InventoryCommand {
+            action: ServerAction::EquipmentClick {
+                slot: 8,
+                secondary: true
+            },
+            ..
+        }]
+    ));
+    // Complete the previous request before dispatching another serial transaction.
+    app.world_mut()
+        .resource_mut::<ClientSession>()
+        .inventory_response += 1;
+    app.update();
+    app.world_mut()
+        .resource_mut::<ButtonInput<KeyCode>>()
+        .press(KeyCode::ShiftLeft);
+    action(
+        &mut app,
+        InventoryAction::Pointer {
+            command: "equipment".into(),
+            index: Some(2),
+            item: String::new(),
+            secondary: false,
+        },
+    );
+    assert!(matches!(
+        requests(&mut app).as_slice(),
+        [InventoryCommand {
+            action: ServerAction::EquipmentQuickMove { slot: 2 },
+            ..
+        }]
+    ));
+}
+
+#[test]
+fn equipment_view_refreshes_when_stats_arrive_before_the_bag_revision() {
+    use terra_core::{ArmorItem, EquipmentSlot};
+    let mut app = app(GameMode::Survival);
+    action(&mut app, InventoryAction::Toggle);
+    let before = app.world().resource::<ClientSession>().inventory.revision;
+    let item = ItemKind::Armor(ArmorItem::ALL[0]);
+    app.world_mut()
+        .resource_mut::<ClientSession>()
+        .stats
+        .equipment
+        .set(EquipmentSlot::Helmet, Some(item));
+    app.update();
+    assert_eq!(
+        app.world().resource::<ClientSession>().inventory.revision,
+        before
+    );
+    let slot = &app.world().resource::<InventoryView>().equipment[0];
+    assert!(!slot.item.empty);
+    assert_eq!(slot.item.preview_key, preview_key(item));
+    assert!(slot.item.description.contains("Armor:"));
+    let serialized = toml::Value::try_from(app.world().resource::<InventoryView>()).unwrap();
+    assert_eq!(
+        serialized["equipment"][0]["preview_key"].as_str(),
+        Some(preview_key(item).as_str())
+    );
+    assert!(serialized["equipment"][0].get("item").is_none());
+}
 
 fn food_input_app(binding: InputBinding) -> App {
     let mut app = app(GameMode::Survival);
@@ -28,6 +148,179 @@ fn food_requests(app: &mut App) -> Vec<Option<u8>> {
         .drain()
         .map(|request| request.0)
         .collect()
+}
+
+#[test]
+fn using_a_real_nest_takes_priority_over_eating_a_held_food_item() {
+    use terra_world::props::{PropHit, PropId, PropKind, WorldProp};
+    let mut app = food_input_app(InputBinding::Key(KeyCode::KeyU));
+    app.insert_resource(terra_player::TargetWorld(Some(
+        terra_player::WorldTarget::Prop(PropHit {
+            prop: WorldProp {
+                id: PropId(121),
+                kind: PropKind::BeeNest,
+                position: [3.5, 3.0, 3.5],
+                rotation: 0.0,
+                scale: 1.0,
+                variant: 0,
+                section: terra_voxel::SectionPos::default(),
+                removed: false,
+            },
+            distance: 2.0,
+        }),
+    )));
+    app.world_mut()
+        .resource_mut::<ButtonInput<KeyCode>>()
+        .press(KeyCode::KeyU);
+    for _ in 0..3 {
+        app.update();
+        assert!(food_requests(&mut app).is_empty());
+    }
+    app.world_mut()
+        .resource_mut::<terra_player::TargetWorld>()
+        .0 = None;
+    app.update();
+    assert_eq!(food_requests(&mut app), vec![Some(0)]);
+}
+
+#[test]
+fn mounted_crank_uses_rebound_hold_without_eating_or_unlocking_the_camera() {
+    use terra_voxel::{BlockSection, SectionPos, blocks::BlockHit};
+    use terra_world::{
+        edits::{BlockObjectState, EditJournal},
+        streaming::{ChunkStore, LoadedSection},
+    };
+    for binding in [
+        InputBinding::Key(KeyCode::KeyU),
+        InputBinding::Mouse(MouseButton::Right),
+    ] {
+        let mut app = food_input_app(binding);
+        app.init_resource::<terra_network::client::CrankInput>()
+            .init_resource::<terra_player::CameraInputState>()
+            .add_systems(
+                Update,
+                drive_crusher.after(actions).before(held_consumption),
+            );
+        app.world_mut()
+            .resource_mut::<terra_player::CameraInputState>()
+            .captured = true;
+        let mut journal = EditJournal::default();
+        let mut data = BlockSection::empty(SectionPos::default()).unwrap();
+        for (position, material, peer, secondary) in [
+            ([1, 1, 1], 99, [2, 1, 1], false),
+            ([2, 1, 1], 99, [1, 1, 1], true),
+            ([3, 1, 1], 100, [1, 1, 1], false),
+        ] {
+            journal.record(position, material).unwrap();
+            journal
+                .set_object_state(
+                    position,
+                    Some(BlockObjectState {
+                        peer: Some(peer),
+                        secondary,
+                        ..default()
+                    }),
+                )
+                .unwrap();
+            data.set_block(position.map(|p| p as usize), material)
+                .unwrap();
+        }
+        let mut chunks = ChunkStore::default();
+        chunks.loaded.insert(
+            SectionPos::default(),
+            LoadedSection {
+                data,
+                mesh: None,
+                mesh_epoch: 0,
+                water_epoch: 0,
+                water: None,
+                props: Vec::new(),
+            },
+        );
+        app.insert_resource(journal)
+            .insert_resource(chunks)
+            .insert_resource(terra_player::TargetWorld(Some(
+                terra_player::WorldTarget::Block(BlockHit {
+                    position: [3, 1, 1],
+                    normal: [1, 0, 0],
+                    distance: 2.0,
+                }),
+            )));
+        match binding {
+            InputBinding::Key(key) => app
+                .world_mut()
+                .resource_mut::<ButtonInput<KeyCode>>()
+                .press(key),
+            InputBinding::Mouse(button) => app
+                .world_mut()
+                .resource_mut::<ButtonInput<MouseButton>>()
+                .press(button),
+            InputBinding::Chord { .. } => unreachable!(),
+        }
+        app.update();
+        assert_eq!(
+            app.world()
+                .resource::<terra_network::client::CrankInput>()
+                .0,
+            Some([3, 1, 1])
+        );
+        assert!(food_requests(&mut app).is_empty());
+        assert!(
+            app.world()
+                .resource::<terra_player::CameraInputState>()
+                .captured
+        );
+        assert!(!app.world().resource::<PlayerInputBlock>().0);
+        assert!(!app.world().resource::<InventoryState>().open);
+        app.world_mut()
+            .resource_mut::<ButtonInput<KeyCode>>()
+            .press(KeyCode::ShiftLeft);
+        app.update();
+        assert_eq!(
+            app.world()
+                .resource::<terra_network::client::CrankInput>()
+                .0,
+            None
+        );
+        app.world_mut()
+            .resource_mut::<ButtonInput<KeyCode>>()
+            .release(KeyCode::ShiftLeft);
+        app.update();
+        assert_eq!(
+            app.world()
+                .resource::<terra_network::client::CrankInput>()
+                .0,
+            Some([3, 1, 1])
+        );
+        app.world_mut().resource_mut::<crate::SettingsView>().open = true;
+        app.update();
+        assert_eq!(
+            app.world()
+                .resource::<terra_network::client::CrankInput>()
+                .0,
+            None
+        );
+        app.world_mut().resource_mut::<crate::SettingsView>().open = false;
+        app.world_mut().resource_mut::<ClientSession>().game_mode = GameMode::Spectator;
+        app.update();
+        assert_eq!(
+            app.world()
+                .resource::<terra_network::client::CrankInput>()
+                .0,
+            None
+        );
+        app.world_mut().resource_mut::<ClientSession>().game_mode = GameMode::Survival;
+        app.world_mut()
+            .resource_mut::<terra_player::TargetWorld>()
+            .0 = None;
+        app.update();
+        assert_eq!(
+            app.world()
+                .resource::<terra_network::client::CrankInput>()
+                .0,
+            None
+        );
+    }
 }
 
 #[test]
@@ -84,6 +377,149 @@ fn rebound_place_key_and_mouse_send_held_food_pulses_and_cancel_on_release_or_me
                 .count(ItemKind::Prop(ResourcePropKind::Mushroom)),
             3,
         );
+    }
+}
+
+#[test]
+fn configured_place_on_creature_does_not_open_or_crank_background_stations_but_explicit_use_does() {
+    use terra_voxel::{BlockSection, SectionPos, blocks::BlockHit};
+    use terra_world::{
+        edits::{BlockObjectState, EditJournal},
+        streaming::{ChunkStore, LoadedSection},
+    };
+    for material in [28, 29, 59, 99, 100] {
+        for (creature, explicit_use) in [(Some(3), false), (Some(3), true), (None, false)] {
+            let mut app = food_input_app(InputBinding::Key(KeyCode::KeyU));
+            app.init_resource::<terra_network::client::CrankInput>()
+                .init_resource::<terra_player::CameraInputState>()
+                .insert_resource(terra_player::TargetCreature(creature))
+                .add_systems(PreUpdate, block_opening_frame)
+                .add_systems(
+                    Update,
+                    drive_crusher.after(actions).before(held_consumption),
+                );
+            app.world_mut()
+                .resource_mut::<terra_player::CameraInputState>()
+                .captured = true;
+            let owner = SectionPos::default();
+            let position = [3, 1, 1];
+            let mut data = BlockSection::empty(owner).unwrap();
+            data.set_block([3, 1, 1], material).unwrap();
+            let mut journal = EditJournal::default();
+            if material == 100 {
+                for (position, material, peer, secondary) in [
+                    ([1, 1, 1], 99, [2, 1, 1], false),
+                    ([2, 1, 1], 99, [1, 1, 1], true),
+                    ([3, 1, 1], 100, [1, 1, 1], false),
+                ] {
+                    data.set_block(position.map(|v| v as usize), material)
+                        .unwrap();
+                    journal.record(position, material).unwrap();
+                    journal
+                        .set_object_state(
+                            position,
+                            Some(BlockObjectState {
+                                peer: Some(peer),
+                                secondary,
+                                ..default()
+                            }),
+                        )
+                        .unwrap();
+                }
+            }
+            let mut chunks = ChunkStore::default();
+            chunks.loaded.insert(
+                owner,
+                LoadedSection {
+                    data,
+                    mesh: None,
+                    mesh_epoch: 0,
+                    water_epoch: 0,
+                    water: None,
+                    props: Vec::new(),
+                },
+            );
+            app.insert_resource(chunks)
+                .insert_resource(journal)
+                .insert_resource(terra_player::TargetWorld(Some(
+                    terra_player::WorldTarget::Block(BlockHit {
+                        position,
+                        normal: [1, 0, 0],
+                        distance: 2.0,
+                    }),
+                )));
+            app.world_mut()
+                .resource_mut::<Messages<InventoryAction>>()
+                .clear();
+            let key = if explicit_use {
+                KeyCode::KeyR
+            } else {
+                KeyCode::KeyU
+            };
+            app.world_mut()
+                .resource_mut::<ButtonInput<KeyCode>>()
+                .press(key);
+            app.update();
+            let station_allowed = creature.is_none() || explicit_use;
+            let opens: Vec<_> = app
+                .world_mut()
+                .resource_mut::<Messages<InventoryAction>>()
+                .drain()
+                .filter(|action| {
+                    matches!(
+                        action,
+                        InventoryAction::OpenChest(_) | InventoryAction::OpenWorkbench(_)
+                    )
+                })
+                .collect();
+            assert_eq!(
+                !opens.is_empty(),
+                station_allowed && material != 100,
+                "material={material}, creature={creature:?}, explicit_use={explicit_use}"
+            );
+            assert_eq!(
+                app.world().resource::<InventoryState>().open,
+                station_allowed && material != 100
+            );
+            assert_eq!(
+                app.world()
+                    .resource::<terra_network::client::CrankInput>()
+                    .0,
+                (station_allowed && material == 100).then_some(position)
+            );
+            assert!(
+                food_requests(&mut app).is_empty(),
+                "background interaction must never start eating"
+            );
+            assert!(
+                app.world()
+                    .resource::<terra_player::CameraInputState>()
+                    .captured
+            );
+            if !station_allowed {
+                assert!(!app.world().resource::<PlayerInputBlock>().0);
+                assert!(
+                    app.world_mut()
+                        .resource_mut::<Messages<ContainerRequest>>()
+                        .drain()
+                        .next()
+                        .is_none()
+                );
+                // Holding Place must not start the crank or consumption on the next frame.
+                app.world_mut()
+                    .resource_mut::<ButtonInput<KeyCode>>()
+                    .clear_just_pressed(key);
+                app.update();
+                assert_eq!(
+                    app.world()
+                        .resource::<terra_network::client::CrankInput>()
+                        .0,
+                    None
+                );
+                assert!(food_requests(&mut app).is_empty());
+                assert!(!app.world().resource::<InventoryState>().open);
+            }
+        }
     }
 }
 
@@ -482,6 +918,71 @@ fn an_open_inventory_waits_for_stable_layout_and_resets_after_closing() {
 }
 
 #[test]
+fn hidden_inventory_prewarms_low_cadence_browser_snapshot_without_revealing_or_capturing_input() {
+    let mut app = App::new();
+    app.insert_resource(InventoryView {
+        visible: true,
+        prewarming: true,
+        layout_style: "opacity: 0; pointer-events: none;".into(),
+        ..default()
+    })
+    .init_resource::<InventoryState>()
+    .init_resource::<PlayerInputBlock>()
+    .add_systems(Update, reveal_layout);
+    app.world_mut().spawn((
+        ElementId("inventory-panel".into()),
+        ComputedNode {
+            size: Vec2::new(704.0, 840.0),
+            ..default()
+        },
+    ));
+    for _ in 0..5 {
+        app.update();
+        assert!(app.world().resource::<InventoryView>().prewarming);
+    }
+    app.world_mut()
+        .resource_mut::<InventoryState>()
+        .page_capacity = 45;
+    app.world_mut()
+        .resource_mut::<InventoryView>()
+        .browser_capacity = 45;
+    app.update();
+    app.update();
+    // A changed capacity requires its own settled materialization, not stale first-frame slots.
+    app.world_mut()
+        .resource_mut::<InventoryState>()
+        .page_capacity = 56;
+    // Simulate the serialized view waiting for a low-frequency UI cadence tick.
+    for _ in 0..8 {
+        app.update();
+        assert!(app.world().resource::<InventoryView>().prewarming);
+    }
+    app.world_mut()
+        .resource_mut::<InventoryView>()
+        .browser_capacity = 56;
+    app.world_mut()
+        .resource_mut::<InventoryState>()
+        .category_dropdown = true;
+    for _ in 0..5 {
+        app.update();
+        assert!(app.world().resource::<InventoryView>().prewarming);
+    }
+    app.world_mut()
+        .resource_mut::<InventoryView>()
+        .category_dropdown = true;
+    for _ in 0..2 {
+        app.update();
+        assert!(app.world().resource::<InventoryView>().prewarming);
+    }
+    app.update();
+    let view = app.world().resource::<InventoryView>();
+    assert!(!view.prewarming);
+    assert!(!view.open);
+    assert!(view.layout_style.contains("opacity: 0"));
+    assert!(!app.world().resource::<PlayerInputBlock>().0);
+}
+
+#[test]
 fn container_opening_never_reveals_the_player_layout_before_its_server_reply() {
     let mut app = App::new();
     app.insert_resource(InventoryView {
@@ -766,6 +1267,78 @@ fn creative_trash_targets_real_selected_stacks_and_prefers_the_cursor() {
             }
         );
         assert_eq!(app.world().resource::<ClientSession>().inventory, before);
+    }
+}
+
+#[test]
+fn control_trash_clears_the_whole_creative_bag_through_authority_only() {
+    for key in [KeyCode::ControlLeft, KeyCode::ControlRight] {
+        let mut app = app(GameMode::Creative);
+        {
+            let mut session = app.world_mut().resource_mut::<ClientSession>();
+            assert!(session.inventory.creative_set(
+                terra_core::INVENTORY_SLOTS - 1,
+                terra_core::ItemStack {
+                    item: ItemKind::Block(6),
+                    count: 41,
+                },
+            ));
+            session.stats.equipment.set(
+                terra_core::EquipmentSlot::Helmet,
+                Some(ItemKind::Armor(terra_core::ArmorItem {
+                    material: terra_core::ArmorMaterial::Iron,
+                    piece: terra_core::ArmorPiece::Helmet,
+                })),
+            );
+        }
+        action(&mut app, InventoryAction::Toggle);
+        app.world_mut()
+            .write_message(crafting::CraftingAction::Search("oak_planks".into()));
+        app.update();
+        add_recipe(&mut app);
+        assert!(
+            app.world()
+                .resource::<crafting::CraftingView>()
+                .grid
+                .iter()
+                .any(|slot| !slot.empty)
+        );
+        assert!(
+            app.world_mut()
+                .resource_mut::<ClientSession>()
+                .inventory
+                .creative_cursor(terra_core::ItemStack {
+                    item: ItemKind::Block(2),
+                    count: 19
+                })
+        );
+        let before = app.world().resource::<ClientSession>().inventory.clone();
+        app.world_mut()
+            .resource_mut::<ButtonInput<KeyCode>>()
+            .press(key);
+        action(&mut app, InventoryAction::Trash);
+        assert_eq!(requests(&mut app)[0].action, ServerAction::CreativeClear);
+        assert_eq!(app.world().resource::<ClientSession>().inventory, before);
+        {
+            let mut session = app.world_mut().resource_mut::<ClientSession>();
+            session.inventory = terra_core::Inventory {
+                revision: before.revision + 1,
+                ..default()
+            };
+            session.stats.equipment = default();
+            session.inventory_response += 1;
+            session.last_inventory =
+                Some(terra_network::protocol::inventory::InventoryOutcome::Applied);
+        }
+        app.update();
+        assert!(
+            app.world()
+                .resource::<crafting::CraftingView>()
+                .grid
+                .iter()
+                .all(|slot| slot.empty)
+        );
+        assert!(!app.world().resource::<InventoryView>().trash_available);
     }
 }
 
@@ -1294,6 +1867,117 @@ fn recipe_browser_shows_station_and_missing_errors_and_never_sends_invalid_craft
 }
 
 #[test]
+fn crusher_recipes_preview_and_plus_load_only_the_matching_station() {
+    use super::crafting::{CraftingAction, CraftingView};
+    let recipe = terra_core::crusher::recipes()
+        .iter()
+        .find(|recipe| matches!(recipe.output.item, ItemKind::Dust(_)))
+        .unwrap();
+    let mut app = app(GameMode::Survival);
+    app.world_mut()
+        .resource_mut::<ClientSession>()
+        .inventory
+        .insert(recipe.input, 3);
+    action(&mut app, InventoryAction::Toggle);
+    app.world_mut()
+        .write_message(CraftingAction::Search(recipe.key.clone()));
+    app.update();
+    let view = app.world().resource::<CraftingView>();
+    assert!(view.recipe_open && view.crushing && !view.smelting);
+    assert_eq!(view.recipe_station, "Crusher");
+    assert!(!view.can_apply_recipe);
+    add_recipe(&mut app);
+    assert!(requests(&mut app).is_empty());
+    let anchor = [-1, 60, 2];
+    app.world_mut().resource_mut::<ClientSession>().container = Some(ContainerSnapshot {
+        anchor,
+        workbench: None,
+        furnace: None,
+        crusher: Some(terra_core::crusher::CrusherView::default()),
+        halves: vec![ContainerHalf {
+            position: anchor,
+            inventory: default(),
+        }],
+    });
+    action(
+        &mut app,
+        pointer_action("catalog", None, &item_id(recipe.output.item), false),
+    );
+    assert!(app.world().resource::<CraftingView>().can_apply_recipe);
+    let before = app.world().resource::<ClientSession>().inventory.clone();
+    add_recipe(&mut app);
+    assert_eq!(
+        requests(&mut app)[0].action,
+        ServerAction::LoadCrushingRecipe {
+            recipe: recipe.id,
+            station: anchor
+        }
+    );
+    assert_eq!(app.world().resource::<ClientSession>().inventory, before);
+    assert!(!app.world().resource::<CraftingView>().recipe_open);
+}
+
+#[test]
+fn crusher_progress_updates_without_bag_edits_and_exposes_two_correct_slots() {
+    let mut app = app(GameMode::Survival);
+    let anchor = [4, 60, -8];
+    app.world_mut().resource_mut::<ClientSession>().container = Some(ContainerSnapshot {
+        anchor,
+        workbench: None,
+        furnace: None,
+        crusher: Some(terra_core::crusher::CrusherView {
+            progress: 0.25,
+            working: true,
+            ..default()
+        }),
+        halves: vec![ContainerHalf {
+            position: anchor,
+            inventory: default(),
+        }],
+    });
+    app.update();
+    let view = app.world().resource::<InventoryView>();
+    assert!(view.crusher && !view.furnace && !view.container);
+    assert_eq!(view.title, "Crusher");
+    assert_eq!(view.container_items.len(), 2);
+    assert_eq!(view.crusher_input[0].index, "0");
+    assert_eq!(view.crusher_output[0].index, "1");
+    assert_eq!(view.crusher_progress_style, "width: 25.0%;");
+    app.world_mut()
+        .resource_mut::<ClientSession>()
+        .container
+        .as_mut()
+        .unwrap()
+        .crusher
+        .as_mut()
+        .unwrap()
+        .progress = 0.75;
+    app.update();
+    assert_eq!(
+        app.world()
+            .resource::<InventoryView>()
+            .crusher_progress_style,
+        "width: 75.0%;"
+    );
+}
+
+#[test]
+fn all_dusts_and_flower_dyes_have_crushing_alternatives() {
+    use super::crafting::{CraftingAction, CraftingView};
+    for recipe in terra_core::crusher::recipes() {
+        let mut app = app(GameMode::Creative);
+        action(&mut app, InventoryAction::Toggle);
+        app.world_mut()
+            .write_message(CraftingAction::Search(recipe.key.clone()));
+        app.update();
+        let view = app.world().resource::<CraftingView>();
+        assert!(view.crushing && view.selected, "{}", recipe.key);
+        assert_eq!(view.recipe_output[0].item_id, item_id(recipe.output.item));
+        assert!(!view.smelting);
+    }
+}
+
+#[test]
 fn smelting_recipe_browser_requires_furnace_and_loads_material_without_local_mutation() {
     use super::crafting::{CraftingAction, CraftingView};
     use terra_core::minerals::MineralItem;
@@ -1333,6 +2017,7 @@ fn smelting_recipe_browser_requires_furnace_and_loads_material_without_local_mut
             smoke_cells: 0,
             vented: false,
         }),
+        crusher: None,
         halves: vec![ContainerHalf {
             position: anchor,
             inventory: default(),
@@ -1379,6 +2064,7 @@ fn smelting_recipe_plus_rejects_a_different_material_in_the_furnace() {
                 smoke_cells: 0,
                 vented: false,
             }),
+            crusher: None,
             halves: vec![ContainerHalf {
                 position: anchor,
                 inventory: furnace_inventory,
@@ -1562,7 +2248,12 @@ fn creative_catalog_contains_real_items_and_requests_a_server_stack() {
         .choices
         .iter()
         .map(|block| ItemKind::Block(block.id))
-        .chain(ResourcePropKind::ALL.map(ItemKind::Prop))
+        .chain(
+            ResourcePropKind::ALL
+                .into_iter()
+                .filter(|kind| terra_core::CropKind::from_prop(*kind).is_none())
+                .map(ItemKind::Prop),
+        )
         .chain(ItemKind::EXTRA)
         .collect();
     action(&mut app, InventoryAction::Toggle);
@@ -2562,7 +3253,7 @@ fn prop_descriptions_come_from_the_loaded_registry_metadata() {
 }
 
 #[test]
-fn middle_pick_selects_an_existing_hotbar_block_or_requests_a_server_stack_only_in_creative() {
+fn middle_pick_selects_an_existing_hotbar_block_or_requests_one_block_only_in_creative() {
     let mut app = app(GameMode::Creative);
     {
         let mut session = app.world_mut().resource_mut::<ClientSession>();
@@ -2588,7 +3279,7 @@ fn middle_pick_selects_an_existing_hotbar_block_or_requests_a_server_stack_only_
         ServerAction::CreativeSet {
             slot: 4,
             item: ItemKind::Block(2),
-            count: 128
+            count: 1
         }
     );
     assert_eq!(
@@ -2643,7 +3334,7 @@ fn actual_middle_mouse_uses_the_hit_block_at_negative_coordinates() {
         ServerAction::CreativeSet {
             slot: 0,
             item: ItemKind::Block(MaterialId::Stone as u16),
-            count: 128
+            count: 1
         }
     );
 }
@@ -2881,6 +3572,7 @@ fn chest_snapshot(anchor: [i64; 3], double: bool) -> ContainerSnapshot {
         halves,
         workbench: None,
         furnace: None,
+        crusher: None,
     }
 }
 
@@ -3886,14 +4578,14 @@ fn empty_slot_click_and_q_are_silent_but_a_queued_fill_then_drop_still_executes(
         ServerAction::CreativeSet {
             slot: 0,
             item: ItemKind::Block(3),
-            count: 128
+            count: 1
         }
     );
     action(&mut app, InventoryAction::Drop(false));
     assert!(requests(&mut app).is_empty());
     {
         let mut session = app.world_mut().resource_mut::<ClientSession>();
-        session.inventory.insert(ItemKind::Block(3), 128);
+        session.inventory.insert(ItemKind::Block(3), 1);
         session.inventory_response += 1;
     }
     app.update();

@@ -111,7 +111,15 @@ pub fn fuel_seconds(item: ItemKind) -> Option<f32> {
     static FUELS: OnceLock<Vec<FuelDefinition>> = OnceLock::new();
     FUELS
         .get_or_init(|| {
-            const SOURCES: [(&str, &str); 8] = [
+            const SOURCES: [(&str, &str); 10] = [
+                (
+                    "cherry_log",
+                    include_str!("../../../assets/fuels/cherry_log.json"),
+                ),
+                (
+                    "cherry_planks",
+                    include_str!("../../../assets/fuels/cherry_planks.json"),
+                ),
                 ("coal", include_str!("../../../assets/fuels/coal.json")),
                 ("stick", include_str!("../../../assets/fuels/stick.json")),
                 (
@@ -161,12 +169,13 @@ pub fn fuel_seconds(item: ItemKind) -> Option<f32> {
         .map(|f| f.seconds)
 }
 pub fn slot_capacity(slot: usize, item: ItemKind) -> u16 {
-    match slot {
+    let capacity = match slot {
         INPUT if recipe_for(item).is_some() => STACK_LIMIT,
         FUEL if fuel_seconds(item).is_some() => STACK_LIMIT,
         BELLOWS if matches!(item, ItemKind::Bellows(_)) => 1,
         _ => 0,
-    }
+    };
+    capacity.min(item.max_stack())
 }
 pub fn valid_inventory(inventory: &Inventory) -> bool {
     inventory.valid()

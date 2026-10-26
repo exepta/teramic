@@ -4,10 +4,22 @@ use bevy::{
     prelude::*,
     tasks::{AsyncComputeTaskPool, futures_lite::future},
 };
-use std::sync::Arc;
+use std::{collections::BTreeSet, sync::Arc};
 use terra_voxel::SectionPos;
 
 const BATCH_SIZE: usize = 16;
+
+async fn generate_sections<T, R>(requests: Vec<T>, mut generate: impl FnMut(T) -> R) -> Vec<R> {
+    let mut sections = Vec::with_capacity(requests.len());
+    for request in requests {
+        // Generation is CPU-bound. Release the executor between sections (and
+        // after column preparation) so edits/render work can actually run even
+        // when every physical AsyncCompute worker owns a streaming column.
+        future::yield_now().await;
+        sections.push(generate(request));
+    }
+    sections
+}
 
 pub(super) fn dispatch_jobs(
     settings: Res<StreamingSettings>,
@@ -15,6 +27,7 @@ pub(super) fn dispatch_jobs(
     journal: Res<EditJournal>,
     mut chunks: ResMut<ChunkStore>,
     mut pending: ResMut<PendingSections>,
+    focus: Option<Res<ChunkFocus>>,
 ) {
     let _scope = terra_core::profiling::ScopeTimer::new("streaming.dispatch");
     if chunks.dirty.is_empty() && chunks.queue.is_empty() {
@@ -22,7 +35,102 @@ pub(super) fn dispatch_jobs(
     }
     // Dispatch only consumes worker bookkeeping; publication changes the world.
     let chunks = chunks.bypass_change_detection();
-    while pending.0.len() < settings.max_jobs {
+    // An old column task must not keep a newly edited loaded section captive.
+    // Requeue its other requests and replace it with the newest snapshot.
+    let stale: Vec<_> = pending
+        .0
+        .iter()
+        .filter_map(|(&key, job)| {
+            job.positions
+                .iter()
+                .any(|p| chunks.dirty.contains(p) && chunks.loaded.contains_key(p))
+                .then_some(key)
+        })
+        .collect();
+    for key in stale {
+        if let Some(job) = pending.0.remove(&key) {
+            for position in job.positions {
+                if !chunks.is_wanted(position) {
+                    continue;
+                }
+                if chunks.loaded.contains_key(&position) {
+                    chunks.dirty.insert(position);
+                } else {
+                    chunks.queue.push_back(position);
+                }
+            }
+        }
+    }
+    loop {
+        let urgent = chunks
+            .dirty
+            .iter()
+            .copied()
+            .filter(|p| chunks.loaded.contains_key(p) && !pending.contains(p))
+            .min_by_key(|p| {
+                let point = focus.as_ref().map_or([0.0; 3], |f| f.0);
+                let distance = [p.x, p.y, p.z]
+                    .into_iter()
+                    .enumerate()
+                    .map(|(axis, v)| (v as f64 * 16.0 + 8.0 - point[axis]).powi(2))
+                    .sum::<f64>();
+                (distance as u64, p.y, p.z, p.x)
+            });
+        // One bounded edit slot remains available even when all ordinary column
+        // workers are busy. It publishes one section, never a serial column batch.
+        if pending.0.len() >= settings.max_jobs + usize::from(urgent.is_some()) {
+            break;
+        }
+        if settings.meshes
+            && let Some(position) = urgent
+            && let Some(column) = chunks.columns.get(&[position.x, position.z]).cloned()
+        {
+            chunks.dirty.remove(&position);
+            let loaded = &chunks.loaded[&position];
+            let data = loaded.data.clone();
+            let origin = match position.origin() {
+                Ok(origin) => origin,
+                Err(_) => continue,
+            };
+            let mut known = Vec::with_capacity(terra_voxel::meshing::PADDED_VOLUME);
+            for z in -1..=16 {
+                for y in -1..=16 {
+                    for x in -1..=16 {
+                        known.push(chunks.block_at([origin[0] + x, origin[1] + y, origin[2] + z]));
+                    }
+                }
+            }
+            let revision = journal.revision(position);
+            let epoch = journal.mesh_epoch(position);
+            let water_epoch = journal.water_mesh_epoch(position);
+            let edits = journal.snapshot(position);
+            let generator = SectionGenerator::new(terrain.0.clone());
+            let task = AsyncComputeTaskPool::get().spawn(async move {
+                let _scope = terra_core::profiling::ScopeTimer::new("streaming.remesh_loaded");
+                let result = edits.map_err(|e| e.to_string()).and_then(|edits| {
+                    generator
+                        .remesh_loaded(&data, revision, &edits, &column, &known)
+                        .map_err(|e| e.to_string())
+                });
+                ColumnOutput {
+                    coordinate: [position.x, position.z],
+                    remesh: true,
+                    prepared: None,
+                    sections: vec![(position, epoch, water_epoch, result)],
+                }
+            });
+            pending.0.insert(
+                position,
+                SectionJob {
+                    positions: vec![position],
+                    task,
+                },
+            );
+            continue;
+        }
+        if pending.0.len() >= settings.max_jobs {
+            break;
+        }
         let dirty = chunks
             .dirty
             .iter()
@@ -49,7 +157,9 @@ pub(super) fn dispatch_jobs(
             .dirty
             .iter()
             .copied()
-            .filter(|p| [p.x, p.z] == coordinate && !pending.contains(p))
+            .filter(|p| {
+                [p.x, p.z] == coordinate && !chunks.loaded.contains_key(p) && !pending.contains(p)
+            })
             .take(BATCH_SIZE - 1)
             .collect();
         for p in siblings {
@@ -87,19 +197,21 @@ pub(super) fn dispatch_jobs(
                 },
                 Ok,
             );
-            let mut sections = Vec::with_capacity(requests.len());
-            for (p, revision, epoch, water_epoch, edits) in requests {
-                let result = match (&prepared, edits) {
-                    (Ok(column), Ok(edits)) => generator
-                        .build_prepared(p, revision, &edits, column)
-                        .map_err(|e| e.to_string()),
-                    (Err(error), _) => Err(error.to_string()),
-                    (_, Err(error)) => Err(error.to_string()),
-                };
-                sections.push((p, epoch, water_epoch, result));
-            }
+            let sections =
+                generate_sections(requests, |(p, revision, epoch, water_epoch, edits)| {
+                    let result = match (&prepared, edits) {
+                        (Ok(column), Ok(edits)) => generator
+                            .build_prepared(p, revision, &edits, column)
+                            .map_err(|e| e.to_string()),
+                        (Err(error), _) => Err(error.to_string()),
+                        (_, Err(error)) => Err(error.to_string()),
+                    };
+                    (p, epoch, water_epoch, result)
+                })
+                .await;
             ColumnOutput {
                 coordinate,
+                remesh: false,
                 prepared: prepared.ok(),
                 sections,
             }
@@ -125,6 +237,8 @@ pub(super) fn receive_jobs(
             finished.push((key, output));
         }
     }
+    let mut structure_refresh = BTreeSet::new();
+    let mut fresh_publications = BTreeSet::new();
     for (key, output) in finished {
         pending.0.remove(&key);
         if output
@@ -137,12 +251,24 @@ pub(super) fn receive_jobs(
                 .get(&output.coordinate)
                 .is_none_or(|previous| !Arc::ptr_eq(previous, &prepared))
         {
+            // A tall room can extend beyond the ordinary player-height band.
+            // Request its prepared envelope when the column arrives, including
+            // while the player is standing still during the initial load.
+            for position in super::interest::cave_sections_for_column(
+                output.coordinate,
+                &prepared,
+                &chunks.cave_views,
+            ) {
+                if chunks.wanted.insert(position) && !pending.contains(&position) {
+                    chunks.queue.push_back(position);
+                }
+            }
             chunks.columns.insert(output.coordinate, prepared);
             columns_changed.write(PreparedColumnChanged {
                 coordinate: output.coordinate,
             });
         }
-        for (position, epoch, water_epoch, result) in output.sections {
+        for (position, epoch, mut water_epoch, result) in output.sections {
             if !chunks.is_wanted(position) {
                 continue;
             }
@@ -154,6 +280,56 @@ pub(super) fn receive_jobs(
                 Ok(mut section) => {
                     let _scope =
                         terra_core::profiling::ScopeTimer::new("streaming.publish_section");
+                    if authoritative && !output.remesh {
+                        let objects = chunks
+                            .columns
+                            .get(&[position.x, position.z])
+                            .map(|column| column.structure_objects(position))
+                            .unwrap_or_default();
+                        if !objects.is_empty() {
+                            let previous_fluid_epoch = journal.fluid_epoch(position);
+                            match journal
+                                .bypass_change_detection()
+                                .initialize_structures(&objects)
+                            {
+                                Ok(affected) => {
+                                    if !affected.is_empty()
+                                        || journal.fluid_epoch(position) != previous_fluid_epoch
+                                    {
+                                        journal.set_changed();
+                                        for neighbor in affected {
+                                            if chunks.loaded.contains_key(&neighbor)
+                                                && !fresh_publications.contains(&neighbor)
+                                            {
+                                                structure_refresh.insert(neighbor);
+                                            }
+                                        }
+                                        water_epoch = journal.water_mesh_epoch(position);
+                                    }
+                                }
+                                Err(error) => {
+                                    tracing::error!(?position, %error, "Structure object initialization failed")
+                                }
+                            }
+                        }
+                    }
+                    let has_fluids = journal
+                        .fluid_snapshot(position)
+                        .is_ok_and(|snapshot| !snapshot.is_empty())
+                        || journal
+                            .blocks_in_section(position)
+                            .any(|(_, material)| crate::water::space::partial(material));
+                    if output.remesh
+                        && let Some(live) = chunks.loaded.get_mut(&position)
+                    {
+                        // Fluids and props can publish while block meshing runs.
+                        // A geometry-only result never owns their older snapshots.
+                        if has_fluids || live.water_epoch >= water_epoch {
+                            section.water = live.water.take();
+                            water_epoch = live.water_epoch;
+                        }
+                        section.props = std::mem::take(&mut live.props);
+                    }
                     if authoritative {
                         for &p in &section.fluid_wake {
                             journal.bypass_change_detection().wake_fluid_neighbors(p);
@@ -161,12 +337,6 @@ pub(super) fn receive_jobs(
                         journal.bypass_change_detection().resume_fluids(position);
                     }
                     journal.apply_prop_removals(position, &mut section.props);
-                    let has_fluids = journal
-                        .fluid_snapshot(position)
-                        .is_ok_and(|snapshot| !snapshot.is_empty())
-                        || journal
-                            .blocks_in_section(position)
-                            .any(|(_, material)| crate::water::space::partial(material));
                     if let Some([low, high]) = section.surface_sections {
                         chunks
                             .surface_ranges
@@ -178,13 +348,16 @@ pub(super) fn receive_jobs(
                             }
                         }
                     }
+                    if !chunks.loaded.contains_key(&position) {
+                        fresh_publications.insert(position);
+                    }
                     chunks.loaded.insert(
                         position,
                         LoadedSection {
                             data: section.data,
                             mesh: section.mesh,
                             mesh_epoch: epoch,
-                            water_epoch: if has_fluids {
+                            water_epoch: if has_fluids && !output.remesh {
                                 water_epoch.saturating_sub(1)
                             } else {
                                 water_epoch
@@ -206,6 +379,23 @@ pub(super) fn receive_jobs(
                     tracing::error!(?position,%error,"Section generation failed");
                     generation.status = GenerationStatus::Failed(error);
                 }
+            }
+        }
+    }
+    // Joinery metadata changes only meshes which were already visible. Coalesce
+    // their refresh after publication so fresh sibling outputs remain valid.
+    if !structure_refresh.is_empty() {
+        match journal
+            .bypass_change_detection()
+            .invalidate_structure_meshes(&structure_refresh)
+        {
+            Ok(()) => {
+                journal.set_changed();
+                chunks.dirty.extend(structure_refresh);
+            }
+            Err(error) => {
+                tracing::error!(%error, "Structure mesh invalidation failed");
+                generation.status = GenerationStatus::Failed(error.to_string());
             }
         }
     }
@@ -233,6 +423,9 @@ pub(super) fn receive_jobs(
 }
 
 #[cfg(test)]
+mod structure_tests;
+
+#[cfg(test)]
 mod tests {
     use super::*;
     use crate::generation::sections::GeneratedSection;
@@ -241,6 +434,494 @@ mod tests {
 
     #[derive(Resource, Default)]
     struct ChunkChanges(usize);
+
+    #[test]
+    fn cpu_bound_column_generation_yields_to_interactive_work_on_one_physical_worker() {
+        use std::sync::{
+            Arc,
+            atomic::{AtomicBool, AtomicUsize, Ordering},
+            mpsc,
+        };
+        let pool = bevy::tasks::TaskPoolBuilder::new().num_threads(1).build();
+        let completed = Arc::new(AtomicUsize::new(0));
+        let queued = Arc::new(AtomicBool::new(false));
+        let (started, receiver) = mpsc::sync_channel(1);
+        let cpu_completed = completed.clone();
+        let cpu_queued = queued.clone();
+        let column = pool.spawn(async move {
+            generate_sections((0..BATCH_SIZE).collect(), |section| {
+                if section == 0 {
+                    started.send(()).unwrap();
+                    let deadline = Instant::now() + Duration::from_secs(5);
+                    while !cpu_queued.load(Ordering::Acquire) {
+                        assert!(Instant::now() < deadline);
+                        std::thread::yield_now();
+                    }
+                }
+                let finish = Instant::now() + Duration::from_millis(2);
+                while Instant::now() < finish {
+                    std::hint::spin_loop();
+                }
+                cpu_completed.fetch_add(1, Ordering::AcqRel);
+                section
+            })
+            .await
+        });
+        receiver.recv_timeout(Duration::from_secs(5)).unwrap();
+        let interactive = pool.spawn(async move { completed.load(Ordering::Acquire) });
+        queued.store(true, Ordering::Release);
+        let observed = future::block_on(interactive);
+        assert!(
+            observed < BATCH_SIZE,
+            "interactive work waited for every CPU-bound section despite a free logical edit slot: {observed}"
+        );
+        assert_eq!(
+            future::block_on(column),
+            (0..BATCH_SIZE).collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn loaded_remesh_publication_keeps_newer_water_and_live_props_and_applies_removals() {
+        use crate::props::{PropId, PropKind, WorldProp};
+        let owner = SectionPos::new(-1, 0, -1);
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .init_resource::<PendingSections>()
+            .init_resource::<ChunkStore>()
+            .init_resource::<EditJournal>()
+            .init_resource::<WorldGeneration>()
+            .add_message::<SectionPublished>()
+            .add_message::<PreparedColumnChanged>()
+            .insert_resource(WorldAccess::Replica { ready: true })
+            .add_systems(Update, receive_jobs);
+        let prop = WorldProp {
+            id: PropId(81),
+            kind: PropKind::Mushroom,
+            position: [-3.5, 1.0, -3.5],
+            rotation: 0.0,
+            scale: 1.0,
+            variant: 5,
+            section: owner,
+            removed: false,
+        };
+        let removed = WorldProp {
+            id: PropId(82),
+            ..prop
+        };
+        let water = crate::water::WaterPatch {
+            positions: vec![[0.0, 4.75, 0.0]],
+            normals: Vec::new(),
+            flow: Vec::new(),
+            depth_shore: Vec::new(),
+            surface_effects: Vec::new(),
+            wave_weights: Vec::new(),
+            indices: Vec::new(),
+        };
+        app.world_mut()
+            .resource_mut::<EditJournal>()
+            .remove_prop(owner, removed.id)
+            .unwrap();
+        let water_epoch = app
+            .world()
+            .resource::<EditJournal>()
+            .water_mesh_epoch(owner);
+        {
+            let mut chunks = app.world_mut().resource_mut::<ChunkStore>();
+            chunks.wanted.insert(owner);
+            chunks.loaded.insert(
+                owner,
+                LoadedSection {
+                    data: BlockSection::empty(owner).unwrap(),
+                    mesh: None,
+                    mesh_epoch: 0,
+                    water_epoch,
+                    water: Some(water.clone()),
+                    props: vec![prop, removed],
+                },
+            );
+        }
+        let epoch = app.world().resource::<EditJournal>().mesh_epoch(owner);
+        let output = ColumnOutput {
+            coordinate: [-1, -1],
+            remesh: true,
+            prepared: None,
+            sections: vec![(
+                owner,
+                epoch,
+                0,
+                Ok(GeneratedSection {
+                    data: BlockSection::empty(owner).unwrap(),
+                    mesh: Some(Default::default()),
+                    surface_sections: None,
+                    water: None,
+                    props: Vec::new(),
+                    fluid_wake: Vec::new(),
+                }),
+            )],
+        };
+        app.world_mut().resource_mut::<PendingSections>().0.insert(
+            owner,
+            SectionJob {
+                positions: vec![owner],
+                task: AsyncComputeTaskPool::get().spawn(async move { output }),
+            },
+        );
+        let deadline = Instant::now() + Duration::from_secs(5);
+        while !app.world().resource::<PendingSections>().0.is_empty() {
+            app.update();
+            assert!(Instant::now() < deadline);
+            std::thread::sleep(Duration::from_millis(1));
+        }
+        let section = &app.world().resource::<ChunkStore>().loaded[&owner];
+        assert_eq!(
+            section.water,
+            Some(water),
+            "a newer fluid patch cannot be rolled back by terrain meshing"
+        );
+        assert_eq!(section.water_epoch, water_epoch);
+        assert_eq!(
+            section.props,
+            vec![
+                prop,
+                WorldProp {
+                    removed: true,
+                    ..removed
+                }
+            ],
+            "live variant data is retained and journal removals still win"
+        );
+    }
+
+    #[test]
+    fn loaded_edit_remesh_bypasses_full_generation_workers_and_preserves_world_data() {
+        use crate::props::{PropId, PropKind, WorldProp};
+        for coordinate in [[0, 0], [-2, -3]] {
+            let owner = SectionPos::new(coordinate[0], 10, coordinate[1]);
+            let cell = owner.global_block([15, 7, 15]).unwrap();
+            let terrain = crate::TerraGenerator::new(terra_core::WorldConfig {
+                caves: false,
+                trees: false,
+                water: false,
+                cave_structure_revision: 0,
+                ..Default::default()
+            })
+            .unwrap();
+            let prepared = Arc::new(
+                SectionGenerator::new(terrain.clone())
+                    .prepare_column(coordinate, true)
+                    .unwrap(),
+            );
+            let mut app = App::new();
+            app.add_plugins(MinimalPlugins)
+                .init_resource::<PendingSections>()
+                .init_resource::<ChunkStore>()
+                .init_resource::<EditJournal>()
+                .init_resource::<WorldGeneration>()
+                .add_message::<SectionPublished>()
+                .add_message::<PreparedColumnChanged>()
+                .insert_resource(WorldTerrain(terrain))
+                .insert_resource(ChunkFocus(cell.map(|v| v as f64 + 0.5)))
+                .insert_resource(StreamingSettings {
+                    radius: 2,
+                    vertical_radius: 1,
+                    max_jobs: 1,
+                    meshes: true,
+                })
+                .add_systems(Update, (receive_jobs, dispatch_jobs).chain());
+            let prop = WorldProp {
+                id: PropId(991),
+                kind: PropKind::Mushroom,
+                position: owner.global_block([2, 1, 2]).unwrap().map(|v| v as f64),
+                rotation: 0.0,
+                scale: 1.0,
+                variant: 0,
+                section: owner,
+                removed: false,
+            };
+            {
+                let mut chunks = app.world_mut().resource_mut::<ChunkStore>();
+                chunks.columns.insert(coordinate, prepared);
+                for z in -1..=1 {
+                    for y in -1..=1 {
+                        for x in -1..=1 {
+                            let p = owner.offset([x, y, z]).unwrap();
+                            let mut data = BlockSection::empty(p).unwrap();
+                            data.set_block([2, 0, 2], 11).unwrap();
+                            chunks.wanted.insert(p);
+                            chunks.loaded.insert(
+                                p,
+                                LoadedSection {
+                                    data,
+                                    mesh: None,
+                                    mesh_epoch: 0,
+                                    water_epoch: 0,
+                                    water: None,
+                                    props: if p == owner { vec![prop] } else { Vec::new() },
+                                },
+                            );
+                        }
+                    }
+                }
+            }
+            let blocked = owner.offset([20, 0, 0]).unwrap();
+            app.world_mut().resource_mut::<PendingSections>().0.insert(
+                blocked,
+                SectionJob {
+                    positions: vec![blocked],
+                    task: AsyncComputeTaskPool::get().spawn(std::future::pending()),
+                },
+            );
+            app.world_mut()
+                .resource_mut::<EditJournal>()
+                .record(cell, 36)
+                .unwrap();
+            app.world_mut()
+                .resource_mut::<ChunkStore>()
+                .dirty
+                .insert(owner);
+            app.update();
+            let pending = app.world().resource::<PendingSections>();
+            assert_eq!(pending.0.len(), 2, "only one bounded extra edit slot");
+            assert_eq!(
+                pending.0[&owner].positions,
+                vec![owner],
+                "edits cannot wait for sixteen serial sections"
+            );
+            let deadline = Instant::now() + Duration::from_secs(5);
+            while app.world().resource::<ChunkStore>().loaded[&owner].mesh_epoch != 1 {
+                app.update();
+                assert!(
+                    Instant::now() < deadline,
+                    "edit waited for a never-completing unrelated generation job"
+                );
+                assert!(app.world().resource::<PendingSections>().0.len() <= 2);
+                std::thread::sleep(Duration::from_millis(1));
+            }
+            let chunks = app.world().resource::<ChunkStore>();
+            assert_eq!(chunks.block_at(cell), Some(36));
+            let section = &chunks.loaded[&owner];
+            assert_eq!(
+                section.data.block([2, 0, 2]).unwrap(),
+                11,
+                "existing authored blocks must not be regenerated"
+            );
+            assert_eq!(
+                section.props,
+                vec![prop],
+                "unchanged props retain their identity and state"
+            );
+            assert!(
+                section
+                    .mesh
+                    .as_ref()
+                    .unwrap()
+                    .faces
+                    .iter()
+                    .any(|face| face.material == 36)
+            );
+            assert!(
+                app.world()
+                    .resource::<PendingSections>()
+                    .0
+                    .contains_key(&blocked)
+            );
+        }
+    }
+
+    #[test]
+    fn new_edit_invalidates_an_old_loaded_section_task_instead_of_waiting_for_it() {
+        let owner = SectionPos::new(-1, 8, -1);
+        let terrain = crate::TerraGenerator::new(terra_core::WorldConfig {
+            caves: false,
+            trees: false,
+            water: false,
+            ..Default::default()
+        })
+        .unwrap();
+        let column = Arc::new(
+            SectionGenerator::new(terrain.clone())
+                .prepare_column([-1, -1], true)
+                .unwrap(),
+        );
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .insert_resource(WorldTerrain(terrain))
+            .init_resource::<EditJournal>()
+            .init_resource::<PendingSections>()
+            .init_resource::<ChunkStore>()
+            .insert_resource(StreamingSettings {
+                radius: 1,
+                vertical_radius: 1,
+                max_jobs: 1,
+                meshes: true,
+            })
+            .add_systems(Update, dispatch_jobs);
+        {
+            let mut chunks = app.world_mut().resource_mut::<ChunkStore>();
+            chunks.columns.insert([-1, -1], column);
+            chunks.wanted.insert(owner);
+            chunks.loaded.insert(
+                owner,
+                LoadedSection {
+                    data: BlockSection::empty(owner).unwrap(),
+                    mesh: None,
+                    mesh_epoch: 0,
+                    water_epoch: 0,
+                    water: None,
+                    props: Vec::new(),
+                },
+            );
+        }
+        app.world_mut().resource_mut::<PendingSections>().0.insert(
+            owner,
+            SectionJob {
+                positions: vec![owner],
+                task: AsyncComputeTaskPool::get().spawn(std::future::pending()),
+            },
+        );
+        app.world_mut()
+            .resource_mut::<EditJournal>()
+            .record(owner.global_block([3, 4, 5]).unwrap(), 3)
+            .unwrap();
+        app.world_mut()
+            .resource_mut::<ChunkStore>()
+            .dirty
+            .insert(owner);
+        app.update();
+        let deadline = Instant::now() + Duration::from_secs(5);
+        loop {
+            let output = {
+                let mut pending = app.world_mut().resource_mut::<PendingSections>();
+                future::block_on(future::poll_once(
+                    &mut pending.0.get_mut(&owner).unwrap().task,
+                ))
+            };
+            if let Some(output) = output {
+                assert_eq!(output.sections.len(), 1);
+                assert_eq!(output.sections[0].1, 1);
+                assert_eq!(
+                    output.sections[0]
+                        .3
+                        .as_ref()
+                        .unwrap()
+                        .data
+                        .block([3, 4, 5])
+                        .unwrap(),
+                    3
+                );
+                break;
+            }
+            assert!(Instant::now() < deadline, "stale task was never replaced");
+            std::thread::sleep(Duration::from_millis(1));
+        }
+    }
+
+    #[test]
+    fn arriving_tall_cave_column_requests_its_roof_and_floor_without_player_motion() {
+        for cave_structure_revision in [4, 5] {
+            let terrain = crate::TerraGenerator::new(terra_core::WorldConfig {
+                cave_structure_revision,
+                ..Default::default()
+            })
+            .unwrap();
+            let room = (-16..0)
+                .flat_map(|z| (-16..0).map(move |x| (x, z)))
+                .filter_map(|(x, z)| {
+                    terrain.cave_chamber_center((x * 192 + 96) as f64, (z * 192 + 96) as f64)
+                })
+                .map(|center| {
+                    (
+                        [center[0], center[2]],
+                        terrain.cave_structure_at(center[0], center[2]),
+                    )
+                })
+                .find(|(_, room)| {
+                    room.active() && room.ceiling - room.floor > 48.0 && !room.open_to_sky()
+                })
+                .unwrap();
+            let coordinate = room.0.map(|p| (p.floor() as i64).div_euclid(16));
+            let eye = room.1.floor + 5.0;
+            let focus = SectionPos::new(
+                coordinate[0],
+                (eye.floor() as i64).div_euclid(16),
+                coordinate[1],
+            );
+            let prepared = Arc::new(
+                SectionGenerator::new(terrain)
+                    .prepare_column(coordinate, true)
+                    .unwrap(),
+            );
+            let envelope = super::super::interest::cave_sections_for_column(
+                coordinate,
+                &prepared,
+                &[(focus, 2)],
+            );
+            assert!(
+                envelope.iter().any(|p| p.y - focus.y > 1),
+                "fixture must expose the former vertical-band ceiling hole"
+            );
+            let bounds = prepared
+                .cave_view_sections(focus.y as f64 * 16.0 + 8.0)
+                .unwrap();
+            assert_eq!(envelope.len(), (bounds[1] - bounds[0] + 1) as usize);
+            for y in bounds[0]..=bounds[1] {
+                assert!(envelope.contains(&SectionPos::new(coordinate[0], y, coordinate[1])));
+            }
+            assert!(
+                super::super::interest::cave_sections_for_column(coordinate, &prepared, &[])
+                    .is_empty(),
+                "headless interest does not load visual-only room envelopes"
+            );
+            let mut app = App::new();
+            app.add_plugins(MinimalPlugins)
+                .init_resource::<PendingSections>()
+                .init_resource::<ChunkStore>()
+                .init_resource::<EditJournal>()
+                .init_resource::<WorldGeneration>()
+                .add_message::<SectionPublished>()
+                .add_message::<PreparedColumnChanged>()
+                .add_systems(Update, receive_jobs);
+            {
+                let mut chunks = app.world_mut().resource_mut::<ChunkStore>();
+                chunks.wanted.insert(focus);
+                chunks.cave_views = vec![(focus, 2)];
+            }
+            let generated = GeneratedSection {
+                data: BlockSection::empty(focus).unwrap(),
+                mesh: None,
+                surface_sections: None,
+                water: None,
+                props: Vec::new(),
+                fluid_wake: Vec::new(),
+            };
+            app.world_mut().resource_mut::<PendingSections>().0.insert(
+                focus,
+                SectionJob {
+                    positions: vec![focus],
+                    task: AsyncComputeTaskPool::get().spawn(async move {
+                        ColumnOutput {
+                            coordinate,
+                            remesh: false,
+                            prepared: Some(prepared),
+                            sections: vec![(focus, 0, 0, Ok(generated))],
+                        }
+                    }),
+                },
+            );
+            let deadline = Instant::now() + Duration::from_secs(5);
+            while !app.world().resource::<PendingSections>().0.is_empty() {
+                app.update();
+                assert!(Instant::now() < deadline);
+                std::thread::yield_now();
+            }
+            let chunks = app.world().resource::<ChunkStore>();
+            for position in envelope {
+                assert!(chunks.wanted.contains(&position));
+            }
+            assert!(!chunks.queue.is_empty());
+        }
+    }
 
     #[test]
     fn reloading_a_naturally_waterlogged_partial_block_requests_a_geometry_patch() {
@@ -291,6 +972,7 @@ mod tests {
                 task: AsyncComputeTaskPool::get().spawn(async move {
                     ColumnOutput {
                         coordinate: [owner.x, owner.z],
+                        remesh: false,
                         prepared: None,
                         sections: vec![(owner, epoch, water_epoch, Ok(generated))],
                     }
@@ -489,6 +1171,7 @@ mod tests {
         };
         let output = ColumnOutput {
             coordinate: [-1, -1],
+            remesh: false,
             prepared: Some(prepared.clone()),
             sections: vec![
                 (fresh, 0, 0, generated(fresh)),
@@ -649,6 +1332,9 @@ mod tests {
             let mut host = EditJournal::default();
             host.record(position, MaterialId::FluidWater as u16)
                 .unwrap();
+            // Reload reconciles actual support losses, not every mineral in
+            // a column touched by an unrelated horizontal water edit.
+            host.record([-2, -2, -1], MaterialId::Air as u16).unwrap();
             app.world_mut()
                 .resource_mut::<EditJournal>()
                 .import_replica_delta(host.section_delta(owner))
@@ -682,6 +1368,7 @@ mod tests {
                         task: AsyncComputeTaskPool::get().spawn(async move {
                             ColumnOutput {
                                 coordinate: [owner.x, owner.z],
+                                remesh: false,
                                 prepared: None,
                                 sections: vec![(owner, epoch, water_epoch, Ok(generated))],
                             }

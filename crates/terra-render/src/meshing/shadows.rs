@@ -14,6 +14,21 @@ pub(crate) const LAYER: usize = 61;
 #[derive(Component)]
 pub(crate) struct ShadowProxy;
 
+#[derive(Resource)]
+pub(crate) struct OpaqueShadowMaterial(pub Handle<StandardMaterial>);
+
+pub(crate) fn prepare_material(
+    mut commands: Commands,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+) {
+    commands.insert_resource(OpaqueShadowMaterial(materials.add(StandardMaterial {
+        cull_mode: None,
+        double_sided: true,
+        unlit: true,
+        ..default()
+    })));
+}
+
 #[derive(Component)]
 pub(crate) struct ReplacedShadowCaster;
 
@@ -98,7 +113,7 @@ pub(crate) fn append(
             {
                 continue;
             }
-            if matches!(face.material, 7..=9) {
+            if matches!(face.material, 7..=9 | 132 | 133) {
                 masked_materials.insert(block.face_materials[face.side]);
             }
             append_greedy(&mut shadows, face, block)?;
@@ -114,14 +129,8 @@ pub(crate) fn append(
             recessed_shell(&mut batch)?;
             batch.normals = Vec::new();
             batch.uvs = Vec::new();
-            // A visible cave ceiling faces down. Its back must still block
-            // sunlight when the terrain surface above it is not streamed.
-            // Reuse the same vertices/material/draw, leaving cutout leaves alone.
-            let front_indices = batch.indices.len();
-            for i in (0..front_indices).step_by(3) {
-                let (a, b, c) = (batch.indices[i], batch.indices[i + 1], batch.indices[i + 2]);
-                batch.indices.extend_from_slice(&[a, c, b]);
-            }
+            // The shared depth-only material is two-sided: cave ceilings still
+            // block sunlight without submitting every triangle twice.
             if let Some(combined) = &mut opaque {
                 let base = u32::try_from(combined.positions.len())
                     .map_err(|_| "Shadow mesh index overflow")?;
@@ -196,6 +205,22 @@ fn full_geometry_reference() -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn shared_opaque_shadow_material_keeps_both_sides_without_reverse_triangles() {
+        let mut app = App::new();
+        app.init_resource::<Assets<StandardMaterial>>()
+            .add_systems(Startup, prepare_material);
+        app.update();
+        let handle = &app.world().resource::<OpaqueShadowMaterial>().0;
+        let materials = app.world().resource::<Assets<StandardMaterial>>();
+        let material = materials.get(handle).unwrap();
+        assert_eq!(material.cull_mode, None);
+        assert!(material.double_sided);
+        assert_eq!(material.alpha_mode, AlphaMode::Opaque);
+        assert!(material.base_color_texture.is_none());
+        assert_eq!(materials.len(), 1);
+    }
 
     #[test]
     fn only_explicitly_disabled_shadow_quality_skips_proxies() {
@@ -453,13 +478,7 @@ mod tests {
         assert_eq!(batches.len(), 1);
         assert!(batches[0].shadow_only);
         assert_eq!(batches[0].positions.len(), 8);
-        assert_eq!(batches[0].indices.len(), 60);
-        for (front, back) in batches[0].indices[..30]
-            .chunks_exact(3)
-            .zip(batches[0].indices[30..].chunks_exact(3))
-        {
-            assert_eq!(back, &[front[0], front[2], front[1]]);
-        }
+        assert_eq!(batches[0].indices.len(), 30);
         assert!(batches[0].normals.is_empty());
         assert!(batches[0].uvs.is_empty());
         batches.clear();

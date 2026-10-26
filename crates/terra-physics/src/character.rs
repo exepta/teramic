@@ -142,6 +142,47 @@ pub struct CharacterSimulation<'w, 's> {
 }
 
 impl CharacterSimulation<'_, '_> {
+    pub fn riding_position(&self, horse: &terra_core::creatures::Creature) -> Vec3 {
+        Vec3::from_array(terra_world::creatures::riding::seat_feet(horse).map(|v| v as f32))
+            + Vec3::Y * PLAYER_HALF_HEIGHT
+    }
+    pub fn ride_step(
+        &self,
+        horse: &mut terra_core::creatures::Creature,
+        stamina: &mut f32,
+        input: CharacterInput,
+    ) -> bool {
+        let Some(terrain) = &self.terrain else {
+            return false;
+        };
+        terra_world::creatures::riding::step(
+            horse,
+            stamina,
+            &terra_world::creatures::Habitat {
+                terrain: &terrain.0,
+                chunks: &self.chunks,
+                journal: &self.journal,
+            },
+            terra_world::creatures::riding::RideInput {
+                direction: [input.direction.x, input.direction.z],
+                jump: input.jump,
+                sprint: input.sprint,
+            },
+            self.delta_seconds(),
+        )
+    }
+    pub fn dismount(&self, horse: &terra_core::creatures::Creature) -> Option<Vec3> {
+        let terrain = self.terrain.as_ref()?;
+        terra_world::creatures::riding::dismount(
+            horse,
+            &terra_world::creatures::Habitat {
+                terrain: &terrain.0,
+                chunks: &self.chunks,
+                journal: &self.journal,
+            },
+        )
+        .map(|p| Vec3::from_array(p.map(|v| v as f32)) + Vec3::Y * PLAYER_HALF_HEIGHT)
+    }
     pub fn delta_seconds(&self) -> f32 {
         self.time.delta_secs()
     }
@@ -236,6 +277,7 @@ impl CharacterSimulation<'_, '_> {
     ) -> bool {
         let _scope = terra_core::profiling::ScopeTimer::new("character.step");
         let _sample = self.profile.measure();
+        let previous = *state;
         if let Some(speed) = input.flight_speed {
             state.velocity = input.direction.clamp_length_max(1.0) * speed.clamp(0.0, 60.0);
             state.position += state.velocity * self.time.delta_secs();
@@ -363,8 +405,9 @@ impl CharacterSimulation<'_, '_> {
             &self.chunks,
             &self.journal,
         ) {
-            state.velocity = Vec3::ZERO;
-            state.grounded = false;
+            // A collider rebuild pauses this tick; it must not cancel a jump
+            // or leave authority/prediction with a partially simulated state.
+            *state = previous;
             return false;
         }
         let before = state.position;

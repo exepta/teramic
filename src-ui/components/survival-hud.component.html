@@ -8,8 +8,11 @@
   }
   <div id="survival-hud" [class]="survivalView.editing ? 'survival-hud hud-editable' : 'survival-hud'" [style]="survivalView.position">
     <img id="survival-chrome" class="vital-chrome" src="tilt-ui://assets/survival-chrome.png" alt="Health and stamina" />
+    @if (survivalView.show_armor) {
+      <div id="survival-armor" class="vital-armor" [title]="survivalView.armor_tooltip"><img id="survival-armor-frame" class="armor-frame" src="tilt-ui://assets/survival-chrome.png" alt="Armor" /><progress-bar id="survival-armor-meter" class="armor-bar" min="0" max="100" [value]="survivalView.armor" /></div>
+    }
     @if (statusEffectView.shield) {
-      <div id="survival-shield" class="vital-shield"><progress-bar class="shield-power-bar" min="0" max="100" [value]="statusEffectView.shield_value" /><ornate-frame></ornate-frame><img class="shield-power-icon" src="tilt-ui://assets/status-effects-atlas.png" alt="Status effect 12" /><p>{{ statusEffectView.shield_label }}</p></div>
+      <div id="survival-shield" class="vital-shield" [title]="statusEffectView.shield_label"><progress-bar class="shield-power-bar" min="0" max="100" [value]="statusEffectView.shield_value" /></div>
     }
     <div class="vital-meter health-meter"><progress-bar id="survival-health" class="health-bar" min="0" max="100" [value]="survivalView.health" /><div id="survival-health-label" class="vital-label"><p>{{ survivalView.health_label }}</p></div></div>
     @if (survivalView.show_oxygen) {
@@ -21,7 +24,7 @@
     <div class="vital-statuses">
       <div id="survival-food-status" class="food-status"><img id="survival-food-frame" class="food-frame" src="tilt-ui://assets/survival-status-frame.png" alt="" /><img id="survival-food" class="food-icon" src="tilt-ui://assets/survival-atlas.png" alt="Hunger" /><progress-bar id="survival-hunger" class="hunger-bar" min="0" max="100" [value]="survivalView.hunger" /></div>
       @for (effect of statusEffectView.cards; track effect.id) {
-        <div id="status-effect-card" [class]="effect.class" [title]="effect.tooltip"><ornate-frame></ornate-frame><img class="status-effect-icon" src="tilt-ui://assets/status-effects-atlas.png" [alt]="effect.icon" /><div class="effect-details">@if (statusEffectView.expanded) { <p class="effect-name">{{ effect.name }}</p> }<div class="effect-level"><div [class.active]="effect.level >= 1"></div><div [class.active]="effect.level >= 2"></div><div [class.active]="effect.level >= 3"></div><div [class.active]="effect.level >= 4"></div><div [class.active]="effect.level >= 5"></div></div><p class="effect-time">{{ effect.time_label }}</p></div></div>
+        <div id="status-effect-card" [class]="effect.class" [title]="effect.tooltip"><ornate-frame></ornate-frame>@if (effect.night_vision) { <div class="status-effect-icon night-vision-icon"><icon name="eye" size="32" /></div> } @else { <img class="status-effect-icon" src="tilt-ui://assets/status-effects-atlas.png" [alt]="effect.icon" /> }<div class="effect-details">@if (statusEffectView.expanded) { <p class="effect-name">{{ effect.name }}</p> }<div class="effect-level"><div [class.active]="effect.level >= 1"></div><div [class.active]="effect.level >= 2"></div><div [class.active]="effect.level >= 3"></div><div [class.active]="effect.level >= 4"></div><div [class.active]="effect.level >= 5"></div></div><p class="effect-time">{{ effect.time_label }}</p></div></div>
       }
       @if (statusEffectView.overflow > 0) {
         <div id="status-effect-overflow" class="status-effect-card effect-overflow" [title]="statusEffectView.overflow_title"><ornate-frame></ornate-frame><p>+{{ statusEffectView.overflow }}</p></div>

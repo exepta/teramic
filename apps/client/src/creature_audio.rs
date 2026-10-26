@@ -1,15 +1,19 @@
 //! Recorded animal cues and a bounded, body-listened environmental soundscape.
 mod acoustics;
 mod actions;
+mod chests;
 mod clips;
 mod eating;
 mod furniture;
 mod scene;
 mod smoke;
 mod source;
+mod spiders;
+mod stalker;
 mod thunder;
 
 use bevy::{audio::AddAudioSource, prelude::*};
+pub(crate) use chests::ChestAudioStatus;
 
 pub(crate) fn install(app: &mut App) {
     crate::ui_audio::install(app);
@@ -17,6 +21,7 @@ pub(crate) fn install(app: &mut App) {
     crate::water_contacts::install(app);
     app.add_audio_source::<source::RecordedSoundscape>()
         .init_resource::<scene::Soundscape>()
+        .init_resource::<ChestAudioStatus>()
         .add_systems(Startup, scene::load)
         .add_systems(
             Update,

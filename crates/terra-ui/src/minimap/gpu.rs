@@ -62,12 +62,13 @@ pub(super) fn material(
     overlay_reference: &Projection,
     level: i64,
     reference_level: i64,
+    overlay_reference_level: i64,
     player: [f32; 3],
     yaw: f32,
     grid: bool,
 ) {
     let rows = current.uv_transform_from(reference, level, reference_level);
-    let overlay_rows = current.uv_transform_from(overlay_reference, level, level);
+    let overlay_rows = current.uv_transform_from(overlay_reference, level, overlay_reference_level);
     let origin = current.world_at([0.0, 0.0]);
     let x = current.world_at([current.size() as f32, 0.0]);
     let y = current.world_at([0.0, current.size() as f32]);
@@ -197,6 +198,7 @@ mod tests {
             reference: Some(old.clone()),
             overlay_reference: Some(old.clone()),
             reference_level: 80,
+            overlay_reference_level: 80,
             next_frame: 10.0,
             next_terrain: 10.0,
             job: Some(task),
@@ -213,14 +215,15 @@ mod tests {
             .enumerate()
         {
             let current = Projection::at(center, 192, tick as f32 * 0.1, true, true, 320, true);
-            let player = [center[0] as f32, 80.0, center[1] as f32];
+            let level = [80, 104, -40][tick];
+            let player = [center[0] as f32, level as f32, center[1] as f32];
             present(
                 &mut canvas,
                 &HashMap::new(),
                 MapLayer::Surface,
                 &MapPalette::default(),
                 &current,
-                80,
+                level,
                 192,
                 1,
                 1.0 + tick as f64 * 0.01,
@@ -236,8 +239,8 @@ mod tests {
                 "marker upload must retain its FPS cap"
             );
             let material = assets.materials.get(&canvas.material).unwrap();
-            let terrain = current.uv_transform_from(&refreshed, 80, 80);
-            let overlay = current.uv_transform_from(&old, 80, 80);
+            let terrain = current.uv_transform_from(&refreshed, level, 80);
+            let overlay = current.uv_transform_from(&old, level, 80);
             assert_eq!(material.row_x, terrain[0]);
             assert_eq!(material.row_y, terrain[1]);
             assert_eq!(material.overlay_x, overlay[0]);
@@ -245,6 +248,16 @@ mod tests {
             assert_eq!(material.clip.y, 0.0);
             assert_eq!(material.clip.z, 320.0);
             assert_eq!(material.player.truncate().truncate(), Vec2::splat(160.0));
+            let center_uv = Vec3::new(0.5, 0.5, 1.0);
+            let sampled = Vec2::new(
+                material.row_x.truncate().dot(center_uv),
+                material.row_y.truncate().dot(center_uv),
+            );
+            let expected = Vec2::from_array(refreshed.project(player, 80)) / 320.0;
+            assert!(
+                sampled.distance(expected) < 0.00001,
+                "the centered arrow must sample the same terrain point after a ground-height change"
+            );
         }
     }
 

@@ -1,8 +1,17 @@
 //! Equipped objects reuse the drop cache, with a lower-edge first-person grip.
 use super::{BuildingWorld, drops::DropAssets};
 use bevy::prelude::*;
+use terra_core::farming::FarmToolKind;
 use terra_core::{ItemKind, PlayerId};
 use terra_player::{CameraPerspective, TerraCamera};
+
+fn farm_kind(item: ItemKind) -> Option<FarmToolKind> {
+    if let ItemKind::Tool(tool) = item {
+        tool.farm_kind()
+    } else {
+        None
+    }
+}
 
 #[derive(Component)]
 pub(super) struct HeldItem {
@@ -24,17 +33,28 @@ fn first_person_pose(
     };
     let tangent = (fov * 0.5).tan();
     let tool = matches!(item, ItemKind::Tool(_) | ItemKind::Stick);
+    let scythe = farm_kind(item) == Some(FarmToolKind::Scythe);
+    let watering = farm_kind(item) == Some(FarmToolKind::WateringCan);
     let half_height = 0.55 * tangent;
-    let mut scale = (if tool { 1.55 } else { 1.2 }) * tangent / (65.0_f32.to_radians() * 0.5).tan();
+    let view_scale = if matches!(item, ItemKind::Tool(_)) {
+        0.46 / (bounds.1.y - bounds.0.y).max(0.01)
+    } else if tool {
+        1.55
+    } else {
+        1.2
+    };
+    let mut scale = view_scale * tangent / (65.0_f32.to_radians() * 0.5).tan();
     let rotation = Quat::from_euler(
         EulerRot::XYZ,
-        -0.12 - swing * 0.75,
-        if tool {
-            std::f32::consts::FRAC_PI_2 - 0.4
+        -0.12 - swing * if scythe || watering { 0.20 } else { 0.75 },
+        if matches!(item, ItemKind::Tool(_)) {
+            std::f32::consts::FRAC_PI_2 + 0.10 + if scythe { swing * 0.95 } else { 0.0 }
+        } else if tool {
+            -0.30
         } else {
             -0.4
         },
-        -0.18 + swing * 0.22,
+        -0.18 + swing * if watering { -0.65 } else { 0.22 },
     );
     let z = -0.55 - swing * 0.20;
     let mut nearest = 0.0_f32;
@@ -60,13 +80,29 @@ fn first_person_pose(
     let y = 1.12 * (z + support.z) * tangent - support.y;
     Transform::from_translation(
         camera.translation
-            + camera.rotation * Vec3::new(half_height * aspect * (0.68 - swing * 0.10), y, z),
+            + camera.rotation
+                * Vec3::new(
+                    half_height * aspect * (if tool { 0.48 } else { 0.68 } - swing * 0.10)
+                        - if scythe { swing * 0.10 } else { 0.0 },
+                    y,
+                    z,
+                ),
     )
     .with_rotation(camera.rotation * rotation)
     .with_scale(Vec3::splat(scale))
 }
 
 fn third_person_pose(item: ItemKind) -> Transform {
+    let palm = Vec3::new(0.008, -0.54 - crate::players::model::ELBOW, -0.028);
+    let rotation = Quat::from_rotation_x(-0.25)
+        * if matches!(item, ItemKind::Tool(_)) {
+            Quat::from_rotation_y(std::f32::consts::FRAC_PI_2)
+        } else {
+            Quat::IDENTITY
+        };
+    if let Some(grip) = crate::previews::tools::grip(item) {
+        return Transform::from_translation(palm - rotation * grip).with_rotation(rotation);
+    }
     let handle = matches!(
         item,
         ItemKind::Tool(_) | ItemKind::Stick | ItemKind::Block(40)
@@ -76,11 +112,26 @@ fn third_person_pose(item: ItemKind) -> Transform {
         if handle { -0.065 } else { -0.075 },
         0.025,
     );
-    let palm = Vec3::new(0.008, -0.54 - crate::players::model::ELBOW, -0.028);
-    let rotation = Quat::from_rotation_x(-0.25);
     Transform::from_translation(palm - rotation * grip * 1.4)
         .with_rotation(rotation)
         .with_scale(Vec3::splat(1.4))
+}
+
+fn third_person_action_pose(item: ItemKind, swing: f32) -> Transform {
+    let mut pose = third_person_pose(item);
+    if swing > 0.0
+        && let Some(grip) = crate::previews::tools::grip(item)
+    {
+        let grip_position = pose.transform_point(grip);
+        let motion = match farm_kind(item) {
+            Some(FarmToolKind::Scythe) => Quat::from_rotation_y(-swing * 0.95),
+            Some(FarmToolKind::WateringCan) => Quat::from_rotation_z(-swing * 0.65),
+            _ => return pose,
+        };
+        pose.rotation *= motion;
+        pose.translation = grip_position - pose.rotation * grip;
+    }
+    pose
 }
 
 fn first_person_eating_pose(
@@ -236,7 +287,17 @@ pub(super) fn render(
             continue;
         };
         if let Some(item) = item {
-            desired.push((owner, item, Some(arm), third_person_pose(item)));
+            let amount = if owner.is_none() {
+                swing.as_ref().map_or(0.0, |s| s.amount)
+            } else {
+                0.0
+            };
+            desired.push((
+                owner,
+                item,
+                Some(arm),
+                third_person_action_pose(item, amount),
+            ));
         }
     }
     for (entity, held, mut transform) in &mut items {
@@ -273,6 +334,54 @@ pub(super) fn render(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn real_size_tools_attach_to_the_grip_and_stay_in_front_of_the_first_person_camera() {
+        for tool in terra_core::ToolKind::ALL {
+            let item = ItemKind::Tool(tool);
+            let length = crate::previews::tools::world_length(item).unwrap();
+            let third = third_person_pose(item);
+            assert_eq!(third.scale, Vec3::ONE);
+            assert!(
+                third
+                    .transform_point(crate::previews::tools::grip(item).unwrap())
+                    .abs_diff_eq(
+                        Vec3::new(0.008, -0.54 - crate::players::model::ELBOW, -0.028),
+                        1e-5
+                    )
+            );
+            let bounds = (
+                Vec3::new(-0.44, -0.5, -0.13) * length,
+                Vec3::new(0.44, 0.5, 0.13) * length,
+            );
+            for fov in [50.0_f32, 65.0, 90.0, 110.0] {
+                let projection = Projection::Perspective(PerspectiveProjection {
+                    fov: fov.to_radians(),
+                    aspect_ratio: 16.0 / 9.0,
+                    ..default()
+                });
+                for swing in [0.0, 0.5, 1.0] {
+                    let pose = first_person_pose(
+                        &Transform::IDENTITY,
+                        Some(&projection),
+                        swing,
+                        item,
+                        bounds,
+                    );
+                    for x in [bounds.0.x, bounds.1.x] {
+                        for y in [bounds.0.y, bounds.1.y] {
+                            for z in [bounds.0.z, bounds.1.z] {
+                                assert!(
+                                    pose.transform_point(Vec3::new(x, y, z)).z < -0.119,
+                                    "{tool:?}, fov={fov}, swing={swing}"
+                                );
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
 
     #[test]
     fn eating_lifts_food_into_view_and_keeps_it_in_front_of_the_near_plane() {
@@ -362,9 +471,8 @@ mod tests {
     }
 
     #[test]
-    fn tools_are_turned_a_quarter_turn_relative_to_blocks() {
+    fn equipped_tools_point_their_working_edge_into_the_scene_not_across_the_view() {
         let bounds = (Vec3::splat(-0.12), Vec3::splat(0.12));
-        let block = first_person_pose(&Transform::IDENTITY, None, 0.0, ItemKind::Block(3), bounds);
         let tool = first_person_pose(
             &Transform::IDENTITY,
             None,
@@ -372,10 +480,46 @@ mod tests {
             ItemKind::Tool(terra_core::ToolKind::WoodSword),
             bounds,
         );
-        assert!(
-            (block.rotation.angle_between(tool.rotation) - std::f32::consts::FRAC_PI_2).abs()
-                < 1e-5
-        );
+        let face = tool.rotation * Vec3::Z;
+        let toward_eye = -tool.translation.normalize();
+        assert!(face.dot(toward_eye).abs() < 0.85);
+        assert!((tool.rotation * Vec3::X).dot(Vec3::NEG_Z) > 0.95);
+        for kind in terra_core::ToolKind::ALL {
+            let pose = third_person_pose(ItemKind::Tool(kind));
+            assert!((pose.rotation * Vec3::X).dot(Vec3::NEG_Z) > 0.95);
+        }
+    }
+
+    #[test]
+    fn scythes_sweep_laterally_and_watering_cans_tip_without_losing_the_grip() {
+        let bounds = (Vec3::splat(-0.25), Vec3::splat(0.25));
+        let camera = Transform::IDENTITY;
+        let item = ItemKind::Tool(terra_core::ToolKind::IronScythe);
+        let idle = first_person_pose(&camera, None, 0.0, item, bounds);
+        let cut = first_person_pose(&camera, None, 1.0, item, bounds);
+        let blade = Vec3::new(0.25, 0.25, 0.0);
+        assert!(cut.transform_point(blade).x < idle.transform_point(blade).x - 0.10);
+        for item in [item, ItemKind::Tool(terra_core::ToolKind::IronWateringCan)] {
+            let third = third_person_pose(item);
+            let action = third_person_action_pose(item, 1.0);
+            let grip = crate::previews::tools::grip(item).unwrap();
+            assert!(
+                third
+                    .transform_point(grip)
+                    .abs_diff_eq(action.transform_point(grip), 1e-5)
+            );
+            assert!(third.rotation.angle_between(action.rotation) > 0.6);
+            for amount in [0.0, 0.25, 0.5, 0.75, 1.0] {
+                let pose = first_person_pose(&camera, None, amount, item, bounds);
+                for x in [bounds.0.x, bounds.1.x] {
+                    for y in [bounds.0.y, bounds.1.y] {
+                        for z in [bounds.0.z, bounds.1.z] {
+                            assert!(pose.transform_point(Vec3::new(x, y, z)).z < -0.119);
+                        }
+                    }
+                }
+            }
+        }
     }
 
     #[test]
@@ -385,13 +529,11 @@ mod tests {
             ItemKind::Tool(terra_core::ToolKind::WoodSword),
         ] {
             let pose = third_person_pose(item);
-            assert!(
-                pose.transform_point(Vec3::new(0.0, -0.065, 0.025))
-                    .abs_diff_eq(
-                        Vec3::new(0.008, -0.54 - crate::players::model::ELBOW, -0.028),
-                        1e-5
-                    )
-            );
+            let grip = crate::previews::tools::grip(item).unwrap_or(Vec3::new(0.0, -0.065, 0.025));
+            assert!(pose.transform_point(grip).abs_diff_eq(
+                Vec3::new(0.008, -0.54 - crate::players::model::ELBOW, -0.028),
+                1e-5
+            ));
         }
     }
     #[test]
@@ -402,7 +544,7 @@ mod tests {
         let idle = first_person_pose(&camera, None, 0.0, item, bounds);
         let hit = first_person_pose(&camera, None, 1.0, item, bounds);
         assert!(hit.translation.z < idle.translation.z - 0.15);
-        // The quarter-turned tool combines pitch and roll around closer axes.
+        // The blade pitches forward with the same fixed camera transform.
         assert!(hit.rotation.angle_between(idle.rotation) > 0.45);
         assert!(
             idle.scale.x

@@ -102,14 +102,99 @@ pub enum MaterialId {
     GlassFence = 96,
     IceFence = 97,
     SnowLayer = 98,
+    Crusher = 99,
+    HandCrank = 100,
+    Farmland = 101,
+    Path = 102,
+    Wool = 103,
+    WoolStairs = 104,
+    WoolSlab = 105,
+    WhiteCarpet = 106,
+    RedCarpet = 107,
+    YellowCarpet = 108,
+    BlueCarpet = 109,
+    OrangeCarpet = 110,
+    GreenCarpet = 111,
+    PurpleCarpet = 112,
+    BlackCarpet = 113,
+    LimeCarpet = 114,
+    PinkCarpet = 115,
+    GoldCarpet = 116,
+    SilverCarpet = 117,
+    LightBlueCarpet = 118,
+    RedWool = 119,
+    YellowWool = 120,
+    BlueWool = 121,
+    OrangeWool = 122,
+    GreenWool = 123,
+    PurpleWool = 124,
+    BlackWool = 125,
+    LimeWool = 126,
+    PinkWool = 127,
+    GoldWool = 128,
+    SilverWool = 129,
+    LightBlueWool = 130,
+    FlowerPot = 131,
+    CherryLeaves = 132,
+    WhiteCherryLeaves = 133,
+    CherryLog = 134,
+    CherryPlanks = 135,
+    CherryStairs = 136,
+    CherrySlab = 137,
+    CherryFence = 138,
+    CherryDoor = 139,
+    CherryWindow = 140,
 }
 
 impl MaterialId {
-    pub const LAST: u16 = Self::SnowLayer as u16;
+    pub const LAST: u16 = Self::CherryWindow as u16;
+    pub const FOLIAGE: [u16; 5] = [7, 8, 9, 132, 133];
     pub const BLOCK_COUNT: usize = Self::LAST as usize;
 
     pub const fn identifier(self) -> &'static str {
         match self {
+            Self::CherryLog => "teramic::cherry_log",
+            Self::CherryPlanks => "teramic::cherry_planks",
+            Self::CherryStairs => "teramic::cherry_stairs",
+            Self::CherrySlab => "teramic::cherry_slab",
+            Self::CherryFence => "teramic::cherry_fence",
+            Self::CherryDoor => "teramic::cherry_door",
+            Self::CherryWindow => "teramic::cherry_window",
+            Self::CherryLeaves => "teramic::cherry_leaves",
+            Self::WhiteCherryLeaves => "teramic::white_cherry_leaves",
+            Self::Path => "teramic::path",
+            Self::Wool => "teramic::wool_block",
+            Self::WoolStairs => "teramic::wool_stairs",
+            Self::WoolSlab => "teramic::wool_slab",
+            Self::WhiteCarpet => "teramic::carpet",
+            Self::RedCarpet => "teramic::red_carpet",
+            Self::YellowCarpet => "teramic::yellow_carpet",
+            Self::BlueCarpet => "teramic::blue_carpet",
+            Self::OrangeCarpet => "teramic::orange_carpet",
+            Self::GreenCarpet => "teramic::green_carpet",
+            Self::PurpleCarpet => "teramic::purple_carpet",
+            Self::BlackCarpet => "teramic::black_carpet",
+            Self::LimeCarpet => "teramic::lime_carpet",
+            Self::PinkCarpet => "teramic::pink_carpet",
+            Self::GoldCarpet => "teramic::gold_carpet",
+            Self::SilverCarpet => "teramic::silver_carpet",
+            Self::LightBlueCarpet => "teramic::light_blue_carpet",
+            Self::RedWool => "teramic::red_wool",
+            Self::YellowWool => "teramic::yellow_wool",
+            Self::BlueWool => "teramic::blue_wool",
+            Self::OrangeWool => "teramic::orange_wool",
+            Self::GreenWool => "teramic::green_wool",
+            Self::PurpleWool => "teramic::purple_wool",
+            Self::BlackWool => "teramic::black_wool",
+            Self::LimeWool => "teramic::lime_wool",
+            Self::PinkWool => "teramic::pink_wool",
+            Self::GoldWool => "teramic::gold_wool",
+            Self::SilverWool => "teramic::silver_wool",
+            Self::LightBlueWool => "teramic::light_blue_wool",
+            Self::FlowerPot => "teramic::flower_pot",
+            Self::Farmland => "teramic::farmland",
+            Self::Crusher => "teramic::crusher",
+            Self::HandCrank => "teramic::hand_crank",
             Self::SnowLayer => "teramic::snow_layer",
             Self::OakStairs => "teramic::oak_stairs",
             Self::BirchStairs => "teramic::birch_stairs",
@@ -313,6 +398,48 @@ impl MaterialId {
             96 => Self::GlassFence,
             97 => Self::IceFence,
             98 => Self::SnowLayer,
+            99 => Self::Crusher,
+            100 => Self::HandCrank,
+            101 => Self::Farmland,
+            102 => Self::Path,
+            103 => Self::Wool,
+            104 => Self::WoolStairs,
+            105 => Self::WoolSlab,
+            106 => Self::WhiteCarpet,
+            107 => Self::RedCarpet,
+            108 => Self::YellowCarpet,
+            109 => Self::BlueCarpet,
+            110 => Self::OrangeCarpet,
+            111 => Self::GreenCarpet,
+            112 => Self::PurpleCarpet,
+            113 => Self::BlackCarpet,
+            114 => Self::LimeCarpet,
+            115 => Self::PinkCarpet,
+            116 => Self::GoldCarpet,
+            117 => Self::SilverCarpet,
+            118 => Self::LightBlueCarpet,
+            119 => Self::RedWool,
+            120 => Self::YellowWool,
+            121 => Self::BlueWool,
+            122 => Self::OrangeWool,
+            123 => Self::GreenWool,
+            124 => Self::PurpleWool,
+            125 => Self::BlackWool,
+            126 => Self::LimeWool,
+            127 => Self::PinkWool,
+            128 => Self::GoldWool,
+            129 => Self::SilverWool,
+            130 => Self::LightBlueWool,
+            131 => Self::FlowerPot,
+            132 => Self::CherryLeaves,
+            133 => Self::WhiteCherryLeaves,
+            134 => Self::CherryLog,
+            135 => Self::CherryPlanks,
+            136 => Self::CherryStairs,
+            137 => Self::CherrySlab,
+            138 => Self::CherryFence,
+            139 => Self::CherryDoor,
+            140 => Self::CherryWindow,
             _ => return None,
         })
     }
@@ -332,7 +459,19 @@ impl MaterialId {
     }
 
     pub const fn is_opaque(self) -> bool {
-        if (self as u16) >= 74 && (self as u16) <= 98 {
+        if (self as u16) >= 74 && (self as u16) <= 98
+            || matches!(self, Self::Path | Self::WoolStairs | Self::WoolSlab)
+            || (self as u16) >= 106 && (self as u16) <= 118
+            || matches!(
+                self,
+                Self::FlowerPot
+                    | Self::CherryStairs
+                    | Self::CherrySlab
+                    | Self::CherryFence
+                    | Self::CherryDoor
+                    | Self::CherryWindow
+            )
+        {
             return false;
         }
         !matches!(
@@ -342,6 +481,8 @@ impl MaterialId {
                 | Self::Workbench
                 | Self::Chest
                 | Self::Furnace
+                | Self::Crusher
+                | Self::HandCrank
                 | Self::ChimneyStraight
                 | Self::ChimneyElbow
                 | Self::ChimneyHorizontal
@@ -359,6 +500,8 @@ impl MaterialId {
                 | Self::Leaves
                 | Self::AutumnLeaves
                 | Self::SilverLeaves
+                | Self::CherryLeaves
+                | Self::WhiteCherryLeaves
                 | Self::SolidWater
                 | Self::Glass
                 | Self::FluidWater
@@ -378,6 +521,8 @@ impl MaterialId {
             self,
             Self::Grass
                 | Self::Dirt
+                | Self::Farmland
+                | Self::Path
                 | Self::Stone
                 | Self::Sand
                 | Self::Snow
@@ -398,7 +543,7 @@ impl MaterialId {
     }
 
     pub const fn flammable(self) -> bool {
-        if matches!(self as u16, 74..=76 | 82..=84 | 90..=92) {
+        if matches!(self as u16, 74..=76 | 82..=84 | 90..=92 | 103..=130 | 134..=140) {
             return true;
         }
         matches!(
@@ -415,6 +560,8 @@ impl MaterialId {
                 | Self::Leaves
                 | Self::AutumnLeaves
                 | Self::SilverLeaves
+                | Self::CherryLeaves
+                | Self::WhiteCherryLeaves
                 | Self::OakPlanks
                 | Self::BirchPlanks
                 | Self::SprucePlanks
@@ -432,6 +579,29 @@ impl MaterialId {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn village_materials_append_without_changing_old_ids_or_shape_occlusion() {
+        assert_eq!(MaterialId::Farmland as u16, 101);
+        for (id, material) in [
+            MaterialId::Path,
+            MaterialId::Wool,
+            MaterialId::WoolStairs,
+            MaterialId::WoolSlab,
+        ]
+        .into_iter()
+        .enumerate()
+        {
+            assert_eq!(material as usize, 102 + id);
+            assert_eq!(MaterialId::from_raw(material as u16), Some(material));
+            assert!(material.is_solid());
+        }
+        assert!(MaterialId::Wool.is_opaque());
+        assert!(!MaterialId::WoolSlab.is_opaque());
+        assert!(!MaterialId::WoolStairs.is_opaque());
+        assert!(!MaterialId::Path.is_opaque());
+        assert!(MaterialId::Path.is_natural_ground());
+        assert!(MaterialId::Wool.flammable());
+    }
     #[test]
     fn reef_cubes_append_ids_without_changing_existing_materials() {
         for (offset, material) in [

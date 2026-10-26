@@ -2,7 +2,7 @@
 use serde::{Deserialize, Serialize};
 use std::sync::OnceLock;
 
-pub const EFFECT_COUNT: usize = 13;
+pub const EFFECT_COUNT: usize = 14;
 pub const MAX_EFFECT_SECONDS: f32 = 3_600.0;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -22,6 +22,7 @@ pub enum EffectKind {
     FreezeResistance,
     Regeneration,
     ShieldPower,
+    NightVision,
 }
 
 impl EffectKind {
@@ -39,6 +40,7 @@ impl EffectKind {
         Self::FreezeResistance,
         Self::Regeneration,
         Self::ShieldPower,
+        Self::NightVision,
     ];
 
     pub const fn index(self) -> usize {
@@ -192,6 +194,10 @@ const SOURCES: [(&str, &str); EFFECT_COUNT] = [
     (
         "shield_power",
         include_str!("../../../assets/terra/effects/shield_power.json"),
+    ),
+    (
+        "nightvision",
+        include_str!("../../../assets/terra/effects/nightvision.json"),
     ),
 ];
 

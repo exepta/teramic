@@ -36,6 +36,75 @@ fn put(chunks: &mut ChunkStore, p: [i64; 3], m: u16) {
 }
 
 #[test]
+fn saved_floating_vines_are_reconciled_only_after_their_real_ceiling_becomes_known() {
+    for ceiling in [0, 3] {
+        let (mut chunks, mut journal, properties) = fixture();
+        for y in -18..=-1 {
+            put(&mut chunks, [-1, y, -1], if y % 2 == 0 { 54 } else { 55 });
+        }
+        put(&mut chunks, [-1, 0, -1], ceiling);
+        let roof = SectionPos::new(-1, 0, -1);
+        let roof_data = chunks.loaded.remove(&roof).unwrap();
+        for owner in [SectionPos::new(-1, -2, -1), SectionPos::new(-1, -1, -1)] {
+            loaded(&mut chunks, &journal, owner);
+        }
+        assert!(chunks.support_queue.is_empty());
+        assert_eq!(journal.revision(SectionPos::new(-1, -1, -1)), 0);
+        assert!(journal.gameplay().drops.is_empty());
+        chunks.loaded.insert(roof, roof_data);
+        loaded(&mut chunks, &journal, roof);
+        assert_eq!(chunks.support_queue.is_empty(), ceiling == 3);
+        while let Some(p) = chunks.support_queue.pop_front() {
+            prune(&mut chunks, &mut journal, p, &properties).unwrap();
+        }
+        for y in -18..=-1 {
+            assert_eq!(
+                chunks.block_at([-1, y, -1]),
+                Some(if ceiling == 0 {
+                    0
+                } else if y % 2 == 0 {
+                    54
+                } else {
+                    55
+                })
+            );
+        }
+        assert_eq!(
+            journal.gameplay().drops.len(),
+            if ceiling == 0 { 18 } else { 0 }
+        );
+    }
+}
+
+#[test]
+fn cave_vines_with_an_air_gap_drop_but_unrelated_anchored_roots_do_not() {
+    let (mut chunks, mut journal, properties) = fixture();
+    for x in [-2, -1] {
+        for y in -18..=-13 {
+            put(&mut chunks, [x, y, -1], 54);
+        }
+        put(&mut chunks, [x, -12, -1], 3);
+    }
+    // This represents old saved procedural data, not a new mining action.
+    put(&mut chunks, [-1, -15, -1], 0);
+    loaded(&mut chunks, &journal, SectionPos::new(-1, -2, -1));
+    loaded(&mut chunks, &journal, SectionPos::new(-1, -1, -1));
+    while let Some(p) = chunks.support_queue.pop_front() {
+        prune(&mut chunks, &mut journal, p, &properties).unwrap();
+    }
+    for y in -18..=-16 {
+        assert_eq!(chunks.block_at([-1, y, -1]), Some(0));
+    }
+    for y in -14..=-13 {
+        assert_eq!(chunks.block_at([-1, y, -1]), Some(54));
+    }
+    for y in -18..=-13 {
+        assert_eq!(chunks.block_at([-2, y, -1]), Some(54));
+    }
+    assert_eq!(journal.gameplay().drops.len(), 3);
+}
+
+#[test]
 fn crystal_and_seagrass_picking_hits_authored_geometry_but_not_empty_cell_corners() {
     let (mut chunks, _, _) = fixture();
     for material in [50, 51, 52, 53] {
@@ -157,6 +226,29 @@ fn hanging_mineral_cut_drops_only_detached_part_and_retains_ceiling_root() {
                     && d.velocity[1] < 0.0
                     && d.pickup_delay_seconds >= 1.0)
         );
+    }
+}
+
+#[test]
+fn unrelated_mining_and_reload_do_not_validate_or_drop_natural_mineral_columns() {
+    for material in [51, 52, 53] {
+        let (mut chunks, mut journal, properties) = fixture();
+        // Natural side-rooted formations need not have a vertical solid anchor.
+        for y in -8..=-3 {
+            put(&mut chunks, [-8, y, -8], material);
+        }
+        put(&mut chunks, [-3, -4, -3], 3);
+        remove(&mut chunks, &mut journal, [-3, -4, -3], &properties);
+        loaded(&mut chunks, &journal, SectionPos::new(-1, -1, -1));
+        loaded(&mut chunks, &journal, SectionPos::new(-1, 0, -1));
+        assert!(
+            chunks.support_queue.is_empty(),
+            "an unrelated section revision must not enqueue the crystal"
+        );
+        for y in -8..=-3 {
+            assert_eq!(chunks.block_at([-8, y, -8]), Some(material));
+        }
+        assert!(journal.gameplay().drops.is_empty());
     }
 }
 

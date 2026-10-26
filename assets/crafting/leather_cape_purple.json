@@ -1,0 +1,34 @@
+{
+  "id": "teramic::leather_cape_purple",
+  "name": "Purple Leather Cape",
+  "station": "hand",
+  "output": {
+    "item": {
+      "cape": {
+        "material": "leather",
+        "color": "purple"
+      }
+    },
+    "count": 1
+  },
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "cape": {
+            "material": "leather",
+            "color": "white"
+          }
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "dye": "purple"
+        },
+        "count": 1
+      }
+    ]
+  }
+}

@@ -123,6 +123,44 @@ fn waterfall_lips_and_impacts_share_pinned_corners_with_moving_pool_interiors() 
 }
 
 #[test]
+fn natural_reservoir_meshes_never_project_waterfalls_through_dry_air() {
+    let g = generator(4.0, 8.0, true);
+    for drop in [1.0, 4.0, 5.0, 12.0, 30.0] {
+        let mut columns = vec![g.terrain().surface_column(0.0, 0.0); 18 * 18];
+        for z in 0..18 {
+            for x in 0..18 {
+                columns[x + z * 18].water_level = Some(if x <= 8 { 8.0 + drop } else { 8.0 });
+            }
+        }
+        let mut surfaces = 0;
+        for sy in 0..=2 {
+            let owner = SectionPos::new(-1, sy, -1);
+            if let Some(patch) = super::channels::build_channel_patch(
+                owner,
+                owner.origin().unwrap(),
+                &columns,
+                &vec![0; 18 * 18 * 18],
+            ) {
+                surfaces += 1;
+                assert!(patch.surface_effects.iter().all(|e| e[3] != 1.0));
+                assert!(patch.normals.iter().all(|normal| normal[1] > 0.01));
+                assert!(patch.positions.iter().all(|p| (0.0..=16.0).contains(&p[1])));
+                assert!(
+                    patch
+                        .indices
+                        .iter()
+                        .all(|&i| (i as usize) < patch.positions.len())
+                );
+            }
+        }
+        assert!(
+            surfaces > 0,
+            "reservoir tops remain visible while falling geometry belongs to cells"
+        );
+    }
+}
+
+#[test]
 fn wave_weights_match_across_negative_chunk_boundaries_and_pin_live_fluid_edges() {
     let g = generator(4.0, 8.0, true);
     let make = |position: SectionPos| {
@@ -265,83 +303,6 @@ fn negative_fractional_levels_and_tile_seams_share_positions_and_depth() {
 }
 
 #[test]
-fn waterfall_geometry_is_owned_once_and_clips_across_vertical_sections() {
-    let terrain = generator(4.0, 8.0, true);
-    let column = terrain.terrain().surface_column(0.5, 0.5);
-    let mut columns = vec![column; 18 * 18];
-    // A downstream tile with its upstream reach in the read-only padding.
-    for column in columns.iter_mut().take(18) {
-        column.water_level = Some(24.8);
-        column.height = 21.0;
-    }
-    let padded = vec![0; 18 * 18 * 18];
-    for sy in [0, 1] {
-        let p = SectionPos::new(-1, sy, 0);
-        let patch = super::channels::build_channel_patch(p, p.origin().unwrap(), &columns, &padded)
-            .unwrap();
-        assert_eq!(patch.positions.len(), patch.normals.len());
-        assert_eq!(patch.positions.len(), patch.flow.len());
-        assert!(
-            patch
-                .positions
-                .iter()
-                .all(|p| p.iter().all(|v| v.is_finite()) && p[1] >= 0.0 && p[1] <= 16.0)
-        );
-        assert!(
-            patch
-                .indices
-                .iter()
-                .all(|&i| (i as usize) < patch.positions.len())
-        );
-        assert_eq!(patch.positions.len(), patch.surface_effects.len());
-        let mut offsets = Vec::new();
-        for (point, effect) in patch.positions.iter().zip(&patch.surface_effects) {
-            if effect[3] == 1.0 && effect[0] > 0.0 {
-                assert!(
-                    (0.05..0.96).contains(&point[2]),
-                    "fall must clear the cliff and stay inside its downstream cell"
-                );
-                offsets.push(point[2]);
-                assert!((effect[0] + effect[1] - effect[2]).abs() < 1e-5);
-            }
-        }
-        let minimum = offsets.iter().copied().fold(f32::INFINITY, f32::min);
-        let maximum = offsets.iter().copied().fold(f32::NEG_INFINITY, f32::max);
-        assert!(
-            maximum - minimum > 0.45,
-            "curtain must have a curved profile"
-        );
-        let middle = if sy == 0 { 15.0 } else { 1.0 };
-        let lateral: Vec<_> = patch
-            .positions
-            .iter()
-            .zip(&patch.surface_effects)
-            .filter(|(p, e)| p[1] == middle && e[3] == 1.0)
-            .map(|(p, _)| p[2])
-            .collect();
-        let near = lateral.iter().copied().fold(f32::INFINITY, f32::min);
-        let far = lateral.iter().copied().fold(f32::NEG_INFINITY, f32::max);
-        assert!(
-            far - near > 0.25,
-            "falling streams need visible lateral relief"
-        );
-        for indices in patch.indices.chunks_exact(3) {
-            let [a, b, c] =
-                [indices[0], indices[1], indices[2]].map(|i| patch.positions[i as usize]);
-            let ab: [f32; 3] = std::array::from_fn(|i| b[i] - a[i]);
-            let ac: [f32; 3] = std::array::from_fn(|i| c[i] - a[i]);
-            let cross = [
-                ab[1] * ac[2] - ab[2] * ac[1],
-                ab[2] * ac[0] - ab[0] * ac[2],
-                ab[0] * ac[1] - ab[1] * ac[0],
-            ];
-            let normal = patch.normals[indices[0] as usize];
-            assert!(cross.iter().zip(normal).map(|(a, b)| a * b).sum::<f32>() > 0.0);
-        }
-    }
-}
-
-#[test]
 fn small_river_descents_share_corners_without_vertical_waterfall_strips() {
     let terrain = generator(4.0, 8.0, true);
     let base = terrain.terrain().surface_column(0.5, 0.5);
@@ -385,173 +346,6 @@ fn small_river_descents_share_corners_without_vertical_waterfall_strips() {
 }
 
 #[test]
-fn waterfall_sheets_start_at_exactly_five_blocks() {
-    let terrain = generator(4.0, 8.0, true);
-    let base = terrain.terrain().surface_column(0.5, 0.5);
-    let padded = vec![0; 18 * 18 * 18];
-    for drop in [1.0, 4.999, 5.0, 6.0, 8.0] {
-        let mut columns = vec![base; 18 * 18];
-        for column in columns.iter_mut().take(18) {
-            column.water_level = Some(8.0 + drop);
-        }
-        let position = SectionPos::default();
-        let water = super::channels::build_channel_patch(
-            position,
-            position.origin().unwrap(),
-            &columns,
-            &padded,
-        )
-        .unwrap();
-        let falling = water.surface_effects.iter().any(|e| e[3] == 1.0);
-        assert_eq!(falling, drop >= MIN_WATERFALL_DROP);
-        if drop == 8.0 {
-            // A crest exactly at section Y=16 must keep its connected lip in the
-            // lower section; the next section has no positive-height fall face.
-            let lip_vertices = water.positions.iter().filter(|p| p[1] == 16.0).count();
-            assert_eq!(lip_vertices, 16 * (2 + 4));
-            assert!(
-                super::channels::build_channel_patch(
-                    SectionPos::new(0, 1, 0),
-                    [0, 16, 0],
-                    &columns,
-                    &padded
-                )
-                .is_none()
-            );
-        }
-    }
-}
-
-#[test]
-fn curved_waterfalls_share_world_space_edges_across_negative_sections() {
-    let terrain = generator(-8.0, -4.0, true);
-    let base = terrain.terrain().surface_column(0.5, 0.5);
-    let padded = vec![0; 18 * 18 * 18];
-    let build = |position: SectionPos| {
-        let origin = position.origin().unwrap();
-        let mut columns = vec![base; 18 * 18];
-        for column in columns.iter_mut().take(18) {
-            column.water_level = Some(20.0);
-            column.height = 16.0;
-        }
-        super::channels::build_channel_patch(position, origin, &columns, &padded).unwrap()
-    };
-    let below = build(SectionPos::new(-1, -1, -1));
-    let above = build(SectionPos::new(-1, 0, -1));
-    let right = build(SectionPos::new(0, 0, -1));
-    let edge_samples = |patch: &WaterPatch, axis: usize, value: f32, origin: [f32; 3]| {
-        let mut samples: Vec<[u32; 7]> = patch
-            .positions
-            .iter()
-            .zip(&patch.surface_effects)
-            .filter(|(p, e)| p[axis] == value && e[3] == 1.0)
-            .map(|(p, e)| {
-                [
-                    (p[0] + origin[0]).to_bits(),
-                    (p[1] + origin[1]).to_bits(),
-                    (p[2] + origin[2]).to_bits(),
-                    e[0].to_bits(),
-                    e[1].to_bits(),
-                    e[2].to_bits(),
-                    e[3].to_bits(),
-                ]
-            })
-            .collect();
-        samples.sort_unstable();
-        samples.dedup();
-        samples
-    };
-    let lower_edge = edge_samples(&below, 1, 16.0, [-16.0, -16.0, -16.0]);
-    assert!(!lower_edge.is_empty());
-    assert_eq!(
-        lower_edge,
-        edge_samples(&above, 1, 0.0, [-16.0, 0.0, -16.0])
-    );
-    let left_edge = edge_samples(&above, 0, 16.0, [-16.0, 0.0, -16.0]);
-    assert!(!left_edge.is_empty());
-    assert_eq!(left_edge, edge_samples(&right, 0, 0.0, [0.0, 0.0, -16.0]));
-}
-
-#[test]
-fn thirty_meter_waterfall_is_continuous_across_three_vertical_sections() {
-    let terrain = generator(-8.0, -4.0, true);
-    let base = terrain.terrain().surface_column(0.5, 0.5);
-    let mut columns = vec![base; 18 * 18];
-    for column in columns.iter_mut().take(18) {
-        column.water_level = Some(26.0);
-        column.height = 22.0;
-    }
-    let padded = vec![0; 18 * 18 * 18];
-    let mut previous_top: Option<Vec<[u32; 3]>> = None;
-    for sy in -1..=1 {
-        let position = SectionPos::new(-2, sy, -1);
-        let water = super::channels::build_channel_patch(
-            position,
-            position.origin().unwrap(),
-            &columns,
-            &padded,
-        )
-        .unwrap();
-        assert!(water.positions.iter().all(|p| (0.0..=16.0).contains(&p[1])));
-        let edge = |height: f32| {
-            let mut vertices: Vec<_> = water
-                .positions
-                .iter()
-                .zip(&water.surface_effects)
-                .filter(|(p, e)| p[1] == height && e[3] == 1.0)
-                .map(|(p, e)| {
-                    assert!((e[2] - 30.0).abs() < 1e-5);
-                    [p[0].to_bits(), p[2].to_bits(), e[0].to_bits()]
-                })
-                .collect();
-            vertices.sort_unstable();
-            vertices.dedup();
-            vertices
-        };
-        if let Some(previous) = previous_top {
-            assert_eq!(previous, edge(0.0));
-        }
-        previous_top = Some(edge(16.0));
-    }
-}
-
-#[test]
-fn sloping_waterfall_lips_are_clipped_without_leaving_their_sections() {
-    let terrain = generator(4.0, 8.0, true);
-    let base = terrain.terrain().surface_column(0.5, 0.5);
-    let mut columns = vec![base; 18 * 18];
-    for (x, column) in columns.iter_mut().take(18).enumerate() {
-        column.water_level = Some(15.2 + x as f64 * 0.12);
-        column.height = 10.0;
-    }
-    let padded = vec![0; 18 * 18 * 18];
-    for sy in [0, 1] {
-        let position = SectionPos::new(-1, sy, -1);
-        let water = super::channels::build_channel_patch(
-            position,
-            position.origin().unwrap(),
-            &columns,
-            &padded,
-        )
-        .unwrap();
-        assert!(water.positions.iter().all(|p| (0.0..=16.0).contains(&p[1])));
-        let lip = water
-            .positions
-            .iter()
-            .zip(&water.surface_effects)
-            .filter(|(_, e)| e[3] == 1.0 && e[0] == 0.0)
-            .count();
-        assert!(lip > 0, "both sections own their clipped part of the crest");
-        assert!(
-            water
-                .indices
-                .iter()
-                .all(|&i| (i as usize) < water.positions.len())
-        );
-    }
-}
-
-#[test]
 fn channel_shores_meet_dry_bed_and_share_depth_at_section_edges() {
     let terrain = generator(4.0, 8.0, true);
     let base = terrain.terrain().surface_column(0.5, 0.5);
@@ -589,7 +383,7 @@ fn intersecting_gentle_slopes_use_one_corner_for_every_incident_cell() {
     let terrain = generator(0.0, 1.0, true);
     let base = terrain.terrain().surface_column(0.5, 0.5);
     let mut columns = vec![base; 18 * 18];
-    for (x, z, level) in [(1, 1, 1.0), (2, 1, 4.0), (1, 2, 4.0), (2, 2, 7.0)] {
+    for (x, z, level) in [(1, 1, 1.0), (2, 1, 1.375), (1, 2, 1.375), (2, 2, 1.75)] {
         columns[x + 18 * z].water_level = Some(level);
     }
     let water = super::channels::build_channel_patch(
@@ -605,7 +399,7 @@ fn intersecting_gentle_slopes_use_one_corner_for_every_incident_cell() {
         .filter(|p| p[0] == 1.0 && p[2] == 1.0)
         .map(|p| p[1])
         .collect();
-    assert_eq!(heights, vec![4.0; 4]);
+    assert_eq!(heights, vec![1.375; 4]);
 }
 
 #[test]

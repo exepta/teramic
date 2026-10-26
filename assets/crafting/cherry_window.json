@@ -1,0 +1,52 @@
+{
+  "id": "teramic::cherry_window",
+  "name": "Cherry Window",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "block": 140
+    },
+    "count": 1
+  },
+  "pattern": {
+    "kind": "shaped",
+    "width": 3,
+    "height": 3,
+    "cells": [
+      null,
+      {
+        "item": {
+          "block": 135
+        },
+        "count": 1
+      },
+      null,
+      {
+        "item": {
+          "block": 135
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "block": 15
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "block": 135
+        },
+        "count": 1
+      },
+      null,
+      {
+        "item": {
+          "block": 135
+        },
+        "count": 1
+      },
+      null
+    ]
+  }
+}

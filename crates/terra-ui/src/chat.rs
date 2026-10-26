@@ -168,9 +168,12 @@ pub(crate) fn install(app: &mut App) {
 }
 
 fn available(world: &World) -> bool {
-    world
-        .get_resource::<ClientSession>()
-        .is_some_and(|session| session.ready && session.error.is_none() && !session.dead())
+    !world
+        .get_resource::<crate::pets::PetMenuState>()
+        .is_some_and(|p| p.blocks_input())
+        && world
+            .get_resource::<ClientSession>()
+            .is_some_and(|session| session.ready && session.error.is_none() && !session.dead())
         && world
             .get_resource::<MenuState>()
             .is_none_or(|menu| menu.page == MenuPage::Playing)

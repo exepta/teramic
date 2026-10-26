@@ -1,0 +1,5 @@
+elapsed_seconds,interval_seconds,frames,fps,median_ms,p95_ms,p99_ms,max_ms,rss_mib,legacy_entity_indices,entities,allocated_entity_indices,live_entities,entity_count_kind,mesh_entities,visible_mesh_entities,mesh_assets,standard_material_assets,image_assets,upload_vertices,resource_sample_lag_seconds,drm_memory_vram_kib,drm_memory_gtt_kib,process_cpu_percent,swap_kib,minor_faults,major_faults,minor_faults_delta,major_faults_delta
+30.001173877,30.001173877,3394,113.12890668594687,8.418732,12.467366,16.072670000000002,43.904331,1462.40625,,9603,16384,,explicit_fields,4976,2724,5303,256,441,13722349,,,,,,,,,
+60.005539423,30.004365546,3781,126.01499585796309,7.4212929999999995,11.483376,15.315055,25.201638,1476.41015625,,7996,16384,,explicit_fields,3731,2310,4278,256,441,15066538,,,,,,,,,
+90.009818146,30.004278723,3767,125.54876038771026,7.457493,11.722632,15.755183999999998,28.947914,1470.45703125,,8544,16384,,explicit_fields,4152,2539,4711,256,441,15851406,,,,,,,,,
+120.016663192,30.006845046,3652,121.70556399386687,7.633097,12.351364,16.614261000000003,26.336841,1505.72265625,,9731,16384,,explicit_fields,5093,2982,5116,256,441,22659253,,,,,,,,,

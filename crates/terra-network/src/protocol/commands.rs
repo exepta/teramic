@@ -12,6 +12,7 @@ pub enum Command {
     Player(String),
     Spawn(terra_core::creatures::spawning::SpawnMob),
     EffectGive(terra_core::EffectKind, f32, u8),
+    EffectPlayer(String, terra_core::EffectKind, f32, u8),
     EffectClear(Option<terra_core::EffectKind>),
 }
 
@@ -32,7 +33,7 @@ pub struct CommandDescription {
 
 pub const CATALOGUE: &[CommandDescription] = &[
     CommandDescription {
-        usage: "/effect give <effect> [seconds] [level] | clear [effect]",
+        usage: "/effect [@player] <effect> <level> <seconds> | clear [effect]",
         description: "Apply or clear a survival status effect; requires environment permission.",
     },
     CommandDescription {
@@ -46,6 +47,10 @@ pub const CATALOGUE: &[CommandDescription] = &[
     CommandDescription {
         usage: "/locate biome <name>",
         description: "Find a biome and a safe teleport destination.",
+    },
+    CommandDescription {
+        usage: "/locate struct <teramic::village|teramic::ruin|teramic::mine>",
+        description: "Find a generated structure; Creative also supports air and water landings.",
     },
     CommandDescription {
         usage: "/time set <time>",
@@ -79,6 +84,37 @@ pub const CATALOGUE: &[CommandDescription] = &[
 
 pub fn help_pages() -> usize {
     CATALOGUE.len().div_ceil(HELP_PAGE_SIZE)
+}
+
+#[cfg(test)]
+mod locate_tests {
+    use super::*;
+
+    #[test]
+    fn structure_completion_is_shared_by_chat_console_and_explicit_player_context() {
+        assert_eq!(
+            suggestions("/locate struct teramic::v", &[]),
+            ["/locate struct teramic::village"]
+        );
+        assert_eq!(
+            console_suggestions("locate struct teramic::m", &[]),
+            ["locate struct teramic::mine"]
+        );
+        assert_eq!(
+            console_suggestions("as Alice locate struct teramic::r", &[]),
+            ["as Alice locate struct teramic::ruin"]
+        );
+        assert_eq!(
+            suggestions("/locate ", &[]),
+            ["/locate biome ", "/locate struct "]
+        );
+        assert!(
+            CATALOGUE
+                .iter()
+                .any(|entry| entry.usage.starts_with("/locate struct "))
+        );
+        assert!((1..=help_pages()).all(|page| help_page(page).len() <= HELP_PAGE_SIZE));
+    }
 }
 
 #[cfg(test)]
@@ -124,6 +160,76 @@ mod rule_tests {
 #[cfg(test)]
 mod effect_tests {
     use super::*;
+
+    #[test]
+    fn direct_effect_commands_support_self_named_players_levels_and_duration_order() {
+        use terra_core::EffectKind::NightVision;
+        assert_eq!(
+            parse("/effect teramic::nightvision 2 100"),
+            Ok(Some(Command::EffectGive(NightVision, 100.0, 2)))
+        );
+        assert_eq!(
+            parse("/effect @Alice teramic::nightvision 2 200"),
+            Ok(Some(Command::EffectPlayer(
+                "Alice".into(),
+                NightVision,
+                200.0,
+                2
+            )))
+        );
+        assert_eq!(
+            parse("/effect @\"Alice Smith\" nightvision 1 10"),
+            Ok(Some(Command::EffectPlayer(
+                "Alice Smith".into(),
+                NightVision,
+                10.0,
+                1
+            )))
+        );
+        for invalid in [
+            "/effect @ nightvision 1 10",
+            "/effect nightvision 0 10",
+            "/effect nightvision 4 10",
+            "/effect nightvision 1 NaN",
+            "/effect nightvision 1 inf",
+            "/effect nightvision 1 0",
+            "/effect nightvision 1 3601",
+            "/effect @Alice nightvision 2",
+            "/effect @\"Alice nightvision 1 10",
+        ] {
+            assert!(parse(invalid).is_err(), "{invalid}");
+        }
+        let players = ["Alice".into(), "Alice Smith".into()];
+        assert!(suggestions("/effect @Al", &players).contains(&"/effect @Alice ".into()));
+        assert!(suggestions("/effect @Al", &players).contains(&"/effect @\"Alice Smith\" ".into()));
+        assert_eq!(
+            suggestions("/effect @\"Alice S", &players),
+            ["/effect @\"Alice Smith\" "]
+        );
+        assert_eq!(
+            suggestions("/effect @Alice teramic::nightv", &players),
+            ["/effect @Alice teramic::nightvision"]
+        );
+        assert_eq!(
+            suggestions("/effect @aLiCe teramic::nightv", &players),
+            ["/effect @Alice teramic::nightvision"]
+        );
+        assert_eq!(
+            console_suggestions("effect @\"alice smith\" teramic::nightv", &players),
+            ["effect @\"Alice Smith\" teramic::nightvision"]
+        );
+        assert!(
+            suggestions("/effect nightvision ", &players).contains(&"/effect nightvision 2".into())
+        );
+        assert!(
+            suggestions("/effect nightvision 2 ", &players)
+                .contains(&"/effect nightvision 2 200".into())
+        );
+        assert_eq!(
+            console_suggestions("effect @Alice teramic::nightv", &players),
+            ["effect @Alice teramic::nightvision"]
+        );
+    }
 
     #[test]
     fn effects_use_registered_ids_bounded_values_and_shared_console_completion() {
@@ -184,6 +290,20 @@ pub fn help_page(page: usize) -> &'static [CommandDescription] {
 }
 
 pub fn parse(text: &str) -> Result<Option<Command>, &'static str> {
+    if let Some(rest) = text.strip_prefix("/effect @\"") {
+        let (name, values) = rest.split_once('"').ok_or("Unclosed player name.")?;
+        let values: Vec<_> = values.split_whitespace().collect();
+        if name.trim().is_empty() || values.len() != 3 {
+            return Err("Usage: /effect @\"player name\" <effect> <level> <seconds>");
+        }
+        let (kind, seconds, level) = parse_effect_values(values[0], values[1], values[2])?;
+        return Ok(Some(Command::EffectPlayer(
+            name.into(),
+            kind,
+            seconds,
+            level,
+        )));
+    }
     if let Some(name) = text
         .strip_prefix("/tp ")
         .map(str::trim)
@@ -199,7 +319,8 @@ pub fn parse(text: &str) -> Result<Option<Command>, &'static str> {
     let parts: Vec<_> = text.split_whitespace().collect();
     match parts.first().copied() {
         Some("/effect") => {
-            let usage = "Usage: /effect give <effect> [seconds: 0.1-3600] [level: 1-10] or /effect clear [effect]";
+            let usage =
+                "Usage: /effect [@player] <effect> <level> <seconds> or /effect clear [effect]";
             match parts.as_slice() {
                 [_, "clear"] => Ok(Some(Command::EffectClear(None))),
                 [_, "clear", name] => effect_kind(name)
@@ -222,6 +343,23 @@ pub fn parse(text: &str) -> Result<Option<Command>, &'static str> {
                         return Err(usage);
                     }
                     Ok(Some(Command::EffectGive(kind, seconds, level)))
+                }
+                [_, name, level, seconds] => {
+                    let (kind, seconds, level) = parse_effect_values(name, level, seconds)?;
+                    Ok(Some(Command::EffectGive(kind, seconds, level)))
+                }
+                [_, player, name, level, seconds] if player.starts_with('@') => {
+                    let player = player.trim_start_matches('@');
+                    if player.is_empty() {
+                        return Err("Player name must not be empty.");
+                    }
+                    let (kind, seconds, level) = parse_effect_values(name, level, seconds)?;
+                    Ok(Some(Command::EffectPlayer(
+                        player.into(),
+                        kind,
+                        seconds,
+                        level,
+                    )))
                 }
                 _ => Err(usage),
             }
@@ -326,6 +464,28 @@ pub fn parse(text: &str) -> Result<Option<Command>, &'static str> {
     }
 }
 
+fn parse_effect_values(
+    name: &str,
+    level: &str,
+    seconds: &str,
+) -> Result<(terra_core::EffectKind, f32, u8), &'static str> {
+    let kind = effect_kind(name).ok_or("Unknown effect. Tab lists available effects.")?;
+    let definition = terra_core::effects::effect_definition(kind);
+    let level = level
+        .parse::<u8>()
+        .ok()
+        .filter(|level| (1..=definition.max_level).contains(level))
+        .ok_or("Invalid effect level. Tab lists supported levels.")?;
+    let seconds = seconds
+        .parse::<f32>()
+        .ok()
+        .filter(|seconds| {
+            seconds.is_finite() && (0.1..=definition.max_duration_seconds).contains(seconds)
+        })
+        .ok_or("Invalid effect duration. Use a finite value from 0.1 to 3600 seconds.")?;
+    Ok((kind, seconds, level))
+}
+
 fn effect_kind(name: &str) -> Option<terra_core::EffectKind> {
     terra_core::EffectKind::ALL.into_iter().find(|kind| {
         kind.identifier() == name || kind.identifier().strip_prefix("teramic::") == Some(name)
@@ -394,7 +554,7 @@ pub fn suggestions(prefix: &str, players: &[String]) -> Vec<String> {
     } else if prefix.starts_with("/effect clear ") {
         effect_suggestions(&prefix, "/effect clear ", true)
     } else if prefix.starts_with("/effect ") {
-        vec!["/effect give ".into(), "/effect clear".into()]
+        direct_effect_suggestions(&prefix, players)
     } else if prefix.starts_with("/gamerule list ") {
         (1..=rule_pages())
             .map(|p| format!("/gamerule list {p}"))
@@ -499,14 +659,23 @@ pub fn suggestions(prefix: &str, players: &[String]) -> Vec<String> {
             "ocean",
             "mushroom_park",
             "cliffted_desert",
+            "cherry_forest",
         ]
         .iter()
         .map(|v| format!("/locate biome {v}"))
         .collect()
+    } else if prefix.starts_with("/locate struct ") {
+        ["teramic::village", "teramic::ruin", "teramic::mine"]
+            .iter()
+            .map(|v| format!("/locate struct {v}"))
+            .collect()
+    } else if prefix.starts_with("/locate ") {
+        vec!["/locate biome ".into(), "/locate struct ".into()]
     } else {
         [
             "/help",
             "/locate biome ",
+            "/locate struct ",
             "/time set ",
             "/tp ",
             "/clear",
@@ -523,9 +692,88 @@ pub fn suggestions(prefix: &str, players: &[String]) -> Vec<String> {
     };
     choices
         .into_iter()
-        .filter(|v| v.to_ascii_lowercase().starts_with(&prefix))
+        .filter(|v| {
+            v.to_ascii_lowercase().starts_with(&prefix) || effect_player_completion(v, &prefix)
+        })
         .take(64)
         .collect()
+}
+
+fn effect_player_completion(candidate: &str, prefix: &str) -> bool {
+    let Some(typed) = prefix.strip_prefix("/effect @") else {
+        return false;
+    };
+    let incomplete = if let Some(quoted) = typed.strip_prefix('"') {
+        !quoted.contains('"')
+    } else {
+        !typed.contains(char::is_whitespace)
+    };
+    if !incomplete {
+        return false;
+    }
+    candidate
+        .strip_prefix("/effect @")
+        .and_then(split_actor)
+        .is_some_and(|(actor, _)| {
+            actor
+                .trim_matches('"')
+                .to_ascii_lowercase()
+                .starts_with(typed.trim_start_matches('"'))
+        })
+}
+
+fn direct_effect_suggestions(prefix: &str, players: &[String]) -> Vec<String> {
+    let rest = prefix.strip_prefix("/effect ").unwrap_or_default();
+    let (command, rest) = if rest.starts_with('@') {
+        let Some((player, tail)) = split_actor(rest.trim_start_matches('@')) else {
+            return players
+                .iter()
+                .map(|player| format!("/effect @{} ", quoted(player)))
+                .collect();
+        };
+        let player = players
+            .iter()
+            .find(|name| name.eq_ignore_ascii_case(player.trim_matches('"')))
+            .map_or_else(|| player.to_owned(), |name| quoted(name));
+        (format!("/effect @{player} "), tail)
+    } else {
+        ("/effect ".to_owned(), rest)
+    };
+    let parts: Vec<_> = rest.split_whitespace().collect();
+    if let Some(kind) = parts.first().and_then(|name| effect_kind(name))
+        && (parts.len() > 1 || rest.ends_with(' '))
+    {
+        let name = parts[0];
+        if parts.len() > 2 || parts.len() == 2 && rest.ends_with(' ') {
+            return ["5", "10", "30", "60", "100", "200", "300"]
+                .map(|seconds| format!("{command}{name} {} {seconds}", parts[1]))
+                .into();
+        }
+        return (1..=terra_core::effects::effect_definition(kind).max_level)
+            .map(|level| format!("{command}{name} {level}"))
+            .collect();
+    }
+    let qualified = rest.starts_with("teramic:");
+    let mut result: Vec<_> = terra_core::EffectKind::ALL
+        .into_iter()
+        .map(|kind| {
+            let name = if qualified {
+                kind.identifier()
+            } else {
+                kind.identifier().trim_start_matches("teramic::")
+            };
+            format!("{command}{name}")
+        })
+        .collect();
+    if command == "/effect " {
+        result.extend(["/effect give ".into(), "/effect clear".into()]);
+        result.extend(
+            players
+                .iter()
+                .map(|player| format!("/effect @{} ", quoted(player))),
+        );
+    }
+    result
 }
 
 fn effect_suggestions(prefix: &str, command: &str, clear: bool) -> Vec<String> {

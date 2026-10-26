@@ -15,10 +15,13 @@ local artifacts. The initial publication would otherwise include more than
 
 - `results/inventory-fps-2026-10-22/native/`
 - `results/status-effects-2026-10-22/native/`
+- `results/equipment-2026-10-22/native/`
+- `results/capes-crusher-2026-10-22/native/`
+- `results/manual-crusher-2026-10-22/native/`
 
 Add similarly narrow exceptions for future reviewed visual evidence rather
 than committing complete generated benchmark directories.
 
-Reviewed plain-text logs in those same two reports' `logs/` directories are
+Reviewed plain-text logs in those same reports' `logs/` directories are
 also retained. Other logs keep the existing exclusion; do not include private
 server logs or copied profiles as benchmark evidence.

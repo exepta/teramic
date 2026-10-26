@@ -253,25 +253,37 @@ pub(super) fn marker_visible(
     if marker.player {
         return true;
     }
-    let [x, _, z] = marker.position.map(|v| v.floor() as i64);
-    let Some(sample) = entries
-        .get(&([x.div_euclid(16), z.div_euclid(16)], layer))
-        .and_then(|e| e.detail.as_ref())
-        .map(|d| d.cells[(z.rem_euclid(16) * 16 + x.rem_euclid(16)) as usize])
-        .filter(|s| s.known)
-    else {
+    let [x, feet, z] = marker.position.map(|v| v.floor() as i64);
+    // A live loaded animal must not wait for asynchronous exploration-cache IO.
+    // Keep unloaded regions out, but use every existing height source, not only
+    // the short-lived detailed tiles that are evicted during normal mapping.
+    if chunks.block_at([x, feet, z]).is_none() && chunks.block_at([x, feet + 1, z]).is_none() {
         return false;
-    };
-    let feet = marker.position[1].floor() as i64;
-    let floor = i64::from(sample.height);
-    if (floor - feet).abs() > 40 {
+    }
+    let floor = entries
+        .get(&([x.div_euclid(16), z.div_euclid(16)], layer))
+        .and_then(|entry| entry.height_at((z.rem_euclid(16) * 16 + x.rem_euclid(16)) as usize))
+        .map(i64::from)
+        .or_else(|| match layer {
+            MapLayer::Surface => chunks.surface_column_at(x, z).map(|column| {
+                column
+                    .height
+                    .max(column.water_level.unwrap_or(column.height))
+                    .floor() as i64
+            }),
+            MapLayer::Cave { level } => Some(i64::from(level)),
+        })
+        .unwrap_or(feet + 40);
+    if floor.abs_diff(feet) > 128 {
         return false;
     }
     // Leaves and water do not hide wildlife; a solid roof separates cave storeys.
+    // Missing vertically streamed sections are not evidence of a solid roof.
     (feet.min(floor) + 1..feet.max(floor)).all(|y| {
-        chunks
+        !chunks
             .block_at([x, y, z])
-            .is_some_and(|id| terra_voxel::MaterialId::from_raw(id).is_some_and(|m| !m.is_opaque()))
+            .and_then(terra_voxel::MaterialId::from_raw)
+            .is_some_and(terra_voxel::MaterialId::is_opaque)
     })
 }
 
@@ -356,10 +368,15 @@ pub(super) fn markers(
                 position,
                 kind: animal.kind,
                 variant: animal.variant,
-                hostile: matches!(
-                    animal.behavior,
-                    CreatureBehavior::Attack | CreatureBehavior::Hunt
-                ),
+                hostile: creatures
+                    .bonds
+                    .get(&animal.id)
+                    .is_none_or(|bond| bond.owner.is_none())
+                    && (animal.kind.hostile_to_players()
+                        || matches!(
+                            animal.behavior,
+                            CreatureBehavior::Attack | CreatureBehavior::Hunt
+                        )),
             });
         }
     }
@@ -840,6 +857,250 @@ mod tests {
     use super::*;
     use crate::minimap::SIZE;
 
+    fn loaded_air(position: terra_voxel::SectionPos) -> terra_world::streaming::LoadedSection {
+        terra_world::streaming::LoadedSection {
+            data: terra_voxel::BlockSection::empty(position).unwrap(),
+            mesh: None,
+            mesh_epoch: 0,
+            water_epoch: 0,
+            water: None,
+            props: Vec::new(),
+        }
+    }
+
+    #[test]
+    fn live_wildlife_does_not_depend_on_detail_tile_io_and_known_roofs_still_separate_storeys() {
+        use terra_voxel::global_to_section;
+        for location in [[0, 2, 0], [-1, 2, -1], [16, 18, -17]] {
+            let (owner, cell) = global_to_section(location);
+            let mut chunks = terra_world::streaming::ChunkStore::default();
+            chunks.loaded.insert(owner, loaded_air(owner));
+            let marker = Marker {
+                player: false,
+                position: [
+                    location[0] as f32 + 0.5,
+                    location[1] as f32,
+                    location[2] as f32 + 0.5,
+                ],
+                kind: CreatureKind::Cow,
+                variant: 0,
+                hostile: false,
+            };
+            let mut entries = HashMap::new();
+            assert!(marker_visible(
+                &marker,
+                &entries,
+                MapLayer::Surface,
+                &chunks
+            ));
+            entries.insert(
+                ([owner.x, owner.z], MapLayer::Surface),
+                Entry {
+                    tile: None,
+                    detail: None,
+                    overview: Some(std::sync::Arc::new(super::super::Overview {
+                        pixels: [0; 64],
+                        heights: [location[1] as i16 + 5; 16],
+                        water: 0,
+                    })),
+                    source_revision: None,
+                    used: 0,
+                },
+            );
+            assert!(marker_visible(
+                &marker,
+                &entries,
+                MapLayer::Surface,
+                &chunks
+            ));
+            let roof = [location[0], location[1] + 3, location[2]];
+            let (roof_owner, roof_cell) = global_to_section(roof);
+            chunks
+                .loaded
+                .entry(roof_owner)
+                .or_insert_with(|| loaded_air(roof_owner))
+                .data
+                .set_block(roof_cell, 3)
+                .unwrap();
+            assert!(!marker_visible(
+                &marker,
+                &entries,
+                MapLayer::Surface,
+                &chunks
+            ));
+            chunks
+                .loaded
+                .get_mut(&roof_owner)
+                .unwrap()
+                .data
+                .set_block(roof_cell, 7)
+                .unwrap();
+            assert!(marker_visible(
+                &marker,
+                &entries,
+                MapLayer::Surface,
+                &chunks
+            ));
+            chunks
+                .loaded
+                .get_mut(&owner)
+                .unwrap()
+                .data
+                .set_block(cell, 27)
+                .unwrap();
+            assert!(marker_visible(
+                &marker,
+                &entries,
+                MapLayer::Surface,
+                &chunks
+            ));
+            chunks.loaded.clear();
+            assert!(!marker_visible(
+                &marker,
+                &entries,
+                MapLayer::Surface,
+                &chunks
+            ));
+        }
+    }
+
+    #[test]
+    fn deep_water_mobs_remain_visible_but_a_known_rock_roof_is_not_water() {
+        use terra_voxel::{SectionPos, global_to_section};
+        let mut chunks = terra_world::streaming::ChunkStore::default();
+        let location = [-1, -55, -1];
+        let (owner, local) = global_to_section(location);
+        let mut section = loaded_air(owner);
+        section.data.set_block(local, 27).unwrap();
+        chunks.loaded.insert(owner, section);
+        let layer = MapLayer::Surface;
+        let marker = Marker {
+            player: false,
+            position: [-0.5, -55.0, -0.5],
+            kind: CreatureKind::ReefShark,
+            variant: 0,
+            hostile: true,
+        };
+        let entries = HashMap::from([(
+            ([-1, -1], layer),
+            Entry {
+                tile: None,
+                detail: None,
+                overview: Some(std::sync::Arc::new(super::super::Overview {
+                    pixels: [0; 64],
+                    heights: [0; 16],
+                    water: u16::MAX,
+                })),
+                source_revision: None,
+                used: 0,
+            },
+        )]);
+        assert!(marker_visible(&marker, &entries, layer, &chunks));
+        let roof = SectionPos::new(-1, -2, -1);
+        let mut rock = loaded_air(roof);
+        rock.data.set_block([15, 12, 15], 3).unwrap();
+        chunks.loaded.insert(roof, rock);
+        assert!(!marker_visible(&marker, &entries, layer, &chunks));
+    }
+
+    #[test]
+    fn real_creature_snapshots_update_icons_without_tile_repaints_and_keep_tame_hostiles_friendly()
+    {
+        use terra_core::creatures::{
+            Creature, CreatureNeeds,
+            taming::{CompanionMode, CompanionView},
+        };
+        use terra_network::client::CreatureTrack;
+        let mut animals = ReplicatedCreatures::default();
+        for (index, kind) in [
+            CreatureKind::Cow,
+            CreatureKind::Fish,
+            CreatureKind::SmallSpider,
+            CreatureKind::MediumSpider,
+            CreatureKind::Stalker,
+            CreatureKind::Bee,
+        ]
+        .into_iter()
+        .enumerate()
+        {
+            let animal = Creature {
+                id: index as u64 + 1,
+                home: [-1, -1],
+                kind,
+                position: [-8.0 + index as f64 * 3.0, 2.0, -8.0],
+                velocity: [0.0; 3],
+                yaw: 0.0,
+                health: kind.health(),
+                behavior: if kind == CreatureKind::Bee {
+                    CreatureBehavior::InNest
+                } else {
+                    CreatureBehavior::Rest
+                },
+                timer: 0.0,
+                age: 0.0,
+                variant: 0,
+                needs: CreatureNeeds::full(kind),
+            };
+            animals.creatures.insert(
+                animal.id,
+                CreatureTrack {
+                    previous: animal.clone(),
+                    current: animal,
+                    interval: 0.1,
+                    received: std::time::Instant::now(),
+                    playback: Default::default(),
+                },
+            );
+        }
+        let owner = terra_core::PlayerUuid::from_bytes([1; 16]);
+        animals.bonds.insert(
+            4,
+            CompanionView {
+                id: 4,
+                owner: Some(owner),
+                player: owner,
+                trust: 100,
+                mode: CompanionMode::Wait,
+            },
+        );
+        let settings = MinimapConfig::default();
+        let projection = Projection::at([0.0, -8.0], 96, 0.0, false, true, 320, true);
+        let first = markers(Some(&animals), None, &projection, 2, false, &settings);
+        assert_eq!(first.len(), 5);
+        assert!(
+            first
+                .iter()
+                .find(|marker| marker.kind == CreatureKind::Stalker)
+                .unwrap()
+                .hostile
+        );
+        assert!(
+            !first
+                .iter()
+                .find(|marker| marker.kind == CreatureKind::MediumSpider)
+                .unwrap()
+                .hostile
+        );
+        let before = marker_overlay(&projection, 2, &first, 1.0);
+        let moved = animals.creatures.get_mut(&1).unwrap();
+        moved.current.position[2] += 12.0;
+        moved.previous = moved.current.clone();
+        let after = marker_overlay(
+            &projection,
+            2,
+            &markers(Some(&animals), None, &projection, 2, false, &settings),
+            1.0,
+        );
+        assert_ne!(
+            before, after,
+            "live snapshots repaint the mob overlay independently of terrain cache"
+        );
+        assert!(before.chunks_exact(4).filter(|pixel| pixel[3] != 0).count() > 100);
+        let mut hidden = settings;
+        hidden.mobs = false;
+        assert!(markers(Some(&animals), None, &projection, 2, false, &hidden).is_empty());
+    }
+
     #[test]
     fn peers_keep_icons_and_names_before_detail_io_and_in_live_3d() {
         use terra_network::{
@@ -1039,6 +1300,43 @@ mod tests {
     }
 
     #[test]
+    fn changing_follow_ground_datum_keeps_arrow_terrain_and_cached_icons_geographically_aligned() {
+        let reference =
+            Projection::at([-140.25, -67.125], 384, 0.0, false, true, 320, true).cached();
+        for (center, level) in [
+            ([-132.6, -71.625], -32),
+            ([-0.2, 16.25], 104),
+            ([32.125, -64.5], 200),
+        ] {
+            for yaw in [-2.8, 0.0, 1.3, 3.1] {
+                let current = Projection::at(center, 192, yaw, true, true, 320, true);
+                let rows = current.uv_transform_from(&reference, level, 80);
+                let ground = [center[0] as f32, level as f32, center[1] as f32];
+                let arrow = current.player_transform(ground, level, yaw);
+                assert!((arrow.xy() - Vec2::splat(160.0)).length() < 0.0001);
+                for (world, height) in [
+                    (center, level as f64),
+                    ([-137.5, -65.25], -120.0),
+                    ([12.25, -0.125], 350.0),
+                ] {
+                    let point =
+                        Vec2::from_array(current.project_world(world, height, level)) / 320.0;
+                    let actual = Vec2::new(
+                        rows[0].dot(point.extend(1.0).extend(0.0)),
+                        rows[1].dot(point.extend(1.0).extend(0.0)),
+                    );
+                    let expected =
+                        Vec2::from_array(reference.project_world(world, height, 80)) / 320.0;
+                    assert!(
+                        actual.distance(expected) < 0.00001,
+                        "level={level}, yaw={yaw}"
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
     fn reprojection_tracks_fractional_centers_rotation_scale_and_height() {
         let reference = Projection::at([-140.25, -67.125], 384, 0.7, true, true, 320, true);
         for (rotate, relief, circular, size) in [
@@ -1143,7 +1441,7 @@ mod tests {
     fn colors_follow_actual_palette_and_different_materials() {
         let mut palette = MapPalette {
             colors: vec![[0.3, 0.3, 0.3]; 44],
-            biome_colors: [[0.2, 0.6, 0.1]; 7],
+            biome_colors: [[0.2, 0.6, 0.1]; 8],
             ..Default::default()
         };
         let sample = MapSample {

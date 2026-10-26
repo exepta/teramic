@@ -1,0 +1,10 @@
+{
+  "id": "teramic::lettuce_seeds",
+  "name": "Lettuce Seeds",
+  "station": "hand",
+  "output": { "item": { "crop": "lettuce_seeds" }, "count": 3 },
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [{ "item": { "crop": "lettuce" }, "count": 1 }]
+  }
+}

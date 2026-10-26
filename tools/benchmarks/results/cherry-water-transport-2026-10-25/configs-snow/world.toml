@@ -1,0 +1,13 @@
+seed = 104729
+ecology_revision = 2
+bounded_world = true
+structures_revision = 4
+river_terrain_revision = 1
+geology_revision = 4
+landscape_revision = 1
+ocean_revision = 1
+cave_structure_revision = 8
+
+[time]
+paused = true
+start_hour = 12.0

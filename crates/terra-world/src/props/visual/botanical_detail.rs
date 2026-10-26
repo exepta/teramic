@@ -256,8 +256,8 @@ pub(super) fn flower(
     variant: usize,
     palette: &PropPalette,
 ) -> Result<(), String> {
-    let species = variant % 7;
-    let color = palette.flowers[if species == 6 { 1 } else { species }];
+    let species = variant % 8;
+    let color = palette.flowers[species];
     for child in 0..3 {
         let root = [
             Vec3::new(-0.10, 0.0, -0.055),
@@ -368,9 +368,6 @@ pub(super) fn flower(
                 1.0,
             )?;
         }
-    }
-    if species == 6 {
-        tint_material(batches, color, [1.1, 0.38, 0.055]);
     }
     Ok(())
 }

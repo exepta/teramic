@@ -14,6 +14,14 @@ use terra_world::{
     streaming::{ChunkStore, WorldTerrain},
 };
 
+// Retain Phase 111's darker caves, with 12.5% more background readability.
+const CAVE_EXPOSURE: f32 = 6.451_563;
+
+pub(crate) fn sky_visibility(blend: f32) -> f32 {
+    let open = 1.0 - blend.clamp(0.0, 1.0);
+    open * open * (3.0 - 2.0 * open)
+}
+
 #[derive(Resource, Default, Debug)]
 pub struct CaveState {
     pub blend: f32,
@@ -93,7 +101,7 @@ fn probe(
                 0.0
             },
             haze,
-            0.0,
+            state.blend.powi(4) * (1.0 - underwater.blend),
             0.0,
         );
         if settings.view_from_clip != matrix || settings.parameters != parameters {
@@ -138,11 +146,11 @@ fn exposure(
         .is_some_and(|s| s.game_mode == terra_core::GameMode::Spectator)
     {
         for mut fill in &mut ambient {
-            fill.brightness += (100.0 - fill.brightness) * cave.blend;
+            fill.brightness += (100.0_f32.max(fill.brightness) - fill.brightness) * cave.blend;
             fill.color = fill.color.mix(&Color::srgb(0.94, 0.95, 1.0), cave.blend);
         }
     }
-    let cave_exposure = day.exposure + (6.0 - day.exposure) * cave.blend;
+    let cave_exposure = day.exposure + (CAVE_EXPOSURE - day.exposure) * cave.blend;
     let solar_compensation = 2.0_f32.powf(cave_exposure - day.exposure);
     // Keep sunlit entrances at their outdoor luminance as eyes adapt to the
     // room; local lamps retain the increased cave readability. No sunlight
@@ -151,9 +159,21 @@ fn exposure(
         let cloud_attenuation = weather.as_ref().map_or(1.0, |weather| {
             1.0 - ((weather.clouds - 0.30) / 0.70).clamp(0.0, 1.0) * 0.62
         });
-        let illuminance = day.illuminance(sun) * solar_compensation * cloud_attenuation;
+        // Cascaded outdoor shadows cover a finite range; they cannot be the
+        // enclosure test for a deep room or its underwater surfaces.
+        let illuminance = day.illuminance(sun)
+            * solar_compensation
+            * cloud_attenuation
+            * sky_visibility(cave.blend);
         if light.illuminance != illuminance {
             light.illuminance = illuminance;
+        }
+        let shadows = illuminance > 0.0
+            && graphics
+                .as_ref()
+                .is_none_or(|g| g.shadow_quality != terra_core::ShadowQuality::Off);
+        if light.shadow_maps_enabled != shadows {
+            light.shadow_maps_enabled = shadows;
         }
     }
     for (mut exposure, mut environment, generated, filtered, atmosphere) in &mut cameras {
@@ -164,7 +184,7 @@ fn exposure(
         }
         // Compensate eye adaptation: otherwise lowering EV while linearly
         // fading the sky briefly makes the entrance brighter/bluer than outside.
-        let intensity = 1.05 * (1.0 - cave.blend) * solar_compensation;
+        let intensity = 1.05 * sky_visibility(cave.blend) * solar_compensation;
         if environment.intensity != intensity {
             environment.intensity = intensity;
         }
@@ -199,7 +219,12 @@ pub(crate) fn apply(
     grading: &mut ColorGrading,
     ambient: &mut AmbientLight,
 ) {
-    let blend = blend * (1.0 - water);
+    let enclosed = blend.clamp(0.0, 1.0);
+    // Water changes optical absorption, not the room's access to skylight.
+    // Previously diving canceled this fill reduction and restored outdoor light.
+    ambient.brightness += (25.2 - ambient.brightness) * enclosed;
+    ambient.color = ambient.color.mix(&Color::srgb(0.94, 0.93, 0.90), enclosed);
+    let blend = enclosed * (1.0 - water);
     if blend <= 0.0 {
         return;
     }
@@ -217,8 +242,6 @@ pub(crate) fn apply(
         *start += (cave_start - *start) * blend;
         *end += (cave_end - *end) * blend;
     }
-    ambient.brightness += (25.2 - ambient.brightness) * blend;
-    ambient.color = ambient.color.mix(&Color::srgb(0.94, 0.93, 0.90), blend);
     grading.global.post_saturation += (0.98 - grading.global.post_saturation) * blend;
 }
 
@@ -257,6 +280,16 @@ mod tests {
         assert_eq!(
             app.world().get::<AmbientLight>(camera).unwrap().brightness,
             100.0
+        );
+        // Spectator readability is a floor, not a cap over a local Night Vision buff.
+        app.world_mut()
+            .get_mut::<AmbientLight>(camera)
+            .unwrap()
+            .brightness = 176.4;
+        app.update();
+        assert_eq!(
+            app.world().get::<AmbientLight>(camera).unwrap().brightness,
+            176.4
         );
         app.world_mut().resource_mut::<CaveState>().blend = 0.0;
         app.world_mut()
@@ -307,8 +340,8 @@ mod tests {
                 .world()
                 .resource::<super::super::daylight::Daylight>()
                 .exposure;
-            let cave_exposure = day + (6.0 - day) * blend;
-            let expected = 1.05 * (1.0 - blend) * 2.0_f32.powf(cave_exposure - day);
+            let cave_exposure = day + (CAVE_EXPOSURE - day) * blend;
+            let expected = 1.05 * sky_visibility(blend) * 2.0_f32.powf(cave_exposure - day);
             assert_eq!(
                 app.world()
                     .get::<DirectionalLight>(sun)
@@ -318,6 +351,7 @@ mod tests {
                     .resource::<super::super::daylight::Daylight>()
                     .illuminance(true)
                     * 2.0_f32.powf(cave_exposure - day)
+                    * sky_visibility(blend)
             );
             assert_eq!(
                 app.world()
@@ -362,7 +396,7 @@ mod tests {
         }
     }
     #[test]
-    fn cave_fill_is_bounded_and_underwater_keeps_its_own_environment() {
+    fn cave_fill_stays_enclosed_when_diving_and_water_keeps_its_own_fog() {
         let mut fog = DistanceFog {
             falloff: FogFalloff::Linear {
                 start: 100.0,
@@ -376,7 +410,7 @@ mod tests {
             ..default()
         };
         apply(1.0, 1.0, &mut fog, &mut grading, &mut ambient);
-        assert_eq!(ambient.brightness, 760.0);
+        assert!((ambient.brightness - 25.2).abs() < 0.001);
         apply(1.0, 0.0, &mut fog, &mut grading, &mut ambient);
         assert!((ambient.brightness - 25.2).abs() < 0.001);
         assert!(matches!(
@@ -386,5 +420,48 @@ mod tests {
                 end: 128.0
             }
         ));
+    }
+
+    #[test]
+    fn cave_darkening_preserves_local_lights_and_closes_both_celestial_sources() {
+        assert!((2.0_f32.powf(6.621_488 - CAVE_EXPOSURE) - 1.125).abs() < 0.00001);
+        assert_eq!(sky_visibility(0.0), 1.0);
+        assert_eq!(sky_visibility(1.0), 0.0);
+        let mut app = App::new();
+        app.init_resource::<super::super::daylight::Daylight>()
+            .insert_resource(CaveState {
+                blend: 1.0,
+                ..default()
+            })
+            .add_systems(PostUpdate, exposure);
+        let sun = app
+            .world_mut()
+            .spawn((super::super::daylight::Sun, DirectionalLight::default()))
+            .id();
+        let moon = app
+            .world_mut()
+            .spawn((super::super::daylight::Moon, DirectionalLight::default()))
+            .id();
+        let lamp = app
+            .world_mut()
+            .spawn(PointLight {
+                intensity: 3200.0,
+                ..default()
+            })
+            .id();
+        app.update();
+        for entity in [sun, moon] {
+            assert_eq!(
+                app.world()
+                    .get::<DirectionalLight>(entity)
+                    .unwrap()
+                    .illuminance,
+                0.0
+            );
+        }
+        assert_eq!(
+            app.world().get::<PointLight>(lamp).unwrap().intensity,
+            3200.0
+        );
     }
 }

@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "id": 113,
+  "name": "Black Carpet",
+  "description": "A thin woven wool carpet, one eighth of a block high. Recolor with flower dye.",
+  "creative_category": "decoration",
+  "render_kind": "boxes",
+  "bevel_width": 0,
+  "materials": {
+    "Woven wool": {
+      "texture_pattern": "wool",
+      "base_color": [
+        0.035,
+        0.04,
+        0.055,
+        1
+      ],
+      "roughness": 1,
+      "reflectance": 0.08
+    }
+  },
+  "face_materials": [
+    "Woven wool",
+    "Woven wool",
+    "Woven wool",
+    "Woven wool",
+    "Woven wool",
+    "Woven wool"
+  ],
+  "hardness": 0.2,
+  "resistance": 0.8,
+  "required_tool": null,
+  "mining_level": 0,
+  "struct_block": true,
+  "collision_boxes": [
+    {
+      "minimum": [
+        0,
+        0,
+        0
+      ],
+      "maximum": [
+        1,
+        0.125,
+        1
+      ]
+    }
+  ]
+}

@@ -6,7 +6,7 @@
   "name": "Sandstone",
   "render_kind": "cube",
   "surface": "rock",
-  "bevel_width": 0.035,
+  "bevel_width": 0.0,
   "materials": {
     "Sediment": {
       "texture_pattern": "sandstone"

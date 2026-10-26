@@ -1,0 +1,6 @@
+@for (bar of mobHealthHud.bars; track bar.id) {
+  <div class="mob-health" [style]="bar.position">
+    <p class="mob-health-title" [style]="bar.font">{{ bar.title }}</p>
+    <div class="mob-health-track"><div class="mob-health-fill" [style]="bar.fill"></div><p class="mob-health-value" [style]="bar.font">{{ bar.label }}</p></div>
+  </div>
+}

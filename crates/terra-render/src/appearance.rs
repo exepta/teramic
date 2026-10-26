@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use terra_core::{GameConfig, WeatherKind};
 use terra_world::{environment::SurfaceCondition, generation::biomes::BiomeSample};
 
-const BIOME_COLORS: [[f32; 3]; 7] = [
+const BIOME_COLORS: [[f32; 3]; 8] = [
     [0.56, 0.77, 0.50],
     [0.66, 0.83, 0.36],
     [0.49, 0.76, 0.33],
@@ -10,8 +10,9 @@ const BIOME_COLORS: [[f32; 3]; 7] = [
     [0.58, 0.72, 0.51],
     [0.61, 0.70, 0.63],
     [0.90, 0.78, 0.47],
+    [0.57, 0.81, 0.39],
 ];
-pub(crate) static LINEAR_COLORS: std::sync::LazyLock<[[f32; 4]; 7]> =
+pub(crate) static LINEAR_COLORS: std::sync::LazyLock<[[f32; 4]; 8]> =
     std::sync::LazyLock::new(|| {
         BIOME_COLORS.map(|c| Color::srgb(c[0], c[1], c[2]).to_linear().to_f32_array())
     });

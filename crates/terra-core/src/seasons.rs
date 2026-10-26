@@ -196,6 +196,20 @@ impl SeasonSample {
         self.blend([0.0, 0.0, 0.0, 1.0], 0.0)
     }
 
+    pub fn flower_loss(self) -> f32 {
+        if !self.enabled {
+            return 0.0;
+        }
+        match self.season {
+            Season::Autumn => {
+                let t = self.progress.clamp(0.0, 1.0);
+                t * t * (3.0 - 2.0 * t)
+            }
+            Season::Winter => 1.0 - self.weights[Season::Spring.index()],
+            _ => 0.0,
+        }
+    }
+
     pub fn leaf_tint(self) -> [f32; 3] {
         std::array::from_fn(|axis| {
             self.blend(
@@ -234,6 +248,43 @@ impl WorldClock {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn flower_dormancy_progresses_through_autumn_and_reverses_at_the_spring_transition() {
+        let config = SeasonConfig::default();
+        let sample = |day, phase| {
+            WorldClock {
+                day,
+                phase,
+                ..Default::default()
+            }
+            .season(config)
+        };
+        assert_eq!(sample(0, 0.0).flower_loss(), 0.0);
+        assert_eq!(sample(7, 0.5).flower_loss(), 0.0);
+        assert_eq!(sample(14, 0.0).flower_loss(), 0.0);
+        let mut previous = 0.0;
+        for step in 0..700 {
+            let loss = sample(14 + step / 100, (step % 100) as f64 / 100.0).flower_loss();
+            assert!(loss >= previous && loss <= 1.0);
+            previous = loss;
+        }
+        assert!((sample(21, 0.0).flower_loss() - previous).abs() < 0.001);
+        assert!(sample(27, 0.5).flower_loss() < 0.51);
+        assert!((sample(27, 0.9999).flower_loss() - sample(28, 0.0).flower_loss()).abs() < 0.001);
+        assert_eq!(
+            WorldClock {
+                day: 21,
+                ..Default::default()
+            }
+            .season(SeasonConfig {
+                enabled: false,
+                ..config
+            })
+            .flower_loss(),
+            0.0
+        );
+    }
     use crate::{Config, WorldConfig};
     #[test]
     fn seasonal_transition_only_blends_during_the_last_day_and_is_continuous() {

@@ -1,0 +1,22 @@
+{
+  "id": "teramic::white_dye",
+  "name": "White Dye",
+  "station": "hand",
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "mineral": "salt_crystal"
+        },
+        "count": 1
+      }
+    ]
+  },
+  "output": {
+    "item": {
+      "dye": "white"
+    },
+    "count": 2
+  }
+}

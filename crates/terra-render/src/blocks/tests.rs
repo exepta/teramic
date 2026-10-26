@@ -6,6 +6,46 @@ fn library() -> BlockLibrary {
 }
 
 #[test]
+fn shipped_blocks_have_square_edges_without_changing_material_identity() {
+    use bevy::math::Vec3;
+    let definitions = library();
+    let mut checked = 0;
+    for block in &definitions.blocks {
+        assert_eq!(
+            block.bevel_width, 0.0,
+            "{} still has rounded edges",
+            block.id
+        );
+        if block.render_kind != BlockRenderKind::Cube {
+            continue;
+        }
+        checked += 1;
+        let faces = super::cube_faces(block.bevel_width, [0, 1, 2, 3, 4, 5], None);
+        let mut corners = std::collections::BTreeSet::new();
+        for (side, patches) in faces.iter().enumerate() {
+            assert_eq!(patches.len(), 1, "square face needs only one quad");
+            for patch in patches {
+                assert_eq!(patch.material, side);
+                assert_eq!(patch.positions.len(), 4);
+                for (&position, &normal) in patch.positions.iter().zip(&patch.normals) {
+                    assert!(
+                        position
+                            .into_iter()
+                            .all(|value| value == 0.0 || value == 1.0)
+                    );
+                    let normal = Vec3::from_array(normal).abs();
+                    assert_eq!(normal.element_sum(), 1.0);
+                    assert_eq!(normal.max_element(), 1.0);
+                    corners.insert(position.map(|value| value as u8));
+                }
+            }
+        }
+        assert_eq!(corners.len(), 8, "cube must retain all eight exact corners");
+    }
+    assert!(checked >= 30);
+}
+
+#[test]
 fn ice_is_one_shared_translucent_solid_cube_without_a_glb_or_light() {
     let definitions = library();
     let ice = definitions.blocks.iter().find(|d| d.id == 49).unwrap();
@@ -97,15 +137,29 @@ fn shipped_ids_and_face_materials_stay_explicit_without_cube_models() {
         (1..=terra_voxel::MaterialId::LAST).collect::<Vec<_>>()
     );
     for block in &definitions.blocks {
-        if matches!(block.id, 28..=29 | 40 | 59..=73) {
+        if matches!(block.id, 28..=29 | 40 | 59..=73 | 99..=100 | 139..=140) {
             assert_eq!(block.render_kind, BlockRenderKind::CustomMesh);
             assert!(!block.model.is_empty());
             block.validate().expect("static assembly definition");
+            if block.id == terra_core::crusher::MATERIAL {
+                assert!(block.gameplay.struct_block);
+                assert_eq!(block.model, "models/crusher.gltf");
+                assert!(
+                    block
+                        .collision_boxes
+                        .iter()
+                        .any(|bounds| bounds.maximum[1] > 1.0)
+                );
+            }
             continue;
         }
         assert_eq!(
             block.render_kind,
-            if terra_core::construction::is_shape(block.id) || block.id == 98 {
+            if terra_core::construction::is_shape(block.id)
+                || matches!(block.id, 98 | 102)
+                || terra_core::textiles::is_carpet(block.id)
+                || block.id == terra_core::flower_pot::MATERIAL
+            {
                 BlockRenderKind::Boxes
             } else if (50..=56).contains(&block.id) {
                 BlockRenderKind::Segment
@@ -133,6 +187,83 @@ fn shipped_ids_and_face_materials_stay_explicit_without_cube_models() {
         .expect("snow faces");
     assert!(snow_faces.iter().all(|material| material == "Soft snow"));
     assert!(definitions.blocks[4].side_cap.is_none());
+}
+
+#[test]
+fn textile_and_pot_definitions_keep_their_explicit_shapes_palette_and_standard_material_pipeline() {
+    use super::definitions::{CubeSurface, TexturePattern};
+    use terra_core::{beds::DyeColor, textiles};
+
+    let definitions = library();
+    let block = |id| {
+        definitions
+            .blocks
+            .iter()
+            .find(|block| block.id == id)
+            .unwrap()
+    };
+    for color in DyeColor::ALL {
+        let carpet = block(textiles::dyed(textiles::WHITE_CARPET, color).unwrap());
+        assert_eq!(carpet.render_kind, BlockRenderKind::Boxes);
+        assert!(carpet.gameplay.struct_block && carpet.model.is_empty());
+        assert!(carpet.light.is_none());
+        assert_eq!(carpet.collision_boxes.len(), 1);
+        assert_eq!(carpet.collision_boxes[0].minimum, [0.0; 3]);
+        assert_eq!(carpet.collision_boxes[0].maximum, [1.0, 0.125, 1.0]);
+        assert_eq!(carpet.materials["Woven wool"].base_color, color.tint());
+        let wool = block(textiles::dyed(textiles::WHITE_WOOL, color).unwrap());
+        assert_eq!(wool.render_kind, BlockRenderKind::Cube);
+        assert!(matches!(wool.surface, Some(CubeSurface::Wool)));
+        assert!(wool.collision_boxes.is_empty() && wool.model.is_empty());
+        assert!(wool.light.is_none());
+        assert_eq!(
+            wool.materials["Woven wool"].base_color,
+            if color == DyeColor::White {
+                [1.0; 4]
+            } else {
+                color.tint()
+            }
+        );
+        for textile in [carpet, wool] {
+            assert_eq!(textile.materials.len(), 1);
+            assert_eq!(
+                textile.face_materials.as_ref().unwrap(),
+                &std::array::from_fn(|_| "Woven wool".to_owned())
+            );
+            let material = &textile.materials["Woven wool"];
+            assert_eq!(material.texture_pattern, Some(TexturePattern::Wool));
+            assert_eq!(material.roughness, 1.0);
+            assert_eq!(material.reflectance, 0.08);
+            assert_eq!(material.emission, [0.0; 3]);
+        }
+    }
+    let pot = block(terra_core::flower_pot::MATERIAL);
+    assert_eq!(pot.render_kind, BlockRenderKind::Boxes);
+    assert!(pot.gameplay.struct_block && pot.model.is_empty());
+    assert!(pot.light.is_none());
+    assert_eq!(pot.materials.len(), 1);
+    assert_eq!(
+        pot.materials["Fired clay"].base_color,
+        [0.54, 0.25, 0.15, 1.0]
+    );
+    assert_eq!(
+        pot.face_materials.as_ref().unwrap(),
+        &std::array::from_fn(|_| "Fired clay".to_owned())
+    );
+    assert_eq!(pot.collision_boxes.len(), 10);
+    for bounds in &pot.collision_boxes {
+        assert!(bounds.valid());
+        assert!(bounds.minimum.into_iter().all(|v| v >= 0.0));
+        assert!(bounds.maximum.into_iter().all(|v| v <= 1.0));
+        assert!(bounds.maximum[1] <= 0.4);
+        assert!(
+            !(0..3).all(|axis| {
+                let point = [0.5, 0.35, 0.5][axis];
+                bounds.minimum[axis] <= point && bounds.maximum[axis] >= point
+            }),
+            "the flower pot must keep its opening clear"
+        );
+    }
 }
 
 #[test]

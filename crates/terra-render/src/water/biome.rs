@@ -3,6 +3,7 @@ use terra_world::{TerraGenerator, generation::biomes::BiomeSample};
 
 /// Linear scattering colors. Ocean, plains and forest retain the original tint.
 pub(crate) const DEFAULT_TINT: [f32; 3] = [0.025, 0.20, 0.16];
+pub(crate) const CHERRY_TINT: [f32; 3] = [0.20, 0.15, 0.18];
 pub(crate) const COLORS: [[f32; 3]; 6] = [
     DEFAULT_TINT,
     DEFAULT_TINT,
@@ -20,11 +21,12 @@ pub(super) fn biome_tint(sample: BiomeSample) -> [f32; 3] {
     let mut weights = sample.weights.values();
     weights[3] += weights[6];
     std::array::from_fn(|channel| {
-        weights
+        let original: f32 = weights
             .into_iter()
             .zip(COLORS)
             .map(|(weight, color)| weight as f32 * color[channel])
-            .sum()
+            .sum();
+        original + weights[7] as f32 * CHERRY_TINT[channel]
     })
 }
 
@@ -82,6 +84,7 @@ mod tests {
                 highland: weights[4],
                 mushroom_park: weights[5],
                 cliffted_desert: 0.0,
+                cherry_forest: 0.0,
             },
         }
     }

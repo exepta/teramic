@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "id": 103,
+  "name": "Wool Block",
+  "description": "Packed white wool with dense, stepped loops and softly shadowed woven fibres.",
+  "creative_category": "building",
+  "render_kind": "cube",
+  "surface": "wool",
+  "bevel_width": 0.0,
+  "materials": {"Woven wool": {"texture_pattern": "wool", "roughness": 1.0, "reflectance": 0.08}},
+  "face_materials": ["Woven wool", "Woven wool", "Woven wool", "Woven wool", "Woven wool", "Woven wool"],
+  "hardness": 0.45,
+  "resistance": 0.8,
+  "required_tool": null,
+  "mining_level": 0
+}

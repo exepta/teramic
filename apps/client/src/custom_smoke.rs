@@ -29,6 +29,23 @@ pub(crate) fn install(app: &mut App) {
     if !std::env::args().any(|arg| arg == "--smoke-test-custom") {
         return;
     }
+    if std::env::var_os("TERRA_SMOKE_PIPE_ROOFS").is_some() {
+        app.insert_resource(CustomSmoke {
+            complete: false,
+            error: None,
+            reported_error: false,
+            placements: None,
+            started: Instant::now(),
+        })
+        .add_systems(PostStartup, prepare_pipe_roofs)
+        .add_systems(
+            Update,
+            inspect_pipe_roofs
+                .after(StreamingSet::Dispatch)
+                .after(terra_player::PlayerSet::Movement),
+        );
+        return;
+    }
     let error = BlockLibrary::load(&terra_core::asset_directory().join("terra/blocks"))
         .and_then(|library| {
             library
@@ -54,6 +71,163 @@ pub(crate) fn install(app: &mut App) {
         started: Instant::now(),
     })
     .add_systems(Update, inspect_fixture.after(StreamingSet::Dispatch));
+}
+
+#[derive(Resource)]
+struct PipeRoofs {
+    cells: std::collections::BTreeMap<[i64; 3], (u16, u8)>,
+    pipes: [[i64; 3]; 4],
+    camera: Transform,
+    ready_at: Option<Instant>,
+}
+
+fn prepare_pipe_roofs(
+    mut commands: Commands,
+    terrain: Res<WorldTerrain>,
+    mut journal: ResMut<EditJournal>,
+) {
+    use terra_world::edits::BlockObjectState;
+    // Isolate the roof profiles above the local treetops; all geometry remains
+    // ordinary editable voxels and shared production model batches.
+    let base = (terrain.0.surface_height(8.5, 0.5) - 0.5).floor() as i64 + 28;
+    let mut cells = std::collections::BTreeMap::new();
+    let pipes = [
+        [0, base + 1, 0],
+        [6, base + 1, 0],
+        [12, base + 1, 0],
+        [18, base + 1, 0],
+    ];
+    for (index, &pipe) in pipes.iter().enumerate() {
+        for x in -2..=2 {
+            for z in -2..=2 {
+                cells.insert([pipe[0] + x, base - 1, z], (3, 0));
+                if x == 0 && (z >= 0 || index == 3) {
+                    continue;
+                }
+                let roof = if index == 0 {
+                    (3, 0)
+                } else if index == 1 {
+                    (77, 2)
+                } else if index == 3 {
+                    (77, if x < 0 { 1 } else { 3 })
+                } else {
+                    match (x.signum(), z.signum()) {
+                        (-1, _) => (82, 0),
+                        (1, _) => (85, 4),
+                        _ => (
+                            83,
+                            terra_core::construction::merged_slab(83, 0, 85).unwrap(),
+                        ),
+                    }
+                };
+                cells.insert([pipe[0] + x, pipe[1], z], roof);
+            }
+        }
+        for y in base..=base + 4 {
+            cells.insert([pipe[0], y, 0], (60, 0));
+        }
+    }
+    for (&position, &(material, facing)) in &cells {
+        journal
+            .record(position, material)
+            .expect("Valid pipe roof fixture voxel");
+        if material == 60 || terra_core::construction::is_shape(material) {
+            journal
+                .set_object_state(
+                    position,
+                    Some(BlockObjectState {
+                        facing,
+                        ..Default::default()
+                    }),
+                )
+                .expect("Valid pipe roof fixture pose");
+        }
+    }
+    for pipe in pipes {
+        let pieces = terra_world::objects::chimney_infill_with_states(60, 0, |offset| {
+            cells
+                .get(&std::array::from_fn(|axis| pipe[axis] + offset[axis]))
+                .copied()
+        });
+        assert!(
+            !pieces.is_empty(),
+            "Each roof must have three contacts or two opposing ridge profiles"
+        );
+        assert!(
+            pieces
+                .iter()
+                .all(|(bounds, _)| !bounds.intersects([0.27; 3], [0.73; 3])),
+            "Smoke lumen must stay free"
+        );
+    }
+    let target = Vec3::new(9.5, base as f32 + 1.8, 0.5);
+    let camera =
+        Transform::from_translation(target + Vec3::new(7.0, 8.0, 22.0)).looking_at(target, Vec3::Y);
+    tracing::info!(
+        ?pipes,
+        cells = cells.len(),
+        "Pipe roof fixture seeded: full block, rotated stairs, mixed slabs and a two-sided pitched ridge"
+    );
+    commands.insert_resource(PipeRoofs {
+        cells,
+        pipes,
+        camera,
+        ready_at: None,
+    });
+}
+
+fn inspect_pipe_roofs(
+    world: CustomWorld,
+    roofs: Option<ResMut<PipeRoofs>>,
+    mut smoke: ResMut<CustomSmoke>,
+    mut camera: Query<&mut Transform, With<TerraCamera>>,
+    mut focus: ResMut<ChunkFocus>,
+    mut exit: MessageWriter<AppExit>,
+) {
+    let Some(mut roofs) = roofs else {
+        return;
+    };
+    for mut camera in &mut camera {
+        *camera = roofs.camera;
+    }
+    focus.0 = roofs.camera.translation.to_array().map(f64::from);
+    if smoke.complete || smoke.reported_error {
+        return;
+    }
+    if let Some(error) = world.renderer.error.clone().or_else(|| {
+        (smoke.started.elapsed() > Duration::from_secs(120))
+            .then(|| "Pipe roof fixture timed out".into())
+    }) {
+        tracing::error!(%error, "Pipe roof inspection failed");
+        smoke.reported_error = true;
+        exit.write(AppExit::error());
+        return;
+    }
+    if world.generation.status != GenerationStatus::Ready || !world.renderer.ready {
+        roofs.ready_at = None;
+        return;
+    }
+    for (&position, &(material, facing)) in &roofs.cells {
+        let (owner, _) = global_to_section(position);
+        if world.chunks.block_at(position) != Some(material)
+            || ((material == 60 || terra_core::construction::is_shape(material))
+                && world
+                    .journal
+                    .object_state(position)
+                    .is_none_or(|state| state.facing != facing))
+            || world.rendered.sections.get(&owner).is_none_or(|section| {
+                section.mesh_epoch != world.journal.mesh_epoch(owner) || section.meshes.is_empty()
+            })
+        {
+            roofs.ready_at = None;
+            return;
+        }
+    }
+    if roofs.ready_at.get_or_insert_with(Instant::now).elapsed() < Duration::from_secs(1) {
+        return;
+    }
+    smoke.complete = true;
+    tracing::info!(pipes = ?roofs.pipes, "Pipe roof inspection passed: actual loaded voxels, orientation states, current uploaded mesh epochs and open lumens; full/stair/mixed-slab comparison ready for screenshot");
 }
 
 #[derive(SystemParam)]

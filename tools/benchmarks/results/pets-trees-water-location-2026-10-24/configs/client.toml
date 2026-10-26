@@ -1,0 +1,13 @@
+width = 1280
+height = 800
+vsync = false
+debug_overlay = false
+view_distance = 4
+vertical_view_distance = 3
+max_chunk_jobs = 4
+max_mesh_jobs = 16
+mesh_uploads_per_frame = 12
+water_quality = "high"
+water_wave_strength = 0.65
+water_reflections = true
+weather = "clear"

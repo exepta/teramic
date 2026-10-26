@@ -5,6 +5,9 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct WorldConfig {
+    /// Saved surface ecology/drainage contract. Absent in old saves retains their terrain.
+    #[serde(default)]
+    pub ecology_revision: u8,
     /// Natural population cap within 150 m of each player; owned animals are excluded.
     pub natural_mob_limit: u16,
     /// New saved terrain contract; absent in existing worlds means no retrogen.
@@ -13,6 +16,9 @@ pub struct WorldConfig {
     /// Absent in saved worlds retains their original narrow ravines.
     #[serde(default)]
     pub ravine_revision: u8,
+    /// Saved river-bank erosion contract; missing in existing worlds preserves their terrain.
+    #[serde(default)]
+    pub river_terrain_revision: u8,
     pub time: crate::WorldTimeConfig,
     pub seasons: crate::SeasonConfig,
     pub game_rules: crate::GameRules,
@@ -37,6 +43,9 @@ pub struct WorldConfig {
     /// Saved cave ecology/hydrology contract; absent in old saves disables retrogen.
     #[serde(default)]
     pub cave_structure_revision: u8,
+    /// Saved settlement/ruin/mine contract. Fresh worlds opt in; missing saved fields disable retrogen.
+    #[serde(default)]
+    pub structures_revision: u8,
     pub cave_biomes: super::CaveBiomesConfig,
     pub trees: bool,
     pub water: bool,
@@ -58,6 +67,7 @@ impl WorldConfig {
     pub fn same_terrain(&self, other: &Self) -> bool {
         // Exhaustive destructuring makes new settings an explicit cache-identity decision.
         let Self {
+            ecology_revision,
             natural_mob_limit: _,
             time: _,
             seasons: _,
@@ -67,6 +77,7 @@ impl WorldConfig {
             generator_version,
             bounded_world,
             ravine_revision,
+            river_terrain_revision,
             base_height,
             hill_amplitude,
             mountain_amplitude,
@@ -77,6 +88,7 @@ impl WorldConfig {
             landscape_revision,
             ocean_revision,
             cave_structure_revision,
+            structures_revision,
             cave_biomes,
             trees,
             water,
@@ -89,11 +101,13 @@ impl WorldConfig {
             terrace_strength,
             ores,
         } = self;
-        id == &other.id
+        ecology_revision == &other.ecology_revision
+            && id == &other.id
             && seed == &other.seed
             && generator_version == &other.generator_version
             && bounded_world == &other.bounded_world
             && ravine_revision == &other.ravine_revision
+            && river_terrain_revision == &other.river_terrain_revision
             && base_height == &other.base_height
             && hill_amplitude == &other.hill_amplitude
             && mountain_amplitude == &other.mountain_amplitude
@@ -104,6 +118,7 @@ impl WorldConfig {
             && landscape_revision == &other.landscape_revision
             && ocean_revision == &other.ocean_revision
             && cave_structure_revision == &other.cave_structure_revision
+            && structures_revision == &other.structures_revision
             && cave_biomes == &other.cave_biomes
             && trees == &other.trees
             && water == &other.water
@@ -120,9 +135,11 @@ impl WorldConfig {
 impl Default for WorldConfig {
     fn default() -> Self {
         Self {
+            ecology_revision: 2,
             natural_mob_limit: 256,
             bounded_world: true,
             ravine_revision: 1,
+            river_terrain_revision: 1,
             time: crate::WorldTimeConfig::default(),
             seasons: crate::SeasonConfig::default(),
             game_rules: crate::GameRules::default(),
@@ -138,7 +155,8 @@ impl Default for WorldConfig {
             geology_revision: 4,
             landscape_revision: 1,
             ocean_revision: 1,
-            cave_structure_revision: 4,
+            cave_structure_revision: 8,
+            structures_revision: 5,
             cave_biomes: Default::default(),
             trees: true,
             water: true,
@@ -155,9 +173,17 @@ impl Default for WorldConfig {
 }
 impl Config for WorldConfig {
     fn validate(&self) -> Result<(), ConfigError> {
+        ensure(
+            self.ecology_revision <= 2,
+            "Unsupported world.ecology_revision",
+        )?;
+        ensure(
+            self.structures_revision <= 5,
+            "Unsupported world.structures_revision",
+        )?;
         ensure(self.game_rules.valid(), "Invalid world.game_rules")?;
         ensure(
-            self.cave_structure_revision <= 4,
+            self.cave_structure_revision <= 8,
             "Unsupported world.cave_structure_revision",
         )?;
         self.cave_biomes.validate()?;
@@ -165,6 +191,10 @@ impl Config for WorldConfig {
         ensure(
             self.ravine_revision <= 1,
             "Unsupported world.ravine_revision",
+        )?;
+        ensure(
+            self.river_terrain_revision <= 1,
+            "Unsupported world.river_terrain_revision",
         )?;
         ensure(
             self.natural_mob_limit <= 4096,

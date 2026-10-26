@@ -6,7 +6,7 @@
   "creative_category": "nature",
   "render_kind": "cube",
   "surface": "coral_yellow",
-  "bevel_width": 0.025,
+  "bevel_width": 0.0,
   "materials": {
     "Yellow reef coral": {
       "texture_pattern": "coral_yellow",

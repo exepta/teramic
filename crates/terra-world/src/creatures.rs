@@ -5,14 +5,22 @@ use terra_core::creatures::{
 };
 pub mod aquatics;
 pub mod bears;
+pub mod bee_lifecycle;
 pub mod bees;
+pub mod breeding;
+pub mod companions;
 pub mod ecology;
 mod horses;
 pub mod navigation;
 #[path = "creature_needs.rs"]
 mod needs;
+pub mod riding;
 pub mod spawning;
+pub mod spider_hunting;
+pub mod spiders;
+pub mod stalker;
 mod support;
+pub mod villagers;
 pub use needs::{Forage, apply_forage};
 
 pub const ACTIVE_RADIUS: f64 = 150.0;
@@ -31,11 +39,11 @@ impl Habitat<'_> {
     ) -> bool {
         static PROFILES: std::sync::OnceLock<terra_core::block_properties::BlockPropertiesCatalog> =
             std::sync::OnceLock::new();
-        crate::interaction_shapes::visit_boxes(
-            self.chunks,
+        crate::interaction_shapes::visit_boxes_with(
             self.journal,
             PROFILES.get_or_init(Default::default),
             cell,
+            |position| self.block(position),
             &mut visit,
         )
     }
@@ -51,20 +59,7 @@ impl Habitat<'_> {
         }
         let mut blocked = false;
         let mut intersects = |shape: terra_core::block_shapes::ShapeBox| {
-            if !shape.intersects(lower, upper) {
-                return;
-            }
-            let (p, size, yaw) = pose;
-            let (sin, cos) = yaw.sin_cos();
-            let dx = (shape.minimum[0] + shape.maximum[0]) * 0.5 - p[0];
-            let dz = (shape.minimum[2] + shape.maximum[2]) * 0.5 - p[2];
-            let x = (shape.maximum[0] - shape.minimum[0]) * 0.5;
-            let z = (shape.maximum[2] - shape.minimum[2]) * 0.5;
-            // The two local rectangle axes complete the horizontal SAT test.
-            blocked |= (dx * cos - dz * sin).abs()
-                < size[0] * 0.5 + x * cos.abs() + z * sin.abs() - 0.000001
-                && (dx * sin + dz * cos).abs()
-                    < size[2] * 0.5 + x * sin.abs() + z * cos.abs() - 0.000001;
+            blocked |= Self::shape_obstructs(shape, lower, upper, pose);
         };
         if !self.boxes(cell, &mut intersects) {
             intersects(terra_core::block_shapes::ShapeBox {
@@ -75,6 +70,25 @@ impl Habitat<'_> {
         }
         blocked
     }
+    fn shape_obstructs(
+        shape: terra_core::block_shapes::ShapeBox,
+        lower: [f64; 3],
+        upper: [f64; 3],
+        (p, size, yaw): ([f64; 3], [f64; 3], f64),
+    ) -> bool {
+        if !shape.intersects(lower, upper) {
+            return false;
+        }
+        let (sin, cos) = yaw.sin_cos();
+        let dx = (shape.minimum[0] + shape.maximum[0]) * 0.5 - p[0];
+        let dz = (shape.minimum[2] + shape.maximum[2]) * 0.5 - p[2];
+        let x = (shape.maximum[0] - shape.minimum[0]) * 0.5;
+        let z = (shape.maximum[2] - shape.minimum[2]) * 0.5;
+        // The two local rectangle axes complete the horizontal SAT test.
+        (dx * cos - dz * sin).abs() < size[0] * 0.5 + x * cos.abs() + z * sin.abs() - 0.000001
+            && (dx * sin + dz * cos).abs()
+                < size[2] * 0.5 + x * sin.abs() + z * cos.abs() - 0.000001
+    }
     fn support_at(&self, cell: [i64; 3], point: [f64; 3]) -> Option<f64> {
         let mut top: Option<f64> = None;
         let shaped = self.boxes(cell, |shape| {
@@ -82,6 +96,7 @@ impl Habitat<'_> {
                 && point[0] < shape.maximum[0]
                 && point[2] >= shape.minimum[2]
                 && point[2] < shape.maximum[2]
+                && shape.maximum[1] <= point[1] + 1.01
             {
                 top = Some(top.map_or(shape.maximum[1], |v| v.max(shape.maximum[1])));
             }
@@ -115,6 +130,25 @@ impl Habitat<'_> {
                 .chunks
                 .fluid_cell_at(self.terrain, self.journal, cell, b);
             fluid.amount > 0 && p[1] < cell[1] as f64 + fluid.height()
+        })
+    }
+    pub(super) fn wet_footprint(&self, p: [f64; 3], size: [f64; 3], yaw: f64) -> bool {
+        let immersed =
+            |feet: [f64; 3]| self.wet(feet) || self.wet([feet[0], feet[1] - 0.08, feet[2]]);
+        if immersed(p) {
+            return true;
+        }
+        let (sin, cos) = yaw.sin_cos();
+        let half = [size[0] * 0.5, size[2] * 0.5];
+        [-1.0, 0.0, 1.0].into_iter().any(|x| {
+            [-1.0, 0.0, 1.0].into_iter().any(|z| {
+                (x != 0.0 || z != 0.0)
+                    && immersed([
+                        p[0] + x * half[0] * cos + z * half[1] * sin,
+                        p[1],
+                        p[2] - x * half[0] * sin + z * half[1] * cos,
+                    ])
+            })
         })
     }
     /// The contiguous local fluid column, including partial flowing cells.
@@ -229,9 +263,157 @@ impl Habitat<'_> {
     pub fn ground(&self, p: [f64; 3], kind: Kind) -> Option<[f64; 3]> {
         self.ground_rotated(p, kind, 0.0)
     }
+    /// Walking cannot skip an intervening wall, unsupported gap or unloaded cell.
+    pub fn walk_step(
+        &self,
+        start: [f64; 3],
+        target: [f64; 3],
+        kind: Kind,
+        yaw: f64,
+    ) -> Option<[f64; 3]> {
+        self.walk_step_sized(start, target, kind.size(), yaw)
+    }
+    pub fn walk_step_sized(
+        &self,
+        start: [f64; 3],
+        target: [f64; 3],
+        size: [f64; 3],
+        yaw: f64,
+    ) -> Option<[f64; 3]> {
+        self.swept_step(start, target, size, yaw, false)
+    }
+    /// Actual locomotion may enter verified water; a fluid surface is never
+    /// promoted to ground support. The existing buoyancy resolver takes over.
+    pub fn travel_step(
+        &self,
+        start: [f64; 3],
+        target: [f64; 3],
+        kind: Kind,
+        yaw: f64,
+    ) -> Option<[f64; 3]> {
+        self.travel_step_sized(start, target, kind.size(), yaw)
+    }
+    pub fn travel_step_sized(
+        &self,
+        start: [f64; 3],
+        target: [f64; 3],
+        size: [f64; 3],
+        yaw: f64,
+    ) -> Option<[f64; 3]> {
+        self.swept_step(start, target, size, yaw, true)
+    }
+    fn swept_step(
+        &self,
+        start: [f64; 3],
+        target: [f64; 3],
+        size: [f64; 3],
+        yaw: f64,
+        water_entry: bool,
+    ) -> Option<[f64; 3]> {
+        let distance = (target[0] - start[0]).hypot(target[2] - start[2]);
+        if !yaw.is_finite()
+            || !start.iter().chain(target.iter()).all(|v| v.is_finite())
+            || size
+                .iter()
+                .any(|v| !v.is_finite() || *v <= 0.0 || *v > 24.0)
+            || distance > 11.52
+            || !self.clear_swimmer_rotated(start, size, yaw)
+        {
+            return None;
+        }
+        let steps = (distance / 0.18).ceil().clamp(1.0, 64.0) as usize;
+        let mut current = start;
+        for step in 1..=steps {
+            let t = step as f64 / steps as f64;
+            let probe = [
+                start[0] + (target[0] - start[0]) * t,
+                current[1],
+                start[2] + (target[2] - start[2]) * t,
+            ];
+            current = if water_entry {
+                self.supported_sized(probe, size, yaw)
+            } else {
+                self.ground_sized(probe, size, yaw)
+            }
+            .or_else(|| {
+                if !water_entry || !self.clear_swimmer_rotated(probe, size, yaw) {
+                    return None;
+                }
+                self.wet_footprint(probe, size, yaw).then_some(probe)
+            })?;
+        }
+        Some(current)
+    }
     pub fn ground_rotated(&self, p: [f64; 3], kind: Kind, yaw: f64) -> Option<[f64; 3]> {
+        self.ground_sized(p, kind.size(), yaw)
+    }
+    pub fn ground_sized(&self, p: [f64; 3], size: [f64; 3], yaw: f64) -> Option<[f64; 3]> {
+        self.ground_profile(p, size, yaw, false)
+    }
+    /// Physical contact may span several descending steps while the rear feet
+    /// still support the body. Path planning deliberately keeps its stricter
+    /// four-foot probe so this cannot create routes across unsupported gaps.
+    pub(super) fn supported_sized(
+        &self,
+        p: [f64; 3],
+        size: [f64; 3],
+        yaw: f64,
+    ) -> Option<[f64; 3]> {
+        self.ground_profile(p, size, yaw, true)
+            .or_else(|| self.contact_ground(p, size, yaw))
+    }
+    fn contact_ground(&self, p: [f64; 3], size: [f64; 3], yaw: f64) -> Option<[f64; 3]> {
         let (sin, cos) = yaw.sin_cos();
-        let half = [kind.size()[0] * 0.5 - 0.0001, kind.size()[2] * 0.5 - 0.0001];
+        let radius = [
+            (size[0] * cos.abs() + size[2] * sin.abs()) * 0.5,
+            (size[0] * sin.abs() + size[2] * cos.abs()) * 0.5,
+        ];
+        let mut best: Option<[f64; 3]> = None;
+        for x in (p[0] - radius[0]).floor() as i64..=(p[0] + radius[0] - 0.000001).floor() as i64 {
+            for z in
+                (p[2] - radius[1]).floor() as i64..=(p[2] + radius[1] - 0.000001).floor() as i64
+            {
+                for y in (p[1].floor() as i64 - 2)..=p[1].floor() as i64 {
+                    let cell = [x, y, z];
+                    self.block(cell)?;
+                    if !self.solid(cell) {
+                        continue;
+                    }
+                    let mut visit = |shape: terra_core::block_shapes::ShapeBox| {
+                        let top = shape.maximum[1];
+                        if (top - p[1]).abs() > 1.01 || best.is_some_and(|old| top <= old[1]) {
+                            return;
+                        }
+                        let lower = [p[0] - radius[0], top - 0.001, p[2] - radius[1]];
+                        let upper = [p[0] + radius[0], top + 0.001, p[2] + radius[1]];
+                        let probe = [p[0], top, p[2]];
+                        if Self::shape_obstructs(shape, lower, upper, (probe, size, yaw))
+                            && self.clear_rotated(probe, size, false, yaw)
+                        {
+                            best = Some(probe);
+                        }
+                    };
+                    if !self.boxes(cell, &mut visit) {
+                        visit(terra_core::block_shapes::ShapeBox {
+                            minimum: cell.map(|v| v as f64),
+                            maximum: cell.map(|v| v as f64 + 1.0),
+                            hinged: false,
+                        });
+                    }
+                }
+            }
+        }
+        best
+    }
+    fn ground_profile(
+        &self,
+        p: [f64; 3],
+        size: [f64; 3],
+        yaw: f64,
+        partial: bool,
+    ) -> Option<[f64; 3]> {
+        let (sin, cos) = yaw.sin_cos();
+        let half = [size[0] * 0.5 - 0.0001, size[2] * 0.5 - 0.0001];
         let mut support = f64::NEG_INFINITY;
         let mut lowest = f64::INFINITY;
         let mut dry_hooves = 0;
@@ -264,7 +446,12 @@ impl Habitat<'_> {
                 if in_water {
                     continue;
                 }
-                let height = found?;
+                let Some(height) = found else {
+                    if partial {
+                        continue;
+                    }
+                    return None;
+                };
                 dry_hooves += 1;
                 support = support.max(height);
                 lowest = lowest.min(height);
@@ -276,9 +463,9 @@ impl Habitat<'_> {
         // Two real contacts can climb a bank while the rear hooves still swim;
         // the fluid surface itself never contributes a support height.
         (dry_hooves >= 2
-            && (support - lowest) <= 1.001
+            && (partial || (support - lowest) <= 1.001)
             && (support - p[1]).abs() <= 1.01
-            && self.clear_rotated(next, kind.size(), false, yaw))
+            && self.clear_rotated(next, size, false, yaw))
         .then_some(next)
     }
 }
@@ -300,6 +487,7 @@ pub(super) fn biome_slug(biome: crate::generation::biomes::BiomeKind) -> &'stati
         BiomeKind::Highland => "highland",
         BiomeKind::MushroomPark => "mushroom_park",
         BiomeKind::ClifftedDesert => "cliffted_desert",
+        BiomeKind::CherryForest => "cherry_forest",
     }
 }
 
@@ -366,7 +554,7 @@ fn spawn_cell_using<'a>(
         if (group_seed >> 32).is_multiple_of(3) {
             continue;
         }
-        let biome = biome_slug(surface.biome.weights.dominant());
+        let biome = biome_slug(habitat.terrain.surface_biome(&surface));
         let kind = if fish {
             let ocean = surface.biome.weights.ocean > 0.55;
             let lake = habitat
@@ -442,7 +630,9 @@ fn spawn_cell_using<'a>(
             }
             p
         } else {
-            let Some(p) = habitat.ground([x, y, z], kind) else {
+            let Some(p) =
+                habitat.ground_rotated([x, y, z], kind, f64::from((seed % 628) as f32 * 0.01))
+            else {
                 continue;
             };
             let support = habitat.block([x.floor() as i64, p[1] as i64 - 1, z.floor() as i64]);
@@ -550,6 +740,10 @@ pub(super) fn step_with_flowers(
         );
         return Forage::None;
     }
+    if animal.kind.is_spider() {
+        spiders::step_with_navigation(animal, habitat, players, dt, search, true, navigation);
+        return Forage::None;
+    }
     if animal.kind.is_aquatic() && animal.kind != Kind::Fish {
         aquatics::step(animal, habitat, players, &bears::PreyIndex::default(), dt);
         return Forage::None;
@@ -642,6 +836,7 @@ pub(super) fn step_with_flowers(
     );
     let speed = if moving {
         animal.kind.speed()
+            * animal.movement_scale()
             * if animal.behavior == Behavior::Flee {
                 2.8
             } else {
@@ -655,7 +850,7 @@ pub(super) fn step_with_flowers(
     target[2] -= f64::from(animal.yaw.cos()) * speed * f64::from(dt);
     let grounded = animal.kind == Kind::Fish
         || habitat
-            .ground_rotated(animal.position, animal.kind, f64::from(animal.yaw))
+            .supported_sized(animal.position, animal.size(), f64::from(animal.yaw))
             .is_some_and(|p| p[1] <= animal.position[1] + 0.001);
     if animal.kind == Kind::Horse
         && grounded
@@ -674,7 +869,7 @@ pub(super) fn step_with_flowers(
                     animal.position[2] - f64::from(animal.yaw.cos()) * distance,
                 ];
                 if let Some(landing) =
-                    habitat.ground_rotated(probe, animal.kind, f64::from(animal.yaw))
+                    habitat.ground_sized(probe, animal.size(), f64::from(animal.yaw))
                     && horses::launch(animal, habitat, landing)
                 {
                     if let Some(nav) = navigation.as_deref_mut() {
@@ -695,6 +890,17 @@ pub(super) fn step_with_flowers(
         },
         |g| g.position.map(|v| v as f64 + 0.5),
     );
+    if let Some(nav) = navigation.as_deref_mut() {
+        nav.intend(
+            animal,
+            if !grounded {
+                terra_core::creatures::intentions::IntentReason::Unsupported
+            } else {
+                terra_core::creatures::intentions::CreatureIntent::state(animal).reason
+            },
+            moving.then_some(destination),
+        );
+    }
     let move_to_waypoint = |waypoint| {
         let length = distance(waypoint, animal.position).sqrt().max(0.001);
         let p = std::array::from_fn(|i| {
@@ -702,10 +908,10 @@ pub(super) fn step_with_flowers(
                 + (waypoint[i] - animal.position[i]) / length * (speed * f64::from(dt)).min(length)
         });
         if animal.kind == Kind::Fish {
-            habitat.clear(p, animal.kind.size(), true).then_some(p)
+            habitat.clear(p, animal.size(), true).then_some(p)
         } else {
             let yaw = (animal.position[0] - p[0]).atan2(animal.position[2] - p[2]);
-            habitat.ground_rotated(p, animal.kind, yaw)
+            habitat.travel_step_sized(animal.position, p, animal.size(), yaw)
         }
     };
     // A free direct step does not mean a detour has cleared its obstacle.
@@ -741,11 +947,14 @@ pub(super) fn step_with_flowers(
             *value += f64::from(flow.velocity[axis].clamp(-0.45, 0.45) * 0.2 * dt);
         }
         target[1] += (animal.age * 0.6 + animal.id as f64 % 11.0).sin() * 0.2 * f64::from(dt);
-        habitat
-            .clear(target, animal.kind.size(), true)
-            .then_some(target)
+        habitat.clear(target, animal.size(), true).then_some(target)
     } else if grounded {
-        habitat.ground_rotated(target, animal.kind, f64::from(animal.yaw))
+        habitat.travel_step_sized(
+            animal.position,
+            target,
+            animal.size(),
+            f64::from(animal.yaw),
+        )
     } else {
         None
     };
@@ -787,22 +996,18 @@ pub(super) fn step_with_flowers(
             probe[0] -= f64::from(yaw.sin()) * 0.7;
             probe[2] -= f64::from(yaw.cos()) * 0.7;
             let candidate = if animal.kind == Kind::Fish {
-                habitat
-                    .clear(probe, animal.kind.size(), true)
-                    .then_some(probe)
+                habitat.clear(probe, animal.size(), true).then_some(probe)
             } else {
-                habitat.ground_rotated(probe, animal.kind, f64::from(yaw))
+                habitat.travel_step_sized(animal.position, probe, animal.size(), f64::from(yaw))
             };
             if candidate.is_some() {
                 let mut step = animal.position;
                 step[0] -= f64::from(yaw.sin()) * speed * f64::from(dt);
                 step[2] -= f64::from(yaw.cos()) * speed * f64::from(dt);
                 next = if animal.kind == Kind::Fish {
-                    habitat
-                        .clear(step, animal.kind.size(), true)
-                        .then_some(step)
+                    habitat.clear(step, animal.size(), true).then_some(step)
                 } else {
-                    habitat.ground_rotated(step, animal.kind, f64::from(yaw))
+                    habitat.travel_step_sized(animal.position, step, animal.size(), f64::from(yaw))
                 };
                 if next.is_some() {
                     animal.yaw = yaw.rem_euclid(std::f32::consts::TAU);
@@ -831,9 +1036,21 @@ pub(super) fn step_with_flowers(
         animal.needs.search_in = 2.0;
         animal.timer = 2.0 + (random(animal.id, animal.age as u64) % 20) as f32 * 0.1;
     }
+    let vertical = animal.velocity[1];
     animal.velocity = std::array::from_fn(|i| {
         ((animal.position[i] - before[i]) / f64::from(dt.max(0.001))) as f32
     });
+    if animal.kind != Kind::Fish {
+        // Walking down a stair changes support height, not ballistic velocity.
+        // Gravity already produced the real falling velocity when unsupported.
+        animal.velocity[1] = if next.is_some() { 0.0 } else { vertical };
+        if next.is_none() {
+            // A local penetration correction is not locomotion, even when it
+            // moves the saved pose sideways at a high simulation frequency.
+            animal.velocity[0] = 0.0;
+            animal.velocity[2] = 0.0;
+        }
+    }
     if animal.health <= 0.0 {
         animal.behavior = Behavior::Dead;
         animal.velocity = [0.0; 3];
@@ -841,7 +1058,8 @@ pub(super) fn step_with_flowers(
     forage
 }
 
-/// Slab picking against the same conservative articulated-body bounds as navigation.
+/// Client targeting and authoritative interaction share the anatomical volumes;
+/// navigation clearance must not turn empty space around a long body into a hit.
 pub fn ray_distance(
     animal: &Creature,
     origin: [f64; 3],
@@ -851,50 +1069,5 @@ pub fn ray_distance(
     if animal.health <= 0.0 || animal.behavior == Behavior::InNest {
         return None;
     }
-    let size = animal.size();
-    let (origin, direction, min, max) = if animal.kind.is_aquatic() {
-        let [x, y, z] = std::array::from_fn(|i| origin[i] - animal.position[i]);
-        let (sin, cos) = f64::from(animal.yaw).sin_cos();
-        (
-            [cos * x - sin * z, y, sin * x + cos * z],
-            [
-                cos * direction[0] - sin * direction[2],
-                direction[1],
-                sin * direction[0] + cos * direction[2],
-            ],
-            [-size[0] * 0.5, 0.0, -size[2] * 0.5],
-            [size[0] * 0.5, size[1], size[2] * 0.5],
-        )
-    } else {
-        let r = size[0].max(size[2]) * 0.5;
-        let min = [
-            animal.position[0] - r,
-            animal.position[1],
-            animal.position[2] - r,
-        ];
-        let max = [
-            animal.position[0] + r,
-            animal.position[1] + size[1],
-            animal.position[2] + r,
-        ];
-        (origin, direction, min, max)
-    };
-    let mut near: f64 = 0.0;
-    let mut far = reach;
-    for axis in 0..3 {
-        if direction[axis].abs() < 1e-9 {
-            if origin[axis] < min[axis] || origin[axis] > max[axis] {
-                return None;
-            }
-        } else {
-            let a = (min[axis] - origin[axis]) / direction[axis];
-            let b = (max[axis] - origin[axis]) / direction[axis];
-            near = near.max(a.min(b));
-            far = far.min(a.max(b));
-            if near > far {
-                return None;
-            }
-        }
-    }
-    Some(near)
+    terra_core::creatures::hitboxes::for_creature(animal).ray_distance(origin, direction, reach)
 }

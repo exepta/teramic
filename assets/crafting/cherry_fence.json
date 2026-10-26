@@ -1,0 +1,50 @@
+{
+  "id": "teramic::cherry_fence",
+  "name": "Cherry Fence",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "block": 138
+    },
+    "count": 3
+  },
+  "pattern": {
+    "kind": "shaped",
+    "width": 3,
+    "height": 2,
+    "cells": [
+      {
+        "item": {
+          "block": 135
+        },
+        "count": 1
+      },
+      {
+        "item": "stick",
+        "count": 1
+      },
+      {
+        "item": {
+          "block": 135
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "block": 135
+        },
+        "count": 1
+      },
+      {
+        "item": "stick",
+        "count": 1
+      },
+      {
+        "item": {
+          "block": 135
+        },
+        "count": 1
+      }
+    ]
+  }
+}

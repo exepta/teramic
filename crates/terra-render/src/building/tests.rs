@@ -67,6 +67,39 @@ fn removal(request: u64, outcome: EditOutcome) -> ConfirmedEdit {
     }
 }
 
+fn oriented_preview(app: &mut App, position: [i64; 3], material: u16) {
+    let properties = terra_core::block_properties::BlockPropertiesCatalog::default();
+    let mut templates = crate::blocks::TemplateSet::default();
+    templates.blocks.insert(
+        material,
+        crate::blocks::BlockTemplate {
+            surface: None,
+            render_kind: crate::blocks::definitions::BlockRenderKind::CustomMesh,
+            bevel_width: 0.0,
+            faces: std::array::from_fn(|_| Vec::new()),
+            face_materials: [0; 6],
+            side_cap: None,
+            details: Vec::new(),
+            model: crate::blocks::cube::box_model(properties.shape(material), 0.0, [0; 6]),
+        },
+    );
+    app.world_mut().resource_mut::<BlockAssets>().templates = Some(std::sync::Arc::new(templates));
+    app.init_resource::<terra_world::edits::EditJournal>();
+    *app.world_mut().resource_mut::<PlacementPreview>() = PlacementPreview {
+        position: Some(position),
+        material,
+        valid: false,
+        plan: Some(terra_world::placement::Layout {
+            edits: vec![terra_world::streaming::BlockEditRequest {
+                position,
+                expected_material: 0,
+                material,
+            }],
+            states: Vec::new(),
+        }),
+    };
+}
+
 #[test]
 fn mining_feedback_emits_small_cube_chips_within_the_existing_particle_budget() {
     let mut app = app();
@@ -210,7 +243,7 @@ fn cracks_only_cover_visible_faces_and_cancel_with_gameplay_input() {
 }
 
 #[test]
-fn invalid_preview_changes_shared_material_and_reuses_one_ghost() {
+fn oriented_outline_reuses_one_entity_mesh_and_orange_material_for_both_validities() {
     let mut app = app();
     *app.world_mut().resource_mut::<DebugSettings>() = DebugSettings {
         enabled: true,
@@ -218,39 +251,45 @@ fn invalid_preview_changes_shared_material_and_reuses_one_ghost() {
         ..default()
     };
     app.world_mut().resource_mut::<CameraInputState>().captured = true;
-    app.world_mut().resource_mut::<PlacementPreview>().position = Some([-2, 8, -3]);
+    oriented_preview(&mut app, [-2, 8, -3], 82);
     app.update();
-    let (entity, transform, material) = app.world_mut()
-        .query_filtered::<(Entity, &Transform, &MeshMaterial3d<StandardMaterial>), With<BuildGhost>>()
-        .single(app.world()).unwrap();
+    let (entity, transform, material) = app
+        .world_mut()
+        .query_filtered::<(
+            Entity,
+            &Transform,
+            &MeshMaterial3d<PlacementOutlineMaterial>,
+        ), With<PlacementOutline>>()
+        .single(app.world())
+        .unwrap();
     assert_eq!(transform.translation, Vec3::new(-1.5, 8.5, -2.5));
-    assert_eq!(
-        material.0,
-        app.world().resource::<BuildingAssets>().ghost[0]
-    );
+    assert_eq!(material.0, app.world().resource::<BuildingAssets>().outline);
     assert!(app.world().resource::<BuildingStatus>().preview_visible);
     assert!(!app.world().resource::<BuildingStatus>().preview_valid);
     app.world_mut().resource_mut::<PlacementPreview>().valid = true;
     app.update();
     let (next_entity, material) = app
         .world_mut()
-        .query_filtered::<(Entity, &MeshMaterial3d<StandardMaterial>), With<BuildGhost>>()
+        .query_filtered::<(Entity, &MeshMaterial3d<PlacementOutlineMaterial>), With<PlacementOutline>>()
         .single(app.world())
         .unwrap();
     assert_eq!(next_entity, entity);
-    assert_eq!(
-        material.0,
-        app.world().resource::<BuildingAssets>().ghost[1]
-    );
+    assert_eq!(material.0, app.world().resource::<BuildingAssets>().outline);
     assert!(app.world().resource::<BuildingStatus>().preview_valid);
-    assert_eq!(app.world().resource::<Assets<Mesh>>().len(), 2);
-    assert_eq!(app.world().resource::<Assets<StandardMaterial>>().len(), 4);
+    assert_eq!(app.world().resource::<Assets<Mesh>>().len(), 3);
+    assert_eq!(app.world().resource::<Assets<StandardMaterial>>().len(), 2);
+    assert_eq!(
+        app.world()
+            .resource::<Assets<PlacementOutlineMaterial>>()
+            .len(),
+        1
+    );
     app.world_mut().resource_mut::<ClientSession>().ready = false;
     app.update();
     assert!(!app.world().resource::<BuildingStatus>().preview_visible);
     assert_eq!(
         app.world_mut()
-            .query_filtered::<Entity, With<BuildGhost>>()
+            .query_filtered::<Entity, With<PlacementOutline>>()
             .iter(app.world())
             .count(),
         0
@@ -258,16 +297,16 @@ fn invalid_preview_changes_shared_material_and_reuses_one_ghost() {
 }
 
 #[test]
-fn placement_box_requires_both_debug_and_block_preview_toggle() {
+fn oriented_outline_is_available_without_debug_and_never_adds_a_filled_or_debug_cube() {
     let mut app = app();
     app.world_mut().resource_mut::<CameraInputState>().captured = true;
-    app.world_mut().resource_mut::<PlacementPreview>().position = Some([8; 3]);
+    oriented_preview(&mut app, [8; 3], 82);
     for (enabled, block_placement, visible) in [
-        (false, false, false),
-        (true, false, false),
-        (false, true, false),
+        (false, false, true),
+        (true, false, true),
+        (false, true, true),
         (true, true, true),
-        (false, true, false),
+        (false, true, true),
     ] {
         *app.world_mut().resource_mut::<DebugSettings>() = DebugSettings {
             enabled,
@@ -281,12 +320,119 @@ fn placement_box_requires_both_debug_and_block_preview_toggle() {
         );
         assert_eq!(
             app.world_mut()
-                .query_filtered::<Entity, With<BuildGhost>>()
+                .query_filtered::<Entity, With<PlacementOutline>>()
                 .iter(app.world())
                 .count(),
             usize::from(visible)
         );
     }
+}
+
+#[test]
+fn plain_cubes_never_get_a_placement_outline_even_with_stale_oriented_plan_or_debug_enabled() {
+    let mut app = app();
+    app.world_mut().resource_mut::<CameraInputState>().captured = true;
+    oriented_preview(&mut app, [-17, 8, -1], 82);
+    app.update();
+    assert!(app.world().resource::<BuildingStatus>().preview_visible);
+    for material in [
+        0, 1, 2, 3, 4, 5, 6, 7, 12, 15, 16, 30, 41, 49, 50, 51, 98, 101,
+    ] {
+        app.world_mut().resource_mut::<PlacementPreview>().material = material;
+        for debug in [false, true] {
+            *app.world_mut().resource_mut::<DebugSettings>() = DebugSettings {
+                enabled: debug,
+                block_placement: debug,
+                ..default()
+            };
+            app.update();
+            assert!(
+                !app.world().resource::<BuildingStatus>().preview_visible,
+                "{material}"
+            );
+            assert_eq!(
+                app.world_mut()
+                    .query_filtered::<Entity, With<PlacementOutline>>()
+                    .iter(app.world())
+                    .count(),
+                0
+            );
+        }
+    }
+    for material in [28, 29, 40, 59, 60, 65, 68, 71, 74, 77, 82, 85, 90, 99, 100] {
+        assert!(orientation_preview(material), "{material}");
+    }
+}
+
+#[test]
+fn placement_outline_pulses_orange_without_rebuilding_geometry_or_growing_assets() {
+    let mut app = app();
+    app.world_mut().resource_mut::<CameraInputState>().captured = true;
+    oriented_preview(&mut app, [8; 3], 82);
+    app.update();
+    let (entity, mesh) = app
+        .world_mut()
+        .query_filtered::<(Entity, &Mesh3d), With<PlacementOutline>>()
+        .single(app.world())
+        .map(|(e, m)| (e, m.0.clone()))
+        .unwrap();
+    let geometry = app.world().resource::<Assets<Mesh>>().get(&mesh).unwrap();
+    assert_eq!(
+        geometry.primitive_topology(),
+        bevy::mesh::PrimitiveTopology::TriangleList
+    );
+    assert_eq!(geometry.count_vertices(), 48);
+    assert_eq!(geometry.indices().unwrap().len(), 72);
+    let material = app.world().resource::<BuildingAssets>().outline.clone();
+    let mut range = [1.0_f32, 0.0_f32];
+    for _ in 0..200 {
+        app.update();
+        let surface = app
+            .world()
+            .resource::<Assets<PlacementOutlineMaterial>>()
+            .get(&material)
+            .unwrap();
+        let color = Color::from(surface.color).to_srgba();
+        assert!((color.red - 1.0).abs() < 0.00001);
+        assert!((color.green - 0.68).abs() < 0.00001);
+        assert!((color.blue - 0.2).abs() < 0.00001);
+        assert_eq!(surface.parameters.x, 2.0);
+        assert!((0.3999..=0.9501).contains(&color.alpha));
+        range[0] = range[0].min(color.alpha);
+        range[1] = range[1].max(color.alpha);
+        assert_eq!(app.world().get::<Mesh3d>(entity).unwrap().0, mesh);
+        assert_eq!(app.world().resource::<Assets<Mesh>>().len(), 3);
+        assert_eq!(app.world().resource::<Assets<StandardMaterial>>().len(), 2);
+        assert_eq!(
+            app.world()
+                .resource::<Assets<PlacementOutlineMaterial>>()
+                .len(),
+            1
+        );
+    }
+    assert!(range[1] - range[0] > 0.5);
+}
+
+#[test]
+fn missing_orientation_geometry_never_falls_back_to_a_filled_cube() {
+    let mut app = app();
+    app.world_mut().resource_mut::<CameraInputState>().captured = true;
+    *app.world_mut().resource_mut::<PlacementPreview>() = PlacementPreview {
+        position: Some([8; 3]),
+        material: 29,
+        valid: true,
+        plan: None,
+    };
+    app.update();
+    assert!(!app.world().resource::<BuildingStatus>().preview_visible);
+    assert_eq!(
+        app.world_mut()
+            .query_filtered::<Entity, With<PlacementOutline>>()
+            .iter(app.world())
+            .count(),
+        0
+    );
+    assert_eq!(app.world().resource::<Assets<Mesh>>().len(), 2);
 }
 
 #[test]
@@ -463,13 +609,13 @@ fn mining_hides_the_preview_and_grass_feedback_is_not_neutral_white() {
         ..default()
     };
     app.world_mut().resource_mut::<CameraInputState>().captured = true;
-    app.world_mut().resource_mut::<PlacementPreview>().position = Some([8, 8, 8]);
+    oriented_preview(&mut app, [8; 3], 82);
     app.world_mut().resource_mut::<InteractionMotion>().swinging = true;
     app.update();
     assert!(!app.world().resource::<BuildingStatus>().preview_visible);
     assert_eq!(
         app.world_mut()
-            .query_filtered::<Entity, With<BuildGhost>>()
+            .query_filtered::<Entity, With<PlacementOutline>>()
             .iter(app.world())
             .count(),
         0
@@ -540,7 +686,7 @@ fn confirmed_break_particles_have_a_hard_budget_and_expire_without_asset_growth(
         0
     );
     assert_eq!(app.world().resource::<Assets<Mesh>>().len(), 2);
-    assert_eq!(app.world().resource::<Assets<StandardMaterial>>().len(), 4);
+    assert_eq!(app.world().resource::<Assets<StandardMaterial>>().len(), 2);
     app.world_mut()
         .write_message(removal(100, EditOutcome::Applied));
     app.update();
@@ -656,7 +802,7 @@ fn resource_drop_markers_share_assets_obey_the_cap_and_cleanup_on_disconnect() {
         .collect();
     assert_eq!(before, after);
     assert_eq!(app.world().resource::<Assets<Mesh>>().len(), 3);
-    assert_eq!(app.world().resource::<Assets<StandardMaterial>>().len(), 4);
+    assert_eq!(app.world().resource::<Assets<StandardMaterial>>().len(), 2);
     app.world_mut()
         .resource_mut::<ClientSession>()
         .drops

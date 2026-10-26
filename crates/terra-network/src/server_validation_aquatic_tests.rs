@@ -9,6 +9,9 @@ use terra_world::{
     streaming::{ChunkStore, LoadedSection, WorldTerrain},
 };
 
+#[path = "server_validation_pot_tests.rs"]
+mod pot_tests;
+
 fn fixture(kind: ResourcePropKind, wet: bool) -> (App, Peer, [i64; 3]) {
     let support = [4, 3, 4];
     let mut config = GameConfig::default();
@@ -32,7 +35,8 @@ fn fixture(kind: ResourcePropKind, wet: bool) -> (App, Peer, [i64; 3]) {
         .init_resource::<terra_core::block_properties::BlockPropertiesCatalog>()
         .init_resource::<ChunkStore>()
         .init_resource::<EditJournal>()
-        .init_resource::<crate::server::ConnectedProfiles>();
+        .init_resource::<crate::server::ConnectedProfiles>()
+        .init_resource::<crate::server::riding::Mounts>();
     let owner = terra_voxel::global_to_section(support).0;
     let mut data = terra_voxel::BlockSection::empty(owner).unwrap();
     for x in 0..16 {
@@ -62,7 +66,7 @@ fn fixture(kind: ResourcePropKind, wet: bool) -> (App, Peer, [i64; 3]) {
         bag.creative_set(
             0,
             ItemStack {
-                item: ItemKind::Prop(kind),
+                item: prop_placement_item(kind),
                 count: 2,
             },
         );
@@ -98,6 +102,8 @@ fn fixture(kind: ResourcePropKind, wet: bool) -> (App, Peer, [i64; 3]) {
         .id();
     let now = std::time::Instant::now();
     let peer = Peer {
+        farming: Default::default(),
+        crank: Default::default(),
         chest_cursor: None,
         creature_action_at: now,
         container: None,
@@ -133,8 +139,11 @@ fn fixture(kind: ResourcePropKind, wet: bool) -> (App, Peer, [i64; 3]) {
         edits_left: 20.0,
         rate_time: now,
         spawned: true,
+        restored_spawn: false,
+        restore_location: None,
         last_movement: Default::default(),
         vitals: Default::default(),
+        equipment: Default::default(),
         survival: Default::default(),
         stats_sent: None,
     };
@@ -146,6 +155,336 @@ fn aim(app: &App, peer: &Peer, target: [f64; 3]) -> [f32; 2] {
         app.world().get::<Transform>(peer.body).unwrap().translation + Vec3::Y * PLAYER_EYE_OFFSET;
     let direction = (Vec3::from_array(target.map(|v| v as f32)) - eye).normalize();
     [(-direction.x).atan2(-direction.z), direction.y.asin()]
+}
+
+fn equip_farm_tool(app: &mut App, peer: &Peer, tool: terra_core::ToolKind) {
+    app.world_mut()
+        .resource_mut::<EditJournal>()
+        .gameplay_mut()
+        .inventories
+        .get_mut(&peer.uuid)
+        .unwrap()
+        .creative_set(
+            0,
+            ItemStack {
+                item: ItemKind::Tool(tool),
+                count: 1,
+            },
+        );
+}
+
+fn farm_command(
+    app: &App,
+    peer: &Peer,
+    position: [i64; 3],
+    action: terra_core::farming::FarmingAction,
+    look: [f32; 2],
+) -> EditCommand {
+    use terra_core::farming::FarmingAction;
+    let journal = app.world().resource::<EditJournal>();
+    let section = terra_voxel::global_to_section(position).0;
+    EditCommand {
+        request: 1,
+        look,
+        action: EditAction::Farm { position, action },
+        revision: if matches!(
+            action,
+            FarmingAction::FillBucket | FarmingAction::EmptyBucket
+        ) {
+            journal.water_mesh_epoch(section)
+        } else if matches!(action, FarmingAction::Till | FarmingAction::Refill) {
+            journal.revision(section)
+        } else {
+            journal.prop_epoch(section)
+        },
+        source: Some(InventorySource {
+            slot: 0,
+            revision: journal.gameplay().inventories[&peer.uuid].revision,
+        }),
+    }
+}
+
+#[test]
+fn buckets_exchange_the_held_item_and_real_source_without_duplication_or_remote_use() {
+    use terra_core::{ToolKind, farming::FarmingAction};
+    let (mut app, mut peer, _) = fixture(ResourcePropKind::Wheat, false);
+    let p = [6, 4, 4];
+    app.world_mut()
+        .resource_mut::<ChunkStore>()
+        .loaded
+        .get_mut(&terra_voxel::SectionPos::default())
+        .unwrap()
+        .data
+        .set_block([6, 4, 4], 27)
+        .unwrap();
+    app.world_mut()
+        .resource_mut::<EditJournal>()
+        .set_fluid(
+            p,
+            terra_world::water::FluidCell {
+                amount: 8,
+                source: true,
+                flow: [0; 2],
+            },
+        )
+        .unwrap();
+    equip_farm_tool(&mut app, &peer, ToolKind::Bucket);
+    let fill = farm_command(
+        &app,
+        &peer,
+        p,
+        FarmingAction::FillBucket,
+        aim(&app, &peer, [6.5, 4.5, 4.5]),
+    );
+    let mut sender = lightyear::prelude::MessageSender::<ServerControl>::default();
+    let mut system = SystemState::<ControlWorld>::new(app.world_mut());
+    {
+        let mut world = system.get_mut(app.world_mut()).unwrap();
+        let apply = super::super::farm_tools::apply;
+        assert_eq!(
+            apply(fill, &mut peer, &mut sender, &mut world),
+            EditOutcome::Applied
+        );
+        assert_eq!(
+            world.journal.gameplay().inventories[&peer.uuid]
+                .slot(0)
+                .unwrap()
+                .item,
+            ItemKind::Tool(ToolKind::WaterBucket)
+        );
+        assert_eq!(world.journal.fluid(p).unwrap().amount, 0);
+        assert_eq!(world.chunks.block_at(p), Some(0));
+        peer.farming.reset_cooldown();
+        assert_eq!(
+            apply(fill, &mut peer, &mut sender, &mut world),
+            EditOutcome::Conflict
+        );
+    }
+    let pour = farm_command(
+        &app,
+        &peer,
+        p,
+        FarmingAction::EmptyBucket,
+        aim(&app, &peer, [6.5, 3.99, 4.5]),
+    );
+    {
+        let mut world = system.get_mut(app.world_mut()).unwrap();
+        peer.permissions.build = false;
+        assert_eq!(
+            super::super::farm_tools::apply(pour, &mut peer, &mut sender, &mut world),
+            EditOutcome::Invalid
+        );
+        peer.permissions.build = true;
+        assert_eq!(
+            super::super::farm_tools::apply(pour, &mut peer, &mut sender, &mut world),
+            EditOutcome::Applied
+        );
+        assert!(world.journal.fluid(p).unwrap().source);
+        assert_eq!(
+            world.journal.gameplay().inventories[&peer.uuid]
+                .slot(0)
+                .unwrap()
+                .item,
+            ItemKind::Tool(ToolKind::Bucket)
+        );
+        let delta = world
+            .journal
+            .section_delta(terra_voxel::SectionPos::default());
+        let mut replica = EditJournal::default();
+        replica.import_delta(delta).unwrap();
+        assert_eq!(replica.fluid(p), world.journal.fluid(p));
+    }
+}
+
+fn plant_test_crop(app: &mut App, support: [i64; 3], ripe: bool) {
+    let owner = terra_voxel::global_to_section(support).0;
+    app.world_mut()
+        .resource_mut::<ChunkStore>()
+        .loaded
+        .get_mut(&owner)
+        .unwrap()
+        .data
+        .set_block(support.map(|value| value.rem_euclid(16) as usize), 2)
+        .unwrap();
+    let prop = placed_prop(support, ResourcePropKind::Wheat, 0);
+    let mut system = SystemState::<ControlWorld>::new(app.world_mut());
+    let mut world = system.get_mut(app.world_mut()).unwrap();
+    assert!(
+        terra_world::farming::plant_crop(
+            &mut world.chunks,
+            &mut world.journal,
+            &world.block_properties,
+            prop
+        )
+        .unwrap()
+    );
+    let mut crop = *world.journal.crop_at(support).unwrap();
+    crop.moisture = 0.1;
+    if ripe {
+        crop.progress_seconds = crop.growth_duration_seconds;
+    }
+    terra_world::farming::commit_crop_state(&mut world.chunks, &mut world.journal, support, crop)
+        .unwrap();
+}
+
+#[test]
+fn hoe_requires_selected_tool_current_inventory_and_uncovered_top_soil() {
+    use terra_core::{ToolKind, farming::FarmingAction};
+    let (mut app, mut peer, support) = fixture(ResourcePropKind::Wheat, false);
+    app.world_mut()
+        .resource_mut::<ChunkStore>()
+        .loaded
+        .get_mut(&terra_voxel::SectionPos::default())
+        .unwrap()
+        .data
+        .set_block([4, 3, 4], 2)
+        .unwrap();
+    equip_farm_tool(&mut app, &peer, ToolKind::WoodHoe);
+    let command = farm_command(
+        &app,
+        &peer,
+        support,
+        FarmingAction::Till,
+        aim(&app, &peer, [4.5, 4.0, 4.5]),
+    );
+    let mut sender = lightyear::prelude::MessageSender::<ServerControl>::default();
+    let mut system = SystemState::<ControlWorld>::new(app.world_mut());
+    let mut world = system.get_mut(app.world_mut()).unwrap();
+    let mut forged = command;
+    forged.source.as_mut().unwrap().revision += 1;
+    assert_eq!(
+        super::super::farm_tools::apply(forged, &mut peer, &mut sender, &mut world),
+        EditOutcome::Conflict
+    );
+    assert_eq!(world.chunks.block_at(support), Some(2));
+    assert_eq!(
+        super::super::farm_tools::apply(command, &mut peer, &mut sender, &mut world),
+        EditOutcome::Applied
+    );
+    assert_eq!(
+        world.chunks.block_at(support),
+        Some(terra_core::farming::FARMLAND)
+    );
+    peer.farming.reset_cooldown();
+    assert_eq!(
+        super::super::farm_tools::apply(command, &mut peer, &mut sender, &mut world),
+        EditOutcome::Conflict
+    );
+    assert_eq!(
+        world.journal.gameplay().inventories[&peer.uuid].count(ItemKind::Tool(ToolKind::WoodHoe)),
+        1
+    );
+}
+
+#[test]
+fn watering_refills_real_water_and_persists_crop_moisture_without_terrain_rebuild() {
+    use terra_core::{ToolKind, farming::FarmingAction};
+    let (mut app, mut peer, support) = fixture(ResourcePropKind::Wheat, false);
+    plant_test_crop(&mut app, support, false);
+    equip_farm_tool(&mut app, &peer, ToolKind::IronWateringCan);
+    app.world_mut()
+        .resource_mut::<ChunkStore>()
+        .loaded
+        .get_mut(&terra_voxel::SectionPos::default())
+        .unwrap()
+        .data
+        .set_block([6, 4, 4], 27)
+        .unwrap();
+    let refill = farm_command(
+        &app,
+        &peer,
+        [6, 4, 4],
+        FarmingAction::Refill,
+        aim(&app, &peer, [6.5, 4.5, 4.5]),
+    );
+    let water = farm_command(
+        &app,
+        &peer,
+        support,
+        FarmingAction::Water,
+        aim(&app, &peer, [4.5, 4.0, 4.5]),
+    );
+    let mut sender = lightyear::prelude::MessageSender::<ServerControl>::default();
+    let mut system = SystemState::<ControlWorld>::new(app.world_mut());
+    let mut world = system.get_mut(app.world_mut()).unwrap();
+    let mesh_epoch = world.chunks.loaded[&terra_voxel::SectionPos::default()].mesh_epoch;
+    assert_eq!(
+        super::super::farm_tools::apply(water, &mut peer, &mut sender, &mut world),
+        EditOutcome::Invalid
+    );
+    assert_eq!(
+        super::super::farm_tools::apply(refill, &mut peer, &mut sender, &mut world),
+        EditOutcome::Applied
+    );
+    assert_eq!(peer.farming.water(), 12);
+    assert_eq!(
+        super::super::farm_tools::apply(water, &mut peer, &mut sender, &mut world),
+        EditOutcome::RateLimited
+    );
+    peer.farming.reset_cooldown();
+    assert_eq!(
+        super::super::farm_tools::apply(water, &mut peer, &mut sender, &mut world),
+        EditOutcome::Applied
+    );
+    assert_eq!(peer.farming.water(), 11);
+    assert_eq!(world.journal.crop_at(support).unwrap().moisture, 1.0);
+    assert_eq!(
+        world.chunks.loaded[&terra_voxel::SectionPos::default()].mesh_epoch,
+        mesh_epoch
+    );
+    peer.farming.reset_cooldown();
+    assert_eq!(
+        super::super::farm_tools::apply(water, &mut peer, &mut sender, &mut world),
+        EditOutcome::Invalid
+    );
+    assert_eq!(peer.farming.water(), 11);
+}
+
+#[test]
+fn scythe_harvests_only_ripe_visible_crops_and_reserves_all_drop_slots_atomically() {
+    use terra_core::{ToolKind, farming::FarmingAction};
+    let (mut app, mut peer, _) = fixture(ResourcePropKind::Wheat, false);
+    for x in 4..=6 {
+        plant_test_crop(&mut app, [x, 3, 4], true);
+    }
+    plant_test_crop(&mut app, [5, 3, 5], false);
+    equip_farm_tool(&mut app, &peer, ToolKind::WoodScythe);
+    let prop = app.world().resource::<ChunkStore>().loaded[&terra_voxel::SectionPos::default()]
+        .props
+        .iter()
+        .find(|prop| terra_world::props::placement::support(prop) == [5, 3, 4] && !prop.removed)
+        .copied()
+        .unwrap();
+    let command = farm_command(
+        &app,
+        &peer,
+        [5, 3, 4],
+        FarmingAction::Harvest,
+        aim_crop(&app, &peer, prop),
+    );
+    let mut sender = lightyear::prelude::MessageSender::<ServerControl>::default();
+    let mut system = SystemState::<ControlWorld>::new(app.world_mut());
+    let mut world = system.get_mut(app.world_mut()).unwrap();
+    world.journal.gameplay_mut().next_drop = u64::MAX - 2;
+    assert_eq!(
+        super::super::farm_tools::apply(command, &mut peer, &mut sender, &mut world),
+        EditOutcome::RateLimited
+    );
+    assert!((4..=6).all(|x| world.journal.crop_at([x, 3, 4]).is_some()));
+    world.journal.gameplay_mut().next_drop = 0;
+    assert_eq!(
+        super::super::farm_tools::apply(command, &mut peer, &mut sender, &mut world),
+        EditOutcome::Applied
+    );
+    assert!((4..=6).all(|x| world.journal.crop_at([x, 3, 4]).is_none()));
+    assert!(world.journal.crop_at([5, 3, 5]).is_some());
+    assert_eq!(world.journal.gameplay().drops.len(), 6);
+    peer.farming.reset_cooldown();
+    assert_eq!(
+        super::super::farm_tools::apply(command, &mut peer, &mut sender, &mut world),
+        EditOutcome::Conflict
+    );
+    assert_eq!(world.journal.gameplay().drops.len(), 6);
 }
 
 #[test]
@@ -283,6 +622,231 @@ fn slab_merge_is_authoritative_consumes_one_half_and_rejects_a_third() {
 }
 
 #[test]
+fn mixed_slabs_are_mined_one_aimed_half_at_a_time_and_keep_the_other_material_and_pose() {
+    for facing in [0, 4, 5, 6, 7, 8] {
+        for selected in 0..2 {
+            for mode in [GameMode::Survival, GameMode::Creative] {
+                let (mut app, mut peer, _) = fixture(ResourcePropKind::Seagrass, false);
+                peer.mode = Some(mode);
+                let position = [4, 4, 4];
+                let merged = terra_core::construction::merged_slab(82, facing, 85).unwrap();
+                let halves = terra_core::construction::slab_halves(82, merged).unwrap();
+                let bounds = terra_core::construction::slab_bounds(halves[selected].1);
+                let center = std::array::from_fn(|axis| {
+                    position[axis] as f64 + (bounds.minimum[axis] + bounds.maximum[axis]) * 0.5
+                });
+                let split_axis = (0..3)
+                    .find(|&axis| bounds.maximum[axis] - bounds.minimum[axis] == 0.5)
+                    .unwrap();
+                let mut eye = Vec3::from_array(center.map(|v| v as f32));
+                eye[if split_axis == 2 { 0 } else { 2 }] -= 3.0;
+                app.world_mut()
+                    .get_mut::<Transform>(peer.body)
+                    .unwrap()
+                    .translation = eye - Vec3::Y * PLAYER_EYE_OFFSET;
+                app.world_mut()
+                    .resource_mut::<ChunkStore>()
+                    .loaded
+                    .get_mut(&terra_voxel::SectionPos::default())
+                    .unwrap()
+                    .data
+                    .set_block([4, 4, 4], 82)
+                    .unwrap();
+                {
+                    let mut journal = app.world_mut().resource_mut::<EditJournal>();
+                    journal.record(position, 82).unwrap();
+                    journal
+                        .set_object_state(
+                            position,
+                            Some(terra_world::edits::BlockObjectState {
+                                facing: merged,
+                                wood: terra_core::WoodSpecies::Birch,
+                                ..Default::default()
+                            }),
+                        )
+                        .unwrap();
+                }
+                equip_farm_tool(&mut app, &peer, terra_core::ToolKind::WoodPickaxe);
+                let look = aim(&app, &peer, center);
+                let mut system = SystemState::<ControlWorld>::new(app.world_mut());
+                let mut world = system.get_mut(app.world_mut()).unwrap();
+                let command = EditCommand {
+                    request: 1,
+                    revision: world.journal.revision(terra_voxel::SectionPos::default()),
+                    look,
+                    source: None,
+                    action: EditAction::Block {
+                        position,
+                        expected: 82,
+                        material: 0,
+                    },
+                };
+                assert_eq!(
+                    check(command, &peer, &world),
+                    EditOutcome::Applied,
+                    "{facing}/{selected}/{mode:?}"
+                );
+                if mode == GameMode::Survival {
+                    assert_eq!(
+                        apply(command, &peer, &mut world, false),
+                        EditOutcome::Invalid
+                    );
+                    assert_eq!(world.journal.object_state(position).unwrap().facing, merged);
+                }
+                assert_eq!(
+                    apply(command, &peer, &mut world, true),
+                    EditOutcome::Applied,
+                    "{facing}/{selected}/{mode:?}"
+                );
+                assert_eq!(
+                    world.chunks.block_at(position),
+                    Some(halves[1 - selected].0)
+                );
+                let state = world.journal.object_state(position).unwrap();
+                assert_eq!(state.facing, halves[1 - selected].1);
+                assert_eq!(state.wood, terra_core::WoodSpecies::Birch);
+                assert!(state.valid_for(position, halves[1 - selected].0));
+                let restored: terra_world::edits::BlockObjectState =
+                    serde_json::from_str(&serde_json::to_string(&state).unwrap()).unwrap();
+                assert_eq!(restored, state);
+                let drops = &world.journal.gameplay().drops;
+                assert_eq!(drops.len(), usize::from(mode == GameMode::Survival));
+                if mode == GameMode::Survival {
+                    assert_eq!(
+                        drops[0].stack,
+                        ItemStack {
+                            item: ItemKind::Block(halves[selected].0),
+                            count: 1
+                        }
+                    );
+                    assert_eq!(drops[0].position, center);
+                }
+                let stale = command;
+                assert_eq!(apply(stale, &peer, &mut world, true), EditOutcome::Conflict);
+            }
+        }
+    }
+}
+
+#[test]
+fn identical_and_legacy_double_slabs_keep_whole_mining_and_two_item_drops() {
+    for facing in [
+        terra_core::construction::DOUBLE_SLAB,
+        terra_core::construction::merged_slab(82, 5, 82).unwrap(),
+    ] {
+        let (mut app, mut peer, _) = fixture(ResourcePropKind::Seagrass, false);
+        peer.mode = Some(GameMode::Survival);
+        let position = [4, 4, 4];
+        app.world_mut()
+            .resource_mut::<ChunkStore>()
+            .loaded
+            .get_mut(&terra_voxel::SectionPos::default())
+            .unwrap()
+            .data
+            .set_block([4, 4, 4], 82)
+            .unwrap();
+        {
+            let mut journal = app.world_mut().resource_mut::<EditJournal>();
+            journal.record(position, 82).unwrap();
+            journal
+                .set_object_state(
+                    position,
+                    Some(terra_world::edits::BlockObjectState {
+                        facing,
+                        ..Default::default()
+                    }),
+                )
+                .unwrap();
+        }
+        let look = aim(&app, &peer, [4.5, 4.5, 4.5]);
+        let mut system = SystemState::<ControlWorld>::new(app.world_mut());
+        let mut world = system.get_mut(app.world_mut()).unwrap();
+        let command = EditCommand {
+            request: 1,
+            revision: world.journal.revision(terra_voxel::SectionPos::default()),
+            look,
+            source: None,
+            action: EditAction::Block {
+                position,
+                expected: 82,
+                material: 0,
+            },
+        };
+        assert!(mined_slab(command, &peer, &world).is_none());
+        assert_eq!(
+            apply(command, &peer, &mut world, true),
+            EditOutcome::Applied
+        );
+        assert_eq!(world.chunks.block_at(position), Some(0));
+        assert!(world.journal.object_state(position).is_none());
+        assert_eq!(
+            world
+                .journal
+                .gameplay()
+                .drops
+                .iter()
+                .filter(|drop| drop.stack.item == ItemKind::Block(82))
+                .map(|drop| drop.stack.count)
+                .sum::<u16>(),
+            2
+        );
+    }
+}
+
+#[test]
+fn floor_slab_placement_is_vertical_in_the_center_and_horizontal_near_the_edge_on_authority() {
+    for (x, facing) in [(4.5, 8), (4.05, 0)] {
+        let (mut app, peer, _) = fixture(ResourcePropKind::Seagrass, false);
+        app.world_mut()
+            .get_mut::<Transform>(peer.body)
+            .unwrap()
+            .translation = Vec3::new(4.5, 6.0 - PLAYER_EYE_OFFSET, 7.5);
+        {
+            let mut journal = app.world_mut().resource_mut::<EditJournal>();
+            journal
+                .gameplay_mut()
+                .inventories
+                .get_mut(&peer.uuid)
+                .unwrap()
+                .creative_set(
+                    0,
+                    ItemStack {
+                        item: ItemKind::Block(82),
+                        count: 2,
+                    },
+                );
+        }
+        let look = aim(&app, &peer, [x, 4.0, 4.5]);
+        let mut system = SystemState::<ControlWorld>::new(app.world_mut());
+        let mut world = system.get_mut(app.world_mut()).unwrap();
+        let command = EditCommand {
+            request: 1,
+            revision: world.journal.revision(terra_voxel::SectionPos::default()),
+            look,
+            source: None,
+            action: EditAction::Block {
+                position: [4, 4, 4],
+                expected: 0,
+                material: 82,
+            },
+        };
+        assert_eq!(check(command, &peer, &world), EditOutcome::Applied);
+        assert_eq!(
+            apply(command, &peer, &mut world, false),
+            EditOutcome::Applied
+        );
+        assert_eq!(
+            world.journal.object_state([4, 4, 4]).unwrap().facing,
+            facing
+        );
+        assert_eq!(
+            world.journal.gameplay().inventories[&peer.uuid].count(ItemKind::Block(82)),
+            1
+        );
+    }
+}
+
+#[test]
 fn crystal_extension_consumes_one_resource_and_rejects_forged_endpoints_and_spectators() {
     for material in [51, 52, 53] {
         let (mut app, mut peer, _) = fixture(ResourcePropKind::Seagrass, false);
@@ -402,14 +966,98 @@ fn segmented_seagrass_uses_authority_water_support_inventory_and_the_existing_so
 }
 
 #[test]
+fn scarecrow_requires_a_full_cube_and_two_dry_free_cells() {
+    let (mut app, _, support) = fixture(ResourcePropKind::Scarecrow, false);
+    let owner = terra_voxel::global_to_section(support).0;
+    let valid = |app: &App| {
+        prop_environment_valid(
+            app.world().resource::<ChunkStore>(),
+            &app.world().resource::<WorldTerrain>().0,
+            app.world().resource::<EditJournal>(),
+            app.world()
+                .resource::<terra_core::block_properties::BlockPropertiesCatalog>(),
+            support,
+            ResourcePropKind::Scarecrow,
+        )
+    };
+    for (material, allowed) in [
+        (2, true),
+        (3, true),
+        (101, true),
+        (82, false),
+        (74, false),
+        (29, false),
+        (98, false),
+    ] {
+        app.world_mut()
+            .resource_mut::<ChunkStore>()
+            .loaded
+            .get_mut(&owner)
+            .unwrap()
+            .data
+            .set_block([4, 3, 4], material)
+            .unwrap();
+        assert_eq!(valid(&app), allowed, "support material {material}");
+    }
+    app.world_mut()
+        .resource_mut::<ChunkStore>()
+        .loaded
+        .get_mut(&owner)
+        .unwrap()
+        .data
+        .set_block([4, 3, 4], 3)
+        .unwrap();
+    for dy in 1..=2 {
+        let position = [support[0], support[1] + dy, support[2]];
+        app.world_mut()
+            .resource_mut::<EditJournal>()
+            .set_fluid(
+                position,
+                terra_world::water::FluidCell {
+                    amount: 4,
+                    flow: [0; 2],
+                    source: false,
+                },
+            )
+            .unwrap();
+        assert!(!valid(&app), "flowing water in air cell {position:?}");
+        app.world_mut()
+            .resource_mut::<EditJournal>()
+            .set_fluid(position, terra_world::water::FluidCell::default())
+            .unwrap();
+        assert!(valid(&app));
+    }
+    app.world_mut()
+        .resource_mut::<terra_core::block_properties::BlockPropertiesCatalog>()
+        .1
+        .insert(
+            3,
+            std::sync::Arc::from([terra_core::block_shapes::ShapeBox {
+                minimum: [0.0; 3],
+                maximum: [1.0, 0.5, 1.0],
+                hinged: false,
+            }]),
+        );
+    assert!(
+        !valid(&app),
+        "data-defined partial shapes also cannot leave a floating puppet"
+    );
+}
+
+#[test]
 fn marine_placement_checks_real_source_cells_depth_and_loaded_ground() {
-    for kind in ResourcePropKind::ALL {
+    for kind in ResourcePropKind::ALL
+        .into_iter()
+        .filter(|kind| terra_core::CropKind::from_prop(*kind).is_none())
+    {
         let (mut app, _, support) = fixture(kind, true);
         let valid = |app: &App| {
             prop_environment_valid(
                 app.world().resource::<ChunkStore>(),
                 &app.world().resource::<WorldTerrain>().0,
                 app.world().resource::<EditJournal>(),
+                app.world()
+                    .resource::<terra_core::block_properties::BlockPropertiesCatalog>(),
                 support,
                 kind,
             )
@@ -443,6 +1091,8 @@ fn marine_placement_checks_real_source_cells_depth_and_loaded_ground() {
                 dry.world().resource::<ChunkStore>(),
                 &dry.world().resource::<WorldTerrain>().0,
                 dry.world().resource::<EditJournal>(),
+                dry.world()
+                    .resource::<terra_core::block_properties::BlockPropertiesCatalog>(),
                 support,
                 kind
             ),
@@ -477,6 +1127,8 @@ fn marine_placement_checks_real_source_cells_depth_and_loaded_ground() {
             app.world().resource::<ChunkStore>(),
             &app.world().resource::<WorldTerrain>().0,
             app.world().resource::<EditJournal>(),
+            app.world()
+                .resource::<terra_core::block_properties::BlockPropertiesCatalog>(),
             support,
             kind
         ),
@@ -486,7 +1138,10 @@ fn marine_placement_checks_real_source_cells_depth_and_loaded_ground() {
 
 #[test]
 fn every_prop_uses_authority_placement_accurate_picking_harvest_drop_and_reload_tombstone() {
-    for kind in ResourcePropKind::ALL {
+    for kind in ResourcePropKind::ALL
+        .into_iter()
+        .filter(|kind| terra_core::CropKind::from_prop(*kind).is_none())
+    {
         let (mut app, peer, support) = fixture(kind, PropKind::from(kind).aquatic());
         let owner = terra_voxel::global_to_section(support).0;
         let look = aim(&app, &peer, [4.5, 4.0, 4.5]);
@@ -564,16 +1219,46 @@ fn every_prop_uses_authority_placement_accurate_picking_harvest_drop_and_reload_
                 EditOutcome::Applied,
                 "{kind:?}"
             );
-            assert_eq!(world.journal.gameplay().drops.len(), 1);
+            let expected_drops = world.journal.gameplay().drops.clone();
+            assert!((1..=2).contains(&expected_drops.len()));
+            assert_eq!(expected_drops[0].stack.count, 1);
             assert_eq!(
                 world.journal.gameplay().drops[0].stack.item,
-                ItemKind::Prop(kind)
+                if kind == ResourcePropKind::Flower {
+                    ItemKind::Flower(terra_core::crusher::flower_color(prop.variant))
+                } else {
+                    ItemKind::Prop(kind)
+                }
             );
+            if let Some(seed_drop) = expected_drops.get(1) {
+                assert!(matches!(
+                    kind,
+                    ResourcePropKind::Grass
+                        | ResourcePropKind::Flower
+                        | ResourcePropKind::SmallPlant
+                ));
+                assert_eq!(seed_drop.stack.count, 1);
+                assert!(seed_drop.stack.valid());
+                let ItemKind::Crop(seed) = seed_drop.stack.item else {
+                    panic!("Only a crop seed may supplement a wild prop harvest");
+                };
+                assert!(seed.crop_kind().is_some());
+            }
+            if let ItemKind::Flower(color) = world.journal.gameplay().drops[0].stack.item {
+                assert_eq!(color, terra_core::crusher::flower_color(prop.variant));
+                assert_eq!(
+                    terra_core::crusher::recipe_for(ItemKind::Flower(color))
+                        .unwrap()
+                        .output
+                        .item,
+                    ItemKind::Dye(color)
+                );
+            }
             assert_eq!(
                 apply(command, &peer, &mut world, true),
                 EditOutcome::Conflict
             );
-            assert_eq!(world.journal.gameplay().drops.len(), 1);
+            assert_eq!(world.journal.gameplay().drops, expected_drops);
         }
         let delta = app.world().resource::<EditJournal>().section_delta(owner);
         let mut loaded = EditJournal::default();
@@ -585,4 +1270,446 @@ fn every_prop_uses_authority_placement_accurate_picking_harvest_drop_and_reload_
             "{kind:?} must not return after section reload"
         );
     }
+}
+
+fn aim_crop(app: &App, peer: &Peer, prop: terra_world::props::WorldProp) -> [f32; 2] {
+    let [low, high] = prop.bounds();
+    for y in 1..=8 {
+        for z in 1..=8 {
+            for x in 1..=8 {
+                let target = [
+                    low[0] + (high[0] - low[0]) * x as f64 / 9.0,
+                    low[1] + (high[1] - low[1]) * y as f64 / 9.0,
+                    low[2] + (high[2] - low[2]) * z as f64 / 9.0,
+                ];
+                let look = aim(app, peer, target);
+                let eye = app.world().get::<Transform>(peer.body).unwrap().translation
+                    + Vec3::Y * PLAYER_EYE_OFFSET;
+                let direction =
+                    Quat::from_euler(EulerRot::YXZ, look[0], look[1], 0.0) * Vec3::NEG_Z;
+                let (_, target) = pick_world_with_context(
+                    app.world().resource::<ChunkStore>(),
+                    app.world().resource::<EditJournal>(),
+                    app.world()
+                        .resource::<terra_core::block_properties::BlockPropertiesCatalog>(),
+                    eye.to_array().map(f64::from),
+                    direction.to_array().map(f64::from),
+                    PropPose::Rest,
+                );
+                if matches!(target, Some(WorldTarget::Prop(hit)) if hit.prop.id == prop.id) {
+                    return look;
+                }
+            }
+        }
+    }
+    panic!(
+        "Crop model must be pickable: {:?} stage {}",
+        prop.kind, prop.variant
+    )
+}
+
+#[test]
+fn lettuce_seeds_plant_prepared_farmland_at_negative_section_edges_and_replant_authoritatively() {
+    use terra_core::CropKind;
+    let kind = CropKind::Lettuce;
+    for support in [[4, 3, 4], [-1, 15, -1]] {
+        let (mut app, peer, _) = fixture(kind.resource_prop(), false);
+        let (owner, local) = terra_voxel::global_to_section(support);
+        let mut data = terra_voxel::BlockSection::empty(owner).unwrap();
+        data.set_block(local, terra_core::farming::FARMLAND)
+            .unwrap();
+        {
+            let mut chunks = app.world_mut().resource_mut::<ChunkStore>();
+            chunks.loaded.clear();
+            for dx in -1..=1 {
+                for dz in -1..=1 {
+                    for dy in 0..=1 {
+                        let position = owner.offset([dx, dy, dz]).unwrap();
+                        chunks.loaded.insert(
+                            position,
+                            LoadedSection {
+                                data: terra_voxel::BlockSection::empty(position).unwrap(),
+                                mesh: None,
+                                mesh_epoch: 0,
+                                water_epoch: 0,
+                                water: None,
+                                props: vec![],
+                            },
+                        );
+                    }
+                }
+            }
+            chunks.loaded.insert(
+                owner,
+                LoadedSection {
+                    data,
+                    mesh: None,
+                    mesh_epoch: 0,
+                    water_epoch: 0,
+                    water: None,
+                    props: vec![],
+                },
+            );
+            let above = terra_voxel::global_to_section([support[0], support[1] + 1, support[2]]).0;
+            if above != owner {
+                chunks.loaded.insert(
+                    above,
+                    LoadedSection {
+                        data: terra_voxel::BlockSection::empty(above).unwrap(),
+                        mesh: None,
+                        mesh_epoch: 0,
+                        water_epoch: 0,
+                        water: None,
+                        props: vec![],
+                    },
+                );
+            }
+        }
+        app.world_mut()
+            .get_mut::<Transform>(peer.body)
+            .unwrap()
+            .translation = Vec3::new(
+            support[0] as f32 + 0.5,
+            support[1] as f32 + 3.0,
+            support[2] as f32 + 4.5,
+        );
+        let look = aim(
+            &app,
+            &peer,
+            [
+                support[0] as f64 + 0.5,
+                support[1] as f64 + 1.0,
+                support[2] as f64 + 0.5,
+            ],
+        );
+        let source = crate::protocol::session::InventorySource {
+            slot: 0,
+            revision: app.world().resource::<EditJournal>().gameplay().inventories[&peer.uuid]
+                .revision,
+        };
+        let place = EditCommand {
+            request: 1,
+            revision: 0,
+            look,
+            source: Some(source),
+            action: EditAction::PlaceProp {
+                support,
+                kind: kind.resource_prop(),
+            },
+        };
+        {
+            let mut system = SystemState::<ControlWorld>::new(app.world_mut());
+            let mut world = system.get_mut(app.world_mut()).unwrap();
+            assert_eq!(world.journal.block(support), None);
+            assert_eq!(apply(place, &peer, &mut world, false), EditOutcome::Applied);
+            assert_eq!(
+                world.journal.gameplay().inventories[&peer.uuid].count(ItemKind::Crop(kind.seed())),
+                1
+            );
+            assert_eq!(
+                world.journal.block(support),
+                Some(terra_core::farming::FARMLAND)
+            );
+            assert_eq!(
+                apply(place, &peer, &mut world, false),
+                EditOutcome::Conflict
+            );
+            let mut ripe = *world.journal.crop_at(support).unwrap();
+            ripe.progress_seconds = kind.definition().growth_seconds;
+            terra_world::farming::commit_crop_state(
+                &mut world.chunks,
+                &mut world.journal,
+                support,
+                ripe,
+            )
+            .unwrap();
+        }
+        let prop = app
+            .world()
+            .resource::<EditJournal>()
+            .section_delta(owner)
+            .placed_props[0];
+        let harvest = EditCommand {
+            request: 2,
+            revision: app.world().resource::<EditJournal>().prop_epoch(owner),
+            look: aim_crop(&app, &peer, prop),
+            source: None,
+            action: EditAction::Prop {
+                section: owner,
+                id: prop.id,
+            },
+        };
+        let mut system = SystemState::<ControlWorld>::new(app.world_mut());
+        let mut world = system.get_mut(app.world_mut()).unwrap();
+        assert_eq!(
+            apply(harvest, &peer, &mut world, true),
+            EditOutcome::Applied
+        );
+        let mesh = world.journal.mesh_epoch(owner);
+        let source = crate::protocol::session::InventorySource {
+            slot: 0,
+            revision: world.journal.gameplay().inventories[&peer.uuid].revision,
+        };
+        let replant = EditCommand {
+            request: 3,
+            revision: world.journal.prop_epoch(owner),
+            source: Some(source),
+            ..place
+        };
+        assert_eq!(
+            apply(replant, &peer, &mut world, false),
+            EditOutcome::Applied
+        );
+        assert_eq!(world.journal.mesh_epoch(owner), mesh);
+        assert_eq!(world.journal.crop_at(support).unwrap().kind, kind);
+        assert_eq!(
+            world.journal.gameplay().inventories[&peer.uuid].count(ItemKind::Crop(kind.seed())),
+            0
+        );
+    }
+}
+
+#[test]
+fn lettuce_seeds_do_not_replace_existing_decoration_or_consume_items_on_rejection() {
+    let kind = terra_core::CropKind::Lettuce;
+    for blocker in [PropKind::Grass, PropKind::Flower, PropKind::Mushroom] {
+        let (mut app, peer, support) = fixture(kind.resource_prop(), false);
+        let owner = terra_voxel::global_to_section(support).0;
+        let mut decoration = placed_prop(support, ResourcePropKind::Grass, 0);
+        decoration.kind = blocker;
+        app.world_mut()
+            .resource_mut::<ChunkStore>()
+            .loaded
+            .get_mut(&owner)
+            .unwrap()
+            .props
+            .push(decoration);
+        let source = crate::protocol::session::InventorySource {
+            slot: 0,
+            revision: app.world().resource::<EditJournal>().gameplay().inventories[&peer.uuid]
+                .revision,
+        };
+        let command = EditCommand {
+            request: 1,
+            revision: 0,
+            look: aim(&app, &peer, [4.5, 4.0, 4.5]),
+            source: Some(source),
+            action: EditAction::PlaceProp {
+                support,
+                kind: kind.resource_prop(),
+            },
+        };
+        let mut system = SystemState::<ControlWorld>::new(app.world_mut());
+        let mut world = system.get_mut(app.world_mut()).unwrap();
+        assert_ne!(
+            apply(command, &peer, &mut world, false),
+            EditOutcome::Applied
+        );
+        assert_eq!(
+            world.journal.gameplay().inventories[&peer.uuid].count(ItemKind::Crop(kind.seed())),
+            2
+        );
+        assert!(world.journal.crop_at(support).is_none());
+        assert_eq!(world.chunks.loaded[&owner].props, vec![decoration]);
+    }
+}
+
+#[test]
+fn crops_sow_seed_only_till_harvest_atomically_replant_and_reject_stale_replays() {
+    use terra_core::{CropKind, CropState};
+    for kind in CropKind::ALL {
+        let (mut app, peer, support) = fixture(kind.resource_prop(), false);
+        let owner = terra_voxel::global_to_section(support).0;
+        app.world_mut()
+            .resource_mut::<ChunkStore>()
+            .loaded
+            .get_mut(&owner)
+            .unwrap()
+            .data
+            .set_block([4, 3, 4], MaterialId::Dirt as u16)
+            .unwrap();
+        let look = aim(&app, &peer, [4.5, 4.0, 4.5]);
+        let place = EditCommand {
+            request: 1,
+            revision: 0,
+            look,
+            source: None,
+            action: EditAction::PlaceProp {
+                support,
+                kind: kind.resource_prop(),
+            },
+        };
+        {
+            let mut system = SystemState::<ControlWorld>::new(app.world_mut());
+            let mut world = system.get_mut(app.world_mut()).unwrap();
+            assert_eq!(apply(place, &peer, &mut world, false), EditOutcome::Applied);
+            assert_eq!(
+                world.journal.gameplay().inventories[&peer.uuid].count(ItemKind::Crop(kind.seed())),
+                1
+            );
+            assert_eq!(
+                world.chunks.block_at(support),
+                Some(terra_core::farming::FARMLAND)
+            );
+            assert_eq!(world.journal.crop_at(support).unwrap().kind, kind);
+            let mut ripe = *world.journal.crop_at(support).unwrap();
+            ripe.progress_seconds = kind.definition().growth_seconds;
+            terra_world::farming::commit_crop_state(
+                &mut world.chunks,
+                &mut world.journal,
+                support,
+                ripe,
+            )
+            .unwrap();
+        }
+        let prop = app
+            .world()
+            .resource::<EditJournal>()
+            .section_delta(owner)
+            .placed_props[0];
+        let harvest = EditCommand {
+            request: 2,
+            revision: app.world().resource::<EditJournal>().prop_epoch(owner),
+            look: aim_crop(&app, &peer, prop),
+            source: None,
+            action: EditAction::Prop {
+                section: owner,
+                id: prop.id,
+            },
+        };
+        {
+            let mut system = SystemState::<ControlWorld>::new(app.world_mut());
+            let mut world = system.get_mut(app.world_mut()).unwrap();
+            world.journal.gameplay_mut().next_drop = u64::MAX - 1;
+            assert_eq!(
+                apply(harvest, &peer, &mut world, true),
+                EditOutcome::RateLimited
+            );
+            assert!(world.journal.crop_at(support).unwrap().mature());
+            assert!(!world.journal.prop_removed(owner, prop.id));
+            world.journal.gameplay_mut().next_drop = 0;
+            let expected = CropState {
+                kind,
+                prop_id: prop.id.0,
+                progress_seconds: kind.definition().growth_seconds,
+                growth_duration_seconds: kind.definition().growth_seconds,
+                moisture: 0.5,
+            }
+            .harvest();
+            assert_eq!(
+                apply(harvest, &peer, &mut world, true),
+                EditOutcome::Applied
+            );
+            assert_eq!(
+                world
+                    .journal
+                    .gameplay()
+                    .drops
+                    .iter()
+                    .map(|drop| drop.stack)
+                    .collect::<Vec<_>>(),
+                expected
+            );
+            assert!(world.journal.crop_at(support).is_none());
+            assert_eq!(
+                apply(harvest, &peer, &mut world, true),
+                EditOutcome::Conflict
+            );
+            assert_eq!(world.journal.gameplay().drops.len(), 2);
+            let mut replant = place;
+            replant.request = 3;
+            replant.revision = world.journal.prop_epoch(owner);
+            assert_eq!(
+                apply(replant, &peer, &mut world, false),
+                EditOutcome::Applied
+            );
+            assert_eq!(
+                world.journal.gameplay().inventories[&peer.uuid].count(ItemKind::Crop(kind.seed())),
+                0
+            );
+            assert_eq!(
+                world.journal.crop_at(support).unwrap().progress_seconds,
+                0.0
+            );
+            assert_eq!(world.journal.crop_at(support).unwrap().prop_id, prop.id.0);
+            assert_eq!(
+                apply(harvest, &peer, &mut world, true),
+                EditOutcome::Conflict
+            );
+        }
+    }
+}
+
+#[test]
+fn legacy_prop_items_cannot_forge_seeds_and_wild_seed_drops_are_stable_and_obtainable() {
+    for kind in terra_core::CropKind::ALL {
+        let (mut app, peer, support) = fixture(kind.resource_prop(), false);
+        let mut bag = Inventory::default();
+        bag.creative_set(
+            0,
+            ItemStack {
+                item: ItemKind::Prop(kind.resource_prop()),
+                count: 2,
+            },
+        );
+        let revision = bag.revision;
+        app.world_mut()
+            .resource_mut::<EditJournal>()
+            .gameplay_mut()
+            .inventories
+            .insert(peer.uuid, bag);
+        let command = EditCommand {
+            request: 1,
+            revision: 0,
+            look: aim(&app, &peer, [4.5, 4.0, 4.5]),
+            source: Some(crate::protocol::session::InventorySource { slot: 0, revision }),
+            action: EditAction::PlaceProp {
+                support,
+                kind: kind.resource_prop(),
+            },
+        };
+        let mut system = SystemState::<ControlWorld>::new(app.world_mut());
+        let world = system.get_mut(app.world_mut()).unwrap();
+        assert_eq!(check(command, &peer, &world), EditOutcome::Invalid);
+    }
+    let owner = terra_voxel::SectionPos::new(0, 0, 0);
+    let mut chunks = ChunkStore::default();
+    chunks.loaded.insert(
+        owner,
+        LoadedSection {
+            data: terra_voxel::BlockSection::empty(owner).unwrap(),
+            mesh: None,
+            mesh_epoch: 0,
+            water_epoch: 0,
+            water: None,
+            props: Vec::new(),
+        },
+    );
+    let journal = EditJournal::default();
+    let mut found = std::collections::HashSet::new();
+    for id in 1..=1024 {
+        let prop = terra_world::props::WorldProp {
+            id: terra_world::props::PropId(id),
+            kind: PropKind::Grass,
+            position: [4.5, 4.0, 4.5],
+            rotation: 0.0,
+            scale: 1.0,
+            variant: 0,
+            section: owner,
+            removed: false,
+        };
+        chunks.loaded.get_mut(&owner).unwrap().props = vec![prop];
+        let action = EditAction::Prop {
+            section: owner,
+            id: prop.id,
+        };
+        let drops = resource_stacks(action, &chunks, &journal);
+        assert_eq!(drops, resource_stacks(action, &chunks, &journal));
+        for (_, stack) in drops {
+            if let ItemKind::Crop(seed) = stack.item {
+                found.insert(seed);
+            }
+        }
+    }
+    assert_eq!(found.len(), 3);
 }

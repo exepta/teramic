@@ -271,7 +271,7 @@ fn find_source(chunks: &ChunkStore, center: Vec3, sequence: u64) -> Option<(Vec3
         let z = (center.z + (random(seed ^ 0xf723) - 0.5) * 24.0).floor() as i64;
         let bottom = center.y.floor() as i64;
         for y in (bottom + 1..=bottom + 18).rev() {
-            if let Some(kind @ 7..=9) = chunks.block_at([x, y, z])
+            if let Some(kind @ (7..=9 | 132 | 133)) = chunks.block_at([x, y, z])
                 && chunks.block_at([x, y - 1, z]) == Some(0)
             {
                 let position = Vec3::new(

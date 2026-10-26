@@ -185,7 +185,8 @@ pub(crate) fn tick(
             // Do not backfill a newly started snowfall over time spent in clear
             // weather before this column's budgeted visit.
             let snow_elapsed = elapsed.min(weather.elapsed_seconds.max(0.0) as f32);
-            deposition.snow *= weather.snow_accumulation_multiplier() * snow_elapsed / elapsed;
+            deposition.snow *= weather.snow_accumulation_multiplier() * snow_elapsed / elapsed
+                * deposition_rate(terrain.0.config().seed.0, position);
             let mut next = evolve(before, deposition, elapsed, winter);
             if !super::retains_snow(chunks.block_at(position).unwrap_or(0)) {
                 next.snow = 0.0;
@@ -421,7 +422,7 @@ pub(crate) fn reconcile_snow(
         material,
     } = edit;
     if current != material {
-        crate::streaming::commit_block_edit(
+        crate::streaming::commit_weather_cap(
             chunks,
             journal,
             &crate::streaming::BlockEditRequest {
@@ -444,6 +445,22 @@ pub(crate) fn reconcile_snow(
         )?;
     }
     Ok(())
+}
+
+fn deposition_rate(seed: u64, position: [i64; 3]) -> f32 {
+    let mut hash = seed ^ 0x27f8_954c_a69d_031b;
+    for (axis, value) in position.into_iter().enumerate() {
+        hash ^= (value as u64).wrapping_mul(
+            [
+                0x9e37_79b9_7f4a_7c15,
+                0xbf58_476d_1ce4_e5b9,
+                0x94d0_49bb_1331_11eb,
+            ][axis],
+        );
+        hash = (hash ^ (hash >> 30)).wrapping_mul(0xbf58_476d_1ce4_e5b9);
+    }
+    hash = (hash ^ (hash >> 27)).wrapping_mul(0x94d0_49bb_1331_11eb);
+    0.55 + ((hash ^ (hash >> 31)) & 0xffff) as f32 / 65535.0 * 0.9
 }
 
 fn evolve(
@@ -481,6 +498,108 @@ fn evolve(
 mod tests {
     use super::*;
     use terra_voxel::{BlockSection, SectionPos};
+
+    #[test]
+    fn deposition_is_per_block_seeded_and_independent_of_chunk_boundaries_and_visit_order() {
+        let rates: BTreeMap<_, _> = (-16..16)
+            .flat_map(|z| (-16..16).map(move |x| [x, 1, z]))
+            .map(|p| (p, deposition_rate(116, p)))
+            .collect();
+        let reversed: BTreeMap<_, _> = rates
+            .keys()
+            .rev()
+            .map(|&p| (p, deposition_rate(116, p)))
+            .collect();
+        assert_eq!(rates, reversed);
+        assert!(rates.values().all(|rate| (0.55..=1.45).contains(rate)));
+        let states: Vec<_> = rates
+            .values()
+            .map(|rate| (0.003 * 50.0 * rate * 8.0).floor() as u8)
+            .collect();
+        assert!(
+            states.contains(&0) && states.contains(&1),
+            "first snow is scattered, not a whole-column switch"
+        );
+        assert!(
+            rates
+                .iter()
+                .any(|(&p, &rate)| deposition_rate(117, p) != rate)
+        );
+        for z in -16..16 {
+            assert_eq!(rates[&[-1, 1, z]], deposition_rate(116, [-1, 1, z]));
+            assert_eq!(rates[&[0, 1, z]], deposition_rate(116, [0, 1, z]));
+        }
+    }
+
+    #[test]
+    fn natural_snow_preserves_prop_identity_and_buries_it_only_at_the_third_layer() {
+        use crate::props::{PropId, PropKind, WorldProp};
+        let section = SectionPos::new(-1, 0, -1);
+        let support = [-1, 1, -1];
+        let mut data = BlockSection::empty(section).unwrap();
+        data.set_block([15, 1, 15], MaterialId::Grass as u16)
+            .unwrap();
+        let prop = WorldProp {
+            id: PropId(712),
+            kind: PropKind::Flower,
+            position: [-0.5, 2.0, -0.5],
+            rotation: 0.0,
+            scale: 0.65,
+            variant: 0,
+            section,
+            removed: false,
+        };
+        let mut chunks = ChunkStore::default();
+        chunks.loaded.insert(
+            section,
+            crate::streaming::LoadedSection {
+                data,
+                mesh: None,
+                mesh_epoch: 0,
+                water_epoch: 0,
+                water: None,
+                props: vec![prop],
+            },
+        );
+        let mut journal = EditJournal::default();
+        let properties = terra_core::block_properties::BlockPropertiesCatalog::default();
+        for state in 1_u8..=8 {
+            reconcile_snow(
+                &mut chunks,
+                &mut journal,
+                &properties,
+                support,
+                f32::from(state) / 8.0,
+            )
+            .unwrap();
+            assert_eq!(chunks.loaded[&section].props, vec![prop]);
+            assert!(!journal.prop_removed(section, prop.id));
+            assert_eq!(
+                crate::props::seasonal::snow_buried(&prop, &chunks, &journal),
+                state >= 3
+            );
+        }
+        reconcile_snow(&mut chunks, &mut journal, &properties, support, 0.0).unwrap();
+        assert!(!crate::props::seasonal::snow_buried(
+            &prop, &chunks, &journal
+        ));
+        assert_eq!(chunks.loaded[&section].props, vec![prop]);
+        crate::streaming::commit_block_edit(
+            &mut chunks,
+            &mut journal,
+            &crate::streaming::BlockEditRequest {
+                position: [-1, 2, -1],
+                expected_material: 0,
+                material: MaterialId::Stone as u16,
+            },
+            &properties,
+        )
+        .unwrap();
+        assert!(
+            chunks.loaded[&section].props[0].removed,
+            "ordinary player construction still removes occupied plants"
+        );
+    }
 
     #[test]
     fn dry_winter_never_deposits_snow_and_intensity_controls_deposition() {

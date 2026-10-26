@@ -17,6 +17,8 @@ use tilt_ui::ElementId;
 #[path = "inventory_view.rs"]
 mod view;
 pub use view::InventoryView;
+#[path = "inventory_cache.rs"]
+mod cache;
 #[path = "crafting.rs"]
 pub(crate) mod crafting;
 #[path = "inventory_pointer.rs"]
@@ -118,14 +120,17 @@ struct InventoryContext<'w> {
     settings: Res<'w, crate::SettingsView>,
     chat: Option<Res<'w, crate::chat::ChatState>>,
     target: Option<Res<'w, terra_player::TargetWorld>>,
+    creature: Option<Res<'w, terra_player::TargetCreature>>,
     chunks: Option<Res<'w, terra_world::streaming::ChunkStore>>,
     journal: Option<Res<'w, terra_world::edits::EditJournal>>,
     camera: Option<Res<'w, terra_player::CameraInputState>>,
     fullmap: Option<Res<'w, crate::minimap::fullmap::FullMapState>>,
+    pets: Option<Res<'w, crate::pets::PetMenuState>>,
 }
 impl InventoryContext<'_> {
     fn available(&self) -> bool {
         !self.settings.open
+            && !self.pets.as_ref().is_some_and(|p| p.blocks_input())
             && !self.fullmap.as_ref().is_some_and(|map| map.blocks_input())
             && !self.chat.as_ref().is_some_and(|chat| chat.blocks_input())
             && self
@@ -141,6 +146,7 @@ impl InventoryContext<'_> {
 
 pub(crate) fn install(app: &mut App) {
     crafting::install(app);
+    cache::install(app);
     app.init_resource::<InventoryState>()
         .init_resource::<InventoryView>()
         .init_resource::<BlockPreviewImages>()
@@ -170,6 +176,7 @@ pub(crate) fn install(app: &mut App) {
             (
                 keyboard,
                 actions,
+                drive_crusher,
                 held_consumption,
                 pointer::finish_gesture,
                 pointer::send_requests,
@@ -209,8 +216,9 @@ fn browser_layout(
     parents: Query<&ChildOf>,
     palette: Res<BlockPalette>,
     mut state: ResMut<InventoryState>,
+    view: Option<Res<InventoryView>>,
 ) {
-    if !state.open {
+    if !state.open && !view.as_ref().is_some_and(|view| view.prewarming) {
         return;
     }
     if let Some((_, _, browser, _)) = nodes
@@ -277,14 +285,16 @@ fn browser_capacity(space: Vec2, cell: Vec2, gap: Vec2) -> usize {
     (count.x as usize * count.y as usize).clamp(1, 1024)
 }
 
+type InventoryLayoutSettlement = Option<(Entity, Vec2, usize, bool, u8)>;
+
 fn reveal_layout(
     nodes: Query<(Entity, &tilt_ui::ElementId, &ComputedNode)>,
     parents: Query<&ChildOf>,
     mut view: ResMut<InventoryView>,
     state: Option<Res<InventoryState>>,
-    mut settled: Local<Option<(Entity, Vec2, u8)>>,
+    mut settled: Local<InventoryLayoutSettlement>,
 ) {
-    if !view.open {
+    if !view.open && !view.prewarming {
         *settled = None;
         return;
     }
@@ -297,7 +307,7 @@ fn reveal_layout(
         *settled = None;
         return;
     }
-    if view.layout_style == "opacity: 1; pointer-events: auto;" {
+    if view.open && view.layout_style == "opacity: 1; pointer-events: auto;" {
         return;
     }
     let Some((entity, _, panel)) = nodes
@@ -332,13 +342,33 @@ fn reveal_layout(
         *settled = None;
         return;
     }
+    let (capacity, dropdown) = state.as_ref().map_or((0, false), |state| {
+        (state.page_capacity, state.category_dropdown)
+    });
+    if view.prewarming
+        && (capacity == 0
+            || capacity != view.browser_capacity
+            || dropdown != view.category_dropdown)
+    {
+        *settled = None;
+        return;
+    }
     let frames = settled
         .as_ref()
-        .filter(|(old, extent, _)| *old == entity && extent.abs_diff_eq(size, 0.1))
-        .map_or(0, |(_, _, frames)| frames.saturating_add(1));
-    *settled = Some((entity, size, frames));
-    if frames >= 2 && view.layout_style != "opacity: 1; pointer-events: auto;" {
-        view.layout_style = "opacity: 1; pointer-events: auto;".into();
+        .filter(|(old, extent, old_capacity, old_dropdown, _)| {
+            *old == entity
+                && extent.abs_diff_eq(size, 0.1)
+                && *old_capacity == capacity
+                && *old_dropdown == dropdown
+        })
+        .map_or(0, |(_, _, _, _, frames)| frames.saturating_add(1));
+    *settled = Some((entity, size, capacity, dropdown, frames));
+    if frames >= 2 {
+        if view.open {
+            view.layout_style = "opacity: 1; pointer-events: auto;".into();
+        } else {
+            view.prewarming = false;
+        }
     }
 }
 
@@ -351,6 +381,12 @@ pub(crate) fn preview_key(item: ItemKind) -> String {
         | ItemKind::Mineral(_)
         | ItemKind::Animal(_)
         | ItemKind::Bellows(_)
+        | ItemKind::Armor(_)
+        | ItemKind::Accessory(_)
+        | ItemKind::Cape(_)
+        | ItemKind::Dust(_)
+        | ItemKind::Crop(_)
+        | ItemKind::Flower(_)
         | ItemKind::Dye(_)
         | ItemKind::DyedBed { .. }
         | ItemKind::WoodenBlock { .. } => {
@@ -523,7 +559,7 @@ fn block_opening_frame(
         && (input.just_pressed(GameAction::Inventory)
             || station_target(&input, &context)
                 .and_then(|p| context.chunks.as_ref()?.block_at(p))
-                .is_some_and(|material| matches!(material, 28 | 29 | 59)))
+                .is_some_and(|material| matches!(material, 28 | 29 | 59 | 99)))
     {
         blocked.0 = true;
     }
@@ -531,6 +567,7 @@ fn block_opening_frame(
 
 fn station_target(input: &GameplayInput, context: &InventoryContext) -> Option<[i64; 3]> {
     if !(input.just_pressed(GameAction::Use) || input.just_pressed(GameAction::Place))
+        || creature_place_target(input, context)
         || input.keys.pressed(KeyCode::ShiftLeft)
         || input.keys.pressed(KeyCode::ShiftRight)
     {
@@ -541,9 +578,60 @@ fn station_target(input: &GameplayInput, context: &InventoryContext) -> Option<[
     };
     matches!(
         context.chunks.as_ref()?.block_at(hit.position),
-        Some(28 | 29 | 59 | 65..=73)
+        Some(28 | 29 | 59 | 65..=73 | 99 | 131 | 139..=140)
     )
     .then_some(hit.position)
+}
+
+fn creature_place_target(input: &GameplayInput, context: &InventoryContext) -> bool {
+    input.pressed(GameAction::Place)
+        && !input.pressed(GameAction::Use)
+        && context
+            .creature
+            .as_ref()
+            .is_some_and(|target| target.0.is_some())
+}
+
+fn mounted_crank_target(input: &GameplayInput, context: &InventoryContext) -> Option<[i64; 3]> {
+    if creature_place_target(input, context) {
+        return None;
+    }
+    let terra_player::WorldTarget::Block(hit) = context.target.as_ref()?.0? else {
+        return None;
+    };
+    let journal = context.journal.as_ref()?;
+    (context.chunks.as_ref()?.block_at(hit.position) == Some(terra_core::crusher::CRANK_MATERIAL)
+        && journal.crank_anchor(hit.position).is_some())
+    .then_some(hit.position)
+}
+
+fn drive_crusher(
+    input: GameplayInput,
+    state: Res<InventoryState>,
+    context: InventoryContext,
+    crank: Option<ResMut<terra_network::client::CrankInput>>,
+) {
+    let Some(mut crank) = crank else { return };
+    let held = (input.pressed(GameAction::Place) || input.pressed(GameAction::Use))
+        && !input.pressed(GameAction::Break)
+        && !input.keys.pressed(KeyCode::ShiftLeft)
+        && !input.keys.pressed(KeyCode::ShiftRight);
+    let enabled = held
+        && context.available()
+        && !state.blocks_input()
+        && context.camera.as_ref().is_none_or(|camera| camera.captured)
+        && context.session.as_ref().is_some_and(|session| {
+            session.ready
+                && session.game_mode != GameMode::Spectator
+                && !session.stats.survival.dead()
+                && session.sleeping().is_none()
+        });
+    let target = enabled
+        .then(|| mounted_crank_target(&input, &context))
+        .flatten();
+    if crank.0 != target {
+        crank.0 = target;
+    }
 }
 
 #[derive(Default)]
@@ -568,7 +656,7 @@ fn held_consumption(
         && !state.blocks_input()
         && station_target(&input, &context)
             .and_then(|position| context.chunks.as_ref()?.block_at(position))
-            .is_some_and(|material| (65..=73).contains(&material))
+            .is_some_and(|material| matches!(material, 65..=73 | 139..=140))
     {
         // Doors stay in gameplay; holding the interaction must not start a bite.
         held.opening_until_release = true;
@@ -578,6 +666,10 @@ fn held_consumption(
         && context.camera.as_ref().is_none_or(|camera| camera.captured)
         && !held.opening_until_release
         && input.consume_pressed()
+        && (input.pressed(GameAction::FlyDown)
+            || !context.target.as_ref().is_some_and(|target| matches!(target.0,
+                Some(terra_player::WorldTarget::Prop(hit)) if hit.prop.kind == terra_world::props::PropKind::BeeNest)))
+        && mounted_crank_target(&input, &context).is_none()
         && station_target(&input, &context).is_none()
         && (input.pressed(GameAction::Use)
             || creature.as_ref().is_none_or(|target| target.0.is_none()))
@@ -658,7 +750,7 @@ fn keyboard(
             .flatten();
         if let Some(position) = workbench {
             match context.chunks.as_ref().and_then(|c| c.block_at(position)) {
-                Some(material @ 65..=73) => {
+                Some(material @ (65..=73 | 131 | 139..=140)) => {
                     objects.write(terra_network::client::ObjectInteractionRequest {
                         position,
                         expected: material,
@@ -670,7 +762,7 @@ fn keyboard(
                             .facing,
                     });
                 }
-                Some(29 | 59) => {
+                Some(29 | 59 | 99) => {
                     actions.write(InventoryAction::OpenChest(position));
                 }
                 _ => {
@@ -799,6 +891,12 @@ impl InventorySelection<'_> {
                 | ItemKind::Mineral(_)
                 | ItemKind::Animal(_)
                 | ItemKind::Bellows(_)
+                | ItemKind::Armor(_)
+                | ItemKind::Accessory(_)
+                | ItemKind::Cape(_)
+                | ItemKind::Dust(_)
+                | ItemKind::Crop(_)
+                | ItemKind::Flower(_)
                 | ItemKind::Dye(_) => None,
             })
             .unwrap_or(self.palette.choices.len());
@@ -1077,7 +1175,7 @@ fn actions(
                         if input.keys.pressed(KeyCode::ShiftLeft)
                             || input.keys.pressed(KeyCode::ShiftRight)
                         {
-                            STACK_LIMIT
+                            item.max_stack()
                         } else {
                             1
                         },
@@ -1120,7 +1218,12 @@ fn actions(
             }
             InventoryAction::Trash if state.open && session.game_mode == GameMode::Creative => {
                 pointer.cancel_gesture();
-                if let Some(stack) = session.inventory.cursor {
+                if input.keys.pressed(KeyCode::ControlLeft)
+                    || input.keys.pressed(KeyCode::ControlRight)
+                {
+                    state.source = None;
+                    selection.request(session, ServerAction::CreativeClear);
+                } else if let Some(stack) = session.inventory.cursor {
                     selection.queue.push_queued(pointer::QueuedAction::held(
                         ServerAction::CreativeTrash { slot: None },
                         stack.item,
@@ -1260,7 +1363,7 @@ fn actions(
                         ServerAction::CreativeSet {
                             slot,
                             item,
-                            count: STACK_LIMIT,
+                            count: 1,
                         },
                     );
                 }
@@ -1316,7 +1419,7 @@ fn actions(
                         if input.keys.pressed(KeyCode::ShiftLeft)
                             || input.keys.pressed(KeyCode::ShiftRight)
                         {
-                            STACK_LIMIT
+                            items[index].max_stack()
                         } else {
                             1
                         },
@@ -1331,7 +1434,7 @@ fn actions(
     }
 }
 
-fn prop_kinds() -> [ResourcePropKind; 14] {
+fn prop_kinds() -> [ResourcePropKind; ResourcePropKind::ALL.len()] {
     ResourcePropKind::ALL
 }
 fn prop_slug(kind: ResourcePropKind) -> &'static str {
@@ -1349,6 +1452,14 @@ fn item_id(item: ItemKind) -> String {
         ItemKind::Bellows(kind) => format!("item-{}", kind.slug()),
         ItemKind::Dye(color) => format!("item-{}_dye", color.slug()),
         ItemKind::DyedBed { material, color } => format!("block-{material}-{}", color.slug()),
+        ItemKind::Armor(_)
+        | ItemKind::Accessory(_)
+        | ItemKind::Cape(_)
+        | ItemKind::Dust(_)
+        | ItemKind::Crop(_)
+        | ItemKind::Flower(_) => {
+            format!("item-{}", item.identifier().trim_start_matches("teramic::"))
+        }
     }
 }
 fn available_items(
@@ -1365,8 +1476,9 @@ fn available_items(
                 prop_kinds()
                     .into_iter()
                     .filter(|kind| {
-                        *kind != ResourcePropKind::Seagrass
-                            || !palette.choices.iter().any(|block| block.id == 50)
+                        terra_core::farming::CropKind::from_prop(*kind).is_none()
+                            && (*kind != ResourcePropKind::Seagrass
+                                || !palette.choices.iter().any(|block| block.id == 50))
                     })
                     .map(ItemKind::Prop),
             )
@@ -1385,5 +1497,8 @@ fn available_items(
 fn catalog_item(item: ItemKind) -> bool {
     // Keep legacy metadata and carried stacks available, but expose only the adaptive pipe.
     !matches!(item.block_material(), Some(61..=64 | 95))
+        && item
+            .block_material()
+            .is_none_or(|material| !terra_core::textiles::is_dyed(material))
         && !matches!(item, ItemKind::DyedBed { .. })
 }

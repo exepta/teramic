@@ -48,7 +48,10 @@ fn sizing(kind: PropKind, variant: u8) -> Result<&'static Sizing, String> {
             if width <= 0.0 {
                 return Err("Prop template has no horizontal extent".to_owned());
             }
-            let horizontal_scale = if kind == PropKind::BeeNest || kind.aquatic() {
+            let horizontal_scale = if matches!(kind, PropKind::BeeNest | PropKind::Scarecrow)
+                || kind.aquatic()
+                || kind.crop().is_some()
+            {
                 1.0
             } else {
                 0.5 / maximum_visual_scale / width
@@ -104,5 +107,8 @@ pub(super) fn normalize(
 }
 
 pub(crate) fn bounds(kind: PropKind, variant: u8) -> Option<[[f32; 3]; 2]> {
+    if kind == PropKind::SpiderWeb {
+        return super::webs::bounds(variant);
+    }
     sizing(kind, variant).ok().map(|sizing| sizing.bounds)
 }

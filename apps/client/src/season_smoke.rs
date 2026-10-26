@@ -61,6 +61,7 @@ pub(crate) fn install(app: &mut App) {
     }
     let now = Instant::now();
     app.insert_resource(ControllerMode::Fly)
+        .insert_resource(terra_render::CosmeticSnowPreview)
         .insert_resource(bevy::winit::WinitSettings::continuous())
         .insert_resource(Smoke {
             started: now,

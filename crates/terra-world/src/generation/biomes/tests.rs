@@ -7,7 +7,7 @@ fn climate_weights_are_normalized_varied_and_reproducible() {
     let a = ClimateSampler::new(42042, 2048.0, 4096.0);
     let b = ClimateSampler::new(42042, 2048.0, 4096.0);
     let c = ClimateSampler::new(42042 + (1 << 32), 2048.0, 4096.0);
-    let mut maxima = [0.0_f64; 7];
+    let mut maxima = [0.0_f64; 8];
     let mut different = false;
     for z in (-16384..=16384).step_by(512) {
         for x in (-16384..=16384).step_by(512) {
@@ -40,6 +40,7 @@ fn profiles_blend_every_weight_instead_of_selecting_a_dominant_biome() {
             highland: values[4],
             mushroom_park: values[5],
             cliffted_desert: 0.0,
+            cherry_forest: 0.0,
         },
     };
     let weights = [0.10, 0.20, 0.25, 0.15, 0.10, 0.20];

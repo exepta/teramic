@@ -1,0 +1,5 @@
+   Compiling tilt-ui-runtime v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/vendor/tilt-ui-runtime)
+   Compiling tilt-ui v0.1.0
+   Compiling terra-ui v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-ui)
+   Compiling terra-client v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/apps/client)
+    Finished `dev` profile [optimized + debuginfo] target(s) in 1m 20s

@@ -1,0 +1,34 @@
+{
+  "id": "teramic::leather_cape_pink",
+  "name": "Pink Leather Cape",
+  "station": "hand",
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "cape": {
+            "material": "leather",
+            "color": "white"
+          }
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "dye": "pink"
+        },
+        "count": 1
+      }
+    ]
+  },
+  "output": {
+    "item": {
+      "cape": {
+        "material": "leather",
+        "color": "pink"
+      }
+    },
+    "count": 1
+  }
+}

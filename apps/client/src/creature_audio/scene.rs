@@ -60,6 +60,7 @@ pub(super) fn update(
     mut sounds: ResMut<Soundscape>,
     mut assets: ResMut<Assets<RecordedSoundscape>>,
     mut commands: Commands,
+    mut weather_probe: Local<terra_world::weather::SurfaceWeatherProbe>,
 ) {
     if let Some(result) = sounds
         .loading
@@ -193,9 +194,10 @@ pub(super) fn update(
             (biome.weights.forest + biome.weights.plains + biome.weights.mushroom_park) as f32,
         );
         let local = world.weather.as_ref().map(|weather| {
-            terra_world::weather::sample_at(
+            weather_probe.sample(
                 weather,
                 &world.terrain.0,
+                &world.chunks,
                 listener.to_array().map(f64::from),
                 world.clock.as_deref().copied().unwrap_or_default(),
             )
@@ -288,7 +290,11 @@ pub(super) fn update(
             behavior: Behavior::Rest,
         });
         let speed = Vec3::from_array(animal.velocity).length();
-        let cue = if animal.kind.is_aquatic() {
+        let cue = if animal.kind == Kind::Stalker {
+            stalker_cue(animal, timing, now)
+        } else if animal.kind.is_spider() {
+            spider_cue(animal, timing, now, speed)
+        } else if animal.kind.is_aquatic() {
             aquatic_cue(animal, timing, now, speed, submerged)
         } else if animal.behavior == Behavior::Sleep {
             // Sleeping suppresses calls, chewing and walking, including overdue calls.
@@ -362,11 +368,86 @@ pub(super) fn update(
                 sound,
                 gains: [gain * (0.7 - pan * 0.3), gain * (0.7 + pan * 0.3)],
                 pitch: 0.96 + (animal.id % 9) as f32 * 0.01,
-                reverb: 0.0,
+                reverb: if animal.kind.is_spider() || animal.kind == Kind::Stalker {
+                    sounds.room.cave * 0.45
+                } else {
+                    0.0
+                },
             });
             budget -= 1;
         }
     }
+}
+
+fn stalker_cue(
+    animal: &terra_core::creatures::Creature,
+    timing: &mut Timing,
+    now: f32,
+) -> Option<(usize, f32)> {
+    if animal.behavior == Behavior::Hold && timing.behavior != Behavior::Hold {
+        timing.call = now + 2.0;
+        return Some((clips::STALKER_SCREAM_CLIP, 0.48));
+    }
+    if now >= timing.call {
+        let fast = matches!(animal.behavior, Behavior::Attack | Behavior::Hold);
+        timing.call = now
+            + if fast {
+                1.8
+            } else {
+                4.5 + (animal.id % 5) as f32 * 0.3
+            };
+        return Some((
+            if fast {
+                clips::STALKER_FAST_BREATH_CLIP
+            } else {
+                clips::STALKER_BREATH_CLIP
+            },
+            if fast { 0.22 } else { 0.13 },
+        ));
+    }
+    if now >= timing.step {
+        timing.step = now + 3.5 + (animal.id % 7) as f32 * 0.21;
+        return Some((clips::STALKER_SCRATCH_CLIP, 0.09));
+    }
+    None
+}
+
+fn spider_cue(
+    animal: &terra_core::creatures::Creature,
+    timing: &mut Timing,
+    now: f32,
+    speed: f32,
+) -> Option<(usize, f32)> {
+    if animal.kind == Kind::LargeSpider
+        && matches!(animal.behavior, Behavior::Attack | Behavior::Flee)
+        && now >= timing.call
+    {
+        timing.call = now + 6.0 + (animal.id % 5) as f32;
+        return Some((clips::SPIDER_HISS_CLIP, 0.40));
+    }
+    if speed > 0.03 && now >= timing.step {
+        timing.step = now + (0.42 - speed.min(2.0) * 0.07);
+        return Some((
+            clips::SPIDER_STEP_CLIP,
+            match animal.kind {
+                Kind::SmallSpider => 0.025,
+                Kind::MediumSpider => 0.12,
+                _ => 0.24,
+            },
+        ));
+    }
+    if now >= timing.eat {
+        timing.eat = now + 6.0 + (animal.id % 7) as f32;
+        return Some((
+            clips::SPIDER_IDLE_CLIP,
+            if animal.kind == Kind::SmallSpider {
+                0.014
+            } else {
+                0.07
+            },
+        ));
+    }
+    None
 }
 
 fn aquatic_cue(
@@ -484,6 +565,7 @@ pub(super) fn contacts(
     sounds: Res<Soundscape>,
     mut steps: MessageReader<terra_core::footsteps::Footstep>,
     mut variation: Local<clips::ContactVariation>,
+    mut weather_probe: Local<terra_world::weather::SurfaceWeatherProbe>,
 ) {
     let Some(body) = world.bodies.iter().next() else {
         steps.clear();
@@ -512,10 +594,10 @@ pub(super) fn contacts(
             step.position + Vec3::Y * 0.15,
             |p| habitat.block(p),
         );
-        let level = if step.walker == terra_core::footsteps::Walker::Player {
-            0.34
-        } else {
-            0.12
+        let level = match step.walker {
+            terra_core::footsteps::Walker::Player => 0.34,
+            terra_core::footsteps::Walker::Stalker => 0.09,
+            _ => 0.12,
         };
         let take = variation.next(step.material, step.alternate);
         let contact = (step.position - Vec3::Y * 0.08)
@@ -523,25 +605,15 @@ pub(super) fn contacts(
             .as_i64vec3()
             .to_array();
         let rain = world.weather.as_ref().map_or(0.0, |weather| {
-            world
-                .chunks
-                .prepared_column([contact[0].div_euclid(16), contact[2].div_euclid(16)])
-                .and_then(|column| column.surface_at(contact[0], contact[2]).copied())
-                .map_or(0.0, |surface| {
-                    terra_world::weather::from_climate_seasonal(
-                        weather,
-                        surface.biome,
-                        f64::from(step.position.y),
-                        world.terrain.0.config().sea_level,
-                        world
-                            .clock
-                            .as_deref()
-                            .copied()
-                            .unwrap_or_default()
-                            .season(world.terrain.0.config().seasons),
-                    )
-                    .rain
-                })
+            weather_probe
+                .sample(
+                    weather,
+                    &world.terrain.0,
+                    &world.chunks,
+                    step.position.to_array().map(f64::from),
+                    world.clock.as_deref().copied().unwrap_or_default(),
+                )
+                .rain
         });
         let wet = acoustics::wet_step_mix(
             rain,

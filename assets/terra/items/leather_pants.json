@@ -1,0 +1,16 @@
+{
+  "item": {
+    "armor": {
+      "material": "leather",
+      "piece": "pants"
+    }
+  },
+  "name": "Leather Pants",
+  "description": "Leather pants fitted for protection and comfortable movement.",
+  "equipment": {
+    "slot": "pants",
+    "armor_points": 2.5,
+    "health_bonus": 0,
+    "stamina_bonus": 4
+  }
+}

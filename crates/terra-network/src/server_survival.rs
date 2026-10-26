@@ -57,6 +57,18 @@ pub(super) fn environmental_damage(
     }
 }
 
+/// Invulnerability restores survival vitals, not an explicitly granted visual buff.
+pub(super) fn reset_invulnerable_vitals(peer: &mut Peer) {
+    let vision = peer.vitals.effects.get(terra_core::EffectKind::NightVision);
+    peer.vitals = SurvivalVitals::default();
+    peer.vitals.apply_equipment(peer.equipment);
+    if let Some(vision) = vision {
+        peer.vitals
+            .effects
+            .apply(vision.kind, vision.remaining_seconds, vision.level);
+    }
+}
+
 #[allow(clippy::too_many_arguments)]
 pub(super) fn advance(
     peer: &mut Peer,
@@ -68,7 +80,8 @@ pub(super) fn advance(
     dt: f32,
 ) {
     if mode != GameMode::Survival {
-        peer.vitals = SurvivalVitals::default();
+        reset_invulnerable_vitals(peer);
+        peer.vitals.effects.advance(dt);
         peer.survival.fall_peak = None;
         return;
     }
@@ -102,7 +115,7 @@ pub(super) fn advance(
         );
     }
     if after.position.y < -512.0 {
-        peer.vitals.hurt(100.0, DamageCause::Void);
+        peer.vitals.hurt(peer.vitals.max_health, DamageCause::Void);
     }
     if peer.vitals.health < health {
         peer.survival.damage_epoch = peer.survival.damage_epoch.wrapping_add(1);
@@ -161,6 +174,7 @@ pub(super) fn commit_and_send(
             .copied()
             .unwrap_or_default();
         stats.survival = peer.vitals;
+        stats.equipment = peer.equipment;
         stats.deaths = stats
             .deaths
             .saturating_add(std::mem::take(&mut peer.survival.pending_deaths));
@@ -174,7 +188,7 @@ pub(super) fn commit_and_send(
             }
             sender.send::<ControlChannel>(ServerControl::Stats {
                 generation: peer.generation,
-                stats,
+                stats: Box::new(stats),
             });
             peer.stats_sent = Some((peer.generation, stats));
         }

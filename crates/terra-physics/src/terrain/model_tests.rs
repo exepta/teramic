@@ -3,6 +3,92 @@ use terra_core::{block_properties::BlockPropertiesCatalog, block_shapes::ShapeBo
 use terra_world::{edits::BlockObjectState, streaming::LoadedSection};
 
 #[test]
+fn crusher_hopper_lips_have_clipped_colliders_above_positive_and_negative_section_seams() {
+    for y in [-17, -1, 15, 31] {
+        for facing in 0..4 {
+            let anchor = [-1, y, -1];
+            let state = BlockObjectState {
+                facing,
+                ..default()
+            };
+            let peer = std::array::from_fn(|axis| anchor[axis] + state.right()[axis]);
+            let mut chunks = ChunkStore::default();
+            let mut journal = EditJournal::default();
+            for (position, other, secondary) in [(anchor, peer, false), (peer, anchor, true)] {
+                let (section, local) = global_to_section(position);
+                let upper = section.offset([0, 1, 0]).unwrap();
+                for owner in [section, upper] {
+                    chunks.loaded.entry(owner).or_insert_with(|| LoadedSection {
+                        data: BlockSection::empty(owner).unwrap(),
+                        mesh: None,
+                        mesh_epoch: 0,
+                        water_epoch: 0,
+                        water: None,
+                        props: Vec::new(),
+                    });
+                }
+                chunks
+                    .loaded
+                    .get_mut(&section)
+                    .unwrap()
+                    .data
+                    .set_block(local, 99)
+                    .unwrap();
+                journal.record(position, 99).unwrap();
+                journal
+                    .set_object_state(
+                        position,
+                        Some(BlockObjectState {
+                            peer: Some(other),
+                            secondary,
+                            ..state
+                        }),
+                    )
+                    .unwrap();
+            }
+            let properties = BlockPropertiesCatalog::default();
+            let upper_sections: HashSet<_> = [anchor, peer]
+                .map(|position| global_to_section(position).0.offset([0, 1, 0]).unwrap())
+                .into_iter()
+                .collect();
+            for upper in upper_sections {
+                let data = &chunks.loaded[&upper].data;
+                let shapes = model_shapes(data, &chunks, &journal, &properties).unwrap();
+                assert!(
+                    !shapes.is_empty(),
+                    "missing hopper collider at seam {y}, facing {facing}, upper {upper:?}"
+                );
+                assert!(
+                    shapes
+                        .iter()
+                        .all(|shape| shape.minimum[1] >= 0.0 && shape.maximum[1] <= 0.231)
+                );
+                assert!(
+                    shapes
+                        .iter()
+                        .any(|shape| (shape.maximum[1] - 0.23).abs() < 0.000001)
+                );
+                let collider = build_collider_with_models(data, &shapes, &[99])
+                    .unwrap()
+                    .unwrap();
+                let triangles = collider.shape().as_trimesh().unwrap();
+                assert!(!triangles.indices().is_empty());
+                assert!(
+                    triangles
+                        .vertices()
+                        .iter()
+                        .all(|vertex| vertex.is_finite() && vertex.y >= 0.0 && vertex.y <= 0.231)
+                );
+                assert_eq!(
+                    shapes,
+                    model_shapes(data, &chunks, &journal, &properties).unwrap()
+                );
+            }
+        }
+    }
+}
+
+#[test]
 fn real_capsule_can_walk_through_open_doors_and_retreat_from_windows() {
     #[derive(Resource)]
     struct Probe(Vec3, Vec3);

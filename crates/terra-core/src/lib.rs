@@ -1,19 +1,31 @@
 //! Shared identities, validated configuration and optional ECS integration.
+#[cfg(test)]
+mod cherry_tests;
 pub mod config;
 mod constants;
 pub mod containers;
 pub mod creatures;
+pub mod crusher;
 #[cfg(feature = "bevy")]
 mod debug;
 pub mod effects;
+pub mod equipment;
+pub mod farming;
 mod food;
 #[cfg(feature = "bevy")]
 pub mod footsteps;
 pub mod furnace;
+pub use crusher::DustKind;
 pub use effects::{
     ActiveEffect, EffectDefinition, EffectKind, EffectStacking, StatusEffects,
     effect_catalog_fingerprint, effect_definition,
 };
+pub use equipment::{
+    AccessoryKind, ArmorItem, ArmorMaterial, ArmorPiece, CapeItem, EQUIPMENT_SLOTS,
+    EquipmentBonuses, EquipmentDefinition, EquipmentSlot, EquipmentSlots, MAX_ARMOR_POINTS,
+    equipment_catalog_fingerprint, equipment_definition,
+};
+pub use farming::{CropItem, CropKind, CropState};
 pub use food::{FoodDefinition, FoodRegeneration, food};
 mod gameplay;
 mod identity;
@@ -26,9 +38,11 @@ pub mod profiling;
 pub use minerals::{MineralItem, OreGeneration, OreKind, OreVeinConfig};
 mod game_rules;
 mod paths;
+mod player_location;
 #[cfg(feature = "bevy")]
 mod plugin;
 mod profile;
+pub use player_location::PlayerLocation;
 mod seasons;
 mod survival;
 mod world_time;
@@ -45,12 +59,13 @@ pub use weather::{LightningEvent, LightningObserver, SnowProfile, WeatherPattern
 pub use config::controls::{ControlsConfig, GameAction, GameplayInput, InputBinding};
 pub use config::{
     AudioConfig, BlockDetailConfig, BlockDetailQuality, ChunkAnimation, ClientConfig, Config,
-    ConfigError, GameConfig, GameplayConfig, MapMode, MinimapConfig, MultiplayerConfig,
-    PlayerPermissions, ServerConfig, WaterQuality, WeatherKind, WeatherQuality, WorldConfig,
-    config_directory,
+    ConfigError, GameConfig, GameplayConfig, MapMode, MinimapConfig, MobHealthBars,
+    MultiplayerConfig, PlayerPermissions, ServerConfig, WaterQuality, WeatherKind, WeatherQuality,
+    WorldConfig, config_directory,
 };
 pub use config::{
-    CaveQuality, GraphicsConfig, ShadowQuality, WindowModeSetting, menu_config_directory, save_toml,
+    CaveQuality, GraphicsConfig, ShadowQuality, TreeFallAnimation, WindowModeSetting,
+    menu_config_directory, save_toml,
 };
 pub use constants::*;
 #[cfg(feature = "bevy")]
@@ -71,3 +86,5 @@ pub mod block_properties;
 pub mod block_shapes;
 pub mod construction;
 pub mod crafting;
+pub mod flower_pot;
+pub mod textiles;

@@ -395,6 +395,11 @@ pub(crate) fn enter(commands: &mut Commands, root: Entity, mode: ChunkAnimation)
     }
 }
 
+#[cfg(test)]
+pub(crate) fn start_test_fade(world: &mut World, root: Entity) {
+    assert!(start(world, root, ChunkAnimation::Fade, false, Vec::new()));
+}
+
 pub(crate) fn retire(
     commands: &mut Commands,
     root: Entity,
@@ -1157,6 +1162,9 @@ mod tests {
                 effects: Vec4::ZERO,
                 reflections: Vec4::ZERO,
                 weather: Vec4::ZERO,
+                environment: Vec4::ZERO,
+                wake_positions: Default::default(),
+                wake_motions: Default::default(),
             },
         });
     }

@@ -1,0 +1,28 @@
+{
+  "id": "teramic::silver_wool",
+  "name": "Silver Wool",
+  "station": "hand",
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "block": 103
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "dye": "silver"
+        },
+        "count": 1
+      }
+    ]
+  },
+  "output": {
+    "item": {
+      "block": 129
+    },
+    "count": 1
+  }
+}

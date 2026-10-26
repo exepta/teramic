@@ -39,6 +39,8 @@ struct PortraitCapture {
     closed: bool,
     camera: Option<Entity>,
     eyelids: Option<Entity>,
+    equipment: crate::armor::AvatarEquipment,
+    gender: terra_core::PlayerGender,
 }
 
 pub(crate) fn install(app: &mut App) {
@@ -54,26 +56,52 @@ fn prepare(
     mut preview: ResMut<PlayerPreviewImage>,
     mut pending: ResMut<PortraitCapture>,
     profile: Option<Res<terra_core::PlayerProfile>>,
+    session: Option<Res<terra_network::client::ClientSession>>,
 ) {
+    let equipment = crate::armor::AvatarEquipment::from(
+        session
+            .as_ref()
+            .map_or(terra_core::EquipmentSlots::default(), |session| {
+                session.stats.equipment
+            }),
+    );
+    let gender = profile
+        .as_ref()
+        .map_or(terra_core::PlayerGender::default(), |profile| {
+            profile.gender
+        });
+    if pending.finished && (pending.equipment != equipment || pending.gender != gender) {
+        *pending = PortraitCapture::default();
+        preview.ready = false;
+        preview.error = None;
+    }
     if pending.started.is_some() {
         return;
     }
+    pending.equipment = equipment;
+    pending.gender = gender;
     pending.started = Some(Instant::now());
-    let mut target = Image::new_target_texture(320, 512, TextureFormat::Rgba8UnormSrgb, None);
-    target.texture_descriptor.usage |= TextureUsages::COPY_SRC;
-    preview.image = images.add(target.clone());
-    preview.closed_image = images.add(target);
+    if preview.image == Handle::default() || preview.closed_image == Handle::default() {
+        let mut target = Image::new_target_texture(320, 512, TextureFormat::Rgba8UnormSrgb, None);
+        target.texture_descriptor.usage |= TextureUsages::COPY_SRC;
+        preview.image = images.add(target.clone());
+        preview.closed_image = images.add(target);
+    }
     let root = commands
-        .spawn((PortraitScene, Transform::default(), Visibility::Visible))
+        .spawn((
+            PortraitScene,
+            equipment,
+            crate::players::AvatarGender(gender),
+            Transform::default(),
+            Visibility::Visible,
+        ))
         .id();
     let avatar = spawn_parts(
         &mut commands,
         &assets,
         root,
         RenderLayers::layer(LAYER),
-        profile
-            .as_ref()
-            .map_or(terra_core::PlayerGender::default(), |p| p.gender),
+        gender,
     );
     pending.eyelids = avatar.eyelids;
     if let Some(eyelids) = avatar.eyelids {
@@ -270,5 +298,54 @@ mod tests {
                 .count(),
             0
         );
+    }
+
+    #[test]
+    fn equipment_changes_recapture_portrait_without_allocating_new_targets() {
+        let mut app = App::new();
+        app.init_resource::<Assets<Image>>()
+            .init_resource::<PlayerPreviewImage>()
+            .init_resource::<PortraitCapture>()
+            .init_resource::<terra_network::client::ClientSession>()
+            .insert_resource(AvatarAssets {
+                parts: [Vec::new(), Vec::new()],
+                eyelids: None,
+                material: Handle::default(),
+            })
+            .add_systems(Update, (prepare, capture).chain());
+        app.update();
+        let open = app.world().resource::<PlayerPreviewImage>().image.clone();
+        let closed = app
+            .world()
+            .resource::<PlayerPreviewImage>()
+            .closed_image
+            .clone();
+        assert_eq!(app.world().resource::<Assets<Image>>().len(), 2);
+        for material in terra_core::ArmorMaterial::ALL {
+            for _ in 0..2 {
+                app.world_mut().resource_mut::<PortraitCapture>().received = Some(true);
+                app.update();
+            }
+            assert!(app.world().resource::<PlayerPreviewImage>().ready);
+            let helmet = terra_core::ItemKind::Armor(terra_core::ArmorItem {
+                material,
+                piece: terra_core::ArmorPiece::Helmet,
+            });
+            app.world_mut()
+                .resource_mut::<terra_network::client::ClientSession>()
+                .stats
+                .equipment
+                .set(terra_core::EquipmentSlot::Helmet, Some(helmet));
+            app.update();
+            let preview = app.world().resource::<PlayerPreviewImage>();
+            assert!(!preview.ready);
+            assert_eq!(preview.image, open);
+            assert_eq!(preview.closed_image, closed);
+            assert_eq!(app.world().resource::<Assets<Image>>().len(), 2);
+            assert_eq!(
+                app.world().resource::<PortraitCapture>().equipment.0[0],
+                Some(helmet)
+            );
+        }
     }
 }

@@ -1,0 +1,15 @@
+{
+  "id": 10605,
+  "key": "teramic::crush_salt",
+  "name": "Crush salt",
+  "input": {
+    "mineral": "salt_crystal"
+  },
+  "output": {
+    "item": {
+      "dust": "salt"
+    },
+    "count": 1
+  },
+  "seconds": 4
+}

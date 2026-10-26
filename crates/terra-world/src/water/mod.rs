@@ -1,4 +1,6 @@
 //! Water shares section batches but keeps fluid occupancy separate from solid blocks.
+#[cfg(feature = "bevy")]
+pub mod buckets;
 mod channels;
 pub(crate) mod fluid;
 #[cfg(any(feature = "bevy", test))]
@@ -6,6 +8,7 @@ mod fluid_mesh;
 mod geometry;
 #[cfg(feature = "bevy")]
 mod motion;
+pub(crate) mod outlets;
 #[cfg(feature = "bevy")]
 mod simulation;
 pub(crate) mod space;
@@ -21,7 +24,8 @@ pub(crate) use fluid_mesh::{FluidOccluders, append_fluid_patch};
 pub use geometry::WaterPatch;
 pub(crate) use geometry::build_water_patch;
 #[cfg(feature = "bevy")]
-pub use motion::{CURRENT_RESPONSE, CURRENT_SPEED, FluidMotion, fluid_motion_at};
+pub use motion::{CURRENT_RESPONSE, CURRENT_SPEED, FluidMotion, falling_fluid_at, fluid_motion_at};
+pub(crate) use outlets::natural_outlets;
 #[cfg(feature = "bevy")]
 pub(crate) use simulation::tick as tick_fluids;
 #[cfg(feature = "bevy")]

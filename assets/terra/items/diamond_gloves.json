@@ -1,0 +1,16 @@
+{
+  "item": {
+    "armor": {
+      "material": "diamond",
+      "piece": "gloves"
+    }
+  },
+  "name": "Diamond Gloves",
+  "description": "Diamond gloves fitted for protection and comfortable movement.",
+  "equipment": {
+    "slot": "gloves",
+    "armor_points": 3,
+    "health_bonus": 2,
+    "stamina_bonus": 2
+  }
+}

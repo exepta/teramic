@@ -1,4 +1,4 @@
-use super::{INVENTORY_SLOTS, Inventory, ItemStack, STACK_LIMIT};
+use super::{INVENTORY_SLOTS, Inventory, ItemStack};
 
 impl Inventory {
     /// Exact, atomic transfers for multiple visual crafting cells sharing inventory slots.
@@ -9,13 +9,13 @@ impl Inventory {
         to_cursor: bool,
     ) -> bool {
         let total: u32 = counts.iter().map(|&n| u32::from(n)).sum();
-        if !self.valid() || total == 0 || total > u32::from(STACK_LIMIT) {
+        if !self.valid() || total == 0 || total > u32::from(item.max_stack()) {
             return false;
         }
         let total = total as u16;
         let held = self.cursor.map_or(0, |s| s.count);
         if self.cursor.is_some_and(|s| s.item != item)
-            || (to_cursor && held.saturating_add(total) > STACK_LIMIT)
+            || (to_cursor && held.saturating_add(total) > item.max_stack())
             || (!to_cursor && held < total)
         {
             return false;
@@ -37,7 +37,7 @@ impl Inventory {
                 amount
             } else {
                 let amount = present.saturating_add(count);
-                if amount > STACK_LIMIT {
+                if amount > item.max_stack() {
                     return false;
                 }
                 amount
@@ -112,7 +112,7 @@ impl Inventory {
                 return false;
             }
             let restored = current.map_or(0, |stack| stack.count) + count;
-            if restored > STACK_LIMIT {
+            if restored > original.item.max_stack() {
                 return false;
             }
             next.set(
@@ -200,7 +200,7 @@ impl Inventory {
                         continue;
                     }
                     let present = existing.map_or(0, |s| s.count);
-                    let amount = remaining.min(STACK_LIMIT - present);
+                    let amount = remaining.min(stack.item.max_stack() - present);
                     if amount == 0 {
                         continue;
                     }
@@ -249,7 +249,8 @@ impl Inventory {
             }
             (Some(mut cursor), target) if target.is_none_or(|s| s.item == cursor.item) => {
                 let present = target.map_or(0, |s| s.count);
-                let amount = (if secondary { 1 } else { cursor.count }).min(STACK_LIMIT - present);
+                let amount = (if secondary { 1 } else { cursor.count })
+                    .min(cursor.item.max_stack() - present);
                 if amount == 0 {
                     return false;
                 }
@@ -284,7 +285,7 @@ impl Inventory {
             }
             if self
                 .slot(slot)
-                .is_none_or(|s| s.item == cursor.item && s.count < STACK_LIMIT)
+                .is_none_or(|s| s.item == cursor.item && s.count < cursor.item.max_stack())
             {
                 targets.push(slot);
             }
@@ -303,7 +304,9 @@ impl Inventory {
         let original = cursor.count;
         for slot in targets {
             let present = self.slot(slot).map_or(0, |s| s.count);
-            let moved = amount.min(cursor.count).min(STACK_LIMIT - present);
+            let moved = amount
+                .min(cursor.count)
+                .min(cursor.item.max_stack() - present);
             if moved > 0 {
                 self.set(
                     slot,
@@ -341,7 +344,7 @@ impl Inventory {
                     continue;
                 }
                 let present = existing.map_or(0, |s| s.count);
-                let moved = remaining.min(STACK_LIMIT - present);
+                let moved = remaining.min(source.item.max_stack() - present);
                 if moved == 0 {
                     continue;
                 }
@@ -393,10 +396,10 @@ impl Inventory {
                 let Some(mut stack) = self.slot(index) else {
                     continue;
                 };
-                if stack.item != item || (stack.count == STACK_LIMIT) != full {
+                if stack.item != item || (stack.count == item.max_stack()) != full {
                     continue;
                 }
-                let amount = stack.count.min(STACK_LIMIT - cursor.count);
+                let amount = stack.count.min(item.max_stack() - cursor.count);
                 stack.count -= amount;
                 cursor.count += amount;
                 self.set(
@@ -427,10 +430,10 @@ impl Inventory {
         let Some(mut source) = self.slot(slot) else {
             return false;
         };
-        if source.item != cursor.item || cursor.count >= STACK_LIMIT {
+        if source.item != cursor.item || cursor.count >= cursor.item.max_stack() {
             return false;
         }
-        let amount = source.count.min(STACK_LIMIT - cursor.count);
+        let amount = source.count.min(cursor.item.max_stack() - cursor.count);
         source.count -= amount;
         cursor.count += amount;
         self.cursor = Some(cursor);
@@ -457,7 +460,7 @@ impl Inventory {
             let Some(target) = self.slot(slot) else {
                 return false;
             };
-            if target.count >= STACK_LIMIT {
+            if target.count >= target.item.max_stack() {
                 return false;
             }
             let mut source_range = if slot < 9 { 9..INVENTORY_SLOTS } else { 0..9 };
@@ -471,7 +474,7 @@ impl Inventory {
         let Some(mut source) = self.slot(slot) else {
             return false;
         };
-        if source.item != cursor.item || cursor.count >= STACK_LIMIT {
+        if source.item != cursor.item || cursor.count >= cursor.item.max_stack() {
             return false;
         }
         source.count -= 1;
@@ -520,6 +523,7 @@ impl Inventory {
 mod tests {
     use super::*;
     use crate::ItemKind;
+    use crate::STACK_LIMIT;
 
     fn resources(bag: &Inventory, item: ItemKind) -> u16 {
         bag.count(item) + bag.cursor.filter(|s| s.item == item).map_or(0, |s| s.count)

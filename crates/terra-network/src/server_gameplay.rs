@@ -1,5 +1,7 @@
 use super::*;
 use terra_core::GameMode;
+#[path = "server_equipment.rs"]
+mod equipment;
 
 pub(super) fn held_tool(peer: &Peer, world: &ControlWorld) -> Option<terra_core::ItemKind> {
     world
@@ -14,7 +16,16 @@ fn tool_duration(
     target: MiningTarget,
     tool: Option<terra_core::ItemKind>,
     world: &ControlWorld,
+    part: Option<terra_world::slabs::HalfRemoval>,
 ) -> f32 {
+    let target = if let (MiningTarget::Block { position, .. }, Some(part)) = (target, part) {
+        MiningTarget::Block {
+            position,
+            expected: part.removed,
+        }
+    } else {
+        target
+    };
     let speed = match (target, tool) {
         (MiningTarget::Block { expected, .. }, Some(terra_core::ItemKind::Tool(tool))) => {
             tool.speed(expected)
@@ -73,6 +84,28 @@ pub(super) struct MiningState {
     started: Instant,
     pulse: Instant,
     reported: Instant,
+    part: Option<terra_world::slabs::HalfRemoval>,
+    fell_tree: bool,
+    tree: Option<terra_world::tree_felling::Plan>,
+}
+
+impl MiningState {
+    #[cfg(test)]
+    pub(super) fn elapse_tree_timer(&mut self) -> bool {
+        let Some(tree) = self.tree.as_ref() else {
+            return false;
+        };
+        self.started =
+            Instant::now() - Duration::from_secs_f32(tree.duration_with_tool(self.tool) + 0.05);
+        true
+    }
+
+    fn duration(&self, world: &ControlWorld) -> f32 {
+        self.tree.as_ref().map_or_else(
+            || tool_duration(self.target, self.tool, world, self.part),
+            |tree| tree.duration_with_tool(self.tool),
+        )
+    }
 }
 
 fn command(target: MiningTarget, look: [f32; 2], journal: &EditJournal) -> EditCommand {
@@ -103,14 +136,24 @@ pub(super) fn intent(
         }
         return;
     };
-    if peer.game_mode(&world.config) != GameMode::Survival {
+    let tool = held_tool(peer, world);
+    let mode = peer.game_mode(&world.config);
+    if mode == GameMode::Spectator
+        || mode == GameMode::Creative
+            && (!intent.fell_tree || !terra_world::tree_felling::is_axe(tool))
+    {
+        if peer.mining.take().is_some() {
+            sender.send::<ControlChannel>(ServerControl::Mining(None));
+        }
         return;
     }
-    let tool = held_tool(peer, world);
+    let part = validation::mined_slab(command(target, intent.look, &world.journal), peer, world);
     let now = Instant::now();
     let continuing = peer.mining.as_ref().is_some_and(|m| {
         m.target == target
+            && m.part == part
             && m.tool == tool
+            && m.fell_tree == intent.fell_tree
             && now.duration_since(m.pulse) <= Duration::from_millis(350)
     });
     if !continuing {
@@ -142,6 +185,25 @@ pub(super) fn intent(
             return;
         }
         peer.edits_left -= 1.0;
+        let tree = if intent.fell_tree {
+            let MiningTarget::Block { position, .. } = target else {
+                return;
+            };
+            let Some(plan) =
+                terra_world::tree_felling::Plan::prepare(&world.chunks, &world.journal, position)
+            else {
+                terra_world::tree_felling::request_missing(
+                    &mut world.chunks,
+                    &world.journal,
+                    position,
+                );
+                sender.send::<ControlChannel>(ServerControl::Mining(None));
+                return;
+            };
+            Some(plan)
+        } else {
+            None
+        };
         peer.mining = Some(MiningState {
             tool,
             target,
@@ -149,11 +211,18 @@ pub(super) fn intent(
             started: now,
             pulse: now,
             reported: now,
+            part,
+            fell_tree: intent.fell_tree,
+            tree,
         });
         sender.send::<ControlChannel>(ServerControl::Mining(Some(MiningProgress {
             target,
             progress: 0.0,
-            duration: tool_duration(target, tool, world),
+            duration: peer
+                .mining
+                .as_ref()
+                .expect("new mining state")
+                .duration(world),
         })));
     } else if let Some(mining) = peer.mining.as_mut() {
         mining.pulse = now;
@@ -166,6 +235,7 @@ pub(super) fn tick(
     mut peers: Query<(&mut Peer, &mut MessageSender<ServerControl>), With<Connected>>,
     mut world: ControlWorld,
     mut pickup_time: Local<f64>,
+    mut felling: ResMut<terra_world::tree_felling::Queue>,
     time: Res<Time>,
 ) {
     let now = Instant::now();
@@ -174,6 +244,7 @@ pub(super) fn tick(
     if pickup {
         *pickup_time = time.elapsed_secs_f64() + 0.05;
     }
+    let mut collapses = Vec::new();
     for (mut peer, mut sender) in &mut peers {
         super::containers::refresh(&mut peer, &mut sender, &world);
         super::consumption::tick(&mut peer, &mut sender, &mut world, now);
@@ -186,14 +257,51 @@ pub(super) fn tick(
             if now.duration_since(mining.pulse) > Duration::from_millis(350)
                 || valid != EditOutcome::Applied
                 || mining.tool != held_tool(&peer, &world)
+                || peer.game_mode(&world.config) == GameMode::Spectator
+                || peer.game_mode(&world.config) == GameMode::Creative
+                    && (!mining.fell_tree || !terra_world::tree_felling::is_axe(mining.tool))
+                || mining.part != validation::mined_slab(mining.command, &peer, &world)
+                || mining
+                    .tree
+                    .as_ref()
+                    .is_some_and(|tree| !tree.unchanged(&world.chunks, &world.journal))
             {
                 sender.send::<ControlChannel>(ServerControl::Mining(None));
             } else {
                 let progress = (now.duration_since(mining.started).as_secs_f32()
-                    / tool_duration(mining.target, mining.tool, &world))
+                    / mining.duration(&world))
                 .min(1.0);
                 if progress >= 1.0 {
-                    let outcome = validation::apply(mining.command, &peer, &mut world, true);
+                    let outcome = if let Some(tree) = mining.tree.take() {
+                        let away = world
+                            .bodies
+                            .get(peer.body)
+                            .map(|body| {
+                                [
+                                    tree.foot()[0] as f32 + 0.5 - body.translation.x,
+                                    tree.foot()[2] as f32 + 0.5 - body.translation.z,
+                                ]
+                            })
+                            .unwrap_or([-peer.look[0].sin(), -peer.look[0].cos()]);
+                        let collapse = tree.collapse(away);
+                        if world.journal.gameplay().drops.len()
+                            + terra_world::tree_felling::WOOD_BUDGET * 6
+                            < terra_core::MAX_WORLD_DROPS
+                            && world.journal.gameplay().can_drop()
+                            && felling.enqueue_with_drops(
+                                tree,
+                                peer.uuid,
+                                peer.game_mode(&world.config) == GameMode::Survival,
+                            )
+                        {
+                            collapses.push(collapse);
+                            EditOutcome::Applied
+                        } else {
+                            EditOutcome::RateLimited
+                        }
+                    } else {
+                        validation::apply(mining.command, &peer, &mut world, true)
+                    };
                     sender.send::<ControlChannel>(ServerControl::EditResult {
                         request: 0,
                         action: mining.command.action,
@@ -207,7 +315,7 @@ pub(super) fn tick(
                             MiningProgress {
                                 target: mining.target,
                                 progress,
-                                duration: tool_duration(mining.target, mining.tool, &world),
+                                duration: mining.duration(&world),
                             },
                         )));
                     }
@@ -282,6 +390,27 @@ pub(super) fn tick(
             }
         }
     }
+    for collapse in collapses {
+        let foot = Vec3::from_array(collapse.foot.map(|v| v as f32));
+        for (peer, mut sender) in &mut peers {
+            if peer.synced
+                && world
+                    .bodies
+                    .get(peer.body)
+                    .is_ok_and(|body| body.translation.distance_squared(foot) < 128.0 * 128.0)
+            {
+                sender.send::<ControlChannel>(ServerControl::TreeCollapse(collapse.clone()));
+            }
+        }
+    }
+    if let Err(error) = felling.advance(
+        &mut world.chunks,
+        &mut world.journal,
+        &world.block_properties,
+        time.elapsed_secs_f64(),
+    ) {
+        tracing::error!(%error, "Authoritative tree felling batch failed");
+    }
 }
 
 pub(super) fn inventory(
@@ -311,7 +440,10 @@ pub(super) fn inventory(
         super::containers::access(command, peer, sender, world);
         return;
     }
-    if matches!(command.action, InventoryAction::LoadSmeltingRecipe { .. }) {
+    if matches!(
+        command.action,
+        InventoryAction::LoadSmeltingRecipe { .. } | InventoryAction::LoadCrushingRecipe { .. }
+    ) {
         super::containers::load_recipe(command, peer, sender, world);
         return;
     }
@@ -323,6 +455,7 @@ pub(super) fn inventory(
         .cloned()
         .unwrap_or_default();
     let mut next = current.clone();
+    let mut next_equipment = peer.equipment;
     let mut drop = None;
     peer.edits_left = (peer.edits_left + peer.rate_time.elapsed().as_secs_f64() * 10.0).min(20.0);
     peer.rate_time = Instant::now();
@@ -344,6 +477,7 @@ pub(super) fn inventory(
             | InventoryAction::CreativeCursor { .. }
             | InventoryAction::CreativeQuickMove { .. }
             | InventoryAction::CreativeTrash { .. }
+            | InventoryAction::CreativeClear
     ) && peer.game_mode(&world.config) != GameMode::Creative
     {
         InventoryOutcome::Denied
@@ -353,6 +487,12 @@ pub(super) fn inventory(
             // Legacy immediate-consumption packets must not bypass held-use timing.
             InventoryAction::Eat { .. } => false,
             InventoryAction::Click { slot, secondary } => next.click(usize::from(slot), secondary),
+            InventoryAction::EquipmentClick { slot, secondary } => {
+                equipment::click(&mut next, &mut next_equipment, usize::from(slot), secondary)
+            }
+            InventoryAction::EquipmentQuickMove { slot } => {
+                equipment::unequip(&mut next, &mut next_equipment, usize::from(slot))
+            }
             InventoryAction::TakeToCursor { slot, count } => {
                 next.take_cursor(usize::from(slot), count)
             }
@@ -369,7 +509,8 @@ pub(super) fn inventory(
                 use crate::protocol::inventory::ProtectedMoveKind;
                 match kind {
                     ProtectedMoveKind::QuickMove => {
-                        inventory.quick_move(usize::from(slot), terra_core::STACK_LIMIT)
+                        equipment::equip(inventory, &mut next_equipment, usize::from(slot))
+                            || inventory.quick_move(usize::from(slot), terra_core::STACK_LIMIT)
                     }
                     ProtectedMoveKind::Collect => inventory.collect(usize::from(slot)),
                     ProtectedMoveKind::CollectFrom => inventory.collect_from(usize::from(slot)),
@@ -378,7 +519,8 @@ pub(super) fn inventory(
             }),
             InventoryAction::Drag { slots, secondary } => next.drag(slots, secondary),
             InventoryAction::QuickMove { slot } => {
-                next.quick_move(usize::from(slot), terra_core::STACK_LIMIT)
+                equipment::equip(&mut next, &mut next_equipment, usize::from(slot))
+                    || next.quick_move(usize::from(slot), terra_core::STACK_LIMIT)
             }
             InventoryAction::Collect { slot } => next.collect(usize::from(slot)),
             InventoryAction::CollectFrom { slot } => next.collect_from(usize::from(slot)),
@@ -396,6 +538,18 @@ pub(super) fn inventory(
             }
             InventoryAction::CreativeTrash { slot } => {
                 next.take_stack(slot.map(usize::from), true).is_some()
+            }
+            InventoryAction::CreativeClear => {
+                let occupied = next.cursor.is_some()
+                    || next.occupied_slots() > 0
+                    || next_equipment.iter().next().is_some();
+                if occupied {
+                    next.slots.clear();
+                    next.cursor = None;
+                    next_equipment = Default::default();
+                    next.revision = current.revision.saturating_add(1);
+                }
+                occupied
             }
             InventoryAction::DropSlot { slot, all } => {
                 drop = next.take_stack(Some(usize::from(slot)), all);
@@ -508,10 +662,19 @@ pub(super) fn inventory(
             InventoryAction::OpenContainer { .. }
             | InventoryAction::CloseContainer
             | InventoryAction::LoadSmeltingRecipe { .. }
+            | InventoryAction::LoadCrushingRecipe { .. }
             | InventoryAction::ViewDrag { .. } => false,
         };
         if applied
             && next.valid()
+            && next_equipment.valid()
+            && (next_equipment == peer.equipment
+                || world
+                    .journal
+                    .gameplay()
+                    .player_stats
+                    .contains_key(&peer.uuid)
+                || world.journal.gameplay().player_stats.len() < 4096)
             && (drop.is_none()
                 || (world.journal.gameplay().can_drop() && drop_launch(peer, world).is_some()))
         {
@@ -520,6 +683,8 @@ pub(super) fn inventory(
             InventoryOutcome::Invalid
         }
     };
+    let equipment_changed =
+        outcome == InventoryOutcome::Applied && next_equipment != peer.equipment;
     let inventory = if outcome == InventoryOutcome::Applied {
         let launch = drop.and_then(|stack| {
             drop_launch(peer, world).map(|(position, velocity)| (stack, position, velocity))
@@ -536,11 +701,51 @@ pub(super) fn inventory(
         }
         state.inventories.insert(peer.uuid, next.clone());
         state.revision = state.revision.saturating_add(1);
+        if equipment_changed {
+            peer.equipment = next_equipment;
+            peer.vitals.apply_equipment(next_equipment);
+        }
         next
     } else {
         current
     };
+    if equipment_changed {
+        let mut stats = world
+            .journal
+            .gameplay()
+            .player_stats
+            .get(&peer.uuid)
+            .copied()
+            .unwrap_or_default();
+        stats.equipment = peer.equipment;
+        stats.survival = peer.vitals;
+        world
+            .journal
+            .bypass_change_detection()
+            .update_player_stats(peer.uuid, stats);
+    }
     sender.send::<ControlChannel>(ServerControl::InventoryResult { outcome, inventory });
+    if equipment_changed
+        || matches!(
+            command.action,
+            InventoryAction::EquipmentClick { .. } | InventoryAction::EquipmentQuickMove { .. }
+        )
+    {
+        let mut stats = world
+            .journal
+            .gameplay()
+            .player_stats
+            .get(&peer.uuid)
+            .copied()
+            .unwrap_or_default();
+        stats.equipment = peer.equipment;
+        stats.survival = peer.vitals;
+        sender.send::<ControlChannel>(ServerControl::Stats {
+            generation: peer.generation,
+            stats: Box::new(stats),
+        });
+        peer.stats_sent = Some((peer.generation, stats));
+    }
 }
 
 fn drop_launch(peer: &Peer, world: &ControlWorld) -> Option<([f64; 3], [f32; 3])> {

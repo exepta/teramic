@@ -11,7 +11,7 @@ pub fn template(
     palette: &PropPalette,
 ) -> Result<Vec<PropMesh>, String> {
     let mut meshes = raw_template(kind, variant, level, palette)?;
-    if kind != PropKind::Grass {
+    if !matches!(kind, PropKind::Grass | PropKind::SpiderWeb) {
         super::sizing::normalize(kind, variant, level, &mut meshes)?;
     }
     Ok(meshes)
@@ -27,6 +27,17 @@ pub(super) fn raw_template(
     let fine = level == PropDetail::Near;
     let variant = usize::from(variant);
     let leaf = palette.foliage[variant % 3];
+    if kind == PropKind::SpiderWeb {
+        return super::webs::template(variant as u8, level, palette);
+    }
+    if kind == PropKind::Scarecrow {
+        super::scarecrow::append(&mut batches, variant as u8, level, palette)?;
+        return Ok(batches.into_values().collect());
+    }
+    if kind.crop().is_some() {
+        super::crops::append(&mut batches, kind, variant as u8, level, palette)?;
+        return Ok(batches.into_values().collect());
+    }
     if kind.aquatic() {
         super::aquatic::append(&mut batches, kind, variant, level, palette)?;
         return Ok(batches.into_values().collect());
@@ -100,6 +111,11 @@ pub(super) fn raw_template(
         | PropKind::PlateCoral
         | PropKind::SeaAnemone
         | PropKind::SmallStones
+        | PropKind::Wheat
+        | PropKind::Corn
+        | PropKind::Lettuce
+        | PropKind::Scarecrow
+        | PropKind::SpiderWeb
         | PropKind::Mushroom => {}
         PropKind::Fern => {
             voxel(

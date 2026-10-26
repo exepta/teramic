@@ -1,0 +1,34 @@
+{
+  "id": "teramic::diamond_sword",
+  "name": "Diamond Sword",
+  "station": "workbench",
+  "pattern": {
+    "kind": "shaped",
+    "width": 1,
+    "height": 3,
+    "cells": [
+      {
+        "item": {
+          "mineral": "diamond"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "mineral": "diamond"
+        },
+        "count": 1
+      },
+      {
+        "item": "stick",
+        "count": 1
+      }
+    ]
+  },
+  "output": {
+    "item": {
+      "tool": "diamond_sword"
+    },
+    "count": 1
+  }
+}

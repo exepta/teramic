@@ -6,7 +6,7 @@
   "creative_category": "terrain",
   "render_kind": "cube",
   "surface": "earth",
-  "bevel_width": 0.045,
+  "bevel_width": 0.0,
   "materials": {
     "Rounded gravel": {
       "texture_pattern": "gravel",

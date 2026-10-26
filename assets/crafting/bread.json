@@ -1,0 +1,10 @@
+{
+  "id": "teramic::bread",
+  "name": "Bread",
+  "station": "workbench",
+  "output": { "item": { "crop": "bread" }, "count": 1 },
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [{ "item": { "crop": "wheat" }, "count": 3 }]
+  }
+}

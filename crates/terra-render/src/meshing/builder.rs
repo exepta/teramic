@@ -21,6 +21,7 @@ pub(crate) struct RenderOptions {
 
 #[derive(Default, Debug, PartialEq)]
 pub(crate) struct MeshBatch {
+    pub staged: Option<super::staging::StagedMesh>,
     pub shadow_only: bool,
     pub shadow_sources: Vec<usize>,
     pub material: usize,
@@ -275,7 +276,7 @@ pub(crate) fn compose_section_with_segments(
         }
         let block = base_block;
         if block.render_kind == BlockRenderKind::Cube
-            && matches!(face.material, 7..=9)
+            && matches!(face.material, 7..=9 | 132 | 133)
             && options.detail_level != DetailLevel::Far
             && templates.block_details.leaf_geometry_quality != terra_core::BlockDetailQuality::Low
         {
@@ -334,7 +335,7 @@ pub(crate) fn compose_section_with_segments(
         }
         if block.render_kind == BlockRenderKind::Cube
             && (options.detail_level != DetailLevel::Near
-                || matches!(face.material, 7..=9)
+                || matches!(face.material, 7..=9 | 132 | 133)
                     && templates.block_details.leaf_geometry_quality
                         == terra_core::BlockDetailQuality::Low)
         {
@@ -489,7 +490,7 @@ pub(crate) fn compose_section_with_segments(
                 )?;
             }
             if options.detail_level == DetailLevel::Near
-                && matches!(face.material, 6 | 10 | 36)
+                && matches!(face.material, 6 | 10 | 36 | 134)
                 && open_neighbors[cell_index(cell)] & (1 << 3) != 0
             {
                 let global = std::array::from_fn(|i| origin[i] + i64::from(cell[i]));
@@ -875,7 +876,7 @@ fn append_rectangle(
         .cross(Vec3::from_array(d) - Vec3::from_array(a));
     let start = u32::try_from(batch.positions.len()).map_err(|_| "Mesh index overflow")?;
     batch.positions.extend([a, b, c, d]);
-    if matches!(face.material, 7..=9) {
+    if matches!(face.material, 7..=9 | 132 | 133) {
         batch.foliage_owners.push(FoliageOwner {
             vertices: start as usize..batch.positions.len(),
             cell: face.minimum,

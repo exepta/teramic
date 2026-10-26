@@ -35,6 +35,58 @@ impl TreeForm {
 }
 
 impl Tree {
+    #[cfg(feature = "bevy")]
+    pub(crate) fn felling_shape(&self) -> Option<crate::tree_felling::Shape> {
+        use std::collections::HashSet;
+        let start = std::array::from_fn(|i| self.origin[i] + i64::from(self.bounds.min[i]));
+        let size = (0..3)
+            .map(|i| (self.bounds.max[i] - self.bounds.min[i]) as usize)
+            .max()?;
+        let global =
+            |point: [f32; 3]| std::array::from_fn(|i| self.origin[i] + point[i].floor() as i64);
+        let mut wood = HashSet::new();
+        for segment in &self.wood {
+            visit_voxels(segment.bounds, self.origin, start, size, |point, _| {
+                if segment.contains(point) {
+                    wood.insert(global(point));
+                }
+            });
+            if wood.len() > crate::tree_felling::MAX_WOOD {
+                return None;
+            }
+        }
+        let mut leaves = HashSet::new();
+        for crown in &self.crowns {
+            visit_voxels(crown.bounds, self.origin, start, size, |point, _| {
+                let cell = global(point);
+                if !wood.contains(&cell) && crown.contains(point) {
+                    leaves.insert(cell);
+                }
+            });
+            if leaves.len() > crate::tree_felling::MAX_LEAVES {
+                return None;
+            }
+        }
+        let mut wood: Vec<_> = wood.into_iter().collect();
+        wood.sort_unstable_by_key(|p| (std::cmp::Reverse(p[1]), p[2], p[0]));
+        let mut leaves: Vec<_> = leaves.into_iter().collect();
+        leaves.sort_unstable_by_key(|p| {
+            (
+                super::mix(
+                    p[0] as u64 ^ (p[1] as u64).rotate_left(21) ^ (p[2] as u64).rotate_left(42),
+                ),
+                *p,
+            )
+        });
+        Some(crate::tree_felling::Shape {
+            origin: self.origin,
+            wood_material: self.wood_material as u16,
+            leaves_material: self.species.leaves() as u16,
+            wood,
+            leaves,
+        })
+    }
+
     #[cfg(test)]
     pub fn new(origin: [i64; 3], seed: u64, roots: [f32; 4]) -> Self {
         Self::with_species(origin, seed, roots, TreeSpecies::from_seed(seed))
@@ -52,6 +104,7 @@ impl Tree {
             _ => {}
         }
         let form = match (seed >> 24) % 3 {
+            _ if matches!(species, TreeSpecies::Cherry(_)) => TreeForm::Spreading,
             0 => TreeForm::Spreading,
             1 => TreeForm::Upright,
             _ => TreeForm::Tiered,

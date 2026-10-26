@@ -30,6 +30,7 @@ pub struct PropGrowthStatus {
     pub active_until: f32,
     pub shader_time: f32,
     pub(super) active: std::collections::HashMap<terra_world::props::PropId, super::growth::Pose>,
+    pub(super) crop_cleanup: std::collections::HashMap<terra_voxel::SectionPos, f32>,
 }
 
 impl PropGrowthStatus {
@@ -58,6 +59,15 @@ impl Default for PropExtension {
 }
 
 impl MaterialExtension for PropExtension {
+    fn fragment_shader() -> ShaderRef {
+        "shaders/terra_prop_fragment.wgsl".into()
+    }
+    fn prepass_fragment_shader() -> ShaderRef {
+        "shaders/terra_prop_fragment.wgsl".into()
+    }
+    fn deferred_fragment_shader() -> ShaderRef {
+        "shaders/terra_prop_fragment.wgsl".into()
+    }
     fn vertex_shader() -> ShaderRef {
         "shaders/terra_props.wgsl".into()
     }

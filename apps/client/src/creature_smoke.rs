@@ -39,7 +39,14 @@ pub(crate) fn install(app: &mut App) {
                 .before(terra_player::PlayerSet::Targeting),
         );
 }
-fn setup(mut creatures: ResMut<ReplicatedCreatures>) {
+fn setup(
+    mut creatures: ResMut<ReplicatedCreatures>,
+    mut journal: ResMut<terra_world::edits::EditJournal>,
+) {
+    if std::env::var_os("TERRA_SMOKE_VILLAGERS").is_some() {
+        setup_villagers(&mut creatures, &mut journal);
+        return;
+    }
     if std::env::var_os("TERRA_HORSE_INSPECT").is_some() {
         for variant in 0..16 {
             let home = [i64::from(variant), 0];
@@ -71,6 +78,7 @@ fn setup(mut creatures: ResMut<ReplicatedCreatures>) {
                     previous: animal.clone(),
                     current: animal,
                     received: Instant::now(),
+                    playback: Default::default(),
                 },
             );
         }
@@ -138,6 +146,7 @@ fn setup(mut creatures: ResMut<ReplicatedCreatures>) {
                 previous: animal.clone(),
                 current: animal,
                 received: Instant::now(),
+                playback: Default::default(),
             },
         );
     }
@@ -157,6 +166,10 @@ fn setup(mut creatures: ResMut<ReplicatedCreatures>) {
     }
 }
 fn run(world: &mut World) {
+    if std::env::var_os("TERRA_SMOKE_VILLAGERS").is_some() {
+        villagers_run(world);
+        return;
+    }
     if std::env::var_os("TERRA_HORSE_INSPECT").is_some() {
         horse_run(world);
         return;
@@ -380,6 +393,193 @@ fn run(world: &mut World) {
                 } else {
                     state.failed = true;
                     error!("Creature screenshot is blank; refusing a visual-test pass");
+                }
+            },
+        );
+}
+
+fn setup_villagers(
+    creatures: &mut ReplicatedCreatures,
+    journal: &mut terra_world::edits::EditJournal,
+) {
+    use terra_world::edits::BlockObjectState;
+    for role in 0..villagers::ROLE_COUNT {
+        let home = [0, 0];
+        let id = villagers::id(home, u16::from(role)).unwrap();
+        let animal = Creature {
+            id,
+            kind: CreatureKind::Villager,
+            home,
+            position: [
+                4.5 + f64::from(role % 5) * 2.0,
+                32.0,
+                23.5 + f64::from(role / 5) * 3.0,
+            ],
+            velocity: [0.0; 3],
+            yaw: std::f32::consts::PI,
+            health: CreatureKind::Villager.health(),
+            behavior: CreatureBehavior::Rest,
+            timer: 1.0,
+            age: 0.0,
+            variant: role,
+            needs: CreatureNeeds::full(CreatureKind::Villager),
+        };
+        creatures.creatures.insert(
+            id,
+            CreatureTrack {
+                interval: 0.1,
+                previous: animal.clone(),
+                current: animal,
+                received: Instant::now(),
+                playback: Default::default(),
+            },
+        );
+        let foot = [
+            4 + i64::from(role % 5) * 2,
+            32,
+            14 + i64::from(role / 5) * 3,
+        ];
+        let head = [foot[0], foot[1], foot[2] + 1];
+        for (position, peer, secondary) in [(foot, head, false), (head, foot, true)] {
+            journal.record(position, 71).unwrap();
+            journal
+                .set_object_state(
+                    position,
+                    Some(BlockObjectState {
+                        facing: 0,
+                        peer: Some(peer),
+                        secondary,
+                        ..Default::default()
+                    }),
+                )
+                .unwrap();
+        }
+    }
+}
+
+fn villagers_run(world: &mut World) {
+    let stage = world.resource::<Inspection>().captured;
+    let stride_time = world.resource::<Time>().elapsed_secs_f64() * 1.15;
+    if stage >= 4 {
+        info!(
+            "Villager gallery passed: ten role models, distinct clothing/tools, idle, closeup, walking and actual bed-aligned sleep; rendering fixture, not an authoritative AI test"
+        );
+        world.write_message(AppExit::Success);
+        return;
+    }
+    let state = world.resource::<Inspection>();
+    if state.failed || state.start.elapsed() > Duration::from_secs(90) {
+        error!("Villager gallery failed or timed out");
+        world.write_message(AppExit::error());
+        return;
+    }
+    for track in world
+        .resource_mut::<ReplicatedCreatures>()
+        .creatures
+        .values_mut()
+    {
+        let role = track.current.variant;
+        track.current.behavior = match stage {
+            2 => CreatureBehavior::Wander,
+            3 => CreatureBehavior::Sleep,
+            _ => CreatureBehavior::Rest,
+        };
+        track.current.velocity = if stage == 2 {
+            [0.0, 0.0, (stride_time.cos() * 0.65 * 1.15) as f32]
+        } else {
+            [0.0; 3]
+        };
+        track.current.position = if stage == 3 {
+            [
+                4.5 + f64::from(role % 5) * 2.0,
+                32.79,
+                14.1 + f64::from(role / 5) * 3.0,
+            ]
+        } else {
+            [
+                4.5 + f64::from(role % 5) * 2.0,
+                32.0,
+                23.5 + f64::from(role / 5) * 3.0
+                    + if stage == 2 {
+                        stride_time.sin() * 0.65
+                    } else {
+                        0.0
+                    },
+            ]
+        };
+        track.current.yaw = if stage == 3 {
+            0.0
+        } else {
+            if stage == 2 && stride_time.cos() < 0.0 {
+                0.0
+            } else {
+                std::f32::consts::PI
+            }
+        };
+        track.previous = track.current.clone();
+    }
+    let eye = match stage {
+        1 => Transform::from_xyz(10.2, 34.0, 29.1).looking_at(Vec3::new(8.5, 33.0, 26.5), Vec3::Y),
+        3 => Transform::from_xyz(8.5, 36.9, 24.4).looking_at(Vec3::new(8.5, 32.7, 16.6), Vec3::Y),
+        _ => Transform::from_xyz(8.5, 36.2, 34.8).looking_at(Vec3::new(8.5, 33.0, 24.8), Vec3::Y),
+    };
+    for mut body in world
+        .query_filtered::<&mut Transform, With<terra_player::PlayerBody>>()
+        .iter_mut(world)
+    {
+        body.translation = eye.translation - Vec3::Y * terra_physics::character::PLAYER_EYE_OFFSET;
+    }
+    for mut camera in world
+        .query_filtered::<&mut Transform, With<terra_player::TerraCamera>>()
+        .iter_mut(world)
+    {
+        *camera = eye;
+    }
+    world.resource_mut::<terra_world::streaming::ChunkFocus>().0 = [8.5, 33.0, 21.0];
+    let ready = world.resource::<terra_render::RenderStatus>().ready
+        && world
+            .resource::<terra_world::streaming::WorldGeneration>()
+            .status
+            == terra_world::streaming::GenerationStatus::Ready;
+    let count = world
+        .query::<&terra_render::creatures::CreatureAvatar>()
+        .iter(world)
+        .count();
+    let state = world.resource::<Inspection>();
+    if !ready
+        || count != usize::from(villagers::ROLE_COUNT)
+        || state.start.elapsed() < Duration::from_secs(8)
+        || state.requested != state.captured
+        || state.last.elapsed() < Duration::from_secs(2)
+    {
+        return;
+    }
+    let folder = PathBuf::from(
+        std::env::var("TERRA_CAPTURE_DIR").unwrap_or_else(|_| "/tmp/terra-villagers".into()),
+    );
+    if let Err(error) = std::fs::create_dir_all(&folder) {
+        error!(%error, "Cannot create villager capture directory");
+        world.write_message(AppExit::error());
+        return;
+    }
+    world.resource_mut::<Inspection>().requested += 1;
+    world
+        .spawn(Screenshot::primary_window())
+        .observe(save_to_disk(folder.join(format!("villagers-{stage}.png"))))
+        .observe(
+            |event: On<ScreenshotCaptured>, mut state: ResMut<Inspection>| {
+                let nonblank = event.image.data.as_ref().is_some_and(|data| {
+                    data.chunks_exact(4)
+                        .step_by(16)
+                        .filter(|pixel| pixel[..3].iter().any(|value| *value > 20))
+                        .count()
+                        > 1000
+                });
+                if nonblank {
+                    state.captured += 1;
+                    state.last = Instant::now();
+                } else {
+                    state.failed = true;
                 }
             },
         );

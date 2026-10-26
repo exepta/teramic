@@ -1,0 +1,66 @@
+{
+  "schema_version": 1,
+  "id": 139,
+  "name": "Cherry Door",
+  "description": "A framed cherry plank door with iron hinges. Opens smoothly and ventilates furnace smoke.",
+  "creative_category": "decoration",
+  "render_kind": "custom_mesh",
+  "struct_block": true,
+  "model_layout": "scene",
+  "model": "models/cherry_door.gltf",
+  "hardness": 2,
+  "resistance": 4,
+  "required_tool": "axe",
+  "mining_level": 0,
+  "collision_boxes": [
+    {
+      "minimum": [
+        0.04,
+        0,
+        0.34
+      ],
+      "maximum": [
+        0.15,
+        2,
+        0.66
+      ]
+    },
+    {
+      "minimum": [
+        0.87,
+        0,
+        0.34
+      ],
+      "maximum": [
+        0.96,
+        2,
+        0.66
+      ]
+    },
+    {
+      "minimum": [
+        0.15,
+        1.94,
+        0.34
+      ],
+      "maximum": [
+        0.87,
+        2,
+        0.66
+      ]
+    },
+    {
+      "minimum": [
+        0.15,
+        0.015,
+        0.485
+      ],
+      "maximum": [
+        0.87,
+        1.94,
+        0.515
+      ],
+      "hinged": true
+    }
+  ]
+}

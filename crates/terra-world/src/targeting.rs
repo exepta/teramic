@@ -1,6 +1,6 @@
 //! One logical targeting implementation for clients and authoritative validation.
 use crate::{
-    props::{PropHit, PropPose, raycast_props_with_pose},
+    props::{PropHit, PropPose, raycast_props_with_lifecycle},
     streaming::ChunkStore,
 };
 use terra_voxel::{SectionPos, blocks::BlockHit};
@@ -31,6 +31,16 @@ pub fn item_placement_with_state(
     hit: BlockHit,
     material: u16,
 ) -> Option<([i64; 3], u16)> {
+    if material == terra_core::crusher::CRANK_MATERIAL {
+        let anchor = journal.crusher_primary(hit.position)?;
+        let state = journal.object_state(anchor)?;
+        if hit.normal.map(i64::from) != state.right() {
+            return None;
+        }
+        let position = journal.crusher_crank_position(anchor)?;
+        let expected = chunks.block_at(position)?;
+        return matches!(expected, 0 | 27).then_some((position, expected));
+    }
     if terra_core::construction::is_slab(material)
         && chunks
             .block_at(hit.position)
@@ -48,6 +58,40 @@ pub fn item_placement_with_state(
     item_placement(chunks, hit, material)
 }
 
+/// A crank connects to the gear face, never another face of the same machine cell.
+pub fn hand_crank_mount_hit(
+    journal: &crate::edits::EditJournal,
+    hit: BlockHit,
+    ray: ([f64; 3], [f64; 3]),
+) -> bool {
+    let Some(anchor) = journal.crusher_primary(hit.position) else {
+        return false;
+    };
+    let Some(state) = journal.object_state(anchor) else {
+        return false;
+    };
+    let right = state.right();
+    if hit.normal.map(i64::from) != right {
+        return false;
+    }
+    let forward = [[0, 0, 1], [1, 0, 0], [0, 0, -1], [-1, 0, 0]][usize::from(state.facing)];
+    let point: [f64; 3] = std::array::from_fn(|axis| {
+        ray.0[axis] + ray.1[axis] * hit.distance
+            - anchor[axis] as f64
+            - if axis == 1 { 0.0 } else { 0.5 }
+    });
+    let x = (0..3)
+        .map(|axis| point[axis] * right[axis] as f64)
+        .sum::<f64>()
+        + 0.5;
+    let z = (0..3)
+        .map(|axis| point[axis] * forward[axis] as f64)
+        .sum::<f64>()
+        + 0.5;
+    (x - 1.997).abs() <= 0.07
+        && (point[1] - 0.455).powi(2) + (z - 0.515).powi(2) <= 0.235f64.powi(2)
+}
+
 /// The same proposed half-cell volume drives local and authoritative body checks.
 pub fn placement_bounds(
     chunks: &ChunkStore,
@@ -57,6 +101,29 @@ pub fn placement_bounds(
     ray: ([f64; 3], [f64; 3]),
 ) -> Option<terra_core::block_shapes::ShapeBox> {
     let (position, expected) = item_placement_with_state(chunks, journal, hit, material)?;
+    if material == terra_core::crusher::CRANK_MATERIAL {
+        let facing = placement_facing(chunks, journal, hit, material, ray);
+        let mut union: Option<terra_core::block_shapes::ShapeBox> = None;
+        crate::interaction_shapes::visit_placement_boxes(
+            chunks,
+            journal,
+            &terra_core::block_properties::BlockPropertiesCatalog::default(),
+            position,
+            material,
+            facing,
+            |bounds| {
+                if let Some(union) = union.as_mut() {
+                    for axis in 0..3 {
+                        union.minimum[axis] = union.minimum[axis].min(bounds.minimum[axis]);
+                        union.maximum[axis] = union.maximum[axis].max(bounds.maximum[axis]);
+                    }
+                } else {
+                    union = Some(bounds);
+                }
+            },
+        );
+        return union;
+    }
     let facing = if terra_core::construction::is_slab(expected) {
         terra_core::construction::DOUBLE_SLAB
     } else {
@@ -82,6 +149,12 @@ pub fn placement_facing(
     material: u16,
     ray: ([f64; 3], [f64; 3]),
 ) -> u8 {
+    if material == terra_core::crusher::CRANK_MATERIAL {
+        return journal
+            .crusher_primary(hit.position)
+            .and_then(|anchor| journal.object_state(anchor))
+            .map_or(0, |state| state.facing);
+    }
     let old = journal
         .object_state(hit.position)
         .unwrap_or_default()
@@ -227,12 +300,66 @@ fn pick_context(
         for y in lower[1]..=upper[1] {
             for x in lower[0]..=upper[0] {
                 if let Some(section) = chunks.loaded.get(&SectionPos::new(x, y, z))
-                    && let Some(hit) = raycast_props_with_pose(
+                    && let Some(hit) = raycast_props_with_lifecycle(
                         origin,
                         direction,
                         closest.map_or(reach, |hit| hit.distance),
-                        section.props.iter().filter(|p| !p.removed),
+                        // Crop leaves may overhang an adjacent empty field. Seed
+                        // placement targets soil; occupancy is validated separately.
+                        section.props.iter().filter(|p| {
+                            !p.removed
+                                && (!planting || p.kind.crop().is_none())
+                                && crate::props::placement::supported(p, |p| chunks.block_at(p))
+                                    == Some(true)
+                                && !crate::props::seasonal::snow_buried(p, chunks, journal)
+                        }),
                         pose,
+                        Some(&journal.flowers),
+                    )
+                    && closest.is_none_or(|old| {
+                        hit.distance < old.distance
+                            || (hit.distance == old.distance && hit.prop.id < old.prop.id)
+                    })
+                {
+                    closest = Some(hit);
+                }
+            }
+        }
+    }
+    // Large silk batches retain one persisted anchor owner. Their far capture
+    // surface remains selectable across two section boundaries without widening
+    // every grass/flower picking query or testing their strands twice.
+    let web_margin = [
+        crate::props::webs::MAX_SPAN + 1.0,
+        6.0,
+        crate::props::webs::MAX_SPAN + 1.0,
+    ];
+    let web_lower: [i64; 3] = std::array::from_fn(|i| {
+        ((origin[i].min(end[i]) - web_margin[i]).floor() as i64).div_euclid(16)
+    });
+    let web_upper: [i64; 3] = std::array::from_fn(|i| {
+        ((origin[i].max(end[i]) + web_margin[i]).floor() as i64).div_euclid(16)
+    });
+    for z in web_lower[2]..=web_upper[2] {
+        for y in web_lower[1]..=web_upper[1] {
+            for x in web_lower[0]..=web_upper[0] {
+                if (lower[0]..=upper[0]).contains(&x)
+                    && (lower[1]..=upper[1]).contains(&y)
+                    && (lower[2]..=upper[2]).contains(&z)
+                {
+                    continue;
+                }
+                if let Some(section) = chunks.loaded.get(&SectionPos::new(x, y, z))
+                    && let Some(hit) = raycast_props_with_lifecycle(
+                        origin,
+                        direction,
+                        closest.map_or(reach, |hit| hit.distance),
+                        section
+                            .props
+                            .iter()
+                            .filter(|p| !p.removed && crate::props::webs::is_construction(p)),
+                        pose,
+                        Some(&journal.flowers),
                     )
                     && closest.is_none_or(|old| {
                         hit.distance < old.distance
@@ -254,6 +381,190 @@ fn pick_context(
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn far_spanning_web_is_targetable_and_removable_across_two_owner_section_boundaries() {
+        use super::*;
+        use crate::{
+            edits::EditJournal,
+            props::{PropId, webs},
+            streaming::{LoadedSection, PropRemoveRequest, commit_prop_removal},
+        };
+        let prop = webs::spanning([-1, 11, 8], [1, 0, 0], 21, 10, PropId(4119)).unwrap();
+        let mut chunks = ChunkStore::default();
+        for x in -1..=2 {
+            let position = SectionPos::new(x, 0, 0);
+            chunks.loaded.insert(
+                position,
+                LoadedSection {
+                    data: terra_voxel::BlockSection::empty(position).unwrap(),
+                    mesh: None,
+                    mesh_epoch: 0,
+                    water_epoch: 0,
+                    water: None,
+                    props: if position == prop.section {
+                        vec![prop]
+                    } else {
+                        Vec::new()
+                    },
+                },
+            );
+        }
+        let mut journal = EditJournal::default();
+        assert!(journal.place_prop(prop).unwrap());
+        let point = webs::world_point(&prop, bevy_math::Vec3::new(9.32, -0.70, -0.20));
+        assert_eq!(
+            terra_voxel::global_to_section(point.map(|v| v.floor() as i64))
+                .0
+                .x
+                - prop.section.x,
+            2
+        );
+        let origin = [point[0], point[1], point[2] + 2.0];
+        let (_, hit) = pick_world_with_context(
+            &chunks,
+            &journal,
+            &Default::default(),
+            origin,
+            [0.0, 0.0, -1.0],
+            PropPose::Rest,
+        );
+        let Some(WorldTarget::Prop(hit)) = hit else {
+            panic!("far capture surface must be picked")
+        };
+        assert_eq!(hit.prop.id, prop.id);
+        assert_eq!(hit.prop.section, prop.section);
+        assert!(
+            commit_prop_removal(
+                &mut chunks,
+                &mut journal,
+                &PropRemoveRequest {
+                    id: hit.prop.id,
+                    section: hit.prop.section
+                }
+            )
+            .unwrap()
+        );
+        let (_, hit) = pick_world_with_context(
+            &chunks,
+            &journal,
+            &Default::default(),
+            origin,
+            [0.0, 0.0, -1.0],
+            PropPose::Rest,
+        );
+        assert!(hit.is_none());
+        let mut restored = Vec::new();
+        journal.apply_prop_removals(prop.section, &mut restored);
+        assert!(restored.iter().all(|p| p.removed));
+    }
+
+    #[test]
+    fn hand_crank_targets_the_same_gear_from_either_parent_half_and_rejects_other_faces() {
+        use super::*;
+        use crate::{
+            edits::{BlockObjectState, EditJournal},
+            streaming::LoadedSection,
+        };
+        use terra_voxel::BlockSection;
+        for facing in 0..4 {
+            let anchor = [-1, 4, -1];
+            let state = BlockObjectState {
+                facing,
+                ..Default::default()
+            };
+            let peer = std::array::from_fn(|axis| anchor[axis] + state.right()[axis]);
+            let mut chunks = ChunkStore::default();
+            let mut journal = EditJournal::default();
+            for x in -1..=1 {
+                for z in -1..=1 {
+                    let section = SectionPos::new(x, 0, z);
+                    chunks.loaded.insert(
+                        section,
+                        LoadedSection {
+                            data: BlockSection::empty(section).unwrap(),
+                            mesh: None,
+                            mesh_epoch: 0,
+                            water_epoch: 0,
+                            water: None,
+                            props: Vec::new(),
+                        },
+                    );
+                }
+            }
+            for (position, other, secondary) in [(anchor, peer, false), (peer, anchor, true)] {
+                let (owner, local) = terra_voxel::global_to_section(position);
+                chunks
+                    .loaded
+                    .get_mut(&owner)
+                    .unwrap()
+                    .data
+                    .set_block(local, 99)
+                    .unwrap();
+                journal.record(position, 99).unwrap();
+                journal
+                    .set_object_state(
+                        position,
+                        Some(BlockObjectState {
+                            peer: Some(other),
+                            secondary,
+                            ..state
+                        }),
+                    )
+                    .unwrap();
+            }
+            let mount = journal.crusher_crank_position(anchor).unwrap();
+            let right = state.right();
+            let forward = [[0, 0, 1], [1, 0, 0], [0, 0, -1], [-1, 0, 0]][usize::from(facing)];
+            let point: [f64; 3] = std::array::from_fn(|axis| {
+                anchor[axis] as f64
+                    + if axis == 1 {
+                        0.455
+                    } else {
+                        0.5 + right[axis] as f64 * 1.497 + forward[axis] as f64 * 0.015
+                    }
+            });
+            let ray = (
+                std::array::from_fn(|axis| point[axis] + right[axis] as f64 * 2.0),
+                right.map(|value| -(value as f64)),
+            );
+            for position in [anchor, peer] {
+                let hit = BlockHit {
+                    position,
+                    normal: right.map(|value| value as i32),
+                    distance: 2.0,
+                };
+                assert_eq!(
+                    item_placement_with_state(&chunks, &journal, hit, 100),
+                    Some((mount, 0))
+                );
+                assert!(hand_crank_mount_hit(&journal, hit, ray));
+                assert_eq!(placement_facing(&chunks, &journal, hit, 100, ray), facing);
+                let wrong = BlockHit {
+                    normal: [0, 1, 0],
+                    ..hit
+                };
+                assert!(item_placement_with_state(&chunks, &journal, wrong, 100).is_none());
+                assert!(!hand_crank_mount_hit(&journal, wrong, ray));
+                let mut high = ray;
+                high.0[1] += 0.5;
+                assert!(!hand_crank_mount_hit(&journal, hit, high));
+            }
+            journal.record(mount, 100).unwrap();
+            journal
+                .set_object_state(
+                    mount,
+                    Some(BlockObjectState {
+                        peer: Some(anchor),
+                        ..state
+                    }),
+                )
+                .unwrap();
+            let delta = journal.section_delta(terra_voxel::global_to_section(mount).0);
+            let mut copy = EditJournal::default();
+            copy.import_delta(delta).unwrap();
+            assert_eq!(copy.object_state(mount), journal.object_state(mount));
+        }
+    }
     #[test]
     fn vertical_slabs_use_half_cell_collision_and_continue_the_same_plane_above() {
         use super::*;
@@ -384,6 +695,13 @@ mod tests {
         assert!(
             matches!(selected,Some(WorldTarget::Block(hit)) if hit.position == [4,3,4] && hit.normal == [0,1,0])
         );
+        chunks
+            .loaded
+            .get_mut(&section)
+            .unwrap()
+            .data
+            .set_block([4, 4, 4], 0)
+            .unwrap();
         let prop = WorldProp {
             id: PropId(78),
             kind: PropKind::BeeNest,
@@ -428,6 +746,121 @@ mod tests {
     }
 
     #[test]
+    fn planting_ignores_overhanging_crop_leaves_but_mining_decorations_and_walls_keep_real_geometry()
+     {
+        let mut chunks = ChunkStore::default();
+        for x in -1..=0 {
+            for z in -1..=0 {
+                let section = SectionPos::new(x, 0, z);
+                chunks.loaded.insert(
+                    section,
+                    LoadedSection {
+                        data: BlockSection::empty(section).unwrap(),
+                        mesh: None,
+                        mesh_epoch: 0,
+                        water_epoch: 0,
+                        water: None,
+                        props: Vec::new(),
+                    },
+                );
+            }
+        }
+        for x in -2..=0 {
+            for z in -2..=0 {
+                let (owner, local) = terra_voxel::global_to_section([x, 4, z]);
+                chunks
+                    .loaded
+                    .get_mut(&owner)
+                    .unwrap()
+                    .data
+                    .set_block(local, terra_core::farming::FARMLAND)
+                    .unwrap();
+            }
+        }
+        let owner = SectionPos::new(-1, 0, -1);
+        let corn = WorldProp {
+            id: PropId(801),
+            kind: PropKind::Corn,
+            position: [-0.5, 5.0, -0.5],
+            rotation: 0.0,
+            scale: 1.0,
+            variant: 7,
+            section: owner,
+            removed: false,
+        };
+        chunks.loaded.get_mut(&owner).unwrap().props.push(corn);
+        let journal = crate::edits::EditJournal::default();
+        let properties = terra_core::block_properties::BlockPropertiesCatalog::default();
+        let direction = [0.0, -1.0, 0.0];
+        let origin = (0..=7).flat_map(|x| (0..=32).map(move |z| [0.01 + f64::from(x) * 0.04, 8.5, -1.3 + f64::from(z) * 0.05]))
+            .find(|origin| matches!(pick_world_with_context(&chunks, &journal, &properties, *origin, direction, PropPose::Rest).1,
+                Some(WorldTarget::Prop(hit)) if hit.prop.id == corn.id))
+            .expect("mature corn has real leaves overhanging the adjacent empty field");
+        let ground = [origin[0].floor() as i64, 4, origin[2].floor() as i64];
+        assert_ne!(ground, crate::props::placement::support(&corn));
+        let pick = |chunks: &ChunkStore| {
+            pick_world_for_planting(
+                chunks,
+                &journal,
+                &properties,
+                origin,
+                direction,
+                PropPose::Rest,
+            )
+            .1
+        };
+        assert!(
+            matches!(pick(&chunks), Some(WorldTarget::Block(hit)) if hit.position == ground && hit.normal == [0,1,0])
+        );
+
+        let obstruction = [ground[0], 7, ground[2]];
+        let (obstruction_owner, local) = terra_voxel::global_to_section(obstruction);
+        chunks
+            .loaded
+            .get_mut(&obstruction_owner)
+            .unwrap()
+            .data
+            .set_block(local, 3)
+            .unwrap();
+        assert!(
+            matches!(pick(&chunks), Some(WorldTarget::Block(hit)) if hit.position == obstruction)
+        );
+        chunks
+            .loaded
+            .get_mut(&obstruction_owner)
+            .unwrap()
+            .data
+            .set_block(local, 0)
+            .unwrap();
+        let nest = WorldProp {
+            id: PropId(802),
+            kind: PropKind::BeeNest,
+            position: [origin[0], 7.0, origin[2]],
+            rotation: 0.0,
+            scale: 1.0,
+            variant: 0,
+            section: obstruction_owner,
+            removed: false,
+        };
+        let (support_owner, support_local) =
+            terra_voxel::global_to_section(crate::props::placement::support(&nest));
+        chunks
+            .loaded
+            .get_mut(&support_owner)
+            .unwrap()
+            .data
+            .set_block(support_local, 3)
+            .unwrap();
+        chunks
+            .loaded
+            .get_mut(&obstruction_owner)
+            .unwrap()
+            .props
+            .push(nest);
+        assert!(matches!(pick(&chunks), Some(WorldTarget::Prop(hit)) if hit.prop.id == nest.id));
+    }
+
+    #[test]
     fn enlarged_placed_reed_is_pickable_above_its_support_section() {
         let mut chunks = ChunkStore::default();
         for y in -1..=1 {
@@ -445,6 +878,13 @@ mod tests {
             );
         }
         let owner = SectionPos::new(-1, -1, -1);
+        chunks
+            .loaded
+            .get_mut(&owner)
+            .unwrap()
+            .data
+            .set_block([15, 15, 15], 3)
+            .unwrap();
         let prop = WorldProp {
             id: PropId(7),
             kind: PropKind::SmallPlant,
@@ -463,6 +903,32 @@ mod tests {
                 .1
                 .is_none(),
             "air above the actual reed must not hit its old enclosing box"
+        );
+        chunks
+            .loaded
+            .get_mut(&owner)
+            .unwrap()
+            .data
+            .set_block([15, 15, 15], 0)
+            .unwrap();
+        assert!(
+            pick_world(&chunks, [-2.0, 2.1, -0.5], [1.0, 0.0, 0.0])
+                .1
+                .is_none()
+        );
+        assert!(
+            !chunks.loaded[&owner].props[0].removed,
+            "presentation validation does not tombstone saved vegetation"
+        );
+        chunks
+            .loaded
+            .get_mut(&owner)
+            .unwrap()
+            .data
+            .set_block([15, 15, 15], 3)
+            .unwrap();
+        assert!(
+            matches!(pick_world(&chunks, [-2.0, 2.1, -0.5], [1.0, 0.0, 0.0]).1, Some(WorldTarget::Prop(hit)) if hit.prop.id == prop.id)
         );
     }
 }

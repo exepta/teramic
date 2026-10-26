@@ -1,0 +1,25 @@
+2026-10-24T11:50:43.938002Z  INFO bevy_render::renderer: AdapterInfo { name: "AMD Radeon RX 6950 XT (RADV NAVI21)", vendor: 4098, device: 29605, device_type: DiscreteGpu, device_pci_bus_id: "0000:0c:00.0", driver: "radv", driver_info: "Mesa 26.2.4-arch3.1", backend: Vulkan, subgroup_min_size: 32, subgroup_max_size: 64, transient_saves_memory: false }
+2026-10-24T11:50:44.616269Z  INFO bevy_pbr::cluster: GPU clustering is supported on this device.
+2026-10-24T11:50:44.616303Z  INFO bevy_render::batching::gpu_preprocessing: GPU preprocessing is fully supported on this device.
+2026-10-24T11:50:44.617276Z  INFO bevy_winit::system: Creating new window TERAMIC (135v0)
+2026-10-24T11:50:45.751573Z  INFO terra_client::creature_audio::scene: Recorded animal/environment audio decoded clips=105
+2026-10-24T11:50:45.814553Z  INFO terra_render::scene::caves::lights::soft_core: Torch soft-core attenuation installed in existing clustered PBR path
+2026-10-24T11:50:45.815734Z  INFO terra_render::water::raymarch: Water SSR hardware depth filtering ready; multisampled views retain the original path
+2026-10-24T11:50:45.819745Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/wood.png mip_levels=10 rebound_materials=1
+2026-10-24T11:50:45.819757Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/oak-crafted-hd.png mip_levels=11 rebound_materials=0
+2026-10-24T11:50:45.819761Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/forged-iron-warm.png mip_levels=11 rebound_materials=0
+2026-10-24T11:50:45.819764Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/stone-strata-hd.png mip_levels=11 rebound_materials=1
+2026-10-24T11:50:45.824318Z  INFO terra_render::blocks::loading: Block template library ready blocks=101 materials=236
+2026-10-24T11:50:47.660639Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/tools/benchmarks/results/render-health-webs-2026-10-24/native/webs/web-7m-0.png
+2026-10-24T11:50:47.688747Z  INFO terra_client::web_constructions_smoke: Native spanning silk framebuffer pixels stage=0 silk=19727 nonblank=31257
+2026-10-24T11:50:48.639296Z  INFO terra_client::web_constructions_smoke: Native spanning silk framebuffer pixels stage=1 silk=18852 nonblank=47862
+2026-10-24T11:50:48.690962Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/tools/benchmarks/results/render-health-webs-2026-10-24/native/webs/web-7m-1.png
+2026-10-24T11:50:49.621723Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/tools/benchmarks/results/render-health-webs-2026-10-24/native/webs/web-12m-0.png
+2026-10-24T11:50:49.651072Z  INFO terra_client::web_constructions_smoke: Native spanning silk framebuffer pixels stage=2 silk=24191 nonblank=40537
+2026-10-24T11:50:50.605986Z  INFO terra_client::web_constructions_smoke: Native spanning silk framebuffer pixels stage=3 silk=23257 nonblank=37623
+2026-10-24T11:50:50.672428Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/tools/benchmarks/results/render-health-webs-2026-10-24/native/webs/web-12m-1.png
+2026-10-24T11:50:51.556030Z  INFO terra_client::web_constructions_smoke: Native spanning silk framebuffer pixels stage=4 silk=31919 nonblank=59148
+2026-10-24T11:50:51.611190Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/tools/benchmarks/results/render-health-webs-2026-10-24/native/webs/web-20m-0.png
+2026-10-24T11:50:52.508008Z  INFO terra_client::web_constructions_smoke: Native spanning silk framebuffer pixels stage=5 silk=29209 nonblank=61006
+2026-10-24T11:50:52.565267Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/tools/benchmarks/results/render-health-webs-2026-10-24/native/webs/web-20m-1.png
+2026-10-24T11:50:52.586855Z  INFO terra_client::web_constructions_smoke: Native spanning silk gallery passed: actual section-batched 7/12/20m WorldProps, isolated neutral views, real remote anchors and cross-section AABBs; visual fixture only

@@ -9,6 +9,7 @@ pub(super) struct GameplayPanels<'w> {
     inventory: Option<Res<'w, crate::inventory::InventoryState>>,
     chat: Option<Res<'w, crate::chat::ChatState>>,
     fullmap: Option<Res<'w, crate::minimap::fullmap::FullMapState>>,
+    pets: Option<Res<'w, crate::pets::PetMenuState>>,
 }
 
 pub(super) fn keyboard_navigation(
@@ -20,6 +21,13 @@ pub(super) fn keyboard_navigation(
     panels: GameplayPanels,
 ) {
     if draft.rebinding.is_some() || draft.consumed_escape {
+        return;
+    }
+    if panels
+        .pets
+        .as_ref()
+        .is_some_and(|p| p.blocks_input() || p.consumed_escape)
+    {
         return;
     }
     if panels
@@ -93,6 +101,9 @@ pub(super) fn actions(world: &mut World) {
             .get_resource::<crate::chat::ChatState>()
             .is_some_and(|chat| chat.blocks_input())
         && !world
+            .get_resource::<crate::pets::PetMenuState>()
+            .is_some_and(|p| p.blocks_input())
+        && !world
             .get_resource::<terra_network::client::ClientSession>()
             .is_some_and(|session| session.teleporting || session.dead());
     if world.resource::<PlayerInputBlock>().0 == playing {
@@ -112,6 +123,7 @@ fn command_action(world: &mut World, command: &str) -> Result<(), String> {
                 | "display-keep"
                 | "display-revert"
                 | "minimap-reset"
+                | "mob-health-reset"
         )
     {
         return Ok(());
@@ -145,6 +157,17 @@ fn command_action(world: &mut World, command: &str) -> Result<(), String> {
                 .resource_mut::<options::OptionsDraft>()
                 .gameplay
                 .minimap = terra_core::MinimapConfig::default();
+        }
+        "mob-health-settings" if world.resource::<MenuState>().page == MenuPage::Options => {
+            world.resource_mut::<MenuState>().dialog = MenuDialog::MobHealth;
+        }
+        "mob-health-reset" if modal == MenuDialog::MobHealth => {
+            let defaults = terra_core::GameplayConfig::default();
+            let mut draft = world.resource_mut::<options::OptionsDraft>();
+            draft.gameplay.mob_health_bars = defaults.mob_health_bars;
+            draft.gameplay.mob_health_friendly_color = defaults.mob_health_friendly_color;
+            draft.gameplay.mob_health_hostile_color = defaults.mob_health_hostile_color;
+            draft.gameplay.mob_health_font_color = defaults.mob_health_font_color;
         }
         "surface-wet" | "surface-snow" | "surface-fire" | "surface-clear" => {
             if !world.resource::<MenuState>().session_active

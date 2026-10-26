@@ -4,14 +4,48 @@ mod picking;
 pub mod placement;
 #[cfg(test)]
 mod placement_tests;
+pub mod seasonal;
 pub mod visual;
+pub mod webs;
 #[derive(Debug, Clone, Copy)]
 pub enum PropPose {
     Rest,
     Wind(f32),
-    WeatherWind { time: f32, frame: [f32; 4] },
+    WeatherWind {
+        time: f32,
+        frame: [f32; 4],
+    },
     Swept,
-    WeatherSwept { frame: [f32; 4] },
+    WeatherSwept {
+        frame: [f32; 4],
+    },
+    Seasonal {
+        time: Option<f32>,
+        frame: [f32; 4],
+        swept: bool,
+        season: terra_core::SeasonSample,
+    },
+}
+
+impl PropPose {
+    pub fn with_season(self, season: terra_core::SeasonSample) -> Self {
+        let (time, frame, swept) = match self {
+            Self::Rest => (None, [0.86, 0.51, 1.0, 1.0], false),
+            Self::Wind(time) => (Some(time), [0.86, 0.51, 1.0, 1.0], false),
+            Self::WeatherWind { time, frame } => (Some(time), frame, false),
+            Self::Swept => (None, [0.86, 0.51, 1.0, 1.0], true),
+            Self::WeatherSwept { frame } => (None, frame, true),
+            Self::Seasonal {
+                time, frame, swept, ..
+            } => (time, frame, swept),
+        };
+        Self::Seasonal {
+            time,
+            frame,
+            swept,
+            season,
+        }
+    }
 }
 
 pub const WIND_AMPLITUDE: f32 = 0.026;
@@ -67,6 +101,9 @@ pub fn wind_parameters(kind: PropKind, variant: u8, height: f32, scale: f32) -> 
         PropKind::Bush => (0.75, 0.65),
         PropKind::Flower => (0.60, 0.55),
         PropKind::Fern => (0.45, 0.7),
+        PropKind::Wheat => (1.3, 0.5),
+        PropKind::Corn => (2.0, 0.35),
+        PropKind::Lettuce => (0.5, 0.15),
         PropKind::SmallPlant if variant < 128 => (0.9, 0.8),
         PropKind::Seagrass => (3.35, -7.5),
         PropKind::SeaAnemone => (0.50, -0.9),
@@ -99,10 +136,15 @@ pub enum PropKind {
     PlateCoral,
     SeaAnemone,
     SmallStones,
+    Wheat,
+    Corn,
+    Lettuce,
+    Scarecrow,
+    SpiderWeb,
 }
 
 impl PropKind {
-    pub const ALL: [Self; 14] = [
+    pub const ALL: [Self; 19] = [
         Self::Grass,
         Self::Flower,
         Self::Bush,
@@ -117,7 +159,21 @@ impl PropKind {
         Self::PlateCoral,
         Self::SeaAnemone,
         Self::SmallStones,
+        Self::Wheat,
+        Self::Corn,
+        Self::Lettuce,
+        Self::Scarecrow,
+        Self::SpiderWeb,
     ];
+    pub fn crop(self) -> Option<terra_core::farming::CropKind> {
+        use terra_core::farming::CropKind;
+        match self {
+            Self::Wheat => Some(CropKind::Wheat),
+            Self::Corn => Some(CropKind::Corn),
+            Self::Lettuce => Some(CropKind::Lettuce),
+            _ => None,
+        }
+    }
     pub fn aquatic(self) -> bool {
         matches!(
             self,
@@ -176,7 +232,9 @@ impl WorldProp {
     }
 
     pub fn template_variant(&self) -> u8 {
-        if self.kind.aquatic() {
+        if self.kind == PropKind::SpiderWeb {
+            self.variant
+        } else if self.kind.aquatic() {
             self.variant % 8
         } else if self.growing_grass() {
             0
@@ -203,7 +261,14 @@ impl WorldProp {
     pub fn visual_scale(&self) -> f32 {
         let scale = self.scale * 1.3;
         match self.kind {
-            kind if kind == PropKind::BeeNest || kind.aquatic() => self.scale,
+            kind if matches!(
+                kind,
+                PropKind::BeeNest | PropKind::Scarecrow | PropKind::SpiderWeb
+            ) || kind.aquatic()
+                || kind.crop().is_some() =>
+            {
+                self.scale
+            }
             PropKind::Flower => scale.clamp(0.65, 0.95),
             PropKind::Mushroom => scale.clamp(0.35, 0.55),
             _ => scale,
@@ -219,6 +284,14 @@ impl WorldProp {
             && (0.1..=2.0).contains(&self.scale)
             && self.rotation.is_finite()
             && self.rotation.abs() <= std::f32::consts::TAU
+            && (self.kind.crop().is_none() || self.variant <= 7)
+            && (self.kind != PropKind::Scarecrow || self.variant <= 3)
+            && (self.kind != PropKind::SpiderWeb || usize::from(self.variant) < webs::VARIANTS)
+            && (!webs::is_construction(self)
+                || ((0.6975..=2.0).contains(&self.scale) && {
+                    let turn = self.rotation / std::f32::consts::FRAC_PI_2;
+                    (turn - turn.round()).abs() < 0.001
+                }))
             && terra_voxel::global_to_section(support).0 == self.section
     }
     /// Conservative bounds shared with procedural visual templates.
@@ -280,6 +353,17 @@ pub fn raycast_props_with_pose<'a>(
     props: impl IntoIterator<Item = &'a WorldProp>,
     pose: PropPose,
 ) -> Option<PropHit> {
+    raycast_props_with_lifecycle(origin, direction, reach, props, pose, None)
+}
+
+pub(crate) fn raycast_props_with_lifecycle<'a>(
+    origin: [f64; 3],
+    direction: [f64; 3],
+    reach: f64,
+    props: impl IntoIterator<Item = &'a WorldProp>,
+    pose: PropPose,
+    flowers: Option<&seasonal::FlowerLifecycle>,
+) -> Option<PropHit> {
     if origin.iter().chain(&direction).any(|v| !v.is_finite())
         || !reach.is_finite()
         || !(0.0..=128.0).contains(&reach)
@@ -292,21 +376,36 @@ pub fn raycast_props_with_pose<'a>(
     }
     let direction = direction.map(|v| v / length);
     let mut closest: Option<PropHit> = None;
+    let season = match pose {
+        PropPose::Seasonal { season, .. } => season,
+        _ => terra_core::WorldClock::default().season(terra_core::SeasonConfig::default()),
+    };
     for prop in props {
-        if prop.removed || prop.growing_grass() {
+        let coverage = flowers.map_or_else(
+            || match pose {
+                PropPose::Seasonal { season, .. } => seasonal::flower_coverage(prop, season),
+                _ => 1.0,
+            },
+            |flowers| flowers.coverage(prop, season),
+        );
+        if prop.removed || prop.growing_grass() || coverage <= 0.0 {
             continue;
         }
-        let [mut minimum, mut maximum] = prop.bounds();
+        let [mut minimum, mut maximum] = prop.bounds_at_scale(prop.visual_scale() * coverage);
         if !matches!(pose, PropPose::Rest) {
             let strength = match pose {
-                PropPose::WeatherWind { frame, .. } | PropPose::WeatherSwept { frame } => {
-                    frame[2].clamp(0.0, MAX_WEATHER_WIND)
-                }
+                PropPose::WeatherWind { frame, .. }
+                | PropPose::WeatherSwept { frame }
+                | PropPose::Seasonal { frame, .. } => frame[2].clamp(0.0, MAX_WEATHER_WIND),
                 PropPose::Wind(_) | PropPose::Swept => 1.0,
                 _ => MAX_WEATHER_WIND,
             };
-            let [_, flexibility] =
-                wind_parameters(prop.kind, prop.variant, 10.0, prop.visual_scale());
+            let [_, flexibility] = wind_parameters(
+                prop.kind,
+                prop.variant,
+                10.0,
+                prop.visual_scale() * coverage,
+            );
             let gain = if flexibility < 0.0 { 1.0 } else { strength };
             let margin = f64::from((WIND_AMPLITUDE + WIND_FLUTTER) * flexibility.abs() * gain);
             for axis in [0, 2] {
@@ -330,7 +429,13 @@ pub fn raycast_props_with_pose<'a>(
             far = far.min(first.max(second));
         }
         let precise = (near <= far)
-            .then(|| picking::hit(prop, origin, direction, far, pose))
+            .then(|| {
+                if coverage == 1.0 {
+                    picking::hit(prop, origin, direction, far, pose)
+                } else {
+                    picking::hit_scaled(prop, origin, direction, far, pose, coverage)
+                }
+            })
             .flatten();
         if let Some(distance) = precise
             && closest.is_none_or(|hit| {

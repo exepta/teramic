@@ -1,0 +1,65 @@
+{
+  "id": "teramic::gold_pants",
+  "name": "Gold Pants",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "armor": {
+        "material": "gold",
+        "piece": "pants"
+      }
+    },
+    "count": 1
+  },
+  "pattern": {
+    "kind": "shaped",
+    "width": 3,
+    "height": 3,
+    "cells": [
+      {
+        "item": {
+          "mineral": "gold_ingot"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "mineral": "gold_ingot"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "mineral": "gold_ingot"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "mineral": "gold_ingot"
+        },
+        "count": 1
+      },
+      null,
+      {
+        "item": {
+          "mineral": "gold_ingot"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "mineral": "gold_ingot"
+        },
+        "count": 1
+      },
+      null,
+      {
+        "item": {
+          "mineral": "gold_ingot"
+        },
+        "count": 1
+      }
+    ]
+  }
+}

@@ -6,7 +6,7 @@
   "name": "Meadow Grass",
   "render_kind": "cube",
   "surface": "turf",
-  "bevel_width": 0.065,
+  "bevel_width": 0.0,
   "materials": {
     "Painted meadow turf": {
       "texture_pattern": "turf",

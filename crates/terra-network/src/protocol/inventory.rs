@@ -33,6 +33,13 @@ pub enum InventoryAction {
         slot: u8,
         secondary: bool,
     },
+    EquipmentClick {
+        slot: u8,
+        secondary: bool,
+    },
+    EquipmentQuickMove {
+        slot: u8,
+    },
     Drag {
         slots: [Option<u8>; 27],
         secondary: bool,
@@ -122,6 +129,11 @@ pub enum InventoryAction {
     CreativeTrash {
         slot: Option<u8>,
     },
+    LoadCrushingRecipe {
+        recipe: u64,
+        station: [i64; 3],
+    },
+    CreativeClear,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -135,15 +147,24 @@ pub struct ContainerSnapshot {
     pub anchor: [i64; 3],
     pub workbench: Option<[i64; 3]>,
     pub furnace: Option<terra_core::furnace::FurnaceView>,
+    pub crusher: Option<terra_core::crusher::CrusherView>,
     pub halves: Vec<ContainerHalf>,
 }
 impl ContainerSnapshot {
     pub fn valid(&self) -> bool {
         (1..=2).contains(&self.halves.len())
-            && self
-                .furnace
-                .as_ref()
-                .is_none_or(|f| f.valid() && self.halves.len() == 1 && self.workbench.is_none())
+            && self.furnace.as_ref().is_none_or(|f| {
+                f.valid()
+                    && self.halves.len() == 1
+                    && self.workbench.is_none()
+                    && self.crusher.is_none()
+            })
+            && self.crusher.as_ref().is_none_or(|c| {
+                c.valid()
+                    && self.halves.len() == 1
+                    && self.workbench.is_none()
+                    && self.furnace.is_none()
+            })
             && self
                 .workbench
                 .is_none_or(|position| position.iter().all(|p| p.unsigned_abs() <= 990_000))
@@ -152,6 +173,8 @@ impl ContainerSnapshot {
                 half.position.iter().all(|p| p.unsigned_abs() <= 990_000)
                     && if self.furnace.is_some() {
                         terra_core::furnace::valid_inventory(&half.inventory)
+                    } else if self.crusher.is_some() {
+                        terra_core::crusher::valid_inventory(&half.inventory)
                     } else {
                         terra_core::containers::valid_chest(&half.inventory)
                     }

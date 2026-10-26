@@ -78,6 +78,7 @@ pub(super) fn prepare(
                 previous: animal.clone(),
                 current: animal,
                 received: Instant::now(),
+                playback: Default::default(),
                 interval: 0.1,
             },
         );

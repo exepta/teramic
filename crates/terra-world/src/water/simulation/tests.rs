@@ -110,7 +110,11 @@ fn placed_fluid_water_source_flows_and_remains_removable_after_reload() {
         )
         .unwrap()
     );
-    assert!(reloaded.fluid(p).is_none());
+    assert!(
+        reloaded
+            .fluid(p)
+            .is_some_and(|c| c.amount == 0 && !c.source)
+    );
     assert!(reloaded.fluid_cells().all(|(_, c)| !c.source));
     let solid = [-4, 18, -4];
     commit_block_edit(
@@ -412,17 +416,29 @@ fn flowing_water_keeps_every_aquatic_prop_and_existing_reeds_but_removes_land_pl
     let original: Vec<_> = PropKind::ALL
         .into_iter()
         .enumerate()
-        .map(|(index, kind)| WorldProp {
-            id: PropId(index as u64 + 100),
-            kind,
-            position: [-7.5, 17.0, -7.5],
-            rotation: 0.0,
-            scale: 1.0,
-            variant: 0,
-            section: owner,
-            removed: false,
+        .map(|(index, kind)| {
+            let id = PropId(index as u64 + 100);
+            if kind == PropKind::SpiderWeb {
+                return crate::props::webs::attached([-8, 16, -8], [0, 1, 0], 5, id).unwrap();
+            }
+            WorldProp {
+                id,
+                kind,
+                position: [-7.5, 17.0, -7.5],
+                rotation: 0.0,
+                scale: 1.0,
+                variant: 0,
+                section: owner,
+                removed: false,
+            }
         })
         .collect();
+    assert!(original.iter().all(WorldProp::valid));
+    let web = original
+        .iter()
+        .find(|p| p.kind == PropKind::SpiderWeb)
+        .unwrap();
+    assert!(crate::props::webs::fits(web, |p| chunks.block_at(p)));
     chunks.loaded.get_mut(&owner).unwrap().props = original.clone();
     let mut journal = EditJournal::default();
     journal
@@ -438,7 +454,10 @@ fn flowing_water_keeps_every_aquatic_prop_and_existing_reeds_but_removes_land_pl
     let step = simulate_fluid_step(&terrain, &chunks, &mut journal, 1).unwrap();
     let land_count = original.iter().filter(|p| !p.water_tolerant()).count();
     assert_eq!(step.removed_props, land_count);
-    assert_eq!(land_count, 6);
+    assert!(
+        journal.prop_removed(owner, web.id),
+        "flow must remove the anchored floor web"
+    );
     for prop in &original {
         assert_eq!(
             journal.prop_removed(owner, prop.id),

@@ -31,11 +31,14 @@ struct Inspection {
     folder: PathBuf,
     failure: Option<String>,
     benchmark: bool,
+    shell: bool,
     connector: Option<connectors::View>,
 }
 impl Inspection {
     fn end(&self) -> usize {
-        if self.connector.is_some() {
+        if self.shell {
+            2
+        } else if self.connector.is_some() {
             1
         } else {
             KINDS.len() * 2
@@ -66,6 +69,7 @@ pub(crate) fn install(app: &mut App) {
             .unwrap_or_else(|| "target/cave-structures".into()),
         failure: None,
         benchmark: benchmark.is_some(),
+        shell: std::env::var_os("TERRA_CAVE_SHELL_INSPECT").is_some(),
         connector: None,
     })
     .insert_resource(terra_player::ControllerMode::Fly)
@@ -86,6 +90,33 @@ fn locate(world: &mut World) {
             .game_mode = terra_core::GameMode::Spectator;
     }
     let terrain = world.resource::<WorldTerrain>().0.clone();
+    if world.resource::<Inspection>().shell {
+        let room = (-16..0)
+            .flat_map(|z| (-16..0).map(move |x| (x, z)))
+            .filter_map(|(x, z)| {
+                terrain
+                    .cave_chamber_center(f64::from(x) * 192.0 + 96.0, f64::from(z) * 192.0 + 96.0)
+            })
+            .map(|p| terrain.cave_structure_at(p[0], p[2]))
+            .find(|room| {
+                room.active()
+                    && room.ceiling - room.floor > 48.0
+                    && room.kind != CaveEcology::Lush
+                    && room.ceiling < terrain.surface_height(room.center[0], room.center[2]) - 6.0
+            });
+        match room {
+            Some(room) => {
+                info!(seed=terrain.config().seed.0,revision=terrain.config().cave_structure_revision,center=?room.center,floor=room.floor,ceiling=room.ceiling,radius=room.radius,"Located tall natural cave shell fixture");
+                let mut state = world.resource_mut::<Inspection>();
+                state.rooms = vec![room];
+                state.stage = 0;
+            }
+            None => {
+                world.resource_mut::<Inspection>().failure =
+                    Some("No enclosed >48m natural chamber for shell fixture".into())
+            }
+        }
+    }
     if let Some(index) = std::env::var("TERRA_CAVE_CONNECTOR")
         .ok()
         .and_then(|v| v.parse::<usize>().ok())
@@ -100,33 +131,36 @@ fn locate(world: &mut World) {
             Err(error) => world.resource_mut::<Inspection>().failure = Some(error),
         }
     }
+    let shell = world.resource::<Inspection>().shell;
     let mut rooms = [None; 4];
-    for (x, z) in
-        std::iter::once((87, -94)).chain((-96..96).flat_map(|z| (-96..96).map(move |x| (x, z))))
-    {
-        let Some(center) =
-            terrain.cave_chamber_center(f64::from(x) * 192.0 + 96.0, f64::from(z) * 192.0 + 96.0)
-        else {
-            continue;
-        };
-        let room = terrain.cave_structure_at(center[0], center[2]);
-        if let Some(index) = KINDS.iter().position(|kind| *kind == room.kind)
-            && room.active()
-            && rooms[index].is_none()
+    if !shell {
+        for (x, z) in
+            std::iter::once((87, -94)).chain((-96..96).flat_map(|z| (-96..96).map(move |x| (x, z))))
         {
-            info!(kind=?room.kind,center=?room.center,radius=room.radius,"Located natural cave ecology");
-            rooms[index] = Some(room);
-        }
-        if rooms.iter().all(Option::is_some) {
-            break;
+            let Some(center) = terrain
+                .cave_chamber_center(f64::from(x) * 192.0 + 96.0, f64::from(z) * 192.0 + 96.0)
+            else {
+                continue;
+            };
+            let room = terrain.cave_structure_at(center[0], center[2]);
+            if let Some(index) = KINDS.iter().position(|kind| *kind == room.kind)
+                && room.active()
+                && rooms[index].is_none()
+            {
+                info!(kind=?room.kind,center=?room.center,radius=room.radius,"Located natural cave ecology");
+                rooms[index] = Some(room);
+            }
+            if rooms.iter().all(Option::is_some) {
+                break;
+            }
         }
     }
     let mut state = world.resource_mut::<Inspection>();
-    if rooms.iter().any(Option::is_none) {
+    if !shell && rooms.iter().any(Option::is_none) {
         state.failure = Some(format!(
-            "Missing cave rooms: {rooms:?}; requires cave_structure_revision=1, geology_revision=4"
+            "Missing cave rooms: {rooms:?}; requires cave structures enabled, geology_revision=4"
         ));
-    } else {
+    } else if !shell {
         state.rooms = rooms.into_iter().flatten().collect();
     }
     if let Err(error) = std::fs::create_dir_all(&state.folder) {
@@ -166,7 +200,7 @@ fn advance(world: &mut World, state: &mut Inspection) -> Result<(), String> {
     if let Some(error) = state.failure.take() {
         return Err(error);
     }
-    if state.started.elapsed() > Duration::from_secs(240) {
+    if state.started.elapsed() > Duration::from_secs(if state.shell { 110 } else { 240 }) {
         return Err("Cave structure timeout".into());
     }
     if state.requested && state.captured > state.stage {
@@ -202,6 +236,20 @@ fn advance(world: &mut World, state: &mut Inspection) -> Result<(), String> {
             + 2.0;
         eye.y = local.floor as f32 + 3.0;
     }
+    if state.shell {
+        eye = center + Vec3::new(-0.14, 0.0, 0.12) * room.radius as f32;
+        let local = terrain.cave_structure_at(f64::from(eye.x), f64::from(eye.z));
+        eye.y = local.floor as f32 + 5.0;
+        if let Some(water) = local.water {
+            eye.y = eye.y.max(water.level as f32 + 2.0);
+        }
+        target = center + Vec3::new(0.0, 0.0, -room.radius as f32 * 0.24);
+        target.y = if state.stage == 0 {
+            local.floor as f32 + 4.0
+        } else {
+            room.ceiling as f32 - 1.0
+        };
+    }
     if !state.benchmark
         && let Some(water) = local.water
     {
@@ -215,7 +263,7 @@ fn advance(world: &mut World, state: &mut Inspection) -> Result<(), String> {
     crate::reef_smoke::set_camera(
         world,
         Transform::from_translation(eye).looking_at(target, Vec3::Y),
-        center,
+        if state.shell { eye } else { center },
     );
     for (mut transform, lamp) in world
         .query::<(&mut Transform, &InspectionLamp)>()
@@ -224,10 +272,15 @@ fn advance(world: &mut World, state: &mut Inspection) -> Result<(), String> {
         transform.translation = if state.connector.is_some() {
             eye + Vec3::Y * 0.3
         } else {
+            let lamp_y = if state.shell && state.stage == 1 {
+                room.ceiling as f32 - 8.0
+            } else {
+                center.y - 4.0
+            };
             center
                 + Vec3::new(
                     if lamp.0 == 0 { -12.0 } else { 12.0 },
-                    -4.0,
+                    lamp_y - center.y,
                     if lamp.0 == 0 { 12.0 } else { -12.0 },
                 )
         };
@@ -248,6 +301,41 @@ fn advance(world: &mut World, state: &mut Inspection) -> Result<(), String> {
         return Ok(());
     }
     let chunks = world.resource::<ChunkStore>();
+    if state.shell {
+        // Check real generated geometry, not only a darkened background: the
+        // entire centre-column floor/roof envelope must be loaded and meshed.
+        let column = [
+            (room.center[0].floor() as i64).div_euclid(16),
+            (room.center[2].floor() as i64).div_euclid(16),
+        ];
+        let low = ((room.floor - 1.0).floor() as i64).div_euclid(16).max(-8);
+        let high = ((room.ceiling + 1.0).ceil() as i64).div_euclid(16).min(22);
+        for y in low..=high {
+            let p = terra_voxel::SectionPos::new(column[0], y, column[1]);
+            if !chunks.loaded.contains_key(&p) {
+                return Err(format!("Missing actual tall cave shell section {p:?}"));
+            }
+        }
+        for y in [
+            room.floor.floor() as i64 - 2,
+            room.ceiling.ceil() as i64 + 2,
+        ] {
+            let p = [
+                room.center[0].floor() as i64,
+                y,
+                room.center[2].floor() as i64,
+            ];
+            if !chunks
+                .block_at(p)
+                .and_then(terra_voxel::MaterialId::from_raw)
+                .is_some_and(terra_voxel::MaterialId::is_solid)
+            {
+                return Err(format!(
+                    "Natural cave shell at {p:?} has no solid roof/floor"
+                ));
+            }
+        }
+    }
     let mut counts = [0; 7];
     for &material in chunks.loaded.values().flat_map(|s| s.data.blocks()) {
         if (50..=56).contains(&material) {
@@ -269,7 +357,13 @@ fn advance(world: &mut World, state: &mut Inspection) -> Result<(), String> {
         .spawn(Screenshot::primary_window())
         .observe(save_to_disk(state.folder.join(
             state.connector.as_ref().map_or_else(
-                || format!("cave-{:?}-{}.png", room.kind, state.stage % 2),
+                || {
+                    if state.shell {
+                        format!("cave-natural-shell-{}.png", state.stage)
+                    } else {
+                        format!("cave-{:?}-{}.png", room.kind, state.stage % 2)
+                    }
+                },
                 |view| format!("connector-{}.png", view.name),
             ),
         )))

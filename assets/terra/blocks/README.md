@@ -5,6 +5,23 @@ this directory and sorted by stable nonzero `u16` ID; 0 is air. Existing IDs 1
 through 26, world IDs and logical one-meter cells retain their meanings.
 The dedicated server does not load these rendering assets.
 
+## Textiles, Pots And Connected Windows
+
+White wool retains ID 103. Carpet IDs 106-118 and dyed wool IDs 119-130 use
+the thirteen existing dye colors; only white wool/carpet appear in the creative
+catalog. Recipes recolor the actual blocks. Carpets use a shared one-eighth-cell
+profile, wool the existing cube mesher. Flower pot 131 stores empty, flower or
+mushroom contents in the existing object-state byte and composes the canonical
+plant meshes into its section batch. No separate entity or material per plant.
+
+Window IDs 68-70 retain their saved states. Matching coplanar neighbors form
+bounded 1x2, 2x1 or 2x2 groups with shared frames and outer hinges. Rendering,
+picking, collision and atomic opening use the same group geometry. Different
+woods, wall directions or saved open states are not silently merged.
+
+The phase-124 report documents recipes, persistence, native galleries and limits:
+[Village fields and decoration](../../../tools/benchmarks/results/village-fields-decor-2026-10-25/README.md).
+
 Every shipped block's editable `description` lives in its own JSON definition.
 Inventory tooltips read that text directly; changing a description needs no Rust
 code changes. Collectible prop descriptions are in individual
@@ -334,6 +351,14 @@ and edit journal preserve arbitrary `u16` custom-model IDs, including the fixtur
 clients permission to place an unregistered ID.
 
 ## Plants And Tree Details
+
+Cherry Forest appends `cherry_leaves` (132) and `white_cherry_leaves` (133).
+Both use the existing shared, alpha-clipped foliage meshes and the neutral
+procedural `blossom_canopy` pattern. The material tint supplies pink/white;
+the green seasonal leaf-color filter is bypassed, but wind and seasonal
+shedding still apply. Sparse material IDs use dense bounded provenance slots,
+not raw-ID offsets. Existing IDs and logical block sizes are unchanged.
+These ordinary leaf blocks need no separate GLB or entity per leaf.
 
 The historical grass/sand `details` entries remain compatible authoring metadata.
 For Cube definitions, these names do not load model assets or emit decorations

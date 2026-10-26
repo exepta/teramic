@@ -1,0 +1,30 @@
+{
+  "id": "teramic::carpet",
+  "name": "White Carpet",
+  "station": "hand",
+  "pattern": {
+    "kind": "shaped",
+    "width": 2,
+    "height": 1,
+    "cells": [
+      {
+        "item": {
+          "block": 103
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "block": 103
+        },
+        "count": 1
+      }
+    ]
+  },
+  "output": {
+    "item": {
+      "block": 106
+    },
+    "count": 3
+  }
+}
