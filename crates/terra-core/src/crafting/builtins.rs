@@ -1,4 +1,10 @@
 [
+    include_str!("../../../../assets/crafting/ballast.json"),
+    include_str!("../../../../assets/crafting/ballast_stairs.json"),
+    include_str!("../../../../assets/crafting/ballast_slab.json"),
+    include_str!("../../../../assets/crafting/rail_switch_left.json"),
+    include_str!("../../../../assets/crafting/rail_switch_right.json"),
+    include_str!("../../../../assets/crafting/rail_switch_stand.json"),
     include_str!("../../../../assets/crafting/rail_straight.json"),
     include_str!("../../../../assets/crafting/apple_sapling.json"),
     include_str!("../../../../assets/crafting/apple_sapling_from_core.json"),

@@ -158,7 +158,7 @@ impl Surface {
                 | Mixer | FilteredFunnel | BeltMerger | FilteredTunnel | BeltDistributor | Campfire
                 | WoodPipe | Basin | HoldBlock | CastleTimberWall,
             ) => Self::Wood,
-            Some(Gravel) => Self::Gravel,
+            Some(Gravel | Ballast | BallastStairs | BallastSlab) => Self::Gravel,
             Some(Glass | GlassPipe | Ice | SaltCrystal | IceCrystal) => Self::Glass,
             Some(
                 Leaves | AutumnLeaves | SilverLeaves | CherryLeaves | WhiteCherryLeaves
@@ -206,6 +206,7 @@ impl Surface {
                 | FluidInfuser
                 | Lantern
                 | Chain
+                | RailSwitchStand
                 | Bergfried
                 | CastleStoneWall
                 | BergfriedWall
@@ -422,6 +423,8 @@ mod tests {
         expected.extend([Stone; 2]); // Iron lantern feet/frame and chain links use the hard metal family.
         expected.push(Leaves); // The apple canopy keeps the same leaf contact sounds.
         expected.extend([Wood; 10]); // Railway modules retain timber sleeper contact sounds.
+        expected.extend([Gravel; 3]); // Railway ballast and its shaped embankment blocks.
+        expected.push(Stone); // The separate switch stand has an iron base.
         assert_eq!(
             expected.len(),
             usize::from(terra_voxel::MaterialId::LAST) + 1

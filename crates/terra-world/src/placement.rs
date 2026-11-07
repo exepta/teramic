@@ -19,6 +19,7 @@ pub fn furniture(material: u16) -> bool {
         || terra_core::castle::is_castle(material)
         || terra_core::textiles::is_carpet(material)
         || terra_core::rails::is_rail(material)
+        || material == terra_core::rails::SWITCH_STAND
 }
 
 /// Creative copying retains authoritative appearance metadata, not only the raw block ID.
@@ -38,7 +39,11 @@ pub fn picked_item(
     let state = journal.object_state(position).unwrap_or_default();
     if terra_core::rails::is_rail(material) {
         return Some(terra_core::ItemKind::for_wood(
-            terra_core::rails::STRAIGHT,
+            if matches!(material, 202 | 203) {
+                material
+            } else {
+                terra_core::rails::STRAIGHT
+            },
             state.wood,
         ));
     }
@@ -272,7 +277,10 @@ pub fn layout(
         result.states.push((position, Some(state)));
         return Ok(result);
     }
-    if material == terra_core::flower_pot::MATERIAL || terra_core::textiles::is_carpet(material) {
+    if material == terra_core::flower_pot::MATERIAL
+        || material == terra_core::rails::SWITCH_STAND
+        || terra_core::textiles::is_carpet(material)
+    {
         let support = chunks
             .block_at([position[0], position[1] - 1, position[2]])
             .ok_or("Decorative support is not loaded")?;

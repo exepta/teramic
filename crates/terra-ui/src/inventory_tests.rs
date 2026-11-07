@@ -2,7 +2,7 @@ use super::*;
 use crate::CraftingView;
 
 #[test]
-fn creative_catalog_has_four_track_woods_without_legacy_shape_items() {
+fn creative_catalog_has_four_track_and_switch_woods_without_legacy_curve_items() {
     let mut palette = BlockPalette::default();
     palette.choices.extend((196..=205).map(|id| BlockChoice {
         id,
@@ -19,18 +19,20 @@ fn creative_catalog_has_four_track_woods_without_legacy_shape_items() {
         terra_core::WoodSpecies::Spruce,
         terra_core::WoodSpecies::Cherry,
     ] {
-        let item = ItemKind::for_wood(196, wood);
-        assert_eq!(
-            creative
-                .iter()
-                .filter(|&&candidate| candidate == item)
-                .count(),
-            1
-        );
-        assert!(catalog_item(item));
-        assert!(!view::item_view(item, 1, &palette).empty);
+        for material in [196, 202, 203] {
+            let item = ItemKind::for_wood(material, wood);
+            assert_eq!(
+                creative
+                    .iter()
+                    .filter(|&&candidate| candidate == item)
+                    .count(),
+                1
+            );
+            assert!(catalog_item(item));
+            assert!(!view::item_view(item, 1, &palette).empty);
+        }
     }
-    for material in 197..=205 {
+    for material in (197..=201).chain(204..=205) {
         assert!(!creative.contains(&ItemKind::Block(material)));
         assert!(!catalog_item(ItemKind::Block(material)));
     }

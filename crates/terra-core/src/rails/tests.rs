@@ -149,7 +149,23 @@ fn cached_geometry_cells_supports_and_three_wide_flat_tracks_share_one_shape() {
                     piece.encoded_facing(),
                     cell
                 ));
-                assert!(!piece.cell_boxes(cell).is_empty());
+                if piece.cell_boxes(cell).is_empty() {
+                    assert!(
+                        kind.is_switch(),
+                        "only historic switch reservations may be empty"
+                    );
+                    assert!(
+                        piece.local_geometry().iter().all(|beam| {
+                            let bounds = beam.bounds();
+                            (0..3).any(|axis| {
+                                bounds.maximum[axis].min(f64::from(cell[axis]) + 1.0)
+                                    - bounds.minimum[axis].max(f64::from(cell[axis]))
+                                    <= 1e-8
+                            })
+                        }),
+                        "empty ownership cannot discard an authored physical beam"
+                    );
+                }
                 assert!(piece.cell_boxes(cell).iter().all(|shape| shape.valid()));
                 assert!(Arc::ptr_eq(
                     &piece.cell_boxes(cell),
@@ -163,6 +179,7 @@ fn cached_geometry_cells_supports_and_three_wide_flat_tracks_share_one_shape() {
                 );
                 assert!(footprint.contains(&support.cell));
                 assert!(!footprint.contains(&support.support));
+                assert!(!piece.cell_boxes(support.cell).is_empty());
             }
             assert!(piece.local_geometry().iter().all(|beam| {
                 beam.corners()
@@ -317,4 +334,83 @@ fn buffer_has_a_terminal_route_but_cannot_connect_through_the_stop() {
         network.route(endpoint(buffer, 0), endpoint(after, 1), 8),
         Err(RailError::Disconnected)
     );
+}
+
+#[test]
+fn separate_switch_stands_preserve_every_historic_owned_cell_without_invisible_lever_solids() {
+    let left = [
+        [-4, 0, 3],
+        [-4, 0, 4],
+        [-4, 0, 5],
+        [-3, 0, 2],
+        [-3, 0, 3],
+        [-3, 0, 4],
+        [-3, 0, 5],
+        [-2, 0, 1],
+        [-2, 0, 2],
+        [-2, 0, 3],
+        [-2, 0, 4],
+        [-2, 0, 5],
+        [-1, 0, 0],
+        [-1, 0, 1],
+        [-1, 0, 2],
+        [-1, 0, 3],
+        [-1, 0, 4],
+        [-1, 0, 5],
+        [-1, 0, 6],
+        [-1, 0, 7],
+        [0, 0, 0],
+        [0, 0, 1],
+        [0, 0, 2],
+        [0, 0, 3],
+        [0, 0, 4],
+        [0, 0, 5],
+        [0, 0, 6],
+        [0, 0, 7],
+        [1, 0, 0],
+        [1, 0, 1],
+        [1, 0, 2],
+        [1, 0, 3],
+        [1, 0, 4],
+        [1, 0, 5],
+        [1, 0, 6],
+        [1, 0, 7],
+        [2, 0, 0],
+        [2, 0, 1],
+    ];
+    for material in [SWITCH_LEFT, SWITCH_RIGHT] {
+        for yaw in 0..4 {
+            let expected: BTreeSet<_> = left
+                .into_iter()
+                .map(|[mut x, y, z]| {
+                    if material == SWITCH_RIGHT {
+                        x = -x;
+                    }
+                    match yaw {
+                        0 => [x, y, z],
+                        1 => [z, y, -x],
+                        2 => [-x, y, -z],
+                        _ => [-z, y, x],
+                    }
+                })
+                .collect();
+            for branch in [0, 4] {
+                let switch = Piece::new([0; 3], material, yaw | branch).unwrap();
+                assert_eq!(
+                    switch.footprint().iter().copied().collect::<BTreeSet<_>>(),
+                    expected
+                );
+                assert!(switch.local_geometry().iter().all(|beam| {
+                    beam.material != PartMaterial::Red && beam.bounds().maximum[1] <= 0.3125 + 1e-8
+                }));
+                assert!(
+                    switch
+                        .supports()
+                        .iter()
+                        .all(|point| { !switch.cell_boxes(point.cell).is_empty() }),
+                    "empty legacy ownership slices must not require phantom floors"
+                );
+            }
+        }
+    }
 }

@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "id": 209,
+  "name": "Rail Switch Stand",
+  "description": "Place directly beside the throat of a left or right switch. Right-click to select its route.",
+  "creative_category": "building",
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/rail_switch_stand.gltf",
+  "struct_block": true,
+  "hardness": 0.8,
+  "resistance": 4,
+  "required_tool": "pickaxe",
+  "mining_level": 0,
+  "collision_boxes": [
+    {
+      "minimum": [
+        0.1,
+        0,
+        0.18
+      ],
+      "maximum": [
+        0.9,
+        0.12,
+        0.82
+      ]
+    },
+    {
+      "minimum": [
+        0.36,
+        0.12,
+        0.36
+      ],
+      "maximum": [
+        0.64,
+        0.44,
+        0.64
+      ]
+    },
+    {
+      "minimum": [
+        0.28,
+        0.38,
+        0.3
+      ],
+      "maximum": [
+        0.72,
+        0.5,
+        0.7
+      ]
+    },
+    {
+      "minimum": [
+        0.45,
+        0.5,
+        0.45
+      ],
+      "maximum": [
+        0.55,
+        0.82,
+        0.55
+      ]
+    },
+    {
+      "minimum": [
+        0.28,
+        0.82,
+        0.34
+      ],
+      "maximum": [
+        0.72,
+        0.96,
+        0.66
+      ]
+    }
+  ]
+}

@@ -1,0 +1,37 @@
+{
+  "id": "teramic::rail_switch_stand",
+  "name": "Rail Switch Stand",
+  "station": "hand",
+  "output": {
+    "item": {
+      "block": 209
+    },
+    "count": 1
+  },
+  "pattern": {
+    "kind": "shaped",
+    "width": 2,
+    "height": 2,
+    "cells": [
+      {
+        "item": {
+          "mineral": "iron_ingot"
+        },
+        "count": 1
+      },
+      null,
+      {
+        "item": {
+          "block": 3
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "mineral": "iron_ingot"
+        },
+        "count": 1
+      }
+    ]
+  }
+}

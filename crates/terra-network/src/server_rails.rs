@@ -16,6 +16,21 @@ struct Prepared {
     operation: Operation,
 }
 
+/// Historic shapes remain usable without turning separate switches into track stock.
+fn placement_source_allowed(action: EditAction, source: u16) -> bool {
+    let target = match action {
+        EditAction::Block { material, .. } => material,
+        EditAction::ConnectRail { .. } => terra_core::rails::STRAIGHT,
+        _ => return false,
+    };
+    match source {
+        196 => terra_core::rails::is_rail(target) && !matches!(target, 202 | 203),
+        197..=201 => target == source || target == terra_core::rails::STRAIGHT,
+        202..=205 => target == source,
+        _ => false,
+    }
+}
+
 pub(super) fn handles(action: EditAction) -> bool {
     match action {
         EditAction::Block {
@@ -24,7 +39,9 @@ pub(super) fn handles(action: EditAction) -> bool {
             terra_core::rails::is_rail(material)
                 || material == 0 && terra_core::rails::is_rail(expected)
         }
-        EditAction::ToggleObject { expected, .. } => terra_core::rails::is_rail(expected),
+        EditAction::ToggleObject { expected, .. } => {
+            terra_core::rails::is_rail(expected) || expected == terra_core::rails::SWITCH_STAND
+        }
         EditAction::ConnectRail { .. } => true,
         _ => false,
     }
@@ -70,11 +87,7 @@ fn prepare(
             expected,
             closing: false,
             ..
-        } if terra_core::rails::Kind::from_material(expected)
-            .is_some_and(terra_core::rails::Kind::is_switch) =>
-        {
-            (position, expected, Operation::Switch)
-        }
+        } if expected == terra_core::rails::SWITCH_STAND => (position, expected, Operation::Switch),
         _ => return Err(EditOutcome::Invalid),
     };
     if position.iter().any(|value| value.unsigned_abs() > 990_000)
@@ -83,6 +96,13 @@ fn prepare(
     {
         return Err(EditOutcome::Conflict);
     }
+    let placement_material = match command.action {
+        EditAction::Block {
+            material: material @ (202 | 203),
+            ..
+        } => material,
+        _ => terra_core::rails::STRAIGHT,
+    };
     let gameplay = world.journal.gameplay();
     let selected_item = if matches!(operation, Operation::Place) {
         if let Some(source) = command.source {
@@ -106,13 +126,20 @@ fn prepare(
             }
             stack.item
         } else if peer.game_mode(&world.config) == GameMode::Creative {
-            ItemKind::Block(terra_core::rails::STRAIGHT)
+            ItemKind::Block(placement_material)
         } else {
             return Err(EditOutcome::Invalid);
         }
     } else {
         ItemKind::Block(terra_core::rails::STRAIGHT)
     };
+    if matches!(operation, Operation::Place)
+        && !selected_item
+            .block_material()
+            .is_some_and(|material| placement_source_allowed(command.action, material))
+    {
+        return Err(EditOutcome::Invalid);
+    }
     let wood = selected_item.wood_species().unwrap_or_default();
     let body = world
         .bodies
@@ -236,7 +263,20 @@ fn prepare(
                 {
                     return Err(EditOutcome::Conflict);
                 }
-                rails::toggle_switch_plan(&world.chunks, &world.journal, position)
+                let switch = rails::stand::switch_at(&world.journal, position)
+                    .ok_or(EditOutcome::Invalid)?;
+                if !super::super::kingdoms::permission_allowed(
+                    peer.uuid,
+                    KingdomPermission::Inventories,
+                    position,
+                    world,
+                ) || rails::cells(switch)
+                    .iter()
+                    .any(|cell| world.chunks.block_at(*cell) != Some(switch.material))
+                {
+                    return Err(EditOutcome::Invalid);
+                }
+                rails::toggle_switch_plan(&world.chunks, &world.journal, switch.anchor)
                     .map_err(|_| EditOutcome::Conflict)?
             }
         }
@@ -372,7 +412,14 @@ fn prepare(
             drops.push((
                 position.map(|coordinate| coordinate as f64 + 0.5),
                 ItemStack {
-                    item: ItemKind::for_wood(terra_core::rails::STRAIGHT, state.wood),
+                    item: ItemKind::for_wood(
+                        if piece.kind().is_some_and(terra_core::rails::Kind::is_switch) {
+                            piece.material
+                        } else {
+                            terra_core::rails::STRAIGHT
+                        },
+                        state.wood,
+                    ),
                     count: rails::piece_cost(piece),
                 },
             ));

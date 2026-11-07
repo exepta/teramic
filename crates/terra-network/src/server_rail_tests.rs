@@ -64,7 +64,11 @@ fn rail_fixture(material: u16, anchor: [i64; 3]) -> (App, Peer, Piece, EditComma
     assert!(bag.creative_set(
         0,
         ItemStack {
-            item: ItemKind::Block(rails::STRAIGHT),
+            item: ItemKind::Block(if piece.kind().is_some_and(rails::Kind::is_switch) {
+                material
+            } else {
+                rails::STRAIGHT
+            }),
             count: terra_world::rails::piece_cost(piece) + 1
         }
     ));
@@ -126,7 +130,15 @@ fn snapshot(app: &App, piece: Piece) -> Snapshot {
 fn target_look(app: &App, peer: &Peer, cell: [i64; 3], material: u16) -> [f32; 2] {
     let journal = app.world().resource::<EditJournal>();
     let state = journal.object_state(cell).unwrap();
-    for bounds in terra_world::rails::cell_boxes(cell, material, state).iter() {
+    let boxes = if rails::is_rail(material) {
+        terra_world::rails::cell_boxes(cell, material, state).to_vec()
+    } else {
+        terra_core::block_shapes::builtin_boxes(material)
+            .iter()
+            .map(|shape| shape.rotated_y(state.facing))
+            .collect()
+    };
+    for bounds in &boxes {
         let target = std::array::from_fn(|axis| {
             cell[axis] as f64 + (bounds.minimum[axis] + bounds.maximum[axis]) * 0.5
         });
@@ -150,6 +162,82 @@ fn target_look(app: &App, peer: &Peer, cell: [i64; 3], material: u16) -> [f32; 2
     }
     panic!("rail slice must be genuinely visible: {cell:?}")
 }
+fn placed_stand(app: &mut App, peer: &Peer, piece: Piece) -> EditCommand {
+    let stand = terra_world::rails::stand::positions(piece)[1];
+    set_block(app, stand, 0);
+    set_block(app, [stand[0], stand[1] - 1, stand[2]], 3);
+    let eye = Vec3::new(
+        stand[0] as f32 + 0.5,
+        stand[1] as f32 + 2.0,
+        stand[2] as f32 + 2.5,
+    );
+    app.world_mut()
+        .get_mut::<Transform>(peer.body)
+        .unwrap()
+        .translation = eye - Vec3::Y * PLAYER_EYE_OFFSET;
+    let look = aim(
+        app,
+        peer,
+        [
+            stand[0] as f64 + 0.5,
+            stand[1] as f64,
+            stand[2] as f64 + 0.5,
+        ],
+    );
+    let command = {
+        let mut journal = app.world_mut().resource_mut::<EditJournal>();
+        let bag = journal
+            .gameplay_mut()
+            .inventories
+            .get_mut(&peer.uuid)
+            .unwrap();
+        assert!(bag.creative_set(
+            0,
+            ItemStack {
+                item: ItemKind::Block(rails::SWITCH_STAND),
+                count: 2
+            }
+        ));
+        let source = InventorySource {
+            slot: 0,
+            revision: bag.revision,
+        };
+        EditCommand {
+            request: 2,
+            revision: journal.revision(global_to_section(stand).0),
+            look,
+            source: Some(source),
+            action: EditAction::Block {
+                position: stand,
+                expected: 0,
+                material: rails::SWITCH_STAND,
+            },
+        }
+    };
+    assert_eq!(
+        run(app, peer, command, false),
+        EditOutcome::Applied,
+        "real stand placement"
+    );
+    let journal = app.world().resource::<EditJournal>();
+    assert_eq!(
+        terra_world::rails::stand::switch_at(journal, stand),
+        Some(piece)
+    );
+    EditCommand {
+        request: 3,
+        revision: journal.revision(global_to_section(stand).0),
+        look: target_look(app, peer, stand, rails::SWITCH_STAND),
+        source: None,
+        action: EditAction::ToggleObject {
+            position: stand,
+            expected: rails::SWITCH_STAND,
+            facing: journal.object_state(stand).unwrap().facing,
+            closing: false,
+        },
+    }
+}
+
 fn removal(app: &App, peer: &Peer, piece: Piece, cell: [i64; 3]) -> EditCommand {
     EditCommand {
         request: 2,
@@ -316,21 +404,7 @@ fn full_drop_capacity_rejects_secondary_removal_before_any_cell_changes() {
 fn switches_require_the_correct_opcode_facing_and_real_ray_then_update_every_slice() {
     let (mut app, peer, piece, command) = rail_fixture(rails::SWITCH_RIGHT, [8, 4, 10]);
     assert_eq!(run(&mut app, &peer, command, false), EditOutcome::Applied);
-    let toggle = EditCommand {
-        request: 2,
-        revision: app
-            .world()
-            .resource::<EditJournal>()
-            .revision(global_to_section(piece.anchor).0),
-        look: target_look(&app, &peer, piece.anchor, piece.material),
-        source: None,
-        action: EditAction::ToggleObject {
-            position: piece.anchor,
-            expected: piece.material,
-            facing: 2,
-            closing: false,
-        },
-    };
+    let toggle = placed_stand(&mut app, &peer, piece);
     for failure in ["closing", "facing", "ray"] {
         let mut invalid = toggle;
         match failure {
@@ -484,23 +558,9 @@ fn stats_capacity_is_reserved_before_placement_or_removal_and_existing_stats_rem
 fn a_switch_does_not_allocate_stats_when_the_valid_save_table_is_full() {
     let (mut app, peer, piece, command) = rail_fixture(rails::SWITCH_RIGHT, [8, 4, 10]);
     assert_eq!(run(&mut app, &peer, command, false), EditOutcome::Applied);
+    let toggle = placed_stand(&mut app, &peer, piece);
     fill_stats(&mut app, &peer, false);
     let before = app.world().resource::<EditJournal>().gameplay().clone();
-    let toggle = EditCommand {
-        request: 2,
-        revision: app
-            .world()
-            .resource::<EditJournal>()
-            .revision(global_to_section(piece.anchor).0),
-        look: target_look(&app, &peer, piece.anchor, piece.material),
-        source: None,
-        action: EditAction::ToggleObject {
-            position: piece.anchor,
-            expected: piece.material,
-            facing: piece.encoded_facing(),
-            closing: false,
-        },
-    };
     assert_eq!(run(&mut app, &peer, toggle, false), EditOutcome::Applied);
     let journal = app.world().resource::<EditJournal>();
     assert_eq!(journal.gameplay(), &before);
@@ -510,4 +570,214 @@ fn a_switch_does_not_allocate_stats_when_the_valid_save_table_is_full() {
             .into_iter()
             .all(|cell| journal.object_state(cell).unwrap().facing == 6)
     );
+}
+
+#[test]
+fn separate_switch_items_preserve_both_handedness_and_all_four_sleepers_species() {
+    for material in [rails::SWITCH_LEFT, rails::SWITCH_RIGHT] {
+        for wood in [
+            terra_core::WoodSpecies::Oak,
+            terra_core::WoodSpecies::Birch,
+            terra_core::WoodSpecies::Spruce,
+            terra_core::WoodSpecies::Cherry,
+        ] {
+            let (mut app, peer, piece, mut command) = rail_fixture(material, [8, 4, 10]);
+            let item = ItemKind::for_wood(material, wood);
+            {
+                let mut journal = app.world_mut().resource_mut::<EditJournal>();
+                let bag = journal
+                    .gameplay_mut()
+                    .inventories
+                    .get_mut(&peer.uuid)
+                    .unwrap();
+                let wanted = ItemStack { item, count: 2 };
+                if bag.slot(0) != Some(wanted) {
+                    assert!(bag.creative_set(0, wanted));
+                }
+                assert_eq!(bag.slot(0), Some(wanted));
+                command.source.as_mut().unwrap().revision = bag.revision;
+            }
+            assert_eq!(run(&mut app, &peer, command, false), EditOutcome::Applied);
+            assert_eq!(
+                app.world().resource::<EditJournal>().gameplay().inventories[&peer.uuid]
+                    .count(item),
+                1
+            );
+            assert!(terra_world::rails::cells(piece).iter().all(|cell| {
+                app.world()
+                    .resource::<EditJournal>()
+                    .object_state(*cell)
+                    .unwrap()
+                    .wood
+                    == wood
+            }));
+            let remove = removal(&app, &peer, piece, piece.anchor);
+            assert_eq!(run(&mut app, &peer, remove, true), EditOutcome::Applied);
+            let journal = app.world().resource::<EditJournal>();
+            assert_eq!(journal.gameplay().drops.len(), 1);
+            assert_eq!(
+                journal.gameplay().drops[0].stack,
+                ItemStack { item, count: 1 }
+            );
+        }
+    }
+    let (mut app, peer, piece, mut command) = rail_fixture(rails::SWITCH_LEFT, [8, 4, 10]);
+    {
+        let mut journal = app.world_mut().resource_mut::<EditJournal>();
+        let bag = journal
+            .gameplay_mut()
+            .inventories
+            .get_mut(&peer.uuid)
+            .unwrap();
+        assert!(bag.creative_set(
+            0,
+            ItemStack {
+                item: ItemKind::Block(rails::STRAIGHT),
+                count: 64
+            }
+        ));
+        command.source.as_mut().unwrap().revision = bag.revision;
+    }
+    let before = snapshot(&app, piece);
+    assert_eq!(run(&mut app, &peer, command, false), EditOutcome::Invalid);
+    assert_eq!(snapshot(&app, piece), before);
+}
+
+#[test]
+fn stands_check_every_switch_claim_and_direct_switch_clicks_are_rejected() {
+    let (mut app, peer, piece, place) = rail_fixture(rails::SWITCH_RIGHT, [15, 4, 10]);
+    assert_eq!(run(&mut app, &peer, place, false), EditOutcome::Applied);
+    let toggle = placed_stand(&mut app, &peer, piece);
+    let EditAction::ToggleObject {
+        position: stand, ..
+    } = toggle.action
+    else {
+        unreachable!()
+    };
+    app.world_mut()
+        .resource_mut::<EditJournal>()
+        .gameplay_mut()
+        .kingdoms
+        .found(
+            PlayerUuid::from_u128(206_209),
+            [8, 10, 5],
+            "Protected turnout",
+        )
+        .unwrap();
+    let registry = &app.world().resource::<EditJournal>().gameplay().kingdoms;
+    assert!(registry.can(
+        peer.uuid,
+        terra_core::kingdom::KingdomPermission::Inventories,
+        stand
+    ));
+    assert!(terra_world::rails::cells(piece).iter().any(|cell| {
+        !registry.can(
+            peer.uuid,
+            terra_core::kingdom::KingdomPermission::Inventories,
+            *cell,
+        )
+    }));
+    let before = snapshot(&app, piece);
+    assert_eq!(run(&mut app, &peer, toggle, false), EditOutcome::Invalid);
+    assert_eq!(snapshot(&app, piece), before);
+
+    let (mut app, peer, piece, place) = rail_fixture(rails::SWITCH_LEFT, [8, 4, 10]);
+    assert_eq!(run(&mut app, &peer, place, false), EditOutcome::Applied);
+    let mut direct = placed_stand(&mut app, &peer, piece);
+    direct.look = target_look(&app, &peer, piece.anchor, piece.material);
+    direct.revision = app
+        .world()
+        .resource::<EditJournal>()
+        .revision(global_to_section(piece.anchor).0);
+    direct.action = EditAction::ToggleObject {
+        position: piece.anchor,
+        expected: piece.material,
+        facing: piece.encoded_facing(),
+        closing: false,
+    };
+    let before = snapshot(&app, piece);
+    assert_eq!(run(&mut app, &peer, direct, false), EditOutcome::Invalid);
+    assert_eq!(snapshot(&app, piece), before);
+}
+
+#[test]
+fn legacy_shape_stock_still_builds_its_original_form_and_old_curves_support_auto_track() {
+    for source_material in [197, 198, 199, 200, 201, 204, 205] {
+        let targets = if source_material <= 201 {
+            vec![source_material, rails::STRAIGHT]
+        } else {
+            vec![source_material]
+        };
+        for target_material in targets {
+            let (mut app, peer, piece, mut command) = rail_fixture(target_material, [8, 4, 10]);
+            let item = ItemKind::Block(source_material);
+            let cost = terra_world::rails::piece_cost(piece);
+            {
+                let mut journal = app.world_mut().resource_mut::<EditJournal>();
+                let bag = journal
+                    .gameplay_mut()
+                    .inventories
+                    .get_mut(&peer.uuid)
+                    .unwrap();
+                assert!(bag.creative_set(
+                    0,
+                    ItemStack {
+                        item,
+                        count: cost + 1
+                    }
+                ));
+                command.source.as_mut().unwrap().revision = bag.revision;
+            }
+            assert_eq!(
+                run(&mut app, &peer, command, false),
+                EditOutcome::Applied,
+                "saved source {source_material} -> form {target_material}"
+            );
+            let journal = app.world().resource::<EditJournal>();
+            assert!(terra_world::rails::complete(journal, piece));
+            assert_eq!(journal.gameplay().inventories[&peer.uuid].count(item), 1);
+            assert!(terra_world::rails::cells(piece).iter().all(|cell| {
+                journal.object_state(*cell).unwrap().wood == terra_core::WoodSpecies::Oak
+            }));
+        }
+    }
+}
+
+#[test]
+fn legacy_sources_cannot_substitute_another_shape_or_cross_the_separate_switch_boundary() {
+    for (source_material, target_material) in [
+        (204, 196),
+        (205, 196),
+        (197, 204),
+        (202, 196),
+        (203, 196),
+        (196, 202),
+        (196, 203),
+        (202, 203),
+    ] {
+        let (mut app, peer, piece, mut command) = rail_fixture(target_material, [8, 4, 10]);
+        {
+            let mut journal = app.world_mut().resource_mut::<EditJournal>();
+            let bag = journal
+                .gameplay_mut()
+                .inventories
+                .get_mut(&peer.uuid)
+                .unwrap();
+            assert!(bag.creative_set(
+                0,
+                ItemStack {
+                    item: ItemKind::Block(source_material),
+                    count: 64
+                }
+            ));
+            command.source.as_mut().unwrap().revision = bag.revision;
+        }
+        let before = snapshot(&app, piece);
+        assert_eq!(
+            run(&mut app, &peer, command, false),
+            EditOutcome::Invalid,
+            "source {source_material} -> forbidden form {target_material}"
+        );
+        assert_eq!(snapshot(&app, piece), before);
+    }
 }

@@ -113,6 +113,89 @@ fn connection_fixture() -> (App, Entity, terra_core::rails::Endpoint, ItemKind) 
 }
 
 #[test]
+fn each_wood_switch_is_placed_as_its_own_handed_block_and_never_as_a_track_mode() {
+    for material in [rails::SWITCH_LEFT, rails::SWITCH_RIGHT] {
+        for wood in [
+            WoodSpecies::Oak,
+            WoodSpecies::Birch,
+            WoodSpecies::Spruce,
+            WoodSpecies::Cherry,
+        ] {
+            let mut app = app();
+            session(&mut app, GameMode::Creative, false);
+            app.world_mut()
+                .resource_mut::<terra_network::client::ClientSession>()
+                .uuid = Some(PlayerUuid::from_u128(1));
+            let piece = Piece::new([4, 1, 4], material, 0).unwrap();
+            support(&mut app.world_mut().resource_mut::<ChunkStore>(), piece);
+            let item = ItemKind::for_wood(material, wood);
+            app.insert_resource(EditJournal::default())
+                .insert_resource(terra_core::block_properties::BlockPropertiesCatalog::default())
+                .insert_resource(super::super::ActiveItem(Some(item)));
+            let mut look = crate::CameraLook::default();
+            look.sync_external(Quat::from_rotation_y(std::f32::consts::PI));
+            app.world_mut()
+                .spawn((crate::TerraCamera, Transform::from_xyz(4.5, 3., 1.5), look));
+            let hit = terra_voxel::blocks::BlockHit {
+                position: [4, 0, 4],
+                normal: [0, 1, 0],
+                distance: 3.0,
+            };
+            app.insert_resource(TargetBlock(Some(hit)))
+                .insert_resource(TargetWorld(Some(WorldTarget::Block(hit))));
+            app.update();
+            let preview = app.world().resource::<PlacementPreview>();
+            assert!(
+                preview.valid,
+                "{material} {wood:?}: {:?}",
+                preview.rail_error
+            );
+            assert_eq!((preview.material, preview.rail_cost), (material, 1));
+            assert!(
+                preview
+                    .plan
+                    .as_ref()
+                    .unwrap()
+                    .states
+                    .iter()
+                    .all(|(_, state)| state.unwrap().wood == wood)
+            );
+            app.world_mut()
+                .resource_mut::<ButtonInput<KeyCode>>()
+                .press(KeyCode::KeyR);
+            app.update();
+            assert_eq!(app.world().resource::<PlacementPreview>().rail_mode, 0);
+            assert!(
+                app.world()
+                    .resource::<Messages<BlockEditRequest>>()
+                    .is_empty()
+            );
+            app.world_mut()
+                .resource_mut::<ButtonInput<KeyCode>>()
+                .reset_all();
+            app.world_mut()
+                .resource_mut::<ButtonInput<KeyCode>>()
+                .press(KeyCode::KeyB);
+            app.update();
+            let requests: Vec<_> = app
+                .world_mut()
+                .resource_mut::<Messages<BlockEditRequest>>()
+                .drain()
+                .collect();
+            assert_eq!(requests.len(), 1);
+            assert_eq!(requests[0].material, material);
+            assert!(
+                app.world()
+                    .resource::<PlacementPreview>()
+                    .rail_start
+                    .is_none()
+            );
+            assert_eq!(app.world().resource::<EditJournal>().rail_module_count(), 0);
+        }
+    }
+}
+
+#[test]
 fn two_click_preview_sends_one_real_connection_without_speculative_changes_or_wood_loss() {
     let (mut app, camera, start, item) = connection_fixture();
     app.world_mut()
@@ -228,7 +311,7 @@ fn cancel_item_changes_and_shared_item_modes_never_place_an_unconfirmed_connecti
             .rail_start
             .is_none()
     );
-    for mode in 1..=5 {
+    for mode in 1..=3 {
         app.world_mut()
             .resource_mut::<ButtonInput<KeyCode>>()
             .reset_all();
@@ -238,7 +321,7 @@ fn cancel_item_changes_and_shared_item_modes_never_place_an_unconfirmed_connecti
         app.update();
         assert_eq!(
             app.world().resource::<PlacementPreview>().rail_mode,
-            mode % 5
+            mode % 3
         );
     }
     app.world_mut()

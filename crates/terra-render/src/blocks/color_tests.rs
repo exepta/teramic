@@ -83,3 +83,61 @@ fn tree_assets_use_botanical_and_bark_textures_not_stone() {
         assert!(block.model.is_empty());
     }
 }
+
+#[test]
+fn ballast_block_stairs_and_slab_share_the_actual_angular_material_and_physical_profiles() {
+    use super::definitions::{BlockLibrary, BlockRenderKind, TexturePattern};
+    let library = BlockLibrary::load(&terra_core::asset_directory().join("terra/blocks")).unwrap();
+    for (id, kind, boxes) in [
+        (206, BlockRenderKind::Cube, 0),
+        (207, BlockRenderKind::Boxes, 4),
+        (208, BlockRenderKind::Boxes, 1),
+    ] {
+        let definition = library.blocks.iter().find(|block| block.id == id).unwrap();
+        definition.validate().unwrap();
+        assert_eq!(definition.render_kind, kind);
+        assert_eq!(definition.creative_category.as_deref(), Some("building"));
+        assert_eq!(definition.collision_boxes.len(), boxes);
+        assert_eq!(definition.bevel_width, 0.0);
+        assert!(definition.model.is_empty());
+        for face in definition.face_materials.as_ref().unwrap() {
+            assert_eq!(
+                definition.materials[face].texture_pattern,
+                Some(TexturePattern::Ballast)
+            );
+        }
+        if id != 206 {
+            assert_eq!(
+                definition.collision_boxes,
+                terra_core::construction::boxes(id)
+            );
+        }
+    }
+    let image = super::textures::generate(TexturePattern::Ballast);
+    assert_eq!(image.texture_descriptor.size.width, 512);
+    assert_eq!(image.texture_descriptor.size.height, 512);
+    assert_eq!(image.texture_descriptor.size.depth_or_array_layers, 1);
+    assert_eq!(image.texture_descriptor.mip_level_count, 10);
+    assert_eq!(
+        image.texture_descriptor.format,
+        bevy::render::render_resource::TextureFormat::Rgba8UnormSrgb
+    );
+    let expected_bytes = (0..image.texture_descriptor.mip_level_count)
+        .map(|level| (512_usize >> level).max(1).pow(2) * 4)
+        .sum::<usize>();
+    let data = image.data.unwrap();
+    assert_eq!(
+        data.len(),
+        expected_bytes,
+        "base level plus every mip through 1x1"
+    );
+    assert!(data.chunks_exact(4).all(|pixel| pixel[3] == 255));
+    let gravel = super::textures::generate(TexturePattern::Gravel)
+        .data
+        .unwrap();
+    assert_ne!(
+        &data[..512 * 512 * 4],
+        &gravel[..512 * 512 * 4],
+        "ballast angular shards must have their own native base texture"
+    );
+}

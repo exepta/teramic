@@ -1,0 +1,10 @@
+{
+  "item": {
+    "wooden_block": {
+      "material": 203,
+      "wood": "cherry"
+    }
+  },
+  "name": "Cherry Right Switch",
+  "description": "A separate right turnout with cherry sleepers. Place a switch stand beside its throat to select the route."
+}

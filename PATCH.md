@@ -6473,3 +6473,52 @@ fremden Claimkanten sind abgesichert. Alle 169 Itemdefinitionen sind vollständi
 Clippy aller Targets mit `-D warnings`, Format, Diff und der vollständige
 Client-/Server-Build sind sauber. Logs und Quell-/Asset-Prüfsummen sind im Bericht
 gespeichert; keine Grafiktests oder Spielclients wurden gestartet.
+
+## 206. Gleiskurven, Eigene Weichen Und Schotter
+
+Ein gehaltenes Gleis erzwingt keine leere Blockinformation mehr. Der obere HUD
+folgt ausschließlich dem tatsächlichen Ziel. Ein getrennter rahmenloser
+Bauhinweis zeigt Tasten, Bedarf und konkrete Fehler, auch wenn eine geometrisch
+unmögliche Kurve keinen Ghost erzeugen kann. HUD-Ausblendung und Menüs gelten
+auch für diesen Hinweis.
+
+Neue Bodenenden folgen dem Streckenverlauf statt der Kamerarichtung. Der
+Bézierplaner behält gültige bestehende Kontrollsätze und sucht bei Bedarf mit
+höchstens 36 unabhängigen Griffpaaren nach sicheren Kurven. Dadurch funktionieren
+auch ungleich lange 90-Grad-Schenkel. Eigene Weichenabgänge werden als wirkliche
+Ports verlängert; seitliches Einsetzen in die Gleismitte bleibt ein Weichenfall.
+Radius, Steigung, Länge, Reichweite, Besitz, Unterbau und Spielerfreiheit bleiben
+geprüft.
+
+Die Materialien 202/203 sind eigene linke/rechte Weichenitems in allen vier
+Holzarten. Eine vollständige Weiche kostet und liefert ein Item. Track 196 behält
+Längenkosten und seine Formen Gleis/Kreuzung/Prellbock. Der separate Steller 209
+verwendet eine eindeutige unmittelbare Nachbarweiche, echte Zielstrahlen und
+Rechte über den Steller und die ganze Baugruppe. Umschalten bleibt atomar.
+Der alte rote Hebel wandert aus dem Gleismodell in das eigene Stellermodell;
+historische Besitzerzellen bleiben ohne Phantomkollision/-stützen erhalten.
+Alte getragene Formitems bleiben über ausdrücklich begrenzte Source-Regeln nutzbar.
+
+Schotter 206, vierstufige Treppe 207 und Slab 208 erhalten eine eigene kantige
+512er-Steintextur, echte gemeinsame Formprofile und normale Rezepte. Alte
+Treppenformen und Mixed-Slab-Codes bleiben erhalten. Der live ausgewertete
+Gleisbettfaktor 1,5 berücksichtigt bestehenden Kies 42, alle Schotterformen und
+die tatsächliche Oberseite gemischter Slabs. `speed_limit` und `travel_seconds`
+werten vollständige Module und aktive Strecken aus; der Fahrbetrieb bleibt F53.
+Die Zielinformation zeigt den Bonus, Gravel-Kontakte und ein bestätigter
+Stellerschaltimpuls nutzen vorhandene Sounds.
+
+Protokoll 113 grenzt die neuen Materialien und Itemregeln ab. RG13/ID12/PLY7
+bleiben unverändert. Sechs neue Rezepte ergeben 331, sechs Holz-Weichenvarianten
+ergeben insgesamt 175 zusätzliche Itemdefinitionen. Die zentrale CPU-Abnahme wird im
+[Prüfbericht](tools/benchmarks/results/rail-curves-switches-ballast-2026-11-08/README.md)
+festgehalten. Keine Grafiktests oder Spielclients werden gestartet.
+
+Abnahme 206: 4.213 Workspace-Library-/Bin-Tests bestanden, keiner fehlgeschlagen,
+neun bestehende Tests ignoriert. Echte Kurven und beide Weichenabgänge,
+alle Holzarten, autoritative Stellerplatzierung/-bedienung über UDP mit Late Join,
+getimter sekundärer Abbau, leere Legacybesitzzellen ohne Phantomkollision,
+Schotteroberseiten und der einmalige Faktor 1,5 sind geprüft. Zielkarten und
+Bauhinweise bestehen ihre CPU-Prüfungen. Clippy aller Targets mit `-D warnings`,
+Format, Diff, kopfloser Assetexport und aktueller Client-/Server-Build sind sauber.
+Keine Grafiktests, Spielclients oder Screenshots wurden gestartet.

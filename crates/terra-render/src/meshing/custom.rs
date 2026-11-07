@@ -38,7 +38,7 @@ struct ModelCell {
 struct ConstructionKey {
     material: u16,
     facing: u8,
-    neighbors: [Option<u8>; 6],
+    neighbors: [Option<(u8, bool)>; 6],
 }
 
 #[derive(Default)]
@@ -70,15 +70,18 @@ impl ConstructionProfiles {
         model: &ModelCell,
         templates: &TemplateSet,
     ) -> Result<Cow<'a, [crate::blocks::PrimitiveTemplate]>, String> {
-        // Only stair poses affect a neighbouring stair profile. Ordinary walls,
-        // materials and empty cells share the same shape key.
+        // Stair pose and tread count affect its neighbour. Ordinary materials
+        // with the same tread count and empty cells share one shape key.
         let key = ConstructionKey {
             material: model.material,
             facing: model.state.facing,
             neighbors: std::array::from_fn(|side| {
                 (terra_core::construction::is_stair(model.material)
                     && model.neighbors[side].is_some_and(terra_core::construction::is_stair))
-                .then_some(model.neighbor_facing[side])
+                .then_some((
+                    model.neighbor_facing[side],
+                    model.neighbors[side] == Some(terra_core::construction::BALLAST_STAIRS),
+                ))
             }),
         };
         let full = self.0.len() == Self::LIMIT;

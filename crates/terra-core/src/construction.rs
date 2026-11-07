@@ -5,17 +5,33 @@ use std::{collections::BTreeMap, sync::OnceLock};
 
 pub const FIRST: u16 = 74;
 pub const LAST: u16 = 97;
+pub const BALLAST: u16 = 206;
+pub const BALLAST_STAIRS: u16 = 207;
+pub const BALLAST_SLAB: u16 = 208;
+
+/// Loose gravel and all compacted ballast forms share railway foundation semantics.
+pub const fn is_ballast(material: u16) -> bool {
+    matches!(material, 42 | BALLAST | BALLAST_STAIRS | BALLAST_SLAB)
+}
+
+fn stair_steps(material: u16) -> usize {
+    if material == BALLAST_STAIRS { 4 } else { 3 }
+}
+fn shared_steps(first: usize, second: usize) -> usize {
+    if first == second { first } else { 12 }
+}
 pub fn is_shape(material: u16) -> bool {
-    (FIRST..=LAST).contains(&material) || matches!(material, 104..=105 | 136..=138)
+    (FIRST..=LAST).contains(&material)
+        || matches!(material, 104..=105 | 136..=138 | BALLAST_STAIRS | BALLAST_SLAB)
 }
 pub fn is_fence(material: u16) -> bool {
     (90..=97).contains(&material) || material == 138
 }
 pub fn is_slab(material: u16) -> bool {
-    (82..=89).contains(&material) || matches!(material, 105 | 137)
+    (82..=89).contains(&material) || matches!(material, 105 | 137 | BALLAST_SLAB)
 }
 pub fn is_stair(material: u16) -> bool {
-    (74..=81).contains(&material) || matches!(material, 104 | 136)
+    (74..=81).contains(&material) || matches!(material, 104 | 136 | BALLAST_STAIRS)
 }
 /// Saved sand fences keep their ID and shape, but cannot be obtained anymore.
 pub fn obtainable(material: u16) -> bool {
@@ -24,8 +40,8 @@ pub fn obtainable(material: u16) -> bool {
 
 pub const DOUBLE_SLAB: u8 = 9;
 const HALF_FACINGS: [u8; 6] = [0, 4, 5, 6, 7, 8];
-pub const SLAB_MATERIALS: [u16; 10] = [82, 83, 84, 85, 86, 87, 88, 89, 105, 137];
-pub const LAST_MIXED_SLAB: u8 = 69;
+pub const SLAB_MATERIALS: [u16; 11] = [82, 83, 84, 85, 86, 87, 88, 89, 105, 137, BALLAST_SLAB];
+pub const LAST_MIXED_SLAB: u8 = 75;
 
 /// Weather retains legacy 1..=7 poses. New player layers use a disjoint range,
 /// so later weather reconciliation never mistakes their height for ownership.
@@ -285,8 +301,9 @@ pub fn placed_boxes(material: u16, facing: u8, neighbors: [Option<(u16, u8)>; 6]
         return boxes(material).to_vec();
     }
     let basis = stair_basis(facing);
+    let steps = stair_steps(material);
     // Wall mouldings can meet on perpendicular support planes while sharing
-    // their rise direction. Union their solid thirds, never stretch a mesh.
+    // their rise direction. Union their actual treads, never stretch a mesh.
     if let Some(other) = neighbors.iter().flatten().find_map(|(id, f)| {
         let other = stair_basis(*f);
         (is_stair(*id)
@@ -297,29 +314,31 @@ pub fn placed_boxes(material: u16, facing: u8, neighbors: [Option<(u16, u8)>; 6]
                 .map(|(a, b)| i32::from(*a) * i32::from(b))
                 .sum::<i32>()
                 == 0)
-            .then_some(other)
+            .then_some((other, stair_steps(*id)))
     }) {
-        let inside = |p: [f64; 3], frame: [[i8; 3]; 3]| {
+        let (other, other_steps) = other;
+        let resolution = shared_steps(steps, other_steps);
+        let inside = |p: [f64; 3], frame: [[i8; 3]; 3], count: usize| {
             let along = |axis: usize| {
                 (0..3)
                     .map(|i| (p[i] - 0.5) * f64::from(frame[axis][i]))
                     .sum::<f64>()
                     + 0.5
             };
-            along(1) < (along(2) * 3.0).floor() / 3.0 + 1.0 / 3.0
+            along(1) < (along(2) * count as f64).floor() / count as f64 + 1.0 / count as f64
         };
         let mut result = Vec::new();
-        for x in 0..3 {
-            for z in 0..3 {
+        for x in 0..resolution {
+            for z in 0..resolution {
                 let mut y = 0;
-                while y < 3 {
-                    let occupied = |y: i32| {
+                while y < resolution {
+                    let occupied = |y: usize| {
                         let p = [
-                            (f64::from(x) + 0.5) / 3.0,
-                            (f64::from(y) + 0.5) / 3.0,
-                            (f64::from(z) + 0.5) / 3.0,
+                            (x as f64 + 0.5) / resolution as f64,
+                            (y as f64 + 0.5) / resolution as f64,
+                            (z as f64 + 0.5) / resolution as f64,
                         ];
-                        inside(p, basis) || inside(p, other)
+                        inside(p, basis, steps) || inside(p, other, other_steps)
                     };
                     if !occupied(y) {
                         y += 1;
@@ -327,19 +346,19 @@ pub fn placed_boxes(material: u16, facing: u8, neighbors: [Option<(u16, u8)>; 6]
                     }
                     let start = y;
                     y += 1;
-                    while y < 3 && occupied(y) {
+                    while y < resolution && occupied(y) {
                         y += 1;
                     }
                     result.push(ShapeBox {
                         minimum: [
-                            f64::from(x) / 3.0,
-                            f64::from(start) / 3.0,
-                            f64::from(z) / 3.0,
+                            x as f64 / resolution as f64,
+                            start as f64 / resolution as f64,
+                            z as f64 / resolution as f64,
                         ],
                         maximum: [
-                            f64::from(x + 1) / 3.0,
-                            f64::from(y) / 3.0,
-                            f64::from(z + 1) / 3.0,
+                            (x + 1) as f64 / resolution as f64,
+                            y as f64 / resolution as f64,
+                            (z + 1) as f64 / resolution as f64,
                         ],
                         hinged: false,
                     });
@@ -361,7 +380,7 @@ pub fn placed_boxes(material: u16, facing: u8, neighbors: [Option<(u16, u8)>; 6]
                 && other[1] == basis[1]
                 && other[2] != basis[2]
                 && other[2] != basis[2].map(|v| -v))
-            .then_some(other[2])
+            .then_some((other[2], stair_steps(id)))
         })
     };
     let outer = turn(basis[2]);
@@ -377,42 +396,45 @@ pub fn placed_boxes(material: u16, facing: u8, neighbors: [Option<(u16, u8)>; 6]
             .collect();
     }
     let mut result = Vec::new();
-    // Three treads, merged vertically per column: at most nine boxes, no per-voxel entities.
-    for x in 0..3 {
-        for z in 0..3 {
+    // Mixed thirds/quarters use their common twelfth-grid; at most144 columns.
+    let resolution = shared_steps(steps, outer.or(inner).map_or(steps, |(_, count)| count));
+    for x in 0..resolution {
+        for z in 0..resolution {
             let p = [
-                f64::from(x) / 3.0 + 1.0 / 6.0,
+                (x as f64 + 0.5) / resolution as f64,
                 0.5,
-                f64::from(z) / 3.0 + 1.0 / 6.0,
+                (z as f64 + 0.5) / resolution as f64,
             ];
-            let turned_height = |forward: [i8; 3]| {
+            let turned_height = |(forward, count): ([i8; 3], usize)| {
                 let world: [f64; 3] = std::array::from_fn(|axis| {
                     (0..3)
                         .map(|i| (p[i] - 0.5) * f64::from(basis[i][axis]))
                         .sum()
                 });
-                (((0..3)
+                let along = (0..3)
                     .map(|i| world[i] * f64::from(forward[i]))
                     .sum::<f64>()
-                    + 0.5)
-                    * 3.0)
-                    .floor() as i32
-                    + 1
+                    + 0.5;
+                ((along * count as f64).floor() + 1.0) / count as f64
             };
-            let mut height = z + 1;
-            if let Some(v) = outer {
-                height = height.min(turned_height(v));
+            let mut height = ((p[2] * steps as f64).floor() + 1.0) / steps as f64;
+            if let Some(direction) = outer {
+                height = height.min(turned_height(direction));
             }
-            if let Some(v) = inner {
-                height = height.max(turned_height(v));
+            if let Some(direction) = inner {
+                height = height.max(turned_height(direction));
             }
             result.push(rotate_box(
                 ShapeBox {
-                    minimum: [f64::from(x) / 3.0, 0.0, f64::from(z) / 3.0],
+                    minimum: [
+                        x as f64 / resolution as f64,
+                        0.0,
+                        z as f64 / resolution as f64,
+                    ],
                     maximum: [
-                        f64::from(x + 1) / 3.0,
-                        f64::from(height) / 3.0,
-                        f64::from(z + 1) / 3.0,
+                        (x + 1) as f64 / resolution as f64,
+                        height,
+                        (z + 1) as f64 / resolution as f64,
                     ],
                     hinged: false,
                 },
@@ -423,6 +445,9 @@ pub fn placed_boxes(material: u16, facing: u8, neighbors: [Option<(u16, u8)>; 6]
     result
 }
 pub fn base_material(material: u16) -> Option<u16> {
+    if matches!(material, BALLAST_STAIRS | BALLAST_SLAB) {
+        return Some(BALLAST);
+    }
     if matches!(material, 136..=138) {
         Some(135)
     } else if matches!(material, 104..=105) {
@@ -443,6 +468,8 @@ pub fn boxes(material: u16) -> &'static [ShapeBox] {
     PROFILES
         .get_or_init(|| {
             [
+                include_str!("../../../assets/terra/blocks/ballast_stairs.json"),
+                include_str!("../../../assets/terra/blocks/ballast_slab.json"),
                 include_str!("../../../assets/terra/blocks/cherry_stairs.json"),
                 include_str!("../../../assets/terra/blocks/cherry_slab.json"),
                 include_str!("../../../assets/terra/blocks/cherry_fence.json"),
@@ -749,3 +776,7 @@ mod tests {
         assert!(connects(Some(97)));
     }
 }
+
+#[cfg(test)]
+#[path = "construction/ballast_tests.rs"]
+mod ballast_tests;

@@ -209,10 +209,14 @@ pub enum MaterialId {
     RailSwitchRight = 203,
     RailCrossing = 204,
     RailBuffer = 205,
+    Ballast = 206,
+    BallastStairs = 207,
+    BallastSlab = 208,
+    RailSwitchStand = 209,
 }
 
 impl MaterialId {
-    pub const LAST: u16 = Self::RailBuffer as u16;
+    pub const LAST: u16 = Self::RailSwitchStand as u16;
     pub const FOLIAGE: [u16; 6] = [7, 8, 9, 132, 133, 195];
     pub const BLOCK_COUNT: usize = Self::LAST as usize;
 
@@ -229,6 +233,10 @@ impl MaterialId {
             Self::RailSwitchRight => "teramic::rail_switch_right",
             Self::RailCrossing => "teramic::rail_crossing",
             Self::RailBuffer => "teramic::rail_buffer",
+            Self::Ballast => "teramic::ballast",
+            Self::BallastStairs => "teramic::ballast_stairs",
+            Self::BallastSlab => "teramic::ballast_slab",
+            Self::RailSwitchStand => "teramic::rail_switch_stand",
             Self::Lantern => "teramic::lantern",
             Self::Chain => "teramic::chain",
             Self::WoodPipe => "teramic::wood_pipe",
@@ -633,6 +641,10 @@ impl MaterialId {
             203 => Self::RailSwitchRight,
             204 => Self::RailCrossing,
             205 => Self::RailBuffer,
+            206 => Self::Ballast,
+            207 => Self::BallastStairs,
+            208 => Self::BallastSlab,
+            209 => Self::RailSwitchStand,
             193 => Self::Lantern,
             194 => Self::Chain,
             _ => return None,
@@ -656,6 +668,9 @@ impl MaterialId {
     }
 
     pub const fn is_opaque(self) -> bool {
+        if matches!(self, Self::Ballast) {
+            return true;
+        }
         if (self as u16) >= 141 && (self as u16) <= Self::LAST {
             return false;
         }
@@ -781,6 +796,35 @@ impl MaterialId {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn ballast_and_switch_stand_append_ids_without_changing_old_rail_codes() {
+        for (id, material, identifier, opaque) in [
+            (205, MaterialId::RailBuffer, "teramic::rail_buffer", false),
+            (206, MaterialId::Ballast, "teramic::ballast", true),
+            (
+                207,
+                MaterialId::BallastStairs,
+                "teramic::ballast_stairs",
+                false,
+            ),
+            (208, MaterialId::BallastSlab, "teramic::ballast_slab", false),
+            (
+                209,
+                MaterialId::RailSwitchStand,
+                "teramic::rail_switch_stand",
+                false,
+            ),
+        ] {
+            assert_eq!(material as u16, id);
+            assert_eq!(MaterialId::from_raw(id), Some(material));
+            assert_eq!(material.identifier(), identifier);
+            assert!(material.is_solid());
+            assert_eq!(material.is_opaque(), opaque);
+            assert!(!material.flammable());
+        }
+        assert_eq!(MaterialId::LAST, 209);
+    }
+
     #[test]
     fn village_materials_append_without_changing_old_ids_or_shape_occlusion() {
         assert_eq!(MaterialId::Farmland as u16, 101);

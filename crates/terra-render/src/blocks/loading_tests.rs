@@ -361,8 +361,21 @@ fn shipped_cube_materials_share_soil_but_keep_whole_snow_distinct_from_rock() {
     assert_eq!(sand.reflectance, 0.12);
     assert_eq!(
         materials.len(),
-        72 + terra_core::OreKind::ALL.len() + terra_core::beds::DyeColor::ALL.len() + 1
+        72 + terra_core::OreKind::ALL.len() + terra_core::beds::DyeColor::ALL.len()
+            + 1 // Distinct apple canopy.
+            + 1 // One new angular ballast material shared by its three shapes.
     );
+    let ballast = slots[&(206, "Angular ballast")];
+    assert_eq!(ballast, slots[&(207, "Angular ballast")]);
+    assert_eq!(ballast, slots[&(208, "Angular ballast")]);
+    assert_ne!(
+        ballast,
+        slots[&(42, "Rounded gravel")],
+        "angular compacted ballast retains its own texture"
+    );
+    let ballast_material = materials.get(&assets.materials[ballast]).unwrap();
+    assert_eq!(ballast_material.perceptual_roughness, 0.99);
+    assert_eq!(ballast_material.reflectance, 0.08);
     assert_ne!(
         slots[&(195, "Painted moss canopy")],
         slots[&(7, "Painted moss canopy")],

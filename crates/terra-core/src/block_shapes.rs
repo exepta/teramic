@@ -172,6 +172,7 @@ pub fn builtin_boxes(material: u16) -> &'static [ShapeBox] {
     static TORCH: OnceLock<Vec<ShapeBox>> = OnceLock::new();
     static LANTERN: OnceLock<Vec<ShapeBox>> = OnceLock::new();
     static CHAIN: OnceLock<Vec<ShapeBox>> = OnceLock::new();
+    static SWITCH_STAND: OnceLock<Vec<ShapeBox>> = OnceLock::new();
     static FURNACE: OnceLock<Vec<ShapeBox>> = OnceLock::new();
     static CRUSHER: OnceLock<Vec<ShapeBox>> = OnceLock::new();
     static MIXER: OnceLock<Vec<ShapeBox>> = OnceLock::new();
@@ -203,6 +204,12 @@ pub fn builtin_boxes(material: u16) -> &'static [ShapeBox] {
     static GEARBOXES: [OnceLock<Vec<ShapeBox>>; 2] = [const { OnceLock::new() }; 2];
     static KINETICS: [OnceLock<Vec<ShapeBox>>; 11] = [const { OnceLock::new() }; 11];
     match material {
+        209 => SWITCH_STAND.get_or_init(|| {
+            read(
+                include_str!("../../../assets/terra/blocks/rail_switch_stand.json"),
+                209,
+            )
+        }),
         172 => GLASS_PIPE.get_or_init(|| {
             read(
                 include_str!("../../../assets/terra/blocks/glass_pipe.json"),

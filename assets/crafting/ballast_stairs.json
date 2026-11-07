@@ -1,0 +1,57 @@
+{
+  "id": "teramic::ballast_stairs",
+  "name": "Schotter Stairs",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "block": 207
+    },
+    "count": 4
+  },
+  "pattern": {
+    "kind": "shaped",
+    "width": 3,
+    "height": 3,
+    "cells": [
+      {
+        "item": {
+          "block": 206
+        },
+        "count": 1
+      },
+      null,
+      null,
+      {
+        "item": {
+          "block": 206
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "block": 206
+        },
+        "count": 1
+      },
+      null,
+      {
+        "item": {
+          "block": 206
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "block": 206
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "block": 206
+        },
+        "count": 1
+      }
+    ]
+  }
+}

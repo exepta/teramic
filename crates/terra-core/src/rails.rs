@@ -24,6 +24,7 @@ pub const SWITCH_LEFT: u16 = 202;
 pub const SWITCH_RIGHT: u16 = 203;
 pub const CROSSING: u16 = 204;
 pub const BUFFER: u16 = 205;
+pub const SWITCH_STAND: u16 = 209;
 pub const MATERIALS: [u16; 10] = [196, 197, 198, 199, 200, 201, 202, 203, 204, 205];
 pub const FIXED_SCALE: i64 = 16;
 pub const TRACK_WIDTH: f64 = 3.0;

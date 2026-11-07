@@ -66,6 +66,20 @@ pub(super) fn update(
         if matches!(edit.action, EditAction::HarvestTree { .. }) {
             emit(listener, 7, 0.22, 1.12, Category::Environment);
         }
+        if let EditAction::ToggleObject {
+            position,
+            expected: terra_core::rails::SWITCH_STAND,
+            ..
+        } = edit.action
+        {
+            emit(
+                Vec3::from_array(position.map(|value| value as f32 + 0.5)),
+                terra_core::rails::SWITCH_STAND,
+                0.30,
+                1.08,
+                Category::Environment,
+            );
+        }
         if let EditAction::ConnectRail { position, .. } = edit.action {
             emit(
                 Vec3::from_array(position.map(|value| value as f32 + 0.5)),

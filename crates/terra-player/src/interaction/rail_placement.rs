@@ -52,23 +52,35 @@ pub(super) fn update(
         (rotation * Vec3::NEG_Z).to_array().map(f64::from),
     );
     let wood = item.wood_species().unwrap_or_default();
+    let held_material = item.block_material().unwrap_or(rails::STRAIGHT);
+    let fixed_piece = matches!(
+        held_material,
+        rails::SWITCH_LEFT | rails::SWITCH_RIGHT | rails::CROSSING | rails::BUFFER
+    );
     let start = presentation.preview.rail_start;
     if start.is_none()
+        && !fixed_piece
         && presentation.preview.rail_mode == 0
         && chunks.block_at(hit.position).is_some_and(rails::is_rail)
     {
         if keys.just_pressed(Action::Place) && hit.distance <= 4.5 {
             presentation.preview.rail_start =
                 terra_world::rails::select_endpoint(journal, hit, ray);
+            if presentation.preview.rail_start.is_none() {
+                presentation.preview.rail_error =
+                    Some("Kein freies Gleisende in Reichweite".into());
+            }
         }
         return;
     }
-    let material = match presentation.preview.rail_mode {
-        1 => rails::SWITCH_LEFT,
-        2 => rails::SWITCH_RIGHT,
-        3 => rails::CROSSING,
-        4 => rails::BUFFER,
-        _ => rails::STRAIGHT,
+    let material = if fixed_piece {
+        held_material
+    } else {
+        match presentation.preview.rail_mode {
+            1 => rails::CROSSING,
+            2 => rails::BUFFER,
+            _ => rails::STRAIGHT,
+        }
     };
     let valid_plan = if let Some(start) = start {
         terra_world::rails::connection(chunks, journal, start, hit, [yaw, pitch], wood)
@@ -76,6 +88,7 @@ pub(super) fn update(
         terra_world::rails::placement(chunks, journal, hit, material, ray, [yaw, pitch])
     };
     let environment_valid = valid_plan.is_ok();
+    let environment_error = valid_plan.as_ref().err().cloned();
     let plan = valid_plan.or_else(|_| {
         if let Some(start) = start {
             terra_world::rails::proposal_connection(chunks, journal, start, hit, [yaw, pitch], wood)
@@ -83,7 +96,13 @@ pub(super) fn update(
             terra_world::rails::proposal(chunks, journal, hit, material, ray, [yaw, pitch])
         }
     });
-    let Ok(mut plan) = plan else { return };
+    let mut plan = match plan {
+        Ok(plan) => plan,
+        Err(error) => {
+            presentation.preview.rail_error = Some(error);
+            return;
+        }
+    };
     terra_world::rails::set_wood(&mut plan, wood);
     let Some(anchor) = plan.states.iter().find_map(|(cell, state)| {
         state
@@ -196,6 +215,25 @@ pub(super) fn update(
         && has_item
         && permitted
         && !blocked;
+    if !valid {
+        presentation.preview.rail_error = Some(if !endpoint_reachable || hit.distance > 4.5 {
+            "Das Ziel-Gleisende ist zu weit entfernt".into()
+        } else if !has_item {
+            format!("Zu wenig Material: {cost} benötigt")
+        } else if !permitted {
+            "Keine Baurechte am Gleis oder im Baubereich".into()
+        } else if !existing_sites_loaded {
+            "Der vorhandene Gleisanschluss ist noch nicht vollständig geladen".into()
+        } else if blocked {
+            "Ein Spieler steht im Gleisbereich".into()
+        } else if !within_height {
+            "Das Gleis liegt außerhalb der Bauhöhe".into()
+        } else if !foreground_clear {
+            "Das anvisierte Objekt versperrt den Gleisbau".into()
+        } else {
+            environment_error.unwrap_or_else(|| "Der Gleisbereich ist blockiert".into())
+        });
+    }
     presentation.preview.position = Some(anchor);
     presentation.preview.material = material;
     presentation.preview.valid = valid;

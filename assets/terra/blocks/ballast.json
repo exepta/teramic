@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "id": 206,
+  "name": "Schotter Block",
+  "description": "Compacted angular railway ballast in warm grey stone. A solid embankment block for railway foundations.",
+  "creative_category": "building",
+  "render_kind": "cube",
+  "bevel_width": 0.0,
+  "materials": {
+    "Angular ballast": {
+      "texture_pattern": "ballast",
+      "roughness": 0.99,
+      "reflectance": 0.08
+    }
+  },
+  "face_materials": [
+    "Angular ballast",
+    "Angular ballast",
+    "Angular ballast",
+    "Angular ballast",
+    "Angular ballast",
+    "Angular ballast"
+  ],
+  "hardness": 0.8,
+  "resistance": 1.5,
+  "required_tool": null,
+  "mining_level": 0,
+  "struct_block": false
+}

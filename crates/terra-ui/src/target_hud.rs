@@ -62,8 +62,6 @@ fn load(mut p: ResMut<Presentations>) {
 }
 #[derive(bevy::ecs::system::SystemParam)]
 struct Scene<'w, 's> {
-    rail_preview: Option<Res<'w, terra_player::interaction::PlacementPreview>>,
-    controls: Option<Res<'w, terra_core::ControlsConfig>>,
     session: Option<Res<'w, terra_network::client::ClientSession>>,
     layout: Option<Res<'w, crate::hud_layout::HudWidgetStyles>>,
     time: Res<'w, Time>,
@@ -709,6 +707,47 @@ fn update(scene: Scene, mut view: ResMut<TargetView>, mut next: Local<f32>) {
                     v.tool_label = "Unzerstoerbar".into();
                 }
                 v.mining = matches!(scene.mining.target,Some(terra_network::protocol::session::MiningTarget::Block{position,..}) if position==hit.position);
+                if terra_core::rails::is_rail(material)
+                    && let Some(journal) = scene.journal.as_ref()
+                {
+                    let factor = terra_world::rails::ballast::speed_multiplier(
+                        &scene.chunks,
+                        journal,
+                        hit.position,
+                    );
+                    v.stats.push(StatRow {
+                        id: "rail-bed-speed".into(),
+                        label: "Gleisbett / Tempolimit".into(),
+                        text: if factor > 1.0 {
+                            "Schotter · +50 %"
+                        } else {
+                            "Normal · 100 %"
+                        }
+                        .into(),
+                        bar: false,
+                        value: 0.0,
+                    });
+                }
+                if material == terra_core::rails::SWITCH_STAND {
+                    let switch = scene.journal.as_ref().and_then(|journal| {
+                        terra_world::rails::stand::switch_at(journal, hit.position)
+                    });
+                    v.stats.push(StatRow {
+                        id: "rail-switch-position".into(),
+                        label: "Weichenstellung".into(),
+                        text: switch
+                            .map_or("Keine eindeutige Weiche daneben", |piece| {
+                                if piece.switched {
+                                    "Abzweig"
+                                } else {
+                                    "Geradeaus"
+                                }
+                            })
+                            .into(),
+                        bar: false,
+                        value: 0.0,
+                    });
+                }
                 if terra_core::kinetic::is_part(material) {
                     let state = scene
                         .session
@@ -976,51 +1015,6 @@ fn update(scene: Scene, mut view: ResMut<TargetView>, mut next: Local<f32>) {
         }
         v.progress = scene.mining.progress.clamp(0.0, 1.0) * 100.0;
     }
-    if let Some(preview) = scene.rail_preview.as_ref()
-        && scene.active.0.is_some_and(|item| {
-            item.block_material()
-                .is_some_and(terra_core::rails::is_rail)
-        })
-    {
-        let mode = [
-            "Gleis",
-            "Weiche links",
-            "Weiche rechts",
-            "Kreuzung",
-            "Prellbock",
-        ]
-        .get(usize::from(preview.rail_mode))
-        .copied()
-        .unwrap_or("Gleis");
-        let binding = |action: terra_core::GameAction| {
-            scene.controls.as_ref().map_or_else(
-                || action.default_binding().label(),
-                |controls| controls.binding(action).label(),
-            )
-        };
-        v.visible = true;
-        v.status = if preview.rail_start.is_some() {
-            format!(
-                "{mode}: Ziel waehlen · {}+{}: Abbrechen",
-                binding(terra_core::GameAction::FlyDown),
-                binding(terra_core::GameAction::Place)
-            )
-        } else {
-            format!(
-                "{mode} · {}: Bauform · Gleis anklicken: Verbinden",
-                binding(terra_core::GameAction::Use)
-            )
-        };
-        if preview.rail_cost > 0 && preview.rail_cost != u16::MAX {
-            v.stats.push(StatRow {
-                id: "rail-cost".into(),
-                label: "Schienen".into(),
-                text: preview.rail_cost.to_string(),
-                bar: false,
-                value: 100.,
-            });
-        }
-    }
     if *view != v {
         *view = v;
     }
@@ -1032,6 +1026,79 @@ mod tests {
         props::{PropId, PropKind, WorldProp},
         streaming::LoadedSection,
     };
+
+    #[test]
+    fn held_tracks_and_curves_never_open_an_empty_target_card() {
+        let mut app = App::new();
+        app.init_resource::<Time>()
+            .init_resource::<terra_core::DebugSettings>()
+            .init_resource::<crate::inventory::InventoryState>()
+            .init_resource::<crate::SettingsView>()
+            .init_resource::<crate::chat::ChatState>()
+            .init_resource::<TargetCreature>()
+            .init_resource::<MiningVisual>()
+            .init_resource::<Presentations>()
+            .init_resource::<terra_world::streaming::WorldAccess>()
+            .init_resource::<TargetView>()
+            .init_resource::<ChunkStore>()
+            .init_resource::<BlockPalette>()
+            .init_resource::<terra_core::block_properties::BlockPropertiesCatalog>()
+            .init_resource::<TargetWorld>()
+            .insert_resource(ActiveItem(Some(ItemKind::Block(
+                terra_core::rails::STRAIGHT,
+            ))))
+            .insert_resource(terra_player::interaction::PlacementPreview {
+                rail_start: Some(terra_core::rails::Endpoint {
+                    anchor: [0; 3],
+                    port: 1,
+                }),
+                rail_cost: 3,
+                rail_error: Some("Curve needs more room".into()),
+                ..Default::default()
+            })
+            .add_systems(Update, update);
+        app.update();
+        assert!(!app.world().resource::<TargetView>().visible);
+        let position = [0, 0, 0];
+        let (owner, local) = terra_voxel::global_to_section(position);
+        let mut data = terra_voxel::BlockSection::empty(owner).unwrap();
+        data.set_block(local, 3).unwrap();
+        app.world_mut().resource_mut::<ChunkStore>().loaded.insert(
+            owner,
+            LoadedSection {
+                data,
+                mesh: None,
+                mesh_epoch: 0,
+                water_epoch: 0,
+                water: None,
+                props: Vec::new(),
+            },
+        );
+        app.world_mut().resource_mut::<TargetWorld>().0 =
+            Some(WorldTarget::Block(terra_voxel::blocks::BlockHit {
+                position,
+                normal: [0, 1, 0],
+                distance: 2.0,
+            }));
+        app.world_mut()
+            .resource_mut::<Time>()
+            .advance_by(std::time::Duration::from_millis(100));
+        app.update();
+        assert!(app.world().resource::<TargetView>().visible);
+        assert!(
+            app.world()
+                .resource::<TargetView>()
+                .stats
+                .iter()
+                .all(|row| !row.id.starts_with("rail-"))
+        );
+        app.world_mut().resource_mut::<TargetWorld>().0 = None;
+        app.world_mut()
+            .resource_mut::<Time>()
+            .advance_by(std::time::Duration::from_millis(100));
+        app.update();
+        assert!(!app.world().resource::<TargetView>().visible);
+    }
 
     #[test]
     fn hovered_saplings_show_confirmed_growth_for_each_species_and_ignore_stale_occupants() {

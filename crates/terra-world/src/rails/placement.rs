@@ -130,12 +130,20 @@ pub fn connection(
     look: [f32; 2],
     wood: terra_core::WoodSpecies,
 ) -> Result<Layout, String> {
-    let plan = proposal_connection(chunks, journal, start, hit, look, wood)?;
-    environment(&plan, chunks, journal)?;
-    Ok(plan)
+    let mut first_error = None;
+    for plan in connection_candidates(chunks, journal, start, hit, look, wood)? {
+        match environment(&plan, chunks, journal) {
+            Ok(()) => return Ok(plan),
+            Err(error) => {
+                first_error.get_or_insert(error);
+            }
+        }
+    }
+    Err(first_error.unwrap_or_else(|| "No free rail connection fits these ends".into()))
 }
 
-/// Keep only genuine, valid curve geometry when its construction space is blocked.
+/// Keep genuine curve geometry visible when its floor or corridor is blocked.
+/// A floor destination derives its tangent from the route, never the camera.
 pub fn proposal_connection(
     chunks: &ChunkStore,
     journal: &EditJournal,
@@ -144,8 +152,30 @@ pub fn proposal_connection(
     look: [f32; 2],
     wood: terra_core::WoodSpecies,
 ) -> Result<Layout, String> {
-    if look.iter().any(|value| !value.is_finite()) {
-        return Err("Invalid rail connection look".into());
+    connection_candidates(chunks, journal, start, hit, look, wood)?
+        .into_iter()
+        .next()
+        .ok_or_else(|| "No rail curve candidate".into())
+}
+
+fn connection_candidates(
+    chunks: &ChunkStore,
+    journal: &EditJournal,
+    start: terra_core::rails::Endpoint,
+    hit: terra_voxel::blocks::BlockHit,
+    look: [f32; 2],
+    wood: terra_core::WoodSpecies,
+) -> Result<Vec<Layout>, String> {
+    use terra_core::rails::{CurveError, CurveSpec, FixedPoint, Port};
+    if look.iter().any(|value| !value.is_finite())
+        || hit
+            .position
+            .iter()
+            .any(|value| value.unsigned_abs() > 990_000)
+        || !hit.distance.is_finite()
+        || hit.distance < 0.0
+    {
+        return Err("Invalid rail connection target".into());
     }
     let piece = owner_at(journal, start.anchor).ok_or("Rail start no longer exists")?;
     if !complete(journal, piece) {
@@ -157,55 +187,77 @@ pub fn proposal_connection(
         .find(|port| port.index == start.port && port.connectable)
         .filter(|port| !port_connected(journal, piece, *port))
         .ok_or("Rail start is already connected")?;
-    let end_port = if let Some(target) = owner_at(journal, hit.position) {
+    let position = start_port.position.position();
+    let end_ports = if let Some(target) = owner_at(journal, hit.position) {
         if !complete(journal, target) {
             return Err("Rail destination is incomplete".into());
         }
-        nearest_free_port(
-            journal,
-            target,
-            hit.position.map(|coordinate| coordinate as f64 + 0.5),
-            None,
-        )
-        .filter(|port| port.position != start_port.position)
-        .ok_or("Rail destination has no free port")?
+        let point = hit.position.map(|coordinate| coordinate as f64 + 0.5);
+        let mut ports: Vec<_> = target
+            .ports()
+            .into_iter()
+            .filter(|port| {
+                port.connectable
+                    && port.position != start_port.position
+                    && !port_connected(journal, target, *port)
+            })
+            .collect();
+        ports.sort_by(|first, second| {
+            distance_squared(first.position.position(), point)
+                .total_cmp(&distance_squared(second.position.position(), point))
+                .then(first.index.cmp(&second.index))
+        });
+        if ports.is_empty() {
+            return Err("Rail destination has no free end; use a switch for a side branch".into());
+        }
+        ports
     } else {
         if hit.normal != [0, 1, 0] {
             return Err("A free rail destination needs a floor top".into());
         }
         let cell = hit.adjacent();
-        let yaw = crate::edits::BlockObjectState::from_yaw(look[0] + std::f32::consts::PI).facing;
-        let forward = terra_core::kinetic::forward(yaw);
-        let local = [
-            if forward[0] == 0 {
-                8
-            } else if forward[0] > 0 {
-                16
-            } else {
-                0
-            },
-            2,
-            if forward[2] == 0 {
-                8
-            } else if forward[2] > 0 {
-                16
-            } else {
-                0
-            },
-        ];
-        terra_core::rails::Port {
-            index: 0,
-            connectable: true,
-            position: terra_core::rails::FixedPoint(std::array::from_fn(|axis| {
-                cell[axis] * 16 + local[axis]
-            })),
-            tangent: forward.map(|value| -value as i16),
-        }
+        let delta: [f64; 3] = std::array::from_fn(|axis| cell[axis] as f64 + 0.5 - position[axis]);
+        let mut headings = [[0_i64, 0, 1], [1, 0, 0], [0, 0, -1], [-1, 0, 0]];
+        let score = |heading: [i64; 3]| delta[0] * heading[0] as f64 + delta[2] * heading[2] as f64;
+        let continuation = |heading: [i64; 3]| {
+            i64::from(start_port.tangent[0]) * heading[0]
+                + i64::from(start_port.tangent[2]) * heading[2]
+        };
+        headings.sort_by(|first, second| {
+            score(*second)
+                .total_cmp(&score(*first))
+                .then(continuation(*second).cmp(&continuation(*first)))
+        });
+        headings
+            .into_iter()
+            .filter(|heading| score(*heading) > 1e-8)
+            .map(|forward| {
+                let local = [
+                    if forward[0] == 0 {
+                        8
+                    } else if forward[0] > 0 {
+                        16
+                    } else {
+                        0
+                    },
+                    2,
+                    if forward[2] == 0 {
+                        8
+                    } else if forward[2] > 0 {
+                        16
+                    } else {
+                        0
+                    },
+                ];
+                Port {
+                    index: 0,
+                    connectable: true,
+                    position: FixedPoint(std::array::from_fn(|axis| cell[axis] * 16 + local[axis])),
+                    tangent: forward.map(|value| -value as i16),
+                }
+            })
+            .collect()
     };
-    let position = start_port.position.position();
-    if distance_squared(position, end_port.position.position()) > 32.0 * 32.0 {
-        return Err("A rail connection may span at most 32 metres".into());
-    }
     let anchor = std::array::from_fn(|axis| {
         let step = if axis == 1 {
             0.0
@@ -214,10 +266,28 @@ pub fn proposal_connection(
         };
         (position[axis] + step).floor() as i64
     });
-    let curve = terra_core::rails::CurveSpec::between(start_port, end_port, anchor)
-        .ok_or("Rail endpoints cannot form a safe curve")?;
-    let curve = Piece::new_curve(anchor, curve).ok_or("Invalid rail curve")?;
-    candidate_piece(chunks, curve, wood)
+    let mut candidates = Vec::new();
+    let mut first_error = None;
+    for end_port in end_ports {
+        let result = CurveSpec::between_checked(start_port, end_port, anchor).map_err(|error| match error {
+            CurveError::Reverses => "The selected ends face away from this route; choose a free end facing the route or use a switch for a side branch".to_string(),
+            CurveError::TooTight => "Rail ends are too close for the 4.5 m turning radius; move the destination farther away".to_string(),
+            other => other.to_string(),
+        }).and_then(|curve| Piece::new_curve(anchor, curve).ok_or_else(|| "Invalid rail curve".into()))
+            .and_then(|curve| candidate_piece(chunks, curve, wood));
+        match result {
+            Ok(plan) => candidates.push(plan),
+            Err(error) => {
+                first_error.get_or_insert(error);
+            }
+        }
+    }
+    if candidates.is_empty() {
+        Err(first_error
+            .unwrap_or_else(|| "Rail destination needs horizontal room for a curve".into()))
+    } else {
+        Ok(candidates)
+    }
 }
 
 /// Snap to an actual free endpoint of the clicked module, including its grade.
@@ -486,7 +556,7 @@ fn proposed_piece(plan: &Layout) -> Option<Piece> {
 }
 
 /// Require a complete top face; lower slabs, furniture and other rails cannot float a module.
-fn supports_floor(journal: &EditJournal, cell: Cell, material: u16) -> bool {
+pub(super) fn supports_floor(journal: &EditJournal, cell: Cell, material: u16) -> bool {
     supports_floor_with_state(material, journal.object_state(cell))
 }
 
@@ -498,6 +568,9 @@ fn supports_floor_with_state(material: u16, state: Option<crate::edits::BlockObj
         return state.is_some_and(|state| {
             state.facing == 4 || terra_core::construction::full_slab(state.facing)
         });
+    }
+    if terra_core::construction::is_stair(material) {
+        return state.is_some_and(|state| (4..8).contains(&state.facing));
     }
     terra_core::beds::supports_bed_floor(material)
 }
@@ -550,6 +623,9 @@ pub fn environment(
                 edit.material,
                 false,
             )?;
+        }
+        if terra_core::rails::is_rail(edit.expected_material) {
+            return Err("Rail curve overlaps an existing module; connect its free end or use a switch for a side branch".into());
         }
         if edit.material != piece.material
             || chunks.block_at(edit.position) != Some(edit.expected_material)

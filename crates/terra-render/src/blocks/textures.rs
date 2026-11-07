@@ -1,5 +1,6 @@
 //! Small, tileable material textures. Generated once, shared across all sections.
 use super::definitions::TexturePattern;
+mod ballast;
 mod reference;
 mod underwater;
 mod village;
@@ -15,7 +16,8 @@ pub(super) fn generate(pattern: TexturePattern) -> Image {
     let mut pixels = Vec::with_capacity((SIZE * SIZE * 4) as usize);
     for py in 0..SIZE {
         for px in 0..SIZE {
-            if let Some(color) = reference::sample(pattern, px, py)
+            if let Some(color) = ballast::sample(pattern, px, py)
+                .or_else(|| reference::sample(pattern, px, py))
                 .or_else(|| underwater::sample(pattern, px, py))
                 .or_else(|| village::sample(pattern, px, py))
             {
@@ -41,6 +43,7 @@ pub(super) fn generate(pattern: TexturePattern) -> Image {
                 | TexturePattern::BirchCanopy
                 | TexturePattern::BlossomCanopy
                 | TexturePattern::Gravel
+                | TexturePattern::Ballast
                 | TexturePattern::StructureStone
                 | TexturePattern::CoralRed
                 | TexturePattern::CoralBlue

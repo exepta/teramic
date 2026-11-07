@@ -391,9 +391,30 @@ fn make_layout(piece: Piece) -> Layout {
             }
         }
     }
+    if piece.kind().is_some_and(Kind::is_switch) {
+        for mut beam in legacy_switch_lever(Piece { facing: 0, ..piece }) {
+            beam.center = rotate_point(beam.center, piece.facing);
+            beam.right = rotate_vector(beam.right, piece.facing);
+            beam.up = rotate_vector(beam.up, piece.facing);
+            beam.forward = rotate_vector(beam.forward, piece.facing);
+            let bounds = beam.bounds();
+            let low = bounds.minimum.map(|v| (v + 1e-8).floor() as i32);
+            let high = bounds.maximum.map(|v| (v - 1e-8).floor() as i32);
+            for x in low[0]..=high[0] {
+                for y in low[1]..=high[1] {
+                    for z in low[2]..=high[2] {
+                        cells.entry([x, y, z]).or_default();
+                    }
+                }
+            }
+        }
+    }
     let footprint = cells.keys().copied().collect::<Vec<_>>();
     let mut ground = BTreeMap::new();
     for &[x, y, z] in &footprint {
+        if cells.get(&[x, y, z]).is_none_or(Vec::is_empty) {
+            continue;
+        }
         ground
             .entry([x, z])
             .and_modify(|height: &mut i32| *height = (*height).min(y))
@@ -588,32 +609,7 @@ fn make_beams(piece: Piece) -> Vec<Beam> {
         }
     }
     if canonical.kind().is_some_and(Kind::is_switch) {
-        let side = if canonical.material == SWITCH_LEFT {
-            1.0
-        } else {
-            -1.0
-        };
-        beams.push(axis_beam(
-            [0.5 + side * 1.8, 0.15, 1.0],
-            [0.2, 0.15, 0.25],
-            PartMaterial::Steel,
-        ));
-        let lean = if canonical.switched { 0.35 } else { -0.35 };
-        let forward = normalized([lean, 0.65, 0.0]);
-        beams.push(Beam {
-            center: [0.5 + side * 1.8 + lean * 0.5, 0.6, 1.0],
-            right: [0.0, 0.0, 1.0],
-            up: normalized(cross(forward, [0.0, 0.0, 1.0])),
-            forward,
-            half_extents: [0.045, 0.045, 0.4],
-            material: PartMaterial::Steel,
-            cross_sections: None,
-        });
-        beams.push(axis_beam(
-            [0.5 + side * 1.8 + lean, 0.9, 1.0],
-            [0.12, 0.10, 0.12],
-            PartMaterial::Red,
-        ));
+        beams.push(legacy_switch_lever(canonical)[0]);
     }
     if canonical.material == BUFFER {
         for x in [-0.5, 1.5] {
@@ -636,6 +632,39 @@ fn make_beams(piece: Piece) -> Vec<Beam> {
             ));
         }
     }
+    beams
+}
+
+// Historical ownership includes the former lever, but its moving solids now
+// belong to the separately placed switch stand. Never resurrect its collision.
+fn legacy_switch_lever(canonical: Piece) -> Vec<Beam> {
+    let mut beams = Vec::new();
+    let side = if canonical.material == SWITCH_LEFT {
+        1.0
+    } else {
+        -1.0
+    };
+    beams.push(axis_beam(
+        [0.5 + side * 1.8, 0.15, 1.0],
+        [0.2, 0.15, 0.25],
+        PartMaterial::Steel,
+    ));
+    let lean = if canonical.switched { 0.35 } else { -0.35 };
+    let forward = normalized([lean, 0.65, 0.0]);
+    beams.push(Beam {
+        center: [0.5 + side * 1.8 + lean * 0.5, 0.6, 1.0],
+        right: [0.0, 0.0, 1.0],
+        up: normalized(cross(forward, [0.0, 0.0, 1.0])),
+        forward,
+        half_extents: [0.045, 0.045, 0.4],
+        material: PartMaterial::Steel,
+        cross_sections: None,
+    });
+    beams.push(axis_beam(
+        [0.5 + side * 1.8 + lean, 0.9, 1.0],
+        [0.12, 0.10, 0.12],
+        PartMaterial::Red,
+    ));
     beams
 }
 

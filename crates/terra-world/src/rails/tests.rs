@@ -67,7 +67,26 @@ fn every_module_owns_all_its_cells_and_breaks_once_from_an_unloaded_secondary() 
                 );
                 assert!(crate::water::can_hold_fluid(material));
                 let authored = cell_boxes(cell, material, object_state(piece, cell));
-                assert!(!authored.is_empty());
+                if authored.is_empty() {
+                    assert!(
+                        piece.kind().is_some_and(rails::Kind::is_switch),
+                        "only historic switch lever reservations may lack solids"
+                    );
+                    let low = std::array::from_fn::<_, 3, _>(|axis| {
+                        (cell[axis] - piece.anchor[axis]) as f64
+                    });
+                    assert!(
+                        piece.local_geometry().iter().all(|beam| {
+                            let bounds = beam.bounds();
+                            (0..3).any(|axis| {
+                                bounds.maximum[axis].min(low[axis] + 1.0)
+                                    - bounds.minimum[axis].max(low[axis])
+                                    <= 1e-8
+                            })
+                        }),
+                        "an empty legacy slice cannot hide real beam collision"
+                    );
+                }
                 assert!(authored.iter().all(|bounds| {
                     (0..3).all(|axis| bounds.minimum[axis] >= 0.0 && bounds.maximum[axis] <= 1.0)
                 }));
@@ -653,3 +672,6 @@ fn connection_sites_cover_complete_modules_and_a_nearby_curve_hit_can_have_a_dis
     journal.record(missing, 0).unwrap();
     assert!(connection_sites(&journal, start, hit).is_none());
 }
+
+#[path = "curve_placement_tests.rs"]
+mod curve_placement_tests;

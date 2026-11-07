@@ -61,6 +61,7 @@ pub struct PlacementPreview {
     pub rail_item: Option<ItemKind>,
     pub rail_mode: u8,
     pub rail_cost: u16,
+    pub rail_error: Option<String>,
 }
 
 #[derive(Resource, Default, Debug)]
@@ -136,8 +137,12 @@ pub(crate) fn edit_target_block(
         }
     });
     presentation.preview.rail_cost = 0;
+    presentation.preview.rail_error = None;
     if blocked || selected != presentation.preview.rail_item {
         presentation.preview.rail_start = None;
+        if selected != presentation.preview.rail_item {
+            presentation.preview.rail_mode = 0;
+        }
     }
     presentation.preview.rail_item = selected.filter(|item| {
         item.block_material()
@@ -145,7 +150,9 @@ pub(crate) fn edit_target_block(
     });
     if presentation.preview.rail_item.is_some() && !blocked {
         if keys.just_pressed(Action::Use) {
-            presentation.preview.rail_mode = (presentation.preview.rail_mode + 1) % 5;
+            if selected.and_then(ItemKind::block_material) == Some(terra_core::rails::STRAIGHT) {
+                presentation.preview.rail_mode = (presentation.preview.rail_mode + 1) % 3;
+            }
             presentation.preview.rail_start = None;
             return;
         }
@@ -888,12 +895,7 @@ pub(crate) fn edit_target_block(
         && target.world.0.is_some_and(|target| match target {
             WorldTarget::Block(hit) => chunks.block_at(hit.position).is_some_and(|m| {
                 terra_world::objects::is_opening(m)
-                    || terra_core::rails::Kind::from_material(m)
-                        .is_some_and(terra_core::rails::Kind::is_switch)
-                        && !selected.is_some_and(|item| {
-                            item.block_material()
-                                .is_some_and(terra_core::rails::is_rail)
-                        })
+                    || m == terra_core::rails::SWITCH_STAND
                     || terra_core::beds::is_bed(m)
                     || m == terra_core::flower_pot::MATERIAL
                     || matches!(m, 166..=167)

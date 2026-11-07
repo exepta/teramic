@@ -336,6 +336,7 @@ pub enum TexturePattern {
     BlossomCanopy,
     CherryBark,
     CherryEnd,
+    Ballast,
 }
 
 fn white() -> [f32; 4] {

@@ -12,7 +12,11 @@ fn one_track_recipe_preserves_all_four_plank_species_and_retires_shape_recipes()
             count: 1
         }
     );
-    for kind in crate::rails::Kind::ALL.into_iter().skip(1) {
+    for kind in crate::rails::Kind::ALL
+        .into_iter()
+        .skip(1)
+        .filter(|kind| !kind.is_switch())
+    {
         assert!(
             book.get(recipe_key(&format!("teramic::{}", kind.key())))
                 .is_none()
@@ -1147,6 +1151,8 @@ fn builtin_recipes_are_valid_and_catalog_roundtrip_preserves_keys() {
             + 2 // Iron lantern and hanging chain.
             + 2 // Apple saplings from whole fruit or two cores.
             + 1 // One wood-preserving track item for all railway geometry.
+            + 3 // Ballast block, four-tread stairs and half slab.
+            + 3 // Dedicated left/right switches and their control stand.
     );
     for id in [
         "lantern",

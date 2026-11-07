@@ -228,3 +228,82 @@ fn invalid_tight_steep_reversed_and_oversized_curves_fail_before_geometry() {
     wrong_material.curve = Some(gentle());
     assert!(!wrong_material.valid());
 }
+
+#[test]
+fn adaptive_handles_fit_asymmetric_right_angle_turns_without_changing_existing_curves() {
+    let anchor = [-33, 16, -49];
+    let rotate = |[x, y, z]: [i32; 3], facing| match facing {
+        0 => [x, y, z],
+        1 => [z, y, -x],
+        2 => [-x, y, -z],
+        _ => [-z, y, x],
+    };
+    for facing in 0..4 {
+        let first = [8, 2, 8];
+        let delta = rotate([96, 0, 192], facing);
+        let last = std::array::from_fn(|axis| first[axis] + delta[axis]);
+        let start = Port {
+            position: FixedPoint(std::array::from_fn(|axis| {
+                anchor[axis] * 16 + i64::from(first[axis])
+            })),
+            tangent: rotate([0, 0, 1], facing).map(|value| value as i16),
+            index: 1,
+            connectable: true,
+        };
+        let end = Port {
+            position: FixedPoint(std::array::from_fn(|axis| {
+                anchor[axis] * 16 + i64::from(last[axis])
+            })),
+            tangent: rotate([-1, 0, 0], facing).map(|value| value as i16),
+            index: 0,
+            connectable: true,
+        };
+        let old_handle = 86;
+        let old = CurveSpec {
+            points: [
+                first,
+                std::array::from_fn(|axis| {
+                    first[axis] + i32::from(start.tangent[axis]) * old_handle
+                }),
+                std::array::from_fn(|axis| last[axis] + i32::from(end.tangent[axis]) * old_handle),
+                last,
+            ],
+        };
+        assert_eq!(old.validate(), Err(CurveError::TooTight));
+        let fitted = CurveSpec::between_checked(start, end, anchor).unwrap();
+        let metrics = fitted.validate().unwrap();
+        assert!(metrics.min_radius >= MIN_CURVE_RADIUS);
+        assert!(metrics.length <= MAX_CURVE_LENGTH);
+        assert!(metrics.max_grade <= MAX_CURVE_GRADE);
+        assert_ne!(fitted.points, old.points);
+        let piece = Piece::new_curve(anchor, fitted).unwrap();
+        assert!(start.connects(piece.ports()[0]));
+        assert!(end.connects(piece.ports()[1]));
+    }
+    let start = Port {
+        position: FixedPoint([8, 2, 0]),
+        tangent: [0, 0, 1],
+        index: 1,
+        connectable: true,
+    };
+    let end = Port {
+        position: FixedPoint([72, 2, 192]),
+        tangent: [0, 0, -1],
+        index: 0,
+        connectable: true,
+    };
+    assert_eq!(
+        CurveSpec::between_checked(start, end, [0; 3])
+            .unwrap()
+            .points,
+        [[8, 2, 0], [8, 2, 81], [72, 2, 111], [72, 2, 192]]
+    );
+    let reversed = Port {
+        tangent: [0, 0, -1],
+        ..start
+    };
+    assert_eq!(
+        CurveSpec::between_checked(reversed, end, [0; 3]),
+        Err(CurveError::Reverses)
+    );
+}

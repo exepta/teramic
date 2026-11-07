@@ -440,6 +440,53 @@ fn common_wood_track_consumes_curve_length_cost_and_secondary_break_returns_the_
 }
 
 #[test]
+fn saved_curve_stock_can_fund_real_free_connections_but_separate_switches_cannot() {
+    for source_material in [197, 198, 199, 200, 201, 202, 203, 204, 205] {
+        let mut fixture = connection_fixture(WoodSpecies::Oak);
+        let item = ItemKind::Block(source_material);
+        let cost = terra_world::rails::piece_cost(fixture.curve);
+        {
+            let mut journal = fixture.app.world_mut().resource_mut::<EditJournal>();
+            let bag = journal
+                .gameplay_mut()
+                .inventories
+                .get_mut(&fixture.peer.uuid)
+                .unwrap();
+            assert!(bag.creative_set(
+                0,
+                ItemStack {
+                    item,
+                    count: cost + 1
+                }
+            ));
+            fixture.command.source.as_mut().unwrap().revision = bag.revision;
+        }
+        let before = rpc_snapshot(&fixture);
+        let outcome = run(&mut fixture.app, &fixture.peer, fixture.command, false);
+        if source_material <= 201 {
+            assert_eq!(
+                outcome,
+                EditOutcome::Applied,
+                "legacy source {source_material}"
+            );
+            let journal = fixture.app.world().resource::<EditJournal>();
+            assert!(terra_world::rails::complete(journal, fixture.curve));
+            assert_eq!(
+                journal.gameplay().inventories[&fixture.peer.uuid].count(item),
+                1
+            );
+        } else {
+            assert_eq!(
+                outcome,
+                EditOutcome::Invalid,
+                "non-track source {source_material}"
+            );
+            assert_eq!(rpc_snapshot(&fixture), before);
+        }
+    }
+}
+
+#[test]
 fn stale_or_underfunded_sources_and_foreign_curve_cells_cannot_publish_partial_connections() {
     for failure in ["stale_source", "missing_material", "foreign_claim"] {
         let mut fixture = connection_fixture(WoodSpecies::Spruce);
@@ -533,7 +580,7 @@ fn a_foreign_source_at_a_claim_boundary_cannot_be_connected_from_unclaimed_land(
 }
 
 #[test]
-fn snapping_each_common_special_mode_cannot_occupy_a_foreign_modules_free_port() {
+fn snapping_separate_switches_and_common_specials_cannot_occupy_a_foreign_modules_free_port() {
     for material in [
         rails::SWITCH_LEFT,
         rails::SWITCH_RIGHT,
@@ -628,7 +675,11 @@ fn snapping_each_common_special_mode_cannot_occupy_a_foreign_modules_free_port()
             assert!(bag.creative_set(
                 0,
                 ItemStack {
-                    item: ItemKind::Block(rails::STRAIGHT),
+                    item: ItemKind::Block(if special.kind().is_some_and(rails::Kind::is_switch) {
+                        material
+                    } else {
+                        rails::STRAIGHT
+                    }),
                     count: terra_world::rails::piece_cost(special) + 1,
                 }
             ));

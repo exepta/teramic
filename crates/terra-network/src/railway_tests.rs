@@ -79,8 +79,7 @@ fn visible_secondary(host: &App, client: &App, piece: Piece) -> ([i64; 3], [f32;
 }
 
 #[test]
-fn udp_survival_rail_module_consumes_common_track_cost_switches_all_cells_and_breaks_once_after_late_join()
- {
+fn udp_separate_switch_and_real_stand_replicate_toggle_and_return_one_switch_after_timed_mining() {
     let (mut host, mut first, mut second) = pair();
     let state = first
         .world()
@@ -140,7 +139,7 @@ fn udp_survival_rail_module_consumes_common_track_cost_switches_all_cells_and_br
         .resource::<client::ClientSession>()
         .uuid
         .unwrap();
-    let item = ItemKind::Block(terra_core::rails::STRAIGHT);
+    let item = ItemKind::Block(piece.material);
     let cost = rails::piece_cost(piece);
     {
         let mut journal = host.world_mut().resource_mut::<EditJournal>();
@@ -150,6 +149,13 @@ fn udp_survival_rail_module_consumes_common_track_cost_switches_all_cells_and_br
             ItemStack {
                 item,
                 count: cost + 1
+            }
+        ));
+        assert!(inventory.creative_set(
+            6,
+            ItemStack {
+                item: ItemKind::Block(terra_core::rails::SWITCH_STAND),
+                count: 1
             }
         ));
         let pickaxe = ItemStack {
@@ -262,6 +268,84 @@ fn udp_survival_rail_module_consumes_common_track_cost_switches_all_cells_and_br
             .count(item),
         1
     );
+    let stand = rails::stand::positions(piece)[0];
+    assert!(!cells.contains(&stand));
+    assert_eq!(
+        host.world()
+            .resource::<ChunkStore>()
+            .block_at([stand[0], ground_y, stand[2]]),
+        Some(3)
+    );
+    let origin = eye(&first);
+    // Aim at the near corner of the genuine supporting face, not through the switch.
+    let direction = Vec3::new(
+        stand[0] as f32 + 0.5,
+        anchor[1] as f32,
+        stand[2] as f32 + 0.5,
+    ) - origin;
+    let near = Vec3::new(
+        stand[0] as f32 + if direction.x > 0.0 { 0.1 } else { 0.9 },
+        anchor[1] as f32,
+        stand[2] as f32 + if direction.z > 0.0 { 0.1 } else { 0.9 },
+    );
+    let stand_look = look_at(origin, near);
+    let support_hit =
+        picked(&host, origin, stand_look).expect("the real stand floor must be visible");
+    assert_eq!(support_hit.position, [stand[0], ground_y, stand[2]]);
+    assert_eq!(support_hit.normal, [0, 1, 0]);
+    assert!(support_hit.distance <= 4.5);
+    let previous = first
+        .world()
+        .resource::<client::ClientSession>()
+        .last_edit
+        .unwrap()
+        .0;
+    first
+        .world_mut()
+        .resource_mut::<client::ClientSession>()
+        .look = stand_look;
+    first
+        .world_mut()
+        .resource_mut::<client::SelectedInventorySlot>()
+        .0 = Some(6);
+    first.world_mut().write_message(BlockEditRequest {
+        position: stand,
+        expected_material: 0,
+        material: terra_core::rails::SWITCH_STAND,
+    });
+    wait(&mut host, &mut [&mut first, &mut second], |_, clients| {
+        clients[0]
+            .world()
+            .resource::<client::ClientSession>()
+            .last_edit
+            .is_some_and(|(sequence, _)| sequence != previous)
+    });
+    assert_eq!(
+        first
+            .world()
+            .resource::<client::ClientSession>()
+            .last_edit
+            .unwrap()
+            .1,
+        EditOutcome::Applied
+    );
+    wait(
+        &mut host,
+        &mut [&mut first, &mut second],
+        |host, clients| {
+            rails::stand::switch_at(host.world().resource::<EditJournal>(), stand) == Some(piece)
+                && clients.iter().all(|client| {
+                    rails::stand::switch_at(client.world().resource::<EditJournal>(), stand)
+                        == Some(piece)
+                })
+                && clients[0]
+                    .world()
+                    .resource::<client::ClientSession>()
+                    .inventory
+                    .count(ItemKind::Block(terra_core::rails::SWITCH_STAND))
+                    == 0
+        },
+    );
     let token = host
         .world()
         .resource::<server::ServerRuntime>()
@@ -289,7 +373,26 @@ fn udp_survival_rail_module_consumes_common_track_cost_switches_all_cells_and_br
             );
         }
     }
-    let (secondary, switch_look) = visible_secondary(&host, &first, piece);
+    let stand_state = host
+        .world()
+        .resource::<EditJournal>()
+        .object_state(stand)
+        .unwrap();
+    let origin = eye(&first);
+    let switch_look = terra_core::block_shapes::builtin_boxes(terra_core::rails::SWITCH_STAND)
+        .iter()
+        .filter_map(|shape| {
+            let shape = shape.rotated_y(stand_state.facing);
+            let center = Vec3::from_array(std::array::from_fn(|axis| {
+                stand[axis] as f32 + ((shape.minimum[axis] + shape.maximum[axis]) * 0.5) as f32
+            }));
+            let look = look_at(origin, center);
+            picked(&host, origin, look)
+                .filter(|hit| hit.position == stand && hit.distance <= 4.5)
+                .map(|_| look)
+        })
+        .next()
+        .expect("the actual stand grip must be visible within interaction reach");
     first
         .world_mut()
         .resource_mut::<client::ClientSession>()
@@ -303,9 +406,9 @@ fn udp_survival_rail_module_consumes_common_track_cost_switches_all_cells_and_br
     first
         .world_mut()
         .write_message(client::ObjectInteractionRequest {
-            position: secondary,
-            expected: piece.material,
-            facing: piece.encoded_facing(),
+            position: stand,
+            expected: terra_core::rails::SWITCH_STAND,
+            facing: stand_state.facing,
             closing: false,
         });
     let switched = Piece::new(anchor, piece.material, 4).unwrap();
@@ -410,7 +513,7 @@ fn udp_survival_rail_module_consumes_common_track_cost_switches_all_cells_and_br
     assert_eq!(
         gameplay.next_drop,
         next_drop + 1,
-        "one module produces one stack of the common track item"
+        "the whole turnout returns exactly one separate switch item"
     );
     let dropped: Vec<_> = gameplay
         .drops
@@ -419,7 +522,7 @@ fn udp_survival_rail_module_consumes_common_track_cost_switches_all_cells_and_br
         .collect();
     assert_eq!(dropped.len(), 1);
     assert_eq!(dropped[0].stack.count, cost);
-    assert_eq!(gameplay.player_stats[&uuid].blocks_placed, 1);
+    assert_eq!(gameplay.player_stats[&uuid].blocks_placed, 2);
     assert_eq!(gameplay.player_stats[&uuid].blocks_broken, 1);
     wait(
         &mut host,

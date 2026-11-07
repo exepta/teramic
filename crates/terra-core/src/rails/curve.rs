@@ -160,42 +160,104 @@ impl CurveSpec {
     /// one in the opposite direction. Control offsets are integer multiples of
     /// the primitive tangents, so quantization never changes the endpoint grade.
     pub fn between(start: Port, end: Port, anchor: [i64; 3]) -> Option<Self> {
+        Self::between_checked(start, end, anchor).ok()
+    }
+
+    /// Fit endpoint tangents with a bounded set of independent handle lengths.
+    /// The historical equal-handle curve is tried first, preserving successful
+    /// connections; asymmetric turns can then use the available approach length.
+    pub fn between_checked(start: Port, end: Port, anchor: [i64; 3]) -> Result<Self, CurveError> {
         if !start.connectable || !end.connectable || start.position == end.position {
-            return None;
+            return Err(CurveError::Degenerate);
         }
-        let start_tangent = primitive(start.tangent.map(i32::from))?;
-        let end_tangent = primitive(end.tangent.map(i32::from))?;
-        let point = |port: Port| -> Option<[i32; 3]> {
+        let start_tangent =
+            primitive(start.tangent.map(i32::from)).ok_or(CurveError::Degenerate)?;
+        let end_tangent = primitive(end.tangent.map(i32::from)).ok_or(CurveError::Degenerate)?;
+        let point = |port: Port| -> Result<[i32; 3], CurveError> {
             let mut result = [0; 3];
             for (axis, coordinate) in result.iter_mut().enumerate() {
                 *coordinate = i32::try_from(
-                    port.position.0[axis].checked_sub(anchor[axis].checked_mul(FIXED_SCALE)?)?,
+                    port.position.0[axis]
+                        .checked_sub(
+                            anchor[axis]
+                                .checked_mul(FIXED_SCALE)
+                                .ok_or(CurveError::Coordinates)?,
+                        )
+                        .ok_or(CurveError::Coordinates)?,
                 )
-                .ok()?;
+                .map_err(|_| CurveError::Coordinates)?;
             }
-            Some(result)
+            Ok(result)
         };
         let first = point(start)?;
         let last = point(end)?;
-        let distance = norm(std::array::from_fn(|axis| {
-            f64::from(last[axis]) - f64::from(first[axis])
-        }));
-        let handle = |tangent: [i16; 3]| {
-            (distance * 0.4 / norm(tangent.map(f64::from)))
-                .round()
-                .max(1.0) as i32
-        };
-        let start_handle = handle(start_tangent);
-        let end_handle = handle(end_tangent);
-        let mut second = [0; 3];
-        let mut third = [0; 3];
-        for axis in 0..3 {
-            second[axis] = first[axis]
-                .checked_add(i32::from(start_tangent[axis]).checked_mul(start_handle)?)?;
-            third[axis] =
-                last[axis].checked_add(i32::from(end_tangent[axis]).checked_mul(end_handle)?)?;
+        let chord = std::array::from_fn(|axis| f64::from(last[axis]) - f64::from(first[axis]));
+        let distance = norm(chord);
+        if distance > MAX_CURVE_LENGTH * FIXED_SCALE as f64 + 1e-8 {
+            return Err(CurveError::TooLong);
         }
-        Self::new([first, second, third, last])
+        if distance < 0.5 * FIXED_SCALE as f64 {
+            return Err(CurveError::Degenerate);
+        }
+        let start_vector = start_tangent.map(f64::from);
+        let end_vector = end_tangent.map(f64::from);
+        if dot(start_vector, chord) < -1e-8 || dot(end_vector, chord) > 1e-8 {
+            return Err(CurveError::Reverses);
+        }
+        let handles = |vector: [f64; 3], projection: f64| {
+            let magnitude = norm(vector);
+            let candidates = [
+                distance * 0.4,
+                projection * 0.85,
+                projection * 0.4,
+                projection * 0.2,
+                projection * 1.25,
+                distance * 0.6,
+            ];
+            let mut result = Vec::with_capacity(candidates.len());
+            for candidate in candidates {
+                let handle = (candidate / magnitude).round().max(1.0) as i32;
+                if !result.contains(&handle) {
+                    result.push(handle);
+                }
+            }
+            result
+        };
+        let start_handles = handles(start_vector, dot(start_vector, chord) / norm(start_vector));
+        let end_handles = handles(end_vector, -dot(end_vector, chord) / norm(end_vector));
+        let mut first_error = None;
+        for start_handle in start_handles {
+            for &end_handle in &end_handles {
+                let mut second = [0; 3];
+                let mut third = [0; 3];
+                for axis in 0..3 {
+                    second[axis] = first[axis]
+                        .checked_add(
+                            i32::from(start_tangent[axis])
+                                .checked_mul(start_handle)
+                                .ok_or(CurveError::Coordinates)?,
+                        )
+                        .ok_or(CurveError::Coordinates)?;
+                    third[axis] = last[axis]
+                        .checked_add(
+                            i32::from(end_tangent[axis])
+                                .checked_mul(end_handle)
+                                .ok_or(CurveError::Coordinates)?,
+                        )
+                        .ok_or(CurveError::Coordinates)?;
+                }
+                let curve = Self {
+                    points: [first, second, third, last],
+                };
+                match curve.validate() {
+                    Ok(_) => return Ok(curve),
+                    Err(error) => {
+                        first_error.get_or_insert(error);
+                    }
+                }
+            }
+        }
+        Err(first_error.unwrap_or(CurveError::Degenerate))
     }
     pub fn sample(self, t: f64) -> Sample {
         let (position, derivative, _) = self.evaluate(t);

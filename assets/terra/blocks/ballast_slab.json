@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "id": 208,
+  "name": "Schotter Slab",
+  "description": "Compacted angular railway ballast in warm grey stone. A half-height embankment layer.",
+  "creative_category": "building",
+  "render_kind": "boxes",
+  "bevel_width": 0.0,
+  "materials": {
+    "Angular ballast": {
+      "texture_pattern": "ballast",
+      "roughness": 0.99,
+      "reflectance": 0.08
+    }
+  },
+  "face_materials": [
+    "Angular ballast",
+    "Angular ballast",
+    "Angular ballast",
+    "Angular ballast",
+    "Angular ballast",
+    "Angular ballast"
+  ],
+  "hardness": 0.8,
+  "resistance": 1.5,
+  "required_tool": null,
+  "mining_level": 0,
+  "struct_block": false,
+  "collision_boxes": [
+    {
+      "minimum": [
+        0,
+        0,
+        0
+      ],
+      "maximum": [
+        1,
+        0.5,
+        1
+      ]
+    }
+  ]
+}

@@ -156,6 +156,7 @@ fn shipped_ids_and_face_materials_stay_explicit_without_cube_models() {
             || terra_core::castle::is_castle(block.id)
             || terra_core::lantern::is_part(block.id)
             || terra_core::rails::is_rail(block.id)
+            || block.id == terra_voxel::MaterialId::RailSwitchStand as u16
         {
             assert_eq!(block.render_kind, BlockRenderKind::CustomMesh);
             assert!(!block.model.is_empty());

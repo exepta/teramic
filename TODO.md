@@ -1,6 +1,6 @@
 # TERAMIC: Offene Aufgaben
 
-Stand: 07.11.2026. Nur offene Features, Korrekturen und Abnahmen.
+Stand: 08.11.2026. Nur offene Features, Korrekturen und Abnahmen.
 Erledigte Aufgaben werden entfernt; die Umsetzungshistorie steht in
 [PATCH.md](PATCH.md). Bestehende IDs bleiben erhalten, neue IDs werden fortlaufend angehaengt.
 `F` = Feature, `O` = Optimierung/Fehlerkorrektur, `A` = Abnahme.
@@ -37,7 +37,7 @@ Wachstum, NPC-Arbeit und bewegte Fahrzeuge muessen begrenzt simuliert werden.
 
 ### Fahrbetrieb Und Automatisierung
 
-- [ ] **F53 Fahrbarer Zug Und Dampfantrieb:** Anfahren, Bremsen, Rueckwaertsfahrt, Kupplungen und Mitfahren umsetzen. Dampfloks mit echtem Wasser-/Brennstoffverbrauch und Kesseldruck an vorhandene Wassertechnik, Inventare und Kinetik anbinden. Bremswege, Hindernisse, Kollisionen und Entgleisungsregeln definieren; Fahrt ueber Chunk-Grenzen, Fahrzeug-Unload und Wiederaufnahme nach Laden pruefen.
+- [ ] **F53 Fahrbarer Zug Und Dampfantrieb:** Anfahren, Bremsen, Rueckwaertsfahrt, Kupplungen und Mitfahren umsetzen. Dampfloks mit echtem Wasser-/Brennstoffverbrauch und Kesseldruck an vorhandene Wassertechnik, Inventare und Kinetik anbinden. Das vorhandene Live-Gleisbettlimit `terra_world::rails::ballast::speed_limit` verwenden: vollstaendig tragender Kies/Schotter erlaubt 50 Prozent mehr Tempo, ein Bonus wird einmal angewandt. Bremswege, Hindernisse, Kollisionen und Entgleisungsregeln definieren; Fahrt ueber Chunk-Grenzen, Fahrzeug-Unload und Wiederaufnahme nach Laden pruefen.
 
 - [ ] **F65 NPC-Lokfuehrer:** Einen zuweisbaren Zugfuehrer-Beruf ergaenzen. Fuehrerstand erreichen, zugewiesenen Zug fahren, Weichen/Signale und Haltepunkte beachten sowie bei Hindernissen sicher bremsen. Wasser-/Brennstoffmangel, blockierte Strecke und fehlende Berechtigung anzeigen; Dienstzeit, Spieleruebernahme und Wiederaufnahme nach Laden regeln.
 

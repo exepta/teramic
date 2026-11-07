@@ -3,7 +3,7 @@ use crate::blocks::{BlockTemplate, PrimitiveTemplate, definitions::BlockRenderKi
 
 fn templates() -> TemplateSet {
     let mut templates = TemplateSet::default();
-    for id in (74..=89).chain([98, 104, 105]) {
+    for id in (74..=89).chain([98, 104, 105, 206, 207, 208]) {
         templates.blocks.insert(
             id,
             BlockTemplate {
@@ -113,4 +113,31 @@ fn benchmark_repeated_roof_profiles() {
             "structure_roof_profile pass={pass} requests=20000 previous_ms={previous:.3} cached_ms={cached:.3}"
         );
     }
+}
+
+#[test]
+fn ballast_quarters_and_legacy_thirds_have_distinct_neighbor_cache_keys() {
+    let templates = templates();
+    let mut cache = ConstructionProfiles::default();
+    let mut model = cell(207, 0);
+    model.neighbors[5] = Some(77);
+    model.neighbor_facing[5] = 1;
+    let thirds = construction_profile(&model, &templates).unwrap();
+    assert_identical(&cache.get(&model, &templates).unwrap(), &thirds);
+    model.neighbors[5] = Some(207);
+    let quarters = construction_profile(&model, &templates).unwrap();
+    assert_identical(&cache.get(&model, &templates).unwrap(), &quarters);
+    assert_eq!(cache.0.len(), 2);
+    assert_ne!(
+        thirds.len(),
+        quarters.len(),
+        "third- and quarter-step corners require different real surfaces"
+    );
+    model.neighbors[5] = Some(78);
+    assert_identical(&cache.get(&model, &templates).unwrap(), &thirds);
+    assert_eq!(
+        cache.0.len(),
+        2,
+        "ordinary three-step materials should still share a profile"
+    );
 }

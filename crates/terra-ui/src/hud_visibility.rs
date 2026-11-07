@@ -78,6 +78,7 @@ fn passive_root(id: Option<&ElementId>, classes: Option<&ElementClasses>, chat_o
             "inventory-hud"
             | "debug-overlay"
             | "target-card"
+            | "rail-build-hint"
             | "mini-map"
             | "survival-hud"
             | "survival-hit"

@@ -198,14 +198,15 @@ fn every_yaw_and_switch_pose_partitions_without_holes_or_duplicate_surfaces() {
 }
 
 #[test]
-fn real_switch_steel_tongues_and_red_lever_move_but_sleepers_stay_fixed() {
+fn steel_tongues_move_without_an_integrated_lever_while_sleepers_stay_fixed() {
     for material in [rails::SWITCH_LEFT, rails::SWITCH_RIGHT] {
         let main = profile(Piece::new([0; 3], material, 0).unwrap(), &template()).unwrap();
         let branch = profile(Piece::new([0; 3], material, 4).unwrap(), &template()).unwrap();
         assert_eq!(main.full[&0].positions, branch.full[&0].positions);
         assert_ne!(main.full[&1].positions, branch.full[&1].positions);
         assert_ne!(main.full[&2].positions, branch.full[&2].positions);
-        assert_ne!(main.full[&4].positions, branch.full[&4].positions);
+        assert!(!main.full.contains_key(&4));
+        assert!(!branch.full.contains_key(&4));
     }
 }
 

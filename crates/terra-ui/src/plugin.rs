@@ -19,6 +19,7 @@ impl Plugin for TerraUiPlugin {
         crate::survival::install(app);
         crate::debug::install(app);
         crate::target_hud::install(app);
+        crate::rail_hint::install(app);
         crate::mob_health::install(app);
         crate::pets::install(app);
         crate::settlement_map::install(app);

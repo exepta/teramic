@@ -929,3 +929,7 @@ impl RecipeBook {
         true
     }
 }
+
+#[cfg(test)]
+#[path = "crafting/ballast_tests.rs"]
+mod ballast_tests;

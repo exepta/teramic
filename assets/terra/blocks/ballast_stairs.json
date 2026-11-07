@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "id": 207,
+  "name": "Schotter Stairs",
+  "description": "Compacted angular railway ballast in warm grey stone. Four quarter-height treads shape a stable embankment.",
+  "creative_category": "building",
+  "render_kind": "boxes",
+  "bevel_width": 0.0,
+  "materials": {
+    "Angular ballast": {
+      "texture_pattern": "ballast",
+      "roughness": 0.99,
+      "reflectance": 0.08
+    }
+  },
+  "face_materials": [
+    "Angular ballast",
+    "Angular ballast",
+    "Angular ballast",
+    "Angular ballast",
+    "Angular ballast",
+    "Angular ballast"
+  ],
+  "hardness": 0.8,
+  "resistance": 1.5,
+  "required_tool": null,
+  "mining_level": 0,
+  "struct_block": false,
+  "collision_boxes": [
+    {
+      "minimum": [
+        0,
+        0.0,
+        0.0
+      ],
+      "maximum": [
+        1,
+        0.25,
+        1
+      ]
+    },
+    {
+      "minimum": [
+        0,
+        0.25,
+        0.25
+      ],
+      "maximum": [
+        1,
+        0.5,
+        1
+      ]
+    },
+    {
+      "minimum": [
+        0,
+        0.5,
+        0.5
+      ],
+      "maximum": [
+        1,
+        0.75,
+        1
+      ]
+    },
+    {
+      "minimum": [
+        0,
+        0.75,
+        0.75
+      ],
+      "maximum": [
+        1,
+        1.0,
+        1
+      ]
+    }
+  ]
+}

@@ -735,7 +735,7 @@ fn station_target(
             | 156..=157
             | 159..=162
             | 166..=167
-            | 202..=203,
+            | 209,
         )
     )
     .then_some(hit.position)
@@ -953,7 +953,7 @@ fn held_consumption(
             held_action_priority(&input, &context, active.as_deref()),
         )
         .and_then(|position| context.chunks.as_ref()?.block_at(position))
-        .is_some_and(|material| matches!(material, 65..=73 | 139..=140 | 166..=167))
+        .is_some_and(|material| matches!(material, 65..=73 | 139..=140 | 166..=167 | 209))
     {
         // Doors stay in gameplay; holding the interaction must not start a bite.
         held.opening_until_release = true;
@@ -1101,7 +1101,7 @@ fn keyboard(
             .flatten();
         if let Some(position) = workbench {
             match context.chunks.as_ref().and_then(|c| c.block_at(position)) {
-                Some(material @ (65..=73 | 131 | 139..=140 | 166..=167 | 202..=203)) => {
+                Some(material @ (65..=73 | 131 | 139..=140 | 166..=167 | 209)) => {
                     objects.write(terra_network::client::ObjectInteractionRequest {
                         position,
                         expected: material,
@@ -2050,7 +2050,8 @@ fn available_items(
             .choices
             .iter()
             .filter(|choice| {
-                !terra_core::castle::retired_item(choice.id) && !matches!(choice.id, 197..=205)
+                !terra_core::castle::retired_item(choice.id)
+                    && !matches!(choice.id, 197..=201 | 204..=205)
             })
             .map(|choice| ItemKind::Block(choice.id))
             .chain(
@@ -2105,7 +2106,7 @@ fn catalog_item(item: ItemKind) -> bool {
         && item.block_material().is_none_or(|material| {
             !terra_core::textiles::is_dyed(material)
                 && !terra_core::castle::retired_item(material)
-                && !matches!(material, 197..=205)
+                && !matches!(material, 197..=201 | 204..=205)
         })
         && !matches!(item, ItemKind::DyedBed { .. })
         && !matches!(item, ItemKind::TintedBlock { .. })

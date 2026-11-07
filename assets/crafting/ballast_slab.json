@@ -1,0 +1,36 @@
+{
+  "id": "teramic::ballast_slab",
+  "name": "Schotter Slab",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "block": 208
+    },
+    "count": 6
+  },
+  "pattern": {
+    "kind": "shaped",
+    "width": 3,
+    "height": 1,
+    "cells": [
+      {
+        "item": {
+          "block": 206
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "block": 206
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "block": 206
+        },
+        "count": 1
+      }
+    ]
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "item": {
+    "wooden_block": {
+      "material": 203,
+      "wood": "spruce"
+    }
+  },
+  "name": "Spruce Right Switch",
+  "description": "A separate right turnout with spruce sleepers. Place a switch stand beside its throat to select the route."
+}

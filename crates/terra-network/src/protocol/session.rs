@@ -7,8 +7,8 @@ use terra_core::{
 use terra_voxel::SectionPos;
 use terra_world::{edits::SectionDelta, props::PropId};
 
-// Version 112 adds free rail connections and persisted curve appearance metadata.
-pub const PROTOCOL_VERSION: u32 = 112;
+// Version 113 adds ballast blocks and separate switch items and stands.
+pub const PROTOCOL_VERSION: u32 = 113;
 pub const PROTOCOL_ID: u64 = 0x5445525241000001;
 pub const MAX_INPUT_BACKLOG: usize = 128;
 pub const MAX_TREE_INTEREST: usize = 256;
@@ -912,7 +912,7 @@ mod layout_tests {
                 .collect::<Vec<_>>()
         );
         assert_eq!(received.creatures.len(), 10);
-        assert_eq!(PROTOCOL_VERSION, 112);
+        assert_eq!(PROTOCOL_VERSION, 113);
     }
     #[test]
     fn kinetic_stress_capacity_roundtrip_and_reject_nonfinite_or_impossible_reserves() {

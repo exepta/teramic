@@ -8,6 +8,8 @@ use std::sync::Arc;
 use terra_core::{block_shapes::ShapeBox, rails::Piece};
 
 #[cfg(feature = "bevy")]
+pub mod ballast;
+#[cfg(feature = "bevy")]
 mod clearance;
 #[cfg(feature = "bevy")]
 pub(crate) mod placement;
@@ -19,6 +21,8 @@ pub use placement::{
     placement, placement_sites, plan, proposal, proposal_connection, select_endpoint, set_wood,
     support_edit_allowed, toggle_switch_plan,
 };
+
+pub mod stand;
 
 pub type Cell = [i64; 3];
 
@@ -141,6 +145,9 @@ pub fn cell_boxes(cell: Cell, material: u16, state: BlockObjectState) -> Arc<[Sh
 
 /// Construction and dismantling use the same four-metre item unit.
 pub fn piece_cost(piece: Piece) -> u16 {
+    if piece.kind().is_some_and(terra_core::rails::Kind::is_switch) {
+        return 1;
+    }
     let length: f64 = piece.paths().iter().map(|path| path.length()).sum();
     (length / 4.0).ceil().clamp(1.0, f64::from(u16::MAX)) as u16
 }
