@@ -1,6 +1,6 @@
 {
   "phase": 203,
-  "recorded_utc": "2026-11-07T17:46:32.935952+00:00",
+  "recorded_utc": "2026-11-07T17:48:04.252468+00:00",
   "graphical_tests": {
     "run": false,
     "reason": "User explicitly forbids graphical testing while playing."
@@ -60,7 +60,7 @@
     }
   ],
   "source_sha256": {
-    ".gitattributes": "1d363e11a1424c0731e63563a4d750ffc1696094a462159f403885c9ebaf2757",
+    ".gitattributes": "0a530d425a81cefe0191e5dcc0cfd66212f58e0afae53383e9d656348666be8f",
     "Cargo.lock": "0335598b846e97ec2e7faf1ee1a525a14a7b42b8ca59d15ce1723f43424c66d4",
     "Cargo.toml": "a14946520f0e261652af0d3ecaa4f891a1580161d08b82afbfd828079ddb4c45",
     "TODO.md": "e01ce6c8e2e462d323feebb322456bf34f28d475b7cd07da128e126536f7ad17",

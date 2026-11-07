@@ -82,5 +82,5 @@ TiltUI-Checkout bleibt eine in der Projekt-README dokumentierte Voraussetzung.
 Git-Attribute kennzeichnen Binärassets ausdrücklich als binär, damit Modellbuffer
 weder als Textdiff erscheinen noch Zeilenendkonvertierungen erhalten. Alle 264
 vorgemerkten regulären Binärassets wurden gegen die exakten Arbeitskopiebytes geprüft.
-Unveränderte historische Profilingausgaben und Unified-Patches behalten ihre
-aufgezeichneten Leerzeichen als Daten.
+Unveränderte historische Profilingausgaben, Unified-Patches und Testausgaben
+behalten ihre aufgezeichneten Leerzeichen als Daten.
