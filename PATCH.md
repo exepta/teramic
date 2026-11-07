@@ -6422,3 +6422,54 @@ UDP-Clients samt Late Join, Weichenschaltung und Survival-Abbau sind abgesichert
 Der abschließende Workspace-Build erstellt aktuelle Client-/Serverdateien;
 Formatierung und Diff sind sauber. Es wurden keine Grafiktests oder Spielclients
 gestartet.
+
+## 205. Freier Gleisbau, Holzvarianten Und Prop-Clearance
+
+Ein gemeinsames Track-Item ersetzt die separaten Kurven-/Steigungsrezepte.
+Platzierte Startstücke lassen sich durch Auswahl eines freien Anschlusses und
+eines Zielpunkts mit einer echten kubischen Bézierkurve verbinden. Der Verlauf
+entsteht aus Endpositionen und Tangenten, ohne auf die alten vorgegebenen Radien
+zurückzufallen. Vorschau, Kollision, Waterlogging und Streckennetz verwenden
+dieselben Profile. Der Zielklick bleibt in 4,5 Metern Reichweite, die Verbindung
+ist auf 32 Meter begrenzt. Kardinale Bodenenden lassen eindeutige anschließende
+Voxel-Baugruppen zu; Kurvenradien und Höhenverlauf werden frei berechnet.
+
+Eiche, Birke, Fichte und Kirsche bleiben beim Crafting, Platzieren, Kopieren,
+Speichern und Abbau erhalten. Terrain, Icons und Vorschau verwenden die echten
+Plankenmaterialien. Too Many Items bietet vier Holzvarianten des gemeinsamen
+Items; die bisherigen Form-IDs bleiben für vorhandene Welten lesbar. Benutzen
+(standardmäßig R) schaltet Auto, linke/rechte Weiche, Kreuzung und Prellbock um.
+Alle verwenden dasselbe Item. Shift+Platzieren verwirft eine Verbindungswahl.
+Der HUD zeigt Bauform, tatsächliche Tastenbelegung und Materialbedarf an.
+
+Die Kosten betragen aufgerundet ein Gleisitem je vier Meter räumlicher Pfadlänge;
+mehrsträngige Bauformen zählen ihre Pfade zusammen. Survival reserviert die
+passende Holzart und Menge vor dem Bau. Abbau über jede Sekundärzelle entfernt
+die gesamte Baugruppe und gibt dieselbe Menge zurück.
+
+Berührte gewöhnliche Props werden automatisch freigeräumt, einschließlich
+gesetzter Dekoration, Setzlinge und Nutzpflanzen. Die Bereinigung prüft die
+tatsächlichen Formen und Rechte über den gesamten Propbereich samt Support.
+Blöcke, Bienenstöcke und interne Baumfrüchte bleiben Hindernisse. Prop-Tombstones,
+Pflanzenmetadaten, Gleiszellen, Inventar und normale Survival-Drops werden vorab
+geprüft und atomar veröffentlicht. Die Transaktion kopiert nur betroffene
+Sparse-Sections und betroffene Baumdatensätze.
+
+Protokoll 112 überträgt Verbindungsbefehle und Kurvenmetadaten. Die RG13-Hülle
+speichert Kontrollpunkte pro besessener Zelle; ein expliziter vierfeldriger
+Adapter hält historische Regionlayouts unverändert lesbar. Gameplayindex ID12
+und Spielerformat PLY7 bleiben erhalten. Begrenzte Arc-Caches verhindern dauerhaft
+angesammelte Vorschauformen; Gültigkeit und Längen erhalten einen gesonderten
+begrenzten Metrikcache.
+
+[Prüfbericht und Bedienung](tools/benchmarks/results/free-rail-building-2026-11-07/README.md).
+Keine Grafiktests oder Spielclients werden gestartet.
+
+Abnahme 205: 4.186 Workspace-Library-/Bin-Tests bestanden, keiner fehlgeschlagen,
+neun bestehende Tests ignoriert. Freie Verbindungen sind über echte UDP-Clients
+einschließlich normalem Teleport, Holz-/Materialverbrauch, Late Join und sekundärem
+Survival-Abbau geprüft. Source-/Zielrechte sowie direkte Spezialanschlüsse an
+fremden Claimkanten sind abgesichert. Alle 169 Itemdefinitionen sind vollständig.
+Clippy aller Targets mit `-D warnings`, Format, Diff und der vollständige
+Client-/Server-Build sind sauber. Logs und Quell-/Asset-Prüfsummen sind im Bericht
+gespeichert; keine Grafiktests oder Spielclients wurden gestartet.

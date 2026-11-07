@@ -39,6 +39,8 @@ pub struct BlockObjectState {
     pub secondary: bool,
     #[serde(default)]
     pub wood: terra_core::WoodSpecies,
+    #[serde(default)]
+    pub rail_curve: Option<terra_core::rails::CurveSpec>,
 }
 
 impl BlockObjectState {
@@ -65,6 +67,9 @@ impl BlockObjectState {
     pub fn valid_for(self, position: [i64; 3], material: u16) -> bool {
         if terra_core::rails::is_rail(material) {
             return crate::rails::valid_state(position, material, self);
+        }
+        if self.rail_curve.is_some() {
+            return false;
         }
         if material == terra_core::kinetic::CONVEYOR {
             return self.facing < terra_core::kinetic::BELT_FACING_COUNT

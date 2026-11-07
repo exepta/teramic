@@ -7,8 +7,8 @@ use terra_core::{
 use terra_voxel::SectionPos;
 use terra_world::{edits::SectionDelta, props::PropId};
 
-// Version 111 adds authoritative modular railway placement, switching and ownership.
-pub const PROTOCOL_VERSION: u32 = 111;
+// Version 112 adds free rail connections and persisted curve appearance metadata.
+pub const PROTOCOL_VERSION: u32 = 112;
 pub const PROTOCOL_ID: u64 = 0x5445525241000001;
 pub const MAX_INPUT_BACKLOG: usize = 128;
 pub const MAX_TREE_INTEREST: usize = 256;
@@ -240,6 +240,11 @@ pub enum EditAction {
         id: u64,
         fruit_revision: u64,
         slot: u8,
+    },
+    ConnectRail {
+        start: terra_core::rails::Endpoint,
+        position: [i64; 3],
+        expected: u16,
     },
 }
 #[derive(Clone, Copy, Debug, Serialize, Deserialize)]
@@ -907,7 +912,7 @@ mod layout_tests {
                 .collect::<Vec<_>>()
         );
         assert_eq!(received.creatures.len(), 10);
-        assert_eq!(PROTOCOL_VERSION, 111);
+        assert_eq!(PROTOCOL_VERSION, 112);
     }
     #[test]
     fn kinetic_stress_capacity_roundtrip_and_reject_nonfinite_or_impossible_reserves() {

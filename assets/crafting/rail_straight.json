@@ -1,6 +1,6 @@
 {
   "id": "teramic::rail_straight",
-  "name": "Rail Straight",
+  "name": "Track",
   "station": "workbench",
   "output": {
     "item": {

@@ -2,6 +2,45 @@ use super::*;
 use crate::CraftingView;
 
 #[test]
+fn creative_catalog_has_four_track_woods_without_legacy_shape_items() {
+    let mut palette = BlockPalette::default();
+    palette.choices.extend((196..=205).map(|id| BlockChoice {
+        id,
+        name: format!("Rail {id}"),
+        identifier: ItemKind::Block(id).identifier(),
+        description: String::new(),
+    }));
+    let mut inventory = terra_core::Inventory::default();
+    assert_eq!(inventory.insert(ItemKind::Block(197), 2), 0);
+    let creative = available_items(GameMode::Creative, &inventory, &palette);
+    for wood in [
+        terra_core::WoodSpecies::Oak,
+        terra_core::WoodSpecies::Birch,
+        terra_core::WoodSpecies::Spruce,
+        terra_core::WoodSpecies::Cherry,
+    ] {
+        let item = ItemKind::for_wood(196, wood);
+        assert_eq!(
+            creative
+                .iter()
+                .filter(|&&candidate| candidate == item)
+                .count(),
+            1
+        );
+        assert!(catalog_item(item));
+        assert!(!view::item_view(item, 1, &palette).empty);
+    }
+    for material in 197..=205 {
+        assert!(!creative.contains(&ItemKind::Block(material)));
+        assert!(!catalog_item(ItemKind::Block(material)));
+    }
+    assert_eq!(
+        available_items(GameMode::Survival, &inventory, &palette),
+        vec![ItemKind::Block(197)]
+    );
+}
+
+#[test]
 fn reference_recipe_book_and_catalog_clicks_are_read_only_and_filter_closes_after_selection() {
     let mut app = app(GameMode::Creative);
     action(&mut app, InventoryAction::Toggle);
@@ -1052,6 +1091,159 @@ fn wrench_and_mechanical_parts_take_priority_over_station_and_crank_input() {
             app.world()
                 .resource::<Messages<ContainerRequest>>()
                 .is_empty()
+        );
+    }
+}
+
+fn rail_priority_app(material: u16) -> App {
+    use terra_voxel::{BlockSection, SectionPos, blocks::BlockHit};
+    use terra_world::{
+        edits::{BlockObjectState, EditJournal},
+        streaming::{ChunkStore, LoadedSection},
+    };
+    let mut app = food_input_app(InputBinding::Mouse(MouseButton::Right));
+    let item = ItemKind::for_wood(196, terra_core::WoodSpecies::Birch);
+    app.world_mut().resource_mut::<ClientSession>().allow_build = true;
+    app.world_mut()
+        .resource_mut::<ClientSession>()
+        .inventory
+        .creative_set(0, terra_core::ItemStack { item, count: 4 });
+    app.insert_resource(ActiveItem(Some(item)))
+        .init_resource::<terra_player::CameraInputState>()
+        .init_resource::<terra_network::client::CrankInput>()
+        .add_systems(PreUpdate, block_opening_frame)
+        .add_systems(
+            Update,
+            drive_crusher.after(actions).before(held_consumption),
+        );
+    app.world_mut()
+        .resource_mut::<terra_player::CameraInputState>()
+        .captured = true;
+    let position = [3, 1, 1];
+    let mut data = BlockSection::empty(SectionPos::default()).unwrap();
+    data.set_block([3, 1, 1], material).unwrap();
+    let mut journal = EditJournal::default();
+    if material == terra_core::crusher::CRANK_MATERIAL {
+        for (cell, block, peer, secondary) in [
+            ([1, 1, 1], 99, [2, 1, 1], false),
+            ([2, 1, 1], 99, [1, 1, 1], true),
+            (position, material, [1, 1, 1], false),
+        ] {
+            data.set_block(cell.map(|value| value as usize), block)
+                .unwrap();
+            journal.record(cell, block).unwrap();
+            journal
+                .set_object_state(
+                    cell,
+                    Some(BlockObjectState {
+                        peer: Some(peer),
+                        secondary,
+                        ..default()
+                    }),
+                )
+                .unwrap();
+        }
+        assert!(journal.crank_anchor(position).is_some());
+    }
+    let mut chunks = ChunkStore::default();
+    chunks.loaded.insert(
+        SectionPos::default(),
+        LoadedSection {
+            data,
+            mesh: None,
+            mesh_epoch: 0,
+            water_epoch: 0,
+            water: None,
+            props: Vec::new(),
+        },
+    );
+    app.insert_resource(chunks)
+        .insert_resource(journal)
+        .insert_resource(terra_player::TargetWorld(Some(
+            terra_player::WorldTarget::Block(BlockHit {
+                position,
+                normal: [0, 1, 0],
+                distance: 2.0,
+            }),
+        )));
+    app
+}
+
+#[test]
+fn held_track_use_owns_mode_input_before_station_faucet_and_crank_even_while_held() {
+    for material in [28, 29, 65, 167, terra_core::crusher::CRANK_MATERIAL] {
+        for use_key in [KeyCode::KeyR, KeyCode::KeyY] {
+            let mut app = rail_priority_app(material);
+            app.world_mut()
+                .resource_mut::<ControlsConfig>()
+                .rebind(GameAction::Use, InputBinding::Key(use_key))
+                .unwrap();
+            app.world_mut()
+                .resource_mut::<ButtonInput<KeyCode>>()
+                .press(use_key);
+            for frame in 0..2 {
+                if frame == 1 {
+                    app.world_mut()
+                        .resource_mut::<ButtonInput<KeyCode>>()
+                        .clear_just_pressed(use_key);
+                }
+                app.update();
+                assert!(
+                    !app.world().resource::<InventoryState>().open,
+                    "Use must not open station {material}"
+                );
+                assert!(
+                    !app.world().resource::<PlayerInputBlock>().0,
+                    "UI must leave modecycle input available"
+                );
+                assert!(
+                    app.world()
+                        .resource::<Messages<ContainerRequest>>()
+                        .is_empty()
+                );
+                assert!(
+                    app.world()
+                        .resource::<Messages<terra_network::client::ObjectInteractionRequest>>()
+                        .is_empty()
+                );
+                assert_eq!(
+                    app.world()
+                        .resource::<terra_network::client::CrankInput>()
+                        .0,
+                    None
+                );
+                assert!(food_requests(&mut app).is_empty());
+            }
+        }
+    }
+}
+
+#[test]
+fn held_track_place_keeps_existing_station_faucet_and_crank_actions() {
+    for material in [28, 29, 65, 167, terra_core::crusher::CRANK_MATERIAL] {
+        let mut app = rail_priority_app(material);
+        app.world_mut()
+            .resource_mut::<ButtonInput<MouseButton>>()
+            .press(MouseButton::Right);
+        app.update();
+        assert_eq!(
+            app.world().resource::<InventoryState>().open,
+            matches!(material, 28 | 29)
+        );
+        let objects = app
+            .world_mut()
+            .resource_mut::<Messages<terra_network::client::ObjectInteractionRequest>>()
+            .drain()
+            .collect::<Vec<_>>();
+        assert_eq!(objects.len(), usize::from(matches!(material, 65 | 167)));
+        if let Some(object) = objects.first() {
+            assert_eq!(object.expected, material);
+        }
+        assert_eq!(
+            app.world()
+                .resource::<terra_network::client::CrankInput>()
+                .0,
+            (material == terra_core::crusher::CRANK_MATERIAL).then_some([3, 1, 1])
         );
     }
 }

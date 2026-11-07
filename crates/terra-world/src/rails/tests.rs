@@ -25,7 +25,7 @@ pub(super) fn prepare(chunks: &mut ChunkStore, piece: Piece) {
     for cell in cells(piece) {
         block(chunks, cell, 0);
     }
-    for support in piece.supports() {
+    for support in piece.supports().iter() {
         block(
             chunks,
             std::array::from_fn(|axis| piece.anchor[axis] + i64::from(support.support[axis])),
@@ -190,7 +190,7 @@ fn water_is_retained_around_real_rails_and_survives_module_removal() {
             crate::water::space::FluidSpace::at(&journal, cell, |cell| chunks.block_at(cell));
         assert_eq!(
             space.solids.as_slice(),
-            cell_boxes(cell, piece.material, object_state(piece, cell))
+            cell_boxes(cell, piece.material, object_state(piece, cell)).as_ref()
         );
         assert!(space.solids.iter().all(|bounds| bounds.maximum[1] < 0.5));
     }
@@ -204,7 +204,7 @@ fn water_is_retained_around_real_rails_and_survives_module_removal() {
 }
 
 #[test]
-fn placed_props_cannot_be_overwritten_and_a_saved_slab_floor_cannot_rotate_out_of_support() {
+fn protected_hives_cannot_be_overwritten_and_a_saved_slab_floor_cannot_rotate_out_of_support() {
     let piece = Piece::new([0, 16, 0], rails::STRAIGHT, 0).unwrap();
     let mut chunks = ChunkStore::default();
     let mut journal = EditJournal::default();
@@ -212,7 +212,7 @@ fn placed_props_cannot_be_overwritten_and_a_saved_slab_floor_cannot_rotate_out_o
     let support = [0, 15, 0];
     let prop = crate::props::WorldProp {
         id: crate::props::PropId(620),
-        kind: crate::props::PropKind::SmallStones,
+        kind: crate::props::PropKind::BeeNest,
         position: [0.5, 16.0, 0.5],
         rotation: 0.0,
         scale: 1.0,
@@ -256,7 +256,7 @@ fn sleeper_support_is_protected_even_when_its_rail_section_is_unloaded() {
     prepare(&mut chunks, piece);
     install(&mut chunks, &mut journal, piece);
     chunks.loaded.clear();
-    for point in piece.supports() {
+    for point in piece.supports().iter() {
         let support =
             std::array::from_fn(|axis| piece.anchor[axis] + i64::from(point.support[axis]));
         assert!(!support_edit_allowed(&chunks, &journal, support, 0));
@@ -372,4 +372,284 @@ fn partial_section_imports_never_expose_a_partial_graph() {
     let empty = EditJournal::default();
     assert!(cache.refresh(&empty).unwrap());
     assert!(cache.graph().is_empty());
+}
+
+#[test]
+fn free_curve_preserves_both_ports_wood_cost_and_unloaded_slice_ownership() {
+    let first = Piece::new([-17, 16, -17], rails::STRAIGHT, 0).unwrap();
+    let mut chunks = ChunkStore::default();
+    let mut journal = EditJournal::default();
+    prepare(&mut chunks, first);
+    install(&mut chunks, &mut journal, first);
+    let start = Endpoint {
+        anchor: first.anchor,
+        port: 1,
+    };
+    let hit = terra_voxel::blocks::BlockHit {
+        position: [-10, 15, 2],
+        normal: [0, 1, 0],
+        distance: 2.0,
+    };
+    let look = [std::f32::consts::PI, -0.5];
+    let wood = terra_core::WoodSpecies::Cherry;
+    let proposal = proposal_connection(&chunks, &journal, start, hit, look, wood).unwrap();
+    let (anchor, state) = proposal
+        .states
+        .iter()
+        .find_map(|(cell, state)| {
+            state
+                .filter(|state| !state.secondary)
+                .map(|state| (*cell, state))
+        })
+        .unwrap();
+    let curve = piece_from_state(anchor, rails::STRAIGHT, state).unwrap();
+    assert!(curve.curve.is_some());
+    let old_cells: std::collections::BTreeSet<_> = cells(first).into_iter().collect();
+    assert!(cells(curve).iter().all(|cell| !old_cells.contains(cell)));
+    assert!(first.ports()[1].connects(curve.ports()[0]));
+    assert!(
+        connection(&chunks, &journal, start, hit, look, wood).is_err(),
+        "an unprepared floor cannot authorize the candidate"
+    );
+    prepare(&mut chunks, curve);
+    let plan = connection(&chunks, &journal, start, hit, look, wood).unwrap();
+    assert_eq!(cost(&plan), Some(piece_cost(curve)));
+    assert!(piece_cost(curve) > 1);
+    assert!(commit(&mut chunks, &mut journal, &plan).unwrap());
+    assert!(complete(&journal, curve));
+    for cell in cells(curve) {
+        let state = journal.object_state(cell).unwrap();
+        assert_eq!(state.wood, wood);
+        assert_eq!(state.rail_curve, curve.curve);
+        assert_eq!(owner_at(&journal, cell), Some(curve));
+    }
+    let graph = network(&journal).unwrap();
+    assert!(
+        graph
+            .route(
+                Endpoint {
+                    anchor: first.anchor,
+                    port: 0
+                },
+                Endpoint {
+                    anchor: curve.anchor,
+                    port: 1
+                },
+                32
+            )
+            .is_ok()
+    );
+    let secondary = *cells(curve).last().unwrap();
+    chunks.loaded.remove(&global_to_section(curve.anchor).0);
+    assert!(
+        !cell_boxes(
+            secondary,
+            curve.material,
+            journal.object_state(secondary).unwrap()
+        )
+        .is_empty()
+    );
+    let removal = break_layout(&chunks, &journal, secondary).unwrap();
+    assert!(commit(&mut chunks, &mut journal, &removal).unwrap());
+    assert_eq!(network(&journal).unwrap().len(), 1);
+    assert!(complete(&journal, first));
+}
+
+#[test]
+fn rail_clearance_removes_only_intersecting_generated_and_saved_props_and_reports_foreign_support()
+{
+    let piece = Piece::new([14, 16, 0], rails::STRAIGHT, 0).unwrap();
+    let mut chunks = ChunkStore::default();
+    let mut journal = EditJournal::default();
+    prepare(&mut chunks, piece);
+    let make = |id, position: [f64; 3]| crate::props::WorldProp {
+        id: crate::props::PropId(id),
+        kind: crate::props::PropKind::Grass,
+        position,
+        rotation: 0.0,
+        scale: 1.0,
+        variant: 0,
+        section: global_to_section([position[0].floor() as i64, 15, position[2].floor() as i64]).0,
+        removed: false,
+    };
+    let natural = make(20501, [14.5, 16.0, 0.5]);
+    let saved = make(20502, [14.5, 16.0, 1.5]);
+    let foreign = make(20503, [16.1, 16.0, 0.5]);
+    let untouched = make(20504, [18.5, 16.0, 0.5]);
+    for prop in [natural, foreign, untouched] {
+        let support = crate::props::placement::support(&prop);
+        block(&mut chunks, support, 3);
+        chunks
+            .loaded
+            .get_mut(&prop.section)
+            .unwrap()
+            .props
+            .push(prop);
+    }
+    assert!(journal.place_prop(saved).unwrap());
+    let plan = plan(&chunks, &journal, piece.anchor, piece.material, 0).unwrap();
+    let cleared = clearance(&plan, &chunks, &journal).unwrap();
+    assert_eq!(
+        cleared
+            .iter()
+            .map(|entry| entry.prop.id)
+            .collect::<std::collections::BTreeSet<_>>(),
+        [natural.id, saved.id, foreign.id].into_iter().collect()
+    );
+    assert_eq!(
+        cleared
+            .iter()
+            .find(|entry| entry.prop.id == saved.id)
+            .unwrap()
+            .source,
+        PropSource::Saved
+    );
+    assert!(
+        cleared
+            .iter()
+            .find(|entry| entry.prop.id == foreign.id)
+            .unwrap()
+            .rights_cells
+            .iter()
+            .any(|cell| cell[0] == 16)
+    );
+    assert!(commit(&mut chunks, &mut journal, &plan).unwrap());
+    for prop in [natural, saved, foreign] {
+        assert!(journal.prop_removed(prop.section, prop.id));
+    }
+    assert!(!journal.prop_removed(untouched.section, untouched.id));
+    assert!(
+        journal
+            .placed_props(saved.section)
+            .all(|prop| prop.id != saved.id)
+    );
+}
+
+#[test]
+fn clearing_a_planted_sapling_retires_its_growth_record_without_touching_other_trees() {
+    let piece = Piece::new([0, 16, 0], rails::STRAIGHT, 0).unwrap();
+    let mut chunks = ChunkStore::default();
+    let mut journal = EditJournal::default();
+    prepare(&mut chunks, piece);
+    block(&mut chunks, [0, 15, 0], 2);
+    let prop = crate::props::WorldProp {
+        id: crate::props::PropId(20520),
+        kind: crate::props::PropKind::OakSapling,
+        position: [0.5, 16.0, 0.5],
+        rotation: 0.0,
+        scale: 1.0,
+        variant: 0,
+        section: global_to_section([0, 15, 0]).0,
+        removed: false,
+    };
+    assert!(
+        crate::saplings::plant(
+            &mut chunks,
+            &mut journal,
+            prop,
+            terra_core::PlayerUuid::from_u128(205)
+        )
+        .unwrap()
+    );
+    let tree = journal.gameplay().trees.get(prop.id.0).unwrap().clone();
+    let plan = plan(&chunks, &journal, piece.anchor, piece.material, 0).unwrap();
+    assert!(
+        clearance(&plan, &chunks, &journal)
+            .unwrap()
+            .iter()
+            .any(|entry| entry.prop.id == prop.id)
+    );
+    assert!(commit(&mut chunks, &mut journal, &plan).unwrap());
+    let retired = journal.gameplay().trees.get(prop.id.0).unwrap();
+    assert_eq!(retired.stage, terra_core::TreeStage::Felled);
+    assert_eq!(retired.revision, tree.revision + 1);
+    assert_eq!(retired.root, tree.root);
+    assert_eq!(retired.species, tree.species);
+    assert!(journal.prop_removed(prop.section, prop.id));
+}
+
+#[test]
+fn connection_sites_cover_complete_modules_and_a_nearby_curve_hit_can_have_a_distant_terminal_port()
+{
+    let source = Piece::new([0, 16, -20], rails::STRAIGHT, 0).unwrap();
+    let target = Piece::new([0, 16, 0], rails::CURVE_LARGE, 0).unwrap();
+    let mut chunks = ChunkStore::default();
+    let mut journal = EditJournal::default();
+    prepare(&mut chunks, source);
+    prepare(&mut chunks, target);
+    install(&mut chunks, &mut journal, source);
+    install(&mut chunks, &mut journal, target);
+    let start = Endpoint {
+        anchor: source.anchor,
+        port: 1,
+    };
+    let mut chosen = None;
+    'cells: for cell in cells(target) {
+        for bounds in cell_boxes(cell, target.material, object_state(target, cell)).iter() {
+            let point: [f64; 3] = std::array::from_fn(|axis| {
+                cell[axis] as f64 + (bounds.minimum[axis] + bounds.maximum[axis]) * 0.5
+            });
+            let eye = [point[0] + 0.5, point[1] + 2.0, point[2]];
+            let delta: [f64; 3] = std::array::from_fn(|axis| point[axis] - eye[axis]);
+            let length = delta.iter().map(|value| value * value).sum::<f64>().sqrt();
+            let direction = delta.map(|value| value / length);
+            let Some(hit) = crate::interaction_shapes::raycast_solid(
+                &chunks,
+                &journal,
+                &Default::default(),
+                eye,
+                direction,
+                4.5,
+            ) else {
+                continue;
+            };
+            if owner_at(&journal, hit.position) != Some(target) {
+                continue;
+            }
+            let look = [
+                (-direction[0]).atan2(-direction[2]) as f32,
+                direction[1].asin() as f32,
+            ];
+            let Ok(plan) = proposal_connection(
+                &chunks,
+                &journal,
+                start,
+                hit,
+                look,
+                terra_core::WoodSpecies::Oak,
+            ) else {
+                continue;
+            };
+            let port = connection_target(&plan).unwrap();
+            let distance = (0..3)
+                .map(|axis| (port.position.position()[axis] - eye[axis]).powi(2))
+                .sum::<f64>()
+                .sqrt();
+            if hit.distance <= 4.5 && distance > 4.5 {
+                chosen = Some((hit, plan, distance));
+                break 'cells;
+            }
+        }
+    }
+    let (hit, plan, distance) =
+        chosen.expect("a real middle-of-curve hit can be near while its selected port is distant");
+    assert!(hit.distance <= 4.5 && distance > 4.5);
+    assert!(
+        connection_target(&plan)
+            .unwrap()
+            .connects(target.ports()[0])
+            || connection_target(&plan)
+                .unwrap()
+                .connects(target.ports()[1])
+    );
+    let sites = connection_sites(&journal, start, hit).unwrap();
+    let expected: std::collections::BTreeSet<_> =
+        cells(source).into_iter().chain(cells(target)).collect();
+    assert_eq!(sites, expected.into_iter().collect::<Vec<_>>());
+    let missing = cells(target)
+        .into_iter()
+        .find(|cell| *cell != target.anchor && *cell != hit.position)
+        .unwrap();
+    journal.record(missing, 0).unwrap();
+    assert!(connection_sites(&journal, start, hit).is_none());
 }

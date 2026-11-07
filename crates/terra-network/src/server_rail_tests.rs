@@ -3,6 +3,9 @@ use std::collections::BTreeSet;
 use terra_core::rails::{self, Piece};
 use terra_voxel::{BlockSection, SectionPos, global_to_section};
 
+#[path = "server_rail_connections_tests.rs"]
+mod connections;
+
 fn set_block(app: &mut App, cell: [i64; 3], material: u16) {
     let (owner, local) = global_to_section(cell);
     app.world_mut()
@@ -27,7 +30,7 @@ fn rail_fixture(material: u16, anchor: [i64; 3]) -> (App, Peer, Piece, EditComma
     for cell in terra_world::rails::cells(piece) {
         set_block(&mut app, cell, 0);
     }
-    for support in piece.supports() {
+    for support in piece.supports().iter() {
         set_block(
             &mut app,
             std::array::from_fn(|axis| anchor[axis] + i64::from(support.support[axis])),
@@ -61,8 +64,8 @@ fn rail_fixture(material: u16, anchor: [i64; 3]) -> (App, Peer, Piece, EditComma
     assert!(bag.creative_set(
         0,
         ItemStack {
-            item: ItemKind::Block(material),
-            count: 2
+            item: ItemKind::Block(rails::STRAIGHT),
+            count: terra_world::rails::piece_cost(piece) + 1
         }
     ));
     let source = Some(InventorySource {
@@ -123,7 +126,7 @@ fn snapshot(app: &App, piece: Piece) -> Snapshot {
 fn target_look(app: &App, peer: &Peer, cell: [i64; 3], material: u16) -> [f32; 2] {
     let journal = app.world().resource::<EditJournal>();
     let state = journal.object_state(cell).unwrap();
-    for bounds in terra_world::rails::cell_boxes(cell, material, state) {
+    for bounds in terra_world::rails::cell_boxes(cell, material, state).iter() {
         let target = std::array::from_fn(|axis| {
             cell[axis] as f64 + (bounds.minimum[axis] + bounds.maximum[axis]) * 0.5
         });

@@ -138,9 +138,12 @@ fn cached_geometry_cells_supports_and_three_wide_flat_tracks_share_one_shape() {
             let footprint = piece.footprint();
             assert!(footprint.contains(&[0; 3]));
             assert!(!footprint.is_empty() && footprint.len() < 256);
-            assert!(std::ptr::eq(piece.footprint(), piece.footprint()));
-            assert!(std::ptr::eq(piece.local_geometry(), piece.local_geometry()));
-            for &cell in footprint {
+            assert!(Arc::ptr_eq(&piece.footprint(), &piece.footprint()));
+            assert!(Arc::ptr_eq(
+                &piece.local_geometry(),
+                &piece.local_geometry()
+            ));
+            for &cell in footprint.iter() {
                 assert!(contains_offset(
                     piece.material,
                     piece.encoded_facing(),
@@ -148,9 +151,12 @@ fn cached_geometry_cells_supports_and_three_wide_flat_tracks_share_one_shape() {
                 ));
                 assert!(!piece.cell_boxes(cell).is_empty());
                 assert!(piece.cell_boxes(cell).iter().all(|shape| shape.valid()));
-                assert!(std::ptr::eq(piece.cell_boxes(cell), piece.cell_boxes(cell)));
+                assert!(Arc::ptr_eq(
+                    &piece.cell_boxes(cell),
+                    &piece.cell_boxes(cell)
+                ));
             }
-            for support in piece.supports() {
+            for support in piece.supports().iter() {
                 assert_eq!(
                     support.support,
                     [support.cell[0], support.cell[1] - 1, support.cell[2]]

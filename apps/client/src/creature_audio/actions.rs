@@ -66,6 +66,15 @@ pub(super) fn update(
         if matches!(edit.action, EditAction::HarvestTree { .. }) {
             emit(listener, 7, 0.22, 1.12, Category::Environment);
         }
+        if let EditAction::ConnectRail { position, .. } = edit.action {
+            emit(
+                Vec3::from_array(position.map(|value| value as f32 + 0.5)),
+                terra_core::rails::STRAIGHT,
+                0.36,
+                0.95,
+                Category::Environment,
+            );
+        }
         if let EditAction::Block {
             position,
             material,

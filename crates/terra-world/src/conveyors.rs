@@ -513,6 +513,7 @@ pub fn layout(
             } else {
                 BlockObjectState {
                     facing: kinetic::belt_pose(a.facing),
+                    rail_curve: None,
                     peer: Some(if p == controller { end } else { controller }),
                     secondary: false,
                     wood,
@@ -625,6 +626,7 @@ pub fn insert_shaft_layout(
             Some(if cell == position {
                 BlockObjectState {
                     facing: span.facing,
+                    rail_curve: None,
                     secondary: false,
                     wood: shaft_item.wood_species().unwrap_or_default(),
                     peer: Some(peer),

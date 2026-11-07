@@ -56,6 +56,103 @@ fn reply_with_request(app: &mut App, request: u64, outcome: KingdomOutcome) {
 }
 
 #[test]
+fn held_track_use_does_not_open_bergfried_but_place_and_other_items_still_do() {
+    use terra_core::{ControlsConfig, InputBinding, ItemKind, WoodSpecies};
+    use terra_voxel::{BlockSection, SectionPos, blocks::BlockHit};
+    use terra_world::streaming::{ChunkStore, LoadedSection};
+    for (item, use_key, place, opens) in [
+        (
+            Some(ItemKind::for_wood(196, WoodSpecies::Birch)),
+            KeyCode::KeyR,
+            false,
+            false,
+        ),
+        (
+            Some(ItemKind::for_wood(196, WoodSpecies::Spruce)),
+            KeyCode::KeyY,
+            false,
+            false,
+        ),
+        (Some(ItemKind::Block(203)), KeyCode::KeyR, false, false),
+        (
+            Some(ItemKind::for_wood(196, WoodSpecies::Cherry)),
+            KeyCode::KeyR,
+            true,
+            true,
+        ),
+        (Some(ItemKind::Block(3)), KeyCode::KeyR, false, true),
+        (None, KeyCode::KeyR, false, true),
+    ] {
+        let mut app = app();
+        let mut controls = ControlsConfig::default();
+        controls
+            .rebind(GameAction::Use, InputBinding::Key(use_key))
+            .unwrap();
+        controls
+            .rebind(GameAction::Place, InputBinding::Mouse(MouseButton::Right))
+            .unwrap();
+        app.insert_resource(controls)
+            .insert_resource(terra_player::interaction::ActiveItem(item))
+            .add_systems(Update, opening_frame);
+        app.world_mut()
+            .resource_mut::<terra_player::CameraInputState>()
+            .captured = true;
+        let mut data = BlockSection::empty(SectionPos::default()).unwrap();
+        data.set_block([0; 3], terra_core::castle::BERGFRIED)
+            .unwrap();
+        let mut chunks = ChunkStore::default();
+        chunks.loaded.insert(
+            SectionPos::default(),
+            LoadedSection {
+                data,
+                mesh: None,
+                mesh_epoch: 0,
+                water_epoch: 0,
+                water: None,
+                props: Vec::new(),
+            },
+        );
+        app.insert_resource(chunks)
+            .insert_resource(terra_player::TargetWorld(Some(
+                terra_player::WorldTarget::Block(BlockHit {
+                    position: [0; 3],
+                    normal: [0, 1, 0],
+                    distance: 2.0,
+                }),
+            )));
+        if place {
+            app.world_mut()
+                .resource_mut::<ButtonInput<MouseButton>>()
+                .press(MouseButton::Right);
+        } else {
+            app.world_mut()
+                .resource_mut::<ButtonInput<KeyCode>>()
+                .press(use_key);
+        }
+        app.update();
+        assert_eq!(
+            app.world()
+                .resource::<KingdomMenuState>()
+                .position
+                .is_some(),
+            opens
+        );
+        assert_eq!(app.world().resource::<PlayerInputBlock>().0, opens);
+        let actions = app
+            .world_mut()
+            .resource_mut::<Messages<KingdomMenuAction>>()
+            .drain()
+            .collect::<Vec<_>>();
+        assert_eq!(actions.len(), usize::from(opens));
+        assert!(
+            actions
+                .iter()
+                .all(|action| matches!(action, KingdomMenuAction::Open([0, 0, 0])))
+        );
+    }
+}
+
+#[test]
 fn late_inspect_and_found_responses_cannot_complete_a_reopened_dialog() {
     for founding in [false, true] {
         let mut app = app();

@@ -253,9 +253,28 @@ mod tests {
                 ),
             )
         }));
+        let metadata = super::super::load_tool_metadata(&directory.join("items")).unwrap();
+        for wood in [
+            terra_core::WoodSpecies::Birch,
+            terra_core::WoodSpecies::Spruce,
+            terra_core::WoodSpecies::Cherry,
+        ] {
+            let item = ItemKind::for_wood(terra_core::rails::STRAIGHT, wood);
+            let definitions = metadata
+                .iter()
+                .filter(|(candidate, _, _)| *candidate == item)
+                .collect::<Vec<_>>();
+            assert_eq!(
+                definitions.len(),
+                1,
+                "every track wood needs one actual item definition"
+            );
+            assert!(definitions[0].1.contains("Track"));
+            assert!(definitions[0].2.contains("sleepers"));
+            assert_eq!(item_category(item, None), "building");
+        }
         items.extend(
-            super::super::load_tool_metadata(&directory.join("items"))
-                .unwrap()
+            metadata
                 .into_iter()
                 .map(|(item, _, _)| (item, item_category(item, None))),
         );

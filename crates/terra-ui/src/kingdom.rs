@@ -254,6 +254,7 @@ pub(crate) fn install(app: &mut App) {
 
 #[derive(bevy::ecs::system::SystemParam)]
 struct InputContext<'w> {
+    active: Option<Res<'w, terra_player::interaction::ActiveItem>>,
     session: Option<Res<'w, ClientSession>>,
     menu: Option<Res<'w, crate::menu::MenuState>>,
     inventory: Option<Res<'w, crate::inventory::InventoryState>>,
@@ -328,6 +329,7 @@ fn opening_frame(
     }
     if !context.playing()
         || !context.unoccupied()
+        || crate::inventory::rail_mode_priority(&input, context.active.as_deref())
         || !context.camera.as_ref().is_some_and(|c| c.captured)
         || input.pressed(GameAction::FlyDown)
         || (input.binding(GameAction::FlyDown) == GameAction::FlyDown.default_binding()

@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "id": 196,
-  "name": "Rail: Straight",
-  "description": "Three-block-wide track with wooden sleepers, steel rail heads and bolted feet. The complete module follows its shared collision and routing profile.",
+  "name": "Track",
+  "description": "Three-block-wide wooden track. Plan its start and end to build a continuous railway with matching gauge and grade.",
   "creative_category": "building",
   "render_kind": "custom_mesh",
   "model_layout": "scene",

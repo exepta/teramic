@@ -3,7 +3,10 @@ use super::{MeshBatch, ModelCell};
 use crate::blocks::{BlockTemplate, TemplateSet};
 use bevy::math::{Vec2, Vec3, Vec4};
 use std::collections::BTreeMap;
-use terra_core::rails::{PartMaterial, Piece};
+use terra_core::{
+    WoodSpecies,
+    rails::{CurveSpec, PartMaterial, Piece},
+};
 
 #[derive(Clone, Copy)]
 struct Vertex {
@@ -19,8 +22,16 @@ struct Profile {
     cells: BTreeMap<[i32; 3], BTreeMap<usize, MeshBatch>>,
 }
 
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+struct ProfileKey {
+    material: u16,
+    facing: u8,
+    curve: Option<CurveSpec>,
+    wood: WoodSpecies,
+}
+
 #[derive(Default)]
-pub(super) struct Profiles(BTreeMap<(u16, u8), Profile>);
+pub(super) struct Profiles(BTreeMap<ProfileKey, Profile>);
 
 impl Profiles {
     pub(super) fn append(
@@ -32,14 +43,38 @@ impl Profiles {
         standalone: bool,
     ) -> Result<(), String> {
         let piece = Piece::from_facing([0; 3], model.material, model.state.facing)
+            .and_then(|piece| match model.state.rail_curve {
+                Some(curve) => piece.with_curve(curve),
+                None => Some(piece),
+            })
             .ok_or("Invalid rail model pose")?;
-        let key = (piece.material, piece.encoded_facing());
+        let key = ProfileKey {
+            material: piece.material,
+            facing: piece.encoded_facing(),
+            curve: piece.curve,
+            wood: model.state.wood,
+        };
         if let std::collections::btree_map::Entry::Vacant(entry) = self.0.entry(key) {
             let template = templates
                 .blocks
                 .get(&model.material)
                 .ok_or("Missing rail template")?;
-            entry.insert(profile(piece, template)?);
+            let plank = match model.state.wood {
+                WoodSpecies::Oak => 16,
+                WoodSpecies::Birch => 17,
+                WoodSpecies::Spruce => 18,
+                WoodSpecies::Cherry => 135,
+            };
+            let wood_material = templates
+                .blocks
+                .get(&plank)
+                .map(|plank| plank.face_materials[0]);
+            entry.insert(profile_with_wood(
+                piece,
+                template,
+                wood_material,
+                model.state.wood,
+            )?);
         }
         let profile = &self.0[&key];
         let cell = std::array::from_fn(|axis| origin[axis] + i64::from(model.cell[axis]));
@@ -72,6 +107,16 @@ impl Profiles {
                     .iter()
                     .map(|p| (Vec3::from_array(*p) + translation).to_array()),
             );
+            if !target.colors.is_empty() || !source.colors.is_empty() {
+                target.colors.resize(base as usize, [1.0; 4]);
+                if source.colors.is_empty() {
+                    target
+                        .colors
+                        .extend(std::iter::repeat_n([1.0; 4], source.positions.len()));
+                } else {
+                    target.colors.extend_from_slice(&source.colors);
+                }
+            }
             target.normals.extend_from_slice(&source.normals);
             target.uvs.extend_from_slice(&source.uvs);
             target.append_tangents(base as usize, source.tangents.iter().copied());
@@ -83,10 +128,22 @@ impl Profiles {
     }
 }
 
+#[cfg(test)]
 fn profile(piece: Piece, template: &BlockTemplate) -> Result<Profile, String> {
+    profile_with_wood(piece, template, None, WoodSpecies::Oak)
+}
+
+fn profile_with_wood(
+    piece: Piece,
+    template: &BlockTemplate,
+    wood_material: Option<usize>,
+    wood: WoodSpecies,
+) -> Result<Profile, String> {
     let mut result = Profile::default();
-    for surface in piece.local_surfaces() {
-        let beam = &piece.local_geometry()[surface.beam];
+    let beams = piece.local_geometry();
+    let surfaces = piece.local_surfaces();
+    for surface in surfaces.iter() {
+        let beam = &beams[surface.beam];
         // Native GLTF primitives use this fixed semantic material-slot order.
         let slot = match surface.material {
             PartMaterial::Wood => 0,
@@ -95,11 +152,16 @@ fn profile(piece: Piece, template: &BlockTemplate) -> Result<Profile, String> {
             PartMaterial::Bolt => 3,
             PartMaterial::Red => 4,
         };
-        let material = template
+        let native_material = template
             .model
             .get(slot)
             .ok_or("Missing rail material slot")?
             .material;
+        let material = if surface.material == PartMaterial::Wood {
+            wood_material.unwrap_or(native_material)
+        } else {
+            native_material
+        };
         let bounds = beam.bounds();
         let low = bounds.minimum.map(|value| (value + 1.0e-8).floor() as i32);
         let high = bounds.maximum.map(|value| (value - 1.0e-8).floor() as i32);
@@ -119,6 +181,18 @@ fn profile(piece: Piece, template: &BlockTemplate) -> Result<Profile, String> {
                         }
                     }
                 }
+            }
+        }
+    }
+    // A partial template set can still draw authored legacy meshes. A complete
+    // palette selects the real plank PBR texture, without compensating oak tint.
+    if wood_material.is_none()
+        && wood != WoodSpecies::Oak
+        && let Some(native) = template.model.first()
+    {
+        for batches in std::iter::once(&mut result.full).chain(result.cells.values_mut()) {
+            if let Some(batch) = batches.get_mut(&native.material) {
+                batch.colors = vec![wood.tint(); batch.positions.len()];
             }
         }
     }

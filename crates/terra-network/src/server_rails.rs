@@ -12,7 +12,7 @@ enum Operation {
 struct Prepared {
     layout: Layout,
     inventory: Option<Inventory>,
-    drop: Option<([f64; 3], ItemStack)>,
+    drops: Vec<([f64; 3], ItemStack)>,
     operation: Operation,
 }
 
@@ -25,6 +25,7 @@ pub(super) fn handles(action: EditAction) -> bool {
                 || material == 0 && terra_core::rails::is_rail(expected)
         }
         EditAction::ToggleObject { expected, .. } => terra_core::rails::is_rail(expected),
+        EditAction::ConnectRail { .. } => true,
         _ => false,
     }
 }
@@ -51,6 +52,9 @@ fn prepare(
         return Err(EditOutcome::Invalid);
     }
     let (position, expected, operation) = match command.action {
+        EditAction::ConnectRail {
+            position, expected, ..
+        } => (position, expected, Operation::Place),
         EditAction::Block {
             position,
             expected,
@@ -79,6 +83,37 @@ fn prepare(
     {
         return Err(EditOutcome::Conflict);
     }
+    let gameplay = world.journal.gameplay();
+    let selected_item = if matches!(operation, Operation::Place) {
+        if let Some(source) = command.source {
+            let bag = gameplay
+                .inventories
+                .get(&peer.uuid)
+                .ok_or(EditOutcome::Invalid)?;
+            if bag.revision != source.revision || peer.held_slot != Some(source.slot) {
+                return Err(EditOutcome::Conflict);
+            }
+            let stack = bag
+                .slot(usize::from(source.slot))
+                .ok_or(EditOutcome::Invalid)?;
+            if !stack.valid()
+                || !stack
+                    .item
+                    .block_material()
+                    .is_some_and(terra_core::rails::is_rail)
+            {
+                return Err(EditOutcome::Invalid);
+            }
+            stack.item
+        } else if peer.game_mode(&world.config) == GameMode::Creative {
+            ItemKind::Block(terra_core::rails::STRAIGHT)
+        } else {
+            return Err(EditOutcome::Invalid);
+        }
+    } else {
+        ItemKind::Block(terra_core::rails::STRAIGHT)
+    };
+    let wood = selected_item.wood_species().unwrap_or_default();
     let body = world
         .bodies
         .get(peer.body)
@@ -95,7 +130,7 @@ fn prepare(
         Operation::Remove => terra_world::targeting::pick_world_for_mining,
         Operation::Switch => terra_world::targeting::pick_world_with_context,
     };
-    let (_, target) = picker(
+    let (block, target) = picker(
         &world.chunks,
         &world.journal,
         &world.block_properties,
@@ -112,33 +147,65 @@ fn prepare(
                 .season(world.config.world.seasons),
         ),
     );
-    let Some(WorldTarget::Block(hit)) = target else {
-        return Err(EditOutcome::Occluded);
+    let hit = match target {
+        Some(WorldTarget::Block(hit)) => hit,
+        Some(WorldTarget::Prop(_)) if matches!(operation, Operation::Place) => {
+            block.ok_or(EditOutcome::Occluded)?
+        }
+        _ => return Err(EditOutcome::Occluded),
     };
     if hit.distance > 4.5 {
         return Err(EditOutcome::OutOfReach);
     }
-    let layout = match operation {
+    let mut layout = match operation {
         Operation::Place => {
-            let EditAction::Block { material, .. } = command.action else {
-                unreachable!()
-            };
-            let layout = rails::placement(
-                &world.chunks,
-                &world.journal,
-                hit,
-                material,
-                (eye, direction),
-                command.look,
-            )
-            .map_err(|_| EditOutcome::Invalid)?;
-            if !layout.states.iter().any(|(cell, state)| {
-                *cell == position
-                    && state.is_some_and(|state| !state.secondary && state.peer == Some(position))
-            }) {
-                return Err(EditOutcome::Occluded);
+            if let EditAction::ConnectRail { start, .. } = command.action {
+                if hit.position != position {
+                    return Err(EditOutcome::Occluded);
+                }
+                let layout = rails::connection(
+                    &world.chunks,
+                    &world.journal,
+                    start,
+                    hit,
+                    command.look,
+                    wood,
+                )
+                .map_err(|_| EditOutcome::Invalid)?;
+                let destination = rails::connection_target(&layout)
+                    .ok_or(EditOutcome::Invalid)?
+                    .position
+                    .position();
+                if (0..3)
+                    .map(|axis| (destination[axis] - eye[axis]).powi(2))
+                    .sum::<f64>()
+                    > 4.5 * 4.5
+                {
+                    return Err(EditOutcome::OutOfReach);
+                }
+                layout
+            } else {
+                let EditAction::Block { material, .. } = command.action else {
+                    unreachable!()
+                };
+                let layout = rails::placement(
+                    &world.chunks,
+                    &world.journal,
+                    hit,
+                    material,
+                    (eye, direction),
+                    command.look,
+                )
+                .map_err(|_| EditOutcome::Invalid)?;
+                if !layout.states.iter().any(|(cell, state)| {
+                    *cell == position
+                        && state
+                            .is_some_and(|state| !state.secondary && state.peer == Some(position))
+                }) {
+                    return Err(EditOutcome::Occluded);
+                }
+                layout
             }
-            layout
         }
         Operation::Remove | Operation::Switch => {
             if hit.position != position {
@@ -174,6 +241,58 @@ fn prepare(
             }
         }
     };
+    if matches!(operation, Operation::Place) {
+        let existing_sites = match command.action {
+            EditAction::ConnectRail { start, .. } => {
+                rails::connection_sites(&world.journal, start, hit)
+            }
+            _ => rails::placement_sites(&world.journal, hit),
+        }
+        .ok_or(EditOutcome::Conflict)?;
+        if existing_sites.iter().any(|cell| {
+            world.chunks.block_at(*cell).is_none()
+                || world.chunks.block_at(*cell) != world.journal.block(*cell)
+                || !super::super::kingdoms::permission_allowed(
+                    peer.uuid,
+                    KingdomPermission::Build,
+                    *cell,
+                    world,
+                )
+        }) {
+            return Err(EditOutcome::Invalid);
+        }
+        rails::set_wood(&mut layout, wood);
+    }
+    let clearance = if matches!(operation, Operation::Place) {
+        rails::clearance(&layout, &world.chunks, &world.journal)
+            .map_err(|_| EditOutcome::Invalid)?
+    } else {
+        Vec::new()
+    };
+    if let Some(WorldTarget::Prop(hit)) = target
+        && !clearance.iter().any(|cleared| {
+            cleared.prop.id == hit.prop.id && cleared.prop.section == hit.prop.section
+        })
+    {
+        return Err(EditOutcome::Occluded);
+    }
+    if clearance.iter().any(|cleared| {
+        cleared.rights_cells.iter().any(|cell| {
+            !super::super::kingdoms::permission_allowed(
+                peer.uuid,
+                KingdomPermission::Break,
+                *cell,
+                world,
+            ) || !super::super::kingdoms::permission_allowed(
+                peer.uuid,
+                KingdomPermission::Build,
+                *cell,
+                world,
+            )
+        })
+    }) {
+        return Err(EditOutcome::Invalid);
+    }
     let permission = match operation {
         Operation::Place => KingdomPermission::Build,
         Operation::Remove => KingdomPermission::Break,
@@ -214,62 +333,78 @@ fn prepare(
     {
         return Err(EditOutcome::RateLimited);
     }
-    let inventory = if let Operation::Place = operation {
-        let EditAction::Block { material, .. } = command.action else {
-            unreachable!()
-        };
-        let item = ItemKind::Block(material);
-        if let Some(source) = command.source {
-            let bag = gameplay
-                .inventories
-                .get(&peer.uuid)
-                .ok_or(EditOutcome::Invalid)?;
-            if bag.revision != source.revision || peer.held_slot != Some(source.slot) {
-                return Err(EditOutcome::Conflict);
-            }
-            if bag
-                .slot(usize::from(source.slot))
-                .is_none_or(|stack| stack.item != item || stack.count == 0)
-            {
-                return Err(EditOutcome::Invalid);
-            }
-            if peer.game_mode(&world.config) == GameMode::Survival {
-                let mut next = bag.clone();
-                if bag.revision == u64::MAX || !next.take_from(usize::from(source.slot), item) {
-                    return Err(EditOutcome::Invalid);
-                }
-                Some(next)
-            } else {
-                None
-            }
-        } else if peer.game_mode(&world.config) == GameMode::Creative {
-            None
-        } else {
-            return Err(EditOutcome::Invalid);
-        }
-    } else {
-        None
-    };
-    let drop = if matches!(operation, Operation::Remove)
+    let inventory = if matches!(operation, Operation::Place)
         && peer.game_mode(&world.config) == GameMode::Survival
     {
-        if !gameplay.can_drop() {
-            return Err(EditOutcome::RateLimited);
+        let cost = rails::cost(&layout).ok_or(EditOutcome::Invalid)?;
+        let bag = gameplay
+            .inventories
+            .get(&peer.uuid)
+            .ok_or(EditOutcome::Invalid)?;
+        if cost == 0
+            || bag.count(selected_item) < cost
+            || bag.revision.checked_add(u64::from(cost)).is_none()
+        {
+            return Err(EditOutcome::Invalid);
         }
-        Some((
-            position.map(|coordinate| coordinate as f64 + 0.5),
-            ItemStack {
-                item: ItemKind::Block(expected),
-                count: 1,
-            },
-        ))
+        let mut next = bag.clone();
+        let source = command.source.ok_or(EditOutcome::Invalid)?;
+        if !next.take_from(usize::from(source.slot), selected_item) {
+            return Err(EditOutcome::Invalid);
+        }
+        for _ in 1..cost {
+            if !next.take_one(selected_item) {
+                return Err(EditOutcome::Invalid);
+            }
+        }
+        Some(next)
     } else {
         None
     };
+    let mut drops = Vec::new();
+    if peer.game_mode(&world.config) == GameMode::Survival {
+        if matches!(operation, Operation::Remove) {
+            let piece = rails::owner_at(&world.journal, position).ok_or(EditOutcome::Conflict)?;
+            let state = world
+                .journal
+                .object_state(position)
+                .ok_or(EditOutcome::Conflict)?;
+            drops.push((
+                position.map(|coordinate| coordinate as f64 + 0.5),
+                ItemStack {
+                    item: ItemKind::for_wood(terra_core::rails::STRAIGHT, state.wood),
+                    count: rails::piece_cost(piece),
+                },
+            ));
+        }
+        for cleared in &clearance {
+            drops.extend(super::resource_stacks_for_prop(
+                &cleared.prop,
+                &world.journal,
+            ));
+        }
+    }
+    if gameplay.drops.len().saturating_add(drops.len()) > terra_core::MAX_WORLD_DROPS
+        || gameplay.next_drop.checked_add(drops.len() as u64).is_none()
+        || gameplay
+            .revision
+            .checked_add(drops.len() as u64 + clearance.len() as u64 * 2 + 2)
+            .is_none()
+    {
+        return Err(EditOutcome::RateLimited);
+    }
+    if drops.iter().any(|(position, stack)| {
+        !stack.valid()
+            || position
+                .iter()
+                .any(|value| !value.is_finite() || value.abs() > 1_000_000.0)
+    }) {
+        return Err(EditOutcome::Invalid);
+    }
     Ok(Prepared {
         layout,
         inventory,
-        drop,
+        drops,
         operation,
     })
 }
@@ -301,7 +436,7 @@ pub(super) fn apply(
                 gameplay.inventories.insert(peer.uuid, inventory);
                 gameplay.revision += 1;
             }
-            if let Some((position, stack)) = prepared.drop {
+            for (position, stack) in prepared.drops {
                 let dropped = gameplay.drop_stack(position, stack, [0.0, 1.8, 0.0], 0.35);
                 debug_assert!(
                     dropped,

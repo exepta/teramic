@@ -62,6 +62,8 @@ fn load(mut p: ResMut<Presentations>) {
 }
 #[derive(bevy::ecs::system::SystemParam)]
 struct Scene<'w, 's> {
+    rail_preview: Option<Res<'w, terra_player::interaction::PlacementPreview>>,
+    controls: Option<Res<'w, terra_core::ControlsConfig>>,
     session: Option<Res<'w, terra_network::client::ClientSession>>,
     layout: Option<Res<'w, crate::hud_layout::HudWidgetStyles>>,
     time: Res<'w, Time>,
@@ -973,6 +975,51 @@ fn update(scene: Scene, mut view: ResMut<TargetView>, mut next: Local<f32>) {
             v.stats.push(row);
         }
         v.progress = scene.mining.progress.clamp(0.0, 1.0) * 100.0;
+    }
+    if let Some(preview) = scene.rail_preview.as_ref()
+        && scene.active.0.is_some_and(|item| {
+            item.block_material()
+                .is_some_and(terra_core::rails::is_rail)
+        })
+    {
+        let mode = [
+            "Gleis",
+            "Weiche links",
+            "Weiche rechts",
+            "Kreuzung",
+            "Prellbock",
+        ]
+        .get(usize::from(preview.rail_mode))
+        .copied()
+        .unwrap_or("Gleis");
+        let binding = |action: terra_core::GameAction| {
+            scene.controls.as_ref().map_or_else(
+                || action.default_binding().label(),
+                |controls| controls.binding(action).label(),
+            )
+        };
+        v.visible = true;
+        v.status = if preview.rail_start.is_some() {
+            format!(
+                "{mode}: Ziel waehlen · {}+{}: Abbrechen",
+                binding(terra_core::GameAction::FlyDown),
+                binding(terra_core::GameAction::Place)
+            )
+        } else {
+            format!(
+                "{mode} · {}: Bauform · Gleis anklicken: Verbinden",
+                binding(terra_core::GameAction::Use)
+            )
+        };
+        if preview.rail_cost > 0 && preview.rail_cost != u16::MAX {
+            v.stats.push(StatRow {
+                id: "rail-cost".into(),
+                label: "Schienen".into(),
+                text: preview.rail_cost.to_string(),
+                bar: false,
+                value: 100.,
+            });
+        }
     }
     if *view != v {
         *view = v;

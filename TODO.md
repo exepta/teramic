@@ -6,7 +6,7 @@ Erledigte Aufgaben werden entfernt; die Umsetzungshistorie steht in
 `F` = Feature, `O` = Optimierung/Fehlerkorrektur, `A` = Abnahme.
 
 Die weiteren Schwerpunkte bauen auf den vorhandenen Kingdom-Rechten, Baeumen
-und Setzlingen auf: produktive NPC-Arbeit sowie Gleise und Fahrzeugbasis
+und Setzlingen auf: produktive NPC-Arbeit sowie Fahrzeugbasis
 vor Zugbetrieb. Vorhandene Registries, Navigation, Inventare,
 Wassertechnik sowie Speicher- und Netzwerkpfade werden erweitert.
 Neue Systeme brauchen passende Save/Reload-, Mehrspieler- und Besitzpruefungen;

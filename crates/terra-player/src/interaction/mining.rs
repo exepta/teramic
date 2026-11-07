@@ -9,8 +9,15 @@ use terra_network::{
 use terra_voxel::MaterialId;
 use terra_world::streaming::{BlockEditRequest, ChunkStore, PropRemoveRequest};
 
+#[path = "rail_placement.rs"]
+mod rail_placement;
+#[cfg(test)]
+#[path = "rail_placement_tests.rs"]
+mod rail_placement_tests;
+
 #[derive(SystemParam)]
 pub(crate) struct EditRequests<'w> {
+    rails: MessageWriter<'w, terra_network::client::RailConnectRequest>,
     creatures: Option<ResMut<'w, terra_network::client::CreatureActions>>,
     player_attacks: Option<ResMut<'w, terra_network::client::PlayerAttacks>>,
     nests: Option<ResMut<'w, terra_network::client::BeeNestActions>>,
@@ -50,6 +57,10 @@ pub struct PlacementPreview {
     pub valid: bool,
     pub plan: Option<terra_world::placement::Layout>,
     pub conveyor_start: Option<([i64; 3], u64)>,
+    pub rail_start: Option<terra_core::rails::Endpoint>,
+    pub rail_item: Option<ItemKind>,
+    pub rail_mode: u8,
+    pub rail_cost: u16,
 }
 
 #[derive(Resource, Default, Debug)]
@@ -124,6 +135,24 @@ pub(crate) fn edit_target_block(
             None
         }
     });
+    presentation.preview.rail_cost = 0;
+    if blocked || selected != presentation.preview.rail_item {
+        presentation.preview.rail_start = None;
+    }
+    presentation.preview.rail_item = selected.filter(|item| {
+        item.block_material()
+            .is_some_and(terra_core::rails::is_rail)
+    });
+    if presentation.preview.rail_item.is_some() && !blocked {
+        if keys.just_pressed(Action::Use) {
+            presentation.preview.rail_mode = (presentation.preview.rail_mode + 1) % 5;
+            presentation.preview.rail_start = None;
+            return;
+        }
+        if keys.just_pressed(Action::Break) {
+            presentation.preview.rail_start = None;
+        }
+    }
     presentation.vessel.begin_frame(
         selected,
         target
@@ -904,130 +933,19 @@ pub(crate) fn edit_target_block(
     {
         return;
     }
-    if let Some(material) = selected
-        .and_then(ItemKind::block_material)
-        .filter(|material| terra_core::rails::is_rail(*material))
-    {
-        let Some(WorldTarget::Block(hit)) = target.world.0 else {
-            return;
-        };
-        let Some(journal) = target.journal.as_deref() else {
-            return;
-        };
-        let Some((camera, look)) = target.camera.iter().next() else {
-            return;
-        };
-        let origin = if target
-            .perspective
-            .as_deref()
-            .is_some_and(|mode| mode.is_third_person())
-        {
-            target
-                .bodies
-                .iter()
-                .next()
-                .map_or(camera.translation, |body| {
-                    body.translation + Vec3::Y * terra_physics::character::PLAYER_EYE_OFFSET
-                })
-        } else {
-            camera.translation
-        };
-        let rotation = look.rotation();
-        let (yaw, pitch, _) = rotation.to_euler(EulerRot::YXZ);
-        let ray = (
-            origin.to_array().map(f64::from),
-            (rotation * Vec3::NEG_Z).to_array().map(f64::from),
+    if let Some(item) = selected.filter(|item| {
+        item.block_material()
+            .is_some_and(terra_core::rails::is_rail)
+    }) {
+        rail_placement::update(
+            &keys,
+            &target,
+            &chunks,
+            &mut requests,
+            &mut presentation,
+            item,
+            creative,
         );
-        let plan =
-            terra_world::rails::placement(&chunks, journal, hit, material, ray, [yaw, pitch]);
-        let environment_valid = plan.is_ok();
-        let plan = plan
-            .or_else(|_| {
-                terra_world::rails::proposal(&chunks, journal, hit, material, ray, [yaw, pitch])
-            })
-            .ok();
-        let anchor = plan.as_ref().and_then(|plan| {
-            plan.states.iter().find_map(|(cell, state)| {
-                state
-                    .is_some_and(|state| !state.secondary && state.peer == Some(*cell))
-                    .then_some(*cell)
-            })
-        });
-        let Some(position) = anchor else {
-            presentation.preview.position = Some(hit.adjacent());
-            presentation.preview.material = material;
-            return;
-        };
-        let plan = plan.expect("a rail anchor belongs to its placement plan");
-        let has_item = creative
-            || target
-                .session
-                .as_ref()
-                .is_some_and(|session| session.inventory.count(ItemKind::Block(material)) > 0);
-        let permitted = target.session.as_ref().is_none_or(|session| {
-            session.uuid.is_some_and(|actor| {
-                plan.edits.iter().all(|edit| {
-                    terra_world::kingdom_access::can_use(
-                        &session.kingdoms,
-                        &chunks,
-                        actor,
-                        terra_core::kingdom::KingdomPermission::Build,
-                        edit.position,
-                    )
-                })
-            })
-        });
-        let properties = target.properties.as_deref();
-        let boxes = properties
-            .map(|properties| terra_world::placement::boxes(&plan, &chunks, journal, properties));
-        let half = Vec3::new(
-            terra_physics::character::PLAYER_RADIUS,
-            terra_physics::character::PLAYER_HALF_HEIGHT,
-            terra_physics::character::PLAYER_RADIUS,
-        );
-        let overlaps = |center: Vec3| {
-            boxes.as_ref().is_some_and(|boxes| {
-                boxes.iter().any(|shape| {
-                    shape.intersects(
-                        (center - half).to_array().map(f64::from),
-                        (center + half).to_array().map(f64::from),
-                    )
-                })
-            })
-        };
-        let blocked = target.bodies.iter().any(|body| overlaps(body.translation))
-            || target.remote.as_ref().is_some_and(|players| {
-                players
-                    .players
-                    .values()
-                    .any(|track| overlaps(track.position()))
-            });
-        let within_height = target.config.as_ref().is_none_or(|config| {
-            !config.world.bounded_world
-                || plan
-                    .edits
-                    .iter()
-                    .all(|edit| (-128..=356).contains(&edit.position[1]))
-        });
-        let valid = environment_valid
-            && within_height
-            && hit.distance <= 4.5
-            && has_item
-            && permitted
-            && !blocked;
-        presentation.preview.position = Some(position);
-        presentation.preview.material = material;
-        presentation.preview.valid = valid;
-        presentation.preview.plan = Some(plan);
-        if valid && keys.just_pressed(Action::Place) {
-            presentation.motion.placing = true;
-            presentation.motion.impulse = presentation.motion.impulse.wrapping_add(1);
-            requests.blocks.write(BlockEditRequest {
-                position,
-                expected_material: chunks.block_at(position).unwrap_or(0),
-                material,
-            });
-        }
         return;
     }
     if selected == Some(ItemKind::Block(98)) {
@@ -1305,7 +1223,7 @@ mod tests {
         streaming::LoadedSection,
     };
 
-    fn app() -> App {
+    pub(super) fn app() -> App {
         let mut app = App::new();
         app.init_resource::<ButtonInput<MouseButton>>()
             .init_resource::<ButtonInput<KeyCode>>()
@@ -1329,6 +1247,7 @@ mod tests {
             .add_message::<terra_network::client::InventoryRequest>()
             .add_message::<terra_network::client::ObjectRotateRequest>()
             .add_message::<terra_network::client::ConveyorConnectRequest>()
+            .add_message::<terra_network::client::RailConnectRequest>()
             .add_message::<terra_network::client::ConveyorInteractionRequest>()
             .insert_resource(TargetBlock(Some(BlockHit {
                 position: [1, 0, 1],
@@ -1375,7 +1294,8 @@ mod tests {
             let piece = rails::Piece::new([15, 1, 8], rails::STRAIGHT, 2).unwrap();
             {
                 let mut chunks = app.world_mut().resource_mut::<ChunkStore>();
-                let supports = piece.supports().iter().map(|point| {
+                let support_points = piece.supports();
+                let supports = support_points.iter().map(|point| {
                     (
                         std::array::from_fn(|axis| {
                             piece.anchor[axis] + i64::from(point.support[axis])
@@ -1470,7 +1390,7 @@ mod tests {
     }
 
     #[test]
-    fn railway_invalid_space_keeps_a_silhouette_but_foreground_props_prevent_placement() {
+    fn railway_invalid_space_and_uncleared_foreground_keep_an_invalid_silhouette() {
         #[derive(Clone, Copy, Debug)]
         enum Obstruction {
             MissingSupport,
@@ -1488,7 +1408,8 @@ mod tests {
                 terra_core::rails::Piece::new([1, 1, 5], terra_core::rails::STRAIGHT, 2).unwrap();
             {
                 let mut chunks = app.world_mut().resource_mut::<ChunkStore>();
-                let supports = piece.supports().iter().map(|point| {
+                let support_points = piece.supports();
+                let supports = support_points.iter().map(|point| {
                     (
                         std::array::from_fn(|axis| {
                             piece.anchor[axis] + i64::from(point.support[axis])
@@ -1568,16 +1489,11 @@ mod tests {
             app.update();
             let preview = app.world().resource::<PlacementPreview>();
             assert!(!preview.valid, "{obstruction:?}");
-            if matches!(obstruction, Obstruction::ForegroundProp) {
-                assert!(preview.position.is_none());
-                assert!(preview.plan.is_none());
-            } else {
-                assert_eq!(preview.position, Some(piece.anchor));
-                assert_eq!(
-                    preview.plan.as_ref().unwrap().edits.len(),
-                    piece.footprint().len()
-                );
-            }
+            assert_eq!(preview.position, Some(piece.anchor));
+            assert_eq!(
+                preview.plan.as_ref().unwrap().edits.len(),
+                piece.footprint().len()
+            );
             assert!(
                 app.world_mut()
                     .resource_mut::<Messages<BlockEditRequest>>()
@@ -2541,7 +2457,7 @@ mod tests {
         );
     }
 
-    fn session(app: &mut App, mode: GameMode, flight: bool) {
+    pub(super) fn session(app: &mut App, mode: GameMode, flight: bool) {
         let mut session = terra_network::client::ClientSession::default();
         session.ready = true;
         session.allow_build = true;

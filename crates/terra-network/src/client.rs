@@ -107,6 +107,13 @@ pub struct ConveyorConnectRequest {
 }
 
 #[derive(Message, Clone, Copy, Debug)]
+pub struct RailConnectRequest {
+    pub start: terra_core::rails::Endpoint,
+    pub position: [i64; 3],
+    pub expected: u16,
+}
+
+#[derive(Message, Clone, Copy, Debug)]
 pub enum ConveyorInteractionRequest {
     Collect {
         id: u64,
@@ -599,6 +606,7 @@ pub(crate) fn install(app: &mut App) {
         .add_message::<ConsumptionRequest>()
         .init_resource::<CrankInput>()
         .add_message::<ObjectInteractionRequest>()
+        .add_message::<RailConnectRequest>()
         .add_message::<InventoryRequest>()
         .add_message::<ContainerRequest>()
         .add_message::<KingdomRequest>()
@@ -1736,6 +1744,7 @@ fn send_inputs(
 
 #[derive(SystemParam)]
 struct EditRequests<'w, 's> {
+    rails: MessageReader<'w, 's, RailConnectRequest>,
     belt_interactions: MessageReader<'w, 's, ConveyorInteractionRequest>,
     conveyors: MessageReader<'w, 's, ConveyorConnectRequest>,
     objects: MessageReader<'w, 's, ObjectInteractionRequest>,
@@ -1799,6 +1808,13 @@ fn send_edits(
             end: request.end,
             start_revision: request.start_revision,
             item: request.item,
+        });
+    }
+    for request in requests.rails.read() {
+        actions.push(EditAction::ConnectRail {
+            start: request.start,
+            position: request.position,
+            expected: request.expected,
         });
     }
     for request in requests.rotations.read() {
@@ -1865,6 +1881,7 @@ fn send_edits(
                 journal.revision(terra_voxel::global_to_section(end).0)
             }
             EditAction::Block { position, .. }
+            | EditAction::ConnectRail { position, .. }
             | EditAction::ToggleObject { position, .. }
             | EditAction::RotateObject { position, .. } => {
                 journal.revision(terra_voxel::global_to_section(position).0)
@@ -1889,6 +1906,7 @@ fn send_edits(
                 | EditAction::Farm { .. }
                 | EditAction::RotateObject { .. }
                 | EditAction::ConnectConveyor { .. }
+                | EditAction::ConnectRail { .. }
                 | EditAction::DyeConveyor { .. }
                 | EditAction::DyeFabric { .. }
                 | EditAction::ToggleObject {

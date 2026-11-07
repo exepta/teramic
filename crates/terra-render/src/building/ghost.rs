@@ -330,20 +330,27 @@ mod tests {
     #[test]
     fn wide_rail_ghost_emits_one_complete_rotated_assembly_at_its_real_anchor() {
         use terra_core::rails;
-        for (material, facing) in [
-            (rails::CURVE_LARGE, 3),
-            (rails::SWITCH_LEFT, 5),
-            (rails::SLOPE_ENTRY, 1),
+        let anchor = [-17, 15, -17];
+        for piece in [
+            rails::Piece::from_facing(anchor, rails::CURVE_LARGE, 3).unwrap(),
+            rails::Piece::from_facing(anchor, rails::SWITCH_LEFT, 5).unwrap(),
+            rails::Piece::from_facing(anchor, rails::SLOPE_ENTRY, 1).unwrap(),
+            rails::Piece::new_curve(
+                anchor,
+                rails::CurveSpec::new([[8, 2, 0], [8, 2, 64], [40, 6, 128], [72, 10, 192]])
+                    .unwrap(),
+            )
+            .unwrap(),
         ] {
-            let anchor = [-17, 15, -17];
             let origin = [-14, 15, -15];
-            let piece = rails::Piece::from_facing(anchor, material, facing).unwrap();
+            let material = piece.material;
+            let facing = piece.encoded_facing();
             let mut plan = terra_world::placement::Layout {
                 edits: Vec::new(),
                 states: Vec::new(),
                 belts: Vec::new(),
             };
-            for &offset in piece.footprint() {
+            for &offset in piece.footprint().iter() {
                 let position = std::array::from_fn(|axis| anchor[axis] + i64::from(offset[axis]));
                 plan.edits.push(terra_world::streaming::BlockEditRequest {
                     position,
@@ -354,6 +361,7 @@ mod tests {
                     position,
                     Some(BlockObjectState {
                         facing,
+                        rail_curve: piece.curve,
                         peer: Some(anchor),
                         secondary: position != anchor,
                         ..default()

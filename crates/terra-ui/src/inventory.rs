@@ -661,7 +661,7 @@ fn block_opening_frame(
             || station_target(
                 &input,
                 &context,
-                held_action_priority(&context, active.as_deref()),
+                held_action_priority(&input, &context, active.as_deref()),
             )
             .and_then(|p| context.chunks.as_ref()?.block_at(p))
             .is_some_and(
@@ -810,11 +810,25 @@ fn mounted_crank_target(
     .then_some(hit.position)
 }
 
-fn held_action_priority(context: &InventoryContext, active: Option<&ActiveItem>) -> bool {
+/// Holding Use with a rail owns mode selection, independent of the looked-at object.
+/// Place retains the existing station and object interaction policy.
+pub(crate) fn rail_mode_priority(input: &GameplayInput, active: Option<&ActiveItem>) -> bool {
+    input.pressed(GameAction::Use)
+        && active
+            .and_then(|active| active.0)
+            .and_then(ItemKind::block_material)
+            .is_some_and(terra_core::rails::is_rail)
+}
+
+fn held_action_priority(
+    input: &GameplayInput,
+    context: &InventoryContext,
+    active: Option<&ActiveItem>,
+) -> bool {
     let Some(item) = active.and_then(|active| active.0) else {
         return false;
     };
-    if item == ItemKind::Tool(terra_core::ToolKind::Wrench) {
+    if rail_mode_priority(input, active) || item == ItemKind::Tool(terra_core::ToolKind::Wrench) {
         return true;
     }
     if context
@@ -902,7 +916,7 @@ fn drive_crusher(
             mounted_crank_target(
                 &input,
                 &context,
-                held_action_priority(&context, active.as_deref()),
+                held_action_priority(&input, &context, active.as_deref()),
             )
         })
         .flatten();
@@ -936,7 +950,7 @@ fn held_consumption(
         && station_target(
             &input,
             &context,
-            held_action_priority(&context, active.as_deref()),
+            held_action_priority(&input, &context, active.as_deref()),
         )
         .and_then(|position| context.chunks.as_ref()?.block_at(position))
         .is_some_and(|material| matches!(material, 65..=73 | 139..=140 | 166..=167))
@@ -952,8 +966,8 @@ fn held_consumption(
         && (input.pressed(GameAction::FlyDown)
             || !context.target.as_ref().is_some_and(|target| matches!(target.0,
                 Some(terra_player::WorldTarget::Prop(hit)) if hit.prop.kind == terra_world::props::PropKind::BeeNest)))
-        && mounted_crank_target(&input, &context, held_action_priority(&context, active.as_deref())).is_none()
-        && station_target(&input, &context, held_action_priority(&context, active.as_deref())).is_none()
+        && mounted_crank_target(&input, &context, held_action_priority(&input, &context, active.as_deref())).is_none()
+        && station_target(&input, &context, held_action_priority(&input, &context, active.as_deref())).is_none()
         && (input.pressed(GameAction::Use)
             || creature.as_ref().is_none_or(|target| target.0.is_none()))
         && !input.pressed(GameAction::Break))
@@ -1059,7 +1073,7 @@ fn keyboard(
                 faucet_control_target(
                     &input,
                     &context,
-                    held_action_priority(&context, active.as_deref()),
+                    held_action_priority(&input, &context, active.as_deref()),
                 )
             })
             .flatten();
@@ -1081,7 +1095,7 @@ fn keyboard(
                 station_target(
                     &input,
                     &context,
-                    held_action_priority(&context, active.as_deref()),
+                    held_action_priority(&input, &context, active.as_deref()),
                 )
             })
             .flatten();
@@ -2035,7 +2049,9 @@ fn available_items(
         return palette
             .choices
             .iter()
-            .filter(|choice| !terra_core::castle::retired_item(choice.id))
+            .filter(|choice| {
+                !terra_core::castle::retired_item(choice.id) && !matches!(choice.id, 197..=205)
+            })
             .map(|choice| ItemKind::Block(choice.id))
             .chain(
                 prop_kinds()
@@ -2087,7 +2103,9 @@ fn catalog_item(item: ItemKind) -> bool {
     // Keep legacy metadata and carried stacks available, but expose only the adaptive pipe.
     !matches!(item.block_material(), Some(61..=64 | 95))
         && item.block_material().is_none_or(|material| {
-            !terra_core::textiles::is_dyed(material) && !terra_core::castle::retired_item(material)
+            !terra_core::textiles::is_dyed(material)
+                && !terra_core::castle::retired_item(material)
+                && !matches!(material, 197..=205)
         })
         && !matches!(item, ItemKind::DyedBed { .. })
         && !matches!(item, ItemKind::TintedBlock { .. })

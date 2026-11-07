@@ -61,7 +61,9 @@ fn visible_secondary(host: &App, client: &App, piece: Piece) -> ([i64; 3], [f32;
             .then(first.cmp(second))
     });
     for cell in candidates.into_iter().filter(|cell| *cell != piece.anchor) {
-        for bounds in rails::cell_boxes(cell, piece.material, rails::object_state(piece, cell)) {
+        for bounds in
+            rails::cell_boxes(cell, piece.material, rails::object_state(piece, cell)).iter()
+        {
             let center = std::array::from_fn(|axis| {
                 cell[axis] as f32 + ((bounds.minimum[axis] + bounds.maximum[axis]) * 0.5) as f32
             });
@@ -77,7 +79,7 @@ fn visible_secondary(host: &App, client: &App, piece: Piece) -> ([i64; 3], [f32;
 }
 
 #[test]
-fn udp_survival_rail_module_consumes_one_switches_all_cells_and_breaks_once_from_a_secondary_after_late_join()
+fn udp_survival_rail_module_consumes_common_track_cost_switches_all_cells_and_breaks_once_after_late_join()
  {
     let (mut host, mut first, mut second) = pair();
     let state = first
@@ -138,11 +140,18 @@ fn udp_survival_rail_module_consumes_one_switches_all_cells_and_breaks_once_from
         .resource::<client::ClientSession>()
         .uuid
         .unwrap();
-    let item = ItemKind::Block(piece.material);
+    let item = ItemKind::Block(terra_core::rails::STRAIGHT);
+    let cost = rails::piece_cost(piece);
     {
         let mut journal = host.world_mut().resource_mut::<EditJournal>();
         let inventory = journal.gameplay_mut().inventories.entry(uuid).or_default();
-        assert!(inventory.creative_set(8, ItemStack { item, count: 2 }));
+        assert!(inventory.creative_set(
+            8,
+            ItemStack {
+                item,
+                count: cost + 1
+            }
+        ));
         let pickaxe = ItemStack {
             item: ItemKind::Tool(ToolKind::WoodPickaxe),
             count: 1,
@@ -162,7 +171,7 @@ fn udp_survival_rail_module_consumes_one_switches_all_cells_and_breaks_once_from
             .resource::<client::ClientSession>()
             .inventory
             .count(item)
-            == 2
+            == cost + 1
             && clients.iter().all(|client| {
                 client
                     .world()
@@ -401,7 +410,7 @@ fn udp_survival_rail_module_consumes_one_switches_all_cells_and_breaks_once_from
     assert_eq!(
         gameplay.next_drop,
         next_drop + 1,
-        "one module produces exactly one item drop"
+        "one module produces one stack of the common track item"
     );
     let dropped: Vec<_> = gameplay
         .drops
@@ -409,7 +418,7 @@ fn udp_survival_rail_module_consumes_one_switches_all_cells_and_breaks_once_from
         .filter(|drop| drop.stack.item == item)
         .collect();
     assert_eq!(dropped.len(), 1);
-    assert_eq!(dropped[0].stack.count, 1);
+    assert_eq!(dropped[0].stack.count, cost);
     assert_eq!(gameplay.player_stats[&uuid].blocks_placed, 1);
     assert_eq!(gameplay.player_stats[&uuid].blocks_broken, 1);
     wait(

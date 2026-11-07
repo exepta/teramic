@@ -1,0 +1,10 @@
+{
+  "item": {
+    "wooden_block": {
+      "material": 196,
+      "wood": "spruce"
+    }
+  },
+  "name": "Spruce Track",
+  "description": "Three-block-wide track with spruce sleepers and steel rails. Select a start and target to build a continuous rail connection; the same item also builds switches, crossings and buffer stops."
+}

@@ -125,6 +125,7 @@ fn oriented_preview(app: &mut App, position: [i64; 3], material: u16) {
             states: Vec::new(),
             belts: Vec::new(),
         }),
+        ..Default::default()
     };
 }
 
@@ -469,6 +470,7 @@ fn missing_orientation_geometry_never_falls_back_to_a_filled_cube() {
         valid: true,
         conveyor_start: None,
         plan: None,
+        ..Default::default()
     };
     app.update();
     assert!(!app.world().resource::<BuildingStatus>().preview_visible);

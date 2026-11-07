@@ -11,6 +11,35 @@ impl EditJournal {
         plan: &Layout,
     ) -> Result<bool, String> {
         crate::rails::placement::validate_commit(plan, chunks, self)?;
+        let cleared = if plan
+            .edits
+            .iter()
+            .all(|edit| matches!(edit.expected_material, 0 | 14 | 27))
+        {
+            crate::rails::clearance(plan, chunks, self)?
+        } else {
+            Vec::new()
+        };
+        let mut retired_trees = BTreeMap::new();
+        for cleared_prop in &cleared {
+            if let Some(tree) = self.gameplay.trees.get(cleared_prop.prop.id.0)
+                && tree.stage == terra_core::TreeStage::Sapling
+            {
+                let mut retired = tree.clone();
+                retired.stage = terra_core::TreeStage::Felled;
+                retired.fruit = None;
+                retired.revision = retired
+                    .revision
+                    .checked_add(1)
+                    .ok_or("Sapling revision overflow")?;
+                retired_trees.insert(retired.id, retired);
+            }
+        }
+        self.gameplay
+            .trees
+            .revision
+            .checked_add(retired_trees.len() as u64)
+            .ok_or("Sapling registry revision overflow")?;
         let rail_epoch = self
             .rail_epoch
             .checked_add(1)
@@ -19,6 +48,7 @@ impl EditJournal {
             .edits
             .iter()
             .map(|edit| global_to_section(edit.position).0)
+            .chain(cleared.iter().map(|cleared_prop| cleared_prop.prop.section))
             .collect();
         let mut staged = Self::default();
         let mut halo = BTreeSet::new();
@@ -40,6 +70,20 @@ impl EditJournal {
                             .insert(neighbor, self.water_mesh_epoch(neighbor));
                     }
                 }
+            }
+        }
+        for cleared_prop in &cleared {
+            staged
+                .remove_prop(cleared_prop.prop.section, cleared_prop.prop.id)
+                .map_err(|error| error.to_string())?;
+            let section = staged
+                .sections
+                .get(&cleared_prop.prop.section)
+                .ok_or("Missing prop clearance section")?;
+            if section.removed_props.len() > 4096
+                || section.placed_props.len() + section.removed_props.len() > 4096
+            {
+                return Err("Rail clearance exceeds persistent prop capacity".into());
             }
         }
         let mut blocks = BTreeMap::new();
@@ -94,6 +138,28 @@ impl EditJournal {
         for owner in owners {
             self.refresh_object_section(owner);
         }
+        for (id, retired) in retired_trees {
+            *self
+                .gameplay
+                .trees
+                .get_mut(id)
+                .expect("captured cleared sapling") = retired;
+            self.gameplay.trees.changed();
+        }
+        let prop_sections: BTreeSet<_> = cleared
+            .iter()
+            .map(|cleared_prop| cleared_prop.prop.section)
+            .collect();
+        for cleared_prop in &cleared {
+            if let Some(support) = self.crop_props.get(&cleared_prop.prop.id).copied() {
+                self.remove_crop(support);
+            }
+        }
+        for owner in prop_sections {
+            if let Some(section) = chunks.loaded.get_mut(&owner) {
+                self.apply_prop_removals(owner, &mut section.props);
+            }
+        }
         for (owner, data) in blocks {
             chunks
                 .loaded
@@ -123,6 +189,84 @@ mod tests {
     use terra_voxel::BlockSection;
 
     #[test]
+    fn a_late_prop_epoch_overflow_restores_every_prop_and_rail_cell() {
+        let piece = Piece::new([15, 16, 1], STRAIGHT, 0).unwrap();
+        let mut chunks = ChunkStore::default();
+        let mut journal = EditJournal::default();
+        let mut set = |cell, material| {
+            let (owner, local) = global_to_section(cell);
+            chunks
+                .loaded
+                .entry(owner)
+                .or_insert_with(|| LoadedSection {
+                    data: BlockSection::empty(owner).unwrap(),
+                    mesh: None,
+                    mesh_epoch: 0,
+                    water_epoch: 0,
+                    water: None,
+                    props: Vec::new(),
+                })
+                .data
+                .set_block(local, material)
+                .unwrap();
+        };
+        for cell in rails::cells(piece) {
+            set(cell, 0);
+        }
+        for point in piece.supports().iter() {
+            set(
+                std::array::from_fn(|axis| piece.anchor[axis] + i64::from(point.support[axis])),
+                3,
+            );
+        }
+        let mut props = Vec::new();
+        for (id, x) in [(20511, 15.5), (20512, 16.5)] {
+            let prop = crate::props::WorldProp {
+                id: crate::props::PropId(id),
+                kind: crate::props::PropKind::Grass,
+                position: [x, 16.0, 1.5],
+                rotation: 0.0,
+                scale: 1.0,
+                variant: 0,
+                section: global_to_section([x as i64, 15, 1]).0,
+                removed: false,
+            };
+            chunks
+                .loaded
+                .get_mut(&prop.section)
+                .unwrap()
+                .props
+                .push(prop);
+            props.push(prop);
+        }
+        let plan = rails::plan(&chunks, &journal, piece.anchor, piece.material, 0).unwrap();
+        assert_eq!(rails::clearance(&plan, &chunks, &journal).unwrap().len(), 2);
+        journal
+            .sections
+            .entry(props[1].section)
+            .or_default()
+            .prop_epoch = u64::MAX;
+        assert!(rails::commit(&mut chunks, &mut journal, &plan).is_err());
+        assert!(
+            props
+                .iter()
+                .all(|prop| !journal.prop_removed(prop.section, prop.id))
+        );
+        assert!(props.iter().all(|prop| {
+            chunks.loaded[&prop.section]
+                .props
+                .iter()
+                .any(|live| live.id == prop.id && !live.removed)
+        }));
+        assert!(
+            rails::cells(piece)
+                .into_iter()
+                .all(|cell| chunks.block_at(cell) == Some(0))
+        );
+        assert_eq!(journal.rail_module_count(), 0);
+    }
+
+    #[test]
     fn late_mesh_or_water_counter_overflow_cannot_publish_any_rail_cells() {
         for water in [false, true] {
             let piece = Piece::new([-1, 16, -1], STRAIGHT, 0).unwrap();
@@ -148,7 +292,7 @@ mod tests {
             for cell in rails::cells(piece) {
                 set(cell, 0);
             }
-            for point in piece.supports() {
+            for point in piece.supports().iter() {
                 set(
                     std::array::from_fn(|axis| piece.anchor[axis] + i64::from(point.support[axis])),
                     3,

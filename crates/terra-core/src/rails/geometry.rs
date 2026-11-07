@@ -1,7 +1,7 @@
 use super::*;
 use crate::block_shapes::ShapeBox;
-use std::collections::BTreeMap;
-use std::sync::OnceLock;
+use std::collections::{BTreeMap, VecDeque};
+use std::sync::{Arc, Mutex, OnceLock};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PartMaterial {
@@ -83,21 +83,65 @@ pub struct SupportPoint {
 }
 
 pub(super) struct Layout {
-    pub beams: Vec<Beam>,
-    pub footprint: Vec<[i32; 3]>,
-    pub cells: BTreeMap<[i32; 3], Vec<ShapeBox>>,
-    pub supports: Vec<SupportPoint>,
+    pub beams: Arc<[Beam]>,
+    pub footprint: Arc<[[i32; 3]]>,
+    pub cells: BTreeMap<[i32; 3], Arc<[ShapeBox]>>,
+    pub supports: Arc<[SupportPoint]>,
+    pub surfaces: OnceLock<Arc<[Surface]>>,
 }
-static LAYOUTS: [OnceLock<Layout>; 80] = [const { OnceLock::new() }; 80];
+static LAYOUTS: [OnceLock<Arc<Layout>>; 80] = [const { OnceLock::new() }; 80];
+type DynamicEntries = VecDeque<(CurveSpec, Arc<Layout>)>;
+static DYNAMIC: OnceLock<Mutex<DynamicEntries>> = OnceLock::new();
 
-pub(super) fn layout(material: u16, facing: u8) -> Option<&'static Layout> {
+pub(super) fn layout(material: u16, facing: u8) -> Option<Arc<Layout>> {
     if !valid_facing(material, facing) {
         return None;
     }
     let index = usize::from(material - STRAIGHT) * 8 + usize::from(facing);
-    Some(LAYOUTS[index].get_or_init(|| {
-        make_layout(Piece::from_facing([0; 3], material, facing).expect("validated rail pose"))
-    }))
+    Some(
+        LAYOUTS[index]
+            .get_or_init(|| {
+                Arc::new(make_layout(
+                    Piece::from_facing([0; 3], material, facing).expect("validated rail pose"),
+                ))
+            })
+            .clone(),
+    )
+}
+pub(super) fn piece_layout(piece: Piece) -> Option<Arc<Layout>> {
+    if !piece.valid() {
+        return None;
+    }
+    let Some(curve) = piece.curve else {
+        return layout(piece.material, piece.encoded_facing());
+    };
+    let cache = DYNAMIC.get_or_init(|| Mutex::new(VecDeque::new()));
+    {
+        let mut entries = cache
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        if let Some(index) = entries.iter().position(|(spec, _)| *spec == curve) {
+            let entry = entries.remove(index).expect("located rail layout");
+            let layout = entry.1.clone();
+            entries.push_back(entry);
+            return Some(layout);
+        }
+    }
+    let layout = Arc::new(make_layout(Piece {
+        anchor: [0; 3],
+        ..piece
+    }));
+    let mut entries = cache
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
+    if let Some((_, previous)) = entries.iter().find(|(spec, _)| *spec == curve) {
+        return Some(previous.clone());
+    }
+    if entries.len() >= DYNAMIC_CACHE_LIMIT {
+        entries.pop_front();
+    }
+    entries.push_back((curve, layout.clone()));
+    Some(layout)
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -106,11 +150,20 @@ pub(crate) enum PathShape {
     Curve { radius: f64, side: f64 },
     Entry,
     Exit,
+    Bezier(CurveSpec),
 }
 
 pub(super) fn paths(piece: Piece) -> Vec<Path> {
     if !piece.valid() {
         return vec![];
+    }
+    if let Some(curve) = piece.curve {
+        return vec![Path {
+            piece,
+            index: 0,
+            ports: [0, 1],
+            shape: PathShape::Bezier(curve),
+        }];
     }
     let line = |length, rise| PathShape::Line {
         start: [0.5, DECK_HEIGHT, 0.0],
@@ -179,6 +232,7 @@ fn local_sample(shape: PathShape, t: f64) -> Sample {
         0.0
     };
     match shape {
+        PathShape::Bezier(curve) => curve.sample(t),
         PathShape::Line { start, end } => Sample {
             position: add(start, mul(sub(end, start), t)),
             tangent: normalized(sub(end, start)),
@@ -216,6 +270,7 @@ pub(super) fn sample(path: Path, t: f64) -> Sample {
 }
 pub(super) fn path_length(path: Path) -> f64 {
     match path.shape {
+        PathShape::Bezier(curve) => curve.length().unwrap_or(0.0),
         PathShape::Line { start, end } => length(sub(end, start)),
         PathShape::Curve { radius, .. } => radius * std::f64::consts::FRAC_PI_2,
         PathShape::Entry | PathShape::Exit => {
@@ -234,6 +289,23 @@ pub(super) fn path_length(path: Path) -> f64 {
 pub(super) fn ports(piece: Piece) -> Vec<Port> {
     if !piece.valid() {
         return vec![];
+    }
+    if let Some(curve) = piece.curve {
+        return [false, true]
+            .into_iter()
+            .enumerate()
+            .map(|(index, end)| Port {
+                index: index as u8,
+                position: FixedPoint(std::array::from_fn(|axis| {
+                    piece.anchor[axis] * FIXED_SCALE
+                        + i64::from(curve.points[if end { 3 } else { 0 }][axis])
+                })),
+                tangent: curve
+                    .endpoint_tangent(end)
+                    .expect("validated endpoint tangent"),
+                connectable: true,
+            })
+            .collect();
     }
     let canonical = match piece.kind().expect("validated rail kind") {
         Kind::Straight | Kind::Buffer => vec![([8, 2, 0], [0, 0, -1]), ([8, 2, 64], [0, 0, 1])],
@@ -333,12 +405,16 @@ fn make_layout(piece: Piece) -> Layout {
             cell: [x, y, z],
             support: [x, y - 1, z],
         })
-        .collect();
+        .collect::<Vec<_>>();
     Layout {
-        beams,
-        footprint,
-        cells,
-        supports,
+        beams: beams.into(),
+        footprint: footprint.into(),
+        cells: cells
+            .into_iter()
+            .map(|(cell, boxes)| (cell, boxes.into()))
+            .collect(),
+        supports: supports.into(),
+        surfaces: OnceLock::new(),
     }
 }
 
@@ -352,7 +428,16 @@ fn make_beams(piece: Piece) -> Vec<Beam> {
     let mut tie_candidates = Vec::new();
     for path in &paths {
         let path_length = path.length();
-        let steps = (path_length * 4.0).ceil() as usize;
+        let parameters: Arc<[f64]> = match path.shape {
+            PathShape::Bezier(curve) => curve.parameters().expect("validated curve samples"),
+            _ => {
+                let steps = (path_length * 4.0).ceil() as usize;
+                (0..=steps)
+                    .map(|index| index as f64 / steps as f64)
+                    .collect::<Vec<_>>()
+                    .into()
+            }
+        };
         let start = if canonical.kind().is_some_and(Kind::is_switch)
             && path.index != u8::from(canonical.switched)
         {
@@ -360,9 +445,8 @@ fn make_beams(piece: Piece) -> Vec<Beam> {
         } else {
             0.0
         };
-        for index in 0..steps {
-            let t0 = index as f64 / steps as f64;
-            let t1 = (index + 1) as f64 / steps as f64;
+        for parameters in parameters.windows(2) {
+            let [t0, t1] = [parameters[0], parameters[1]];
             if t0 < start {
                 continue;
             }
@@ -404,15 +488,18 @@ fn make_beams(piece: Piece) -> Vec<Beam> {
                             length(sub(rail_end, rail_start)) * 0.5,
                         ],
                         material,
-                        cross_sections: matches!(path.shape, PathShape::Curve { .. })
-                            .then_some([first_right, second_right]),
+                        cross_sections: matches!(
+                            path.shape,
+                            PathShape::Curve { .. } | PathShape::Bezier(_)
+                        )
+                        .then_some([first_right, second_right]),
                     });
                 }
             }
         }
         let ties = path_length.floor() as usize;
         for index in 0..ties {
-            let sample = path.sample((index as f64 + 0.5) / path_length);
+            let sample = path.sample_distance(index as f64 + 0.5);
             if tie_centers
                 .iter()
                 .any(|center| length(sub(*center, sample.position)) < 0.65)

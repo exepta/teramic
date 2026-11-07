@@ -15,6 +15,8 @@ const INDEX: &str = "level.data";
 const MAGIC: &[u8; 8] = b"TERAMIC\0";
 mod creature_legacy;
 mod kingdom_legacy;
+#[path = "regions/rail_legacy.rs"]
+mod rail_legacy;
 use kingdom_legacy::{KingdomIndex10, KingdomRecord9, TreeIndex11};
 #[cfg(test)]
 #[path = "regions/hierarchy_tests.rs"]
@@ -428,6 +430,13 @@ struct PlumbingRegion {
     plumbing: Vec<([i64; 3], terra_world::plumbing::PlumbingState)>,
 }
 
+/// Curve metadata extends, rather than changes, every historical region payload.
+#[derive(Serialize, Deserialize)]
+struct RailRegion {
+    prior: Vec<u8>,
+    curves: Vec<([i64; 3], terra_core::rails::CurveSpec)>,
+}
+
 /// Frozen pre-RGB wire layout. New appearance metadata lives in RGA7, never in old section bytes.
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 struct StoredSectionDelta {
@@ -441,6 +450,7 @@ struct StoredSectionDelta {
     placed_props: Vec<terra_world::props::WorldProp>,
     conditions: Vec<([u8; 3], terra_world::environment::SurfaceCondition)>,
     fluids: Vec<([u8; 3], terra_world::water::FluidCell)>,
+    #[serde(with = "rail_legacy")]
     objects: Vec<([u8; 3], terra_world::edits::BlockObjectState)>,
 }
 impl From<SectionDelta> for StoredSectionDelta {
@@ -486,6 +496,13 @@ mod bees_tests;
 #[path = "regions/pets_tests.rs"]
 mod pet_tests;
 fn read_creature_region(bytes: &[u8]) -> Result<CreatureRegion, String> {
+    if bytes.get(12..16) == Some(b"RG13") {
+        let data: RailRegion = decode(b"RG13", bytes)?;
+        if data.prior.get(12..16) == Some(b"RG13") {
+            return Err("Nested rail region wrapper".into());
+        }
+        return read_creature_region(&data.prior);
+    }
     if bytes.get(12..16) == Some(b"RG12") {
         let data: PlumbingRegion = decode(b"RG12", bytes)?;
         return read_creature_region(&encode(b"RG11", &data.prior)?);
@@ -667,6 +684,7 @@ fn read_region(bytes: &[u8]) -> Result<Region, String> {
                 | b"RG10"
                 | b"RG11"
                 | b"RG12"
+                | b"RG13"
         )
     ) {
         return read_creature_region(bytes).map(|data| data.region);
@@ -729,6 +747,7 @@ fn read_region(bytes: &[u8]) -> Result<Region, String> {
                                     peer: s.peer,
                                     secondary: s.secondary,
                                     wood: terra_core::WoodSpecies::Oak,
+                                    rail_curve: None,
                                 },
                             )
                         })
@@ -1370,9 +1389,22 @@ fn commit(root: &Path, world: WorldId, journal: &EditJournal) -> Result<(), Stri
     let mut sections: Vec<_> = journal.changed_sections().collect();
     sections.sort_unstable_by_key(|p| (p.x, p.y, p.z));
     let mut belts: BTreeMap<[i64; 2], Vec<_>> = BTreeMap::new();
+    let mut rail_curves: BTreeMap<[i64; 2], Vec<_>> = BTreeMap::new();
     for p in sections {
         let position = [p.x.div_euclid(32), p.z.div_euclid(32)];
         let delta = journal.section_delta(p);
+        for (local, state) in &delta.objects {
+            if let Some(curve) = state.rail_curve {
+                let cell = p
+                    .global_block(local.map(usize::from))
+                    .map_err(|error| error.to_string())?;
+                let material = journal.block(cell).ok_or("Orphaned rail curve state")?;
+                if !state.valid_for(cell, material) {
+                    return Err("Invalid rail curve state".into());
+                }
+                rail_curves.entry(position).or_default().push((cell, curve));
+            }
+        }
         for (local, owner) in &delta.belts {
             let cell = p
                 .global_block(local.map(usize::from))
@@ -1964,6 +1996,18 @@ fn commit(root: &Path, world: WorldId, journal: &EditJournal) -> Result<(), Stri
                 },
             )?
         };
+        let curves = rail_curves.remove(&p).unwrap_or_default();
+        let bytes = if curves.is_empty() {
+            bytes
+        } else {
+            encode(
+                b"RG13",
+                &RailRegion {
+                    prior: bytes,
+                    curves,
+                },
+            )?
+        };
         stage(region_name(p), bytes)?;
     }
     for player in players {
@@ -2124,6 +2168,21 @@ fn load(root: &Path, world: WorldId) -> Result<EditJournal, String> {
             return Err("Duplicate region index".into());
         }
         let mut bytes = read(&root.join(region_name(p)))?;
+        let mut rail_curves = BTreeMap::new();
+        if bytes.get(12..16) == Some(b"RG13") {
+            let data: RailRegion = decode(b"RG13", &bytes)?;
+            if data.curves.len() > terra_core::rails::MAX_PIECES * 512
+                || data.prior.get(12..16) == Some(b"RG13")
+            {
+                return Err("Invalid rail curve region size or nesting".into());
+            }
+            for (cell, curve) in data.curves {
+                if region_at(cell) != p || rail_curves.insert(cell, curve).is_some() {
+                    return Err("Duplicate or misplaced rail curve state".into());
+                }
+            }
+            bytes = data.prior;
+        }
         if bytes.get(12..16) == Some(b"RG12") {
             let data: PlumbingRegion = decode(b"RG12", &bytes)?;
             if data.plumbing.len() > terra_world::plumbing::MAX_NODES - plumbing.len() {
@@ -2506,6 +2565,12 @@ fn load(root: &Path, world: WorldId) -> Result<EditJournal, String> {
                 return Err("Duplicate or misplaced section in region".into());
             }
             let mut delta: SectionDelta = delta.into();
+            for (local, state) in &mut delta.objects {
+                let cell = owner
+                    .global_block(local.map(usize::from))
+                    .map_err(|error| error.to_string())?;
+                state.rail_curve = rail_curves.remove(&cell);
+            }
             delta.tints = tints
                 .remove(&(owner.x, owner.y, owner.z))
                 .unwrap_or_default();
@@ -2513,6 +2578,9 @@ fn load(root: &Path, world: WorldId) -> Result<EditJournal, String> {
                 .remove(&(owner.x, owner.y, owner.z))
                 .unwrap_or_default();
             journal.import_delta(delta)?;
+        }
+        if !rail_curves.is_empty() {
+            return Err("Orphaned rail curve state".into());
         }
         for drop in region.drops {
             if region_at(drop.position.map(|v| v.floor() as i64)) != p {

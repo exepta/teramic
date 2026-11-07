@@ -227,7 +227,7 @@ fn cell_slices_render_once_across_negative_horizontal_and_vertical_section_edges
         let mut sections = BTreeMap::<SectionPos, BlockSection>::new();
         let mut journal = EditJournal::default();
         let mut occupied = BTreeMap::new();
-        for &offset in piece.footprint() {
+        for &offset in piece.footprint().iter() {
             let cell = std::array::from_fn(|axis| anchor[axis] + i64::from(offset[axis]));
             let (section, local) = global_to_section(cell);
             sections
@@ -308,6 +308,10 @@ fn native_gltf_and_exported_profile_are_exactly_the_core_profile_not_a_second_cu
         (
             "crates/terra-core/src/rails.rs",
             include_bytes!("../../../terra-core/src/rails.rs").as_slice(),
+        ),
+        (
+            "crates/terra-core/src/rails/curve.rs",
+            include_bytes!("../../../terra-core/src/rails/curve.rs").as_slice(),
         ),
         (
             "crates/terra-core/src/rails/geometry.rs",
@@ -447,4 +451,196 @@ fn native_gltf_and_exported_profile_are_exactly_the_core_profile_not_a_second_cu
             "icons/drops must fit the entire assembly rather than crop a one-cell fragment"
         );
     }
+}
+
+fn wood_templates() -> TemplateSet {
+    let mut templates = TemplateSet::default();
+    templates.blocks.insert(rails::STRAIGHT, template());
+    for (index, plank) in [16, 17, 18, 135].into_iter().enumerate() {
+        templates.blocks.insert(
+            plank,
+            BlockTemplate {
+                face_materials: [100 + index; 6],
+                ..template()
+            },
+        );
+    }
+    templates
+}
+
+#[test]
+fn actual_plank_materials_and_curve_specs_are_independent_render_cache_keys() {
+    use terra_world::edits::BlockObjectState;
+    let templates = wood_templates();
+    let curves = [
+        rails::CurveSpec::new([[8, 2, 0], [8, 2, 64], [40, 6, 128], [72, 10, 192]]).unwrap(),
+        rails::CurveSpec::new([[8, 2, 0], [8, 2, 64], [24, 6, 128], [40, 10, 192]]).unwrap(),
+    ];
+    let mut profiles = Profiles::default();
+    let mut wood_positions = Vec::new();
+    for curve in curves {
+        for (index, wood) in [
+            WoodSpecies::Oak,
+            WoodSpecies::Birch,
+            WoodSpecies::Spruce,
+            WoodSpecies::Cherry,
+        ]
+        .into_iter()
+        .enumerate()
+        {
+            let model = ModelCell {
+                cell: [0; 3],
+                material: rails::STRAIGHT,
+                state: BlockObjectState {
+                    wood,
+                    rail_curve: Some(curve),
+                    ..Default::default()
+                },
+                peer_wood: wood,
+                neighbors: [None; 6],
+                neighbor_facing: [0; 6],
+            };
+            let mut batches = BTreeMap::new();
+            profiles
+                .append(&mut batches, &model, &templates, [0; 3], true)
+                .unwrap();
+            let sleepers = &batches[&(100 + index)];
+            assert!(sleepers.positions.len() > 24);
+            assert!(
+                sleepers.colors.is_empty(),
+                "real plank texture must not also receive compensated oak tint"
+            );
+            assert!(
+                !batches.contains_key(&0),
+                "native oak material must not replace selected wood texture"
+            );
+            if index == 0 {
+                wood_positions.push(sleepers.positions.clone());
+            } else {
+                assert_eq!(sleepers.positions, *wood_positions.last().unwrap());
+            }
+        }
+    }
+    assert_eq!(profiles.0.len(), 8);
+    assert_ne!(
+        wood_positions[0], wood_positions[1],
+        "free curves must not collapse to one of the old ten shapes"
+    );
+}
+
+#[test]
+fn free_bezier_uses_shared_hulls_and_disjoint_cell_slices_including_unloaded_anchor() {
+    let curve =
+        rails::CurveSpec::new([[8, 2, 0], [8, 2, 64], [40, 6, 128], [72, 10, 192]]).unwrap();
+    let piece = Piece::new_curve([0; 3], curve).unwrap();
+    let rendered = profile(piece, &template()).unwrap();
+    let whole = rendered.full.values().map(area).sum::<f64>();
+    let sliced = rendered
+        .cells
+        .values()
+        .flat_map(BTreeMap::values)
+        .map(area)
+        .sum::<f64>();
+    assert!((whole - sliced).abs() < whole * 0.00002 + 0.00001);
+    assert!(rendered.cells.len() > 20);
+    for (&cell, batches) in &rendered.cells {
+        assert!(piece.footprint().contains(&cell));
+        let shapes = piece.cell_boxes(cell);
+        for position in batches.values().flat_map(|batch| &batch.positions) {
+            assert!(shapes.iter().any(|shape| (0..3).all(|axis| {
+                let local = f64::from(position[axis]) - f64::from(cell[axis]);
+                local >= shape.minimum[axis] - 0.00001 && local <= shape.maximum[axis] + 0.00001
+            })));
+        }
+    }
+    let templates = wood_templates();
+    let mut profiles = Profiles::default();
+    let cell = *rendered.cells.keys().find(|&&cell| cell[2] > 8).unwrap();
+    let model = ModelCell {
+        cell,
+        material: rails::STRAIGHT,
+        state: terra_world::edits::BlockObjectState {
+            wood: WoodSpecies::Cherry,
+            rail_curve: Some(curve),
+            peer: Some([0; 3]),
+            secondary: true,
+            ..Default::default()
+        },
+        peer_wood: WoodSpecies::Cherry,
+        neighbors: [None; 6],
+        neighbor_facing: [0; 6],
+    };
+    let mut batches = BTreeMap::new();
+    profiles
+        .append(&mut batches, &model, &templates, [0; 3], false)
+        .unwrap();
+    let expected = rendered.cells[&cell].values().map(area).sum::<f64>();
+    assert!((batches.values().map(area).sum::<f64>() - expected).abs() < 0.00001);
+    assert!(batches.contains_key(&103));
+}
+
+#[test]
+fn four_track_item_previews_use_actual_plank_textures_and_fit_the_whole_assembly() {
+    let templates = wood_templates();
+    let options = crate::meshing::builder::RenderOptions {
+        water_level: None,
+        detail_level: crate::meshing::DetailLevel::Near,
+        terrain: None,
+        exposure: None,
+        tints: Default::default(),
+        conditions: Default::default(),
+    };
+    for (index, wood) in [
+        WoodSpecies::Oak,
+        WoodSpecies::Birch,
+        WoodSpecies::Spruce,
+        WoodSpecies::Cherry,
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        let batches = crate::previews::wooden_block_batches(
+            terra_core::ItemKind::for_wood(196, wood),
+            &templates,
+            &options,
+        )
+        .unwrap();
+        assert!(batches.iter().any(|batch| batch.material == 100 + index));
+        assert!(
+            batches
+                .iter()
+                .flat_map(|batch| &batch.positions)
+                .flatten()
+                .all(|value| (-0.00001..=1.00001).contains(value))
+        );
+    }
+}
+
+#[test]
+fn shared_plank_batches_keep_existing_terrain_vertex_colors_aligned() {
+    let templates = wood_templates();
+    let model = ModelCell {
+        cell: [0; 3],
+        material: rails::STRAIGHT,
+        state: terra_world::edits::BlockObjectState::default(),
+        peer_wood: WoodSpecies::Oak,
+        neighbors: [None; 6],
+        neighbor_facing: [0; 6],
+    };
+    let mut batches = BTreeMap::from([(
+        100,
+        MeshBatch {
+            material: 100,
+            positions: vec![[0.0; 3]],
+            colors: vec![[0.4, 0.5, 0.6, 1.0]],
+            ..Default::default()
+        },
+    )]);
+    Profiles::default()
+        .append(&mut batches, &model, &templates, [0; 3], true)
+        .unwrap();
+    let batch = &batches[&100];
+    assert_eq!(batch.colors.len(), batch.positions.len());
+    assert_eq!(batch.colors[0], [0.4, 0.5, 0.6, 1.0]);
+    assert!(batch.colors[1..].iter().all(|&color| color == [1.0; 4]));
 }

@@ -575,7 +575,7 @@ impl ItemKind {
     }
     pub fn wood_species(self) -> Option<WoodSpecies> {
         match self {
-            Self::Block(6 | 16 | 28 | 29 | 141 | 144 | 148 | 149) => Some(WoodSpecies::Oak),
+            Self::Block(6 | 16 | 28 | 29 | 141 | 144 | 148 | 149 | 196) => Some(WoodSpecies::Oak),
             Self::Block(10 | 17) => Some(WoodSpecies::Birch),
             Self::Block(18 | 36 | 169) => Some(WoodSpecies::Spruce),
             Self::Block(134 | 135) => Some(WoodSpecies::Cherry),
@@ -589,7 +589,7 @@ impl ItemKind {
         }
     }
     pub const fn supports_wood(material: u16) -> bool {
-        matches!(material, 28 | 29 | 141 | 144 | 148 | 149 | 169)
+        matches!(material, 28 | 29 | 141 | 144 | 148 | 149 | 169 | 196)
     }
     pub fn for_wood(material: u16, wood: WoodSpecies) -> Self {
         if wood == Self::Block(material).wood_species().unwrap_or_default()
@@ -600,7 +600,7 @@ impl ItemKind {
             Self::WoodenBlock { material, wood }
         }
     }
-    pub const EXTRA: [Self; 166] = [
+    pub const EXTRA: [Self; 169] = [
         Self::GlassBottle,
         Self::WaterBottle,
         Self::Potion(1),
@@ -902,6 +902,18 @@ impl ItemKind {
         },
         Self::Apple,
         Self::AppleCore,
+        Self::WoodenBlock {
+            material: 196,
+            wood: WoodSpecies::Birch,
+        },
+        Self::WoodenBlock {
+            material: 196,
+            wood: WoodSpecies::Spruce,
+        },
+        Self::WoodenBlock {
+            material: 196,
+            wood: WoodSpecies::Cherry,
+        },
     ];
     pub fn can_harvest(self, material: u16) -> bool {
         if let Some(ore) = crate::OreKind::from_material(material) {
@@ -1703,7 +1715,7 @@ mod tests {
     #[test]
     fn wooden_mechanics_keep_canonical_oak_and_persistent_species_variants() {
         let mut identifiers = std::collections::BTreeSet::new();
-        for material in [141, 144, 148, 149] {
+        for material in [141, 144, 148, 149, 196] {
             assert!(ItemKind::supports_wood(material));
             for wood in [
                 WoodSpecies::Oak,
@@ -1739,7 +1751,10 @@ mod tests {
                 );
             }
         }
-        for material in [4, 142, 143, 145, 146, 147, 150, 151, 152, 153] {
+        for material in [
+            4, 142, 143, 145, 146, 147, 150, 151, 152, 153, 197, 198, 199, 200, 201, 202, 203, 204,
+            205,
+        ] {
             assert!(!ItemKind::supports_wood(material));
             assert!(
                 !ItemKind::WoodenBlock {

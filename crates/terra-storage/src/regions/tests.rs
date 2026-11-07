@@ -1638,6 +1638,7 @@ fn furnace_journal(position: [i64; 3]) -> EditJournal {
             .set_object_state(
                 cell,
                 Some(terra_world::edits::BlockObjectState {
+                    rail_curve: None,
                     facing: 2,
                     peer: Some(peer),
                     secondary,
@@ -2832,6 +2833,7 @@ fn legacy_regions_migrate_and_oriented_pairs_roundtrip_across_region_boundaries(
                     facing: 0,
                     peer: Some(peer),
                     secondary,
+                    rail_curve: None,
                 }),
             )
             .unwrap();

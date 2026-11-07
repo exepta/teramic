@@ -39,6 +39,7 @@ impl Plugin for TerraPlayerPlugin {
             .add_message::<terra_network::client::FarmToolRequest>()
             .add_message::<terra_network::client::ObjectRotateRequest>()
             .add_message::<terra_network::client::ConveyorConnectRequest>()
+            .add_message::<terra_network::client::RailConnectRequest>()
             .add_message::<terra_network::client::ConveyorInteractionRequest>()
             .add_message::<terra_network::client::ConfirmedEdit>()
             .configure_sets(

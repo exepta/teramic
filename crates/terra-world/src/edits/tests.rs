@@ -60,6 +60,7 @@ fn object_rotation_and_pair_state_replicate_and_invalidate_same_material_meshes(
     client.import_delta(host.section_delta(owner)).unwrap();
     let previous = client.mesh_epoch(owner);
     let state = BlockObjectState {
+        rail_curve: None,
         wood: terra_core::WoodSpecies::Birch,
         facing: 0,
         peer: Some(peer),

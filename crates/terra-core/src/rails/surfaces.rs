@@ -1,5 +1,5 @@
-use super::{Beam, PartMaterial, Piece, STRAIGHT, valid_facing};
-use std::{collections::BTreeMap, sync::OnceLock};
+use super::{Beam, PartMaterial};
+use std::{collections::BTreeMap, sync::Arc};
 
 const EPSILON: f64 = 1.0e-10;
 const PLANE_SCALE: f64 = 100_000_000.0;
@@ -18,17 +18,8 @@ impl Surface {
         polygon_area(&self.points)
     }
 }
-static SURFACES: [OnceLock<Vec<Surface>>; 80] = [const { OnceLock::new() }; 80];
-
-pub(super) fn local_surfaces(material: u16, facing: u8) -> &'static [Surface] {
-    if !valid_facing(material, facing) {
-        return &[];
-    }
-    let index = usize::from(material - STRAIGHT) * 8 + usize::from(facing);
-    SURFACES[index].get_or_init(|| {
-        let piece = Piece::new([0; 3], material, facing).expect("validated rail pose");
-        visible_surfaces(piece.local_geometry())
-    })
+pub(super) fn make_surfaces(beams: &[Beam]) -> Arc<[Surface]> {
+    visible_surfaces(beams).into()
 }
 
 fn raw_surfaces(beams: &[Beam]) -> Vec<Surface> {
@@ -46,13 +37,29 @@ fn raw_surfaces(beams: &[Beam]) -> Vec<Surface> {
             let points = indices.map(|index| corners[index]);
             let edge = subtract(points[1], points[0]);
             let normal = normalized(cross(edge, subtract(points[2], points[0])));
-            surfaces.push(Surface {
+            let face = Surface {
                 beam: beam_index,
                 points: points.to_vec(),
                 normal,
                 tangent: normalized(edge),
                 material: beam.material,
-            });
+            };
+            if dot(normal, subtract(points[3], points[0])).abs() > 1.0e-8 {
+                // A bent ascending extrusion can twist. Triangles retain exact
+                // corners and true planes for both clipping and mesh normals.
+                for indices in [[0, 1, 2], [0, 2, 3]] {
+                    let triangle = indices.map(|index| points[index]);
+                    let edge = subtract(triangle[1], triangle[0]);
+                    surfaces.push(Surface {
+                        points: triangle.to_vec(),
+                        normal: normalized(cross(edge, subtract(triangle[2], triangle[0]))),
+                        tangent: normalized(edge),
+                        ..face.clone()
+                    });
+                }
+            } else {
+                surfaces.push(face);
+            }
         }
     }
     surfaces
@@ -230,7 +237,7 @@ fn normalized(vector: [f64; 3]) -> [f64; 3] {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::rails::{CROSSING, SWITCH_LEFT, SWITCH_RIGHT};
+    use crate::rails::{CROSSING, Piece, SWITCH_LEFT, SWITCH_RIGHT};
     fn overlap_area(first: &Surface, second: &Surface) -> f64 {
         if plane(first) != plane(second)
             || !bounds_overlap(
@@ -271,15 +278,15 @@ mod tests {
         for material in [SWITCH_LEFT, SWITCH_RIGHT] {
             for facing in 0..8 {
                 let piece = Piece::new([0; 3], material, facing).unwrap();
-                let original = raw_surfaces(piece.local_geometry());
+                let original = raw_surfaces(&piece.local_geometry());
                 assert!(
                     overlaps(&original) > 0.001,
                     "the regression must exercise actual intersecting rail heads"
                 );
                 let visible = piece.local_surfaces();
-                assert!(std::ptr::eq(visible, piece.local_surfaces()));
+                assert!(Arc::ptr_eq(&visible, &piece.local_surfaces()));
                 assert!(
-                    overlaps(visible) < 1.0e-8,
+                    overlaps(&visible) < 1.0e-8,
                     "material {material} pose {facing}"
                 );
                 assert!(visible.iter().all(|surface| {
@@ -290,7 +297,7 @@ mod tests {
                             .flatten()
                             .all(|value| value.is_finite())
                 }));
-                for surface in visible {
+                for surface in visible.iter() {
                     let source = original
                         .iter()
                         .find(|face| face.beam == surface.beam && face.normal == surface.normal)
@@ -306,6 +313,6 @@ mod tests {
             }
         }
         let crossing = Piece::new([0; 3], CROSSING, 0).unwrap();
-        assert!(overlaps(crossing.local_surfaces()) < 1.0e-8);
+        assert!(overlaps(&crossing.local_surfaces()) < 1.0e-8);
     }
 }

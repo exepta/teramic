@@ -1,14 +1,224 @@
-use super::{Cell, cell_boxes, cells, complete, object_state, owner_at};
+use super::{Cell, cells, complete, object_state_with_wood, owner_at, piece_from_state};
 use crate::{
     edits::EditJournal,
     placement::Layout,
     streaming::{BlockEditRequest, ChunkStore},
 };
 use std::collections::BTreeSet;
-use terra_core::{block_shapes::ShapeBox, rails::Piece};
+use terra_core::rails::Piece;
 use terra_voxel::global_to_section;
 
 const MAX_MODULE_CELLS: usize = 512;
+
+pub fn set_wood(plan: &mut Layout, wood: terra_core::WoodSpecies) {
+    for (_, state) in &mut plan.states {
+        if let Some(state) = state {
+            state.wood = wood;
+        }
+    }
+}
+
+pub fn cost(plan: &Layout) -> Option<u16> {
+    proposed_piece(plan).map(super::piece_cost)
+}
+
+/// Snapping consumes an existing module's free port, even when the new piece
+/// occupies only unclaimed cells. Callers must authorize its complete footprint.
+pub fn placement_sites(
+    journal: &EditJournal,
+    hit: terra_voxel::blocks::BlockHit,
+) -> Option<Vec<Cell>> {
+    if !journal
+        .block(hit.position)
+        .is_some_and(terra_core::rails::is_rail)
+    {
+        return Some(Vec::new());
+    }
+    let target = owner_at(journal, hit.position)?;
+    complete(journal, target).then(|| cells(target))
+}
+
+/// Connecting consumes a free port on each existing module, so callers must
+/// authorize every owned cell of those modules as well as the new curve.
+pub fn connection_sites(
+    journal: &EditJournal,
+    start: terra_core::rails::Endpoint,
+    hit: terra_voxel::blocks::BlockHit,
+) -> Option<Vec<Cell>> {
+    let source = owner_at(journal, start.anchor)?;
+    if source.anchor != start.anchor
+        || !complete(journal, source)
+        || !source
+            .ports()
+            .iter()
+            .any(|port| port.index == start.port && port.connectable)
+    {
+        return None;
+    }
+    let mut sites: BTreeSet<_> = cells(source).into_iter().collect();
+    sites.extend(placement_sites(journal, hit)?);
+    Some(sites.into_iter().collect())
+}
+
+/// The terminal physical port, independent of the clicked voxel's distance.
+pub fn connection_target(plan: &Layout) -> Option<terra_core::rails::Port> {
+    proposed_piece(plan)
+        .filter(|piece| piece.curve.is_some())?
+        .ports()
+        .into_iter()
+        .find(|port| port.index == 1)
+}
+
+/// Resolve the nearest free physical port of the actually hit module.
+pub fn select_endpoint(
+    journal: &EditJournal,
+    hit: terra_voxel::blocks::BlockHit,
+    ray: ([f64; 3], [f64; 3]),
+) -> Option<terra_core::rails::Endpoint> {
+    if ray
+        .0
+        .iter()
+        .chain(ray.1.iter())
+        .any(|value| !value.is_finite())
+    {
+        return None;
+    }
+    let piece = owner_at(journal, hit.position)?;
+    if !complete(journal, piece) {
+        return None;
+    }
+    let point = std::array::from_fn(|axis| ray.0[axis] + ray.1[axis] * hit.distance);
+    nearest_free_port(journal, piece, point, Some(ray.0)).map(|port| terra_core::rails::Endpoint {
+        anchor: piece.anchor,
+        port: port.index,
+    })
+}
+
+fn distance_squared(first: [f64; 3], second: [f64; 3]) -> f64 {
+    (0..3)
+        .map(|axis| (first[axis] - second[axis]).powi(2))
+        .sum()
+}
+
+fn nearest_free_port(
+    journal: &EditJournal,
+    piece: Piece,
+    point: [f64; 3],
+    eye: Option<[f64; 3]>,
+) -> Option<terra_core::rails::Port> {
+    piece
+        .ports()
+        .into_iter()
+        .filter(|port| {
+            port.connectable
+                && eye
+                    .is_none_or(|eye| distance_squared(port.position.position(), eye) <= 4.5 * 4.5)
+                && !port_connected(journal, piece, *port)
+        })
+        .min_by(|first, second| {
+            distance_squared(first.position.position(), point)
+                .total_cmp(&distance_squared(second.position.position(), point))
+                .then(first.index.cmp(&second.index))
+        })
+}
+
+pub fn connection(
+    chunks: &ChunkStore,
+    journal: &EditJournal,
+    start: terra_core::rails::Endpoint,
+    hit: terra_voxel::blocks::BlockHit,
+    look: [f32; 2],
+    wood: terra_core::WoodSpecies,
+) -> Result<Layout, String> {
+    let plan = proposal_connection(chunks, journal, start, hit, look, wood)?;
+    environment(&plan, chunks, journal)?;
+    Ok(plan)
+}
+
+/// Keep only genuine, valid curve geometry when its construction space is blocked.
+pub fn proposal_connection(
+    chunks: &ChunkStore,
+    journal: &EditJournal,
+    start: terra_core::rails::Endpoint,
+    hit: terra_voxel::blocks::BlockHit,
+    look: [f32; 2],
+    wood: terra_core::WoodSpecies,
+) -> Result<Layout, String> {
+    if look.iter().any(|value| !value.is_finite()) {
+        return Err("Invalid rail connection look".into());
+    }
+    let piece = owner_at(journal, start.anchor).ok_or("Rail start no longer exists")?;
+    if !complete(journal, piece) {
+        return Err("Rail start is incomplete".into());
+    }
+    let start_port = piece
+        .ports()
+        .into_iter()
+        .find(|port| port.index == start.port && port.connectable)
+        .filter(|port| !port_connected(journal, piece, *port))
+        .ok_or("Rail start is already connected")?;
+    let end_port = if let Some(target) = owner_at(journal, hit.position) {
+        if !complete(journal, target) {
+            return Err("Rail destination is incomplete".into());
+        }
+        nearest_free_port(
+            journal,
+            target,
+            hit.position.map(|coordinate| coordinate as f64 + 0.5),
+            None,
+        )
+        .filter(|port| port.position != start_port.position)
+        .ok_or("Rail destination has no free port")?
+    } else {
+        if hit.normal != [0, 1, 0] {
+            return Err("A free rail destination needs a floor top".into());
+        }
+        let cell = hit.adjacent();
+        let yaw = crate::edits::BlockObjectState::from_yaw(look[0] + std::f32::consts::PI).facing;
+        let forward = terra_core::kinetic::forward(yaw);
+        let local = [
+            if forward[0] == 0 {
+                8
+            } else if forward[0] > 0 {
+                16
+            } else {
+                0
+            },
+            2,
+            if forward[2] == 0 {
+                8
+            } else if forward[2] > 0 {
+                16
+            } else {
+                0
+            },
+        ];
+        terra_core::rails::Port {
+            index: 0,
+            connectable: true,
+            position: terra_core::rails::FixedPoint(std::array::from_fn(|axis| {
+                cell[axis] * 16 + local[axis]
+            })),
+            tangent: forward.map(|value| -value as i16),
+        }
+    };
+    let position = start_port.position.position();
+    if distance_squared(position, end_port.position.position()) > 32.0 * 32.0 {
+        return Err("A rail connection may span at most 32 metres".into());
+    }
+    let anchor = std::array::from_fn(|axis| {
+        let step = if axis == 1 {
+            0.0
+        } else {
+            f64::from(start_port.tangent[axis]).signum() * 1e-6
+        };
+        (position[axis] + step).floor() as i64
+    });
+    let curve = terra_core::rails::CurveSpec::between(start_port, end_port, anchor)
+        .ok_or("Rail endpoints cannot form a safe curve")?;
+    let curve = Piece::new_curve(anchor, curve).ok_or("Invalid rail curve")?;
+    candidate_piece(chunks, curve, wood)
+}
 
 /// Snap to an actual free endpoint of the clicked module, including its grade.
 /// Only module ports and four yaws are inspected; this never searches terrain.
@@ -169,6 +379,15 @@ fn candidate(
     facing: u8,
 ) -> Result<Layout, String> {
     let piece = Piece::from_facing(anchor, material, facing).ok_or("Invalid rail module")?;
+    candidate_piece(chunks, piece, terra_core::WoodSpecies::Oak)
+}
+
+fn candidate_piece(
+    chunks: &ChunkStore,
+    piece: Piece,
+    wood: terra_core::WoodSpecies,
+) -> Result<Layout, String> {
+    let material = piece.material;
     let footprint = cells(piece);
     if footprint.is_empty() || footprint.len() > MAX_MODULE_CELLS {
         return Err("Rail module exceeds its placement budget".into());
@@ -184,7 +403,9 @@ fn candidate(
             expected_material: previous,
             material,
         });
-        result.states.push((cell, Some(object_state(piece, cell))));
+        result
+            .states
+            .push((cell, Some(object_state_with_wood(piece, cell, wood))));
     }
     Ok(result)
 }
@@ -233,6 +454,10 @@ pub fn toggle_switch_plan(
     cell: Cell,
 ) -> Result<Layout, String> {
     let old = owner_at(journal, cell).ok_or("Rail module has no canonical owner")?;
+    let wood = journal
+        .object_state(old.anchor)
+        .ok_or("Missing rail wood state")?
+        .wood;
     let switched = Piece::from_facing(old.anchor, old.material, old.encoded_facing() ^ 4)
         .ok_or("Only rail switches can change route")?;
     let mut result = break_layout(chunks, journal, cell)?;
@@ -240,7 +465,7 @@ pub fn toggle_switch_plan(
         edit.material = old.material;
     }
     for (position, state) in &mut result.states {
-        *state = Some(object_state(switched, *position));
+        *state = Some(object_state_with_wood(switched, *position, wood));
     }
     Ok(result)
 }
@@ -256,7 +481,7 @@ fn proposed_piece(plan: &Layout) -> Option<Piece> {
             .iter()
             .find(|edit| edit.position == *cell)?
             .material;
-        Piece::from_facing(*cell, material, state.facing)
+        piece_from_state(*cell, material, state)
     })
 }
 
@@ -287,12 +512,6 @@ fn supported(piece: Piece, chunks: &ChunkStore, journal: &EditJournal) -> bool {
     })
 }
 
-fn overlaps(first: &ShapeBox, second: [[f64; 3]; 2]) -> bool {
-    (0..3).all(|axis| {
-        first.minimum[axis] < second[1][axis] - 1e-7 && first.maximum[axis] > second[0][axis] + 1e-7
-    })
-}
-
 /// Check support and real occupied prop space using the same shape as collision.
 pub fn environment(
     plan: &Layout,
@@ -314,7 +533,13 @@ pub fn environment(
     {
         return Err("Rail layout is incomplete".into());
     }
-    let mut sections = BTreeSet::new();
+    let wood = plan
+        .states
+        .iter()
+        .find(|(cell, _)| *cell == piece.anchor)
+        .and_then(|(_, state)| *state)
+        .ok_or("Missing rail wood state")?
+        .wood;
     for edit in &plan.edits {
         if journal.has_extended_kinetics() {
             crate::placement::kinetic_clearance(
@@ -335,57 +560,12 @@ pub fn environment(
                 .iter()
                 .find(|(cell, _)| *cell == edit.position)
                 .and_then(|(_, state)| *state)
-                != Some(object_state(piece, edit.position))
+                != Some(object_state_with_wood(piece, edit.position, wood))
         {
             return Err("Rail footprint is occupied or changed".into());
         }
-        let owner = global_to_section(edit.position).0;
-        for x in -1..=1 {
-            for y in -1..=1 {
-                for z in -1..=1 {
-                    sections.insert(owner.offset([x, y, z]).map_err(|error| error.to_string())?);
-                }
-            }
-        }
     }
-    let bounds: Vec<_> = plan
-        .edits
-        .iter()
-        .flat_map(|edit| {
-            cell_boxes(
-                edit.position,
-                piece.material,
-                object_state(piece, edit.position),
-            )
-            .iter()
-            .copied()
-            .map(move |mut shape| {
-                for axis in 0..3 {
-                    shape.minimum[axis] += edit.position[axis] as f64;
-                    shape.maximum[axis] += edit.position[axis] as f64;
-                }
-                shape
-            })
-        })
-        .collect();
-    for section in sections {
-        for prop in chunks
-            .loaded
-            .get(&section)
-            .into_iter()
-            .flat_map(|section| section.props.iter())
-            .chain(journal.placed_props(section))
-        {
-            if !prop.removed
-                && !journal.prop_removed(prop.section, prop.id)
-                && bounds
-                    .iter()
-                    .any(|shape| overlaps(shape, prop.placement_bounds()))
-            {
-                return Err("Rail geometry intersects a prop".into());
-            }
-        }
-    }
+    super::clearance(plan, chunks, journal)?;
     Ok(())
 }
 
@@ -488,14 +668,19 @@ pub(crate) fn validate_commit(
         return Ok(());
     }
     let next = proposed_piece(plan).ok_or("Missing rail switch owner")?;
+    let wood = journal
+        .object_state(current.anchor)
+        .ok_or("Missing rail wood state")?
+        .wood;
     if next.anchor != current.anchor
         || next.material != current.material
+        || next.curve != current.curve
         || next.encoded_facing() != (current.encoded_facing() ^ 4)
         || plan.edits.iter().any(|edit| edit.material != next.material)
         || plan
             .states
             .iter()
-            .any(|(cell, state)| *state != Some(object_state(next, *cell)))
+            .any(|(cell, state)| *state != Some(object_state_with_wood(next, *cell, wood)))
     {
         return Err("Invalid rail switch transaction".into());
     }

@@ -36,7 +36,7 @@ fn rail_rays_keep_the_visible_secondary_slice_even_when_the_anchor_section_is_un
             for cell in rails::cells(piece) {
                 block(&mut chunks, cell, 0);
             }
-            for support in piece.supports() {
+            for support in piece.supports().iter() {
                 block(
                     &mut chunks,
                     std::array::from_fn(|axis| {

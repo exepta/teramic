@@ -1,11 +1,17 @@
 //! Canonical wide-gauge rail geometry and exact, bounded track routing.
+mod curve;
 mod geometry;
 mod network;
 mod surfaces;
 
+pub use curve::{
+    CurveError, CurveMetrics, CurveSpec, DYNAMIC_CACHE_LIMIT, MAX_CURVE_GRADE, MAX_CURVE_LENGTH,
+    MAX_CURVE_SAMPLES, MIN_CURVE_RADIUS,
+};
 pub use geometry::{Beam, PartMaterial, Sample, SupportPoint};
 pub use network::{DISTANCE_SCALE, Endpoint, RailError, Route, RouteLeg, RouteNetwork};
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 pub use surfaces::Surface;
 
 pub const STRAIGHT: u16 = 196;
@@ -89,13 +95,15 @@ pub fn valid_facing(material: u16, facing: u8) -> bool {
     Kind::from_material(material).is_some_and(|kind| facing < if kind.is_switch() { 8 } else { 4 })
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct Piece {
     pub anchor: [i64; 3],
     pub material: u16,
     /// Clockwise yaw about the anchor cell center: 0 = +Z, 1 = +X.
     pub facing: u8,
     pub switched: bool,
+    #[serde(default)]
+    pub curve: Option<CurveSpec>,
 }
 impl Piece {
     pub fn new(anchor: [i64; 3], material: u16, encoded_facing: u8) -> Option<Self> {
@@ -110,34 +118,59 @@ impl Piece {
             material,
             facing: facing & 3,
             switched: facing & 4 != 0,
+            curve: None,
         };
         piece.valid().then_some(piece)
     }
     pub fn kind(self) -> Option<Kind> {
         Kind::from_material(self.material)
     }
+    pub fn new_curve(anchor: [i64; 3], curve: CurveSpec) -> Option<Self> {
+        let piece = Self {
+            anchor,
+            material: STRAIGHT,
+            facing: 0,
+            switched: false,
+            curve: Some(curve),
+        };
+        piece.valid().then_some(piece)
+    }
+    pub fn with_curve(mut self, curve: CurveSpec) -> Option<Self> {
+        self.curve = Some(curve);
+        self.valid().then_some(self)
+    }
     pub fn valid(self) -> bool {
         self.facing < 4
             && self
                 .kind()
                 .is_some_and(|kind| !self.switched || kind.is_switch())
-            && self
-                .anchor
-                .iter()
-                .all(|coordinate| coordinate.abs_diff(0) <= (MAX_COORDINATE - 32) as u64)
+            && self.curve.is_none_or(|curve| {
+                self.material == STRAIGHT && self.facing == 0 && !self.switched && curve.valid()
+            })
+            && self.anchor.iter().all(|coordinate| {
+                coordinate.abs_diff(0)
+                    <= (MAX_COORDINATE - if self.curve.is_some() { 48 } else { 32 }) as u64
+            })
     }
     pub const fn encoded_facing(self) -> u8 {
         self.facing | if self.switched { 4 } else { 0 }
     }
     /// Complete, cached local geometry after yaw, relative to the anchor block.
-    pub fn local_geometry(self) -> &'static [Beam] {
-        geometry::layout(self.material, self.encoded_facing())
-            .map_or(&[], |layout| layout.beams.as_slice())
+    pub fn local_geometry(self) -> Arc<[Beam]> {
+        geometry::piece_layout(self).map_or_else(|| Arc::from([]), |layout| layout.beams.clone())
     }
     /// Cached visible convex faces. Coplanar overlap is removed geometrically,
     /// with no depth offsets, while beam ownership and UV provenance are retained.
-    pub fn local_surfaces(self) -> &'static [Surface] {
-        surfaces::local_surfaces(self.material, self.encoded_facing())
+    pub fn local_surfaces(self) -> Arc<[Surface]> {
+        geometry::piece_layout(self).map_or_else(
+            || Arc::from([]),
+            |layout| {
+                layout
+                    .surfaces
+                    .get_or_init(|| surfaces::make_surfaces(&layout.beams))
+                    .clone()
+            },
+        )
     }
     /// World-space beams; use `local_geometry` when translating a whole mesh.
     pub fn geometry(self) -> Vec<Beam> {
@@ -150,19 +183,22 @@ impl Piece {
             .collect()
     }
     /// Cached occupied cells, relative to the anchor; no full bounding-box fill.
-    pub fn footprint(self) -> &'static [[i32; 3]] {
-        geometry::layout(self.material, self.encoded_facing())
-            .map_or(&[], |layout| layout.footprint.as_slice())
+    pub fn footprint(self) -> Arc<[[i32; 3]]> {
+        geometry::piece_layout(self)
+            .map_or_else(|| Arc::from([]), |layout| layout.footprint.clone())
     }
     /// Cached local collision/selection boxes, clipped into the requested cell.
-    pub fn cell_boxes(self, offset: [i32; 3]) -> &'static [crate::block_shapes::ShapeBox] {
-        geometry::layout(self.material, self.encoded_facing())
-            .and_then(|layout| layout.cells.get(&offset))
-            .map_or(&[], Vec::as_slice)
+    pub fn cell_boxes(self, offset: [i32; 3]) -> Arc<[crate::block_shapes::ShapeBox]> {
+        geometry::piece_layout(self)
+            .and_then(|layout| layout.cells.get(&offset).cloned())
+            .unwrap_or_else(|| Arc::from([]))
     }
-    pub fn supports(self) -> &'static [SupportPoint] {
-        geometry::layout(self.material, self.encoded_facing())
-            .map_or(&[], |layout| layout.supports.as_slice())
+    pub fn supports(self) -> Arc<[SupportPoint]> {
+        geometry::piece_layout(self).map_or_else(|| Arc::from([]), |layout| layout.supports.clone())
+    }
+    pub fn contains_offset(self, offset: [i32; 3]) -> bool {
+        geometry::piece_layout(self)
+            .is_some_and(|layout| layout.footprint.binary_search(&offset).is_ok())
     }
     /// All physical paths; inactive switch branches remain visible geometry.
     pub fn paths(self) -> Vec<Path> {
@@ -189,10 +225,10 @@ pub fn cell_boxes(
     material: u16,
     facing: u8,
     offset: [i32; 3],
-) -> &'static [crate::block_shapes::ShapeBox] {
+) -> Arc<[crate::block_shapes::ShapeBox]> {
     geometry::layout(material, facing)
-        .and_then(|layout| layout.cells.get(&offset))
-        .map_or(&[], Vec::as_slice)
+        .and_then(|layout| layout.cells.get(&offset).cloned())
+        .unwrap_or_else(|| Arc::from([]))
 }
 
 /// Exact sixteenth-block coordinates; endpoint matching never uses epsilon.
@@ -234,10 +270,19 @@ impl Path {
     pub fn length(self) -> f64 {
         geometry::path_length(self)
     }
+    pub fn sample_distance(self, distance: f64) -> Sample {
+        let t = match self.piece.curve {
+            Some(curve) => curve.parameter_at_distance(distance),
+            None => (distance / self.length()).clamp(0.0, 1.0),
+        };
+        self.sample(t)
+    }
 }
 
 pub type Network = RouteNetwork;
 pub type PieceRecord = Piece;
 
+#[cfg(test)]
+mod curve_tests;
 #[cfg(test)]
 mod tests;

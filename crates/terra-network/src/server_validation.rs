@@ -120,6 +120,7 @@ pub(super) fn check(command: EditCommand, peer: &Peer, world: &ControlWorld) -> 
         | EditAction::Farm { .. }
         | EditAction::RotateObject { .. }
         | EditAction::ConnectConveyor { .. }
+        | EditAction::ConnectRail { .. }
         | EditAction::CollectConveyor { .. }
         | EditAction::DyeConveyor { .. }
         | EditAction::DyeFabric { .. }
@@ -180,6 +181,7 @@ pub(super) fn check(command: EditCommand, peer: &Peer, world: &ControlWorld) -> 
         Quat::from_euler(EulerRot::YXZ, command.look[0], command.look[1], 0.0) * Vec3::NEG_Z;
     let target = match command.action {
         EditAction::Block { position, .. }
+        | EditAction::ConnectRail { position, .. }
         | EditAction::Farm { position, .. }
         | EditAction::RotateObject { position, .. }
         | EditAction::Surface { position, .. }
@@ -252,6 +254,7 @@ pub(super) fn check(command: EditCommand, peer: &Peer, world: &ControlWorld) -> 
     );
     match command.action {
         EditAction::HarvestTree { .. }
+        | EditAction::ConnectRail { .. }
         | EditAction::ConnectConveyor { .. }
         | EditAction::CollectConveyor { .. }
         | EditAction::DyeConveyor { .. }
@@ -1162,6 +1165,7 @@ pub(super) fn apply(
     }
     let result = match command.action {
         EditAction::HarvestTree { .. }
+        | EditAction::ConnectRail { .. }
         | EditAction::ConnectConveyor { .. }
         | EditAction::CollectConveyor { .. }
         | EditAction::DyeConveyor { .. }
@@ -1690,6 +1694,64 @@ fn resource_drop(
     }
 }
 
+/// The same drops apply to generated and saved props cleared by a rail plan.
+fn resource_stacks_for_prop(
+    prop: &terra_world::props::WorldProp,
+    journal: &terra_world::edits::EditJournal,
+) -> Vec<([f64; 3], terra_core::ItemStack)> {
+    use terra_core::{ItemKind, ItemStack, ResourcePropKind};
+    if prop.kind == terra_world::props::PropKind::AppleFruit {
+        return Vec::new();
+    }
+    if let Some(kind) = prop.kind.crop() {
+        let support = terra_world::props::placement::support(prop);
+        return journal
+            .crop_at(support)
+            .filter(|state| state.prop_id == prop.id.0 && state.kind == kind)
+            .map(|state| {
+                state
+                    .harvest()
+                    .into_iter()
+                    .map(|stack| (prop.position, stack))
+                    .collect()
+            })
+            .unwrap_or_default();
+    }
+    let kind: ResourcePropKind = prop.kind.into();
+    let item = if let Some(crop) = terra_core::farming::CropKind::from_prop(kind) {
+        ItemKind::Crop(crop.seed())
+    } else if kind == ResourcePropKind::Flower {
+        ItemKind::Flower(terra_core::crusher::flower_color(prop.variant))
+    } else {
+        ItemKind::Prop(kind)
+    };
+    let mut position = prop.position;
+    position[1] += 0.25;
+    let mut drops = vec![(position, ItemStack { item, count: 1 })];
+    if !prop.growing_grass()
+        && !prop.wall_attached()
+        && matches!(
+            prop.kind,
+            terra_world::props::PropKind::Grass
+                | terra_world::props::PropKind::Flower
+                | terra_world::props::PropKind::SmallPlant
+        )
+    {
+        let hash = prop.id.0.wrapping_mul(0x9e37_79b9_7f4a_7c15) ^ prop.id.0.rotate_left(27);
+        if hash.is_multiple_of(4) {
+            let kind = terra_core::farming::CropKind::ALL[(hash.rotate_right(19) % 3) as usize];
+            drops.push((
+                prop.position,
+                terra_core::ItemStack {
+                    item: terra_core::ItemKind::Crop(kind.seed()),
+                    count: 1,
+                },
+            ));
+        }
+    }
+    drops
+}
+
 fn resource_stacks(
     action: EditAction,
     chunks: &terra_world::streaming::ChunkStore,
@@ -1705,21 +1767,8 @@ fn resource_stacks(
     } else {
         None
     };
-    if let Some(prop) = prop
-        && let Some(kind) = prop.kind.crop()
-    {
-        let support = terra_world::props::placement::support(prop);
-        return journal
-            .crop_at(support)
-            .filter(|state| state.prop_id == prop.id.0 && state.kind == kind)
-            .map(|state| {
-                state
-                    .harvest()
-                    .into_iter()
-                    .map(|stack| (prop.position, stack))
-                    .collect()
-            })
-            .unwrap_or_default();
+    if let Some(prop) = prop {
+        return resource_stacks_for_prop(prop, journal);
     }
     let mut drops: Vec<_> = resource_drop(action, chunks)
         .map(|(position, item)| (position, terra_core::ItemStack { item, count: 1 }))
@@ -1784,28 +1833,7 @@ fn resource_stacks(
             }
         }
     }
-    if let Some(prop) = prop
-        && !prop.growing_grass()
-        && !prop.wall_attached()
-        && matches!(
-            prop.kind,
-            terra_world::props::PropKind::Grass
-                | terra_world::props::PropKind::Flower
-                | terra_world::props::PropKind::SmallPlant
-        )
-    {
-        let hash = prop.id.0.wrapping_mul(0x9e37_79b9_7f4a_7c15) ^ prop.id.0.rotate_left(27);
-        if hash % 4 == 0 {
-            let kind = terra_core::farming::CropKind::ALL[(hash.rotate_right(19) % 3) as usize];
-            drops.push((
-                prop.position,
-                terra_core::ItemStack {
-                    item: terra_core::ItemKind::Crop(kind.seed()),
-                    count: 1,
-                },
-            ));
-        }
-    }
+
     drops
 }
 

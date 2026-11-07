@@ -36,6 +36,12 @@ pub fn picked_item(
         return Some(ItemKind::Block(terra_core::castle::item_material(material)));
     }
     let state = journal.object_state(position).unwrap_or_default();
+    if terra_core::rails::is_rail(material) {
+        return Some(terra_core::ItemKind::for_wood(
+            terra_core::rails::STRAIGHT,
+            state.wood,
+        ));
+    }
     if material == terra_core::kinetic::CONVEYOR
         && let Some(span) = crate::conveyors::span_at(journal, position)
     {

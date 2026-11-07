@@ -1093,6 +1093,22 @@ pub(crate) fn wooden_block_batches(
     options: &RenderOptions,
 ) -> Result<Vec<MeshBatch>, String> {
     let material = item.block_material().ok_or("Not a block")?;
+    if terra_core::rails::is_rail(material) {
+        let wood = item.wood_species().unwrap_or_default();
+        let mut batches = crate::meshing::custom::model_geometry(
+            material,
+            terra_world::edits::BlockObjectState {
+                wood,
+                ..Default::default()
+            },
+            wood,
+            [None; 6],
+            [0; 6],
+            templates,
+        )?;
+        fit_unit(&mut batches)?;
+        return Ok(batches);
+    }
     let mut batches = block_batches(material, templates, options)?;
     let tint = item.wood_species().unwrap_or_default().tint();
     for batch in &mut batches {

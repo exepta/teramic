@@ -152,3 +152,86 @@ fn saved_missing_secondary_is_not_a_traversable_module_and_invalid_owner_offsets
     assert!(EditJournal::default().import_delta(invalid).is_err());
     fs::remove_dir_all(root).unwrap();
 }
+
+#[test]
+fn frozen_four_field_object_bytes_decode_without_curve_and_keep_the_original_wire_layout() {
+    #[derive(Serialize)]
+    struct OldObject {
+        facing: u8,
+        peer: Option<[i64; 3]>,
+        secondary: bool,
+        wood: terra_core::WoodSpecies,
+    }
+    #[derive(Serialize, Deserialize)]
+    struct Objects(
+        #[serde(with = "super::rail_legacy")] Vec<([u8; 3], terra_world::edits::BlockObjectState)>,
+    );
+    let old = vec![(
+        [15, 0, 0],
+        OldObject {
+            facing: 3,
+            peer: Some([-17, 16, -17]),
+            secondary: true,
+            wood: terra_core::WoodSpecies::Birch,
+        },
+    )];
+    let bytes = postcard::to_allocvec(&old).unwrap();
+    let decoded: Objects = postcard::from_bytes(&bytes).unwrap();
+    assert_eq!(decoded.0[0].1.rail_curve, None);
+    assert_eq!(decoded.0[0].1.wood, terra_core::WoodSpecies::Birch);
+    assert_eq!(postcard::to_allocvec(&decoded).unwrap(), bytes);
+}
+
+#[test]
+fn free_curve_and_every_slice_wood_survive_real_cross_region_save_reload_and_orphans_are_rejected()
+{
+    let root = temporary_world();
+    let world = WorldId(205);
+    let spec = rails::CurveSpec::new([[8, 2, 0], [8, 2, 64], [40, 6, 128], [72, 10, 192]]).unwrap();
+    let piece = Piece::new_curve([-513, 16, -513], spec).unwrap();
+    let mut journal = EditJournal::default();
+    record_piece(&mut journal, piece);
+    for cell in world_rails::cells(piece) {
+        journal
+            .set_object_state(
+                cell,
+                Some(world_rails::object_state_with_wood(
+                    piece,
+                    cell,
+                    terra_core::WoodSpecies::Spruce,
+                )),
+            )
+            .unwrap();
+    }
+    let graph = world_rails::network(&journal).unwrap();
+    save_edits(&root, world, &journal).unwrap();
+    let loaded = load_edits(&root, world).unwrap();
+    assert_eq!(world_rails::network(&loaded).unwrap(), graph);
+    assert!(world_rails::complete(&loaded, piece));
+    let mut regions = BTreeSet::new();
+    for cell in world_rails::cells(piece) {
+        assert_eq!(loaded.object_state(cell), journal.object_state(cell));
+        assert_eq!(loaded.object_state(cell).unwrap().rail_curve, Some(spec));
+        regions.insert(region_at(cell));
+    }
+    assert!(regions.len() > 1);
+    for region in &regions {
+        assert_eq!(
+            read(&root.join(region_name(*region))).unwrap().get(12..16),
+            Some(&b"RG13"[..])
+        );
+    }
+    let first_region = *regions.first().unwrap();
+    let path = root.join(region_name(first_region));
+    let mut data: RailRegion = decode(b"RG13", &read(&path).unwrap()).unwrap();
+    data.curves.push((
+        [first_region[0] * 512 + 100, 16, first_region[1] * 512 + 100],
+        spec,
+    ));
+    fs::write(&path, encode(b"RG13", &data).unwrap()).unwrap();
+    assert!(
+        load_edits(&root, world).is_err(),
+        "a curve sidecar cannot attach to an absent object"
+    );
+    fs::remove_dir_all(root).unwrap();
+}

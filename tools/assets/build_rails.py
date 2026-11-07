@@ -23,7 +23,7 @@ PALETTE = {
     'Red': ('rail_4_red', [.72, .075, .035], None, .18, .65),
 }
 NAMES = [
-    'Rail: Straight', 'Rail: Small Curve', 'Rail: Large Curve', 'Rail: Slope',
+    'Track', 'Rail: Small Curve', 'Rail: Large Curve', 'Rail: Slope',
     'Rail: Slope Entry', 'Rail: Slope Exit', 'Rail: Left Switch',
     'Rail: Right Switch', 'Rail: Crossing', 'Rail: Buffer Stop',
 ]
@@ -31,6 +31,7 @@ NAMES = [
 
 def core_sources():
     return [ROOT / 'crates/terra-core/src/rails.rs',
+            ROOT / 'crates/terra-core/src/rails/curve.rs',
             ROOT / 'crates/terra-core/src/rails/geometry.rs',
             ROOT / 'crates/terra-core/src/rails/surfaces.rs']
 
@@ -52,7 +53,7 @@ def export_core():
     temporary.mkdir(parents=True, exist_ok=True)
     source = (ROOT / 'crates/terra-core/src/rails.rs').read_text()
     source = source.replace('//!', '//')
-    for module in ['geometry', 'network', 'surfaces']:
+    for module in ['curve', 'geometry', 'network', 'surfaces']:
         path = ROOT / f'crates/terra-core/src/rails/{module}.rs'
         source = source.replace(f'mod {module};', f'#[path = {json.dumps(str(path))}] mod {module};')
     adapted = temporary / 'production-rails.rs'
@@ -107,8 +108,10 @@ def main():
         model_path.write_text(json.dumps(gltf, separators=(',', ':'))+'\n')
         definition = {
             'schema_version': 1, 'id': material, 'name': NAMES[material-196],
-            'description': 'Three-block-wide track with wooden sleepers, steel rail heads and bolted feet. '
-                           'The complete module follows its shared collision and routing profile.',
+            'description': ('Three-block-wide wooden track. Plan its start and end to build a continuous railway with matching gauge and grade.'
+                            if material == 196 else
+                            'Three-block-wide track with wooden sleepers, steel rail heads and bolted feet. '
+                            'The complete module follows its shared collision and routing profile.'),
             'creative_category': 'building', 'render_kind': 'custom_mesh',
             'model_layout': 'scene', 'model': f'models/{slug}.gltf',
             'struct_block': True, 'hardness': 1.5, 'resistance': 8.,
