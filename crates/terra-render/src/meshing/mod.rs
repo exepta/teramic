@@ -9,6 +9,7 @@ mod material_edges;
 mod mushroom_details;
 pub(crate) mod ore_details;
 mod pots;
+mod precision;
 mod seasonal_foliage;
 pub(crate) mod segments;
 pub(crate) mod shadows;
@@ -16,6 +17,17 @@ mod tint_faces;
 mod tree_appearance;
 mod tree_details;
 pub use lod::DetailLevel;
+
+/// Inspect the shared terrain material without exposing its extension type.
+/// Native lighting fixtures use this to verify the actual caster entity path.
+pub fn uses_shared_surface_material(
+    world: &bevy::prelude::World,
+    mesh: bevy::prelude::Entity,
+) -> bool {
+    world
+        .get::<bevy::prelude::MeshMaterial3d<crate::weather::surfaces::TerrainDepthMaterial>>(mesh)
+        .is_some()
+}
 mod far_batches;
 #[cfg(test)]
 mod seam_tests;
@@ -37,8 +49,13 @@ pub(crate) use upload::upload_sections;
 /// old worker snapshots before installing their replacement section data.
 pub fn forget_section_snapshots(world: &mut World, positions: &[SectionPos]) {
     visibility::invalidate(world, positions);
+    world.resource_scope(|world, mut jobs: Mut<RenderJobs>| {
+        let mut meshes = world.get_resource_mut::<Assets<Mesh>>();
+        for position in positions {
+            jobs.cancel(position, meshes.as_deref_mut());
+        }
+    });
     for &position in positions {
-        world.resource_mut::<RenderJobs>().0.remove(&position);
         world.resource_mut::<GeometryCache>().forget(position);
     }
 }
@@ -79,6 +96,22 @@ pub struct RenderStatus {
     pub far_groups: usize,
     pub far_source_batches: usize,
     pub far_cache_bytes: usize,
+}
+
+impl RenderStatus {
+    /// Shared loading contract: portal-hidden meshes need no upload, but missing
+    /// section data or pending composition/upload work still blocks readiness.
+    pub fn section_ready(
+        &self,
+        position: SectionPos,
+        section: Option<&terra_world::streaming::LoadedSection>,
+        visibility: Option<&visibility::TerrainVisibility>,
+    ) -> bool {
+        section.is_some_and(|section| {
+            (section.mesh.is_none() || visibility.is_some_and(|v| v.hidden(position)))
+                && !self.pending_columns.contains(&[position.x, position.z])
+        })
+    }
 }
 
 /// Exposed surf quads in an active water batch, useful for native acceptance.

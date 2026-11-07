@@ -1,30 +1,70 @@
-@if (debugOverlay.visible) {
-<div class="debug-overlay">
-  <div class="debug-heading"><div class="voxel-mark"></div><p class="project-title">TERAMIC</p></div>
-  <div class="debug-row"><p class="debug-label">FPS</p><p class="debug-value fps-value">{{ debugOverlay.fps }}</p></div>
-  <div class="debug-row"><p class="debug-label">FPS Min</p><p class="debug-value">{{ debugOverlay.fps_min }}</p></div>
-  <div class="debug-row"><p class="debug-label">FPS Max</p><p class="debug-value">{{ debugOverlay.fps_max }}</p></div>
-  <div class="debug-row"><p class="debug-label">CPU App</p><p class="debug-value">{{ debugOverlay.cpu }}</p></div>
-  <div class="debug-row"><p class="debug-label">RAM App</p><p class="debug-value">{{ debugOverlay.ram }}</p></div>
+@if (debugOverlay.visible || debugOverlay.animal_visible) {
+<div id="debug-overlay" [class]="debugOverlay.visible ? 'debug-overlay' : 'debug-overlay debug-animal-only'">
+  @if (debugOverlay.visible) {
+  <div class="debug-column debug-left">
+    <p class="debug-build">{{ debugOverlay.build }}</p>
+    <p>FPS: {{ debugOverlay.fps }} / {{ debugOverlay.frame_ms }}</p>
+    <p>FPS min / max: {{ debugOverlay.fps_min }} / {{ debugOverlay.fps_max }}</p>
+    <p>Sections: {{ debugOverlay.render_sections }}</p>
+    <p>Streaming: {{ debugOverlay.streaming }}</p>
+    <p>Entities: {{ debugOverlay.entities }}</p>
+    @if (terrainDebugView.visible) {
+  <p class="terrain-profile">{{ terrainDebugView.profile }}</p>
+  <p class="terrain-position">{{ terrainDebugView.xyz }}</p>
+  <div class="terrain-map-row">
+    <div class="terrain-map">
+      <img id="terrain-debug-surface" class="terrain-surface" src="tilt-ui://assets/hand.png" alt="Terrain field" />
+      <icon class="terrain-cross" name="plus" size="12" />
+    </div>
+    <div class="terrain-current"><p class="terrain-layer">{{ terrainDebugView.layer }}</p><p class="terrain-reading">{{ terrainDebugView.value }}</p><p class="terrain-scale">{{ terrainDebugView.low }} / {{ terrainDebugView.high }}</p></div>
+  </div>
+  <p class="terrain-slice">{{ terrainDebugView.slice }}</p>
   <div class="debug-divider"></div>
-  <div class="debug-row"><p class="debug-label">Chunk</p><p class="debug-value">{{ debugOverlay.chunk }}</p></div>
-  <div class="debug-row"><p class="debug-label">XYZ</p><p class="debug-value">{{ debugOverlay.xyz }}</p></div>
-  <div class="debug-row"><p class="debug-label">Biome</p><p class="debug-value">{{ debugOverlay.biome }}</p></div>
-  @if (debugOverlay.cave_visible) {
-  <div class="debug-divider"></div>
-  <div class="debug-row"><p class="debug-label">Cave</p><p class="debug-value">{{ debugOverlay.cave_biome }}</p></div>
-  <div class="debug-row"><p class="debug-label">Region</p><p class="debug-value">{{ debugOverlay.cave_region }}</p></div>
-  <div class="debug-row"><p class="debug-label">Mix / Wet</p><p class="debug-value">{{ debugOverlay.cave_conditions }}</p></div>
-  <div class="debug-row"><p class="debug-label">Boundary</p><p class="debug-value">{{ debugOverlay.cave_boundary }}</p></div>
-  <div class="debug-row"><p class="debug-label">Path</p><p class="debug-value">{{ debugOverlay.cave_connector }}</p></div>
-  <div class="debug-row"><p class="debug-label">T / P / C</p><p class="debug-value">{{ debugOverlay.cave_local }}</p></div>
-  <div class="debug-row"><p class="debug-label">Fluid tick</p><p class="debug-value">{{ debugOverlay.cave_fluid }}</p></div>
+  @for (field of terrainDebugView.rows; track field.id) {
+  <div [class]="field.selected ? 'terrain-row terrain-selected' : 'terrain-row'"><p class="terrain-label">{{ field.label }}</p><p class="terrain-value">{{ field.value }}</p></div>
   }
-  <div class="debug-row target-row"><p class="debug-label">Blick</p><p class="debug-value target-value">{{ debugOverlay.block_name }}</p></div>
-</div>
-}
-@if (debugOverlay.animal_visible) {
-<div class="creature-overlay">
+  <p class="terrain-extra">{{ terrainDebugView.extra }}</p>
+    } @else {
+    <div class="debug-space"></div>
+    <p>XYZ: {{ debugOverlay.xyz }}</p>
+    <p>Block: {{ debugOverlay.block_position }}</p>
+    <p>Chunk: {{ debugOverlay.chunk }} / local {{ debugOverlay.local_position }}</p>
+    <p>Facing: {{ debugOverlay.facing }}</p>
+    <div class="debug-space"></div>
+    <p>World: {{ debugOverlay.world }}</p>
+    <p>Biome: {{ debugOverlay.biome }}</p>
+    <p>Time: {{ debugOverlay.world_time }}</p>
+    <p>Weather: {{ debugOverlay.weather }}</p>
+    <p>Seed: {{ debugOverlay.seed }}</p>
+    @if (debugOverlay.cave_visible) {
+    <div class="debug-space"></div>
+    <p>Cave: {{ debugOverlay.cave_biome }} / {{ debugOverlay.cave_region }}</p>
+    <p>Mix / Wet: {{ debugOverlay.cave_conditions }}</p>
+    <p>Boundary: {{ debugOverlay.cave_boundary }}</p>
+    <p>Path: {{ debugOverlay.cave_connector }}</p>
+    <p>T / P / C: {{ debugOverlay.cave_local }}</p>
+    <p>Fluid tick: {{ debugOverlay.cave_fluid }}</p>
+    }
+    <div class="debug-space"></div>
+    <p class="debug-hint">F1: Debug / F1 + G: Terrain / F1 + E: Creatures</p>
+    }
+  </div>
+  }
+  <div class="debug-column debug-right">
+    @if (debugOverlay.visible) {
+    <p class="debug-build">{{ debugOverlay.system }}</p>
+    <p>CPU app: {{ debugOverlay.cpu }}</p>
+    <p>RAM app: {{ debugOverlay.ram }}</p>
+    <p>GPU: {{ debugOverlay.gpu }}</p>
+    <p>Display: {{ debugOverlay.display }}</p>
+    <p>Network: {{ debugOverlay.network }}</p>
+    <div class="debug-space"></div>
+    <p class="debug-build">Target: {{ debugOverlay.block_name }}</p>
+    <p>{{ debugOverlay.target_identifier }}</p>
+    <p>{{ debugOverlay.target_position }}</p>
+    }
+    @if (debugOverlay.animal_visible) {
+    <div class="creature-overlay">
   <p class="animal-heading">{{ debugOverlay.animal_name }}</p>
   <div class="debug-row"><p class="debug-label">Leben</p><p class="debug-value">{{ debugOverlay.animal_health }}</p></div>
   <div class="debug-row"><p class="debug-label">Hunger</p><p class="debug-value">{{ debugOverlay.animal_food }}</p></div>
@@ -34,5 +74,8 @@
   <p class="animal-intention">{{ debugOverlay.animal_intention }}</p>
   <div class="debug-row"><p class="debug-label">Ziel</p><p class="debug-value">{{ debugOverlay.animal_destination }}</p></div>
   <p class="animal-path">{{ debugOverlay.animal_path }}</p>
+    </div>
+    }
+  </div>
 </div>
 }

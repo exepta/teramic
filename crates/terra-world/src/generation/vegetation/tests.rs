@@ -9,6 +9,8 @@ fn flat(seed: u64, trees: bool) -> TerraGenerator {
     TerraGenerator::new(WorldConfig {
         seed: WorldSeed(seed),
         base_height: 12.0,
+        sea_level: 8.0,
+        landscape_revision: 3,
         hill_amplitude: 0.0,
         mountain_amplitude: 0.0,
         caves: false,
@@ -31,6 +33,10 @@ fn raster(tree: &Tree) -> Vec<u16> {
 fn cherry_wood_revision_preserves_existing_tree_locations_and_old_world_materials() {
     let old = TerraGenerator::new(WorldConfig {
         seed: WorldSeed(42042),
+        landscape_revision: 4,
+        sea_level: 22.0,
+        rivers: true,
+        biome_definitions: Some(terra_core::BiomeDefinitions::default()),
         ecology_revision: 1,
         structures_revision: 4,
         ..Default::default()
@@ -67,6 +73,8 @@ fn whole_tree_shape_matches_every_stamped_root_trunk_and_branch_across_species_a
         TreeSpecies::Autumn,
         TreeSpecies::Birch,
         TreeSpecies::Spruce,
+        TreeSpecies::Fir,
+        TreeSpecies::Apple,
         TreeSpecies::Palm,
     ] {
         for seed in [1, 71, 42042, u64::MAX] {
@@ -375,6 +383,33 @@ fn species_material_ids_are_stable_and_distinct() {
     assert_eq!(TreeSpecies::Autumn.leaves() as u16, 8);
     assert_eq!(TreeSpecies::Birch.leaves() as u16, 9);
     assert_eq!(TreeSpecies::Birch.wood() as u16, 10);
+    assert_eq!(TreeSpecies::Fir.wood(), TreeSpecies::Spruce.wood());
+    assert_eq!(TreeSpecies::Fir.leaves(), TreeSpecies::Spruce.leaves());
+}
+
+#[test]
+fn firs_have_a_tapered_tiered_silhouette_distinct_from_spruces() {
+    for seed in 0..64 {
+        let seed = mix(seed);
+        let tree = Tree::fir([0; 3], seed);
+        assert_ne!(raster(&tree), raster(&Tree::spruce([0; 3], seed)));
+        assert!(tree.wood.len() <= 2 && tree.crowns.len() <= 12);
+        let width_at = |low: f32, high: f32| {
+            let height = tree.bounds.max[1] as f32;
+            let mut width = 0;
+            for y in (height * low) as i64..(height * high) as i64 {
+                for x in -8..=8 {
+                    if tree.leaves_at([x, y, 0]).is_some() {
+                        width = width.max(x.abs());
+                    }
+                }
+            }
+            width
+        };
+        assert!(width_at(0.15, 0.45) > width_at(0.75, 0.98));
+        let top = i64::from(tree.bounds.max[1]) - 2;
+        assert!(tree.leaves_at([0, top, 0]).is_some());
+    }
 }
 
 #[test]
@@ -424,6 +459,7 @@ fn palms_spruces_and_all_six_giant_mushrooms_are_connected_and_bounded() {
     let species = [
         TreeSpecies::Palm,
         TreeSpecies::Spruce,
+        TreeSpecies::Fir,
         TreeSpecies::Mushroom(0),
         TreeSpecies::Mushroom(1),
         TreeSpecies::Mushroom(2),
@@ -497,6 +533,7 @@ fn new_structure_sampling_matches_section_stamping_at_negative_boundaries() {
     for species in [
         TreeSpecies::Palm,
         TreeSpecies::Spruce,
+        TreeSpecies::Fir,
         TreeSpecies::Mushroom(4),
     ] {
         let tree = Tree::with_species([-1, 15, -1], mix(7), [0.0; 4], species);
@@ -529,7 +566,14 @@ fn new_structure_sampling_matches_section_stamping_at_negative_boundaries() {
 
 #[test]
 fn mushroom_park_places_real_structures_on_solid_ground_and_keeps_reload_stable() {
-    let terrain = TerraGenerator::new(WorldConfig::default()).unwrap();
+    let terrain = TerraGenerator::new(WorldConfig {
+        landscape_revision: 4,
+        sea_level: 22.0,
+        rivers: true,
+        biome_definitions: Some(terra_core::BiomeDefinitions::default()),
+        ..Default::default()
+    })
+    .unwrap();
     let start = [-768, 0, 512];
     let trees = trees_in_column(&terrain, start, 256);
     let mushrooms: Vec<_> = trees
@@ -574,9 +618,23 @@ fn mushroom_park_places_real_structures_on_solid_ground_and_keeps_reload_stable(
 
 #[test]
 fn real_desert_oases_have_supported_palms_and_persistent_dry_understory() {
-    let terrain = TerraGenerator::new(WorldConfig::default()).unwrap();
+    assert_oasis_palms_and_understory(1, [[-2682, -153], [-2401, -1404], [-1939, -2166]]);
+}
+
+#[test]
+fn regional_landscape_oases_have_supported_palms_and_persistent_dry_understory() {
+    assert_oasis_palms_and_understory(2, [[-2159, -160], [-2406, 151], [-2682, -153]]);
+}
+
+fn assert_oasis_palms_and_understory(revision: u8, centers: [[i64; 2]; 3]) {
+    let terrain = TerraGenerator::new(WorldConfig {
+        landscape_revision: revision,
+        sea_level: 8.0,
+        ..Default::default()
+    })
+    .unwrap();
     let mut palms = Vec::new();
-    for center in [[-2682, -153], [-2401, -1404], [-1939, -2166]] {
+    for center in centers {
         let oasis = terrain
             .oasis_at(center[0] as f64, center[1] as f64)
             .unwrap();
@@ -642,4 +700,143 @@ fn real_desert_oases_have_supported_palms_and_persistent_dry_understory() {
             .count();
     }
     assert!(dry_grass > 10, "oasis banks have dry grass: {dry_grass}");
+}
+
+#[test]
+fn natural_apple_species_is_gated_by_saved_ecology_revision() {
+    let old = TerraGenerator::new(WorldConfig {
+        ecology_revision: 2,
+        ..flat(42042, true).config().clone()
+    })
+    .unwrap();
+    let fresh = TerraGenerator::new(WorldConfig {
+        ecology_revision: 3,
+        ..old.config().clone()
+    })
+    .unwrap();
+    let old = trees_in_region(&old, [-128, 0, -128], 256)
+        .into_iter()
+        .map(|t| (t.origin, t))
+        .collect::<std::collections::BTreeMap<_, _>>();
+    let fresh = trees_in_region(&fresh, [-128, 0, -128], 256);
+    assert!(old.values().all(|t| t.species != TreeSpecies::Apple));
+    let mut apples = 0;
+    for tree in fresh {
+        let Some(previous) = old.get(&tree.origin) else {
+            continue;
+        };
+        if tree.species == TreeSpecies::Apple {
+            apples += 1;
+            assert!(matches!(
+                previous.species,
+                TreeSpecies::Green | TreeSpecies::Autumn
+            ));
+            assert_eq!(tree.wood_material, MaterialId::Wood);
+            assert_eq!(tree.species.leaves(), MaterialId::AppleLeaves);
+            assert!(tree.crowns.len() >= 5);
+        } else {
+            assert_eq!(&tree, previous);
+        }
+    }
+    assert!(
+        apples > 0,
+        "bounded natural fixture must include real apple trees"
+    );
+}
+
+#[cfg(feature = "bevy")]
+#[test]
+fn legacy_spruce_and_cherry_wood_skins_keep_their_real_species_in_felling_and_leaf_sapling_drops() {
+    use crate::{
+        edits::EditJournal,
+        streaming::{ChunkStore, LoadedSection},
+    };
+    use std::{collections::BTreeSet, sync::Arc};
+    use terra_core::{ItemKind, PlayerUuid};
+    use terra_voxel::{BlockSection, global_to_section};
+    for (kind, expected) in [
+        (TreeSpecies::Spruce, terra_core::TreeSpecies::Spruce),
+        (TreeSpecies::Cherry(false), terra_core::TreeSpecies::Cherry),
+        (TreeSpecies::Cherry(true), terra_core::TreeSpecies::Cherry),
+    ] {
+        let mut tree = Tree::with_species([0, 16, 0], 501, [0.; 4], kind);
+        // Exact historic skins retained by placement.rs: geology0 conifers and
+        // ecology0/1 cherry use Oak wood without becoming Oak trees.
+        tree.wood_material = MaterialId::Wood;
+        let shape = tree.felling_shape().unwrap();
+        assert_eq!(shape.wood_material, 6);
+        let terrain = TerraGenerator::new(WorldConfig {
+            trees: false,
+            caves: false,
+            water: false,
+            rivers: false,
+            biomes: false,
+            ..Default::default()
+        })
+        .unwrap();
+        let generator = crate::SectionGenerator::new(terrain);
+        let mut chunks = ChunkStore::default();
+        let mut columns = BTreeSet::new();
+        for (&cell, material) in shape
+            .wood
+            .iter()
+            .map(|p| (p, shape.wood_material))
+            .chain(shape.leaves.iter().map(|p| (p, shape.leaves_material)))
+        {
+            let (section, local) = global_to_section(cell);
+            columns.insert([section.x, section.z]);
+            chunks
+                .loaded
+                .entry(section)
+                .or_insert_with(|| LoadedSection {
+                    data: BlockSection::empty(section).unwrap(),
+                    mesh: None,
+                    mesh_epoch: 0,
+                    water_epoch: 0,
+                    water: None,
+                    props: vec![],
+                })
+                .data
+                .set_block(local, material)
+                .unwrap();
+        }
+        for coordinate in columns {
+            let mut column = generator.prepare_column(coordinate, false).unwrap();
+            column.trees = vec![tree.clone()];
+            chunks.set_prepared_column_for_test(coordinate, Some(Arc::new(column)));
+        }
+        let mut journal = EditJournal::default();
+        let leaf_drop = shape.leaves.iter().find_map(|cell| {
+            crate::saplings::leaf_drop(&chunks, &journal, *cell, shape.leaves_material)
+        });
+        assert_eq!(
+            leaf_drop,
+            Some(expected),
+            "legacy {kind:?}: leaf attribution must use actual generator species"
+        );
+        let plan = crate::tree_felling::Plan::prepare(&chunks, &journal, shape.origin).unwrap();
+        let mut queue = crate::tree_felling::Queue::default();
+        assert!(queue.enqueue(plan, PlayerUuid::from_u128(1)));
+        queue
+            .finish(&mut chunks, &mut journal, &Default::default())
+            .unwrap();
+        assert_eq!(
+            journal
+                .gameplay()
+                .drops
+                .iter()
+                .filter(|d| d.stack.item == ItemKind::Prop(expected.sapling()))
+                .map(|d| d.stack.count)
+                .sum::<u16>(),
+            1,
+            "legacy {kind:?}: whole-tree replacement sapling"
+        );
+        assert!(
+            !journal
+                .gameplay()
+                .drops
+                .iter()
+                .any(|d| d.stack.item == ItemKind::Prop(terra_core::TreeSpecies::Oak.sapling()))
+        );
+    }
 }

@@ -1,6 +1,312 @@
 use super::*;
 
 #[test]
+fn all_hydraulic_parts_have_real_atomic_workbench_recipes() {
+    let book = RecipeBook::builtins();
+    for (slug, material) in [
+        ("wood_pipe", 163),
+        ("stone_pipe", 164),
+        ("iron_pipe", 165),
+        ("glass_pipe", 172),
+        ("valve", 166),
+        ("faucet", 167),
+        ("pump", 168),
+        ("basin", 169),
+    ] {
+        let recipe = book.get(recipe_key(&format!("teramic::{slug}"))).unwrap();
+        assert_eq!(recipe.output.item, ItemKind::Block(material));
+        let mut bag = Inventory::default();
+        for ingredient in recipe.ingredients() {
+            assert_eq!(bag.insert(ingredient.item, ingredient.count), 0);
+        }
+        book.craft(
+            &mut bag,
+            recipe.key(),
+            1,
+            recipe.station,
+            CraftDestination::Cursor,
+        )
+        .unwrap();
+        let expected = if material == 169 {
+            ItemStack {
+                item: ItemKind::for_wood(material, crate::WoodSpecies::Oak),
+                ..recipe.output
+            }
+        } else {
+            recipe.output
+        };
+        assert_eq!(bag.cursor, Some(expected));
+        assert_eq!(bag.occupied_slots(), 0);
+    }
+}
+
+#[test]
+fn gearbox_recipes_are_registered_and_reorient_without_item_duplication() {
+    let book = RecipeBook::builtins();
+    assert!(
+        book.get(recipe_key("teramic::gearbox_horizontal"))
+            .is_some()
+    );
+    for (from, to) in [(154, 155), (155, 154)] {
+        let mut bag = Inventory::default();
+        bag.insert(ItemKind::Block(from), 1);
+        assert!(book.craft_grid(
+            &mut bag,
+            &[Some(0), None, None, None],
+            2,
+            CraftStation::Hand,
+            1,
+            CraftDestination::Inventory
+        ));
+        assert_eq!(bag.count(ItemKind::Block(from)), 0);
+        assert_eq!(bag.count(ItemKind::Block(to)), 1);
+    }
+}
+
+#[test]
+fn wooden_mechanic_recipes_inherit_consumed_planks_in_every_crafting_path() {
+    use crate::WoodSpecies::{Birch, Cherry, Oak, Spruce};
+    let book = RecipeBook::builtins();
+    for (slug, material) in [
+        ("wooden_gear", 141),
+        ("wooden_shaft", 144),
+        ("conveyor", 148),
+        ("wooden_large_gear", 149),
+    ] {
+        let recipe = book.get(key(slug)).unwrap();
+        assert_eq!(
+            book.iter()
+                .filter(|r| r.output.item.block_material() == Some(material))
+                .count(),
+            if material == 148 { 2 } else { 1 }
+        );
+        for (wood, plank) in [(Oak, 16), (Birch, 17), (Spruce, 18), (Cherry, 135)] {
+            let component_wood = if wood == Oak { Cherry } else { Oak };
+            let input = |ingredient: Ingredient| {
+                if ingredient.wood {
+                    ItemKind::Block(plank)
+                } else if let ItemKind::Block(material) = ingredient.item
+                    && ItemKind::supports_wood(material)
+                {
+                    ItemKind::for_wood(material, component_wood)
+                } else {
+                    ingredient.item
+                }
+            };
+            let mut bag = Inventory::default();
+            for ingredient in recipe.ingredients() {
+                assert_eq!(bag.insert(input(ingredient), ingredient.count), 0);
+            }
+            let unused = ItemKind::Block(if plank == 18 { 135 } else { 18 });
+            assert_eq!(bag.insert(unused, 128), 0);
+            let RecipePattern::Shaped {
+                width,
+                cells: pattern,
+                ..
+            } = &recipe.pattern
+            else {
+                panic!("expected shaped mechanical recipe")
+            };
+            let mut cells = [None; 9];
+            let mut reserved = [None; 9];
+            for (index, ingredient) in pattern.iter().enumerate() {
+                if let Some(ingredient) = ingredient {
+                    let slot = bag
+                        .slots
+                        .iter()
+                        .position(|stack| stack.item == input(*ingredient))
+                        .unwrap() as u8;
+                    let cell = index % usize::from(*width) + index / usize::from(*width) * 3;
+                    cells[cell] = Some(slot);
+                    reserved[cell] = Some(CraftGridCell {
+                        slot,
+                        count: ingredient.count,
+                    });
+                }
+            }
+            let expected = ItemStack {
+                item: ItemKind::for_wood(material, wood),
+                count: recipe.output.count,
+            };
+            assert_eq!(
+                book.output_for_grid(&bag, &cells, 3, CraftStation::Workbench),
+                Some(expected)
+            );
+            assert_eq!(
+                book.output_for_reserved_grid(&bag, &reserved, 3, CraftStation::Workbench),
+                Some(expected)
+            );
+            let before = bag.clone();
+            let mut generic = bag.clone();
+            book.craft(
+                &mut generic,
+                recipe.key(),
+                1,
+                CraftStation::Workbench,
+                CraftDestination::Cursor,
+            )
+            .unwrap();
+            let mut grid = bag.clone();
+            assert!(book.craft_grid(
+                &mut grid,
+                &cells,
+                3,
+                CraftStation::Workbench,
+                1,
+                CraftDestination::Cursor
+            ));
+            let mut reserved_grid = bag.clone();
+            assert!(book.craft_reserved_grid(
+                &mut reserved_grid,
+                &reserved,
+                3,
+                CraftStation::Workbench,
+                1,
+                CraftDestination::Cursor
+            ));
+            for result in [&generic, &grid, &reserved_grid] {
+                assert_eq!(result.cursor, Some(expected), "{slug} {wood:?}");
+                assert_eq!(result.count(unused), 128);
+                assert_eq!(result.revision, before.revision + 1);
+                assert_eq!(
+                    toml::from_str::<Inventory>(&toml::to_string(result).unwrap()).unwrap(),
+                    *result
+                );
+            }
+            assert_eq!(bag, before);
+            bag.cursor = Some(ItemStack {
+                item: ItemKind::for_wood(material, component_wood),
+                count: 1,
+            });
+            let before = bag.clone();
+            assert!(!book.craft_reserved_grid(
+                &mut bag,
+                &reserved,
+                3,
+                CraftStation::Workbench,
+                1,
+                CraftDestination::Cursor
+            ));
+            assert_eq!(bag, before);
+        }
+    }
+}
+
+#[test]
+fn wood_components_match_generic_recipes_without_overriding_plank_ties() {
+    use crate::WoodSpecies::{Birch, Cherry, Oak, Spruce};
+    for material in [28, 29, 141, 144, 148, 149] {
+        let generic = Ingredient {
+            item: ItemKind::Block(material),
+            count: 1,
+            wood: false,
+        };
+        let birch = Ingredient {
+            item: ItemKind::for_wood(material, Birch),
+            ..generic
+        };
+        for wood in [Oak, Birch, Spruce, Cherry] {
+            let item = ItemKind::for_wood(material, wood);
+            assert!(generic.matches(item));
+            assert_eq!(birch.matches(item), wood == Birch);
+        }
+        assert!(!generic.matches(ItemKind::Block(3)));
+        let mut inputs = WoodInputs::default();
+        inputs.consume(ItemKind::Block(16), 2);
+        inputs.consume(ItemKind::Block(17), 2);
+        inputs.consume(ItemKind::for_wood(144, Birch), 1);
+        let output = ItemStack {
+            item: ItemKind::Block(material),
+            count: 1,
+        };
+        assert_eq!(resolved_output(output, inputs), output);
+        let mut inputs = WoodInputs::default();
+        inputs.consume(ItemKind::for_wood(144, Cherry), 1);
+        assert_eq!(
+            resolved_output(output, inputs).item,
+            ItemKind::for_wood(material, Cherry)
+        );
+    }
+}
+
+#[test]
+fn every_non_oak_mechanical_catalog_item_has_matching_shipped_metadata() {
+    for (slug, material) in [
+        ("wooden_gear", 141),
+        ("wooden_shaft", 144),
+        ("conveyor", 148),
+        ("wooden_large_gear", 149),
+    ] {
+        for wood in [
+            crate::WoodSpecies::Birch,
+            crate::WoodSpecies::Spruce,
+            crate::WoodSpecies::Cherry,
+        ] {
+            let item = ItemKind::for_wood(material, wood);
+            let path = crate::asset_directory()
+                .join("terra/items")
+                .join(format!("{}_{slug}.json", wood.slug()));
+            let metadata: serde_json::Value =
+                serde_json::from_str(&std::fs::read_to_string(path).unwrap()).unwrap();
+            assert_eq!(
+                serde_json::from_value::<ItemKind>(metadata["item"].clone()).unwrap(),
+                item
+            );
+            assert!(!metadata["name"].as_str().unwrap().is_empty());
+            assert!(!metadata["description"].as_str().unwrap().is_empty());
+        }
+    }
+}
+
+#[test]
+fn every_kinetic_part_has_a_workbench_recipe_and_atomic_inventory_transaction() {
+    let book = RecipeBook::builtins();
+    for (slug, material) in [
+        ("wooden_large_gear", crate::kinetic::WOODEN_LARGE_GEAR),
+        ("stone_large_gear", crate::kinetic::STONE_LARGE_GEAR),
+        ("iron_large_gear", crate::kinetic::IRON_LARGE_GEAR),
+        ("wooden_gear", crate::kinetic::WOODEN_GEAR),
+        ("stone_gear", crate::kinetic::STONE_GEAR),
+        ("iron_gear", crate::kinetic::IRON_GEAR),
+        ("wooden_shaft", crate::kinetic::WOODEN_SHAFT),
+        ("stone_shaft", crate::kinetic::STONE_SHAFT),
+        ("iron_shaft", crate::kinetic::IRON_SHAFT),
+        ("water_wheel", crate::kinetic::WATER_WHEEL),
+        ("conveyor", crate::kinetic::CONVEYOR),
+    ] {
+        let recipe = book.get(key(slug)).unwrap();
+        assert_eq!(recipe.station, CraftStation::Workbench);
+        assert_eq!(recipe.output.item, ItemKind::Block(material));
+        let mut inventory = Inventory::default();
+        for ingredient in recipe.ingredients() {
+            assert_eq!(inventory.insert(ingredient.item, ingredient.count), 0);
+        }
+        let before = inventory.clone();
+        assert_eq!(
+            book.craft(
+                &mut inventory,
+                recipe.key(),
+                1,
+                CraftStation::Hand,
+                CraftDestination::Cursor
+            ),
+            Err(CraftError::WrongStation)
+        );
+        assert_eq!(inventory, before);
+        book.craft(
+            &mut inventory,
+            recipe.key(),
+            1,
+            CraftStation::Workbench,
+            CraftDestination::Cursor,
+        )
+        .unwrap();
+        assert_eq!(inventory.cursor, Some(recipe.output));
+        assert_eq!(inventory.occupied_slots(), 0);
+    }
+}
+
+#[test]
 fn village_building_blocks_are_real_obtainable_recipes_in_the_existing_book() {
     let book = RecipeBook::builtins();
     for (slug, material) in [
@@ -81,7 +387,7 @@ fn all_palette_dyes_have_one_catalog_item_and_a_working_data_defined_recipe() {
 }
 
 #[test]
-fn all_tools_have_unique_catalog_entries_and_valid_shaped_workbench_recipes() {
+fn all_tools_have_unique_catalog_entries_and_valid_shaped_station_recipes() {
     let book = RecipeBook::builtins();
     let mut slugs = std::collections::HashSet::new();
     for tool in crate::ToolKind::ALL {
@@ -103,29 +409,39 @@ fn all_tools_have_unique_catalog_entries_and_valid_shaped_workbench_recipes() {
         }
         let recipe = book.get(key(tool.slug())).unwrap();
         assert_eq!(recipe.output.item, item);
-        assert_eq!(recipe.station, CraftStation::Workbench);
+        let station = if matches!(
+            tool,
+            crate::ToolKind::WoodSpoon | crate::ToolKind::StoneSpoon | crate::ToolKind::GoldSpoon
+        ) {
+            CraftStation::Hand
+        } else {
+            CraftStation::Workbench
+        };
+        assert_eq!(recipe.station, station);
         assert!(matches!(recipe.pattern, RecipePattern::Shaped { .. }));
         let mut inventory = Inventory::default();
         for ingredient in recipe.ingredients() {
             assert_eq!(inventory.insert(ingredient.item, ingredient.count), 0);
         }
-        let before = inventory.clone();
-        assert_eq!(
-            book.craft(
-                &mut inventory,
-                recipe.key(),
-                1,
-                CraftStation::Hand,
-                CraftDestination::Cursor
-            ),
-            Err(CraftError::WrongStation)
-        );
-        assert_eq!(inventory, before);
+        if station == CraftStation::Workbench {
+            let before = inventory.clone();
+            assert_eq!(
+                book.craft(
+                    &mut inventory,
+                    recipe.key(),
+                    1,
+                    CraftStation::Hand,
+                    CraftDestination::Cursor
+                ),
+                Err(CraftError::WrongStation)
+            );
+            assert_eq!(inventory, before);
+        }
         book.craft(
             &mut inventory,
             recipe.key(),
             1,
-            CraftStation::Workbench,
+            station,
             CraftDestination::Cursor,
         )
         .unwrap();
@@ -755,8 +1071,38 @@ fn builtin_recipes_are_valid_and_catalog_roundtrip_preserves_keys() {
             + 4
             + 2 * crate::beds::DyeColor::ALL.len()
             + 2
+            + 11
+            + 1
+            + 2
+            + 3
+            + 1 // The kinetic RGB mixer's workbench recipe.
+            + 3 // Belt dye, filtered funnel, and belt merger.
+            + 2 // Existing wool stairs and slabs can be recolored with dye.
+            + 2 // Filtered tunnel and three-output belt distributor.
+            + 6 // Bottles, three spoons, cauldron and campfire.
+            + 7 // Three pipes, valve, faucet, pump and modular basin.
+            + 1 // The additional glass pipe uses its own real workbench recipe.
+            + 2 // Hold platform and pipe-fed fluid infuser.
+            + 2 // Iron lantern and hanging chain.
+            + 2 // Apple saplings from whole fruit or two cores.
     );
     for id in [
+        "lantern",
+        "chain",
+        "apple_sapling",
+        "apple_sapling_from_core",
+        "glass_pipe",
+        "filtered_tunnel",
+        "belt_distributor",
+        "filtered_funnel",
+        "belt_merger",
+        "conveyor_dye",
+        "mixer",
+        "item_hopper",
+        "item_importer",
+        "gearbox_horizontal",
+        "gearbox_vertical",
+        "gearbox_horizontal_from_vertical",
         "furnace",
         "chimney_straight",
         "oak_door",
@@ -852,6 +1198,62 @@ fn builtin_recipes_are_valid_and_catalog_roundtrip_preserves_keys() {
     assert!(inventory.craft([Some(1), None, None, None]));
     assert_eq!(inventory.count(ItemKind::Block(16)), 2);
     assert_eq!(inventory.count(ItemKind::Stick), 4);
+}
+
+#[test]
+fn filtered_tunnel_and_distributor_recipes_charge_their_real_parts() {
+    let book = RecipeBook::builtins();
+    for (id, material, costs) in [
+        (
+            "filtered_tunnel",
+            crate::logistics::FILTERED_TUNNEL,
+            vec![
+                (ItemKind::Block(crate::logistics::TUNNEL), 1),
+                (ItemKind::Mineral(crate::MineralItem::IronIngot), 1),
+                (ItemKind::Dust(crate::crusher::DustKind::Diamond), 1),
+            ],
+        ),
+        (
+            "belt_distributor",
+            crate::logistics::BELT_DISTRIBUTOR,
+            vec![
+                (ItemKind::Block(crate::logistics::FILTERED_FUNNEL), 3),
+                (ItemKind::Mineral(crate::MineralItem::IronIngot), 2),
+            ],
+        ),
+    ] {
+        let recipe = book.get(key(id)).unwrap();
+        assert_eq!(recipe.station, CraftStation::Workbench);
+        assert!(matches!(recipe.pattern, RecipePattern::Shapeless { .. }));
+        let output = ItemStack {
+            item: ItemKind::Block(material),
+            count: 1,
+        };
+        assert_eq!(recipe.output, output);
+        let ingredients = recipe.ingredients();
+        assert_eq!(ingredients.len(), costs.len());
+        let mut bag = Inventory::default();
+        for &(item, count) in &costs {
+            assert!(ingredients.contains(&Ingredient {
+                item,
+                count,
+                wood: false,
+            }));
+            assert_eq!(bag.insert(item, count + 1), 0);
+        }
+        book.craft(
+            &mut bag,
+            key(id),
+            1,
+            CraftStation::Workbench,
+            CraftDestination::Cursor,
+        )
+        .unwrap();
+        assert_eq!(bag.cursor, Some(output));
+        for (item, _) in costs {
+            assert_eq!(bag.count(item), 1, "{id} cost for {item:?}");
+        }
+    }
 }
 
 #[test]
@@ -1230,4 +1632,75 @@ fn dominant_wood_results_do_not_merge_into_a_different_wood_cursor() {
     .unwrap();
     assert_eq!(bag.cursor.unwrap().count, 128);
     assert_eq!(bag.count(ItemKind::Block(18)), 20);
+}
+
+#[test]
+fn basin_recipe_inherits_each_consumed_plank_species() {
+    let book = RecipeBook::builtins();
+    let recipe = book.get(recipe_key("teramic::basin")).unwrap();
+    for (wood, plank) in [
+        (crate::WoodSpecies::Oak, 16),
+        (crate::WoodSpecies::Birch, 17),
+        (crate::WoodSpecies::Spruce, 18),
+        (crate::WoodSpecies::Cherry, 135),
+    ] {
+        let mut inventory = Inventory::default();
+        for ingredient in recipe.ingredients() {
+            inventory.insert(
+                if ingredient.wood {
+                    ItemKind::Block(plank)
+                } else {
+                    ingredient.item
+                },
+                ingredient.count,
+            );
+        }
+        book.craft(
+            &mut inventory,
+            recipe.key(),
+            1,
+            recipe.station,
+            CraftDestination::Cursor,
+        )
+        .unwrap();
+        assert_eq!(
+            inventory.cursor.unwrap().item,
+            ItemKind::for_wood(169, wood)
+        );
+        assert_eq!(inventory.occupied_slots(), 0);
+    }
+}
+
+#[test]
+fn whole_apples_and_consumed_cores_are_real_sapling_recipe_ingredients() {
+    for (slug, input, count) in [
+        ("apple_sapling", ItemKind::Apple, 1),
+        ("apple_sapling_from_core", ItemKind::AppleCore, 2),
+    ] {
+        let book = RecipeBook::builtins();
+        let recipe = book.get(recipe_key(&format!("teramic::{slug}"))).unwrap();
+        assert_eq!(recipe.station, CraftStation::Hand);
+        assert_eq!(
+            recipe.output.item,
+            ItemKind::Prop(crate::ResourcePropKind::AppleSapling)
+        );
+        let mut bag = Inventory::default();
+        bag.insert(input, count);
+        bag.insert(ItemKind::Block(2), 1);
+        book.craft(
+            &mut bag,
+            recipe.key(),
+            1,
+            CraftStation::Hand,
+            CraftDestination::Cursor,
+        )
+        .unwrap();
+        assert_eq!(bag.cursor.unwrap().item, recipe.output.item);
+        assert_eq!(bag.count(input), 0);
+        assert_eq!(bag.count(ItemKind::Block(2)), 0);
+    }
+    let food = crate::food::food(ItemKind::Apple).unwrap();
+    assert!(food.nutrition > 0. && food.saturation > 0.);
+    assert_eq!(food.remainder, Some(ItemKind::AppleCore));
+    assert!(crate::food::food(ItemKind::AppleCore).is_none());
 }

@@ -1,0 +1,57 @@
+{
+  "biome": "ocean",
+  "terrain": {
+    "min_height": -98,
+    "max_height": 22,
+    "horizontal_scale": 700,
+    "detail_strength": 0.12,
+    "relief_strength": 0.75,
+    "soil_depth": 3,
+    "tree_density": 0,
+    "terrace_strength": 0.03
+  },
+  "ocean": {
+    "warm": {
+      "floor": {
+        "sand": 70,
+        "gravel": 5,
+        "mud": 4,
+        "dirt": 1,
+        "stone": 20
+      },
+      "coral_density": 0.8,
+      "seagrass_density": 0.55,
+      "max_vegetation_depth": 90
+    },
+    "cold": {
+      "floor": {
+        "sand": 8,
+        "gravel": 47,
+        "mud": 35,
+        "dirt": 2,
+        "stone": 8
+      },
+      "coral_density": 0,
+      "seagrass_density": 0.7,
+      "max_vegetation_depth": 110
+    },
+    "swamp": {
+      "floor": {
+        "sand": 20,
+        "gravel": 3,
+        "mud": 50,
+        "dirt": 25,
+        "stone": 2
+      },
+      "coral_density": 0,
+      "seagrass_density": 0.88,
+      "max_vegetation_depth": 85
+    },
+    "cold_temperature": 0.36,
+    "warm_temperature": 0.58,
+    "swamp_humidity": 0.72,
+    "clay_frequency": 0.14,
+    "clay_cluster_scale": 18,
+    "clay_depth": 2.5
+  }
+}

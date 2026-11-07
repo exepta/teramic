@@ -46,7 +46,16 @@ pub(crate) fn build_water_patch(
     let wet = |x: usize, z: usize| {
         let bed = (columns[x + SIZE * z].height - 0.5).floor() + 1.0;
         let block = padded[x + SIZE * (y + SIZE * z)];
-        super::can_hold_fluid(block) && !super::space::partial(block) && bed < level
+        let volume = if (level - plane as f64).abs() < 1e-8 && y > 0 {
+            padded[x + SIZE * (y - 1 + SIZE * z)]
+        } else {
+            block
+        };
+        super::can_hold_fluid(block)
+            && !super::space::partial(block)
+            && super::can_hold_fluid(volume)
+            && !super::space::partial(volume)
+            && bed < level
     };
     let mut patch = WaterPatch {
         normals: Vec::new(),
@@ -93,7 +102,7 @@ pub(crate) fn build_water_patch(
             }
         }
     }
-    assign_wave_weights(&mut patch, origin, columns, None);
+    assign_wave_weights(&mut patch, origin, columns, None, padded);
     (!patch.indices.is_empty()).then_some(patch)
 }
 
@@ -102,6 +111,7 @@ pub(super) fn assign_wave_weights(
     origin: [i64; 3],
     columns: &[SurfaceColumn],
     fluids: Option<&super::FluidSnapshot>,
+    padded: &[u16],
 ) {
     let surface_effects = &patch.surface_effects;
     let normals = &patch.normals;
@@ -115,11 +125,27 @@ pub(super) fn assign_wave_weights(
         return;
     }
     let mut corners = [0.0; 17 * 17];
+    let mut corner_flow = [[0.; 2]; 17 * 17];
     for z in 0..=16 {
         for x in 0..=16 {
             corners[x + z * 17] = super::channels::shared_wave_weight(columns, x, z);
+            // The vertex shader also derives swell amplitude from flow. Every
+            // owner of this corner must supply the same four-column value;
+            // a per-cell flow would split moving and still surfaces despite
+            // identical displacement weights and world-space wave phase.
+            for column in [
+                columns[x + 18 * z],
+                columns[x + 1 + 18 * z],
+                columns[x + 18 * (z + 1)],
+                columns[x + 1 + 18 * (z + 1)],
+            ] {
+                for (shared, local) in corner_flow[x + z * 17].iter_mut().zip(column.water_flow) {
+                    *shared += local * 0.25;
+                }
+            }
         }
     }
+    patch.flow.resize(patch.positions.len(), [0.; 2]);
     for i in 0..patch.positions.len() {
         if !horizontal(i) {
             continue;
@@ -138,14 +164,33 @@ pub(super) fn assign_wave_weights(
         let global_z = origin[2] + z as i64;
         let y = origin[1] + (f64::from(p[1]) - 0.001).floor() as i64;
         let edited = fluids.is_some_and(|fluids| {
-            (-1..=1).any(|dy| {
+            (0..=1).any(|dy| {
                 (-1..=0).any(|dz| {
                     (-1..=0).any(|dx| fluids.contains_key(&[global_x + dx, y + dy, global_z + dz]))
                 })
             })
         });
-        if !edited {
+        // Live terrain/pipe edits may differ from the immutable height field.
+        // Every owner samples the same padded four cells, including negative
+        // section borders. Pin the contact rather than lowering the whole lake.
+        let touches_solid = (0..=1).any(|dy| {
+            (-1..=0).any(|dz| {
+                (-1..=0).any(|dx| {
+                    let local = [x as i64 + dx + 1, y - origin[1] + dy + 1, z as i64 + dz + 1];
+                    if !local.iter().all(|v| (0..18).contains(v)) {
+                        return false;
+                    }
+                    let [lx, ly, lz] = local.map(|v| v as usize);
+                    let material = padded[lx + 18 * (ly + 18 * lz)];
+                    !super::can_hold_fluid(material) || super::space::partial(material)
+                })
+            })
+        });
+        if !edited && !touches_solid {
             patch.wave_weights[i] = corners[x as usize + z as usize * 17];
+            if patch.wave_weights[i] > 0. {
+                patch.flow[i] = corner_flow[x as usize + z as usize * 17];
+            }
         }
     }
 }

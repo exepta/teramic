@@ -10,9 +10,10 @@ use bevy::{
         renderer::{RenderGraph, RenderGraphSystems},
     },
 };
+use std::time::Instant;
 
 #[derive(Resource, Default)]
-struct Interval<const N: usize>(Option<terra_core::profiling::ScopeTimer>);
+struct Interval<const N: usize>(Option<terra_core::profiling::ScopeTimer>, Option<Instant>);
 
 const NAMES: [&str; 19] = [
     "render.assets",
@@ -37,11 +38,14 @@ const NAMES: [&str; 19] = [
 ];
 
 fn start<const N: usize>(mut timer: ResMut<Interval<N>>) {
+    timer.1 = super::systems::stall_start();
     timer.0 = Some(terra_core::profiling::ScopeTimer::new(NAMES[N]));
 }
 
 fn stop<const N: usize>(mut timer: ResMut<Interval<N>>) {
+    let elapsed = timer.1.take().map(|started| started.elapsed());
     drop(timer.0.take());
+    super::systems::report_stall(NAMES[N], elapsed);
 }
 
 pub(super) fn install(app: &mut SubApp) {
@@ -133,6 +137,7 @@ mod tests {
         for _ in 0..3 {
             app.world_mut().run_schedule(Render);
             assert!(app.world().resource::<Interval<9>>().0.is_none());
+            assert!(app.world().resource::<Interval<9>>().1.is_none());
         }
     }
 }

@@ -1,11 +1,120 @@
 use super::*;
 
 #[test]
+fn main_landscape_is_default_and_all_saved_revisions_remain_readable() {
+    let legacy = WorldConfig::from_toml("seed=42042").unwrap();
+    assert_eq!(legacy.landscape_revision, 0);
+    let fresh = WorldConfig::default();
+    assert_eq!(fresh.landscape_revision, 1);
+    assert_eq!(fresh.sea_level, 8.0);
+    assert!(fresh.biome_definitions.is_none());
+    assert!(!legacy.rivers);
+    assert!(!fresh.rivers);
+    for revision in 0..=5 {
+        let saved = WorldConfig {
+            landscape_revision: revision,
+            ..fresh.clone()
+        };
+        assert_eq!(
+            WorldConfig::from_toml(&toml::to_string(&saved).unwrap()).unwrap(),
+            saved
+        );
+        assert_eq!(
+            WorldConfig::from_toml(&format!("landscape_revision={revision}"))
+                .unwrap()
+                .landscape_revision,
+            revision
+        );
+    }
+    assert!(WorldConfig::from_toml("landscape_revision=6").is_err());
+    assert_eq!(
+        WorldConfig::from_toml(include_str!("../../../../configs/world.toml"))
+            .unwrap()
+            .landscape_revision,
+        0
+    );
+}
+
+#[test]
+fn revision_four_snapshots_without_landscape_profiles_keep_their_saved_biomes() {
+    let mut saved = WorldConfig {
+        landscape_revision: 4,
+        biome_definitions: Some(BiomeDefinitions::default()),
+        ..Default::default()
+    };
+    saved.biome_definitions.as_mut().unwrap().landscapes = LandscapeDefinitions::legacy_v5();
+    saved.biome_definitions.as_mut().unwrap().entries[BiomeKind::Plains as usize]
+        .terrain
+        .max_height = 57.0;
+    let mut legacy = toml::Value::try_from(&saved).unwrap();
+    legacy["biome_definitions"]
+        .as_table_mut()
+        .unwrap()
+        .remove("landscapes");
+    let restored = WorldConfig::from_toml(&toml::to_string(&legacy).unwrap()).unwrap();
+    assert_eq!(restored, saved);
+    assert_eq!(restored.landscape_revision, 4);
+    assert_eq!(
+        restored.biome_definitions.as_ref().unwrap().landscapes,
+        LandscapeDefinitions::legacy_v5()
+    );
+    let mut legacy = serde_json::to_value(&saved).unwrap();
+    legacy["biome_definitions"]
+        .as_object_mut()
+        .unwrap()
+        .remove("landscapes");
+    assert_eq!(
+        serde_json::from_value::<WorldConfig>(legacy).unwrap(),
+        saved
+    );
+}
+
+#[test]
+fn saved_landscape_profiles_roundtrip_and_participate_in_terrain_cache_identity() {
+    let original = WorldConfig {
+        landscape_revision: 5,
+        biome_definitions: Some(BiomeDefinitions::default()),
+        ..Default::default()
+    };
+    let mut custom = original.clone();
+    let landscapes = &mut custom.biome_definitions.as_mut().unwrap().landscapes;
+    landscapes.warp_strength += 17.0;
+    landscapes.profiles[TerrainKind::Forest as usize].horizontal_scale += 31.0;
+    custom.validate().unwrap();
+    assert!(!custom.same_terrain(&original));
+    let restored = WorldConfig::from_toml(&toml::to_string(&custom).unwrap()).unwrap();
+    assert_eq!(restored, custom);
+    assert!(restored.same_terrain(&custom));
+    assert_eq!(restored.landscape_revision, 5);
+}
+
+#[test]
+fn prepared_terrain_identity_distinguishes_every_landscape_revision() {
+    for old_revision in 0..=5 {
+        let saved = WorldConfig {
+            landscape_revision: old_revision,
+            ..Default::default()
+        };
+        for new_revision in 0..=5 {
+            let changed = WorldConfig {
+                landscape_revision: new_revision,
+                ..saved.clone()
+            };
+            assert_eq!(
+                saved.same_terrain(&changed),
+                old_revision == new_revision,
+                "landscape revision {old_revision} -> {new_revision}"
+            );
+        }
+    }
+}
+
+#[test]
 fn cherry_ecology_is_saved_and_never_retroactively_enabled_in_old_worlds() {
     let legacy = WorldConfig::from_toml("seed=42042").unwrap();
     assert_eq!(legacy.ecology_revision, 0);
     let fresh = WorldConfig::default();
-    assert_eq!(fresh.ecology_revision, 2);
+    assert_eq!(fresh.ecology_revision, 4);
     let serialized = toml::to_string(&fresh).unwrap();
     assert_eq!(WorldConfig::from_toml(&serialized).unwrap(), fresh);
     assert!(!fresh.same_terrain(&WorldConfig {
@@ -18,7 +127,13 @@ fn cherry_ecology_is_saved_and_never_retroactively_enabled_in_old_worlds() {
             .ecology_revision,
         1
     );
-    assert!(WorldConfig::from_toml("ecology_revision=3").is_err());
+    assert_eq!(
+        WorldConfig::from_toml("ecology_revision=4")
+            .unwrap()
+            .ecology_revision,
+        4
+    );
+    assert!(WorldConfig::from_toml("ecology_revision=5").is_err());
 }
 
 #[test]
@@ -26,7 +141,7 @@ fn waterfall_terrain_revision_is_saved_without_changing_legacy_world_contracts()
     let legacy = WorldConfig::from_toml("seed=42042\nrivers=true").unwrap();
     assert_eq!(legacy.river_terrain_revision, 0);
     let fresh = WorldConfig::default();
-    assert_eq!(fresh.river_terrain_revision, 1);
+    assert_eq!(fresh.river_terrain_revision, 4);
     assert_eq!(
         WorldConfig::from_toml(&toml::to_string(&fresh).unwrap()).unwrap(),
         fresh
@@ -35,7 +150,7 @@ fn waterfall_terrain_revision_is_saved_without_changing_legacy_world_contracts()
         river_terrain_revision: 0,
         ..fresh.clone()
     }));
-    for revision in 0..=1 {
+    for revision in 0..=4 {
         assert_eq!(
             WorldConfig::from_toml(&format!("river_terrain_revision={revision}"))
                 .unwrap()
@@ -43,12 +158,12 @@ fn waterfall_terrain_revision_is_saved_without_changing_legacy_world_contracts()
             revision
         );
     }
-    assert!(WorldConfig::from_toml("river_terrain_revision=2").is_err());
+    assert!(WorldConfig::from_toml("river_terrain_revision=5").is_err());
     assert_eq!(
         WorldConfig::from_toml(include_str!("../../../../configs/world.toml"))
             .unwrap()
             .river_terrain_revision,
-        1
+        4
     );
 }
 
@@ -81,7 +196,7 @@ fn structures_contract_is_explicit_for_fresh_worlds_and_absent_in_legacy_manifes
     let legacy = WorldConfig::from_toml("seed=42042").unwrap();
     assert_eq!(legacy.structures_revision, 0);
     let fresh = WorldConfig::default();
-    assert_eq!(fresh.structures_revision, 5);
+    assert_eq!(fresh.structures_revision, 9);
     assert_eq!(
         WorldConfig::from_toml(&toml::to_string(&fresh).unwrap()).unwrap(),
         fresh
@@ -95,12 +210,16 @@ fn structures_contract_is_explicit_for_fresh_worlds_and_absent_in_legacy_manifes
     assert!(WorldConfig::from_toml("structures_revision=3").is_ok());
     assert!(WorldConfig::from_toml("structures_revision=4").is_ok());
     assert!(WorldConfig::from_toml("structures_revision=5").is_ok());
-    assert!(WorldConfig::from_toml("structures_revision=6").is_err());
+    assert!(WorldConfig::from_toml("structures_revision=6").is_ok());
+    assert!(WorldConfig::from_toml("structures_revision=7").is_ok());
+    assert!(WorldConfig::from_toml("structures_revision=8").is_ok());
+    assert!(WorldConfig::from_toml("structures_revision=9").is_ok());
+    assert!(WorldConfig::from_toml("structures_revision=10").is_err());
     assert_eq!(
         WorldConfig::from_toml(include_str!("../../../../configs/world.toml"))
             .unwrap()
             .structures_revision,
-        5
+        9
     );
 }
 
@@ -331,5 +450,153 @@ fn natural_population_and_new_terrain_contract_are_saved_without_retrogen() {
             .unwrap()
             .natural_mob_limit,
         Some(128)
+    );
+}
+
+#[test]
+fn world_creation_biome_and_structure_choices_roundtrip_without_legacy_retrogen() {
+    let legacy = WorldConfig::from_toml("seed=42042").unwrap();
+    assert_eq!(legacy.preferred_spawn_biome, None);
+    assert_eq!(legacy.structures, StructureSettings::default());
+    assert_eq!(legacy.structures_revision, 0);
+    let selected = WorldConfig {
+        preferred_spawn_biome: Some(BiomeKind::CherryForest),
+        structures: StructureSettings {
+            villages: true,
+            ruins: false,
+            mines: false,
+            kingdoms: false,
+            outposts: true,
+        },
+        ..Default::default()
+    };
+    let restored = WorldConfig::from_toml(&toml::to_string(&selected).unwrap()).unwrap();
+    assert_eq!(restored, selected);
+    assert_eq!(
+        restored.preferred_spawn_biome,
+        Some(BiomeKind::CherryForest)
+    );
+    assert!(restored.structures.villages);
+    assert!(!restored.structures.ruins && !restored.structures.mines);
+    assert!(WorldConfig::from_toml("preferred_spawn_biome='spirit_forest'").is_err());
+    assert!(WorldConfig::from_toml("[structures]\ntowers=false").is_err());
+    let partial = WorldConfig::from_toml("[structures]\nvillages=false").unwrap();
+    assert!(!partial.structures.villages);
+    assert!(partial.structures.ruins && partial.structures.mines);
+}
+
+#[test]
+fn spawn_preference_is_metadata_but_structure_switches_change_terrain_identity() {
+    let original = WorldConfig::default();
+    for biome in BiomeKind::ALL {
+        let preferred = WorldConfig {
+            preferred_spawn_biome: Some(biome),
+            ..original.clone()
+        };
+        assert!(original.same_terrain(&preferred));
+    }
+    for disabled in 0..5 {
+        let mut changed = original.clone();
+        match disabled {
+            0 => changed.structures.villages = false,
+            1 => changed.structures.ruins = false,
+            2 => changed.structures.mines = false,
+            3 => changed.structures.kingdoms = false,
+            _ => changed.structures.outposts = false,
+        }
+        assert!(!original.same_terrain(&changed));
+    }
+    let mut switches = StructureSettings::default();
+    assert!(switches.any_enabled());
+    switches.set_all(false);
+    assert!(!switches.any_enabled());
+    assert!(
+        !switches.villages
+            && !switches.ruins
+            && !switches.mines
+            && !switches.kingdoms
+            && !switches.outposts
+    );
+    switches.set_all(true);
+    assert_eq!(switches, StructureSettings::default());
+}
+
+#[test]
+fn legacy_royal_switches_inherit_villages_and_explicit_new_choices_override_independently() {
+    for villages in [false, true] {
+        let legacy = WorldConfig::from_toml(&format!(
+            "structures_revision=6\n[structures]\nvillages={villages}\nruins=false\nmines=true"
+        ))
+        .unwrap();
+        assert_eq!(legacy.structures.kingdoms, villages);
+        assert_eq!(legacy.structures.outposts, villages);
+        assert_eq!(
+            legacy.structures_revision, 6,
+            "New defaults must never upgrade saved terrain"
+        );
+        let json = serde_json::json!({"villages":villages,"ruins":false,"mines":true});
+        let decoded: StructureSettings = serde_json::from_value(json).unwrap();
+        assert_eq!(decoded, legacy.structures);
+    }
+    for kingdoms in [false, true] {
+        for outposts in [false, true] {
+            let source = format!(
+                "structures_revision=7\n[structures]\nvillages=false\nruins=false\nmines=false\nkingdoms={kingdoms}\noutposts={outposts}"
+            );
+            let selected = WorldConfig::from_toml(&source).unwrap();
+            assert_eq!(selected.structures.kingdoms, kingdoms);
+            assert_eq!(selected.structures.outposts, outposts);
+            assert_eq!(selected.structures.any_enabled(), kingdoms || outposts);
+            assert_eq!(
+                WorldConfig::from_toml(&toml::to_string(&selected).unwrap()).unwrap(),
+                selected
+            );
+            assert_eq!(
+                serde_json::from_str::<StructureSettings>(
+                    &serde_json::to_string(&selected.structures).unwrap()
+                )
+                .unwrap(),
+                selected.structures
+            );
+        }
+    }
+}
+
+#[test]
+fn mutable_realm_policy_and_frozen_structure_spacing_have_distinct_terrain_identity() {
+    let original = WorldConfig::default();
+    let mut changed = original.clone();
+    changed.kingdom_rules.realm_min_border_gap = 24;
+    changed.kingdom_rules.city_min_build_gap = 15;
+    assert!(original.same_terrain(&changed));
+    let rules = crate::WorldRuleSettings::from_world(&changed);
+    let mut applied = original.clone();
+    rules.apply(&mut applied);
+    assert_eq!(applied.kingdom_rules, changed.kingdom_rules);
+    assert_eq!(applied.structure_border_gap, original.structure_border_gap);
+    assert!(applied.same_terrain(&original));
+    changed.structure_border_gap = 24;
+    assert!(!original.same_terrain(&changed));
+    assert_eq!(
+        WorldConfig::from_toml(&toml::to_string(&changed).unwrap()).unwrap(),
+        changed
+    );
+    let old = WorldConfig::from_toml("seed=42\nstructures_revision=8").unwrap();
+    assert_eq!(old.structures_revision, 8);
+    assert_eq!(old.kingdom_rules, crate::kingdom::KingdomRules::default());
+    assert!(WorldConfig::from_toml("structure_border_gap=4097").is_err());
+    assert!(WorldConfig::from_toml("[kingdom_rules]\ncity_min_kingdom_level=0").is_err());
+    assert!(super::ServerConfig::from_toml("[kingdom_rules]\noutpost_build_base=0").is_err());
+    let dedicated =
+        super::ServerConfig::from_toml(include_str!("../../../../configs/server.toml")).unwrap();
+    assert_eq!(
+        dedicated.kingdom_rules,
+        Some(crate::kingdom::KingdomRules::default())
+    );
+    assert!(
+        super::ServerConfig::from_toml("")
+            .unwrap()
+            .kingdom_rules
+            .is_none()
     );
 }

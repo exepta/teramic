@@ -5,7 +5,14 @@ use terra_voxel::{MaterialId, global_to_section};
 
 #[test]
 fn new_cave_dirt_forms_connected_patches_not_checkerboard_noise() {
-    let terrain = TerraGenerator::new(WorldConfig::default()).unwrap();
+    let terrain = TerraGenerator::new(WorldConfig {
+        landscape_revision: 4,
+        sea_level: 22.0,
+        rivers: true,
+        biome_definitions: Some(terra_core::BiomeDefinitions::default()),
+        ..Default::default()
+    })
+    .unwrap();
     let mut dirt = std::collections::HashSet::new();
     for z in -24..24 {
         for x in -24..24 {
@@ -46,6 +53,8 @@ fn new_cave_dirt_forms_connected_patches_not_checkerboard_noise() {
 #[test]
 fn cliffted_desert_is_a_normalized_desert_interior_with_rare_salt_chambers() {
     let terrain = TerraGenerator::new(WorldConfig {
+        landscape_revision: 3,
+        sea_level: 8.0,
         cave_structure_revision: 2,
         ..Default::default()
     })
@@ -101,6 +110,10 @@ fn cliffted_desert_is_a_normalized_desert_interior_with_rare_salt_chambers() {
 #[test]
 fn salt_cave_is_broad_and_only_its_native_dripstone_walls_contain_salt() {
     let terrain = TerraGenerator::new(WorldConfig {
+        landscape_revision: 4,
+        sea_level: 22.0,
+        rivers: true,
+        biome_definitions: Some(terra_core::BiomeDefinitions::default()),
         cave_structure_revision: 2,
         trees: false,
         ..Default::default()
@@ -161,7 +174,14 @@ fn salt_cave_is_broad_and_only_its_native_dripstone_walls_contain_salt() {
 
 #[test]
 fn all_three_native_cave_types_exist_without_chamber_seams_or_open_surface_roofs() {
-    let terrain = TerraGenerator::new(WorldConfig::default()).unwrap();
+    let terrain = TerraGenerator::new(WorldConfig {
+        landscape_revision: 4,
+        sea_level: 22.0,
+        rivers: true,
+        biome_definitions: Some(terra_core::BiomeDefinitions::default()),
+        ..Default::default()
+    })
+    .unwrap();
     let mut found = [false; 3];
     for z in -5..=5 {
         for x in -5..=5 {

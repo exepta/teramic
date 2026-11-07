@@ -24,11 +24,28 @@ mod tests {
     use terra_voxel::{MaterialId, SectionPos};
 
     const CENTERS: [[f64; 2]; 3] = [[-2682.0, -153.0], [-2401.0, -1404.0], [-1939.0, -2166.0]];
+    const REGIONAL_CENTERS: [[f64; 2]; 3] =
+        [[-2159.0, -160.0], [-2406.0, 151.0], [-2682.0, -153.0]];
 
     #[test]
     fn isolated_lakes_have_local_levels_and_closed_supported_shores() {
-        let terrain = TerraGenerator::new(WorldConfig::default()).unwrap();
-        for [cx, cz] in CENTERS {
+        assert_closed_shores(1, CENTERS);
+    }
+
+    #[test]
+    fn regional_landscape_oases_have_local_levels_and_closed_supported_shores() {
+        assert_closed_shores(2, REGIONAL_CENTERS);
+    }
+
+    fn assert_closed_shores(revision: u8, centers: [[f64; 2]; 3]) {
+        let terrain = TerraGenerator::new(WorldConfig {
+            landscape_revision: revision,
+            sea_level: 8.0,
+            rivers: false,
+            ..Default::default()
+        })
+        .unwrap();
+        for [cx, cz] in centers {
             let oasis = terrain.oasis_at(cx, cz).unwrap();
             assert!(oasis.level > terrain.config().sea_level + 2.0);
             assert!(terrain.water_column(cx, cz).unwrap().depth > 2.0);
@@ -63,7 +80,12 @@ mod tests {
 
     #[test]
     fn desert_strata_and_lake_geometry_survive_reload_and_negative_sections() {
-        let config = WorldConfig::default();
+        let config = WorldConfig {
+            landscape_revision: 1,
+            sea_level: 8.0,
+            rivers: false,
+            ..Default::default()
+        };
         let terrain = TerraGenerator::new(config.clone()).unwrap();
         let reload = TerraGenerator::new(config).unwrap();
         let [x, z] = CENTERS[0];
@@ -125,10 +147,12 @@ mod tests {
         for config in [
             WorldConfig {
                 water: false,
+                rivers: false,
                 ..Default::default()
             },
             WorldConfig {
                 biomes: false,
+                rivers: false,
                 ..Default::default()
             },
         ] {
@@ -145,7 +169,12 @@ mod tests {
 
     #[test]
     fn dominant_desert_keeps_sand_outside_oasis_grass_margins() {
-        let terrain = TerraGenerator::new(WorldConfig::default()).unwrap();
+        let terrain = TerraGenerator::new(WorldConfig {
+            landscape_revision: 1,
+            rivers: false,
+            ..Default::default()
+        })
+        .unwrap();
         let mut desert = 0;
         let mut dry_grass = 0;
         for dz in (-80..=80).step_by(2) {
@@ -236,6 +265,9 @@ impl TerraGenerator {
         ];
         // The full influence remains inside its tile, so neighbors need no scans.
         if (x - center[0]).abs().max((z - center[1]).abs()) > 58.0 {
+            return None;
+        }
+        if self.connected_hydrology() && self.connected_lake_conflicts(center, 58.0) {
             return None;
         }
         let cached = self

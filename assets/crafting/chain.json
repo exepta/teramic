@@ -1,0 +1,22 @@
+{
+  "id": "teramic::chain",
+  "name": "Chain",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "block": 194
+    },
+    "count": 4
+  },
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "mineral": "iron_ingot"
+        },
+        "count": 2
+      }
+    ]
+  }
+}

@@ -555,6 +555,21 @@ impl SectionGenerator {
                 },
             ));
         }
+        let mut garden_supports = std::collections::BTreeSet::new();
+        if self.terrain.config().structures_revision >= 8 {
+            for site in &column.structures {
+                for support in site.garden_supports(position) {
+                    garden_supports.insert(support);
+                    if edits.contains_key(&support)
+                        || edits.contains_key(&[support[0], support[1] + 1, support[2]])
+                        || edits.contains_key(&[support[0], support[1] + 2, support[2]])
+                    {
+                        continue;
+                    }
+                    props.extend(site.garden_props(&self.terrain, support, position));
+                }
+            }
+        }
         for z in 0..SECTION_SIZE {
             for y in 0..SECTION_SIZE {
                 let source = padding + size * (y + padding + size * (z + padding));
@@ -778,6 +793,9 @@ impl SectionGenerator {
                     continue;
                 }
                 let global = [origin[0] + x as i64, ground, origin[2] + z as i64];
+                if garden_supports.contains(&global) {
+                    continue;
+                }
                 let index = x + padding + size * (y as usize + padding + size * (z + padding));
                 let material = padded[index];
                 if original_ground.as_ref().is_some_and(|original| {

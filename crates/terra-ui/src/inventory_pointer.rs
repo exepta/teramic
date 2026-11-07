@@ -70,11 +70,30 @@ impl InventoryPointer {
         self.last_primary = None;
     }
 
-    pub(super) fn catalog_item(&self) -> Option<&str> {
+    pub(super) fn recipe_item(&self) -> Option<&str> {
         self.hovered
             .as_ref()
-            .filter(|hovered| hovered.command == "catalog" && !hovered.item.is_empty())
+            .filter(|hovered| {
+                !hovered.item.is_empty()
+                    && (hovered.command == "catalog"
+                        || matches!(
+                            hovered.command.as_str(),
+                            "slot" | "hotbar" | "container" | "equipment" | "recipe-preview"
+                        ))
+            })
             .map(|hovered| hovered.item.as_str())
+    }
+
+    pub(super) fn recipe_is_preview(&self) -> bool {
+        self.hovered
+            .as_ref()
+            .is_some_and(|hovered| hovered.command == "recipe-preview")
+    }
+
+    pub(super) fn recipe_is_catalog(&self) -> bool {
+        self.hovered
+            .as_ref()
+            .is_some_and(|hovered| hovered.command == "catalog")
     }
 
     pub(super) fn preview(
@@ -126,6 +145,48 @@ impl InventoryPointer {
                     } else if session
                         .container
                         .as_ref()
+                        .is_some_and(|c| c.cauldron.is_some())
+                    {
+                        terra_core::brewing::apply_gesture_reserved(
+                            &mut preview.player,
+                            &mut preview.halves[0],
+                            terra_core::containers::ContainerGesture::Click {
+                                slot,
+                                secondary: true,
+                            },
+                            crafting::reserved_counts(reservations),
+                        )
+                    } else if session
+                        .container
+                        .as_ref()
+                        .is_some_and(|c| c.campfire.is_some())
+                    {
+                        terra_core::campfire::apply_gesture_reserved(
+                            &mut preview.player,
+                            &mut preview.halves[0],
+                            terra_core::containers::ContainerGesture::Click {
+                                slot,
+                                secondary: true,
+                            },
+                            crafting::reserved_counts(reservations),
+                        )
+                    } else if session
+                        .container
+                        .as_ref()
+                        .is_some_and(|c| c.mixer.is_some())
+                    {
+                        terra_core::mixer::apply_gesture_reserved(
+                            &mut preview.player,
+                            &mut preview.halves[0],
+                            terra_core::containers::ContainerGesture::Click {
+                                slot,
+                                secondary: true,
+                            },
+                            crafting::reserved_counts(reservations),
+                        )
+                    } else if session
+                        .container
+                        .as_ref()
                         .is_some_and(|c| c.crusher.is_some())
                     {
                         terra_core::crusher::apply_gesture_reserved(
@@ -172,6 +233,48 @@ impl InventoryPointer {
                 *target = Some(*slot);
             }
             preview.player.drag(targets, false)
+        } else if session
+            .container
+            .as_ref()
+            .is_some_and(|c| c.cauldron.is_some())
+        {
+            terra_core::brewing::apply_gesture_reserved(
+                &mut preview.player,
+                &mut preview.halves[0],
+                terra_core::containers::ContainerGesture::Drag {
+                    slots: slots.clone(),
+                    secondary: false,
+                },
+                crafting::reserved_counts(reservations),
+            )
+        } else if session
+            .container
+            .as_ref()
+            .is_some_and(|c| c.campfire.is_some())
+        {
+            terra_core::campfire::apply_gesture_reserved(
+                &mut preview.player,
+                &mut preview.halves[0],
+                terra_core::containers::ContainerGesture::Drag {
+                    slots: slots.clone(),
+                    secondary: false,
+                },
+                crafting::reserved_counts(reservations),
+            )
+        } else if session
+            .container
+            .as_ref()
+            .is_some_and(|c| c.mixer.is_some())
+        {
+            terra_core::mixer::apply_gesture_reserved(
+                &mut preview.player,
+                &mut preview.halves[0],
+                terra_core::containers::ContainerGesture::Drag {
+                    slots: slots.clone(),
+                    secondary: false,
+                },
+                crafting::reserved_counts(reservations),
+            )
         } else if session
             .container
             .as_ref()
@@ -291,6 +394,7 @@ impl InventoryPointer {
 #[derive(Resource, Default)]
 pub(super) struct InventoryQueue {
     pub(super) owner: Option<[i64; 3]>,
+    pub(super) owner_view: Option<ContainerView>,
     pending: VecDeque<QueuedAction>,
     waiting: Option<PendingResponse>,
 }
@@ -308,14 +412,145 @@ impl InventoryQueue {
 
     pub(super) fn push_queued(&mut self, mut action: QueuedAction) {
         action.container = self.owner;
+        action.view = self.owner_view;
+        if let Some(last) = self.pending.back_mut()
+            && matches!((action.action,last.action),
+                (ServerAction::SetBrewingRecipe { station:a,.. },ServerAction::SetBrewingRecipe { station:b,.. })
+                | (ServerAction::SetCampfireLit { station:a,.. },ServerAction::SetCampfireLit { station:b,.. }) if a==b)
+        {
+            *last = action;
+            return;
+        }
+        if let ServerAction::SetMixerColor { station, .. } = action.action
+            && let Some(last) = self.pending.back_mut()
+            && matches!(last.action, ServerAction::SetMixerColor { station: previous, .. } if previous == station)
+        {
+            *last = action;
+            return;
+        }
+        if let ServerAction::SetFunnelFilter { station, .. } = action.action
+            && let Some(last) = self.pending.back_mut()
+            && matches!(last.action, ServerAction::SetFunnelFilter { station: previous, .. } if previous == station)
+        {
+            *last = action;
+            return;
+        }
+        if let ServerAction::SetTunnelRandom { station, .. } = action.action
+            && let Some(last) = self.pending.back_mut()
+            && matches!(last.action, ServerAction::SetTunnelRandom { station: previous, .. } if previous == station)
+        {
+            *last = action;
+            return;
+        }
+        if let ServerAction::SetDistributorFilter {
+            station, output, ..
+        } = action.action
+            && let Some(last) = self.pending.back_mut()
+            && matches!(last.action, ServerAction::SetDistributorFilter { station: previous, output: previous_output, .. } if previous == station && previous_output == output)
+        {
+            *last = action;
+            return;
+        }
         if self.pending.len() < 64 {
             self.pending.push_back(action);
         }
     }
 
+    pub(super) fn mixer_target(&self, station: [i64; 3]) -> Option<[u8; 3]> {
+        self.pending
+            .iter()
+            .rev()
+            .chain(self.waiting.iter().map(|waiting| &waiting.action))
+            .find_map(|queued| match queued.action {
+                ServerAction::SetMixerColor {
+                    station: owner,
+                    target,
+                } if owner == station => Some(target),
+                _ => None,
+            })
+    }
+
+    pub(super) fn funnel_filter(
+        &self,
+        station: [i64; 3],
+    ) -> Option<terra_core::logistics::FilterConfig> {
+        self.pending
+            .iter()
+            .rev()
+            .chain(self.waiting.iter().map(|waiting| &waiting.action))
+            .find_map(|queued| match queued.action {
+                ServerAction::SetFunnelFilter {
+                    station: owner,
+                    filter,
+                } if owner == station => Some(filter),
+                _ => None,
+            })
+    }
+
+    pub(super) fn distributor_filter(
+        &self,
+        station: [i64; 3],
+        output: u8,
+    ) -> Option<terra_core::logistics::FilterConfig> {
+        self.pending
+            .iter()
+            .rev()
+            .chain(self.waiting.iter().map(|waiting| &waiting.action))
+            .find_map(|queued| match queued.action {
+                ServerAction::SetDistributorFilter {
+                    station: owner,
+                    output: slot,
+                    filter,
+                } if owner == station && slot == output => Some(filter),
+                _ => None,
+            })
+    }
+
+    pub(super) fn tunnel_random(&self, station: [i64; 3]) -> Option<bool> {
+        self.pending
+            .iter()
+            .rev()
+            .chain(self.waiting.iter().map(|waiting| &waiting.action))
+            .find_map(|queued| match queued.action {
+                ServerAction::SetTunnelRandom {
+                    station: owner,
+                    random,
+                } if owner == station => Some(random),
+                _ => None,
+            })
+    }
+
     pub(super) fn clear(&mut self) {
         self.pending.clear();
         self.waiting = None;
+    }
+
+    pub(super) fn brewing_recipe(&self, station: [i64; 3]) -> Option<u16> {
+        self.pending
+            .iter()
+            .rev()
+            .chain(self.waiting.iter().map(|waiting| &waiting.action))
+            .find_map(|queued| match queued.action {
+                ServerAction::SetBrewingRecipe {
+                    station: owner,
+                    recipe,
+                } if owner == station => Some(recipe),
+                _ => None,
+            })
+    }
+
+    pub(super) fn campfire_lit(&self, station: [i64; 3]) -> Option<bool> {
+        self.pending
+            .iter()
+            .rev()
+            .chain(self.waiting.iter().map(|waiting| &waiting.action))
+            .find_map(|queued| match queued.action {
+                ServerAction::SetCampfireLit {
+                    station: owner,
+                    lit,
+                } if owner == station => Some(lit),
+                _ => None,
+            })
     }
 
     pub(super) fn is_empty(&self) -> bool {
@@ -324,18 +559,25 @@ impl InventoryQueue {
 
     pub(super) fn has_open_container(&self) -> bool {
         self.waiting.as_ref().is_some_and(|waiting| {
-            matches!(waiting.action.action, ServerAction::OpenContainer { .. })
-        }) || self
-            .pending
-            .iter()
-            .any(|queued| matches!(queued.action, ServerAction::OpenContainer { .. }))
+            matches!(
+                waiting.action.action,
+                ServerAction::OpenContainer { .. } | ServerAction::OpenCampfire { .. }
+            )
+        }) || self.pending.iter().any(|queued| {
+            matches!(
+                queued.action,
+                ServerAction::OpenContainer { .. } | ServerAction::OpenCampfire { .. }
+            )
+        })
     }
 
     pub(super) fn has_container_lifecycle(&self) -> bool {
         let lifecycle = |action| {
             matches!(
                 action,
-                ServerAction::OpenContainer { .. } | ServerAction::CloseContainer
+                ServerAction::OpenContainer { .. }
+                    | ServerAction::OpenCampfire { .. }
+                    | ServerAction::CloseContainer
             )
         };
         self.waiting
@@ -355,6 +597,7 @@ enum CursorGuard {
 #[derive(Clone, Copy)]
 pub(super) struct QueuedAction {
     container: Option<[i64; 3]>,
+    view: Option<ContainerView>,
     action: ServerAction,
     cursor: CursorGuard,
 }
@@ -367,6 +610,7 @@ impl QueuedAction {
     fn direct(action: ServerAction) -> Self {
         Self {
             container: None,
+            view: None,
             action,
             cursor: CursorGuard::Any,
         }
@@ -374,6 +618,7 @@ impl QueuedAction {
     pub(super) fn held(action: ServerAction, item: ItemKind) -> Self {
         Self {
             container: None,
+            view: None,
             action,
             cursor: CursorGuard::Holding(item),
         }
@@ -652,7 +897,7 @@ pub(super) fn finish_gesture(
             && session.as_ref().is_some_and(|s| s.container.is_some())
         {
             let mut slots = [None; 32];
-            let mut extra = [None; 31];
+            let mut extra = [None; terra_core::containers::CONTAINER_VIEW_SLOTS - 32];
             for (entry, slot) in slots.iter_mut().chain(extra.iter_mut()).zip(destinations) {
                 *entry = Some(slot);
             }
@@ -693,6 +938,7 @@ pub(super) fn finish_gesture(
             queue.push_queued(
                 QueuedAction {
                     container: None,
+                    view: None,
                     action: ServerAction::Wheel {
                         slot,
                         to_cursor: delta > 0.0,
@@ -803,6 +1049,44 @@ fn container_gesture(action: ServerAction) -> Option<terra_core::containers::Con
 }
 
 fn context_matches(action: QueuedAction, session: &ClientSession) -> bool {
+    if let ServerAction::SetBrewingRecipe { station, .. } = action.action {
+        return session
+            .container
+            .as_ref()
+            .is_some_and(|container| container.anchor == station && container.cauldron.is_some());
+    }
+    if let ServerAction::SetCampfireLit { station, .. } = action.action {
+        return session
+            .container
+            .as_ref()
+            .is_some_and(|container| container.anchor == station && container.campfire.is_some());
+    }
+    if let ServerAction::SetTunnelRandom { station, .. } = action.action {
+        return session.container.as_ref().is_some_and(|container| {
+            container.anchor == station && container.tunnel_random.is_some()
+        });
+    }
+    if let ServerAction::SetDistributorFilter {
+        station, output, ..
+    } = action.action
+    {
+        return output < 3
+            && session.container.as_ref().is_some_and(|container| {
+                container.anchor == station && container.distributor.is_some()
+            });
+    }
+    if let ServerAction::SetFunnelFilter { station, .. } = action.action {
+        return session
+            .container
+            .as_ref()
+            .is_some_and(|container| container.anchor == station && container.filter.is_some());
+    }
+    if let ServerAction::SetMixerColor { station, .. } = action.action {
+        return session
+            .container
+            .as_ref()
+            .is_some_and(|container| container.anchor == station && container.mixer.is_some());
+    }
     if let ServerAction::LoadCrushingRecipe { station, .. } = action.action {
         return session
             .container
@@ -817,6 +1101,9 @@ fn context_matches(action: QueuedAction, session: &ClientSession) -> bool {
     }
     container_gesture(action.action).is_none()
         || action.container == session.container.as_ref().map(|container| container.anchor)
+            && session.container.as_ref().is_none_or(|container| {
+                container.view == action.view.unwrap_or(ContainerView::Primary)
+            })
 }
 
 fn dispatch(
@@ -836,6 +1123,7 @@ fn dispatch(
                 inventory_revision: session.inventory.revision,
                 reserved: crafting::reserved_counts(reservations),
                 anchor,
+                view: queued.view.unwrap_or(ContainerView::Primary),
                 revisions: snapshot
                     .halves
                     .iter()
@@ -857,7 +1145,7 @@ fn dispatch(
 pub(super) fn suppress_transfer_scroll(
     state: Res<InventoryState>,
     keys: Res<ButtonInput<KeyCode>>,
-    events: Option<ResMut<Messages<bevy::picking::events::Pointer<bevy::picking::events::Scroll>>>>,
+    events: Option<ResMut<Messages<bevy::picking::events::PointerScroll>>>,
 ) {
     if state.open
         && (keys.pressed(KeyCode::ControlLeft) || keys.pressed(KeyCode::ControlRight))
@@ -1003,8 +1291,16 @@ mod tests {
         let snapshot = ContainerSnapshot {
             anchor,
             workbench: None,
+            view: ContainerView::Primary,
+            attached_campfire: false,
+            cauldron: None,
+            campfire: None,
+            tunnel_random: None,
             furnace: None,
             crusher: None,
+            mixer: None,
+            filter: None,
+            distributor: None,
             halves: [anchor, [-3, 60, 8]]
                 .into_iter()
                 .map(|position| ContainerHalf {
@@ -1017,7 +1313,10 @@ mod tests {
         let pointer = InventoryPointer {
             gesture: Some(PointerGesture::Distribute {
                 item,
-                slots: vec![27, 45],
+                slots: vec![
+                    terra_core::INVENTORY_SLOTS as u8,
+                    (terra_core::INVENTORY_SLOTS + terra_core::containers::CHEST_SLOTS) as u8,
+                ],
             }),
             ..default()
         };
@@ -1041,6 +1340,11 @@ mod tests {
         session.container = Some(ContainerSnapshot {
             anchor,
             workbench: None,
+            view: ContainerView::Primary,
+            attached_campfire: false,
+            cauldron: None,
+            campfire: None,
+            tunnel_random: None,
             furnace: Some(terra_core::furnace::FurnaceView {
                 progress: 0.0,
                 burn_remaining: 0.0,
@@ -1050,6 +1354,9 @@ mod tests {
                 vented: false,
             }),
             crusher: None,
+            mixer: None,
+            filter: None,
+            distributor: None,
             halves: vec![ContainerHalf {
                 position: anchor,
                 inventory: default(),

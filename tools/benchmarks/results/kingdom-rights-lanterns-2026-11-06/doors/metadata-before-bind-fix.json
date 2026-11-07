@@ -1,0 +1,43 @@
+{
+  "prepared_at": "2026-11-06T19:14:49.806911+00:00",
+  "private_root": "target/phase199-doors",
+  "argument": "--smoke-test-window-gallery",
+  "native_flag": "TERRA_DOOR_GALLERY",
+  "expected_captures": [
+    "doors-closed",
+    "doors-open",
+    "oak-double-door-open",
+    "birch-door-separated"
+  ],
+  "config_sha256": {
+    "servers.toml": "ba666a45e47263bf4eff0985256014e7a14e5dd3b95340b3f39cab9b5cb466ff",
+    "client.toml": "77f34b62651c2118a41d6698eb219e7be8e5bfa406ae8b61a58ae6bd3e7d4ca2",
+    "server.toml": "1f9890bdf6d4ef86086edd3fd6906f394f10d01d9b542bc7fa97c436d753ba51",
+    "world.toml": "10c618936c7fc770f1f568dfb6ae96e68a79bdf8707b86f495628f1a4320216a",
+    "graphics.toml": "967fa23c553bd06769559a6ad7fee882a479d2d7e1bf3453e569e5904f5a5887",
+    "controls.toml": "af057e943a52520848c93f3a0e4354863e7d44d3b751f6e6010fbddf48e4b2ca",
+    "audio.toml": "e483f0be5ffe3203fc4d86a8506eb0515bf300842ecb9ce89d4c25f145b0b94d",
+    "multiplayer.toml": "e187160ce08807e85d8cdce8a1bc2c33a017915c106ed2b251a1daf7b52f06f9",
+    "gameplay.toml": "c7ff511ad6b06010ca0b287fe35cda01e9705611b833d10a067a1eee1b309016"
+  },
+  "source_sha256": {
+    "apps/client/src/window_gallery_smoke.rs": "3da87fd92a177a393b99aad19b52e265aeb36e1019ac7c23c71993748edf671f",
+    "crates/terra-world/src/objects/doors.rs": "2ce6aadcb1f4e3a1fa213f3b1b39c024bb88c44f093e817c465b6518eb4c656e",
+    "crates/terra-render/src/openings.rs": "214a64608124c176d67ab0f4dd70714eb516951f79fec84a7e0c2b8cce2973a5",
+    "crates/terra-render/src/openings/windows.rs": "6893717cd28bfc2598eb11e787c815d5d1ca13badc904e1c37ba1e5fc71e0034"
+  },
+  "status": "failed",
+  "environment": {
+    "TERRA_CONFIG_DIR": "/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/target/phase199-doors/configs",
+    "TERRA_MENU_CONFIG_DIR": "/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/target/phase199-doors/configs",
+    "TERRA_PROFILE_FILE": "/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/target/phase199-doors/profile.toml",
+    "TERRA_WORLD_DIR": "/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/target/phase199-doors/worlds",
+    "TERRA_ASSET_DIR": "/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/assets",
+    "TERRA_CAPTURE_DIR": "/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/tools/benchmarks/results/kingdom-rights-lanterns-2026-11-06/doors",
+    "TERRA_BENCH_GRAPHICS": "1",
+    "TERRA_COMPUTE_THREADS": "4",
+    "TERRA_DOOR_GALLERY": "1"
+  },
+  "exit_code": 1,
+  "captures": {}
+}

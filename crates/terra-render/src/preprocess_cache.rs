@@ -1,4 +1,4 @@
-//! Reuse stock Bevy preprocessing bindings, not the per-frame GPU data they bind.
+//! Smoke-only experiment: reuse stock bindings, not the per-frame GPU data they bind.
 use std::{
     any::TypeId,
     collections::{HashMap, HashSet},
@@ -16,14 +16,14 @@ use bevy::{
     pbr::{
         BinUnpackingBindGroups, BuildIndirectParametersBindGroups, MeshCullingDataBuffer,
         MeshInputUniform, MeshUniform, PreprocessBindGroups, PreprocessPipelines,
-        prepare_preprocess_bind_groups, prepare_preprocess_pipelines,
+        UniformAllocationBindGroups, prepare_preprocess_bind_groups, prepare_preprocess_pipelines,
     },
     prelude::*,
     render::{
         Render, RenderApp, RenderStartup, RenderSystems,
         batching::gpu_preprocessing::{
-            BatchedInstanceBuffers, BinUnpackingBuffers, IndirectParametersBuffers,
-            PreprocessWorkItemBuffers,
+            BatchedInstanceBuffers, IndirectParametersBuffers, IndirectParametersBuildJobs,
+            PreprocessWorkItemBuffers, SceneUnpackingBuffers,
         },
         render_resource::{
             BindGroupLayoutId, BindingResource, Buffer, BufferId, PipelineCache, TextureViewId,
@@ -56,6 +56,8 @@ fn binding(binding: Option<BindingResource<'_>>, source: Option<&Buffer>) -> Bin
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 struct Snapshot {
     global: Vec<Binding>,
+    unpack_global: Vec<Binding>,
+    build_global: Vec<Binding>,
     phases: HashMap<TypeId, Vec<Binding>>,
     work: HashMap<(TypeId, RetainedViewEntity), Vec<Binding>>,
     unpack: HashMap<(TypeId, RetainedViewEntity), Vec<Binding>>,
@@ -73,19 +75,25 @@ struct CachedFrame {
     signature: Snapshot,
     views: HashMap<RetainedViewEntity, PreprocessBindGroups>,
     unpacked: BinUnpackingBindGroups,
+    allocated: UniformAllocationBindGroups,
     indirect: Option<BuildIndirectParametersBindGroups>,
 }
 #[derive(Component)]
+#[component(storage = "SparseSet")]
 struct NeedsBindings;
 impl Cache {
     fn select_buffers(
         &mut self,
         next: &Snapshot,
         unpacked: &mut BinUnpackingBindGroups,
+        allocated: &mut UniformAllocationBindGroups,
         built: Option<&mut BuildIndirectParametersBindGroups>,
     ) -> bool {
         let matches = |signature: &Snapshot| {
-            signature.global == next.global && !phase_buffers_changed(signature, next)
+            signature.global == next.global
+                && signature.unpack_global == next.unpack_global
+                && signature.build_global == next.build_global
+                && !phase_buffers_changed(signature, next)
         };
         if self
             .3
@@ -94,12 +102,14 @@ impl Cache {
         {
             let old = self.3.take().unwrap();
             let unpacked = std::mem::replace(unpacked, old.unpacked);
+            let allocated = std::mem::replace(allocated, old.allocated);
             let indirect =
                 built.map(|current| std::mem::replace(current, old.indirect.unwrap_or_default()));
             self.3 = self.0.take().map(|signature| CachedFrame {
                 signature,
                 views: std::mem::take(&mut self.2),
                 unpacked,
+                allocated,
                 indirect,
             });
             self.0 = Some(old.signature);
@@ -107,10 +117,14 @@ impl Cache {
             true
         } else {
             if self.0.as_ref().is_some_and(|old| !matches(old)) {
-                self.3 = self.0.take().map(|signature| CachedFrame {
-                    signature,
-                    views: std::mem::take(&mut self.2),
-                    unpacked: std::mem::take(unpacked),
+                // Keep the current view table for the dependency diff. A single
+                // phase reallocation must not discard every unrelated view.
+                // These clones retain handles, not new GPU bind groups.
+                self.3 = self.0.as_ref().map(|signature| CachedFrame {
+                    signature: signature.clone(),
+                    views: self.2.clone(),
+                    unpacked: unpacked.clone(),
+                    allocated: allocated.clone(),
                     indirect: built.map(std::mem::take),
                 });
             }
@@ -126,6 +140,8 @@ impl Cache {
             info!(
                 complete,
                 global = previous.global != next.global,
+                unpack_global = previous.unpack_global != next.unpack_global,
+                build_global = previous.build_global != next.build_global,
                 phases = previous.phases != next.phases,
                 work = previous.work != next.work,
                 unpack = previous.unpack != next.unpack,
@@ -179,7 +195,8 @@ struct Inputs<'w, 's> {
     >,
     buffers: Res<'w, BatchedInstanceBuffers<MeshUniform, MeshInputUniform>>,
     indirect: Res<'w, IndirectParametersBuffers>,
-    unpack: Res<'w, BinUnpackingBuffers>,
+    unpack: Res<'w, SceneUnpackingBuffers>,
+    jobs: Res<'w, IndirectParametersBuildJobs>,
     culling: Res<'w, MeshCullingDataBuffer>,
     ranges: Res<'w, RenderVisibilityRanges>,
     uniforms: Res<'w, ViewUniforms>,
@@ -188,6 +205,7 @@ struct Inputs<'w, 's> {
     pipeline_cache: Res<'w, PipelineCache>,
     built: Option<ResMut<'w, BuildIndirectParametersBindGroups>>,
     unpacked: ResMut<'w, BinUnpackingBindGroups>,
+    allocated: ResMut<'w, UniformAllocationBindGroups>,
 }
 
 fn changed(mut inputs: Inputs, mut cache: ResMut<Cache>, mut commands: Commands) {
@@ -206,8 +224,12 @@ fn changed(mut inputs: Inputs, mut cache: ResMut<Cache>, mut commands: Commands)
                 inputs.uniforms.uniforms.buffer(),
             ),
             buffer(inputs.previous.uniforms.buffer()),
-            buffer(inputs.unpack.bin_unpacking_metadata.buffer()),
         ],
+        unpack_global: vec![
+            buffer(inputs.unpack.bin_unpacking_metadata.buffer()),
+            buffer(inputs.unpack.uniform_allocation_metadata.buffer()),
+        ],
+        build_global: vec![buffer(inputs.jobs.buffer())],
         ..Default::default()
     };
     let p = &inputs.pipelines;
@@ -216,14 +238,29 @@ fn changed(mut inputs: Inputs, mut cache: ResMut<Cache>, mut commands: Commands)
         &p.gpu_frustum_culling_preprocess.bind_group_layout,
         &p.early_gpu_occlusion_culling_preprocess.bind_group_layout,
         &p.late_gpu_occlusion_culling_preprocess.bind_group_layout,
+    ] {
+        next.global.push(Binding::Layout(
+            inputs.pipeline_cache.get_bind_group_layout(layout).id(),
+        ));
+    }
+    for layout in [
+        &p.bin_unpacking.bind_group_layout,
+        &p.uniform_allocation.local_scan.bind_group_layout,
+        &p.uniform_allocation.global_scan.bind_group_layout,
+        &p.uniform_allocation.fan.bind_group_layout,
+    ] {
+        next.unpack_global.push(Binding::Layout(
+            inputs.pipeline_cache.get_bind_group_layout(layout).id(),
+        ));
+    }
+    for layout in [
         &p.gpu_frustum_culling_build_indexed_indirect_params
             .bind_group_layout,
         &p.gpu_frustum_culling_build_non_indexed_indirect_params
             .bind_group_layout,
         &p.early_phase.reset_indirect_batch_sets.bind_group_layout,
-        &p.bin_unpacking.bind_group_layout,
     ] {
-        next.global.push(Binding::Layout(
+        next.build_global.push(Binding::Layout(
             inputs.pipeline_cache.get_bind_group_layout(layout).id(),
         ));
     }
@@ -252,15 +289,17 @@ fn changed(mut inputs: Inputs, mut cache: ResMut<Cache>, mut commands: Commands)
                 ($class:expr) => {
                     signature.extend([
                         buffer($class.data_buffer()),
-                        buffer($class.cpu_metadata_buffer()),
-                        buffer($class.gpu_metadata_buffer()),
+                        buffer($class.metadata_buffer()),
                         buffer($class.batch_sets_buffer()),
-                        Binding::Count($class.batch_count()),
                     ]);
                 };
             }
             class!(parameters.indexed);
             class!(parameters.non_indexed);
+            // Only the non-indexed metadata binding is sized by batch_count.
+            // Indexed counts stay in GPU job data and dispatch resources;
+            // changing them alone does not alter a bind group resource/range.
+            signature.push(Binding::Count(parameters.non_indexed.batch_count()));
         }
         next.phases.insert(phase, signature);
         for (&view, work) in &buffers.work_item_buffers {
@@ -308,28 +347,39 @@ fn changed(mut inputs: Inputs, mut cache: ResMut<Cache>, mut commands: Commands)
         {
             signature.extend([
                 buffer(Some(&job.render_binned_mesh_instance_buffer)),
-                buffer(Some(&job.bin_index_to_indirect_parameters_offset_buffer)),
+                buffer(Some(&job.bin_index_to_bin_metadata_index_buffer)),
+                buffer(Some(&job.bin_metadata_buffer)),
+                buffer(Some(&job.fan_buffer)),
                 Binding::Count(job.bin_unpacking_metadata_index.uniform_offset() as usize),
+                Binding::Count(job.uniform_allocation_metadata_index.uniform_offset() as usize),
+                Binding::Count(job.bin_count as usize),
                 Binding::Count(job.mesh_instance_count as usize),
             ]);
         }
         if next.views.contains(&key.view) && next.work.contains_key(&(key.phase, key.view)) {
-            complete &= inputs.unpacked.contains_key(key);
+            complete &= inputs.unpacked.contains_key(key) && inputs.allocated.contains_key(key);
             next.unpack.insert((key.phase, key.view), signature);
         }
     }
     // Equality is structural and order-independent, not a probabilistic hash.
     // Bevy collect_buffers_for_phase swaps two persistent buffer sets. Compare
     // with the frame owning this set, not invariably with the opposite set.
-    let reused = cache.select_buffers(&next, &mut inputs.unpacked, inputs.built.as_deref_mut());
+    let reused = cache.select_buffers(
+        &next,
+        &mut inputs.unpacked,
+        &mut inputs.allocated,
+        inputs.built.as_deref_mut(),
+    );
     let previous = cache.0.as_ref();
-    let shared =
-        previous.is_none_or(|old| old.global != next.global || phase_buffers_changed(old, &next));
+    let shared = previous.is_none_or(|old| old.global != next.global);
     let build = inputs.built.as_ref().is_none_or(|b| b.is_empty())
-        || previous.is_none_or(|old| old.phases != next.phases);
+        || previous
+            .is_none_or(|old| old.phases != next.phases || old.build_global != next.build_global);
     let mut required = previous.map_or_else(HashSet::new, |old| changed_views(old, &next));
     for key in inputs.unpack.view_phase_buffers.keys() {
-        if next.unpack.contains_key(&(key.phase, key.view)) && !inputs.unpacked.contains_key(key) {
+        if next.unpack.contains_key(&(key.phase, key.view))
+            && (!inputs.unpacked.contains_key(key) || !inputs.allocated.contains_key(key))
+        {
             required.insert(key.view);
         }
     }
@@ -341,17 +391,7 @@ fn changed(mut inputs: Inputs, mut cache: ResMut<Cache>, mut commands: Commands)
     }
     // The stock helper also prepares shared indirect-parameter bindings. A
     // count-only change needs one indirect view, not all shadow cubemap faces.
-    let is_indirect = |id| {
-        next.work
-            .iter()
-            .any(|((_, view), work)| *view == id && work.first() == Some(&Binding::Count(1)))
-    };
-    if build
-        && !required.iter().any(|&id| is_indirect(id))
-        && let Some(id) = next.views.iter().copied().find(|&id| is_indirect(id))
-    {
-        required.insert(id);
-    }
+    include_indirect_builder_view(&mut required, &next, build);
     for (entity, view, has_groups) in &inputs.views {
         let id = view.retained_view_entity;
         if required.contains(&id) {
@@ -368,7 +408,28 @@ fn changed(mut inputs: Inputs, mut cache: ResMut<Cache>, mut commands: Commands)
     inputs.unpacked.retain(|key, _| {
         next.views.contains(&key.view) && next.work.contains_key(&(key.phase, key.view))
     });
+    inputs.allocated.retain(|key, _| {
+        next.views.contains(&key.view) && next.work.contains_key(&(key.phase, key.view))
+    });
     cache.needs_rebuild(next, complete);
+}
+
+fn include_indirect_builder_view(
+    required: &mut HashSet<RetainedViewEntity>,
+    next: &Snapshot,
+    build: bool,
+) {
+    let is_indirect = |id| {
+        next.work
+            .iter()
+            .any(|((_, view), work)| *view == id && work.first() == Some(&Binding::Count(1)))
+    };
+    if build
+        && !required.iter().any(|&id| is_indirect(id))
+        && let Some(id) = next.views.iter().copied().find(|&id| is_indirect(id))
+    {
+        required.insert(id);
+    }
 }
 
 fn phase_buffers_changed(old: &Snapshot, next: &Snapshot) -> bool {
@@ -400,6 +461,37 @@ fn changed_views(old: &Snapshot, next: &Snapshot) -> HashSet<RetainedViewEntity>
     let mut result = HashSet::new();
     different(&old.work, &next.work, &mut result);
     different(&old.unpack, &next.unpack, &mut result);
+    let changed_phases: HashSet<_> = old
+        .phases
+        .keys()
+        .chain(next.phases.keys())
+        .filter(
+            |&phase| match (old.phases.get(phase), next.phases.get(phase)) {
+                (Some(previous), Some(current)) => !previous
+                    .iter()
+                    .filter(|value| !matches!(value, Binding::Count(_)))
+                    .eq(current
+                        .iter()
+                        .filter(|value| !matches!(value, Binding::Count(_)))),
+                _ => true,
+            },
+        )
+        .copied()
+        .collect();
+    for &(phase, view) in old.work.keys().chain(next.work.keys()) {
+        if changed_phases.contains(&phase) {
+            result.insert(view);
+        }
+    }
+    if old.unpack_global != next.unpack_global {
+        for ((_, view), jobs) in old.unpack.iter().chain(&next.unpack) {
+            // The leading count is present even when both job lists are empty.
+            // Empty outputs contain no bind groups referencing these buffers.
+            if jobs.len() > 1 {
+                result.insert(*view);
+            }
+        }
+    }
     for (view, depth) in &next.depth {
         if old.depth.get(view) != Some(depth) {
             result.insert(*view);
@@ -422,13 +514,15 @@ struct PrepareInputs<'w, 's> {
     pipeline_cache: Res<'w, PipelineCache>,
     buffers: Res<'w, BatchedInstanceBuffers<MeshUniform, MeshInputUniform>>,
     indirect: Res<'w, IndirectParametersBuffers>,
-    unpack: Res<'w, BinUnpackingBuffers>,
+    jobs: Res<'w, IndirectParametersBuildJobs>,
+    unpack: Res<'w, SceneUnpackingBuffers>,
     culling: Res<'w, MeshCullingDataBuffer>,
     ranges: Res<'w, RenderVisibilityRanges>,
     uniforms: Res<'w, ViewUniforms>,
     previous: Res<'w, PreviousViewUniforms>,
     pipelines: Res<'w, PreprocessPipelines>,
     unpacked: ResMut<'w, BinUnpackingBindGroups>,
+    allocated: ResMut<'w, UniformAllocationBindGroups>,
 }
 fn prepare(
     commands: Commands,
@@ -450,6 +544,7 @@ fn prepare(
         inputs.pipeline_cache,
         inputs.buffers,
         inputs.indirect,
+        inputs.jobs,
         inputs.unpack,
         inputs.culling,
         inputs.ranges,
@@ -457,6 +552,7 @@ fn prepare(
         inputs.previous,
         inputs.pipelines,
         inputs.unpacked,
+        inputs.allocated,
     );
 }
 
@@ -492,10 +588,19 @@ fn cached<A: IntoSystem<(), (), M>, M, B: IntoSystem<(), (), N>, N>(
         "cached_preprocess_bind_groups".into(),
     )
 }
+pub(crate) fn experiment_enabled() -> bool {
+    experiment_requested(
+        std::env::args().any(|argument| argument.starts_with("--smoke-test")),
+        std::env::var("TERRA_PREPROCESS_CACHE").ok().as_deref(),
+    )
+}
+
+fn experiment_requested(smoke: bool, value: Option<&str>) -> bool {
+    smoke && value == Some("1")
+}
+
 pub(crate) fn install(app: &mut App) {
-    if std::env::args().any(|a| a.starts_with("--smoke-test"))
-        && std::env::var("TERRA_PREPROCESS_CACHE").is_ok_and(|v| v == "0")
-    {
+    if !experiment_enabled() {
         return;
     }
     if let Some(render) = app.get_sub_app_mut(RenderApp) {
@@ -531,10 +636,40 @@ fn replace(world: &mut World) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn cached_bindings_require_explicit_smoke_opt_in_and_never_enable_during_gameplay() {
+        assert!(!experiment_requested(false, None));
+        assert!(!experiment_requested(false, Some("1")));
+        assert!(!experiment_requested(true, None));
+        assert!(!experiment_requested(true, Some("0")));
+        assert!(!experiment_requested(true, Some("true")));
+        assert!(experiment_requested(true, Some("1")));
+    }
+
+    #[test]
+    fn binding_markers_preserve_dense_view_order_and_metadata_offsets() {
+        let mut world = World::new();
+        let views: Vec<_> = (0..24).map(|_| world.spawn(Created).id()).collect();
+        let mut query = world.query_filtered::<Entity, With<Created>>();
+        let original: Vec<_> = query.iter(&world).collect();
+        for frame in 0..30 {
+            for (i, &entity) in views.iter().enumerate() {
+                if (i + frame) % 3 == 0 {
+                    world.entity_mut(entity).insert(NeedsBindings);
+                } else {
+                    world.entity_mut(entity).remove::<NeedsBindings>();
+                }
+            }
+            assert_eq!(query.iter(&world).collect::<Vec<_>>(), original);
+        }
+    }
+
     #[test]
     fn alternating_gpu_buffers_reuse_only_their_own_bounded_cache_entry() {
         let mut cache = Cache::default();
         let mut unpacked = BinUnpackingBindGroups::default();
+        let mut allocated = UniformAllocationBindGroups::default();
         let a = Snapshot {
             global: vec![buffer(None)],
             ..Default::default()
@@ -547,19 +682,19 @@ mod tests {
             global: vec![buffer(None); 3],
             ..Default::default()
         };
-        assert!(!cache.select_buffers(&a, &mut unpacked, None));
+        assert!(!cache.select_buffers(&a, &mut unpacked, &mut allocated, None));
         cache.needs_rebuild(a.clone(), true);
-        assert!(!cache.select_buffers(&b, &mut unpacked, None));
-        assert!(cache.0.is_none());
+        assert!(!cache.select_buffers(&b, &mut unpacked, &mut allocated, None));
+        assert_eq!(cache.0.as_ref(), Some(&a));
         assert_eq!(cache.3.as_ref().unwrap().signature, a);
         cache.needs_rebuild(b.clone(), true);
         for next in [&a, &b, &a, &b] {
-            assert!(cache.select_buffers(next, &mut unpacked, None));
+            assert!(cache.select_buffers(next, &mut unpacked, &mut allocated, None));
             assert_eq!(cache.0.as_ref(), Some(next));
             cache.needs_rebuild(next.clone(), true);
         }
-        assert!(!cache.select_buffers(&c, &mut unpacked, None));
-        assert!(cache.0.is_none());
+        assert!(!cache.select_buffers(&c, &mut unpacked, &mut allocated, None));
+        assert_eq!(cache.0.as_ref(), Some(&b));
         assert_eq!(cache.3.as_ref().unwrap().signature, b);
     }
     #[test]
@@ -583,6 +718,179 @@ mod tests {
         assert!(changed_views(&previous, &next).contains(&other));
         next.phases.get_mut(&phase).unwrap()[0] = Binding::Buffer(Some(BufferId::new()), 0, None);
         assert!(phase_buffers_changed(&previous, &next));
+    }
+
+    fn view(index: u32) -> RetainedViewEntity {
+        RetainedViewEntity::new(Entity::PLACEHOLDER.into(), None, index)
+    }
+
+    #[test]
+    fn phase_reallocation_and_removal_only_invalidate_that_phases_views() {
+        let opaque = TypeId::of::<u8>();
+        let shadow = TypeId::of::<u16>();
+        let mut previous = Snapshot::default();
+        previous.phases.insert(opaque, vec![buffer(None)]);
+        previous.phases.insert(shadow, vec![buffer(None)]);
+        previous
+            .work
+            .insert((opaque, view(0)), vec![Binding::Count(1)]);
+        previous
+            .work
+            .insert((shadow, view(1)), vec![Binding::Count(1)]);
+        previous
+            .work
+            .insert((shadow, view(2)), vec![Binding::Count(1)]);
+        let mut next = previous.clone();
+        next.phases.get_mut(&opaque).unwrap()[0] = Binding::Buffer(Some(BufferId::new()), 0, None);
+        assert_eq!(changed_views(&previous, &next), HashSet::from([view(0)]));
+        next = previous.clone();
+        next.phases.remove(&shadow);
+        assert_eq!(
+            changed_views(&previous, &next),
+            HashSet::from([view(1), view(2)])
+        );
+    }
+
+    #[test]
+    fn new_phase_buffers_preserve_cached_unrelated_views_instead_of_starting_over() {
+        let opaque = TypeId::of::<u8>();
+        let shadow = TypeId::of::<u16>();
+        let mut previous = Snapshot::default();
+        previous.phases.insert(opaque, vec![buffer(None)]);
+        previous.phases.insert(shadow, vec![buffer(None)]);
+        previous
+            .work
+            .insert((opaque, view(0)), vec![Binding::Count(1)]);
+        previous
+            .work
+            .insert((shadow, view(1)), vec![Binding::Count(1)]);
+        let mut cache = Cache(Some(previous.clone()), 0, HashMap::new(), None);
+        for id in [view(0), view(1)] {
+            cache.2.insert(id, PreprocessBindGroups(Default::default()));
+        }
+        let mut next = previous.clone();
+        next.phases.get_mut(&opaque).unwrap()[0] = Binding::Buffer(Some(BufferId::new()), 0, None);
+        assert!(!cache.select_buffers(
+            &next,
+            &mut BinUnpackingBindGroups::default(),
+            &mut UniformAllocationBindGroups::default(),
+            None,
+        ));
+        assert_eq!(cache.0.as_ref(), Some(&previous));
+        assert!(cache.2.contains_key(&view(1)));
+        assert_eq!(
+            changed_views(cache.0.as_ref().unwrap(), &next),
+            HashSet::from([view(0)])
+        );
+        assert_eq!(cache.3.as_ref().unwrap().views.len(), 2);
+    }
+
+    #[test]
+    fn indirect_job_binding_changes_need_only_one_indirect_view() {
+        let phase = TypeId::of::<u8>();
+        let mut previous = Snapshot::default();
+        previous.build_global.push(buffer(None));
+        for index in 0..8 {
+            previous.views.insert(view(index));
+            previous
+                .work
+                .insert((phase, view(index)), vec![Binding::Count(1)]);
+        }
+        let mut next = previous.clone();
+        next.build_global[0] = Binding::Buffer(Some(BufferId::new()), 0, None);
+        let mut required = changed_views(&previous, &next);
+        assert!(required.is_empty());
+        include_indirect_builder_view(&mut required, &next, true);
+        assert_eq!(required.len(), 1);
+        include_indirect_builder_view(&mut required, &next, true);
+        assert_eq!(required.len(), 1);
+        let mut no_build = HashSet::new();
+        include_indirect_builder_view(&mut no_build, &next, false);
+        assert!(no_build.is_empty());
+    }
+
+    #[test]
+    fn build_and_unpack_buffers_keep_separate_bounded_history_entries() {
+        for unpack in [false, true] {
+            let mut cache = Cache::default();
+            let mut unpacked = BinUnpackingBindGroups::default();
+            let mut allocated = UniformAllocationBindGroups::default();
+            let a = Snapshot::default();
+            let mut b = a.clone();
+            if unpack {
+                b.unpack_global.push(buffer(None));
+            } else {
+                b.build_global.push(buffer(None));
+            }
+            assert!(!cache.select_buffers(&a, &mut unpacked, &mut allocated, None));
+            cache.needs_rebuild(a.clone(), true);
+            assert!(!cache.select_buffers(&b, &mut unpacked, &mut allocated, None));
+            cache.needs_rebuild(b.clone(), true);
+            assert!(cache.select_buffers(&a, &mut unpacked, &mut allocated, None));
+            assert_eq!(cache.0.as_ref(), Some(&a));
+            assert!(cache.select_buffers(&b, &mut unpacked, &mut allocated, None));
+            assert_eq!(cache.0.as_ref(), Some(&b));
+        }
+    }
+
+    #[test]
+    fn unpack_metadata_buffers_only_invalidate_views_with_actual_jobs() {
+        let phase = TypeId::of::<u8>();
+        let mut previous = Snapshot::default();
+        previous.unpack_global.push(buffer(None));
+        previous
+            .unpack
+            .insert((phase, view(0)), vec![Binding::Count(0)]);
+        previous.unpack.insert(
+            (phase, view(1)),
+            vec![Binding::Count(1), buffer(None), Binding::Count(12)],
+        );
+        let mut next = previous.clone();
+        next.unpack_global[0] = Binding::Buffer(Some(BufferId::new()), 0, None);
+        assert_eq!(changed_views(&previous, &next), HashSet::from([view(1)]));
+    }
+
+    #[test]
+    fn counts_binding_ranges_and_metadata_offsets_remain_part_of_invalidation() {
+        let phase = TypeId::of::<u8>();
+        let id = view(0);
+        let mut previous = Snapshot::default();
+        previous
+            .phases
+            .insert(phase, vec![buffer(None), Binding::Count(8)]);
+        previous.work.insert(
+            (phase, id),
+            vec![Binding::Count(1), buffer(None), Binding::Count(16)],
+        );
+        previous.unpack.insert(
+            (phase, id),
+            vec![
+                Binding::Count(1),
+                buffer(None),
+                Binding::Count(256),
+                Binding::Count(512),
+                Binding::Count(8),
+                Binding::Count(16),
+            ],
+        );
+        let mut next = previous.clone();
+        next.phases.get_mut(&phase).unwrap()[1] = Binding::Count(9);
+        assert!(!phase_buffers_changed(&previous, &next));
+        assert_ne!(
+            previous.phases, next.phases,
+            "sized metadata still rebuilds shared bindings"
+        );
+        for slot in [2, 3, 4, 5] {
+            next = previous.clone();
+            next.unpack.get_mut(&(phase, id)).unwrap()[slot] = Binding::Count(1024);
+            assert_eq!(changed_views(&previous, &next), HashSet::from([id]));
+        }
+        next = previous.clone();
+        next.work.get_mut(&(phase, id)).unwrap()[2] = Binding::Count(17);
+        assert_eq!(changed_views(&previous, &next), HashSet::from([id]));
+        next = previous.clone();
+        next.work.get_mut(&(phase, id)).unwrap()[1] = Binding::Buffer(None, 16, Some(128));
+        assert_eq!(changed_views(&previous, &next), HashSet::from([id]));
     }
     #[test]
     fn unchanged_signature_reuses_bindings_but_sizes_views_and_missing_outputs_invalidate() {

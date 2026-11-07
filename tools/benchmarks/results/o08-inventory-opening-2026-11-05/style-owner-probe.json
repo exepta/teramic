@@ -1,0 +1,1929 @@
+{
+  "classification": "temporary private-source diagnostic instrumentation with the subsequently rejected component extraction, separate from production A/B; external source restored after probe",
+  "events": [
+    {
+      "fields": {
+        "cold_owners": 9,
+        "full_owners": 9,
+        "partial_owners": 7,
+        "selector_snapshot_ms": 0.075422,
+        "total_ms": 6.3562840000000005
+      },
+      "kind": "overall",
+      "raw": "2026-11-05T15:36:03.190709Z  INFO tilt_ui_runtime::style::plugin: O08 temporary overall CSS trace total_ms=6.3562840000000005 selector_snapshot_ms=0.075422 full_owners=9 partial_owners=7 cold_owners=9"
+    },
+    {
+      "fields": {
+        "cold_owners": 9,
+        "full_owners": 9,
+        "partial_owners": 0,
+        "selector_snapshot_ms": 0.103492,
+        "total_ms": 7.7906010000000006
+      },
+      "kind": "overall",
+      "raw": "2026-11-05T15:36:03.541042Z  INFO tilt_ui_runtime::style::plugin: O08 temporary overall CSS trace total_ms=7.7906010000000006 selector_snapshot_ms=0.103492 full_owners=9 partial_owners=0 cold_owners=9"
+    },
+    {
+      "fields": {
+        "cold_owners": 9,
+        "full_owners": 9,
+        "partial_owners": 0,
+        "selector_snapshot_ms": 0.273525,
+        "total_ms": 6.808561999999999
+      },
+      "kind": "overall",
+      "raw": "2026-11-05T15:36:03.625113Z  INFO tilt_ui_runtime::style::plugin: O08 temporary overall CSS trace total_ms=6.808561999999999 selector_snapshot_ms=0.273525 full_owners=9 partial_owners=0 cold_owners=9"
+    },
+    {
+      "fields": {
+        "affected_nodes": 2,
+        "cascade_ms": 0.655992,
+        "changed_nodes": 0,
+        "component": "ComponentId(6",
+        "full": true,
+        "metadata_changed": false,
+        "owner": "1143v1",
+        "reconcile_ms": 0.087062,
+        "resolve_ms": 1.202984,
+        "scrollbar_ms": 0.037920999999999996,
+        "setup_ms": 0.008,
+        "stylesheet": "tilt-ui://components/hud-slot.component.css",
+        "template": "tilt-ui://components/hud-slot.component.html",
+        "total_ms": 2.04936,
+        "view_nodes": 2
+      },
+      "kind": "owner",
+      "raw": "2026-11-05T15:36:04.135034Z  INFO tilt_ui_runtime::style::plugin: O08 temporary owner CSS trace owner=1143v1 component=Some(ComponentId(6)) template=Some(tilt-ui://components/hud-slot.component.html) stylesheet=Some(tilt-ui://components/hud-slot.component.css) full=true metadata_changed=false changed_nodes=0 view_nodes=2 affected_nodes=2 total_ms=2.04936 setup_ms=0.008 cascade_ms=0.655992 scrollbar_ms=0.037920999999999996 resolve_ms=1.202984 reconcile_ms=0.087062"
+    },
+    {
+      "fields": {
+        "affected_nodes": 7,
+        "cascade_ms": 1.812195,
+        "changed_nodes": 0,
+        "component": "ComponentId(10",
+        "full": true,
+        "metadata_changed": false,
+        "owner": "1248v0",
+        "reconcile_ms": 0.085621,
+        "resolve_ms": 1.3596570000000001,
+        "scrollbar_ms": 0.073561,
+        "setup_ms": 0.018601,
+        "stylesheet": "tilt-ui://components/inventory-slot.component.css",
+        "template": "tilt-ui://components/inventory-slot.component.html",
+        "total_ms": 3.3536360000000003,
+        "view_nodes": 7
+      },
+      "kind": "owner",
+      "raw": "2026-11-05T15:36:04.143662Z  INFO tilt_ui_runtime::style::plugin: O08 temporary owner CSS trace owner=1248v0 component=Some(ComponentId(10)) template=Some(tilt-ui://components/inventory-slot.component.html) stylesheet=Some(tilt-ui://components/inventory-slot.component.css) full=true metadata_changed=false changed_nodes=0 view_nodes=7 affected_nodes=7 total_ms=3.3536360000000003 setup_ms=0.018601 cascade_ms=1.812195 scrollbar_ms=0.073561 resolve_ms=1.3596570000000001 reconcile_ms=0.085621"
+    },
+    {
+      "fields": {
+        "affected_nodes": 8,
+        "cascade_ms": 1.244675,
+        "changed_nodes": 0,
+        "component": "ComponentId(10",
+        "full": true,
+        "metadata_changed": false,
+        "owner": "1645v0",
+        "reconcile_ms": 0.058811999999999996,
+        "resolve_ms": 0.726554,
+        "scrollbar_ms": 0.02333,
+        "setup_ms": 0.00274,
+        "stylesheet": "tilt-ui://components/inventory-slot.component.css",
+        "template": "tilt-ui://components/inventory-slot.component.html",
+        "total_ms": 2.0591009999999996,
+        "view_nodes": 8
+      },
+      "kind": "owner",
+      "raw": "2026-11-05T15:36:04.173439Z  INFO tilt_ui_runtime::style::plugin: O08 temporary owner CSS trace owner=1645v0 component=Some(ComponentId(10)) template=Some(tilt-ui://components/inventory-slot.component.html) stylesheet=Some(tilt-ui://components/inventory-slot.component.css) full=true metadata_changed=false changed_nodes=0 view_nodes=8 affected_nodes=8 total_ms=2.0591009999999996 setup_ms=0.00274 cascade_ms=1.244675 scrollbar_ms=0.02333 resolve_ms=0.726554 reconcile_ms=0.058811999999999996"
+    },
+    {
+      "fields": {
+        "affected_nodes": 6,
+        "cascade_ms": 1.868987,
+        "changed_nodes": 0,
+        "component": "ComponentId(7",
+        "full": true,
+        "metadata_changed": false,
+        "owner": "2276v0",
+        "reconcile_ms": 0.097272,
+        "resolve_ms": 1.229544,
+        "scrollbar_ms": 0.07655100000000001,
+        "setup_ms": 0.00976,
+        "stylesheet": "tilt-ui://components/inventory-category.component.css",
+        "template": "tilt-ui://components/inventory-category.component.html",
+        "total_ms": 3.287084,
+        "view_nodes": 6
+      },
+      "kind": "owner",
+      "raw": "2026-11-05T15:36:04.233921Z  INFO tilt_ui_runtime::style::plugin: O08 temporary owner CSS trace owner=2276v0 component=Some(ComponentId(7)) template=Some(tilt-ui://components/inventory-category.component.html) stylesheet=Some(tilt-ui://components/inventory-category.component.css) full=true metadata_changed=false changed_nodes=0 view_nodes=6 affected_nodes=6 total_ms=3.287084 setup_ms=0.00976 cascade_ms=1.868987 scrollbar_ms=0.07655100000000001 resolve_ms=1.229544 reconcile_ms=0.097272"
+    },
+    {
+      "fields": {
+        "affected_nodes": 0,
+        "cascade_ms": 0.00011,
+        "changed_nodes": 0,
+        "component": "ComponentId(0",
+        "full": true,
+        "metadata_changed": false,
+        "owner": "1011v0",
+        "reconcile_ms": 0.07689199999999999,
+        "resolve_ms": 8.437643999999999,
+        "scrollbar_ms": 0.01334,
+        "setup_ms": 0.004189999999999999,
+        "stylesheet": "tilt-ui://app-shell.component.css",
+        "template": "tilt-ui://app-shell.component.html",
+        "total_ms": 8.536456,
+        "view_nodes": 0
+      },
+      "kind": "owner",
+      "raw": "2026-11-05T15:36:04.250377Z  INFO tilt_ui_runtime::style::plugin: O08 temporary owner CSS trace owner=1011v0 component=Some(ComponentId(0)) template=Some(tilt-ui://app-shell.component.html) stylesheet=Some(tilt-ui://app-shell.component.css) full=true metadata_changed=false changed_nodes=0 view_nodes=0 affected_nodes=0 total_ms=8.536456 setup_ms=0.004189999999999999 cascade_ms=0.00011 scrollbar_ms=0.01334 resolve_ms=8.437643999999999 reconcile_ms=0.07689199999999999"
+    },
+    {
+      "fields": {
+        "affected_nodes": 4,
+        "cascade_ms": 1.02147,
+        "changed_nodes": 0,
+        "component": "ComponentId(9",
+        "full": true,
+        "metadata_changed": false,
+        "owner": "1183v0",
+        "reconcile_ms": 0.143353,
+        "resolve_ms": 13.993932000000001,
+        "scrollbar_ms": 0.055801,
+        "setup_ms": 0.00979,
+        "stylesheet": "tilt-ui://components/inventory-panel.component.css",
+        "template": "tilt-ui://components/inventory-panel.component.html",
+        "total_ms": 15.277776999999999,
+        "view_nodes": 4
+      },
+      "kind": "owner",
+      "raw": "2026-11-05T15:36:04.265699Z  INFO tilt_ui_runtime::style::plugin: O08 temporary owner CSS trace owner=1183v0 component=Some(ComponentId(9)) template=Some(tilt-ui://components/inventory-panel.component.html) stylesheet=Some(tilt-ui://components/inventory-panel.component.css) full=true metadata_changed=false changed_nodes=0 view_nodes=4 affected_nodes=4 total_ms=15.277776999999999 setup_ms=0.00979 cascade_ms=1.02147 scrollbar_ms=0.055801 resolve_ms=13.993932000000001 reconcile_ms=0.143353"
+    },
+    {
+      "fields": {
+        "affected_nodes": 19,
+        "cascade_ms": 2.913407,
+        "changed_nodes": 0,
+        "component": "ComponentId(27",
+        "full": true,
+        "metadata_changed": false,
+        "owner": "1205v0",
+        "reconcile_ms": 0.130883,
+        "resolve_ms": 1.54855,
+        "scrollbar_ms": 0.06306099999999999,
+        "setup_ms": 0.01887,
+        "stylesheet": "tilt-ui://components/survival-hud.component.css",
+        "template": "tilt-ui://components/survival-hud.component.html",
+        "total_ms": 4.677661,
+        "view_nodes": 19
+      },
+      "kind": "owner",
+      "raw": "2026-11-05T15:36:04.272413Z  INFO tilt_ui_runtime::style::plugin: O08 temporary owner CSS trace owner=1205v0 component=Some(ComponentId(27)) template=Some(tilt-ui://components/survival-hud.component.html) stylesheet=Some(tilt-ui://components/survival-hud.component.css) full=true metadata_changed=false changed_nodes=0 view_nodes=19 affected_nodes=19 total_ms=4.677661 setup_ms=0.01887 cascade_ms=2.913407 scrollbar_ms=0.06306099999999999 resolve_ms=1.54855 reconcile_ms=0.130883"
+    },
+    {
+      "fields": {
+        "affected_nodes": 46,
+        "cascade_ms": 7.464145,
+        "changed_nodes": 0,
+        "component": "ComponentId(8",
+        "full": true,
+        "metadata_changed": false,
+        "owner": "1046v1",
+        "reconcile_ms": 0.326747,
+        "resolve_ms": 2.937707,
+        "scrollbar_ms": 0.032611,
+        "setup_ms": 0.063241,
+        "stylesheet": "tilt-ui://components/inventory-content.component.css",
+        "template": "tilt-ui://components/inventory-content.component.html",
+        "total_ms": 10.829051,
+        "view_nodes": 46
+      },
+      "kind": "owner",
+      "raw": "2026-11-05T15:36:04.285758Z  INFO tilt_ui_runtime::style::plugin: O08 temporary owner CSS trace owner=1046v1 component=Some(ComponentId(8)) template=Some(tilt-ui://components/inventory-content.component.html) stylesheet=Some(tilt-ui://components/inventory-content.component.css) full=true metadata_changed=false changed_nodes=0 view_nodes=46 affected_nodes=46 total_ms=10.829051 setup_ms=0.063241 cascade_ms=7.464145 scrollbar_ms=0.032611 resolve_ms=2.937707 reconcile_ms=0.326747"
+    },
+    {
+      "fields": {
+        "affected_nodes": 30,
+        "cascade_ms": 5.8329640000000005,
+        "changed_nodes": 0,
+        "component": "ComponentId(11",
+        "full": true,
+        "metadata_changed": false,
+        "owner": "1018v1",
+        "reconcile_ms": 0.448018,
+        "resolve_ms": 2.0422000000000002,
+        "scrollbar_ms": 0.117112,
+        "setup_ms": 0.02281,
+        "stylesheet": "tilt-ui://components/item-browser.component.css",
+        "template": "tilt-ui://components/item-browser.component.html",
+        "total_ms": 8.467684,
+        "view_nodes": 30
+      },
+      "kind": "owner",
+      "raw": "2026-11-05T15:36:04.294318Z  INFO tilt_ui_runtime::style::plugin: O08 temporary owner CSS trace owner=1018v1 component=Some(ComponentId(11)) template=Some(tilt-ui://components/item-browser.component.html) stylesheet=Some(tilt-ui://components/item-browser.component.css) full=true metadata_changed=false changed_nodes=0 view_nodes=30 affected_nodes=30 total_ms=8.467684 setup_ms=0.02281 cascade_ms=5.8329640000000005 scrollbar_ms=0.117112 resolve_ms=2.0422000000000002 reconcile_ms=0.448018"
+    },
+    {
+      "fields": {
+        "affected_nodes": 10,
+        "cascade_ms": 2.2328230000000002,
+        "changed_nodes": 0,
+        "component": "ComponentId(4",
+        "full": true,
+        "metadata_changed": false,
+        "owner": "2481v0",
+        "reconcile_ms": 0.191634,
+        "resolve_ms": 0.307016,
+        "scrollbar_ms": 0.12205300000000001,
+        "setup_ms": 0.015531000000000001,
+        "stylesheet": "tilt-ui://components/equipment-slot.component.css",
+        "template": "tilt-ui://components/equipment-slot.component.html",
+        "total_ms": 2.873727,
+        "view_nodes": 10
+      },
+      "kind": "owner",
+      "raw": "2026-11-05T15:36:04.297241Z  INFO tilt_ui_runtime::style::plugin: O08 temporary owner CSS trace owner=2481v0 component=Some(ComponentId(4)) template=Some(tilt-ui://components/equipment-slot.component.html) stylesheet=Some(tilt-ui://components/equipment-slot.component.css) full=true metadata_changed=false changed_nodes=0 view_nodes=10 affected_nodes=10 total_ms=2.873727 setup_ms=0.015531000000000001 cascade_ms=2.2328230000000002 scrollbar_ms=0.12205300000000001 resolve_ms=0.307016 reconcile_ms=0.191634"
+    },
+    {
+      "fields": {
+        "cold_owners": 118,
+        "full_owners": 118,
+        "partial_owners": 107,
+        "selector_snapshot_ms": 0.919438,
+        "total_ms": 179.563296
+      },
+      "kind": "overall",
+      "raw": "2026-11-05T15:36:04.311573Z  INFO tilt_ui_runtime::style::plugin: O08 temporary overall CSS trace total_ms=179.563296 selector_snapshot_ms=0.919438 full_owners=118 partial_owners=107 cold_owners=118"
+    },
+    {
+      "fields": {
+        "affected_nodes": 4,
+        "cascade_ms": 0.7874960000000001,
+        "changed_nodes": 0,
+        "component": "ComponentId(14",
+        "full": true,
+        "metadata_changed": false,
+        "owner": "1175v1",
+        "reconcile_ms": 0.194383,
+        "resolve_ms": 1.395688,
+        "scrollbar_ms": 0.033769999999999994,
+        "setup_ms": 0.007940000000000001,
+        "stylesheet": "tilt-ui://components/mini-map.component.css",
+        "template": "tilt-ui://components/mini-map.component.html",
+        "total_ms": 2.421837,
+        "view_nodes": 4
+      },
+      "kind": "owner",
+      "raw": "2026-11-05T15:36:04.503007Z  INFO tilt_ui_runtime::style::plugin: O08 temporary owner CSS trace owner=1175v1 component=Some(ComponentId(14)) template=Some(tilt-ui://components/mini-map.component.html) stylesheet=Some(tilt-ui://components/mini-map.component.css) full=true metadata_changed=false changed_nodes=0 view_nodes=4 affected_nodes=4 total_ms=2.421837 setup_ms=0.007940000000000001 cascade_ms=0.7874960000000001 scrollbar_ms=0.033769999999999994 resolve_ms=1.395688 reconcile_ms=0.194383"
+    },
+    {
+      "fields": {
+        "affected_nodes": 30,
+        "cascade_ms": 4.364285,
+        "changed_nodes": 0,
+        "component": "ComponentId(11",
+        "full": true,
+        "metadata_changed": false,
+        "owner": "1018v1",
+        "reconcile_ms": 0.137902,
+        "resolve_ms": 0.367307,
+        "scrollbar_ms": 0.17222400000000002,
+        "setup_ms": 0.01511,
+        "stylesheet": "tilt-ui://components/item-browser.component.css",
+        "template": "tilt-ui://components/item-browser.component.html",
+        "total_ms": 5.067648,
+        "view_nodes": 30
+      },
+      "kind": "owner",
+      "raw": "2026-11-05T15:36:04.522520Z  INFO tilt_ui_runtime::style::plugin: O08 temporary owner CSS trace owner=1018v1 component=Some(ComponentId(11)) template=Some(tilt-ui://components/item-browser.component.html) stylesheet=Some(tilt-ui://components/item-browser.component.css) full=true metadata_changed=false changed_nodes=0 view_nodes=30 affected_nodes=30 total_ms=5.067648 setup_ms=0.01511 cascade_ms=4.364285 scrollbar_ms=0.17222400000000002 resolve_ms=0.367307 reconcile_ms=0.137902"
+    },
+    {
+      "fields": {
+        "cold_owners": 93,
+        "full_owners": 93,
+        "partial_owners": 1,
+        "selector_snapshot_ms": 1.409598,
+        "total_ms": 113.177274
+      },
+      "kind": "overall",
+      "raw": "2026-11-05T15:36:04.522566Z  INFO tilt_ui_runtime::style::plugin: O08 temporary overall CSS trace total_ms=113.177274 selector_snapshot_ms=1.409598 full_owners=93 partial_owners=1 cold_owners=93"
+    },
+    {
+      "fields": {
+        "affected_nodes": 23,
+        "cascade_ms": 5.564759,
+        "changed_nodes": 0,
+        "component": "ComponentId(14",
+        "full": true,
+        "metadata_changed": false,
+        "owner": "1175v1",
+        "reconcile_ms": 0.293956,
+        "resolve_ms": 1.678363,
+        "scrollbar_ms": 0.188013,
+        "setup_ms": 0.01388,
+        "stylesheet": "tilt-ui://components/mini-map.component.css",
+        "template": "tilt-ui://components/mini-map.component.html",
+        "total_ms": 7.7426509999999995,
+        "view_nodes": 23
+      },
+      "kind": "owner",
+      "raw": "2026-11-05T15:36:04.571428Z  INFO tilt_ui_runtime::style::plugin: O08 temporary owner CSS trace owner=1175v1 component=Some(ComponentId(14)) template=Some(tilt-ui://components/mini-map.component.html) stylesheet=Some(tilt-ui://components/mini-map.component.css) full=true metadata_changed=false changed_nodes=0 view_nodes=23 affected_nodes=23 total_ms=7.7426509999999995 setup_ms=0.01388 cascade_ms=5.564759 scrollbar_ms=0.188013 resolve_ms=1.678363 reconcile_ms=0.293956"
+    },
+    {
+      "fields": {
+        "affected_nodes": 30,
+        "cascade_ms": 4.079969999999999,
+        "changed_nodes": 0,
+        "component": "ComponentId(11",
+        "full": true,
+        "metadata_changed": false,
+        "owner": "1018v1",
+        "reconcile_ms": 0.214234,
+        "resolve_ms": 0.375948,
+        "scrollbar_ms": 0.240194,
+        "setup_ms": 0.02204,
+        "stylesheet": "tilt-ui://components/item-browser.component.css",
+        "template": "tilt-ui://components/item-browser.component.html",
+        "total_ms": 4.946906,
+        "view_nodes": 30
+      },
+      "kind": "owner",
+      "raw": "2026-11-05T15:36:04.576417Z  INFO tilt_ui_runtime::style::plugin: O08 temporary owner CSS trace owner=1018v1 component=Some(ComponentId(11)) template=Some(tilt-ui://components/item-browser.component.html) stylesheet=Some(tilt-ui://components/item-browser.component.css) full=true metadata_changed=false changed_nodes=0 view_nodes=30 affected_nodes=30 total_ms=4.946906 setup_ms=0.02204 cascade_ms=4.079969999999999 scrollbar_ms=0.240194 resolve_ms=0.375948 reconcile_ms=0.214234"
+    },
+    {
+      "fields": {
+        "cold_owners": 2,
+        "full_owners": 2,
+        "partial_owners": 1,
+        "selector_snapshot_ms": 0.363607,
+        "total_ms": 13.165967
+      },
+      "kind": "overall",
+      "raw": "2026-11-05T15:36:04.576458Z  INFO tilt_ui_runtime::style::plugin: O08 temporary overall CSS trace total_ms=13.165967 selector_snapshot_ms=0.363607 full_owners=2 partial_owners=1 cold_owners=2"
+    },
+    {
+      "fields": {
+        "affected_nodes": 8,
+        "cascade_ms": 2.478938,
+        "changed_nodes": 0,
+        "component": "ComponentId(28",
+        "full": true,
+        "metadata_changed": false,
+        "owner": "1207v0",
+        "reconcile_ms": 0.199534,
+        "resolve_ms": 2.222403,
+        "scrollbar_ms": 0.22830499999999998,
+        "setup_ms": 0.01481,
+        "stylesheet": "tilt-ui://components/target-card.component.css",
+        "template": "tilt-ui://components/target-card.component.html",
+        "total_ms": 5.14639,
+        "view_nodes": 8
+      },
+      "kind": "owner",
+      "raw": "2026-11-05T15:36:04.611477Z  INFO tilt_ui_runtime::style::plugin: O08 temporary owner CSS trace owner=1207v0 component=Some(ComponentId(28)) template=Some(tilt-ui://components/target-card.component.html) stylesheet=Some(tilt-ui://components/target-card.component.css) full=true metadata_changed=false changed_nodes=0 view_nodes=8 affected_nodes=8 total_ms=5.14639 setup_ms=0.01481 cascade_ms=2.478938 scrollbar_ms=0.22830499999999998 resolve_ms=2.222403 reconcile_ms=0.199534"
+    },
+    {
+      "fields": {
+        "cold_owners": 1,
+        "full_owners": 1,
+        "partial_owners": 1,
+        "selector_snapshot_ms": 0.35077600000000003,
+        "total_ms": 5.563998
+      },
+      "kind": "overall",
+      "raw": "2026-11-05T15:36:04.611511Z  INFO tilt_ui_runtime::style::plugin: O08 temporary overall CSS trace total_ms=5.563998 selector_snapshot_ms=0.35077600000000003 full_owners=1 partial_owners=1 cold_owners=1"
+    },
+    {
+      "fields": {
+        "affected_nodes": 4,
+        "cascade_ms": 1.025639,
+        "changed_nodes": 0,
+        "component": "ComponentId(9",
+        "full": true,
+        "metadata_changed": false,
+        "owner": "1183v0",
+        "reconcile_ms": 0.12352199999999999,
+        "resolve_ms": 0.732065,
+        "scrollbar_ms": 0.149673,
+        "setup_ms": 0.014771,
+        "stylesheet": "tilt-ui://components/inventory-panel.component.css",
+        "template": "tilt-ui://components/inventory-panel.component.html",
+        "total_ms": 2.05024,
+        "view_nodes": 4
+      },
+      "kind": "owner",
+      "raw": "2026-11-05T15:36:04.697041Z  INFO tilt_ui_runtime::style::plugin: O08 temporary owner CSS trace owner=1183v0 component=Some(ComponentId(9)) template=Some(tilt-ui://components/inventory-panel.component.html) stylesheet=Some(tilt-ui://components/inventory-panel.component.css) full=true metadata_changed=false changed_nodes=0 view_nodes=4 affected_nodes=4 total_ms=2.05024 setup_ms=0.014771 cascade_ms=1.025639 scrollbar_ms=0.149673 resolve_ms=0.732065 reconcile_ms=0.12352199999999999"
+    },
+    {
+      "fields": {
+        "cold_owners": 1,
+        "full_owners": 1,
+        "partial_owners": 1,
+        "selector_snapshot_ms": 0.413738,
+        "total_ms": 2.574631
+      },
+      "kind": "overall",
+      "raw": "2026-11-05T15:36:04.697116Z  INFO tilt_ui_runtime::style::plugin: O08 temporary overall CSS trace total_ms=2.574631 selector_snapshot_ms=0.413738 full_owners=1 partial_owners=1 cold_owners=1"
+    },
+    {
+      "fields": {
+        "affected_nodes": 30,
+        "cascade_ms": 7.266081,
+        "changed_nodes": 0,
+        "component": "ComponentId(11",
+        "full": true,
+        "metadata_changed": false,
+        "owner": "1018v1",
+        "reconcile_ms": 0.216795,
+        "resolve_ms": 0.32252600000000003,
+        "scrollbar_ms": 0.46441899999999997,
+        "setup_ms": 0.024261,
+        "stylesheet": "tilt-ui://components/item-browser.component.css",
+        "template": "tilt-ui://components/item-browser.component.html",
+        "total_ms": 8.338432999999998,
+        "view_nodes": 30
+      },
+      "kind": "owner",
+      "raw": "2026-11-05T15:36:04.728801Z  INFO tilt_ui_runtime::style::plugin: O08 temporary owner CSS trace owner=1018v1 component=Some(ComponentId(11)) template=Some(tilt-ui://components/item-browser.component.html) stylesheet=Some(tilt-ui://components/item-browser.component.css) full=true metadata_changed=false changed_nodes=0 view_nodes=30 affected_nodes=30 total_ms=8.338432999999998 setup_ms=0.024261 cascade_ms=7.266081 scrollbar_ms=0.46441899999999997 resolve_ms=0.32252600000000003 reconcile_ms=0.216795"
+    },
+    {
+      "fields": {
+        "cold_owners": 1,
+        "full_owners": 1,
+        "partial_owners": 0,
+        "selector_snapshot_ms": 0.543961,
+        "total_ms": 8.965205000000001
+      },
+      "kind": "overall",
+      "raw": "2026-11-05T15:36:04.728853Z  INFO tilt_ui_runtime::style::plugin: O08 temporary overall CSS trace total_ms=8.965205000000001 selector_snapshot_ms=0.543961 full_owners=1 partial_owners=0 cold_owners=1"
+    },
+    {
+      "fields": {
+        "affected_nodes": 4,
+        "cascade_ms": 0.9896289999999999,
+        "changed_nodes": 0,
+        "component": "ComponentId(1",
+        "full": true,
+        "metadata_changed": false,
+        "owner": "1203v0",
+        "reconcile_ms": 0.36517700000000003,
+        "resolve_ms": 2.945998,
+        "scrollbar_ms": 0.865117,
+        "setup_ms": 0.020291,
+        "stylesheet": "tilt-ui://components/chat-panel.component.css",
+        "template": "tilt-ui://components/chat-panel.component.html",
+        "total_ms": 5.195162,
+        "view_nodes": 4
+      },
+      "kind": "owner",
+      "raw": "2026-11-05T15:36:25.404641Z  INFO tilt_ui_runtime::style::plugin: O08 temporary owner CSS trace owner=1203v0 component=Some(ComponentId(1)) template=Some(tilt-ui://components/chat-panel.component.html) stylesheet=Some(tilt-ui://components/chat-panel.component.css) full=true metadata_changed=false changed_nodes=0 view_nodes=4 affected_nodes=4 total_ms=5.195162 setup_ms=0.020291 cascade_ms=0.9896289999999999 scrollbar_ms=0.865117 resolve_ms=2.945998 reconcile_ms=0.36517700000000003"
+    },
+    {
+      "fields": {
+        "cold_owners": 1,
+        "full_owners": 1,
+        "partial_owners": 1,
+        "selector_snapshot_ms": 1.223203,
+        "total_ms": 6.521097
+      },
+      "kind": "overall",
+      "raw": "2026-11-05T15:36:25.404704Z  INFO tilt_ui_runtime::style::plugin: O08 temporary overall CSS trace total_ms=6.521097 selector_snapshot_ms=1.223203 full_owners=1 partial_owners=1 cold_owners=1"
+    },
+    {
+      "fields": {
+        "cold_owners": 1,
+        "full_owners": 1,
+        "partial_owners": 0,
+        "selector_snapshot_ms": 0.301085,
+        "total_ms": 2.269154
+      },
+      "kind": "overall",
+      "raw": "2026-11-05T15:36:25.427678Z  INFO tilt_ui_runtime::style::plugin: O08 temporary overall CSS trace total_ms=2.269154 selector_snapshot_ms=0.301085 full_owners=1 partial_owners=0 cold_owners=1"
+    },
+    {
+      "fields": {
+        "affected_nodes": 6,
+        "cascade_ms": 1.587541,
+        "changed_nodes": 0,
+        "component": "ComponentId(1",
+        "full": true,
+        "metadata_changed": false,
+        "owner": "1203v0",
+        "reconcile_ms": 0.13984300000000002,
+        "resolve_ms": 0.241564,
+        "scrollbar_ms": 0.224544,
+        "setup_ms": 0.042490999999999994,
+        "stylesheet": "tilt-ui://components/chat-panel.component.css",
+        "template": "tilt-ui://components/chat-panel.component.html",
+        "total_ms": 2.239343,
+        "view_nodes": 6
+      },
+      "kind": "owner",
+      "raw": "2026-11-05T15:36:30.400697Z  INFO tilt_ui_runtime::style::plugin: O08 temporary owner CSS trace owner=1203v0 component=Some(ComponentId(1)) template=Some(tilt-ui://components/chat-panel.component.html) stylesheet=Some(tilt-ui://components/chat-panel.component.css) full=true metadata_changed=false changed_nodes=0 view_nodes=6 affected_nodes=6 total_ms=2.239343 setup_ms=0.042490999999999994 cascade_ms=1.587541 scrollbar_ms=0.224544 resolve_ms=0.241564 reconcile_ms=0.13984300000000002"
+    },
+    {
+      "fields": {
+        "cold_owners": 1,
+        "full_owners": 1,
+        "partial_owners": 1,
+        "selector_snapshot_ms": 0.450409,
+        "total_ms": 2.768704
+      },
+      "kind": "overall",
+      "raw": "2026-11-05T15:36:30.400738Z  INFO tilt_ui_runtime::style::plugin: O08 temporary overall CSS trace total_ms=2.768704 selector_snapshot_ms=0.450409 full_owners=1 partial_owners=1 cold_owners=1"
+    },
+    {
+      "fields": {
+        "affected_nodes": 6,
+        "cascade_ms": 2.098861,
+        "changed_nodes": 0,
+        "component": "ComponentId(1",
+        "full": true,
+        "metadata_changed": false,
+        "owner": "1203v0",
+        "reconcile_ms": 0.19342299999999998,
+        "resolve_ms": 0.103372,
+        "scrollbar_ms": 0.189114,
+        "setup_ms": 0.03929,
+        "stylesheet": "tilt-ui://components/chat-panel.component.css",
+        "template": "tilt-ui://components/chat-panel.component.html",
+        "total_ms": 2.62906,
+        "view_nodes": 6
+      },
+      "kind": "owner",
+      "raw": "2026-11-05T15:36:30.433677Z  INFO tilt_ui_runtime::style::plugin: O08 temporary owner CSS trace owner=1203v0 component=Some(ComponentId(1)) template=Some(tilt-ui://components/chat-panel.component.html) stylesheet=Some(tilt-ui://components/chat-panel.component.css) full=true metadata_changed=false changed_nodes=0 view_nodes=6 affected_nodes=6 total_ms=2.62906 setup_ms=0.03929 cascade_ms=2.098861 scrollbar_ms=0.189114 resolve_ms=0.103372 reconcile_ms=0.19342299999999998"
+    },
+    {
+      "fields": {
+        "cold_owners": 1,
+        "full_owners": 1,
+        "partial_owners": 1,
+        "selector_snapshot_ms": 0.5534,
+        "total_ms": 3.272094
+      },
+      "kind": "overall",
+      "raw": "2026-11-05T15:36:30.433730Z  INFO tilt_ui_runtime::style::plugin: O08 temporary overall CSS trace total_ms=3.272094 selector_snapshot_ms=0.5534 full_owners=1 partial_owners=1 cold_owners=1"
+    },
+    {
+      "fields": {
+        "affected_nodes": 6,
+        "cascade_ms": 1.524479,
+        "changed_nodes": 0,
+        "component": "ComponentId(1",
+        "full": true,
+        "metadata_changed": false,
+        "owner": "1203v0",
+        "reconcile_ms": 0.172523,
+        "resolve_ms": 0.08733199999999999,
+        "scrollbar_ms": 0.202184,
+        "setup_ms": 0.012809999999999998,
+        "stylesheet": "tilt-ui://components/chat-panel.component.css",
+        "template": "tilt-ui://components/chat-panel.component.html",
+        "total_ms": 2.0020279999999997,
+        "view_nodes": 6
+      },
+      "kind": "owner",
+      "raw": "2026-11-05T15:36:30.448868Z  INFO tilt_ui_runtime::style::plugin: O08 temporary owner CSS trace owner=1203v0 component=Some(ComponentId(1)) template=Some(tilt-ui://components/chat-panel.component.html) stylesheet=Some(tilt-ui://components/chat-panel.component.css) full=true metadata_changed=false changed_nodes=0 view_nodes=6 affected_nodes=6 total_ms=2.0020279999999997 setup_ms=0.012809999999999998 cascade_ms=1.524479 scrollbar_ms=0.202184 resolve_ms=0.08733199999999999 reconcile_ms=0.172523"
+    },
+    {
+      "fields": {
+        "cold_owners": 1,
+        "full_owners": 1,
+        "partial_owners": 1,
+        "selector_snapshot_ms": 0.262966,
+        "total_ms": 2.317685
+      },
+      "kind": "overall",
+      "raw": "2026-11-05T15:36:30.448903Z  INFO tilt_ui_runtime::style::plugin: O08 temporary overall CSS trace total_ms=2.317685 selector_snapshot_ms=0.262966 full_owners=1 partial_owners=1 cold_owners=1"
+    },
+    {
+      "fields": {
+        "affected_nodes": 6,
+        "cascade_ms": 1.517419,
+        "changed_nodes": 0,
+        "component": "ComponentId(1",
+        "full": true,
+        "metadata_changed": false,
+        "owner": "1203v0",
+        "reconcile_ms": 0.116702,
+        "resolve_ms": 0.090552,
+        "scrollbar_ms": 0.30209600000000003,
+        "setup_ms": 0.035601,
+        "stylesheet": "tilt-ui://components/chat-panel.component.css",
+        "template": "tilt-ui://components/chat-panel.component.html",
+        "total_ms": 2.0650999999999997,
+        "view_nodes": 6
+      },
+      "kind": "owner",
+      "raw": "2026-11-05T15:36:30.463494Z  INFO tilt_ui_runtime::style::plugin: O08 temporary owner CSS trace owner=1203v0 component=Some(ComponentId(1)) template=Some(tilt-ui://components/chat-panel.component.html) stylesheet=Some(tilt-ui://components/chat-panel.component.css) full=true metadata_changed=false changed_nodes=0 view_nodes=6 affected_nodes=6 total_ms=2.0650999999999997 setup_ms=0.035601 cascade_ms=1.517419 scrollbar_ms=0.30209600000000003 resolve_ms=0.090552 reconcile_ms=0.116702"
+    },
+    {
+      "fields": {
+        "cold_owners": 1,
+        "full_owners": 1,
+        "partial_owners": 1,
+        "selector_snapshot_ms": 0.48859,
+        "total_ms": 2.606241
+      },
+      "kind": "overall",
+      "raw": "2026-11-05T15:36:30.463522Z  INFO tilt_ui_runtime::style::plugin: O08 temporary overall CSS trace total_ms=2.606241 selector_snapshot_ms=0.48859 full_owners=1 partial_owners=1 cold_owners=1"
+    },
+    {
+      "fields": {
+        "cold_owners": 1,
+        "full_owners": 1,
+        "partial_owners": 1,
+        "selector_snapshot_ms": 0.272426,
+        "total_ms": 2.1187810000000002
+      },
+      "kind": "overall",
+      "raw": "2026-11-05T15:36:30.524138Z  INFO tilt_ui_runtime::style::plugin: O08 temporary overall CSS trace total_ms=2.1187810000000002 selector_snapshot_ms=0.272426 full_owners=1 partial_owners=1 cold_owners=1"
+    },
+    {
+      "fields": {
+        "cold_owners": 1,
+        "full_owners": 1,
+        "partial_owners": 1,
+        "selector_snapshot_ms": 0.5280509999999999,
+        "total_ms": 2.0739500000000004
+      },
+      "kind": "overall",
+      "raw": "2026-11-05T15:36:30.556293Z  INFO tilt_ui_runtime::style::plugin: O08 temporary overall CSS trace total_ms=2.0739500000000004 selector_snapshot_ms=0.5280509999999999 full_owners=1 partial_owners=1 cold_owners=1"
+    },
+    {
+      "fields": {
+        "cold_owners": 1,
+        "full_owners": 1,
+        "partial_owners": 1,
+        "selector_snapshot_ms": 0.283735,
+        "total_ms": 2.126721
+      },
+      "kind": "overall",
+      "raw": "2026-11-05T15:36:30.572690Z  INFO tilt_ui_runtime::style::plugin: O08 temporary overall CSS trace total_ms=2.126721 selector_snapshot_ms=0.283735 full_owners=1 partial_owners=1 cold_owners=1"
+    },
+    {
+      "fields": {
+        "cold_owners": 1,
+        "full_owners": 1,
+        "partial_owners": 1,
+        "selector_snapshot_ms": 0.323827,
+        "total_ms": 2.305155
+      },
+      "kind": "overall",
+      "raw": "2026-11-05T15:36:30.586677Z  INFO tilt_ui_runtime::style::plugin: O08 temporary overall CSS trace total_ms=2.305155 selector_snapshot_ms=0.323827 full_owners=1 partial_owners=1 cold_owners=1"
+    },
+    {
+      "fields": {
+        "cold_owners": 1,
+        "full_owners": 1,
+        "partial_owners": 1,
+        "selector_snapshot_ms": 0.880037,
+        "total_ms": 2.55557
+      },
+      "kind": "overall",
+      "raw": "2026-11-05T15:36:30.633016Z  INFO tilt_ui_runtime::style::plugin: O08 temporary overall CSS trace total_ms=2.55557 selector_snapshot_ms=0.880037 full_owners=1 partial_owners=1 cold_owners=1"
+    },
+    {
+      "fields": {
+        "cold_owners": 1,
+        "full_owners": 1,
+        "partial_owners": 1,
+        "selector_snapshot_ms": 0.43307799999999996,
+        "total_ms": 2.190133
+      },
+      "kind": "overall",
+      "raw": "2026-11-05T15:36:30.673522Z  INFO tilt_ui_runtime::style::plugin: O08 temporary overall CSS trace total_ms=2.190133 selector_snapshot_ms=0.43307799999999996 full_owners=1 partial_owners=1 cold_owners=1"
+    },
+    {
+      "fields": {
+        "cold_owners": 1,
+        "full_owners": 1,
+        "partial_owners": 1,
+        "selector_snapshot_ms": 0.580761,
+        "total_ms": 2.257145
+      },
+      "kind": "overall",
+      "raw": "2026-11-05T15:36:30.723756Z  INFO tilt_ui_runtime::style::plugin: O08 temporary overall CSS trace total_ms=2.257145 selector_snapshot_ms=0.580761 full_owners=1 partial_owners=1 cold_owners=1"
+    },
+    {
+      "fields": {
+        "cold_owners": 1,
+        "full_owners": 1,
+        "partial_owners": 1,
+        "selector_snapshot_ms": 0.631632,
+        "total_ms": 2.166533
+      },
+      "kind": "overall",
+      "raw": "2026-11-05T15:36:30.785739Z  INFO tilt_ui_runtime::style::plugin: O08 temporary overall CSS trace total_ms=2.166533 selector_snapshot_ms=0.631632 full_owners=1 partial_owners=1 cold_owners=1"
+    },
+    {
+      "fields": {
+        "cold_owners": 1,
+        "full_owners": 1,
+        "partial_owners": 1,
+        "selector_snapshot_ms": 0.54369,
+        "total_ms": 2.528069
+      },
+      "kind": "overall",
+      "raw": "2026-11-05T15:36:30.805288Z  INFO tilt_ui_runtime::style::plugin: O08 temporary overall CSS trace total_ms=2.528069 selector_snapshot_ms=0.54369 full_owners=1 partial_owners=1 cold_owners=1"
+    },
+    {
+      "fields": {
+        "affected_nodes": 6,
+        "cascade_ms": 1.425049,
+        "changed_nodes": 0,
+        "component": "ComponentId(1",
+        "full": true,
+        "metadata_changed": false,
+        "owner": "1203v0",
+        "reconcile_ms": 0.28234499999999996,
+        "resolve_ms": 0.101272,
+        "scrollbar_ms": 0.27113499999999996,
+        "setup_ms": 0.02048,
+        "stylesheet": "tilt-ui://components/chat-panel.component.css",
+        "template": "tilt-ui://components/chat-panel.component.html",
+        "total_ms": 2.105392,
+        "view_nodes": 6
+      },
+      "kind": "owner",
+      "raw": "2026-11-05T15:36:30.838018Z  INFO tilt_ui_runtime::style::plugin: O08 temporary owner CSS trace owner=1203v0 component=Some(ComponentId(1)) template=Some(tilt-ui://components/chat-panel.component.html) stylesheet=Some(tilt-ui://components/chat-panel.component.css) full=true metadata_changed=false changed_nodes=0 view_nodes=6 affected_nodes=6 total_ms=2.105392 setup_ms=0.02048 cascade_ms=1.425049 scrollbar_ms=0.27113499999999996 resolve_ms=0.101272 reconcile_ms=0.28234499999999996"
+    },
+    {
+      "fields": {
+        "cold_owners": 1,
+        "full_owners": 1,
+        "partial_owners": 1,
+        "selector_snapshot_ms": 0.548571,
+        "total_ms": 2.742303
+      },
+      "kind": "overall",
+      "raw": "2026-11-05T15:36:30.838064Z  INFO tilt_ui_runtime::style::plugin: O08 temporary overall CSS trace total_ms=2.742303 selector_snapshot_ms=0.548571 full_owners=1 partial_owners=1 cold_owners=1"
+    },
+    {
+      "fields": {
+        "cold_owners": 1,
+        "full_owners": 1,
+        "partial_owners": 1,
+        "selector_snapshot_ms": 1.0729520000000001,
+        "total_ms": 3.145152
+      },
+      "kind": "overall",
+      "raw": "2026-11-05T15:36:30.915635Z  INFO tilt_ui_runtime::style::plugin: O08 temporary overall CSS trace total_ms=3.145152 selector_snapshot_ms=1.0729520000000001 full_owners=1 partial_owners=1 cold_owners=1"
+    },
+    {
+      "fields": {
+        "affected_nodes": 6,
+        "cascade_ms": 1.947148,
+        "changed_nodes": 0,
+        "component": "ComponentId(1",
+        "full": true,
+        "metadata_changed": false,
+        "owner": "1203v0",
+        "reconcile_ms": 0.155283,
+        "resolve_ms": 0.085232,
+        "scrollbar_ms": 0.22179400000000002,
+        "setup_ms": 0.01952,
+        "stylesheet": "tilt-ui://components/chat-panel.component.css",
+        "template": "tilt-ui://components/chat-panel.component.html",
+        "total_ms": 2.4320370000000002,
+        "view_nodes": 6
+      },
+      "kind": "owner",
+      "raw": "2026-11-05T15:36:30.931883Z  INFO tilt_ui_runtime::style::plugin: O08 temporary owner CSS trace owner=1203v0 component=Some(ComponentId(1)) template=Some(tilt-ui://components/chat-panel.component.html) stylesheet=Some(tilt-ui://components/chat-panel.component.css) full=true metadata_changed=false changed_nodes=0 view_nodes=6 affected_nodes=6 total_ms=2.4320370000000002 setup_ms=0.01952 cascade_ms=1.947148 scrollbar_ms=0.22179400000000002 resolve_ms=0.085232 reconcile_ms=0.155283"
+    },
+    {
+      "fields": {
+        "cold_owners": 1,
+        "full_owners": 1,
+        "partial_owners": 1,
+        "selector_snapshot_ms": 0.40870799999999996,
+        "total_ms": 2.8963970000000003
+      },
+      "kind": "overall",
+      "raw": "2026-11-05T15:36:30.931915Z  INFO tilt_ui_runtime::style::plugin: O08 temporary overall CSS trace total_ms=2.8963970000000003 selector_snapshot_ms=0.40870799999999996 full_owners=1 partial_owners=1 cold_owners=1"
+    },
+    {
+      "fields": {
+        "cold_owners": 1,
+        "full_owners": 1,
+        "partial_owners": 1,
+        "selector_snapshot_ms": 0.387867,
+        "total_ms": 2.167783
+      },
+      "kind": "overall",
+      "raw": "2026-11-05T15:36:30.946386Z  INFO tilt_ui_runtime::style::plugin: O08 temporary overall CSS trace total_ms=2.167783 selector_snapshot_ms=0.387867 full_owners=1 partial_owners=1 cold_owners=1"
+    },
+    {
+      "fields": {
+        "affected_nodes": 6,
+        "cascade_ms": 1.601571,
+        "changed_nodes": 0,
+        "component": "ComponentId(1",
+        "full": true,
+        "metadata_changed": false,
+        "owner": "1203v0",
+        "reconcile_ms": 0.234644,
+        "resolve_ms": 0.152283,
+        "scrollbar_ms": 0.619982,
+        "setup_ms": 0.013701,
+        "stylesheet": "tilt-ui://components/chat-panel.component.css",
+        "template": "tilt-ui://components/chat-panel.component.html",
+        "total_ms": 2.629601,
+        "view_nodes": 6
+      },
+      "kind": "owner",
+      "raw": "2026-11-05T15:36:30.960358Z  INFO tilt_ui_runtime::style::plugin: O08 temporary owner CSS trace owner=1203v0 component=Some(ComponentId(1)) template=Some(tilt-ui://components/chat-panel.component.html) stylesheet=Some(tilt-ui://components/chat-panel.component.css) full=true metadata_changed=false changed_nodes=0 view_nodes=6 affected_nodes=6 total_ms=2.629601 setup_ms=0.013701 cascade_ms=1.601571 scrollbar_ms=0.619982 resolve_ms=0.152283 reconcile_ms=0.234644"
+    },
+    {
+      "fields": {
+        "cold_owners": 1,
+        "full_owners": 1,
+        "partial_owners": 1,
+        "selector_snapshot_ms": 0.296935,
+        "total_ms": 3.026659
+      },
+      "kind": "overall",
+      "raw": "2026-11-05T15:36:30.960430Z  INFO tilt_ui_runtime::style::plugin: O08 temporary overall CSS trace total_ms=3.026659 selector_snapshot_ms=0.296935 full_owners=1 partial_owners=1 cold_owners=1"
+    },
+    {
+      "fields": {
+        "cold_owners": 1,
+        "full_owners": 1,
+        "partial_owners": 1,
+        "selector_snapshot_ms": 0.669823,
+        "total_ms": 2.534549
+      },
+      "kind": "overall",
+      "raw": "2026-11-05T15:36:31.151892Z  INFO tilt_ui_runtime::style::plugin: O08 temporary overall CSS trace total_ms=2.534549 selector_snapshot_ms=0.669823 full_owners=1 partial_owners=1 cold_owners=1"
+    },
+    {
+      "fields": {
+        "cold_owners": 1,
+        "full_owners": 1,
+        "partial_owners": 1,
+        "selector_snapshot_ms": 0.41142799999999996,
+        "total_ms": 2.305055
+      },
+      "kind": "overall",
+      "raw": "2026-11-05T15:36:31.168759Z  INFO tilt_ui_runtime::style::plugin: O08 temporary overall CSS trace total_ms=2.305055 selector_snapshot_ms=0.41142799999999996 full_owners=1 partial_owners=1 cold_owners=1"
+    },
+    {
+      "fields": {
+        "cold_owners": 1,
+        "full_owners": 1,
+        "partial_owners": 1,
+        "selector_snapshot_ms": 0.6841240000000001,
+        "total_ms": 2.2038230000000003
+      },
+      "kind": "overall",
+      "raw": "2026-11-05T15:36:31.233719Z  INFO tilt_ui_runtime::style::plugin: O08 temporary overall CSS trace total_ms=2.2038230000000003 selector_snapshot_ms=0.6841240000000001 full_owners=1 partial_owners=1 cold_owners=1"
+    },
+    {
+      "fields": {
+        "cold_owners": 1,
+        "full_owners": 1,
+        "partial_owners": 1,
+        "selector_snapshot_ms": 0.353227,
+        "total_ms": 2.0037290000000003
+      },
+      "kind": "overall",
+      "raw": "2026-11-05T15:36:31.248214Z  INFO tilt_ui_runtime::style::plugin: O08 temporary overall CSS trace total_ms=2.0037290000000003 selector_snapshot_ms=0.353227 full_owners=1 partial_owners=1 cold_owners=1"
+    },
+    {
+      "fields": {
+        "affected_nodes": 6,
+        "cascade_ms": 1.54567,
+        "changed_nodes": 0,
+        "component": "ComponentId(1",
+        "full": true,
+        "metadata_changed": false,
+        "owner": "1203v0",
+        "reconcile_ms": 0.21599400000000002,
+        "resolve_ms": 0.113203,
+        "scrollbar_ms": 0.17653300000000002,
+        "setup_ms": 0.01933,
+        "stylesheet": "tilt-ui://components/chat-panel.component.css",
+        "template": "tilt-ui://components/chat-panel.component.html",
+        "total_ms": 2.08251,
+        "view_nodes": 6
+      },
+      "kind": "owner",
+      "raw": "2026-11-05T15:36:31.262544Z  INFO tilt_ui_runtime::style::plugin: O08 temporary owner CSS trace owner=1203v0 component=Some(ComponentId(1)) template=Some(tilt-ui://components/chat-panel.component.html) stylesheet=Some(tilt-ui://components/chat-panel.component.css) full=true metadata_changed=false changed_nodes=0 view_nodes=6 affected_nodes=6 total_ms=2.08251 setup_ms=0.01933 cascade_ms=1.54567 scrollbar_ms=0.17653300000000002 resolve_ms=0.113203 reconcile_ms=0.21599400000000002"
+    },
+    {
+      "fields": {
+        "cold_owners": 1,
+        "full_owners": 1,
+        "partial_owners": 1,
+        "selector_snapshot_ms": 0.346427,
+        "total_ms": 2.55391
+      },
+      "kind": "overall",
+      "raw": "2026-11-05T15:36:31.262640Z  INFO tilt_ui_runtime::style::plugin: O08 temporary overall CSS trace total_ms=2.55391 selector_snapshot_ms=0.346427 full_owners=1 partial_owners=1 cold_owners=1"
+    },
+    {
+      "fields": {
+        "affected_nodes": 6,
+        "cascade_ms": 1.5225289999999998,
+        "changed_nodes": 0,
+        "component": "ComponentId(1",
+        "full": true,
+        "metadata_changed": false,
+        "owner": "1203v0",
+        "reconcile_ms": 0.446058,
+        "resolve_ms": 0.131893,
+        "scrollbar_ms": 0.7460249999999999,
+        "setup_ms": 0.02118,
+        "stylesheet": "tilt-ui://components/chat-panel.component.css",
+        "template": "tilt-ui://components/chat-panel.component.html",
+        "total_ms": 2.879046,
+        "view_nodes": 6
+      },
+      "kind": "owner",
+      "raw": "2026-11-05T15:36:31.328257Z  INFO tilt_ui_runtime::style::plugin: O08 temporary owner CSS trace owner=1203v0 component=Some(ComponentId(1)) template=Some(tilt-ui://components/chat-panel.component.html) stylesheet=Some(tilt-ui://components/chat-panel.component.css) full=true metadata_changed=false changed_nodes=0 view_nodes=6 affected_nodes=6 total_ms=2.879046 setup_ms=0.02118 cascade_ms=1.5225289999999998 scrollbar_ms=0.7460249999999999 resolve_ms=0.131893 reconcile_ms=0.446058"
+    },
+    {
+      "fields": {
+        "cold_owners": 1,
+        "full_owners": 1,
+        "partial_owners": 1,
+        "selector_snapshot_ms": 0.363047,
+        "total_ms": 3.389506
+      },
+      "kind": "overall",
+      "raw": "2026-11-05T15:36:31.328374Z  INFO tilt_ui_runtime::style::plugin: O08 temporary overall CSS trace total_ms=3.389506 selector_snapshot_ms=0.363047 full_owners=1 partial_owners=1 cold_owners=1"
+    },
+    {
+      "fields": {
+        "cold_owners": 1,
+        "full_owners": 1,
+        "partial_owners": 1,
+        "selector_snapshot_ms": 0.545721,
+        "total_ms": 2.107971
+      },
+      "kind": "overall",
+      "raw": "2026-11-05T15:36:31.371297Z  INFO tilt_ui_runtime::style::plugin: O08 temporary overall CSS trace total_ms=2.107971 selector_snapshot_ms=0.545721 full_owners=1 partial_owners=1 cold_owners=1"
+    },
+    {
+      "fields": {
+        "affected_nodes": 6,
+        "cascade_ms": 1.6599620000000002,
+        "changed_nodes": 0,
+        "component": "ComponentId(1",
+        "full": true,
+        "metadata_changed": false,
+        "owner": "1203v0",
+        "reconcile_ms": 0.102792,
+        "resolve_ms": 0.077922,
+        "scrollbar_ms": 0.146943,
+        "setup_ms": 0.016229999999999998,
+        "stylesheet": "tilt-ui://components/chat-panel.component.css",
+        "template": "tilt-ui://components/chat-panel.component.html",
+        "total_ms": 2.007669,
+        "view_nodes": 6
+      },
+      "kind": "owner",
+      "raw": "2026-11-05T15:36:31.397898Z  INFO tilt_ui_runtime::style::plugin: O08 temporary owner CSS trace owner=1203v0 component=Some(ComponentId(1)) template=Some(tilt-ui://components/chat-panel.component.html) stylesheet=Some(tilt-ui://components/chat-panel.component.css) full=true metadata_changed=false changed_nodes=0 view_nodes=6 affected_nodes=6 total_ms=2.007669 setup_ms=0.016229999999999998 cascade_ms=1.6599620000000002 scrollbar_ms=0.146943 resolve_ms=0.077922 reconcile_ms=0.102792"
+    },
+    {
+      "fields": {
+        "cold_owners": 1,
+        "full_owners": 1,
+        "partial_owners": 1,
+        "selector_snapshot_ms": 0.342287,
+        "total_ms": 2.412787
+      },
+      "kind": "overall",
+      "raw": "2026-11-05T15:36:31.397940Z  INFO tilt_ui_runtime::style::plugin: O08 temporary overall CSS trace total_ms=2.412787 selector_snapshot_ms=0.342287 full_owners=1 partial_owners=1 cold_owners=1"
+    },
+    {
+      "fields": {
+        "affected_nodes": 6,
+        "cascade_ms": 1.7881049999999998,
+        "changed_nodes": 0,
+        "component": "ComponentId(1",
+        "full": true,
+        "metadata_changed": false,
+        "owner": "1203v0",
+        "reconcile_ms": 0.233445,
+        "resolve_ms": 0.112842,
+        "scrollbar_ms": 0.257175,
+        "setup_ms": 0.02123,
+        "stylesheet": "tilt-ui://components/chat-panel.component.css",
+        "template": "tilt-ui://components/chat-panel.component.html",
+        "total_ms": 2.4188069999999997,
+        "view_nodes": 6
+      },
+      "kind": "owner",
+      "raw": "2026-11-05T15:36:31.425899Z  INFO tilt_ui_runtime::style::plugin: O08 temporary owner CSS trace owner=1203v0 component=Some(ComponentId(1)) template=Some(tilt-ui://components/chat-panel.component.html) stylesheet=Some(tilt-ui://components/chat-panel.component.css) full=true metadata_changed=false changed_nodes=0 view_nodes=6 affected_nodes=6 total_ms=2.4188069999999997 setup_ms=0.02123 cascade_ms=1.7881049999999998 scrollbar_ms=0.257175 resolve_ms=0.112842 reconcile_ms=0.233445"
+    },
+    {
+      "fields": {
+        "cold_owners": 1,
+        "full_owners": 1,
+        "partial_owners": 1,
+        "selector_snapshot_ms": 0.352877,
+        "total_ms": 2.9018070000000002
+      },
+      "kind": "overall",
+      "raw": "2026-11-05T15:36:31.426002Z  INFO tilt_ui_runtime::style::plugin: O08 temporary overall CSS trace total_ms=2.9018070000000002 selector_snapshot_ms=0.352877 full_owners=1 partial_owners=1 cold_owners=1"
+    },
+    {
+      "fields": {
+        "cold_owners": 1,
+        "full_owners": 1,
+        "partial_owners": 1,
+        "selector_snapshot_ms": 0.388148,
+        "total_ms": 2.1085510000000003
+      },
+      "kind": "overall",
+      "raw": "2026-11-05T15:36:31.474505Z  INFO tilt_ui_runtime::style::plugin: O08 temporary overall CSS trace total_ms=2.1085510000000003 selector_snapshot_ms=0.388148 full_owners=1 partial_owners=1 cold_owners=1"
+    },
+    {
+      "fields": {
+        "cold_owners": 1,
+        "full_owners": 1,
+        "partial_owners": 1,
+        "selector_snapshot_ms": 0.559551,
+        "total_ms": 2.03908
+      },
+      "kind": "overall",
+      "raw": "2026-11-05T15:36:31.491077Z  INFO tilt_ui_runtime::style::plugin: O08 temporary overall CSS trace total_ms=2.03908 selector_snapshot_ms=0.559551 full_owners=1 partial_owners=1 cold_owners=1"
+    },
+    {
+      "fields": {
+        "cold_owners": 1,
+        "full_owners": 1,
+        "partial_owners": 1,
+        "selector_snapshot_ms": 0.5426810000000001,
+        "total_ms": 2.403517
+      },
+      "kind": "overall",
+      "raw": "2026-11-05T15:36:31.522316Z  INFO tilt_ui_runtime::style::plugin: O08 temporary overall CSS trace total_ms=2.403517 selector_snapshot_ms=0.5426810000000001 full_owners=1 partial_owners=1 cold_owners=1"
+    },
+    {
+      "fields": {
+        "cold_owners": 1,
+        "full_owners": 1,
+        "partial_owners": 1,
+        "selector_snapshot_ms": 0.37066699999999997,
+        "total_ms": 2.0439999999999996
+      },
+      "kind": "overall",
+      "raw": "2026-11-05T15:36:31.538047Z  INFO tilt_ui_runtime::style::plugin: O08 temporary overall CSS trace total_ms=2.0439999999999996 selector_snapshot_ms=0.37066699999999997 full_owners=1 partial_owners=1 cold_owners=1"
+    },
+    {
+      "fields": {
+        "cold_owners": 1,
+        "full_owners": 1,
+        "partial_owners": 1,
+        "selector_snapshot_ms": 0.24625500000000003,
+        "total_ms": 2.1971130000000003
+      },
+      "kind": "overall",
+      "raw": "2026-11-05T15:36:31.551361Z  INFO tilt_ui_runtime::style::plugin: O08 temporary overall CSS trace total_ms=2.1971130000000003 selector_snapshot_ms=0.24625500000000003 full_owners=1 partial_owners=1 cold_owners=1"
+    },
+    {
+      "fields": {
+        "cold_owners": 1,
+        "full_owners": 1,
+        "partial_owners": 1,
+        "selector_snapshot_ms": 0.434699,
+        "total_ms": 2.0821899999999998
+      },
+      "kind": "overall",
+      "raw": "2026-11-05T15:36:31.567701Z  INFO tilt_ui_runtime::style::plugin: O08 temporary overall CSS trace total_ms=2.0821899999999998 selector_snapshot_ms=0.434699 full_owners=1 partial_owners=1 cold_owners=1"
+    },
+    {
+      "fields": {
+        "cold_owners": 1,
+        "full_owners": 1,
+        "partial_owners": 1,
+        "selector_snapshot_ms": 0.52204,
+        "total_ms": 2.07868
+      },
+      "kind": "overall",
+      "raw": "2026-11-05T15:36:31.583842Z  INFO tilt_ui_runtime::style::plugin: O08 temporary overall CSS trace total_ms=2.07868 selector_snapshot_ms=0.52204 full_owners=1 partial_owners=1 cold_owners=1"
+    },
+    {
+      "fields": {
+        "cold_owners": 1,
+        "full_owners": 1,
+        "partial_owners": 1,
+        "selector_snapshot_ms": 0.32234599999999997,
+        "total_ms": 2.07992
+      },
+      "kind": "overall",
+      "raw": "2026-11-05T15:36:31.614013Z  INFO tilt_ui_runtime::style::plugin: O08 temporary overall CSS trace total_ms=2.07992 selector_snapshot_ms=0.32234599999999997 full_owners=1 partial_owners=1 cold_owners=1"
+    },
+    {
+      "fields": {
+        "affected_nodes": 6,
+        "cascade_ms": 1.085611,
+        "changed_nodes": 0,
+        "component": "ComponentId(1",
+        "full": true,
+        "metadata_changed": false,
+        "owner": "1203v0",
+        "reconcile_ms": 0.21022400000000002,
+        "resolve_ms": 0.128202,
+        "scrollbar_ms": 0.47923,
+        "setup_ms": 0.352037,
+        "stylesheet": "tilt-ui://components/chat-panel.component.css",
+        "template": "tilt-ui://components/chat-panel.component.html",
+        "total_ms": 2.259614,
+        "view_nodes": 6
+      },
+      "kind": "owner",
+      "raw": "2026-11-05T15:36:31.628349Z  INFO tilt_ui_runtime::style::plugin: O08 temporary owner CSS trace owner=1203v0 component=Some(ComponentId(1)) template=Some(tilt-ui://components/chat-panel.component.html) stylesheet=Some(tilt-ui://components/chat-panel.component.css) full=true metadata_changed=false changed_nodes=0 view_nodes=6 affected_nodes=6 total_ms=2.259614 setup_ms=0.352037 cascade_ms=1.085611 scrollbar_ms=0.47923 resolve_ms=0.128202 reconcile_ms=0.21022400000000002"
+    },
+    {
+      "fields": {
+        "cold_owners": 1,
+        "full_owners": 1,
+        "partial_owners": 1,
+        "selector_snapshot_ms": 0.425048,
+        "total_ms": 2.792734
+      },
+      "kind": "overall",
+      "raw": "2026-11-05T15:36:31.628431Z  INFO tilt_ui_runtime::style::plugin: O08 temporary overall CSS trace total_ms=2.792734 selector_snapshot_ms=0.425048 full_owners=1 partial_owners=1 cold_owners=1"
+    },
+    {
+      "fields": {
+        "cold_owners": 1,
+        "full_owners": 1,
+        "partial_owners": 1,
+        "selector_snapshot_ms": 0.271826,
+        "total_ms": 2.102571
+      },
+      "kind": "overall",
+      "raw": "2026-11-05T15:36:31.643163Z  INFO tilt_ui_runtime::style::plugin: O08 temporary overall CSS trace total_ms=2.102571 selector_snapshot_ms=0.271826 full_owners=1 partial_owners=1 cold_owners=1"
+    },
+    {
+      "fields": {
+        "cold_owners": 1,
+        "full_owners": 1,
+        "partial_owners": 1,
+        "selector_snapshot_ms": 0.33221599999999996,
+        "total_ms": 2.111791
+      },
+      "kind": "overall",
+      "raw": "2026-11-05T15:36:31.684984Z  INFO tilt_ui_runtime::style::plugin: O08 temporary overall CSS trace total_ms=2.111791 selector_snapshot_ms=0.33221599999999996 full_owners=1 partial_owners=1 cold_owners=1"
+    },
+    {
+      "fields": {
+        "affected_nodes": 6,
+        "cascade_ms": 1.9038970000000002,
+        "changed_nodes": 0,
+        "component": "ComponentId(1",
+        "full": true,
+        "metadata_changed": false,
+        "owner": "1203v0",
+        "reconcile_ms": 0.197594,
+        "resolve_ms": 0.22486399999999998,
+        "scrollbar_ms": 0.28027599999999997,
+        "setup_ms": 0.114782,
+        "stylesheet": "tilt-ui://components/chat-panel.component.css",
+        "template": "tilt-ui://components/chat-panel.component.html",
+        "total_ms": 2.725463,
+        "view_nodes": 6
+      },
+      "kind": "owner",
+      "raw": "2026-11-05T15:36:31.731659Z  INFO tilt_ui_runtime::style::plugin: O08 temporary owner CSS trace owner=1203v0 component=Some(ComponentId(1)) template=Some(tilt-ui://components/chat-panel.component.html) stylesheet=Some(tilt-ui://components/chat-panel.component.css) full=true metadata_changed=false changed_nodes=0 view_nodes=6 affected_nodes=6 total_ms=2.725463 setup_ms=0.114782 cascade_ms=1.9038970000000002 scrollbar_ms=0.28027599999999997 resolve_ms=0.22486399999999998 reconcile_ms=0.197594"
+    },
+    {
+      "fields": {
+        "cold_owners": 1,
+        "full_owners": 1,
+        "partial_owners": 1,
+        "selector_snapshot_ms": 0.5771609999999999,
+        "total_ms": 3.397996
+      },
+      "kind": "overall",
+      "raw": "2026-11-05T15:36:31.731703Z  INFO tilt_ui_runtime::style::plugin: O08 temporary overall CSS trace total_ms=3.397996 selector_snapshot_ms=0.5771609999999999 full_owners=1 partial_owners=1 cold_owners=1"
+    },
+    {
+      "fields": {
+        "cold_owners": 1,
+        "full_owners": 1,
+        "partial_owners": 1,
+        "selector_snapshot_ms": 1.364266,
+        "total_ms": 2.774454
+      },
+      "kind": "overall",
+      "raw": "2026-11-05T15:36:31.746917Z  INFO tilt_ui_runtime::style::plugin: O08 temporary overall CSS trace total_ms=2.774454 selector_snapshot_ms=1.364266 full_owners=1 partial_owners=1 cold_owners=1"
+    },
+    {
+      "fields": {
+        "cold_owners": 1,
+        "full_owners": 1,
+        "partial_owners": 1,
+        "selector_snapshot_ms": 0.577721,
+        "total_ms": 2.372707
+      },
+      "kind": "overall",
+      "raw": "2026-11-05T15:36:31.761114Z  INFO tilt_ui_runtime::style::plugin: O08 temporary overall CSS trace total_ms=2.372707 selector_snapshot_ms=0.577721 full_owners=1 partial_owners=1 cold_owners=1"
+    },
+    {
+      "fields": {
+        "affected_nodes": 6,
+        "cascade_ms": 1.642652,
+        "changed_nodes": 0,
+        "component": "ComponentId(1",
+        "full": true,
+        "metadata_changed": false,
+        "owner": "1203v0",
+        "reconcile_ms": 0.13422299999999998,
+        "resolve_ms": 0.101912,
+        "scrollbar_ms": 0.224434,
+        "setup_ms": 0.106572,
+        "stylesheet": "tilt-ui://components/chat-panel.component.css",
+        "template": "tilt-ui://components/chat-panel.component.html",
+        "total_ms": 2.213613,
+        "view_nodes": 6
+      },
+      "kind": "owner",
+      "raw": "2026-11-05T15:36:31.824645Z  INFO tilt_ui_runtime::style::plugin: O08 temporary owner CSS trace owner=1203v0 component=Some(ComponentId(1)) template=Some(tilt-ui://components/chat-panel.component.html) stylesheet=Some(tilt-ui://components/chat-panel.component.css) full=true metadata_changed=false changed_nodes=0 view_nodes=6 affected_nodes=6 total_ms=2.213613 setup_ms=0.106572 cascade_ms=1.642652 scrollbar_ms=0.224434 resolve_ms=0.101912 reconcile_ms=0.13422299999999998"
+    },
+    {
+      "fields": {
+        "cold_owners": 1,
+        "full_owners": 1,
+        "partial_owners": 1,
+        "selector_snapshot_ms": 0.800005,
+        "total_ms": 3.100671
+      },
+      "kind": "overall",
+      "raw": "2026-11-05T15:36:31.824688Z  INFO tilt_ui_runtime::style::plugin: O08 temporary overall CSS trace total_ms=3.100671 selector_snapshot_ms=0.800005 full_owners=1 partial_owners=1 cold_owners=1"
+    },
+    {
+      "fields": {
+        "cold_owners": 1,
+        "full_owners": 1,
+        "partial_owners": 1,
+        "selector_snapshot_ms": 0.37726699999999996,
+        "total_ms": 2.248904
+      },
+      "kind": "overall",
+      "raw": "2026-11-05T15:36:31.840602Z  INFO tilt_ui_runtime::style::plugin: O08 temporary overall CSS trace total_ms=2.248904 selector_snapshot_ms=0.37726699999999996 full_owners=1 partial_owners=1 cold_owners=1"
+    },
+    {
+      "fields": {
+        "cold_owners": 1,
+        "full_owners": 1,
+        "partial_owners": 1,
+        "selector_snapshot_ms": 0.426028,
+        "total_ms": 2.08085
+      },
+      "kind": "overall",
+      "raw": "2026-11-05T15:36:31.909523Z  INFO tilt_ui_runtime::style::plugin: O08 temporary overall CSS trace total_ms=2.08085 selector_snapshot_ms=0.426028 full_owners=1 partial_owners=1 cold_owners=1"
+    },
+    {
+      "fields": {
+        "affected_nodes": 6,
+        "cascade_ms": 1.3716760000000001,
+        "changed_nodes": 0,
+        "component": "ComponentId(1",
+        "full": true,
+        "metadata_changed": false,
+        "owner": "1203v0",
+        "reconcile_ms": 0.371088,
+        "resolve_ms": 0.147862,
+        "scrollbar_ms": 0.221425,
+        "setup_ms": 0.026831,
+        "stylesheet": "tilt-ui://components/chat-panel.component.css",
+        "template": "tilt-ui://components/chat-panel.component.html",
+        "total_ms": 2.145092,
+        "view_nodes": 6
+      },
+      "kind": "owner",
+      "raw": "2026-11-05T15:36:31.925399Z  INFO tilt_ui_runtime::style::plugin: O08 temporary owner CSS trace owner=1203v0 component=Some(ComponentId(1)) template=Some(tilt-ui://components/chat-panel.component.html) stylesheet=Some(tilt-ui://components/chat-panel.component.css) full=true metadata_changed=false changed_nodes=0 view_nodes=6 affected_nodes=6 total_ms=2.145092 setup_ms=0.026831 cascade_ms=1.3716760000000001 scrollbar_ms=0.221425 resolve_ms=0.147862 reconcile_ms=0.371088"
+    },
+    {
+      "fields": {
+        "cold_owners": 1,
+        "full_owners": 1,
+        "partial_owners": 1,
+        "selector_snapshot_ms": 0.44191800000000003,
+        "total_ms": 2.664622
+      },
+      "kind": "overall",
+      "raw": "2026-11-05T15:36:31.925447Z  INFO tilt_ui_runtime::style::plugin: O08 temporary overall CSS trace total_ms=2.664622 selector_snapshot_ms=0.44191800000000003 full_owners=1 partial_owners=1 cold_owners=1"
+    },
+    {
+      "fields": {
+        "cold_owners": 1,
+        "full_owners": 1,
+        "partial_owners": 1,
+        "selector_snapshot_ms": 0.47050899999999996,
+        "total_ms": 2.4264769999999998
+      },
+      "kind": "overall",
+      "raw": "2026-11-05T15:36:31.993010Z  INFO tilt_ui_runtime::style::plugin: O08 temporary overall CSS trace total_ms=2.4264769999999998 selector_snapshot_ms=0.47050899999999996 full_owners=1 partial_owners=1 cold_owners=1"
+    },
+    {
+      "fields": {
+        "cold_owners": 1,
+        "full_owners": 1,
+        "partial_owners": 1,
+        "selector_snapshot_ms": 0.440009,
+        "total_ms": 2.112081
+      },
+      "kind": "overall",
+      "raw": "2026-11-05T15:36:32.033098Z  INFO tilt_ui_runtime::style::plugin: O08 temporary overall CSS trace total_ms=2.112081 selector_snapshot_ms=0.440009 full_owners=1 partial_owners=1 cold_owners=1"
+    },
+    {
+      "fields": {
+        "affected_nodes": 6,
+        "cascade_ms": 2.220423,
+        "changed_nodes": 0,
+        "component": "ComponentId(1",
+        "full": true,
+        "metadata_changed": false,
+        "owner": "1203v0",
+        "reconcile_ms": 0.153813,
+        "resolve_ms": 0.099532,
+        "scrollbar_ms": 0.209244,
+        "setup_ms": 0.028430999999999998,
+        "stylesheet": "tilt-ui://components/chat-panel.component.css",
+        "template": "tilt-ui://components/chat-panel.component.html",
+        "total_ms": 2.7158830000000003,
+        "view_nodes": 6
+      },
+      "kind": "owner",
+      "raw": "2026-11-05T15:36:32.059618Z  INFO tilt_ui_runtime::style::plugin: O08 temporary owner CSS trace owner=1203v0 component=Some(ComponentId(1)) template=Some(tilt-ui://components/chat-panel.component.html) stylesheet=Some(tilt-ui://components/chat-panel.component.css) full=true metadata_changed=false changed_nodes=0 view_nodes=6 affected_nodes=6 total_ms=2.7158830000000003 setup_ms=0.028430999999999998 cascade_ms=2.220423 scrollbar_ms=0.209244 resolve_ms=0.099532 reconcile_ms=0.153813"
+    },
+    {
+      "fields": {
+        "cold_owners": 1,
+        "full_owners": 1,
+        "partial_owners": 1,
+        "selector_snapshot_ms": 0.46236900000000003,
+        "total_ms": 3.257443
+      },
+      "kind": "overall",
+      "raw": "2026-11-05T15:36:32.059661Z  INFO tilt_ui_runtime::style::plugin: O08 temporary overall CSS trace total_ms=3.257443 selector_snapshot_ms=0.46236900000000003 full_owners=1 partial_owners=1 cold_owners=1"
+    },
+    {
+      "fields": {
+        "affected_nodes": 6,
+        "cascade_ms": 1.9732679999999998,
+        "changed_nodes": 0,
+        "component": "ComponentId(1",
+        "full": true,
+        "metadata_changed": false,
+        "owner": "1203v0",
+        "reconcile_ms": 0.231185,
+        "resolve_ms": 0.094862,
+        "scrollbar_ms": 0.210824,
+        "setup_ms": 0.041941,
+        "stylesheet": "tilt-ui://components/chat-panel.component.css",
+        "template": "tilt-ui://components/chat-panel.component.html",
+        "total_ms": 2.55612,
+        "view_nodes": 6
+      },
+      "kind": "owner",
+      "raw": "2026-11-05T15:36:32.098092Z  INFO tilt_ui_runtime::style::plugin: O08 temporary owner CSS trace owner=1203v0 component=Some(ComponentId(1)) template=Some(tilt-ui://components/chat-panel.component.html) stylesheet=Some(tilt-ui://components/chat-panel.component.css) full=true metadata_changed=false changed_nodes=0 view_nodes=6 affected_nodes=6 total_ms=2.55612 setup_ms=0.041941 cascade_ms=1.9732679999999998 scrollbar_ms=0.210824 resolve_ms=0.094862 reconcile_ms=0.231185"
+    },
+    {
+      "fields": {
+        "cold_owners": 1,
+        "full_owners": 1,
+        "partial_owners": 1,
+        "selector_snapshot_ms": 0.99904,
+        "total_ms": 3.6640520000000003
+      },
+      "kind": "overall",
+      "raw": "2026-11-05T15:36:32.098133Z  INFO tilt_ui_runtime::style::plugin: O08 temporary overall CSS trace total_ms=3.6640520000000003 selector_snapshot_ms=0.99904 full_owners=1 partial_owners=1 cold_owners=1"
+    },
+    {
+      "fields": {
+        "cold_owners": 1,
+        "full_owners": 1,
+        "partial_owners": 1,
+        "selector_snapshot_ms": 0.444129,
+        "total_ms": 2.234494
+      },
+      "kind": "overall",
+      "raw": "2026-11-05T15:36:32.112980Z  INFO tilt_ui_runtime::style::plugin: O08 temporary overall CSS trace total_ms=2.234494 selector_snapshot_ms=0.444129 full_owners=1 partial_owners=1 cold_owners=1"
+    },
+    {
+      "fields": {
+        "affected_nodes": 6,
+        "cascade_ms": 2.144171,
+        "changed_nodes": 0,
+        "component": "ComponentId(1",
+        "full": true,
+        "metadata_changed": false,
+        "owner": "1203v0",
+        "reconcile_ms": 0.31473599999999996,
+        "resolve_ms": 0.169323,
+        "scrollbar_ms": 0.324847,
+        "setup_ms": 0.033871,
+        "stylesheet": "tilt-ui://components/chat-panel.component.css",
+        "template": "tilt-ui://components/chat-panel.component.html",
+        "total_ms": 2.994838,
+        "view_nodes": 6
+      },
+      "kind": "owner",
+      "raw": "2026-11-05T15:36:32.131760Z  INFO tilt_ui_runtime::style::plugin: O08 temporary owner CSS trace owner=1203v0 component=Some(ComponentId(1)) template=Some(tilt-ui://components/chat-panel.component.html) stylesheet=Some(tilt-ui://components/chat-panel.component.css) full=true metadata_changed=false changed_nodes=0 view_nodes=6 affected_nodes=6 total_ms=2.994838 setup_ms=0.033871 cascade_ms=2.144171 scrollbar_ms=0.324847 resolve_ms=0.169323 reconcile_ms=0.31473599999999996"
+    },
+    {
+      "fields": {
+        "cold_owners": 1,
+        "full_owners": 1,
+        "partial_owners": 1,
+        "selector_snapshot_ms": 0.476149,
+        "total_ms": 3.5888
+      },
+      "kind": "overall",
+      "raw": "2026-11-05T15:36:32.131841Z  INFO tilt_ui_runtime::style::plugin: O08 temporary overall CSS trace total_ms=3.5888 selector_snapshot_ms=0.476149 full_owners=1 partial_owners=1 cold_owners=1"
+    },
+    {
+      "fields": {
+        "cold_owners": 1,
+        "full_owners": 1,
+        "partial_owners": 1,
+        "selector_snapshot_ms": 0.45627900000000005,
+        "total_ms": 2.075701
+      },
+      "kind": "overall",
+      "raw": "2026-11-05T15:36:32.167925Z  INFO tilt_ui_runtime::style::plugin: O08 temporary overall CSS trace total_ms=2.075701 selector_snapshot_ms=0.45627900000000005 full_owners=1 partial_owners=1 cold_owners=1"
+    },
+    {
+      "fields": {
+        "cold_owners": 1,
+        "full_owners": 1,
+        "partial_owners": 1,
+        "selector_snapshot_ms": 0.44831899999999997,
+        "total_ms": 2.166042
+      },
+      "kind": "overall",
+      "raw": "2026-11-05T15:36:32.183757Z  INFO tilt_ui_runtime::style::plugin: O08 temporary overall CSS trace total_ms=2.166042 selector_snapshot_ms=0.44831899999999997 full_owners=1 partial_owners=1 cold_owners=1"
+    },
+    {
+      "fields": {
+        "cold_owners": 1,
+        "full_owners": 1,
+        "partial_owners": 1,
+        "selector_snapshot_ms": 0.287456,
+        "total_ms": 2.313855
+      },
+      "kind": "overall",
+      "raw": "2026-11-05T15:36:32.230225Z  INFO tilt_ui_runtime::style::plugin: O08 temporary overall CSS trace total_ms=2.313855 selector_snapshot_ms=0.287456 full_owners=1 partial_owners=1 cold_owners=1"
+    },
+    {
+      "fields": {
+        "cold_owners": 1,
+        "full_owners": 1,
+        "partial_owners": 1,
+        "selector_snapshot_ms": 0.44744799999999996,
+        "total_ms": 2.4440180000000002
+      },
+      "kind": "overall",
+      "raw": "2026-11-05T15:36:32.261513Z  INFO tilt_ui_runtime::style::plugin: O08 temporary overall CSS trace total_ms=2.4440180000000002 selector_snapshot_ms=0.44744799999999996 full_owners=1 partial_owners=1 cold_owners=1"
+    },
+    {
+      "fields": {
+        "cold_owners": 1,
+        "full_owners": 1,
+        "partial_owners": 1,
+        "selector_snapshot_ms": 0.270345,
+        "total_ms": 2.217254
+      },
+      "kind": "overall",
+      "raw": "2026-11-05T15:36:32.276953Z  INFO tilt_ui_runtime::style::plugin: O08 temporary overall CSS trace total_ms=2.217254 selector_snapshot_ms=0.270345 full_owners=1 partial_owners=1 cold_owners=1"
+    },
+    {
+      "fields": {
+        "cold_owners": 1,
+        "full_owners": 1,
+        "partial_owners": 1,
+        "selector_snapshot_ms": 0.377777,
+        "total_ms": 2.303534
+      },
+      "kind": "overall",
+      "raw": "2026-11-05T15:36:32.322240Z  INFO tilt_ui_runtime::style::plugin: O08 temporary overall CSS trace total_ms=2.303534 selector_snapshot_ms=0.377777 full_owners=1 partial_owners=1 cold_owners=1"
+    },
+    {
+      "fields": {
+        "affected_nodes": 6,
+        "cascade_ms": 1.5301900000000002,
+        "changed_nodes": 0,
+        "component": "ComponentId(1",
+        "full": true,
+        "metadata_changed": false,
+        "owner": "1203v0",
+        "reconcile_ms": 0.219124,
+        "resolve_ms": 0.137043,
+        "scrollbar_ms": 0.333816,
+        "setup_ms": 0.028249999999999997,
+        "stylesheet": "tilt-ui://components/chat-panel.component.css",
+        "template": "tilt-ui://components/chat-panel.component.html",
+        "total_ms": 2.253643,
+        "view_nodes": 6
+      },
+      "kind": "owner",
+      "raw": "2026-11-05T15:36:32.351561Z  INFO tilt_ui_runtime::style::plugin: O08 temporary owner CSS trace owner=1203v0 component=Some(ComponentId(1)) template=Some(tilt-ui://components/chat-panel.component.html) stylesheet=Some(tilt-ui://components/chat-panel.component.css) full=true metadata_changed=false changed_nodes=0 view_nodes=6 affected_nodes=6 total_ms=2.253643 setup_ms=0.028249999999999997 cascade_ms=1.5301900000000002 scrollbar_ms=0.333816 resolve_ms=0.137043 reconcile_ms=0.219124"
+    },
+    {
+      "fields": {
+        "cold_owners": 1,
+        "full_owners": 1,
+        "partial_owners": 1,
+        "selector_snapshot_ms": 0.939678,
+        "total_ms": 3.3050140000000003
+      },
+      "kind": "overall",
+      "raw": "2026-11-05T15:36:32.351617Z  INFO tilt_ui_runtime::style::plugin: O08 temporary overall CSS trace total_ms=3.3050140000000003 selector_snapshot_ms=0.939678 full_owners=1 partial_owners=1 cold_owners=1"
+    },
+    {
+      "fields": {
+        "cold_owners": 1,
+        "full_owners": 1,
+        "partial_owners": 1,
+        "selector_snapshot_ms": 0.424378,
+        "total_ms": 2.088121
+      },
+      "kind": "overall",
+      "raw": "2026-11-05T15:36:32.368177Z  INFO tilt_ui_runtime::style::plugin: O08 temporary overall CSS trace total_ms=2.088121 selector_snapshot_ms=0.424378 full_owners=1 partial_owners=1 cold_owners=1"
+    },
+    {
+      "fields": {
+        "cold_owners": 1,
+        "full_owners": 1,
+        "partial_owners": 1,
+        "selector_snapshot_ms": 0.48186,
+        "total_ms": 2.0917000000000003
+      },
+      "kind": "overall",
+      "raw": "2026-11-05T15:36:32.382739Z  INFO tilt_ui_runtime::style::plugin: O08 temporary overall CSS trace total_ms=2.0917000000000003 selector_snapshot_ms=0.48186 full_owners=1 partial_owners=1 cold_owners=1"
+    },
+    {
+      "fields": {
+        "active_cameras": "[(965v0, 0, true)]",
+        "camera": "Transform { translation: Vec3(8.5, 114.630005, 24.5",
+        "dropped_samples": 0,
+        "entities": 31084,
+        "event_binding_nodes": 0,
+        "fps": 77.1384164521933,
+        "frames": 927,
+        "image_nodes": 90,
+        "images": 144,
+        "inventory_open": false,
+        "max_ms": 52.072953999999996,
+        "median_ms": 12.617476,
+        "meshes": 20269,
+        "p95_ms": 16.465811,
+        "p99_ms": 20.372525999999997,
+        "phase": "Closed",
+        "property_binding_nodes": 32,
+        "resident_memory_kib": 2246384,
+        "sample_frames": 927,
+        "tilt_nodes": 658,
+        "ui_nodes": 991,
+        "window_seconds": 12.01735844
+      },
+      "kind": "context",
+      "raw": "2026-11-05T15:36:45.895693Z  INFO terra_client::inventory_benchmark: Inventory benchmark phase: CPU wall frames, unchanged scene and quality phase=Closed window_seconds=12.01735844 frames=927 sample_frames=927 dropped_samples=0 fps=77.1384164521933 median_ms=12.617476 p95_ms=16.465811 p99_ms=20.372525999999997 max_ms=52.072953999999996 resident_memory_kib=Some(2246384) entities=31084 images=144 meshes=20269 ui_nodes=991 tilt_nodes=658 property_binding_nodes=32 event_binding_nodes=0 image_nodes=90 active_cameras=[(965v0, 0, true)] inventory_open=false camera=Some(Transform { translation: Vec3(8.5, 114.630005, 24.5), rotation: Quat(-0.13282566, 0.1587254, 0.021554638, 0.97810996), scale: Vec3(1.0, 1.0, 1.0) })"
+    },
+    {
+      "fields": {
+        "affected_nodes": 1,
+        "cascade_ms": 0.304736,
+        "changed_nodes": 0,
+        "component": "ComponentId(34",
+        "full": true,
+        "metadata_changed": false,
+        "owner": "1180v0",
+        "reconcile_ms": 0.126712,
+        "resolve_ms": 1.673133,
+        "scrollbar_ms": 0.121432,
+        "setup_ms": 0.00538,
+        "stylesheet": "tilt-ui://pages/game.component.css",
+        "template": "tilt-ui://pages/game.component.html",
+        "total_ms": 2.234503,
+        "view_nodes": 1
+      },
+      "kind": "owner",
+      "raw": "2026-11-05T15:36:45.935515Z  INFO tilt_ui_runtime::style::plugin: O08 temporary owner CSS trace owner=1180v0 component=Some(ComponentId(34)) template=Some(tilt-ui://pages/game.component.html) stylesheet=Some(tilt-ui://pages/game.component.css) full=true metadata_changed=false changed_nodes=0 view_nodes=1 affected_nodes=1 total_ms=2.234503 setup_ms=0.00538 cascade_ms=0.304736 scrollbar_ms=0.121432 resolve_ms=1.673133 reconcile_ms=0.126712"
+    },
+    {
+      "fields": {
+        "affected_nodes": 46,
+        "cascade_ms": 7.866863,
+        "changed_nodes": 0,
+        "component": "ComponentId(8",
+        "full": true,
+        "metadata_changed": false,
+        "owner": "1046v1",
+        "reconcile_ms": 0.188264,
+        "resolve_ms": 0.611652,
+        "scrollbar_ms": 0.276545,
+        "setup_ms": 0.09267199999999999,
+        "stylesheet": "tilt-ui://components/inventory-content.component.css",
+        "template": "tilt-ui://components/inventory-content.component.html",
+        "total_ms": 9.050926,
+        "view_nodes": 46
+      },
+      "kind": "owner",
+      "raw": "2026-11-05T15:36:45.944604Z  INFO tilt_ui_runtime::style::plugin: O08 temporary owner CSS trace owner=1046v1 component=Some(ComponentId(8)) template=Some(tilt-ui://components/inventory-content.component.html) stylesheet=Some(tilt-ui://components/inventory-content.component.css) full=true metadata_changed=false changed_nodes=0 view_nodes=46 affected_nodes=46 total_ms=9.050926 setup_ms=0.09267199999999999 cascade_ms=7.866863 scrollbar_ms=0.276545 resolve_ms=0.611652 reconcile_ms=0.188264"
+    },
+    {
+      "fields": {
+        "affected_nodes": 7,
+        "cascade_ms": 2.100431,
+        "changed_nodes": 0,
+        "component": "ComponentId(10",
+        "full": true,
+        "metadata_changed": false,
+        "owner": "31168v1",
+        "reconcile_ms": 0.37626800000000005,
+        "resolve_ms": 0.54547,
+        "scrollbar_ms": 0.296806,
+        "setup_ms": 0.02759,
+        "stylesheet": "tilt-ui://components/inventory-slot.component.css",
+        "template": "tilt-ui://components/inventory-slot.component.html",
+        "total_ms": 3.410966,
+        "view_nodes": 7
+      },
+      "kind": "owner",
+      "raw": "2026-11-05T15:36:45.949772Z  INFO tilt_ui_runtime::style::plugin: O08 temporary owner CSS trace owner=31168v1 component=Some(ComponentId(10)) template=Some(tilt-ui://components/inventory-slot.component.html) stylesheet=Some(tilt-ui://components/inventory-slot.component.css) full=true metadata_changed=false changed_nodes=0 view_nodes=7 affected_nodes=7 total_ms=3.410966 setup_ms=0.02759 cascade_ms=2.100431 scrollbar_ms=0.296806 resolve_ms=0.54547 reconcile_ms=0.37626800000000005"
+    },
+    {
+      "fields": {
+        "affected_nodes": 7,
+        "cascade_ms": 1.51115,
+        "changed_nodes": 0,
+        "component": "ComponentId(10",
+        "full": true,
+        "metadata_changed": false,
+        "owner": "3614v1",
+        "reconcile_ms": 0.224364,
+        "resolve_ms": 0.092752,
+        "scrollbar_ms": 0.210854,
+        "setup_ms": 0.0115,
+        "stylesheet": "tilt-ui://components/inventory-slot.component.css",
+        "template": "tilt-ui://components/inventory-slot.component.html",
+        "total_ms": 2.05369,
+        "view_nodes": 7
+      },
+      "kind": "owner",
+      "raw": "2026-11-05T15:36:45.953778Z  INFO tilt_ui_runtime::style::plugin: O08 temporary owner CSS trace owner=3614v1 component=Some(ComponentId(10)) template=Some(tilt-ui://components/inventory-slot.component.html) stylesheet=Some(tilt-ui://components/inventory-slot.component.css) full=true metadata_changed=false changed_nodes=0 view_nodes=7 affected_nodes=7 total_ms=2.05369 setup_ms=0.0115 cascade_ms=1.51115 scrollbar_ms=0.210854 resolve_ms=0.092752 reconcile_ms=0.224364"
+    },
+    {
+      "fields": {
+        "cold_owners": 8,
+        "full_owners": 8,
+        "partial_owners": 63,
+        "selector_snapshot_ms": 0.338507,
+        "total_ms": 90.115235
+      },
+      "kind": "overall",
+      "raw": "2026-11-05T15:36:46.023023Z  INFO tilt_ui_runtime::style::plugin: O08 temporary overall CSS trace total_ms=90.115235 selector_snapshot_ms=0.338507 full_owners=8 partial_owners=63 cold_owners=8"
+    },
+    {
+      "fields": {
+        "affected_nodes": 7,
+        "cascade_ms": 1.642672,
+        "changed_nodes": 0,
+        "component": "ComponentId(10",
+        "full": true,
+        "metadata_changed": false,
+        "owner": "31168v1",
+        "reconcile_ms": 0.166683,
+        "resolve_ms": 0.01999,
+        "scrollbar_ms": 0.241465,
+        "setup_ms": 0.01468,
+        "stylesheet": "tilt-ui://components/inventory-slot.component.css",
+        "template": "tilt-ui://components/inventory-slot.component.html",
+        "total_ms": 2.0932809999999997,
+        "view_nodes": 7
+      },
+      "kind": "owner",
+      "raw": "2026-11-05T15:36:46.059201Z  INFO tilt_ui_runtime::style::plugin: O08 temporary owner CSS trace owner=31168v1 component=Some(ComponentId(10)) template=Some(tilt-ui://components/inventory-slot.component.html) stylesheet=Some(tilt-ui://components/inventory-slot.component.css) full=true metadata_changed=false changed_nodes=0 view_nodes=7 affected_nodes=7 total_ms=2.0932809999999997 setup_ms=0.01468 cascade_ms=1.642672 scrollbar_ms=0.241465 resolve_ms=0.01999 reconcile_ms=0.166683"
+    },
+    {
+      "fields": {
+        "affected_nodes": 30,
+        "cascade_ms": 4.687961,
+        "changed_nodes": 0,
+        "component": "ComponentId(11",
+        "full": true,
+        "metadata_changed": false,
+        "owner": "1018v1",
+        "reconcile_ms": 0.130303,
+        "resolve_ms": 0.244245,
+        "scrollbar_ms": 0.201874,
+        "setup_ms": 0.02467,
+        "stylesheet": "tilt-ui://components/item-browser.component.css",
+        "template": "tilt-ui://components/item-browser.component.html",
+        "total_ms": 5.296713,
+        "view_nodes": 30
+      },
+      "kind": "owner",
+      "raw": "2026-11-05T15:36:46.069327Z  INFO tilt_ui_runtime::style::plugin: O08 temporary owner CSS trace owner=1018v1 component=Some(ComponentId(11)) template=Some(tilt-ui://components/item-browser.component.html) stylesheet=Some(tilt-ui://components/item-browser.component.css) full=true metadata_changed=false changed_nodes=0 view_nodes=30 affected_nodes=30 total_ms=5.296713 setup_ms=0.02467 cascade_ms=4.687961 scrollbar_ms=0.201874 resolve_ms=0.244245 reconcile_ms=0.130303"
+    },
+    {
+      "fields": {
+        "cold_owners": 6,
+        "full_owners": 6,
+        "partial_owners": 0,
+        "selector_snapshot_ms": 0.460499,
+        "total_ms": 12.745469
+      },
+      "kind": "overall",
+      "raw": "2026-11-05T15:36:46.069366Z  INFO tilt_ui_runtime::style::plugin: O08 temporary overall CSS trace total_ms=12.745469 selector_snapshot_ms=0.460499 full_owners=6 partial_owners=0 cold_owners=6"
+    },
+    {
+      "fields": {
+        "frames": 3,
+        "max_ms": 142.210839,
+        "median_ms": 48.404163,
+        "p95_ms": 142.210839,
+        "p99_ms": 142.210839,
+        "request_to_visible_ms": 228.37858699999998,
+        "stage": "Opening"
+      },
+      "kind": "context",
+      "raw": "2026-11-05T15:36:46.124553Z  INFO terra_client::inventory_benchmark: Inventory benchmark real UI transition; opening includes settled visible slot layout, not only the open flag stage=Opening request_to_visible_ms=228.37858699999998 frames=3 median_ms=48.404163 p95_ms=142.210839 p99_ms=142.210839 max_ms=142.210839"
+    },
+    {
+      "fields": {
+        "affected_nodes": 4,
+        "cascade_ms": 1.01108,
+        "changed_nodes": 0,
+        "component": "ComponentId(9",
+        "full": true,
+        "metadata_changed": false,
+        "owner": "1183v0",
+        "reconcile_ms": 0.259615,
+        "resolve_ms": 2.618791,
+        "scrollbar_ms": 0.184273,
+        "setup_ms": 0.024641,
+        "stylesheet": "tilt-ui://components/inventory-panel.component.css",
+        "template": "tilt-ui://components/inventory-panel.component.html",
+        "total_ms": 4.1023,
+        "view_nodes": 4
+      },
+      "kind": "owner",
+      "raw": "2026-11-05T15:36:46.145455Z  INFO tilt_ui_runtime::style::plugin: O08 temporary owner CSS trace owner=1183v0 component=Some(ComponentId(9)) template=Some(tilt-ui://components/inventory-panel.component.html) stylesheet=Some(tilt-ui://components/inventory-panel.component.css) full=true metadata_changed=false changed_nodes=0 view_nodes=4 affected_nodes=4 total_ms=4.1023 setup_ms=0.024641 cascade_ms=1.01108 scrollbar_ms=0.184273 resolve_ms=2.618791 reconcile_ms=0.259615"
+    },
+    {
+      "fields": {
+        "cold_owners": 1,
+        "full_owners": 1,
+        "partial_owners": 1,
+        "selector_snapshot_ms": 0.602662,
+        "total_ms": 4.776933
+      },
+      "kind": "overall",
+      "raw": "2026-11-05T15:36:46.145488Z  INFO tilt_ui_runtime::style::plugin: O08 temporary overall CSS trace total_ms=4.776933 selector_snapshot_ms=0.602662 full_owners=1 partial_owners=1 cold_owners=1"
+    },
+    {
+      "fields": {
+        "active_cameras": "[(965v0, 0, true)]",
+        "camera": "Transform { translation: Vec3(8.5, 114.630005, 24.5",
+        "dropped_samples": 0,
+        "entities": 31119,
+        "event_binding_nodes": 0,
+        "fps": 73.32939843120232,
+        "frames": 881,
+        "image_nodes": 152,
+        "images": 180,
+        "inventory_open": true,
+        "max_ms": 28.23546,
+        "median_ms": 13.197917,
+        "meshes": 20269,
+        "p95_ms": 17.683833999999997,
+        "p99_ms": 21.184402000000002,
+        "phase": "Open",
+        "property_binding_nodes": 382,
+        "resident_memory_kib": 2305072,
+        "sample_frames": 881,
+        "tilt_nodes": 679,
+        "ui_nodes": 1028,
+        "window_seconds": 12.014281023
+      },
+      "kind": "context",
+      "raw": "2026-11-05T15:37:00.150157Z  INFO terra_client::inventory_benchmark: Inventory benchmark phase: CPU wall frames, unchanged scene and quality phase=Open window_seconds=12.014281023 frames=881 sample_frames=881 dropped_samples=0 fps=73.32939843120232 median_ms=13.197917 p95_ms=17.683833999999997 p99_ms=21.184402000000002 max_ms=28.23546 resident_memory_kib=Some(2305072) entities=31119 images=180 meshes=20269 ui_nodes=1028 tilt_nodes=679 property_binding_nodes=382 event_binding_nodes=0 image_nodes=152 active_cameras=[(965v0, 0, true)] inventory_open=true camera=Some(Transform { translation: Vec3(8.5, 114.630005, 24.5), rotation: Quat(-0.13282566, 0.1587254, 0.021554638, 0.97810996), scale: Vec3(1.0, 1.0, 1.0) })"
+    },
+    {
+      "fields": {
+        "affected_nodes": 4,
+        "cascade_ms": 0.811075,
+        "changed_nodes": 0,
+        "component": "ComponentId(9",
+        "full": true,
+        "metadata_changed": false,
+        "owner": "1183v0",
+        "reconcile_ms": 0.22880399999999998,
+        "resolve_ms": 2.419137,
+        "scrollbar_ms": 0.209545,
+        "setup_ms": 0.006640999999999999,
+        "stylesheet": "tilt-ui://components/inventory-panel.component.css",
+        "template": "tilt-ui://components/inventory-panel.component.html",
+        "total_ms": 3.681212,
+        "view_nodes": 4
+      },
+      "kind": "owner",
+      "raw": "2026-11-05T15:37:00.194284Z  INFO tilt_ui_runtime::style::plugin: O08 temporary owner CSS trace owner=1183v0 component=Some(ComponentId(9)) template=Some(tilt-ui://components/inventory-panel.component.html) stylesheet=Some(tilt-ui://components/inventory-panel.component.css) full=true metadata_changed=false changed_nodes=0 view_nodes=4 affected_nodes=4 total_ms=3.681212 setup_ms=0.006640999999999999 cascade_ms=0.811075 scrollbar_ms=0.209545 resolve_ms=2.419137 reconcile_ms=0.22880399999999998"
+    },
+    {
+      "fields": {
+        "cold_owners": 2,
+        "full_owners": 2,
+        "partial_owners": 2,
+        "selector_snapshot_ms": 0.287876,
+        "total_ms": 6.0170770000000005
+      },
+      "kind": "overall",
+      "raw": "2026-11-05T15:37:00.194318Z  INFO tilt_ui_runtime::style::plugin: O08 temporary overall CSS trace total_ms=6.0170770000000005 selector_snapshot_ms=0.287876 full_owners=2 partial_owners=2 cold_owners=2"
+    },
+    {
+      "fields": {
+        "frames": 2,
+        "max_ms": 35.243357,
+        "median_ms": 19.705383,
+        "p95_ms": 35.243357,
+        "p99_ms": 35.243357,
+        "request_to_visible_ms": 54.94874,
+        "stage": "Closing"
+      },
+      "kind": "context",
+      "raw": "2026-11-05T15:37:00.205886Z  INFO terra_client::inventory_benchmark: Inventory benchmark real UI transition; opening includes settled visible slot layout, not only the open flag stage=Closing request_to_visible_ms=54.94874 frames=2 median_ms=19.705383 p95_ms=35.243357 p99_ms=35.243357 max_ms=35.243357"
+    },
+    {
+      "fields": {
+        "affected_nodes": 30,
+        "cascade_ms": 4.196651,
+        "changed_nodes": 0,
+        "component": "ComponentId(11",
+        "full": true,
+        "metadata_changed": false,
+        "owner": "1018v1",
+        "reconcile_ms": 0.17733300000000002,
+        "resolve_ms": 0.236545,
+        "scrollbar_ms": 0.206474,
+        "setup_ms": 0.024741,
+        "stylesheet": "tilt-ui://components/item-browser.component.css",
+        "template": "tilt-ui://components/item-browser.component.html",
+        "total_ms": 4.862615,
+        "view_nodes": 30
+      },
+      "kind": "owner",
+      "raw": "2026-11-05T15:37:00.218194Z  INFO tilt_ui_runtime::style::plugin: O08 temporary owner CSS trace owner=1018v1 component=Some(ComponentId(11)) template=Some(tilt-ui://components/item-browser.component.html) stylesheet=Some(tilt-ui://components/item-browser.component.css) full=true metadata_changed=false changed_nodes=0 view_nodes=30 affected_nodes=30 total_ms=4.862615 setup_ms=0.024741 cascade_ms=4.196651 scrollbar_ms=0.206474 resolve_ms=0.236545 reconcile_ms=0.17733300000000002"
+    },
+    {
+      "fields": {
+        "cold_owners": 1,
+        "full_owners": 1,
+        "partial_owners": 0,
+        "selector_snapshot_ms": 0.349047,
+        "total_ms": 5.2907329999999995
+      },
+      "kind": "overall",
+      "raw": "2026-11-05T15:37:00.218240Z  INFO tilt_ui_runtime::style::plugin: O08 temporary overall CSS trace total_ms=5.2907329999999995 selector_snapshot_ms=0.349047 full_owners=1 partial_owners=0 cold_owners=1"
+    },
+    {
+      "fields": {
+        "active_cameras": "[(965v0, 0, true)]",
+        "camera": "Transform { translation: Vec3(8.5, 114.630005, 24.5",
+        "dropped_samples": 0,
+        "entities": 31127,
+        "event_binding_nodes": 0,
+        "fps": 78.39931604216733,
+        "frames": 941,
+        "image_nodes": 152,
+        "images": 180,
+        "inventory_open": false,
+        "max_ms": 23.938576,
+        "median_ms": 12.538624,
+        "meshes": 20269,
+        "p95_ms": 15.921040000000001,
+        "p99_ms": 18.51176,
+        "phase": "ClosedAgain",
+        "property_binding_nodes": 32,
+        "resident_memory_kib": 2310096,
+        "sample_frames": 941,
+        "tilt_nodes": 682,
+        "ui_nodes": 1031,
+        "window_seconds": 12.002655731
+      },
+      "kind": "context",
+      "raw": "2026-11-05T15:37:14.214496Z  INFO terra_client::inventory_benchmark: Inventory benchmark phase: CPU wall frames, unchanged scene and quality phase=ClosedAgain window_seconds=12.002655731 frames=941 sample_frames=941 dropped_samples=0 fps=78.39931604216733 median_ms=12.538624 p95_ms=15.921040000000001 p99_ms=18.51176 max_ms=23.938576 resident_memory_kib=Some(2310096) entities=31127 images=180 meshes=20269 ui_nodes=1031 tilt_nodes=682 property_binding_nodes=32 event_binding_nodes=0 image_nodes=152 active_cameras=[(965v0, 0, true)] inventory_open=false camera=Some(Transform { translation: Vec3(8.5, 114.630005, 24.5), rotation: Quat(-0.13282566, 0.1587254, 0.021554638, 0.97810996), scale: Vec3(1.0, 1.0, 1.0) })"
+    }
+  ],
+  "external_style_probe_restoration": {
+    "byte_identical": true,
+    "bytes": 104052,
+    "included_in_production_patch": false,
+    "original_sha256": "8a1c557963e05f9ab46244ddc71b4f6ed7708ac04fcf5de8cd2482c0f2a29c30",
+    "original_snapshot_path": "/tmp/teramic-o08-style-trace/plugin.rs.original",
+    "purpose": "Temporary private style-pass diagnosis; the external dependency source was restored after instrumentation.",
+    "restored_external_path": "/run/media/exepta/Data/Jetbrains/projects/rust/tilt-us/tilt-ui/crates/tilt-ui-runtime/src/style/plugin.rs",
+    "restored_sha256": "8a1c557963e05f9ab46244ddc71b4f6ed7708ac04fcf5de8cd2482c0f2a29c30"
+  },
+  "source": "/tmp/teramic-o08-439o32is/style-probe.log",
+  "source_log_sha256": "524154ac4d0cf5928d9c7a376925f88c865c71e700192fe53291ecaf896f601e"
+}

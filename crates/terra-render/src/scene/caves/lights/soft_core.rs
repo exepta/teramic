@@ -6,7 +6,7 @@ use crate::blocks::definitions::LightFalloff;
 use bevy::shader::{Shader, ShaderImport, Source};
 
 // Exact binary fraction, reserved internally; never exposed as a physical size.
-// Bevy 0.19.1: range drives bounds/shadow frusta; only the three decoded PBR
+// Bevy 0.20.0: range drives bounds/shadow frusta; only the three decoded PBR
 // radius reads consume this marker. Keep PCSS and source-radius gizmos disabled
 // on these lights. They deliberately do not participate in volumetric fog.
 const TORCH_RADIUS_CODE: f32 = 128.375;
@@ -16,7 +16,7 @@ const ATTENUATION: &str = "let rangeAttenuation = getDistanceAttenuation(distanc
 const RADIUS_ARGUMENT: &str = "(*light).position_radius.w,";
 const RADIUS_LOCAL: &str = "let light_radius = (*light).position_radius.w;";
 const RADIUS_READ: &str = "(*light).position_radius.w";
-const IMPORT_PATH: &str = "bevy_pbr::lighting";
+const IMPORT_PATH: &str = "bevy_pbr::render::pbr_lighting";
 
 #[derive(Resource, Default)]
 pub struct TorchLightingStatus {
@@ -60,15 +60,15 @@ fn prepare(mut shaders: ResMut<Assets<Shader>>, mut state: ResMut<TorchLightingS
     let Some(shader) = shaders.get(id) else {
         return;
     };
-    let Source::Wgsl(source) = &shader.source else {
+    let Source::Wesl(source) = &shader.source else {
         state.failed = true;
-        error!("Torch soft-core lighting requires Bevy's WGSL PBR library");
+        error!("Torch soft-core lighting requires Bevy's WESL PBR library");
         return;
     };
     match extend(source) {
         Ok(source) => {
             if let Some(mut shader) = shaders.get_mut(id) {
-                shader.source = Source::Wgsl(source.into());
+                shader.source = Source::Wesl(source.into());
                 state.ready = true;
                 info!("Torch soft-core attenuation installed in existing clustered PBR path");
             }
@@ -94,7 +94,7 @@ fn extend(source: &str) -> Result<String, &'static str> {
         || point.matches(RADIUS_LOCAL).count() != 1
         || point.matches(RADIUS_READ).count() != 3
     {
-        return Err("Bevy 0.19 point-light signature changed");
+        return Err("Bevy 0.20 point-light signature changed");
     }
     let point = point.replace(ATTENUATION, "let rangeAttenuation = terra_torch_attenuation(distance_square, (*light).color_inverse_square_range.w, (*light).position_radius.w);")
         .replace(RADIUS_ARGUMENT, "terra_physical_light_radius((*light).position_radius.w),")
@@ -110,10 +110,10 @@ fn extend(source: &str) -> Result<String, &'static str> {
 mod tests {
     use super::*;
     #[test]
-    fn matches_bevys_declared_module_name_not_the_wgsl_filename() {
-        let shader = Shader::from_wgsl(
-            "#define_import_path bevy_pbr::lighting\n",
-            "embedded://bevy_pbr/render/pbr_lighting.wgsl",
+    fn matches_bevys_embedded_wesl_module_path() {
+        let shader = Shader::from_wesl(
+            "// lighting library\n",
+            "embedded://bevy_pbr/render/pbr_lighting.wesl",
         );
         assert!(matches!(shader.import_path, ShaderImport::Custom(path) if path == IMPORT_PATH));
     }
@@ -199,7 +199,7 @@ mod tests {
     #[test]
     fn preparation_patches_only_the_lighting_module_once_and_fails_closed() {
         let source = format!(
-            "#define_import_path {IMPORT_PATH}\nfn point_light(\n{ATTENUATION}\n{RADIUS_ARGUMENT}\n{RADIUS_ARGUMENT}\n{RADIUS_LOCAL}\n)\nfn spot_light(\n// untouched tail"
+            "// lighting library\nfn point_light(\n{ATTENUATION}\n{RADIUS_ARGUMENT}\n{RADIUS_ARGUMENT}\n{RADIUS_LOCAL}\n)\nfn spot_light(\n// untouched tail"
         );
         let mut app = App::new();
         app.init_resource::<Assets<Shader>>()
@@ -208,44 +208,50 @@ mod tests {
         let other = app
             .world_mut()
             .resource_mut::<Assets<Shader>>()
-            .add(Shader::from_wgsl(
-                "#define_import_path unrelated::lighting\n",
-                "other.wgsl",
+            .add(Shader::from_wesl(
+                "// unrelated lighting\n",
+                "embedded://unrelated/lighting.wesl",
             ));
         app.update();
         assert!(!app.world().resource::<TorchLightingStatus>().ready);
         let lighting = app
             .world_mut()
             .resource_mut::<Assets<Shader>>()
-            .add(Shader::from_wgsl(source, "pbr_lighting.wgsl"));
+            .add(Shader::from_wesl(
+                source,
+                "embedded://bevy_pbr/render/pbr_lighting.wesl",
+            ));
         app.update();
         assert!(app.world().resource::<TorchLightingStatus>().ready);
         for _ in 0..3 {
             app.update();
         }
         let shaders = app.world().resource::<Assets<Shader>>();
-        let Source::Wgsl(patched) = &shaders.get(&lighting).unwrap().source else {
+        let Source::Wesl(patched) = &shaders.get(&lighting).unwrap().source else {
             panic!("Expected WGSL")
         };
         assert_eq!(patched.matches("fn terra_torch_attenuation(").count(), 1);
-        let Source::Wgsl(unrelated) = &shaders.get(&other).unwrap().source else {
+        let Source::Wesl(unrelated) = &shaders.get(&other).unwrap().source else {
             panic!("Expected WGSL")
         };
-        assert_eq!(&**unrelated, "#define_import_path unrelated::lighting\n");
+        assert_eq!(&**unrelated, "// unrelated lighting\n");
 
         let mut app = App::new();
         app.init_resource::<Assets<Shader>>()
             .init_resource::<TorchLightingStatus>()
             .add_systems(Update, prepare);
-        let incompatible = format!("#define_import_path {IMPORT_PATH}\n// changed engine API\n");
+        let incompatible = "// changed engine API\n".to_string();
         let handle = app
             .world_mut()
             .resource_mut::<Assets<Shader>>()
-            .add(Shader::from_wgsl(incompatible.clone(), "new_engine.wgsl"));
+            .add(Shader::from_wesl(
+                incompatible.clone(),
+                "embedded://bevy_pbr/render/pbr_lighting.wesl",
+            ));
         app.update();
         let status = app.world().resource::<TorchLightingStatus>();
         assert!(!status.ready && status.failed);
-        let Source::Wgsl(unchanged) = &app
+        let Source::Wesl(unchanged) = &app
             .world()
             .resource::<Assets<Shader>>()
             .get(&handle)

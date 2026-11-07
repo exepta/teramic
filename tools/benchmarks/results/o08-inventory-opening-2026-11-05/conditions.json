@@ -1,0 +1,95 @@
+{
+  "base_config_directory": "configs",
+  "cases": {
+    "after-slot-player": {
+      "implementation_stage": "slots-only causal intermediate",
+      "readiness": "legacy layout/open readiness",
+      "rounds": 1,
+      "source_config_directory": "configs",
+      "surface": "Player"
+    },
+    "before-player": {
+      "implementation_stage": "baseline",
+      "readiness": "legacy layout/open readiness",
+      "rounds": 1,
+      "source_config_directory": "configs",
+      "surface": "Player"
+    },
+    "chest-before-pending-gate": {
+      "implementation_stage": "intermediate: valid functional chest run, pending gate not fixed",
+      "readiness": "two consecutive actually painted frames",
+      "rounds": 2,
+      "source_config_directory": "after-chest-configs",
+      "surface": "Chest"
+    },
+    "chest-cache-stable": {
+      "implementation_stage": "intermediate: stable fixture; stale projection race remains",
+      "readiness": "two consecutive actually painted frames",
+      "rounds": 2,
+      "source_config_directory": "after-chest-configs",
+      "surface": "Chest"
+    },
+    "chest-projection-final": {
+      "implementation_stage": "final repeated authoritative chest",
+      "readiness": "two consecutive actually painted frames",
+      "rounds": 2,
+      "source_config_directory": "after-chest-configs",
+      "surface": "Chest"
+    },
+    "final-player": {
+      "implementation_stage": "slots + crafting prewarm; repeated player coverage before cache fix",
+      "readiness": "two consecutive actually painted frames",
+      "rounds": 2,
+      "source_config_directory": "configs",
+      "surface": "Player"
+    },
+    "final-player-after-cache": {
+      "implementation_stage": "final primary comparable default player",
+      "readiness": "legacy layout/open readiness",
+      "rounds": 1,
+      "source_config_directory": "configs",
+      "surface": "Player"
+    }
+  },
+  "chest_fixture_override": {
+    "purpose": "authoritative chest fixture placement; no visual quality reduction",
+    "server.toml.game_mode": {
+      "base": "survival",
+      "chest": "creative"
+    }
+  },
+  "excluded_identity_or_user_state": [
+    "profiles/",
+    "servers.toml",
+    "maps/",
+    "world saves",
+    "benchmark profiles"
+  ],
+  "measurement_notes": {
+    "frame_times": "Measured CPU wall-frame intervals, not GPU execution duration.",
+    "input": "Benchmark smoke mode disables OS cursor capture and reports os_capture_exercised=false. Reference acceptance uses the native OS-pointer helper for actual picking/keys; this does not turn CPU wall timings into a cursor-capture benchmark.",
+    "readiness": "Baseline, slots-only and final default Player use legacy open/layout readiness. Extended Player/Chest cases require two frames with actually painted panels and slots. Request-to-visible latency is reported without a before/after percentage; maximum observed transition frames are compared conservatively.",
+    "resources": "RSS and DRM peaks include process startup, assets and all phases. DRM VRAM/GTT are residency, not GPU time. Short repeated cycles do not establish long-run memory bounds.",
+    "scopes": "Nested/concurrent scopes must not be added or subtracted to derive exclusive time. Transition windows contain closed spans only; cumulative maxima in phase scopes include prior phases/startup.",
+    "style_interval": "ui.style is the scheduler interval bracketing the public TiltUiStyleRuntimeSet::Apply set. It includes scheduling/interleaved work and can overlap ui.reactivity; it is an upper bound around style application, not exclusive private-function CPU time."
+  },
+  "overlays": {
+    "after-chest-configs": {
+      "server.toml": "configs/chest/server.toml"
+    },
+    "configs": {},
+    "reference-configs": {
+      "server.toml": "configs/reference/server.toml"
+    }
+  },
+  "technical_configs": [
+    "audio.toml",
+    "client.toml",
+    "controls.toml",
+    "gameplay.toml",
+    "graphics.toml",
+    "multiplayer.toml",
+    "server.toml",
+    "world.toml"
+  ]
+}

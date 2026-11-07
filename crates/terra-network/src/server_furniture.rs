@@ -7,8 +7,36 @@ use terra_world::{
 pub(super) struct Plan {
     edits: Vec<BlockEditRequest>,
     states: Vec<([i64; 3], Option<BlockObjectState>)>,
+    tint: Option<[u8; 3]>,
+    belts: Vec<([i64; 3], Option<terra_world::edits::BeltOwner>)>,
+    resource_drops: usize,
 }
 impl Plan {
+    pub(super) fn allowed(&self, peer: &Peer, world: &ControlWorld) -> bool {
+        self.edits.iter().all(|edit| {
+            super::kingdoms::edit_allowed(
+                EditAction::Block {
+                    position: edit.position,
+                    expected: edit.expected_material,
+                    material: edit.material,
+                },
+                peer,
+                world,
+            )
+        }) && self.states.iter().all(|(position, _)| {
+            self.edits.iter().any(|edit| edit.position == *position)
+                || super::kingdoms::permission_allowed(
+                    peer.uuid,
+                    terra_core::kingdom::KingdomPermission::Build,
+                    *position,
+                    world,
+                )
+        })
+    }
+    pub(super) fn with_resource_drops(mut self, count: usize) -> Self {
+        self.resource_drops = count;
+        self
+    }
     pub(super) fn with_slab_half(
         mut self,
         position: [i64; 3],
@@ -24,7 +52,7 @@ impl Plan {
         self
     }
     pub(super) fn with_construction_facing(mut self, facing: Option<u8>) -> Self {
-        if let Some(facing) = facing {
+        if let Some(facing) = facing.filter(|_| self.belts.is_empty()) {
             if terra_core::construction::full_slab(facing) {
                 for edit in &mut self.edits {
                     if terra_core::construction::is_slab(edit.expected_material) {
@@ -41,6 +69,7 @@ impl Plan {
         self
     }
     pub(super) fn with_item(mut self, item: Option<terra_core::ItemKind>) -> Self {
+        self.tint = item.and_then(terra_core::tints::color);
         if let Some(terra_core::ItemKind::DyedBed { material, color }) = item
             && terra_core::beds::is_bed(material)
         {
@@ -48,7 +77,7 @@ impl Plan {
                 if self.edits.iter().any(|edit| {
                     edit.position == *position
                         && edit.material == material
-                        && matches!(edit.expected_material, 0 | 27)
+                        && matches!(edit.expected_material, 0 | 27 | 98)
                 }) && let Some(state) = state
                 {
                     state.facing = terra_core::beds::dyed_facing(state.facing, color);
@@ -74,19 +103,35 @@ fn offset(p: [i64; 3], d: [i64; 3], sign: i64) -> [i64; 3] {
     std::array::from_fn(|i| p[i] + d[i] * sign)
 }
 pub(super) fn plan(command: EditCommand, world: &ControlWorld) -> Result<Option<Plan>, String> {
-    plan_with_crank(command, world, None)
+    plan_with_crank(command, world, None, None, None)
+}
+pub(super) fn plan_from_layout(
+    command: EditCommand,
+    world: &ControlWorld,
+    layout: terra_world::placement::Layout,
+) -> Result<Option<Plan>, String> {
+    plan_with_crank(command, world, None, None, Some(layout))
+}
+pub(super) fn plan_kinetic(
+    command: EditCommand,
+    world: &ControlWorld,
+    facing: u8,
+) -> Result<Option<Plan>, String> {
+    plan_with_crank(command, world, None, Some(facing), None)
 }
 pub(super) fn plan_crank(
     command: EditCommand,
     world: &ControlWorld,
     anchor: [i64; 3],
 ) -> Result<Option<Plan>, String> {
-    plan_with_crank(command, world, Some(anchor))
+    plan_with_crank(command, world, Some(anchor), None, None)
 }
 fn plan_with_crank(
     command: EditCommand,
     world: &ControlWorld,
     crank_owner: Option<[i64; 3]>,
+    facing: Option<u8>,
+    placement: Option<terra_world::placement::Layout>,
 ) -> Result<Option<Plan>, String> {
     let EditAction::Block {
         position,
@@ -104,7 +149,29 @@ fn plan_with_crank(
     if position.iter().any(|p| p.unsigned_abs() > 990_000) {
         return Err("Object outside world bounds".into());
     }
-    if matches!(material, 59 | 99) && world.journal.gameplay().revision > u64::MAX - 16 {
+    if terra_core::plumbing::is_part(material)
+        && (!world.journal.plumbing_slot_available(position)
+            || world.journal.gameplay().revision == u64::MAX)
+    {
+        return Err("Plumbing state capacity exhausted".into());
+    }
+    if matches!(material, 161 | 162)
+        && !(expected == 161 && material == 162)
+        && !world.journal.hearth_slot_available(position, material)
+    {
+        return Err("Hearth metadata capacity exhausted".into());
+    }
+    if matches!((expected, material), (161, 162) | (162, 161))
+        && (!world.journal.attached_campfire_slot_available(position)
+            || world.journal.has_attached_campfire(position)
+            || expected == 162 && world.journal.campfire_at(position).is_none()
+            || expected == 161 && world.journal.cauldron_at(position).is_none())
+    {
+        return Err("Compound hearth metadata unavailable".into());
+    }
+    if matches!(material, 59 | 99 | 156 | 161 | 162)
+        && world.journal.gameplay().revision > u64::MAX - 16
+    {
         return Err("Furnace state revision exhausted".into());
     }
     let mut plan = Plan {
@@ -114,9 +181,53 @@ fn plan_with_crank(
             material,
         }],
         states: Vec::new(),
+        tint: None,
+        belts: Vec::new(),
+        resource_drops: 1,
     };
     if material == 0 {
-        if matches!(expected, 59 | 99) {
+        let spans = if expected == 148 {
+            terra_world::conveyors::span_at(&world.journal, position)
+                .filter(|s| s.linked)
+                .into_iter()
+                .collect()
+        } else if matches!(expected, 144..=146) {
+            terra_world::conveyors::connected_at(&world.journal, position)
+        } else {
+            Vec::new()
+        };
+        for span in spans {
+            let removal = terra_world::conveyors::removal_layout(
+                &world.chunks,
+                &world.journal,
+                span,
+                matches!(expected, 144..=146).then_some(position),
+            )?;
+            for edit in removal.edits {
+                if !plan.edits.iter().any(|old| old.position == edit.position) {
+                    plan.edits.push(edit);
+                }
+            }
+            plan.states.extend(removal.states);
+            plan.belts.extend(removal.belts);
+        }
+        if terra_core::kinetic::is_crank_mount(expected) {
+            for direction in terra_core::kinetic::DIRECTIONS {
+                let cell = terra_core::kinetic::offset(position, direction);
+                if world.journal.crank_anchor(cell) != Some(position) {
+                    continue;
+                }
+                if world.chunks.block_at(cell) != Some(100) {
+                    return Err("Mounted crank is not loaded".into());
+                }
+                plan.edits.push(BlockEditRequest {
+                    position: cell,
+                    expected_material: 100,
+                    material: 0,
+                });
+            }
+        }
+        if matches!(expected, 59 | 99 | 156 | 161 | 162) {
             let state = world
                 .journal
                 .object_state(position)
@@ -140,24 +251,9 @@ fn plan_with_crank(
                     material: 0,
                 });
             }
-            let count = world
-                .journal
-                .container_at(anchor)
-                .map_or(0, |bag| bag.occupied_slots())
-                + 1
-                + usize::from(crank.is_some());
-            let game = world.journal.gameplay();
-            if game.drops.len() + count > terra_core::MAX_WORLD_DROPS
-                || game.next_drop.checked_add(count as u64).is_none()
-                || game.revision > u64::MAX - 16
-            {
-                return Err("No space for furnace content drops".into());
-            }
         }
-        if expected == 29 && world.journal.container_nonempty(position) {
-            return Err("Empty this chest before removing it".into());
-        }
-        if expected != 100
+        if !matches!(expected, 100 | 144..=146 | 148)
+            && !terra_core::logistics::is_port(expected)
             && let Some(state) = world.journal.object_state(position)
             && let Some(peer) = state.peer
         {
@@ -186,21 +282,34 @@ fn plan_with_crank(
             }
         }
     } else {
-        let shared = terra_world::placement::layout(
-            &world.chunks,
-            &world.journal,
-            position,
-            expected,
-            material,
-            command.look,
-            crank_owner,
-        )?;
+        let shared = if let Some(layout) = placement {
+            layout
+        } else {
+            terra_world::placement::layout(
+                &world.chunks,
+                &world.journal,
+                position,
+                expected,
+                material,
+                command.look,
+                crank_owner,
+            )?
+        };
         plan.edits = shared.edits;
         plan.states = shared.states;
+        plan.belts = shared.belts;
+        if let Some(facing) = facing.filter(|_| plan.belts.is_empty()) {
+            for (_, state) in &mut plan.states {
+                if let Some(state) = state {
+                    state.facing = facing;
+                }
+            }
+        }
     }
     let shared = terra_world::placement::Layout {
         edits: plan.edits.clone(),
         states: plan.states.clone(),
+        belts: plan.belts.clone(),
     };
     terra_world::placement::environment(
         &shared,
@@ -242,6 +351,12 @@ fn plan_with_crank(
     ) {
         return Err("Furniture placement order exhausted".into());
     }
+    preflight_object_revisions(&plan, world)?;
+    preflight_inventory_drops(&plan, world, 0)?;
+    Ok(Some(plan))
+}
+
+fn preflight_object_revisions(plan: &Plan, world: &ControlWorld) -> Result<(), String> {
     for position in plan
         .edits
         .iter()
@@ -274,7 +389,81 @@ fn plan_with_crank(
             }
         }
     }
-    Ok(Some(plan))
+    Ok(())
+}
+
+fn preflight_inventory_drops(
+    plan: &Plan,
+    world: &ControlWorld,
+    resource_drops: usize,
+) -> Result<(), String> {
+    let positions: Vec<_> = plan
+        .edits
+        .iter()
+        .filter(|edit| {
+            edit.expected_material != edit.material
+                && !(edit.expected_material == 162 && edit.material == 161)
+                && (matches!(edit.expected_material, 29 | 59 | 99 | 156 | 161 | 162)
+                    || world.journal.container_at(edit.position).is_some()
+                    || world.journal.attached_campfire_at(edit.position).is_some())
+        })
+        .map(|edit| edit.position)
+        .collect();
+    let removing_drive = plan.edits.iter().any(|edit| {
+        (edit.expected_material == 99
+            || terra_core::kinetic::is_crank_mount(edit.expected_material))
+            && edit.material != edit.expected_material
+    });
+    let cranks = if removing_drive {
+        plan.edits
+            .iter()
+            .filter(|edit| edit.expected_material == 100 && edit.material == 0)
+            .count()
+    } else {
+        0
+    };
+    if positions.is_empty() && cranks == 0 {
+        return Ok(());
+    }
+    // A staged plan may be committed after its revisions changed. Validate
+    // every cell before dropping a crank or removing the first machine half.
+    for position in plan
+        .edits
+        .iter()
+        .map(|edit| edit.position)
+        .chain(plan.states.iter().map(|(position, _)| *position))
+    {
+        let owner = terra_voxel::global_to_section(position).0;
+        if world.journal.revision(owner) > u64::MAX - 32
+            || world.journal.fluid_epoch(owner) > u64::MAX - 32
+            || world.journal.appearance_epoch(owner) > u64::MAX - 32
+            || world.journal.prop_epoch(owner) > u64::MAX - 32
+            || world
+                .chunks
+                .loaded
+                .get(&owner)
+                .is_none_or(|section| section.data.revision() > u64::MAX - 32)
+        {
+            return Err("Container transaction cannot advance revision".into());
+        }
+        for dz in -1..=1 {
+            for dy in -1..=1 {
+                for dx in -1..=1 {
+                    let neighbor = owner
+                        .offset([dx, dy, dz])
+                        .map_err(|error| error.to_string())?;
+                    if world.journal.mesh_epoch(neighbor) > u64::MAX - 64
+                        || world.journal.water_mesh_epoch(neighbor) > u64::MAX - 64
+                    {
+                        return Err("Container transaction mesh epoch exhausted".into());
+                    }
+                }
+            }
+        }
+    }
+    world
+        .journal
+        .preflight_inventory_removal(positions, cranks + resource_drops)
 }
 
 pub(super) fn toggle(
@@ -308,6 +497,12 @@ pub(super) fn toggle_with_players(
     properties: &terra_core::block_properties::BlockPropertiesCatalog,
     players: &[[f64; 3]],
 ) -> Result<bool, String> {
+    if matches!(
+        expected,
+        terra_core::plumbing::VALVE | terra_core::plumbing::FAUCET
+    ) {
+        return terra_world::plumbing::toggle(chunks, journal, position, expected, facing);
+    }
     if !terra_world::objects::is_opening(expected) {
         return Err("Not an opening".into());
     }
@@ -325,6 +520,17 @@ pub(super) fn toggle_with_players(
             })
         })
         .filter(|group| group.width > 1 || group.height > 1);
+    let door = terra_world::objects::is_door(expected)
+        .then(|| {
+            terra_world::objects::doors::group(position, expected, state, |p| {
+                Some((
+                    chunks.block_at(p).or_else(|| journal.block(p))?,
+                    journal.object_state(p)?,
+                ))
+            })
+        })
+        .flatten()
+        .filter(|group| group.width == 2);
     let mut cells = if let Some(group) = window {
         group
             .cells()
@@ -335,10 +541,21 @@ pub(super) fn toggle_with_players(
                     .ok_or_else(|| "Missing connected window state".to_string())
             })
             .collect::<Result<Vec<_>, _>>()?
+    } else if let Some(group) = door {
+        group
+            .cells()
+            .map(|p| {
+                journal
+                    .object_state(p)
+                    .map(|state| (p, state))
+                    .ok_or_else(|| "Missing connected door state".to_string())
+            })
+            .collect::<Result<Vec<_>, _>>()?
     } else {
         vec![(position, state)]
     };
     if window.is_none()
+        && door.is_none()
         && let Some(peer) = state.peer
     {
         let other = journal
@@ -386,7 +603,14 @@ pub(super) fn toggle_with_players(
             secondary: false,
             ..state
         };
-        let boxes: Vec<_> = if let Some(group) = window {
+        let boxes: Vec<_> = if let Some(group) = door {
+            let destination = group.with_open(facing < 4);
+            terra_world::objects::doors::pieces()
+                .into_iter()
+                .filter(|p| p.solid && p.leaf.is_some())
+                .map(|p| destination.world_box(p))
+                .collect()
+        } else if let Some(group) = window {
             terra_world::objects::windows::pieces(group.width, group.height)
                 .into_iter()
                 .filter(|p| p.solid && p.leaf.is_some())
@@ -428,7 +652,7 @@ pub(super) fn toggle_with_players(
             journal,
             cell,
             Some(BlockObjectState {
-                facing: state.facing ^ 4,
+                facing: state.facing % 4 + if facing < 4 { 4 } else { 0 },
                 ..state
             }),
         )?;
@@ -437,6 +661,152 @@ pub(super) fn toggle_with_players(
 }
 
 pub(super) fn commit(plan: Plan, world: &mut ControlWorld) -> Result<bool, String> {
+    if plan.edits.iter().any(|edit| {
+        terra_world::objects::is_door(edit.material)
+            || terra_world::objects::is_door(edit.expected_material)
+    }) {
+        preflight_object_revisions(&plan, world)?;
+    }
+    if plan.edits.len() == 1
+        && let Some(edit) = plan.edits.first()
+        && matches!(edit.expected_material, 161 | 162)
+        && edit.material == 161
+        && !world.journal.has_attached_campfire(edit.position)
+        && let Some((_, Some(state))) = plan.states.iter().find(|(position, state)| {
+            *position == edit.position
+                && state.is_some_and(|state| terra_core::brewing::has_fire(state.facing))
+        })
+    {
+        let fire = if edit.expected_material == 162 {
+            terra_core::campfire::AttachedCampfire {
+                state: world
+                    .journal
+                    .campfire_at(edit.position)
+                    .cloned()
+                    .ok_or("Missing standalone fire")?,
+                inventory: world
+                    .journal
+                    .container_at(edit.position)
+                    .cloned()
+                    .unwrap_or_default(),
+            }
+        } else {
+            terra_core::campfire::AttachedCampfire::default()
+        };
+        if !fire.valid() {
+            return Err("Invalid existing hearth contents".into());
+        }
+        if edit.expected_material == 162
+            && !terra_world::streaming::commit_block_edit_preserving_inventory(
+                &mut world.chunks,
+                &mut world.journal,
+                edit,
+                &world.block_properties,
+            )?
+        {
+            return Err("Standalone hearth changed before upgrade".into());
+        }
+        commit_object_state(
+            &mut world.chunks,
+            &mut world.journal,
+            edit.position,
+            Some(*state),
+        )?;
+        if edit.expected_material == 162 {
+            world
+                .journal
+                .set_cauldron(edit.position, Default::default())?;
+        }
+        world
+            .journal
+            .commit_attached_campfire(edit.position, fire)?;
+        return Ok(true);
+    }
+    if plan.tint.is_some() {
+        for edit in &plan.edits {
+            let section = terra_voxel::global_to_section(edit.position).0;
+            if world.journal.revision(section) > u64::MAX - 512
+                || world.journal.appearance_epoch(section) > u64::MAX - 512
+                || world.journal.mesh_epoch(section) > u64::MAX - 512
+            {
+                return Err("RGB object revision exhausted".into());
+            }
+        }
+    }
+    if !plan.belts.is_empty()
+        || plan.edits.iter().any(|edit| {
+            edit.expected_material == 148
+                && edit.material == 0
+                && world
+                    .journal
+                    .object_state(edit.position)
+                    .is_some_and(|s| s.peer.is_some())
+        })
+    {
+        let removing_endpoint = plan.belts.iter().any(|(_, owner)| owner.is_none())
+            && plan
+                .edits
+                .first()
+                .is_some_and(|e| e.expected_material != 148);
+        let mut drops = Vec::new();
+        let mut seen = std::collections::BTreeSet::new();
+        for edit in &plan.edits {
+            if removing_endpoint
+                && let Some(span) = terra_world::conveyors::span_at(&world.journal, edit.position)
+                && span.linked
+                && seen.insert(span.controller)
+            {
+                drops.push((
+                    span.controller,
+                    terra_world::conveyors::item(span, &world.journal),
+                ));
+            }
+            if edit.expected_material == 100 && edit.material == 0 {
+                drops.push((edit.position, terra_core::ItemKind::Block(100)));
+            }
+        }
+        let game = world.journal.gameplay();
+        if game.drops.len() + drops.len() + 1 > terra_core::MAX_WORLD_DROPS
+            || game.next_drop.checked_add(drops.len() as u64 + 1).is_none()
+            || game.revision > u64::MAX - 64
+        {
+            return Err("No space for conveyor attachment drops".into());
+        }
+        let states = plan
+            .edits
+            .iter()
+            .map(|edit| {
+                (
+                    edit.position,
+                    if edit.material == 0 {
+                        None
+                    } else {
+                        plan.states
+                            .iter()
+                            .find(|(p, _)| *p == edit.position)
+                            .and_then(|(_, state)| *state)
+                            .or_else(|| world.journal.object_state(edit.position))
+                    },
+                )
+            })
+            .collect();
+        let shared = terra_world::placement::Layout {
+            states,
+            edits: plan.edits,
+            belts: plan.belts,
+        };
+        let committed =
+            terra_world::conveyors::commit(&mut world.chunks, &mut world.journal, &shared)?;
+        if committed {
+            for (position, item) in drops {
+                world
+                    .journal
+                    .gameplay_mut()
+                    .drop_one(position.map(|v| v as f64 + 0.5), item);
+            }
+        }
+        return Ok(committed);
+    }
     for (position, state) in &plan.states {
         if let Some(state) = state {
             let material = plan
@@ -451,12 +821,19 @@ pub(super) fn commit(plan: Plan, world: &mut ControlWorld) -> Result<bool, Strin
             }
         }
     }
-    let removing_crusher = plan
-        .edits
-        .iter()
-        .any(|edit| edit.expected_material == 99 && edit.material != 99);
+    preflight_inventory_drops(&plan, world, plan.resource_drops)?;
     for edit in &plan.edits {
-        if removing_crusher
+        if world.chunks.block_at(edit.position) != Some(edit.expected_material) {
+            return Err("Object transaction changed before commit".into());
+        }
+    }
+    let removing_drive = plan.edits.iter().any(|edit| {
+        (edit.expected_material == 99
+            || terra_core::kinetic::is_crank_mount(edit.expected_material))
+            && edit.material != edit.expected_material
+    });
+    for edit in &plan.edits {
+        if removing_drive
             && edit.expected_material == 100
             && edit.material == 0
             && !world.journal.gameplay_mut().drop_one(
@@ -466,34 +843,33 @@ pub(super) fn commit(plan: Plan, world: &mut ControlWorld) -> Result<bool, Strin
         {
             return Err("Crank drop capacity exhausted".into());
         }
-        if matches!(edit.expected_material, 59 | 99) && edit.material != edit.expected_material {
-            if let Some(contents) = world.journal.remove_container(edit.position)? {
-                for stack in contents.slots.into_iter().filter(|s| s.valid()) {
-                    if !world.journal.gameplay_mut().drop_stack(
-                        edit.position.map(|v| v as f64 + 0.5),
-                        stack,
-                        [0.0, 1.8, 0.0],
-                        0.35,
-                    ) {
-                        return Err("Furnace content drop failed".into());
-                    }
-                }
-            }
-            world.journal.remove_furnace(edit.position);
-            world.journal.remove_crusher(edit.position);
-        }
     }
+    let tint_cells: Vec<_> = plan
+        .edits
+        .iter()
+        .filter(|edit| {
+            edit.material != 0
+                && terra_core::tints::cell_dyeable(
+                    edit.material,
+                    plan.states
+                        .iter()
+                        .find(|(position, _)| *position == edit.position)
+                        .and_then(|(_, state)| *state)
+                        .unwrap_or_default()
+                        .facing,
+                )
+        })
+        .map(|edit| edit.position)
+        .collect();
+    let inherited_tints: Vec<_> = tint_cells
+        .iter()
+        .filter_map(|position| world.journal.tint_at(*position).map(|rgb| (*position, rgb)))
+        .collect();
     for edit in plan.edits {
         if terra_core::construction::is_slab(edit.material)
             && edit.expected_material == edit.material
         {
             continue;
-        }
-        if edit.expected_material == 29 && edit.material != 29 {
-            if world.journal.container_nonempty(edit.position) {
-                return Err("Empty this chest before removing it".into());
-            }
-            world.journal.remove_container(edit.position)?;
         }
         if !commit_block_edit(
             &mut world.chunks,
@@ -518,14 +894,406 @@ pub(super) fn commit(plan: Plan, world: &mut ControlWorld) -> Result<bool, Strin
         if world.journal.block(position) == Some(99) && state.is_some_and(|s| !s.secondary) {
             world.journal.set_crusher(position, Default::default())?;
         }
+        if world.journal.block(position) == Some(156) && state.is_some_and(|s| !s.secondary) {
+            world.journal.set_mixer(position, Default::default())?;
+        }
+        if world.journal.block(position) == Some(161) && state.is_some_and(|s| !s.secondary) {
+            world.journal.set_cauldron(position, Default::default())?;
+        }
+        if world.journal.block(position) == Some(162) && state.is_some_and(|s| !s.secondary) {
+            world.journal.set_campfire(position, Default::default())?;
+        }
+        if world
+            .journal
+            .block(position)
+            .is_some_and(terra_core::plumbing::is_part)
+            && state.is_some()
+            && world.journal.plumbing_at(position).is_none()
+        {
+            world.journal.set_plumbing(position, Default::default())?;
+        }
+    }
+    for position in tint_cells {
+        let rgb = plan.tint.or_else(|| {
+            inherited_tints
+                .iter()
+                .find(|(cell, _)| *cell == position)
+                .map(|(_, rgb)| *rgb)
+        });
+        if rgb.is_some() {
+            world.journal.set_tint(position, rgb)?;
+        }
     }
     Ok(true)
 }
 
 #[cfg(test)]
+#[path = "server_furniture_domain_tests.rs"]
+mod domain_tests;
+
+#[cfg(test)]
 mod tests {
     use super::*;
     use bevy::ecs::system::SystemState;
+
+    fn legacy_crusher(app: &mut App, anchor: [i64; 3], yaw: f32) {
+        edit(app, anchor, 0, 99, yaw).unwrap();
+        let state = app
+            .world()
+            .resource::<EditJournal>()
+            .object_state(anchor)
+            .unwrap();
+        let peer = offset(anchor, state.right(), 1);
+        let mut system = SystemState::<ControlWorld>::new(app.world_mut());
+        let mut world = system.get_mut(app.world_mut()).unwrap();
+        let (section, local) = terra_voxel::global_to_section(peer);
+        world
+            .chunks
+            .loaded
+            .get_mut(&section)
+            .unwrap()
+            .data
+            .set_block(local, 99)
+            .unwrap();
+        world.journal.record(peer, 99).unwrap();
+        world
+            .journal
+            .set_object_state(
+                anchor,
+                Some(BlockObjectState {
+                    peer: Some(peer),
+                    ..state
+                }),
+            )
+            .unwrap();
+        world
+            .journal
+            .set_object_state(
+                peer,
+                Some(BlockObjectState {
+                    peer: Some(anchor),
+                    secondary: true,
+                    ..state
+                }),
+            )
+            .unwrap();
+    }
+
+    #[test]
+    fn mixer_is_single_cell_and_drops_its_real_pigments_and_output_once() {
+        use terra_core::{Inventory, ItemKind, ItemStack, beds::DyeColor, mixer};
+        for facing in 0..4 {
+            let mut app = app();
+            let anchor = [4, 1, 8];
+            assert!(
+                edit(
+                    &mut app,
+                    anchor,
+                    0,
+                    mixer::MATERIAL,
+                    facing as f32 * std::f32::consts::FRAC_PI_2
+                )
+                .unwrap()
+            );
+            let state = app
+                .world()
+                .resource::<EditJournal>()
+                .object_state(anchor)
+                .unwrap();
+            assert!(state.peer.is_none() && !state.secondary && state.facing < 4);
+            assert!(
+                app.world()
+                    .resource::<EditJournal>()
+                    .mixer_at(anchor)
+                    .is_some()
+            );
+            let crank = mount_mixer_crank(&mut app, anchor);
+            let input = ItemStack {
+                item: ItemKind::Dye(DyeColor::ALL[0]),
+                count: 5,
+            };
+            let output = ItemStack {
+                item: ItemKind::Dye(DyeColor::Rgb([17, 95, 213])),
+                count: 7,
+            };
+            let mut inventory = Inventory::default();
+            inventory.slots.resize(mixer::SLOTS, ItemStack::EMPTY);
+            inventory.slots[0] = input;
+            inventory.slots[mixer::OUTPUT] = output;
+            app.world_mut()
+                .resource_mut::<EditJournal>()
+                .set_container(anchor, inventory)
+                .unwrap();
+            assert!(edit(&mut app, anchor, mixer::MATERIAL, 0, 0.0).unwrap());
+            let journal = app.world().resource::<EditJournal>();
+            assert!(journal.mixer_at(anchor).is_none());
+            assert!(journal.container_at(anchor).is_none());
+            assert_eq!(
+                app.world().resource::<ChunkStore>().block_at(crank),
+                Some(0)
+            );
+            assert_eq!(
+                journal
+                    .gameplay()
+                    .drops
+                    .iter()
+                    .filter(|drop| drop.stack.item == ItemKind::Block(100))
+                    .count(),
+                1
+            );
+            assert_eq!(
+                journal
+                    .gameplay()
+                    .drops
+                    .iter()
+                    .filter(|drop| drop.stack == input)
+                    .count(),
+                1
+            );
+            assert_eq!(
+                journal
+                    .gameplay()
+                    .drops
+                    .iter()
+                    .filter(|drop| drop.stack == output)
+                    .count(),
+                1
+            );
+            assert!(journal.gameplay().valid());
+        }
+    }
+
+    fn mount_mixer_crank(app: &mut App, anchor: [i64; 3]) -> [i64; 3] {
+        let mut system = SystemState::<ControlWorld>::new(app.world_mut());
+        let mut world = system.get_mut(app.world_mut()).unwrap();
+        let state = world.journal.object_state(anchor).unwrap();
+        let position = offset(anchor, state.right(), 1);
+        let command = EditCommand {
+            request: 0,
+            revision: 0,
+            look: [f32::from(state.facing) * std::f32::consts::FRAC_PI_2, 0.0],
+            source: None,
+            action: EditAction::Block {
+                position,
+                expected: 0,
+                material: 100,
+            },
+        };
+        let plan = plan_crank(command, &world, anchor).unwrap().unwrap();
+        assert!(commit(plan, &mut world).unwrap());
+        assert_eq!(world.journal.crank_anchor(position), Some(anchor));
+        assert_eq!(
+            world.journal.object_state(position).unwrap().facing,
+            state.facing
+        );
+        position
+    }
+
+    #[test]
+    fn mixer_removal_reserves_contents_block_and_mounted_crank_before_mutation() {
+        use terra_core::{Inventory, ItemKind, ItemStack, beds::DyeColor, mixer};
+        for facing in 0..4 {
+            let mut app = app();
+            let anchor = [4, 1, 8];
+            edit(
+                &mut app,
+                anchor,
+                0,
+                mixer::MATERIAL,
+                facing as f32 * std::f32::consts::FRAC_PI_2,
+            )
+            .unwrap();
+            let crank = mount_mixer_crank(&mut app, anchor);
+            let inventory = Inventory {
+                slots: vec![ItemStack {
+                    item: ItemKind::Dye(DyeColor::ALL[0]),
+                    count: 5,
+                }],
+                ..Default::default()
+            };
+            let before = {
+                let mut journal = app.world_mut().resource_mut::<EditJournal>();
+                journal.set_container(anchor, inventory.clone()).unwrap();
+                for _ in 0..terra_core::MAX_WORLD_DROPS - 2 {
+                    assert!(
+                        journal
+                            .gameplay_mut()
+                            .drop_one([0.5, 2.5, 0.5], ItemKind::Block(3))
+                    );
+                }
+                journal.gameplay().clone()
+            };
+            assert!(edit(&mut app, anchor, mixer::MATERIAL, 0, 0.0).is_err());
+            let journal = app.world().resource::<EditJournal>();
+            assert_eq!(journal.gameplay(), &before);
+            assert_eq!(journal.container_at(anchor), Some(&inventory));
+            assert!(journal.mixer_at(anchor).is_some());
+            assert_eq!(
+                app.world().resource::<ChunkStore>().block_at(crank),
+                Some(100)
+            );
+            app.world_mut()
+                .resource_mut::<EditJournal>()
+                .gameplay_mut()
+                .drops
+                .pop();
+            assert!(edit(&mut app, anchor, mixer::MATERIAL, 0, 0.0).unwrap());
+            let journal = app.world().resource::<EditJournal>();
+            assert!(journal.mixer_at(anchor).is_none());
+            assert!(journal.container_at(anchor).is_none());
+            assert_eq!(
+                journal.gameplay().drops.len(),
+                terra_core::MAX_WORLD_DROPS - 1
+            );
+            assert_eq!(
+                journal
+                    .gameplay()
+                    .drops
+                    .iter()
+                    .filter(|drop| drop.stack == inventory.slots[0])
+                    .count(),
+                1
+            );
+            assert_eq!(
+                journal
+                    .gameplay()
+                    .drops
+                    .iter()
+                    .filter(|drop| drop.stack.item == ItemKind::Block(100))
+                    .count(),
+                1
+            );
+            assert_eq!(
+                app.world().resource::<ChunkStore>().block_at(crank),
+                Some(0)
+            );
+            assert_eq!(
+                app.world().resource::<ChunkStore>().block_at(anchor),
+                Some(0)
+            );
+            assert!(journal.gameplay().valid());
+        }
+    }
+
+    #[test]
+    fn new_crusher_uses_one_cell_and_rotates_its_adjacent_crank_without_losing_inventory() {
+        for facing in 0..4 {
+            let mut app = app();
+            let anchor = [4, 1, 8];
+            let yaw = facing as f32 * std::f32::consts::FRAC_PI_2;
+            edit(&mut app, anchor, 0, 99, yaw).unwrap();
+            let state = app
+                .world()
+                .resource::<EditJournal>()
+                .object_state(anchor)
+                .unwrap();
+            assert!(state.peer.is_none() && !state.secondary);
+            let crank = offset(anchor, state.right(), 1);
+            assert_eq!(
+                app.world().resource::<ChunkStore>().block_at(crank),
+                Some(0)
+            );
+            edit(&mut app, crank, 0, 100, yaw).unwrap();
+            let mut system = SystemState::<ControlWorld>::new(app.world_mut());
+            let mut world = system.get_mut(app.world_mut()).unwrap();
+            let inventory = terra_core::Inventory {
+                slots: vec![terra_core::ItemStack {
+                    item: terra_core::crusher::recipes()[0].input,
+                    count: 3,
+                }],
+                ..Default::default()
+            };
+            world
+                .journal
+                .set_container(anchor, inventory.clone())
+                .unwrap();
+            let plan =
+                terra_world::wrench::propose(&world.chunks, &world.journal, anchor, false).unwrap();
+            terra_world::wrench::commit(&mut world.chunks, &mut world.journal, &plan).unwrap();
+            assert_eq!(world.journal.container_at(anchor), Some(&inventory));
+            let next = world.journal.crusher_crank_position(anchor).unwrap();
+            assert_eq!(world.journal.crank_anchor(next), Some(anchor));
+            assert_eq!(world.chunks.block_at(crank), Some(0));
+            assert!(super::super::crushers::loaded(
+                anchor,
+                &world.chunks,
+                &world.journal
+            ));
+        }
+    }
+    #[test]
+    fn conveyor_endpoint_removal_counts_connector_drops_not_every_owned_segment() {
+        for free in [1, 2] {
+            let mut app = app();
+            let start = [5, 3, 2];
+            let end = [5, 3, 12];
+            edit(&mut app, start, 0, 144, 0.0).unwrap();
+            edit(&mut app, end, 0, 144, 0.0).unwrap();
+            let mut system = SystemState::<ControlWorld>::new(app.world_mut());
+            let mut world = system.get_mut(app.world_mut()).unwrap();
+            let belt = terra_world::conveyors::layout(
+                &world.chunks,
+                &world.journal,
+                start,
+                end,
+                terra_core::ItemKind::Block(148),
+            )
+            .unwrap();
+            let span = terra_world::conveyors::proposed_span(&belt).unwrap();
+            terra_world::conveyors::commit(&mut world.chunks, &mut world.journal, &belt).unwrap();
+            for _ in 0..terra_core::MAX_WORLD_DROPS - free {
+                assert!(
+                    world
+                        .journal
+                        .gameplay_mut()
+                        .drop_one([1.5, 3.5, 1.5], terra_core::ItemKind::Block(3))
+                );
+            }
+            let command = EditCommand {
+                request: 1,
+                revision: 0,
+                look: [0.0; 2],
+                source: None,
+                action: EditAction::Block {
+                    position: start,
+                    expected: 144,
+                    material: 0,
+                },
+            };
+            let removal = plan(command, &world).unwrap().unwrap();
+            let result = commit(removal, &mut world);
+            if free == 1 {
+                assert!(result.is_err());
+                assert_eq!(world.chunks.block_at(start), Some(144));
+                assert!(span.cells().all(|p| world.chunks.block_at(p) == Some(148)));
+                assert_eq!(
+                    world.journal.gameplay().drops.len(),
+                    terra_core::MAX_WORLD_DROPS - 1
+                );
+            } else {
+                assert_eq!(result, Ok(true));
+                assert_eq!(world.chunks.block_at(start), Some(0));
+                assert_eq!(world.chunks.block_at(end), Some(144));
+                assert!(span.cells().all(|p| world.chunks.block_at(p) == Some(0)));
+                assert_eq!(
+                    world.journal.gameplay().drops.len(),
+                    terra_core::MAX_WORLD_DROPS - 1
+                );
+                assert_eq!(
+                    world.journal.gameplay().drops.last().unwrap().stack.item,
+                    terra_core::ItemKind::Block(148)
+                );
+                assert!(world.journal.gameplay_mut().drop_one(
+                    start.map(|v| v as f64 + 0.5),
+                    terra_core::ItemKind::Block(144)
+                ));
+                assert_eq!(
+                    world.journal.gameplay().drops.len(),
+                    terra_core::MAX_WORLD_DROPS
+                );
+            }
+        }
+    }
     #[test]
     fn hand_crank_mounts_without_floor_and_detaches_without_corrupting_the_machine_pair() {
         for facing in 0..4 {
@@ -601,7 +1369,7 @@ mod tests {
         for anchor in [[14, 1, 8], [-2, 1, 8]] {
             for secondary in [false, true] {
                 let mut app = app();
-                edit(&mut app, anchor, 0, 99, 0.0).unwrap();
+                legacy_crusher(&mut app, anchor, 0.0);
                 let journal = app.world().resource::<EditJournal>();
                 let peer = journal.object_state(anchor).unwrap().peer.unwrap();
                 let crank = journal.crusher_crank_position(anchor).unwrap();
@@ -686,7 +1454,7 @@ mod tests {
                 let mut app = app();
                 let anchor = [4, 1, 8];
                 let yaw = facing as f32 * std::f32::consts::FRAC_PI_2;
-                edit(&mut app, anchor, 0, 99, yaw).unwrap();
+                legacy_crusher(&mut app, anchor, yaw);
                 let peer = app
                     .world()
                     .resource::<EditJournal>()
@@ -731,7 +1499,7 @@ mod tests {
             }
         }
     }
-    fn app() -> App {
+    pub(super) fn app() -> App {
         let mut app = App::new();
         let config = GameConfig::default();
         app.insert_resource(terra_world::streaming::WorldTerrain(
@@ -768,7 +1536,7 @@ mod tests {
         }
         app
     }
-    fn edit(
+    pub(super) fn edit(
         app: &mut App,
         position: [i64; 3],
         expected: u16,
@@ -801,7 +1569,7 @@ mod tests {
         let plan = plan(command, &world)?.ok_or("Missing furniture plan")?;
         commit(plan.with_item(item), &mut world)
     }
-    fn wooden_edit(
+    pub(super) fn wooden_edit(
         app: &mut App,
         position: [i64; 3],
         material: u16,
@@ -916,7 +1684,7 @@ mod tests {
                 .journal
                 .revision(terra_voxel::global_to_section(position).0),
             look,
-            source: Some(source),
+            source: None,
             action: EditAction::Block {
                 position,
                 expected: 0,
@@ -942,7 +1710,14 @@ mod tests {
             .map(|edit| (edit.position, Some(BlockObjectState::default())))
             .chain([([8, 1, 8], Some(BlockObjectState::default()))])
             .collect();
-        let plan = Plan { edits, states }.with_item(Some(terra_core::ItemKind::DyedBed {
+        let plan = Plan {
+            edits,
+            states,
+            tint: None,
+            belts: Vec::new(),
+            resource_drops: 1,
+        }
+        .with_item(Some(terra_core::ItemKind::DyedBed {
             material,
             color: terra_core::beds::DyeColor::Purple,
         }));
@@ -958,7 +1733,7 @@ mod tests {
         }
     }
     #[test]
-    fn creative_dyed_bed_source_keeps_furnaces_stairs_and_other_beds_valid() {
+    fn creative_catalog_placement_ignores_an_unrelated_held_dyed_bed_without_a_source() {
         let item = terra_core::ItemKind::DyedBed {
             material: 71,
             color: terra_core::beds::DyeColor::Purple,
@@ -975,6 +1750,10 @@ mod tests {
                 EditOutcome::Applied
             );
             let journal = app.world().resource::<EditJournal>();
+            assert_eq!(
+                journal.gameplay().inventories[&terra_core::PlayerUuid::from_u128(1)].count(item),
+                1
+            );
             let state = journal.object_state(position).unwrap();
             assert_eq!(
                 state.facing,
@@ -1465,10 +2244,10 @@ mod tests {
         assert_eq!(app.world().resource::<ChunkStore>().block_at(a), Some(29));
     }
     #[test]
-    fn different_facing_chests_remain_single_and_player_blocks_second_bench_cell() {
+    fn front_to_back_chests_remain_single_and_player_blocks_second_bench_cell() {
         let mut app = app();
         edit(&mut app, [-1, 1, 8], 0, 29, 0.0).unwrap();
-        edit(&mut app, [0, 1, 8], 0, 29, std::f32::consts::FRAC_PI_2).unwrap();
+        edit(&mut app, [-1, 1, 9], 0, 29, 0.0).unwrap();
         assert_eq!(
             app.world()
                 .resource::<EditJournal>()
@@ -1490,7 +2269,7 @@ mod tests {
         );
     }
 
-    fn furnace_snapshot(
+    pub(super) fn furnace_snapshot(
         app: &App,
         position: [i64; 3],
     ) -> (

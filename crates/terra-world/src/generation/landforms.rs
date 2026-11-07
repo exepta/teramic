@@ -3,13 +3,35 @@ use noise::NoiseFn;
 
 impl TerraGenerator {
     pub fn surface_height(&self, x: f64, z: f64) -> f64 {
+        if self.config().landscape_revision >= 5 {
+            return self.carved_surface_height(x, z, self.terrain_base_height(x, z));
+        }
         self.height_with_biome(x, z, self.climate_biome_at(x, z))
     }
 
     pub(super) fn height_with_biome(&self, x: f64, z: f64, biome: BiomeSample) -> f64 {
         let raw = self.base_height_with_biome(x, z, biome);
+        self.carved_surface_height(x, z, raw)
+    }
+
+    fn carved_surface_height(&self, x: f64, z: f64, raw: f64) -> f64 {
+        let regional_lake = self
+            .connected_hydrology()
+            .then(|| self.lake_at(x, z))
+            .flatten();
         let height = self.river_at(x, z).map_or(raw, |river| {
-            let height = river_height(raw, river, self.config().sea_level);
+            let mut height = river_height(raw, river, self.config().sea_level);
+            if let Some(lake) = regional_lake {
+                let wet_channel = river.distance < river.width
+                    && (river.bed_height() - 0.5).floor() + 1.0 < river.level;
+                if !wet_channel {
+                    // An outlet may descend below its lake. Its exterior eroded
+                    // apron must not cut holes in the lake's higher dry shore.
+                    let protect =
+                        1.0 - smoothstep(lake.radius + 6.0, lake.radius + 18.0, lake.distance);
+                    height += (raw - height) * protect;
+                }
+            }
             let Some(cavity) = river.cavity() else {
                 return height;
             };
@@ -22,7 +44,12 @@ impl TerraGenerator {
         let height = self
             .oasis_at(x, z)
             .map_or(height, |oasis| oasis.carve(height));
-        self.lake_at(x, z).map_or(height, |lake| lake.carve(height))
+        let lake = if self.connected_hydrology() {
+            regional_lake
+        } else {
+            self.lake_at(x, z)
+        };
+        lake.map_or(height, |lake| lake.carve(height))
     }
 
     fn river_roof_supported(&self, x: f64, z: f64, height: f64, cavity: [f64; 2]) -> bool {
@@ -33,13 +60,26 @@ impl TerraGenerator {
         // A smooth exterior height and an independently carved arch can intersect
         // in detached roof islands. Keep only voxel roof spans with an overlapping
         // face-connected path to a bank. This runs per column, never per voxel.
+        let cross = if self.connected_hydrology() {
+            self.river_at(x, z).map_or([1.0, 0.0], |river| {
+                // Stay on face-neighbour voxels even for diagonal courses.
+                if river.flow[0].abs() > river.flow[1].abs() {
+                    [0.0, 1.0]
+                } else {
+                    [1.0, 0.0]
+                }
+            })
+        } else {
+            [1.0, 0.0]
+        };
         [-1.0, 1.0].into_iter().any(|direction| {
             let mut previous = span;
             // Covers both banks even at the widest fork/terminal pool.
             for step in 1..=64 {
-                let sx = x + direction * f64::from(step);
-                let raw = self.base_height_with_biome(sx, z, self.climate_biome_at(sx, z));
-                let river = self.river_at(sx, z);
+                let sx = x + direction * f64::from(step) * cross[0];
+                let sz = z + direction * f64::from(step) * cross[1];
+                let raw = self.base_height_with_biome(sx, sz, self.climate_biome_at(sx, sz));
+                let river = self.river_at(sx, sz);
                 let h = river.map_or(raw, |r| river_height(raw, r, self.config().sea_level));
                 let next =
                     RoofSpan::new(h, river.and_then(RiverSample::cavity), self.config().caves);
@@ -57,6 +97,18 @@ impl TerraGenerator {
 
     pub(super) fn base_height_with_biome(&self, x: f64, z: f64, biome: BiomeSample) -> f64 {
         let config = self.config();
+        if config.landscape_revision >= 5 {
+            if config.hill_amplitude == 0.0 && config.mountain_amplitude == 0.0 {
+                return config.base_height;
+            }
+            return self.advanced_height(x, z);
+        }
+        if config.landscape_revision >= 4 {
+            if config.hill_amplitude == 0.0 && config.mountain_amplitude == 0.0 {
+                return config.base_height;
+            }
+            return self.configured_height(x, z, biome);
+        }
         let profile = biome.profile();
         let hills = self.hills.get([x * 0.008 + 0.37, z * 0.008 + 0.71]);
         let detail = self.hills.get([x * 0.033 + 1.17, z * 0.033 + 2.31]);

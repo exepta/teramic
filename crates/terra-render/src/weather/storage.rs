@@ -29,10 +29,12 @@ pub(crate) struct WeatherGpuData {
     pub leaves: Vec4,
     /// Grass RGB multiplier and continuous snow reserve.
     pub grass: Vec4,
-    /// Flower dormancy, explicit local-gallery cosmetic snow, real flower clock, reserved.
+    /// Flower dormancy, cosmetic snow, flower clock, active footprint cutouts.
     pub vegetation: Vec4,
     /// Fixed 256-rank flower death timestamps, packed into 64 storage vectors.
     pub flowers: [Vec4; 64],
+    /// Four bounded imprint rectangles per world-cell hash bucket (two vectors each).
+    pub footprints: [Vec4; 1024],
 }
 
 impl Default for WeatherGpuData {
@@ -45,19 +47,22 @@ impl Default for WeatherGpuData {
             grass: Vec3::ONE.extend(0.0),
             vegetation: Vec4::ZERO,
             flowers: [Vec4::splat(-1.0); 64],
+            footprints: [Vec4::ZERO; 1024],
         }
     }
 }
 
 #[derive(Resource, Clone, Copy, Default, ExtractResource)]
+#[extract_app(RenderApp)]
 pub(crate) struct WeatherPayload(pub WeatherGpuData);
 
-type SnowContext<'w> = (
+type SurfaceContext<'w> = (
     Option<Res<'w, terra_core::WorldWeather>>,
     Option<Res<'w, terra_world::streaming::WorldAccess>>,
     Option<Res<'w, super::CosmeticSnowPreview>>,
     Option<Res<'w, terra_world::edits::EditJournal>>,
     Option<Res<'w, Time<Real>>>,
+    Option<Res<'w, crate::footprints::Imprints>>,
 );
 
 pub(crate) fn install(app: &mut App) {
@@ -66,11 +71,11 @@ pub(crate) fn install(app: &mut App) {
     let mut buffers = app.world_mut().resource_mut::<Assets<ShaderBuffer>>();
     if !buffers.contains(WEATHER_BUFFER_HANDLE.id()) {
         let mut buffer = ShaderBuffer::with_size(
-            WeatherGpuData::min_size().get() as usize,
+            WeatherGpuData::min_size().get(),
             RenderAssetUsages::RENDER_WORLD,
         );
-        buffer.buffer_description.label = Some("terra shared weather");
-        buffer.buffer_description.usage = BufferUsages::STORAGE | BufferUsages::COPY_DST;
+        buffer.label = "terra shared weather".into();
+        buffer.buffer_usage = BufferUsages::STORAGE | BufferUsages::COPY_DST;
         if let Err(error) = buffers.insert(WEATHER_BUFFER_HANDLE.id(), buffer) {
             tracing::error!(%error, "Shared weather buffer initialization failed");
         }
@@ -93,7 +98,7 @@ pub(crate) fn update(
     growth: Option<Res<crate::props::PropGrowthStatus>>,
     clock: Option<Res<terra_core::WorldClock>>,
     time: Option<Res<Time>>,
-    (authority, access, preview, journal, real): SnowContext,
+    (authority, access, preview, journal, real, imprints): SurfaceContext,
     (mut payload, mut snow, mut flowers): (
         ResMut<WeatherPayload>,
         Local<snow::SnowVisual>,
@@ -105,6 +110,10 @@ pub(crate) fn update(
         visual.as_deref(),
         growth.as_deref().map_or(0.0, |growth| growth.shader_time),
     );
+    if let Some(imprints) = imprints {
+        data.footprints = imprints.0;
+        data.vegetation.w = f32::from(imprints.0.iter().any(|value| value.w > 0.0));
+    }
     let season = config.as_deref().map(|config| {
         clock
             .as_deref()
@@ -203,11 +212,12 @@ fn snapshot(
         grass: Vec3::ONE.extend(0.0),
         vegetation: Vec4::ZERO,
         flowers: [Vec4::splat(-1.0); 64],
+        footprints: [Vec4::ZERO; 1024],
     }
 }
 
 fn encode(data: &WeatherGpuData) -> Option<Vec<u8>> {
-    let mut buffer = encase::StorageBuffer::new(Vec::with_capacity(1120));
+    let mut buffer = encase::StorageBuffer::new(Vec::with_capacity(17504));
     if let Err(error) = buffer.write(data) {
         tracing::error!(%error, "Shared weather payload encoding failed");
         return None;
@@ -281,13 +291,13 @@ mod tests {
             assert_eq!(app.world().resource::<WeatherPayload>().0.vegetation.y, 0.0);
         }
         assert_eq!(app.world().resource::<Assets<ShaderBuffer>>().len(), 1);
-        let shader = include_str!("../../../../assets/shaders/terra_wet_surface.wgsl");
+        let shader = include_str!("../../../../assets/shaders/terra_wet_surface.wesl");
         assert!(shader.contains("let preview_snow = terra_weather.grass.w * frost * snow_sky * clamp(terra_weather.vegetation.y, 0.0, 1.0);"));
         assert!(
             shader
                 .contains("let snow_amount = max(saved_snow, preview_snow) * (1.0 - sheds_snow);")
         );
-        let foliage = include_str!("../../../../assets/shaders/terra_foliage.wgsl");
+        let foliage = include_str!("../../../../assets/shaders/terra_foliage.wesl");
         let global_snow_lines: Vec<_> = foliage
             .lines()
             .filter(|line| line.contains("let snow ="))
@@ -343,20 +353,21 @@ mod tests {
                     (25 + index * 4 + channel) as f32
                 }))
             }),
+            footprints: [Vec4::ZERO; 1024],
         };
         let bytes = encode(&data).unwrap();
-        assert_eq!(bytes.len(), 1120);
-        for (index, bytes) in bytes.chunks_exact(4).enumerate() {
+        assert_eq!(bytes.len(), 17504);
+        for (index, bytes) in bytes[..1120].chunks_exact(4).enumerate() {
             assert_eq!(
                 f32::from_le_bytes(bytes.try_into().unwrap()),
                 index as f32 + 1.0
             );
         }
         for shader in [
-            include_str!("../../../../assets/shaders/terra_props.wgsl"),
-            include_str!("../../../../assets/shaders/terra_prop_fragment.wgsl"),
-            include_str!("../../../../assets/shaders/terra_foliage.wgsl"),
-            include_str!("../../../../assets/shaders/terra_wet_surface.wgsl"),
+            include_str!("../../../../assets/shaders/terra_props.wesl"),
+            include_str!("../../../../assets/shaders/terra_prop_fragment.wesl"),
+            include_str!("../../../../assets/shaders/terra_foliage.wesl"),
+            include_str!("../../../../assets/shaders/terra_wet_surface.wesl"),
         ] {
             assert!(shader.contains("vegetation: vec4<f32>,\n    flowers: array<vec4<f32>, 64>,"));
         }
@@ -439,8 +450,7 @@ mod tests {
             .resource::<Assets<ShaderBuffer>>()
             .get(&WEATHER_BUFFER_HANDLE)
             .unwrap()
-            .buffer_description
-            .clone();
+            .buffer_size();
         for step in 1..=32 {
             app.insert_resource(super::super::WeatherVisual {
                 wetness: step as f32 / 32.0,
@@ -467,10 +477,10 @@ mod tests {
             .get(&WEATHER_BUFFER_HANDLE)
             .unwrap();
         assert_eq!(
-            buffer.buffer_description.usage,
+            buffer.buffer_usage,
             BufferUsages::STORAGE | BufferUsages::COPY_DST
         );
-        assert_eq!(buffer.buffer_description.size, initial.size);
-        assert_eq!(buffer.buffer_description.size, 1120);
+        assert_eq!(buffer.buffer_size(), initial);
+        assert_eq!(buffer.buffer_size(), 17504);
     }
 }

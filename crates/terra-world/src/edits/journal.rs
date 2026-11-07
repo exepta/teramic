@@ -1,3 +1,9 @@
+#[cfg(feature = "bevy")]
+#[path = "sapling_placement.rs"]
+mod sapling_placement;
+#[cfg(feature = "bevy")]
+#[path = "tree_growth.rs"]
+pub(crate) mod tree_growth;
 use crate::environment::{SurfaceCondition, SurfaceConditionError, SurfaceSnapshot};
 use crate::generation::sections::BlockOverrides;
 use crate::props::{PropId, WorldProp};
@@ -5,6 +11,32 @@ use crate::water::FluidCell;
 use std::collections::{HashMap, HashSet};
 use terra_voxel::blocks::BlockError;
 use terra_voxel::{SectionPos, global_to_section};
+#[cfg(test)]
+#[path = "import_performance_tests.rs"]
+mod import_performance_tests;
+#[cfg(feature = "bevy")]
+#[path = "rotation.rs"]
+mod rotation;
+
+/// Valid network deltas normally contain unique cells. Keep historical
+/// duplicate-block validation (any matching value, last stored value) intact.
+fn delta_block_matches(
+    indexed: &HashMap<[usize; 3], u16>,
+    original: &[([u8; 3], u16)],
+    local: [u8; 3],
+    valid: impl Fn(u16) -> bool,
+) -> bool {
+    if indexed.len() == original.len() {
+        indexed
+            .get(&local.map(usize::from))
+            .copied()
+            .is_some_and(valid)
+    } else {
+        original
+            .iter()
+            .any(|(cell, material)| *cell == local && valid(*material))
+    }
+}
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct SectionDelta {
@@ -23,10 +55,16 @@ pub struct SectionDelta {
     pub fluids: Vec<([u8; 3], FluidCell)>,
     #[serde(default)]
     pub objects: Vec<([u8; 3], super::BlockObjectState)>,
+    #[serde(default)]
+    pub tints: Vec<([u8; 3], [u8; 3])>,
+    #[serde(default)]
+    pub belts: Vec<([u8; 3], super::BeltOwner)>,
 }
 
 #[derive(Default, Clone)]
 pub(super) struct SectionEdits {
+    pub(super) belts: HashMap<[usize; 3], super::BeltOwner>,
+    tints: HashMap<[usize; 3], [u8; 3]>,
     pub(super) objects: HashMap<[usize; 3], super::BlockObjectState>,
     revision: u64,
     pub(super) blocks: HashMap<[usize; 3], u16>,
@@ -38,6 +76,32 @@ pub(super) struct SectionEdits {
     pub(super) fluid_epoch: u64,
     pub(super) fluids: HashMap<[usize; 3], FluidCell>,
 }
+
+impl SectionEdits {
+    pub(super) fn commit_belt_owner(
+        &mut self,
+        local: [usize; 3],
+        owner: Option<super::BeltOwner>,
+        appearance_revision: Option<u64>,
+        appearance_epoch: u64,
+    ) {
+        if let Some(owner) = owner {
+            self.belts.insert(local, owner);
+        } else {
+            self.belts.remove(&local);
+        }
+        if let Some(revision) = appearance_revision {
+            self.revision = revision;
+        }
+        self.appearance_epoch = appearance_epoch;
+    }
+
+    pub(super) fn clear_pose_tint(&mut self, local: [usize; 3], preflighted_epoch: u64) {
+        self.tints.remove(&local);
+        self.appearance_epoch = preflighted_epoch;
+    }
+}
+
 /// Session-local authoritative edits survive section eviction. Disk/network storage is separate.
 #[derive(Default, Clone)]
 #[cfg_attr(feature = "bevy", derive(bevy::prelude::Resource))]
@@ -48,14 +112,37 @@ pub struct EditJournal {
     pub world_rules: Option<terra_core::WorldRuleSettings>,
     /// Runtime-only shared flower animation; excluded from save/network deltas.
     pub flowers: crate::props::seasonal::FlowerLifecycle,
+    #[cfg(feature = "bevy")]
+    pub(crate) planted_appearances:
+        std::sync::Arc<std::sync::Mutex<crate::saplings::AppearanceCache>>,
     player_state_revision: u64,
     player_locations: HashMap<terra_core::PlayerUuid, terra_core::PlayerLocation>,
     gameplay: terra_core::GameplayState,
     pub(super) containers: HashMap<[i64; 3], terra_core::Inventory>,
     pub(super) furnaces: HashMap<[i64; 3], terra_core::furnace::FurnaceState>,
     pub(super) crushers: HashMap<[i64; 3], terra_core::crusher::CrusherState>,
+    pub(super) mixers: HashMap<[i64; 3], terra_core::mixer::MixerState>,
+    pub(super) cauldrons: HashMap<[i64; 3], terra_core::brewing::CauldronState>,
+    pub(super) campfires: HashMap<[i64; 3], terra_core::campfire::CampfireState>,
+    pub(super) attached_campfires: HashMap<[i64; 3], terra_core::campfire::AttachedCampfire>,
+    pub(super) plumbing: std::collections::BTreeMap<[i64; 3], crate::plumbing::PlumbingState>,
+    pub(super) plumbing_sections: HashMap<SectionPos, std::collections::BTreeSet<[i64; 3]>>,
+    pub(super) plumbing_supply: HashMap<[i64; 3], crate::plumbing::SupplyToken>,
+    pub(super) plumbing_epoch: u64,
+    pub(super) hold_sections: HashMap<SectionPos, std::collections::BTreeSet<[i64; 3]>>,
+    /// Runtime presentation only; no item ownership, fluid storage or persisted progress.
+    pub(super) infusion_views:
+        std::collections::BTreeMap<[i64; 3], terra_core::infusion::HoldVisual>,
+    pub(super) logistics_filters: HashMap<[i64; 3], terra_core::logistics::FilterConfig>,
+    pub(super) distributors: HashMap<[i64; 3], terra_core::logistics::DistributorConfig>,
+    pub(super) random_tunnels: HashSet<[i64; 3]>,
     pub(super) crusher_sections: HashMap<SectionPos, HashSet<[i64; 3]>>,
     pub(super) crusher_driven: HashSet<[i64; 3]>,
+    pub(super) kinetic_sections: HashMap<SectionPos, std::collections::BTreeSet<[i64; 3]>>,
+    pub(super) logistics_sections: HashMap<SectionPos, std::collections::BTreeSet<[i64; 3]>>,
+    pub(super) extended_kinetic_sections: HashMap<SectionPos, std::collections::BTreeSet<[i64; 3]>>,
+    pub(super) kinetic_states:
+        std::collections::BTreeMap<[i64; 3], terra_core::kinetic::KineticState>,
     pub(super) crops: HashMap<[i64; 3], terra_core::farming::CropState>,
     pub(super) crop_sections: HashMap<SectionPos, HashSet<[i64; 3]>>,
     pub(super) crop_props: HashMap<PropId, [i64; 3]>,
@@ -63,6 +150,7 @@ pub struct EditJournal {
     pub(super) furniture_order: HashMap<[i64; 3], u64>,
     pub(super) next_furniture_order: u64,
     pub(super) sections: HashMap<SectionPos, SectionEdits>,
+    pub(super) object_sections: HashSet<SectionPos>,
     mesh_epochs: HashMap<SectionPos, u64>,
     pub(super) water_mesh_epochs: HashMap<SectionPos, u64>,
     pub(super) fluid_active: std::collections::VecDeque<[i64; 3]>,
@@ -203,6 +291,24 @@ impl EditJournal {
                 values.sort_unstable_by_key(|(p, _)| *p);
                 values
             },
+            tints: {
+                let mut values: Vec<_> = edits
+                    .tints
+                    .iter()
+                    .map(|(p, rgb)| (p.map(|v| v as u8), *rgb))
+                    .collect();
+                values.sort_unstable_by_key(|(p, _)| *p);
+                values
+            },
+            belts: {
+                let mut values: Vec<_> = edits
+                    .belts
+                    .iter()
+                    .map(|(p, owner)| (p.map(|v| v as u8), *owner))
+                    .collect();
+                values.sort_unstable_by_key(|(p, _)| *p);
+                values
+            },
         }
     }
 
@@ -227,55 +333,104 @@ impl EditJournal {
         delta: SectionDelta,
         wake_simulation: bool,
     ) -> Result<Vec<SectionPos>, String> {
+        let _scope = terra_core::profiling::ScopeTimer::new("world.import_section_delta");
         delta.position.origin().map_err(|e| e.to_string())?;
         if delta.blocks.len() > 4096
             || delta.objects.len() > 4096
-            || delta.objects.iter().any(|(p, state)| {
-                p.iter().any(|v| *v >= 16)
-                    || !delta.blocks.iter().any(|(cell, material)| {
-                        cell == p
-                            && delta
-                                .position
-                                .global_block(p.map(usize::from))
-                                .is_ok_and(|position| state.valid_for(position, *material))
-                    })
-            })
-            || delta
-                .objects
-                .iter()
-                .map(|(p, _)| p)
-                .collect::<HashSet<_>>()
-                .len()
-                != delta.objects.len()
+            || delta.belts.len() > 4096
+            || delta.tints.len() > 4096
             || delta.conditions.len() > 4096
             || delta.removed_props.len() > 4096
             || delta.placed_props.len() > 256
+            || delta.fluids.len() > 4096
+            || delta
+                .blocks
+                .iter()
+                .any(|(local, _)| local.iter().any(|value| *value >= 16))
+        {
+            return Err("Invalid section delta".into());
+        }
+        // Reuse the final sparse maps for validation as well as installation.
+        // Dense construction packets must not scan all blocks for every object.
+        let blocks: HashMap<_, _> = delta
+            .blocks
+            .iter()
+            .map(|(local, material)| (local.map(usize::from), *material))
+            .collect();
+        let objects: HashMap<_, _> = delta
+            .objects
+            .iter()
+            .map(|(local, state)| (local.map(usize::from), *state))
+            .collect();
+        if objects.len() != delta.objects.len()
+            || delta.belts.iter().any(|(local, owner)| {
+                local.iter().any(|value| *value >= 16)
+                    || !delta
+                        .position
+                        .global_block(local.map(usize::from))
+                        .is_ok_and(|position| owner.valid_at(position))
+                    || !delta_block_matches(&blocks, &delta.blocks, *local, |material| {
+                        matches!(material, 144..=146 | 148)
+                    })
+                    || !objects.contains_key(&local.map(usize::from))
+            })
+            || delta
+                .belts
+                .iter()
+                .map(|(local, _)| local)
+                .collect::<HashSet<_>>()
+                .len()
+                != delta.belts.len()
+            || delta.tints.iter().any(|(local, _)| {
+                local.iter().any(|value| *value >= 16)
+                    || !delta_block_matches(&blocks, &delta.blocks, *local, |material| {
+                        terra_core::tints::cell_dyeable(
+                            material,
+                            objects
+                                .get(&local.map(usize::from))
+                                .map_or(0, |state| state.facing),
+                        )
+                    })
+            })
+            || delta
+                .tints
+                .iter()
+                .map(|(local, _)| local)
+                .collect::<HashSet<_>>()
+                .len()
+                != delta.tints.len()
+            || delta.objects.iter().any(|(local, state)| {
+                local.iter().any(|value| *value >= 16)
+                    || !delta_block_matches(&blocks, &delta.blocks, *local, |material| {
+                        delta
+                            .position
+                            .global_block(local.map(usize::from))
+                            .is_ok_and(|position| state.valid_for(position, material))
+                    })
+            })
             || delta
                 .placed_props
                 .iter()
-                .any(|p| !p.valid() || p.section != delta.position || p.removed)
+                .any(|prop| !prop.valid() || prop.section != delta.position || prop.removed)
             || delta
                 .placed_props
                 .iter()
-                .map(|p| p.id)
+                .map(|prop| prop.id)
                 .collect::<HashSet<_>>()
                 .len()
                 != delta.placed_props.len()
-            || delta.fluids.len() > 4096
-            || delta.blocks.iter().any(|(p, _)| p.iter().any(|&v| v >= 16))
-            || delta
-                .conditions
-                .iter()
-                .any(|(p, c)| p.iter().any(|&v| v >= 16) || c.validate().is_err())
-            || delta.fluids.iter().any(|(p, cell)| {
-                p.iter().any(|&v| v >= 16)
+            || delta.conditions.iter().any(|(local, condition)| {
+                local.iter().any(|value| *value >= 16) || condition.validate().is_err()
+            })
+            || delta.fluids.iter().any(|(local, cell)| {
+                local.iter().any(|value| *value >= 16)
                     || !cell.validate()
-                    || cell.amount == 0 && !delta.blocks.iter().any(|(q, _)| q == p)
+                    || cell.amount == 0 && !blocks.contains_key(&local.map(usize::from))
             })
             || delta
                 .fluids
                 .iter()
-                .map(|(p, _)| p)
+                .map(|(local, _)| local)
                 .collect::<HashSet<_>>()
                 .len()
                 != delta.fluids.len()
@@ -290,15 +445,17 @@ impl EditJournal {
         {
             return Ok(Vec::new());
         }
-        let blocks: HashMap<_, _> = delta
-            .blocks
+        drop(delta.blocks);
+        drop(delta.objects);
+        let tints: HashMap<_, _> = delta
+            .tints
             .into_iter()
-            .map(|(p, id)| (p.map(usize::from), id))
+            .map(|(p, rgb)| (p.map(usize::from), rgb))
             .collect();
-        let objects: HashMap<_, _> = delta
-            .objects
+        let belts: HashMap<_, _> = delta
+            .belts
             .into_iter()
-            .map(|(p, state)| (p.map(usize::from), state))
+            .map(|(p, owner)| (p.map(usize::from), owner))
             .collect();
         let old = self.sections.get(&p);
         let cells: HashSet<_> = blocks
@@ -311,6 +468,10 @@ impl EditJournal {
             .filter(|local| {
                 old.and_then(|e| e.blocks.get(local)) != blocks.get(local)
                     || old.and_then(|e| e.objects.get(local)) != objects.get(local)
+                    || old
+                        .and_then(|e| e.belts.get(local))
+                        .map(|owner| (owner.start, owner.end))
+                        != belts.get(local).map(|owner| (owner.start, owner.end))
             })
             .collect();
         let mut affected = HashSet::new();
@@ -328,25 +489,45 @@ impl EditJournal {
             .into_iter()
             .filter(|local| old.and_then(|e| e.fluids.get(local)) != fluids.get(local))
             .collect();
+        // No consumer observes the intermediate imported object poses. Rebuild
+        // their sparse indexes once after the final metadata is installed.
+        // On a bounded-revision failure, resync against the actual partial state
+        // before returning, matching normal record() failure behavior.
         for local in changed {
-            let global = p.global_block(local).map_err(|e| e.to_string())?;
+            let global = p.global_block(local).map_err(|error| {
+                self.refresh_object_section(p);
+                error.to_string()
+            })?;
             affected.extend(
                 self.record_with_order(
                     global,
                     blocks.get(&local).copied().unwrap_or(0),
                     false,
                     wake_simulation,
+                    false,
+                    false,
                 )
-                .map_err(|e| e.to_string())?,
+                .map_err(|error| {
+                    self.refresh_object_section(p);
+                    error.to_string()
+                })?,
             );
         }
         for local in fluid_changes {
-            let global = p.global_block(local).map_err(|e| e.to_string())?;
-            self.invalidate_water(global).map_err(|e| e.to_string())?;
+            let global = p.global_block(local).map_err(|error| {
+                self.refresh_object_section(p);
+                error.to_string()
+            })?;
+            self.invalidate_water(global).map_err(|error| {
+                self.refresh_object_section(p);
+                error.to_string()
+            })?;
         }
         self.sections.insert(
             p,
             SectionEdits {
+                belts,
+                tints,
                 objects,
                 revision: delta.revision,
                 blocks,
@@ -363,6 +544,27 @@ impl EditJournal {
                     .collect(),
             },
         );
+        let edits = &self.sections[&p];
+        let extended: std::collections::BTreeSet<_> = edits
+            .blocks
+            .iter()
+            .filter_map(|(local, material)| {
+                (terra_core::kinetic::is_extended(*material)
+                    || matches!(material, 144..=146)
+                        && edits
+                            .objects
+                            .get(local)
+                            .is_some_and(|state| state.peer.is_some()))
+                .then(|| p.global_block(*local).ok())
+                .flatten()
+            })
+            .collect();
+        if extended.is_empty() {
+            self.extended_kinetic_sections.remove(&p);
+        } else {
+            self.extended_kinetic_sections.insert(p, extended);
+        }
+        self.refresh_object_section(p);
         Ok(affected.into_iter().collect())
     }
     pub fn revision(&self, p: SectionPos) -> u64 {
@@ -383,6 +585,58 @@ impl EditJournal {
         self.sections
             .get(&section)
             .map_or(0, |edits| edits.appearance_epoch)
+    }
+    pub fn tint_at(&self, position: [i64; 3]) -> Option<[u8; 3]> {
+        let (section, local) = global_to_section(position);
+        self.sections.get(&section)?.tints.get(&local).copied()
+    }
+    pub fn tint_snapshot(&self, section: SectionPos) -> HashMap<[usize; 3], [u8; 3]> {
+        self.sections
+            .get(&section)
+            .map(|edits| edits.tints.clone())
+            .unwrap_or_default()
+    }
+    pub fn tints(&self) -> impl Iterator<Item = ([i64; 3], [u8; 3])> + '_ {
+        self.sections.iter().flat_map(|(&section, edits)| {
+            edits
+                .tints
+                .iter()
+                .filter_map(move |(&p, &rgb)| section.global_block(p).ok().map(|p| (p, rgb)))
+        })
+    }
+    /// Sparse appearance metadata never changes block identity, collision or water.
+    pub fn set_tint(&mut self, position: [i64; 3], color: Option<[u8; 3]>) -> Result<bool, String> {
+        if self.tint_at(position) == color {
+            return Ok(false);
+        }
+        if color.is_some()
+            && !self.block(position).is_some_and(|material| {
+                terra_core::tints::cell_dyeable(
+                    material,
+                    self.object_state(position).unwrap_or_default().facing,
+                )
+            })
+        {
+            return Err("RGB tint requires a recorded dyeable block".into());
+        }
+        let (section, local) = global_to_section(position);
+        let revision = self
+            .revision(section)
+            .checked_add(1)
+            .ok_or("Tint revision overflow")?;
+        let appearance = self
+            .appearance_epoch(section)
+            .checked_add(1)
+            .ok_or("Tint appearance overflow")?;
+        let edits = self.sections.entry(section).or_default();
+        if let Some(rgb) = color {
+            edits.tints.insert(local, rgb);
+        } else {
+            edits.tints.remove(&local);
+        }
+        edits.revision = revision;
+        edits.appearance_epoch = appearance;
+        Ok(true)
     }
     #[cfg(feature = "bevy")]
     pub(crate) fn blocks_in_section(
@@ -533,6 +787,13 @@ impl EditJournal {
         edits.removed_props.insert(id);
         edits.placed_props.remove(&id);
         edits.prop_epoch = epoch;
+        if let Some(tree) = self.gameplay.trees.get_mut(id.0)
+            && tree.stage == terra_core::TreeStage::Sapling
+        {
+            tree.stage = terra_core::TreeStage::Felled;
+            tree.revision = tree.revision.saturating_add(1);
+            self.gameplay.trees.changed();
+        }
         if let Some(position) = self.crop_props.get(&id).copied() {
             self.remove_crop(position);
         }
@@ -605,7 +866,7 @@ impl EditJournal {
         global: [i64; 3],
         material: u16,
     ) -> Result<Vec<SectionPos>, BlockError> {
-        self.record_with_order(global, material, true, true)
+        self.record_with_order(global, material, true, true, true, true)
     }
 
     /// Persist metadata for a block already present in a freshly generated section.
@@ -637,6 +898,13 @@ impl EditJournal {
             edits.objects.insert(local, state);
         }
         edits.revision = revision;
+        self.refresh_object_section(owner);
+        if terra_core::kinetic::is_part(material) {
+            self.kinetic_sections
+                .entry(owner)
+                .or_default()
+                .insert(global);
+        }
         if let Some(order) = furniture_order {
             self.furniture_order.insert(global, order);
             self.next_furniture_order = order;
@@ -704,7 +972,14 @@ impl EditJournal {
         material: u16,
         track_furniture: bool,
         wake_simulation: bool,
+        refresh_objects: bool,
+        relinquish_tree: bool,
     ) -> Result<Vec<SectionPos>, BlockError> {
+        if material != terra_core::castle::BERGFRIED
+            && self.gameplay.kingdoms.active_at(global).is_some()
+        {
+            return Err(BlockError::ProtectedStructure);
+        }
         let (owner, local) = global_to_section(global);
         let mut affected = Vec::with_capacity(8);
         // Corner AO, like shoreline vertices, reads diagonal halo cells as well.
@@ -785,13 +1060,102 @@ impl EditJournal {
         } else {
             None
         };
+        // Confirmed snapshots carry independent authoritative tree ownership.
+        // Installing their section cells is not a new local replacement edit.
+        if relinquish_tree {
+            self.gameplay.trees.relinquish(global);
+        }
         let edits = self.sections.entry(owner).or_default();
         let previous = edits.blocks.insert(local, material);
-        if !(matches!(material, 28..=29 | 40 | 59..=73 | 99..=100 | 131)
-            || terra_core::construction::is_shape(material))
+        if !matches!(material, 144..=146 | 148) || previous.is_some_and(|old| old != material) {
+            edits.belts.remove(&local);
+        }
+        if !terra_core::tints::cell_dyeable(
+            material,
+            edits.objects.get(&local).map_or(0, |state| state.facing),
+        ) || previous.is_some_and(|old| old != material)
+        {
+            edits.tints.remove(&local);
+        }
+        if !(matches!(material, 28..=29 | 40 | 59..=73 | 99..=100 | 131 | 141..=172)
+            || crate::objects::is_opening(material)
+            || terra_core::construction::is_shape(material)
+            || terra_core::castle::is_castle(material)
+            || terra_core::lantern::is_part(material))
             || previous.is_some_and(|old| old != material)
         {
             edits.objects.remove(&local);
+        }
+        if terra_core::kinetic::is_part(material) {
+            self.kinetic_sections
+                .entry(owner)
+                .or_default()
+                .insert(global);
+        } else if let Some(positions) = self.kinetic_sections.get_mut(&owner) {
+            positions.remove(&global);
+            if positions.is_empty() {
+                self.kinetic_sections.remove(&owner);
+            }
+        }
+        if terra_core::logistics::is_port(material) {
+            self.logistics_sections
+                .entry(owner)
+                .or_default()
+                .insert(global);
+        } else if let Some(positions) = self.logistics_sections.get_mut(&owner) {
+            positions.remove(&global);
+            if positions.is_empty() {
+                self.logistics_sections.remove(&owner);
+            }
+        }
+        self.kinetic_states.remove(&global);
+        if material != terra_core::brewing::MATERIAL || previous.is_some_and(|old| old != material)
+        {
+            self.attached_campfires.remove(&global);
+        }
+        if (material != terra_core::brewing::MATERIAL
+            || previous.is_some_and(|old| old != material))
+            && self.cauldrons.remove(&global).is_some()
+        {
+            self.containers.remove(&global);
+        }
+        if (material != terra_core::campfire::MATERIAL
+            || previous.is_some_and(|old| old != material))
+            && self.campfires.remove(&global).is_some()
+        {
+            self.containers.remove(&global);
+        }
+        if !terra_core::logistics::is_tunnel(material)
+            || previous.is_some_and(|old| old != material)
+        {
+            self.random_tunnels.remove(&global);
+        }
+        if !terra_core::logistics::supports_filter(material)
+            || previous.is_some_and(|old| old != material)
+        {
+            self.logistics_filters.remove(&global);
+        }
+        if material != terra_core::logistics::BELT_DISTRIBUTOR
+            || previous.is_some_and(|old| old != material)
+        {
+            self.distributors.remove(&global);
+        }
+        if terra_core::kinetic::is_extended(material)
+            || matches!(material, 144..=146)
+                && edits
+                    .objects
+                    .get(&local)
+                    .is_some_and(|state| state.peer.is_some())
+        {
+            self.extended_kinetic_sections
+                .entry(owner)
+                .or_default()
+                .insert(global);
+        } else if let Some(positions) = self.extended_kinetic_sections.get_mut(&owner) {
+            positions.remove(&global);
+            if positions.is_empty() {
+                self.extended_kinetic_sections.remove(&owner);
+            }
         }
         if !matches!(material, 28..=29) || previous.is_some_and(|previous| previous != material) {
             self.furniture_order.remove(&global);
@@ -805,6 +1169,14 @@ impl EditJournal {
             edits.surface_conditions.remove(&local);
             edits.appearance_epoch = epoch;
         }
+        if terra_core::plumbing::is_part(material) {
+            self.invalidate_plumbing_supply();
+        } else if previous.is_some_and(terra_core::plumbing::is_part) {
+            self.remove_plumbing(global);
+        }
+        if refresh_objects {
+            self.refresh_object_section(owner);
+        }
         for &p in &affected {
             *self.mesh_epochs.entry(p).or_default() += 1;
         }
@@ -816,20 +1188,6 @@ impl EditJournal {
                     amount: crate::water::FLUID_CAPACITY,
                     flow: [0, 0],
                     source: true,
-                },
-                wake_simulation,
-            )?;
-        } else if crate::water::space::partial(material)
-            && previous == Some(terra_voxel::MaterialId::FluidWater as u16)
-            && let Some(cell) = self.fluid(global)
-        {
-            // Replacing the explicit source removes its replenishment, while
-            // remaining water can drain through the construction's free space.
-            self.write_fluid_with_wake(
-                global,
-                FluidCell {
-                    source: false,
-                    ..cell
                 },
                 wake_simulation,
             )?;

@@ -1,0 +1,45 @@
+/* Compact content inside the larger responsive inventory, without resizing cells. */
+#inventory-shell .inventory-reference-label { font-size: 14px !important; line-height: 18px !important; }
+#inventory-shell .title-diamond { font-size: 10px !important; }
+#inventory-shell .machine-section-title { font-size: 11px !important; line-height: 14px !important; }
+#inventory-shell .inventory-section-heading p { font-size: 9px !important; line-height: 12px !important; }
+#inventory-shell .craft-heading h3 { font-size: 14px !important; line-height: 18px !important; }
+#inventory-shell .machine-slot-caption { font-size: 9px !important; line-height: 12px !important; }
+#inventory-shell .furnace-status, #inventory-shell .mixer-recipe, #inventory-shell .alchemy-effects, #inventory-shell .inventory-error { font-size: 9px !important; line-height: 12px !important; }
+#inventory-shell .mixer-target p, #inventory-shell .alchemy-station-button p, #inventory-shell .funnel-filter-mode label, #inventory-shell .tunnel-random-label { font-size: 9px !important; line-height: 12px !important; }
+#inventory-shell .distributor-output-name { font-size: 10px !important; line-height: 13px !important; }
+#inventory-shell .alchemy-recipe-choice, #inventory-shell .machine-color-picker { font-size: 10px !important; }
+#inventory-shell .alchemy-recipe-choice::value, #inventory-shell .alchemy-recipe-choice option { font-size: 10px !important; line-height: 13px !important; }
+#inventory-shell .machine-color-picker::value, #inventory-shell .machine-color-picker::placeholder, #inventory-shell .machine-color-picker::format { font-size: 10px !important; line-height: 13px !important; }
+
+/* The bench and browser are separate components; select their own roots. */
+.copper-crafting-panel .bench-station-title { font-size: 14px !important; line-height: 18px !important; }
+.copper-crafting-panel .bench-output-area p, .copper-crafting-panel .craft-message { font-size: 10px !important; line-height: 13px !important; }
+#item-browser .browser-search input { font-size: 10px !important; line-height: 13px !important; }
+#inventory-search, #inventory-search::value, #inventory-search::placeholder { font-size: 10px !important; line-height: 13px !important; }
+#inventory-search::placeholder { left: 3px !important; top: 50% !important; transform: translateY(-50%) !important; text-align: left !important; }
+#item-browser .browser-pagination p, #item-browser .browser-empty { font-size: 10px !important; line-height: 13px !important; }
+.reference-slot .inventory-stack-count { font-size: 10px !important; line-height: 11px !important; top: auto !important; right: 2px !important; bottom: 2px !important; }
+
+/* Keep click targets intact and reduce only the decorative control glyphs. */
+#inventory-shell .craft-heading > icon, #inventory-shell .craft-clear > icon,
+#inventory-shell .inventory-section-heading > icon, #inventory-shell .craft-workspace > icon,
+#inventory-shell .alchemy-process > icon, #inventory-shell .crusher-process > icon,
+#inventory-shell .furnace-progress-group > icon, #inventory-shell .furnace-air,
+#inventory-shell .alchemy-station-button > icon, #inventory-shell .alchemy-fire-button > icon,
+#inventory-shell .distributor-output-label > icon, #inventory-shell .filter-clear > icon,
+#inventory-shell .tunnel-extraction-mode > icon,
+.copper-crafting-panel .bench-heading > icon, .copper-crafting-panel .craft-clear > icon {
+  width: 14px !important; height: 14px !important; min-width: 0 !important; min-height: 0 !important; flex-shrink: 0 !important;
+}
+.copper-crafting-panel .bench-workspace > icon { width: 18px !important; height: 18px !important; min-width: 0 !important; min-height: 0 !important; flex-shrink: 0 !important; }
+#inventory-recipe-book > icon { width: 12px !important; height: 12px !important; min-width: 0 !important; min-height: 0 !important; }
+#inventory-shell .furnace-placeholder, #inventory-shell .filter-placeholder { width: 14px !important; height: 14px !important; min-width: 0 !important; min-height: 0 !important; left: 50% !important; top: 50% !important; transform: translate(-50%, -50%) !important; }
+#item-browser .browser-search > icon, #item-browser .browser-filter > icon,
+#item-browser .browser-pagination button > icon { width: 14px !important; height: 14px !important; min-width: 0 !important; min-height: 0 !important; flex-shrink: 0 !important; }
+#item-browser .inventory-trash-icon { width: 16px !important; height: 16px !important; min-width: 0 !important; min-height: 0 !important; }
+.reference-equipment .equipment-symbol { left: 26% !important; top: 26% !important; width: 48% !important; height: 48% !important; }
+
+/* Match the lighter labels on the enlarged HUD hotbar. */
+.inventory-hud .hud-item-name { font-size: 11px !important; }
+.reference-hud-slot .hud-slot-count, .reference-hud-slot .hud-slot-key { font-size: 9px !important; }

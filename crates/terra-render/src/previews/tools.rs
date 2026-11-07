@@ -7,8 +7,10 @@ use terra_core::ToolKind;
 mod farming;
 mod geometry;
 mod palette;
+mod spoon;
 #[cfg(test)]
 mod tests;
+mod wrench;
 
 use geometry::{axe, handle, pickaxe, shovel, sword};
 use palette::{Palette, ToolMaterial};
@@ -23,13 +25,15 @@ enum Shape {
     Bucket(bool),
     Hoe,
     Scythe,
+    Wrench,
+    Spoon,
     Stick,
 }
 
 fn profile(item: ItemKind) -> Option<(Shape, ToolMaterial)> {
     use ToolKind::*;
     use ToolMaterial as M;
-    Some(match item {
+    Some(match item.preview_item() {
         ItemKind::Stick => (Shape::Stick, M::Wood),
         ItemKind::Tool(kind) => match kind {
             WoodSword => (Shape::Sword, M::Wood),
@@ -69,16 +73,23 @@ fn profile(item: ItemKind) -> Option<(Shape, ToolMaterial)> {
             RubyScythe => (Shape::Scythe, M::Ruby),
             Bucket => (Shape::Bucket(false), M::Iron),
             WaterBucket => (Shape::Bucket(true), M::Iron),
+            Wrench => (Shape::Wrench, M::Iron),
+            WoodSpoon => (Shape::Spoon, M::Wood),
+            StoneSpoon => (Shape::Spoon, M::Stone),
+            GoldSpoon => (Shape::Spoon, M::Gold),
         },
         _ => return None,
     })
 }
 
-pub(super) fn batches(item: ItemKind, material: usize) -> Result<Vec<MeshBatch>, String> {
+pub(crate) fn batches(item: ItemKind, material: usize) -> Result<Vec<MeshBatch>, String> {
     let (shape, kind) = profile(item).ok_or("Not a tool or stick")?;
     let palette = Palette::for_material(kind);
     let mut builder = Builder::default();
-    if !matches!(shape, Shape::WateringCan | Shape::Bucket(_)) {
+    if !matches!(
+        shape,
+        Shape::WateringCan | Shape::Bucket(_) | Shape::Wrench | Shape::Spoon
+    ) {
         handle(&mut builder, shape, &palette)?;
     }
     match shape {
@@ -86,10 +97,20 @@ pub(super) fn batches(item: ItemKind, material: usize) -> Result<Vec<MeshBatch>,
         Shape::Pickaxe => pickaxe(&mut builder, &palette)?,
         Shape::Axe => axe(&mut builder, &palette)?,
         Shape::Shovel => shovel(&mut builder, &palette)?,
-        Shape::WateringCan => farming::watering_can(&mut builder, &palette)?,
+        Shape::WateringCan => {
+            farming::watering_can(&mut builder, &palette)?;
+            if let ItemKind::FilledWateringCan { tool, units } = item {
+                farming::watering_can_water(
+                    &mut builder,
+                    f32::from(units) / f32::from(tool.watering_capacity()),
+                )?;
+            }
+        }
         Shape::Bucket(filled) => farming::bucket(&mut builder, &palette, filled)?,
         Shape::Hoe => farming::hoe(&mut builder, &palette)?,
         Shape::Scythe => farming::scythe(&mut builder, &palette)?,
+        Shape::Wrench => wrench::build(&mut builder, &palette)?,
+        Shape::Spoon => spoon::build(&mut builder, &palette)?,
         Shape::Stick => {}
     }
     let mut mesh = builder.finish_batch()?;
@@ -105,6 +126,8 @@ pub(crate) fn world_length(item: ItemKind) -> Option<f32> {
         Shape::Scythe => Some(1.5),
         Shape::WateringCan => Some(0.85),
         Shape::Bucket(_) => Some(0.7),
+        Shape::Wrench => Some(1.0),
+        Shape::Spoon => Some(0.75),
         Shape::Stick => None,
     }
 }
@@ -120,6 +143,8 @@ pub(crate) fn grip(item: ItemKind) -> Option<Vec3> {
         Shape::Hoe | Shape::Scythe => 0.20,
         Shape::WateringCan => 0.90,
         Shape::Bucket(_) => 0.92,
+        Shape::Wrench => 0.20,
+        Shape::Spoon => 0.22,
         Shape::Stick => return None,
     };
     Some(cache_vertex(

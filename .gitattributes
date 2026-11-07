@@ -1,0 +1,13 @@
+# Model buffers, textures, audio and fonts must retain their exact bytes.
+*.bin binary
+*.glb binary
+*.png binary
+*.webp binary
+*.jpg binary
+*.ogg binary
+*.wav binary
+*.ttf binary
+
+# Unified patches and profiling captures preserve their original whitespace.
+tools/**/*.patch -whitespace
+tools/**/perf-symbols.txt -whitespace

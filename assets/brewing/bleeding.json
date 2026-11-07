@@ -1,0 +1,1 @@
+{"id":10,"key":"teramic::bleeding_potion","name":"Bleeding Potion","inputs":[{"item":{"dust":"iron"},"count":1},{"item":{"flower":"red"},"count":1}],"effects":[{"kind":"bleeding","level":1,"seconds":15.0}],"seconds":16.0,"color":[153,36,55]}

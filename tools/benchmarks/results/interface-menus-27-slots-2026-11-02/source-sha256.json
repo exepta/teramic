@@ -1,0 +1,23 @@
+{
+  "crates/terra-core/src/gameplay.rs": "8d332a65bddb5ddc71901ba9efb39eb3c97e2b8b3f4c5583f20151c632c3e64a",
+  "crates/terra-core/src/gameplay/inventory_ops.rs": "e3db1978ac83e644b4150d7b20a8ce12ff999912d3d46df71228acddb2007f59",
+  "crates/terra-network/src/protocol/session.rs": "3b66e545fc07a277f514d711152246a5501597b4263bcdcbfa1235314c429bf4",
+  "crates/terra-network/src/protocol/inventory.rs": "0a48413a5be02ea05a306a3b17423e73cee12da02d1546a040cdee4c3806ea3e",
+  "crates/terra-network/src/server.rs": "092f4a723561aeb3d0cef5430947266d239fa3725369ab28e82b7e7587610361",
+  "crates/terra-storage/src/regions.rs": "d1e07a202fc705e6ed736ab53244411ee0e4c6348530c522c8a851323a160d0d",
+  "crates/terra-storage/src/regions/tests.rs": "9838162d0e8c8f8d069c2ebe43facb4220a8d47a800c9437e6504764059b908c",
+  "crates/terra-ui/src/inventory.rs": "bef99c6c8b8576390a92423feef014439bd0dfcd1692ca9ee6e368ea725ecd7f",
+  "crates/terra-ui/src/frames.rs": "acec27451909e98dc1cfc0e6a2561d218c8161d7c3d38c1884f52f3b75b861aa",
+  "crates/terra-ui/src/menu/view.rs": "058d31b2ebc451d4331af335249d249f76bd9497c41351465a3c6f582839cd1e",
+  "apps/client/src/inventory_reference_smoke.rs": "f7d8ecf9ac6c38e34da7a542d755af11f487be9a726f657e80be2dd760c0b7f3",
+  "src-ui/index.html": "3ed51433fe642499b1a7b902578ea0f1a3f8b9a6582de0200972d6a3c63a60cf",
+  "src-ui/app-shell.component.rs": "971aa78da7df2fd270529719b34e55a18f856a7858187045c2446ba286a5425e",
+  "src-ui/styles/interface-183.css": "1932d2e56b5b17380218d8dfa56e0841a26b36fbe25261caf44274e2ff515faf",
+  "src-ui/pages/game-menu.component.html": "c7424fd49e840812cd8af97baf8ce483dd15d48818fd24165322a199a0558754",
+  "src-ui/pages/options.component.html": "c32bee2f359920053b1a697fff4f4f59322be1d3c4668db53ba8cda0a94c859c",
+  "src-ui/pages/singleplayer.component.html": "3cb0b4754a69e1291e1593a856c892d2b00ffd302bcfb7771d64208afbe2ad17",
+  "src-ui/components/menu-background.component.html": "a1f0fb1c281f5c692b6560b13ba96d97b0ac5cea7ffced830e3c4cd0140ac87b",
+  "src-ui/components/menu-button.component.html": "751170c2fa7386795d7c601475537b557ba9022ac2f942b67154bf80c3ff4320",
+  "src-ui/components/settings-row.component.html": "86af8dd3f80abd472272cc3e6e396fb971bec1013a9853c5b316df7ec54dc2af",
+  "src-ui/components/world-card.component.html": "3f736a1de3a2335585ca28457d5d023d09687d4c5bdcf586b6fb9197412e6d0f"
+}

@@ -35,7 +35,8 @@ impl SnowVisual {
             (now - previous).clamp(0.0, 3600.0) as f32
         });
         let snowfall = snowfall.clamp(0.0, 8.0);
-        self.accumulation = (self.accumulation + snowfall * elapsed * 0.003
+        self.accumulation = (self.accumulation
+            + snowfall * elapsed * terra_world::weather::SNOW_ACCUMULATION_PER_SECOND
             - (1.0 - winter) * (1.0 - snowfall).max(0.0) * elapsed * 0.004)
             .clamp(0.0, 1.0);
         let target = self.accumulation;
@@ -89,9 +90,120 @@ pub(crate) fn encode_surface(wetness: f32, snow: f32) -> f32 {
     (snow.clamp(0.0, 1.0) * 255.0).round() * 2.0 + wetness.clamp(0.0, 1.0)
 }
 
+/// Custom shapes use the same saved surface payload as cubes. The wet/snow
+/// fragment shader follows their real normals instead of adding a flat cap.
+pub(crate) fn model_surface_payload(
+    material: u16,
+    condition: terra_world::environment::SurfaceCondition,
+    exposure: f32,
+    snow_exposed: bool,
+) -> Option<[f32; 2]> {
+    if !terra_world::weather::retains_snow(material) {
+        return Some([2048.0, 0.0]);
+    }
+    let snow = if exposure < -0.5 {
+        0.0
+    } else if material == terra_voxel::MaterialId::Path as u16 {
+        // Compacted paths keep their texture visible beneath a light frost.
+        condition.snow.min(0.25)
+    } else if terra_world::snow::coatable(material) {
+        (condition.snow / terra_world::weather::SHAPED_SNOW_FULL_COVER).clamp(0.0, 1.0)
+    } else {
+        condition.snow
+    };
+    let snow_sky_override = snow_exposed && exposure == 0.0;
+    (material == 98
+        || snow > 0.0
+        || condition.wetness > 0.003
+        || exposure != 0.0
+        || snow_sky_override)
+        .then_some([
+            encode_surface(condition.wetness, snow) + if snow_sky_override { 1024.0 } else { 0.0 },
+            exposure,
+        ])
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn dry_sheltered_snow_layers_keep_an_imprint_payload_without_inventing_weather() {
+        assert_eq!(
+            model_surface_payload(98, Default::default(), 0.0, false),
+            Some([0.0; 2])
+        );
+        assert_eq!(
+            model_surface_payload(98, Default::default(), 1.0, true),
+            Some([0.0, 1.0])
+        );
+        assert_eq!(
+            model_surface_payload(98, Default::default(), -1.0, false),
+            Some([0.0, -1.0])
+        );
+        assert_eq!(
+            model_surface_payload(78, Default::default(), 0.0, false),
+            None
+        );
+    }
+
+    #[test]
+    fn shaped_surfaces_use_saved_snow_and_roof_flags_without_snowing_on_machinery() {
+        let condition = terra_world::environment::SurfaceCondition {
+            snow: 0.75,
+            wetness: 0.4,
+            ..Default::default()
+        };
+        for material in [77, 78, 85, 86, 94, 101, 104, 105, 138] {
+            assert_eq!(
+                model_surface_payload(material, condition, 1.0, true),
+                Some([encode_surface(0.4, 1.0), 1.0])
+            );
+            assert_eq!(
+                model_surface_payload(material, Default::default(), 0.0, false),
+                None
+            );
+            assert_eq!(
+                model_surface_payload(material, condition, 0.0, true),
+                Some([encode_surface(0.4, 1.0) + 1024.0, 0.0])
+            );
+            assert_eq!(
+                model_surface_payload(material, condition, -1.0, false),
+                Some([encode_surface(0.4, 0.0), -1.0])
+            );
+        }
+        for material in [28, 29, 59, 71, 99, 100, 147, 148, 156, 157, 158, 159, 160] {
+            assert_eq!(
+                model_surface_payload(material, condition, 1.0, true),
+                Some([2048.0, 0.0])
+            );
+        }
+    }
+
+    #[test]
+    fn paths_keep_a_light_frost_even_at_full_accumulation_without_losing_wetness_or_roof_flags() {
+        let material = terra_voxel::MaterialId::Path as u16;
+        for snow in [0.0_f32, 0.125, 0.25, 0.5, 0.75, 1.0] {
+            let condition = terra_world::environment::SurfaceCondition {
+                snow,
+                wetness: 0.4,
+                ..Default::default()
+            };
+            let expected = encode_surface(0.4, snow.min(0.25));
+            assert_eq!(
+                model_surface_payload(material, condition, 1.0, true),
+                Some([expected, 1.0])
+            );
+            assert_eq!(
+                model_surface_payload(material, condition, 0.0, true),
+                Some([expected + 1024.0, 0.0])
+            );
+            assert_eq!(
+                model_surface_payload(material, condition, -1.0, false),
+                Some([encode_surface(0.4, 0.0), -1.0])
+            );
+        }
+    }
 
     fn season(day: u64) -> SeasonSample {
         terra_core::WorldClock {
@@ -125,10 +237,10 @@ mod tests {
         }
         coarse.advance(Some(season(7)), 1.0, 60.0, None);
         assert!((snow.accumulation - coarse.accumulation).abs() < 0.00001);
-        assert!(snow.reserve > 0.17);
+        assert!(snow.reserve > 0.04 && snow.reserve < 0.05);
         let before = snow.reserve;
         snow.advance(Some(season(7)), 0.0, 1.0, None);
-        assert!(snow.reserve < before && snow.reserve > 0.17);
+        assert!(snow.reserve < before && snow.reserve > 0.04);
         snow.advance(Some(season(7)), 0.0, 600.0, None);
         assert_eq!(snow.reserve, 0.0);
     }
@@ -137,10 +249,10 @@ mod tests {
     fn authoritative_catchup_blends_loaded_meshes_over_a_few_seconds() {
         let mut snow = SnowVisual::default();
         snow.advance(Some(season(14)), 0.0, 0.0, Some(0.0));
-        snow.advance(Some(season(14)), 1.0, 0.1, Some(600.0));
+        snow.advance(Some(season(14)), 1.0, 0.1, Some(1800.0));
         assert!(snow.reserve > 0.0 && snow.reserve < 0.2);
         for _ in 0..30 {
-            snow.advance(Some(season(14)), 1.0, 0.1, Some(600.0));
+            snow.advance(Some(season(14)), 1.0, 0.1, Some(1800.0));
         }
         assert!(snow.reserve > 0.99);
         assert_eq!(coverage(snow.reserve, -5.0), 1.0);
@@ -152,7 +264,7 @@ mod tests {
         let mut snow = SnowVisual::default();
         snow.advance(Some(winter), 0.0, 0.0, None);
         assert_eq!(snow.reserve, 0.0, "a dry winter never creates snow");
-        snow.advance(Some(winter), 1.0, 600.0, None);
+        snow.advance(Some(winter), 1.0, 1800.0, None);
         assert_eq!(snow.reserve, 1.0);
         for x in 0..256 {
             assert_eq!(coverage(snow.reserve, -5.0 + x as f32 * 0.001), 1.0);

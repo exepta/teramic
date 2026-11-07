@@ -23,6 +23,7 @@ mod tests;
 pub(crate) struct ChatState {
     open: bool,
     resume_pending: bool,
+    teleport_resume_pending: bool,
     focus_pending: bool,
     scroll_frames: u8,
     draft: String,
@@ -46,7 +47,11 @@ struct Completion {
 
 impl ChatState {
     pub(crate) fn blocks_input(&self) -> bool {
-        self.open || self.resume_pending
+        self.open || self.resume_pending || self.teleport_resume_pending
+    }
+
+    pub(crate) fn input_state(&self) -> (bool, bool, bool) {
+        (self.open, self.resume_pending, self.teleport_resume_pending)
     }
 }
 
@@ -169,8 +174,11 @@ pub(crate) fn install(app: &mut App) {
 
 fn available(world: &World) -> bool {
     !world
-        .get_resource::<crate::pets::PetMenuState>()
-        .is_some_and(|p| p.blocks_input())
+        .get_resource::<crate::kingdom::KingdomMenuState>()
+        .is_some_and(|k| k.blocks_input())
+        && !world
+            .get_resource::<crate::pets::PetMenuState>()
+            .is_some_and(|p| p.blocks_input())
         && world
             .get_resource::<ClientSession>()
             .is_some_and(|session| session.ready && session.error.is_none() && !session.dead())
@@ -205,7 +213,69 @@ fn action_pressed(world: &World, action: GameAction) -> bool {
     )
 }
 
+fn teleport_capture(world: &mut World) {
+    let playing = world
+        .get_resource::<MenuState>()
+        .is_none_or(|menu| menu.page == MenuPage::Playing);
+    let session = world.get_resource::<ClientSession>();
+    if !playing
+        || session.is_none_or(|session| !session.ready || session.dead() || session.error.is_some())
+    {
+        world.resource_mut::<ChatState>().teleport_resume_pending = false;
+        return;
+    }
+    if session.is_some_and(|session| session.teleporting) {
+        world.resource_mut::<ChatState>().teleport_resume_pending = true;
+        world.resource_mut::<PlayerInputBlock>().0 = true;
+        return;
+    }
+    if !world.resource::<ChatState>().teleport_resume_pending {
+        return;
+    }
+    let chat = world.resource::<ChatState>();
+    let other_owner = chat.open
+        || chat.resume_pending
+        || world
+            .get_resource::<crate::kingdom::KingdomMenuState>()
+            .is_some_and(|k| k.blocks_input())
+        || world
+            .get_resource::<InventoryState>()
+            .is_some_and(InventoryState::blocks_input)
+        || world
+            .get_resource::<crate::SettingsView>()
+            .is_some_and(|settings| settings.open)
+        || world
+            .get_resource::<crate::pets::PetMenuState>()
+            .is_some_and(|pets| pets.blocks_input())
+        || world
+            .get_resource::<crate::minimap::fullmap::FullMapState>()
+            .is_some_and(|map| map.blocks_input());
+    if other_owner {
+        // Transfer the handoff; waiting for the other owner here would form a modal cycle.
+        world.resource_mut::<ChatState>().teleport_resume_pending = false;
+        return;
+    }
+    let released = world
+        .resource::<ButtonInput<KeyCode>>()
+        .get_pressed()
+        .next()
+        .is_none()
+        && world
+            .resource::<ButtonInput<MouseButton>>()
+            .get_pressed()
+            .next()
+            .is_none();
+    if released {
+        world.resource_mut::<ChatState>().teleport_resume_pending = false;
+        world.resource_mut::<PlayerInputBlock>().0 = false;
+        world.write_message(CaptureRequest(true));
+    } else {
+        world.resource_mut::<PlayerInputBlock>().0 = true;
+    }
+}
+
 fn update(world: &mut World) {
+    teleport_capture(world);
     let sleeping = world
         .get_resource::<ClientSession>()
         .is_some_and(|s| s.ready && s.sleeping().is_some());
@@ -304,7 +374,10 @@ fn update(world: &mut World) {
             .get_pressed()
             .next()
             .is_none();
-    if world.resource::<ChatState>().resume_pending && released {
+    if world.resource::<ChatState>().resume_pending
+        && released
+        && !world.resource::<ClientSession>().teleporting
+    {
         world.resource_mut::<ChatState>().resume_pending = false;
         world.resource_mut::<PlayerInputBlock>().0 = false;
         world.write_message(CaptureRequest(true));

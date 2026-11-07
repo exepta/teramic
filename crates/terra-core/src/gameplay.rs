@@ -5,6 +5,7 @@ use std::collections::{BTreeMap, HashSet};
 
 mod inventory_ops;
 
+/// Nine hotbar slots and two complete nine-slot backpack rows.
 pub const INVENTORY_SLOTS: usize = 27;
 pub const STACK_LIMIT: u16 = 128;
 pub const DROP_LIFETIME_SECONDS: f32 = 300.0;
@@ -50,9 +51,16 @@ pub enum ResourcePropKind {
     Lettuce,
     Scarecrow,
     SpiderWeb,
+    OakSapling,
+    SpruceSapling,
+    BirchSapling,
+    CherrySapling,
+    AppleSapling,
+    /// Internal derived fruit target; never an inventory/placement item.
+    AppleFruit,
 }
 impl ResourcePropKind {
-    pub const ALL: [Self; 19] = [
+    pub const ALL: [Self; 24] = [
         Self::Grass,
         Self::Flower,
         Self::Bush,
@@ -72,6 +80,11 @@ impl ResourcePropKind {
         Self::Lettuce,
         Self::Scarecrow,
         Self::SpiderWeb,
+        Self::OakSapling,
+        Self::SpruceSapling,
+        Self::BirchSapling,
+        Self::CherrySapling,
+        Self::AppleSapling,
     ];
     pub fn slug(self) -> &'static str {
         match self {
@@ -94,6 +107,12 @@ impl ResourcePropKind {
             Self::Lettuce => "lettuce_crop",
             Self::Scarecrow => "scarecrow",
             Self::SpiderWeb => "spider_web",
+            Self::OakSapling => "oak_sapling",
+            Self::SpruceSapling => "spruce_sapling",
+            Self::BirchSapling => "birch_sapling",
+            Self::CherrySapling => "cherry_sapling",
+            Self::AppleSapling => "apple_sapling",
+            Self::AppleFruit => "apple_fruit",
         }
     }
     pub fn label(self) -> &'static str {
@@ -117,6 +136,12 @@ impl ResourcePropKind {
             Self::Lettuce => "Lettuce",
             Self::Scarecrow => "Scarecrow",
             Self::SpiderWeb => "Spider web",
+            Self::OakSapling => "Oak sapling",
+            Self::SpruceSapling => "Spruce sapling",
+            Self::BirchSapling => "Birch sapling",
+            Self::CherrySapling => "Cherry sapling",
+            Self::AppleSapling => "Apple sapling",
+            Self::AppleFruit => "Apple fruit",
         }
     }
 }
@@ -145,6 +170,27 @@ pub enum ItemKind {
     Dust(crate::DustKind),
     Flower(crate::beds::DyeColor),
     Crop(crate::CropItem),
+    TintedBlock {
+        material: u16,
+        wood: WoodSpecies,
+        color: [u8; 3],
+    },
+    GlassBottle,
+    WaterBottle,
+    Potion(u16),
+    /// Water belongs to this vessel across inventories, drops and saved worlds.
+    FilledWateringCan {
+        tool: ToolKind,
+        units: u8,
+    },
+    /// A snapshot of its maker's heraldry, retained through trade, drops and saves.
+    /// Appended to preserve the binary identities of existing item variants.
+    HeraldicCape {
+        cape: crate::CapeItem,
+        heraldry: crate::kingdom::KingdomHeraldry,
+    },
+    Apple,
+    AppleCore,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
@@ -251,9 +297,13 @@ pub enum ToolKind {
     RubyScythe,
     Bucket,
     WaterBucket,
+    Wrench,
+    WoodSpoon,
+    StoneSpoon,
+    GoldSpoon,
 }
 impl ToolKind {
-    pub const ALL: [Self; 37] = [
+    pub const ALL: [Self; 41] = [
         Self::WoodPickaxe,
         Self::StonePickaxe,
         Self::StoneAxe,
@@ -291,6 +341,10 @@ impl ToolKind {
         Self::RubyScythe,
         Self::Bucket,
         Self::WaterBucket,
+        Self::Wrench,
+        Self::WoodSpoon,
+        Self::StoneSpoon,
+        Self::GoldSpoon,
     ];
     pub fn slug(self) -> &'static str {
         match self {
@@ -331,6 +385,10 @@ impl ToolKind {
             Self::RubyScythe => "ruby_scythe",
             Self::Bucket => "bucket",
             Self::WaterBucket => "water_bucket",
+            Self::Wrench => "wrench",
+            Self::WoodSpoon => "wood_spoon",
+            Self::StoneSpoon => "stone_spoon",
+            Self::GoldSpoon => "gold_spoon",
         }
     }
     pub const fn class(self) -> Option<crate::block_properties::ToolClass> {
@@ -456,12 +514,51 @@ impl ToolKind {
     }
 }
 impl ItemKind {
+    pub const fn tool_kind(self) -> Option<ToolKind> {
+        match self {
+            Self::Tool(tool) | Self::FilledWateringCan { tool, .. } => Some(tool),
+            _ => None,
+        }
+    }
+    pub const fn watering_units(self) -> u8 {
+        match self {
+            Self::FilledWateringCan { units, .. } => units,
+            _ => 0,
+        }
+    }
+    pub fn with_watering_units(self, units: u8) -> Option<Self> {
+        let tool = self.tool_kind()?;
+        if tool.watering_capacity() == 0 || units > tool.watering_capacity() {
+            return None;
+        }
+        Some(if units == 0 {
+            Self::Tool(tool)
+        } else {
+            Self::FilledWateringCan { tool, units }
+        })
+    }
+    pub const fn preview_item(self) -> Self {
+        match self {
+            Self::FilledWateringCan { tool, .. } => Self::Tool(tool),
+            _ => self,
+        }
+    }
     pub const fn max_stack(self) -> u16 {
         match self {
+            Self::FilledWateringCan { .. } => 1,
             Self::Armor(_)
             | Self::Accessory(_)
             | Self::Cape(_)
-            | Self::Tool(ToolKind::Bucket | ToolKind::WaterBucket) => 1,
+            | Self::HeraldicCape { .. }
+            | Self::Tool(
+                ToolKind::Bucket
+                | ToolKind::WaterBucket
+                | ToolKind::Wrench
+                | ToolKind::WoodSpoon
+                | ToolKind::StoneSpoon
+                | ToolKind::GoldSpoon,
+            ) => 1,
+            Self::GlassBottle | Self::WaterBottle | Self::Potion(_) => 16,
             _ => STACK_LIMIT,
         }
     }
@@ -469,6 +566,7 @@ impl ItemKind {
         match self {
             Self::Block(material)
             | Self::WoodenBlock { material, .. }
+            | Self::TintedBlock { material, .. }
             | Self::DyedBed { material, .. } => Some(material),
             Self::Prop(ResourcePropKind::Seagrass) => Some(50),
             Self::Mineral(crate::MineralItem::SaltCrystal) => Some(51),
@@ -477,22 +575,50 @@ impl ItemKind {
     }
     pub fn wood_species(self) -> Option<WoodSpecies> {
         match self {
-            Self::Block(6 | 16 | 28 | 29) => Some(WoodSpecies::Oak),
+            Self::Block(6 | 16 | 28 | 29 | 141 | 144 | 148 | 149) => Some(WoodSpecies::Oak),
             Self::Block(10 | 17) => Some(WoodSpecies::Birch),
-            Self::Block(18 | 36) => Some(WoodSpecies::Spruce),
+            Self::Block(18 | 36 | 169) => Some(WoodSpecies::Spruce),
             Self::Block(134 | 135) => Some(WoodSpecies::Cherry),
-            Self::WoodenBlock { wood, .. } => Some(wood),
+            Self::WoodenBlock { wood, .. }
+            | Self::TintedBlock {
+                material: 148,
+                wood,
+                ..
+            } => Some(wood),
             _ => None,
         }
     }
+    pub const fn supports_wood(material: u16) -> bool {
+        matches!(material, 28 | 29 | 141 | 144 | 148 | 149 | 169)
+    }
     pub fn for_wood(material: u16, wood: WoodSpecies) -> Self {
-        if wood == WoodSpecies::Oak || !matches!(material, 28..=29) {
+        if wood == Self::Block(material).wood_species().unwrap_or_default()
+            || !Self::supports_wood(material)
+        {
             Self::Block(material)
         } else {
             Self::WoodenBlock { material, wood }
         }
     }
-    pub const EXTRA: [Self; 131] = [
+    pub const EXTRA: [Self; 166] = [
+        Self::GlassBottle,
+        Self::WaterBottle,
+        Self::Potion(1),
+        Self::Potion(2),
+        Self::Potion(3),
+        Self::Potion(4),
+        Self::Potion(5),
+        Self::Potion(6),
+        Self::Potion(7),
+        Self::Potion(8),
+        Self::Potion(9),
+        Self::Potion(10),
+        Self::Potion(11),
+        Self::Potion(12),
+        Self::Tool(ToolKind::WoodSpoon),
+        Self::Tool(ToolKind::StoneSpoon),
+        Self::Tool(ToolKind::GoldSpoon),
+        Self::Tool(ToolKind::Wrench),
         Self::Tool(ToolKind::Bucket),
         Self::Tool(ToolKind::WaterBucket),
         Self::Tool(ToolKind::WoodWateringCan),
@@ -714,6 +840,68 @@ impl ItemKind {
         Self::Accessory(crate::AccessoryKind::Necklace),
         Self::Accessory(crate::AccessoryKind::Belt),
         Self::Accessory(crate::AccessoryKind::Socks),
+        Self::WoodenBlock {
+            material: 141,
+            wood: WoodSpecies::Birch,
+        },
+        Self::WoodenBlock {
+            material: 141,
+            wood: WoodSpecies::Spruce,
+        },
+        Self::WoodenBlock {
+            material: 141,
+            wood: WoodSpecies::Cherry,
+        },
+        Self::WoodenBlock {
+            material: 144,
+            wood: WoodSpecies::Birch,
+        },
+        Self::WoodenBlock {
+            material: 144,
+            wood: WoodSpecies::Spruce,
+        },
+        Self::WoodenBlock {
+            material: 144,
+            wood: WoodSpecies::Cherry,
+        },
+        Self::WoodenBlock {
+            material: 148,
+            wood: WoodSpecies::Birch,
+        },
+        Self::WoodenBlock {
+            material: 148,
+            wood: WoodSpecies::Spruce,
+        },
+        Self::WoodenBlock {
+            material: 148,
+            wood: WoodSpecies::Cherry,
+        },
+        Self::WoodenBlock {
+            material: 149,
+            wood: WoodSpecies::Birch,
+        },
+        Self::WoodenBlock {
+            material: 149,
+            wood: WoodSpecies::Spruce,
+        },
+        Self::WoodenBlock {
+            material: 149,
+            wood: WoodSpecies::Cherry,
+        },
+        Self::WoodenBlock {
+            material: 169,
+            wood: WoodSpecies::Oak,
+        },
+        Self::WoodenBlock {
+            material: 169,
+            wood: WoodSpecies::Birch,
+        },
+        Self::WoodenBlock {
+            material: 169,
+            wood: WoodSpecies::Cherry,
+        },
+        Self::Apple,
+        Self::AppleCore,
     ];
     pub fn can_harvest(self, material: u16) -> bool {
         if let Some(ore) = crate::OreKind::from_material(material) {
@@ -732,21 +920,53 @@ impl ItemKind {
     }
     pub fn identifier(self) -> String {
         match self {
+            Self::HeraldicCape { cape, heraldry } => format!(
+                "{}#heraldry={:02X}{:02X}{:02X}:{}",
+                Self::Cape(cape.undyed()).identifier(),
+                heraldry.color[0],
+                heraldry.color[1],
+                heraldry.color[2],
+                heraldry.icon.key()
+            ),
+            Self::FilledWateringCan { tool, units } => {
+                format!("teramic::{}#water={units}", tool.slug())
+            }
+            Self::Apple => "teramic::apple".into(),
+            Self::AppleCore => "teramic::apple_core".into(),
+            Self::GlassBottle => "teramic::glass_bottle".into(),
+            Self::WaterBottle => "teramic::water_bottle".into(),
+            Self::Potion(id) => crate::brewing::recipe(id).map_or_else(
+                || format!("teramic::invalid_potion_{id}"),
+                |recipe| recipe.key.clone(),
+            ),
             Self::Cape(cape) => {
                 let id = format!("teramic::{}_cape", cape.material.slug());
                 if cape.color == crate::beds::DyeColor::White {
                     id
                 } else {
-                    format!("{id}#{}", cape.color.slug())
+                    format!("{id}#{}", cape.color.code())
                 }
             }
             Self::Dust(kind) => format!("teramic::{}", kind.slug()),
             Self::Crop(kind) => format!("teramic::{}", kind.slug()),
             Self::Flower(color) => format!("teramic::{}_flower", color.slug()),
+            Self::Dye(crate::beds::DyeColor::Rgb(rgb)) => format!(
+                "teramic::mixed_dye#{}",
+                crate::beds::DyeColor::Rgb(rgb).code()
+            ),
             Self::Dye(color) => format!("teramic::{}_dye", color.slug()),
             Self::DyedBed { material, color } => {
-                format!("{}#{}", Self::Block(material).identifier(), color.slug())
+                format!("{}#{}", Self::Block(material).identifier(), color.code())
             }
+            Self::TintedBlock {
+                material,
+                wood,
+                color,
+            } => format!(
+                "{}#{}",
+                Self::for_wood(material, wood).identifier(),
+                crate::beds::DyeColor::Rgb(color).code()
+            ),
             Self::WoodenBlock { material, wood } => {
                 format!("{}#{}", Self::Block(material).identifier(), wood.slug())
             }
@@ -766,14 +986,27 @@ impl ItemKind {
     }
     pub fn valid(self) -> bool {
         match self {
+            Self::HeraldicCape { cape, heraldry } => {
+                cape.color == crate::beds::DyeColor::Rgb(heraldry.color) && heraldry.icon.valid()
+            }
+            Self::FilledWateringCan { tool, units } => {
+                units > 0 && units <= tool.watering_capacity()
+            }
+            Self::Potion(id) => crate::brewing::recipe(id).is_some(),
+            Self::Prop(ResourcePropKind::AppleFruit) => false,
+            Self::GlassBottle | Self::WaterBottle | Self::Apple | Self::AppleCore => true,
             Self::Dye(_) => true,
             Self::Armor(_) | Self::Accessory(_) | Self::Cape(_) | Self::Dust(_) | Self::Crop(_) => {
                 true
             }
             Self::Flower(color) => crate::beds::DyeColor::FLOWER_COLORS.contains(&color),
             Self::DyedBed { material, .. } => crate::beds::is_bed(material),
+            Self::TintedBlock { material, wood, .. } => {
+                crate::tints::supports(material) && (material == 148 || wood == WoodSpecies::Oak)
+            }
             Self::WoodenBlock { material, wood } => {
-                matches!(material, 28..=29) && wood != WoodSpecies::Oak
+                Self::supports_wood(material)
+                    && wood != Self::Block(material).wood_species().unwrap_or_default()
             }
             Self::Block(id) => terra_voxel::MaterialId::from_raw(id)
                 .is_some_and(|material| material != terra_voxel::MaterialId::Air),
@@ -809,6 +1042,16 @@ pub struct Inventory {
     pub revision: u64,
 }
 impl Inventory {
+    /// Older saves had up to four backpack rows. They remain readable until
+    /// the owner joins and the server can recover excess items at their feet.
+    pub fn valid_saved_player(&self) -> bool {
+        self.slots.len() <= 45
+            && self.cursor.is_none_or(ItemStack::valid)
+            && self
+                .slots
+                .iter()
+                .all(|s| *s == ItemStack::EMPTY || s.valid())
+    }
     pub fn valid(&self) -> bool {
         self.slots.len() <= INVENTORY_SLOTS
             && self.cursor.is_none_or(ItemStack::valid)
@@ -844,6 +1087,32 @@ impl Inventory {
         }
         self.set(slot, stack);
         self.changed();
+        true
+    }
+    /// Transform one selected item, retaining the rest of its legacy stack atomically.
+    pub fn transform_one(&mut self, slot: usize, replacement: ItemKind) -> bool {
+        if slot >= INVENTORY_SLOTS {
+            return false;
+        }
+        let Some(source) = self.slot(slot) else {
+            return false;
+        };
+        if !replacement.valid() || source.item == replacement || self.revision == u64::MAX {
+            return false;
+        }
+        let mut next = self.clone();
+        next.set(
+            slot,
+            ItemStack {
+                item: replacement,
+                count: 1,
+            },
+        );
+        if source.count > 1 && next.insert(source.item, source.count - 1) != 0 {
+            return false;
+        }
+        next.revision = self.revision + 1;
+        *self = next;
         true
     }
     /// Stable slot indices: merge equal items, or swap complete unlike stacks.
@@ -1034,6 +1303,8 @@ pub struct PlayerStats {
 #[derive(Debug, Default, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct GameplayState {
+    pub trees: crate::trees::TreeRegistry,
+    pub kingdoms: crate::kingdom::KingdomRegistry,
     pub creatures: crate::creatures::CreaturePopulation,
     pub animal_bonds: BTreeMap<u64, crate::creatures::taming::AnimalBond>,
     pub pet_orders: BTreeMap<u64, crate::creatures::taming::CompanionMode>,
@@ -1049,7 +1320,9 @@ pub struct GameplayState {
 impl GameplayState {
     pub fn valid(&self) -> bool {
         let mut ids = HashSet::new();
-        self.creatures.valid()
+        self.trees.valid()
+            && self.kingdoms.valid()
+            && self.creatures.valid()
             && self.pet_orders.len() <= crate::creatures::MAX_CREATURES
             && self.pet_orders.keys().all(|id| {
                 self.creatures.owners.contains_key(id)
@@ -1118,7 +1391,7 @@ impl GameplayState {
             && self
                 .inventories
                 .iter()
-                .all(|(id, bag)| !id.is_nil() && bag.valid())
+                .all(|(id, bag)| !id.is_nil() && bag.valid_saved_player())
             && self.drops.len() <= MAX_WORLD_DROPS
             && self
                 .drops
@@ -1128,6 +1401,102 @@ impl GameplayState {
     pub fn can_drop(&self) -> bool {
         self.drops.len() < MAX_WORLD_DROPS && self.next_drop < u64::MAX
     }
+    /// Recover old inventory rows atomically, merging into the 27 accessible
+    /// slots first and spawning only the remainder at the resolved join position.
+    pub fn recover_player_inventory(&mut self, player: PlayerUuid, position: [f64; 3]) -> bool {
+        let Some(original) = self.inventories.get(&player) else {
+            return true;
+        };
+        if !original.valid_saved_player() {
+            return false;
+        }
+        if original.slots.len() <= INVENTORY_SLOTS {
+            return true;
+        }
+        let mut inventory = original.clone();
+        let excess = inventory.slots.split_off(INVENTORY_SLOTS);
+        let mut remaining = Vec::new();
+        for stack in excess.into_iter().filter(|stack| stack.valid()) {
+            let count = inventory.insert(stack.item, stack.count);
+            if count > 0 {
+                remaining.push(ItemStack { count, ..stack });
+            }
+        }
+        if self.drops.len() + remaining.len() > MAX_WORLD_DROPS
+            || self.next_drop.checked_add(remaining.len() as u64).is_none()
+            || position
+                .iter()
+                .any(|v| !v.is_finite() || v.abs() > 1_000_000.0)
+        {
+            return false;
+        }
+        inventory.revision = original.revision.saturating_add(1);
+        self.inventories.insert(player, inventory);
+        for stack in remaining {
+            let accepted = self.drop_stack(position, stack, [0.0, 1.8, 0.0], 0.35);
+            debug_assert!(accepted);
+        }
+        self.revision = self.revision.saturating_add(1);
+        true
+    }
+    /// Transfer every owned stack to the death position as one preflighted
+    /// operation. A full world-drop budget leaves ownership intact for retry.
+    pub fn drop_death_inventory(
+        &mut self,
+        player: PlayerUuid,
+        equipment: &mut crate::EquipmentSlots,
+        position: [f64; 3],
+    ) -> bool {
+        let bag = self.inventories.get(&player).cloned().unwrap_or_default();
+        if player.is_nil()
+            || !bag.valid_saved_player()
+            || !equipment.valid()
+            || position
+                .iter()
+                .any(|v| !v.is_finite() || v.abs() > 1_000_000.0)
+        {
+            return false;
+        }
+        let stacks: Vec<_> = bag
+            .slots
+            .iter()
+            .copied()
+            .filter(|stack| stack.valid())
+            .chain(bag.cursor)
+            .chain(equipment.slots.into_iter().filter(|stack| stack.valid()))
+            .collect();
+        if stacks.is_empty() {
+            return true;
+        }
+        let Some(revision) = bag.revision.checked_add(1) else {
+            return false;
+        };
+        if (!self.inventories.contains_key(&player) && self.inventories.len() >= 4096)
+            || self.drops.len() + stacks.len() > MAX_WORLD_DROPS
+            || self.next_drop.checked_add(stacks.len() as u64).is_none()
+            || self.revision.checked_add(stacks.len() as u64 + 1).is_none()
+        {
+            return false;
+        }
+        self.inventories.insert(
+            player,
+            Inventory {
+                revision,
+                ..Default::default()
+            },
+        );
+        *equipment = Default::default();
+        if let Some(stats) = self.player_stats.get_mut(&player) {
+            stats.equipment = *equipment;
+        }
+        for stack in stacks {
+            let accepted = self.drop_stack(position, stack, [0.0, 1.8, 0.0], 2.0);
+            debug_assert!(accepted, "death drop was preflighted");
+        }
+        self.revision += 1;
+        true
+    }
+
     pub fn drop_one(&mut self, position: [f64; 3], item: ItemKind) -> bool {
         self.drop_stack(
             position,
@@ -1258,7 +1627,7 @@ mod tests {
         let encoded = toml::to_string(&bag).unwrap();
         assert_eq!(toml::from_str::<Inventory>(&encoded).unwrap(), bag);
         assert!(bag.valid());
-        assert!(!bag.move_slot(26, 27, 1));
+        assert!(!bag.move_slot(26, INVENTORY_SLOTS, 1));
         assert!(!bag.move_slot(26, 0, 37));
     }
 
@@ -1332,6 +1701,102 @@ mod tests {
         assert_eq!(state, restored);
     }
     #[test]
+    fn wooden_mechanics_keep_canonical_oak_and_persistent_species_variants() {
+        let mut identifiers = std::collections::BTreeSet::new();
+        for material in [141, 144, 148, 149] {
+            assert!(ItemKind::supports_wood(material));
+            for wood in [
+                WoodSpecies::Oak,
+                WoodSpecies::Birch,
+                WoodSpecies::Spruce,
+                WoodSpecies::Cherry,
+            ] {
+                let item = ItemKind::for_wood(material, wood);
+                assert!(item.valid());
+                assert_eq!(item.block_material(), Some(material));
+                assert_eq!(item.wood_species(), Some(wood));
+                assert!(identifiers.insert(item.identifier()));
+                if wood == WoodSpecies::Oak {
+                    assert_eq!(item, ItemKind::Block(material));
+                    assert!(!ItemKind::WoodenBlock { material, wood }.valid());
+                } else {
+                    assert_eq!(
+                        ItemKind::EXTRA
+                            .iter()
+                            .filter(|entry| **entry == item)
+                            .count(),
+                        1
+                    );
+                    assert_eq!(
+                        item.identifier(),
+                        format!("{}#{}", ItemKind::Block(material).identifier(), wood.slug())
+                    );
+                }
+                let stack = ItemStack { item, count: 128 };
+                assert_eq!(
+                    toml::from_str::<ItemStack>(&toml::to_string(&stack).unwrap()).unwrap(),
+                    stack
+                );
+            }
+        }
+        for material in [4, 142, 143, 145, 146, 147, 150, 151, 152, 153] {
+            assert!(!ItemKind::supports_wood(material));
+            assert!(
+                !ItemKind::WoodenBlock {
+                    material,
+                    wood: WoodSpecies::Birch
+                }
+                .valid()
+            );
+            assert_eq!(
+                ItemKind::for_wood(material, WoodSpecies::Birch),
+                ItemKind::Block(material)
+            );
+        }
+    }
+    #[test]
+    fn basin_defaults_to_spruce_and_keeps_all_other_species_distinct() {
+        assert_eq!(
+            ItemKind::Block(169).wood_species(),
+            Some(WoodSpecies::Spruce)
+        );
+        for wood in [
+            WoodSpecies::Oak,
+            WoodSpecies::Birch,
+            WoodSpecies::Spruce,
+            WoodSpecies::Cherry,
+        ] {
+            let item = ItemKind::for_wood(169, wood);
+            assert!(item.valid());
+            assert_eq!(item.wood_species(), Some(wood));
+            assert_eq!(item == ItemKind::Block(169), wood == WoodSpecies::Spruce);
+            assert_eq!(
+                toml::from_str::<ItemStack>(
+                    &toml::to_string(&ItemStack { item, count: 1 }).unwrap()
+                )
+                .unwrap()
+                .item,
+                item
+            );
+            if wood != WoodSpecies::Spruce {
+                assert_eq!(
+                    ItemKind::EXTRA
+                        .iter()
+                        .filter(|&&entry| entry == item)
+                        .count(),
+                    1
+                );
+            }
+        }
+        assert!(
+            !ItemKind::WoodenBlock {
+                material: 169,
+                wood: WoodSpecies::Spruce
+            }
+            .valid()
+        );
+    }
+    #[test]
     fn full_inventory_keeps_drop_and_partial_pickup_keeps_remainder() {
         let uuid = PlayerUuid::new_v4();
         let item = ItemKind::Block(3);
@@ -1362,5 +1827,71 @@ mod tests {
         assert_eq!(state.inventories[&uuid].count(item), 1);
         assert!(state.drop_one([2.0, 3.0, 4.0], item));
         assert_eq!(state.drops[0].id, 2);
+    }
+}
+
+#[cfg(test)]
+mod death_inventory_tests {
+    use super::*;
+    #[test]
+    fn death_transfer_conserves_cursor_inventory_and_equipment_without_duplication() {
+        let player = PlayerUuid::new_v4();
+        let mut state = GameplayState::default();
+        let mut bag = Inventory::default();
+        bag.insert(ItemKind::Block(3), 17);
+        bag.cursor = Some(ItemStack {
+            item: ItemKind::Block(2),
+            count: 4,
+        });
+        let before_revision = bag.revision;
+        state.inventories.insert(player, bag);
+        let mut equipment = crate::EquipmentSlots::default();
+        let armor = ItemKind::Armor(crate::ArmorItem {
+            material: crate::ArmorMaterial::Iron,
+            piece: crate::ArmorPiece::Chestplate,
+        });
+        equipment.set(crate::EquipmentSlot::Chestplate, Some(armor));
+        assert!(state.drop_death_inventory(player, &mut equipment, [2.5, 3.0, 4.5]));
+        assert_eq!(state.inventories[&player].occupied_slots(), 0);
+        assert!(state.inventories[&player].cursor.is_none());
+        assert!(state.inventories[&player].revision > before_revision);
+        assert_eq!(equipment, crate::EquipmentSlots::default());
+        assert_eq!(
+            state
+                .drops
+                .iter()
+                .map(|drop| drop.stack.count as u32)
+                .sum::<u32>(),
+            22
+        );
+        assert!(state.drops.iter().any(|drop| drop.stack.item == armor));
+        assert!(
+            state
+                .drops
+                .iter()
+                .all(|drop| drop.position == [2.5, 3.0, 4.5])
+        );
+        let committed = state.clone();
+        assert!(state.drop_death_inventory(player, &mut equipment, [2.5, 3.0, 4.5]));
+        assert_eq!(state, committed);
+        assert!(state.valid());
+    }
+    #[test]
+    fn exhausted_drop_ids_defer_the_entire_death_transfer_without_losing_items() {
+        let player = PlayerUuid::new_v4();
+        let mut state = GameplayState::default();
+        let mut bag = Inventory::default();
+        bag.insert(ItemKind::Block(3), 2);
+        bag.cursor = Some(ItemStack {
+            item: ItemKind::Block(2),
+            count: 1,
+        });
+        state.inventories.insert(player, bag);
+        state.next_drop = u64::MAX - 1;
+        let before = state.clone();
+        let mut equipment = crate::EquipmentSlots::default();
+        assert!(!state.drop_death_inventory(player, &mut equipment, [0.0; 3]));
+        assert_eq!(state, before);
+        assert_eq!(equipment, crate::EquipmentSlots::default());
     }
 }

@@ -1,4 +1,4 @@
-//! Mechanical stations advance only while both footprint cells are loaded.
+//! Mechanical stations advance only while their complete saved footprint is loaded.
 use super::*;
 use terra_core::{Inventory, crusher};
 type Cell = [i64; 3];
@@ -43,7 +43,22 @@ fn crank_available(
         return None;
     }
     let anchor = world.journal.crank_anchor(position)?;
-    if !loaded(anchor, &world.chunks, &world.journal) {
+    if !super::kingdoms::permission_allowed(
+        peer.uuid,
+        terra_core::kingdom::KingdomPermission::Inventories,
+        position,
+        world,
+    ) || !super::kingdoms::permission_allowed(
+        peer.uuid,
+        terra_core::kingdom::KingdomPermission::Inventories,
+        anchor,
+        world,
+    ) {
+        return None;
+    }
+    if world.journal.valid_crusher(anchor) && !loaded(anchor, &world.chunks, &world.journal)
+        || world.chunks.block_at(anchor) != world.journal.block(anchor)
+    {
         return None;
     }
     let body = world.bodies.get(peer.body).ok()?;
@@ -77,6 +92,15 @@ pub(super) fn intent(
         peer.crank.lease = None;
         return;
     };
+    if !super::kingdoms::permission_allowed(
+        peer.uuid,
+        terra_core::kingdom::KingdomPermission::Inventories,
+        position,
+        world,
+    ) {
+        peer.crank.lease = None;
+        return;
+    }
     let now = Instant::now();
     if peer
         .crank
@@ -114,7 +138,7 @@ fn active_drives(
             if lease_current(lease, now)
                 && crank_available(lease.position, peer.look, &peer, world) == Some(lease.anchor)
             {
-                active.insert(lease.anchor);
+                active.insert(lease.position);
             } else {
                 peer.crank.lease = None;
             }
@@ -129,26 +153,16 @@ pub(super) struct Schedule {
     accounted: HashMap<Cell, f64>,
     cursor: Option<Cell>,
     sent: HashMap<PlayerId, (u32, Vec<CrusherVisual>)>,
+    kinetic_sent: HashMap<PlayerId, (u32, Vec<KineticVisual>)>,
+    kinetics: super::kinetics::Runtime,
+    logistics: super::logistics::Runtime,
 }
 
-fn loaded(position: Cell, chunks: &ChunkStore, journal: &EditJournal) -> bool {
-    chunks.block_at(position) == Some(99)
-        && journal.object_state(position).is_some_and(|state| {
-            !state.secondary
-                && state.valid_for(position, 99)
-                && state.peer.is_some_and(|peer| {
-                    chunks.block_at(peer) == Some(99)
-                        && journal.object_state(peer).is_some_and(|other| {
-                            other.secondary
-                                && other.peer == Some(position)
-                                && other.facing == state.facing
-                                && other.valid_for(peer, 99)
-                        })
-                })
-        })
+pub(super) fn loaded(position: Cell, chunks: &ChunkStore, journal: &EditJournal) -> bool {
+    terra_world::crushers::loaded(position, chunks, journal)
 }
 
-fn process(
+pub(super) fn process(
     position: Cell,
     elapsed: f32,
     chunks: &ChunkStore,
@@ -164,6 +178,12 @@ fn process(
         return Ok(());
     };
     let mut inventory = journal.container_at(position).cloned().unwrap_or_default();
+    let rpm = journal.kinetic_state(position).rpm.abs();
+    let elapsed = if rpm == 0.0 {
+        elapsed
+    } else {
+        elapsed * rpm / 30.0
+    };
     if crusher::advance(&mut state, &mut inventory, elapsed) {
         journal.commit_crusher(position, state, inventory)?;
     }
@@ -227,6 +247,26 @@ fn visuals(center: [f64; 3], chunks: &ChunkStore, journal: &EditJournal) -> Vec<
         .collect()
 }
 
+fn process_mixer(
+    position: Cell,
+    elapsed: f32,
+    chunks: &ChunkStore,
+    journal: &mut EditJournal,
+) -> Result<(), String> {
+    let drive = journal.kinetic_state(position);
+    if chunks.block_at(position) != Some(terra_core::mixer::MATERIAL) || !drive.running() {
+        return Ok(());
+    }
+    let Some(mut state) = journal.mixer_at(position).cloned() else {
+        return Ok(());
+    };
+    let mut inventory = journal.container_at(position).cloned().unwrap_or_default();
+    if terra_core::mixer::advance(&mut state, &mut inventory, elapsed * drive.rpm.abs() / 30.0) {
+        journal.commit_mixer(position, state, inventory)?;
+    }
+    Ok(())
+}
+
 pub(super) fn tick(
     mut world: ControlWorld,
     time: Res<Time>,
@@ -238,32 +278,67 @@ pub(super) fn tick(
             .journal
             .bypass_change_detection()
             .replace_crusher_drives(Default::default());
+        world
+            .journal
+            .bypass_change_detection()
+            .replace_kinetic_states(Default::default());
         *schedule = Schedule::default();
         return;
     }
     schedule.elapsed += time.delta_secs();
-    if schedule.elapsed < 0.125 {
+    if schedule.elapsed < 0.1 {
         return;
     }
     let elapsed = std::mem::take(&mut schedule.elapsed).min(1.0);
     let now = time.elapsed_secs_f64();
     let active = active_drives(&world, &mut peers, Instant::now());
-    world
-        .journal
-        .bypass_change_detection()
-        .replace_crusher_drives(active);
     let ControlWorld {
         chunks,
         mut journal,
         bodies,
+        terrain,
+        block_properties,
         ..
     } = world;
     let journal = journal.bypass_change_detection();
-    let mut positions: Vec<_> = chunks
-        .loaded
-        .keys()
-        .flat_map(|section| journal.crushers_in_section(*section))
+    super::kinetics::advance(
+        &mut schedule.kinetics,
+        &terrain.0,
+        &chunks,
+        journal,
+        &active,
+    );
+    super::kinetics::transport(
+        &mut schedule.kinetics,
+        &chunks,
+        journal,
+        &block_properties,
+        elapsed,
+    );
+    super::logistics::advance(
+        &mut schedule.logistics,
+        &chunks,
+        journal,
+        &block_properties,
+        elapsed,
+    );
+    let mut positions: Vec<_> = journal
+        .kinetic_states()
+        .filter_map(|(position, state)| {
+            (state.running()
+                && matches!(journal.block(position), Some(99 | 156))
+                && journal.object_state(position).is_some_and(|s| !s.secondary))
+            .then_some(position)
+        })
         .filter(|position| {
+            if journal.block(*position) == Some(156) {
+                // Full pigment fitting belongs after the shared 32-station budget.
+                return journal.mixer_at(*position).is_some()
+                    && journal.container_at(*position).is_some_and(|inventory| {
+                        (0..terra_core::mixer::INPUT_SLOTS)
+                            .any(|slot| inventory.slot(slot).is_some())
+                    });
+            }
             let Some(state) = journal.crusher_at(*position) else {
                 return false;
             };
@@ -281,12 +356,20 @@ pub(super) fn tick(
         .collect();
     positions.sort_unstable();
     for (position, dt) in due(&mut schedule, &positions, now, elapsed) {
-        if let Err(error) = process(position, dt, &chunks, journal) {
+        let result = if journal.block(position) == Some(156) {
+            process_mixer(position, dt, &chunks, journal)
+        } else {
+            process(position, dt, &chunks, journal)
+        };
+        if let Err(error) = result {
             tracing::warn!(%error, ?position, "Crusher could not be advanced");
         }
     }
     schedule
         .sent
+        .retain(|id, _| peers.iter().any(|(peer, _)| peer.synced && peer.id == *id));
+    schedule
+        .kinetic_sent
         .retain(|id, _| peers.iter().any(|(peer, _)| peer.synced && peer.id == *id));
     for (peer, mut sender) in &mut peers {
         if !peer.synced {
@@ -296,6 +379,20 @@ pub(super) fn tick(
             continue;
         };
         let visible = visuals(body.translation.to_array().map(f64::from), &chunks, journal);
+        let kinetics =
+            super::kinetics::visuals(body.translation.to_array().map(f64::from), journal);
+        if !schedule
+            .kinetic_sent
+            .get(&peer.id)
+            .is_some_and(|(generation, previous)| {
+                *generation == peer.generation && *previous == kinetics
+            })
+        {
+            sender.send::<ControlChannel>(ServerControl::Kinetics(kinetics.clone()));
+            schedule
+                .kinetic_sent
+                .insert(peer.id, (peer.generation, kinetics));
+        }
         if !schedule
             .sent
             .get(&peer.id)
@@ -361,6 +458,84 @@ mod tests {
             },
         );
         (anchor, chunks, journal)
+    }
+    #[test]
+    fn mixer_requires_loaded_actual_kinetic_drive_and_commits_one_exact_rgb_batch() {
+        use terra_core::{kinetic, mixer};
+        let (anchor, mut chunks, mut journal) = fixture();
+        let section = terra_voxel::global_to_section(anchor).0;
+        chunks
+            .loaded
+            .get_mut(&section)
+            .unwrap()
+            .data
+            .set_block(terra_voxel::global_to_section(anchor).1, mixer::MATERIAL)
+            .unwrap();
+        journal.remove_crusher(anchor);
+        journal.record(anchor, mixer::MATERIAL).unwrap();
+        journal
+            .set_object_state(anchor, Some(BlockObjectState::default()))
+            .unwrap();
+        let target = [41, 176, 221];
+        let recipe = mixer::recipe(target);
+        let mut inventory = Inventory::default();
+        inventory.slots.resize(mixer::SLOTS, ItemStack::EMPTY);
+        for (slot, stack) in recipe.inputs.iter().enumerate() {
+            inventory.slots[slot] = *stack;
+        }
+        journal
+            .commit_mixer(
+                anchor,
+                mixer::MixerState {
+                    target,
+                    ..Default::default()
+                },
+                inventory.clone(),
+            )
+            .unwrap();
+        for _ in 0..10 {
+            process_mixer(anchor, 1.0, &chunks, &mut journal).unwrap();
+        }
+        assert_eq!(journal.mixer_at(anchor).unwrap().progress_seconds, 0.0);
+        assert_eq!(journal.container_at(anchor), Some(&inventory));
+        let source = kinetic::Node {
+            position: [anchor[0] - 1, anchor[1], anchor[2]],
+            material: 100,
+            facing: 0,
+            secondary: false,
+            source_rpm: 30.0,
+            source_capacity: 12800,
+            belt_load: false,
+            links: [None; 2],
+        };
+        let machine = kinetic::Node {
+            position: anchor,
+            material: 156,
+            source_rpm: 0.0,
+            source_capacity: 0,
+            belt_load: false,
+            ..source
+        };
+        let nodes = [source, machine];
+        let solved = kinetic::solve_component(anchor, &mut 256, |p| {
+            nodes.iter().find(|n| n.position == p).copied()
+        });
+        journal.replace_kinetic_states(solved.into_iter().map(|(n, s)| (n.position, s)).collect());
+        assert!(journal.kinetic_state(anchor).running());
+        let epoch = journal.mesh_epoch(section);
+        for _ in 0..4 {
+            process_mixer(anchor, 1.0, &chunks, &mut journal).unwrap();
+        }
+        assert_eq!(
+            journal.container_at(anchor).unwrap().slot(mixer::OUTPUT),
+            Some(recipe.output)
+        );
+        assert_eq!(journal.mixer_at(anchor).unwrap().completed, 1);
+        assert_eq!(journal.mesh_epoch(section), epoch);
+        let before = journal.mixer_at(anchor).cloned();
+        chunks.loaded.clear();
+        process_mixer(anchor, 1.0, &chunks, &mut journal).unwrap();
+        assert_eq!(journal.mixer_at(anchor).cloned(), before);
     }
     #[test]
     fn loaded_crusher_conserves_material_without_remeshing_and_unloaded_time_does_not_advance() {

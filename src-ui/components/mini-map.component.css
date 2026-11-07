@@ -23,7 +23,6 @@
 .mini-map button:focus { outline: 1px solid #e4c47e; }
 .mini-map button:disabled { opacity: 0.35; }
 .mini-map .map-compact { width: 100px; height: 32px; min-height: 32px; max-height: 32px; align-self: flex-end; gap: 8px; }
-.mini-map .map-collapse { position: absolute; top: 0; right: 0; pointer-events: auto; }
 .map-status { margin: 0; padding: 2px 12px; font-size: 11px; color: #e0bb80; }
 .cave-map .map-readout { background-color: #172029ed; border-color: #657c86; }
 .map-peer-name { position: absolute; margin: 0; width: 104px; margin-left: -52px; height: 14px; top: 0; font-size: 10px; line-height: 14px; color: #ffffff; text-shadow: 1px 1px #10191d; text-align: center; text-wrap: nowrap; overflow: hidden; pointer-events: none; background-color: #10191d9c; border-radius: 3px; }

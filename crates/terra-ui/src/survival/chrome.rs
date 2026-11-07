@@ -18,7 +18,7 @@ struct VitalMaterial {
 
 impl UiMaterial for VitalMaterial {
     fn fragment_shader() -> ShaderRef {
-        "shaders/terra_vital_ui.wgsl".into()
+        "shaders/terra_vital_ui.wesl".into()
     }
 }
 

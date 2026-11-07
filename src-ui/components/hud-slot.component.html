@@ -1,4 +1,4 @@
-<div [class]="slot.selected ? 'hud-slot selected' : 'hud-slot'">
+<div [class]="slot.selected ? 'hud-slot reference-hud-slot selected' : 'hud-slot reference-hud-slot'">
   @if (!slot.empty) {
     <img class="hud-slot-image" [alt]="slot.preview_key" />
     @if (slot.count != '') { <p class="hud-slot-count">{{ slot.count }}</p> }

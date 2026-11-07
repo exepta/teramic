@@ -3,9 +3,77 @@ use terra_core::{block_properties::BlockPropertiesCatalog, block_shapes::ShapeBo
 use terra_world::{edits::BlockObjectState, streaming::LoadedSection};
 
 #[test]
-fn crusher_hopper_lips_have_clipped_colliders_above_positive_and_negative_section_seams() {
+fn open_belt_port_feet_keep_collision_below_the_negative_section_seam() {
+    let position = [-16, 0, -16];
+    let owner = global_to_section(position).0;
+    let below = owner.offset([0, -1, 0]).unwrap();
+    for material in [152, 153] {
+        let mut chunks = ChunkStore::default();
+        for section in [owner, below] {
+            chunks.loaded.insert(
+                section,
+                LoadedSection {
+                    data: BlockSection::empty(section).unwrap(),
+                    mesh: None,
+                    mesh_epoch: 0,
+                    water_epoch: 0,
+                    water: None,
+                    props: Vec::new(),
+                },
+            );
+        }
+        chunks
+            .loaded
+            .get_mut(&owner)
+            .unwrap()
+            .data
+            .set_block(global_to_section(position).1, material)
+            .unwrap();
+        let mut journal = EditJournal::default();
+        let peer = [position[0], position[1], position[2] + 1];
+        chunks
+            .loaded
+            .get_mut(&owner)
+            .unwrap()
+            .data
+            .set_block(global_to_section(peer).1, 29)
+            .unwrap();
+        journal.record(peer, 29).unwrap();
+        journal.record(position, material).unwrap();
+        journal
+            .set_object_state(
+                position,
+                Some(BlockObjectState {
+                    facing: if material == 152 { 2 } else { 0 },
+                    peer: Some(peer),
+                    ..BlockObjectState::default()
+                }),
+            )
+            .unwrap();
+        let properties = BlockPropertiesCatalog::default();
+        let shapes =
+            model_shapes(&chunks.loaded[&below].data, &chunks, &journal, &properties).unwrap();
+        assert!(!shapes.is_empty());
+        assert!(
+            shapes
+                .iter()
+                .all(|b| b.minimum[1] >= 15.625 && b.maximum[1] <= 16.0)
+        );
+        assert!(
+            !shapes
+                .iter()
+                .any(|b| b.intersects([0.38, 15.63, 0.38], [0.62, 15.92, 0.62])),
+            "the center passage is not replaced with a solid collider"
+        );
+    }
+}
+
+#[test]
+fn compact_crusher_and_legacy_pair_colliders_stop_at_their_cell_top_across_section_seams() {
     for y in [-17, -1, 15, 31] {
-        for facing in 0..4 {
+        for (facing, legacy) in
+            (0..4).flat_map(|facing| [false, true].map(|legacy| (facing, legacy)))
+        {
             let anchor = [-1, y, -1];
             let state = BlockObjectState {
                 facing,
@@ -14,7 +82,10 @@ fn crusher_hopper_lips_have_clipped_colliders_above_positive_and_negative_sectio
             let peer = std::array::from_fn(|axis| anchor[axis] + state.right()[axis]);
             let mut chunks = ChunkStore::default();
             let mut journal = EditJournal::default();
-            for (position, other, secondary) in [(anchor, peer, false), (peer, anchor, true)] {
+            let cells: Vec<_> = std::iter::once((anchor, peer, false))
+                .chain(legacy.then_some((peer, anchor, true)))
+                .collect();
+            for &(position, other, secondary) in &cells {
                 let (section, local) = global_to_section(position);
                 let upper = section.offset([0, 1, 0]).unwrap();
                 for owner in [section, upper] {
@@ -39,7 +110,7 @@ fn crusher_hopper_lips_have_clipped_colliders_above_positive_and_negative_sectio
                     .set_object_state(
                         position,
                         Some(BlockObjectState {
-                            peer: Some(other),
+                            peer: legacy.then_some(other),
                             secondary,
                             ..state
                         }),
@@ -47,26 +118,26 @@ fn crusher_hopper_lips_have_clipped_colliders_above_positive_and_negative_sectio
                     .unwrap();
             }
             let properties = BlockPropertiesCatalog::default();
-            let upper_sections: HashSet<_> = [anchor, peer]
-                .map(|position| global_to_section(position).0.offset([0, 1, 0]).unwrap())
-                .into_iter()
+            let owner_sections: HashSet<_> = cells
+                .iter()
+                .map(|(p, _, _)| global_to_section(*p).0)
                 .collect();
-            for upper in upper_sections {
-                let data = &chunks.loaded[&upper].data;
+            for section in owner_sections {
+                let data = &chunks.loaded[&section].data;
                 let shapes = model_shapes(data, &chunks, &journal, &properties).unwrap();
                 assert!(
                     !shapes.is_empty(),
-                    "missing hopper collider at seam {y}, facing {facing}, upper {upper:?}"
+                    "missing compact machine collider at seam {y}, facing {facing}"
                 );
                 assert!(
                     shapes
                         .iter()
-                        .all(|shape| shape.minimum[1] >= 0.0 && shape.maximum[1] <= 0.231)
+                        .all(|shape| shape.minimum[1] >= 15.0 && shape.maximum[1] <= 16.0)
                 );
                 assert!(
                     shapes
                         .iter()
-                        .any(|shape| (shape.maximum[1] - 0.23).abs() < 0.000001)
+                        .any(|shape| (shape.maximum[1] - 16.0).abs() < 0.000001)
                 );
                 let collider = build_collider_with_models(data, &shapes, &[99])
                     .unwrap()
@@ -77,11 +148,23 @@ fn crusher_hopper_lips_have_clipped_colliders_above_positive_and_negative_sectio
                     triangles
                         .vertices()
                         .iter()
-                        .all(|vertex| vertex.is_finite() && vertex.y >= 0.0 && vertex.y <= 0.231)
+                        .all(|vertex| vertex.is_finite() && vertex.y >= 15.0 && vertex.y <= 16.0)
                 );
                 assert_eq!(
                     shapes,
                     model_shapes(data, &chunks, &journal, &properties).unwrap()
+                );
+                let upper = section.offset([0, 1, 0]).unwrap();
+                let data = &chunks.loaded[&upper].data;
+                let shapes = model_shapes(data, &chunks, &journal, &properties).unwrap();
+                assert!(
+                    shapes.is_empty(),
+                    "the old hopper overhang must not leave invisible colliders above {section:?}"
+                );
+                assert!(
+                    build_collider_with_models(data, &shapes, &[99])
+                        .unwrap()
+                        .is_none()
                 );
             }
         }
@@ -634,6 +717,7 @@ fn secondary_sections_own_clipped_furniture_even_before_primary_chunk_arrives() 
             collision_state.sections.insert(
                 secondary_section,
                 ReadySection {
+                    plain: None,
                     profile: None,
                     entity: None,
                     epoch,
@@ -704,5 +788,58 @@ fn same_section_pair_never_duplicates_its_model_boxes() {
     assert!(!both.is_empty());
     for (index, bounds) in both.iter().enumerate() {
         assert!(!both[..index].contains(bounds));
+    }
+}
+
+#[test]
+fn water_wheel_trimesh_has_only_the_axle_while_rim_picking_is_unchanged() {
+    let position = [8, 8, 8];
+    let owner = global_to_section(position).0;
+    let mut data = BlockSection::empty(owner).unwrap();
+    data.set_block(global_to_section(position).1, 147).unwrap();
+    let mut chunks = ChunkStore::default();
+    chunks.loaded.insert(
+        owner,
+        LoadedSection {
+            data,
+            mesh: None,
+            mesh_epoch: 0,
+            water_epoch: 0,
+            water: None,
+            props: Vec::new(),
+        },
+    );
+    let mut journal = EditJournal::default();
+    journal.record(position, 147).unwrap();
+    journal
+        .set_object_state(position, Some(BlockObjectState::default()))
+        .unwrap();
+    let properties = BlockPropertiesCatalog::default();
+    let data = &chunks.loaded[&owner].data;
+    let shapes = model_shapes(data, &chunks, &journal, &properties).unwrap();
+    assert_eq!(shapes.len(), 1);
+    assert_eq!(shapes[0].minimum, [8.0, 8.407, 8.407]);
+    assert_eq!(shapes[0].maximum, [9.0, 8.593, 8.593]);
+    let collider = build_collider_with_models(data, &shapes, &[147])
+        .unwrap()
+        .unwrap();
+    for (y, physical) in [(8.5, true), (9.5, false)] {
+        let eye = Vec3::new(10.5, y, 8.5);
+        assert_eq!(
+            collider
+                .cast_ray(Vec3::ZERO, Quat::IDENTITY, eye, Vec3::NEG_X, 3.0, true)
+                .is_some(),
+            physical
+        );
+        let hit = terra_world::interaction_shapes::raycast(
+            &chunks,
+            &journal,
+            &properties,
+            eye.as_dvec3().to_array(),
+            [-1.0, 0.0, 0.0],
+            3.0,
+        )
+        .unwrap();
+        assert_eq!(hit.position, position);
     }
 }

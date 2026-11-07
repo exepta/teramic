@@ -1,0 +1,1 @@
+{"id":7,"key":"teramic::poison_potion","name":"Poison Potion","inputs":[{"item":{"prop":"mushroom"},"count":1},{"item":{"dust":"coal"},"count":1}],"effects":[{"kind":"poison","level":1,"seconds":20.0}],"seconds":14.0,"color":[98,168,59]}

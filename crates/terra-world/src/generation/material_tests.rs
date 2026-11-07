@@ -42,7 +42,14 @@ fn fractional_surface_heights_have_exactly_one_grass_voxel_then_at_least_three_d
 
 #[test]
 fn grassy_oasis_and_desert_transition_surfaces_keep_dirt_not_sandstone_underneath() {
-    let terrain = TerraGenerator::new(WorldConfig::default()).unwrap();
+    let terrain = TerraGenerator::new(WorldConfig {
+        landscape_revision: 4,
+        sea_level: 22.0,
+        rivers: true,
+        biome_definitions: Some(terra_core::BiomeDefinitions::default()),
+        ..Default::default()
+    })
+    .unwrap();
     let base = terrain.surface_column(2304.5, -8191.5);
     assert!(base.sandstone_depth > 4.0);
     let column = SurfaceColumn {
@@ -65,6 +72,10 @@ fn grassy_oasis_and_desert_transition_surfaces_keep_dirt_not_sandstone_underneat
 #[test]
 fn sandstone_is_stratified_under_desert_sand_and_smooth_stone_is_never_generated() {
     let terrain = TerraGenerator::new(WorldConfig {
+        landscape_revision: 4,
+        sea_level: 22.0,
+        rivers: true,
+        biome_definitions: Some(terra_core::BiomeDefinitions::default()),
         caves: false,
         trees: false,
         ..Default::default()
@@ -97,6 +108,10 @@ fn sandstone_is_stratified_under_desert_sand_and_smooth_stone_is_never_generated
 #[test]
 fn submerged_clay_forms_bounded_deterministic_patches_among_sand() {
     let terrain = TerraGenerator::new(WorldConfig {
+        landscape_revision: 4,
+        sea_level: 22.0,
+        rivers: true,
+        biome_definitions: Some(terra_core::BiomeDefinitions::default()),
         trees: false,
         caves: false,
         ..Default::default()
@@ -130,6 +145,9 @@ fn submerged_clay_forms_bounded_deterministic_patches_among_sand() {
 #[test]
 fn moss_is_sparse_and_confined_to_damp_daylight_cave_walls() {
     let terrain = TerraGenerator::new(WorldConfig {
+        // These recorded river-gallery coordinates belong to revision two.
+        landscape_revision: 2,
+        river_terrain_revision: 1,
         cave_structure_revision: 2,
         trees: false,
         biomes: false,

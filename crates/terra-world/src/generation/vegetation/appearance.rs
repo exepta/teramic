@@ -1,3 +1,10 @@
+#[derive(Default)]
+pub(in crate::generation) struct PlantedAppearanceSource {
+    records: Vec<std::sync::Arc<terra_core::TreeRecord>>,
+    sections: std::sync::Mutex<
+        std::collections::HashMap<[i64; 3], std::sync::Arc<TreeAppearanceSnapshot>>,
+    >,
+}
 use super::{Tree, species::TreeSpecies, trees_in_column};
 use crate::TerraGenerator;
 use std::{
@@ -10,6 +17,7 @@ use std::{
 
 const MAX_COLUMNS: usize = 512;
 type TreeColumn = Arc<Vec<Tree>>;
+type PlantedCells = HashMap<([i64; 3], u16), TreeAppearance>;
 
 #[derive(Default)]
 pub(in crate::generation) struct TreeAppearanceCache(Mutex<Columns>, Mutex<Sections>);
@@ -36,6 +44,8 @@ pub enum TreeAppearance {
     Palm,
     Mushroom,
     Cherry,
+    Fir,
+    Apple,
 }
 
 impl TreeAppearance {
@@ -45,6 +55,8 @@ impl TreeAppearance {
             TreeSpecies::Autumn => Self::Autumn,
             TreeSpecies::Birch => Self::Birch,
             TreeSpecies::Spruce => Self::Spruce,
+            TreeSpecies::Fir => Self::Fir,
+            TreeSpecies::Apple => Self::Apple,
             TreeSpecies::Palm => Self::Palm,
             TreeSpecies::Mushroom(_) => Self::Mushroom,
             TreeSpecies::Cherry(_) => Self::Cherry,
@@ -55,18 +67,76 @@ impl TreeAppearance {
 pub struct TreeAppearanceSnapshot {
     trees: TreeColumn,
     origin: [i64; 3],
-    cells: Box<[AtomicU8]>,
+    cells: Arc<[AtomicU8]>,
+    planted: Option<Arc<PlantedCells>>,
 }
 
-fn cell_memo() -> Box<[AtomicU8]> {
+fn cell_memo() -> Arc<[AtomicU8]> {
     std::iter::repeat_with(|| AtomicU8::new(0))
         .take(5 * 4096)
-        .collect()
+        .collect::<Vec<_>>()
+        .into()
 }
 
 impl TerraGenerator {
     /// Prepare once per asynchronous section composition, never once per vertex.
+    pub fn with_planted_appearance(mut self, records: Vec<Arc<terra_core::TreeRecord>>) -> Self {
+        self.planted_appearances = Arc::new(PlantedAppearanceSource {
+            records,
+            sections: Mutex::new(HashMap::new()),
+        });
+        self
+    }
     pub fn tree_appearance(&self, origin: [i64; 3]) -> Arc<TreeAppearanceSnapshot> {
+        let natural = self.natural_tree_appearance(origin);
+        if self.planted_appearances.records.is_empty() {
+            return natural;
+        }
+        if let Some(cached) = self
+            .planted_appearances
+            .sections
+            .lock()
+            .ok()
+            .and_then(|m| m.get(&origin).cloned())
+        {
+            return cached;
+        }
+        let mut planted = HashMap::new();
+        for tree in &self.planted_appearances.records {
+            if !tree.stage.is_generated() {
+                continue;
+            }
+            let kind = match tree.species {
+                terra_core::TreeSpecies::Oak => TreeAppearance::Oak,
+                terra_core::TreeSpecies::Spruce => TreeAppearance::Spruce,
+                terra_core::TreeSpecies::Birch => TreeAppearance::Birch,
+                terra_core::TreeSpecies::Cherry => TreeAppearance::Cherry,
+                terra_core::TreeSpecies::Apple => TreeAppearance::Apple,
+            };
+            for (cells, material) in [
+                (&tree.wood, tree.species.wood()),
+                (&tree.leaves, tree.species.leaves()),
+            ] {
+                for offset in cells {
+                    let p = tree.global(*offset);
+                    if (0..3).all(|a| (origin[a] - 1..=origin[a] + 16).contains(&p[a])) {
+                        planted.insert((p, material), kind);
+                    }
+                }
+            }
+        }
+        let snapshot = Arc::new(TreeAppearanceSnapshot {
+            trees: natural.trees.clone(),
+            origin,
+            cells: natural.cells.clone(),
+            planted: Some(Arc::new(planted)),
+        });
+        if let Ok(mut cache) = self.planted_appearances.sections.lock() {
+            cache.insert(origin, snapshot.clone());
+        }
+        snapshot
+    }
+    fn natural_tree_appearance(&self, origin: [i64; 3]) -> Arc<TreeAppearanceSnapshot> {
         if let Some(snapshot) = self
             .tree_appearances
             .1
@@ -104,6 +174,7 @@ impl TerraGenerator {
             trees,
             origin,
             cells: cell_memo(),
+            planted: None,
         });
         if let Ok(mut cache) = self.tree_appearances.1.lock() {
             if let Some(existing) = cache.entries.get(&origin) {
@@ -122,9 +193,32 @@ impl TerraGenerator {
 }
 
 impl TreeAppearanceSnapshot {
+    /// Existing generated roots around this section, without resampling terrain.
+    /// Neighboring snapshots can contain the same tree.
+    pub fn tree_roots(&self) -> impl Iterator<Item = ([i64; 3], TreeAppearance)> + '_ {
+        self.trees
+            .iter()
+            .map(|tree| (tree.origin, TreeAppearance::of(tree)))
+    }
+
+    pub fn is_planted(&self, global: [i64; 3], material: u16) -> bool {
+        self.planted
+            .as_ref()
+            .is_some_and(|p| p.contains_key(&(global, material)))
+    }
     pub fn at(&self, global: [i64; 3], material: u16) -> Option<TreeAppearance> {
+        if let Some(kind) = self
+            .planted
+            .as_ref()
+            .and_then(|p| p.get(&(global, material)))
+        {
+            return Some(*kind);
+        }
         if matches!(material, 132 | 133) {
             return Some(TreeAppearance::Cherry);
+        }
+        if material == 195 {
+            return Some(TreeAppearance::Apple);
         }
         if material == 36 {
             return self.uncached(global, material);
@@ -148,6 +242,8 @@ impl TreeAppearanceSnapshot {
                     6 => Some(TreeAppearance::Palm),
                     7 => Some(TreeAppearance::Mushroom),
                     8 => Some(TreeAppearance::Cherry),
+                    9 => Some(TreeAppearance::Fir),
+                    10 => Some(TreeAppearance::Apple),
                     _ => None,
                 };
             }
@@ -162,7 +258,7 @@ impl TreeAppearanceSnapshot {
         let tree = self.trees.iter().find(|tree| {
             let generated = match material {
                 6 | 10 | 36 | 134 => tree.wood_at(global),
-                7..=9 | 132 | 133 => tree.leaves_at(global),
+                7..=9 | 132 | 133 | 195 => tree.leaves_at(global),
                 _ => None,
             };
             generated.is_some_and(|generated| generated as u16 == material)
@@ -181,6 +277,8 @@ mod tests {
             (TreeSpecies::Green, TreeAppearance::Oak),
             (TreeSpecies::Birch, TreeAppearance::Birch),
             (TreeSpecies::Spruce, TreeAppearance::Spruce),
+            (TreeSpecies::Fir, TreeAppearance::Fir),
+            (TreeSpecies::Apple, TreeAppearance::Apple),
         ] {
             let tree = Tree::with_species([-16, 100, -16], 42, [0.0; 4], species);
             let material = species.leaves() as u16;
@@ -209,6 +307,8 @@ mod tests {
                 tree_props: Vec::new(),
                 maximum: 150.0,
                 surface_sections: None,
+                #[cfg(feature = "bevy")]
+                cave_eye_bounds: None,
             };
             assert_eq!(column.tree_appearance_at(leaf, material), Some(expected));
             assert_eq!(column.tree_appearance_at(leaf, 3), None);
@@ -222,12 +322,14 @@ mod tests {
             (TreeSpecies::Green, TreeAppearance::Oak),
             (TreeSpecies::Birch, TreeAppearance::Birch),
             (TreeSpecies::Spruce, TreeAppearance::Spruce),
+            (TreeSpecies::Fir, TreeAppearance::Fir),
         ] {
             let tree = Tree::with_species([-16, 100, -16], 42, [0.0; 4], species);
             let snapshot = TreeAppearanceSnapshot {
                 trees: Arc::new(vec![tree]),
                 origin: [-16, 96, -16],
                 cells: cell_memo(),
+                planted: None,
             };
             let material = species.wood() as u16;
             assert_eq!(snapshot.at([-16, 101, -16], material), Some(expected));
@@ -270,6 +372,7 @@ mod tests {
             trees: Arc::new(vec![tree]),
             origin: [-16, 96, -16],
             cells: cell_memo(),
+            planted: None,
         };
         for x in -16..0 {
             for y in 96..112 {
@@ -283,5 +386,57 @@ mod tests {
                 }
             }
         }
+    }
+}
+
+#[cfg(all(test, feature = "bevy"))]
+mod planted_tests {
+    use super::*;
+    use terra_core::{PlayerUuid, TreeRecord, TreeSpecies as CoreSpecies, TreeStage};
+    #[test]
+    fn exact_generated_ownership_selects_natural_style_and_ignores_player_replacements_and_legacy_mature()
+     {
+        let mut r = TreeRecord {
+            id: 1,
+            root: [0, 16, 0],
+            species: CoreSpecies::Spruce,
+            seed: 42,
+            planted_by: Some(PlayerUuid::from_u128(1)),
+            stage: TreeStage::Generated,
+            growth_seconds: 1500.,
+            bounds: None,
+            wood: vec![[0, 0, 0]],
+            leaves: vec![[0, 10, 0], [1, 10, 0]],
+            fruit: None,
+            revision: 1,
+        }
+        .with_bounds();
+        let generator = TerraGenerator::new(terra_core::WorldConfig {
+            trees: false,
+            ..Default::default()
+        })
+        .unwrap();
+        let snapshot = generator
+            .clone()
+            .with_planted_appearance(vec![Arc::new(r.clone())])
+            .tree_appearance([0, 16, 0]);
+        assert_eq!(snapshot.at([0, 26, 0], 7), Some(TreeAppearance::Spruce));
+        assert!(snapshot.is_planted([0, 26, 0], 7));
+        assert!(!snapshot.is_planted([0, 26, 0], 6));
+        r.stage = TreeStage::GeneratedFelled;
+        r.leaves.remove(0);
+        r.refresh_bounds();
+        let snapshot = generator
+            .clone()
+            .with_planted_appearance(vec![Arc::new(r.clone())])
+            .tree_appearance([0, 16, 0]);
+        assert!(!snapshot.is_planted([0, 26, 0], 7));
+        assert_eq!(snapshot.at([1, 26, 0], 7), Some(TreeAppearance::Spruce));
+        r.stage = TreeStage::Mature;
+        let snapshot = generator
+            .with_planted_appearance(vec![Arc::new(r)])
+            .tree_appearance([0, 16, 0]);
+        assert!(!snapshot.is_planted([1, 26, 0], 7));
+        assert_eq!(snapshot.at([1, 26, 0], 7), None);
     }
 }

@@ -12,6 +12,9 @@ use terra_world::{
     props::{PropId, PropKind, WorldProp},
 };
 
+mod scope_timeline;
+use scope_timeline::FrameScopeTrace;
+
 #[derive(Resource)]
 struct SmokeTest {
     elapsed: Duration,
@@ -25,6 +28,7 @@ struct SmokeTest {
     motion_captured: bool,
     started_at: Instant,
     previous_frame: Instant,
+    timeline_frame: u64,
     initial_ready: Option<Duration>,
     frame_times: Vec<f64>,
     skip_frames: u8,
@@ -56,11 +60,15 @@ struct FrameContext {
     upload_vertices: usize,
     active_animations: usize,
     queued_animations: usize,
+    window_focused: Option<bool>,
+    window_visible: Option<bool>,
+    present_mode: Option<bevy::window::PresentMode>,
 }
 struct FrameSpike {
     seconds: f64,
     sample_time: f64,
     context: FrameContext,
+    scopes: Option<FrameScopeTrace>,
 }
 pub(crate) fn install(app: &mut App) {
     crate::custom_smoke::install(app);
@@ -128,6 +136,7 @@ pub(crate) fn install(app: &mut App) {
             motion_captured: false,
             started_at: now,
             previous_frame: now,
+            timeline_frame: 0,
             initial_ready: None,
             frame_times: Vec::new(),
             skip_frames: 0,
@@ -302,6 +311,7 @@ struct SmokeWorld<'w, 's> {
     camera: Query<'w, 's, &'static Transform, With<TerraCamera>>,
     generation: Res<'w, WorldGeneration>,
     renderer: Res<'w, RenderStatus>,
+    visibility: Option<Res<'w, terra_render::TerrainVisibility>>,
     water: Res<'w, WaterStatus>,
     props: Res<'w, PropRenderStatus>,
     previews: Res<'w, terra_render::RenderBlockPreviews>,
@@ -328,8 +338,16 @@ fn smoke_test(
 ) {
     let world = &scene.generation;
     let now = Instant::now();
-    let frame_seconds = now.duration_since(smoke.previous_frame).as_secs_f64();
+    let previous_frame = smoke.previous_frame;
+    let frame_seconds = now.duration_since(previous_frame).as_secs_f64();
     smoke.previous_frame = now;
+    smoke.timeline_frame = smoke.timeline_frame.saturating_add(1);
+    let timeline_frame = smoke.timeline_frame;
+    for frame in &mut smoke.worst_frames {
+        if let Some(scopes) = &mut frame.scopes {
+            scopes.resolve(timeline_frame);
+        }
+    }
     smoke.elapsed = now.duration_since(smoke.started_at);
     if let Err(error) = validate_benchmark_resolution(
         scene.resolution.as_deref(),
@@ -357,6 +375,7 @@ fn smoke_test(
             seconds: frame_seconds,
             sample_time: (smoke.elapsed - smoke.captured_at).as_secs_f64(),
             context: smoke.previous_context,
+            scopes: FrameScopeTrace::new(previous_frame, now, timeline_frame),
         };
         if smoke.worst_frames.len() < 12
             || smoke
@@ -384,6 +403,13 @@ fn smoke_test(
         upload_vertices: scene.upload.admitted_vertices,
         active_animations: scene.animations.active,
         queued_animations: scene.animations.queued,
+        window_focused: scene.windows.iter().next().map(|window| window.focused),
+        window_visible: scene.windows.iter().next().map(|window| window.visible),
+        present_mode: scene
+            .windows
+            .iter()
+            .next()
+            .map(|window| window.present_mode),
     };
     if let Some(error) = scene
         .renderer
@@ -429,7 +455,11 @@ fn smoke_test(
         }
         smoke.mining_complete = true;
     }
-    let uploaded = chunks.loaded.values().all(|section| section.mesh.is_none());
+    let uploaded = chunks.loaded.iter().all(|(&position, section)| {
+        scene
+            .renderer
+            .section_ready(position, Some(section), scene.visibility.as_deref())
+    });
     let water_ready = scene.water.ready && (!smoke.water_check || scene.water.visible_tiles > 0);
     let props_ready = scene.props.ready
         && scene.prop_smoke.as_ref().is_none_or(|props| props.complete)
@@ -519,6 +549,9 @@ fn smoke_test(
         // frame sampling above still ends at the original measurement boundary.
         && scene.previews.pending == 0
         && scene.portrait.ready
+        && smoke.worst_frames.iter().all(|frame| {
+            frame.scopes.as_ref().is_none_or(FrameScopeTrace::resolved)
+        })
         && (!smoke.flythrough
             || (scene.renderer.ready
                 && props_ready
@@ -687,6 +720,7 @@ fn report_metrics(
         minimum_fps = ?samples.last().filter(|seconds| **seconds > 0.0).map(|seconds| seconds.recip()),
         maximum_fps = ?samples.first().filter(|seconds| **seconds > 0.0).map(|seconds| seconds.recip()),
         worst_frame_ms = ?samples.last().map(|seconds| seconds * 1000.0),
+        frames_below_32_fps = samples.iter().filter(|&&seconds| seconds > 1.0 / 32.0).count(),
         p95_frame_ms = percentile(&samples, 0.95) * 1000.0,
         p99_frame_ms = percentile(&samples, 0.99) * 1000.0,
         initial_load_seconds = smoke.initial_ready.map(|elapsed| elapsed.as_secs_f64()),
@@ -711,6 +745,7 @@ fn report_metrics(
         prop_composition_worker_seconds = scene.props.composition_seconds,
         water_tiles = scene.water.visible_tiles,
         peak_admitted_upload_vertices = scene.upload.peak_admitted_vertices,
+        peak_admitted_upload_bytes = scene.upload.peak_admitted_bytes,
         deferred_upload_batches = scene.upload.deferred_batches,
         chunk_animations = ?scene.animations.as_ref(),
         mesh_draw_submissions = ?scene.draws.as_ref().and_then(|status| status.snapshot()),
@@ -757,8 +792,14 @@ fn report_metrics(
             upload_vertices = frame.context.upload_vertices,
             active_animations = frame.context.active_animations,
             queued_animations = frame.context.queued_animations,
+            window_focused = ?frame.context.window_focused,
+            window_visible = ?frame.context.window_visible,
+            present_mode = ?frame.context.present_mode,
             "Worst sampled frame with preceding frame context (correlation, not a GPU stall attribution)"
         );
+        if let Some(scopes) = &frame.scopes {
+            scopes.report(frame.seconds * 1000.0, frame.sample_time);
+        }
     }
     Ok(())
 }

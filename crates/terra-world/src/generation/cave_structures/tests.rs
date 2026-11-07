@@ -34,8 +34,96 @@ use crate::SectionGenerator;
 use terra_core::{Config, WorldConfig};
 use terra_voxel::global_to_section;
 
+#[test]
+fn explicit_revision_three_corridors_survive_chamber_guards_without_losing_their_floor_or_roof() {
+    let terrain = TerraGenerator::new(WorldConfig {
+        landscape_revision: 3,
+        geology_revision: 0,
+        rivers: false,
+        trees: false,
+        biomes: false,
+        ..Default::default()
+    })
+    .unwrap();
+    let base = terrain.surface_column(0.5, 0.5);
+    let room = CaveStructure {
+        kind: CaveEcology::Dripstone,
+        center: [0.5, -32.5, 0.5],
+        radius: 48.0,
+        height: 22.0,
+        floor: -42.5,
+        ceiling: -20.5,
+        radial: 0.1,
+        revision: 7,
+        seed: 19,
+        ..Default::default()
+    };
+    let [floor, ceiling] = [-46.5, -38.5];
+    for suppressed in [false, true] {
+        for river in [false, true] {
+            let column = crate::SurfaceColumn {
+                height: 20.0,
+                cave: CaveStructure { suppressed, ..room },
+                cave_cavity: (!river).then_some([floor, ceiling]),
+                river_cavity: river.then_some([floor, ceiling]),
+                ..base
+            };
+            for step in 1..16 {
+                let y = floor + f64::from(step) * 0.5;
+                let sample = terrain.sample_with_column([0.5, y, 0.5], column);
+                assert!(
+                    sample.density > 0.0 && sample.material == MaterialId::Air as u16,
+                    "corridor resealed by chamber: suppressed={suppressed}, river={river}, y={y}, sample={sample:?}"
+                );
+            }
+            for y in [
+                floor - 0.25,
+                floor - 1.0,
+                floor - 1.75,
+                ceiling + 0.25,
+                ceiling + 1.0,
+            ] {
+                assert!(
+                    terrain.sample_with_column([0.5, y, 0.5], column).density < 0.0,
+                    "missing corridor support: suppressed={suppressed}, river={river}, y={y}"
+                );
+            }
+            if !suppressed {
+                for y in [ceiling + 4.0, ceiling + 6.0] {
+                    assert!(
+                        terrain.cave_density_with_column([0.5, y, 0.5], column).0 > 0.0,
+                        "corridor roof protection sealed a higher chamber: river={river}, y={y}"
+                    );
+                }
+            }
+        }
+    }
+    let legacy = TerraGenerator::new(WorldConfig {
+        landscape_revision: 2,
+        ..terrain.config().clone()
+    })
+    .unwrap();
+    let blocked = crate::SurfaceColumn {
+        height: 20.0,
+        cave: room,
+        cave_cavity: Some([floor, ceiling]),
+        river_cavity: None,
+        ..base
+    };
+    assert!(
+        legacy
+            .cave_density_with_column([0.5, -44.5, 0.5], blocked)
+            .0
+            < 0.0
+    );
+}
+
 fn revision_two() -> WorldConfig {
     WorldConfig {
+        landscape_revision: 4,
+        sea_level: 22.0,
+        rivers: true,
+        biome_definitions: Some(terra_core::BiomeDefinitions::default()),
         cave_structure_revision: 2,
         ..Default::default()
     }
@@ -301,6 +389,10 @@ fn rooms(terrain: &TerraGenerator) -> Vec<CaveStructure> {
 fn revision_two_adds_larger_rooms_and_leaves_solid_bands_between_networks() {
     let current = TerraGenerator::new(revision_two()).unwrap();
     let previous = TerraGenerator::new(WorldConfig {
+        landscape_revision: 4,
+        sea_level: 22.0,
+        rivers: true,
+        biome_definitions: Some(terra_core::BiomeDefinitions::default()),
         cave_structure_revision: 1,
         ..Default::default()
     })

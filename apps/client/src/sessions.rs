@@ -13,6 +13,7 @@ use terra_network::client::{ClientSession, connect_session, disconnect_session};
 use terra_server::IntegratedServer;
 use terra_ui::menu::{
     LoadingProgress, MenuPage, MenuPaths, MenuState, ServerMenu, SessionInfo, SessionRequest,
+    StartupProgress,
 };
 
 struct PreparedSession {
@@ -20,6 +21,134 @@ struct PreparedSession {
     token: Vec<u8>,
     info: SessionInfo,
 }
+#[derive(Resource)]
+pub(crate) struct StartupLaunch(pub Vec<u8>);
+
+fn startup_barrier(startup: Option<&terra_render::RenderPreviewStartup>) -> Result<bool, String> {
+    let Some(startup) = startup.filter(|startup| startup.required) else {
+        return Ok(false);
+    };
+    if let Some(error) = &startup.error {
+        return Err(format!("Inventory icon preparation failed: {error}"));
+    }
+    Ok(!startup.ready)
+}
+
+fn all_startup_barriers(world: &World) -> Result<bool, String> {
+    let catalog = startup_barrier(world.get_resource::<terra_render::RenderPreviewStartup>())?
+        || world
+            .get_resource::<StartupProgress>()
+            .is_some_and(|progress| progress.fading);
+    if let Some(ui) = world
+        .get_resource::<crate::bootstrap::startup_ui::UiStartupAssets>()
+        .filter(|ui| ui.required)
+    {
+        if let Some(error) = &ui.error {
+            return Err(error.clone());
+        }
+        return Ok(catalog || !ui.ready);
+    }
+    Ok(catalog)
+}
+
+fn update_startup(world: &mut World) {
+    let preview_startup = world.get_resource::<terra_render::RenderPreviewStartup>();
+    let ui_startup = world.get_resource::<crate::bootstrap::startup_ui::UiStartupAssets>();
+    let active = preview_startup.is_some_and(|preview_startup| {
+        preview_startup.required && (!preview_startup.ready || preview_startup.error.is_some())
+    }) || ui_startup.is_some_and(|ui_startup| {
+        ui_startup.required && (!ui_startup.ready || ui_startup.error.is_some())
+    });
+    if !active {
+        let required = preview_startup.is_some_and(|preview_startup| preview_startup.required)
+            || ui_startup.is_some_and(|ui_startup| ui_startup.required);
+        let total = preview_startup.map_or(0, |preview_startup| preview_startup.total)
+            + ui_startup.map_or(0, |ui_startup| ui_startup.total);
+        let frame = world
+            .get_resource::<Time<Real>>()
+            .map_or(0.0, |time| time.delta_secs().min(0.05));
+        let mut progress = world.resource_mut::<StartupProgress>();
+        if required && progress.active {
+            progress.fading = true;
+            progress.reveal = (progress.reveal + frame / 0.65).min(1.0);
+            progress.fraction = Some(1.0);
+            progress.label = format!("{total} / {total}");
+            progress.detail = "Bereit".into();
+            progress.error.clear();
+            if progress.reveal >= 1.0 {
+                progress.active = false;
+                progress.fading = false;
+            }
+        } else {
+            progress.active = false;
+            progress.fading = false;
+            progress.reveal = if required { 1.0 } else { 0.0 };
+            progress.fraction = required.then_some(1.0);
+            progress.detail.clear();
+            progress.label.clear();
+            progress.error.clear();
+        }
+        return;
+    }
+    let completed = preview_startup.map_or(0, |preview_startup| preview_startup.completed)
+        + ui_startup.map_or(0, |ui_startup| ui_startup.completed);
+    let total = preview_startup.map_or(0, |preview_startup| preview_startup.total)
+        + ui_startup.map_or(0, |ui_startup| ui_startup.total);
+    let fraction = (total > 0
+        && preview_startup.is_none_or(|state| !state.required || state.initialized))
+    .then(|| completed as f32 / total as f32);
+    let error = preview_startup
+        .and_then(|preview_startup| preview_startup.error.clone())
+        .or_else(|| ui_startup.and_then(|ui_startup| ui_startup.error.clone()))
+        .unwrap_or_default();
+    let label = format!("{completed} / {total}");
+    let detail = preview_startup
+        .filter(|state| !state.ready && !state.current_path.is_empty())
+        .map(|state| state.current_path.clone())
+        .or_else(|| {
+            ui_startup
+                .filter(|state| !state.current_path.is_empty())
+                .map(|state| state.current_path.clone())
+        })
+        .unwrap_or_else(|| "Modelle, Texturen, Icons, Schriftarten und Audio".into());
+    let detail = shorten_asset_path(&detail, 72);
+    let mut progress = world.resource_mut::<StartupProgress>();
+    if progress.active != active
+        || progress.fraction != fraction
+        || progress.detail != detail
+        || progress.label != label
+        || progress.error != error
+    {
+        progress.active = active;
+        progress.fading = false;
+        progress.reveal = 0.0;
+        progress.fraction = fraction;
+        progress.detail = detail;
+        progress.label = label;
+        progress.error = error;
+    }
+}
+/// Keep both the source root and filename readable, including Unicode asset names.
+fn shorten_asset_path(path: &str, limit: usize) -> String {
+    if path.chars().count() <= limit {
+        return path.into();
+    }
+    if limit < 2 {
+        return path.chars().take(limit).collect();
+    }
+    let tail = limit.saturating_sub(20);
+    let head: String = path.chars().take(limit.saturating_sub(tail + 1)).collect();
+    let end: String = path
+        .chars()
+        .rev()
+        .take(tail)
+        .collect::<Vec<_>>()
+        .into_iter()
+        .rev()
+        .collect();
+    format!("{head}…{end}")
+}
+
 #[derive(Resource, Default)]
 struct SessionJobs {
     start: Option<Task<Result<PreparedSession, String>>>,
@@ -28,9 +157,11 @@ struct SessionJobs {
     save: Option<Task<Result<(), String>>>,
     loading_updated: Option<Instant>,
     reveal_elapsed: Option<Duration>,
+    deferred_start: Option<SessionRequest>,
 }
 pub(crate) fn install(app: &mut App) {
     app.init_resource::<SessionJobs>()
+        .init_resource::<StartupProgress>()
         .add_systems(
             Update,
             update.after(terra_world::streaming::StreamingSet::Dispatch),
@@ -39,6 +170,7 @@ pub(crate) fn install(app: &mut App) {
         .add_systems(Last, limit_fps);
 }
 fn update(world: &mut World) {
+    update_startup(world);
     let requests: Vec<_> = world
         .resource_mut::<Messages<SessionRequest>>()
         .drain()
@@ -51,6 +183,22 @@ fn update(world: &mut World) {
                 world.resource_mut::<MenuState>().error = error;
             } else {
                 fail(world, error);
+            }
+        }
+    }
+    let barrier = all_startup_barriers(world);
+    if !matches!(barrier, Ok(true)) {
+        if let Some(request) = world.resource_mut::<SessionJobs>().deferred_start.take() {
+            let result = barrier.clone().and_then(|_| start_request(world, request));
+            if let Err(error) = result {
+                fail(world, error);
+            }
+        }
+        if let Some(StartupLaunch(token)) = world.remove_resource::<StartupLaunch>() {
+            match barrier {
+                Ok(false) => connect_session(world, token),
+                Err(error) => fail(world, error),
+                Ok(true) => unreachable!(),
             }
         }
     }
@@ -170,12 +318,22 @@ fn start_request(world: &mut World, request: SessionRequest) -> Result<(), Strin
         return Ok(());
     }
     if matches!(request, SessionRequest::Leave | SessionRequest::Quit) {
+        world.remove_resource::<StartupLaunch>();
         let mut jobs = world.resource_mut::<SessionJobs>();
+        jobs.deferred_start = None;
         jobs.reveal_elapsed = None;
         if jobs.closing.is_none() {
             jobs.closing = Some((matches!(request, SessionRequest::Quit), Instant::now()));
         }
         world.resource_mut::<LoadingProgress>().reveal = 0.0;
+        return Ok(());
+    }
+    if all_startup_barriers(world)? {
+        let mut jobs = world.resource_mut::<SessionJobs>();
+        if jobs.deferred_start.is_some() {
+            return Err("A world is already waiting for inventory icons".into());
+        }
+        jobs.deferred_start = Some(request);
         return Ok(());
     }
     let jobs = world.resource::<SessionJobs>();
@@ -311,6 +469,9 @@ fn update_loading(world: &mut World) {
     {
         return;
     }
+    if !matches!(all_startup_barriers(world), Ok(false)) {
+        return;
+    }
     let now = Instant::now();
     if let Some(elapsed) = world.resource::<SessionJobs>().reveal_elapsed {
         // Shader compilation or one stalled frame must not skip the reveal.
@@ -356,12 +517,9 @@ fn update_loading(world: &mut World) {
         return;
     }
     let chunks = world.resource::<terra_world::streaming::ChunkStore>();
+    let visibility = world.get_resource::<terra_render::TerrainVisibility>();
     let (completed, total) = chunk_counts(chunks.wanted_sections().map(|position| {
-        let ready = chunks
-            .loaded
-            .get(&position)
-            .is_some_and(|section| section.mesh.is_none())
-            && !render.pending_columns.contains(&[position.x, position.z]);
+        let ready = render.section_ready(position, chunks.loaded.get(&position), visibility);
         (position, ready)
     }));
     if total > 0
@@ -405,7 +563,9 @@ fn chunk_counts(
     )
 }
 fn fail(world: &mut World, error: String) {
-    world.resource_mut::<SessionJobs>().reveal_elapsed = None;
+    let mut jobs = world.resource_mut::<SessionJobs>();
+    jobs.reveal_elapsed = None;
+    jobs.deferred_start = None;
     world.resource_mut::<LoadingProgress>().reveal = 0.0;
     let mut menu = world.resource_mut::<MenuState>();
     menu.page = MenuPage::Loading;
@@ -431,6 +591,212 @@ mod tests {
     use super::{chunk_counts, reveal_fraction};
     use std::time::Duration;
     use terra_voxel::SectionPos;
+
+    #[test]
+    fn startup_barrier_is_absent_for_headless_and_finished_or_demand_only_clients() {
+        use super::startup_barrier;
+        assert_eq!(startup_barrier(None), Ok(false));
+        assert_eq!(
+            startup_barrier(Some(&terra_render::RenderPreviewStartup::default())),
+            Ok(false)
+        );
+        let mut startup = terra_render::RenderPreviewStartup {
+            required: true,
+            ..Default::default()
+        };
+        assert_eq!(startup_barrier(Some(&startup)), Ok(true));
+        startup.ready = true;
+        assert_eq!(startup_barrier(Some(&startup)), Ok(false));
+        startup.error = Some("missing item model".into());
+        assert!(
+            startup_barrier(Some(&startup))
+                .unwrap_err()
+                .contains("missing item model")
+        );
+    }
+
+    #[test]
+    fn pending_startup_preload_defers_world_and_network_start_but_cancel_and_quit_still_work() {
+        use super::*;
+        for request in [
+            SessionRequest::PlayWorld(terra_core::WorldId(42)),
+            SessionRequest::JoinAddress("127.0.0.1:5000".parse().unwrap()),
+        ] {
+            for cancel in [SessionRequest::Leave, SessionRequest::Quit] {
+                let mut world = World::new();
+                world.init_resource::<SessionJobs>();
+                world.init_resource::<LoadingProgress>();
+                world.insert_resource(terra_render::RenderPreviewStartup {
+                    required: true,
+                    ..default()
+                });
+                start_request(&mut world, request.clone()).unwrap();
+                assert!(world.resource::<SessionJobs>().deferred_start.is_some());
+                assert!(world.resource::<SessionJobs>().start.is_none());
+                assert!(!world.contains_resource::<IntegratedServer>());
+                start_request(&mut world, cancel.clone()).unwrap();
+                assert!(world.resource::<SessionJobs>().deferred_start.is_none());
+                assert!(world.resource::<SessionJobs>().closing.is_some());
+            }
+        }
+    }
+
+    #[test]
+    fn startup_paths_keep_real_filenames_and_shorten_unicode_without_breaking_characters() {
+        use super::*;
+        let path = "terra/blocks/models/basin.gltf";
+        assert_eq!(shorten_asset_path(path, 72), path);
+        let long = format!(
+            "terra/blocks/{}/Bächlein.gltf",
+            "langes_verzeichnis/".repeat(8)
+        );
+        let short = shorten_asset_path(&long, 72);
+        assert_eq!(short.chars().count(), 72);
+        assert!(short.starts_with("terra/blocks/") && short.ends_with("/Bächlein.gltf"));
+        assert!(short.contains('…'));
+        assert_eq!(shorten_asset_path(&long, 0), "");
+        assert_eq!(shorten_asset_path(&long, 1), "t");
+    }
+
+    fn finish_startup_fade(world: &mut bevy::prelude::World) {
+        use super::*;
+        world.init_resource::<Time<Real>>();
+        world
+            .resource_mut::<Time<Real>>()
+            .advance_by(Duration::from_millis(50));
+        for _ in 0..14 {
+            update_startup(world);
+        }
+    }
+
+    #[test]
+    fn startup_fade_uses_real_frame_time_and_blocks_launch_until_its_last_frame() {
+        use super::*;
+        let mut world = World::new();
+        world.insert_resource(StartupProgress {
+            active: true,
+            ..default()
+        });
+        world.insert_resource(terra_render::RenderPreviewStartup {
+            required: true,
+            ready: true,
+            ..default()
+        });
+        world.init_resource::<Time<Real>>();
+        world
+            .resource_mut::<Time<Real>>()
+            .advance_by(Duration::from_secs(1));
+        update_startup(&mut world);
+        let progress = world.resource::<StartupProgress>();
+        assert!(
+            progress.active && progress.fading && progress.reveal > 0.0 && progress.reveal < 0.1
+        );
+        assert!(
+            all_startup_barriers(&world).unwrap(),
+            "A long frame must not skip the visual transition or launch a world"
+        );
+        finish_startup_fade(&mut world);
+        let progress = world.resource::<StartupProgress>();
+        assert!(!progress.active && !progress.fading);
+        assert_eq!(progress.blend(), 1.0);
+        assert!(!all_startup_barriers(&world).unwrap());
+    }
+
+    #[test]
+    fn startup_progress_is_finite_and_clears_after_preloading_instead_of_becoming_world_work() {
+        use super::*;
+        let mut world = World::new();
+        world.init_resource::<StartupProgress>();
+        world.insert_resource(terra_render::RenderPreviewStartup {
+            required: true,
+            initialized: true,
+            total: 400,
+            completed: 200,
+            current_path: "terra/blocks/models/basin.gltf".into(),
+            ..default()
+        });
+        update_startup(&mut world);
+        assert!(world.resource::<StartupProgress>().active);
+        assert_eq!(world.resource::<StartupProgress>().fraction, Some(0.5));
+        assert_eq!(world.resource::<StartupProgress>().label, "200 / 400");
+        assert_eq!(
+            world.resource::<StartupProgress>().detail,
+            "terra/blocks/models/basin.gltf"
+        );
+        world
+            .resource_mut::<terra_render::RenderPreviewStartup>()
+            .ready = true;
+        world
+            .resource_mut::<terra_render::RenderPreviewStartup>()
+            .completed = 400;
+        update_startup(&mut world);
+        assert!(
+            world.resource::<StartupProgress>().active
+                && world.resource::<StartupProgress>().fading
+        );
+        assert_eq!(world.resource::<StartupProgress>().label, "400 / 400");
+        finish_startup_fade(&mut world);
+        assert!(!world.resource::<StartupProgress>().active);
+        assert_eq!(world.resource::<StartupProgress>().fraction, Some(1.0));
+    }
+
+    #[test]
+    fn failed_startup_stays_on_the_loading_gate_and_reports_the_error_even_after_catalog_finishes()
+    {
+        use super::*;
+        let mut world = World::new();
+        world.init_resource::<StartupProgress>();
+        world.insert_resource(terra_render::RenderPreviewStartup {
+            required: true,
+            initialized: true,
+            ready: true,
+            total: 10,
+            completed: 10,
+            error: Some("A model texture is missing".into()),
+            ..default()
+        });
+        update_startup(&mut world);
+        let progress = world.resource::<StartupProgress>();
+        assert!(progress.active);
+        assert_eq!(progress.error, "A model texture is missing");
+        assert!(all_startup_barriers(&world).is_err());
+        world
+            .resource_mut::<terra_render::RenderPreviewStartup>()
+            .error = None;
+        update_startup(&mut world);
+        assert!(world.resource::<StartupProgress>().fading);
+        assert!(world.resource::<StartupProgress>().error.is_empty());
+        finish_startup_fade(&mut world);
+        assert!(!world.resource::<StartupProgress>().active);
+    }
+
+    #[test]
+    fn session_start_waits_for_static_ui_icons_and_fonts_as_well_as_item_previews() {
+        use super::*;
+        let mut world = World::new();
+        world.insert_resource(terra_render::RenderPreviewStartup {
+            required: true,
+            ready: true,
+            ..default()
+        });
+        world.init_resource::<crate::bootstrap::startup_ui::UiStartupAssets>();
+        world
+            .resource_mut::<crate::bootstrap::startup_ui::UiStartupAssets>()
+            .required = true;
+        assert_eq!(all_startup_barriers(&world), Ok(true));
+        world
+            .resource_mut::<crate::bootstrap::startup_ui::UiStartupAssets>()
+            .ready = true;
+        assert_eq!(all_startup_barriers(&world), Ok(false));
+        world
+            .resource_mut::<crate::bootstrap::startup_ui::UiStartupAssets>()
+            .error = Some("missing UI font".into());
+        assert!(
+            all_startup_barriers(&world)
+                .unwrap_err()
+                .contains("missing UI font")
+        );
+    }
 
     #[test]
     fn chunk_progress_waits_for_every_vertical_section_including_negative_coordinates() {

@@ -21,19 +21,33 @@ pub(crate) fn item_category(item: ItemKind, declared: Option<&str>) -> String {
         return "food".into();
     }
     match item {
+        ItemKind::Tool(terra_core::ToolKind::Wrench)
+        | ItemKind::Bellows(_)
+        | ItemKind::Block(59..=64 | 99..=100 | 141..=172)
+        | ItemKind::TintedBlock { material: 148, .. }
+        | ItemKind::WoodenBlock {
+            material: 141..=155 | 169,
+            ..
+        } => "technic",
         ItemKind::Block(28 | 29 | 40 | 59..=73)
         | ItemKind::Prop(_)
         | ItemKind::Flower(_)
         | ItemKind::DyedBed { .. } => "decoration",
-        ItemKind::Block(_) | ItemKind::WoodenBlock { .. } => "building",
+        ItemKind::Block(_) | ItemKind::WoodenBlock { .. } | ItemKind::TintedBlock { .. } => {
+            "building"
+        }
         ItemKind::Stick | ItemKind::Mineral(_) | ItemKind::Dye(_) => "materials",
         ItemKind::Animal(_) => "animal_materials",
         ItemKind::Tool(_)
-        | ItemKind::Bellows(_)
+        | ItemKind::FilledWateringCan { .. }
         | ItemKind::Armor(_)
         | ItemKind::Accessory(_)
-        | ItemKind::Cape(_) => "tools",
-        ItemKind::Dust(_) | ItemKind::Crop(_) => "materials",
+        | ItemKind::Cape(_)
+        | ItemKind::HeraldicCape { .. } => "tools",
+        ItemKind::Dust(_) | ItemKind::Crop(_) | ItemKind::GlassBottle | ItemKind::WaterBottle => {
+            "materials"
+        }
+        ItemKind::Potion(_) | ItemKind::Apple | ItemKind::AppleCore => "food",
     }
     .into()
 }
@@ -86,8 +100,12 @@ pub(crate) fn load_creative_categories(
     let mut categories = Vec::new();
     for definition in definitions {
         let available_icon = match definition.icon {
+            ItemKind::FilledWateringCan { .. } => {
+                item_categories.contains_key(&definition.icon.preview_item())
+            }
             ItemKind::Block(id)
             | ItemKind::WoodenBlock { material: id, .. }
+            | ItemKind::TintedBlock { material: id, .. }
             | ItemKind::DyedBed { material: id, .. } => {
                 blocks.blocks.iter().any(|block| block.id == id)
             }
@@ -97,13 +115,19 @@ pub(crate) fn load_creative_categories(
             | ItemKind::Mineral(_)
             | ItemKind::Bellows(_)
             | ItemKind::Dye(_)
+            | ItemKind::GlassBottle
+            | ItemKind::WaterBottle
+            | ItemKind::Potion(_)
             | ItemKind::Armor(_)
             | ItemKind::Accessory(_)
             | ItemKind::Cape(_)
+            | ItemKind::HeraldicCape { .. }
             | ItemKind::Dust(_)
             | ItemKind::Crop(_)
             | ItemKind::Flower(_)
-            | ItemKind::Animal(_) => item_categories.contains_key(&definition.icon),
+            | ItemKind::Animal(_)
+            | ItemKind::Apple
+            | ItemKind::AppleCore => item_categories.contains_key(&definition.icon),
         };
         if !valid_category_id(&definition.id)
             || !seen.insert(definition.id.clone())
@@ -235,6 +259,10 @@ mod tests {
                 .into_iter()
                 .map(|(item, _, _)| (item, item_category(item, None))),
         );
+        for item in [ItemKind::Apple, ItemKind::AppleCore] {
+            assert!(ItemKind::EXTRA.contains(&item));
+            assert_eq!(items.get(&item).map(String::as_str), Some("food"));
+        }
         let categories =
             load_creative_categories(&directory.join("inventory/categories"), &blocks, &items)
                 .unwrap();
@@ -249,7 +277,8 @@ mod tests {
                 "materials",
                 "animal_materials",
                 "food",
-                "tools"
+                "tools",
+                "technic"
             ]
         );
         assert!(
@@ -262,6 +291,7 @@ mod tests {
                 .iter()
                 .any(|category| matches!(category.icon, ItemKind::Prop(_)))
         );
+        assert!(!categories.iter().any(|category| category.id == "resources"));
     }
 
     #[test]
@@ -297,6 +327,16 @@ mod tests {
             "materials"
         );
         assert_eq!(item_category(ItemKind::Stick, None), "materials");
+        for color in terra_core::beds::DyeColor::ALL
+            .into_iter()
+            .chain([terra_core::beds::DyeColor::Rgb([71, 93, 184])])
+        {
+            assert_eq!(item_category(ItemKind::Dye(color), None), "materials");
+            assert_eq!(
+                item_category(ItemKind::Dye(color), Some("pack::pigments")),
+                "pack::pigments"
+            );
+        }
         assert_eq!(
             item_category(ItemKind::Tool(ToolKind::StonePickaxe), None),
             "tools"
@@ -306,6 +346,36 @@ mod tests {
             item_category(ItemKind::Block(16), Some("custom::wood")),
             "custom::wood"
         );
+    }
+
+    #[test]
+    fn technic_contains_machines_wood_variants_and_their_tools_without_stealing_custom_categories()
+    {
+        for material in [59, 60, 99, 100].into_iter().chain(141..=172) {
+            assert_eq!(item_category(ItemKind::Block(material), None), "technic");
+        }
+        for wood in [
+            terra_core::WoodSpecies::Oak,
+            terra_core::WoodSpecies::Birch,
+            terra_core::WoodSpecies::Spruce,
+            terra_core::WoodSpecies::Cherry,
+        ] {
+            for material in [141, 144, 148, 149] {
+                assert_eq!(
+                    item_category(ItemKind::for_wood(material, wood), None),
+                    "technic"
+                );
+            }
+        }
+        assert_eq!(
+            item_category(ItemKind::Tool(terra_core::ToolKind::Wrench), None),
+            "technic"
+        );
+        assert_eq!(
+            item_category(ItemKind::Block(154), Some("pack::machines")),
+            "pack::machines"
+        );
+        assert_eq!(item_category(ItemKind::Block(16), None), "building");
     }
 
     #[test]

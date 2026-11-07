@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "id": 151,
+  "name": "Iron Large Gear",
+  "description": "A large mechanical gear with twice the pitch radius. Diagonal small gears turn twice as fast.",
+  "hardness": 3.5,
+  "resistance": 11,
+  "mining_level": 1,
+  "required_tool": "pickaxe",
+  "creative_category": "technic",
+  "render_kind": "custom_mesh",
+  "struct_block": true,
+  "model_layout": "scene",
+  "model": "models/iron_large_gear.gltf",
+  "textures": {
+    "kinetic_gear_large_iron": "textures/machinery-iron-hd.png",
+    "kinetic_gear_large_iron_edge": "textures/machinery-iron-hd.png",
+    "oak_frame": "textures/machinery-oak-hd.png",
+    "iron_frame": "textures/machinery-iron-hd.png"
+  },
+  "collision_boxes": [
+    {
+      "minimum": [
+        0,
+        0.407,
+        0.407
+      ],
+      "maximum": [
+        1,
+        0.593,
+        0.593
+      ]
+    },
+    {
+      "minimum": [
+        0.36,
+        -0.55,
+        0.2
+      ],
+      "maximum": [
+        0.64,
+        1.55,
+        0.8
+      ]
+    },
+    {
+      "minimum": [
+        0.36,
+        0.2,
+        -0.55
+      ],
+      "maximum": [
+        0.64,
+        0.8,
+        1.55
+      ]
+    }
+  ]
+}

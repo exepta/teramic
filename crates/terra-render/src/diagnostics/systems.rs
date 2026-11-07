@@ -12,15 +12,44 @@ use bevy::{
         texture::GpuImage,
     },
 };
+use std::{
+    sync::LazyLock,
+    time::{Duration, Instant},
+};
 
 struct Timed<const N: usize>;
-const NAMES: [&str; 5] = [
+const NAMES: [&str; 8] = [
     "render.mesh_allocator.body",
     "render.prepare_mesh_assets.body",
     "render.preprocess_bind_groups.body",
     "render.mesh_bind_groups.body",
     "render.shadow_bin_uploads.body",
+    "render.prepare_lights.body",
+    "render.prepare_windows.body",
+    "render.prepare_view_targets.body",
 ];
+
+pub(super) fn stall_start() -> Option<Instant> {
+    static ENABLED: LazyLock<bool> =
+        LazyLock::new(|| std::env::var("TERRA_STALL_TRACE").is_ok_and(|value| value == "1"));
+    ENABLED.then(Instant::now)
+}
+
+fn stalled_ms(elapsed: Option<Duration>) -> Option<f64> {
+    elapsed
+        .filter(|elapsed| *elapsed >= Duration::from_millis(32))
+        .map(|elapsed| elapsed.as_secs_f64() * 1000.0)
+}
+
+pub(super) fn report_stall(scope: &'static str, elapsed: Option<Duration>) {
+    if let Some(elapsed_ms) = stalled_ms(elapsed) {
+        warn!(
+            scope,
+            elapsed_ms, "Render wall-time stall; not a GPU-time attribution"
+        );
+    }
+}
+
 impl<A: System<In = ()>, B: System<In = (), Out = ()>, const N: usize> Combine<A, B> for Timed<N> {
     type In = ();
     type Out = A::Out;
@@ -30,8 +59,13 @@ impl<A: System<In = ()>, B: System<In = (), Out = ()>, const N: usize> Combine<A
         a: impl FnOnce(SystemIn<'_, A>, &mut T) -> Result<A::Out, RunSystemError>,
         _: impl FnOnce(SystemIn<'_, B>, &mut T) -> Result<(), RunSystemError>,
     ) -> Result<Self::Out, RunSystemError> {
-        let _scope = terra_core::profiling::ScopeTimer::new(NAMES[N]);
-        a((), data)
+        let started = stall_start();
+        let scope = terra_core::profiling::ScopeTimer::new(NAMES[N]);
+        let result = a((), data);
+        let elapsed = started.map(|started| started.elapsed());
+        drop(scope);
+        report_stall(NAMES[N], elapsed);
+        result
     }
 }
 
@@ -78,8 +112,24 @@ pub(super) fn install(world: &mut World) {
                 .in_set(RenderSystems::PrepareAssets)
                 .after(prepare_assets::<GpuImage>)
         );
-        // Preprocessing's cache measures its real misses itself. Replacing that
-        // wrapper here would inadvertently disable reuse while profiling.
+        // Stock is the production path. The optional cache times its own misses
+        // and must not have that wrapper replaced while profiling.
+        if !crate::preprocess_cache::experiment_enabled() {
+            probe!(
+                bevy::pbr::prepare_preprocess_bind_groups,
+                timed::<2, _, _>(bevy::pbr::prepare_preprocess_bind_groups)
+                    .in_set(RenderSystems::PrepareBindGroups)
+                    .after(bevy::pbr::prepare_preprocess_pipelines)
+                    .run_if(
+                        resource_exists::<
+                            bevy::render::batching::gpu_preprocessing::BatchedInstanceBuffers<
+                                bevy::pbr::MeshUniform,
+                                bevy::pbr::MeshInputUniform,
+                            >,
+                        >
+                    )
+            );
+        }
         probe!(
             bevy::pbr::prepare_mesh_bind_groups,
             timed::<3, _, _>(bevy::pbr::prepare_mesh_bind_groups)
@@ -106,12 +156,40 @@ pub(super) fn install(world: &mut World) {
                 >
             )
         );
+        probe!(
+            bevy::pbr::prepare_lights,
+            timed::<5, _, _>(bevy::pbr::prepare_lights)
+                .in_set(RenderSystems::CreateViews)
+                .after(bevy::render::camera::sort_cameras)
+        );
+        probe!(
+            bevy::render::view::window::prepare_windows,
+            timed::<6, _, _>(bevy::render::view::window::prepare_windows)
+                .in_set(RenderSystems::PrepareViews)
+        );
+        probe!(
+            bevy::render::view::prepare_view_targets,
+            timed::<7, _, _>(bevy::render::view::prepare_view_targets)
+                .in_set(RenderSystems::PrepareViews)
+                .after(bevy::render::view::window::prepare_windows)
+                .after(prepare_assets::<GpuImage>)
+                .ambiguous_with(bevy::render::camera::sort_cameras)
+        );
     });
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn stall_threshold_requires_one_enabled_call_of_at_least_thirty_two_ms() {
+        assert_eq!(stalled_ms(None), None);
+        assert_eq!(stalled_ms(Some(Duration::ZERO)), None);
+        assert_eq!(stalled_ms(Some(Duration::from_nanos(31_999_999))), None);
+        assert_eq!(stalled_ms(Some(Duration::from_millis(32))), Some(32.0));
+        assert_eq!(stalled_ms(Some(Duration::from_millis(100))), Some(100.0));
+    }
     #[derive(Resource, Default)]
     struct Calls(Vec<u8>);
     #[derive(Component)]

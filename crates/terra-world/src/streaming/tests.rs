@@ -495,6 +495,8 @@ fn app() -> App {
 }
 fn app_with_height(height: f64) -> App {
     let mut config = GameConfig::default();
+    config.world.landscape_revision = 3;
+    config.world.sea_level = 8.0;
     config.client.view_distance = 1;
     config.client.vertical_view_distance = 1;
     config.world.hill_amplitude = 0.0;
@@ -583,8 +585,7 @@ fn ready(world: &World) -> bool {
     world.resource::<WorldGeneration>().status == GenerationStatus::Ready
 }
 
-#[test]
-fn internal_block_edits_cannot_remove_or_replace_nonempty_chests() {
+fn filled_chest_fixture() -> (ChunkStore, EditJournal, [i64; 3], terra_core::Inventory) {
     let position = [-1, 3, -1];
     let (owner, local) = global_to_section(position);
     let mut data = terra_voxel::BlockSection::empty(owner).unwrap();
@@ -605,12 +606,96 @@ fn internal_block_edits_cannot_remove_or_replace_nonempty_chests() {
     journal.record(position, MaterialId::Chest as u16).unwrap();
     let mut contents = terra_core::Inventory::default();
     contents.insert(terra_core::ItemKind::Stick, 17);
+    contents.insert(terra_core::ItemKind::Block(3), 42);
     journal.set_container(position, contents.clone()).unwrap();
-    let delta = journal.section_delta(owner);
-    let mesh_epoch = journal.mesh_epoch(owner);
-    let block_revision = chunks.loaded[&owner].data.revision();
-    let properties = terra_core::block_properties::BlockPropertiesCatalog::default();
+    (chunks, journal, position, contents)
+}
+
+#[test]
+fn internal_block_edits_drop_nonempty_chest_contents_when_removed_or_replaced() {
     for material in [0, MaterialId::Stone as u16] {
+        let (mut chunks, mut journal, position, contents) = filled_chest_fixture();
+        let request = BlockEditRequest {
+            position,
+            expected_material: MaterialId::Chest as u16,
+            material,
+        };
+        assert!(
+            commit_block_edit(&mut chunks, &mut journal, &request, &Default::default()).unwrap()
+        );
+        assert_eq!(chunks.block_at(position), Some(material));
+        assert!(journal.container_at(position).is_none());
+        let drops = &journal.gameplay().drops;
+        assert_eq!(drops.len(), contents.occupied_slots());
+        for (drop, stack) in drops.iter().zip(&contents.slots) {
+            assert_eq!(drop.stack, *stack);
+            assert_eq!(drop.position, position.map(|value| value as f64 + 0.5));
+            assert!(drop.valid());
+        }
+        let gameplay = journal.gameplay().clone();
+        assert!(
+            !commit_block_edit(&mut chunks, &mut journal, &request, &Default::default()).unwrap()
+        );
+        assert_eq!(journal.gameplay(), &gameplay);
+        assert!(
+            commit_block_edit(
+                &mut chunks,
+                &mut journal,
+                &BlockEditRequest {
+                    position,
+                    expected_material: material,
+                    material: MaterialId::Chest as u16,
+                },
+                &Default::default()
+            )
+            .unwrap()
+        );
+        assert!(
+            journal.container_at(position).is_none(),
+            "replacement chest cannot revive old items"
+        );
+        assert_eq!(journal.gameplay(), &gameplay);
+    }
+}
+
+#[test]
+fn chest_removal_capacity_ids_and_revision_failures_leave_ownership_unchanged() {
+    for failure in [
+        "capacity",
+        "drop_ids",
+        "gameplay_revision",
+        "block_revision",
+        "water_revision",
+    ] {
+        let (mut chunks, mut journal, position, contents) = filled_chest_fixture();
+        let owner = global_to_section(position).0;
+        match failure {
+            "capacity" => {
+                for _ in 0..terra_core::MAX_WORLD_DROPS - contents.occupied_slots() + 1 {
+                    assert!(
+                        journal
+                            .gameplay_mut()
+                            .drop_one([0.5, 3.5, 0.5], terra_core::ItemKind::Stick)
+                    );
+                }
+            }
+            "drop_ids" => journal.gameplay_mut().next_drop = u64::MAX - 1,
+            "gameplay_revision" => journal.gameplay_mut().revision = u64::MAX - 2,
+            "block_revision" | "water_revision" => {
+                let mut delta = journal.section_delta(owner);
+                if failure == "block_revision" {
+                    delta.revision = u64::MAX;
+                } else {
+                    delta.fluid_epoch = u64::MAX;
+                }
+                journal.import_delta(delta).unwrap();
+            }
+            _ => unreachable!(),
+        }
+        let block = chunks.loaded[&owner].data.clone();
+        let delta = journal.section_delta(owner);
+        let game = journal.gameplay().clone();
+        let epochs = [journal.mesh_epoch(owner), journal.water_mesh_epoch(owner)];
         assert!(
             commit_block_edit(
                 &mut chunks,
@@ -618,17 +703,22 @@ fn internal_block_edits_cannot_remove_or_replace_nonempty_chests() {
                 &BlockEditRequest {
                     position,
                     expected_material: MaterialId::Chest as u16,
-                    material,
+                    material: 0,
                 },
-                &properties
+                &Default::default()
             )
-            .is_err()
+            .is_err(),
+            "{failure}"
         );
-        assert_eq!(chunks.block_at(position), Some(MaterialId::Chest as u16));
-        assert_eq!(chunks.loaded[&owner].data.revision(), block_revision);
-        assert_eq!(journal.section_delta(owner), delta);
-        assert_eq!(journal.mesh_epoch(owner), mesh_epoch);
-        assert_eq!(journal.container_at(position), Some(&contents));
+        assert_eq!(chunks.loaded[&owner].data, block, "{failure}");
+        assert_eq!(journal.section_delta(owner), delta, "{failure}");
+        assert_eq!(journal.gameplay(), &game, "{failure}");
+        assert_eq!(journal.container_at(position), Some(&contents), "{failure}");
+        assert_eq!(
+            [journal.mesh_epoch(owner), journal.water_mesh_epoch(owner)],
+            epochs,
+            "{failure}"
+        );
     }
 }
 

@@ -3,7 +3,7 @@
   "id": 61,
   "name": "Elbow Chimney Pipe",
   "description": "A ninety-degree chimney turn connecting the bottom to the facing side.",
-  "creative_category": "decoration",
+  "creative_category": "technic",
   "render_kind": "custom_mesh",
   "struct_block": true,
   "model_layout": "scene",

@@ -5,6 +5,7 @@ mod chests;
 mod clips;
 mod eating;
 mod furniture;
+mod plumbing;
 mod scene;
 mod smoke;
 mod source;
@@ -14,6 +15,14 @@ mod thunder;
 
 use bevy::{audio::AddAudioSource, prelude::*};
 pub(crate) use chests::ChestAudioStatus;
+pub(crate) use plumbing::HydraulicAudioStatus;
+
+/// Readiness of the existing shared asynchronous recording bank, not a second decode.
+#[derive(Resource, Default)]
+pub(crate) struct RecordedAudioStartup {
+    pub ready: bool,
+    pub error: Option<String>,
+}
 
 pub(crate) fn install(app: &mut App) {
     crate::ui_audio::install(app);
@@ -22,6 +31,8 @@ pub(crate) fn install(app: &mut App) {
     app.add_audio_source::<source::RecordedSoundscape>()
         .init_resource::<scene::Soundscape>()
         .init_resource::<ChestAudioStatus>()
+        .init_resource::<plumbing::HydraulicAudioStatus>()
+        .init_resource::<RecordedAudioStartup>()
         .add_systems(Startup, scene::load)
         .add_systems(
             Update,
@@ -42,4 +53,5 @@ pub(crate) fn install(app: &mut App) {
         eating::update.after(terra_player::PlayerSet::Interaction),
     );
     app.add_systems(Update, furniture::update.after(scene::update));
+    app.add_systems(Update, plumbing::update.after(scene::update));
 }

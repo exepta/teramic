@@ -1,0 +1,258 @@
+{
+  "phase": 190,
+  "date": "2026-11-03",
+  "checks": {
+    "tilt_css_parser": "passed",
+    "stylesheet_regression_tests_passed": 1,
+    "workspace_build": "passed",
+    "workspace_clippy_all_targets": "passed",
+    "format": "passed",
+    "diff": "passed"
+  },
+  "native": {
+    "captures": 26,
+    "success": true,
+    "os_input": false,
+    "inventory_hotkey_elements_present": false,
+    "hud_key_hints_retained": true,
+    "authoritative_inventory_unchanged": true,
+    "slot_and_frame_size_preserved": true,
+    "layout_click_targets_checked": true
+  },
+  "sources": [
+    {
+      "path": "src-ui/styles/inventory-type-190.css",
+      "sha256": "33b2ff329df5dfd1fd6c2cd06d98a27261df39de6f9e6de7bf55fef02a2741b8"
+    },
+    {
+      "path": "src-ui/index.html",
+      "sha256": "aab6df7ce5251122b5233dfbf8ee253e4b5d9fcf117e59f32192f8f336a73f19"
+    },
+    {
+      "path": "src-ui/components/inventory-slot.component.html",
+      "sha256": "b066ba0f44a6c65e418b4948bc5d2b9033fe0117f8b61a8c30bc9276c6247cf5"
+    },
+    {
+      "path": "src-ui/components/hud-slot.component.html",
+      "sha256": "3c6bb815d86d3f984ec228501a77b61674f5532b89505bebcaacbe5159a2c584"
+    },
+    {
+      "path": "crates/terra-ui/src/frames.rs",
+      "sha256": "ed0d9cebeaa20c73b0c9113730b3296c629ef54a04f1877fd9b6c6a2ba54e44b"
+    },
+    {
+      "path": "apps/client/src/inventory_reference_smoke/surfaces.rs",
+      "sha256": "5af3087fc09767f8a636443c2c9c8b41e32fa8ccd8614a0ab0a82216d2c61d45"
+    }
+  ],
+  "screenshots": [
+    {
+      "path": "tools/benchmarks/results/inventory-typography-2026-11-03/native/fixed-player-compact.png",
+      "sha256": "ffb535264bb8e8559082e90a88f0e7f44ef0e218336522fde0c1d83ca90e692e",
+      "size": [
+        1025,
+        641
+      ]
+    },
+    {
+      "path": "tools/benchmarks/results/inventory-typography-2026-11-03/native/fixed-player-wide.png",
+      "sha256": "52eee7d62a201bf999daa425e31f4200ab6526df79c6e6bf8f4781f781410794",
+      "size": [
+        1680,
+        936
+      ]
+    },
+    {
+      "path": "tools/benchmarks/results/inventory-typography-2026-11-03/native/surface-campfire-compact.png",
+      "sha256": "f551acf0f0f05407a9e0cc3a4836bab10d23f20a48d628f13a9b7eb6e08d02ac",
+      "size": [
+        1025,
+        641
+      ]
+    },
+    {
+      "path": "tools/benchmarks/results/inventory-typography-2026-11-03/native/surface-campfire-wide.png",
+      "sha256": "44c15350db14355b71295f8f0a0e5d6fb8ec2e9acb81b08a0fce1caff97a878e",
+      "size": [
+        1680,
+        936
+      ]
+    },
+    {
+      "path": "tools/benchmarks/results/inventory-typography-2026-11-03/native/surface-cauldron-compact.png",
+      "sha256": "4925e2e0f0e358c129c83f58922df01a0cf6ce5e090e0a45803f3b582b66a5b5",
+      "size": [
+        1025,
+        641
+      ]
+    },
+    {
+      "path": "tools/benchmarks/results/inventory-typography-2026-11-03/native/surface-cauldron-wide.png",
+      "sha256": "0b43f804a19c922fcfa83d7cdf465261b9e1b76e71a35e0ffdb8762e24c140d8",
+      "size": [
+        1680,
+        936
+      ]
+    },
+    {
+      "path": "tools/benchmarks/results/inventory-typography-2026-11-03/native/surface-chest-compact.png",
+      "sha256": "d00b92ab8445a550e24ecc7ed86feecbc9bd815d5e77067a876eacb7e4453576",
+      "size": [
+        1025,
+        641
+      ]
+    },
+    {
+      "path": "tools/benchmarks/results/inventory-typography-2026-11-03/native/surface-chest-wide.png",
+      "sha256": "f3c3f71d49bc39ecc14f448e22e52196158d01617c94eb1d9e1fb2423ebeccc6",
+      "size": [
+        1680,
+        936
+      ]
+    },
+    {
+      "path": "tools/benchmarks/results/inventory-typography-2026-11-03/native/surface-crusher-compact.png",
+      "sha256": "04672041adf180d141d0da3d40f2a137351ee213373ddf7e12a6cc88a7ecf383",
+      "size": [
+        1025,
+        641
+      ]
+    },
+    {
+      "path": "tools/benchmarks/results/inventory-typography-2026-11-03/native/surface-crusher-wide.png",
+      "sha256": "9cf7306801a1cbe060562e2f9300ce2616d70c8d7b496760a71e287a52c1755d",
+      "size": [
+        1680,
+        936
+      ]
+    },
+    {
+      "path": "tools/benchmarks/results/inventory-typography-2026-11-03/native/surface-distributor-compact.png",
+      "sha256": "ab0e7c5965fe43d7f038d9ea49b9fd934d881468b282df567b593bd4ef934a9f",
+      "size": [
+        1025,
+        641
+      ]
+    },
+    {
+      "path": "tools/benchmarks/results/inventory-typography-2026-11-03/native/surface-distributor-wide.png",
+      "sha256": "4e2c91e4f449e1dd87d74d507f526ca1782806ceec480afe7ee35d4f19222189",
+      "size": [
+        1680,
+        936
+      ]
+    },
+    {
+      "path": "tools/benchmarks/results/inventory-typography-2026-11-03/native/surface-double-chest-compact.png",
+      "sha256": "41eec0b69e828577cb26dd00a3294a05aa3e04a0301070f03743e7a6d499388a",
+      "size": [
+        1025,
+        641
+      ]
+    },
+    {
+      "path": "tools/benchmarks/results/inventory-typography-2026-11-03/native/surface-double-chest-wide.png",
+      "sha256": "b81c73970e1c8869f30bb8ccc3dd140fdd5c866febd038ae6874dca004d0e32b",
+      "size": [
+        1680,
+        936
+      ]
+    },
+    {
+      "path": "tools/benchmarks/results/inventory-typography-2026-11-03/native/surface-filtered-funnel-compact.png",
+      "sha256": "9fb17d2c3ed4c3bfb855a2888a21c5bed1fe97166628b05953ae7095e81574df",
+      "size": [
+        1025,
+        641
+      ]
+    },
+    {
+      "path": "tools/benchmarks/results/inventory-typography-2026-11-03/native/surface-filtered-funnel-wide.png",
+      "sha256": "26ffa6e10740c7dcbccc2e0dd4e3b942e3cd9c24f42d7c58e86653f89318522d",
+      "size": [
+        1680,
+        936
+      ]
+    },
+    {
+      "path": "tools/benchmarks/results/inventory-typography-2026-11-03/native/surface-filtered-tunnel-compact.png",
+      "sha256": "bd3b0f203112b76359b8e1c9600a5528ec3bc0706dd46452c86d150e090f0753",
+      "size": [
+        1025,
+        641
+      ]
+    },
+    {
+      "path": "tools/benchmarks/results/inventory-typography-2026-11-03/native/surface-filtered-tunnel-wide.png",
+      "sha256": "89e43e680374f2635fba64b3067a54bc5e039a2436463e30dc133077e455f9c2",
+      "size": [
+        1680,
+        936
+      ]
+    },
+    {
+      "path": "tools/benchmarks/results/inventory-typography-2026-11-03/native/surface-furnace-compact.png",
+      "sha256": "9a16b561a622399e72b77a1f7d6f4f597b3a4a18e34e4a8d22c49c23cbd3fb2e",
+      "size": [
+        1025,
+        641
+      ]
+    },
+    {
+      "path": "tools/benchmarks/results/inventory-typography-2026-11-03/native/surface-furnace-wide.png",
+      "sha256": "d7adac5f6fd73998b4c538e03289b2203a37e44c66d0a3a7fdfa4d5fe06e3cc1",
+      "size": [
+        1680,
+        936
+      ]
+    },
+    {
+      "path": "tools/benchmarks/results/inventory-typography-2026-11-03/native/surface-mixer-compact.png",
+      "sha256": "cdd6b3d0e01a9350f0f58065d289a040e64f866c9a0e4a9669d29460e190a723",
+      "size": [
+        1025,
+        641
+      ]
+    },
+    {
+      "path": "tools/benchmarks/results/inventory-typography-2026-11-03/native/surface-mixer-wide.png",
+      "sha256": "4b172b00ebef6eef1b37f5745245e49c142ae71f3fe6cd91369d424e53620ac7",
+      "size": [
+        1680,
+        936
+      ]
+    },
+    {
+      "path": "tools/benchmarks/results/inventory-typography-2026-11-03/native/surface-tunnel-compact.png",
+      "sha256": "e4836b0548da5255e495addc0094d6ce1643bfba9f312e404790889d729dbbd1",
+      "size": [
+        1025,
+        641
+      ]
+    },
+    {
+      "path": "tools/benchmarks/results/inventory-typography-2026-11-03/native/surface-tunnel-wide.png",
+      "sha256": "fe1bd3de5c33b323dc6589f6dcb1fda366c6bc37dad7c870d368722f43d2550c",
+      "size": [
+        1680,
+        936
+      ]
+    },
+    {
+      "path": "tools/benchmarks/results/inventory-typography-2026-11-03/native/surface-workbench-linked-compact.png",
+      "sha256": "ab33c1af406af01caf9e030cd74fe6b0724fe71ae254c6ef9ba9a0bace915070",
+      "size": [
+        1025,
+        641
+      ]
+    },
+    {
+      "path": "tools/benchmarks/results/inventory-typography-2026-11-03/native/surface-workbench-linked-wide.png",
+      "sha256": "912f8a7010cd7900cff7c88dab890cc9749a315bbd881346570ac6d71614bdbf",
+      "size": [
+        1680,
+        936
+      ]
+    }
+  ]
+}

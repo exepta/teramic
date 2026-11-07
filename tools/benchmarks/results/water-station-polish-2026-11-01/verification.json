@@ -1,0 +1,40 @@
+{
+  "protocol": 96,
+  "workspace_tests": {
+    "targets": 12,
+    "passed": 3588,
+    "failed": 0,
+    "ignored": 8
+  },
+  "native_hydraulics": {
+    "seconds": 43.292232513427734,
+    "captures": 18,
+    "unsupported_motion_samples": 7,
+    "actual_driven_belts": true,
+    "single_platform_item": true,
+    "rendered_closed_and_open_gates": true,
+    "pump_delivery": true,
+    "source_cells": 49,
+    "source_units": 392,
+    "ambient_pipe_units": 8,
+    "ambient_pipe_source": false,
+    "surface_level_around_pipe": 19,
+    "intake_bubbles_seen": true,
+    "bubbles_stop_after_release": true
+  },
+  "native_startup": {
+    "catalog_icons": 459,
+    "ui_audio_assets": 1627,
+    "total": 2086,
+    "observed_crossfade": true,
+    "loader_border": false
+  },
+  "checks": {
+    "workspace_build": true,
+    "clippy_all_targets_deny_warnings": true,
+    "format": true,
+    "diff_whitespace": true,
+    "client_package_build": true
+  },
+  "verified_at_utc": "2026-11-01T19:30:03.070131+00:00"
+}

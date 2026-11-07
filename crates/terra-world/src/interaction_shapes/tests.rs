@@ -1,6 +1,281 @@
 use super::*;
+
+#[test]
+fn funnel_legs_exist_only_above_a_loaded_full_floor_without_removing_its_neck() {
+    let position = [8, 3, 8];
+    let properties = BlockPropertiesCatalog::default();
+    for facing in 0..4 {
+        let mut journal = EditJournal::default();
+        journal.record(position, 153).unwrap();
+        journal
+            .set_object_state(
+                position,
+                Some(crate::edits::BlockObjectState {
+                    facing,
+                    ..Default::default()
+                }),
+            )
+            .unwrap();
+        for floor in [None, Some(0), Some(148), Some(3)] {
+            let mut boxes = Vec::new();
+            assert!(visit_boxes_with(
+                &journal,
+                &properties,
+                position,
+                |p| {
+                    if p == position {
+                        Some(153)
+                    } else if p == [8, 2, 8] {
+                        floor
+                    } else {
+                        Some(0)
+                    }
+                },
+                |b| boxes.push(b)
+            ));
+            assert!(boxes.iter().any(|b| (b.minimum[1] - 2.98).abs() < 0.00001));
+            assert_eq!(
+                boxes.iter().any(|b| b.minimum[1] <= 2.695),
+                floor == Some(3)
+            );
+        }
+    }
+}
 use crate::{edits::BlockObjectState, streaming::LoadedSection};
 use terra_voxel::{BlockSection, global_to_section};
+
+#[test]
+fn unsupported_legacy_conveyors_have_no_invisible_frame_or_axle_boxes() {
+    let origin = [-16, 0, -16];
+    let floor = [-16, -1, -16];
+    for facing in 0..4 {
+        for support in [Some(0), Some(27), None, Some(4)] {
+            let (mut chunks, mut journal, properties) = empty_world(origin);
+            put(&mut chunks, &mut journal, origin, 148);
+            if let Some(material) = support {
+                put(&mut chunks, &mut journal, floor, material);
+            } else {
+                chunks.loaded.remove(&global_to_section(floor).0);
+            }
+            let raw =
+                terra_core::kinetic::dyed_belt_facing(facing, terra_core::beds::DyeColor::Blue);
+            journal
+                .set_object_state(
+                    origin,
+                    Some(BlockObjectState {
+                        facing: raw,
+                        ..Default::default()
+                    }),
+                )
+                .unwrap();
+            let mut picking = Vec::new();
+            let mut collision = Vec::new();
+            assert!(visit_boxes(&chunks, &journal, &properties, origin, |b| {
+                picking.push(b)
+            }));
+            assert!(visit_collision_boxes(
+                &chunks,
+                &journal,
+                &properties,
+                origin,
+                |b| collision.push(b)
+            ));
+            assert_eq!(picking, collision);
+            if support == Some(4) {
+                let expected: Vec<_> = properties
+                    .shape(148)
+                    .iter()
+                    .map(|source| {
+                        let mut bounds = source.rotated_y(facing);
+                        for (axis, value) in origin.into_iter().enumerate() {
+                            bounds.minimum[axis] += value as f64;
+                            bounds.maximum[axis] += value as f64;
+                        }
+                        bounds
+                    })
+                    .collect();
+                assert_eq!(collision.len(), expected.len());
+                for (actual, expected) in collision.iter().zip(&expected) {
+                    for axis in 0..3 {
+                        assert!((actual.minimum[axis] - expected.minimum[axis]).abs() < 1e-9);
+                        assert!((actual.maximum[axis] - expected.maximum[axis]).abs() < 1e-9);
+                    }
+                }
+            } else {
+                assert_eq!(collision.len(), 1);
+                assert!(
+                    (collision[0].maximum[1] - f64::from(terra_core::kinetic::CONVEYOR_TOP)).abs()
+                        < 1e-6
+                );
+                for local in [[0.08, 0.2, 0.5], [0.01, 0.5, 0.5]] {
+                    let hidden = point(origin, local, facing, 1.0);
+                    assert!(!collision.iter().any(|b| {
+                        b.intersects(hidden.map(|v| v - 0.005), hidden.map(|v| v + 0.005))
+                    }));
+                }
+            }
+        }
+    }
+}
+
+#[test]
+fn belt_ports_keep_their_open_passage_and_negative_section_foot_overhang_in_all_modes() {
+    let origin = [-16, 0, -16];
+    for material in [152, 153] {
+        for facing in 0..4 {
+            for supported in [false, true] {
+                let (mut chunks, mut journal, properties) = empty_world(origin);
+                if supported {
+                    put(
+                        &mut chunks,
+                        &mut journal,
+                        [origin[0], origin[1] - 1, origin[2]],
+                        3,
+                    );
+                }
+                let forward = terra_core::kinetic::forward(facing);
+                let peer = std::array::from_fn(|axis| {
+                    origin[axis] + forward[axis] * if material == 152 { -1 } else { 1 }
+                });
+                put(&mut chunks, &mut journal, peer, 29);
+                put(&mut chunks, &mut journal, origin, material);
+                let mut geometric = Vec::new();
+                for mode in [0, 4] {
+                    let state = BlockObjectState {
+                        facing: facing + mode,
+                        peer: Some(peer),
+                        ..Default::default()
+                    };
+                    journal.set_object_state(origin, Some(state)).unwrap();
+                    let mut actual = Vec::new();
+                    assert!(visit_boxes(&chunks, &journal, &properties, origin, |b| {
+                        actual.push(b)
+                    }));
+                    let has_feet = material == 152 || supported;
+                    assert_eq!(
+                        actual.iter().any(|b| (b.minimum[1] + 0.375).abs() < 1e-6),
+                        has_feet
+                    );
+                    if mode == 0 {
+                        geometric = actual.clone();
+                    } else {
+                        assert_eq!(actual, geometric);
+                    }
+                    let gap = point(origin, [0.5, -0.22, 0.5], facing, 1.0);
+                    assert!(
+                        !actual
+                            .iter()
+                            .any(|b| b.intersects(gap.map(|v| v - 0.10), gap.map(|v| v + 0.10)))
+                    );
+                    let foot = point(
+                        origin,
+                        if material == 152 {
+                            [0.13, -0.34, 0.12]
+                        } else {
+                            [0.14, -0.34, 0.14]
+                        },
+                        facing,
+                        1.0,
+                    );
+                    let eye = [foot[0], foot[1], foot[2] - 0.06];
+                    if !supported {
+                        let hit =
+                            raycast(&chunks, &journal, &properties, eye, [0.0, 0.0, 1.0], 0.15);
+                        assert_eq!(
+                            hit.is_some_and(|hit| hit.position == origin),
+                            has_feet,
+                            "only real unsupported tunnel feet remain pickable below the negative-Y seam"
+                        );
+                    }
+                    let mut proposed = Vec::new();
+                    visit_proposed_boxes(
+                        &chunks,
+                        &journal,
+                        &properties,
+                        origin,
+                        material,
+                        state,
+                        |b| proposed.push(b),
+                    );
+                    assert_eq!(
+                        proposed, actual,
+                        "clearance uses the same mode-independent shell"
+                    );
+                }
+            }
+        }
+    }
+}
+
+#[test]
+fn generic_crank_collision_and_picking_share_the_centered_mount_pose_in_six_axes() {
+    let origin = [-16, 4, -16];
+    for facing in 0..6 {
+        for distance in [1, 2] {
+            let axis = terra_core::kinetic::axis(facing);
+            let peer = std::array::from_fn(|i| origin[i] - axis[i] * distance);
+            let state = BlockObjectState {
+                facing,
+                peer: Some(peer),
+                ..Default::default()
+            };
+            let (mut chunks, mut journal, properties) = empty_world(origin);
+            put(&mut chunks, &mut journal, origin, 100);
+            journal.set_object_state(origin, Some(state)).unwrap();
+            let mut actual = Vec::new();
+            assert!(visit_boxes(
+                &chunks,
+                &journal,
+                &properties,
+                origin,
+                |bounds| actual.push(bounds)
+            ));
+            let offset = [0.0, 0.045_f32, -0.015_f32];
+            let expected: Vec<_> = properties
+                .shape(100)
+                .iter()
+                .map(|source| {
+                    let mut local = *source;
+                    for (i, displacement) in offset.into_iter().enumerate() {
+                        local.minimum[i] += f64::from(displacement);
+                        local.maximum[i] += f64::from(displacement);
+                    }
+                    let mut world = local.rotated_axis(facing);
+                    for (i, coordinate) in origin.into_iter().enumerate() {
+                        world.minimum[i] += coordinate as f64;
+                        world.maximum[i] += coordinate as f64;
+                    }
+                    world
+                })
+                .collect();
+            assert_eq!(actual, expected);
+            let mut proposed = Vec::new();
+            assert!(visit_proposed_boxes(
+                &chunks,
+                &journal,
+                &properties,
+                origin,
+                100,
+                state,
+                |bounds| proposed.push(bounds)
+            ));
+            assert_eq!(proposed, actual);
+            let eye = std::array::from_fn(|i| {
+                (actual[0].minimum[i] + actual[0].maximum[i]) * 0.5 + axis[i] as f64 * 2.0
+            });
+            let direction = axis.map(|value| -(value as f64));
+            let distance = actual
+                .iter()
+                .filter_map(|bounds| bounds.ray(eye, direction, 3.0))
+                .map(|(distance, _)| distance)
+                .min_by(f64::total_cmp)
+                .unwrap();
+            let hit = raycast(&chunks, &journal, &properties, eye, direction, 3.0).unwrap();
+            assert_eq!(hit.position, origin);
+            assert!((hit.distance - distance).abs() < 1.0e-8);
+        }
+    }
+}
 
 #[test]
 fn chimney_roof_seal_collision_matches_the_partial_slab_height() {
@@ -645,4 +920,87 @@ fn ordinary_cubes_keep_complete_cell_picking_and_volume() {
         [4.01; 3],
         [4.02; 3]
     ));
+}
+
+#[test]
+fn water_wheel_rim_stays_pickable_but_only_its_axle_blocks_bodies() {
+    let origin = [-16, 4, -16];
+    for facing in 0..6 {
+        let (mut chunks, mut journal, properties) = empty_world(origin);
+        put(
+            &mut chunks,
+            &mut journal,
+            origin,
+            terra_core::kinetic::WATER_WHEEL,
+        );
+        journal
+            .set_object_state(
+                origin,
+                Some(BlockObjectState {
+                    facing,
+                    ..Default::default()
+                }),
+            )
+            .unwrap();
+        let mut picking = Vec::new();
+        let mut collision = Vec::new();
+        assert!(visit_boxes(&chunks, &journal, &properties, origin, |b| {
+            picking.push(b)
+        }));
+        assert!(visit_collision_boxes(
+            &chunks,
+            &journal,
+            &properties,
+            origin,
+            |b| collision.push(b)
+        ));
+        assert_eq!(picking.len(), properties.shape(147).len());
+        assert_eq!(collision.len(), 1);
+        for (local, blocked) in [([0.5, 1.5, 0.5], false), ([0.5; 3], true)] {
+            let mut probe = ShapeBox {
+                minimum: local.map(|v| v - 0.01),
+                maximum: local.map(|v| v + 0.01),
+                hinged: false,
+            }
+            .rotated_axis(facing);
+            for (axis, value) in origin.iter().enumerate() {
+                probe.minimum[axis] += *value as f64;
+                probe.maximum[axis] += *value as f64;
+            }
+            assert!(
+                picking
+                    .iter()
+                    .any(|b| b.intersects(probe.minimum, probe.maximum))
+            );
+            assert_eq!(
+                space_intersects(
+                    &chunks,
+                    &journal,
+                    &properties,
+                    origin,
+                    probe.minimum,
+                    probe.maximum,
+                ),
+                blocked,
+                "facing={facing}, local={local:?}"
+            );
+            let axis = terra_core::kinetic::axis(facing);
+            let eye = std::array::from_fn(|i| {
+                (probe.minimum[i] + probe.maximum[i]) * 0.5 + axis[i] as f64 * 2.0
+            });
+            let hit = raycast(
+                &chunks,
+                &journal,
+                &properties,
+                eye,
+                axis.map(|v| -(v as f64)),
+                3.0,
+            )
+            .unwrap();
+            assert_eq!(
+                hit.position, origin,
+                "the full wheel must remain selectable"
+            );
+        }
+    }
 }

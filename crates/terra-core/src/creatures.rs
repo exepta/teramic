@@ -9,6 +9,7 @@ pub mod ecology;
 pub mod hitboxes;
 pub mod horses;
 pub mod intentions;
+pub mod soldiers;
 pub mod spawning;
 pub mod spiders;
 pub mod taming;

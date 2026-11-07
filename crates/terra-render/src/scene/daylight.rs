@@ -33,7 +33,7 @@ impl Daylight {
         if sun {
             // Adaptation must not amplify the remaining sunset light. Blend
             // perceived energy first, then convert back to scene illuminance.
-            100_000.0
+            super::SURFACE_SUN_ILLUMINANCE
                 * smooth(-0.07, 0.18, self.sun.y)
                 * 2.0_f32.powf(self.exposure - super::SURFACE_EXPOSURE)
         } else {
@@ -188,6 +188,97 @@ pub(super) fn moon(commands: &mut Commands, range: f32) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn calibrated_sun_reduces_direct_highlights_without_changing_camera_or_shadow_fill() {
+        use bevy::core_pipeline::tonemapping::Tonemapping;
+        let mut app = App::new();
+        app.init_resource::<WorldClock>()
+            .init_resource::<terra_core::GameConfig>()
+            .init_resource::<GraphicsConfig>()
+            .init_resource::<Daylight>()
+            .add_systems(Update, update);
+        let sun = app
+            .world_mut()
+            .spawn((Sun, DirectionalLight::default()))
+            .id();
+        let moon = app
+            .world_mut()
+            .spawn((Moon, DirectionalLight::default()))
+            .id();
+        let camera = app
+            .world_mut()
+            .spawn((
+                TerraCamera,
+                Exposure::default(),
+                AmbientLight {
+                    brightness: super::super::SURFACE_AMBIENT,
+                    ..default()
+                },
+                Tonemapping::AcesFitted,
+            ))
+            .id();
+        app.world_mut().resource_mut::<WorldClock>().phase = 0.5;
+        app.update();
+        let noon_exposure = app.world().get::<Exposure>(camera).unwrap().ev100;
+        assert_eq!(noon_exposure, 13.7);
+        let legacy_energy = 100_000. * 2.0_f32.powf(-13.7);
+        let energy = app
+            .world()
+            .get::<DirectionalLight>(sun)
+            .unwrap()
+            .illuminance
+            * 2.0_f32.powf(-noon_exposure);
+        assert!((0.60..0.70).contains(&(energy / legacy_energy)));
+        assert_eq!(
+            app.world().get::<AmbientLight>(camera).unwrap().brightness,
+            760.
+        );
+        assert_eq!(
+            app.world().get::<Tonemapping>(camera),
+            Some(&Tonemapping::AcesFitted)
+        );
+        for phase in [0.0, 1.0] {
+            app.world_mut().resource_mut::<WorldClock>().phase = phase;
+            app.update();
+            assert_eq!(
+                app.world()
+                    .get::<DirectionalLight>(sun)
+                    .unwrap()
+                    .illuminance,
+                0.
+            );
+            assert_eq!(
+                app.world()
+                    .get::<DirectionalLight>(moon)
+                    .unwrap()
+                    .illuminance,
+                2200.
+            );
+            assert_eq!(app.world().get::<Exposure>(camera).unwrap().ev100, 10.7);
+            assert_eq!(
+                app.world().get::<Tonemapping>(camera),
+                Some(&Tonemapping::AcesFitted)
+            );
+        }
+    }
+
+    #[test]
+    fn solar_calibration_keeps_night_adaptation_and_enclosed_cave_fill() {
+        let night = Daylight::at(0.);
+        assert_eq!(night.exposure, 10.7);
+        assert_eq!(night.ambient, 300.);
+        let mut fog = DistanceFog::default();
+        let mut grading = super::super::surface_grading();
+        let mut ambient = AmbientLight {
+            brightness: 760.,
+            ..default()
+        };
+        crate::scene::caves::apply(1., 0., &mut fog, &mut grading, &mut ambient);
+        assert!((ambient.brightness - 25.2).abs() < 1e-4);
+        assert_eq!(grading.global.exposure, 0.);
+        assert_eq!(grading.global.post_saturation, 0.98);
+    }
+
     #[test]
     fn celestial_handoff_never_drops_below_the_adapted_night_light_floor() {
         let exposed = |day: Daylight| {

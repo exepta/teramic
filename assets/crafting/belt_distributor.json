@@ -1,0 +1,8 @@
+{
+  "id": "teramic::belt_distributor", "name": "Belt Distributor", "station": "workbench",
+  "output": { "item": { "block": 160 }, "count": 1 },
+  "pattern": { "kind": "shapeless", "ingredients": [
+    { "item": { "block": 157 }, "count": 3 },
+    { "item": { "mineral": "iron_ingot" }, "count": 2 }
+  ] }
+}

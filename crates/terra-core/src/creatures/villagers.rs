@@ -1,6 +1,9 @@
 //! Settlement residents share creature persistence without claiming natural spawn slots.
-pub const ROLE_COUNT: u8 = 10;
-pub const MAX_RESIDENTS: u16 = 128;
+/// Existing professions retain their stable 0..9 values.
+pub const CIVILIAN_ROLE_COUNT: u8 = 10;
+pub const ROLE_COUNT: u8 = 13;
+/// Identity capacity for later recruitment/growth, not a generated population cap.
+pub const MAX_RESIDENTS: u16 = 4096;
 const NAMESPACE: u64 = 1 << 58;
 
 pub fn id(home: [i64; 2], slot: u16) -> Option<u64> {
@@ -11,12 +14,13 @@ pub fn id(home: [i64; 2], slot: u16) -> Option<u64> {
         NAMESPACE
             | ((home[0] + 32768) as u64) << 23
             | ((home[1] + 32768) as u64) << 7
-            | u64::from(slot),
+            | (u64::from(slot / 128) << 39)
+            | u64::from(slot % 128),
     )
 }
 
 pub fn slot(value: u64, home: [i64; 2]) -> Option<u16> {
-    let slot = (value & 127) as u16;
+    let slot = ((value & 127) | (((value >> 39) & 31) << 7)) as u16;
     (id(home, slot) == Some(value)).then_some(slot)
 }
 
@@ -42,6 +46,9 @@ pub fn greeting(id: u64, role: u8, asleep: bool) -> String {
         "Ich schlafe gerade. Komm morgen wieder."
     } else {
         match role {
+            10 => "Schwert und Schild bewachen unser Koenigreich.",
+            11 => "Mit dem Speer halte ich die Tore frei.",
+            12 => "Vom Wachturm habe ich die Wege im Blick.",
             1 => "Die Felder brauchen jeden Tag Pflege.",
             2..=4 => "Ich halte nach dem Rechten Ausschau.",
             5 => "Moegest du sicher durch die Nacht kommen.",
@@ -78,6 +85,23 @@ mod tests {
         }
         assert!(id([31_251, 0], 0).is_none());
         assert!(id([0, 0], MAX_RESIDENTS).is_none());
+    }
+    #[test]
+    fn extended_residents_keep_every_legacy_identity_and_survive_more_than_initial_army_counts() {
+        for home in [[0, 0], [-31250, 31250], [18, -23]] {
+            for slot in 0..128 {
+                let old = NAMESPACE
+                    | ((home[0] + 32768) as u64) << 23
+                    | ((home[1] + 32768) as u64) << 7
+                    | u64::from(slot);
+                assert_eq!(id(home, slot), Some(old));
+            }
+            for index in [127, 128, 143, 255, 511, 4095] {
+                let value = id(home, index).unwrap();
+                assert_eq!(slot(value, home), Some(index));
+                assert_ne!(Some(value), super::super::stalker_id(home));
+            }
+        }
     }
     #[test]
     fn night_schedule_is_staggered_and_ends_at_six() {

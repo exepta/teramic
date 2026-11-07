@@ -84,8 +84,25 @@ pub(crate) struct RenderJob {
     pub level: DetailLevel,
     pub task: Task<(Result<Vec<MeshBatch>, String>, f64)>,
 }
+
+impl RenderJob {
+    fn release_staged(&mut self, meshes: Option<&mut Assets<Mesh>>) {
+        if let (Some((Ok(batches), _)), Some(meshes)) = (&mut self.ready, meshes) {
+            crate::upload_budget::release_staged(batches, meshes);
+        }
+    }
+}
+
 #[derive(Resource, Default)]
 pub(crate) struct RenderJobs(pub HashMap<SectionPos, RenderJob>, pub Vec<SectionPos>);
+
+impl RenderJobs {
+    pub(super) fn cancel(&mut self, position: &SectionPos, meshes: Option<&mut Assets<Mesh>>) {
+        if let Some(mut job) = self.0.remove(position) {
+            job.release_staged(meshes);
+        }
+    }
+}
 #[derive(Default)]
 pub(crate) struct MeshQueue {
     visibility_revision: u64,
@@ -106,6 +123,15 @@ struct SelectionSweep {
 }
 
 impl MeshQueue {
+    fn uploads_consumed(chunks: &ChunkStore, mut hidden: impl FnMut(SectionPos) -> bool) -> bool {
+        // Portal-culled sections deliberately retain CPU geometry for later
+        // exposure. They must not keep the renderer in unbudgeted startup mode.
+        chunks
+            .loaded
+            .iter()
+            .all(|(&position, section)| section.mesh.is_none() || hidden(position))
+    }
+
     fn enqueue(&mut self, position: SectionPos) -> bool {
         if self.queued.insert(position) {
             self.positions.push(position);
@@ -126,6 +152,22 @@ impl MeshQueue {
         self.positions.retain(|&position| loaded(position));
         self.queued.retain(|&position| loaded(position));
         self.arrivals.retain(|&position| loaded(position));
+    }
+
+    fn remove_unloaded(
+        &mut self,
+        removals: impl IntoIterator<Item = SectionPos>,
+        mut loaded: impl FnMut(SectionPos) -> bool,
+    ) -> HashSet<SectionPos> {
+        let mut removed: HashSet<_> = removals.into_iter().collect();
+        // A section may have reloaded since its removal was published.
+        removed.retain(|&position| !loaded(position));
+        if !removed.is_empty() {
+            // Flight can unload hundreds of sections together. Scan the queue
+            // once for the batch instead of once for every removed section.
+            self.retain_loaded(loaded);
+        }
+        removed
     }
 
     fn begin_sweep(&mut self, positions: impl FnOnce() -> Vec<SectionPos>) {
@@ -239,6 +281,7 @@ pub(super) fn interactive_edit(
 }
 #[derive(Default)]
 pub(crate) struct AppearanceInputs {
+    heraldry_revision: Option<(bool, u64)>,
     journal_dirty: bool,
     chunks_dirty: bool,
     fluid_revisions: HashMap<[i64; 2], u64>,
@@ -386,6 +429,7 @@ pub(crate) fn refresh_stream_exposure(
     mut cache: ResMut<GeometryCache>,
     mut inputs: Local<StreamExposureInputs>,
 ) {
+    let _scope = terra_core::profiling::ScopeTimer::new("terrain.stream_exposure");
     if terrain.is_changed() {
         cache.5.columns.clear();
         cache.5.changed.clear();
@@ -393,8 +437,11 @@ pub(crate) fn refresh_stream_exposure(
     }
     let mut changed = HashSet::new();
     if let Some(publications) = publications {
+        let _scope = terra_core::profiling::ScopeTimer::new("terrain.stream_exposure.publications");
         for message in inputs.publications.read(&publications) {
             let position = message.position;
+            cache.refresh_funnel_supports(position, &chunks, &journal);
+            cache.refresh_campfire_supports(position, &chunks, &journal);
             let column = [position.x, position.z];
             if cache.5.columns.get(&column).is_some_and(|state| {
                 state.snapshot.as_ref().is_none_or(|snapshot| {
@@ -410,8 +457,11 @@ pub(crate) fn refresh_stream_exposure(
         }
     }
     if let Some(removals) = removals {
+        let _scope = terra_core::profiling::ScopeTimer::new("terrain.stream_exposure.removals");
         for message in inputs.removals.read(&removals) {
             let position = message.position;
+            cache.refresh_funnel_supports(position, &chunks, &journal);
+            cache.refresh_campfire_supports(position, &chunks, &journal);
             let column = [position.x, position.z];
             if cache.5.columns.get(&column).is_some_and(|state| {
                 state.snapshot.as_ref().is_none_or(|snapshot| {
@@ -488,8 +538,44 @@ pub(crate) struct GeometryCache(
     HashMap<[i64; 2], Option<Arc<crate::weather::surfaces::exposure::Exposure>>>,
     StreamExposureCache,
     u64,
+    HashMap<SectionPos, u64>,
 );
 type GeometrySnapshot = (Arc<BlockMesh>, Option<Arc<super::custom::ModelSnapshot>>);
+
+fn capture_models(
+    section: &terra_voxel::BlockSection,
+    templates: &crate::blocks::TemplateSet,
+    chunks: &ChunkStore,
+    journal: &EditJournal,
+) -> Result<Option<Arc<super::custom::ModelSnapshot>>, String> {
+    let edits = journal
+        .snapshot(section.position())
+        .map_err(|error| error.to_string())?;
+    let mut models = super::custom::capture(section, templates, journal, |global| {
+        edits
+            .get(&global)
+            .copied()
+            .or_else(|| chunks.block_at(global))
+    });
+    if let Some(models) = &mut models {
+        // Joinery can use persisted neighbor metadata; physical support cannot
+        // stand in for a neighboring section which has not actually loaded.
+        let coordinate = [section.position().x, section.position().z];
+        let domains = chunks
+            .prepared_column(coordinate)
+            .map_or_else(Vec::new, |column| {
+                column
+                    .village_settlements()
+                    .map(|site| site.domain())
+                    .collect()
+            });
+        models.set_domains(domains);
+        models.refresh_heraldry(section.position(), &journal.gameplay().kingdoms);
+        models.refresh_funnel_supports(section.position(), chunks, journal);
+        models.refresh_campfire_supports(section.position(), chunks, journal);
+    }
+    Ok(models.map(Arc::new))
+}
 
 fn coastal_section(position: SectionPos, sea: f64) -> bool {
     position
@@ -524,6 +610,80 @@ fn neighboring_columns(columns: &HashSet<[i64; 2]>) -> HashSet<[i64; 2]> {
 }
 
 impl GeometryCache {
+    fn refresh_water_contacts(&mut self, owner: SectionPos, journal: &EditJournal) {
+        let Some(models) = self
+            .0
+            .get_mut(&owner)
+            .and_then(|cached| cached.models.as_mut())
+        else {
+            return;
+        };
+        if !models.water_contacts_changed(owner, journal) {
+            return;
+        }
+        Arc::make_mut(models).refresh_water_contacts(owner, journal);
+        let revision = self.7.entry(owner).or_default();
+        *revision = revision.wrapping_add(1);
+        self.5.changed.insert(owner);
+    }
+    fn refresh_campfire_supports(
+        &mut self,
+        changed: SectionPos,
+        chunks: &ChunkStore,
+        journal: &EditJournal,
+    ) {
+        let Ok(owner) = changed.offset([0, -1, 0]) else {
+            return;
+        };
+        if !chunks.loaded.contains_key(&owner) {
+            return;
+        }
+        let Some(models) = self
+            .0
+            .get_mut(&owner)
+            .and_then(|cached| cached.models.as_mut())
+        else {
+            return;
+        };
+        if !models.campfire_supports_changed(owner, chunks, journal) {
+            return;
+        }
+        if Arc::make_mut(models).refresh_campfire_supports(owner, chunks, journal) {
+            let revision = self.7.entry(owner).or_default();
+            *revision = revision.wrapping_add(1);
+            self.5.changed.insert(owner);
+        }
+    }
+
+    fn refresh_funnel_supports(
+        &mut self,
+        changed: SectionPos,
+        chunks: &ChunkStore,
+        journal: &EditJournal,
+    ) {
+        let Ok(owner) = changed.offset([0, 1, 0]) else {
+            return;
+        };
+        if !chunks.loaded.contains_key(&owner) {
+            return;
+        }
+        let Some(models) = self
+            .0
+            .get_mut(&owner)
+            .and_then(|cached| cached.models.as_mut())
+        else {
+            return;
+        };
+        if !models.funnel_supports_changed(owner, chunks, journal) {
+            return;
+        }
+        if Arc::make_mut(models).refresh_funnel_supports(owner, chunks, journal) {
+            let revision = self.7.entry(owner).or_default();
+            *revision = revision.wrapping_add(1);
+            self.5.changed.insert(owner);
+        }
+    }
+
     fn update_column_revisions(&mut self, revisions: HashMap<[i64; 2], u64>) {
         let changed: HashSet<_> = revisions
             .iter()
@@ -577,6 +737,7 @@ impl GeometryCache {
 
     pub(super) fn forget(&mut self, position: SectionPos) {
         self.0.remove(&position);
+        self.7.remove(&position);
         if self.5.forget(position) {
             let column = [position.x, position.z];
             self.2.remove(&column);
@@ -588,6 +749,7 @@ impl GeometryCache {
         let mut epoch = journal
             .appearance_epoch(position)
             .wrapping_add(self.6)
+            .wrapping_add(self.7.get(&position).copied().unwrap_or(0))
             .wrapping_add(self.1.get(&[position.x, position.z]).copied().unwrap_or(0))
             .wrapping_add(self.5.epoch(position));
         epoch = epoch.wrapping_add(
@@ -620,6 +782,9 @@ impl GeometryCache {
             );
         }
         epoch
+    }
+    pub(super) fn exposure_pending(&self, position: SectionPos) -> bool {
+        self.5.pending(position)
     }
     #[cfg(test)]
     pub(crate) fn insert_test(&mut self, position: SectionPos, epoch: u64, geometry: BlockMesh) {
@@ -669,6 +834,10 @@ impl GeometryCache {
         Some((cached.geometry.clone(), cached.models.clone()))
     }
 }
+
+#[cfg(test)]
+#[path = "model_support_tests.rs"]
+mod model_support_tests;
 #[cfg(test)]
 impl GeometryCache {
     pub fn len(&self) -> usize {
@@ -687,6 +856,7 @@ pub(crate) struct MeshWorld<'w, 's> {
     water: Option<Res<'w, Messages<WaterPublished>>>,
     imported: Option<Res<'w, Messages<SectionEditApplied>>>,
     journal: Res<'w, EditJournal>,
+    session: Option<Res<'w, terra_network::client::ClientSession>>,
     config: Res<'w, terra_core::GameConfig>,
     graphics: Option<Res<'w, terra_core::GraphicsConfig>>,
     focus: Res<'w, ChunkFocus>,
@@ -696,6 +866,7 @@ pub(crate) struct MeshWorld<'w, 's> {
     terrain_sections: Query<'w, 's, &'static super::TerrainSection>,
     entering_removed: RemovedComponents<'w, 's, crate::transitions::EnteringChunk>,
     foliage_reference: Option<Res<'w, crate::foliage::FoliageReferenceBenchmark>>,
+    exact_shadows: super::shadows::ExactInputs<'w>,
 }
 
 fn needs_mesh(
@@ -773,12 +944,14 @@ fn needs_mesh(
     })
 }
 
+#[allow(clippy::too_many_arguments)] // Independent ECS resources and local worker queues.
 pub(crate) fn dispatch_meshes(
     mut world: MeshWorld,
     assets: Res<BlockAssets>,
     mut jobs: ResMut<RenderJobs>,
     mut cache: ResMut<GeometryCache>,
     mut status: ResMut<RenderStatus>,
+    mut meshes: Option<ResMut<Assets<Mesh>>>,
     (mut queue, mut appearance_inputs): (Local<MeshQueue>, Local<AppearanceInputs>),
     mut coarse_templates: Local<
         Option<(
@@ -788,7 +961,36 @@ pub(crate) fn dispatch_meshes(
     >,
 ) {
     let _scope = terra_core::profiling::ScopeTimer::new("terrain.dispatch");
-    let visibility_revision = world.visibility.as_ref().map_or(0, |v| v.revision);
+    let kingdom_session = world.session.as_ref().filter(|session| session.ready);
+    let kingdoms = kingdom_session.map_or(&world.journal.gameplay().kingdoms, |session| {
+        &session.kingdoms
+    });
+    let heraldry_revision = (kingdom_session.is_some(), kingdoms.revision);
+    if appearance_inputs.heraldry_revision != Some(heraldry_revision) || world.terrain.is_changed()
+    {
+        let _scope = terra_core::profiling::ScopeTimer::new("terrain.refresh.heraldry");
+        let changed: Vec<_> = cache
+            .0
+            .iter_mut()
+            .filter_map(|(&position, geometry)| {
+                let models = geometry.models.as_mut()?;
+                if !models.heraldry_changed(position, kingdoms) {
+                    return None;
+                }
+                Arc::make_mut(models).refresh_heraldry(position, kingdoms);
+                Some(position)
+            })
+            .collect();
+        for position in changed {
+            let revision = cache.7.entry(position).or_default();
+            *revision = revision.wrapping_add(1);
+            queue.enqueue(position);
+            queue.arrivals.insert(position);
+            queue.dirty = true;
+        }
+        appearance_inputs.heraldry_revision = Some(heraldry_revision);
+    }
+    let visibility_revision = world.visibility.as_ref().map_or(0, |v| v.revision());
     let visibility_changed = queue.visibility_revision != visibility_revision;
     queue.visibility_revision = visibility_revision;
     let published: Vec<_> = world
@@ -821,10 +1023,29 @@ pub(crate) fn dispatch_meshes(
             });
     let mut changed_columns = prepared_changes.clone();
     changed_columns.extend(published.iter().chain(&removed).map(|p| [p.x, p.z]));
-    let water_published = world
-        .water
-        .as_ref()
-        .is_some_and(|messages| appearance_inputs.water.read(messages).count() != 0);
+    let water_publications: Vec<_> = world.water.as_ref().map_or_else(Vec::new, |messages| {
+        appearance_inputs
+            .water
+            .read(messages)
+            .map(|message| message.position)
+            .collect()
+    });
+    for &position in &water_publications {
+        cache.refresh_water_contacts(position, &world.journal);
+        for offset in [
+            [1, 0, 0],
+            [-1, 0, 0],
+            [0, 1, 0],
+            [0, -1, 0],
+            [0, 0, 1],
+            [0, 0, -1],
+        ] {
+            if let Ok(neighbor) = position.offset(offset) {
+                cache.refresh_water_contacts(neighbor, &world.journal);
+            }
+        }
+    }
+    let water_published = !water_publications.is_empty();
     let edits_applied = world
         .imported
         .as_ref()
@@ -842,11 +1063,12 @@ pub(crate) fn dispatch_meshes(
         && world.generation.as_ref().is_none_or(|generation| {
             generation.status == terra_world::streaming::GenerationStatus::Ready
         })
-        && world
-            .chunks
-            .loaded
-            .values()
-            .all(|section| section.mesh.is_none());
+        && MeshQueue::uploads_consumed(&world.chunks, |position| {
+            world
+                .visibility
+                .as_ref()
+                .is_some_and(|visibility| visibility.hidden(position))
+        });
     // Clear state from the previous world before recording this world's first
     // publications. Otherwise a full worker pool can permanently lose an edit.
     queue.update_initial_ready(world.terrain.is_changed(), initial_ready);
@@ -866,7 +1088,7 @@ pub(crate) fn dispatch_meshes(
         })
         .collect();
     for position in stale {
-        jobs.0.remove(&position);
+        jobs.cancel(&position, meshes.as_deref_mut());
         queue.arrivals.insert(position);
     }
     queue.arrivals.extend(cache.5.changed.drain());
@@ -967,7 +1189,13 @@ pub(crate) fn dispatch_meshes(
             .rendered
             .block_revisions
             .retain(|p, _| world.chunks.loaded.contains_key(p));
-        jobs.0.retain(|p, _| world.chunks.loaded.contains_key(p));
+        jobs.0.retain(|p, job| {
+            let loaded = world.chunks.loaded.contains_key(p);
+            if !loaded {
+                job.release_staged(meshes.as_deref_mut());
+            }
+            loaded
+        });
         let removed: Vec<_> = cache
             .0
             .keys()
@@ -982,15 +1210,13 @@ pub(crate) fn dispatch_meshes(
             .3
             .retain(|column, _| world.chunks.prepared_column(*column).is_some());
     } else {
+        let removed = queue.remove_unloaded(removed, |position| {
+            world.chunks.loaded.contains_key(&position)
+        });
         for position in removed {
-            if !world.chunks.loaded.contains_key(&position) {
-                world.rendered.block_revisions.remove(&position);
-                jobs.0.remove(&position);
-                cache.forget(position);
-                queue.arrivals.remove(&position);
-                queue.positions.retain(|p| *p != position);
-                queue.queued.remove(&position);
-            }
+            world.rendered.block_revisions.remove(&position);
+            jobs.cancel(&position, meshes.as_deref_mut());
+            cache.forget(position);
         }
         for column in &changed_columns {
             if world.chunks.prepared_column(*column).is_none() {
@@ -1079,6 +1305,9 @@ pub(crate) fn dispatch_meshes(
             let mut coarse = templates.as_ref().clone();
             for block in coarse.blocks.values_mut() {
                 block.surface = None;
+            }
+            for (&id, block) in &templates.cube_lods {
+                coarse.blocks.insert(id, block.clone());
             }
             *coarse_templates = Some((templates.clone(), Arc::new(coarse)));
         }
@@ -1173,6 +1402,7 @@ pub(crate) fn dispatch_meshes(
         let _preparation_scope = terra_core::profiling::ScopeTimer::new("terrain.prepare_jobs");
         let available = job_limit.saturating_sub(jobs.0.len());
         let mut dispatched = 0;
+        let mut exact_shadow_materials = None;
         for _ in 0..available {
             let Some(position) = queue.pop_for_dispatch(dispatched, dispatch_started.elapsed())
             else {
@@ -1226,20 +1456,18 @@ pub(crate) fn dispatch_meshes(
             }
             let models = if has_models && section.mesh.is_some() {
                 let _scope = terra_core::profiling::ScopeTimer::new("terrain.custom_snapshot");
-                let edits = match world.journal.snapshot(position) {
-                    Ok(edits) => edits,
+                match capture_models(&section.data, templates, &world.chunks, &world.journal) {
+                    Ok(mut models) => {
+                        if let Some(models) = &mut models {
+                            Arc::make_mut(models).refresh_heraldry(position, kingdoms);
+                        }
+                        models
+                    }
                     Err(error) => {
-                        status.error = Some(error.to_string());
+                        status.error = Some(error);
                         continue;
                     }
-                };
-                super::custom::capture(&section.data, templates, &world.journal, |global| {
-                    edits
-                        .get(&global)
-                        .copied()
-                        .or_else(|| world.chunks.block_at(global))
-                })
-                .map(Arc::new)
+                }
             } else {
                 None
             };
@@ -1308,7 +1536,7 @@ pub(crate) fn dispatch_meshes(
             let seasonal_foliage = geometry
                 .faces
                 .iter()
-                .any(|face| matches!(face.material, 7..=9 | 132 | 133));
+                .any(|face| matches!(face.material, 7..=9 | 132 | 133 | 195));
             let exposure = cache
                 .4
                 .entry([position.x, position.z])
@@ -1374,20 +1602,32 @@ pub(crate) fn dispatch_meshes(
                 None
             };
             let appearance_epoch = cache.appearance_epoch(position, &world.journal);
-            let options = RenderOptions {
-                water_level: world
-                    .config
-                    .world
-                    .water
-                    .then_some(world.config.world.sea_level),
-                detail_level: level,
-                terrain: Some(world.terrain.0.clone()),
-                exposure,
-                conditions: world.journal.surface_snapshot(position),
-            };
+            let options =
+                RenderOptions {
+                    water_level: world
+                        .config
+                        .world
+                        .water
+                        .then_some(world.config.world.sea_level),
+                    detail_level: level,
+                    terrain: Some(world.terrain.0.clone().with_planted_appearance(
+                        world.journal.planted_appearance_records(position),
+                    )),
+                    exposure,
+                    tints: Arc::new(world.journal.tint_snapshot(position)),
+                    conditions: world.journal.surface_snapshot(position),
+                };
             let pack_foliage =
                 world.foliage_reference.is_none() && crate::foliage::packing::enabled();
+            let pack_static = super::builder::static_frame_packing_enabled();
             let shadow_proxies = super::shadows::enabled(world.graphics.as_deref());
+            let exact_shadows = if shadow_proxies && level != DetailLevel::Near {
+                exact_shadow_materials
+                    .get_or_insert_with(|| world.exact_shadows.capture(&assets))
+                    .clone()
+            } else {
+                None
+            };
             let task = AsyncComputeTaskPool::get().spawn(async move {
                 let start = std::time::Instant::now();
                 if let Some(edits) = mineral_edits.as_ref()
@@ -1396,13 +1636,18 @@ pub(crate) fn dispatch_meshes(
                     refresh_growth(&mut geometry, position, terrain, edits);
                     if seasonal_foliage && let Ok(origin) = position.origin() {
                         let trees = terrain.tree_appearance(origin);
-                        if let Some(faces) = super::seasonal_foliage::split_edited_faces(
-                            &geometry.faces,
-                            origin,
-                            edits,
-                            options.exposure.as_deref(),
-                            |global, material| trees.at(global, material),
-                        ) {
+                        if let Some(faces) =
+                            super::seasonal_foliage::split_edited_faces_with_planted(
+                                &geometry.faces,
+                                origin,
+                                edits,
+                                options.exposure.as_deref(),
+                                (
+                                    |global, material| trees.at(global, material),
+                                    |global, material| trees.is_planted(global, material),
+                                ),
+                            )
+                        {
                             Arc::make_mut(&mut geometry).faces = faces;
                         }
                     }
@@ -1427,6 +1672,9 @@ pub(crate) fn dispatch_meshes(
                     super::lighting::apply(&mut batches, &geometry.occluders, &templates);
                     if shadow_proxies {
                         super::shadows::append(&mut batches, &geometry.faces, &templates, level)?;
+                        if let Some(materials) = &exact_shadows {
+                            super::shadows::append_exact(&mut batches, materials, level)?;
+                        }
                     }
                     if seasonal_foliage
                         && let (Some(terrain), Some(edits), Ok(origin)) =
@@ -1435,12 +1683,15 @@ pub(crate) fn dispatch_meshes(
                         let trees = terrain.tree_appearance(origin);
                         let climate =
                             crate::weather::storage::snow::SnowClimate::new(terrain, origin);
-                        super::seasonal_foliage::annotate(
+                        super::seasonal_foliage::annotate_with_planted(
                             &mut batches,
                             &templates,
                             origin,
                             edits,
-                            |global, material| trees.at(global, material),
+                            (
+                                |global, material| trees.at(global, material),
+                                |global, material| trees.is_planted(global, material),
+                            ),
                             |position| climate.temperature(position),
                             |cell| {
                                 options
@@ -1450,19 +1701,29 @@ pub(crate) fn dispatch_meshes(
                             },
                         );
                     }
-                    if pack_foliage {
-                        for batch in &mut batches {
-                            if terra_voxel::MaterialId::FOLIAGE
-                                .into_iter()
-                                .filter_map(|id| templates.blocks.get(&id))
-                                .any(|block| block.face_materials.contains(&batch.material))
-                            {
+                    for batch in &mut batches {
+                        let foliage = terra_voxel::MaterialId::FOLIAGE
+                            .into_iter()
+                            .filter_map(|id| templates.blocks.get(&id))
+                            .any(|block| block.face_materials.contains(&batch.material));
+                        if foliage {
+                            if pack_foliage {
                                 crate::foliage::packing::pack(batch);
                             }
+                        } else if pack_static
+                            && !templates.water_material(batch.material)
+                            && !templates.torch_material(batch.material)
+                            && !templates.torch_palette.contains_key(&batch.material)
+                        {
+                            batch.pack_static_frame();
                         }
                     }
+                    let mut batches = crate::upload_budget::split_batches(batches)?;
                     for batch in &mut batches {
                         batch.compact_indices();
+                        if !batch.shadow_only && !templates.water_material(batch.material) {
+                            super::precision::compact_batch_tints(batch);
+                        }
                     }
                     Ok(batches)
                 });
@@ -1494,8 +1755,8 @@ pub(crate) fn dispatch_meshes(
         && jobs.1.is_empty()
         && queue.positions.is_empty()
         && !queue.has_selection_work()
-        && world.chunks.loaded.iter().all(|(p, s)| {
-            s.mesh.is_none() || world.visibility.as_ref().is_some_and(|v| v.hidden(*p))
+        && world.chunks.loaded.iter().all(|(&position, section)| {
+            status.section_ready(position, Some(section), world.visibility.as_deref())
         });
 }
 pub(crate) fn poll_job(job: &mut RenderJob) -> Option<(Result<Vec<MeshBatch>, String>, f64)> {
@@ -1513,6 +1774,93 @@ pub(crate) fn focus_bucket(focus: [f64; 3]) -> [i64; 3] {
 #[cfg(test)]
 mod dispatch_tests {
     use super::*;
+
+    #[test]
+    fn portal_culled_cpu_meshes_allow_the_play_budget_but_visible_pending_meshes_do_not() {
+        let hidden = SectionPos::new(-2, -3, -4);
+        let visible = SectionPos::new(-2, 4, -4);
+        let mut chunks = ChunkStore::default();
+        for position in [hidden, visible] {
+            chunks.loaded.insert(
+                position,
+                terra_world::streaming::LoadedSection {
+                    data: terra_voxel::BlockSection::empty(position).unwrap(),
+                    mesh: Some(BlockMesh::default()),
+                    mesh_epoch: 0,
+                    water_epoch: 0,
+                    water: None,
+                    props: Vec::new(),
+                },
+            );
+        }
+        assert!(!MeshQueue::uploads_consumed(&chunks, |p| p == hidden));
+        chunks.loaded.get_mut(&visible).unwrap().mesh = None;
+        assert!(MeshQueue::uploads_consumed(&chunks, |p| p == hidden));
+        assert!(!MeshQueue::uploads_consumed(&chunks, |_| false));
+
+        let mut queue = MeshQueue::default();
+        queue.update_initial_ready(false, MeshQueue::uploads_consumed(&chunks, |p| p == hidden));
+        assert!(queue.initial_ready);
+        queue.selection_dirty = true;
+        queue.begin_sweep(|| vec![hidden; 15_000]);
+        assert!(queue.sweep_candidate(0, Duration::ZERO).is_some());
+        assert!(
+            queue
+                .sweep_candidate(1, Duration::from_micros(750))
+                .is_none()
+        );
+        queue.finish_sweep();
+        assert!(queue.sweep.is_some(), "remaining work resumes next frame");
+        assert!(
+            chunks.loaded[&hidden].mesh.is_some(),
+            "culled geometry is retained"
+        );
+    }
+
+    #[test]
+    fn batched_unloads_scan_the_backlog_once_and_preserve_reloaded_sections() {
+        const BACKLOG: usize = 8_192;
+        const REMOVALS: usize = 1_024;
+        let mut queue = MeshQueue::default();
+        for x in 0..BACKLOG as i64 {
+            let position = SectionPos::new(x, -2, -3);
+            queue.enqueue(position);
+            queue.arrivals.insert(position);
+        }
+        let notices: Vec<_> = (0..REMOVALS as i64)
+            .flat_map(|x| [SectionPos::new(x, -2, -3); 2])
+            .collect();
+        let mut inspected = 0;
+        let loaded = |position: SectionPos| position.x >= REMOVALS as i64 || position.x % 2 == 0;
+        let removed = queue.remove_unloaded(notices, |position| {
+            inspected += 1;
+            loaded(position)
+        });
+        assert_eq!(removed.len(), REMOVALS / 2);
+        assert_eq!(inspected, REMOVALS + BACKLOG * 3);
+        assert!(queue.positions.iter().copied().all(loaded));
+        assert_eq!(queue.positions.len(), BACKLOG - REMOVALS / 2);
+        assert_eq!(queue.queued.len(), queue.positions.len());
+        assert_eq!(queue.arrivals.len(), queue.positions.len());
+        assert!(queue.positions.contains(&SectionPos::new(0, -2, -3)));
+        assert!(!queue.positions.contains(&SectionPos::new(1, -2, -3)));
+
+        let before = queue.positions.clone();
+        let mut inspected = 0;
+        assert!(
+            queue
+                .remove_unloaded([SectionPos::new(0, -2, -3); 2], |_| {
+                    inspected += 1;
+                    true
+                })
+                .is_empty()
+        );
+        assert_eq!(
+            inspected, 1,
+            "reloaded-only notices cannot rescan the queue"
+        );
+        assert_eq!(queue.positions, before);
+    }
 
     #[test]
     fn large_backlog_priority_looks_up_each_candidate_once_without_changing_dispatch_order() {
@@ -2034,6 +2382,130 @@ mod stream_exposure_tests {
             assert!(cache.5.columns.is_empty());
             assert!(cache.5.changed.is_empty());
             assert!(cache.4.is_empty());
+        }
+    }
+
+    #[test]
+    fn pending_stream_recapture_preserves_staged_workers_until_masks_are_known() {
+        use terra_world::streaming::LoadedSection;
+        for changed in [false, true] {
+            let mut app = App::new();
+            app.add_plugins(MinimalPlugins)
+                .init_resource::<Assets<Mesh>>()
+                .init_resource::<crate::blocks::BlockAssets>()
+                .init_resource::<RenderedSections>()
+                .init_resource::<RenderStatus>()
+                .init_resource::<RenderJobs>()
+                .init_resource::<GeometryCache>()
+                .init_resource::<ChunkStore>()
+                .init_resource::<EditJournal>()
+                .add_systems(Update, super::super::upload_sections);
+            app.world_mut()
+                .resource_mut::<crate::blocks::BlockAssets>()
+                .materials
+                .push(Handle::default());
+            let position = SectionPos::new(-2, 2, -3);
+            let unrelated = SectionPos::new(3, 2, -3);
+            for owner in [position, unrelated] {
+                app.world_mut().resource_mut::<ChunkStore>().loaded.insert(
+                    owner,
+                    LoadedSection {
+                        data: terra_voxel::BlockSection::empty(owner).unwrap(),
+                        mesh: None,
+                        mesh_epoch: 0,
+                        water_epoch: 0,
+                        water: None,
+                        props: Vec::new(),
+                    },
+                );
+            }
+            let old_epoch;
+            {
+                let mut cache = app.world_mut().resource_mut::<GeometryCache>();
+                cache.insert_test(position, 0, BlockMesh::default());
+                cache.5.watch(position, Some(mask(32)));
+                old_epoch = cache.appearance_epoch(position, &EditJournal::default());
+                assert!(cache.5.mark_pending([position.x, position.z]));
+            }
+            let handle = app
+                .world_mut()
+                .resource_mut::<Assets<Mesh>>()
+                .add(Mesh::from(Cuboid::default()));
+            let staged = super::super::staging::StagedMesh {
+                handle: handle.clone(),
+                bounds: None,
+                rooted: false,
+                damp: false,
+                opaque_shadow: false,
+                coastal_quads: 0,
+                far: None,
+            };
+            for (owner, epoch, batches) in [
+                (
+                    position,
+                    old_epoch,
+                    vec![MeshBatch {
+                        staged: Some(staged),
+                        ..Default::default()
+                    }],
+                ),
+                (unrelated, 0, Vec::new()),
+            ] {
+                app.world_mut().resource_mut::<RenderJobs>().0.insert(
+                    owner,
+                    RenderJob {
+                        ready: Some((Ok(batches), 0.0)),
+                        micro_detail: true,
+                        epoch: 0,
+                        appearance_epoch: epoch,
+                        level: DetailLevel::Near,
+                        task: AsyncComputeTaskPool::get().spawn(std::future::pending()),
+                    },
+                );
+            }
+            app.update();
+            let jobs = app.world().resource::<RenderJobs>();
+            assert!(jobs.0[&position].ready.is_some());
+            assert!(
+                jobs.1.is_empty(),
+                "pending is not evidence of stale geometry"
+            );
+            assert!(app.world().resource::<Assets<Mesh>>().contains(handle.id()));
+            assert!(
+                app.world()
+                    .resource::<RenderedSections>()
+                    .block_revisions
+                    .contains_key(&unrelated),
+                "one pending column cannot block unrelated uploads"
+            );
+            {
+                let mut cache = app.world_mut().resource_mut::<GeometryCache>();
+                assert_eq!(
+                    cache.5.finish(
+                        [position.x, position.z],
+                        Some(mask(if changed { 80 } else { 32 })),
+                    ),
+                    changed
+                );
+            }
+            app.update();
+            assert!(app.world().resource::<RenderJobs>().0.is_empty());
+            assert_eq!(
+                app.world().resource::<RenderJobs>().1,
+                if changed { vec![position] } else { Vec::new() }
+            );
+            assert_eq!(
+                app.world()
+                    .resource::<RenderedSections>()
+                    .sections
+                    .contains_key(&position),
+                !changed
+            );
+            assert_eq!(
+                app.world().resource::<Assets<Mesh>>().contains(handle.id()),
+                !changed,
+                "only genuinely stale staging is released"
+            );
         }
     }
 

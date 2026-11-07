@@ -1,0 +1,42 @@
+[
+  {
+    "reason": "Cold highland spawn produced snow; required rain readiness was not reached.",
+    "selected_raw_evidence": [
+      "2026-11-05T09:09:27.714906Z ERROR terra_client::smoke_test: Client smoke test timed out",
+      "Error: \"Client exited with an error\"",
+      "{\"command\": [\"/tmp/teramic-o07-i3w2xd60/binaries/terra-client-before\", \"--smoke-test-benchmark\"], \"wall_seconds\": 204.629, \"peak_rss_kib\": 2379988, \"user_cpu_seconds\": 655.768, \"system_cpu_seconds\": 79.948, \"peak_drm_memory_vram_kib\": 4303472, \"peak_drm_memory_gtt_kib\": 67588, \"exit_code\": 1}"
+    ],
+    "sha256": "de9a713b4478184fc489b0f0d282c899bfb2678da25ba195c969e54a88c63f63",
+    "source": "/tmp/teramic-o07-i3w2xd60/before/rain/native.log"
+  },
+  {
+    "reason": "Initial village camera at33.62m clipped the floor after f32 teleport conversion; target scene was not reached.",
+    "selected_raw_evidence": [
+      "2026-11-05T09:23:06.922375Z ERROR terra_client::smoke_test: Client smoke test timed out",
+      "Error: \"Client exited with an error\"",
+      "{\"command\": [\"/tmp/teramic-o07-i3w2xd60/binaries/terra-client-before\", \"--smoke-test-benchmark\"], \"wall_seconds\": 204.63, \"peak_rss_kib\": 2489192, \"user_cpu_seconds\": 645.937, \"system_cpu_seconds\": 79.816, \"peak_drm_memory_vram_kib\": 4475712, \"peak_drm_memory_gtt_kib\": 67588, \"exit_code\": 1}"
+    ],
+    "sha256": "d3a0887ec85d6c58eb5f6410457b01fb36070dba605fed525e3161042cb6c706",
+    "source": "/tmp/teramic-o07-i3w2xd60/before-warm/rain/native.log"
+  },
+  {
+    "reason": "Completed edits but rejected natural Grass-to-Dirt decay in the old fixture restoration check; no valid wall summary.",
+    "selected_raw_evidence": [
+      "2026-11-05T09:15:42.506490Z ERROR terra_client::performance_edits: Authoritative soak edits failed error=Rapid edit fixture did not restore its original empty cell and ground stage=Confirm { operation: RemoveSeal, previous_request: 239, previous_revision: 240, material: 0 } cycle=120",
+      "Error: \"Client exited with an error\"",
+      "{\"command\": [\"/tmp/teramic-o07-i3w2xd60/binaries/terra-client-before\", \"--smoke-test-benchmark\"], \"wall_seconds\": 57.003, \"peak_rss_kib\": 2240440, \"user_cpu_seconds\": 201.787, \"system_cpu_seconds\": 19.669, \"peak_drm_memory_vram_kib\": 4280184, \"peak_drm_memory_gtt_kib\": 67588, \"exit_code\": 1}"
+    ],
+    "sha256": "d29f173c3d5dc3756cd1eeab7f02f6c9df90780a5325c82e5aff279f040b4342",
+    "source": "/tmp/teramic-o07-i3w2xd60/before/placement/native.log"
+  },
+  {
+    "reason": "Initial fixture selected an empty source slot; first edit was rejected.",
+    "selected_raw_evidence": [
+      "2026-11-05T08:58:03.189672Z ERROR terra_client::performance_edits: Authoritative soak edits failed error=Server rejected rapid PlaceDryStone: Invalid stage=Confirm { operation: PlaceDryStone, previous_request: 0, previous_revision: 0, material: 3 } cycle=0",
+      "Error: \"Client exited with an error\"",
+      "{\"command\": [\"/tmp/teramic-o07-i3w2xd60/binaries/terra-client-before\", \"--smoke-test-benchmark\"], \"wall_seconds\": 30.882, \"peak_rss_kib\": 2163548, \"user_cpu_seconds\": 110.598, \"system_cpu_seconds\": 11.692, \"peak_drm_memory_vram_kib\": 3980984, \"peak_drm_memory_gtt_kib\": 67588, \"exit_code\": 1}"
+    ],
+    "sha256": "03ba0dfe90ff5278ed2767b8c4be32b9aa1e5501e2136e6b3c12bb227bf8d088",
+    "source": "/tmp/teramic-o07-i3w2xd60/runs/before-placement-probe.log"
+  }
+]

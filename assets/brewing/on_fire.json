@@ -1,0 +1,1 @@
+{"id":12,"key":"teramic::on_fire_potion","name":"Burning Potion","inputs":[{"item":{"dust":"coal"},"count":1},{"item":{"flower":"orange"},"count":1}],"effects":[{"kind":"on_fire","level":1,"seconds":10.0}],"seconds":14.0,"color":[239,107,35]}

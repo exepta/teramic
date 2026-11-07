@@ -3,6 +3,7 @@ mod geometry;
 mod growth;
 mod jobs;
 mod shapes;
+mod static_layout;
 #[cfg(test)]
 mod tests;
 pub(crate) mod wind;

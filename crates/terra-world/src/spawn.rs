@@ -1,5 +1,6 @@
 //! Deterministic dry-land selection without creating islands or changing saves.
 use crate::{SectionGenerator, TerraGenerator, edits::EditJournal, water::fluid_cell_at};
+use terra_core::BiomeKind;
 use terra_voxel::MaterialId;
 
 #[cfg(test)]
@@ -33,19 +34,32 @@ impl WorldSpawn {
 }
 
 /// Search nearby cells first, then wider rings. At most 5441 candidate columns
-/// are examined. A world without reachable dry land fails instead of spawning
-/// in water or silently building a platform under the player.
+/// are examined. An optional saved biome preference filters this same bounded
+/// search; it never changes terrain or the validity of saved player positions.
+/// A world without suitable dry land fails instead of spawning in water or
+/// silently building a platform under the player.
 pub fn find_land_spawn(
     terrain: &TerraGenerator,
     journal: &EditJournal,
     origin: [i64; 2],
 ) -> Result<WorldSpawn, String> {
-    let failure =
-        || "No safe dry-land spawn found. Check world water/terrain settings.".to_string();
+    let preferred = terrain.config().preferred_spawn_biome;
+    let failure = || match preferred {
+        Some(biome) => format!(
+            "No safe spawn found for the selected biome ({biome:?}). Try another seed or biome."
+        ),
+        None => "No safe dry-land spawn found. Check world water/terrain settings.".to_string(),
+    };
     if origin.iter().any(|v| !(-LIMIT..=LIMIT).contains(v)) {
         return Err(failure());
     }
     let config = terrain.config();
+    if preferred.is_some_and(|biome| {
+        (!config.biomes && biome != BiomeKind::Forest)
+            || (biome == BiomeKind::Ocean && !config.water)
+    }) {
+        return Err(failure());
+    }
     if config.water
         && config.hill_amplitude == 0.0
         && config.mountain_amplitude == 0.0
@@ -55,7 +69,13 @@ pub fn find_land_spawn(
     }
     let generator = SectionGenerator::new(terrain.clone());
     let candidate = |x: i64, z: i64| {
+        if !terrain.settlement_start_clear([x, z]) {
+            return None;
+        }
         let ground = surface_ground(terrain, x, z)?;
+        if preferred.is_some_and(|biome| !matches_preferred_biome(terrain, x, z, biome)) {
+            return None;
+        }
         let spawn = WorldSpawn { ground };
         valid(spawn, &generator, journal).then_some(spawn)
     };
@@ -81,6 +101,50 @@ pub fn find_land_spawn(
         }
     }
     Err(failure())
+}
+
+/// Dry land uses the same visible biome policy as SurfaceColumn: marine
+/// climate alone does not turn a dry island into an ocean floor. The Ocean
+/// preference therefore means a safe shore within 64 m of real marine water.
+fn matches_preferred_biome(terrain: &TerraGenerator, x: i64, z: i64, preferred: BiomeKind) -> bool {
+    if preferred == BiomeKind::Ocean {
+        for distance in [8, 32, 64] {
+            for direction in [
+                [-1, -1],
+                [0, -1],
+                [1, -1],
+                [-1, 0],
+                [1, 0],
+                [-1, 1],
+                [0, 1],
+                [1, 1],
+            ] {
+                let point = [x + direction[0] * distance, z + direction[1] * distance];
+                if point.iter().any(|v| !(-LIMIT..=LIMIT).contains(v)) {
+                    continue;
+                }
+                let [sx, sz] = point.map(|value| value as f64 + 0.5);
+                if terrain.biome_at(sx, sz).weights.ocean > 0.45
+                    && terrain.water_column(sx, sz).is_some_and(|water| {
+                        (water.level - terrain.config().sea_level).abs() < 0.01
+                            && water.bed < water.level
+                            && terrain.surface_height(sx, sz) < water.level
+                    })
+                {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+    let mut weights = terrain.biome_at(x as f64 + 0.5, z as f64 + 0.5).weights;
+    weights.ocean = 0.0;
+    let visible = if weights.values().iter().all(|value| *value <= f64::EPSILON) {
+        BiomeKind::Plains
+    } else {
+        weights.dominant()
+    };
+    visible == preferred
 }
 
 fn surface_ground(terrain: &TerraGenerator, x: i64, z: i64) -> Option<[i64; 3]> {

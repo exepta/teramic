@@ -1,0 +1,141 @@
+{
+  "method": "Native game screenshots; centre crop and downsample only. No upscaling or generated artwork.",
+  "images": {
+    "plains": {
+      "source": "tools/benchmarks/results/kingdom-terrain-worldcreate-2026-11-06/biome-sources/picker-plains-overview.png",
+      "source_size": [
+        2562,
+        1440
+      ],
+      "source_sha256": "e8aeaa71788e9c92e3cbbdf07489106a3187a09517b3104190cd096e569ba158",
+      "crop_size": [
+        2562,
+        1281
+      ],
+      "export_size": [
+        1536,
+        768
+      ],
+      "sha256": "b2d1b20669912ef1b4bcb0edb2bae32c2a5843ff70a58f5d777f0ddb465ab12e"
+    },
+    "forest": {
+      "source": "tools/benchmarks/results/kingdom-terrain-worldcreate-2026-11-06/biome-sources/picker-forest-overview.png",
+      "source_size": [
+        2562,
+        1440
+      ],
+      "source_sha256": "4984f12c798f1696c2775f0dd9e860a6df8a2d9140e3824317ab00d25a414c4a",
+      "crop_size": [
+        2562,
+        1281
+      ],
+      "export_size": [
+        1536,
+        768
+      ],
+      "sha256": "59732e779edb9d4a38074488893c764e907a00cd12305f36491f9e57c0e9ae8a"
+    },
+    "desert": {
+      "source": "tools/benchmarks/results/kingdom-terrain-worldcreate-2026-11-06/biome-sources/picker-desert-overview.png",
+      "source_size": [
+        2562,
+        1440
+      ],
+      "source_sha256": "f254d5c35dbea2763123b6aeff624041630d8a1405e0312e890e6754f23c88fa",
+      "crop_size": [
+        2562,
+        1281
+      ],
+      "export_size": [
+        1536,
+        768
+      ],
+      "sha256": "23f579f47b27ad1bddb6eeac631c938bca45ed1c9fe07bb7be9dd832eb30997f"
+    },
+    "highlands": {
+      "source": "tools/benchmarks/results/kingdom-terrain-worldcreate-2026-11-06/biome-sources/picker-highlands-overview.png",
+      "source_size": [
+        2562,
+        1440
+      ],
+      "source_sha256": "e501aa6953cd1e70a159cd573345e7db7e8063f62308b7eaa869a3b81d9f6058",
+      "crop_size": [
+        2562,
+        1281
+      ],
+      "export_size": [
+        1536,
+        768
+      ],
+      "sha256": "fbc81efd7ab83f41cdb8504f95dcb61d03b2cd0c164ea22fc6a5ffd904033970"
+    },
+    "mushroom-park": {
+      "source": "tools/benchmarks/results/kingdom-terrain-worldcreate-2026-11-06/biome-sources/picker-mushroom-park-overview.png",
+      "source_size": [
+        2562,
+        1440
+      ],
+      "source_sha256": "c807a178d86f8757c01d2a5775ce1c40765b277e82be11daf62206860da94bdf",
+      "crop_size": [
+        2562,
+        1281
+      ],
+      "export_size": [
+        1536,
+        768
+      ],
+      "sha256": "a5d562db31005a7e2fbe77652fcd2fe45266dc781ec1e7eb8d593946a87ef758"
+    },
+    "cliffted-desert": {
+      "source": "tools/benchmarks/results/kingdom-terrain-worldcreate-2026-11-06/biome-sources/picker-cliffted-desert-overview.png",
+      "source_size": [
+        2562,
+        1440
+      ],
+      "source_sha256": "5dd3c32a657d9cee19d3baa2e5ed4184794bb765c04469880922b2878ec28bcf",
+      "crop_size": [
+        2562,
+        1281
+      ],
+      "export_size": [
+        1536,
+        768
+      ],
+      "sha256": "763dcdcdbb9e00006195f52bb00dba4671c9a0e912f4e36050cabbe379ee6e99"
+    },
+    "cherry-forest": {
+      "source": "tools/benchmarks/results/kingdom-terrain-worldcreate-2026-11-06/biome-sources/picker-cherry-forest-overview.png",
+      "source_size": [
+        2562,
+        1440
+      ],
+      "source_sha256": "ade0614451916d9f67d6a4f3905ecfa6493618458af456443c8fe4a38c05cfc3",
+      "crop_size": [
+        2562,
+        1281
+      ],
+      "export_size": [
+        1536,
+        768
+      ],
+      "sha256": "1e52f260092091e5493cdf992befa31bd19608eaa0466aaf8fd6cf1f96f38062"
+    },
+    "ocean": {
+      "source": "tools/benchmarks/results/kingdom-terrain-worldcreate-2026-11-06/biome-sources/picker-ocean-overview.png",
+      "source_size": [
+        2562,
+        1440
+      ],
+      "source_sha256": "0a8a6377933b7dc681d04248c0c99248bfdc624525ac05465eeb2680a5d5a047",
+      "crop_size": [
+        2562,
+        1281
+      ],
+      "export_size": [
+        1536,
+        768
+      ],
+      "sha256": "d2ce1ca839e6d4228af653fdf5a66e70cc0a81468c87b1836b628baf28322cb5"
+    }
+  }
+}

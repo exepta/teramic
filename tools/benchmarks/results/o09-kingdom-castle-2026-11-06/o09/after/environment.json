@@ -1,0 +1,18 @@
+{
+  "TERRA_CONFIG_DIR": "/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/target/o09-f43-nyw54kvg/after/configs",
+  "TERRA_MENU_CONFIG_DIR": "/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/target/o09-f43-nyw54kvg/after/menu",
+  "TERRA_PROFILE_FILE": "/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/target/o09-f43-nyw54kvg/after/profile.toml",
+  "TERRA_WORLD_DIR": "/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/target/o09-f43-nyw54kvg/after/worlds",
+  "TERRA_BENCH_MODE": "integrated",
+  "TERRA_BENCH_UI": "1",
+  "TERRA_BENCH_GRAPHICS": "1",
+  "TERRA_BENCH_INVENTORY": "1",
+  "TERRA_BENCH_INVENTORY_ROUNDS": "2",
+  "TERRA_BENCH_INVENTORY_SURFACE": "chest",
+  "TERRA_BENCH_SECONDS": "120",
+  "TERRA_BENCH_LOAD_SECONDS": "180",
+  "TERRA_BENCH_WEATHER": "clear",
+  "TERRA_CPU_SCOPES": "1",
+  "TERRA_SCOPE_TIMELINE": "1",
+  "WGPU_BACKEND": "vulkan"
+}

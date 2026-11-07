@@ -63,3 +63,42 @@
 .full-map-panel.compact .full-map-footer > div { gap: 3px; flex-basis: 48%; }
 .full-map-panel.compact .map-footer-biome icon, .full-map-panel.compact .map-footer-height icon { display: none; }
 .map-peer-name { position: absolute; margin: 0; width: 128px; margin-left: -64px; height: 18px; font-size: 12px; line-height: 18px; color: #ffffff; text-shadow: 1px 1px #10191d; text-align: center; text-wrap: nowrap; overflow: hidden; pointer-events: none; background-color: #10191d9c; border-radius: 3px; }
+.diplomacy-sidebar { gap: 9px; overflow-y: auto; }
+.diplomacy-sidebar p { margin: 0; font-size: 12px; text-wrap: wrap; color: #d2c8a7; }
+.diplomacy-sidebar h3 { margin: 0; font-size: 15px; text-wrap: wrap; color: #f4e3b9; }
+.diplomacy-key { display: flex; flex-direction: column; gap: 5px; flex-shrink: 0; }
+.diplomacy-key p { display: flex; align-items: center; gap: 7px; font-size: 11px; }
+.claim-key { width: 16px; height: 12px; border: 1px solid #d8bb74; flex-shrink: 0; }
+.claim-key.protected { background-color: #4c7598; }
+.claim-key.territory { background-color: #b1c6d699; }
+.diplomacy-selection { display: flex; flex-direction: column; gap: 5px; padding: 10px; background-color: #2b2019; border: 1px solid #795b3e; border-radius: 4px; flex-shrink: 0; }
+.diplomacy-realm-heading { display: flex; align-items: center; gap: 8px; }
+.diplomacy-swatch { display: flex; align-items: center; justify-content: center; width: 27px; height: 27px; min-width: 27px; flex-shrink: 0; border: 1px solid #d3bb79; border-radius: 3px; }
+.diplomacy-swatch img { width: 20px; height: 20px; }
+.diplomacy-actions { display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; }
+.diplomacy-actions button { min-height: 34px; font-size: 12px; }
+.diplomacy-capacity { text-wrap: wrap; }
+.diplomacy-legends { display: flex; flex-direction: column; gap: 7px; flex-shrink: 0; }
+.diplomacy-legend { display: flex; align-items: center; gap: 8px; padding: 7px; border-top: 1px solid #5a5d3d; }
+.diplomacy-legend > div { min-width: 0; }
+.diplomacy-legend p { font-size: 10px; }
+.diplomacy-legend > div:not(.diplomacy-swatch) { display: flex; flex-direction: column; flex-grow: 1; min-width: 0; gap: 3px; }
+.diplomacy-legend h3, .diplomacy-legend p { width: 100%; min-width: 0; text-wrap: wrap; }
+.diplomacy-legend h3 { font-size: 13px; }
+.diplomacy-relations-key { display: flex; flex-wrap: wrap; gap: 5px; flex-shrink: 0; }
+.diplomacy-relation { width: auto; max-width: 100%; align-self: flex-start; padding: 3px 6px; font-size: 10px; color: #dfd1b4; background-color: #40372c; border-radius: 3px; text-wrap: wrap; }
+.diplomacy-relation.own { color: #f2d991; background-color: #5a4828; }
+.diplomacy-relation.allied { color: #c0e4b0; background-color: #314a33; }
+.diplomacy-relation.hostile { color: #f2b5a1; background-color: #5c342e; }
+.diplomacy-relation.neutral { color: #dfd1b4; background-color: #40372c; }
+.diplomacy-relation-help { font-size: 10px; color: #bca78a; text-wrap: wrap; }
+@media (max-height: 800px) {
+  .full-map-tool-rail { gap: 5px; }
+  .full-map-panel .map-tool { width: 44px; height: 44px; min-width: 44px; max-width: 44px; min-height: 44px; max-height: 44px; flex-basis: 44px; padding: 7px; }
+  .map-tool icon { width: 19px; height: 19px; }
+}
+
+.diplomacy-actions .map-command { padding: 7px 10px; height: auto; min-height: 34px; text-wrap: wrap; align-items: center; justify-content: center; }
+.diplomacy-actions .map-command.selected { background-color: #50402a; border-color: #bc9561; color: #ffe5b6; }
+.diplomacy-apply { display: flex; gap: 6px; width: 100%; }
+.diplomacy-apply button { flex-basis: 0; flex-grow: 1; min-width: 0; }

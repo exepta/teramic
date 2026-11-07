@@ -51,6 +51,7 @@ fn sizing(kind: PropKind, variant: u8) -> Result<&'static Sizing, String> {
             let horizontal_scale = if matches!(kind, PropKind::BeeNest | PropKind::Scarecrow)
                 || kind.aquatic()
                 || kind.crop().is_some()
+                || kind.sapling().is_some()
             {
                 1.0
             } else {

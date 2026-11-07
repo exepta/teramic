@@ -1,6 +1,82 @@
 use super::*;
 use terra_core::{ArmorPiece, EquipmentSlot};
 
+#[test]
+fn rgb_cape_cache_bounds_a_thousand_gender_keys_without_removing_equipped_assets() {
+    use bevy::{asset::AssetApp, mesh::PrimitiveTopology};
+    let mut app = App::new();
+    app.add_plugins((MinimalPlugins, AssetPlugin::default()))
+        .init_asset::<Mesh>()
+        .init_resource::<ArmorAssets>();
+    let triangle = || {
+        Mesh::new(
+            PrimitiveTopology::TriangleList,
+            bevy::asset::RenderAssetUsages::RENDER_WORLD,
+        )
+        .with_inserted_attribute(
+            Mesh::ATTRIBUTE_POSITION,
+            vec![[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]],
+        )
+    };
+    let white = ItemKind::Cape(terra_core::CapeItem::ALL_WHITE[0]);
+    let fixed = app
+        .world_mut()
+        .resource_mut::<Assets<Mesh>>()
+        .add(triangle());
+    app.world_mut().resource_mut::<ArmorAssets>().cache_cape(
+        white,
+        false,
+        vec![(AvatarPart::Body, fixed.clone())],
+    );
+    let mut live = None;
+    let mut expired = None;
+    for i in 0u16..1000 {
+        let color = terra_core::beds::DyeColor::Rgb([(i / 2) as u8, ((i / 2) >> 8) as u8, 83]);
+        let item = ItemKind::Cape(terra_core::CapeItem {
+            color,
+            ..terra_core::CapeItem::ALL_WHITE[0]
+        });
+        let mesh = app
+            .world_mut()
+            .resource_mut::<Assets<Mesh>>()
+            .add(triangle());
+        if i == 0 {
+            live = Some((
+                app.world_mut().spawn(Mesh3d(mesh.clone())).id(),
+                mesh.id(),
+                item,
+            ));
+        }
+        if i == 1 {
+            expired = Some(mesh.id());
+        }
+        let mut cache = app.world_mut().resource_mut::<ArmorAssets>();
+        cache.cache_cape(item, i % 2 != 0, vec![(AvatarPart::Body, mesh)]);
+        assert!(cache.dynamic_order.len() <= MAX_DYNAMIC_CAPES);
+        assert!(cache.parts.len() <= MAX_DYNAMIC_CAPES + 1);
+    }
+    app.update();
+    let (entity, id, item) = live.unwrap();
+    let cache = app.world().resource::<ArmorAssets>();
+    assert_eq!(cache.parts.len(), MAX_DYNAMIC_CAPES + 1);
+    assert!(cache.parts.contains_key(&(white, false)));
+    assert!(!cache.parts.contains_key(&(item, false)));
+    assert_eq!(app.world().get::<Mesh3d>(entity).unwrap().0.id(), id);
+    assert!(app.world().resource::<Assets<Mesh>>().contains(id));
+    assert!(
+        !app.world()
+            .resource::<Assets<Mesh>>()
+            .contains(expired.unwrap())
+    );
+    assert_eq!(
+        app.world().resource::<Assets<Mesh>>().len(),
+        MAX_DYNAMIC_CAPES + 2
+    );
+    app.world_mut().despawn(entity);
+    app.update();
+    assert!(!app.world().resource::<Assets<Mesh>>().contains(id));
+}
+
 fn complete(material: ArmorMaterial) -> EquipmentSlots {
     let mut equipment = EquipmentSlots::default();
     for piece in ArmorPiece::ALL {
@@ -288,7 +364,7 @@ fn cape_cache_is_lazy_bounded_and_repeated_swaps_reuse_the_same_mesh_handles() {
 fn capes_only_cover_the_back_and_keep_the_chest_and_face_clear() {
     for cape in terra_core::CapeItem::ALL {
         for gender in [PlayerGender::Male, PlayerGender::Female] {
-            let parts = cape::parts(cape, gender).unwrap();
+            let parts = cape::parts(cape, gender, None).unwrap();
             assert_eq!(parts.len(), 3);
             for (_, batch) in &parts {
                 assert!(batch.positions.iter().all(|p| p[2] > 0.19));

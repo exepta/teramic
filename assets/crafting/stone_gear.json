@@ -1,0 +1,11 @@
+{
+  "id": "teramic::stone_gear", "name": "Stone Gear", "station": "workbench",
+  "output": { "item": { "block": 142 }, "count": 1 },
+  "pattern": { "kind": "shaped", "width": 3, "height": 3, "cells": [
+    null, { "item": { "block": 3 }, "count": 1 }, null,
+    { "item": { "block": 3 }, "count": 1 },
+    { "item": { "block": 145 }, "count": 1 },
+    { "item": { "block": 3 }, "count": 1 },
+    null, { "item": { "block": 3 }, "count": 1 }, null
+  ] }
+}

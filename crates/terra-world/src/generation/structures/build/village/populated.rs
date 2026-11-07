@@ -438,10 +438,15 @@ mod tests {
 
     #[test]
     fn populated_villages_fit_real_default_terrain_for_three_seeds() {
-        for seed in [42042, 1337, 99173] {
+        for (seed, landscape_revision) in [42042, 1337, 99173]
+            .into_iter()
+            .flat_map(|seed| [2, 3].map(|revision| (seed, revision)))
+        {
             let generator = TerraGenerator::new(WorldConfig {
                 seed: WorldSeed(seed),
                 structures_revision: 4,
+                landscape_revision,
+                rivers: landscape_revision >= 3,
                 ..Default::default()
             })
             .unwrap();
@@ -466,14 +471,14 @@ mod tests {
                 );
                 // Only actual settlement candidates: no unrelated mine/ruin
                 // plans, and a hard cap on terrain-heavy construction attempts.
-                if regional % 9 > 3 || regional % 10 == 9 || attempted >= 12 {
+                if regional % 9 > 3 || regional % 10 == 9 || attempted >= 24 {
                     return None;
                 }
                 attempted += 1;
                 generator.village_settlement(region).map(|v| (region, v))
             });
             let (region, village) = village.unwrap_or_else(|| {
-                panic!("seed={seed}: no revision-four village in {attempted} bounded candidates")
+                panic!("seed={seed}, landscape={landscape_revision}: no revision-four village in {attempted} bounded candidates")
             });
             let count = |role| village.services.iter().filter(|b| b.role == role).count();
             let range = match village.size {

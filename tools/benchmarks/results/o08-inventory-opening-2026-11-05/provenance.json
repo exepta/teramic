@@ -1,0 +1,203 @@
+{
+  "artifacts": {
+    "after-slot-player": {
+      "binary": "terra-client-after-slots",
+      "evidence": "evidence/after-slot-player.txt",
+      "implementation_stage": "slots-only causal intermediate",
+      "source": "/tmp/teramic-o08-439o32is/after-slot-player.log",
+      "source_bytes": 308849,
+      "source_config_directory": "configs",
+      "source_log_sha256": "e97e6badd4f874886a74cb24389b1e65e517cc733d033c2e7a0dd1cef3fb4ad6",
+      "summary": "runs/after-slot-player.json"
+    },
+    "before-player": {
+      "binary": "terra-client-before",
+      "evidence": "evidence/before-player.txt",
+      "implementation_stage": "baseline",
+      "source": "/tmp/teramic-o08-439o32is/before-player.log",
+      "source_bytes": 297750,
+      "source_config_directory": "configs",
+      "source_log_sha256": "b86c34fef9e533f32419c4818e4f05d4f67ef7013216b7bff434e4b35cf03efc",
+      "summary": "runs/before-player.json"
+    },
+    "chest-before-pending-gate": {
+      "binary": "terra-client-after-final",
+      "evidence": "evidence/chest-before-pending-gate.txt",
+      "implementation_stage": "intermediate: valid functional chest run, pending gate not fixed",
+      "source": "/tmp/teramic-o08-439o32is/chest-before-pending-gate.log",
+      "source_bytes": 550701,
+      "source_config_directory": "after-chest-configs",
+      "source_log_sha256": "95c4da81c9f5c97add6e0f62a14f60e12f2c0e69da7cca5bd268203b17b12f75",
+      "summary": "runs/chest-before-pending-gate.json"
+    },
+    "chest-cache-stable": {
+      "binary": "terra-client-after-cache-stable",
+      "evidence": "evidence/chest-cache-stable.txt",
+      "implementation_stage": "intermediate: stable fixture; stale projection race remains",
+      "source": "/tmp/teramic-o08-439o32is/chest-cache-stable.log",
+      "source_bytes": 594508,
+      "source_config_directory": "after-chest-configs",
+      "source_log_sha256": "ec63430009d98ebf4e03b0eca1f2006a5fab6f295d4057ab6d89cdc72abcd0fd",
+      "summary": "runs/chest-cache-stable.json"
+    },
+    "chest-projection-final": {
+      "binary": "terra-client-final-projection",
+      "evidence": "evidence/chest-projection-final.txt",
+      "implementation_stage": "final repeated authoritative chest",
+      "source": "/tmp/teramic-o08-439o32is/chest-projection-final.log",
+      "source_bytes": 584103,
+      "source_config_directory": "after-chest-configs",
+      "source_log_sha256": "763185314fd9c8033e76839379acf1f517d08f8e422edba1c90b5f2eb945ef37",
+      "summary": "runs/chest-projection-final.json"
+    },
+    "final-player": {
+      "binary": "terra-client-after-final",
+      "evidence": "evidence/final-player.txt",
+      "implementation_stage": "slots + crafting prewarm; repeated player coverage before cache fix",
+      "source": "/tmp/teramic-o08-439o32is/final-player.log",
+      "source_bytes": 537156,
+      "source_config_directory": "configs",
+      "source_log_sha256": "baae9b55d35e1efdb5eb9726aae4c5378076ee9c74a0b60508b2e1a0d841d0e9",
+      "summary": "runs/final-player.json"
+    },
+    "final-player-after-cache": {
+      "binary": "terra-client-after-cache",
+      "evidence": "evidence/final-player-after-cache.txt",
+      "implementation_stage": "final primary comparable default player",
+      "source": "/tmp/teramic-o08-439o32is/final-player-after-cache.log",
+      "source_bytes": 300908,
+      "source_config_directory": "configs",
+      "source_log_sha256": "3cfc1fcafcbaa991d962e49351638065e8066491031dca964798fbcf01f38f54",
+      "summary": "runs/final-player-after-cache.json"
+    },
+    "reference": {
+      "binary": "terra-client-final-projection",
+      "evidence": "evidence/reference.txt",
+      "source": "/tmp/teramic-o08-439o32is/reference.log",
+      "source_bytes": 12947,
+      "source_config_directory": "reference-configs",
+      "source_log_sha256": "e68fb29daeaf884827a5f5c4499beef34bc1ab8d0f6ea0ab5359c84b8e5f820d",
+      "summary": "runs/reference.json"
+    }
+  },
+  "binary_fingerprints": {
+    "terra-client-after-cache": {
+      "bytes": 1746753736,
+      "path": "target/o08-binaries/terra-client-after-cache",
+      "sha256": "33e3c0573364462a77a0791e7f16d0247139681f6fd65d8f54fdaececbc9a191"
+    },
+    "terra-client-after-cache-stable": {
+      "bytes": 1746754080,
+      "path": "target/o08-binaries/terra-client-after-cache-stable",
+      "sha256": "6f63e7a64a2c1b5a5dc9c4b42a47ef526ad04b1a4f2f3b5a652c7a721a7efb2c"
+    },
+    "terra-client-after-final": {
+      "bytes": 1746612208,
+      "path": "target/o08-binaries/terra-client-after-final",
+      "sha256": "21121b854753a396952e471e2e39eab417ce4e17657c6bd036ee5430fd79d7a1"
+    },
+    "terra-client-after-slots": {
+      "bytes": 1746596984,
+      "path": "target/o08-binaries/terra-client-after-slots",
+      "sha256": "d004267dac611c519eaf83dfcb98931b63534ed00a29f173e4f053053d7d4d04"
+    },
+    "terra-client-before": {
+      "bytes": 1746182512,
+      "path": "target/o08-binaries/terra-client-before",
+      "sha256": "195463d764b84c819cb42b2740657448a4eba911d0ba75193ea45f6d495c9d5e"
+    },
+    "terra-client-final-projection": {
+      "bytes": 1746757672,
+      "path": "target/o08-binaries/terra-client-final-projection",
+      "sha256": "f6a87a4f9c68666f8a6636b165ce4fba94a219061a780f11ff60cdb90c2dccef"
+    }
+  },
+  "collected_utc": "2026-11-05T16:45:49.621561+00:00",
+  "collector_sha256": "8f4b2cccb38c9e106686a88f05e6cb0114f7dc1e617276ba17d474ad7bf67c5f",
+  "configuration_sha256": {
+    "after-chest-configs": {
+      "audio.toml": "d0bb2fa81ba57c34c52f0282b4f88a35ae11fb2f217b3658b5ff365fee5000b4",
+      "client.toml": "97d09f278a771bbecb570b0210219a450e033c802d2c9ff10aa6b881409c2211",
+      "controls.toml": "af057e943a52520848c93f3a0e4354863e7d44d3b751f6e6010fbddf48e4b2ca",
+      "gameplay.toml": "c7ff511ad6b06010ca0b287fe35cda01e9705611b833d10a067a1eee1b309016",
+      "graphics.toml": "e9e71e744e0259353a8e55616ef6cb07e1599def026f08d8ef3abb2f9ba94b2a",
+      "multiplayer.toml": "e187160ce08807e85d8cdce8a1bc2c33a017915c106ed2b251a1daf7b52f06f9",
+      "server.toml": "d817f4e47a47d202f2ba8aaf557a939e5027811d643a3c6e50ad37c5120a7a9a",
+      "world.toml": "21d4e6e3f592af3310e25846034457ca65b4198d01718386e810ec7fee9b789e"
+    },
+    "configs": {
+      "audio.toml": "d0bb2fa81ba57c34c52f0282b4f88a35ae11fb2f217b3658b5ff365fee5000b4",
+      "client.toml": "97d09f278a771bbecb570b0210219a450e033c802d2c9ff10aa6b881409c2211",
+      "controls.toml": "af057e943a52520848c93f3a0e4354863e7d44d3b751f6e6010fbddf48e4b2ca",
+      "gameplay.toml": "c7ff511ad6b06010ca0b287fe35cda01e9705611b833d10a067a1eee1b309016",
+      "graphics.toml": "e9e71e744e0259353a8e55616ef6cb07e1599def026f08d8ef3abb2f9ba94b2a",
+      "multiplayer.toml": "e187160ce08807e85d8cdce8a1bc2c33a017915c106ed2b251a1daf7b52f06f9",
+      "server.toml": "d4c6084a2ea8365fa19dbce6740fb238d1c3854e3d618b18e43b715dd0c15a0a",
+      "world.toml": "21d4e6e3f592af3310e25846034457ca65b4198d01718386e810ec7fee9b789e"
+    },
+    "reference-configs": {
+      "audio.toml": "d0bb2fa81ba57c34c52f0282b4f88a35ae11fb2f217b3658b5ff365fee5000b4",
+      "client.toml": "97d09f278a771bbecb570b0210219a450e033c802d2c9ff10aa6b881409c2211",
+      "controls.toml": "af057e943a52520848c93f3a0e4354863e7d44d3b751f6e6010fbddf48e4b2ca",
+      "gameplay.toml": "c7ff511ad6b06010ca0b287fe35cda01e9705611b833d10a067a1eee1b309016",
+      "graphics.toml": "e9e71e744e0259353a8e55616ef6cb07e1599def026f08d8ef3abb2f9ba94b2a",
+      "multiplayer.toml": "e187160ce08807e85d8cdce8a1bc2c33a017915c106ed2b251a1daf7b52f06f9",
+      "server.toml": "d817f4e47a47d202f2ba8aaf557a939e5027811d643a3c6e50ad37c5120a7a9a",
+      "world.toml": "21d4e6e3f592af3310e25846034457ca65b4198d01718386e810ec7fee9b789e"
+    }
+  },
+  "copied_binaries": false,
+  "copied_profiles": false,
+  "copied_saves": false,
+  "external_style_probe_restoration": {
+    "byte_identical": true,
+    "bytes": 104052,
+    "included_in_production_patch": false,
+    "original_sha256": "8a1c557963e05f9ab46244ddc71b4f6ed7708ac04fcf5de8cd2482c0f2a29c30",
+    "original_snapshot_path": "/tmp/teramic-o08-style-trace/plugin.rs.original",
+    "purpose": "Temporary private style-pass diagnosis; the external dependency source was restored after instrumentation.",
+    "restored_external_path": "/run/media/exepta/Data/Jetbrains/projects/rust/tilt-us/tilt-ui/crates/tilt-ui-runtime/src/style/plugin.rs",
+    "restored_sha256": "8a1c557963e05f9ab46244ddc71b4f6ed7708ac04fcf5de8cd2482c0f2a29c30"
+  },
+  "source_after_sha256": {
+    "apps/client/src/inventory_benchmark.rs": "377afc1bcbadec17eab066754bf5afafe05db710f1ee0e48b8288a0e9e9988c3",
+    "apps/client/src/main_diagnostics.rs": "5ee6c53bac24e32a67737ac045888f34d14a41467c401a72b01fe5497c3d527b",
+    "crates/terra-ui/src/crafting.rs": "f343954ad8f427958f059d87ea7d38a65977cee2422c801a6c4a41cdd374cfe2",
+    "crates/terra-ui/src/inventory_cache.rs": "b2f5c90bd48c1c18cc480478544f2d370d3f6cc097f87c0c62f87a101bb4b518",
+    "crates/terra-ui/src/inventory_slot_style_tests.rs": "ab0bb6b656360600af1ac0b41f268ce44fed99a6f7435a574e09529be81444ee",
+    "crates/terra-ui/src/inventory_view.rs": "fad3fde1afa0c2e52a4a3d9bf9e1acc7be424da02703f17aa204c17d918205d8",
+    "src-ui/components/inventory-panel.component.css": "89a78c2f72c13cea2c21642c38e9c41b1fb2c87f21c1767c43e649fd885e5f97",
+    "src-ui/components/inventory-panel.component.html": "34e2b3af765c20804ab2a59b2ecfa3a1bc946b2dead81d0cdf1c73883367dfed",
+    "src-ui/components/inventory-slot.component.html": "dcebf4f2105c276eb38bcad803b6dd583a0a858e27fdf4812ecc9f9c69d36851"
+  },
+  "source_before_sha256": {
+    "Cargo.lock": "6ce9a347c11fcd80fe79c406b2af560834671bda17853e86a98aad74ead8621f",
+    "Cargo.toml": "5ca51fa592e394d88a20db8cebc0e91c2333819124b48e3949f35e5d279ac720",
+    "apps/client/Cargo.toml": "f2a68516762962861fdc402edbc9ae73a1f7e2b776aa33960c0d61f4fa6c3738",
+    "apps/client/src/main_diagnostics.rs": "1809b5d347cec2c650b9419aa3f5740c2d8e131ae2abd63d01d39c2ec41cadd7",
+    "crates/terra-ui/src/inventory_cache.rs": "e9acc8b7ee4f7299966725e074ba4828feb9fa6882caf994af5c59091ff215cb",
+    "src-ui/components/inventory-panel.component.html": "34e2b3af765c20804ab2a59b2ecfa3a1bc946b2dead81d0cdf1c73883367dfed"
+  },
+  "source_evidence": {
+    "cache_after": {
+      "path": "evidence/source/cache-after.txt",
+      "sha256": "b2f5c90bd48c1c18cc480478544f2d370d3f6cc097f87c0c62f87a101bb4b518"
+    },
+    "cache_before": {
+      "original_snapshot": true,
+      "path": "evidence/source/cache-before.txt",
+      "sha256": "e9acc8b7ee4f7299966725e074ba4828feb9fa6882caf994af5c59091ff215cb"
+    },
+    "slot_after": {
+      "path": "evidence/source/slot-after.txt",
+      "sha256": "dcebf4f2105c276eb38bcad803b6dd583a0a858e27fdf4812ecc9f9c69d36851"
+    },
+    "slot_before": {
+      "method": "Reverse exactly three inventoryView.visible conditions to inventoryView.open; matches the original read-only source inspection. No original whole-file hash was retained before this small edit.",
+      "path": "evidence/source/slot-before-reconstructed.txt",
+      "reconstructed": true,
+      "sha256": "b066ba0f44a6c65e418b4948bc5d2b9033fe0117f8b61a8c30bc9276c6247cf5"
+    }
+  },
+  "source_root": "/tmp/teramic-o08-439o32is"
+}

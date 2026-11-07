@@ -1,5 +1,5 @@
 heartbeat = true
-view_bobbing = false
+view_bobbing = true
 mob_health_bars = "looking_at"
 mob_health_friendly_color = [
     72,

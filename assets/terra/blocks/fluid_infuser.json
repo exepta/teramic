@@ -1,0 +1,97 @@
+{
+  "schema_version": 1,
+  "id": 171,
+  "name": "Fluid Infuser",
+  "description": "A full-block pipe-fed filling head. Place one air block above the Hold Block, then the Infuser. Requires no kinetic drive.",
+  "creative_category": "technic",
+  "render_kind": "custom_mesh",
+  "struct_block": true,
+  "model_layout": "scene",
+  "model": "models/fluid_infuser.gltf",
+  "hardness": 3,
+  "resistance": 8,
+  "mining_level": 0,
+  "required_tool": "pickaxe",
+  "textures": {
+    "wood_frame": "textures/machinery-oak-hd.png",
+    "forged_plate": "textures/machinery-iron-hd.png",
+    "brass_trim": "textures/machinery-iron-hd.png",
+    "iron_rivets": "textures/machinery-iron-hd.png",
+    "kinetic_belt": "textures/machinery-belt-hd.png",
+    "rubber_seal": "textures/machinery-belt-hd.png"
+  },
+  "collision_boxes": [
+    {
+      "minimum": [
+        0.07,
+        0.27,
+        0.07
+      ],
+      "maximum": [
+        0.93,
+        1,
+        0.93
+      ]
+    },
+    {
+      "minimum": [
+        0,
+        0.29,
+        0.29
+      ],
+      "maximum": [
+        1,
+        0.71,
+        0.71
+      ]
+    },
+    {
+      "minimum": [
+        0.29,
+        0.29,
+        0
+      ],
+      "maximum": [
+        0.71,
+        0.71,
+        1
+      ]
+    },
+    {
+      "minimum": [
+        0.35,
+        0.94,
+        0.35
+      ],
+      "maximum": [
+        0.65,
+        1,
+        0.65
+      ]
+    },
+    {
+      "minimum": [
+        0.34,
+        0.12,
+        0.34
+      ],
+      "maximum": [
+        0.66,
+        0.3,
+        0.66
+      ]
+    },
+    {
+      "minimum": [
+        0.43,
+        0,
+        0.43
+      ],
+      "maximum": [
+        0.57,
+        0.12,
+        0.57
+      ]
+    }
+  ]
+}

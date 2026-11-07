@@ -1,0 +1,28 @@
+{
+  "scene": "kingdom-winter",
+  "structures_revision": 8,
+  "seed": 42042,
+  "status": "partial",
+  "last_attempt": {
+    "region": [
+      51,
+      32
+    ],
+    "exit_code": 0,
+    "log": "logs/winter-final-attempt-closed.log",
+    "reason": "Window closed before capture readiness"
+  },
+  "captured_overview": {
+    "region": [
+      -10,
+      12
+    ],
+    "path": "native/kingdom-winter/kingdom-winter-overview.png",
+    "sha256": "406a8879f3308d7ac80ecd55333c227abbdf987af0b70508b6e23ccd757bbc7b",
+    "source_log": "logs/winter-previous-region-timeout.log"
+  },
+  "not_captured": [
+    "kingdom-winter-close.png"
+  ],
+  "further_graphical_tests": "Disabled at the user request; no terra-client process remains."
+}

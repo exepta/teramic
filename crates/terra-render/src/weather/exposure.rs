@@ -146,16 +146,18 @@ impl Exposure {
         {
             return true;
         }
-        self.roofs
-            .iter()
-            .chain(&self.snow_roofs)
-            .any(|&roof| i64::from(roof) <= high)
-            && section.is_some_and(|section| {
-                section
+        section.is_some_and(|section| {
+            !section.is_empty()
+                && self
+                    .roofs
+                    .iter()
+                    .chain(&self.snow_roofs)
+                    .any(|&roof| i64::from(roof) <= high)
+                && section
                     .blocks()
                     .iter()
                     .any(|&block| MaterialId::from_raw(block).is_some_and(MaterialId::is_solid))
-            })
+        })
     }
 
     /// Source Arcs may change without changing any vertex exposure payload.
@@ -431,6 +433,10 @@ fn neighbors4(i: usize, n: usize) -> [Option<usize>; 4] {
         (i + n < n * n).then_some(i + n),
     ]
 }
+
+#[cfg(test)]
+#[path = "exposure_removal_tests.rs"]
+mod removal_tests;
 
 #[cfg(test)]
 mod tests {

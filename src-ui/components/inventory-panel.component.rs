@@ -7,8 +7,130 @@ struct InventoryIntent {
     pub command: String,
 }
 
+#[html_fn("inventory_hearth_view")]
+fn inventory_hearth_view(
+    In(_event): In<HtmlEvent>,
+    view: Res<crate::InventoryView>,
+    mut actions: MessageWriter<crate::InventoryAction>,
+) {
+    if view.hearth_navigation && view.hearth_navigation_enabled {
+        actions.write(crate::InventoryAction::HearthView(view.hearth_show_fire));
+    }
+}
+
+#[html_fn("inventory_brewing_recipe")]
+fn inventory_brewing_recipe(
+    In(event): In<HtmlEvent>,
+    mut actions: MessageWriter<crate::InventoryAction>,
+) {
+    if let Some(recipe) = event
+        .value
+        .as_deref()
+        .and_then(|value| value.parse::<u16>().ok())
+        .filter(|id| terra_core::brewing::recipe(*id).is_some())
+    {
+        actions.write(crate::InventoryAction::BrewingRecipe(recipe));
+    }
+}
+
+#[html_fn("inventory_campfire_lit")]
+fn inventory_campfire_lit(
+    In(event): In<HtmlEvent>,
+    elements: Query<&ElementId>,
+    mut actions: MessageWriter<crate::InventoryAction>,
+) {
+    if let Ok(id) = elements.get(event.target) {
+        match id.0.as_str() {
+            "campfire-light" => {
+                actions.write(crate::InventoryAction::CampfireLit(true));
+            }
+            "campfire-extinguish" => {
+                actions.write(crate::InventoryAction::CampfireLit(false));
+            }
+            _ => {}
+        }
+    }
+}
+
+#[html_fn("inventory_tunnel_random")]
+fn inventory_tunnel_random(
+    In(event): In<HtmlEvent>,
+    mut actions: MessageWriter<crate::InventoryAction>,
+) {
+    if let Some(random) = event
+        .value
+        .as_deref()
+        .and_then(|value| value.parse::<bool>().ok())
+    {
+        actions.write(crate::InventoryAction::TunnelRandom(random));
+    }
+}
+
+#[html_fn("inventory_filter_mode")]
+fn inventory_filter_mode(
+    In(event): In<HtmlEvent>,
+    mut actions: MessageWriter<crate::InventoryAction>,
+) {
+    if let Some(value) = event
+        .value
+        .as_deref()
+        .and_then(|value| value.parse::<bool>().ok())
+    {
+        actions.write(crate::InventoryAction::FilterAllowed(value));
+    }
+}
+
+#[html_fn("inventory_distributor_mode")]
+fn inventory_distributor_mode(
+    In(event): In<HtmlEvent>,
+    elements: Query<&ElementId>,
+    mut actions: MessageWriter<crate::InventoryAction>,
+) {
+    if let Ok(id) = elements.get(event.target)
+        && let Some(output) =
+            id.0.strip_prefix("distributor-filter-mode-")
+                .and_then(|value| value.parse::<u8>().ok())
+                .filter(|output| *output < 3)
+        && let Some(allowed) = event
+            .value
+            .as_deref()
+            .and_then(|value| value.parse::<bool>().ok())
+    {
+        actions.write(crate::InventoryAction::DistributorAllowed(output, allowed));
+    }
+}
+
+#[html_fn("inventory_distributor_clear")]
+fn inventory_distributor_clear(
+    In(event): In<HtmlEvent>,
+    elements: Query<&ElementId>,
+    mut actions: MessageWriter<crate::InventoryAction>,
+) {
+    if let Ok(id) = elements.get(event.target)
+        && let Some(output) =
+            id.0.strip_prefix("distributor-filter-clear-")
+                .and_then(|value| value.parse::<u8>().ok())
+                .filter(|output| *output < 3)
+    {
+        actions.write(crate::InventoryAction::DistributorClear(output));
+    }
+}
+
+#[html_fn("inventory_mixer_color")]
+fn inventory_mixer_color(
+    In(event): In<HtmlEvent>,
+    mut actions: MessageWriter<crate::InventoryAction>,
+) {
+    if let Some(value) = event.value {
+        actions.write(crate::InventoryAction::MixerColor(value));
+    }
+}
+
 #[html_fn("inventory_category_select")]
-fn inventory_category_select(In(event): In<HtmlEvent>, mut actions: MessageWriter<crate::InventoryAction>) {
+fn inventory_category_select(
+    In(event): In<HtmlEvent>,
+    mut actions: MessageWriter<crate::InventoryAction>,
+) {
     if let Some(value) = event.value {
         actions.write(crate::InventoryAction::Category(value));
     }
@@ -79,7 +201,7 @@ fn inventory_pointer(
     images: Query<&ImageMetadata>,
     mut actions: MessageWriter<crate::InventoryAction>,
 ) {
-    let Some(intent) = materialized_slot(
+    let Some(mut intent) = materialized_slot(
         event.target,
         view.creative,
         &elements,
@@ -89,6 +211,9 @@ fn inventory_pointer(
     ) else {
         return;
     };
+    if let Some(item) = view_item(&view, &intent.command, intent.index.parse().ok()) {
+        intent.item = item.into();
+    }
     let index = intent.index.parse::<u8>().ok();
     let secondary = event
         .data
@@ -125,6 +250,23 @@ fn inventory_pointer(
     }
 }
 
+fn view_item<'a>(
+    view: &'a crate::InventoryView,
+    command: &str,
+    index: Option<usize>,
+) -> Option<&'a str> {
+    let index = index?;
+    let slot = match command {
+        "slot" => view.items.get(index.checked_sub(9)?),
+        "hotbar" => view.hotbar.get(index),
+        "container" => view.container_items.get(index),
+        "catalog" => view.browser_items.get(index),
+        "equipment" => view.equipment.get(index).map(|slot| &slot.item),
+        _ => None,
+    }?;
+    Some(slot.item_id.as_str())
+}
+
 fn materialized_slot(
     target: Entity,
     _creative: bool,
@@ -146,11 +288,26 @@ fn materialized_slot(
         let (command, offset) = match id {
             Some("inventory-grid") => ("slot", 9),
             Some("inventory-equipment") => ("equipment", 0),
-            Some("container-grid" | "workbench-container-grid" | "furnace-input" | "crusher-input") => {
-                ("container", 0)
-            }
+            Some(
+                "container-grid"
+                | "workbench-container-grid"
+                | "furnace-input"
+                | "crusher-input"
+                | "mixer-input"
+                | "cauldron-inputs"
+                | "campfire-input",
+            ) => ("container", 0),
             Some("furnace-fuel") => ("container", 1),
             Some("crusher-output") => ("container", 1),
+            Some("mixer-output") => ("container", terra_core::mixer::OUTPUT),
+            Some("cauldron-water") => ("container", terra_core::brewing::WATER),
+            Some("cauldron-bottles") => ("container", terra_core::brewing::BOTTLES),
+            Some("cauldron-spoon") => ("container", terra_core::brewing::SPOON),
+            Some("cauldron-output") => ("container", terra_core::brewing::OUTPUT),
+            Some("campfire-fuel") => ("container", terra_core::campfire::FUEL),
+            Some("campfire-output") => ("container", terra_core::campfire::OUTPUT),
+            Some("funnel-filter-slot") => ("filter", 0),
+            Some("distributor-filter-slots") => ("distributor-filter", 0),
             Some("furnace-output") => ("container", 2),
             Some("furnace-bellows") => ("container", 3),
             Some("inventory-browser-grid") => ("catalog", 0),
@@ -186,6 +343,12 @@ fn materialized_slot(
                 })
                 .or_else(|| {
                     let identifier = alt.strip_prefix("Item preview ")?;
+                    if let Some(rgb) = identifier.strip_prefix("teramic::mixed_dye#")
+                        && rgb.len() == 6
+                        && rgb.bytes().all(|byte| byte.is_ascii_hexdigit())
+                    {
+                        return Some(format!("item-mixed_dye#{rgb}"));
+                    }
                     if let Some((identifier, wood)) = identifier.split_once('#') {
                         let material = (1..=terra_voxel::MaterialId::LAST).find(|&material| {
                             terra_voxel::MaterialId::from_raw(material)
@@ -245,14 +408,28 @@ fn inventory_action(
         "inventory-trash" => {
             actions.write(crate::InventoryAction::Trash);
         }
+        "funnel-filter-clear" => {
+            actions.write(crate::InventoryAction::FilterClear);
+        }
         "inventory-page-previous" => {
             actions.write(crate::InventoryAction::Page(-1));
         }
         "inventory-page-next" => {
             actions.write(crate::InventoryAction::Page(1));
         }
+        "inventory-browser-filter" => {
+            actions.write(crate::InventoryAction::Category("all".into()));
+        }
         _ => {}
     }
+}
+
+#[html_fn("inventory_recipe_book")]
+fn inventory_recipe_book(
+    In(_event): In<HtmlEvent>,
+    mut actions: MessageWriter<crate::InventoryAction>,
+) {
+    actions.write(crate::InventoryAction::ToggleBrowser);
 }
 
 #[cfg(test)]
@@ -300,7 +477,7 @@ mod tests {
     }
 
     #[test]
-    fn furnace_slots_dispatch_clicks_and_hover_with_their_shared_inventory_indices() {
+    fn station_slots_dispatch_clicks_and_hover_with_their_shared_inventory_indices() {
         let mut world = World::new();
         world.init_resource::<crate::InventoryView>();
         world.init_resource::<Messages<crate::InventoryAction>>();
@@ -309,6 +486,26 @@ mod tests {
             ("furnace-fuel", 1, "coal"),
             ("furnace-output", 2, "iron_ingot"),
             ("furnace-bellows", 3, "ruby_bellows"),
+            ("cauldron-inputs", 0, "red_flower"),
+            ("cauldron-water", terra_core::brewing::WATER, "water_bottle"),
+            (
+                "cauldron-bottles",
+                terra_core::brewing::BOTTLES,
+                "glass_bottle",
+            ),
+            ("cauldron-spoon", terra_core::brewing::SPOON, "gold_spoon"),
+            (
+                "cauldron-output",
+                terra_core::brewing::OUTPUT,
+                "regeneration_potion",
+            ),
+            ("campfire-input", terra_core::campfire::INPUT, "beef"),
+            ("campfire-fuel", terra_core::campfire::FUEL, "coal"),
+            (
+                "campfire-output",
+                terra_core::campfire::OUTPUT,
+                "cooked_beef",
+            ),
         ] {
             let root = world.spawn(ElementId(root_id.into())).id();
             let wrapper = world.spawn(ChildOf(root)).id();
@@ -381,7 +578,7 @@ mod tests {
                     action => panic!("Unexpected furnace slot action: {action:?}"),
                 };
                 assert_eq!(command, "container");
-                assert_eq!(actual_index, Some(index));
+                assert_eq!(actual_index, Some(index as u8));
                 assert_eq!(item, format!("item-{slug}"));
             }
         }
@@ -424,6 +621,7 @@ mod tests {
                 ("crafting-output", "bench-output", "0"),
                 ("recipe-preview-grid", "recipe-preview", "0"),
                 ("recipe-preview-output", "recipe-preview", "0"),
+                ("funnel-filter-slot", "filter", "0"),
             ] {
                 let mut world = World::new();
                 let root = world.spawn(ElementId(root.into())).id();
@@ -434,6 +632,159 @@ mod tests {
                 assert_eq!(resolved.command, command);
                 assert_eq!(resolved.index, index);
             }
+        }
+    }
+
+    #[test]
+    fn materialized_rgb_inventory_items_use_the_exact_view_identity() {
+        let mut world = World::new();
+        world.init_resource::<crate::InventoryView>();
+        world.init_resource::<Messages<crate::InventoryAction>>();
+        {
+            let mut view = world.resource_mut::<crate::InventoryView>();
+            view.items.push(Default::default());
+            view.items[0].item_id = "item-conveyor_belt#cherry#112233".into();
+        }
+        let grid = world.spawn(ElementId("inventory-grid".into())).id();
+        let target = world
+            .spawn((ElementId("inventory-cell".into()), ChildOf(grid)))
+            .id();
+        world.spawn((
+            ImageMetadata {
+                alt: Some("Item preview teramic::conveyor_belt#cherry#112233".into()),
+                ..default()
+            },
+            ChildOf(target),
+        ));
+        world
+            .run_system_once_with(
+                inventory_pointer,
+                HtmlEvent {
+                    target,
+                    kind: "mouseenter",
+                    value: None,
+                    submitter: None,
+                    data: default(),
+                    form_data: None,
+                    handler: "inventory_pointer".into(),
+                },
+            )
+            .unwrap();
+        let action = world
+            .resource_mut::<Messages<crate::InventoryAction>>()
+            .drain()
+            .next()
+            .unwrap();
+        assert!(
+            matches!(action, crate::InventoryAction::Hover { command, index: Some(9), item } if command == "slot" && item == "item-conveyor_belt#cherry#112233")
+        );
+    }
+
+    #[test]
+    fn filter_switch_rejects_malformed_values_and_emits_boolean_mode() {
+        let mut world = World::new();
+        world.init_resource::<Messages<crate::InventoryAction>>();
+        let target = world.spawn(ElementId("funnel-filter-mode".into())).id();
+        for value in ["false", "true", "blocked", ""] {
+            world
+                .run_system_once_with(
+                    inventory_filter_mode,
+                    HtmlEvent {
+                        target,
+                        kind: "change",
+                        value: Some(value.into()),
+                        submitter: None,
+                        data: default(),
+                        form_data: None,
+                        handler: "inventory_filter_mode".into(),
+                    },
+                )
+                .unwrap();
+        }
+        let messages = world
+            .resource_mut::<Messages<crate::InventoryAction>>()
+            .drain()
+            .collect::<Vec<_>>();
+        assert_eq!(messages.len(), 2);
+        assert!(matches!(
+            messages[0],
+            crate::InventoryAction::FilterAllowed(false)
+        ));
+        assert!(matches!(
+            messages[1],
+            crate::InventoryAction::FilterAllowed(true)
+        ));
+    }
+
+    #[test]
+    fn distributor_native_handlers_keep_output_indices_and_reject_invalid_rows() {
+        let mut world = World::new();
+        world.init_resource::<Messages<crate::InventoryAction>>();
+        for output in 0..=3 {
+            let target = world
+                .spawn(ElementId(format!("distributor-filter-mode-{output}")))
+                .id();
+            world
+                .run_system_once_with(
+                    inventory_distributor_mode,
+                    HtmlEvent {
+                        target,
+                        kind: "change",
+                        value: Some("false".into()),
+                        submitter: None,
+                        data: default(),
+                        form_data: None,
+                        handler: "inventory_distributor_mode".into(),
+                    },
+                )
+                .unwrap();
+            let target = world
+                .spawn(ElementId(format!("distributor-filter-clear-{output}")))
+                .id();
+            world
+                .run_system_once_with(
+                    inventory_distributor_clear,
+                    HtmlEvent {
+                        target,
+                        kind: "click",
+                        value: None,
+                        submitter: None,
+                        data: default(),
+                        form_data: None,
+                        handler: "inventory_distributor_clear".into(),
+                    },
+                )
+                .unwrap();
+        }
+        let actions: Vec<_> = world
+            .resource_mut::<Messages<crate::InventoryAction>>()
+            .drain()
+            .collect();
+        assert_eq!(actions.len(), 6);
+        for output in 0..3 {
+            assert!(
+                matches!(actions[output * 2], crate::InventoryAction::DistributorAllowed(index, false) if index == output as u8)
+            );
+            assert!(
+                matches!(actions[output * 2 + 1], crate::InventoryAction::DistributorClear(index) if index == output as u8)
+            );
+        }
+        let root = world
+            .spawn(ElementId("distributor-filter-slots".into()))
+            .id();
+        let mut slots = Vec::new();
+        for _ in 0..3 {
+            let row = world.spawn(ChildOf(root)).id();
+            slots.push(
+                world
+                    .spawn((ElementId("inventory-cell".into()), ChildOf(row)))
+                    .id(),
+            );
+        }
+        for (index, target) in slots.into_iter().enumerate() {
+            let resolved = resolve(&mut world, target, false).unwrap();
+            assert_eq!(resolved.command, "distributor-filter");
+            assert_eq!(resolved.index, index.to_string());
         }
     }
 

@@ -335,6 +335,13 @@ pub(super) fn update(
             .and_then(|config| config.world.water.then_some(config.world.sea_level)),
         terrain: scene.terrain.as_ref().map(|terrain| terrain.0.clone()),
         exposure: None,
+        tints: std::sync::Arc::new(
+            scene
+                .journal
+                .as_ref()
+                .map(|journal| journal.tint_snapshot(key.section))
+                .unwrap_or_default(),
+        ),
         conditions: scene
             .journal
             .as_ref()
@@ -347,6 +354,14 @@ pub(super) fn update(
         .as_ref()
         .map(|journal| journal.snapshot(key.section))
         .transpose();
+    let neighbor_tints = std::array::from_fn(|side| {
+        let mut neighbor = key.position;
+        neighbor[side / 2] += if side % 2 == 0 { -1 } else { 1 };
+        scene
+            .journal
+            .as_ref()
+            .and_then(|journal| journal.tint_at(neighbor))
+    });
     state.pending = Some((
         key,
         AsyncComputeTaskPool::get().spawn(async move {
@@ -452,6 +467,7 @@ pub(super) fn update(
                     key.position,
                     key.material,
                     key.neighbors,
+                    neighbor_tints,
                     &templates,
                     &options,
                 )?);
@@ -624,6 +640,7 @@ mod tests {
                 model: primitive_batches
                     .into_values()
                     .map(|batch| crate::blocks::PrimitiveTemplate {
+                        tangents: batch.tangents,
                         positions: batch.positions,
                         normals: batch.normals,
                         uvs: batch.uvs,

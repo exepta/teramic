@@ -1,0 +1,163 @@
+CPU samples=12264 unique_addresses=7909 samples_with_caller=989
+Percentages are sampled userspace CPU time, not frame time. Caller stacks depend on frame pointers.
+
+Modules
+   9745  79.46% /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/target/debug/terra-client
+   1811  14.77% /usr/lib/libc.so.6
+    517   4.22% /usr/lib/libvulkan_radeon.so
+    167   1.36% /usr/lib/libm.so.6
+     10   0.08% /usr/lib/libvulkan.so.1.4.363
+      6   0.05% [vdso]
+      5   0.04% /usr/lib/spa-0.2/audioconvert/libspa-audioconvert.so
+      1   0.01% /usr/lib/libX11.so.6.4.0
+      1   0.01% /usr/lib/libasound.so.2.0.0
+      1   0.01% /usr/lib/libdrm_amdgpu.so.1.134.0
+
+Thread groups
+   8101  66.06% Compute Task Po
+   2276  18.56% Async Compute T
+   1238  10.09% Render thread
+    638   5.20% terra-client
+      7   0.06% data-loop.0
+      3   0.02% cpal_alsa_out
+      1   0.01% WSI swapchain e
+
+Threads
+   1238  10.09% 1049444 Render thread
+    638   5.20% 1049406 terra-client
+    579   4.72% 1049412 Async Compute T
+    572   4.66% 1049413 Async Compute T
+    563   4.59% 1049411 Async Compute T
+    562   4.58% 1049414 Async Compute T
+    539   4.39% 1049429 Compute Task Po
+    528   4.31% 1049428 Compute Task Po
+    527   4.30% 1049425 Compute Task Po
+    527   4.30% 1049426 Compute Task Po
+    523   4.26% 1049424 Compute Task Po
+    515   4.20% 1049421 Compute Task Po
+    507   4.13% 1049416 Compute Task Po
+    506   4.13% 1049423 Compute Task Po
+    504   4.11% 1049415 Compute Task Po
+    503   4.10% 1049420 Compute Task Po
+    503   4.10% 1049417 Compute Task Po
+    497   4.05% 1049419 Compute Task Po
+    494   4.03% 1049430 Compute Task Po
+    479   3.91% 1049427 Compute Task Po
+    476   3.88% 1049418 Compute Task Po
+    473   3.86% 1049422 Compute Task Po
+
+Enclosing functions
+    798   6.51% <bevy_asset::asset_changed::AssetChangeCheck<bevy_mesh::components::Mesh3d>>::has_changed
+    344   2.80% _int_malloc
+    331   2.70% <bevy_camera::primitives::Frustum>::intersects_obb
+    327   2.67% <hashbrown::raw::RawTable<(core::num::nonzero::NonZero<u64>, gpu_allocator::allocator::free_list_allocator::MemoryChunk)>>::find::<hashbrown::map::equivalent_key<core::num::nonzero::NonZero<u64>, core::num::nonzero::N...
+    240   1.96% <bevy_ecs::query::par_iter::QueryParIter<(bevy_ecs::entity::Entity, &bevy_camera::visibility::InheritedVisibility, &mut bevy_camera::visibility::ViewVisibility, core::option::Option<&bevy_camera::visibility::Visibilit...
+    190   1.55% <noise::noise_fns::generators::perlin::Perlin as noise::noise_fns::NoiseFn<f64, 2>>::get
+    188   1.53% terra_render::meshing::lighting::sample
+    175   1.43% _int_free_merge_chunk
+    143   1.17% libc.so.6+0x1b1980
+    120   0.98% <bevy_ecs::query::par_iter::QueryParIter<(bevy_ecs::entity::Entity, &bevy_camera::visibility::InheritedVisibility, core::option::Option<&bevy_camera::visibility::render_layers::RenderLayers>, core::option::Option<&bev...
+    114   0.93% unlink_chunk
+    112   0.91% <hashbrown::raw::RawTableInner>::find_or_find_insert_index_inner
+    110   0.90% <bevy_light::check_dir_light_mesh_visibility::{closure#3} as bevy_ecs::system::commands::command::Command>::apply
+    110   0.90% syscall
+    109   0.89% <noise::noise_fns::generators::perlin::Perlin as noise::noise_fns::NoiseFn<f64, 3>>::get
+    104   0.85% sinf32x
+    102   0.83% <gpu_allocator::allocator::free_list_allocator::FreeListAllocator as gpu_allocator::allocator::SubAllocator>::allocate
+     98   0.80% <bevy_ecs::query::iter::QueryIter<(bevy_ecs::entity::Entity, &bevy_camera::visibility::InheritedVisibility, &mut bevy_camera::visibility::ViewVisibility, core::option::Option<&bevy_camera::visibility::VisibilityClass>...
+     96   0.78% cfree
+     90   0.73% __libc_malloc
+     87   0.71% bevy_ecs::world::unsafe_world_cell::get_component_and_ticks
+     86   0.70% <hashbrown::raw::RawTable<(bevy_render::mesh::allocator::MeshAllocationKey, bevy_render::slab_allocator::SlabId<bevy_render::mesh::allocator::MeshSlabItem>)>>::find::<hashbrown::map::equivalent_key<bevy_render::mesh::...
+
+Innermost inline functions
+    411   3.35% <bevy_asset::handle::Handle<bevy_mesh::mesh::Mesh>>::id
+    385   3.14% <bevy_asset::id::InternalAssetId as core::cmp::PartialEq>::eq
+    328   2.67% _int_malloc
+    284   2.32% hashbrown::util::likely
+    278   2.27% core::core_arch::x86::sse2::_mm_movemask_epi8
+    164   1.34% <bevy_camera::primitives::Frustum>::intersects_obb
+    146   1.19% <terra_voxel::blocks::coordinates::SectionPos as core::cmp::PartialEq>::eq
+    143   1.17% libc.so.6+0x1b1980
+    130   1.06% _int_free_create_chunk
+    127   1.04% terra_render::meshing::lighting::sample
+    114   0.93% unlink_chunk
+    114   0.93% <hashbrown::raw::RawTableInner>::ctrl
+    110   0.90% syscall
+     99   0.81% <bevy_ecs::entity::Entities>::get_spawned
+     90   0.73% cfree
+     80   0.65% <parking_lot::raw_mutex::RawMutex as lock_api::mutex::RawMutex>::lock
+     74   0.60% <hashbrown::control::bitmask::BitMask>::lowest_set_bit
+     74   0.60% <u32>::wrapping_sub
+     72   0.59% core::core_arch::x86::sse::_mm_mul_ps
+     72   0.59% <fixedbitset::block::sse2::Block as core::cmp::PartialEq>::eq
+     68   0.55% tcache_get_n
+     67   0.55% libc_feholdsetround_sse_ctx
+
+Available caller stacks
+    798   6.51% <bevy_asset::asset_changed::AssetChangeCheck<bevy_mesh::components::Mesh3d>>::has_changed
+    331   2.70% <bevy_camera::primitives::Frustum>::intersects_obb
+    327   2.67% <hashbrown::raw::RawTable<(core::num::nonzero::NonZero<u64>, gpu_allocator::allocator::free_list_allocator::MemoryChunk)>>::find::<hashbrown::map::equivalent_key<core::num::nonzero::NonZero<u64>, core::num::nonzero::N...
+    240   1.96% <bevy_ecs::query::par_iter::QueryParIter<(bevy_ecs::entity::Entity, &bevy_camera::visibility::InheritedVisibility, &mut bevy_camera::visibility::ViewVisibility, core::option::Option<&bevy_camera::visibility::Visibilit...
+    231   1.88% _int_malloc;__libc_malloc2
+    190   1.55% <noise::noise_fns::generators::perlin::Perlin as noise::noise_fns::NoiseFn<f64, 2>>::get
+    188   1.53% terra_render::meshing::lighting::sample
+    175   1.43% _int_free_merge_chunk
+    142   1.16% libc.so.6+0x1b1980
+    120   0.98% <bevy_ecs::query::par_iter::QueryParIter<(bevy_ecs::entity::Entity, &bevy_camera::visibility::InheritedVisibility, core::option::Option<&bevy_camera::visibility::render_layers::RenderLayers>, core::option::Option<&bev...
+
+Functions in thread group Compute Task Po
+    798   9.85% <bevy_asset::asset_changed::AssetChangeCheck<bevy_mesh::components::Mesh3d>>::has_changed
+    330   4.07% <bevy_camera::primitives::Frustum>::intersects_obb
+    280   3.46% <hashbrown::raw::RawTable<(core::num::nonzero::NonZero<u64>, gpu_allocator::allocator::free_list_allocator::MemoryChunk)>>::find::<hashbrown::map::equivalent_key<core::num::nonzero::NonZero<u64>, core::num::nonzero::N...
+    242   2.99% _int_malloc
+    240   2.96% <bevy_ecs::query::par_iter::QueryParIter<(bevy_ecs::entity::Entity, &bevy_camera::visibility::InheritedVisibility, &mut bevy_camera::visibility::ViewVisibility, core::option::Option<&bevy_camera::visibility::Visibilit...
+    134   1.65% libc.so.6+0x1b1980
+    120   1.48% <bevy_ecs::query::par_iter::QueryParIter<(bevy_ecs::entity::Entity, &bevy_camera::visibility::InheritedVisibility, core::option::Option<&bevy_camera::visibility::render_layers::RenderLayers>, core::option::Option<&bev...
+    102   1.26% <gpu_allocator::allocator::free_list_allocator::FreeListAllocator as gpu_allocator::allocator::SubAllocator>::allocate
+    101   1.25% <hashbrown::raw::RawTableInner>::find_or_find_insert_index_inner
+     98   1.21% <bevy_ecs::query::iter::QueryIter<(bevy_ecs::entity::Entity, &bevy_camera::visibility::InheritedVisibility, &mut bevy_camera::visibility::ViewVisibility, core::option::Option<&bevy_camera::visibility::VisibilityClass>...
+     97   1.20% syscall
+     79   0.98% core::slice::sort::unstable::quicksort::quicksort::<bevy_ecs::entity::Entity, <bevy_ecs::entity::Entity as core::cmp::PartialOrd>::lt>
+
+Functions in thread group Async Compute T
+    189   8.30% <noise::noise_fns::generators::perlin::Perlin as noise::noise_fns::NoiseFn<f64, 2>>::get
+    188   8.26% terra_render::meshing::lighting::sample
+    109   4.79% <noise::noise_fns::generators::perlin::Perlin as noise::noise_fns::NoiseFn<f64, 3>>::get
+    104   4.57% sinf32x
+     70   3.08% _int_malloc
+     59   2.59% <terra_world::generation::generator::TerraGenerator>::cave_density_with_column
+     50   2.20% roundf
+     48   2.11% terra_render::upload_budget::split_batches
+     46   2.02% <terra_world::generation::generator::TerraGenerator>::cave_biome_column_with_surface (.llvm.12470428251794987647)
+     43   1.89% <terra_world::generation::generator::TerraGenerator>::drainage_at
+     37   1.63% <core::iter::adapters::map::Map<core::iter::adapters::map::Map<core::iter::adapters::zip::Zip<core::slice::iter::Iter<[f32; 4]>, core::slice::iter::Iter<bool>>, terra_render::props::jobs::compose_with_exposure_mode::{...
+     36   1.58% <terra_world::generation::generator::TerraGenerator>::sample_with_column
+
+Functions in thread group Render thread
+     87   7.03% _int_free_merge_chunk
+     46   3.72% <hashbrown::raw::RawTable<(core::num::nonzero::NonZero<u64>, gpu_allocator::allocator::free_list_allocator::MemoryChunk)>>::find::<hashbrown::map::equivalent_key<core::num::nonzero::NonZero<u64>, core::num::nonzero::N...
+     44   3.55% cfree
+     31   2.50% <dyn wgpu_hal::dynamic::DynBuffer as wgpu_hal::dynamic::DynResourceExt>::unbox::<wgpu_hal::vulkan::Buffer>
+     30   2.42% <hashbrown::raw::RawTable<(bevy_render::mesh::allocator::MeshAllocationKey, bevy_render::slab_allocator::SlabAllocation)>>::find::<hashbrown::map::equivalent_key<bevy_render::mesh::allocator::MeshAllocationKey, bevy_r...
+     28   2.26% unlink_chunk
+     27   2.18% <wgpu_core::device::queue::Queue>::submit
+     24   1.94% <bevy_render::camera::DirtySpecializations>::entity_pair_from_visible_main_entity
+     23   1.86% vk_common_ResetCommandPool
+     22   1.78% <hashbrown::raw::RawTable<(bevy_render::mesh::allocator::MeshAllocationKey, bevy_render::slab_allocator::SlabId<bevy_render::mesh::allocator::MeshSlabItem>)>>::find::<hashbrown::map::equivalent_key<bevy_render::mesh::...
+     22   1.78% <hashbrown::map::HashMap<bevy_asset::id::AssetId<bevy_mesh::mesh::Mesh>, bevy_render::mesh::RenderMesh, bevy_platform::hash::FixedHasher>>::get::<bevy_asset::id::AssetId<bevy_mesh::mesh::Mesh>>
+     19   1.53% <wgpu_hal::vulkan::CommandEncoder as wgpu_hal::dynamic::command::DynCommandEncoder>::transition_buffers
+
+Functions in thread group terra-client
+    110  17.24% <bevy_light::check_dir_light_mesh_visibility::{closure#3} as bevy_ecs::system::commands::command::Command>::apply
+     23   3.61% _int_free_merge_chunk
+     13   2.04% _int_malloc
+     12   1.88% <bevy_ecs::storage::table::column::Column>::initialize_from_unchecked
+     10   1.57% <bevy_ecs::schedule::executor::multi_threaded::Context>::tick_executor
+      9   1.41% <fixedbitset::FixedBitSet>::is_disjoint
+      9   1.41% <bevy_ecs::query::state::QueryState<bevy_ecs::entity::Entity, bevy_ecs::query::filter::With<bevy_camera::camera::ShadowLodOrigin>>>::new_archetype
+      9   1.41% <bevy_ecs::query::state::QueryState<(bevy_ecs::entity::Entity, &bevy_window::window::Window, core::option::Option<&mut bevy_window::cursor::CursorIcon>)>>::new_archetype
+      9   1.41% terra_render::transitions::update_material::<bevy_pbr::extended_material::ExtendedMaterial<bevy_pbr::pbr_material::StandardMaterial, terra_render::weather::surfaces::WetExtension>>
+      8   1.25% cfree
+      8   1.25% <bevy_ecs::message::message_registry::MessageRegistry>::run_updates
+      8   1.25% <async_task::task::FallibleTask<core::result::Result<(), alloc::boxed::Box<dyn core::any::Any + core::marker::Send>>> as core::future::future::Future>::poll

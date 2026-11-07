@@ -67,12 +67,28 @@ pub(super) fn create_world(world: &mut World) -> Result<(), String> {
     let mode = match menu.mode.as_str() {
         "creative" => GameMode::Creative,
         "survival" => GameMode::Survival,
+        "spectator" => GameMode::Spectator,
         _ => return Err("Choose a game mode".into()),
     };
     let mut template = world.resource::<GameConfig>().world.clone();
     template.rivers = true;
     template.bounded_world = true;
     template.natural_mob_limit = menu.natural_mob_limit;
+    template.game_rules = menu.game_rules;
+    template.kingdom_rules = menu.kingdom_rules;
+    template.structure_border_gap = menu.kingdom_rules.realm_min_border_gap;
+    template.preferred_spawn_biome = menu.preferred_spawn_biome;
+    template.structures = menu.structures;
+    template.seasons.spring_days = menu.season_days;
+    template.seasons.summer_days = menu.season_days;
+    template.seasons.autumn_days = menu.season_days;
+    template.seasons.winter_days = menu.season_days;
+    template.seasons.transition_days = template
+        .seasons
+        .transition_days
+        .min(f64::from(menu.season_days));
+    template.time.paused = false;
+    template.validate().map_err(|error| error.to_string())?;
     let entry = world
         .resource::<MenuPaths>()
         .worlds

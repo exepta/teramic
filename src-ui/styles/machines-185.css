@@ -1,0 +1,187 @@
+/* All station surfaces share the retained copper frame and true machine controls. */
+.inventory-machine-shell { position: absolute !important; left: 50% !important; top: 50% !important; transform: translate(-50%, -50%) !important; width: 94% !important; max-width: 1080px !important; height: 84% !important; max-height: 850px !important; min-width: 0 !important; min-height: 0 !important; padding: 0 !important; border: 0 !important; border-radius: 8px !important; background-color: #302119 !important; background-image: linear-gradient(to right, #30211b, #3b281d, #271b16) !important; }
+.machine-title { width: 56% !important; max-width: 670px !important; }
+.machine-title .inventory-reference-label { font-size: 27px !important; }
+.machine-main-panel { position: absolute !important; left: 3.5% !important; top: 7% !important; bottom: 7% !important; transform: translate(0px, 0px) !important; width: 60% !important; height: auto !important; max-height: 100% !important; min-width: 0 !important; min-height: 0 !important; display: flex !important; flex-direction: column !important; padding: 0 !important; gap: 9px !important; border: 0 !important; border-radius: 0 !important; background-color: transparent !important; }
+.machine-heading { display: none !important; }
+.machine-main-panel .inventory-body { height: auto !important; flex-grow: 1 !important; min-height: 0 !important; overflow-y: auto !important; overflow-x: hidden !important; padding: 2px 9px 4px 2px !important; gap: 12px !important; }
+.machine-main-panel .inventory-body::scrollbar-y-track, .machine-linked-storage::scrollbar-y-track { width: 7px !important; background-color: #271a12 !important; border: 1px solid #88613b !important; border-radius: 4px !important; }
+.machine-main-panel .inventory-body::scrollbar-y-thumb, .machine-linked-storage::scrollbar-y-thumb { background-color: #e7a338 !important; border: 1px solid #ffd47d !important; border-radius: 3px !important; }
+.machine-section-title { margin: 0 !important; font-family: serif !important; font-size: 18px !important; color: #efd8af !important; }
+.machine-main-panel .inventory-section-heading { width: 100% !important; padding: 2px 5px !important; min-height: 25px !important; }
+.machine-main-panel .inventory-section-heading p { color: #c9a982 !important; font-size: 12px !important; }
+.machine-main-panel .inventory-backpack-section, .machine-main-panel .inventory-container-section { align-items: center !important; padding: 7px !important; gap: 7px !important; border: 1px solid #805633 !important; border-radius: 5px !important; background-color: #2a1c15 !important; }
+.machine-main-panel .inventory-hotbar-section { padding-top: 10px !important; border-top: 1px solid #97683e !important; align-self: center !important; }
+.machine-main-panel .inventory-grid, .machine-main-panel .inventory-hotbar { width: 428px !important; max-width: 100% !important; grid-template-columns: repeat(9, 44px) !important; grid-auto-rows: 44px !important; gap: 4px !important; flex-shrink: 0 !important; justify-content: center !important; }
+.machine-main-panel .inventory-grid { grid-template-rows: repeat(2, 44px) !important; }
+.inventory-double-container.machine-main-panel .container-grid { grid-template-rows: repeat(4, 44px) !important; }
+.machine-main-panel .inventory-status { min-height: 26px !important; padding: 0 8px !important; gap: 8px !important; }
+.machine-main-panel .inventory-error { color: #ecc29b !important; font-size: 12px !important; text-wrap: wrap !important; }
+.machine-main-panel .inventory-trash { width: 30px !important; min-width: 30px !important; height: 30px !important; min-height: 30px !important; padding: 5px !important; border: 1px solid #ae7e4a !important; border-radius: 4px !important; color: #e1b77d !important; background-color: #3e291d !important; }
+.machine-main-panel .inventory-trash:disabled { opacity: 0.45 !important; }
+/* Station workspaces sit above storage in bronze inset panels. */
+.machine-main-panel .furnace-workspace, .machine-main-panel .crusher-workspace, .machine-main-panel .mixer-workspace, .machine-main-panel .alchemy-workspace, .machine-main-panel .funnel-filter-workspace, .machine-main-panel .distributor-filter-workspace, .machine-main-panel .tunnel-extraction-mode { width: 100% !important; min-width: 0 !important; padding: 14px 12px !important; border: 2px solid #97683e !important; border-radius: 7px !important; background-color: #493122 !important; background-image: linear-gradient(to bottom, #513827, #342218) !important; color: #ecc99a !important; }
+.machine-main-panel .furnace-workspace { gap: 10px !important; }
+.machine-main-panel .furnace-material-row { gap: 15px !important; }
+.machine-main-panel .furnace-slot { width: 57px !important; height: 57px !important; }
+.machine-main-panel .furnace-result { width: 65px !important; height: 65px !important; }
+.machine-slot-caption { margin: 0 !important; font-family: serif !important; font-size: 14px !important; color: #edc58d !important; }
+.machine-main-panel .furnace-feed-column { gap: 10px !important; }
+.machine-main-panel .furnace-slot-group { gap: 4px !important; }
+.machine-main-panel .furnace-progress-group { width: 80px !important; color: #edbb66 !important; }
+.machine-main-panel .furnace-progress-track { width: 64px !important; height: 13px !important; border: 1px solid #c18a43 !important; border-radius: 4px !important; background-color: #24170f !important; }
+.machine-main-panel .furnace-progress-fill { background-color: #e9a632 !important; background-image: linear-gradient(to bottom, #ffcf69, #ce7e1b) !important; border-radius: 2px !important; }
+.machine-main-panel .furnace-fuel-track { height: 57px !important; top: auto !important; bottom: 0 !important; right: -12px !important; width: 7px !important; border: 1px solid #a77237 !important; background-color: #251810 !important; border-radius: 3px !important; }
+.machine-main-panel .furnace-fuel-fill { background-color: #ed9226 !important; }
+.machine-main-panel .furnace-placeholder { color: #c49a61 !important; opacity: 0.45 !important; }
+.machine-main-panel .furnace-air { color: #ddbb84 !important; }
+.machine-main-panel .furnace-status { color: #dfc29b !important; font-size: 12px !important; text-wrap: wrap !important; }
+.machine-main-panel .crusher-workspace { min-height: 120px !important; gap: 30px !important; }
+.machine-main-panel .crusher-process { color: #edbd71 !important; gap: 8px !important; }
+.machine-main-panel .mixer-workspace { gap: 11px !important; }
+.machine-main-panel .mixer-materials { gap: 23px !important; }
+.machine-main-panel .mixer-input { grid-template-columns: repeat(3, 44px) !important; grid-auto-rows: 44px !important; gap: 4px !important; }
+.machine-main-panel .mixer-target p, .machine-main-panel .mixer-recipe { color: #e0bf94 !important; }
+.machine-color-picker { width: 190px !important; height: 36px !important; min-height: 36px !important; min-width: 0 !important; border: 1px solid #b6854b !important; border-radius: 4px !important; background-color: #2a1c14 !important; color: #f0d8af !important; }
+.machine-color-picker::popup { background-color: #2d1e16 !important; color: #f0d8af !important; border: 2px solid #b6854b !important; border-radius: 5px !important; z-index: 550 !important; }
+.machine-color-picker::format { background-color: #3c291d !important; color: #e9cc9e !important; }
+.machine-color-picker::selected-format { background-color: #906330 !important; color: #fff0d0 !important; }
+/* Real cauldron/campfire inventories retain water, spoon, bottle and heat state. */
+.machine-main-panel .alchemy-workspace { gap: 12px !important; }
+.machine-main-panel .alchemy-materials { gap: 12px !important; }
+.machine-main-panel .alchemy-inputs { grid-template-columns: repeat(3, 40px) !important; grid-auto-rows: 40px !important; gap: 4px !important; }
+.machine-main-panel .alchemy-workspace .furnace-slot { width: 48px !important; height: 48px !important; }
+.machine-main-panel .alchemy-workspace .furnace-result { width: 55px !important; height: 55px !important; }
+.machine-main-panel .alchemy-process { width: 50px !important; gap: 8px !important; }
+.machine-main-panel .alchemy-process .furnace-progress-track { width: 48px !important; }
+.machine-main-panel .alchemy-water-track { height: 44px !important; width: 8px !important; background-color: #1b2528 !important; border: 1px solid #a37b4c !important; }
+.machine-main-panel .alchemy-water-fill { background-color: #69b5ce !important; }
+.machine-main-panel .alchemy-water-amount { color: #c6d5cc !important; font-size: 11px !important; }
+.machine-main-panel .alchemy-effects { color: #e1c4a0 !important; font-size: 12px !important; }
+.machine-main-panel .alchemy-station-button, .machine-main-panel .alchemy-fire-button { border: 1px solid #b58348 !important; border-radius: 5px !important; background-color: #3b281c !important; color: #f2c67b !important; }
+.machine-main-panel .alchemy-station-button:hover, .machine-main-panel .alchemy-fire-button:hover { border-color: #ffd06a !important; background-color: #644321 !important; }
+.machine-main-panel .alchemy-station-button:disabled, .machine-main-panel .alchemy-fire-button:disabled { opacity: 0.45 !important; }
+.machine-choice { height: 36px !important; min-height: 36px !important; border: 1px solid #b6854b !important; border-radius: 4px !important; color: #f0d8af !important; background-color: #2a1c14 !important; }
+.machine-choice:focus, .machine-choice:open, .machine-color-picker:hover, .machine-color-picker:focus, .machine-color-picker:open { border-color: #ffd06a !important; }
+.machine-choice::value, .machine-choice::indicator { color: #f0d8af !important; }
+.machine-choice::popup { border: 2px solid #b6854b !important; border-radius: 5px !important; color: #f0d8af !important; background-color: #2d1e16 !important; z-index: 550 !important; }
+.machine-choice option { background-color: #2d1e16 !important; color: #f0d8af !important; }
+.machine-choice option:hover, .machine-choice option:checked { background-color: #80572c !important; }
+/* Filter widgets use explicit root classes because widget internals have their own CSS scopes. */
+.machine-main-panel .funnel-filter-workspace { gap: 22px !important; }
+.machine-main-panel .distributor-filter-workspace { gap: 10px !important; }
+.machine-main-panel .distributor-filter-row { gap: 16px !important; padding: 5px !important; border-bottom: 1px solid #79522f !important; }
+.machine-main-panel .distributor-output-name, .machine-main-panel .tunnel-random-label, .machine-main-panel .funnel-filter-mode label { color: #edcea5 !important; }
+.machine-main-panel .funnel-filter-slot { width: 50px !important; height: 50px !important; border: 1px solid #c18b48 !important; border-radius: 5px !important; background-color: #2b1c14 !important; }
+.machine-main-panel .filter-selecting { border-color: #ffd06a !important; box-shadow: 0 0 8px #ffc44766 !important; }
+.machine-main-panel .filter-placeholder { top: 12px !important; left: 12px !important; color: #c4a06a !important; }
+.machine-main-panel .filter-clear { width: 34px !important; height: 34px !important; min-height: 34px !important; padding: 6px !important; border: 1px solid #ad7e49 !important; border-radius: 4px !important; color: #e5bd82 !important; background-color: #3d291b !important; }
+.machine-main-panel .filter-clear:hover { border-color: #ffd578 !important; background-color: #684727 !important; }
+.machine-button-icon { pointer-events: none !important; }
+.machine-switch::track { border: 1px solid #bc8949 !important; border-radius: 12px !important; background-color: #2d1e15 !important; }
+.machine-switch:checked::track { background-color: #aa7327 !important; }
+.machine-switch::thumb { background-color: #ffe09a !important; }
+/* Attached storage gets its own inset panel; every original slot remains available. */
+.inventory-machine-shell.inventory-shell-linked { max-width: 1320px !important; }
+.machine-linked-browser { width: 24.5% !important; }
+.inventory-shell-linked .machine-main-panel { left: 29% !important; width: 37% !important; }
+.machine-linked-storage { left: 3.5% !important; right: auto !important; top: 7% !important; bottom: 5% !important; transform: translate(0px, 0px) !important; width: 23% !important; max-height: 100% !important; padding: 20px 12px !important; border: 0 !important; border-radius: 5px !important; background-color: #35241a !important; gap: 12px !important; }
+.machine-linked-storage .linked-container-grid { width: 201px !important; max-width: 100% !important; align-self: center !important; grid-template-columns: repeat(6, 31px) !important; grid-auto-rows: 31px !important; gap: 3px !important; }
+.inventory-shell-linked .machine-main-panel .inventory-grid, .inventory-shell-linked .machine-main-panel .inventory-hotbar { width: 303px !important; grid-template-columns: repeat(9, 31px) !important; grid-auto-rows: 31px !important; gap: 3px !important; }
+.inventory-shell-linked .machine-main-panel .inventory-grid { grid-template-rows: repeat(2, 31px) !important; }
+@media (max-width: 1100px) {
+ .machine-title { width: 62% !important; }
+ .machine-title .inventory-reference-label { font-size: 22px !important; }
+ .machine-main-panel .inventory-grid, .machine-main-panel .inventory-hotbar { width: 348px !important; grid-template-columns: repeat(9, 36px) !important; grid-auto-rows: 36px !important; gap: 3px !important; }
+ .machine-main-panel .inventory-grid { grid-template-rows: repeat(2, 36px) !important; }
+ .inventory-double-container.machine-main-panel .container-grid { grid-template-rows: repeat(4, 36px) !important; }
+ .machine-main-panel .furnace-slot { width: 48px !important; height: 48px !important; }
+ .machine-main-panel .furnace-result { width: 54px !important; height: 54px !important; }
+ .machine-main-panel .furnace-fuel-track { height: 48px !important; }
+ .machine-main-panel .furnace-material-row { gap: 9px !important; }
+ .machine-main-panel .furnace-progress-group { width: 58px !important; }
+ .machine-main-panel .furnace-progress-track { width: 48px !important; }
+ .machine-main-panel .alchemy-materials { display: grid !important; grid-template-columns: 76px 128px 48px !important; gap: 8px !important; }
+ .machine-main-panel .alchemy-materials .alchemy-process { grid-column: 2 !important; }
+ .machine-main-panel .alchemy-results { grid-column: 3 !important; flex-direction: column !important; }
+ .machine-main-panel .alchemy-inputs { grid-template-columns: repeat(3, 40px) !important; grid-auto-rows: 40px !important; }
+ .machine-main-panel .alchemy-supplies { flex-wrap: wrap !important; justify-content: center !important; }
+ .machine-main-panel .distributor-filter-row { gap: 8px !important; padding: 3px !important; }
+ .machine-main-panel .distributor-output-label { width: 88px !important; }
+ .machine-main-panel .distributor-output-name { font-size: 13px !important; }
+ .machine-main-panel .funnel-filter-mode { min-width: 104px !important; gap: 6px !important; }
+ .machine-main-panel .funnel-filter-mode label { font-size: 12px !important; }
+ .machine-linked-storage { padding: 18px 8px !important; }
+ .machine-linked-storage .linked-container-grid { width: 99px !important; grid-template-columns: repeat(3, 31px) !important; }
+ .inventory-shell-linked .machine-main-panel .inventory-grid, .inventory-shell-linked .machine-main-panel .inventory-hotbar { width: 303px !important; grid-template-columns: repeat(9, 31px) !important; grid-auto-rows: 31px !important; }
+ .inventory-shell-linked .machine-main-panel .inventory-grid { grid-template-rows: repeat(2, 31px) !important; }
+}
+@media (max-height: 720px) {
+ .inventory-machine-shell { height: 88% !important; }
+ .machine-main-panel .inventory-body { gap: 8px !important; }
+ .machine-main-panel .furnace-workspace, .machine-main-panel .crusher-workspace, .machine-main-panel .mixer-workspace, .machine-main-panel .alchemy-workspace, .machine-main-panel .funnel-filter-workspace, .machine-main-panel .distributor-filter-workspace, .machine-main-panel .tunnel-extraction-mode { padding: 9px 8px !important; }
+ .machine-main-panel .inventory-section-heading { min-height: 20px !important; }
+ .machine-section-title { font-size: 15px !important; }
+ .machine-main-panel .inventory-status { min-height: 20px !important; }
+ .machine-main-panel .furnace-slot { width: 44px !important; height: 44px !important; }
+ .machine-main-panel .furnace-result { width: 50px !important; height: 50px !important; }
+ .machine-main-panel .furnace-fuel-track { height: 44px !important; }
+ .machine-main-panel .furnace-feed-column { gap: 7px !important; }
+ .machine-main-panel .furnace-slot-group { gap: 2px !important; }
+ .machine-main-panel .furnace-status { font-size: 11px !important; }
+ .machine-main-panel .alchemy-workspace { gap: 8px !important; }
+ .machine-slot-caption { font-size: 12px !important; }
+ .machine-main-panel .alchemy-summary { gap: 5px !important; flex-wrap: wrap !important; }
+}
+@media (max-width: 980px) {
+ .inventory-machine-shell.inventory-shell-linked { top: 50% !important; width: 94% !important; height: 90% !important; display: flex !important; flex-direction: column !important; align-items: center !important; gap: 16px !important; overflow-y: auto !important; padding: 52px 18px 28px !important; }
+ .inventory-shell-linked .machine-title { top: 6px !important; height: 42px !important; width: 80% !important; min-width: 220px !important; }
+ .inventory-shell-linked .machine-title .inventory-reference-label { font-size: 19px !important; }
+ .inventory-shell-linked .machine-main-panel { position: relative !important; left: auto !important; top: auto !important; bottom: auto !important; width: 100% !important; height: auto !important; min-height: 330px !important; max-height: 620px !important; flex-shrink: 0 !important; }
+ .inventory-shell-linked .machine-main-panel .inventory-body { min-height: 240px !important; max-height: 570px !important; }
+ .machine-linked-storage { position: relative !important; left: auto !important; top: auto !important; bottom: auto !important; width: 100% !important; max-height: 270px !important; flex-shrink: 0 !important; }
+ .machine-linked-storage .linked-container-grid { width: 303px !important; grid-template-columns: repeat(9, 31px) !important; }
+ .machine-linked-browser { position: relative !important; top: auto !important; bottom: auto !important; right: auto !important; left: auto !important; width: 82% !important; height: 310px !important; min-height: 250px !important; margin-left: 42px !important; flex-shrink: 0 !important; }
+}
+@media (max-width: 780px) {
+ .inventory-machine-shell, .inventory-machine-shell.inventory-shell-linked { top: 50% !important; width: 94% !important; height: 90% !important; display: flex !important; flex-direction: column !important; align-items: center !important; gap: 16px !important; overflow-y: auto !important; padding: 52px 18px 28px !important; }
+ .inventory-machine-shell .machine-title { top: 6px !important; height: 42px !important; width: 80% !important; min-width: 220px !important; }
+ .machine-title .inventory-reference-label { font-size: 19px !important; }
+ .machine-main-panel, .inventory-shell-linked .machine-main-panel { position: relative !important; left: auto !important; top: auto !important; bottom: auto !important; width: 100% !important; height: auto !important; min-height: 330px !important; max-height: 620px !important; flex-shrink: 0 !important; }
+ .machine-main-panel .inventory-body { min-height: 240px !important; max-height: 570px !important; }
+ .machine-linked-storage { position: relative !important; left: auto !important; top: auto !important; bottom: auto !important; width: 100% !important; max-height: 270px !important; flex-shrink: 0 !important; }
+ .machine-linked-storage .linked-container-grid { width: 303px !important; grid-template-columns: repeat(9, 31px) !important; }
+ .machine-item-browser { position: relative !important; top: auto !important; bottom: auto !important; right: auto !important; left: auto !important; width: 82% !important; height: 310px !important; min-height: 250px !important; margin-left: 42px !important; flex-shrink: 0 !important; }
+ .machine-main-panel .inventory-grid, .machine-main-panel .inventory-hotbar { width: 303px !important; grid-template-columns: repeat(9, 31px) !important; grid-auto-rows: 31px !important; gap: 3px !important; }
+ .machine-main-panel .inventory-grid { grid-template-rows: repeat(2, 31px) !important; }
+ .inventory-double-container.machine-main-panel .container-grid { grid-template-rows: repeat(4, 31px) !important; }
+ .machine-main-panel .mixer-input { grid-template-columns: repeat(3, 36px) !important; grid-auto-rows: 36px !important; }
+ .machine-main-panel .mixer-materials { gap: 12px !important; }
+ .machine-main-panel .alchemy-materials { display: flex !important; flex-wrap: wrap !important; }
+ .machine-main-panel .distributor-output-label { flex-direction: column !important; gap: 2px !important; width: 75px !important; }
+}
+/* The workbench is its own TiltUI component; root classes avoid crossing CSS scopes. */
+.copper-crafting-panel { width: 100% !important; padding: 12px !important; gap: 12px !important; border: 2px solid #97683e !important; border-radius: 7px !important; background-color: #483020 !important; background-image: linear-gradient(to bottom, #513827, #342218) !important; }
+.copper-crafting-panel .bench-heading { gap: 8px !important; color: #ecc58e !important; }
+.bench-station-title { margin: 0 !important; flex-grow: 1 !important; font-family: serif !important; font-size: 20px !important; color: #f2d9ae !important; }
+.copper-crafting-panel .bench-workspace { gap: 18px !important; color: #efbf71 !important; }
+.copper-crafting-panel .bench-workspace > icon { width: 26px !important; height: 26px !important; flex-shrink: 0 !important; }
+.copper-crafting-panel .bench-grid { width: 140px !important; height: 140px !important; grid-template-columns: repeat(3, 44px) !important; grid-template-rows: repeat(3, 44px) !important; grid-auto-rows: 44px !important; gap: 4px !important; }
+.copper-crafting-panel .bench-output-area { width: 75px !important; min-width: 0 !important; gap: 6px !important; }
+.copper-crafting-panel .bench-output { width: 54px !important; height: 54px !important; }
+.copper-crafting-panel .bench-output-area p { color: #e5c294 !important; font-family: serif !important; font-size: 12px !important; text-wrap: wrap !important; text-align: center !important; }
+.copper-crafting-panel .craft-message { color: #e5bd91 !important; font-size: 12px !important; text-wrap: wrap !important; }
+.machine-main-panel .alchemy-station-button p, .machine-main-panel .alchemy-station-button icon, .machine-main-panel .alchemy-fire-button icon, .copper-crafting-panel .craft-clear icon { pointer-events: none !important; }
+@media (max-width: 1100px) {
+ .copper-crafting-panel { padding: 9px !important; gap: 8px !important; }
+ .bench-station-title { font-size: 17px !important; }
+ .copper-crafting-panel .bench-workspace { gap: 12px !important; }
+ .copper-crafting-panel .bench-grid { width: 116px !important; height: 116px !important; grid-template-columns: repeat(3, 36px) !important; grid-template-rows: repeat(3, 36px) !important; grid-auto-rows: 36px !important; }
+ .copper-crafting-panel .bench-output-area { width: 65px !important; }
+ .copper-crafting-panel .bench-output { width: 48px !important; height: 48px !important; }
+}
+@media (max-height: 720px) {
+ .copper-crafting-panel { padding: 9px !important; gap: 8px !important; }
+ .copper-crafting-panel .bench-grid { width: 116px !important; height: 116px !important; grid-template-columns: repeat(3, 36px) !important; grid-template-rows: repeat(3, 36px) !important; grid-auto-rows: 36px !important; }
+ .copper-crafting-panel .craft-message { font-size: 11px !important; }
+}

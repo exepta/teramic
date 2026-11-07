@@ -169,6 +169,34 @@ impl CapeItem {
     }
 }
 
+impl ItemKind {
+    pub const fn cape(self) -> Option<CapeItem> {
+        match self {
+            Self::Cape(cape) | Self::HeraldicCape { cape, .. } => Some(cape),
+            _ => None,
+        }
+    }
+
+    /// Only newly acquired undyed capes receive the owner's heraldry. A manually
+    /// colored cape and an existing heraldic cape retain their concrete identity.
+    pub fn with_default_heraldry(self, heraldry: Option<crate::kingdom::KingdomHeraldry>) -> Self {
+        match (self, heraldry) {
+            (Self::Cape(cape), Some(heraldry))
+                if cape.color == crate::beds::DyeColor::White && heraldry.icon.valid() =>
+            {
+                Self::HeraldicCape {
+                    cape: CapeItem {
+                        color: crate::beds::DyeColor::Rgb(heraldry.color),
+                        ..cape
+                    },
+                    heraldry,
+                }
+            }
+            _ => self,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum ArmorPiece {
@@ -525,7 +553,7 @@ fn parse(source: &str, expected: ItemKind) -> Result<EquipmentDefinition, String
     Ok(file.equipment)
 }
 pub fn equipment_definition(item: ItemKind) -> Option<&'static EquipmentDefinition> {
-    let item = if let ItemKind::Cape(cape) = item {
+    let item = if let Some(cape) = item.cape() {
         ItemKind::Cape(cape.undyed())
     } else {
         item

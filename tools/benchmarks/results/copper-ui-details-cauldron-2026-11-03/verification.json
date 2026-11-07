@@ -1,0 +1,336 @@
+{
+  "phase": 184,
+  "date": "2026-11-03",
+  "timezone": "Europe/Berlin",
+  "workspace_tests": {
+    "exit_code": 0,
+    "passed": 3744,
+    "failed": 0,
+    "ignored": 8
+  },
+  "checks": {
+    "workspace_build": 0,
+    "all_targets_clippy_deny_warnings": 0,
+    "format": 0,
+    "diff_check": 0,
+    "current_css_parser": 0
+  },
+  "native": {
+    "game_exit_code": 0,
+    "game_captures": 25,
+    "menu_exit_code": 0,
+    "menu_captures": 12,
+    "startup_exit_code": 0,
+    "startup_captures": 3,
+    "os_input": true,
+    "crafting_matches_inventory": true,
+    "catalog_slot_scale": 0.75,
+    "trash_in_category_rail": true,
+    "wood_alternative_click_checked": true,
+    "footer_insets_checked": true,
+    "inventory_unchanged": true,
+    "existing_saves_opened": false,
+    "world_loading": "Representative view data; no world generation claimed.",
+    "startup": "Actual finite preload and animated fade; no terrain or server.",
+    "startup_inventory_icons": 460,
+    "startup_ui_assets": 1633,
+    "startup_ui_icons": 1611
+  },
+  "source_hashes": "source-sha256.json",
+  "captures": {
+    "catalog-page-two.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "dd238f306c825106081738499ddebd8575f708673537e7802e60d72fd7a46f50"
+    },
+    "catalog-search.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "4bffda9984735c3962062b2014cd0a77d5f6cd85f90df34af5b9d8d68d751b4e"
+    },
+    "cauldron-recipe-compact.png": {
+      "size": [
+        1025,
+        641
+      ],
+      "sha256": "0b79b0e0ba20dc8d880046db5f83e88a1fc144567e8de6f9fd963f8a059198e8"
+    },
+    "cauldron-recipe-wide.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "cb2ea3f17bae5c3e185a2148c0a2310b418849c2cdc6a38200b068fa29b78fff"
+    },
+    "chest-birch-alternative.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "ee4517f67bd885b3e665c042102a685a21d88282f7d638029f9ff2f47c72cfa1"
+    },
+    "chest-birch.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "5b0cc839e639c6d3b6ab146cabad6ac77157f310258746be59fe9ef0d1d76031"
+    },
+    "chest-cherry.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "2073cdc9eeda006ec030d873a4eb19d0e893538743d19b3a06ae789969b988c2"
+    },
+    "chest-oak.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "95654e0a7cd4edbd203a06954a7e9b4ae13ab1019f687ddbd3033e7dd5d5392d"
+    },
+    "chest-spruce.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "d147d029bb4114ada5ee10c8ab488528c9cdd1ae2747c379b593531843deddf2"
+    },
+    "crafting-recipe-reference-compact.png": {
+      "size": [
+        1025,
+        641
+      ],
+      "sha256": "2580787266b6e3264ecd6bd95f6092de51c23e22a837a8cdf4fdddf6f278c453"
+    },
+    "crafting-recipe-reference-wide.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "42dacdbbae9d3ce7267849f85bdac7bc8199f03dc7b19e1bec3e577c55b5d2d7"
+    },
+    "furnace-alternative-fuels.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "de14a415c8584f31dd9064492ec2f5aa5d58bd9152d7a7036d74e50714270659"
+    },
+    "furnace-recipe-reference-compact.png": {
+      "size": [
+        1025,
+        641
+      ],
+      "sha256": "723ce2c5768f1e9e11ca3d6df54419ee8968ccfc187cd542dd786857e96a3102"
+    },
+    "furnace-recipe-reference-wide.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "456094bf5300f7ac3a270680e375ef40f030c02fdc648a68bfe64d31f3dea097"
+    },
+    "furnace-selected-fuel.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "69315386a31e84d9c8272ca103424633f90713be549ff8d9e6ef88e660abdb65"
+    },
+    "hotbar-compact.png": {
+      "size": [
+        1025,
+        641
+      ],
+      "sha256": "b66ca2ef78a69ec7cf3c222421151c73de09161f389799fa1ac7520eac265853"
+    },
+    "hotbar-selected-wide.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "73f366f3d78ec7db2f38f0b97c75f385db63823d476df4b3f4bb480511e43ced"
+    },
+    "hotbar-wide.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "a81812da1c3e3bf66e00827128def8117bbfed00875a7da4206eb3be42617f4c"
+    },
+    "inventory-left-category-tabs.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "c031f586849fae4a743f3a799d48811cf7a755aa75479e5437df182d4058afce"
+    },
+    "pause-menu-compact.png": {
+      "size": [
+        1025,
+        641
+      ],
+      "sha256": "4956dca3a299ce5c07024947c2af82936a299575f70a1dab2f92075650b44346"
+    },
+    "pause-menu-wide.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "93d17b9468f76a2870e9aaa75918d48921db1c49550e2d52e89c87ccbc427d9d"
+    },
+    "player-inventory-catalog-collapsed.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "984a5619621c5fe2037157835a8d9776573b47c3f60c72b6e1107dc88855d869"
+    },
+    "player-inventory-reference-compact.png": {
+      "size": [
+        1025,
+        641
+      ],
+      "sha256": "452b5db31ecbe08ea1ed171081fad8df6e4e04dc77f8731b2967c74265e1ae72"
+    },
+    "player-inventory-reference-wide.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "f08e02655106a8786751359e57b5bfa80229bc2e491100e6f6ae6364852765d0"
+    },
+    "settings-compact.png": {
+      "size": [
+        1025,
+        641
+      ],
+      "sha256": "2c43b65d51ca58e32e36bc986448978223843806b137fe4fe5aa95b302072006"
+    },
+    "settings-controls-wide.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "fb5dd7d3f648c5984ec3a7522eff76335db6eec8910299c19a4869e437323b39"
+    },
+    "settings-paused-wide.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "b266e33755e6c39534d64ad462fe34a7da5556a1a46801388ef78fff8736b32a"
+    },
+    "settings-wide.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "6ca2a927bf6c2dbbc97b6f8329be32053171a95d141f872fde506ab558649562"
+    },
+    "singleplayer-button-hover.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "dadb38f7db05bbe7520f64b8a50aa729491d772d7b1b0b16185fcc5c38808a95"
+    },
+    "singleplayer-compact.png": {
+      "size": [
+        1025,
+        641
+      ],
+      "sha256": "3a75be9b40e4d317ef5d8cd323ee9eb0512f2d9f4836598fb0e6320e04a72c54"
+    },
+    "singleplayer-create-dialog.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "214225b09097d6f866379cbc024583a497cd2d869287cf44319af317828cc0ea"
+    },
+    "singleplayer-delete-dialog.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "7a3d660f2a5acfecd29d4a92907c3887a9ecf75116ff7880616417c850ac1542"
+    },
+    "singleplayer-wide.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "c2f01587195fa7a03814444281e5863e770dfefd2f8c4cfec2bc951d7d6877ec"
+    },
+    "start-menu-compact.png": {
+      "size": [
+        1025,
+        641
+      ],
+      "sha256": "8803666fd96ad3aca42a3d3e9407d462c392cc18d2af0ae9b522408df64a18b9"
+    },
+    "start-menu-wide.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "a49ffdb7626e9674d67418ca0c853699cb08b64fb467102c7cc5bf46535053a6"
+    },
+    "startup/main-menu.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "a49ffdb7626e9674d67418ca0c853699cb08b64fb467102c7cc5bf46535053a6"
+    },
+    "startup/startup-icons.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "c183ad4754a2b301c5bf5cb27a0655a88ee6e7b5c369626ee055a9c9f9fa5779"
+    },
+    "startup/startup-transition.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "bd5b2ae5aa4de3ca495503a972771e1d62a783f6fb10878e01ac2b67998752de"
+    },
+    "world-loading-compact.png": {
+      "size": [
+        1025,
+        641
+      ],
+      "sha256": "d376ccb5fec914311950c5857f3d9ee3ebf68036ce7fb8dfaf513fe4eae483d9"
+    },
+    "world-loading-wide.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "54ac95c43b4a30591b424b9762b2c472a690830ff5b6011da385029c9e726d65"
+    }
+  },
+  "imagegen": {
+    "mode": "builtin",
+    "prompt_file": "imagegen-prompts.txt",
+    "asset": "src-ui/assets/cauldron-recipe-184.png",
+    "original": "/home/exepta/.codex/generated_images/01a19401-f363-7293-84fa-4370272101fa/exec-76eca87e-556b-4ff8-bb43-20b2747a5a68.png",
+    "alpha_preserved": true,
+    "rgba_color_type": 6,
+    "raster_postprocessing": false,
+    "size": [
+      1254,
+      1254
+    ],
+    "sha256": "275d926615edceadace2cd57d0adff82b7022223e8e9ea46a5fd1f63828cc130"
+  }
+}

@@ -9,6 +9,9 @@ use std::{
     sync::{LazyLock, OnceLock},
 };
 use terra_voxel::meshing::{BlockFace, PADDED_VOLUME, mesh_section};
+use terra_world::generation::TreeAppearance;
+
+mod needles;
 
 struct CrownTemplate {
     resolution: u32,
@@ -180,15 +183,22 @@ pub(super) fn append_crown(
     local: [u32; 3],
     exposure: u8,
     level: DetailLevel,
-    species_material: (u16, bool),
+    species_material: (u16, Option<TreeAppearance>),
 ) -> Result<(), String> {
-    let (material, spruce) = species_material;
+    let (material, species) = species_material;
+    if let Some(TreeAppearance::Spruce | TreeAppearance::Fir) = species {
+        return needles::append(
+            batches,
+            block,
+            global,
+            local,
+            exposure,
+            level,
+            (material, species == Some(TreeAppearance::Fir)),
+        );
+    }
     let variant = variation(global, 0x0043_524f_574e) % 4;
-    let index = (if spruce {
-        2
-    } else {
-        usize::from(material == 9)
-    }) * 512
+    let index = usize::from(material == 9) * 512
         + ((usize::from(level == DetailLevel::Middle) * 64 + usize::from(exposure)) * 4)
         + variant as usize;
     let template = cached_crown(index)?;

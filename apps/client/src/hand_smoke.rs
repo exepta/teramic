@@ -21,14 +21,15 @@ struct Fixture {
     requested: bool,
 }
 const CENTER: Vec3 = Vec3::new(0.5, 201.0, 0.5);
-const STAGES: usize = 18;
+const STAGES: usize = 21;
 
 fn third_person(stage: usize) -> bool {
-    matches!(stage, 4 | 14 | 15)
+    matches!(stage, 4 | 14 | 15 | 20)
 }
 
 pub(crate) fn install(app: &mut App) {
-    if !std::env::args().any(|a| a == "--smoke-test-hands") {
+    let wrench = std::env::args().any(|a| a == "--smoke-test-wrench");
+    if !wrench && !std::env::args().any(|a| a == "--smoke-test-hands") {
         return;
     }
     match terra_core::PlayerProfile::selected_path(&terra_core::menu_config_directory())
@@ -48,8 +49,8 @@ pub(crate) fn install(app: &mut App) {
     app.insert_resource(Fixture {
         start: Instant::now(),
         entered: Instant::now(),
-        stage: 0,
-        captures: 0,
+        stage: if wrench { 18 } else { 0 },
+        captures: if wrench { 18 } else { 0 },
         requested: false,
     })
     // This fixture presents transforms, not network prediction or locomotion.
@@ -107,6 +108,7 @@ fn drive(world: &mut World) {
         11 | 12 | 14 => ItemKind::Tool(ToolKind::IronScythe),
         16 => ItemKind::Tool(ToolKind::Bucket),
         17 => ItemKind::Tool(ToolKind::WaterBucket),
+        18..=20 => ItemKind::Tool(ToolKind::Wrench),
         _ => ItemKind::Block(40),
     };
     let mut session = world.resource_mut::<ClientSession>();
@@ -125,7 +127,7 @@ fn drive(world: &mut World) {
         });
     world
         .resource_mut::<terra_player::interaction::InteractionMotion>()
-        .swinging = matches!(stage, 3 | 12..=15);
+        .swinging = matches!(stage, 3 | 12..=15 | 19);
     let eye = if third_person(stage) {
         Transform::from_translation(CENTER + Vec3::new(2.0, 1.0, -3.7)).looking_at(CENTER, Vec3::Y)
     } else {

@@ -1,0 +1,11 @@
+/* The source is an empty outer frame, not a second set of slot dividers.
+   Crop 2172x320: its aperture is x208..1965, y269..454 in the original PNG.
+   At 352x52 the 268x28 grid sits at (42,13), inside the rounded endcaps. */
+.inventory-hud { bottom: 24px !important; }
+.inventory-hud .hud-hotbar { width: 352px !important; height: 52px !important; min-width: 352px !important; min-height: 52px !important; padding: 13px 42px 11px !important; grid-template-columns: repeat(9, 28px) !important; grid-template-rows: 28px !important; grid-auto-rows: 28px !important; gap: 2px !important; background-color: transparent !important; background-image: none !important; border: 0 !important; border-radius: 0 !important; overflow: visible !important; }
+.inventory-hud .painted-hotbar-frame { top: 0 !important; left: 0 !important; width: 352px !important; height: 52px !important; }
+.reference-hud-slot { width: 28px !important; height: 28px !important; min-width: 28px !important; min-height: 28px !important; padding: 2px !important; border: 1px solid #97704f !important; border-radius: 4px !important; }
+.reference-hud-slot.selected { border: 2px solid #e4b76c !important; box-shadow: 0 0 5px #edbc5b66 !important; }
+.reference-hud-slot .hud-slot-count { right: 2px !important; bottom: 1px !important; font-size: 10px !important; }
+/* Key plaques sit below the frame so its lower copper rail stays continuous. */
+.reference-hud-slot .hud-slot-key { left: 50% !important; top: auto !important; bottom: -25px !important; width: 18px !important; height: 14px !important; min-height: 14px !important; padding: 0 !important; margin: 0 !important; font-size: 10px !important; transform: translateX(-50%) !important; display: flex !important; justify-content: center !important; align-items: center !important; }

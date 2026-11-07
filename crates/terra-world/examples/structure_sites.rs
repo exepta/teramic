@@ -66,7 +66,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             );
             continue;
         }
-        let mut found = [false; 5];
+        let mut found = [false; 7];
         let started = std::time::Instant::now();
         'regions: for radius in 0_i64..=12 {
             for z in -radius..=radius {
@@ -83,6 +83,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         (StructureKind::Village, VillageStyle::Highland) => 2,
                         (StructureKind::Ruin, _) => 3,
                         (StructureKind::Mine, _) => 4,
+                        (StructureKind::Kingdom, _) => 5,
+                        (StructureKind::Outpost, _) => 6,
                     };
                     if !found[index] {
                         println!(

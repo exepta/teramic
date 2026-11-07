@@ -3,6 +3,69 @@
 .inventory-panel { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 704px; height: 840px; max-height: 95%; min-height: 0; display: flex; flex-direction: column; background-color: #17231ff5; border: 2px solid #a29361; border-radius: 6px; padding: 20px; gap: 16px; }
 .inventory-double-container { height: 840px; }
 .inventory-furnace-panel { height: 740px; }
+.inventory-mixer-panel { background-color: #17231f; }
+.funnel-filter-workspace { display: flex; align-items: center; justify-content: center; gap: 24px; padding: 18px 0 24px; border-bottom: 1px solid #65715a; flex-shrink: 0; }
+.distributor-filter-workspace { display: flex; flex-direction: column; gap: 12px; padding: 12px 0 18px; border-bottom: 1px solid #65715a; flex-shrink: 0; }
+.tunnel-extraction-mode { display: flex; align-items: center; justify-content: center; min-height: 42px; gap: 12px; padding: 4px 0 18px; flex-shrink: 0; color: #e7dfc9; }
+.tunnel-random-label { width: 70px; min-width: 70px; height: 24px; min-height: 24px; flex-shrink: 0; margin: 0; color: #e7dfc9; font-size: 14px; line-height: 20px; text-wrap: nowrap; }
+.tunnel-extraction-mode switch-button { flex-shrink: 0; }
+.alchemy-workspace { display: flex; flex-direction: column; align-items: stretch; gap: 14px; padding: 12px 8px 18px; flex-shrink: 0; }
+.alchemy-navigation { display: flex; justify-content: flex-end; height: 34px; flex-shrink: 0; }
+.alchemy-station-button { min-height: 32px; height: 32px; padding: 4px 10px; gap: 8px; border-radius: 4px; }
+.alchemy-station-button p { font-size: 13px; color: #eee4cf; margin: 0; }
+.alchemy-recipe-choice { width: 100%; height: 42px; flex-shrink: 0; }
+.alchemy-recipe-choice::popup { background-color: #18251f; color: #eee4cf; border-color: #8a9870; border-radius: 4px; z-index: 550; }
+.cauldron-recipe-options { width: 100%; display: flex; flex-direction: column; flex-shrink: 0; }
+.alchemy-materials, .campfire-materials { display: flex; align-items: center; justify-content: center; gap: 16px; }
+.alchemy-inputs { display: grid; grid-template-columns: repeat(3, 56px); gap: 6px; }
+.alchemy-supplies, .alchemy-results { display: flex; align-items: center; gap: 6px; }
+.alchemy-results { flex-direction: column; }
+.alchemy-process { display: flex; flex-direction: column; align-items: center; gap: 9px; width: 66px; flex-shrink: 0; }
+.alchemy-water-track { height: 48px; width: 8px; background-color: #1e2b34; display: flex; align-items: flex-end; border-radius: 2px; overflow: hidden; }
+.alchemy-water-fill { width: 100%; background-color: #67b9d5; }
+.alchemy-water-amount { font-size: 12px; color: #a7c5d0; }
+.alchemy-heat { color: #777e80; }
+.alchemy-heated { color: #f5ae56; }
+.alchemy-progress { background-color: #b887cf; }
+.alchemy-summary { display: flex; align-items: center; justify-content: space-between; gap: 18px; min-height: 36px; }
+.alchemy-effects { font-size: 13px; color: #c1c9d5; text-wrap: wrap; }
+.alchemy-fire-button { width: 44px; height: 44px; padding: 8px; flex-shrink: 0; }
+.alchemy-workspace .furnace-slot { width: 56px; height: 56px; }
+.alchemy-workspace .furnace-result { width: 64px; height: 64px; }
+.alchemy-workspace .furnace-fuel-track { height: 100%; right: -12px; width: 6px; }
+.alchemy-inputs { grid-template-columns: repeat(3, 48px); grid-auto-rows: 48px; }
+.alchemy-materials { gap: 12px; }
+.alchemy-process { width: 50px; }
+.alchemy-process .furnace-progress-track { width: 48px; }
+@media (max-width: 950px) {
+  .alchemy-materials { display: grid; grid-template-columns: 64px 128px 56px; justify-content: center; gap: 8px; }
+  .alchemy-inputs { grid-template-columns: repeat(3, 40px); grid-auto-rows: 40px; gap: 4px; }
+  .alchemy-supplies { flex-wrap: wrap; justify-content: center; gap: 2px; }
+  .alchemy-materials .alchemy-process { grid-column: 2; }
+  .alchemy-results { flex-direction: row; }
+  .alchemy-workspace .furnace-slot { width: 40px; height: 40px; }
+  .alchemy-workspace .furnace-result { width: 46px; height: 46px; }
+  .alchemy-summary { gap: 6px; flex-wrap: wrap; }
+  .alchemy-results { grid-column: 3; flex-direction: column; }
+}
+@media (max-height: 650px) {
+  .alchemy-workspace { gap: 8px; padding: 4px 0 8px; }
+  .alchemy-recipe-choice { height: 34px; }
+  .alchemy-effects, .alchemy-summary .furnace-status { font-size: 11px; }
+}
+.distributor-filter-row { display: flex; align-items: center; justify-content: center; gap: 16px; }
+.distributor-output-label { display: flex; align-items: center; gap: 8px; width: 112px; flex-shrink: 0; }
+.distributor-output-name { width: 83px; min-width: 83px; flex-shrink: 0; margin: 0; font-size: 15px; line-height: 20px; font-weight: 600; text-wrap: nowrap; color: #e7dfc9; }
+@media (max-width: 950px) { .distributor-filter-row { gap: 8px; } }
+@media (max-width: 780px) { .distributor-filter-row { gap: 6px; } .distributor-output-label { width: 88px; flex-direction: column; gap: 2px; } .distributor-output-name { font-size: 13px; line-height: 18px; } .distributor-filter-row .funnel-filter-mode { min-width: 104px; gap: 6px; } .distributor-filter-row .funnel-filter-mode label { font-size: 12px; } .distributor-filter-row .filter-clear { width: 30px; padding: 4px; } }
+.funnel-filter-slot { width: 58px; height: 58px; position: relative; flex-shrink: 0; }
+.funnel-filter-slot .item-slot { position: absolute; top: 0; right: 0; bottom: 0; left: 0; }
+.filter-placeholder { position: absolute; top: 17px; left: 17px; color: #8a9675; opacity: 0.4; pointer-events: none; }
+.filter-selecting .item-cell { border-color: #e9c26d; background-color: #415034; }
+.funnel-filter-mode { display: flex; align-items: center; gap: 10px; min-width: 128px; }
+.funnel-filter-mode label { color: #e7dfc9; font-size: 14px; }
+.filter-clear { width: 36px; height: 36px; padding: 7px; background-color: transparent; color: #c5ba9d; border: 1px solid #697459; border-radius: 4px; }
+.filter-clear:hover { color: #f7e4bd; border-color: #d0b577; }
 .workbench-storage { position: absolute; right: calc(50% + 376px); top: 50%; transform: translateY(-50%); width: 457px; max-height: 95%; min-height: 0; display: flex; flex-direction: column; gap: 14px; padding: 16px; background-color: #17231ff5; border: 2px solid #a29361; border-radius: 6px; overflow-y: auto; }
 .workbench-storage h3 { color: #e8ddb4; font-size: 16px; margin: 0; }
 .linked-container-grid { display: grid; grid-template-columns: repeat(6, 66px); grid-auto-rows: 66px; gap: 5px; flex-shrink: 0; }
@@ -52,6 +115,17 @@
 .crusher-process { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; color: #c4ad7d; }
 .crusher-gear { width: 34px; height: 34px; }
 .crusher-running { animation: crusher-turn 2200ms linear infinite; }
+.mixer-workspace { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 4px 0 10px; flex-shrink: 0; border-bottom: 1px solid #65715a; }
+.mixer-target { display: flex; align-items: center; justify-content: center; gap: 12px; width: 100%; min-width: 0; }
+.mixer-target p { min-width: 72px; margin: 0; color: #e4ddc3; font-size: 13px; }
+.mixer-recipe { width: 100%; margin: 0; text-align: center; text-wrap: wrap; font-size: 11px; color: #bdc8b7; }
+.mixer-target color-picker { width: 180px; min-width: 0; height: 34px; min-height: 34px; background-color: #101b16; color: #eee4cf; border: 1px solid #687b58; border-radius: 4px; }
+.mixer-target color-picker::popup { background-color: #18251ff5; color: #eee4cf; border-color: #8a9870; border-radius: 4px; z-index: 550; }
+.mixer-target color-picker::format { background-color: #263c2c; color: #e4dfcb; }
+.mixer-target color-picker::selected-format { background-color: #526c3d; color: #f4e7b9; }
+.mixer-materials { width: 100%; display: flex; align-items: center; justify-content: center; gap: 24px; }
+.mixer-input { display: grid; grid-template-columns: repeat(3, 58px); grid-auto-rows: 58px; gap: 5px; flex-shrink: 0; }
+.mixer-progress { background-color: #90b9c6; }
 @keyframes crusher-turn { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 .inventory-section-heading { display: flex; align-items: center; justify-content: space-between; min-height: 22px; }
 .inventory-section-heading p { font-size: 12px; color: #aeba9f; }
@@ -121,6 +195,8 @@
   .craft-result { width: 54px; height: 54px; }
 }
 @media (max-width: 950px) {
+  .mixer-materials { gap: 12px; }
+  .mixer-input { grid-template-columns: repeat(3, 42px); grid-auto-rows: 42px; gap: 4px; }
   .furnace-material-row { gap: 6px; }
   .furnace-slot { width: 56px; height: 56px; }
   .furnace-result { width: 64px; height: 64px; }
@@ -155,6 +231,8 @@
   .inventory-status p { font-size: 10px; }
 }
 @media (max-width: 780px) {
+  .mixer-materials { gap: 8px; }
+  .mixer-input { grid-template-columns: repeat(3, 36px); grid-auto-rows: 36px; gap: 3px; }
   .furnace-material-row { gap: 4px; }
   .furnace-slot { width: 48px; height: 48px; }
   .furnace-result { width: 54px; height: 54px; }
@@ -181,6 +259,7 @@
   .inventory-panel { position: relative; top: auto; left: auto; transform: translate(0px, 0px); width: 328px; max-width: 100%; height: 600px; max-height: 90vh; min-height: 260px; flex-shrink: 0; }
   .workbench-storage { position: relative; right: auto; top: auto; transform: translate(0px, 0px); width: 328px; max-width: 100%; max-height: 380px; flex-shrink: 0; }
   .linked-container-grid { grid-template-columns: repeat(9, 31px); grid-auto-rows: 31px; gap: 2px; }
+  .inventory-shell-linked .item-browser { width: 268px; max-width: calc(100% - 60px); }
   .hud-hotbar { grid-template-columns: repeat(9, 40px); grid-auto-rows: 40px; gap: 3px; }
 }
 @media (max-width: 440px) {

@@ -1,0 +1,1 @@
+{"id":4,"key":"teramic::nightvision_potion","name":"Night Vision Potion","inputs":[{"item":{"crop":"lettuce"},"count":1},{"item":{"dust":"gold"},"count":1}],"effects":[{"kind":"night_vision","level":1,"seconds":120.0}],"seconds":18.0,"color":[67,63,160]}

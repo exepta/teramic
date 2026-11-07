@@ -1,0 +1,98 @@
+{
+  "date": "2026-11-01",
+  "phase": 172,
+  "protocol_version": 97,
+  "tests": {
+    "passed": 3609,
+    "failed": 0,
+    "ignored": 8
+  },
+  "world_tests_passed": 981,
+  "infusion_tests_passed": 16,
+  "checks": [
+    {
+      "command": "RUST_TEST_THREADS=4 cargo test --workspace --lib --bins --no-fail-fast -j1",
+      "log": "workspace-tests.log",
+      "status": "passed"
+    },
+    {
+      "command": "cargo build --workspace --locked -j1",
+      "log": "build-workspace.log",
+      "status": "passed"
+    },
+    {
+      "command": "cargo build -p terra-client --locked -j1",
+      "log": "build-client.log",
+      "status": "passed"
+    },
+    {
+      "command": "cargo clippy --workspace --all-targets -j1 -- -D warnings",
+      "log": "clippy.log",
+      "status": "passed"
+    },
+    {
+      "command": "cargo fmt --all --check",
+      "log": "fmt.log",
+      "status": "passed"
+    },
+    {
+      "command": "git diff --check",
+      "log": "diff-check.log",
+      "status": "passed"
+    },
+    {
+      "command": "target/debug/terra-client --smoke-test-hydraulics --gender=f",
+      "log": "native-hydraulics.log",
+      "status": "passed"
+    }
+  ],
+  "models": {
+    "hold_block": {
+      "vertices": 1008,
+      "materials_used": 5
+    },
+    "fluid_infuser": {
+      "vertices": 2984,
+      "materials_used": 4
+    }
+  },
+  "layout_from_bottom": [
+    "hold_block",
+    "air",
+    "fluid_infuser"
+  ],
+  "f29": {
+    "supported_closed_shallow_pool_limit_cells": 64,
+    "proof_budget_per_step_cells": 256,
+    "source_formation": "Two full diagonal sources in a supported closed 2x2 basin form four sources."
+  },
+  "native": {
+    "seconds": 42.61930847167969,
+    "required_captures": 18,
+    "extra_diagnostic_captures": 2,
+    "queue_items": 9,
+    "initial_spacing_blocks": 0.26,
+    "unchanged_bypass_items": 6,
+    "bypass_motion_samples": 43,
+    "concurrent_bypass_on_hold": true,
+    "f29_sources": 4,
+    "f29_units": 32,
+    "f29_epochs_stable": true,
+    "warnings": 0,
+    "errors": 0
+  },
+  "verified_source_subset_sha256": {
+    "crates/terra-core/src/infusion.rs": "c8d3e74f3fe33c946009f59862b3dc99e5453ca21d0da8692c831976cfc4df14",
+    "crates/terra-world/src/water/simulation/pools.rs": "ea4b832448e8c248f7e46594656e20ff9368bd450bef2458747d8ac4167ff086",
+    "crates/terra-world/src/water/simulation/pools/tests.rs": "a6f3e5adacb059710ec3b9f671526b4d0c5820d5b3bdd44cc7730293e4951497",
+    "crates/terra-storage/src/regions/water_source_tests.rs": "dfbad9134d2c617404b04533e101d43a253c943878a368a5e9f7ae09a4e6b0ea",
+    "apps/client/src/hydraulics_smoke.rs": "379e1c8fca53a1fb991e90fcce55b08fa7b889a5f1f9bc6d55cf4e538c1c8817",
+    "crates/terra-render/src/plumbing/intake.rs": "00eb3aa80df837a39c293033f27996ab48e26895ecdc78ddda65f0c23a1d89b2",
+    "crates/terra-render/src/plumbing.rs": "911a60769ecd67870a6d42344cc6307d8e9b57dd921197fb4a96671bfad23f9f",
+    "crates/terra-render/src/meshing/custom_filling.rs": "80466b04a740ff50147c7b8e273fb28d66275d8808a6f227d1f2176e3fd29952",
+    "tools/assets/build_filling.mjs": "eaa85e67b3a6dc0bc8fa1f167d74c0483df04960f16659e1e555233f747e6aaf",
+    "assets/terra/blocks/models/hold_block.gltf": "e4c5779e57dd709d9d92ed8dfb68fcc96f5784d1b342aa055a138dc4ae450759",
+    "assets/terra/blocks/models/fluid_infuser.gltf": "8032f2aa068208cc5910a07584933e6b80974ad5b37b1aba6bee39bdc6cde5ab",
+    "crates/terra-network/src/protocol/session.rs": "fca82f536c6df7f3c45187f43cc60ba76e1ead854e9a28a20a52366d405a8b37"
+  }
+}

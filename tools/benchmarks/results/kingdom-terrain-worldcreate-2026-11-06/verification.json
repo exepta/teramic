@@ -1,0 +1,592 @@
+{
+  "phase": 198,
+  "recorded_utc": "2026-11-06T16:49:03.421564+00:00",
+  "workspace_tests": {
+    "command": "cargo test --workspace --lib --bins --locked --no-fail-fast -j2 -- --test-threads=8",
+    "exit_code": 0,
+    "totals": {
+      "passed": 3918,
+      "failed": 0,
+      "ignored": 9
+    },
+    "suites": [
+      {
+        "crate": "terra_client",
+        "source": "src/main.rs",
+        "passed": 205,
+        "failed": 0,
+        "ignored": 1
+      },
+      {
+        "crate": "terra_core",
+        "source": "src/lib.rs",
+        "passed": 360,
+        "failed": 0,
+        "ignored": 0
+      },
+      {
+        "crate": "terra_network",
+        "source": "src/lib.rs",
+        "passed": 453,
+        "failed": 0,
+        "ignored": 1
+      },
+      {
+        "crate": "terra_physics",
+        "source": "src/lib.rs",
+        "passed": 45,
+        "failed": 0,
+        "ignored": 0
+      },
+      {
+        "crate": "terra_player",
+        "source": "src/lib.rs",
+        "passed": 93,
+        "failed": 0,
+        "ignored": 0
+      },
+      {
+        "crate": "terra_render",
+        "source": "src/lib.rs",
+        "passed": 1014,
+        "failed": 0,
+        "ignored": 2
+      },
+      {
+        "crate": "terra_server",
+        "source": "src/lib.rs",
+        "passed": 5,
+        "failed": 0,
+        "ignored": 0
+      },
+      {
+        "crate": "terra_server",
+        "source": "src/main.rs",
+        "passed": 7,
+        "failed": 0,
+        "ignored": 0
+      },
+      {
+        "crate": "terra_storage",
+        "source": "src/lib.rs",
+        "passed": 142,
+        "failed": 0,
+        "ignored": 0
+      },
+      {
+        "crate": "terra_ui",
+        "source": "src/lib.rs",
+        "passed": 501,
+        "failed": 0,
+        "ignored": 0
+      },
+      {
+        "crate": "terra_voxel",
+        "source": "src/lib.rs",
+        "passed": 24,
+        "failed": 0,
+        "ignored": 0
+      },
+      {
+        "crate": "terra_world",
+        "source": "src/lib.rs",
+        "passed": 1069,
+        "failed": 0,
+        "ignored": 5
+      }
+    ],
+    "log": "logs/workspace-tests.log"
+  },
+  "checks": [
+    {
+      "command": "cargo clippy --workspace --all-targets --locked -j2 -- -D warnings",
+      "exit_code": 0,
+      "log": "logs/workspace-clippy.log"
+    },
+    {
+      "command": "cargo build --workspace --locked -j2",
+      "exit_code": 0,
+      "log": "logs/workspace-build.log"
+    },
+    {
+      "command": "cargo fmt --all -- --check",
+      "exit_code": 0,
+      "log": "logs/format.log"
+    },
+    {
+      "command": "git diff --check",
+      "exit_code": 0,
+      "log": "logs/diff.log"
+    },
+    {
+      "command": "parse all 60 real UI stylesheets with TiltUI parser",
+      "exit_code": 0,
+      "log": "logs/ui-stylesheets.log"
+    }
+  ],
+  "native_scenes": [
+    {
+      "scene": "outpost",
+      "region": [
+        1,
+        4
+      ],
+      "structures_revision": 7,
+      "seed": 42042,
+      "exit_code": 0,
+      "log": "logs/native-outpost.log"
+    },
+    {
+      "scene": "kingdom-temperate",
+      "region": [
+        -1,
+        -1
+      ],
+      "structures_revision": 7,
+      "seed": 42042,
+      "exit_code": 0,
+      "log": "logs/native-temperate.log"
+    },
+    {
+      "scene": "kingdom-winter",
+      "region": [
+        0,
+        -1
+      ],
+      "structures_revision": 7,
+      "seed": 42042,
+      "exit_code": 0,
+      "log": "logs/native-winter.log"
+    },
+    {
+      "scene": "world-create-fhd",
+      "resolution": [
+        1920,
+        1080
+      ],
+      "exit_code": 0,
+      "log": "logs/native-ui-fhd.log"
+    },
+    {
+      "scene": "world-create-4k",
+      "resolution": [
+        3840,
+        2160
+      ],
+      "exit_code": 0,
+      "log": "logs/native-ui-4k.log"
+    }
+  ],
+  "native_images": [
+    {
+      "path": "tools/benchmarks/results/kingdom-terrain-worldcreate-2026-11-06/native/kingdom-temperate/kingdom-temperate-close.png",
+      "width": 2562,
+      "height": 1440,
+      "bit_depth": 8,
+      "bytes": 5256510,
+      "sha256": "99f1745fb52955f254283bcd48738b3e39873f218d74f88db5f0ce71ef60bbe7"
+    },
+    {
+      "path": "tools/benchmarks/results/kingdom-terrain-worldcreate-2026-11-06/native/kingdom-temperate/kingdom-temperate-overview.png",
+      "width": 2562,
+      "height": 1440,
+      "bit_depth": 8,
+      "bytes": 4617816,
+      "sha256": "48a138e6ba48637a3cb7ce5ae48dd70071fb6dbc10e306173e4d084f20b6761c"
+    },
+    {
+      "path": "tools/benchmarks/results/kingdom-terrain-worldcreate-2026-11-06/native/kingdom-winter/kingdom-winter-close.png",
+      "width": 2562,
+      "height": 1440,
+      "bit_depth": 8,
+      "bytes": 5289728,
+      "sha256": "31a4788ed9db7a902cf258e65e5542245e4943d62c7106200e0ed8026df5a53a"
+    },
+    {
+      "path": "tools/benchmarks/results/kingdom-terrain-worldcreate-2026-11-06/native/kingdom-winter/kingdom-winter-overview.png",
+      "width": 2562,
+      "height": 1440,
+      "bit_depth": 8,
+      "bytes": 4819913,
+      "sha256": "d34c4cb06481f6aef318ebe11483b3056732edbe7072dd52fb7608a98c2ee72b"
+    },
+    {
+      "path": "tools/benchmarks/results/kingdom-terrain-worldcreate-2026-11-06/native/outpost/outpost-close.png",
+      "width": 2562,
+      "height": 1440,
+      "bit_depth": 8,
+      "bytes": 5541821,
+      "sha256": "81a10bb232d8f17165bbabb5af69d9172f5ddccdf40e109b5c995e13bb50fbf0"
+    },
+    {
+      "path": "tools/benchmarks/results/kingdom-terrain-worldcreate-2026-11-06/native/outpost/outpost-overview.png",
+      "width": 2562,
+      "height": 1440,
+      "bit_depth": 8,
+      "bytes": 5071654,
+      "sha256": "3bf8c917472738381f4371a5b24e854b283e5f076486e3696e8f8f46b63c0ebe"
+    },
+    {
+      "path": "tools/benchmarks/results/kingdom-terrain-worldcreate-2026-11-06/native/ui-4k/create-world-biome-chooser-scrolled.png",
+      "width": 3840,
+      "height": 2160,
+      "bit_depth": 8,
+      "bytes": 4375442,
+      "sha256": "a145c1aea5afdf65acff992d072a5857177372f126bebc13ccee232958e550fa"
+    },
+    {
+      "path": "tools/benchmarks/results/kingdom-terrain-worldcreate-2026-11-06/native/ui-4k/create-world-biome-chooser.png",
+      "width": 3840,
+      "height": 2160,
+      "bit_depth": 8,
+      "bytes": 4393576,
+      "sha256": "41dc317b2b5aa3d194ed9d5d610a09b9163f55a9c451ae2e6c214a1e2d7283ce"
+    },
+    {
+      "path": "tools/benchmarks/results/kingdom-terrain-worldcreate-2026-11-06/native/ui-4k/create-world-biome-selected.png",
+      "width": 3840,
+      "height": 2160,
+      "bit_depth": 8,
+      "bytes": 5691948,
+      "sha256": "2ac30eaffbacec45ed6958db7a1f1b31acbc15860de9597f32c7d12160cbf0e5"
+    },
+    {
+      "path": "tools/benchmarks/results/kingdom-terrain-worldcreate-2026-11-06/native/ui-4k/create-world-options-scrolled.png",
+      "width": 3840,
+      "height": 2160,
+      "bit_depth": 8,
+      "bytes": 5678411,
+      "sha256": "c46519493ac6770fd284981c621898a988d347a72f99f6362706213a29dd112b"
+    },
+    {
+      "path": "tools/benchmarks/results/kingdom-terrain-worldcreate-2026-11-06/native/ui-4k/create-world-options-top.png",
+      "width": 3840,
+      "height": 2160,
+      "bit_depth": 8,
+      "bytes": 5674029,
+      "sha256": "a62c02aa2171fbcb31961c31fe0796360114c575e53b4d49bddb72131c72ce5a"
+    },
+    {
+      "path": "tools/benchmarks/results/kingdom-terrain-worldcreate-2026-11-06/native/ui-4k/create-world.png",
+      "width": 3840,
+      "height": 2160,
+      "bit_depth": 8,
+      "bytes": 5691948,
+      "sha256": "2ac30eaffbacec45ed6958db7a1f1b31acbc15860de9597f32c7d12160cbf0e5"
+    },
+    {
+      "path": "tools/benchmarks/results/kingdom-terrain-worldcreate-2026-11-06/native/ui-4k/main-menu.png",
+      "width": 3840,
+      "height": 2160,
+      "bit_depth": 8,
+      "bytes": 9882800,
+      "sha256": "a89b4d7778bdbbae84dd3fb3e1e2267ad451e8c902b484a0ffdd905980966dfa"
+    },
+    {
+      "path": "tools/benchmarks/results/kingdom-terrain-worldcreate-2026-11-06/native/ui-4k/worlds-empty.png",
+      "width": 3840,
+      "height": 2160,
+      "bit_depth": 8,
+      "bytes": 7081318,
+      "sha256": "896d667eeee4a3ad635930f55bcfc4b643150ecd350d89b15fcc555a1d4db0eb"
+    },
+    {
+      "path": "tools/benchmarks/results/kingdom-terrain-worldcreate-2026-11-06/native/ui-fhd/create-world-biome-chooser-scrolled.png",
+      "width": 1920,
+      "height": 1080,
+      "bit_depth": 8,
+      "bytes": 1527058,
+      "sha256": "64240b765e713aba6a573d42b59b9b0cde85426fc861df1600eef0ed3142612f"
+    },
+    {
+      "path": "tools/benchmarks/results/kingdom-terrain-worldcreate-2026-11-06/native/ui-fhd/create-world-biome-chooser.png",
+      "width": 1920,
+      "height": 1080,
+      "bit_depth": 8,
+      "bytes": 1616129,
+      "sha256": "6cbed78337e5d39600b65a55608392081831e358debc3f00c6562b3904569480"
+    },
+    {
+      "path": "tools/benchmarks/results/kingdom-terrain-worldcreate-2026-11-06/native/ui-fhd/create-world-biome-selected.png",
+      "width": 1920,
+      "height": 1080,
+      "bit_depth": 8,
+      "bytes": 1212343,
+      "sha256": "909e96343ff9e28b5137516c6f22f4dfd83b327b028110a59929e43bddcfb460"
+    },
+    {
+      "path": "tools/benchmarks/results/kingdom-terrain-worldcreate-2026-11-06/native/ui-fhd/create-world-options-scrolled.png",
+      "width": 1920,
+      "height": 1080,
+      "bit_depth": 8,
+      "bytes": 1198954,
+      "sha256": "960470b18373f6fd39e496b6e34257b170ddf081132d09a38027cfc9dd6328fa"
+    },
+    {
+      "path": "tools/benchmarks/results/kingdom-terrain-worldcreate-2026-11-06/native/ui-fhd/create-world-options-top.png",
+      "width": 1920,
+      "height": 1080,
+      "bit_depth": 8,
+      "bytes": 1220830,
+      "sha256": "f9b3b3c35477bffe8f28c1da40b923bc80511ea0f72fabd06923b70a2d352ac4"
+    },
+    {
+      "path": "tools/benchmarks/results/kingdom-terrain-worldcreate-2026-11-06/native/ui-fhd/create-world.png",
+      "width": 1920,
+      "height": 1080,
+      "bit_depth": 8,
+      "bytes": 1212343,
+      "sha256": "909e96343ff9e28b5137516c6f22f4dfd83b327b028110a59929e43bddcfb460"
+    },
+    {
+      "path": "tools/benchmarks/results/kingdom-terrain-worldcreate-2026-11-06/native/ui-fhd/main-menu.png",
+      "width": 1920,
+      "height": 1080,
+      "bit_depth": 8,
+      "bytes": 3250567,
+      "sha256": "92b31369797ba1a1c5fd1b13c6abb02a4fb9e043d522e4e78d6cc50ba6b49742"
+    },
+    {
+      "path": "tools/benchmarks/results/kingdom-terrain-worldcreate-2026-11-06/native/ui-fhd/worlds-empty.png",
+      "width": 1920,
+      "height": 1080,
+      "bit_depth": 8,
+      "bytes": 1474815,
+      "sha256": "c0c1ed6bef9d3d61fb5452849ffea74339c93887aedd0e479b66ae988372ce70"
+    },
+    {
+      "path": "tools/benchmarks/results/kingdom-terrain-worldcreate-2026-11-06/biome-sources/picker-cherry-forest-overview.png",
+      "width": 2562,
+      "height": 1440,
+      "bit_depth": 8,
+      "bytes": 7232861,
+      "sha256": "ade0614451916d9f67d6a4f3905ecfa6493618458af456443c8fe4a38c05cfc3"
+    },
+    {
+      "path": "tools/benchmarks/results/kingdom-terrain-worldcreate-2026-11-06/biome-sources/picker-cliffted-desert-overview.png",
+      "width": 2562,
+      "height": 1440,
+      "bit_depth": 8,
+      "bytes": 4118854,
+      "sha256": "5dd3c32a657d9cee19d3baa2e5ed4184794bb765c04469880922b2878ec28bcf"
+    },
+    {
+      "path": "tools/benchmarks/results/kingdom-terrain-worldcreate-2026-11-06/biome-sources/picker-desert-overview.png",
+      "width": 2562,
+      "height": 1440,
+      "bit_depth": 8,
+      "bytes": 4070340,
+      "sha256": "f254d5c35dbea2763123b6aeff624041630d8a1405e0312e890e6754f23c88fa"
+    },
+    {
+      "path": "tools/benchmarks/results/kingdom-terrain-worldcreate-2026-11-06/biome-sources/picker-forest-overview.png",
+      "width": 2562,
+      "height": 1440,
+      "bit_depth": 8,
+      "bytes": 5578613,
+      "sha256": "4984f12c798f1696c2775f0dd9e860a6df8a2d9140e3824317ab00d25a414c4a"
+    },
+    {
+      "path": "tools/benchmarks/results/kingdom-terrain-worldcreate-2026-11-06/biome-sources/picker-highlands-overview.png",
+      "width": 2562,
+      "height": 1440,
+      "bit_depth": 8,
+      "bytes": 5193368,
+      "sha256": "e501aa6953cd1e70a159cd573345e7db7e8063f62308b7eaa869a3b81d9f6058"
+    },
+    {
+      "path": "tools/benchmarks/results/kingdom-terrain-worldcreate-2026-11-06/biome-sources/picker-mushroom-park-overview.png",
+      "width": 2562,
+      "height": 1440,
+      "bit_depth": 8,
+      "bytes": 5496409,
+      "sha256": "c807a178d86f8757c01d2a5775ce1c40765b277e82be11daf62206860da94bdf"
+    },
+    {
+      "path": "tools/benchmarks/results/kingdom-terrain-worldcreate-2026-11-06/biome-sources/picker-ocean-overview.png",
+      "width": 2562,
+      "height": 1440,
+      "bit_depth": 8,
+      "bytes": 3435179,
+      "sha256": "0a8a6377933b7dc681d04248c0c99248bfdc624525ac05465eeb2680a5d5a047"
+    },
+    {
+      "path": "tools/benchmarks/results/kingdom-terrain-worldcreate-2026-11-06/biome-sources/picker-plains-overview.png",
+      "width": 2562,
+      "height": 1440,
+      "bit_depth": 8,
+      "bytes": 5584075,
+      "sha256": "e8aeaa71788e9c92e3cbbdf07489106a3187a09517b3104190cd096e569ba158"
+    }
+  ],
+  "biome_exports": [
+    {
+      "kind": "plains",
+      "path": "src-ui/assets/biome-choice-plains.png",
+      "width": 1536,
+      "height": 768,
+      "bit_depth": 8,
+      "bytes": 1794848,
+      "sha256": "b2d1b20669912ef1b4bcb0edb2bae32c2a5843ff70a58f5d777f0ddb465ab12e"
+    },
+    {
+      "kind": "forest",
+      "path": "src-ui/assets/biome-choice-forest.png",
+      "width": 1536,
+      "height": 768,
+      "bit_depth": 8,
+      "bytes": 1775364,
+      "sha256": "59732e779edb9d4a38074488893c764e907a00cd12305f36491f9e57c0e9ae8a"
+    },
+    {
+      "kind": "desert",
+      "path": "src-ui/assets/biome-choice-desert.png",
+      "width": 1536,
+      "height": 768,
+      "bit_depth": 8,
+      "bytes": 1061368,
+      "sha256": "23f579f47b27ad1bddb6eeac631c938bca45ed1c9fe07bb7be9dd832eb30997f"
+    },
+    {
+      "kind": "highlands",
+      "path": "src-ui/assets/biome-choice-highlands.png",
+      "width": 1536,
+      "height": 768,
+      "bit_depth": 8,
+      "bytes": 1539877,
+      "sha256": "fbc81efd7ab83f41cdb8504f95dcb61d03b2cd0c164ea22fc6a5ffd904033970"
+    },
+    {
+      "kind": "mushroom-park",
+      "path": "src-ui/assets/biome-choice-mushroom-park.png",
+      "width": 1536,
+      "height": 768,
+      "bit_depth": 8,
+      "bytes": 1921334,
+      "sha256": "a5d562db31005a7e2fbe77652fcd2fe45266dc781ec1e7eb8d593946a87ef758"
+    },
+    {
+      "kind": "cliffted-desert",
+      "path": "src-ui/assets/biome-choice-cliffted-desert.png",
+      "width": 1536,
+      "height": 768,
+      "bit_depth": 8,
+      "bytes": 1066800,
+      "sha256": "763dcdcdbb9e00006195f52bb00dba4671c9a0e912f4e36050cabbe379ee6e99"
+    },
+    {
+      "kind": "cherry-forest",
+      "path": "src-ui/assets/biome-choice-cherry-forest.png",
+      "width": 1536,
+      "height": 768,
+      "bit_depth": 8,
+      "bytes": 2297510,
+      "sha256": "1e52f260092091e5493cdf992befa31bd19608eaa0466aaf8fd6cf1f96f38062"
+    },
+    {
+      "kind": "ocean",
+      "path": "src-ui/assets/biome-choice-ocean.png",
+      "width": 1536,
+      "height": 768,
+      "bit_depth": 8,
+      "bytes": 633370,
+      "sha256": "d2ce1ca839e6d4228af653fdf5a66e70cc0a81468c87b1836b628baf28322cb5"
+    }
+  ],
+  "memory_reset": {
+    "completed": true,
+    "observed_used": "0B",
+    "restored_priority": 100,
+    "details": "memory-relocation.json",
+    "log": "logs/swap-reset.log",
+    "completed_utc": "2026-11-06T16:47:11.430389+00:00",
+    "after_all_checks": true
+  },
+  "source_sha256": {
+    "PATCH.md": "83439f69ae399326735ce30fe096f353427c00b550f43beb391e21c16bafcc78",
+    "TODO.md": "5995d7727c53fef93745e943553aa72c1f2040fd13adf3d2d899e5c751ed9782",
+    "configs/world.toml": "e1ed1f96d92a7e17d1026d393a19be176f044a2c90c4d4c7fc5f3d99c031e897",
+    "apps/client/src/biome_smoke.rs": "8ea735c66840a2e125db52ab319c2e72029b660325b2fd1ab447b265662b27fb",
+    "apps/client/src/bootstrap.rs": "9b1c3922a71c3f19a4ad6a20e39a3c95cedcb843ddf33e974440c24dbc2f2472",
+    "apps/client/src/menu_smoke.rs": "920a1e3b247551435b10d4f88ecea813d28ddd492cb6caa18123b9fdd648a4de",
+    "crates/terra-core/src/config/world.rs": "3dbc0cbdb8c31b87364c7d5a575a253340b838d01b9d7f6f66a6b897a5899134",
+    "crates/terra-core/src/config/tests.rs": "33071ebec730a5f1834a2d60b827244edbeba4cec0d6eae601c17ef82ad37bd2",
+    "crates/terra-network/src/protocol/session.rs": "39711cd564cf4d35d218bdb5eeea77de307884615211420fca32fd8792c40e40",
+    "crates/terra-network/src/server_creatures.rs": "da7883c24133aef4393cf95b9d6a63782c17ad08c87c9e3ed41e020c70dae8b9",
+    "crates/terra-network/src/server_opening_tests.rs": "d6b212c3e8a8583556273cede96b291fd7e60be5805148580bbb3d13be6fc8f1",
+    "crates/terra-storage/src/dedicated.rs": "a77b850334bcd38c5c50e0aea8af74cda1ad4c988ad3b7ea20555818b4076a70",
+    "crates/terra-storage/src/library.rs": "039b9d8f099918548f32736365d084e87cc19f673378028bf1121a87435a5e8b",
+    "crates/terra-ui/src/lib.rs": "c9d0c06a3473a11044c2dcda57ee94905ca39154c41653320328645d7fd2a1b9",
+    "crates/terra-ui/src/realm_title.rs": "e9c8b25ba47118888da6526d1c1df3492b0da2872b34ec1cbf7376075f187535",
+    "crates/terra-ui/src/biome_previews.rs": "747d4e81e580e37c169dace87a3a267a539b014b011dcefc4ff82ab65667d883",
+    "crates/terra-ui/src/menu/create_world.rs": "63040b62bbea1d7a7d14644e75786aba0744858f40e0feb78bed34f27b295520",
+    "crates/terra-ui/src/menu/model.rs": "13e5a9c00e94133c482d429f56e76fa686958948f1fa4f6ac15f5bc63a908e17",
+    "crates/terra-ui/src/menu/view.rs": "2ce37a2b0aebbb12bd34d91d8ae7371f169eca88fb89001c002e39bc51c8452f",
+    "crates/terra-ui/src/menu/tests.rs": "ef0b022c60db7052b6eec8213dad679f778fe1d9edfdd1b1d6cc63764c22546e",
+    "crates/terra-world/src/generation/structures/build.rs": "b527a1064d36175dfae716addec44dded94f6fd2718f25eb18bda9ff067a4c8a",
+    "crates/terra-world/src/generation/structures/build/royal.rs": "d3bbc9a71d0bd5e2cb74c7b625140874b70da4c6930e6182b2783fb328630aad",
+    "crates/terra-world/src/generation/structures/build/royal/buildings.rs": "238622a604a4fab323a1374e4a84c94a39ba40abab4e1205d6cec476a4c26d27",
+    "crates/terra-world/src/generation/structures/build/royal/fortifications.rs": "783c84a83f04314d296573c3eb9bf8d68eb9b1318e36deae1a19cd5195e6237b",
+    "crates/terra-world/src/generation/structures/build/royal/landscape.rs": "7e9e65c8622535874ae6ecd265dd398e80f7656f73b3f13c34f7708b3ac7bba2",
+    "crates/terra-world/src/generation/structures/build/royal/tests.rs": "aed3048f18cdbb209a7d51e033657fafe5170f76d91a45144ae2aa06703697f9",
+    "crates/terra-world/src/generation/vegetation/appearance.rs": "95d45ba11df7c05dc6ff19f4b930b840bfda512701b3a74320e0ab5ceea4902c",
+    "src-ui/components/modal-dialog.component.html": "41af6a19150c183f044593170fe039ce8915d73a2d92941ccac425f6166bf073",
+    "src-ui/styles/create-world.css": "5f2805d9d0247339ed85ed79bc0323473a3ef4aa09644be394a70616a25c3bb0",
+    "tools/assets/build_biome_previews.py": "042db11559d0ee767cecb316188d64ca9a300424425e6e6bfe14a1db50cdb65a",
+    "src-ui/assets/biome-previews.json": "d2370e10c87c29b712dbbb340847a2ef9a5af91a431f5597e3685733a6c50371"
+  },
+  "log_sha256": {
+    "logs/diff.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "logs/format.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "logs/native-outpost.log": "d3359de80c86935d5c56bb73272081b265fe859f5b3fd90da803bcb7d2e64b0c",
+    "logs/native-temperate.log": "e813a47377d1e08424b9471639851e92b2b0cd0c5d7466b8f64a867d93f80206",
+    "logs/native-ui-4k.log": "c27e51b103036235eb2a0de2efd6b84cb057424d6f9d847a2d6b496d2f8bf34e",
+    "logs/native-ui-fhd.log": "86fe56dc29ae39518660d01770aee06e14e0f64fef6763a28570d00849a12f6c",
+    "logs/native-winter.log": "c95d73b9422ef3ba3bcb1cdb1703b1df7cafdde28b341593fb1e8ff6cec82ffc",
+    "logs/preview-forest-ocean.log": "2da5c755199e5a263e9e80ecea6d250bdd595c5ef2596918a9387d3b1b796ef1",
+    "logs/preview-ocean-final.log": "b78945e2a49047285a64d05076686e77d7f5846e670ee6ea2cb0ee63572e35ee",
+    "logs/swap-reset-before-final-checks.log": "6a38fc71385275e9a69d9851c7a813e917dfba9d97a91c2bc30b39b3d8c3a873",
+    "logs/swap-reset.log": "7ca8eb2cbdb6387ef6d5fe9fa1fd434b331bd048593a98620cf2f4180b3d0995",
+    "logs/ui-stylesheets.log": "69f7d6f4d64314faaf7b23eea6ed992d71c917a41ef14e4736614846739646e0",
+    "logs/workspace-build.log": "dcfe22f4088f30e9d562286fe941c6ca7098fff24ea3e0ce6adba15fe607bcfb",
+    "logs/workspace-clippy.log": "be856ef57133130ca13b733c44139ab618831582f3453261d8fd18b913d293a9",
+    "logs/workspace-tests.log": "1fc83c290e3f40198a2746f1724c08aa6ce40b0f27835fa79c0b8b2090eb26dd"
+  },
+  "notes": [
+    "Revision 7 changes new structure generation; saved older world revisions retain their terrain and door frames.",
+    "Native photographs inspect true world generation; no terrain or HUD pixels were fabricated.",
+    "Biome photographs are downsampled from 2562x1440 source screenshots; source/export hashes match all eight final files.",
+    "Native menu logs contain nonfatal Wayland cursor messages and a final skipped screenshot request; all sixteen recorded menu images are present and both tests exited successfully.",
+    "Swap was reset through successful system authentication; normal later program activity can allocate swap again."
+  ],
+  "created_worlds": [
+    {
+      "scene": "fhd",
+      "path": "created-worlds/fhd-world.toml",
+      "mode": "spectator",
+      "structures_revision": 7,
+      "structures": {
+        "villages": false,
+        "ruins": true,
+        "mines": false,
+        "kingdoms": false,
+        "outposts": false
+      },
+      "sha256": "c52ce98c4d2b7da719d8a12cb226942ec2828327a354a5bbf1fde337b8a81b34"
+    },
+    {
+      "scene": "4k",
+      "path": "created-worlds/4k-world.toml",
+      "mode": "spectator",
+      "structures_revision": 7,
+      "structures": {
+        "villages": false,
+        "ruins": true,
+        "mines": false,
+        "kingdoms": false,
+        "outposts": false
+      },
+      "sha256": "2902f209d88598d42a8bb4492b1a2b9cb211de0f3b58a683a745dbd69d82f835"
+    }
+  ]
+}

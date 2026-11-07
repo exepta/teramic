@@ -7,6 +7,77 @@ use crate::{
 
 const OWNER: SectionPos = SectionPos::new(-1, 0, -1);
 
+#[test]
+fn confirmed_tree_cells_preserve_authoritative_ownership_while_local_edits_relinquish() {
+    use terra_core::{FruitState, PlayerUuid, TreeRecord, TreeSpecies, TreeStage};
+    let root = OWNER.global_block([8, 1, 8]).unwrap();
+    let tree = TreeRecord {
+        id: 90001,
+        root,
+        species: TreeSpecies::Apple,
+        seed: 7201,
+        planted_by: Some(PlayerUuid::from_u128(1)),
+        stage: TreeStage::Generated,
+        growth_seconds: TreeSpecies::Apple.growth_seconds(),
+        bounds: None,
+        wood: vec![[0; 3], [1, 0, 0], [0, 1, 0]],
+        leaves: vec![[0, 2, 0], [1, 2, 0]],
+        fruit: Some(FruitState::new(12)),
+        revision: 1,
+    }
+    .with_bounds();
+    assert!(tree.valid());
+    for replica in [false, true] {
+        let mut source = EditJournal::default();
+        for (offsets, material) in [
+            (&tree.wood, tree.species.wood()),
+            (&tree.leaves, tree.species.leaves()),
+        ] {
+            for offset in offsets {
+                source.record(tree.global(*offset), material).unwrap();
+            }
+        }
+        assert!(source.gameplay_mut().trees.insert(tree.clone()));
+        let mut journal = EditJournal::default();
+        journal.gameplay_mut().trees = source.gameplay().trees.clone();
+        let mut chunks = ChunkStore::default();
+        let import = |chunks: &mut ChunkStore, journal: &mut EditJournal, delta| {
+            if replica {
+                chunks.apply_confirmed_delta(journal, delta).unwrap();
+            } else {
+                journal.import_delta(delta).unwrap();
+            }
+        };
+        let delta = source.section_delta(OWNER);
+        import(&mut chunks, &mut journal, delta.clone());
+        assert_eq!(journal.gameplay().trees, source.gameplay().trees);
+        import(&mut chunks, &mut journal, delta.clone());
+        assert_eq!(journal.gameplay().trees, source.gameplay().trees);
+        let side = tree.global([1, 0, 0]);
+        journal.record(side, tree.species.wood()).unwrap();
+        assert!(
+            !journal
+                .gameplay()
+                .trees
+                .get(tree.id)
+                .unwrap()
+                .owns(side, tree.species.wood())
+        );
+        assert_eq!(journal.gameplay().trees.get(tree.id).unwrap().wood.len(), 2);
+        // A later authoritative fruit-root edit already retired its record before
+        // the corresponding section arrives; the import must not retire it again.
+        source.record(root, 0).unwrap();
+        journal.gameplay_mut().trees = source.gameplay().trees.clone();
+        assert_eq!(
+            journal.gameplay().trees.get(tree.id).unwrap().stage,
+            TreeStage::GeneratedFelled
+        );
+        import(&mut chunks, &mut journal, source.section_delta(OWNER));
+        assert_eq!(journal.gameplay().trees, source.gameplay().trees);
+        assert_eq!(journal.block(root), Some(0));
+    }
+}
+
 fn crop(index: usize) -> WorldProp {
     WorldProp {
         id: PropId(index as u64 + 1),

@@ -1,0 +1,1 @@
+{"id":"teramic::glass_bottle","name":"Glass Bottle","station":"hand","output":{"item":"glass_bottle","count":3},"pattern":{"kind":"shaped","width":2,"height":2,"cells":[{"item":{"block":15},"count":1},null,{"item":{"block":15},"count":1},{"item":{"block":15},"count":1}]}}

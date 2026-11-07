@@ -1,0 +1,9 @@
+title = "Teramic Terrain Revision 5 Validation"
+width = 1280
+height = 800
+view_distance = 12
+vertical_view_distance = 4
+vsync = false
+debug_overlay = false
+weather_quality = "high"
+water_quality = "high"

@@ -1,0 +1,107 @@
+{
+  "status": "prepared-not-run",
+  "command": "./tools/benchmarks/results/kingdom-rights-lanterns-2026-11-06/rights/run-gallery.sh",
+  "private_data_root": "target/phase199-rights",
+  "success_marker": "Native Kingdom UI gallery passed",
+  "gallery_screens": [
+    "kingdom-ui-qhd.png",
+    "kingdom-ui-icons-qhd.png",
+    "kingdom-ui-icons-search.png",
+    "kingdom-ui-colorpicker.png",
+    "kingdom-ui-compact.png",
+    "kingdom-ui-icons-compact.png",
+    "kingdom-ui-4k.png",
+    "kingdom-ui-icons-4k.png",
+    "kingdom-rights-visitor.png",
+    "kingdom-role-choices.png",
+    "kingdom-rights-worker.png",
+    "kingdom-diplomacy-neutral.png",
+    "kingdom-diplomacy-allied.png",
+    "kingdom-diplomacy-pending.png",
+    "kingdom-rights-revoked.png",
+    "kingdom-member-readonly.png",
+    "kingdom-diplomacy-readonly.png"
+  ],
+  "extra_setup_screen": "kingdom-unbound.png",
+  "checks": [
+    "real founding and banner update acknowledgements",
+    "QHD/1024x768/4K window and button label bounds",
+    "full icon catalog, filtered search and themed real colorpicker",
+    "fresh secondary UDP join has Visitor rights",
+    "authoritative Worker grant and Visitor revocation reach both clients",
+    "Visitor self-promotion rejected by server",
+    "Helteria accepted alliance and level-1 Lutera pending offer",
+    "rendered client reconnects with authenticated Visitor identity",
+    "Visitor has no management controls or protected-land capabilities"
+  ],
+  "screen_sizes": {
+    "kingdom-ui-qhd.png": [
+      2560,
+      1440
+    ],
+    "kingdom-ui-icons-qhd.png": [
+      2560,
+      1440
+    ],
+    "kingdom-ui-icons-search.png": [
+      2560,
+      1440
+    ],
+    "kingdom-ui-colorpicker.png": [
+      2560,
+      1440
+    ],
+    "kingdom-ui-compact.png": [
+      1024,
+      768
+    ],
+    "kingdom-ui-icons-compact.png": [
+      1024,
+      768
+    ],
+    "kingdom-ui-4k.png": [
+      3840,
+      2160
+    ],
+    "kingdom-ui-icons-4k.png": [
+      3840,
+      2160
+    ],
+    "kingdom-rights-visitor.png": [
+      3840,
+      2160
+    ],
+    "kingdom-role-choices.png": [
+      3840,
+      2160
+    ],
+    "kingdom-rights-worker.png": [
+      3840,
+      2160
+    ],
+    "kingdom-diplomacy-neutral.png": [
+      3840,
+      2160
+    ],
+    "kingdom-diplomacy-allied.png": [
+      3840,
+      2160
+    ],
+    "kingdom-diplomacy-pending.png": [
+      3840,
+      2160
+    ],
+    "kingdom-rights-revoked.png": [
+      3840,
+      2160
+    ],
+    "kingdom-member-readonly.png": [
+      3840,
+      2160
+    ],
+    "kingdom-diplomacy-readonly.png": [
+      3840,
+      2160
+    ]
+  }
+}

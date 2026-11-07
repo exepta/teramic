@@ -1,0 +1,179 @@
+{
+  "adapters": [
+    {
+      "backend": "Vulkan",
+      "device": 29605,
+      "device_pci_bus_id": "0000:0c:00.0",
+      "device_type": "DiscreteGpu",
+      "driver": "radv",
+      "driver_info": "Mesa 26.2.5-arch3.1",
+      "name": "AMD Radeon RX 6950 XT (RADV NAVI21)",
+      "vendor": 4098
+    }
+  ],
+  "cpu_scopes": {},
+  "effective_configuration": {
+    "benchmark_mode": "integrated",
+    "benchmark_ui": true,
+    "client": "ClientConfig { blocks: BlockDetailConfig { detail_quality: High, micro_geometry: true, micro_geometry_distance: 48.0, material_detail: true, normal_mapping: true, surface_variation: true, leaf_geometry_quality: High }",
+    "graphics": "GraphicsConfig { blocks: BlockDetailConfig { detail_quality: High, micro_geometry: true, micro_geometry_distance: 48.0, material_detail: true, normal_mapping: true, surface_variation: true, leaf_geometry_quality: High }",
+    "physical_resolution": [
+      2562,
+      1440
+    ],
+    "seed": 42042
+  },
+  "inventory_phases": [
+    {
+      "active_cameras": "[(964v0, 0, true)]",
+      "camera": "Transform { translation: Vec3(8.5, 114.630005, 24.5",
+      "dropped_samples": 0,
+      "entities": 31091,
+      "event_binding_nodes": 0,
+      "fps": 109.5283074252207,
+      "frames": 1315,
+      "image_nodes": 90,
+      "images": 143,
+      "inventory_open": false,
+      "max_ms": 15.924548,
+      "median_ms": 8.97513,
+      "meshes": 20269,
+      "p95_ms": 11.032214,
+      "p99_ms": 13.286772000000001,
+      "phase": "Closed",
+      "property_binding_nodes": 32,
+      "resident_memory_kib": 2289240,
+      "sample_frames": 1315,
+      "tilt_nodes": 658,
+      "ui_nodes": 991,
+      "window_seconds": 12.006028678
+    },
+    {
+      "active_cameras": "[(964v0, 0, true)]",
+      "camera": "Transform { translation: Vec3(8.5, 114.630005, 24.5",
+      "dropped_samples": 0,
+      "entities": 31130,
+      "event_binding_nodes": 0,
+      "fps": 105.16866553385498,
+      "frames": 1263,
+      "image_nodes": 152,
+      "images": 179,
+      "inventory_open": true,
+      "max_ms": 16.960959000000003,
+      "median_ms": 9.185415,
+      "meshes": 20269,
+      "p95_ms": 12.540925,
+      "p99_ms": 13.961275,
+      "phase": "Open",
+      "property_binding_nodes": 382,
+      "resident_memory_kib": 2368856,
+      "sample_frames": 1263,
+      "tilt_nodes": 679,
+      "ui_nodes": 1028,
+      "window_seconds": 12.00928046
+    },
+    {
+      "active_cameras": "[(964v0, 0, true)]",
+      "camera": "Transform { translation: Vec3(8.5, 114.630005, 24.5",
+      "dropped_samples": 0,
+      "entities": 31134,
+      "event_binding_nodes": 0,
+      "fps": 109.5709832225777,
+      "frames": 1315,
+      "image_nodes": 152,
+      "images": 179,
+      "inventory_open": false,
+      "max_ms": 14.052686999999999,
+      "median_ms": 8.959659,
+      "meshes": 20269,
+      "p95_ms": 11.027823000000001,
+      "p99_ms": 12.951253,
+      "phase": "ClosedAgain",
+      "property_binding_nodes": 32,
+      "resident_memory_kib": 2373576,
+      "sample_frames": 1315,
+      "tilt_nodes": 682,
+      "ui_nodes": 1031,
+      "window_seconds": 12.00135256
+    }
+  ],
+  "inventory_transitions": [
+    {
+      "frames": 3,
+      "max_ms": 98.13158800000001,
+      "median_ms": 21.525045,
+      "p95_ms": 98.13158800000001,
+      "p99_ms": 98.13158800000001,
+      "request_to_visible_ms": 136.638183,
+      "stage": "Opening"
+    },
+    {
+      "frames": 2,
+      "max_ms": 28.312879,
+      "median_ms": 14.003686,
+      "p95_ms": 28.312879,
+      "p99_ms": 28.312879,
+      "request_to_visible_ms": 42.316565,
+      "stage": "Closing"
+    }
+  ],
+  "measurement_kind": "CPU wall-frame intervals; GPU fields below are memory allocations, not GPU frame timings",
+  "native_wall": null,
+  "process": {
+    "command": [
+      "/tmp/teramic-o07-i3w2xd60/binaries/terra-client-after",
+      "--smoke-test-benchmark"
+    ],
+    "exit_code": 0,
+    "peak_drm_memory_gtt_kib": 67588,
+    "peak_drm_memory_vram_kib": 4410564,
+    "peak_rss_kib": 2369040,
+    "system_cpu_seconds": 26.947,
+    "user_cpu_seconds": 238.428,
+    "wall_seconds": 70.569
+  },
+  "rapid_edits": null,
+  "real_input_route": [],
+  "render_counts": {},
+  "resource_timeline": [
+    {
+      "cpu_interval_seconds": 30.138,
+      "cpu_percent": 409.282,
+      "cpu_ticks_delta": 12335,
+      "drm_memory_gtt_kib": 67588,
+      "drm_memory_vram_kib": 4261708,
+      "elapsed_seconds": 30.138,
+      "kind": "resource_timeline",
+      "major_faults": 219,
+      "major_faults_delta": 219,
+      "minor_faults": 439492,
+      "minor_faults_delta": 439475,
+      "rss_kib": 2276368,
+      "swap_kib": 0,
+      "system_cpu_ticks": 1104,
+      "user_cpu_ticks": 11231,
+      "wall_unix_seconds": 1793872095.380761
+    },
+    {
+      "cpu_interval_seconds": 30.137,
+      "cpu_percent": 354.786,
+      "cpu_ticks_delta": 10692,
+      "drm_memory_gtt_kib": 67588,
+      "drm_memory_vram_kib": 4399500,
+      "elapsed_seconds": 60.275,
+      "kind": "resource_timeline",
+      "major_faults": 219,
+      "major_faults_delta": 0,
+      "minor_faults": 464251,
+      "minor_faults_delta": 24759,
+      "rss_kib": 2368848,
+      "swap_kib": 0,
+      "system_cpu_ticks": 2282,
+      "user_cpu_ticks": 20745,
+      "wall_unix_seconds": 1793872125.5171711
+    }
+  ],
+  "scenario": "inventory",
+  "valid": true,
+  "village_residents": []
+}

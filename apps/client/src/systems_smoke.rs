@@ -19,7 +19,50 @@ struct Fixture {
     frame_times: Vec<f64>,
     captured: bool,
     coast: Option<([f64; 3], [f64; 3])>,
-    shaft_frames: u8,
+    clearing_frames: u8,
+}
+
+#[derive(Resource, Default)]
+struct CloudCaptureChecks {
+    clear_sun: Option<Vec<f32>>,
+    overcast_sun: Option<Vec<f32>>,
+    layer_views: u8,
+    error: Option<String>,
+}
+
+impl CloudCaptureChecks {
+    fn verify_cover_change(&self) -> Result<bool, String> {
+        if let Some(error) = &self.error {
+            return Err(error.clone());
+        }
+        let (Some(clear), Some(overcast)) = (&self.clear_sun, &self.overcast_sun) else {
+            return Ok(false);
+        };
+        if clear.len() != overcast.len() || clear.is_empty() {
+            return Err("Shader-cloud capture samples do not match".into());
+        }
+        let changes: Vec<_> = clear.iter().zip(overcast).map(|(a, b)| b - a).collect();
+        let count = changes.len() as f32;
+        let mean = changes.iter().sum::<f32>() / count;
+        let difference = changes.iter().map(|change| change.abs()).sum::<f32>() / count;
+        let spatial = (changes
+            .iter()
+            .map(|change| (change - mean).powi(2))
+            .sum::<f32>()
+            / count)
+            .sqrt();
+        if difference < 0.025 || spatial < 0.006 {
+            return Err(format!(
+                "Shader-cloud cover did not visibly change across the sky: mean difference={difference:.4}, spatial variation={spatial:.4}"
+            ));
+        }
+        tracing::info!(
+            difference,
+            spatial,
+            "Shader-cloud captures show spatially varying cover changes outside the sun disc"
+        );
+        Ok(true)
+    }
 }
 pub(crate) fn install(app: &mut App) {
     let third = std::env::args().any(|arg| arg == "--smoke-test-perspective");
@@ -44,8 +87,9 @@ pub(crate) fn install(app: &mut App) {
         frame_times: Vec::new(),
         captured: false,
         coast: None,
-        shaft_frames: 0,
+        clearing_frames: 0,
     })
+    .init_resource::<CloudCaptureChecks>()
     .add_systems(
         Update,
         run.after(terra_player::PlayerSet::Movement)
@@ -53,17 +97,136 @@ pub(crate) fn install(app: &mut App) {
     );
 }
 fn capture(world: &mut World, name: &str) {
+    if name.starts_with("cloud-deck-")
+        && let Err(error) = verify_cloud_sky_rays(world)
+    {
+        world.resource_mut::<CloudCaptureChecks>().error = Some(format!("{name}: {error}"));
+    }
     let root = std::env::var_os("TERRA_CAPTURE_DIR")
         .map(PathBuf::from)
         .unwrap_or_else(|| std::env::temp_dir().join("terra-systems"));
     if let Err(error) = std::fs::create_dir_all(&root) {
         tracing::error!(%error,"Cannot create capture directory");
     }
-    world
-        .spawn(bevy::render::view::screenshot::Screenshot::primary_window())
-        .observe(bevy::render::view::screenshot::save_to_disk(
-            root.join(format!("{name}.png")),
-        ));
+    let mut screenshot = world.spawn(bevy::render::view::screenshot::Screenshot::primary_window());
+    screenshot.observe(bevy::render::view::screenshot::save_to_disk(
+        root.join(format!("{name}.png")),
+    ));
+    if matches!(
+        name,
+        "cloud-deck-0-sun" | "cloud-deck-4-sun" | "shader-cloud-inside" | "shader-cloud-above"
+    ) {
+        let name = name.to_owned();
+        screenshot.observe(move |capture: On<bevy::render::view::screenshot::ScreenshotCaptured>, mut checks: ResMut<CloudCaptureChecks>| {
+            let Some(data) = capture.image.data.as_ref() else {
+                checks.error = Some(format!("{name}: missing screenshot pixels"));
+                return;
+            };
+            let size = capture.image.texture_descriptor.size;
+            let format = capture.image.texture_descriptor.format;
+            let bgra = matches!(format,
+                bevy::render::render_resource::TextureFormat::Bgra8Unorm
+                    | bevy::render::render_resource::TextureFormat::Bgra8UnormSrgb);
+            if !bgra && !matches!(format,
+                bevy::render::render_resource::TextureFormat::Rgba8Unorm
+                    | bevy::render::render_resource::TextureFormat::Rgba8UnormSrgb)
+            {
+                checks.error = Some(format!("{name}: unsupported screenshot format {format:?}"));
+                return;
+            }
+            let mut samples = Vec::with_capacity(96);
+            for row in 0..8 {
+                for column in 0..12 {
+                    if (5..=6).contains(&column) && (4..=6).contains(&row) {
+                        continue;
+                    }
+                    // Inspect the sky, leaving HUD edges and the central sun out.
+                    let x = size.width * (column + 1) / 13;
+                    let y = size.height * (row + 1) / 12;
+                    let mut luminance = 0.0;
+                    for dy in 0..3 {
+                        for dx in 0..3 {
+                            let offset = (((y + dy).min(size.height - 1) * size.width
+                                + (x + dx).min(size.width - 1)) * 4) as usize;
+                            if offset + 3 >= data.len() {
+                                checks.error = Some(format!("{name}: truncated screenshot"));
+                                return;
+                            }
+                            let pixel = &data[offset..offset + 4];
+                            let (r, b) = if bgra { (pixel[2], pixel[0]) } else { (pixel[0], pixel[2]) };
+                            luminance += (0.2126 * f32::from(r) + 0.7152 * f32::from(pixel[1]) + 0.0722 * f32::from(b)) / (9.0 * 255.0);
+                        }
+                    }
+                    samples.push(luminance);
+                }
+            }
+            if name == "cloud-deck-0-sun" {
+                checks.clear_sun = Some(samples);
+            } else if name == "cloud-deck-4-sun" {
+                checks.overcast_sun = Some(samples);
+            } else {
+                let low = samples.iter().copied().fold(f32::INFINITY, f32::min);
+                let high = samples.iter().copied().fold(f32::NEG_INFINITY, f32::max);
+                if high - low < 0.008 {
+                    checks.error = Some(format!("{name}: cloud-layer capture is spatially uniform ({low:.4}..{high:.4})"));
+                    return;
+                }
+                checks.layer_views |= if name == "shader-cloud-inside" { 1 } else { 2 };
+                tracing::info!(%name, low, high, "Shader-cloud layer view contains visible spatial detail");
+            }
+        });
+    }
+}
+
+fn verify_cloud_sky_rays(world: &mut World) -> Result<(), String> {
+    let (camera, projection) = world
+        .query_filtered::<(&Transform, &Projection), With<TerraCamera>>()
+        .iter(world)
+        .next()
+        .map(|(camera, projection)| (*camera, projection.clone()))
+        .ok_or("Missing cloud-capture camera")?;
+    let Projection::Perspective(projection) = projection else {
+        return Err("Cloud-capture sky check requires a perspective camera".into());
+    };
+    let chunks = world.resource::<ChunkStore>();
+    let half_fov = (projection.fov * 0.5).tan();
+    for row in 0..8 {
+        for column in 0..12 {
+            if (5..=6).contains(&column) && (4..=6).contains(&row) {
+                continue;
+            }
+            let uv = Vec2::new((column + 1) as f32 / 13.0, (row + 1) as f32 / 12.0);
+            let view_ray = Vec3::new(
+                (uv.x * 2.0 - 1.0) * projection.aspect_ratio * half_fov,
+                (1.0 - uv.y * 2.0) * half_fov,
+                -1.0,
+            );
+            let ray = camera.rotation * view_ray.normalize();
+            if ray.y <= 0.0 {
+                return Err(format!("Cloud sample {column},{row} points below the sky"));
+            }
+            let mut distance = 0.0;
+            while distance < projection.far {
+                let reach = (projection.far - distance).min(128.0);
+                let origin = camera.translation + ray * distance;
+                if let Some(hit) = terra_voxel::blocks::raycast_blocks(
+                    origin.to_array().map(f64::from),
+                    ray.to_array().map(f64::from),
+                    f64::from(reach),
+                    // Only loaded geometry can be foreground in this capture.
+                    |position| Some(chunks.block_at(position).unwrap_or(0)),
+                ) {
+                    return Err(format!(
+                        "Cloud sample {column},{row} is blocked by foreground terrain at {:?}",
+                        hit.position
+                    ));
+                }
+                distance += reach;
+            }
+        }
+    }
+    tracing::info!(eye = ?camera.translation, "Cloud-capture sky samples are clear of foreground terrain");
+    Ok(())
 }
 fn captured(world: &mut World, fixture: &mut Fixture, name: &str) -> bool {
     if fixture.captured {
@@ -117,67 +280,30 @@ fn natural_coast(
     None
 }
 
-fn frame_clearing_shaft(world: &mut World) -> Result<(), String> {
+fn frame_cloud_layer(world: &mut World, height: f32) -> Result<(), String> {
     let observer = world
         .query_filtered::<&Transform, With<TerraCamera>>()
         .iter(world)
         .next()
         .map(|camera| camera.translation)
-        .ok_or("Missing clearing-cloud observer")?;
-    let drift = world
-        .query::<(&Name, &Transform)>()
-        .iter(world)
-        .find(|(name, _)| name.as_str() == "Batched voxel cloud banks")
-        .map(|(_, transform)| transform.translation)
-        .ok_or("Missing generated cloud bank for the shaft inspection")?;
-    let anchor = [
-        ((observer.x - drift.x) / 260.0).floor() as i64,
-        ((observer.z - drift.z) / 260.0).floor() as i64,
-    ];
-    let mut candidate: Option<(Vec3, f32, f32)> = None;
-    // Mirror the existing nine-bank fixture geometry, not a separate render effect.
-    for x in anchor[0] - 1..=anchor[0] + 1 {
-        for z in anchor[1] - 1..=anchor[1] + 1 {
-            let mut seed = (x as u64).wrapping_mul(0x9e3779b97f4a7c15)
-                ^ (z as u64).wrapping_mul(0xbf58476d1ce4e5b9)
-                ^ 0x434c4f5545;
-            seed = (seed ^ (seed >> 30)).wrapping_mul(0xbf58476d1ce4e5b9);
-            seed = (seed ^ (seed >> 27)).wrapping_mul(0x94d049bb133111eb);
-            let random = |shift: u32| ((seed >> shift) & 255_u64) as f32 / 255.0;
-            let threshold = random(40);
-            if threshold < 0.78 {
-                continue;
-            }
-            // At the paused 10:00 sun direction, inspect the shaft's bright middle.
-            let sun = Vec3::new(0.5, 0.866_025_4 * 0.9, 0.866_025_4 * 0.435_889_9);
-            let center = Vec3::new(
-                x as f32 * 260.0 + random(0) * 24.0 + drift.x - sun.x * 60.0 / sun.y,
-                140.0,
-                z as f32 * 260.0 + random(32) * 24.0 + drift.z - sun.z * 60.0 / sun.y,
-            );
-            let distance = center.xz().distance_squared(observer.xz());
-            if candidate.is_none_or(|(_, best, _)| distance < best) {
-                candidate = Some((center, distance, threshold));
-            }
-        }
-    }
-    let (center, _, threshold) = candidate.ok_or("No open cloud bank for shaft inspection")?;
-    let eye = center + Vec3::new(65.0, 20.0, -65.0);
+        .ok_or("Missing shader-cloud observer")?;
+    let eye = Vec3::new(observer.x, height, observer.z);
+    let direction = if height > 312.0 {
+        Vec3::new(0.6, -0.55, -1.0)
+    } else if height >= 200.0 {
+        Vec3::new(0.6, 0.03, -1.0)
+    } else {
+        Vec3::new(0.6, 0.45, -1.0)
+    };
     for mut camera in world
         .query_filtered::<&mut Transform, With<TerraCamera>>()
         .iter_mut(world)
     {
-        *camera = Transform::from_translation(eye).looking_at(center, Vec3::Y);
+        *camera = Transform::from_translation(eye).looking_at(eye + direction, Vec3::Y);
     }
     let mut focus = world.resource_mut::<ChunkFocus>();
-    focus.0[0] = f64::from(eye.x);
-    focus.0[2] = f64::from(eye.z);
-    tracing::info!(
-        ?eye,
-        ?center,
-        threshold,
-        "Native shaft inspection framed against the horizon and terrain"
-    );
+    focus.0 = eye.to_array().map(f64::from);
+    tracing::info!(?eye, ?direction, "Native shader-cloud layer inspection");
     Ok(())
 }
 
@@ -512,9 +638,14 @@ fn advance(world: &mut World, state: &mut Fixture) -> Result<(), String> {
         }
         11 => {
             let status = world.resource::<terra_render::WeatherRenderStatus>();
-            if status.cloud_batches != 1 || status.cloud_faces < 10_000 {
+            if status.cloud_batches != 1
+                || status.cloud_faces != 6
+                || status.cloud_uploads != 1
+                || status.cloud_shaft_batches != 0
+                || status.cloud_shaft_vertices != 0
+            {
                 return Err(format!(
-                    "Voxel sky did not produce its cached exposed-face bank: {status:?}"
+                    "Shader sky did not retain its single bounded volume without sunshafts: {status:?}"
                 ));
             }
             if !captured(world, state, "clouds-clear") {
@@ -747,13 +878,22 @@ fn advance(world: &mut World, state: &mut Fixture) -> Result<(), String> {
             let mut preview = world.resource_mut::<terra_render::WeatherPreview>();
             preview.kind = terra_core::WeatherKind::Rain;
             preview.intensity = 0.0;
+            let mut cloud_eye = None;
             for mut camera in world
                 .query_filtered::<&mut Transform, With<TerraCamera>>()
                 .iter_mut(world)
             {
-                let eye = camera.translation;
+                let eye = camera.translation + Vec3::Y * 120.0;
                 *camera = Transform::from_translation(eye)
                     .looking_at(eye + Vec3::new(0.0, 0.9, 0.4358899), Vec3::Y);
+                cloud_eye = Some(eye);
+            }
+            if let Some(eye) = cloud_eye {
+                world.resource_mut::<ChunkFocus>().0 = eye.to_array().map(f64::from);
+                tracing::info!(
+                    ?eye,
+                    "Native cloud-cover inspection raised above the coastal foreground"
+                );
             }
             state.phase = 30;
         }
@@ -772,6 +912,16 @@ fn advance(world: &mut World, state: &mut Fixture) -> Result<(), String> {
             state.phase += 1;
         }
         35 => {
+            if !state.captured
+                && !world
+                    .resource::<CloudCaptureChecks>()
+                    .verify_cover_change()?
+            {
+                if state.since.elapsed() > Duration::from_secs(7) {
+                    return Err("Shader-cloud screenshots did not complete".into());
+                }
+                return Ok(());
+            }
             if !captured(world, state, "cloud-deck-night-moon-hidden") {
                 return Ok(());
             }
@@ -1014,7 +1164,7 @@ fn advance(world: &mut World, state: &mut Fixture) -> Result<(), String> {
             state.phase = 50;
         }
         50 => {
-            state.shaft_frames = 0;
+            state.clearing_frames = 0;
             {
                 let mut clock = world.resource_mut::<terra_core::WorldClock>();
                 clock.phase = 10.0 / 24.0;
@@ -1031,7 +1181,7 @@ fn advance(world: &mut World, state: &mut Fixture) -> Result<(), String> {
                 kind: terra_core::WeatherKind::Rain,
                 intensity: 1.0,
             });
-            frame_clearing_shaft(world)?;
+            frame_cloud_layer(world, 140.0)?;
             state.phase = 51;
         }
         51 => {
@@ -1059,34 +1209,39 @@ fn advance(world: &mut World, state: &mut Fixture) -> Result<(), String> {
                 let status = world.resource::<terra_render::WeatherRenderStatus>();
                 let cover = status.clouds;
                 if (0.50..=0.60).contains(&cover) {
-                    state.shaft_frames = state.shaft_frames.saturating_add(1);
-                    if state.shaft_frames < 3 {
+                    state.clearing_frames = state.clearing_frames.saturating_add(1);
+                    if state.clearing_frames < 3 {
                         world
                             .resource_mut::<terra_render::WeatherPreview>()
                             .intensity = (cover - 0.32) / 0.65;
                         return Ok(());
                     }
-                    if status.cloud_shaft_batches != 1 || status.cloud_shaft_vertices != 72 {
+                    if status.cloud_shaft_batches != 0
+                        || status.cloud_shaft_vertices != 0
+                        || status.cloud_faces != 6
+                        || status.cloud_batches != 1
+                        || status.cloud_uploads != 1
+                    {
                         return Err(format!(
-                            "Clearing cloud gaps did not activate the bounded sunshaft batch: {status:?}"
+                            "Clearing shader clouds changed their fixed volume or retained sunshafts: {status:?}"
                         ));
                     }
                     tracing::info!(
                         cover,
                         shaft_batches = status.cloud_shaft_batches,
                         shaft_vertices = status.cloud_shaft_vertices,
-                        "Native clearing-cloud sunshafts ready (world-space scattering approximation)"
+                        "Native clearing shader clouds ready without sunshafts"
                     );
                     // Keep the actual accepted cover stable during this capture.
                     world
                         .resource_mut::<terra_render::WeatherPreview>()
                         .intensity = (cover - 0.32) / 0.65;
-                    captured(world, state, "clearing-cloud-gaps-sunshafts");
+                    captured(world, state, "shader-cloud-clearing-below");
                     return Ok(());
                 }
                 if state.since.elapsed() > Duration::from_secs(7) {
                     return Err(format!(
-                        "Clearing cloud cover skipped the sunshaft inspection window: {status:?}"
+                        "Clearing cloud cover skipped the shader-layer inspection window: {status:?}"
                     ));
                 }
                 // WeatherPreview is intentionally instantaneous. Animate its
@@ -1104,18 +1259,49 @@ fn advance(world: &mut World, state: &mut Fixture) -> Result<(), String> {
                     "Low weather quality retained clearing-cloud sunshafts: {status:?}"
                 ));
             }
-            if !captured(world, state, "clearing-cloud-sunshafts-disabled-low") {
+            if !captured(world, state, "shader-cloud-clear-low") {
                 return Ok(());
             }
+            world
+                .resource_mut::<terra_core::GameConfig>()
+                .client
+                .weather_quality = terra_core::WeatherQuality::High;
+            let mut preview = world.resource_mut::<terra_render::WeatherPreview>();
+            preview.kind = terra_core::WeatherKind::Rain;
+            preview.intensity = 1.0;
+            frame_cloud_layer(world, 256.0)?;
             state.phase = 54;
         }
+        54 => {
+            if !captured(world, state, "shader-cloud-inside") {
+                return Ok(());
+            }
+            frame_cloud_layer(world, 400.0)?;
+            state.phase = 55;
+        }
+        55 => {
+            if !captured(world, state, "shader-cloud-above") {
+                return Ok(());
+            }
+            state.phase = 56;
+        }
         _ => {
+            let checks = world.resource::<CloudCaptureChecks>();
+            if let Some(error) = &checks.error {
+                return Err(error.clone());
+            }
+            if checks.layer_views != 3 {
+                if state.since.elapsed() > Duration::from_secs(7) {
+                    return Err("Shader-cloud inside/above captures did not complete".into());
+                }
+                return Ok(());
+            }
             let status = world.resource::<terra_render::WeatherRenderStatus>();
             tracing::info!(
                 quads = status.quads,
                 batches = status.batches,
                 mesh_uploads = status.mesh_uploads,
-                "Native weather fixture passed: rain, five budgeted snow levels/blizzard, five cloud decks/celestial occlusion, clearing-cloud sunshafts with Low-quality suppression, shared horizontal white/lilac lightning/ground strike, ocean-connected coastal wash, storm/calm ocean waves, submerged rain exclusion/visible surface impacts, low/off budgets, night, snow cover, ignition and extinction"
+                "Native weather fixture passed: rain, five budgeted snow levels/blizzard, five shader-cloud covers/celestial occlusion, spatial cloud-cover changes and views below/inside/above the layer without sunshafts, shared horizontal white/lilac lightning/ground strike, ocean-connected coastal wash, storm/calm ocean waves, submerged rain exclusion/visible surface impacts, low/off budgets, night, snow cover, ignition and extinction"
             );
             world.write_message(AppExit::Success);
             state.phase = 255;

@@ -1,0 +1,28 @@
+{
+  "id": "teramic::castle_snow_wall",
+  "name": "Schneemauer",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "block": 189
+    },
+    "count": 1
+  },
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "block": 174
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "block": 5
+        },
+        "count": 1
+      }
+    ]
+  }
+}

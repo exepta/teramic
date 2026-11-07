@@ -9,6 +9,7 @@ mod clownfish;
 mod horse;
 mod mammal;
 mod shape;
+pub(super) mod soldier;
 mod spider;
 mod stalker;
 mod villager;
@@ -34,6 +35,8 @@ pub(super) enum Part {
     StalkerHand(f32),
     StalkerEyes,
     VillagerArm(f32),
+    MilitaryWeapon(f32),
+    MilitaryTabard,
 }
 
 pub(super) fn parts(kind: Kind) -> Result<Vec<(Part, Vec3, Mesh)>, String> {
@@ -58,7 +61,15 @@ pub(super) fn parts_variant(kind: Kind, variant: u8) -> Result<Vec<(Part, Vec3, 
         Kind::ReefShark | Kind::HammerheadShark | Kind::WhaleShark => aquatic::shark(kind),
         Kind::SmallSpider | Kind::MediumSpider | Kind::LargeSpider => spider::parts(kind),
         Kind::Stalker => stalker::parts(),
-        Kind::Villager => villager::parts(variant),
+        Kind::Villager => {
+            if let Some(loadout) =
+                terra_core::creatures::soldiers::SoldierLoadout::from_role(variant)
+            {
+                soldier::parts(loadout)
+            } else {
+                villager::parts(variant)
+            }
+        }
     }
 }
 

@@ -37,6 +37,8 @@ pub struct Controls {
     pub ambient: [AtomicU32; 3],
     pub fire: [AtomicU32; 2],
     pub furnace: [AtomicU32; 2],
+    pub faucet: [AtomicU32; 2],
+    pub faucet_rms: AtomicU32,
     pub rain: [AtomicU32; 2],
     pub volume: AtomicU32,
     pub categories: [AtomicU32; CATEGORIES],
@@ -50,6 +52,8 @@ impl Default for Controls {
             ambient: Default::default(),
             fire: Default::default(),
             furnace: Default::default(),
+            faucet: Default::default(),
+            faucet_rms: AtomicU32::new(0),
             rain: Default::default(),
             volume: AtomicU32::new(0),
             categories: std::array::from_fn(|_| AtomicU32::new(1.0_f32.to_bits())),
@@ -107,6 +111,9 @@ impl Decodable for RecordedSoundscape {
             fire_phase: 0.0,
             furnace: [0.0; 2],
             furnace_phase: 0.0,
+            faucet: [0.0; 2],
+            faucet_phase: 6_170.0,
+            faucet_energy: 0.0,
             rain_phase: [0.0, 3_700.0, 181_000.0],
             rain_gain: 0.0,
             rain_roof: 0.0,
@@ -140,6 +147,9 @@ pub struct Stream {
     fire_phase: f32,
     furnace: [f32; 2],
     furnace_phase: f32,
+    faucet: [f32; 2],
+    faucet_phase: f32,
+    faucet_energy: f32,
     rain_phase: [f32; 3],
     rain_gain: f32,
     rain_roof: f32,
@@ -177,6 +187,13 @@ impl Iterator for Stream {
             return Some(self.pair[1]);
         }
         self.right = true;
+        if self.frame.is_multiple_of(256) {
+            self.controls.faucet_rms.store(
+                (self.faucet_energy / 512.0).sqrt().to_bits(),
+                Ordering::Relaxed,
+            );
+            self.faucet_energy = 0.0;
+        }
         if self.frame.is_multiple_of(256)
             && let Ok(mut queue) = self.controls.queue.lock()
         {
@@ -246,6 +263,18 @@ impl Iterator for Stream {
                 let target = f32::from_bits(self.controls.furnace[channel].load(Ordering::Relaxed));
                 self.furnace[channel] += (target - self.furnace[channel]) * 0.00015;
                 self.pair[channel] += value * self.furnace[channel] * environment;
+            }
+        }
+        // The existing close, detailed water recording forms one crossfaded loop.
+        // All taps share this bounded stereo layer; changing sources only changes gains.
+        if let Some(clip) = self.bank.get(RAIN_DETAIL_CLIP) {
+            let value = loop_sample(clip, &mut self.faucet_phase);
+            for channel in 0..2 {
+                let target = f32::from_bits(self.controls.faucet[channel].load(Ordering::Relaxed));
+                self.faucet[channel] += (target - self.faucet[channel]) * 0.0002;
+                let sample = value * self.faucet[channel] * environment;
+                self.pair[channel] += sample;
+                self.faucet_energy += (sample * self.volume).powi(2);
             }
         }
         if let Some(clip) = self.bank.get(RAIN_CLIP) {
@@ -557,6 +586,55 @@ mod tests {
         assert!(stream.next().unwrap().abs() < 0.00001);
         assert!(stream.voices.is_empty());
     }
+    #[test]
+    fn faucet_loop_reaches_existing_stereo_decoder_and_fades_after_shutoff_or_mute() {
+        let controls = Arc::new(Controls::default());
+        controls.configure(&terra_core::AudioConfig::default(), true);
+        let mut clips = vec![vec![0.0; 24_000]; RAIN_DETAIL_CLIP + 1];
+        clips[RAIN_DETAIL_CLIP] = (0..24_000)
+            .map(|index| (index as f32 * 0.037).sin() * 0.2)
+            .collect();
+        let mut stream = RecordedSoundscape {
+            bank: Arc::new(clips),
+            controls: controls.clone(),
+        }
+        .decoder();
+        let energy = |stream: &mut Stream| {
+            stream
+                .take(24_000)
+                .map(|sample| f64::from(sample).powi(2))
+                .sum::<f64>()
+        };
+        assert_eq!(energy(&mut stream), 0.0);
+        controls.faucet[0].store(0.1_f32.to_bits(), Ordering::Relaxed);
+        controls.faucet[1].store(0.3_f32.to_bits(), Ordering::Relaxed);
+        assert!(energy(&mut stream) > 0.05);
+        assert!(stream.faucet[1] > stream.faucet[0]);
+        assert!(f32::from_bits(controls.faucet_rms.load(Ordering::Relaxed)) > 0.00001);
+        for gain in &controls.faucet {
+            gain.store(0, Ordering::Relaxed);
+        }
+        for _ in 0..192_000 {
+            stream.next();
+        }
+        assert!(energy(&mut stream) < 1e-10);
+        for gain in &controls.faucet {
+            gain.store(0.3_f32.to_bits(), Ordering::Relaxed);
+        }
+        assert!(energy(&mut stream) > 0.05);
+        controls.configure(
+            &terra_core::AudioConfig {
+                muted: true,
+                ..Default::default()
+            },
+            true,
+        );
+        for _ in 0..48_000 {
+            stream.next();
+        }
+        assert!(energy(&mut stream) < 1e-10);
+    }
+
     #[test]
     fn recorded_mix_is_bounded_filtered_and_live_muting_clears_existing_voices() {
         let controls = Arc::new(Controls::default());

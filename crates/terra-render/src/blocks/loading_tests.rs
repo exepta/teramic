@@ -1,5 +1,39 @@
 use super::*;
 
+#[path = "hydraulics_tests.rs"]
+mod hydraulics_tests;
+#[path = "kinetic_art_tests.rs"]
+mod kinetic_art_tests;
+#[path = "lantern_tests.rs"]
+mod lantern_tests;
+
+#[test]
+fn authored_tangents_follow_nonuniform_node_scale_rotation_and_reflection() {
+    let direction = Vec3::new(1.0, 1.0, 0.0).normalize();
+    let mut primitive = PrimitiveTemplate {
+        positions: vec![[0.0, 0.0, 0.0], [0.25, 0.0, 0.0], [0.0, 0.25, 0.0]],
+        normals: vec![[0.0, 0.0, 1.0]; 3],
+        tangents: vec![[direction.x, direction.y, direction.z, 1.0]; 3],
+        uvs: vec![[0.0, 0.0], [1.0, 0.0], [0.0, 1.0]],
+        indices: vec![0, 1, 2],
+        material: 0,
+    };
+    let transform = bevy::math::Affine3A::from_scale_rotation_translation(
+        Vec3::new(-0.5, 0.25, 1.0),
+        Quat::from_rotation_z(0.3),
+        Vec3::splat(0.5),
+    );
+    bake_transform(1, &mut primitive, transform).unwrap();
+    let expected = transform.transform_vector3(direction).normalize();
+    for (&tangent, &normal) in primitive.tangents.iter().zip(&primitive.normals) {
+        let direction = Vec3::from_array([tangent[0], tangent[1], tangent[2]]);
+        assert!((direction - expected).length() < 0.0001);
+        assert!(direction.dot(Vec3::from_array(normal)).abs() < 0.0001);
+        assert_eq!(tangent[3], -1.0);
+    }
+    assert_eq!(primitive.indices, [0, 2, 1]);
+}
+
 #[test]
 fn held_torch_material_has_no_emission_or_self_light_response() {
     let material = torch_item_material();
@@ -114,7 +148,9 @@ fn torch_emits_but_ores_only_reflect_existing_light() {
             .lights()
             .map(|(id, _)| id)
             .collect::<std::collections::BTreeSet<_>>(),
-        [28, 40, 56, 99].into_iter().collect()
+        [28, 40, 56, 99, terra_core::lantern::LANTERN]
+            .into_iter()
+            .collect()
     );
     let (_, crusher_lantern) = assets.lights().find(|(id, _)| *id == 99).unwrap();
     assert_eq!(crusher_lantern.range, 4.0);
@@ -196,31 +232,42 @@ fn every_shipped_item_description_is_editable_json_metadata() {
 }
 
 #[test]
-fn prop_palette_preserves_linear_color_and_restrains_highlights() {
+fn prop_palette_matches_the_authored_grass_green_with_moderate_variation() {
     let mut assets = BlockAssets::default();
     let mut materials = Assets::<StandardMaterial>::default();
     let palette = load_prop_materials(&mut assets, &mut materials);
-    for (slot, previous, factor) in [
-        (palette.foliage[0], [0.16, 0.32, 0.075], 0.80),
-        (palette.foliage[1], [0.28, 0.46, 0.12], 0.80),
-        (palette.foliage[2], [0.40, 0.57, 0.20], 0.75),
-        (palette.stem, [0.18, 0.29, 0.075], 0.80),
+    let target = [0.28, 0.46, 0.08];
+    let mut luminances = Vec::new();
+    for (slot, expected) in [
+        (palette.foliage[0], [0.245, 0.405, 0.072]),
+        (palette.foliage[1], target),
+        (palette.foliage[2], [0.310, 0.495, 0.095]),
+        (palette.stem, [0.225, 0.360, 0.063]),
     ] {
         let material = materials
             .get(&assets.materials[slot])
             .expect("prop material");
         let color = material.base_color.to_linear();
-        for (channel, previous) in [color.red, color.green, color.blue]
+        for (channel, expected) in [color.red, color.green, color.blue]
             .into_iter()
-            .zip(previous)
+            .zip(expected)
         {
-            assert!((channel - previous * factor).abs() < 0.000001);
+            assert!((channel - expected).abs() < 0.000001);
         }
+        assert!(color.green > color.red * 1.5 && color.green > color.blue * 4.5);
+        luminances.push(color.red * 0.2126 + color.green * 0.7152 + color.blue * 0.0722);
         assert_eq!(color.alpha, 1.0);
         assert!(material.base_color_texture.is_none());
     }
+    assert!(luminances[..3].windows(2).all(|pair| pair[0] < pair[1]));
+    assert!(luminances[2] / luminances[0] < 1.3);
+    assert!(luminances[3] < luminances[0]);
     assert_eq!(palette.flowers.len(), 8);
     for (slot, expected) in [
+        (palette.dry_grass[0], [0.36, 0.31, 0.10, 1.0]),
+        (palette.dry_grass[1], [0.47, 0.39, 0.16, 1.0]),
+        (palette.dry_grass[2], [0.32, 0.34, 0.12, 1.0]),
+        (palette.twig, [0.26, 0.17, 0.075, 1.0]),
         (palette.flowers[6], [0.94, 0.29, 0.045, 1.0]),
         (palette.flowers[7], [0.27, 0.69, 0.20, 1.0]),
     ] {
@@ -292,17 +339,34 @@ fn shipped_cube_materials_share_soil_but_keep_whole_snow_distinct_from_rock() {
             slots.insert((block.id, name.as_str()), slot);
         }
     }
-    assert_eq!(
-        slots[&(1, "Root-rich earth")],
-        slots[&(2, "Root-rich earth")]
+    assert!(
+        !slots.keys().any(|(id, _)| *id == 1),
+        "authored grass uses GLTF PBR, not procedural soil"
     );
     assert_ne!(
         slots[&(3, "Weathered blue stone")],
         slots[&(5, "Soft snow")]
     );
+    for id in [79, 87, 95] {
+        assert_eq!(
+            slots[&(4, "Fine sand")],
+            slots[&(id, "Fine sand")],
+            "Sand construction shapes keep the exact shared PBR material"
+        );
+    }
+    let sand = materials
+        .get(&assets.materials[slots[&(4, "Fine sand")]])
+        .unwrap();
+    assert_eq!(sand.perceptual_roughness, 1.0);
+    assert_eq!(sand.reflectance, 0.12);
     assert_eq!(
         materials.len(),
-        60 + terra_core::OreKind::ALL.len() + terra_core::beds::DyeColor::ALL.len() + 1
+        72 + terra_core::OreKind::ALL.len() + terra_core::beds::DyeColor::ALL.len() + 1
+    );
+    assert_ne!(
+        slots[&(195, "Painted moss canopy")],
+        slots[&(7, "Painted moss canopy")],
+        "Apple canopy keeps its own yellow-green material"
     );
     assert_eq!(slots[&(103, "Woven wool")], slots[&(104, "Woven wool")]);
     assert_eq!(slots[&(103, "Woven wool")], slots[&(105, "Woven wool")]);
@@ -404,11 +468,20 @@ fn weather_cycles_share_surface_factors_and_restore_registry_materials() {
 
     let mut library = BlockLibrary::load(&terra_core::asset_directory().join("terra/blocks"))
         .expect("definitions");
+    // Keep coverage of the legacy procedural cube contract alongside authored grass.
+    let mut legacy_grass = library
+        .blocks
+        .iter()
+        .find(|block| block.id == 4)
+        .unwrap()
+        .clone();
+    legacy_grass.id = 1;
     let grass = library
         .blocks
         .iter_mut()
         .find(|block| block.id == 1)
         .unwrap();
+    *grass = legacy_grass;
     let top = grass.face_materials.as_ref().unwrap()[3].clone();
     let custom = grass.materials.get_mut(&top).unwrap();
     custom.base_color = [0.83, 0.91, 0.76, 0.93];
@@ -637,7 +710,7 @@ fn load_pedestal() -> Vec<PrimitiveTemplate> {
     load_static_scene("terra/blocks/fixtures/pedestal.gltf", 65000)
 }
 
-fn load_static_scene(path: &'static str, id: u16) -> Vec<PrimitiveTemplate> {
+pub(super) fn load_static_scene(path: &'static str, id: u16) -> Vec<PrimitiveTemplate> {
     let mut app = App::new();
     app.add_plugins((
         MinimalPlugins,
@@ -650,6 +723,11 @@ fn load_static_scene(path: &'static str, id: u16) -> Vec<PrimitiveTemplate> {
         bevy::gltf::GltfPlugin::default(),
     ))
     .init_asset::<Image>()
+    // This headless fixture has no TexturePlugin::finish to register the PNG
+    // loader. Hydraulics use real external PBR maps, unlike older color-only glTFs.
+    .register_asset_loader(bevy::image::ImageLoader::new(
+        bevy::image::CompressedImageFormats::NONE,
+    ))
     .init_asset::<StandardMaterial>();
     app.finish();
     app.cleanup();
@@ -666,20 +744,22 @@ fn load_static_scene(path: &'static str, id: u16) -> Vec<PrimitiveTemplate> {
     loop {
         app.update();
         let server = app.world().resource::<AssetServer>();
+        let dependencies = server.get_recursive_dependency_load_state(handle.id());
         assert!(
             !matches!(
                 server.get_load_state(handle.id()),
                 Some(LoadState::Failed(_))
-            ),
-            "fixture load failed: {:?}",
-            server.get_load_state(handle.id())
+            ) && !matches!(dependencies, Some(RecursiveDependencyLoadState::Failed(_))),
+            "fixture {path} load failed: {:?}; dependencies: {dependencies:?}",
+            server.get_load_state(handle.id()),
         );
         if server.is_loaded_with_dependencies(handle.id()) {
             break;
         }
         assert!(
             std::time::Instant::now() < deadline,
-            "fixture loading timed out"
+            "fixture {path} loading timed out: {:?}; dependencies: {dependencies:?}",
+            server.get_load_state(handle.id()),
         );
         std::thread::sleep(std::time::Duration::from_millis(1));
     }
@@ -727,6 +807,18 @@ fn shipped_furniture_furnace_and_chimneys_have_valid_non_degenerate_static_geome
         ("terra/blocks/models/spruce_bed.gltf", 73),
         ("terra/blocks/models/crusher.gltf", 99),
         ("terra/blocks/models/hand_crank.gltf", 100),
+        ("terra/blocks/models/cauldron.gltf", 161),
+        ("terra/blocks/models/campfire.gltf", 162),
+        ("terra/blocks/models/wood_pipe.gltf", 163),
+        ("terra/blocks/models/stone_pipe.gltf", 164),
+        ("terra/blocks/models/iron_pipe.gltf", 165),
+        ("terra/blocks/models/valve.gltf", 166),
+        ("terra/blocks/models/faucet.gltf", 167),
+        ("terra/blocks/models/pump.gltf", 168),
+        ("terra/blocks/models/basin.gltf", 169),
+        ("terra/blocks/models/hold_block.gltf", 170),
+        ("terra/blocks/models/fluid_infuser.gltf", 171),
+        ("terra/blocks/models/glass_pipe.gltf", 172),
     ] {
         let model = load_static_scene(path, id);
         let bottom = model
@@ -754,8 +846,8 @@ fn shipped_furniture_furnace_and_chimneys_have_valid_non_degenerate_static_geome
                 .flat_map(|primitive| &primitive.positions)
                 .map(|point| point[1])
                 .fold(f32::NEG_INFINITY, f32::max);
-            assert!((top - 1.23).abs() < 0.00001);
-            assert_eq!(model.len(), 14);
+            assert!((top - 1.0).abs() < 0.00001);
+            assert_eq!(model.len(), 13);
         }
         if id == 100 {
             let top = model
@@ -772,9 +864,7 @@ fn shipped_furniture_furnace_and_chimneys_have_valid_non_degenerate_static_geome
             assert_eq!(primitive.positions.len(), primitive.normals.len());
             for point in &primitive.positions {
                 assert!(point.iter().enumerate().all(|(axis, value)| {
-                    let maximum = if id == 99 && axis == 1 {
-                        1.25
-                    } else if (matches!(id, 59 | 65..=67) && axis == 1)
+                    let maximum = if (matches!(id, 59 | 65..=67) && axis == 1)
                         || (terra_core::beds::is_bed(id) && axis == 2)
                     {
                         2.0
@@ -798,6 +888,193 @@ fn shipped_furniture_furnace_and_chimneys_have_valid_non_degenerate_static_geome
             }
         }
     }
+}
+
+#[test]
+fn compact_cauldron_composes_the_actual_fire_inside_its_stand_with_shared_materials() {
+    let cauldron = load_static_scene("terra/blocks/models/cauldron.gltf", 161);
+    let fire = load_static_scene("terra/blocks/models/campfire.gltf", 162);
+    let mut templates = TemplateSet::default();
+    for (id, model) in [(161, cauldron.clone()), (162, fire.clone())] {
+        templates.blocks.insert(
+            id,
+            BlockTemplate {
+                surface: None,
+                render_kind: BlockRenderKind::CustomMesh,
+                bevel_width: 0.0,
+                faces: std::array::from_fn(|_| Vec::new()),
+                face_materials: [0; 6],
+                side_cap: None,
+                details: Vec::new(),
+                model,
+            },
+        );
+    }
+    for facing in 0..4 {
+        let state = |facing| terra_world::edits::BlockObjectState {
+            facing,
+            ..Default::default()
+        };
+        let plain = crate::meshing::custom::model_geometry(
+            161,
+            state(facing),
+            Default::default(),
+            [Some(0); 6],
+            [0; 6],
+            &templates,
+        )
+        .unwrap();
+        let compact = crate::meshing::custom::model_geometry(
+            161,
+            state(facing | terra_core::brewing::ATTACHED_FIRE),
+            Default::default(),
+            [Some(0); 6],
+            [0; 6],
+            &templates,
+        )
+        .unwrap();
+        let count = |parts: &[crate::meshing::builder::MeshBatch]| {
+            parts.iter().map(|part| part.positions.len()).sum::<usize>()
+        };
+        assert_eq!(
+            count(&plain),
+            cauldron
+                .iter()
+                .map(|part| part.positions.len())
+                .sum::<usize>()
+        );
+        assert_eq!(
+            count(&compact) - count(&plain),
+            fire.iter().map(|part| part.positions.len()).sum::<usize>()
+        );
+        assert!(count(&compact) < 8192);
+        let rotation = Quat::from_rotation_y(f32::from(facing) * std::f32::consts::FRAC_PI_2);
+        for original in &fire {
+            let batch = compact
+                .iter()
+                .find(|part| part.material == original.material)
+                .unwrap();
+            let existing = plain
+                .iter()
+                .find(|part| part.material == original.material)
+                .map_or(0, |part| part.positions.len());
+            for (&actual, point) in batch.positions[existing..].iter().zip(&original.positions) {
+                let point =
+                    terra_world::interaction_shapes::attached_campfire_point(point.map(f64::from));
+                assert!(point[0] > 0.175 && point[2] > 0.175);
+                assert!(point[0] < 0.825 && point[2] < 0.825);
+                assert!(point[1] < 0.34);
+                let point = Vec3::from_array(point.map(|v| v as f32));
+                let expected =
+                    rotation * (point - Vec3::new(0.5, 0.0, 0.5)) + Vec3::new(0.5, 0.0, 0.5);
+                assert!((Vec3::from_array(actual) - expected).length() < 1e-6);
+            }
+        }
+        for batch in compact {
+            assert!(
+                batch
+                    .positions
+                    .iter()
+                    .flatten()
+                    .all(|v| v.is_finite() && (-1e-6..=1.000001).contains(v))
+            );
+            for triangle in batch.indices.chunks_exact(3) {
+                let [a, b, c] = [triangle[0], triangle[1], triangle[2]]
+                    .map(|index| Vec3::from_array(batch.positions[index as usize]));
+                assert!(
+                    (b - a)
+                        .cross(c - a)
+                        .dot(Vec3::from_array(batch.normals[triangle[0] as usize]))
+                        > 0.0
+                );
+            }
+            for (tangent, normal) in batch.tangents.iter().zip(&batch.normals) {
+                let tangent = Vec3::new(tangent[0], tangent[1], tangent[2]);
+                assert!((tangent.length() - 1.0).abs() < 1e-4);
+                assert!(tangent.dot(Vec3::from_array(*normal)).abs() < 1e-4);
+            }
+        }
+    }
+}
+
+#[test]
+fn mixer_matches_its_one_cell_hopper_paddle_and_axial_drive_contract() {
+    let model = load_static_scene("terra/blocks/models/mixer.gltf", 156);
+    assert_eq!(
+        model.len(),
+        8,
+        "four rigid and four shared rotating material groups"
+    );
+    assert!(model.iter().map(|p| p.positions.len()).sum::<usize>() <= 8192);
+    for primitive in &model {
+        assert_eq!(primitive.positions.len(), primitive.normals.len());
+        assert_eq!(primitive.positions.len(), primitive.uvs.len());
+        for point in &primitive.positions {
+            assert!(
+                point
+                    .iter()
+                    .all(|v| v.is_finite() && (-0.00001..=1.00001).contains(v))
+            );
+        }
+        for triangle in primitive.indices.chunks_exact(3) {
+            let [a, b, c] = [triangle[0], triangle[1], triangle[2]]
+                .map(|i| Vec3::from_array(primitive.positions[i as usize]));
+            let normal = Vec3::from_array(primitive.normals[triangle[0] as usize]);
+            assert!((b - a).cross(c - a).dot(normal) > 1e-10);
+            assert!(
+                (b - a).cross(c - a).normalize().dot(normal) > 0.9999,
+                "the authored mixer normal must agree with its actual sloped surface"
+            );
+        }
+        if primitive.material >= 4 {
+            for point in &primitive.positions {
+                let radius = (point[1] - 0.5).hypot(point[2] - 0.5);
+                assert!(
+                    radius <= 0.211,
+                    "every animation phase stays inside the chamber/gear envelope"
+                );
+            }
+        }
+    }
+    let axle = model
+        .iter()
+        .flat_map(|p| &p.positions)
+        .filter(|point| point[0] > 0.99999)
+        .collect::<Vec<_>>();
+    assert!(!axle.is_empty());
+    for axis in [1, 2] {
+        let low = axle.iter().map(|p| p[axis]).fold(f32::INFINITY, f32::min);
+        let high = axle
+            .iter()
+            .map(|p| p[axis])
+            .fold(f32::NEG_INFINITY, f32::max);
+        assert!((low + high - 1.0).abs() < 0.00001);
+    }
+    let library = BlockLibrary::load(&terra_core::asset_directory().join("terra/blocks")).unwrap();
+    let definition = library.blocks.iter().find(|block| block.id == 156).unwrap();
+    assert_eq!(definition.name, "Mixer");
+    assert!(definition.gameplay.struct_block);
+    assert!(definition.collision_boxes.len() <= 64);
+    let solid = |point: [f64; 3]| {
+        definition.collision_boxes.iter().any(|bounds| {
+            (0..3).all(|axis| {
+                point[axis] >= bounds.minimum[axis] && point[axis] <= bounds.maximum[axis]
+            })
+        })
+    };
+    assert!(
+        !solid([0.5, 0.96, 0.5]),
+        "the input hopper center is genuinely open"
+    );
+    assert!(
+        !solid([0.5, 0.22, 0.94]),
+        "the front output channel stays open above its floor"
+    );
+    assert!(
+        solid([0.5, 0.50, 0.25]),
+        "the rear plank housing has matching collision"
+    );
+    assert!(solid([0.10, 0.05, 0.10]), "reinforced feet touch the floor");
 }
 
 #[test]
@@ -829,12 +1106,12 @@ fn crusher_housing_closes_rear_and_sides_but_keeps_output_and_crank_mount_clear(
             .sum::<f32>()
     };
     assert!(
-        face_area(2, 0.20, 1.0) > 0.54,
+        face_area(2, 0.16, 1.0) > 0.35,
         "solid rear face must cover the crushing chamber"
     );
-    assert!(face_area(0, 0.065, -1.0) > 0.39, "left housing panel");
+    assert!(face_area(0, 0.075, -1.0) > 0.33, "left housing panel");
     assert!(
-        face_area(0, 0.935, 1.0) > 0.39,
+        face_area(0, 0.925, 1.0) > 0.33,
         "right housing panel behind the gear"
     );
     let library = BlockLibrary::load(&terra_core::asset_directory().join("terra/blocks")).unwrap();
@@ -850,9 +1127,10 @@ fn crusher_housing_closes_rear_and_sides_but_keeps_output_and_crank_mount_clear(
         [0.5, 0.45, 0.15],
         [0.08, 0.45, 0.5],
         [0.92, 0.45, 0.5],
-        [0.5, 0.45, 0.5],
-        [0.2725, 0.73, 0.4],
-        [0.7275, 0.73, 0.4],
+        [0.5, 0.45, 0.35],
+        [0.5, 0.45, 0.65],
+        [0.15, 0.85, 0.4],
+        [0.85, 0.85, 0.4],
     ] {
         assert!(
             solid(point),
@@ -867,6 +1145,193 @@ fn crusher_housing_closes_rear_and_sides_but_keeps_output_and_crank_mount_clear(
         !solid([1.005, 0.455, 0.515]),
         "housing must not intrude into the crank socket cell"
     );
+    assert!(
+        !solid([0.5, 0.95, 0.5]),
+        "the real input center must be inside the open intake"
+    );
+}
+
+#[test]
+fn logistics_ports_use_bounded_reusable_open_housings_and_real_authored_volumes() {
+    for (file, id) in [
+        ("terra/blocks/models/item_hopper.gltf", 152),
+        ("terra/blocks/models/item_importer.gltf", 153),
+        ("terra/blocks/models/filtered_funnel.gltf", 157),
+        ("terra/blocks/models/belt_merger.gltf", 158),
+        ("terra/blocks/models/filtered_tunnel.gltf", 159),
+        ("terra/blocks/models/belt_distributor.gltf", 160),
+    ] {
+        let model = load_static_scene(file, id);
+        let count = model.iter().map(|p| p.positions.len()).sum::<usize>();
+        assert!((200..=4096).contains(&count));
+        for primitive in &model {
+            assert!(primitive.positions.iter().all(|point| {
+                point.iter().enumerate().all(|(axis, v)| {
+                    v.is_finite() && (if axis == 1 { -0.375..=1.0 } else { 0.0..=1.0 }).contains(v)
+                })
+            }));
+            assert!(
+                primitive
+                    .indices
+                    .iter()
+                    .all(|i| (*i as usize) < primitive.positions.len())
+            );
+            for triangle in primitive.indices.chunks_exact(3) {
+                let p = triangle
+                    .iter()
+                    .map(|i| Vec3::from_array(primitive.positions[*i as usize]))
+                    .collect::<Vec<_>>();
+                let n = Vec3::from_array(primitive.normals[triangle[0] as usize]);
+                assert!((p[1] - p[0]).cross(p[2] - p[0]).dot(n) > 0.0);
+            }
+        }
+        let boxes = terra_core::block_shapes::builtin_boxes(id);
+        assert!(!boxes.is_empty());
+        assert!(terra_core::kinetic::is_extended(id));
+        assert!(boxes.iter().any(|b| (b.minimum[1] + 0.375).abs() < 1e-6));
+        let upper = if matches!(id, 158 | 160) {
+            -0.125
+        } else {
+            -0.08
+        };
+        for (low, high) in [
+            ([0.38, -0.37, 0.0], [0.62, upper, 1.0]),
+            ([0.0, -0.37, 0.38], [1.0, upper, 0.62]),
+        ] {
+            assert!(
+                !boxes.iter().any(|b| b.intersects(low, high)),
+                "the belt and carried items pass through both axes of the open port"
+            );
+        }
+        assert!(!terra_voxel::MaterialId::from_raw(id).unwrap().is_opaque());
+    }
+    let directory = terra_core::asset_directory().join("terra/blocks");
+    let funnel: serde_json::Value = serde_json::from_str(
+        &std::fs::read_to_string(directory.join("models/item_importer.gltf")).unwrap(),
+    )
+    .unwrap();
+    let support_slots: Vec<_> = funnel["materials"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .enumerate()
+        .filter(|(_, material)| {
+            material["name"]
+                .as_str()
+                .unwrap()
+                .starts_with("port_support_")
+        })
+        .map(|(slot, _)| slot as u64)
+        .collect();
+    assert_eq!(support_slots.len(), 2);
+    for primitive in funnel["meshes"][0]["primitives"].as_array().unwrap() {
+        let accessor =
+            &funnel["accessors"][primitive["attributes"]["POSITION"].as_u64().unwrap() as usize];
+        let low = accessor["min"][1].as_f64().unwrap();
+        if support_slots.contains(&primitive["material"].as_u64().unwrap()) {
+            assert!(low <= -0.305 + 1e-6);
+        } else {
+            assert!(
+                low >= -0.305 - 1e-6,
+                "only dedicated legs may extend below the funnel"
+            );
+        }
+    }
+    let tunnel: serde_json::Value =
+        serde_json::from_str(&std::fs::read_to_string(directory.join("item_hopper.json")).unwrap())
+            .unwrap();
+    assert_eq!(tunnel["name"], "Tunnel");
+}
+
+#[test]
+fn logistics_contact_pads_meet_belt_edges_without_entering_the_four_item_passages() {
+    let library = BlockLibrary::load(&terra_core::asset_directory().join("terra/blocks")).unwrap();
+    let contact = f64::from(terra_core::kinetic::CONVEYOR_TOP) - 1.0;
+    for material in [153, 157, 158, 160] {
+        let definition = library
+            .blocks
+            .iter()
+            .find(|block| block.id == material)
+            .unwrap();
+        for axis in [0, 2] {
+            for edge in [0.18, 0.82] {
+                assert!(
+                    definition
+                        .collision_boxes
+                        .iter()
+                        .any(|bounds| (bounds.minimum[1] - contact).abs() < 1e-6
+                            && bounds.minimum[axis] < edge
+                            && bounds.maximum[axis] > edge),
+                    "material {material} must touch ribbon edge {axis}/{edge}"
+                );
+            }
+        }
+        for (low, high) in [
+            ([0.38, -0.37, 0.0], [0.62, -0.125, 1.0]),
+            ([0.0, -0.37, 0.38], [1.0, -0.125, 0.62]),
+        ] {
+            assert!(
+                !definition
+                    .collision_boxes
+                    .iter()
+                    .any(|bounds| bounds.intersects(low, high))
+            );
+        }
+        if matches!(material, 158 | 160) {
+            let path = if material == 158 {
+                "terra/blocks/models/belt_merger.gltf"
+            } else {
+                "terra/blocks/models/belt_distributor.gltf"
+            };
+            let model = load_static_scene(path, material);
+            assert!(model.iter().map(|p| p.positions.len()).sum::<usize>() <= 2048);
+        }
+    }
+}
+
+#[test]
+fn real_gearbox_assets_have_distinct_shared_rotors_centered_ports_and_bounded_housings() {
+    for (file, material, cross) in [
+        ("terra/blocks/models/gearbox_horizontal.gltf", 154, 2),
+        ("terra/blocks/models/gearbox_vertical.gltf", 155, 1),
+    ] {
+        let model = load_static_scene(file, material);
+        assert_eq!(model.len(), 6);
+        assert_eq!(model.iter().map(|p| p.positions.len()).sum::<usize>(), 3608);
+        for axis in [0, cross] {
+            for end in [0.0, 1.0] {
+                let port: Vec<_> = model
+                    .iter()
+                    .flat_map(|p| &p.positions)
+                    .filter(|point| (point[axis] - end).abs() < 1e-6)
+                    .collect();
+                assert!(!port.is_empty());
+                for other in (0..3).filter(|&other| other != axis) {
+                    let low = port.iter().map(|p| p[other]).fold(f32::INFINITY, f32::min);
+                    let high = port
+                        .iter()
+                        .map(|p| p[other])
+                        .fold(f32::NEG_INFINITY, f32::max);
+                    assert!(
+                        (low + high - 1.0).abs() < 1e-6,
+                        "the axle pivot stays centered at each cell boundary"
+                    );
+                }
+            }
+        }
+        assert!(
+            model
+                .iter()
+                .flat_map(|p| &p.positions)
+                .flatten()
+                .all(|value| (0.0..=1.0).contains(value))
+        );
+        assert!(
+            terra_core::block_shapes::builtin_boxes(material)
+                .iter()
+                .all(|bounds| bounds.valid_for(material))
+        );
+    }
 }
 
 #[test]
@@ -924,6 +1389,7 @@ fn real_non_cube_gltf_scene_bakes_node_hierarchy_normals_and_reflections() {
 #[test]
 fn only_two_cell_furniture_scene_geometry_can_extend_into_a_second_vertical_cell() {
     let tall = PrimitiveTemplate {
+        tangents: Vec::new(),
         positions: vec![[0.0; 3], [1.0, 2.0, 0.0], [1.0, 2.0, 1.0]],
         normals: vec![[1.0, 0.0, 0.0]; 3],
         uvs: vec![[0.0; 2]; 3],
@@ -934,7 +1400,7 @@ fn only_two_cell_furniture_scene_geometry_can_extend_into_a_second_vertical_cell
         assert!(bake_transform(id, &mut tall.clone(), bevy::math::Affine3A::IDENTITY).is_ok());
     }
     for id in [
-        28, 29, 40, 60, 61, 62, 63, 64, 68, 69, 70, 71, 72, 73, 65000,
+        28, 29, 40, 60, 61, 62, 63, 64, 68, 69, 70, 71, 72, 73, 99, 65000,
     ] {
         assert!(
             bake_transform(id, &mut tall.clone(), bevy::math::Affine3A::IDENTITY).is_err(),
@@ -961,6 +1427,7 @@ fn only_two_cell_furniture_scene_geometry_can_extend_into_a_second_vertical_cell
 #[test]
 fn only_beds_extend_into_the_paired_horizontal_cell() {
     let long = PrimitiveTemplate {
+        tangents: Vec::new(),
         positions: vec![[0.0; 3], [1.0, 1.0, 0.0], [1.0, 1.0, 2.0]],
         normals: vec![[1.0, 0.0, 0.0]; 3],
         uvs: vec![[0.0; 2]; 3],
@@ -1053,6 +1520,7 @@ fn static_models_batch_once_and_do_not_occlude_terrain_or_each_other() {
                 water_level: None,
                 terrain: None,
                 exposure: None,
+                tints: Default::default(),
                 conditions: Default::default(),
             },
         )
@@ -1102,6 +1570,7 @@ fn static_models_batch_once_and_do_not_occlude_terrain_or_each_other() {
             water_level: None,
             terrain: None,
             exposure: None,
+            tints: Default::default(),
             conditions: Default::default(),
         },
     )
@@ -1136,6 +1605,7 @@ fn static_models_batch_once_and_do_not_occlude_terrain_or_each_other() {
             water_level: None,
             terrain: None,
             exposure: None,
+            tints: Default::default(),
             conditions: Default::default(),
         },
     )
@@ -1168,4 +1638,166 @@ fn scene_model_definition_is_opt_in_and_does_not_change_shipped_ids() {
             .len(),
         terra_voxel::MaterialId::BLOCK_COUNT
     );
+}
+
+#[test]
+fn extended_kinetic_models_keep_full_rotor_bounds_and_cell_to_cell_axles() {
+    for (path, id, radius) in [
+        ("terra/blocks/models/wooden_gear.gltf", 141, 0.55),
+        ("terra/blocks/models/wooden_large_gear.gltf", 149, 1.05),
+        ("terra/blocks/models/wooden_shaft.gltf", 144, 0.132),
+        ("terra/blocks/models/water_wheel.gltf", 147, 1.5),
+    ] {
+        let model = load_static_scene(path, id);
+        let mut low = Vec3::splat(f32::INFINITY);
+        let mut high = Vec3::splat(f32::NEG_INFINITY);
+        for point in model.iter().flat_map(|primitive| &primitive.positions) {
+            let point = Vec3::from_array(*point);
+            low = low.min(point);
+            high = high.max(point);
+            assert!((0.0..=1.0).contains(&point.x));
+            assert!(point.y >= 0.5 - radius - 0.00001 && point.y <= 0.5 + radius + 0.00001);
+            assert!(point.z >= 0.5 - radius - 0.00001 && point.z <= 0.5 + radius + 0.00001);
+        }
+        assert!(
+            low.x.abs() < 0.00001 && (high.x - 1.0).abs() < 0.00001,
+            "axial connectors must meet at cell boundaries: {id}"
+        );
+        if id == 147 {
+            assert!((high.y - low.y - 3.0).abs() < 0.00001);
+            assert!((high.z - low.z - 3.0).abs() < 0.00001);
+        } else if id == 149 {
+            assert!(
+                high.y - low.y > 2.0 && high.z - low.z > 2.0,
+                "a large gear cannot be clipped or scaled into one cell"
+            );
+        } else if id == 141 {
+            assert!((high.y - low.y - 1.1).abs() < 0.00001);
+            assert!((high.z - low.z - 1.1).abs() < 0.00001);
+            assert!(
+                model
+                    .iter()
+                    .flat_map(|primitive| &primitive.positions)
+                    .all(|point| { (point[1] - 0.5).hypot(point[2] - 0.5) <= 0.55001 })
+            );
+        }
+    }
+}
+
+#[test]
+fn kinetic_envelope_allowance_never_relaxes_unrelated_models_or_axial_limits() {
+    for (id, radius) in [(141, 0.55), (149, 1.05), (147, 1.5)] {
+        let primitive = PrimitiveTemplate {
+            positions: vec![
+                [0.0, 0.5 - radius, 0.5 - radius],
+                [1.0, 0.5 + radius, 0.5 - radius],
+                [1.0, 0.5 + radius, 0.5 + radius],
+            ],
+            normals: vec![[1.0, 0.0, 0.0]; 3],
+            tangents: Vec::new(),
+            uvs: vec![[0.0; 2]; 3],
+            indices: vec![0, 1, 2],
+            material: 0,
+        };
+        assert!(bake_transform(id, &mut primitive.clone(), bevy::math::Affine3A::IDENTITY).is_ok());
+        let mut ordinary_overhang = primitive.clone();
+        ordinary_overhang.positions[0][1] = -0.001;
+        assert!(
+            bake_transform(
+                65000,
+                &mut ordinary_overhang,
+                bevy::math::Affine3A::IDENTITY
+            )
+            .is_err()
+        );
+        for axis in 0..3 {
+            for sign in [-1.0, 1.0] {
+                let offset = Vec3::from_array(std::array::from_fn(|a| {
+                    if a == axis { sign * 0.001 } else { 0.0 }
+                }));
+                assert!(
+                    bake_transform(
+                        id,
+                        &mut primitive.clone(),
+                        bevy::math::Affine3A::from_translation(offset)
+                    )
+                    .is_err()
+                );
+            }
+        }
+    }
+}
+
+#[test]
+fn raised_conveyor_preserves_cell_centered_ports_and_matches_authoritative_top() {
+    let model = load_static_scene("terra/blocks/models/conveyor.gltf", 148);
+    let positions: Vec<_> = model
+        .iter()
+        .flat_map(|primitive| &primitive.positions)
+        .map(|p| Vec3::from_array(*p))
+        .collect();
+    let top = positions.iter().map(|p| p.y).fold(0.0_f32, f32::max);
+    assert!((top - terra_core::kinetic::CONVEYOR_TOP).abs() < 1e-6);
+    assert!(
+        positions.iter().all(|point| point.x > 0.0 && point.x < 1.0),
+        "a real shaft, not a capped dummy axle, owns both cell boundaries"
+    );
+    for end in [0.125, 0.18, 0.82, 0.875] {
+        let port: Vec<_> = positions
+            .iter()
+            .filter(|point| {
+                (point.x - end).abs() < 1e-6
+                    && (0.1109..=0.1251).contains(&(point.y - 0.5).hypot(point.z - 0.5))
+            })
+            .collect();
+        assert!(
+            !port.is_empty(),
+            "the open bearing must remain centered behind the real shaft collar at {end}"
+        );
+        for axis in [1, 2] {
+            let low = port.iter().map(|p| p[axis]).fold(f32::INFINITY, f32::min);
+            let high = port
+                .iter()
+                .map(|p| p[axis])
+                .fold(f32::NEG_INFINITY, f32::max);
+            let center = if axis == 1 {
+                terra_core::kinetic::CONVEYOR_AXIS_HEIGHT
+            } else {
+                0.5
+            };
+            assert!(((low + high) * 0.5 - center).abs() < 1e-6);
+            assert!((high - low - 0.25).abs() < 1e-6);
+        }
+    }
+    let definition: super::super::definitions::BlockDefinition = serde_json::from_str(
+        include_str!("../../../../assets/terra/blocks/conveyor.json"),
+    )
+    .unwrap();
+    let collision_top = definition
+        .collision_boxes
+        .iter()
+        .map(|shape| shape.maximum[1])
+        .fold(0.0_f64, f64::max);
+    assert_eq!(collision_top, f64::from(terra_core::kinetic::CONVEYOR_TOP));
+}
+
+#[test]
+fn non_rotary_extended_conveyor_metadata_does_not_relax_authored_unit_bounds() {
+    let id = terra_core::kinetic::CONVEYOR;
+    assert!(terra_core::kinetic::is_extended(id));
+    assert_eq!(terra_core::kinetic::radial_extent(id), None);
+    let primitive = PrimitiveTemplate {
+        positions: vec![[0.0, 0.0, 0.0], [1.0, 0.625, 0.0], [1.0, 0.625, 1.0]],
+        normals: vec![[0.0, 1.0, 0.0]; 3],
+        tangents: Vec::new(),
+        uvs: vec![[0.0; 2]; 3],
+        indices: vec![0, 1, 2],
+        material: 0,
+    };
+    assert!(bake_transform(id, &mut primitive.clone(), bevy::math::Affine3A::IDENTITY).is_ok());
+    for axis in 0..3 {
+        let mut overhang = primitive.clone();
+        overhang.positions[0][axis] = -0.001;
+        assert!(bake_transform(id, &mut overhang, bevy::math::Affine3A::IDENTITY).is_err());
+    }
 }

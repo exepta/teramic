@@ -63,6 +63,9 @@ impl SleepRuntime {
     pub(super) fn is_sleeping(&self, player: PlayerId) -> bool {
         self.votes.contains_key(&player)
     }
+    pub(super) fn occupies_bed(&self, anchor: [i64; 3]) -> bool {
+        self.votes.values().any(|vote| vote.anchor == anchor)
+    }
     fn restore_player(
         &self,
         player: PlayerId,
@@ -169,7 +172,12 @@ pub(super) fn interact(
         None
     };
     if let Some(ItemKind::Dye(color)) = held {
-        if bed_color(material, state.facing) == color {
+        let current = world
+            .journal
+            .tint_at(position)
+            .map(terra_core::beds::DyeColor::Rgb)
+            .unwrap_or_else(|| bed_color(material, state.facing));
+        if current == color {
             return Ok(false);
         }
         for cell in [position, partner] {
@@ -219,6 +227,13 @@ pub(super) fn interact(
                     facing: dyed_facing(old.facing, color),
                     ..old
                 }),
+            )?;
+            world.journal.set_tint(
+                cell,
+                match color {
+                    terra_core::beds::DyeColor::Rgb(rgb) => Some(rgb),
+                    _ => None,
+                },
             )?;
         }
         if peer.game_mode(&world.config) == terra_core::GameMode::Survival {

@@ -136,6 +136,7 @@ fn snapshots(
                     .and_then(|config| config.world.water.then_some(config.world.sea_level)),
                 terrain: scene.terrain.as_ref().map(|t| t.0.clone()),
                 exposure: None,
+                tints: Default::default(),
                 conditions: world
                     .journal
                     .as_ref()
@@ -680,7 +681,7 @@ fn floor(chunks: &terra_world::streaming::ChunkStore, center: Vec3, base: f32) -
         let y = start - i;
         chunks
             .block_at([x, y, z])
-            .filter(|m| !matches!(m, 0 | 7..=9 | 132 | 133 | 14 | 27 | 40 | 50..=56))
+            .filter(|m| !matches!(m, 0 | 7..=9 | 132 | 133 | 195 | 14 | 27 | 40 | 50..=56))
             .map(|_| y as f32 + 1.0)
     })
 }

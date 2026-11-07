@@ -137,8 +137,12 @@ pub(crate) fn install(app: &mut App) {
 
 /// Grouped cubemaps bypass Core3d's regular early capture boundary. Drain the
 /// existing collector before a later view can overwrite its indirect data.
+pub(crate) fn gpu_readback_active(world: &World) -> bool {
+    world.contains_resource::<gpu::Collector>()
+}
+
 pub(crate) fn capture_grouped_shadow_boundary(world: &mut World) -> Result<(), String> {
-    if world.contains_resource::<gpu::Collector>() {
+    if gpu_readback_active(world) {
         world
             .run_system_cached(gpu::capture_early)
             .map_err(|error| error.to_string())?;
@@ -147,6 +151,28 @@ pub(crate) fn capture_grouped_shadow_boundary(world: &mut World) -> Result<(), S
 }
 
 struct Counted<C, const PHASE: usize>(std::marker::PhantomData<C>);
+
+struct Feedback<C>(std::marker::PhantomData<C>);
+
+impl<P: PhaseItem, C: RenderCommand<P>> RenderCommand<P> for Feedback<C> {
+    type Param = (C::Param, SRes<crate::transitions::TransitionDraws>);
+    type ViewQuery = C::ViewQuery;
+    type ItemQuery = C::ItemQuery;
+
+    fn render<'w>(
+        item: &P,
+        view: ROQueryItem<'w, '_, Self::ViewQuery>,
+        entity: Option<ROQueryItem<'w, '_, Self::ItemQuery>>,
+        (param, transitions): SystemParamItem<'w, '_, Self::Param>,
+        pass: &mut TrackedRenderPass<'w>,
+    ) -> RenderCommandResult {
+        let result = C::render(item, view, entity, param, pass);
+        if matches!(result, RenderCommandResult::Success) && !transitions.pending.is_empty() {
+            transitions.drawn(item.main_entity().id());
+        }
+        result
+    }
+}
 
 impl<P: PhaseItem, C: RenderCommand<P>, const PHASE: usize> RenderCommand<P> for Counted<C, PHASE> {
     type Param = (
@@ -208,10 +234,22 @@ where
     else {
         return;
     };
-    let counted = RenderCommandState::<P, Counted<C, PHASE>>::new(world);
+    // Color draws need reveal feedback during play, but indirect diagnostics
+    // must not fetch their additional renderer resources on every submission.
+    let replacement: Box<dyn bevy::render::render_phase::Draw<P>> = if PHASE < 4
+        && !world
+            .resource::<DrawCallStatus>()
+            .0
+            .enabled
+            .load(Ordering::Relaxed)
+    {
+        Box::new(RenderCommandState::<P, Feedback<C>>::new(world))
+    } else {
+        Box::new(RenderCommandState::<P, Counted<C, PHASE>>::new(world))
+    };
     let functions = world.resource::<DrawFunctions<P>>();
     if let Some(slot) = functions.write().draw_functions.get_mut(id.0 as usize) {
-        *slot = Box::new(counted);
+        *slot = replacement;
     }
 }
 
@@ -317,6 +355,37 @@ mod tests {
     use super::*;
 
     #[test]
+    fn ordinary_color_feedback_requires_no_diagnostic_renderer_resources() {
+        struct StockCommand;
+        impl RenderCommand<Opaque3d> for StockCommand {
+            type Param = ();
+            type ViewQuery = ();
+            type ItemQuery = ();
+
+            fn render<'w>(
+                _: &Opaque3d,
+                _: ROQueryItem<'w, '_, Self::ViewQuery>,
+                _: Option<ROQueryItem<'w, '_, Self::ItemQuery>>,
+                _: SystemParamItem<'w, '_, Self::Param>,
+                _: &mut TrackedRenderPass<'w>,
+            ) -> RenderCommandResult {
+                unreachable!("parameter contract test does not submit GPU commands")
+            }
+        }
+        type Params = <Feedback<StockCommand> as RenderCommand<Opaque3d>>::Param;
+        let mut world = World::new();
+        world.init_resource::<crate::transitions::TransitionDraws>();
+        let mut params = bevy::ecs::system::SystemState::<Params>::new(&mut world);
+        let (_, transitions) = params.get(&world).unwrap();
+        assert!(transitions.pending.is_empty());
+        assert!(!world.contains_resource::<DrawCallStatus>());
+        assert!(!world.contains_resource::<gpu::Collector>());
+        assert!(!world.contains_resource::<bevy::pbr::RenderMeshInstances>());
+        assert!(!world.contains_resource::<bevy::render::render_asset::RenderAssets<bevy::render::mesh::RenderMesh>>());
+        assert!(!world.contains_resource::<bevy::render::batching::gpu_preprocessing::IndirectParametersBuffers>());
+    }
+
+    #[test]
     fn shadow_diagnostic_wrappers_are_not_installed_during_ordinary_gameplay() {
         use bevy::render::render_phase::{Draw, DrawError};
         struct StockDraw;
@@ -362,8 +431,10 @@ mod tests {
     #[test]
     fn grouped_shadow_capture_is_a_noop_without_collector_and_propagates_real_system_errors() {
         let mut world = World::new();
+        assert!(!gpu_readback_active(&world));
         assert!(capture_grouped_shadow_boundary(&mut world).is_ok());
         world.init_resource::<gpu::Collector>();
+        assert!(gpu_readback_active(&world));
         // RenderContext requires a native RenderDevice. Propagate its absence
         // to the caller's complete Core3d fallback instead of hiding the error.
         assert!(capture_grouped_shadow_boundary(&mut world).is_err());

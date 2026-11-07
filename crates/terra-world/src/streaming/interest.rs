@@ -1,6 +1,6 @@
 use super::resources::*;
+use bevy::platform::collections::HashSet;
 use bevy::prelude::*;
-use std::collections::HashSet;
 use terra_voxel::{SectionPos, global_to_section};
 
 #[derive(bevy::ecs::system::SystemParam)]
@@ -12,12 +12,23 @@ pub(super) struct InterestEnvironment<'w> {
     columns_changed: MessageWriter<'w, PreparedColumnChanged>,
 }
 
+#[cfg(test)]
 pub(super) fn wanted_sections(
     center: SectionPos,
     radius: i64,
     vertical_radius: i64,
 ) -> HashSet<SectionPos> {
     let mut wanted = HashSet::new();
+    extend_wanted_sections(&mut wanted, center, radius, vertical_radius);
+    wanted
+}
+
+fn extend_wanted_sections(
+    wanted: &mut HashSet<SectionPos>,
+    center: SectionPos,
+    radius: i64,
+    vertical_radius: i64,
+) {
     for dz in -radius..=radius {
         for dy in -vertical_radius..=vertical_radius {
             for dx in -radius..=radius {
@@ -27,7 +38,6 @@ pub(super) fn wanted_sections(
             }
         }
     }
-    wanted
 }
 pub(super) fn distance_squared(p: SectionPos, center: SectionPos) -> i128 {
     [p.x - center.x, p.y - center.y, p.z - center.z]
@@ -83,11 +93,12 @@ pub(super) fn refresh_interest(
     };
     let mut wanted = HashSet::new();
     for &center in &centers {
-        wanted.extend(wanted_sections(
+        extend_wanted_sections(
+            &mut wanted,
             center,
             settings.radius,
             settings.vertical_radius,
-        ));
+        );
         let surface_height = chunks.columns.get(&[center.x, center.z]).map_or(
             environment.terrain.0.config().base_height,
             |column| {
@@ -124,11 +135,7 @@ pub(super) fn refresh_interest(
         keep
     });
     for (&coordinate, column) in &chunks.columns {
-        wanted.extend(cave_sections_for_column(
-            coordinate,
-            column,
-            &chunks.cave_views,
-        ));
+        extend_cave_sections_for_column(&mut wanted, coordinate, column, &chunks.cave_views);
     }
     for (&[x, z], &[low, high]) in &chunks.surface_ranges {
         for y in low..=high {
@@ -189,14 +196,7 @@ pub(super) fn cave_sections_for_column(
     views: &[(SectionPos, i64)],
 ) -> Vec<SectionPos> {
     let mut sections = HashSet::new();
-    for &(center, radius) in views {
-        if (coordinate[0] - center.x).abs() > radius || (coordinate[1] - center.z).abs() > radius {
-            continue;
-        }
-        if let Some([low, high]) = column.cave_view_sections(center.y as f64 * 16.0 + 8.0) {
-            sections.extend((low..=high).map(|y| SectionPos::new(coordinate[0], y, coordinate[1])));
-        }
-    }
+    extend_cave_sections_for_column(&mut sections, coordinate, column, views);
     let mut sections: Vec<_> = sections.into_iter().collect();
     sections.sort_unstable_by_key(|p| {
         (
@@ -209,6 +209,25 @@ pub(super) fn cave_sections_for_column(
         )
     });
     sections
+}
+
+fn extend_cave_sections_for_column(
+    sections: &mut HashSet<SectionPos>,
+    coordinate: [i64; 2],
+    column: &crate::PreparedColumn,
+    views: &[(SectionPos, i64)],
+) {
+    // Interest already owns the deduplicating set. Only publication needs a
+    // separately ordered queue; rebuilding it for every loaded column wastes
+    // allocations and sorting whenever the player crosses a section boundary.
+    for &(center, radius) in views {
+        if (coordinate[0] - center.x).abs() > radius || (coordinate[1] - center.z).abs() > radius {
+            continue;
+        }
+        if let Some([low, high]) = column.cave_view_sections(center.y as f64 * 16.0 + 8.0) {
+            sections.extend((low..=high).map(|y| SectionPos::new(coordinate[0], y, coordinate[1])));
+        }
+    }
 }
 
 fn extend_cave_interest(
@@ -242,6 +261,85 @@ fn extend_cave_interest(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn direct_cave_interest_preserves_publication_order_union_and_existing_sections() {
+        let terrain = crate::TerraGenerator::new(terra_core::WorldConfig {
+            trees: false,
+            structures_revision: 0,
+            cave_structure_revision: 4,
+            ..Default::default()
+        })
+        .unwrap();
+        let generator = crate::SectionGenerator::new(terrain);
+        for coordinate in [[-1, -2], [0, 0], [2, 3]] {
+            let column = generator.prepare_column(coordinate, true).unwrap();
+            for y in [-8, -4, -1, 0, 3, 8] {
+                let near = SectionPos::new(coordinate[0], y, coordinate[1]);
+                let views = [
+                    (near, 1),
+                    (near, 1),
+                    (near.offset([1, 0, -1]).unwrap(), 2),
+                    (near.offset([10, -2, 10]).unwrap(), 1),
+                ];
+                let retained = SectionPos::new(-100, -20, 100);
+                let mut direct = HashSet::from([retained]);
+                extend_cave_sections_for_column(&mut direct, coordinate, &column, &views);
+                let mut expected = HashSet::from([retained]);
+                let mut individual = Vec::new();
+                for (center, radius) in views {
+                    if (coordinate[0] - center.x).abs() <= radius
+                        && (coordinate[1] - center.z).abs() <= radius
+                        && let Some([low, high]) =
+                            column.cave_view_sections(center.y as f64 * 16.0 + 8.0)
+                    {
+                        individual.extend((low..=high).map(|section_y| {
+                            SectionPos::new(coordinate[0], section_y, coordinate[1])
+                        }));
+                    }
+                }
+                expected.extend(individual);
+                assert_eq!(direct, expected);
+                let ordered = cave_sections_for_column(coordinate, &column, &views);
+                assert_eq!(
+                    ordered.iter().copied().collect::<HashSet<_>>(),
+                    expected.into_iter().filter(|p| *p != retained).collect()
+                );
+                assert!(ordered.windows(2).all(|pair| {
+                    let key = |position: SectionPos| {
+                        (
+                            views
+                                .iter()
+                                .map(|(center, _)| distance_squared(position, *center))
+                                .min()
+                                .unwrap(),
+                            position.y,
+                        )
+                    };
+                    key(pair[0]) < key(pair[1])
+                }));
+            }
+        }
+    }
+
+    #[test]
+    fn direct_interest_union_keeps_overlapping_players_and_negative_sections() {
+        let mut wanted = HashSet::new();
+        for center in [SectionPos::new(-2, -3, -4), SectionPos::new(-1, -3, -4)] {
+            extend_wanted_sections(&mut wanted, center, 1, 1);
+            extend_wanted_sections(&mut wanted, center, 1, 1);
+        }
+        let mut expected = HashSet::new();
+        for x in -3..=0 {
+            for y in -4..=-2 {
+                for z in -5..=-3 {
+                    expected.insert(SectionPos::new(x, y, z));
+                }
+            }
+        }
+        assert_eq!(wanted, expected);
+        assert_eq!(wanted.len(), 36);
+    }
 
     #[test]
     fn interest_messages_identify_only_actual_section_and_column_evictions() {

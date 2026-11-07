@@ -31,12 +31,46 @@ struct MenuSmoke {
     gameplay_only: bool,
     mob_health_only: bool,
     graphics_controls_only: bool,
+    create_world_only: bool,
     origin: Vec3,
     edit_count: usize,
     loading_captured: bool,
+    startup_captured: bool,
+    startup_fade_captured: bool,
+    startup_only: bool,
 }
+
+#[derive(Resource, Default)]
+struct MenuPointer(Option<bevy::picking::pointer::Location>);
+
+/// Keep fixture input in ECS. Native focus/motion can otherwise replace a
+/// queued press location before the later release; never warp the OS cursor.
+fn maintain_pointer(world: &mut World) {
+    use bevy::picking::pointer::{PointerAction, PointerId, PointerInput};
+    let Some(location) = world.resource::<MenuPointer>().0.clone() else {
+        return;
+    };
+    for mut window in world
+        .query_filtered::<&mut Window, With<PrimaryWindow>>()
+        .iter_mut(world)
+    {
+        let window = window.bypass_change_detection();
+        window.focused = true;
+        window.set_cursor_position(Some(location.position));
+    }
+    world.write_message(PointerInput::new(
+        PointerId::Mouse,
+        location,
+        PointerAction::Move { delta: Vec2::ZERO },
+    ));
+}
+
 pub(crate) fn install(app: &mut App) {
     if !std::env::args().any(|a| a.starts_with("--smoke-test-menu")) {
+        return;
+    }
+    if std::env::var("TERRA_MENU_REFERENCE_SMOKE").as_deref() == Ok("1") {
+        crate::inventory_smoke::reference::install_menu(app);
         return;
     }
     let root = std::env::var_os("TERRA_MENU_SMOKE_DIR")
@@ -64,6 +98,7 @@ pub(crate) fn install(app: &mut App) {
     // The fixture emits UI events without native window events. Keep its
     // reconciliation frames running even when the desktop gives another window focus.
     app.insert_resource(bevy::winit::WinitSettings::continuous())
+        .init_resource::<MenuPointer>()
         .insert_resource(MenuPaths {
             configs: root.join("configs"),
             worlds: terra_storage::WorldLibrary {
@@ -83,12 +118,21 @@ pub(crate) fn install(app: &mut App) {
             mob_health_only: std::env::args().any(|a| a == "--smoke-test-menu-mob-health"),
             graphics_controls_only: std::env::args()
                 .any(|a| a == "--smoke-test-menu-graphics-controls"),
+            create_world_only: std::env::var("TERRA_CREATE_WORLD_SMOKE")
+                .is_ok_and(|value| value == "1"),
             origin: Vec3::ZERO,
             edit_count: 0,
             loading_captured: false,
+            startup_captured: false,
+            startup_fade_captured: false,
+            startup_only: std::env::var("TERRA_STARTUP_ONLY").is_ok_and(|value| value == "1"),
         })
         // ComputedNode assertions need this frame's PostUpdate layout.
-        .add_systems(Last, run);
+        .add_systems(Last, run)
+        .add_systems(
+            First,
+            maintain_pointer.in_set(bevy::picking::PickingSystems::PostInput),
+        );
 }
 fn emit(world: &mut World, id: &str, value: Option<&str>) -> Result<(), String> {
     let direct = world
@@ -113,10 +157,33 @@ fn emit(world: &mut World, id: &str, value: Option<&str>) -> Result<(), String> 
             .iter()
             .chain(&world.resource::<DialogView>().rows)
             .find(|r| r.id == id);
+        let world_rule = world
+            .resource::<DialogView>()
+            .world_rules
+            .iter()
+            .find(|rule| rule.id == id);
+        let structure = world
+            .resource::<DialogView>()
+            .structure_choices
+            .iter()
+            .find(|choice| choice.id == id);
         let (element_id, title, scope) = if let Some(title) = button {
             ("menu-action".to_string(), title, false)
         } else if let Some(row) = row {
             (format!("row-{}", row.kind), row.title.clone(), true)
+        } else if let Some(rule) = world_rule {
+            (
+                if rule.kind == "switch" {
+                    "row-switch"
+                } else {
+                    "row-rule-input"
+                }
+                .into(),
+                rule.title.clone(),
+                true,
+            )
+        } else if let Some(choice) = structure {
+            ("row-switch".into(), choice.title.clone(), true)
         } else if let Some(card) = world
             .resource::<WorldsView>()
             .cards
@@ -182,18 +249,6 @@ fn has_ancestor_class(world: &World, mut entity: Entity, class: &str) -> bool {
             .get::<tilt_ui::ElementClasses>(entity)
             .is_some_and(|classes| classes.classes.iter().any(|value| value == class))
         {
-            return true;
-        }
-        let Some(parent) = world.get::<ChildOf>(entity) else {
-            return false;
-        };
-        entity = parent.parent();
-    }
-    false
-}
-fn has_ancestor_entity(world: &World, mut entity: Entity, ancestor: Entity) -> bool {
-    for _ in 0..24 {
-        if entity == ancestor {
             return true;
         }
         let Some(parent) = world.get::<ChildOf>(entity) else {
@@ -330,9 +385,7 @@ fn key(world: &mut World, key: KeyCode, pressed: bool) {
 fn pointer(world: &mut World, id: &str, title: &str, pressed: bool) -> Result<(), String> {
     use bevy::{
         camera::RenderTarget,
-        picking::pointer::{
-            Location, PointerAction, PointerButton, PointerId, PointerInput, PointerLocation,
-        },
+        picking::pointer::{Location, PointerAction, PointerButton, PointerId, PointerInput},
         window::WindowRef,
     };
     let window = world
@@ -353,7 +406,26 @@ fn pointer(world: &mut World, id: &str, title: &str, pressed: bool) -> Result<()
             .get::<bevy::ui::UiGlobalTransform>(target)
             .ok_or("Pointer target has no layout")?
             .translation;
+        let (minimum, maximum) = create_control_bounds(world, target)?;
         let viewport = world.get::<Window>(window).ok_or("No window")?;
+        tracing::info!(
+            id, title, ?minimum, ?maximum, ?position,
+            physical_size = ?viewport.physical_size(),
+            scale = viewport.resolution.scale_factor(),
+            clip = ?world.get::<bevy::ui::CalculatedClip>(target),
+            "Native pointer target computed geometry"
+        );
+        require(
+            minimum.is_finite()
+                && maximum.is_finite()
+                && maximum.cmpgt(minimum).all()
+                && position.cmpge(Vec2::ZERO).all()
+                && position.cmplt(viewport.physical_size().as_vec2()).all()
+                && world
+                    .get::<bevy::ui::CalculatedClip>(target)
+                    .is_none_or(|clip| clip.contains_point(position)),
+            &format!("Native pointer target is outside its visible layout: {id}/{title}"),
+        )?;
         let position = position / viewport.resolution.scale_factor();
         Location {
             target: RenderTarget::Window(WindowRef::Entity(window))
@@ -363,23 +435,14 @@ fn pointer(world: &mut World, id: &str, title: &str, pressed: bool) -> Result<()
         }
     } else {
         world
-            .query::<(&PointerId, &PointerLocation)>()
-            .iter(world)
-            .find_map(|(id, location)| {
-                (*id == PointerId::Mouse)
-                    .then(|| location.location.clone())
-                    .flatten()
-            })
-            .ok_or("Mouse pointer location missing")?
+            .resource::<MenuPointer>()
+            .0
+            .clone()
+            .ok_or("Fixture mouse pointer location missing")?
     };
+    world.resource_mut::<MenuPointer>().0 = Some(location.clone());
+    maintain_pointer(world);
     // Exercise real hit testing and TiltUI click propagation without an OS cursor warp.
-    if pressed {
-        world.write_message(PointerInput::new(
-            PointerId::Mouse,
-            location.clone(),
-            PointerAction::Move { delta: Vec2::ZERO },
-        ));
-    }
     world.write_message(PointerInput::new(
         PointerId::Mouse,
         location,
@@ -389,6 +452,564 @@ fn pointer(world: &mut World, id: &str, title: &str, pressed: bool) -> Result<()
             PointerAction::Release(PointerButton::Primary)
         },
     ));
+    Ok(())
+}
+fn create_scroll_location(
+    world: &mut World,
+    id: &str,
+) -> Result<bevy::picking::pointer::Location, String> {
+    use bevy::{camera::RenderTarget, window::WindowRef};
+    let window = world
+        .query_filtered::<Entity, With<PrimaryWindow>>()
+        .iter(world)
+        .next()
+        .ok_or("No primary window")?;
+    let body = world
+        .query::<(Entity, &ElementId)>()
+        .iter(world)
+        .find_map(|(entity, element)| (element.0 == id).then_some(entity))
+        .ok_or_else(|| format!("Create World scroll body is missing: {id}"))?;
+    let center = world
+        .get::<bevy::ui::UiGlobalTransform>(body)
+        .ok_or("Create World scroll body has no transform")?
+        .translation;
+    let scale = world
+        .get::<Window>(window)
+        .ok_or("No window")?
+        .scale_factor();
+    Ok(bevy::picking::pointer::Location {
+        target: RenderTarget::Window(WindowRef::Entity(window))
+            .normalize(Some(window))
+            .ok_or("No render target")?,
+        position: center / scale,
+    })
+}
+fn move_to_create_scroll(world: &mut World) -> Result<(), String> {
+    move_to_create_scroll_id(world, "world-create-scroll")
+}
+fn move_to_create_scroll_id(world: &mut World, id: &str) -> Result<(), String> {
+    use bevy::picking::pointer::{PointerAction, PointerId, PointerInput};
+    let location = create_scroll_location(world, id)?;
+    world.resource_mut::<MenuPointer>().0 = Some(location.clone());
+    maintain_pointer(world);
+    world.write_message(PointerInput::new(
+        PointerId::Mouse,
+        location,
+        PointerAction::Move { delta: Vec2::ZERO },
+    ));
+    Ok(())
+}
+fn wheel_create_world(world: &mut World) -> Result<(), String> {
+    wheel_create_scroll_id(world, "world-create-scroll")
+}
+fn wheel_create_scroll_id(world: &mut World, id: &str) -> Result<(), String> {
+    use bevy::picking::pointer::{PointerAction, PointerId, PointerInput};
+    let location = create_scroll_location(world, id)?;
+    world.resource_mut::<MenuPointer>().0 = Some(location.clone());
+    maintain_pointer(world);
+    // Exercise the real picking/wheel pipeline, including ancestor bubbling.
+    // Pixel scrolling keeps this deterministic without waiting for smooth motion.
+    world.write_message(PointerInput::new(
+        PointerId::Mouse,
+        location,
+        PointerAction::Scroll {
+            unit: bevy::input::mouse::MouseScrollUnit::Pixel,
+            x: 0.0,
+            y: -10_000.0,
+            phase: bevy::input::touch::TouchPhase::Moved,
+        },
+    ));
+    Ok(())
+}
+fn create_control_bounds(world: &World, entity: Entity) -> Result<(Vec2, Vec2), String> {
+    let geometry = world
+        .get::<ComputedNode>(entity)
+        .ok_or("Create World control has no geometry")?;
+    let transform = world
+        .get::<bevy::ui::UiGlobalTransform>(entity)
+        .ok_or("Create World control has no transform")?;
+    let half = geometry.size() * 0.5;
+    let corners = [
+        Vec2::new(-half.x, -half.y),
+        Vec2::new(half.x, -half.y),
+        Vec2::new(-half.x, half.y),
+        Vec2::new(half.x, half.y),
+    ]
+    .map(|point| transform.transform_point2(point));
+    Ok(corners.into_iter().fold(
+        (Vec2::splat(f32::INFINITY), Vec2::splat(f32::NEG_INFINITY)),
+        |(low, high), point| (low.min(point), high.max(point)),
+    ))
+}
+fn create_element(world: &mut World, id: &str) -> Result<Entity, String> {
+    world
+        .query::<(Entity, &ElementId)>()
+        .iter(world)
+        .find_map(|(entity, element)| (element.0 == id).then_some(entity))
+        .ok_or_else(|| format!("Create World element is missing: {id}"))
+}
+fn create_descendant(world: &World, mut entity: Entity, ancestor: Entity) -> bool {
+    for _ in 0..24 {
+        if entity == ancestor {
+            return true;
+        }
+        let Some(parent) = world.get::<ChildOf>(entity) else {
+            return false;
+        };
+        entity = parent.parent();
+    }
+    false
+}
+fn create_image(world: &World, entity: Entity, path: &str) -> Result<(), String> {
+    require(
+        world
+            .get::<tilt_ui::ImageMetadata>(entity)
+            .and_then(|m| m.source.as_deref())
+            == Some(path),
+        &format!("Biome image source does not match its choice: {path}"),
+    )?;
+    let node = world
+        .get::<ImageNode>(entity)
+        .ok_or_else(|| format!("Biome thumbnail has no rendered image: {path}"))?;
+    let image = world
+        .resource::<Assets<Image>>()
+        .get(&node.image)
+        .ok_or_else(|| format!("Biome thumbnail did not load: {path}"))?;
+    require(
+        image.width() >= 1024 && image.height() >= 512,
+        &format!("Biome photo must contain genuine high-resolution source pixels: {path}"),
+    )?;
+    require(
+        image.sampler == bevy::image::ImageSampler::linear(),
+        &format!("Biome photo must use its own smooth image sampler: {path}"),
+    )
+}
+
+fn validate_selected_biome(world: &mut World, expected: &str) -> Result<(), String> {
+    let view = world.resource::<DialogView>();
+    require(
+        view.create
+            && !view.biome_picker_open
+            && !world.resource::<WorldMenu>().biome_picker_open
+            && view.selected_biome.command == format!("world-biome-{expected}"),
+        "Biome selection did not close the chooser and update the selected preview",
+    )?;
+    let selected = view.selected_biome.clone();
+    require(
+        !world
+            .query::<&ElementId>()
+            .iter(world)
+            .any(|id| id.0 == "world-biome-picker"),
+        "Closed biome chooser remains in the rendered UI",
+    )?;
+    let preview = world
+        .query::<(Entity, &tilt_ui::ElementClasses)>()
+        .iter(world)
+        .find_map(|(entity, classes)| {
+            classes
+                .classes
+                .iter()
+                .any(|class| class == "world-biome-selected")
+                .then_some(entity)
+        })
+        .ok_or("Selected biome card is missing")?;
+    require(
+        subtree_has_text(world, preview, &selected.title, 0),
+        "Selected biome card shows the wrong label",
+    )?;
+    let image = world
+        .query::<(Entity, &tilt_ui::ElementClasses)>()
+        .iter(world)
+        .find_map(|(entity, classes)| {
+            (classes
+                .classes
+                .iter()
+                .any(|class| class == "world-biome-preview")
+                && create_descendant(world, entity, preview))
+            .then_some(entity)
+        })
+        .ok_or("Selected biome card has no thumbnail")?;
+    create_image(world, image, &selected.image)?;
+    let (card_low, card_high) = create_control_bounds(world, preview)?;
+    let (image_low, image_high) = create_control_bounds(world, image)?;
+    require(
+        (image_high - image_low).min_element() > 16.0
+            && image_low.cmpge(card_low - Vec2::ONE).all()
+            && image_high.cmple(card_high + Vec2::ONE).all(),
+        "Selected biome thumbnail escapes its preview card",
+    )
+}
+fn validate_biome_picker(world: &mut World, expected: &str, scrolled: bool) -> Result<(), String> {
+    use bevy::input_focus::{InputFocus, tab_navigation::TabGroup};
+    require(
+        world.resource::<WorldMenu>().biome_picker_open
+            && world.resource::<DialogView>().biome_picker_open,
+        "Native biome preview click did not open the chooser",
+    )?;
+    let choices = world.resource::<DialogView>().biome_choices.clone();
+    require(
+        choices.len() == 9,
+        "Biome chooser does not offer all nine choices",
+    )?;
+    let popup = create_element(world, "world-biome-picker")?;
+    require(
+        world
+            .get::<TabGroup>(popup)
+            .is_some_and(|group| group.modal),
+        "Biome chooser does not trap Tab navigation in a modal group",
+    )?;
+    require(
+        world
+            .get_resource::<InputFocus>()
+            .and_then(InputFocus::get)
+            .is_some_and(|entity| create_descendant(world, entity, popup)),
+        "Keyboard focus escaped the biome chooser",
+    )?;
+    let scroll = create_element(world, "world-biome-picker-scroll")?;
+    let (popup_low, popup_high) = create_control_bounds(world, popup)?;
+    let (scroll_low, scroll_high) = create_control_bounds(world, scroll)?;
+    let window = world
+        .query_filtered::<&Window, With<PrimaryWindow>>()
+        .iter(world)
+        .next()
+        .ok_or("No primary window")?;
+    let viewport = Vec2::new(
+        window.resolution.physical_width() as f32,
+        window.resolution.physical_height() as f32,
+    );
+    require(
+        popup_low.cmpge(-Vec2::ONE).all()
+            && popup_high.cmple(viewport + Vec2::ONE).all()
+            && scroll_low.cmpge(popup_low - Vec2::ONE).all()
+            && scroll_high.cmple(popup_high + Vec2::ONE).all(),
+        "Biome chooser or its scrolling container escaped its frame",
+    )?;
+    let geometry = world
+        .get::<ComputedNode>(scroll)
+        .ok_or("Biome chooser has no scroll geometry")?;
+    let overflow = geometry.content_size().y - geometry.size().y;
+    let position = world
+        .get::<bevy::ui::ScrollPosition>(scroll)
+        .ok_or("Biome chooser has no real scroll position")?
+        .0
+        .y;
+    require(
+        overflow > 2.0 && (!scrolled || position > 1.0),
+        "Biome chooser has no overflow or its native wheel did not scroll",
+    )?;
+    let cards = world
+        .query::<(Entity, &tilt_ui::ElementClasses)>()
+        .iter(world)
+        .filter(|(entity, classes)| {
+            classes
+                .classes
+                .iter()
+                .any(|class| class == "world-biome-tile")
+                && create_descendant(world, *entity, popup)
+        })
+        .map(|(entity, _)| entity)
+        .collect::<Vec<_>>();
+    require(
+        cards.len() == choices.len(),
+        "Biome chooser cards are missing",
+    )?;
+    for choice in choices {
+        require(
+            choice.image.starts_with("tilt-ui://assets/biome-choice-")
+                && choice.image.ends_with(".png"),
+            &format!(
+                "Biome choice does not use its reference thumbnail: {}",
+                choice.title
+            ),
+        )?;
+        let card = cards
+            .iter()
+            .copied()
+            .find(|&entity| subtree_has_text(world, entity, &choice.title, 0))
+            .ok_or_else(|| format!("Biome card is missing: {}", choice.title))?;
+        let selected = world
+            .get::<tilt_ui::ElementClasses>(card)
+            .is_some_and(|classes| classes.classes.iter().any(|class| class == "selected"));
+        require(
+            selected == (choice.command == format!("world-biome-{expected}")),
+            "Biome chooser did not retain the selected card",
+        )?;
+        let image = world
+            .query::<(Entity, &tilt_ui::ElementClasses)>()
+            .iter(world)
+            .find_map(|(entity, classes)| {
+                (classes
+                    .classes
+                    .iter()
+                    .any(|class| class == "world-biome-image")
+                    && create_descendant(world, entity, card))
+                .then_some(entity)
+            })
+            .ok_or_else(|| format!("Biome card has no image: {}", choice.title))?;
+        create_image(world, image, &choice.image)?;
+        let (card_low, card_high) = create_control_bounds(world, card)?;
+        let (image_low, image_high) = create_control_bounds(world, image)?;
+        require(
+            image_low.cmpge(card_low - Vec2::ONE).all()
+                && image_high.cmple(card_high + Vec2::ONE).all()
+                && (image_high - image_low).min_element() > 32.0,
+            &format!("Biome thumbnail escapes its card: {}", choice.title),
+        )?;
+    }
+    tracing::info!(
+        position,
+        overflow,
+        "Native biome cards, thumbnails and scroll geometry verified"
+    );
+    Ok(())
+}
+fn validate_biome_focus_restored(world: &mut World) -> Result<(), String> {
+    let preview = create_element(world, "world-biome-picker-open")?;
+    require(
+        world
+            .get_resource::<bevy::input_focus::InputFocus>()
+            .and_then(bevy::input_focus::InputFocus::get)
+            == Some(preview),
+        "Closing the biome chooser did not restore focus to its selected preview",
+    )
+}
+fn validate_create_rule_cards(world: &mut World) -> Result<(), String> {
+    let structures = world.resource::<DialogView>().structure_choices.clone();
+    require(
+        structures.len() == 5,
+        "Create World must show all five structure choices",
+    )?;
+    for id in [
+        "world-structure-villages",
+        "world-structure-kingdoms",
+        "world-structure-outposts",
+        "world-structure-ruins",
+        "world-structure-mines",
+    ] {
+        require(
+            structures.iter().any(|choice| choice.id == id),
+            "Missing structure option",
+        )?;
+    }
+    let structure_cards = world
+        .query::<(Entity, &tilt_ui::ElementClasses)>()
+        .iter(world)
+        .filter(|(entity, classes)| {
+            classes
+                .classes
+                .iter()
+                .any(|class| class == "world-structure-card")
+                && has_ancestor_class(world, *entity, "world-create-form")
+        })
+        .count();
+    require(
+        structure_cards == 5,
+        "Every structure choice must have its own rendered card",
+    )?;
+    require(
+        !world.query::<&ElementId>().iter(world).any(|id| {
+            matches!(
+                id.0.as_str(),
+                "world-structures-all-on" | "world-structures-all-off"
+            )
+        }),
+        "Create World still has redundant All On / All Off buttons",
+    )?;
+    let rules = world.resource::<DialogView>().world_rules.clone();
+    let mut actual = rules
+        .iter()
+        .map(|rule| rule.name.as_str())
+        .collect::<Vec<_>>();
+    let mut registered = terra_core::GameRule::ALL
+        .iter()
+        .map(|rule| rule.name())
+        .collect::<Vec<_>>();
+    actual.sort_unstable();
+    registered.sort_unstable();
+    require(
+        actual == registered,
+        "Create World does not show every registered gamerule",
+    )?;
+    require(
+        rules.iter().filter(|rule| rule.kind == "switch").count() == 6
+            && rules.iter().filter(|rule| rule.kind == "number").count() == 3,
+        "Create World gamerule card types do not match the real rule types",
+    )?;
+    let cards = world
+        .query::<(Entity, &tilt_ui::ElementClasses)>()
+        .iter(world)
+        .filter(|(entity, classes)| {
+            classes
+                .classes
+                .iter()
+                .any(|class| class == "world-rule-card")
+                && has_ancestor_class(world, *entity, "world-create-form")
+        })
+        .map(|(entity, _)| entity)
+        .collect::<Vec<_>>();
+    require(
+        cards.len() == rules.len(),
+        "Some gamerules are outside the card layout",
+    )?;
+    for rule in &rules {
+        let card = cards
+            .iter()
+            .copied()
+            .find(|&entity| subtree_has_text(world, entity, &rule.title, 0))
+            .ok_or_else(|| format!("Missing gamerule card: {}", rule.name))?;
+        let expected = if rule.kind == "switch" {
+            "row-switch"
+        } else {
+            "row-rule-input"
+        };
+        let controls = world
+            .query::<(Entity, &ElementId)>()
+            .iter(world)
+            .filter(|(_, id)| id.0 == expected)
+            .map(|(entity, _)| entity)
+            .collect::<Vec<_>>();
+        let control = controls
+            .into_iter()
+            .filter_map(|entity| {
+                scope_distance(world, entity, &rule.title).map(|distance| (distance, entity))
+            })
+            .min_by_key(|(distance, _)| *distance)
+            .map(|(_, entity)| entity)
+            .ok_or_else(|| format!("Missing typed control in gamerule card: {}", rule.name))?;
+        let (card_low, card_high) = create_control_bounds(world, card)?;
+        let (control_low, control_high) = create_control_bounds(world, control)?;
+        require(
+            (control_high - control_low).min_element() > 8.0
+                && control_low.cmpge(card_low - Vec2::splat(1.5)).all()
+                && control_high.cmple(card_high + Vec2::splat(1.5)).all(),
+            &format!("Gamerule control escapes its card: {}", rule.name),
+        )?;
+        if rule.kind != "switch" {
+            require(
+                world.get::<bevy::text::EditableText>(control).is_some(),
+                &format!("Gamerule input is not editable: {}", rule.name),
+            )?;
+        }
+    }
+    tracing::info!(
+        cards = rules.len(),
+        numeric_inputs = 3,
+        "Native typed gamerule cards verified"
+    );
+    Ok(())
+}
+fn validate_create_world_scroll(world: &mut World) -> Result<(), String> {
+    let body = world
+        .query::<(Entity, &ElementId)>()
+        .iter(world)
+        .find_map(|(entity, id)| (id.0 == "world-create-scroll").then_some(entity))
+        .ok_or("Create World scroll body is missing")?;
+    let geometry = world
+        .get::<ComputedNode>(body)
+        .ok_or("Create World scroll body has no layout")?;
+    let scroll = world
+        .get::<bevy::ui::ScrollPosition>(body)
+        .ok_or("Create World has no real scroll position")?
+        .0
+        .y;
+    let overflow = geometry.content_size().y - geometry.size().y;
+    require(
+        overflow <= 2.0 || scroll > 1.0,
+        "Mouse wheel did not scroll the overflowing Create World form",
+    )?;
+    let frame = world
+        .query::<(Entity, &ElementId)>()
+        .iter(world)
+        .find_map(|(entity, id)| (id.0 == "menu-dialog").then_some(entity))
+        .ok_or("Missing Create World frame")?;
+    let footer = world
+        .query::<(Entity, &tilt_ui::ElementClasses)>()
+        .iter(world)
+        .find_map(|(entity, classes)| {
+            classes
+                .classes
+                .iter()
+                .any(|class| class == "copper-dialog-actions")
+                .then_some(entity)
+        })
+        .ok_or("Missing Create World action bar")?;
+    let (frame_low, frame_high) = create_control_bounds(world, frame)?;
+    let (footer_low, footer_high) = create_control_bounds(world, footer)?;
+    require(
+        footer_low.cmpge(frame_low - Vec2::ONE).all()
+            && footer_high.cmple(frame_high + Vec2::ONE).all(),
+        "Create World footer escaped its frame",
+    )?;
+    let bottom_inset = (frame_high.y - footer_high.y)
+        * world
+            .get::<ComputedNode>(frame)
+            .ok_or("Create World frame has no geometry")?
+            .inverse_scale_factor();
+    require(
+        bottom_inset >= 31.5,
+        &format!("Create World footer is too close to its frame: {bottom_inset:.1}px"),
+    )?;
+    let (_, body_high) = create_control_bounds(world, body)?;
+    require(
+        body_high.y <= footer_low.y + 2.0,
+        "Create World scrolling content overlaps its fixed footer",
+    )?;
+    tracing::info!(
+        scroll,
+        overflow,
+        bottom_inset,
+        "Native Create World wheel and footer bounds verified"
+    );
+    Ok(())
+}
+fn validate_created_world_options(world: &mut World) -> Result<(), String> {
+    let id = world
+        .resource::<WorldMenu>()
+        .selected
+        .ok_or("Created world is not selected")?;
+    let library = world.resource::<MenuPaths>().worlds.clone();
+    let saved = terra_storage::WorldLibrary { root: library.root }.load(id)?;
+    let settings = &saved.manifest.world;
+    require(
+        saved.mode == terra_core::GameMode::Spectator,
+        "Spectator game mode was not persisted",
+    )?;
+    require(
+        settings.preferred_spawn_biome == Some(terra_core::BiomeKind::CherryForest),
+        "Desired biome was not persisted",
+    )?;
+    let rules = settings.game_rules;
+    require(
+        rules.keep_inventory
+            && rules.pvp
+            && !rules.daylight_cycle
+            && !rules.weather_cycle
+            && !rules.mob_griefing
+            && !rules.fire_spread,
+        "Create World gamerules were not persisted",
+    )?;
+    require(
+        (rules.sleep_percentage - 35.0).abs() < 0.001
+            && (rules.game_time_speed - 1.5).abs() < 0.001,
+        "Create World numeric gamerules were not persisted",
+    )?;
+    require(
+        [
+            settings.seasons.spring_days,
+            settings.seasons.summer_days,
+            settings.seasons.autumn_days,
+            settings.seasons.winter_days,
+        ] == [24; 4],
+        "Create World season interval was not persisted",
+    )?;
+    require(
+        !settings.structures.villages
+            && settings.structures.ruins
+            && !settings.structures.mines
+            && !settings.structures.kingdoms
+            && !settings.structures.outposts,
+        "Individual structure flags were not persisted",
+    )?;
     Ok(())
 }
 fn require(condition: bool, message: &str) -> Result<(), String> {
@@ -462,8 +1083,19 @@ fn run(world: &mut World) {
     let Some(mut state) = world.remove_resource::<MenuSmoke>() else {
         return;
     };
+    if state.stage == u16::MAX {
+        // An error capture exits after ScreenshotCaptured, keeping the actual
+        // failed layout available for diagnosis instead of closing this frame.
+        if state.advanced.elapsed() > Duration::from_secs(5) {
+            world.write_message(AppExit::error());
+        }
+        world.insert_resource(state);
+        return;
+    }
     let result = if state.started.elapsed()
-        > Duration::from_secs(if state.graphics_controls_only {
+        > Duration::from_secs(if state.startup_only {
+            180
+        } else if state.graphics_controls_only {
             45
         } else if state.mob_health_only {
             25
@@ -485,8 +1117,21 @@ fn run(world: &mut World) {
         Ok(false) => {}
         Err(error) => {
             tracing::error!(%error,stage=state.stage,"Menu smoke failed");
-            world.write_message(AppExit::error());
+            world
+                .spawn(bevy::render::view::screenshot::Screenshot::primary_window())
+                .observe(bevy::render::view::screenshot::save_to_disk(
+                    state
+                        .output
+                        .join(format!("menu-error-stage-{}.png", state.stage)),
+                ))
+                .observe(
+                    |_: On<bevy::render::view::screenshot::ScreenshotCaptured>,
+                     mut exit: MessageWriter<AppExit>| {
+                        exit.write(AppExit::error());
+                    },
+                );
             state.stage = u16::MAX;
+            state.advanced = Instant::now();
         }
     }
     world.insert_resource(state);
@@ -502,6 +1147,201 @@ fn step(world: &mut World, state: &mut MenuSmoke) -> Result<bool, String> {
                 UiLoadState::Ready
             ) {
                 return Ok(false);
+            }
+            if state.startup_only
+                && !world
+                    .get_resource::<terra_render::RenderPreviewStartup>()
+                    .is_some_and(|startup| startup.required)
+            {
+                return Err("Startup-only menu smoke requires TERRA_PREVIEW_WARMUP=1".into());
+            }
+            if world
+                .get_resource::<terra_ui::menu::StartupProgress>()
+                .is_some_and(|progress| progress.active)
+            {
+                let progress = world.resource::<terra_ui::menu::StartupProgress>();
+                if !progress.error.is_empty() {
+                    return Err(format!("Startup assets failed: {}", progress.error));
+                }
+                if progress.fading {
+                    let blend = progress.blend();
+                    let view = world.resource::<MenuView>();
+                    if !view.startup_fading {
+                        return Ok(false);
+                    }
+                    require(
+                        view.startup && view.loading && view.main && !view.buttons.is_empty(),
+                        "Ready startup must retain the loader while revealing the actual menu",
+                    )?;
+                    if !state.startup_fade_captured && (0.3..=0.7).contains(&blend) {
+                        let opacity: std::collections::HashMap<_, _> = world
+                            .query::<(&ElementId, &tilt_ui::RuntimeComputedStyle)>()
+                            .iter(world)
+                            .filter(|(id, _)| {
+                                matches!(id.0.as_str(), "menu-content" | "startup-overlay")
+                            })
+                            .map(|(id, style)| (id.0.clone(), style.0.opacity.unwrap_or(1.0)))
+                            .collect();
+                        let (Some(menu), Some(loader)) =
+                            (opacity.get("menu-content"), opacity.get("startup-overlay"))
+                        else {
+                            return Ok(false);
+                        };
+                        require(
+                            *menu > 0.05
+                                && *menu < 0.95
+                                && *loader > 0.05
+                                && *loader < 0.95
+                                && (menu + loader - 1.0).abs() < 0.02,
+                            "Startup must render intermediate loader and menu opacity, not replace either instantly",
+                        )?;
+                        screenshot(world, state, "startup-transition");
+                        state.startup_fade_captured = true;
+                    }
+                    return Ok(false);
+                }
+                let view = world.resource::<MenuView>();
+                require(
+                    view.startup && view.loading && !view.main && view.buttons.is_empty(),
+                    "Startup must show the loading page before exposing main menu actions",
+                )?;
+                require(
+                    !view.cancel_connect,
+                    "Startup loading must not expose a quit/cancel action",
+                )?;
+                let session = world.resource::<terra_ui::menu::SessionView>();
+                require(session.title == "Laden", "Startup title must be Laden")?;
+                require(
+                    session.progress_label.contains(" / ") && !session.detail.is_empty(),
+                    "Startup must separate centered progress numbers from the pending asset path",
+                )?;
+                require(
+                    !world
+                        .query::<&ElementId>()
+                        .iter(world)
+                        .any(|element| element.0 == "quit"),
+                    "Startup loading materialized a Quit Game button",
+                )?;
+                require(
+                    !world
+                        .query::<&ElementId>()
+                        .iter(world)
+                        .any(|element| element.0 == "menu-action"),
+                    "Main menu buttons were materialized before assets were ready",
+                )?;
+                require(
+                    world
+                        .resource::<terra_world::streaming::ChunkStore>()
+                        .loaded
+                        .is_empty(),
+                    "Startup loading must not stream a world",
+                )?;
+                require(
+                    !world.contains_resource::<terra_server::IntegratedServer>(),
+                    "Startup loading must not start a server",
+                )?;
+                if !state.startup_captured
+                    && world
+                        .query::<&ElementId>()
+                        .iter(world)
+                        .any(|element| element.0 == "asset-loading")
+                {
+                    let measured: std::collections::HashMap<_, _> = world
+                        .query::<(&ElementId, &ComputedNode, &bevy::ui::UiGlobalTransform)>()
+                        .iter(world)
+                        .filter(|(id, _, _)| {
+                            matches!(
+                                id.0.as_str(),
+                                "loading-asset-path" | "loading-progress-meter"
+                            )
+                        })
+                        .map(|(id, node, transform)| {
+                            (id.0.clone(), (node.size(), transform.translation))
+                        })
+                        .collect();
+                    let (Some((path_size, path_center)), Some((bar_size, bar_center))) = (
+                        measured.get("loading-asset-path"),
+                        measured.get("loading-progress-meter"),
+                    ) else {
+                        return Ok(false);
+                    };
+                    require(
+                        path_size.x > 0.0
+                            && path_size.x < bar_size.x - 2.0
+                            && (path_center.x - bar_center.x).abs() < 1.5,
+                        "Pending asset text must use its intrinsic width and be centered below the bar",
+                    )?;
+                    screenshot(world, state, "startup-icons");
+                    state.startup_captured = true;
+                }
+                return Ok(false);
+            }
+            if let Some(startup) = world
+                .get_resource::<terra_render::RenderPreviewStartup>()
+                .filter(|startup| startup.required)
+            {
+                if let Some(error) = &startup.error {
+                    return Err(format!("Startup inventory preload failed: {error}"));
+                }
+                let pending = !startup.ready;
+                let completed = startup.completed;
+                let total = startup.total;
+                if pending {
+                    if !state.startup_captured
+                        && completed > 0
+                        && world.resource::<MenuView>().startup
+                    {
+                        screenshot(world, state, "startup-icons");
+                        state.startup_captured = true;
+                    }
+                    return Ok(false);
+                }
+                require(
+                    total > 0 && completed == total && startup.failed == 0,
+                    "Startup catalog did not finish every finite item",
+                )?;
+                require(
+                    world
+                        .resource::<terra_render::RenderBlockPreviews>()
+                        .pending
+                        == 0,
+                    "Startup catalog still has GPU jobs",
+                )?;
+                let published = world
+                    .resource::<terra_render::RenderBlockPreviews>()
+                    .images
+                    .len()
+                    + world
+                        .resource::<terra_render::RenderPropPreviews>()
+                        .images
+                        .len()
+                    + world
+                        .resource::<terra_render::RenderItemPreviews>()
+                        .images
+                        .len();
+                require(
+                    published == total,
+                    "Startup catalog does not own every completed icon",
+                )?;
+                let ui = world
+                    .get_resource::<crate::bootstrap::startup_ui::UiStartupAssets>()
+                    .ok_or("Startup UI asset preload is missing")?;
+                if let Some(error) = &ui.error {
+                    return Err(format!("Startup UI asset preload failed: {error}"));
+                }
+                if !ui.ready {
+                    return Ok(false);
+                }
+                require(
+                    ui.completed == ui.total && ui.icon_count() == tilt_ui::Icon::ALL.len() * 3,
+                    "Startup UI icons, images or fonts are incomplete",
+                )?;
+                tracing::info!(
+                    inventory_icons = total,
+                    ui_assets = ui.total,
+                    ui_icons = ui.icon_count(),
+                    "Native startup catalog preload passed before world/session creation"
+                );
             }
             if !world
                 .query::<&ElementId>()
@@ -525,6 +1365,14 @@ fn step(world: &mut World, state: &mut MenuSmoke) -> Result<bool, String> {
                 !world.contains_resource::<terra_server::IntegratedServer>(),
                 "Main menu started a server",
             )?;
+            if state.startup_only {
+                require(
+                    state.startup_captured && state.startup_fade_captured,
+                    "Startup must capture both the loading page and animated transition before the main menu",
+                )?;
+                state.stage = 9_999;
+                return Ok(true);
+            }
             screenshot(world, state, "main-menu");
             if state.lan {
                 emit(world, "multiplayer", None)?;
@@ -564,7 +1412,16 @@ fn step(world: &mut World, state: &mut MenuSmoke) -> Result<bool, String> {
         2 => {
             emit(world, "world-name", Some("Cedar Valley"))?;
             emit(world, "world-seed", Some("42042"))?;
-            pointer(world, "world-mode", "", true)?;
+            pointer(
+                world,
+                if state.create_world_only {
+                    "world-mode-spectator"
+                } else {
+                    "world-mode-creative"
+                },
+                "",
+                true,
+            )?;
             state.stage = 299;
         }
         3 => {
@@ -580,6 +1437,15 @@ fn step(world: &mut World, state: &mut MenuSmoke) -> Result<bool, String> {
                 return Ok(false);
             }
             screenshot(world, state, "world-selected");
+            if state.create_world_only {
+                validate_created_world_options(world)?;
+                tracing::info!(
+                    "Native Create World passed: real Spectator button, scroll wheel and contained footer, saved gamerules, selected biome and individual structure flags"
+                );
+                world.write_message(AppExit::Success);
+                state.stage = u16::MAX;
+                return Ok(false);
+            }
             emit(world, "back", None)?;
         }
         5 => {
@@ -1121,6 +1987,22 @@ fn step(world: &mut World, state: &mut MenuSmoke) -> Result<bool, String> {
             );
             world.write_message(AppExit::Success);
         }
+        10_000 => {
+            if world.resource::<MenuView>().startup {
+                return Ok(false);
+            }
+            screenshot(world, state, "main-menu");
+        }
+        10_001
+            if state.output.join("main-menu.png").is_file()
+                && state.output.join("startup-transition.png").is_file() =>
+        {
+            tracing::info!(
+                "Native startup-only smoke passed with no world, server or pending catalog jobs"
+            );
+            world.write_message(AppExit::Success);
+            return Ok(false);
+        }
         180 => {
             if world.resource::<SessionInfo>().saving
                 || world.resource::<MenuState>().status != "World saved"
@@ -1157,50 +2039,157 @@ fn step(world: &mut World, state: &mut MenuSmoke) -> Result<bool, String> {
         }
         300 => pointer(world, "", "", false)?,
         301 => {
-            let popup = world
-                .query::<(&ElementId, &tilt_ui::ChoiceBoxParts)>()
-                .iter(world)
-                .find(|(id, _)| id.0 == "world-mode")
-                .map(|(_, parts)| *parts)
-                .ok_or("World mode dropdown missing")?;
-            let labels: Vec<_> = world
-                .query::<(Entity, &bevy::ui::widget::Text)>()
-                .iter(world)
-                .filter(|(entity, text)| {
-                    has_ancestor_entity(world, *entity, popup.popup)
-                        && matches!(text.0.as_str(), "Survival" | "Creative")
-                })
-                .map(|(entity, text)| {
-                    (
-                        text.0.clone(),
-                        world
-                            .get::<ComputedNode>(entity)
-                            .is_some_and(|node| node.size().min_element() > 0.0),
-                    )
-                })
-                .collect();
-            let ready =
-                popup.open && labels.len() == 2 && labels.iter().all(|(_, visible)| *visible);
-            if !ready && state.advanced.elapsed() < Duration::from_secs(5) {
-                return Ok(false);
+            let expected = if state.create_world_only {
+                "spectator"
+            } else {
+                "creative"
+            };
+            require(
+                world.resource::<WorldMenu>().mode == expected,
+                "Native Game Mode button selection failed",
+            )?;
+            require(
+                !world
+                    .query::<&ElementId>()
+                    .iter(world)
+                    .any(|id| id.0 == "world-mode"),
+                "Create World still contains the overflowing Game Mode dropdown",
+            )?;
+            if state.create_world_only {
+                validate_create_rule_cards(world)?;
+                world.write_message(MenuAction::Change {
+                    control: "world-structures-enabled".into(),
+                    value: "false".into(),
+                });
+                for (control, value) in [
+                    ("world-rule-keep-inventory", "true"),
+                    ("world-rule-daylight-cycle", "false"),
+                    ("world-rule-weather-cycle", "false"),
+                    ("world-rule-mob-griefing", "false"),
+                    ("world-rule-fire-spread", "false"),
+                    ("world-rule-pvp", "true"),
+                    ("world-structure-ruins", "true"),
+                ] {
+                    world.write_message(MenuAction::Change {
+                        control: control.into(),
+                        value: value.into(),
+                    });
+                }
+                emit(world, "world-structure-kingdoms", Some("true"))?;
+                emit(world, "world-structure-outposts", Some("false"))?;
+                // Use each real repeated input's onchange handler, including its
+                // loop context, rather than bypassing the typed card controls.
+                for (id, value) in [
+                    ("world-sleep-percentage", "35"),
+                    ("world-time-speed", "1.5"),
+                    ("world-season-days", "24"),
+                ] {
+                    emit(world, id, Some(value))?;
+                }
+                screenshot(world, state, "create-world-options-top");
+                move_to_create_scroll(world)?;
             }
-            require(
-                ready,
-                &format!(
-                    "World mode dropdown did not finish layout within 5s: open={}, labels={labels:?}",
-                    popup.open
-                ),
-            )?;
-            screenshot(world, state, "mode-dropdown");
-            pointer(world, "mode-creative", "", true)?;
         }
-        302 => pointer(world, "", "", false)?,
+        302 => {
+            if state.create_world_only {
+                let flags = world.resource::<WorldMenu>().structures;
+                require(
+                    flags.kingdoms && !flags.outposts && !flags.villages,
+                    "Kingdom toggle is not independent",
+                )?;
+                emit(world, "world-structure-kingdoms", Some("false"))?;
+                emit(world, "world-structure-outposts", Some("true"))?;
+                wheel_create_world(world)?;
+            }
+        }
         303 => {
+            if state.create_world_only {
+                let flags = world.resource::<WorldMenu>().structures;
+                require(
+                    !flags.kingdoms && flags.outposts && !flags.villages,
+                    "Outpost toggle is not independent",
+                )?;
+                emit(world, "world-structure-outposts", Some("false"))?;
+                validate_create_world_scroll(world)?;
+                validate_selected_biome(world, "random")?;
+                screenshot(world, state, "create-world-options-scrolled");
+                pointer(world, "world-biome-picker-open", "", true)?;
+                state.stage = 309;
+            } else {
+                state.stage = 2;
+            }
+        }
+        310 => pointer(world, "", "", false)?,
+        311 => {
+            validate_biome_picker(world, "random", false)?;
+            screenshot(world, state, "create-world-biome-chooser");
+            move_to_create_scroll_id(world, "world-biome-picker-scroll")?;
+        }
+        312 => wheel_create_scroll_id(world, "world-biome-picker-scroll")?,
+        313 => {
+            validate_biome_picker(world, "random", true)?;
+            screenshot(world, state, "create-world-biome-chooser-scrolled");
+            pointer(world, "menu-action", "Cherry Forest", true)?;
+        }
+        314 => pointer(world, "", "", false)?,
+        315 => {
+            validate_selected_biome(world, "cherry-forest")?;
+            validate_biome_focus_restored(world)?;
+            screenshot(world, state, "create-world-biome-selected");
+            pointer(world, "world-biome-picker-open", "", true)?;
+        }
+        316 => pointer(world, "", "", false)?,
+        317 => {
+            validate_biome_picker(world, "cherry-forest", false)?;
+            key(world, KeyCode::Tab, true);
+            state.stage = 329;
+        }
+        318 => key(world, KeyCode::Escape, false),
+        319 => {
+            validate_selected_biome(world, "cherry-forest")?;
+            validate_biome_focus_restored(world)?;
             require(
-                world.resource::<WorldMenu>().mode == "creative",
-                "Native dropdown selection failed",
+                world.resource::<MenuState>().dialog == MenuDialog::CreateWorld
+                    && world.resource::<WorldMenu>().preferred_spawn_biome
+                        == Some(terra_core::BiomeKind::CherryForest),
+                "Escape dismissed Create World or lost the selected biome",
             )?;
+            pointer(world, "world-biome-picker-open", "", true)?;
+        }
+        320 => pointer(world, "", "", false)?,
+        321 => pointer(world, "world-biome-picker-close", "", true)?,
+        322 => pointer(world, "", "", false)?,
+        323 => {
+            validate_selected_biome(world, "cherry-forest")?;
+            validate_biome_focus_restored(world)?;
+            validate_create_world_scroll(world)?;
+            tracing::info!(
+                "Native biome chooser passed: reference thumbnails, scrolling, selected preview, retained selection, Escape and Close"
+            );
             state.stage = 2;
+        }
+        330 => {
+            key(world, KeyCode::Tab, false);
+            validate_biome_picker(world, "cherry-forest", false)?;
+            let done = create_element(world, "world-biome-picker-close")?;
+            require(
+                world.resource::<bevy::input_focus::InputFocus>().get() != Some(done),
+                "Native Tab did not advance from the chooser's Done button",
+            )?;
+        }
+        331 => key(world, KeyCode::ShiftLeft, true),
+        332 => key(world, KeyCode::Tab, true),
+        333 => {
+            key(world, KeyCode::Tab, false);
+            key(world, KeyCode::ShiftLeft, false);
+            validate_biome_picker(world, "cherry-forest", false)?;
+            let done = create_element(world, "world-biome-picker-close")?;
+            require(
+                world.resource::<bevy::input_focus::InputFocus>().get() == Some(done),
+                "Native Shift+Tab did not wrap back to the chooser's Done button",
+            )?;
+            key(world, KeyCode::Escape, true);
+            state.stage = 317;
         }
         400 => {
             let address = std::env::var("TERRA_MENU_JOIN_ADDRESS")
@@ -1797,7 +2786,7 @@ fn step(world: &mut World, state: &mut MenuSmoke) -> Result<bool, String> {
                 world.resource::<MenuState>().page == MenuPage::Main,
                 "Pointer Back failed",
             )?;
-            pointer(world, "menu-action", "Options", true)?;
+            pointer(world, "menu-action", "Settings", true)?;
         }
         1004 => pointer(world, "", "", false)?,
         1005 => {
@@ -1832,7 +2821,7 @@ fn step(world: &mut World, state: &mut MenuSmoke) -> Result<bool, String> {
                 world.resource::<MenuState>().page == MenuPage::Main,
                 "Pointer Options Back failed",
             )?;
-            pointer(world, "menu-action", "Quit Game", true)?;
+            pointer(world, "menu-action", "Quit", true)?;
         }
         1012 => {
             pointer(world, "", "", false)?;
@@ -1843,4 +2832,67 @@ fn step(world: &mut World, state: &mut MenuSmoke) -> Result<bool, String> {
         _ => {}
     }
     Ok(true)
+}
+
+#[cfg(test)]
+mod pointer_tests {
+    use super::*;
+    use bevy::{
+        camera::RenderTarget,
+        picking::pointer::{
+            Location, PointerAction, PointerButton, PointerId, PointerInput, PointerLocation,
+        },
+        window::WindowRef,
+    };
+
+    #[test]
+    fn release_uses_fixture_position_after_native_mouse_location_changes() {
+        let mut world = World::new();
+        world.init_resource::<Messages<PointerInput>>();
+        world.init_resource::<bevy::picking::pointer::PointerMap>();
+        let window = world
+            .spawn((
+                Window {
+                    focused: false,
+                    ..default()
+                },
+                PrimaryWindow,
+            ))
+            .id();
+        let target = RenderTarget::Window(WindowRef::Entity(window))
+            .normalize(Some(window))
+            .unwrap();
+        let expected = Location {
+            target: target.clone(),
+            position: Vec2::new(250.0, 140.0),
+        };
+        world.insert_resource(MenuPointer(Some(expected.clone())));
+        world.spawn((
+            PointerId::Mouse,
+            PointerLocation::new(Location {
+                target,
+                position: Vec2::ONE,
+            }),
+        ));
+        world.clear_trackers();
+
+        pointer(&mut world, "", "", false).unwrap();
+
+        let events = world
+            .resource_mut::<Messages<PointerInput>>()
+            .drain()
+            .collect::<Vec<_>>();
+        assert!(events.iter().any(|event| {
+            event.location.position == expected.position
+                && matches!(event.action, PointerAction::Release(PointerButton::Primary))
+        }));
+        let entity = world.entity(window);
+        let window = entity.get_ref::<Window>().unwrap();
+        assert!(window.focused);
+        assert_eq!(window.cursor_position(), Some(expected.position));
+        assert!(
+            !window.is_changed(),
+            "Fixture cursor must not request an OS window mutation"
+        );
+    }
 }

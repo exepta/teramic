@@ -1,4 +1,7 @@
-<button id="menu-action" [class]="menuView.main ? (button.primary ? 'menu-button large primary' : 'menu-button large') : (button.primary ? 'menu-button primary' : 'menu-button')" [disabled]="!button.enabled" onclick="$set(menuIntent.command, button.id); menu_command">
+<button id="menu-action" [class]="(menuView.main || menuView.pause) ? 'menu-button large painted-menu-button' : ((menuView.worlds || menuView.servers || menuView.options || dialogView.visible) ? (button.primary ? 'menu-button large primary painted-menu-button copper-menu-action' : 'menu-button large painted-menu-button copper-menu-action') : (button.primary ? 'menu-button primary' : 'menu-button'))" [disabled]="!button.enabled" onclick="$set(menuIntent.command, button.id); menu_command">
+  @if (menuView.main || menuView.pause || menuView.worlds || menuView.servers || menuView.options || dialogView.visible) { <img class="painted-menu-button-frame" src="tilt-ui://assets/menu-button-182.png" alt="" /> }
+  @if (button.icon == 'leaf') { <icon class="painted-menu-leaf" name="leaf" size="30" /> }
+  @if (button.icon == 'power') { <div class="painted-menu-power-symbol"><div class="painted-menu-power-stem"></div></div> }
   @if (button.icon == 'compass') { <icon name="compass" size="24" /> }
   @if (button.icon == 'users-round') { <icon name="users-round" size="24" /> }
   @if (button.icon == 'settings') { <icon name="settings" size="24" /> }
@@ -11,5 +14,5 @@
   @if (button.icon == 'arrow-left') { <icon name="arrow-left" size="24" /> }
   @if (button.icon == 'check') { <icon name="check" size="24" /> }
   @if (button.icon == 'rotate-ccw') { <icon name="rotate-ccw" size="24" /> }
-  <div class="button-copy"><p class="button-title">{{ button.title }}</p></div>
+  <div class="painted-menu-hover-glow"></div><div class="button-copy"><p class="button-title">{{ button.title }}</p></div>
 </button>

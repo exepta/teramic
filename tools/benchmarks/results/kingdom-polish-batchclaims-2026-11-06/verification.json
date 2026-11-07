@@ -1,0 +1,299 @@
+{
+  "phase": 196,
+  "completed_user_points": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    7,
+    8
+  ],
+  "pending_user_points": {
+    "6": "Kingdom 1, Kingdom 2 and Outpost reference images were not attached; tracked as F72."
+  },
+  "protocol": 104,
+  "storage": {
+    "regions": "IDX9",
+    "players": "PLY7",
+    "legacy_item_tags_preserved": true
+  },
+  "library_tests": {
+    "passed": 3674,
+    "failed": 0,
+    "ignored": 8,
+    "command": "cargo test --workspace --lib --locked -j 2 -- --test-threads=8",
+    "suites": [
+      {
+        "passed": 356,
+        "failed": 0,
+        "ignored": 0
+      },
+      {
+        "passed": 450,
+        "failed": 0,
+        "ignored": 1
+      },
+      {
+        "passed": 45,
+        "failed": 0,
+        "ignored": 0
+      },
+      {
+        "passed": 93,
+        "failed": 0,
+        "ignored": 0
+      },
+      {
+        "passed": 1007,
+        "failed": 0,
+        "ignored": 2
+      },
+      {
+        "passed": 5,
+        "failed": 0,
+        "ignored": 0
+      },
+      {
+        "passed": 139,
+        "failed": 0,
+        "ignored": 0
+      },
+      {
+        "passed": 496,
+        "failed": 0,
+        "ignored": 0
+      },
+      {
+        "passed": 24,
+        "failed": 0,
+        "ignored": 0
+      },
+      {
+        "passed": 1059,
+        "failed": 0,
+        "ignored": 5
+      }
+    ]
+  },
+  "checks": {
+    "workspace_build": true,
+    "clippy_all_targets_deny_warnings": true,
+    "format": true,
+    "diff": true,
+    "real_css_stylesheets_parsed": 60
+  },
+  "native": {
+    "screenshots": 24,
+    "kingdom_gallery": "real server founding and appearance acknowledgements; full catalog, search, dark colorpicker, QHD, 1024x768 and 4K, button bounds; capture readback gates state changes",
+    "claims_gallery": "temporary client projection; real ECS drag gesture preview and cancel, no authority mutation; real UDP authority tested separately",
+    "castle_gallery": "eleven world/GPU captures; transparent windows versus ordinary glass, six placement support faces, collision/picking"
+  },
+  "images": [
+    {
+      "path": "native/castle/castle-back.png",
+      "width": 2562,
+      "height": 1440,
+      "sha256": "9711c986a0c5a6c611a6116f3d46333d2f866c0922292b075e5865f279b2ab76"
+    },
+    {
+      "path": "native/castle/castle-front.png",
+      "width": 2562,
+      "height": 1440,
+      "sha256": "208a55ea8020d54070399a70bf006ad431bcc991894f19ffc4ae06d41e8d2918"
+    },
+    {
+      "path": "native/castle/castle-heraldry-dissolved.png",
+      "width": 2562,
+      "height": 1440,
+      "sha256": "b3c439accec8a786324f7447d3e9ad793b54df07eecd2e989962c9169c4c8a07"
+    },
+    {
+      "path": "native/castle/castle-heraldry-initial.png",
+      "width": 2562,
+      "height": 1440,
+      "sha256": "ea64ff31334d5f349e51d2402a061cf2f8408e3e8e936812fc23153e8e678aeb"
+    },
+    {
+      "path": "native/castle/castle-heraldry-updated.png",
+      "width": 2562,
+      "height": 1440,
+      "sha256": "6628650aff77d8ec1682f74f9e6d04f27265cca24886f1690505e8707c1d266c"
+    },
+    {
+      "path": "native/castle/castle-natural-walls.png",
+      "width": 2562,
+      "height": 1440,
+      "sha256": "584e224f0c001f23dc79b17afec714ecbaa741e3d95cb1e16da6dc6ec4415ea4"
+    },
+    {
+      "path": "native/castle/castle-openings.png",
+      "width": 2562,
+      "height": 1440,
+      "sha256": "0deadac926a500d68e9c19dd4252e2edf3bf62069d29a386f86088e5d6e79c14"
+    },
+    {
+      "path": "native/castle/castle-placement-six-faces-back.png",
+      "width": 2562,
+      "height": 1440,
+      "sha256": "668fee7aa12b1d4ac9f0f5a3d82df4bcc0acb6bf3fe20686e3e957966b30093f"
+    },
+    {
+      "path": "native/castle/castle-placement-six-faces-front.png",
+      "width": 2562,
+      "height": 1440,
+      "sha256": "8a54571985da7c355818c50f07e49edb563609266f94d01abe287944fad0461b"
+    },
+    {
+      "path": "native/castle/castle-window-comparison.png",
+      "width": 2562,
+      "height": 1440,
+      "sha256": "90a58624e919f53be8608dcc2e40c766a952494c9f05f4ed7ba48d2574217533"
+    },
+    {
+      "path": "native/castle/castle-window-oblique.png",
+      "width": 2562,
+      "height": 1440,
+      "sha256": "a35a5e9050fcf487e967083b2fb46a0f427965b664febfa514645181a43188d2"
+    },
+    {
+      "path": "native/claims/diplomacy-claims.png",
+      "width": 2562,
+      "height": 1440,
+      "sha256": "7027ea7f225a243756f3d67dec5a61b866e8f95ea574bc90f4a855ff8db019e5"
+    },
+    {
+      "path": "native/claims/diplomacy-compact.png",
+      "width": 1025,
+      "height": 768,
+      "sha256": "f7c1e5ce763ab4534ffc0179d413b9a06530ea3a445dffe3ad862b51293f58f5"
+    },
+    {
+      "path": "native/claims/diplomacy-live-color.png",
+      "width": 2562,
+      "height": 1440,
+      "sha256": "80351efff0a5feca2283206f1624a9f8b2dddc01328f630afc6d52810d4870cf"
+    },
+    {
+      "path": "native/claims/diplomacy-rectangle-preview.png",
+      "width": 2561,
+      "height": 1440,
+      "sha256": "9287aebd35f8853d27dead219fa43ea943d8d2c426d83d0f243c19a24ab8f177"
+    },
+    {
+      "path": "native/kingdom/kingdom-ui-4k.png",
+      "width": 3840,
+      "height": 2160,
+      "sha256": "fecda6cdba6cf8f7ad20ad5b641e9e65814ae08dfd0334872fe0c703165abfb1"
+    },
+    {
+      "path": "native/kingdom/kingdom-ui-colorpicker.png",
+      "width": 2561,
+      "height": 1440,
+      "sha256": "9cdced994464a0af1f2aab3f81a0deb42af00704047e614c261c5f8e5f9acc2a"
+    },
+    {
+      "path": "native/kingdom/kingdom-ui-compact.png",
+      "width": 1025,
+      "height": 768,
+      "sha256": "3f9b65daa19ceaa9a36c850731c8bff42c2671ae3b5d8c7c98ae5817a411cb05"
+    },
+    {
+      "path": "native/kingdom/kingdom-ui-icons-4k.png",
+      "width": 3840,
+      "height": 2160,
+      "sha256": "fae1b6aaad44540fb4d7cf44226fb36d997d9c2c7a5b1bbc760a7d91db8cfef5"
+    },
+    {
+      "path": "native/kingdom/kingdom-ui-icons-compact.png",
+      "width": 1025,
+      "height": 768,
+      "sha256": "4ae5547cc6a2a16af309a41b3e36a8de1b7f07657c002ccc5e22e4d95d0c8730"
+    },
+    {
+      "path": "native/kingdom/kingdom-ui-icons-qhd.png",
+      "width": 2561,
+      "height": 1440,
+      "sha256": "c6329c586604340668f66c1561f57ff96da8128b4b03108e7aa02bdf0bedc3a7"
+    },
+    {
+      "path": "native/kingdom/kingdom-ui-icons-search.png",
+      "width": 2561,
+      "height": 1440,
+      "sha256": "ed92998ee279ff14ab3ba0e6eec2870eaec120c707ae49f34f1f03cafcfe1f82"
+    },
+    {
+      "path": "native/kingdom/kingdom-ui-qhd.png",
+      "width": 2561,
+      "height": 1440,
+      "sha256": "c051cebc6494290b29c88a7ec703a6f7ead6b00a5d95c04077266f83f9b66812"
+    },
+    {
+      "path": "native/kingdom/kingdom-unbound.png",
+      "width": 2562,
+      "height": 1440,
+      "sha256": "30208a6dd385b3bda71591994234125517cff060940212b85a2ca5d40f94a46d"
+    }
+  ],
+  "source_sha256": {
+    "apps/client/src/claims_smoke.rs": "fef36a3263f3e5b2fc3c7e6d73619fd4274c0602c2ff5f59904f102999ee31ec",
+    "apps/client/src/kingdom_smoke.rs": "6130d943a04c3ff504438691882544eb787a87c468f914474502be74a9d7b185",
+    "apps/client/src/kingdom_ui_smoke.rs": "3ca36bcca078ab7ed45dba3fa61d6c8219571c04243dc47ea08a8eeb8d2c9af7",
+    "apps/client/src/main.rs": "c91fc844e229aa280cb80d11b8124cbe4abb52599ced35c97edf6493728a8603",
+    "apps/client/src/materials_smoke_castle.rs": "59910cce92262c8deb9302d6e1294f9f641323466522e3137a12824d7dd43ee9",
+    "assets/terra/blocks/models/castle_window.bin": "ff9f040a87564555a3f32aa89b0e2490e413c931557dbeda120b87e3a3898f80",
+    "assets/terra/blocks/models/castle_window.gltf": "1442eb3e8998bd8bf1228515a32771092586bd347a0ba912ec288d5053a4f514",
+    "crates/terra-core/src/castle.rs": "b5d9ba030f9b14452da0b0c5d0284edb77b8ba5ef97943fa5807a49aa1baf6cf",
+    "crates/terra-core/src/crafting.rs": "fdacee07d59a22a06627e022b36e7bf7761741fa95791e19a093c9e7aa7dfb5a",
+    "crates/terra-core/src/equipment.rs": "98e7705523f76a101e3b4603c7de9e8b99d2288961cedc7f9603840b04c2668b",
+    "crates/terra-core/src/gameplay.rs": "00adb217dc83ddd1187800dee797ace280eebae6e4598c6a897bd96b24fc44d0",
+    "crates/terra-core/src/kingdom.rs": "d3d9dd1deead601b628c5b27760030b083f977d2201e324f0ea23afc9ed4944b",
+    "crates/terra-core/src/kingdom/batch.rs": "97d2e614e304e6bf2ca3439d54b113f812b96b45e0c063d086d6cba18065cf04",
+    "crates/terra-core/src/kingdom/bots.rs": "7c86539d67c4b41754fac74519d5dbbaab554b58cd25125f4585e0258ad5392f",
+    "crates/terra-core/src/kingdom/claim_tests.rs": "e82ab94977f2d1f19d63e21afff111740ca4b526f1054e37d331e1ff1446b2fc",
+    "crates/terra-core/src/kingdom/claims.rs": "1a3fbf6fb95e8df7f9a05ab220ae24d88c792fc4300b47292870e37b197c0bcd",
+    "crates/terra-core/src/kingdom/icon_catalog.rs": "f99cca0b3a972c601d632b4be8976b86c95009db3c647887a1825174e98be455",
+    "crates/terra-core/src/kingdom/icon_tests.rs": "2553537db539c722afd43d80426bf28b84fe496a148681937872d8a4917fd4f8",
+    "crates/terra-network/src/client.rs": "405cada80cbda0a062f58432e3d1efa06cb8ed65ee9a2e754f3abe6a8a7aad46",
+    "crates/terra-network/src/inventory_tests.rs": "445a995b215511843e20e49327a71f3fea9762935c7cd90ca20c6d6c73910f9a",
+    "crates/terra-network/src/kingdom_claim_tests.rs": "27c5e852ac0e4e99f3773a115590f64824998e25753d19a9c6d07940b18855e9",
+    "crates/terra-network/src/protocol/kingdom.rs": "945f185d69969a55462563032f89cddc0adbd346f0391f7cefc90cb5aea7ec68",
+    "crates/terra-network/src/protocol/session.rs": "a391c4cdb702bb94b1265ad606030b69722dd826b0fc5ed48bddb1c244bd05cd",
+    "crates/terra-network/src/server_containers.rs": "7304515d544909fee9dbdfd9419b6ad8b9a10740cb0509ab77f40e359075ed34",
+    "crates/terra-network/src/server_gameplay.rs": "a10752081b8cb973c443f6bcbeb6c82e76115dce34b9509124508a567912f454",
+    "crates/terra-network/src/server_kingdoms.rs": "1200dea6e22c3fd794bb531056a53b7a42bd40db6ba15c5fcd673e4292268471",
+    "crates/terra-render/src/armor/cape.rs": "636761452bc897f81ae2a7819b59d079d83dfd022d3aa45ab1f37b97a5ca5e44",
+    "crates/terra-render/src/armor/model.rs": "8816280e24d8d8270254affb49467136347b0950a31a59d622fb9af90adf48af",
+    "crates/terra-render/src/armor/tests.rs": "c52fd3530b55a70031024426b69645d3e07a97b573f2012a628f44131c84ffce",
+    "crates/terra-render/src/meshing/custom.rs": "5185c0fe1ecadc91c8c76b006a952885f836e1cecb0b4957dca823cc52e63f33",
+    "crates/terra-render/src/meshing/custom_castle.rs": "3c481a4b9021281606d798d00cfc17fcd02b5fc925119b0a7bd80884a622c886",
+    "crates/terra-render/src/meshing/custom_heraldry.rs": "a89c7a73111ef6667028d67a7360c76c2842fd10420fd426bd6d60a923eec467",
+    "crates/terra-storage/src/regions/kingdom_tests.rs": "8d0370616b8058ef9ff244844380059d54b53cbf3651ebfaa36a188748bf26ba",
+    "crates/terra-ui/src/crafting.rs": "97cf01f6cfa7da0abd2eb9ce660e9f5a0c8027ce715401d2b970d73a66543ec1",
+    "crates/terra-ui/src/crafting_browser_tests.rs": "f1b30dc7a27ae3b71217c0c217a5a461ea1f0fd6425d100ab8170a9503663a84",
+    "crates/terra-ui/src/inventory_view.rs": "1e5243baddc76fecf55d0b95983619fa104b3a3c18b2b9f814cb1cde262cda42",
+    "crates/terra-ui/src/kingdom.rs": "1a310c6d4bda62da0df7329cc30a57ba37d61f8bde80d67536dff0107c530268",
+    "crates/terra-ui/src/kingdom_claim_tests.rs": "701d23ec09c12ff801da667c1d8f2c9b9c78509793c108b3d289e3f4ee2a81f7",
+    "crates/terra-ui/src/kingdom_tests.rs": "9ddea6d206bf52f48ee166a4cdcffced1f0d7773c662cec10077b4e6d6b4dd88",
+    "crates/terra-ui/src/minimap.rs": "1dc0926349acf0e6f2e684394f91dff1af486d1f5d270e9d6a44711de543c989",
+    "crates/terra-ui/src/minimap/diplomacy.rs": "436741625eaa796f0a1240d7bd02814d8c44c8eeda0d6e7e3e88740c40a4ea52",
+    "crates/terra-ui/src/minimap/fullmap.rs": "b2a785ca2335b2b976a1d413a068248ab7880e2503cb1595dcb3316f8f6bc47a",
+    "crates/terra-ui/src/realm_title.rs": "3f1de7a8e216145f9baae107b7177b65fd19721b7d34a68e09bdf763fafc1154",
+    "crates/terra-world/src/castle_geometry_tests.rs": "edd845efe6bf4ae0c8f8b3b7d9291964077ed240f26b5dba6203ab8f029ac584",
+    "crates/terra-world/src/generation/structures.rs": "dbb800975f6317a62372869f62b48dc3a5093f09a44f4a30c4821e35e4b869b6",
+    "crates/terra-world/src/generation/structures/settlement.rs": "703646e0671230b07ef120c1766fd30c73a675dfe594b879092dcd92d4aec4db",
+    "crates/terra-world/src/placement.rs": "2982b482014f6fe62e4d368f0678adce726f383d37b12aed7ecdcb3c76e83257",
+    "crates/terra-world/src/placement_pick_tests.rs": "9c452bb16e6e33b5d3ef770fe96802154eb47d4d92a1b1e248d8c175fdf0118a",
+    "src-ui/assets/heraldry-hammer.svg": "b167b6c3dd4df3efbea164a66b40ac86c11f38ead1c065639f15acd14315716e",
+    "src-ui/assets/heraldry-wheat.svg": "7070b3560efeb4d809a4724b673e1704243d085ab43a0b1fb9c2db68ca4806b5",
+    "src-ui/components/full-map.component.css": "d6bc42b91bd337a83ace932f99442a8573e2bf1409368f510c7fe5274b20f256",
+    "src-ui/components/full-map.component.html": "a31fcf31a79747c7d1019c3c3d9887aa307814662872eb42c8af128107628c55",
+    "src-ui/components/full-map.component.rs": "06cb67cda84d9d58b34c210556cb63f69dd8463560e30dc994b8cdac1140c020",
+    "src-ui/components/kingdom-menu.component.css": "3295f52ef6bbf358cbb04185d6f1cdec7c3143c85937d1c4d5e8558f2ecdad26",
+    "src-ui/components/kingdom-menu.component.html": "e1589a7efd1ee4395e365badb01f4ce3d1879f5868e8e1bd277eb4fbe80d64ce",
+    "src-ui/components/kingdom-menu.component.rs": "2472104e1f04c919cae384e07b7f44ebf39ad5e6e4f52c618085fd0669c65f97",
+    "tools/assets/build_castle.py": "bb72ccd3bc060a74542618656bdf9e6190d43be2208b9c121e0f160cb4f638e6",
+    "tools/assets/castle_details.py": "90bf0e37b75ae34c59adf9452ba730441817bb7efcfca2b4cdc5f8f5812748fa",
+    "tools/generate_heraldry_catalog.rs": "d43589242b1b9097b9769fea99b3f2491f72de8a47c54b29943254d38abd0f69"
+  }
+}

@@ -11,6 +11,10 @@ use bevy::{
 use terra_core::GameConfig;
 use terra_player::TerraCamera;
 
+// Reserve the back of the transparent phase independently of proxy mesh centers.
+// Finite headroom avoids overflow when Bevy adds its view-space center distance.
+pub(crate) const BACKGROUND_SORT_BIAS: f32 = -1.0e20;
+
 #[derive(Asset, AsBindGroup, Reflect, Debug, Clone)]
 struct HazeExtension {
     #[uniform(100)]
@@ -22,7 +26,7 @@ struct HazeExtension {
 }
 impl MaterialExtension for HazeExtension {
     fn fragment_shader() -> ShaderRef {
-        "shaders/terra_horizon.wgsl".into()
+        "shaders/terra_horizon.wesl".into()
     }
 
     fn specialize(
@@ -65,6 +69,7 @@ fn setup(
                 unlit: true,
                 cull_mode: None,
                 fog_enabled: false,
+                depth_bias: BACKGROUND_SORT_BIAS,
                 ..default()
             },
             extension: HazeExtension {
@@ -139,9 +144,9 @@ fn update(
             underwater.blend,
             underwater.depth.max(0.0),
         );
-        // Transparent sorting uses mesh centers. This shell's center is the
-        // camera, so its actual distant surface needs an explicit back order.
-        let sort_bias = -2.0 * projection.far;
+        // Cloud centers can lie farther along the view than projection.far.
+        // Keep the celestial background first without changing pipeline keys on motion.
+        let sort_bias = BACKGROUND_SORT_BIAS;
         if materials.get(&handle.0).is_some_and(|material| {
             material.extension.color != color
                 || material.extension.moon != moon
@@ -154,5 +159,56 @@ fn update(
             material.extension.sky = sky;
             material.base.depth_bias = sort_bias;
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn background_sort_bias_and_material_pipeline_key_do_not_follow_the_camera() {
+        let mut app = App::new();
+        app.init_resource::<GameConfig>()
+            .init_resource::<super::super::daylight::Daylight>()
+            .init_resource::<crate::water::UnderwaterState>()
+            .init_resource::<Assets<Mesh>>()
+            .init_resource::<Assets<HazeMaterial>>()
+            .add_systems(Startup, setup)
+            .add_systems(Update, update);
+        let camera = app
+            .world_mut()
+            .spawn((
+                TerraCamera,
+                Transform::from_xyz(1150.5, 145.0, 480.5),
+                Projection::Perspective(PerspectiveProjection {
+                    far: 64.0,
+                    ..default()
+                }),
+                DistanceFog::default(),
+            ))
+            .id();
+        let mut keys = std::collections::HashSet::new();
+        for (height, far) in [
+            (145.0, 64.0),
+            (-128.0, 32.0),
+            (256.0, 272.0),
+            (400.0, 1024.0),
+            (100_000.0, 64.0),
+        ] {
+            *app.world_mut().get_mut::<Transform>(camera).unwrap() =
+                Transform::from_xyz(1150.5, height, 480.5)
+                    .looking_to(Vec3::new(0.0, 0.9, 0.4358899), Vec3::Y);
+            *app.world_mut().get_mut::<Projection>(camera).unwrap() =
+                Projection::Perspective(PerspectiveProjection { far, ..default() });
+            app.update();
+            let materials = app.world().resource::<Assets<HazeMaterial>>();
+            assert_eq!(materials.len(), 1);
+            let (_, material) = materials.iter().next().unwrap();
+            assert_eq!(material.base.depth_bias, BACKGROUND_SORT_BIAS);
+            assert!(material.base.depth_bias.is_finite());
+            keys.insert(bevy::pbr::StandardMaterialKey::from(&material.base));
+        }
+        assert_eq!(keys.len(), 1);
     }
 }

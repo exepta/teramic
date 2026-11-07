@@ -18,9 +18,104 @@ pub struct PreparedColumn {
     pub(super) structures: Vec<Arc<super::structures::Site>>,
     pub(super) maximum: f64,
     pub(super) surface_sections: Option<[i64; 2]>,
+    #[cfg(feature = "bevy")]
+    pub(super) cave_eye_bounds: Option<[f64; 2]>,
+}
+
+#[cfg(all(test, feature = "bevy"))]
+mod snow_tests {
+    use super::*;
+    use crate::generation::structures::{
+        Site, SiteSummary, StructureKind, StructurePatch, VillageStyle,
+    };
+    use std::collections::BTreeMap;
+
+    #[test]
+    fn cached_plain_structure_paths_without_object_metadata_enter_the_snow_round_only_while_loaded()
+    {
+        let section = SectionPos::new(-1, 0, -2);
+        let center = [-1, 4, -17];
+        for material in [102, 78, 3] {
+            let prepared = PreparedColumn {
+                config: WorldConfig::default(),
+                coordinate: [-1, -2],
+                padding: 0,
+                size: 0,
+                columns: Vec::new(),
+                trees: Vec::new(),
+                tree_props: Vec::new(),
+                structures: vec![Arc::new(Site {
+                    summary: SiteSummary {
+                        id: 1,
+                        kind: StructureKind::Village,
+                        style: VillageStyle::Temperate,
+                        center,
+                        bounds: [center, center],
+                        buildings: Vec::new(),
+                        containers: Vec::new(),
+                    },
+                    sections: BTreeMap::from([(
+                        section,
+                        StructurePatch {
+                            cells: vec![(15 + 16 * (4 + 16 * 15), material)],
+                            objects: Vec::new(),
+                        },
+                    )]),
+                    settlement: None,
+                })],
+                maximum: 0.0,
+                surface_sections: None,
+                cave_eye_bounds: None,
+            };
+            assert_eq!(
+                prepared.has_snow_coatable_structure(&[section]),
+                crate::snow::coatable(material)
+            );
+            assert!(!prepared.has_snow_coatable_structure(&[]));
+            assert!(!prepared.has_snow_coatable_structure(&[SectionPos::new(-1, 1, -2)]));
+        }
+    }
 }
 
 impl PreparedColumn {
+    #[cfg(test)]
+    pub(crate) fn with_settlement_for_test(
+        mut self,
+        settlement: Arc<super::structures::VillageSettlement>,
+    ) -> Self {
+        use super::structures::{Site, SiteSummary, StructureKind};
+        self.structures.push(Arc::new(Site {
+            summary: SiteSummary {
+                id: settlement.id,
+                kind: StructureKind::Village,
+                style: settlement.style,
+                center: settlement.center,
+                bounds: settlement.bounds,
+                buildings: Vec::new(),
+                containers: Vec::new(),
+            },
+            sections: Default::default(),
+            settlement: Some(settlement),
+        }));
+        self
+    }
+
+    /// Read cached structural cells: village paths deliberately have no object
+    /// metadata, but must still receive priority winter surface visits.
+    #[cfg(feature = "bevy")]
+    pub(crate) fn has_snow_coatable_structure(&self, sections: &[SectionPos]) -> bool {
+        self.structures.iter().any(|site| {
+            sections.iter().any(|section| {
+                site.sections.get(section).is_some_and(|patch| {
+                    patch
+                        .cells
+                        .iter()
+                        .any(|(_, material)| crate::snow::coatable(*material))
+                })
+            })
+        })
+    }
+
     /// Cached immutable settlement metadata. Never plans regions or samples noise.
     pub fn village_settlements(
         &self,
@@ -43,6 +138,19 @@ impl PreparedColumn {
             .flat_map(|patch| patch.objects.iter().cloned())
             .collect()
     }
+    #[cfg(feature = "bevy")]
+    pub(crate) fn felling_species(&self, root: [i64; 3]) -> Option<terra_core::TreeSpecies> {
+        self.trees
+            .iter()
+            .find(|tree| tree.origin == root)?
+            .sapling_species()
+    }
+    #[cfg(feature = "bevy")]
+    pub(crate) fn felling_materials(&self, root: [i64; 3]) -> Option<(u16, u16)> {
+        let tree = self.trees.iter().find(|tree| tree.origin == root)?;
+        Some((tree.wood_material as u16, tree.species.leaves() as u16))
+    }
+
     #[cfg(feature = "bevy")]
     pub(crate) fn felling_shape(&self, cell: [i64; 3]) -> Option<crate::tree_felling::Shape> {
         self.trees
@@ -95,6 +203,12 @@ impl PreparedColumn {
     /// All values are already prepared; streaming never resamples cave noise.
     #[cfg(feature = "bevy")]
     pub(crate) fn cave_view_sections(&self, eye_y: f64) -> Option<[i64; 2]> {
+        if self
+            .cave_eye_bounds
+            .is_none_or(|[low, high]| eye_y < low || eye_y > high)
+        {
+            return None;
+        }
         let mut envelope: Option<[f64; 2]> = None;
         for z in 0..16 {
             for x in 0..16 {
@@ -135,13 +249,31 @@ impl PreparedColumn {
         self.trees.iter().find_map(|tree| {
             let generated = match material {
                 6 | 10 | 36 | 134 => tree.wood_at(global),
-                7..=9 | 132 | 133 => tree.leaves_at(global),
+                7..=9 | 132 | 133 | 195 => tree.leaves_at(global),
                 _ => None,
             };
             generated
                 .filter(|id| *id as u16 == material)
                 .map(|_| super::TreeAppearance::of(tree))
         })
+    }
+
+    /// Apple roots already prepared for this loaded column; never generates or
+    /// explores another region. Neighbor canopy overlap does not duplicate roots.
+    pub fn natural_apples(&self) -> impl Iterator<Item = ([i64; 3], u64)> + '_ {
+        self.trees
+            .iter()
+            .filter(|tree| {
+                super::TreeAppearance::of(tree) == super::TreeAppearance::Apple
+                    && [tree.origin[0].div_euclid(16), tree.origin[2].div_euclid(16)]
+                        == self.coordinate
+            })
+            .map(|tree| {
+                (
+                    tree.origin,
+                    crate::fruit::generation_seed(self.config.seed.0, tree.origin),
+                )
+            })
     }
     /// Existing immutable biome and surface data; this never resamples noise.
     pub fn surface_at(&self, x: i64, z: i64) -> Option<&SurfaceColumn> {
@@ -158,6 +290,29 @@ impl PreparedColumn {
     pub(crate) fn water_columns(&self) -> &[SurfaceColumn] {
         &self.columns
     }
+}
+
+#[cfg(feature = "bevy")]
+fn cave_eye_bounds(columns: &[SurfaceColumn], padding: usize, size: usize) -> Option<[f64; 2]> {
+    let mut bounds: Option<[f64; 2]> = None;
+    for z in padding..padding + SECTION_SIZE {
+        for x in padding..padding + SECTION_SIZE {
+            let column = &columns[x + z * size];
+            let room = column.cave;
+            if !room.active() {
+                continue;
+            }
+            let low = room.floor - 16.0;
+            let high = (column.height - 6.0).min(room.ceiling + 16.0);
+            if low > high {
+                continue;
+            }
+            let bounds = bounds.get_or_insert([low, high]);
+            bounds[0] = bounds[0].min(low);
+            bounds[1] = bounds[1].max(high);
+        }
+    }
+    bounds
 }
 
 #[cfg(all(test, feature = "bevy"))]
@@ -298,6 +453,10 @@ impl SectionGenerator {
             ((minimum - 0.5).floor() as i64).div_euclid(16) - 1,
             (maximum.ceil() as i64).div_euclid(16),
         ]);
+        // Horizontal flight reuses this immutable column across many interest
+        // changes. Reject impossible cave views before inspecting 256 cells.
+        #[cfg(feature = "bevy")]
+        let cave_eye_bounds = cave_eye_bounds(&columns, padding, size);
         Ok(PreparedColumn {
             config: self.terrain().config().clone(),
             coordinate,
@@ -309,6 +468,8 @@ impl SectionGenerator {
             structures,
             maximum,
             surface_sections,
+            #[cfg(feature = "bevy")]
+            cave_eye_bounds,
         })
     }
 }
@@ -316,6 +477,90 @@ impl SectionGenerator {
 #[cfg(all(test, feature = "bevy"))]
 mod cave_streaming_tests {
     use super::*;
+
+    fn reference(column: &PreparedColumn, eye_y: f64) -> Option<[i64; 2]> {
+        let mut eligible = (0..16)
+            .flat_map(|z| (0..16).map(move |x| (x, z)))
+            .filter_map(|(x, z)| {
+                let surface = column.local_surface(x, z)?;
+                let room = surface.cave;
+                (room.active()
+                    && eye_y <= surface.height - 6.0
+                    && eye_y >= room.floor - 16.0
+                    && eye_y <= room.ceiling + 16.0)
+                    .then_some([room.floor, room.ceiling])
+            });
+        let first = eligible.next()?;
+        let [floor, ceiling] = eligible.fold(first, |a, b| [a[0].min(b[0]), a[1].max(b[1])]);
+        let bounds = [
+            ((floor - 1.0).floor() as i64).div_euclid(16),
+            ((ceiling + 1.0).ceil() as i64).div_euclid(16),
+        ];
+        Some(if column.config.bounded_world {
+            bounds.map(|y| y.clamp(-8, 22))
+        } else {
+            bounds
+        })
+    }
+
+    #[test]
+    fn cave_view_aggregate_matches_exact_cells_at_height_limits_and_ignores_halo_rooms() {
+        let terrain = crate::TerraGenerator::new(WorldConfig {
+            trees: false,
+            caves: false,
+            structures_revision: 0,
+            ..Default::default()
+        })
+        .unwrap();
+        for with_mesh in [false, true] {
+            let mut column = SectionGenerator::new(terrain.clone())
+                .prepare_column([-3, -2], with_mesh)
+                .unwrap();
+            for (index, surface) in column.columns.iter_mut().enumerate() {
+                let x = index % column.size;
+                let z = index / column.size;
+                let halo = x < column.padding
+                    || x >= column.padding + 16
+                    || z < column.padding
+                    || z >= column.padding + 16;
+                surface.height = if halo { 500.0 } else { 32.0 + (x % 9) as f64 };
+                surface.cave = super::super::CaveStructure::default();
+                surface.cave.kind = if index % 7 == 0 {
+                    super::super::CaveEcology::None
+                } else {
+                    super::super::CaveEcology::Salt
+                };
+                surface.cave.floor = if halo {
+                    -500.0
+                } else {
+                    -95.0 + (z % 11) as f64
+                };
+                surface.cave.ceiling = if halo { 400.0 } else { 10.0 + (x % 7) as f64 };
+                surface.cave.radial = if index % 5 == 0 { 1.2 } else { 0.25 };
+            }
+            column.cave_eye_bounds = cave_eye_bounds(&column.columns, column.padding, column.size);
+            assert!(column.cave_eye_bounds.is_some());
+            for bounded in [false, true] {
+                column.config.bounded_world = bounded;
+                for half_y in -1_200..=1_200 {
+                    let eye_y = half_y as f64 * 0.5;
+                    assert_eq!(column.cave_view_sections(eye_y), reference(&column, eye_y));
+                }
+            }
+            let [low, high] = column.cave_eye_bounds.unwrap();
+            for eye_y in [
+                low - 0.001,
+                low,
+                low + 0.001,
+                high - 0.001,
+                high,
+                high + 0.001,
+            ] {
+                assert_eq!(column.cave_view_sections(eye_y), reference(&column, eye_y));
+            }
+        }
+    }
+
     #[test]
     fn tall_cave_view_requests_the_closed_envelope_but_never_surface_columns_or_noise() {
         let terrain = crate::TerraGenerator::new(WorldConfig {
@@ -334,6 +579,7 @@ mod cave_streaming_tests {
         surface.cave.ceiling = 96.0;
         surface.cave.radial = 0.1;
         column.columns.fill(surface);
+        column.cave_eye_bounds = cave_eye_bounds(&column.columns, column.padding, column.size);
         assert_eq!(column.cave_view_sections(-24.0), Some([-6, 6]));
         assert!(column.cave_view_sections(140.0).is_none());
         assert!(column.cave_view_sections(-120.0).is_none());
@@ -341,6 +587,7 @@ mod cave_streaming_tests {
             .columns
             .iter_mut()
             .for_each(|c| c.cave.kind = super::super::CaveEcology::None);
+        column.cave_eye_bounds = cave_eye_bounds(&column.columns, column.padding, column.size);
         assert!(column.cave_view_sections(-24.0).is_none());
     }
 }

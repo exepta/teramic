@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "id": 163,
+  "name": "Wood Pipe",
+  "description": "A reinforced wood pipe for the finite hydraulic network.",
+  "creative_category": "technic",
+  "render_kind": "custom_mesh",
+  "struct_block": true,
+  "model_layout": "scene",
+  "model": "models/wood_pipe.gltf",
+  "hardness": 2,
+  "resistance": 8,
+  "mining_level": 0,
+  "required_tool": "axe",
+  "textures": {
+    "oak_frame": "textures/machinery-oak-hd.png",
+    "brass_flanges": "textures/machinery-iron-hd.png",
+    "iron_bolts": "textures/machinery-iron-hd.png"
+  },
+  "collision_boxes": [
+    {
+      "minimum": [
+        0,
+        0.285,
+        0.285
+      ],
+      "maximum": [
+        1,
+        0.715,
+        0.715
+      ]
+    },
+    {
+      "minimum": [
+        0.285,
+        0,
+        0.285
+      ],
+      "maximum": [
+        0.715,
+        1,
+        0.715
+      ]
+    },
+    {
+      "minimum": [
+        0.285,
+        0.285,
+        0
+      ],
+      "maximum": [
+        0.715,
+        0.715,
+        1
+      ]
+    }
+  ]
+}

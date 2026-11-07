@@ -702,7 +702,7 @@ fn near_light(h: &Habitat, position: [f64; 3]) -> bool {
                         continue;
                     }
                     let radius = match material {
-                        40 => 14.0,
+                        40 | terra_core::lantern::LANTERN => 14.0,
                         28 | 99 => 4.0,
                         59 if h
                             .journal
@@ -713,7 +713,10 @@ fn near_light(h: &Habitat, position: [f64; 3]) -> bool {
                         }
                         _ => continue,
                     };
-                    let light = if material == 59 {
+                    let light = if material == terra_core::lantern::LANTERN {
+                        let offset = terra_core::lantern::emission(state.facing);
+                        std::array::from_fn(|i| p[i] as f64 + offset[i])
+                    } else if material == 59 {
                         let yaw = f64::from(state.facing) * std::f64::consts::FRAC_PI_2;
                         [
                             p[0] as f64 + 0.5 - yaw.sin() * 0.58,

@@ -18,6 +18,11 @@ struct Fixture {
     requested: bool,
     next_diagnostic: Duration,
     stalled_capture: bool,
+    ready_since: Option<Instant>,
+    gameplay_probe_seconds: f64,
+    save_result: Option<std::sync::Mutex<std::sync::mpsc::Receiver<Result<(), String>>>>,
+    gameplay_frames: Vec<f64>,
+    previous_frame: Option<Instant>,
 }
 
 pub(crate) fn install(app: &mut App) {
@@ -41,6 +46,15 @@ pub(crate) fn install(app: &mut App) {
         requested: false,
         next_diagnostic: Duration::from_secs(5),
         stalled_capture: false,
+        ready_since: None,
+        gameplay_probe_seconds: std::env::var("TERRA_LOADING_GAMEPLAY_PROBE_SECONDS")
+            .ok()
+            .and_then(|value| value.parse::<f64>().ok())
+            .filter(|value| value.is_finite() && (0.0..=60.0).contains(value))
+            .unwrap_or(0.4),
+        save_result: None,
+        gameplay_frames: Vec::new(),
+        previous_frame: None,
     })
     .add_systems(Last, verify);
 }
@@ -90,12 +104,21 @@ fn check(world: &mut World, fixture: &mut Fixture) -> Result<(), String> {
         let library = terra_storage::WorldLibrary {
             root: fixture.output.join("worlds"),
         };
-        let entry = library.create(
-            "Loading reveal fixture",
-            Some(template.seed.0),
-            terra_storage::GameMode::Creative,
-            &template,
-        )?;
+        let entry = if let Ok(title) = std::env::var("TERRA_LOADING_USE_WORLD") {
+            library
+                .list()?
+                .0
+                .into_iter()
+                .find(|entry| entry.title == title)
+                .ok_or_else(|| format!("Missing copied loading fixture world {title}"))?
+        } else {
+            library.create(
+                "Loading reveal fixture",
+                Some(template.seed.0),
+                terra_storage::GameMode::Creative,
+                &template,
+            )?
+        };
         let id = entry.manifest.world.id;
         world.resource_mut::<MenuPaths>().worlds = library;
         let mut worlds = world.resource_mut::<WorldMenu>();
@@ -122,6 +145,25 @@ fn check(world: &mut World, fixture: &mut Fixture) -> Result<(), String> {
         let progress = world.resource::<LoadingProgress>();
         let full = progress.fraction == Some(1.0);
         let reveal = progress.reveal;
+        let chunks = world.resource::<terra_world::streaming::ChunkStore>();
+        let scene_ready = world
+            .resource::<terra_world::streaming::WorldGeneration>()
+            .status
+            == terra_world::streaming::GenerationStatus::Ready
+            && chunks
+                .wanted_sections()
+                .all(|position| chunks.loaded.contains_key(&position))
+            && world.resource::<terra_render::RenderStatus>().ready
+            && world.resource::<terra_render::PropRenderStatus>().ready
+            && world.resource::<terra_render::WaterStatus>().initial_ready;
+        if scene_ready && !full {
+            let since = fixture.ready_since.get_or_insert_with(Instant::now);
+            if since.elapsed() > Duration::from_secs(2) {
+                return Err("Loading progress waits for meshes that the ready renderer intentionally culled".into());
+            }
+        } else {
+            fixture.ready_since = None;
+        }
         if reveal < fixture.reveal || (reveal > 0.0 && !full) {
             return Err("Reveal started before 100% or moved backwards".into());
         }
@@ -138,6 +180,19 @@ fn check(world: &mut World, fixture: &mut Fixture) -> Result<(), String> {
             fixture.halfway = true;
         }
     } else if page == MenuPage::Playing {
+        let now = Instant::now();
+        if fixture.gameplay_probe_seconds > 10.0
+            && fixture
+                .playing
+                .is_some_and(|at| at.elapsed().as_secs_f64() >= 10.0)
+            && let Some(previous) = fixture.previous_frame
+            && fixture.gameplay_frames.len() < 65_536
+        {
+            fixture
+                .gameplay_frames
+                .push(now.duration_since(previous).as_secs_f64());
+        }
+        fixture.previous_frame = Some(now);
         if !fixture.full || !fixture.halfway || fixture.reveal < 0.8 {
             return Err("Gameplay skipped the visible 100% hold or smooth reveal".into());
         }
@@ -150,8 +205,53 @@ fn check(world: &mut World, fixture: &mut Fixture) -> Result<(), String> {
         }
         if fixture
             .playing
-            .is_some_and(|at| at.elapsed() >= Duration::from_millis(400))
+            .is_some_and(|at| at.elapsed().as_secs_f64() >= fixture.gameplay_probe_seconds)
         {
+            if fixture.gameplay_probe_seconds > 0.4 {
+                if fixture.save_result.is_none() {
+                    fixture.save_result = Some(std::sync::Mutex::new(
+                        world
+                            .resource::<terra_server::IntegratedServer>()
+                            .request_save()?,
+                    ));
+                    return Ok(());
+                }
+                match fixture
+                    .save_result
+                    .as_ref()
+                    .unwrap()
+                    .lock()
+                    .map_err(|error| error.to_string())?
+                    .try_recv()
+                {
+                    Ok(result) => result?,
+                    Err(std::sync::mpsc::TryRecvError::Empty) => return Ok(()),
+                    Err(error) => {
+                        return Err(format!("Gameplay probe save channel failed: {error}"));
+                    }
+                }
+                tracing::info!(
+                    seconds = fixture.gameplay_probe_seconds,
+                    "Native integrated gameplay probe saved successfully"
+                );
+                if !fixture.gameplay_frames.is_empty() {
+                    let sum: f64 = fixture.gameplay_frames.iter().sum();
+                    fixture.gameplay_frames.sort_unstable_by(f64::total_cmp);
+                    let count = fixture.gameplay_frames.len();
+                    tracing::info!(
+                        sample_frames = count,
+                        sample_seconds = sum,
+                        average_fps = count as f64 / sum,
+                        minimum_fps = 1.0 / fixture.gameplay_frames[count - 1],
+                        p99_ms =
+                            1000.0 * fixture.gameplay_frames[(count * 99 / 100).min(count - 1)],
+                        previews_pending = world
+                            .resource::<terra_render::RenderBlockPreviews>()
+                            .pending,
+                        "Native integrated gameplay probe frame sample (after 10s gameplay warmup)"
+                    );
+                }
+            }
             tracing::info!(
                 streams,
                 "Native loading reveal passed: 100% hold, smooth reveal, world audio only after completion"
@@ -191,6 +291,14 @@ fn diagnostics(world: &mut World, elapsed: Duration) {
         .values()
         .filter(|section| section.mesh.is_some())
         .count();
+    let visibility = world.get_resource::<terra_render::TerrainVisibility>();
+    let hidden_unconsumed_meshes = chunks
+        .loaded
+        .iter()
+        .filter(|(position, section)| {
+            section.mesh.is_some() && visibility.is_some_and(|v| v.hidden(**position))
+        })
+        .count();
     tracing::info!(
         elapsed_seconds = elapsed.as_secs(),
         page = ?menu.page,
@@ -205,6 +313,7 @@ fn diagnostics(world: &mut World, elapsed: Duration) {
         loaded = chunks.loaded.len(),
         missing,
         unconsumed_meshes,
+        hidden_unconsumed_meshes,
         terrain_ready = render.ready,
         terrain_jobs = render.pending_jobs,
         terrain_pending_columns = render.pending_columns.len(),

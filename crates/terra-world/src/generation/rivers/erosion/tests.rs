@@ -6,6 +6,7 @@ fn terrain(seed: u64, revision: u8) -> TerraGenerator {
     TerraGenerator::new(WorldConfig {
         seed: WorldSeed(seed),
         river_terrain_revision: revision,
+        landscape_revision: 2,
         rivers: true,
         caves: false,
         trees: false,
@@ -70,6 +71,9 @@ fn plunge_openings_are_wide_asymmetric_local_and_preserve_the_hydraulic_lip() {
         phase: 0.3,
         branch: None,
         brook: false,
+        step: STEP,
+        frame: DrainageFrame::WORLD,
+        lake: None,
     };
     let edge = STEP * 0.5;
     assert_eq!(path.fall_erosion(0, edge + 2.0, 0.0, 5.0), 1.0);

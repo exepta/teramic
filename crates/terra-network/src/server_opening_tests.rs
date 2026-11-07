@@ -35,6 +35,249 @@ fn resident_opening_toggle(
     )
 }
 
+fn resident_door_tick(
+    app: &mut App,
+    doors: &mut super::super::creatures::ResidentDoors,
+    now: f32,
+    requests: std::collections::BTreeSet<[i64; 3]>,
+    population: &terra_core::creatures::CreaturePopulation,
+    players: &[[f64; 3]],
+) {
+    let mut system = SystemState::<(
+        ResMut<ChunkStore>,
+        ResMut<EditJournal>,
+        Res<terra_core::block_properties::BlockPropertiesCatalog>,
+    )>::new(app.world_mut());
+    let (mut chunks, mut journal, properties) = system.get_mut(app.world_mut()).unwrap();
+    doors.update(
+        now,
+        &requests,
+        super::super::creatures::ResidentDoorWorld {
+            chunks: &mut chunks,
+            journal: &mut journal,
+            properties: &properties,
+            population,
+            players,
+        },
+    );
+}
+
+#[test]
+fn resident_doors_close_both_halves_after_passage_and_wait_for_players_and_creatures() {
+    use terra_core::creatures::{Creature, CreatureKind, CreatureNeeds, CreaturePopulation};
+    for facing in 0_u8..4 {
+        let mut app = app();
+        let anchor = [-16, 15, 8];
+        opening_floor(&mut app, anchor);
+        edit(
+            &mut app,
+            anchor,
+            0,
+            65,
+            f32::from(facing) * std::f32::consts::FRAC_PI_2,
+        )
+        .unwrap();
+        let initial = app
+            .world()
+            .resource::<EditJournal>()
+            .object_state(anchor)
+            .unwrap();
+        let peer = initial.peer.unwrap();
+        let mut doors = super::super::creatures::ResidentDoors::default();
+        let mut population = CreaturePopulation::default();
+        resident_door_tick(&mut app, &mut doors, 0.0, [anchor].into(), &population, &[]);
+        for cell in [anchor, peer] {
+            assert_eq!(
+                app.world()
+                    .resource::<EditJournal>()
+                    .object_state(cell)
+                    .unwrap()
+                    .facing,
+                initial.facing ^ 4
+            );
+        }
+        resident_door_tick(&mut app, &mut doors, 2.9, [].into(), &population, &[]);
+        assert_eq!(
+            app.world()
+                .resource::<EditJournal>()
+                .object_state(anchor)
+                .unwrap()
+                .facing,
+            initial.facing ^ 4
+        );
+        let position = [
+            anchor[0] as f64 + 0.5,
+            anchor[1] as f64,
+            anchor[2] as f64 + 0.5,
+        ];
+        resident_door_tick(
+            &mut app,
+            &mut doors,
+            3.1,
+            [].into(),
+            &population,
+            &[position],
+        );
+        population.animals.insert(
+            1,
+            Creature {
+                id: 1,
+                kind: CreatureKind::Villager,
+                home: [0; 2],
+                position,
+                velocity: [0.0; 3],
+                yaw: 0.0,
+                health: CreatureKind::Villager.health(),
+                behavior: terra_core::creatures::CreatureBehavior::Rest,
+                timer: 0.0,
+                age: 0.0,
+                variant: 0,
+                needs: CreatureNeeds::full(CreatureKind::Villager),
+            },
+        );
+        resident_door_tick(&mut app, &mut doors, 6.2, [].into(), &population, &[]);
+        assert_eq!(
+            app.world()
+                .resource::<EditJournal>()
+                .object_state(anchor)
+                .unwrap()
+                .facing,
+            initial.facing ^ 4
+        );
+        population.animals.get_mut(&1).unwrap().health = 0.0;
+        resident_door_tick(&mut app, &mut doors, 9.3, [].into(), &population, &[]);
+        for cell in [anchor, peer] {
+            assert_eq!(
+                app.world()
+                    .resource::<EditJournal>()
+                    .object_state(cell)
+                    .unwrap()
+                    .facing,
+                initial.facing
+            );
+        }
+    }
+}
+
+#[test]
+fn resident_door_controller_preserves_manual_openings_and_player_closing() {
+    let mut app = app();
+    let anchor = [4, 15, 8];
+    opening_floor(&mut app, anchor);
+    edit(&mut app, anchor, 0, 65, 0.0).unwrap();
+    let initial = app
+        .world()
+        .resource::<EditJournal>()
+        .object_state(anchor)
+        .unwrap();
+    let mut doors = super::super::creatures::ResidentDoors::default();
+    let population = terra_core::creatures::CreaturePopulation::default();
+    assert!(resident_opening_toggle(&mut app, anchor, 65, initial.facing, &[]).unwrap());
+    resident_door_tick(&mut app, &mut doors, 20.0, [].into(), &population, &[]);
+    assert_eq!(
+        app.world()
+            .resource::<EditJournal>()
+            .object_state(anchor)
+            .unwrap()
+            .facing,
+        initial.facing ^ 4
+    );
+    assert!(resident_opening_toggle(&mut app, anchor, 65, initial.facing ^ 4, &[]).unwrap());
+    resident_door_tick(
+        &mut app,
+        &mut doors,
+        21.0,
+        [anchor].into(),
+        &population,
+        &[],
+    );
+    assert!(resident_opening_toggle(&mut app, anchor, 65, initial.facing ^ 4, &[]).unwrap());
+    resident_door_tick(&mut app, &mut doors, 30.0, [].into(), &population, &[]);
+    assert_eq!(
+        app.world()
+            .resource::<EditJournal>()
+            .object_state(anchor)
+            .unwrap()
+            .facing,
+        initial.facing
+    );
+}
+
+#[test]
+fn resident_auto_close_waits_for_unloaded_halves_and_retries_atomically() {
+    for unload_anchor in [false, true] {
+        let mut app = app();
+        let anchor = [4, 15, 8];
+        opening_floor(&mut app, anchor);
+        edit(&mut app, anchor, 0, 65, 0.0).unwrap();
+        let initial = app
+            .world()
+            .resource::<EditJournal>()
+            .object_state(anchor)
+            .unwrap();
+        let peer = initial.peer.unwrap();
+        let mut doors = super::super::creatures::ResidentDoors::default();
+        let population = terra_core::creatures::CreaturePopulation::default();
+        resident_door_tick(&mut app, &mut doors, 0.0, [anchor].into(), &population, &[]);
+        let peer_section = terra_voxel::global_to_section(peer).0;
+        let unloaded = app
+            .world_mut()
+            .resource_mut::<ChunkStore>()
+            .loaded
+            .remove(&peer_section)
+            .unwrap();
+        let anchor_section = terra_voxel::global_to_section(anchor).0;
+        let unloaded_anchor = unload_anchor.then(|| {
+            app.world_mut()
+                .resource_mut::<ChunkStore>()
+                .loaded
+                .remove(&anchor_section)
+                .unwrap()
+        });
+        let states = [anchor, peer].map(|p| {
+            app.world()
+                .resource::<EditJournal>()
+                .object_state(p)
+                .unwrap()
+        });
+        let revisions = [anchor, peer].map(|p| {
+            app.world()
+                .resource::<EditJournal>()
+                .revision(terra_voxel::global_to_section(p).0)
+        });
+        resident_door_tick(&mut app, &mut doors, 10.0, [].into(), &population, &[]);
+        for (i, p) in [anchor, peer].into_iter().enumerate() {
+            let journal = app.world().resource::<EditJournal>();
+            assert_eq!(journal.object_state(p), Some(states[i]));
+            assert_eq!(
+                journal.revision(terra_voxel::global_to_section(p).0),
+                revisions[i]
+            );
+        }
+        app.world_mut()
+            .resource_mut::<ChunkStore>()
+            .loaded
+            .insert(peer_section, unloaded);
+        if let Some(section) = unloaded_anchor {
+            app.world_mut()
+                .resource_mut::<ChunkStore>()
+                .loaded
+                .insert(anchor_section, section);
+        }
+        resident_door_tick(&mut app, &mut doors, 11.0, [].into(), &population, &[]);
+        for p in [anchor, peer] {
+            assert_eq!(
+                app.world()
+                    .resource::<EditJournal>()
+                    .object_state(p)
+                    .unwrap()
+                    .facing,
+                initial.facing
+            );
+        }
+    }
+}
+
 #[test]
 fn resident_opening_keeps_both_halves_unchanged_when_a_player_blocks_the_hinged_leaf() {
     for facing in 0_u8..4 {
@@ -143,6 +386,211 @@ fn opening_floor(app: &mut App, position: [i64; 3]) {
         .data
         .set_block(local, 3)
         .unwrap();
+}
+
+fn opening_cell(app: &mut App, position: [i64; 3], material: u16) {
+    let (owner, local) = terra_voxel::global_to_section(position);
+    let mut chunks = app.world_mut().resource_mut::<ChunkStore>();
+    chunks
+        .loaded
+        .entry(owner)
+        .or_insert_with(|| terra_world::streaming::LoadedSection {
+            data: terra_voxel::BlockSection::empty(owner).unwrap(),
+            mesh: None,
+            mesh_epoch: 0,
+            water_epoch: 0,
+            water: None,
+            props: Vec::new(),
+        })
+        .data
+        .set_block(local, material)
+        .unwrap();
+}
+
+fn remote_extended_opening_fixture(app: &mut App, material: u16) {
+    assert!(edit(app, [24, 4, 8], 0, material, 0.0).unwrap());
+    assert!(
+        app.world()
+            .resource::<EditJournal>()
+            .has_extended_kinetics()
+    );
+}
+
+#[test]
+fn remote_extended_parts_do_not_reject_doors_or_connected_windows_at_negative_borders() {
+    for extended in [147, 149, 152] {
+        for material in (65..=70).chain([139, 140]) {
+            for facing in 0_u8..4 {
+                let mut app = app();
+                remote_extended_opening_fixture(&mut app, extended);
+                let position = [-16, 15, -16];
+                opening_floor(&mut app, position);
+                let yaw = f32::from(facing) * std::f32::consts::FRAC_PI_2;
+                assert!(edit(&mut app, position, 0, material, yaw).unwrap());
+                let state = app
+                    .world()
+                    .resource::<EditJournal>()
+                    .object_state(position)
+                    .unwrap();
+                assert_eq!(state.facing, facing);
+                if terra_world::objects::is_door(material) {
+                    let upper = [position[0], position[1] + 1, position[2]];
+                    let paired = app
+                        .world()
+                        .resource::<EditJournal>()
+                        .object_state(upper)
+                        .unwrap();
+                    assert!(paired.secondary);
+                    assert_eq!(paired.facing, facing);
+                    assert_eq!(paired.peer, Some(position));
+                } else {
+                    let group = terra_world::objects::windows::Group {
+                        anchor: position,
+                        material,
+                        facing,
+                        width: 2,
+                        height: 2,
+                    };
+                    for cell in group.cells().filter(|p| *p != position) {
+                        if cell[1] == position[1] {
+                            opening_floor(&mut app, cell);
+                        } else {
+                            opening_cell(&mut app, cell, 0);
+                        }
+                        assert!(
+                            edit(&mut app, cell, 0, material, yaw).unwrap(),
+                            "material{material} facing{facing} extended{extended} at{cell:?}"
+                        );
+                    }
+                    let chunks = app.world().resource::<ChunkStore>();
+                    let journal = app.world().resource::<EditJournal>();
+                    let connected =
+                        terra_world::objects::windows::group(position, material, facing, |p| {
+                            Some((chunks.block_at(p)?, journal.object_state(p)?.facing))
+                        });
+                    assert_eq!((connected.width, connected.height), (2, 2));
+                }
+                assert!(opening_toggle(&mut app, position, material, facing).unwrap());
+                assert!(opening_toggle(&mut app, position, material, facing + 4).unwrap());
+            }
+        }
+    }
+}
+
+#[test]
+fn remote_extended_parts_preserve_wall_window_and_snow_floor_door_placement() {
+    for material in (65..=70).chain([139, 140]) {
+        for floor in [1, 2, 3, 5, 98] {
+            let mut app = app();
+            remote_extended_opening_fixture(&mut app, 147);
+            let position = [3, 4, 8];
+            opening_floor(&mut app, position);
+            opening_cell(&mut app, [3, 3, 8], floor);
+            opening_cell(&mut app, [3, 2, 8], 3);
+            if terra_world::objects::is_window(material) {
+                opening_cell(&mut app, [3, 3, 8], 0);
+                opening_cell(&mut app, [2, 4, 8], floor);
+            }
+            assert!(edit(&mut app, position, 0, material, 0.0).unwrap());
+            assert_eq!(
+                app.world().resource::<ChunkStore>().block_at(position),
+                Some(material)
+            );
+            assert!(
+                app.world()
+                    .resource::<EditJournal>()
+                    .object_state(position)
+                    .is_some()
+            );
+        }
+    }
+}
+
+#[test]
+fn connected_window_ownership_does_not_ignore_a_foreign_overhanging_gear() {
+    let mut app = app();
+    let first = [2, 1, 8];
+    let second = [3, 1, 8];
+    assert!(edit(&mut app, first, 0, 68, 0.0).unwrap());
+    assert!(edit(&mut app, [4, 1, 8], 0, 149, std::f32::consts::FRAC_PI_2).unwrap());
+    let owner = terra_voxel::global_to_section(first).0;
+    let before = app.world().resource::<EditJournal>().section_delta(owner);
+    assert!(edit(&mut app, second, 0, 68, 0.0).is_err());
+    assert_eq!(
+        app.world().resource::<EditJournal>().section_delta(owner),
+        before
+    );
+    assert_eq!(
+        app.world().resource::<ChunkStore>().block_at(second),
+        Some(0)
+    );
+}
+
+#[test]
+fn authoritative_creative_commands_place_doors_and_connected_windows_with_remote_machinery() {
+    for material in (65..=70).chain([139, 140]) {
+        let mut app = app();
+        remote_extended_opening_fixture(&mut app, 147);
+        let position = [2, 1, 8];
+        assert_eq!(
+            creative_placement(
+                &mut app,
+                position,
+                material,
+                terra_core::ItemKind::Block(material)
+            ),
+            EditOutcome::Applied,
+            "first opening {material}"
+        );
+        assert_eq!(
+            app.world().resource::<ChunkStore>().block_at(position),
+            Some(material)
+        );
+        let state = app
+            .world()
+            .resource::<EditJournal>()
+            .object_state(position)
+            .expect("Authoritative placement must create renderable opening metadata");
+        assert!(state.valid_for(position, material));
+        assert!(!state.secondary);
+        if terra_world::objects::is_door(material) {
+            let upper = [position[0], position[1] + 1, position[2]];
+            assert_eq!(state.peer, Some(upper));
+            assert_eq!(
+                app.world().resource::<ChunkStore>().block_at(upper),
+                Some(material)
+            );
+            assert_eq!(
+                app.world().resource::<EditJournal>().object_state(upper),
+                Some(BlockObjectState {
+                    peer: Some(position),
+                    secondary: true,
+                    ..state
+                })
+            );
+        }
+        if terra_world::objects::is_window(material) {
+            let second = [3, 1, 8];
+            assert_eq!(
+                creative_placement(
+                    &mut app,
+                    second,
+                    material,
+                    terra_core::ItemKind::Block(material)
+                ),
+                EditOutcome::Applied,
+                "connected window {material}"
+            );
+            let chunks = app.world().resource::<ChunkStore>();
+            let journal = app.world().resource::<EditJournal>();
+            assert_eq!(journal.object_state(second), Some(state));
+            let group =
+                terra_world::objects::windows::group(position, material, state.facing, |p| {
+                    Some((chunks.block_at(p)?, journal.object_state(p)?.facing))
+                });
+            assert_eq!((group.width, group.height), (2, 1));
+        }
+    }
 }
 
 #[test]
@@ -560,5 +1008,408 @@ fn a_third_chimney_connection_is_rejected_without_changing_existing_ports() {
             .resource::<EditJournal>()
             .object_state([8, 4, 8])
             .is_none()
+    );
+}
+
+fn double_door_fixture(
+    app: &mut App,
+    material: u16,
+    facing: u8,
+) -> terra_world::objects::doors::Group {
+    let layout = terra_world::objects::windows::Group {
+        anchor: [-1, 15, 8],
+        material,
+        facing,
+        width: 2,
+        height: 2,
+    };
+    for cell in layout.cells().take(2) {
+        opening_floor(app, cell);
+        assert!(
+            edit(
+                app,
+                cell,
+                0,
+                material,
+                f32::from(facing) * std::f32::consts::FRAC_PI_2
+            )
+            .unwrap()
+        );
+    }
+    let journal = app.world().resource::<EditJournal>();
+    let chunks = app.world().resource::<ChunkStore>();
+    let group = terra_world::objects::doors::group(
+        layout.anchor,
+        material,
+        journal.object_state(layout.anchor).unwrap(),
+        |p| Some((chunks.block_at(p)?, journal.object_state(p)?)),
+    )
+    .unwrap();
+    assert_eq!(group.width, 2);
+    group
+}
+
+#[test]
+fn double_doors_toggle_from_any_of_four_cells_and_restore_existing_replica_states() {
+    for material in [65, 66, 67, 139] {
+        for facing in 0..4 {
+            let mut app = app();
+            let group = double_door_fixture(&mut app, material, facing);
+            for clicked in group.cells() {
+                assert!(opening_toggle(&mut app, clicked, material, facing).unwrap());
+                let journal = app.world().resource::<EditJournal>();
+                assert!(
+                    group
+                        .cells()
+                        .all(|p| journal.object_state(p).unwrap().facing == facing + 4)
+                );
+                let mut replica = EditJournal::default();
+                let mut replica_chunks = ChunkStore::default();
+                let sections: std::collections::BTreeSet<_> = group
+                    .cells()
+                    .map(|p| terra_voxel::global_to_section(p).0)
+                    .collect();
+                for section in sections {
+                    replica_chunks
+                        .apply_confirmed_delta(&mut replica, journal.section_delta(section))
+                        .unwrap();
+                }
+                for p in group.cells() {
+                    let actual = terra_world::objects::doors::group(
+                        p,
+                        material,
+                        replica.object_state(p).unwrap(),
+                        |q| Some((replica.block(q)?, replica.object_state(q)?)),
+                    )
+                    .unwrap();
+                    assert_eq!(actual, group.with_open(true));
+                }
+                assert!(opening_toggle(&mut app, clicked, material, facing + 4).unwrap());
+            }
+        }
+    }
+}
+
+#[test]
+fn double_door_second_leaf_occupant_missing_half_or_overflow_leaves_all_four_unchanged() {
+    for fault in ["player", "unloaded", "overflow"] {
+        let mut app = app();
+        let group = double_door_fixture(&mut app, 65, 0);
+        let cells = group.cells().collect::<Vec<_>>();
+        if fault == "unloaded" {
+            app.world_mut()
+                .resource_mut::<ChunkStore>()
+                .loaded
+                .remove(&terra_voxel::global_to_section(cells[3]).0);
+        } else if fault == "overflow" {
+            let mut journal = app.world_mut().resource_mut::<EditJournal>();
+            let mut delta = journal.section_delta(terra_voxel::global_to_section(cells[3]).0);
+            delta.revision = u64::MAX;
+            journal.import_delta(delta).unwrap();
+        }
+        let before = cells
+            .iter()
+            .map(|p| app.world().resource::<EditJournal>().object_state(*p))
+            .collect::<Vec<_>>();
+        let revisions = cells
+            .iter()
+            .map(|p| {
+                app.world()
+                    .resource::<EditJournal>()
+                    .revision(terra_voxel::global_to_section(*p).0)
+            })
+            .collect::<Vec<_>>();
+        let occupant = group.with_open(true).world_box(
+            terra_world::objects::doors::pieces()
+                .into_iter()
+                .find(|p| p.solid && p.leaf == Some(1))
+                .unwrap(),
+        );
+        let players = if fault == "player" {
+            vec![std::array::from_fn(|a| {
+                (occupant.minimum[a] + occupant.maximum[a]) * 0.5
+            })]
+        } else {
+            Vec::new()
+        };
+        assert!(
+            resident_opening_toggle(&mut app, group.anchor, 65, 0, &players).is_err(),
+            "fault {fault}"
+        );
+        let journal = app.world().resource::<EditJournal>();
+        assert_eq!(
+            cells
+                .iter()
+                .map(|p| journal.object_state(*p))
+                .collect::<Vec<_>>(),
+            before
+        );
+        assert_eq!(
+            cells
+                .iter()
+                .map(|p| journal.revision(terra_voxel::global_to_section(*p).0))
+                .collect::<Vec<_>>(),
+            revisions
+        );
+    }
+}
+
+#[test]
+fn mining_one_double_door_leaf_removes_only_its_vertical_pair_and_preflights_staged_revision() {
+    let mut app = app();
+    let group = double_door_fixture(&mut app, 65, 0);
+    let cells = group.cells().collect::<Vec<_>>();
+    assert!(edit(&mut app, cells[3], 65, 0, 0.0).unwrap());
+    for p in [cells[1], cells[3]] {
+        assert_eq!(app.world().resource::<ChunkStore>().block_at(p), Some(0));
+    }
+    for p in [cells[0], cells[2]] {
+        assert_eq!(app.world().resource::<ChunkStore>().block_at(p), Some(65));
+    }
+    let staged = {
+        let mut system = SystemState::<ControlWorld>::new(app.world_mut());
+        let world = system.get_mut(app.world_mut()).unwrap();
+        plan(
+            EditCommand {
+                request: 0,
+                revision: 0,
+                look: [0.0; 2],
+                source: None,
+                action: EditAction::Block {
+                    position: cells[0],
+                    expected: 65,
+                    material: 0,
+                },
+            },
+            &world,
+        )
+        .unwrap()
+        .unwrap()
+    };
+    {
+        let mut journal = app.world_mut().resource_mut::<EditJournal>();
+        let mut delta = journal.section_delta(terra_voxel::global_to_section(cells[2]).0);
+        delta.revision = u64::MAX;
+        journal.import_delta(delta).unwrap();
+    }
+    let mut system = SystemState::<ControlWorld>::new(app.world_mut());
+    let mut world = system.get_mut(app.world_mut()).unwrap();
+    assert!(commit(staged, &mut world).is_err());
+    for p in [cells[0], cells[2]] {
+        assert_eq!(world.chunks.block_at(p), Some(65));
+    }
+}
+
+#[test]
+fn residents_manage_both_double_door_leaves_and_preserve_any_manual_override() {
+    let mut app = app();
+    let group = double_door_fixture(&mut app, 65, 0);
+    let cells = group.cells().collect::<Vec<_>>();
+    let mut doors = super::super::creatures::ResidentDoors::default();
+    let population = terra_core::creatures::CreaturePopulation::default();
+    resident_door_tick(
+        &mut app,
+        &mut doors,
+        0.0,
+        [cells[3]].into(),
+        &population,
+        &[],
+    );
+    assert!(cells.iter().all(|p| {
+        app.world()
+            .resource::<EditJournal>()
+            .object_state(*p)
+            .unwrap()
+            .facing
+            == 4
+    }));
+    let second_center = [
+        cells[1][0] as f64 + 2.0,
+        cells[1][1] as f64 + 1.0,
+        cells[1][2] as f64 + 0.5,
+    ];
+    resident_door_tick(
+        &mut app,
+        &mut doors,
+        4.0,
+        Default::default(),
+        &population,
+        &[second_center],
+    );
+    assert!(cells.iter().all(|p| {
+        app.world()
+            .resource::<EditJournal>()
+            .object_state(*p)
+            .unwrap()
+            .facing
+            == 4
+    }));
+    resident_door_tick(
+        &mut app,
+        &mut doors,
+        8.0,
+        Default::default(),
+        &population,
+        &[],
+    );
+    assert!(cells.iter().all(|p| {
+        app.world()
+            .resource::<EditJournal>()
+            .object_state(*p)
+            .unwrap()
+            .facing
+            == 0
+    }));
+    resident_door_tick(
+        &mut app,
+        &mut doors,
+        9.0,
+        [cells[1]].into(),
+        &population,
+        &[],
+    );
+    for p in [cells[1], cells[3]] {
+        let mut journal = app.world_mut().resource_mut::<EditJournal>();
+        let state = journal.object_state(p).unwrap();
+        journal
+            .set_object_state(p, Some(BlockObjectState { facing: 0, ..state }))
+            .unwrap();
+    }
+    resident_door_tick(
+        &mut app,
+        &mut doors,
+        13.0,
+        Default::default(),
+        &population,
+        &[],
+    );
+    for p in [cells[0], cells[2]] {
+        assert_eq!(
+            app.world()
+                .resource::<EditJournal>()
+                .object_state(p)
+                .unwrap()
+                .facing,
+            4
+        );
+    }
+    for p in [cells[1], cells[3]] {
+        assert_eq!(
+            app.world()
+                .resource::<EditJournal>()
+                .object_state(p)
+                .unwrap()
+                .facing,
+            0
+        );
+    }
+}
+
+#[test]
+fn double_door_toggle_requires_inventory_permission_on_the_other_leaf_chunk() {
+    use terra_core::kingdom::KingdomRole;
+    let mut app = app();
+    let group = double_door_fixture(&mut app, 65, 0);
+    let actor = terra_core::PlayerUuid::from_u128(991);
+    let owner = terra_core::PlayerUuid::from_u128(992);
+    let realm = {
+        let mut journal = app.world_mut().resource_mut::<EditJournal>();
+        let registry = &mut journal.gameplay_mut().kingdoms;
+        let id = registry.found(owner, [16, 15, 8], "Other leaf").unwrap();
+        registry
+            .claim(
+                id,
+                [0, 0],
+                terra_core::kingdom::ClaimKind::ProtectedBuilding,
+                terra_core::kingdom::ClaimActor::Player(owner),
+            )
+            .unwrap();
+        id
+    };
+    let now = Instant::now();
+    let peer = Peer {
+        farming: default(),
+        crank: default(),
+        chest_cursor: None,
+        creature_action_at: now,
+        container: None,
+        held_slot: None,
+        mode: Some(terra_core::GameMode::Creative),
+        generation: 0,
+        chat: default(),
+        uuid: actor,
+        gender: default(),
+        mining: None,
+        consumption: None,
+        gameplay_sent: None,
+        permissions: terra_core::PlayerPermissions {
+            build: true,
+            game_mode: false,
+            flight: false,
+            environment: false,
+        },
+        id: PlayerId(1),
+        transport_id: 1,
+        body: Entity::PLACEHOLDER,
+        accepted: true,
+        synced: true,
+        view: 1,
+        known: default(),
+        inputs: default(),
+        received: 0,
+        ack: 0,
+        look: [0.0; 2],
+        last_input: now,
+        joined: now,
+        last_request: 0,
+        edits_left: 20.0,
+        rate_time: now,
+        spawned: true,
+        restored_spawn: false,
+        restore_location: None,
+        last_movement: default(),
+        vitals: default(),
+        equipment: default(),
+        survival: default(),
+        stats_sent: None,
+    };
+    let action = EditAction::ToggleObject {
+        position: group.anchor,
+        expected: 65,
+        facing: 0,
+        closing: false,
+    };
+    {
+        let mut system = SystemState::<ControlWorld>::new(app.world_mut());
+        let world = system.get_mut(app.world_mut()).unwrap();
+        assert!(!super::super::kingdoms::edit_allowed(action, &peer, &world));
+        assert!(
+            group
+                .cells()
+                .all(|p| world.journal.object_state(p).unwrap().facing == 0)
+        );
+    }
+    {
+        let mut journal = app.world_mut().resource_mut::<EditJournal>();
+        let registry = &mut journal.gameplay_mut().kingdoms;
+        registry.join(actor, realm).unwrap();
+        registry
+            .set_role(owner, realm, actor, KingdomRole::Worker)
+            .unwrap();
+    }
+    let mut system = SystemState::<ControlWorld>::new(app.world_mut());
+    let mut world = system.get_mut(app.world_mut()).unwrap();
+    assert!(super::super::kingdoms::edit_allowed(action, &peer, &world));
+    assert!(!super::super::kingdoms::permission_allowed(
+        actor,
+        terra_core::kingdom::KingdomPermission::Build,
+        [0, 15, 8],
+        &world
+    ));
+    assert!(toggle(group.anchor, 65, 0, &mut world).unwrap());
+    assert!(
+        group
+            .cells()
+            .all(|p| world.journal.object_state(p).unwrap().facing == 4)
     );
 }

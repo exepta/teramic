@@ -1,0 +1,9 @@
+seed,weather,build,sample_seconds,average_fps,minimum_fps,p95_frame_ms,p99_frame_ms,frames_below_32_fps,resident_memory_kib,log
+86420,clear,before_icons,48,88.473861,15.759244,15.461822,18.158748,1,2466188,before-86420-compatible.log
+86420,clear,after_icons,48,87.292031,40.479601,15.148223,17.935567,0,2379440,after-86420.log
+99173,rain,before_icons,48,82.553530,40.963719,15.967901,18.856531,0,2249292,before-99173.log
+99173,rain,after_icons,48,83.797515,40.883658,16.019912,18.820025,0,2101672,after-99173.log
+86420,clear,before_tooltip,48,86.333010,36.930632,15.813418,18.812810,0,2473544,before-tooltip-86420.log
+99173,rain,before_tooltip,48,81.660288,34.829993,15.702936,18.274000,0,2116444,before-tooltip-99173.log
+86420,clear,after_tooltip,48,90.064988,37.492518,15.051155,17.277952,0,2450500,after-tooltip-86420.log
+99173,rain,after_tooltip,48,86.820678,44.663516,15.449633,17.473315,0,2150744,after-tooltip-99173.log

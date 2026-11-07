@@ -8,3 +8,26 @@ tick_rate = 60
 max_players = 32
 log_filter = "info"
 simulation_distance = 1
+
+# Dedicated-server policy overrides. Singleplayer uses its own saved world settings.
+[kingdom_rules]
+require_adjacent_claims = true
+kingdom_build_base = 32
+kingdom_build_per_level = 6
+kingdom_territory_base = 64
+kingdom_territory_per_level = 16
+outposts_per_level = 1
+outpost_build_base = 10
+outpost_build_per_level = 2
+outpost_territory_base = 22
+outpost_territory_per_level = 6
+realm_min_border_gap = 16
+village_requires_territory = true
+village_build_base = 10
+village_build_per_level = 2
+city_min_kingdom_level = 3
+city_requires_territory = true
+city_build_base = 20
+city_build_per_level = 4
+city_min_build_gap = 10
+settlements_follow_kingdom_level = false

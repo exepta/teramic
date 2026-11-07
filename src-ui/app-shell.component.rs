@@ -13,10 +13,19 @@ pub struct MenuIntent {
 fn menu_command(
     In(event): In<HtmlEvent>,
     elements: Query<&ElementId>,
+    parents: Query<&ChildOf>,
     store: Res<UiBindingStore>,
     mut actions: MessageWriter<MenuAction>,
 ) {
-    if let Ok(id) = elements.get(event.target) {
+    // Icons and captions can be the hit target; commands belong to the nearest
+    // enclosing control, including static category tabs.
+    let mut target = Some(event.target);
+    let mut id = None;
+    while let Some(entity) = target {
+        if let Ok(element) = elements.get(entity) { id = Some(element); break; }
+        target = parents.get(entity).ok().map(ChildOf::parent);
+    }
+    if let Some(id) = id {
         let command = if matches!(
             id.0.as_str(),
             "menu-action" | "world-card" | "server-card" | "row-binding" | "row-command"

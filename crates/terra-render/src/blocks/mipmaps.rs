@@ -4,6 +4,14 @@ use bevy::{
     render::render_resource::{TextureDimension, TextureFormat},
 };
 
+/// Authored atlases retain their glTF wrap/filter settings, including clamp edges.
+pub(crate) fn generate_authored(image: Image) -> Result<Image, String> {
+    let sampler = image.sampler.clone();
+    let mut image = generate(image)?;
+    image.sampler = sampler;
+    Ok(image)
+}
+
 /// PNG loaders provide one level. Build the shared terrain texture's remaining
 /// levels on a worker, filtering linear premultiplied color to avoid dark fringes.
 pub(crate) fn generate(mut image: Image) -> Result<Image, String> {
@@ -144,5 +152,41 @@ mod tests {
     fn transparent_texels_do_not_create_dark_color_fringes() {
         let output = generate(image(2, 1, vec![255, 255, 255, 255, 0, 0, 0, 0])).expect("mipmaps");
         assert_eq!(&output.data.expect("pixels")[8..], &[255, 255, 255, 128]);
+    }
+
+    #[test]
+    fn authored_near_clamp_and_coarse_repeat_preserve_samplers_and_identical_mip_pixels() {
+        for address_mode in [ImageAddressMode::ClampToEdge, ImageAddressMode::Repeat] {
+            for format in [TextureFormat::Rgba8UnormSrgb, TextureFormat::Rgba8Unorm] {
+                let mut source = image(
+                    2,
+                    2,
+                    vec![
+                        32, 64, 128, 255, 255, 128, 64, 255, 64, 32, 255, 255, 128, 255, 32, 255,
+                    ],
+                );
+                source.texture_descriptor.format = format;
+                source.sampler = ImageSampler::Descriptor(ImageSamplerDescriptor {
+                    address_mode_u: address_mode,
+                    address_mode_v: address_mode,
+                    lod_max_clamp: 7.0,
+                    ..ImageSamplerDescriptor::linear()
+                });
+                let sampler = source.sampler.clone();
+                let expected = generate(source.clone()).expect("baseline mipmaps");
+                let output = generate_authored(source).expect("authored mipmaps");
+                assert_eq!(output.sampler, sampler);
+                assert_eq!(output.data, expected.data);
+                assert_eq!(output.texture_descriptor.format, format);
+                assert_eq!(output.texture_descriptor.mip_level_count, 2);
+                assert_eq!(
+                    output.texture_descriptor.mip_level_count,
+                    expected.texture_descriptor.mip_level_count
+                );
+                let repeated = generate_authored(output.clone()).expect("completed mipmaps");
+                assert_eq!(repeated.data, output.data);
+                assert_eq!(repeated.sampler, sampler);
+            }
+        }
     }
 }

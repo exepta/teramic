@@ -1,4 +1,8 @@
 //! Short opt-in inspection of real stepped, cross-section fluid flow and meshes.
+#[path = "waterfall_smoke/partial.rs"]
+mod partial;
+#[path = "waterfall_smoke/pipe_air.rs"]
+mod pipe_air;
 use bevy::{
     app::AppExit,
     camera::primitives::Aabb,
@@ -34,6 +38,14 @@ struct Fixture {
 
 pub(crate) fn install(app: &mut App) {
     if !std::env::args().any(|arg| arg == "--smoke-test-waterfalls") {
+        return;
+    }
+    if std::env::var("TERRA_PIPE_AIR_SMOKE").as_deref() == Ok("1") {
+        pipe_air::install(app);
+        return;
+    }
+    if std::env::var("TERRA_PARTIAL_WATER_SMOKE").as_deref() == Ok("1") {
+        partial::install(app);
         return;
     }
     app.insert_resource(ControllerMode::Fly)

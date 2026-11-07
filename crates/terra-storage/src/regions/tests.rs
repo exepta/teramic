@@ -2,6 +2,91 @@ use super::*;
 use std::path::PathBuf;
 
 #[test]
+fn destroyed_filled_chest_contents_survive_real_save_reload_without_inventory_resurrection() {
+    use terra_core::{ItemKind, ItemStack};
+    use terra_world::streaming::{BlockEditRequest, ChunkStore, LoadedSection, commit_block_edit};
+    let root = root();
+    let world = WorldId(122);
+    let position = [-17, 15, -1];
+    let (owner, local) = terra_voxel::global_to_section(position);
+    let mut data = terra_voxel::BlockSection::empty(owner).unwrap();
+    data.set_block(local, 29).unwrap();
+    let mut chunks = ChunkStore::default();
+    chunks.loaded.insert(
+        owner,
+        LoadedSection {
+            data,
+            mesh: None,
+            mesh_epoch: 0,
+            water_epoch: 0,
+            water: None,
+            props: Vec::new(),
+        },
+    );
+    let contents = Inventory {
+        slots: vec![
+            ItemStack {
+                item: ItemKind::Stick,
+                count: 17,
+            },
+            ItemStack {
+                item: ItemKind::Block(3),
+                count: 42,
+            },
+        ],
+        ..Default::default()
+    };
+    let mut journal = EditJournal::default();
+    journal.record(position, 29).unwrap();
+    journal.set_container(position, contents.clone()).unwrap();
+    save_edits(&root, world, &journal).unwrap();
+    let mut loaded = load_edits(&root, world).unwrap();
+    assert_eq!(loaded.container_at(position), Some(&contents));
+    assert!(
+        commit_block_edit(
+            &mut chunks,
+            &mut loaded,
+            &BlockEditRequest {
+                position,
+                expected_material: 29,
+                material: 0,
+            },
+            &Default::default()
+        )
+        .unwrap()
+    );
+    let drops = loaded.gameplay().drops.clone();
+    assert_eq!(
+        drops.iter().map(|drop| drop.stack).collect::<Vec<_>>(),
+        contents.slots
+    );
+    save_edits(&root, world, &loaded).unwrap();
+    let mut removed = load_edits(&root, world).unwrap();
+    assert_eq!(removed.block(position), Some(0));
+    assert!(removed.container_at(position).is_none());
+    assert_eq!(removed.gameplay().drops, drops);
+    assert!(
+        commit_block_edit(
+            &mut chunks,
+            &mut removed,
+            &BlockEditRequest {
+                position,
+                expected_material: 0,
+                material: 29,
+            },
+            &Default::default()
+        )
+        .unwrap()
+    );
+    save_edits(&root, world, &removed).unwrap();
+    let replacement = load_edits(&root, world).unwrap();
+    assert_eq!(replacement.block(position), Some(29));
+    assert!(replacement.container_at(position).is_none());
+    assert_eq!(replacement.gameplay().drops, drops);
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
 fn generated_structure_containers_keep_empty_and_removed_markers_across_real_save_reload() {
     use terra_world::{SectionGenerator, TerraGenerator, generation::structures::StructureKind};
     let root = root();
@@ -41,8 +126,8 @@ fn generated_structure_containers_keep_empty_and_removed_markers_across_real_sav
     assert_eq!(loaded.container_at(chest), Some(&Inventory::default()));
     assert!(loaded.initialize_structures(&objects).unwrap().is_empty());
     assert_eq!(loaded.container_at(chest), Some(&Inventory::default()));
-    // server_furniture retires private contents before its block-edit commit;
-    // record() is deliberately not a destructive inventory transaction.
+    // Raw generation records are not gameplay removals. The streaming block
+    // commit performs the preflighted inventory-to-drop transfer for mining.
     assert_eq!(
         loaded.remove_container(chest).unwrap(),
         Some(Inventory::default())
@@ -152,6 +237,48 @@ fn player_locations_roundtrip_per_uuid_and_world_without_terrain_edits() {
 }
 
 #[test]
+fn legacy_extra_inventory_rows_survive_load_recovery_and_resave() {
+    let root = root();
+    let world = WorldId(124);
+    let player = PlayerUuid::new_v4();
+    let stack = terra_core::ItemStack {
+        item: terra_core::ItemKind::Block(3),
+        count: 128,
+    };
+    let mut journal = EditJournal::default();
+    journal.gameplay_mut().inventories.insert(
+        player,
+        Inventory {
+            slots: vec![stack; 45],
+            ..Default::default()
+        },
+    );
+    save_edits(&root, world, &journal).unwrap();
+    let mut loaded = load_edits(&root, world).unwrap();
+    assert_eq!(loaded.gameplay().inventories[&player].slots.len(), 45);
+    assert!(
+        loaded
+            .gameplay_mut()
+            .recover_player_inventory(player, [-4.0, 20.0, 8.0])
+    );
+    save_edits(&root, world, &loaded).unwrap();
+    let restored = load_edits(&root, world).unwrap();
+    assert_eq!(restored.gameplay().inventories[&player].slots.len(), 27);
+    assert_eq!(restored.gameplay().drops.len(), 18);
+    assert_eq!(
+        restored.gameplay().inventories[&player].count(stack.item)
+            + restored
+                .gameplay()
+                .drops
+                .iter()
+                .map(|drop| drop.stack.count)
+                .sum::<u16>(),
+        45 * 128
+    );
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
 fn legacy_player_payload_has_no_location_and_invalid_new_payload_is_rejected() {
     let player = PlayerUuid::new_v4();
     let data = PlayerData {
@@ -234,6 +361,118 @@ fn spanning_silk_geometry_identity_and_removal_survive_region_and_replica_reload
 
 fn current_farming(bytes: &[u8]) -> FarmingRegion {
     decode::<TamingRegion>(b"RGA3", bytes).unwrap().prior
+}
+
+#[test]
+fn starving_swimming_animals_remain_saveable_after_death_and_reload() {
+    use terra_core::creatures::{
+        Creature, CreatureBehavior, CreatureKind, CreatureNeeds, creature_id,
+    };
+    use terra_world::{
+        TerraGenerator,
+        creatures::Habitat,
+        streaming::{ChunkStore, LoadedSection},
+    };
+    let root = root();
+    let world = WorldId(1232);
+    let terrain = TerraGenerator::new(terra_core::WorldConfig {
+        id: world,
+        caves: false,
+        trees: false,
+        water: false,
+        rivers: false,
+        ..Default::default()
+    })
+    .unwrap();
+    let owner = terra_voxel::SectionPos::default();
+    let mut data = terra_voxel::BlockSection::empty(owner).unwrap();
+    for x in 0..16 {
+        for z in 0..16 {
+            data.set_block([x, 0, z], 3).unwrap();
+            for y in 1..9 {
+                data.set_block([x, y, z], 14).unwrap();
+            }
+        }
+    }
+    let mut chunks = ChunkStore::default();
+    chunks.loaded.insert(
+        owner,
+        LoadedSection {
+            data,
+            mesh: None,
+            mesh_epoch: 0,
+            water_epoch: 0,
+            water: None,
+            props: Vec::new(),
+        },
+    );
+    for (index, kind) in [
+        CreatureKind::Cow,
+        CreatureKind::Sheep,
+        CreatureKind::Pig,
+        CreatureKind::Horse,
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        let mut journal = EditJournal::default();
+        let id = creature_id([0, 0], 0).unwrap();
+        let mut animal = Creature {
+            id,
+            kind,
+            home: [0, 0],
+            position: [5.5, 2.0, 5.5],
+            velocity: [0.0; 3],
+            yaw: 0.0,
+            health: 0.001,
+            behavior: CreatureBehavior::Swim,
+            timer: 0.0,
+            age: 0.0,
+            variant: 0,
+            needs: CreatureNeeds {
+                food: 0.0,
+                ..CreatureNeeds::full(kind)
+            },
+        };
+        assert!(animal.valid());
+        terra_world::creatures::step(
+            &mut animal,
+            &Habitat {
+                terrain: &terrain,
+                chunks: &chunks,
+                journal: &journal,
+            },
+            &[],
+            0.1,
+        );
+        assert_eq!(animal.health, 0.0, "{kind:?}");
+        assert_eq!(animal.behavior, CreatureBehavior::Dead, "{kind:?}");
+        assert!(animal.valid(), "{animal:?}");
+        journal.gameplay_mut().creatures.explored.insert([0, 0]);
+        journal
+            .gameplay_mut()
+            .creatures
+            .animals
+            .insert(id, animal.clone());
+        assert!(journal.gameplay().valid());
+        let path = root.join(index.to_string());
+        save_edits(&path, world, &journal).unwrap();
+        let loaded = load_edits(&path, world).unwrap();
+        assert_eq!(loaded.gameplay(), journal.gameplay());
+        terra_world::creatures::step(
+            &mut animal,
+            &Habitat {
+                terrain: &terrain,
+                chunks: &chunks,
+                journal: &loaded,
+            },
+            &[],
+            0.1,
+        );
+        assert_eq!(loaded.gameplay().creatures.animals[&id], animal);
+        save_edits(&path, world, &loaded).unwrap();
+    }
+    fs::remove_dir_all(root).unwrap();
 }
 
 #[test]
@@ -1174,6 +1413,131 @@ fn crusher_private_slots_progress_and_horizontal_seam_pair_round_trip() {
 }
 
 #[test]
+fn single_cell_crusher_preserves_both_private_slots_progress_and_crank_after_reload() {
+    use terra_core::{ItemKind, ItemStack, MineralItem, crusher};
+    use terra_world::edits::BlockObjectState;
+    let root = root();
+    let world = WorldId(1062);
+    let anchor = [-1, 12, -1];
+    let crank = [0, 12, -1];
+    let mut journal = EditJournal::default();
+    journal.record(anchor, 99).unwrap();
+    journal
+        .set_object_state(anchor, Some(BlockObjectState::default()))
+        .unwrap();
+    let mut state = crusher::CrusherState::default();
+    let mut inventory = Inventory {
+        slots: vec![
+            ItemStack {
+                item: ItemKind::Mineral(MineralItem::RawIron),
+                count: 3,
+            },
+            ItemStack {
+                item: ItemKind::Dust(crusher::DustKind::Iron),
+                count: 2,
+            },
+        ],
+        ..Default::default()
+    };
+    crusher::advance(&mut state, &mut inventory, 0.75);
+    assert!(state.progress_seconds > 0.0);
+    journal
+        .commit_crusher(anchor, state.clone(), inventory.clone())
+        .unwrap();
+    journal.record(crank, 100).unwrap();
+    journal
+        .set_object_state(
+            crank,
+            Some(BlockObjectState {
+                peer: Some(anchor),
+                ..Default::default()
+            }),
+        )
+        .unwrap();
+    save_edits(&root, world, &journal).unwrap();
+    let mut loaded = load_edits(&root, world).unwrap();
+    assert!(loaded.valid_crusher(anchor));
+    assert_eq!(loaded.crank_anchor(crank), Some(anchor));
+    assert_eq!(loaded.object_state(anchor).unwrap().peer, None);
+    assert_eq!(loaded.container_at(anchor), Some(&inventory));
+    assert_eq!(loaded.crusher_at(anchor), Some(&state));
+    assert!(loaded.gameplay().valid());
+    let mut continued = inventory;
+    let mut continued_state = state;
+    crusher::advance(&mut continued_state, &mut continued, 1.0);
+    let mut actual = loaded.container_at(anchor).unwrap().clone();
+    let mut actual_state = loaded.crusher_at(anchor).unwrap().clone();
+    crusher::advance(&mut actual_state, &mut actual, 1.0);
+    loaded
+        .commit_crusher(anchor, actual_state.clone(), actual.clone())
+        .unwrap();
+    assert_eq!((actual_state, actual), (continued_state, continued));
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
+fn rgb_mixer_region_preserves_target_progress_private_slots_and_old_regions() {
+    use terra_core::{ItemKind, ItemStack, beds::DyeColor, mixer};
+    use terra_world::edits::BlockObjectState;
+    let root = root();
+    let world = WorldId(1570);
+    let position = [-17, 12, 15];
+    let mut journal = EditJournal::default();
+    journal.record(position, mixer::MATERIAL).unwrap();
+    journal
+        .set_object_state(position, Some(BlockObjectState::default()))
+        .unwrap();
+    let mut inventory = Inventory::default();
+    inventory.slots.resize(mixer::SLOTS, ItemStack::EMPTY);
+    let target = [24, 213, 176];
+    let recipe = mixer::recipe(target);
+    for (i, stack) in recipe.inputs.iter().enumerate() {
+        inventory.slots[i] = *stack;
+    }
+    inventory.slots[mixer::OUTPUT] = ItemStack {
+        item: ItemKind::Dye(DyeColor::Rgb(target)),
+        count: 3,
+    };
+    let state = mixer::MixerState {
+        target,
+        progress_seconds: 2.5,
+        completed: 9,
+    };
+    journal
+        .commit_mixer(position, state.clone(), inventory.clone())
+        .unwrap();
+    // An unrelated legacy-shaped region must still load in the same atomic snapshot.
+    journal.record([512, 3, 0], 1).unwrap();
+    save_edits(&root, world, &journal).unwrap();
+    let loaded = load_edits(&root, world).unwrap();
+    assert_eq!(loaded.mixer_at(position), Some(&state));
+    assert_eq!(loaded.container_at(position), Some(&inventory));
+    assert_eq!(loaded.block([512, 3, 0]), Some(1));
+    let mut actual_state = loaded.mixer_at(position).unwrap().clone();
+    let mut actual_inventory = loaded.container_at(position).unwrap().clone();
+    assert!(mixer::advance(
+        &mut actual_state,
+        &mut actual_inventory,
+        1.0
+    ));
+    assert!(mixer::advance(
+        &mut actual_state,
+        &mut actual_inventory,
+        0.5
+    ));
+    assert_eq!(
+        actual_inventory.slot(mixer::OUTPUT).unwrap().count,
+        3 + recipe.output.count
+    );
+    save_edits(&root, world, &loaded).unwrap();
+    assert_eq!(
+        load_edits(&root, world).unwrap().mixer_at(position),
+        Some(&state)
+    );
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
 fn rga0_furnaces_migrate_to_rga2_without_changing_prior_private_state() {
     let root = root();
     let world = WorldId(1061);
@@ -1538,6 +1902,64 @@ fn cave_segments_cuts_waterlogged_sources_and_falling_crystals_roundtrip_in_exis
 }
 
 #[test]
+fn natural_water_restoration_and_explicit_source_withdrawals_survive_real_region_reload() {
+    use terra_world::water::{FluidCell, fluid_cell_at};
+
+    let root = root();
+    let world = WorldId(801);
+    let terrain = terra_world::TerraGenerator::new(terra_core::WorldConfig {
+        id: world,
+        base_height: 4.0,
+        sea_level: 8.0,
+        hill_amplitude: 0.0,
+        mountain_amplitude: 0.0,
+        caves: false,
+        trees: false,
+        biomes: false,
+        rivers: false,
+        landscape_revision: 0,
+        structures_revision: 0,
+        ..Default::default()
+    })
+    .unwrap();
+    let restored = [-1, 7, -1];
+    let legacy_air_tombstone = [-513, 8, -17];
+    let withdrawn = [-514, 7, -17];
+    let mut journal = EditJournal::default();
+    journal.record(restored, 3).unwrap();
+    journal.record(restored, 0).unwrap();
+    journal.record(legacy_air_tombstone, 0).unwrap();
+    journal
+        .set_fluid(legacy_air_tombstone, FluidCell::default())
+        .unwrap();
+    journal.record(withdrawn, 0).unwrap();
+    journal.set_fluid(withdrawn, FluidCell::default()).unwrap();
+    save_edits(&root, world, &journal).unwrap();
+    let reloaded = load_edits(&root, world).unwrap();
+    assert_eq!(reloaded.block(restored), Some(0));
+    assert_eq!(reloaded.fluid(restored), None);
+    assert!(fluid_cell_at(&terrain, &reloaded, restored, 0).source);
+    assert_eq!(
+        reloaded.fluid(legacy_air_tombstone),
+        Some(FluidCell::default())
+    );
+    assert!(fluid_cell_at(&terrain, &reloaded, [-513, 7, -17], 0).source);
+    assert_eq!(reloaded.fluid(withdrawn), Some(FluidCell::default()));
+    assert_eq!(
+        fluid_cell_at(&terrain, &reloaded, withdrawn, 0),
+        FluidCell::default()
+    );
+    save_edits(&root, world, &reloaded).unwrap();
+    let second = load_edits(&root, world).unwrap();
+    assert!(fluid_cell_at(&terrain, &second, restored, 0).source);
+    assert_eq!(
+        fluid_cell_at(&terrain, &second, withdrawn, 0),
+        FluidCell::default()
+    );
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
 fn ice_edits_and_inventory_stacks_roundtrip_with_legacy_block_ids() {
     let root = root();
     let world = WorldId(790);
@@ -1575,7 +1997,11 @@ fn all_prop_kinds_items_and_removal_tombstones_persist_in_binary_regions() {
     let player = PlayerUuid::new_v4();
     let mut journal = EditJournal::default();
     let mut originals = Vec::new();
-    for (index, kind) in PropKind::ALL.into_iter().enumerate() {
+    for (index, kind) in ResourcePropKind::ALL
+        .into_iter()
+        .map(PropKind::from)
+        .enumerate()
+    {
         let x = index as i64 - 7;
         let support = [x, 4, 0];
         let mut prop = WorldProp {
@@ -1836,7 +2262,7 @@ fn idx2_calendar_upgrades_to_idx4_with_no_world_or_region_loss() {
     journal.record([1, 2, 3], 3).unwrap();
     journal.clock = Some(terra_core::WorldClock::default());
     save_edits(&root, world, &journal).unwrap();
-    let data = read_index(&root).unwrap();
+    let data = read_index(&root).unwrap().prior;
     fs::write(
         root.join(INDEX),
         encode(
@@ -2904,7 +3330,7 @@ fn old_index_upgrades_and_calendar_roundtrips_without_touching_regions() {
     let mut journal = EditJournal::default();
     journal.record([-20, 4, 1], 3).unwrap();
     save_edits(&root, WorldId(1), &journal).unwrap();
-    let index = read_index(&root).unwrap().index;
+    let index = read_index(&root).unwrap().prior.index;
     fs::write(root.join(INDEX), encode(b"INDX", &index).unwrap()).unwrap();
     let mut loaded = load_edits(&root, WorldId(1)).unwrap();
     assert!(loaded.clock.is_none());
@@ -2956,7 +3382,7 @@ fn weather_roundtrips_with_surface_snow_and_upgrades_previous_calendar_index() {
     let loaded = load_edits(&root, WorldId(1)).unwrap();
     assert_eq!(loaded.weather, Some(weather));
     assert_eq!(loaded.surface_condition([-17, 81, 15]).snow, 0.72);
-    let timed = read_index(&root).unwrap();
+    let timed = read_index(&root).unwrap().prior;
     fs::write(
         root.join(INDEX),
         encode(
@@ -2985,7 +3411,7 @@ fn weather_roundtrips_with_surface_snow_and_upgrades_previous_calendar_index() {
     let migrated = load_edits(&root, WorldId(1)).unwrap();
     assert_eq!(migrated.weather, Some(weather));
     assert_eq!(migrated.surface_condition([-17, 81, 15]).snow, 0.72);
-    let timed = read_index(&root).unwrap();
+    let timed = read_index(&root).unwrap().prior;
     fs::write(
         root.join(INDEX),
         encode(
@@ -2999,7 +3425,7 @@ fn weather_roundtrips_with_surface_snow_and_upgrades_previous_calendar_index() {
         .unwrap(),
     )
     .unwrap();
-    let previous = read_index(&root).unwrap();
+    let previous = read_index(&root).unwrap().prior;
     assert!(previous.weather.is_none());
     assert_eq!(previous.ecology_seconds, 123.0);
     assert_eq!(
@@ -3023,7 +3449,7 @@ fn weather_index5_migrates_and_index6_preserves_snow_and_shared_lightning() {
     weather.advance(8.0, 74);
     journal.weather = Some(weather);
     save_edits(&root, WorldId(1), &journal).unwrap();
-    let timed = read_index(&root).unwrap();
+    let timed = read_index(&root).unwrap().prior;
     fs::write(
         root.join(INDEX),
         encode(

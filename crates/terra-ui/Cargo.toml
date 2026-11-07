@@ -16,8 +16,8 @@ terra-voxel.workspace = true
 terra-player.workspace = true
 terra-network = { workspace = true, features = ["client"] }
 tilt-ui = { workspace = true, features = ["tilt-icons"] }
-tilt-ui-runtime.workspace = true
 serde.workspace = true
+serde_json.workspace = true
 
 [build-dependencies]
 tilt-ui-build.workspace = true

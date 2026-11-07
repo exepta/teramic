@@ -1,0 +1,32 @@
+Working directory: repository root.
+Build/link scratch: target/tmp/interface183 (avoids RAM-backed /tmp linker scratch).
+
+TMPDIR="$PWD/target/tmp/interface183" cargo build --workspace --locked -j1
+TMPDIR="$PWD/target/tmp/interface183" cargo test --workspace --locked -j1 -- --test-threads=4
+TMPDIR="$PWD/target/tmp/interface183" cargo test -p terra-ui --locked -j1 --lib -- --test-threads=4
+TMPDIR="$PWD/target/tmp/interface183" cargo clippy --workspace --all-targets --locked -j1 -- -D warnings
+cargo fmt --all -- --check
+git diff --check
+target/tmp/interface183/css-check src-ui/styles/common-surfaces-185.css
+target/tmp/interface183/css-check src-ui/styles/machines-185.css
+target/tmp/interface183/css-check src-ui/styles/recipes-185.css
+target/tmp/interface183/css-check src-ui/styles/debug-target-185.css
+
+Shared native environment:
+TERRA_CONFIG_DIR=/tmp/teramic180-ui-config
+TERRA_MENU_CONFIG_DIR=/tmp/teramic180-ui-config
+TERRA_COMPUTE_THREADS=16
+TERRA_NATIVE_OS_POINTER=1
+TERRA_CAPTURE_DIR="$PWD/tools/benchmarks/results/all-surfaces-recipes-debug-2026-11-03/native"
+
+Run separately with the shared environment (one native window at a time):
+TERRA_INVENTORY_REFERENCE_SMOKE=1 timeout 260 target/debug/terra-client --smoke-test-inventory
+TERRA_INVENTORY_REFERENCE_SMOKE=1 TERRA_SURFACES_SMOKE=1 timeout 360 target/debug/terra-client --smoke-test-inventory
+TERRA_INVENTORY_REFERENCE_SMOKE=1 TERRA_RECIPES_NARROW_SMOKE=1 timeout 210 target/debug/terra-client --smoke-test-inventory
+TERRA_MENU_REFERENCE_SMOKE=1 timeout 160 target/debug/terra-client --smoke-test-menu
+
+Surfaces are validated client-side ContainerSnapshot projections in a temporary
+integrated world. No real machine inventory or throughput is fabricated.
+Native pointer movement activates the game before E/F1 key verification.
+Recipe/catalog navigation and menu actions use OS events; no existing save is opened.
+Menu fixtures create private world manifests, then remove them. Add Server is canceled.

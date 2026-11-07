@@ -7,6 +7,7 @@ fn terrain(seed: u64, revision: u8) -> TerraGenerator {
         seed: WorldSeed(seed),
         structures_revision: revision,
         landscape_revision: 0,
+        sea_level: 8.0,
         geology_revision: 0,
         ocean_revision: 0,
         base_height: 16.0,
@@ -524,4 +525,116 @@ fn building_tree_clearance_queries_the_full_band_across_a_section_boundary() {
         "root is in the previous section and the site begins8m beyond its last cell"
     );
     assert!(!terrain.structure_clears_tree([110, 16, 176]));
+}
+
+#[test]
+fn per_kind_generation_switches_preserve_other_seeded_sites_in_every_contract() {
+    for revision in [1, 2, 5] {
+        let original = terrain(42042, revision);
+        let mut sites = vec![
+            find(&original, StructureKind::Village),
+            find(&original, StructureKind::Ruin),
+        ];
+        // Current mines need a real hillside. Flat terrain only has the
+        // revision-one descending-mine contract, covered separately below.
+        if revision == 1 {
+            sites.push(find(&original, StructureKind::Mine));
+        }
+        for disabled in [
+            StructureKind::Village,
+            StructureKind::Ruin,
+            StructureKind::Mine,
+        ] {
+            let mut config = original.config().clone();
+            match disabled {
+                StructureKind::Village | StructureKind::Kingdom | StructureKind::Outpost => {
+                    config.structures.villages = false
+                }
+                StructureKind::Ruin => config.structures.ruins = false,
+                StructureKind::Mine => config.structures.mines = false,
+            }
+            let filtered = TerraGenerator::new(config).unwrap();
+            for site in &sites {
+                let region = [site.summary.center[0], site.summary.center[2]]
+                    .map(|coordinate| coordinate.div_euclid(REGION_SIZE));
+                if site.summary.kind == disabled {
+                    assert!(
+                        filtered.planned_site(region).is_none(),
+                        "disabled {disabled:?} was generated"
+                    );
+                    assert!(filtered.structure_site(region).is_none());
+                    assert!(filtered.village_residents(region).is_empty());
+                } else {
+                    let unchanged = filtered.planned_site(region).unwrap();
+                    assert_eq!(unchanged.summary, site.summary);
+                    assert_eq!(unchanged.sections.len(), site.sections.len());
+                    for (position, patch) in &site.sections {
+                        assert_eq!(unchanged.sections[position].cells, patch.cells);
+                        assert_eq!(unchanged.sections[position].objects, patch.objects);
+                    }
+                }
+            }
+        }
+    }
+}
+
+#[test]
+fn all_structures_off_has_no_plans_objects_residents_or_stamped_voxels() {
+    let original = terrain(42042, 5);
+    let village = find(&original, StructureKind::Village);
+    let region = [village.summary.center[0], village.summary.center[2]]
+        .map(|coordinate| coordinate.div_euclid(REGION_SIZE));
+    let owner = global_to_section(village.summary.center).0;
+    let mut config = original.config().clone();
+    config.structures.set_all(false);
+    let disabled = TerraGenerator::new(config.clone()).unwrap();
+    assert!(disabled.structure_site(region).is_none());
+    assert!(disabled.village_residents(region).is_empty());
+    assert!(
+        disabled
+            .structures_for_column([owner.x, owner.z], 1)
+            .is_empty()
+    );
+    assert!(disabled.structure_block(village.summary.center).is_none());
+    let actual = SectionGenerator::new(disabled)
+        .build(owner, 0, &Default::default(), false)
+        .unwrap();
+    config.structures_revision = 0;
+    let expected = SectionGenerator::new(TerraGenerator::new(config).unwrap())
+        .build(owner, 0, &Default::default(), false)
+        .unwrap();
+    assert_eq!(actual.data, expected.data);
+    assert_eq!(actual.props, expected.props);
+}
+
+#[test]
+fn current_mountain_mines_honor_the_individual_generation_switch() {
+    for revision in [2, 5] {
+        let mut config = terrain(42042, revision).config().clone();
+        config.base_height = 72.0;
+        config.hill_amplitude = 180.0;
+        let original = TerraGenerator::new(config.clone()).unwrap();
+        let (region, mine) = (-5..=5)
+            .flat_map(|z| (-5..=5).map(move |x| [x, z]))
+            .filter_map(|region| original.planned_site(region).map(|site| (region, site)))
+            .find(|(_, site)| site.summary.kind == StructureKind::Mine)
+            .unwrap_or_else(|| panic!("revision {revision} needs a real mountainous mine fixture"));
+        config.structures.mines = false;
+        let filtered = TerraGenerator::new(config.clone()).unwrap();
+        assert!(filtered.planned_site(region).is_none());
+        assert!(filtered.structure_block(mine.summary.center).is_none());
+        // Disabling villages or ruins must leave this mine byte-for-byte intact.
+        config.structures.mines = true;
+        config.structures.villages = false;
+        config.structures.ruins = false;
+        let mine_only = TerraGenerator::new(config)
+            .unwrap()
+            .planned_site(region)
+            .unwrap();
+        assert_eq!(mine_only.summary, mine.summary);
+        for (position, patch) in &mine.sections {
+            assert_eq!(mine_only.sections[position].cells, patch.cells);
+            assert_eq!(mine_only.sections[position].objects, patch.objects);
+        }
+    }
 }

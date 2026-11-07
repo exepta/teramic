@@ -25,6 +25,21 @@
 .debug-divider { height: 2px; background-color: #47563f; margin: 7px 0; flex-shrink: 0; }
 .target-row { align-items: flex-start; margin-top: 2px; }
 .target-value { color: #e3c68a; }
+.terrain-profile { color: #e3c68a; font-size: 14px; margin-bottom: 3px; }
+.terrain-position, .terrain-slice, .terrain-extra { color: #aebba6; font-size: 11px; }
+.terrain-map-row { display: flex; align-items: center; gap: 12px; margin-top: 9px; margin-bottom: 5px; }
+.terrain-map { position: relative; width: 128px; height: 128px; flex-shrink: 0; }
+.terrain-surface { width: 128px; height: 128px; }
+.terrain-cross { position: absolute; left: 58px; top: 58px; width: 12px; height: 12px; color: #ffffff; }
+.terrain-current { display: flex; flex-direction: column; gap: 8px; min-width: 0; flex-grow: 1; }
+.terrain-layer { color: #c6df98; font-size: 12px; }
+.terrain-reading { color: #f1f2e6; font-size: 14px; }
+.terrain-scale { color: #aebba6; font-size: 10px; }
+.terrain-row { display: flex; justify-content: space-between; align-items: center; min-height: 22px; gap: 8px; }
+.terrain-label { width: 122px; flex-shrink: 0; color: #aebba6; font-size: 12px; }
+.terrain-value { flex-grow: 1; min-width: 0; text-align: right; font-size: 12px; }
+.terrain-selected { background-color: #324137; }
+.terrain-extra { margin-top: 7px; }
 .creature-overlay {
     z-index: 140;
     position: absolute;

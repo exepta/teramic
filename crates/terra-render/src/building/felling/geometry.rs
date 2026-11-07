@@ -156,6 +156,7 @@ pub(super) fn prepare(
                             detail_level: crate::meshing::DetailLevel::Middle,
                             terrain: None,
                             exposure: None,
+                            tints: Default::default(),
                             conditions: Default::default(),
                         });
                 let mut batches =
@@ -179,6 +180,7 @@ pub(super) fn prepare(
                     let offset = target.positions.len() as u32;
                     target.positions.extend(batch.positions);
                     target.normals.extend(batch.normals);
+                    target.append_tangents(offset as usize, batch.tangents.into_iter());
                     target.uvs.extend(batch.uvs);
                     target.colors.extend(batch.colors);
                     target
@@ -323,6 +325,7 @@ mod tests {
                 detail_level: crate::meshing::DetailLevel::Middle,
                 terrain: None,
                 exposure: None,
+                tints: Default::default(),
                 conditions: Default::default(),
             },
             protected: Box::new([false; 4096]),

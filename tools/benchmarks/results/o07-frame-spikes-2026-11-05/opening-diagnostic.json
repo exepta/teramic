@@ -1,0 +1,279 @@
+{
+  "classification": "Separate diagnostic trace with revised interval instrumentation; not part of paired steady-state matrix",
+  "evidence": "evidence/opening-trace.txt",
+  "hottest_frame_scope_groups": [
+    {
+      "calls": 2,
+      "interval_ms": 101.085759,
+      "max_individual_scope_ms": 100.327104,
+      "scope": "cpu.main_schedule_wall",
+      "stage": "Opening",
+      "summed_overlap_ms": 100.31166300000001,
+      "summed_total_scope_ms": 114.046169,
+      "window": "transition-frame"
+    },
+    {
+      "calls": 1,
+      "interval_ms": 101.085759,
+      "max_individual_scope_ms": 92.06091099999999,
+      "scope": "main.update",
+      "stage": "Opening",
+      "summed_overlap_ms": 92.06091099999999,
+      "summed_total_scope_ms": 92.06091099999999,
+      "window": "transition-frame"
+    },
+    {
+      "calls": 1,
+      "interval_ms": 101.085759,
+      "max_individual_scope_ms": 10.423726,
+      "scope": "ui.reactivity",
+      "stage": "Opening",
+      "summed_overlap_ms": 10.423726,
+      "summed_total_scope_ms": 10.423726,
+      "window": "transition-frame"
+    },
+    {
+      "calls": 1,
+      "interval_ms": 101.085759,
+      "max_individual_scope_ms": 6.811142,
+      "scope": "main.post_update",
+      "stage": "Opening",
+      "summed_overlap_ms": 6.811142,
+      "summed_total_scope_ms": 6.811142,
+      "window": "transition-frame"
+    },
+    {
+      "calls": 1,
+      "interval_ms": 101.085759,
+      "max_individual_scope_ms": 6.801831,
+      "scope": "cpu.render_schedule_wall",
+      "stage": "Opening",
+      "summed_overlap_ms": 6.801831,
+      "summed_total_scope_ms": 6.801831,
+      "window": "transition-frame"
+    },
+    {
+      "calls": 1,
+      "interval_ms": 101.085759,
+      "max_individual_scope_ms": 3.149056,
+      "scope": "render.execute",
+      "stage": "Opening",
+      "summed_overlap_ms": 3.149056,
+      "summed_total_scope_ms": 3.149056,
+      "window": "transition-frame"
+    },
+    {
+      "calls": 1,
+      "interval_ms": 101.085759,
+      "max_individual_scope_ms": 2.2121969999999997,
+      "scope": "render.graph_submit",
+      "stage": "Opening",
+      "summed_overlap_ms": 2.2121969999999997,
+      "summed_total_scope_ms": 2.2121969999999997,
+      "window": "transition-frame"
+    },
+    {
+      "calls": 1,
+      "interval_ms": 101.085759,
+      "max_individual_scope_ms": 1.49058,
+      "scope": "ui.layout",
+      "stage": "Opening",
+      "summed_overlap_ms": 1.49058,
+      "summed_total_scope_ms": 1.49058,
+      "window": "transition-frame"
+    },
+    {
+      "calls": 1,
+      "interval_ms": 101.085759,
+      "max_individual_scope_ms": 1.006821,
+      "scope": "render.bind_groups",
+      "stage": "Opening",
+      "summed_overlap_ms": 1.006821,
+      "summed_total_scope_ms": 1.006821,
+      "window": "transition-frame"
+    },
+    {
+      "calls": 1,
+      "interval_ms": 101.085759,
+      "max_individual_scope_ms": 0.9908899999999999,
+      "scope": "creatures.server_tick",
+      "stage": "Opening",
+      "summed_overlap_ms": 0.9908899999999999,
+      "summed_total_scope_ms": 0.9908899999999999,
+      "window": "transition-frame"
+    },
+    {
+      "calls": 1,
+      "interval_ms": 101.085759,
+      "max_individual_scope_ms": 0.96712,
+      "scope": "render.mesh_bind_groups",
+      "stage": "Opening",
+      "summed_overlap_ms": 0.96712,
+      "summed_total_scope_ms": 0.96712,
+      "window": "transition-frame"
+    },
+    {
+      "calls": 1,
+      "interval_ms": 101.085759,
+      "max_individual_scope_ms": 0.96187,
+      "scope": "render.preprocess_bind_groups",
+      "stage": "Opening",
+      "summed_overlap_ms": 0.96187,
+      "summed_total_scope_ms": 0.96187,
+      "window": "transition-frame"
+    },
+    {
+      "calls": 1,
+      "interval_ms": 101.085759,
+      "max_individual_scope_ms": 0.874738,
+      "scope": "render.preprocess_bind_groups.body",
+      "stage": "Opening",
+      "summed_overlap_ms": 0.874738,
+      "summed_total_scope_ms": 0.874738,
+      "window": "transition-frame"
+    },
+    {
+      "calls": 1,
+      "interval_ms": 101.085759,
+      "max_individual_scope_ms": 0.727345,
+      "scope": "main.fixed_loop",
+      "stage": "Opening",
+      "summed_overlap_ms": 0.727345,
+      "summed_total_scope_ms": 0.727345,
+      "window": "transition-frame"
+    },
+    {
+      "calls": 8,
+      "interval_ms": 101.085759,
+      "max_individual_scope_ms": 0.153193,
+      "scope": "collision.dispatch",
+      "stage": "Opening",
+      "summed_overlap_ms": 0.6901120000000001,
+      "summed_total_scope_ms": 0.6901120000000001,
+      "window": "transition-frame"
+    },
+    {
+      "calls": 1,
+      "interval_ms": 101.085759,
+      "max_individual_scope_ms": 0.688025,
+      "scope": "cpu.render_handoff_wall",
+      "stage": "Opening",
+      "summed_overlap_ms": 0.688025,
+      "summed_total_scope_ms": 0.688025,
+      "window": "transition-frame"
+    },
+    {
+      "calls": 1,
+      "interval_ms": 101.085759,
+      "max_individual_scope_ms": 0.613393,
+      "scope": "cpu.extract_wall",
+      "stage": "Opening",
+      "summed_overlap_ms": 0.613393,
+      "summed_total_scope_ms": 0.613393,
+      "window": "transition-frame"
+    },
+    {
+      "calls": 1,
+      "interval_ms": 101.085759,
+      "max_individual_scope_ms": 0.599433,
+      "scope": "render.camera_postprocess",
+      "stage": "Opening",
+      "summed_overlap_ms": 0.599433,
+      "summed_total_scope_ms": 0.599433,
+      "window": "transition-frame"
+    },
+    {
+      "calls": 1,
+      "interval_ms": 101.085759,
+      "max_individual_scope_ms": 0.452689,
+      "scope": "render.camera_mainpass",
+      "stage": "Opening",
+      "summed_overlap_ms": 0.452689,
+      "summed_total_scope_ms": 0.452689,
+      "window": "transition-frame"
+    },
+    {
+      "calls": 1,
+      "interval_ms": 101.085759,
+      "max_individual_scope_ms": 0.420278,
+      "scope": "render.resources",
+      "stage": "Opening",
+      "summed_overlap_ms": 0.420278,
+      "summed_total_scope_ms": 0.420278,
+      "window": "transition-frame"
+    },
+    {
+      "calls": 1,
+      "interval_ms": 101.085759,
+      "max_individual_scope_ms": 0.40045800000000004,
+      "scope": "render.shadow_bin_uploads.body",
+      "stage": "Opening",
+      "summed_overlap_ms": 0.40045800000000004,
+      "summed_total_scope_ms": 0.40045800000000004,
+      "window": "transition-frame"
+    },
+    {
+      "calls": 1,
+      "interval_ms": 101.085759,
+      "max_individual_scope_ms": 0.39125899999999997,
+      "scope": "render.camera_prepass",
+      "stage": "Opening",
+      "summed_overlap_ms": 0.39125899999999997,
+      "summed_total_scope_ms": 0.39125899999999997,
+      "window": "transition-frame"
+    },
+    {
+      "calls": 1,
+      "interval_ms": 101.085759,
+      "max_individual_scope_ms": 0.359128,
+      "scope": "main.pre_update",
+      "stage": "Opening",
+      "summed_overlap_ms": 0.359128,
+      "summed_total_scope_ms": 0.359128,
+      "window": "transition-frame"
+    },
+    {
+      "calls": 7,
+      "interval_ms": 101.085759,
+      "max_individual_scope_ms": 0.074922,
+      "scope": "character.step",
+      "stage": "Opening",
+      "summed_overlap_ms": 0.30658599999999997,
+      "summed_total_scope_ms": 0.30658599999999997,
+      "window": "transition-frame"
+    }
+  ],
+  "hottest_frame_window": [
+    {
+      "history_truncated": false,
+      "interval_ms": 101.085759,
+      "overlapping_closed_scopes": 291,
+      "ring_evictions": 368212,
+      "stage": "Opening",
+      "window": "transition-frame"
+    }
+  ],
+  "original_log_sha256": "a4f1685e45e10c3100219784bb31770ec9db18e7f833dee0999c0aa079aff1cf",
+  "paired_improvement_claimed": false,
+  "remaining_issue": "First-open long frame remains observed and is tracked separately as O08; the style-pass candidate is unproven.",
+  "transitions": [
+    {
+      "frames": 3,
+      "max_ms": 101.085759,
+      "median_ms": 21.968036,
+      "p95_ms": 101.085759,
+      "p99_ms": 101.085759,
+      "request_to_visible_ms": 143.749554,
+      "stage": "Opening"
+    },
+    {
+      "frames": 2,
+      "max_ms": 32.021765,
+      "median_ms": 14.257976000000001,
+      "p95_ms": 32.021765,
+      "p99_ms": 32.021765,
+      "request_to_visible_ms": 46.279741,
+      "stage": "Closing"
+    }
+  ]
+}

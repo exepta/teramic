@@ -1,0 +1,26 @@
+{
+  "id": "teramic::castle_arrow_slit",
+  "name": "Mauer mit Schiessscharte",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "block": 185
+    },
+    "count": 1
+  },
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "block": 174
+        },
+        "count": 3
+      },
+      {
+        "item": "stick",
+        "count": 1
+      }
+    ]
+  }
+}

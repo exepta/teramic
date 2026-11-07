@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "id": 145,
+  "name": "Stone Shaft",
+  "description": "An axial mechanical transmission. Matching shafts carry rotation through walls and between machines.",
+  "hardness": 2.5,
+  "resistance": 8,
+  "mining_level": 1,
+  "required_tool": "pickaxe",
+  "creative_category": "technic",
+  "render_kind": "custom_mesh",
+  "struct_block": true,
+  "model_layout": "scene",
+  "model": "models/stone_shaft.gltf",
+  "textures": {
+    "kinetic_shaft_stone": "textures/stone-strata-hd.png",
+    "kinetic_shaft_stone_edge": "textures/machinery-iron-hd.png",
+    "oak_frame": "textures/machinery-oak-hd.png",
+    "iron_frame": "textures/machinery-iron-hd.png"
+  },
+  "collision_boxes": [
+    {
+      "minimum": [
+        0,
+        0.368,
+        0.368
+      ],
+      "maximum": [
+        1,
+        0.632,
+        0.632
+      ]
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "biome": "cherry_forest",
+  "terrain": {
+    "min_height": 45,
+    "max_height": 115,
+    "horizontal_scale": 460,
+    "detail_strength": 0.24,
+    "relief_strength": 0.68,
+    "soil_depth": 5,
+    "tree_density": 1.15,
+    "terrace_strength": 0.1
+  }
+}

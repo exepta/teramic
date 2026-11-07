@@ -1,26 +1,37 @@
 use super::{library, model::*, options};
 use bevy::prelude::*;
 use terra_core::{GameAction, GameplayInput};
-use terra_player::{CaptureRequest, ControllerMode, PlayerInputBlock};
+use terra_player::{CaptureRequest, PlayerInputBlock};
 
 #[derive(bevy::ecs::system::SystemParam)]
 pub(super) struct GameplayPanels<'w> {
-    session: Option<Res<'w, terra_network::client::ClientSession>>,
     inventory: Option<Res<'w, crate::inventory::InventoryState>>,
     chat: Option<Res<'w, crate::chat::ChatState>>,
     fullmap: Option<Res<'w, crate::minimap::fullmap::FullMapState>>,
     pets: Option<Res<'w, crate::pets::PetMenuState>>,
+    kingdom: Option<Res<'w, crate::kingdom::KingdomMenuState>>,
 }
 
 pub(super) fn keyboard_navigation(
     input: GameplayInput,
     mut menu: ResMut<MenuState>,
     draft: Res<options::OptionsDraft>,
+    worlds: Res<WorldMenu>,
     mut actions: MessageWriter<MenuAction>,
-    mut mode: ResMut<ControllerMode>,
     panels: GameplayPanels,
+    startup: Option<Res<StartupProgress>>,
 ) {
+    if startup.as_ref().is_some_and(|progress| progress.active) {
+        return;
+    }
     if draft.rebinding.is_some() || draft.consumed_escape {
+        return;
+    }
+    if panels
+        .kingdom
+        .as_ref()
+        .is_some_and(|k| k.blocks_input() || k.consumed_escape)
+    {
         return;
     }
     if panels
@@ -45,20 +56,12 @@ pub(super) fn keyboard_navigation(
     {
         return;
     }
-    if menu.page == MenuPage::Playing
-        && input.just_pressed(GameAction::Flight)
-        && panels.session.as_ref().is_some_and(|s| s.allow_flight)
-    {
-        *mode = if *mode == ControllerMode::Walk {
-            ControllerMode::Fly
-        } else {
-            ControllerMode::Walk
-        };
-    }
     if !input.just_pressed(GameAction::Pause) {
         return;
     }
-    if menu.dialog == MenuDialog::Display {
+    if menu.dialog == MenuDialog::CreateWorld && worlds.biome_picker_open {
+        actions.write(MenuAction::Command("world-biome-picker-close".into()));
+    } else if menu.dialog == MenuDialog::Display {
         actions.write(MenuAction::Command("display-revert".into()));
     } else if menu.dialog != MenuDialog::None {
         menu.dialog = MenuDialog::None;
@@ -81,7 +84,13 @@ pub(super) fn actions(world: &mut World) {
         .resource_mut::<Messages<MenuAction>>()
         .drain()
         .collect();
+    let startup = world
+        .get_resource::<StartupProgress>()
+        .is_some_and(|progress| progress.active);
     for action in actions {
+        if startup {
+            continue;
+        }
         let result = match action {
             MenuAction::Change { control, value } => change(world, &control, &value),
             MenuAction::Command(command) => command_action(world, &command),
@@ -90,7 +99,11 @@ pub(super) fn actions(world: &mut World) {
             world.resource_mut::<MenuState>().error = error;
         }
     }
-    let playing = world.resource::<MenuState>().page == MenuPage::Playing
+    let playing = !startup
+        && !world
+            .get_resource::<crate::kingdom::KingdomMenuState>()
+            .is_some_and(|k| k.blocks_input())
+        && world.resource::<MenuState>().page == MenuPage::Playing
         && !world
             .get_resource::<crate::minimap::fullmap::FullMapState>()
             .is_some_and(|map| map.blocks_input())
@@ -112,6 +125,19 @@ pub(super) fn actions(world: &mut World) {
 }
 fn command_action(world: &mut World, command: &str) -> Result<(), String> {
     let modal = world.resource::<MenuState>().dialog.clone();
+    if modal == MenuDialog::CreateWorld && world.resource::<WorldMenu>().biome_picker_open {
+        if command == "dialog-cancel" {
+            world.resource_mut::<WorldMenu>().biome_picker_open = false;
+            return Ok(());
+        }
+        if !command.starts_with("world-biome-") {
+            return Ok(());
+        }
+    }
+    if modal == MenuDialog::CreateWorld && super::create_world::command(world, command)? {
+        world.resource_mut::<MenuState>().error.clear();
+        return Ok(());
+    }
     if modal != MenuDialog::None
         && !matches!(
             command,
@@ -250,11 +276,7 @@ fn command_action(world: &mut World, command: &str) -> Result<(), String> {
             }
         }
         "world-create" => {
-            let mut form = world.resource_mut::<WorldMenu>();
-            form.name.clear();
-            form.seed.clear();
-            form.mode = "survival".into();
-            form.natural_mob_limit = 256;
+            super::create_world::reset(world);
             world.resource_mut::<MenuState>().dialog = MenuDialog::CreateWorld;
         }
         "world-create-confirm" if modal == MenuDialog::CreateWorld => {
@@ -371,6 +393,18 @@ fn begin(world: &mut World, request: SessionRequest, status: &str) {
     world.write_message(request);
 }
 fn change(world: &mut World, control: &str, value: &str) -> Result<(), String> {
+    if world.resource::<MenuState>().dialog == MenuDialog::CreateWorld
+        && world.resource::<WorldMenu>().biome_picker_open
+    {
+        return Ok(());
+    }
+
+    if super::create_world::change(world, control, value)? {
+        if world.resource::<MenuState>().dialog == MenuDialog::CreateWorld {
+            world.resource_mut::<MenuState>().error.clear();
+        }
+        return Ok(());
+    }
     match control {
         "world-name" => world.resource_mut::<WorldMenu>().name = value.chars().take(65).collect(),
         "world-seed" => world.resource_mut::<WorldMenu>().seed = value.chars().take(32).collect(),

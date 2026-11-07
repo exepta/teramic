@@ -398,7 +398,8 @@ fn projected_bounds(
     aspect: f32,
     bounds: [Vec3; 2],
 ) -> Option<[Vec2; 2]> {
-    let matrix = Mat4::perspective_rh(fov, aspect, 0.1, 1000.0) * view.to_matrix().inverse();
+    let matrix =
+        bevy::math::proj::perspective(fov, aspect, 0.1, 1000.0) * view.to_matrix().inverse();
     let mut result = [Vec2::splat(f32::INFINITY), Vec2::splat(f32::NEG_INFINITY)];
     for x in [bounds[0].x, bounds[1].x] {
         for y in [bounds[0].y, bounds[1].y] {

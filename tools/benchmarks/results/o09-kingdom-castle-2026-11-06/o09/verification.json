@@ -1,0 +1,37 @@
+{
+  "runtime_tests": {
+    "command": "cargo test -p tilt-ui-runtime --lib",
+    "passed": 331,
+    "failed": 0,
+    "ignored": 1
+  },
+  "runtime_clippy": {
+    "command": "cargo clippy -p tilt-ui-runtime --lib --tests -- -D warnings",
+    "exit_code": 0
+  },
+  "application_css_test": {
+    "command": "TILT_UI_INDEX_CSS_FIXTURE=/tmp/teramic-o09-llz5uuic/document.css cargo test -p tilt-ui-runtime --lib application_document_css_matches_exhaustive_and_reduces_cold_candidate_work -- --ignored --nocapture",
+    "passed": 1,
+    "failed": 0
+  },
+  "matching_micro_sample": {
+    "rules_base_and_media": 1599,
+    "nodes": 8,
+    "passes": 30,
+    "exhaustive_candidates_before_media_filter": 12792,
+    "indexed_candidates_before_media_filter": 580,
+    "exhaustive_matching_ms": 15.285,
+    "indexed_matching_ms": 1.166,
+    "includes_cascade_or_gpu": false,
+    "native_metric": false
+  },
+  "native_measurements": {
+    "complete": true,
+    "metrics": "native-metrics.json",
+    "validation": "native-validation.json",
+    "cold_max_before_ms": 94.525945,
+    "cold_max_after_ms": 54.843919,
+    "remaining_cold_frame_ms": 54.843919,
+    "gpu_present_claim": false
+  }
+}

@@ -35,6 +35,18 @@ impl TreeForm {
 }
 
 impl Tree {
+    /// The generator's logical species survives historical wood-material skins.
+    #[cfg(feature = "bevy")]
+    pub(crate) fn sapling_species(&self) -> Option<terra_core::TreeSpecies> {
+        Some(match self.species {
+            TreeSpecies::Green | TreeSpecies::Autumn => terra_core::TreeSpecies::Oak,
+            TreeSpecies::Spruce | TreeSpecies::Fir => terra_core::TreeSpecies::Spruce,
+            TreeSpecies::Birch => terra_core::TreeSpecies::Birch,
+            TreeSpecies::Cherry(_) => terra_core::TreeSpecies::Cherry,
+            TreeSpecies::Apple => terra_core::TreeSpecies::Apple,
+            TreeSpecies::Palm | TreeSpecies::Mushroom(_) => return None,
+        })
+    }
     #[cfg(feature = "bevy")]
     pub(crate) fn felling_shape(&self) -> Option<crate::tree_felling::Shape> {
         use std::collections::HashSet;
@@ -91,6 +103,19 @@ impl Tree {
     pub fn new(origin: [i64; 3], seed: u64, roots: [f32; 4]) -> Self {
         Self::with_species(origin, seed, roots, TreeSpecies::from_seed(seed))
     }
+    pub fn with_species_revision(
+        origin: [i64; 3],
+        seed: u64,
+        roots: [f32; 4],
+        species: TreeSpecies,
+        ecology_revision: u8,
+    ) -> Self {
+        if species == TreeSpecies::Apple && ecology_revision >= 4 {
+            Self::apple(origin, seed, true)
+        } else {
+            Self::with_species(origin, seed, roots, species)
+        }
+    }
     pub fn with_species(
         origin: [i64; 3],
         seed: u64,
@@ -98,8 +123,10 @@ impl Tree {
         species: TreeSpecies,
     ) -> Self {
         match species {
+            TreeSpecies::Apple => return Self::apple(origin, seed, false),
             TreeSpecies::Palm => return Self::palm(origin, seed),
             TreeSpecies::Spruce => return Self::spruce(origin, seed),
+            TreeSpecies::Fir => return Self::fir(origin, seed),
             TreeSpecies::Mushroom(variant) => return Self::mushroom(origin, seed, variant),
             _ => {}
         }

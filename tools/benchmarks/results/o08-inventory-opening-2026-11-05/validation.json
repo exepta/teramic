@@ -1,0 +1,182 @@
+{
+  "build": {
+    "source": "/tmp/teramic-o08-projection-build.log",
+    "source_log_sha256": "7aca05fcdb1211e1ff53e67e5613dc3d781c84e937062b9ba5dba1a4671e4ee1",
+    "status": "passed; coordinated command exit reported by root"
+  },
+  "clippy": {
+    "source": "/tmp/teramic-o08-clippy-identity.log",
+    "source_log_sha256": "32a90519bf7b9f9f8f2e6afcb9abeeb1f380df3cec2bc81b6cc0704c3c1235ab",
+    "status": "passed; coordinated command exit reported by root"
+  },
+  "effective_workspace_totals": {
+    "note": "Replace the earlier workspace client/UI suites with the final successful client200/UI470 rerun; other workspace suites unchanged. Do not count repeated suites twice.",
+    "suites": [
+      {
+        "failed": 0,
+        "ignored": 1,
+        "passed": 200
+      },
+      {
+        "failed": 0,
+        "ignored": 0,
+        "passed": 339
+      },
+      {
+        "failed": 0,
+        "ignored": 1,
+        "passed": 444
+      },
+      {
+        "failed": 0,
+        "ignored": 0,
+        "passed": 45
+      },
+      {
+        "failed": 0,
+        "ignored": 0,
+        "passed": 93
+      },
+      {
+        "failed": 0,
+        "ignored": 2,
+        "passed": 998
+      },
+      {
+        "failed": 0,
+        "ignored": 0,
+        "passed": 5
+      },
+      {
+        "failed": 0,
+        "ignored": 0,
+        "passed": 7
+      },
+      {
+        "failed": 0,
+        "ignored": 0,
+        "passed": 134
+      },
+      {
+        "failed": 0,
+        "ignored": 0,
+        "passed": 470
+      },
+      {
+        "failed": 0,
+        "ignored": 0,
+        "passed": 24
+      },
+      {
+        "failed": 0,
+        "ignored": 5,
+        "passed": 1054
+      }
+    ],
+    "totals": {
+      "failed": 0,
+      "ignored": 9,
+      "passed": 3813
+    }
+  },
+  "final_client_ui": {
+    "source": "/tmp/teramic-o08-identity-tests.log",
+    "source_log_sha256": "2d1998911f9c3f5a5205b613d0d27e7de63fd3608c33e6e0127f1725ebe3bc8c",
+    "status": "passed",
+    "suites": [
+      {
+        "failed": 0,
+        "ignored": 1,
+        "passed": 200
+      },
+      {
+        "failed": 0,
+        "ignored": 0,
+        "passed": 470
+      }
+    ]
+  },
+  "format": {
+    "source": "/tmp/teramic-o08-format-final.log",
+    "source_log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "status": "passed; coordinated command exit reported by root"
+  },
+  "python": {
+    "source": "/tmp/teramic-o08-python-tests.log",
+    "source_log_sha256": "133449d6f429f0588126e0403937f271f33f90517460d5c4b39d69c2eeda0f25",
+    "status": "passed; coordinated command exit reported by root",
+    "tests": 8
+  },
+  "workspace": {
+    "source": "/tmp/teramic-o08-workspace-tests-final.log",
+    "source_log_sha256": "8edb738ec8fe622495a5fc0ad09ebe370bc28c375015127cfb97dadca13c24ac",
+    "status": "passed; coordinated command exit reported by root",
+    "suites": [
+      {
+        "failed": 0,
+        "ignored": 1,
+        "passed": 200
+      },
+      {
+        "failed": 0,
+        "ignored": 0,
+        "passed": 339
+      },
+      {
+        "failed": 0,
+        "ignored": 1,
+        "passed": 444
+      },
+      {
+        "failed": 0,
+        "ignored": 0,
+        "passed": 45
+      },
+      {
+        "failed": 0,
+        "ignored": 0,
+        "passed": 93
+      },
+      {
+        "failed": 0,
+        "ignored": 2,
+        "passed": 998
+      },
+      {
+        "failed": 0,
+        "ignored": 0,
+        "passed": 5
+      },
+      {
+        "failed": 0,
+        "ignored": 0,
+        "passed": 7
+      },
+      {
+        "failed": 0,
+        "ignored": 0,
+        "passed": 134
+      },
+      {
+        "failed": 0,
+        "ignored": 0,
+        "passed": 469
+      },
+      {
+        "failed": 0,
+        "ignored": 0,
+        "passed": 24
+      },
+      {
+        "failed": 0,
+        "ignored": 5,
+        "passed": 1054
+      }
+    ],
+    "totals": {
+      "failed": 0,
+      "ignored": 9,
+      "passed": 3812
+    }
+  }
+}

@@ -1,0 +1,98 @@
+/* Fixed 28px cells (32px results). Panels wrap the grid, never resize the cells. */
+#inventory-shell { width: 570px !important; height: 400px !important; max-width: 9999px !important; max-height: 9999px !important; min-width: 0 !important; min-height: 0 !important; left: 50% !important; top: 50% !important; transform: translate(-50%, -50%) !important; padding: 0 !important; display: block !important; overflow: visible !important; }
+#inventory-shell.inventory-shell-player { height: 366px !important; }
+#inventory-shell.inventory-shell-linked { left: calc(50% + 156px) !important; }
+#inventory-shell.inventory-catalog-collapsed { width: 324px !important; }
+#inventory-shell .inventory-reference-title { width: 250px !important; min-width: 220px !important; height: 42px !important; top: -18px !important; padding: 4px 8px !important; gap: 8px !important; border-width: 2px !important; }
+#inventory-shell .inventory-reference-label { font-size: 18px !important; }
+#inventory-shell .title-diamond { font-size: 14px !important; }
+#inventory-panel, .inventory-shell-linked #inventory-panel { position: absolute !important; left: 16px !important; top: 34px !important; bottom: 18px !important; width: 292px !important; height: auto !important; max-height: 9999px !important; min-height: 0 !important; padding: 0 !important; gap: 0 !important; transform: translate(0px, 0px) !important; border: 0 !important; background-color: transparent !important; }
+#inventory-scroll { height: 100% !important; width: 100% !important; min-height: 0 !important; max-height: 9999px !important; flex-grow: 0 !important; padding: 0 !important; gap: 8px !important; overflow: visible !important; }
+#inventory-shell .inventory-status { position: absolute !important; left: 0 !important; right: 0 !important; bottom: -9px !important; height: 16px !important; min-height: 0 !important; padding: 0 !important; }
+#inventory-shell .inventory-error { font-size: 10px !important; margin: 0 !important; }
+#inventory-shell .inventory-backpack-section, #inventory-shell .inventory-container-section { width: 100% !important; flex-grow: 0 !important; flex-shrink: 0 !important; padding: 0 !important; gap: 4px !important; border: 0 !important; align-items: center !important; background-color: transparent !important; }
+#inventory-shell .inventory-section-heading { height: 18px !important; min-height: 18px !important; padding: 0 4px !important; }
+#inventory-shell .machine-section-title { font-size: 13px !important; }
+#inventory-shell .inventory-section-heading p { font-size: 10px !important; }
+#inventory-shell .inventory-grid, #inventory-shell .inventory-hotbar { padding: 0 !important; border: 0 !important; align-self: center !important; }
+#inventory-shell .inventory-hotbar-section { width: 268px !important; align-self: center !important; height: 35px !important; min-height: 0 !important; padding: 6px 0 0 !important; border-top: 1px solid #97683e !important; flex-shrink: 0 !important; }
+/* Player top occupies the same width as the backpack beneath it. */
+#inventory-shell .inventory-player-top { height: 188px !important; min-height: 188px !important; max-height: 188px !important; flex-basis: auto !important; flex-grow: 0 !important; gap: 8px !important; }
+#inventory-shell .inventory-loadout { width: 142px !important; height: 188px !important; border-radius: 5px !important; box-shadow: none !important; }
+#inventory-shell .inventory-crafting { width: 142px !important; height: 188px !important; min-height: 0 !important; padding: 8px !important; gap: 10px !important; border-radius: 5px !important; box-shadow: none !important; }
+#inventory-shell .craft-heading { min-height: 20px !important; }
+#inventory-shell .craft-heading headline { font-size: 15px !important; }
+#inventory-shell .craft-workspace { width: 100% !important; gap: 4px !important; }
+#inventory-shell .craft-workspace > icon { width: 16px !important; height: 16px !important; flex-shrink: 0 !important; }
+#inventory-shell .reference-recipe-book { width: 26px !important; min-width: 26px !important; max-width: 26px !important; height: 25px !important; min-height: 25px !important; max-height: 25px !important; padding: 3px !important; right: 6px !important; bottom: 6px !important; }
+#inventory-recipe-book > icon { width: 16px !important; height: 16px !important; flex-shrink: 0 !important; }
+#inventory-equipment { left: 6px !important; right: 6px !important; top: 8px !important; bottom: 8px !important; grid-template-columns: 28px 1fr 28px !important; grid-template-rows: repeat(5, 28px) !important; gap: 3px !important; }
+#inventory-shell .inventory-character { width: 94% !important; height: 96% !important; }
+/* Linked storage is its own fitted card to the left of the primary frame. */
+#workbench-storage.machine-linked-storage { position: absolute !important; left: -312px !important; right: auto !important; top: 0 !important; bottom: auto !important; width: 300px !important; height: auto !important; min-height: 0 !important; max-height: 9999px !important; padding: 16px !important; gap: 8px !important; border: 0 !important; background-color: transparent !important; overflow: visible !important; }
+#workbench-storage .inventory-section-heading { padding: 0 8px !important; }
+#workbench-container-grid { align-self: center !important; }
+/* Compact, complete processing workspaces: no clipping or content scrollbar. */
+#inventory-shell .furnace-workspace, #inventory-shell .crusher-workspace, #inventory-shell .mixer-workspace, #inventory-shell .alchemy-workspace, #inventory-shell .funnel-filter-workspace, #inventory-shell .distributor-filter-workspace, #inventory-shell .tunnel-extraction-mode, #inventory-shell .copper-crafting-panel { width: 100% !important; min-height: 0 !important; padding: 6px !important; gap: 6px !important; border-radius: 5px !important; flex-shrink: 0 !important; }
+#inventory-shell .machine-slot-caption { font-size: 11px !important; }
+#inventory-shell .furnace-material-row { gap: 12px !important; }
+#inventory-shell .furnace-feed-column { gap: 6px !important; }
+#inventory-shell .furnace-slot-group { gap: 2px !important; }
+#inventory-shell .furnace-fuel-track { height: 28px !important; width: 5px !important; }
+#inventory-shell .furnace-progress-group { width: 42px !important; }
+#inventory-shell .furnace-progress-track { width: 28px !important; height: 6px !important; }
+#inventory-shell .furnace-status, #inventory-shell .mixer-recipe, #inventory-shell .alchemy-effects, #inventory-shell .craft-message { margin: 0 !important; font-size: 10px !important; }
+#inventory-shell .furnace-placeholder { width: 18px !important; height: 18px !important; left: 5px !important; top: 5px !important; }
+#inventory-shell .crusher-workspace { gap: 18px !important; }
+#inventory-shell .crusher-process { gap: 4px !important; }
+#inventory-shell .mixer-materials { gap: 12px !important; }
+#inventory-shell .mixer-target { gap: 6px !important; }
+/* The native editable value and preview share the compact field's center. */
+#inventory-shell .machine-color-picker { width: 150px !important; height: 26px !important; min-height: 26px !important; padding: 5.5px 8px 5.5px 28px !important; font-size: 11px !important; line-height: 13px !important; }
+#inventory-shell .machine-color-picker::preview { left: 6px !important; width: 16px !important; height: 16px !important; border-color: #b6854b !important; border-radius: 3px !important; }
+#inventory-shell .machine-color-picker::popup { top: 100% !important; }
+#inventory-shell .mixer-target p { font-size: 10px !important; }
+#inventory-shell .alchemy-navigation { height: 22px !important; }
+#inventory-shell .alchemy-station-button { height: 22px !important; min-height: 22px !important; padding: 2px 6px !important; }
+#inventory-shell .alchemy-station-button p { font-size: 10px !important; }
+#inventory-shell .alchemy-recipe-choice { height: 28px !important; min-height: 28px !important; font-size: 11px !important; }
+#inventory-shell .alchemy-materials { display: grid !important; grid-template-columns: 42px 88px 28px 26px 32px !important; gap: 6px !important; align-items: center !important; justify-content: center !important; }
+#inventory-shell .alchemy-supplies { display: grid !important; grid-template-columns: 28px 6px !important; gap: 3px !important; }
+#inventory-shell .alchemy-water-track { width: 6px !important; height: 28px !important; }
+#inventory-shell .alchemy-water-amount { grid-column: span 2 !important; margin: 0 !important; font-size: 9px !important; }
+#inventory-shell .alchemy-materials .alchemy-process { grid-column: auto !important; }
+#inventory-shell .alchemy-results { grid-column: auto !important; flex-direction: column !important; gap: 4px !important; }
+#inventory-shell .alchemy-process { width: 26px !important; gap: 4px !important; }
+#inventory-shell .alchemy-process > icon { width: 16px !important; height: 16px !important; }
+#inventory-shell .alchemy-summary { gap: 4px !important; min-height: 16px !important; }
+#inventory-shell .campfire-materials { gap: 10px !important; }
+#inventory-shell .alchemy-fire-button { padding: 3px !important; }
+#inventory-shell .distributor-filter-row { gap: 6px !important; padding: 3px !important; }
+#inventory-shell .distributor-output-label { width: 65px !important; flex-direction: row !important; }
+#inventory-shell .distributor-output-name { font-size: 11px !important; }
+#inventory-shell .funnel-filter-mode { min-width: 82px !important; gap: 4px !important; }
+#inventory-shell .funnel-filter-mode label, #inventory-shell .tunnel-random-label { font-size: 10px !important; }
+#inventory-shell .filter-clear { width: 24px !important; height: 24px !important; min-height: 24px !important; padding: 3px !important; }
+#inventory-shell .bench-heading { padding: 0 !important; min-height: 22px !important; }
+#inventory-shell .bench-station-title { font-size: 14px !important; }
+#inventory-shell .bench-workspace { gap: 12px !important; }
+#inventory-shell .bench-output-area { width: 54px !important; }
+#inventory-shell .bench-output-area p { font-size: 10px !important; margin: 0 !important; }
+#inventory-shell .craft-clear { width: 22px !important; height: 22px !important; min-height: 22px !important; padding: 2px !important; }
+/* Page the item catalog instead of scrolling it. Trash is always bottom-left. */
+#item-browser.reference-browser { position: absolute !important; left: auto !important; right: 16px !important; top: 34px !important; bottom: 18px !important; width: 198px !important; height: auto !important; min-height: 0 !important; margin: 0 !important; padding: 10px !important; gap: 6px !important; }
+#item-browser .browser-search { height: 26px !important; min-height: 26px !important; padding: 0 24px 0 5px !important; }
+#item-browser .browser-search > icon { width: 16px !important; height: 16px !important; }
+#item-browser .browser-search input { height: 24px !important; min-height: 24px !important; font-size: 11px !important; padding: 3px !important; }
+#item-browser .browser-filter { width: 24px !important; min-width: 24px !important; height: 24px !important; min-height: 24px !important; padding: 3px !important; }
+#item-browser .browser-pagination { height: 24px !important; min-height: 24px !important; gap: 4px !important; }
+#item-browser .browser-pagination button { width: 24px !important; min-width: 24px !important; height: 24px !important; min-height: 24px !important; }
+#item-browser .browser-pagination p { font-size: 12px !important; }
+#inventory-browser-grid { padding: 0 !important; gap: 2px !important; overflow: hidden !important; }
+#inventory-categories-host { left: -37px !important; right: auto !important; top: 0 !important; width: 28px !important; height: 100% !important; padding: 0 !important; }
+#inventory-categories { height: calc(100% - 36px) !important; gap: 4px !important; padding: 0 !important; overflow: hidden !important; }
+#item-browser .browser-category-cell { width: 28px !important; min-width: 28px !important; height: 28px !important; min-height: 28px !important; flex: 0 0 28px !important; }
+#item-browser .category-tab { width: 28px !important; height: 28px !important; padding: 2px !important; border-width: 1px !important; }
+#item-browser .inventory-rail-trash { position: absolute !important; left: 0 !important; bottom: 0 !important; width: 28px !important; min-width: 28px !important; height: 28px !important; min-height: 28px !important; padding: 3px !important; }
+#inventory-shell .item-count { font-size: 10px !important; right: 2px !important; bottom: 2px !important; }
+#inventory-shell .item-hotkey { width: 12px !important; height: 12px !important; font-size: 9px !important; border-width: 1px !important; }

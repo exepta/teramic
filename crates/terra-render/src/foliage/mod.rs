@@ -71,16 +71,16 @@ impl From<&LeafExtension> for LeafKey {
 
 impl MaterialExtension for LeafExtension {
     fn vertex_shader() -> ShaderRef {
-        "shaders/terra_foliage.wgsl".into()
+        "shaders/terra_foliage.wesl".into()
     }
     fn prepass_vertex_shader() -> ShaderRef {
-        "shaders/terra_foliage.wgsl".into()
+        "shaders/terra_foliage.wesl".into()
     }
     fn prepass_fragment_shader() -> ShaderRef {
-        "shaders/terra_foliage_prepass.wgsl".into()
+        "shaders/terra_foliage_prepass.wesl".into()
     }
     fn deferred_vertex_shader() -> ShaderRef {
-        "shaders/terra_foliage.wgsl".into()
+        "shaders/terra_foliage.wesl".into()
     }
     fn specialize(
         _pipeline: &bevy::pbr::MaterialExtensionPipeline,
@@ -343,10 +343,12 @@ mod tests {
         let ShaderRef::Path(path) = LeafExtension::prepass_fragment_shader() else {
             panic!("Leaves require their vertex-aware prepass fragment shader");
         };
-        assert_eq!(path.to_string(), "shaders/terra_foliage_prepass.wgsl");
-        let shader = include_str!("../../../../assets/shaders/terra_foliage_prepass.wgsl");
+        assert_eq!(path.to_string(), "shaders/terra_foliage_prepass.wesl");
+        let shader = include_str!("../../../../assets/shaders/terra_foliage_prepass.wesl");
         assert!(shader.contains("if wind.w >= 0.5"));
-        assert!(shader.contains("pbr_prepass_functions::prepass_alpha_discard(in);"));
+        assert!(
+            shader.contains("pbr_prepass_functions::prepass_sample_color_and_alpha_discard(in);")
+        );
         assert!(shader.contains("output_color.a *= in.color.a;"));
         assert!(shader.contains("if output_color.a < alpha_cutoff"));
         assert!(shader.contains("out.normal ="));

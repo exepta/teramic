@@ -1,0 +1,133 @@
+{
+  "phase": 181,
+  "date": "2026-11-02",
+  "workspace_tests": {
+    "command": "cargo test --workspace --locked -j1 -- --test-threads=4",
+    "exit_code": 0,
+    "passed": 3735,
+    "failed": 0,
+    "ignored": 8
+  },
+  "native": {
+    "exit_code": 0,
+    "captures": 13,
+    "real_os_input": true,
+    "unchanged_authoritative_inventory": true
+  },
+  "source_hashes": "source-sha256.json",
+  "captures": {
+    "chest-any-wood-popup.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "f969f31750d0c4a719c8a2e574769f0051c94ed2eba89bfb0af40b51305b213a"
+    },
+    "crafting-recipe-reference-compact.png": {
+      "size": [
+        1025,
+        641
+      ],
+      "sha256": "f86035784ab5992b2abb67ae9a74575fc91228f8727fbd4eb3bd6bdcc713e8bf"
+    },
+    "crafting-recipe-reference-wide.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "4d4accf5880c25de7086f5dda97c8a315a38352325910e309e52987202467b45"
+    },
+    "furnace-alternative-fuels.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "d29f7a59a38f796281666755598d7ae8f44df2072bdccf8b51a0af45ecaa0c39"
+    },
+    "furnace-recipe-reference-compact.png": {
+      "size": [
+        1025,
+        641
+      ],
+      "sha256": "c8a521b73b1c77fa65a83160279a8afa5c652e7a0a2ffaf0c44014a8a326c6df"
+    },
+    "furnace-recipe-reference-wide.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "ada37cb935cd9fccc5efccc86edf6c739e711b8c66ef25df0d21897fff2668c1"
+    },
+    "furnace-selected-fuel.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "b68b67e544eb64bf5cf55774613423b6d717f494f0981e1d5fdb28adf06f8fff"
+    },
+    "inventory-left-category-tabs.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "558f7377b097f42b72680fd470f310640bf7d51aaed76f49a93c34921f2e8741"
+    },
+    "player-inventory-catalog-collapsed.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "03280eaaa0b7f8b9a7e23c5f96a52eca9c360d48dfcc849db0bd580bd06c7d9c"
+    },
+    "player-inventory-reference-compact.png": {
+      "size": [
+        1025,
+        641
+      ],
+      "sha256": "04561739010968e4d594c9c5c9878ad89abac945d3b6d2cab6ef960b45c588de"
+    },
+    "player-inventory-reference-wide.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "69b95f8a125120effd0643d21da8450b824c97f73178f9b7f714586007f432b0"
+    },
+    "recipe-browser-search.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "ea5c98a2a9a8060d199d2dc11a3ac2d361935b44d80cb445470ecc597652f25e"
+    },
+    "recipe-item-browser-next-page.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "89cf18249987d84eaa6be3b3adc0cdee2730130e0513cddea7aa792ffcbdc3ca"
+    }
+  },
+  "build": {
+    "command": "cargo build --workspace --locked -j1",
+    "exit_code": 0
+  },
+  "clippy": {
+    "command": "cargo clippy --workspace --all-targets --locked -j1 -- -D warnings",
+    "exit_code": 0
+  },
+  "format": {
+    "command": "cargo fmt --all --check",
+    "exit_code": 0
+  },
+  "diff": {
+    "command": "git diff --check",
+    "exit_code": 0
+  },
+  "network_test_recheck": {
+    "test": "tests::invalid_movement_is_disconnected_without_affecting_the_other_player",
+    "initial_timeout": true,
+    "isolated_recheck_exit_code": 0,
+    "full_workspace_recheck_exit_code": 0
+  }
+}

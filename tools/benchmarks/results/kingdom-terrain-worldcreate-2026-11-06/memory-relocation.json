@@ -1,0 +1,79 @@
+{
+  "recorded_utc": "2026-11-06T15:29:46.788883+00:00",
+  "before_observed": {
+    "swapon_used": "24.6G",
+    "zram_data": "23.4G",
+    "zram_physical_total": "7.3G",
+    "tmpfs_used": "16G"
+  },
+  "after_swapon": "/dev/zram0 partition 33541844992 14417420288 100",
+  "after_zramctl": "NAME       ALGORITHM DISKSIZE  DATA COMPR TOTAL STREAMS MOUNTPOINT\n/dev/zram0 zstd         31.2G 12.4G  4.4G  4.5G         [SWAP]\n",
+  "after_free": "               total        used        free      shared  buff/cache   available\nMem:            31Gi        19Gi       5.1Gi       186Mi       7.0Gi        11Gi\nSwap:           31Gi        13Gi        17Gi\n",
+  "after_tmpfs": "Filesystem      Size  Used Avail Use% Mounted on\ntmpfs            16G  4.5G   12G  29% /tmp\n",
+  "archive_bytes": 10374698881,
+  "archive_files": 355888,
+  "relocations": [
+    {
+      "original": "/tmp/teramic-o07-i3w2xd60",
+      "destination": "/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/target/tmp-archive-198/teramic-o07-i3w2xd60",
+      "files": 33003,
+      "bytes": 5677838773,
+      "original_path_preserved_by_symlink": true
+    },
+    {
+      "original": "/tmp/teramic-biome-hud-0v5szki1",
+      "destination": "/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/target/tmp-archive-198/teramic-biome-hud-0v5szki1",
+      "files": 161941,
+      "bytes": 2208361675,
+      "original_path_preserved_by_symlink": true
+    },
+    {
+      "original": "/tmp/teramic-create-world-rwgnonvl",
+      "destination": "/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/target/tmp-archive-198/teramic-create-world-rwgnonvl",
+      "files": 74602,
+      "bytes": 1015768610,
+      "original_path_preserved_by_symlink": true
+    },
+    {
+      "original": "/tmp/teramic-o08-439o32is",
+      "destination": "/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/target/tmp-archive-198/teramic-o08-439o32is",
+      "files": 16900,
+      "bytes": 254788510,
+      "original_path_preserved_by_symlink": true
+    },
+    {
+      "original": "/tmp/teramic-picker-8jv1u_xq",
+      "destination": "/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/target/tmp-archive-198/teramic-picker-8jv1u_xq",
+      "files": 14633,
+      "bytes": 313759816,
+      "original_path_preserved_by_symlink": true
+    },
+    {
+      "original": "/tmp/teramic-tunnel-ui-y_nokpuh",
+      "destination": "/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/target/tmp-archive-198/teramic-tunnel-ui-y_nokpuh",
+      "files": 13587,
+      "bytes": 339295049,
+      "original_path_preserved_by_symlink": true
+    },
+    {
+      "original": "/tmp/teramic-rule-cards-oq5tr_94",
+      "destination": "/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/target/tmp-archive-198/teramic-rule-cards-oq5tr_94",
+      "files": 41222,
+      "bytes": 564886448,
+      "original_path_preserved_by_symlink": true
+    }
+  ],
+  "method": "Unused Teramic test fixtures copied off tmpfs, sizes and mtimes checked before removal, original directory paths preserved as symlinks. No user applications stopped; foreign project files retained.",
+  "full_swap_cycle_completed": true,
+  "administrator_access": "sudo has no cached credentials; pkexec system authentication completed successfully. No password was collected by the assistant.",
+  "swap_reset_completed_utc": "2026-11-06T16:47:11.430389+00:00",
+  "swap_reset_exit_code": 0,
+  "swap_reset_observed_used": "0B",
+  "swap_priority_restored": 100,
+  "swap_reset_guard": "Required MemAvailable to cover swapped pages minus current zram physical storage, plus a 2 GiB reserve; target only /dev/zram0, restore original priority and re-enable swap on exit.",
+  "swap_reset_log": "logs/swap-reset.log",
+  "reset_note": "The successful reset observed 0B used; normal running programs may allocate swap again afterward.",
+  "initial_reset_completed_utc": "2026-11-06T16:27:45.620404+00:00",
+  "final_reset_after_all_builds_tests_and_native_runs": true,
+  "final_post_reset_proc_swaps": "Filename\t\t\t\tType\t\tSize\t\tUsed\t\tPriority\n/dev/zram0                              partition\t32755708\t5147604\t\t100\n"
+}

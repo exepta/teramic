@@ -1,9 +1,5 @@
 use crate::SettingsView;
-use bevy::{
-    ecs::system::SystemParam,
-    prelude::*,
-    window::{PresentMode, PrimaryWindow},
-};
+use bevy::{ecs::system::SystemParam, prelude::*, window::PrimaryWindow};
 use terra_core::{
     ClientConfig, Config, GameConfig, WaterQuality, WeatherQuality, config_directory,
 };
@@ -81,8 +77,10 @@ fn escape_menu(
     menu: Option<Res<crate::menu::MenuState>>,
     inventory: Option<Res<crate::inventory::InventoryState>>,
     chat: Option<Res<crate::chat::ChatState>>,
+    kingdom: Option<Res<crate::kingdom::KingdomMenuState>>,
 ) {
     if menu.is_some()
+        || kingdom.as_ref().is_some_and(|k| k.blocks_input())
         || chat.as_ref().is_some_and(|chat| chat.blocks_input())
         || inventory
             .as_ref()
@@ -287,6 +285,8 @@ fn edited_config(
 
 fn apply_camera_window(
     config: Res<GameConfig>,
+    adapter: Option<Res<bevy::render::renderer::RenderAdapterInfo>>,
+    presentation: Option<Res<crate::PresentationOverride>>,
     mut cameras: Query<&mut Projection, With<TerraCamera>>,
     mut windows: Query<&mut Window, With<PrimaryWindow>>,
 ) {
@@ -298,14 +298,14 @@ fn apply_camera_window(
             perspective.fov = fov;
         }
     }
-    let mode = if config.client.vsync {
-        PresentMode::AutoVsync
-    } else {
-        PresentMode::AutoNoVsync
-    };
+    let mode = crate::preferred_present_mode(config.client.vsync, adapter.as_deref());
+    let mode = presentation
+        .filter(|_| !config.client.vsync)
+        .map_or(mode, |value| value.0);
     for mut window in &mut windows {
         if window.present_mode != mode {
             window.present_mode = mode;
+            info!(?mode, "Applied window presentation policy");
         }
     }
 }
@@ -372,6 +372,7 @@ fn update_view(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use bevy::window::PresentMode;
 
     #[test]
     fn edits_are_validated_without_mutating_the_current_settings() {

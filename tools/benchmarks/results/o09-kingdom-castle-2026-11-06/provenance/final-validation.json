@@ -1,0 +1,13 @@
+{
+  "paired_sources_preserved": true,
+  "post_native_changes_only_recorded_rustfmt": [
+    "crates/terra-core/src/lib.rs",
+    "crates/terra-network/src/tests.rs",
+    "crates/terra-ui/src/chat.rs",
+    "crates/terra-ui/src/lib.rs",
+    "crates/terra-ui/src/pets.rs"
+  ],
+  "external_four_indexed_sources_match_patch": true,
+  "markdown_links_valid": true,
+  "git_diff_check_exit": 0
+}

@@ -1,0 +1,11 @@
+{
+  "id": "teramic::wooden_gear", "name": "Wooden Gear", "station": "workbench",
+  "output": { "item": { "block": 141 }, "count": 1 },
+  "pattern": { "kind": "shaped", "width": 3, "height": 3, "cells": [
+    null, { "item": { "block": 16 }, "wood": true, "count": 1 }, null,
+    { "item": { "block": 16 }, "wood": true, "count": 1 },
+    { "item": { "block": 144 }, "count": 1 },
+    { "item": { "block": 16 }, "wood": true, "count": 1 },
+    null, { "item": { "block": 16 }, "wood": true, "count": 1 }, null
+  ] }
+}

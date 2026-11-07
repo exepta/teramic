@@ -1,0 +1,117 @@
+{
+  "source": "final game index.html linked document stylesheets after Kingdom/Crown additions",
+  "files": [
+    {
+      "path": "styles/menu.css",
+      "sha256": "0ca4bb3001955e92a9630ee6da8dcbb045ba18bbd2a47563c734a4c122a29d8a",
+      "bytes": 6398
+    },
+    {
+      "path": "styles/inventory-reference.css",
+      "sha256": "ba4db97d646cf87816aa06872b2d3e68edff6eeb16b5e431aef5d0c9e9c2c322",
+      "bytes": 49334
+    },
+    {
+      "path": "styles/interface-182.css",
+      "sha256": "3d2a968af464abb992415a8aeb77c52b54b5daa3beabffd5f08a30b925c12823",
+      "bytes": 17586
+    },
+    {
+      "path": "styles/interface-183.css",
+      "sha256": "1932d2e56b5b17380218d8dfa56e0841a26b36fbe25261caf44274e2ff515faf",
+      "bytes": 14896
+    },
+    {
+      "path": "styles/interface-184.css",
+      "sha256": "88c04426982ab3cdda2427d527a4b893fb1e64f7f2f50b240351f7d8f9f0813a",
+      "bytes": 13478
+    },
+    {
+      "path": "styles/common-surfaces-185.css",
+      "sha256": "b58e41e1b595732944980229fbcd5a63af3fdc55190160a5fc98522ef85fef15",
+      "bytes": 10335
+    },
+    {
+      "path": "styles/machines-185.css",
+      "sha256": "e64afabd32447d4c0fb9bc682fbe565bbcd33e8d264455410359fd2f80f1e8cf",
+      "bytes": 23818
+    },
+    {
+      "path": "styles/recipes-185.css",
+      "sha256": "a1fefb84eeb26de0241162135eae6ae321000eb42ee15209ce767fd3b8c8bbb3",
+      "bytes": 18937
+    },
+    {
+      "path": "styles/debug-target-185.css",
+      "sha256": "17e3d5fec8a4b55a45fde69c7c3f4a67c1fad1395bb97bb67544a5c828a8883c",
+      "bytes": 6499
+    },
+    {
+      "path": "styles/polish-186.css",
+      "sha256": "afe3a3da405731acfe1bdbd587d646229710b5721624a547ed221d194bd13b12",
+      "bytes": 5780
+    },
+    {
+      "path": "styles/surfaces-187.css",
+      "sha256": "c80f95579cc793665b12ea9cb09f99e14134641dfaaef7354de2f5d1c9ac4532",
+      "bytes": 1591
+    },
+    {
+      "path": "styles/inventory-uniform-187.css",
+      "sha256": "66e1968ab230a42686bf21309aeb12f94cd7d864a751d6363f32acbffbced7a6",
+      "bytes": 2939
+    },
+    {
+      "path": "styles/inventory-188.css",
+      "sha256": "26e56c3ad86cc9887e9c19d6fd3cae7e9d761005734b2a651093ba5aadda4a46",
+      "bytes": 12692
+    },
+    {
+      "path": "styles/settings-188.css",
+      "sha256": "1c23e05bf19bab452d1e262a5cabeb1ce0448f51518c4d90b013b627738fbe0a",
+      "bytes": 902
+    },
+    {
+      "path": "styles/hotbar-188.css",
+      "sha256": "49137efd33b957bb6bccc99458b25cb66a8bd769c854226f57d68ce82352a3d3",
+      "bytes": 1803
+    },
+    {
+      "path": "styles/inventory-type-190.css",
+      "sha256": "33b2ff329df5dfd1fd6c2cd06d98a27261df39de6f9e6de7bf55fef02a2741b8",
+      "bytes": 4875
+    },
+    {
+      "path": "styles/inventory-191.css",
+      "sha256": "27139407e4f4ade60606579defe8210fc622b330c87aeb97d169dd213bb8fd1b",
+      "bytes": 2843
+    },
+    {
+      "path": "styles/create-world.css",
+      "sha256": "e04d1b222f10ad548d3aafe0a3caab66b44553e099eadc529f2887df1c529ac4",
+      "bytes": 10157
+    }
+  ],
+  "file_count": 18,
+  "combined_sha256": "eaa669812a3f438bb21480d463a498a6f936d9e3761dab9ad18e3507a9fb3f5f",
+  "combined_bytes": 204880,
+  "fixture": "/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/target/o09-f43-nyw54kvg/document-final.css",
+  "cached_test_command": "TILT_UI_INDEX_CSS_FIXTURE=/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/target/o09-f43-nyw54kvg/document-final.css target/debug/deps/tilt_ui_runtime-23b69d80a694505c application_document_css_matches_exhaustive_and_reduces_cold_candidate_work --ignored --nocapture",
+  "test_exit_code": 0,
+  "passed": 1,
+  "failed": 0,
+  "matching_sample": {
+    "rules": 1599,
+    "nodes": 8,
+    "exhaustive_candidates": 12792,
+    "indexed_candidates": 580,
+    "exhaustive_ms": 17.143,
+    "indexed_ms": 1.189
+  },
+  "matching_sample_caveat": "Concurrent root Clippy build; correctness/count refresh, not controlled performance acceptance. Original micro sample retained in draft.",
+  "same_combined_hash_as_original_fixture": true,
+  "final_component_css_sources": {
+    "src-ui/components/kingdom-menu.component.css": "f3109a580088e602d52297874152478313fa95f01266bf55776448aa030c7ac0",
+    "src-ui/app-shell.component.css": "10a7611da682ce3b3c8290dc07bfd25065d7ff1166a16d983c0431909a7f1bb7"
+  }
+}

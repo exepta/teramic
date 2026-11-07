@@ -9,7 +9,10 @@ use bevy::{
 use source::{FoleyBank, MachineSource, MixControls};
 use std::sync::Arc;
 use terra_core::AudioConfig;
-use terra_network::{client::ClientSession, protocol::session::CrusherVisual};
+use terra_network::{
+    client::ClientSession,
+    protocol::session::{CrusherVisual, KineticVisual},
+};
 use terra_player::{PlayerBody, TerraCamera};
 use terra_ui::menu::MenuState;
 use terra_world::{edits::EditJournal, streaming::WorldAccess};
@@ -44,6 +47,7 @@ pub(crate) struct CrusherAudioStatus {
     pub output_rms: f32,
     pub foley_ready: bool,
     pub foley_voices: usize,
+    pub kinetic_parts: usize,
 }
 
 fn load(mut sounds: ResMut<Soundscape>) {
@@ -57,6 +61,9 @@ fn mix(
     config: &AudioConfig,
     journal: &EditJournal,
 ) -> ([[f32; 2]; 2], [usize; 3]) {
+    if visuals.is_empty() {
+        return ([[0.0; 2]; 2], [0; 3]);
+    }
     let mut nearest: Vec<(f32, &CrusherVisual, Vec3)> = Vec::with_capacity(8);
     for machine in visuals.iter().take(64) {
         if !machine.manual_active && !machine.working {
@@ -110,10 +117,82 @@ fn mix(
 }
 
 fn machine_position(anchor: [i64; 3], journal: &EditJournal) -> Vec3 {
-    let right = journal.object_state(anchor).unwrap_or_default().right();
+    let state = journal.object_state(anchor).unwrap_or_default();
+    let legacy_width =
+        if journal.block(anchor) == Some(terra_core::crusher::MATERIAL) && state.peer.is_some() {
+            0.5
+        } else {
+            0.0
+        };
     Vec3::from_array(anchor.map(|value| value as f32))
         + Vec3::new(0.5, 0.55, 0.5)
-        + Vec3::from_array(right.map(|value| value as f32)) * 0.5
+        + Vec3::from_array(state.right().map(|value| value as f32)) * legacy_width
+}
+
+fn mix_kinetics(
+    visuals: &[KineticVisual],
+    listener: Vec3,
+    right: Vec3,
+    config: &AudioConfig,
+    journal: &EditJournal,
+) -> ([f32; 2], usize, f32) {
+    if visuals.is_empty() {
+        return ([0.0; 2], 0, 1.0);
+    }
+    let mut nearest = Vec::with_capacity(8);
+    for visual in visuals.iter().take(256) {
+        if visual.overloaded
+            || !visual.rpm.is_finite()
+            || visual.rpm.abs() < 0.01
+            || !journal
+                .block(visual.position)
+                .is_some_and(|m| matches!(m, 141..=151 | 156 | terra_core::plumbing::PUMP))
+        {
+            continue;
+        }
+        let delta =
+            Vec3::from_array(visual.position.map(|v| v as f32)) + Vec3::splat(0.5) - listener;
+        let distance = delta.length();
+        if distance >= 24.0 {
+            continue;
+        }
+        let index = nearest.partition_point(|(d, _, _): &(f32, Vec3, f32)| *d < distance);
+        if index < 8 {
+            if nearest.len() == 8 {
+                nearest.pop();
+            }
+            nearest.insert(index, (distance, delta, visual.rpm.abs()));
+        }
+    }
+    let count = nearest.len();
+    let mut gains = [0.0_f32; 2];
+    let mut rate = 0.0;
+    let master = if config.muted {
+        0.0
+    } else {
+        config.master_volume * config.ambience_volume
+    };
+    for (distance, delta, rpm) in nearest {
+        let pan = if distance > 0.2 {
+            (delta / distance).dot(right).clamp(-0.85, 0.85)
+        } else {
+            0.0
+        };
+        let gain =
+            (1.0 - distance / 24.0).powi(2) * master * 0.14 * (rpm / 30.0).sqrt().clamp(0.4, 1.6);
+        gains[0] += gain * ((1.0 - pan) * 0.5).sqrt();
+        gains[1] += gain * ((1.0 + pan) * 0.5).sqrt();
+        rate += rpm / 30.0;
+    }
+    (
+        gains.map(|v| v.min(0.42)),
+        count,
+        if count == 0 {
+            1.0
+        } else {
+            (rate / count as f32).clamp(0.25, 4.0)
+        },
+    )
 }
 
 #[derive(bevy::ecs::system::SystemParam)]
@@ -164,7 +243,7 @@ fn update(
         *status = CrusherAudioStatus::default();
         return;
     }
-    let (gains, counts) = mix(
+    let (mut gains, counts) = mix(
         world
             .session
             .as_ref()
@@ -178,8 +257,22 @@ fn update(
         world.config.as_deref().unwrap_or(&AudioConfig::default()),
         &world.journal,
     );
+    let (gears, kinetic_parts, rate) = mix_kinetics(
+        world
+            .session
+            .as_ref()
+            .map_or(&[], |s| s.kinetics.as_slice()),
+        listener.unwrap_or_default(),
+        world.cameras.iter().next().map_or(Vec3::X, |c| *c.right()),
+        world.config.as_deref().unwrap_or(&AudioConfig::default()),
+        &world.journal,
+    );
+    for (gain, gear) in gains[0].iter_mut().zip(gears) {
+        *gain = (*gain + gear).min(0.42);
+    }
     sounds.controls.update(gains);
-    if counts[0] > 0
+    sounds.controls.update_rate(rate);
+    if counts[0] + kinetic_parts > 0
         && sounds.entity.is_none()
         && let Some(bank) = sounds.bank.clone()
     {
@@ -210,12 +303,69 @@ fn update(
         output_rms: sounds.controls.rms(),
         foley_ready: sounds.bank.is_some(),
         foley_voices: sounds.controls.voices(),
+        kinetic_parts,
     };
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn running_kinetic_parts_are_audible_in_both_directions_but_stopped_overloaded_and_crushers_are_not()
+     {
+        let mut journal = EditJournal::default();
+        let position = [2, 1, 0];
+        journal.record(position, 141).unwrap();
+        let mut visual = KineticVisual {
+            position,
+            rpm: 30.0,
+            overloaded: false,
+            ..Default::default()
+        };
+        let listen = Vec3::new(0.0, 1.5, 0.5);
+        let sample = |v: &KineticVisual, c: &AudioConfig, j: &EditJournal| {
+            mix_kinetics(std::slice::from_ref(v), listen, Vec3::X, c, j)
+        };
+        let config = AudioConfig::default();
+        let (gain, count, rate) = sample(&visual, &config, &journal);
+        assert_eq!(count, 1);
+        assert!(gain[1] > gain[0] && gain[0] > 0.0);
+        assert_eq!(rate, 1.0);
+        visual.rpm = -30.0;
+        assert_eq!(sample(&visual, &config, &journal).0, gain);
+        visual.rpm = 60.0;
+        assert_eq!(sample(&visual, &config, &journal).2, 2.0);
+        let muted = AudioConfig {
+            muted: true,
+            ..config
+        };
+        assert_eq!(sample(&visual, &muted, &journal).0, [0.0; 2]);
+        for rpm in [0.0, f32::NAN] {
+            visual.rpm = rpm;
+            assert_eq!(sample(&visual, &AudioConfig::default(), &journal).1, 0);
+        }
+        visual.rpm = 30.0;
+        visual.overloaded = true;
+        assert_eq!(sample(&visual, &AudioConfig::default(), &journal).1, 0);
+        visual.overloaded = false;
+        journal.record(position, 156).unwrap();
+        assert_eq!(sample(&visual, &AudioConfig::default(), &journal).1, 1);
+        visual.rpm = 0.0;
+        assert_eq!(sample(&visual, &AudioConfig::default(), &journal).1, 0);
+        visual.rpm = 30.0;
+        journal
+            .record(position, terra_core::plumbing::PUMP)
+            .unwrap();
+        assert_eq!(sample(&visual, &AudioConfig::default(), &journal).1, 1);
+        visual.rpm = -60.0;
+        assert_eq!(sample(&visual, &AudioConfig::default(), &journal).2, 2.0);
+        visual.rpm = 0.0;
+        assert_eq!(sample(&visual, &AudioConfig::default(), &journal).1, 0);
+        visual.rpm = 30.0;
+        journal.record(position, 99).unwrap();
+        assert_eq!(sample(&visual, &AudioConfig::default(), &journal).1, 0);
+    }
 
     #[test]
     fn nearby_manual_turning_is_audible_without_processable_input_and_bounded() {
@@ -265,6 +415,30 @@ mod tests {
             &journal,
         );
         assert_eq!(counts, [0; 3]);
+    }
+
+    #[test]
+    fn one_cell_machine_audio_stays_at_the_body_center_for_every_yaw() {
+        let anchor = [-17, 4, -33];
+        let mut journal = EditJournal::default();
+        journal
+            .record(anchor, terra_core::crusher::MATERIAL)
+            .unwrap();
+        for facing in 0..4 {
+            journal
+                .set_object_state(
+                    anchor,
+                    Some(terra_world::edits::BlockObjectState {
+                        facing,
+                        ..default()
+                    }),
+                )
+                .unwrap();
+            assert_eq!(
+                machine_position(anchor, &journal),
+                Vec3::new(-16.5, 4.55, -32.5)
+            );
+        }
     }
 
     #[test]

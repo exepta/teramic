@@ -7,7 +7,7 @@ pub(crate) fn install(app: &mut App) {
 }
 fn play(
     mut messages: MessageReader<UiSound>,
-    mut clicks: MessageReader<Pointer<Click>>,
+    mut clicks: MessageReader<bevy::picking::events::PointerClick>,
     ui: Query<
         (),
         (

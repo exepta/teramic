@@ -1,0 +1,13 @@
+running 201 tests
+test result: ok. 200 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 3.04s
+running 470 tests
+test inventory::cache::tests::pending_container_snapshot_and_async_close_keep_the_retained_block_projection ... ok
+test inventory::cache::tests::container_ack_waits_for_the_next_matching_view_projection_before_restoring_bindings ... ok
+test inventory::slot_style_tests::real_recipe_machine_and_selection_changes_still_update_retained_slot_styles ... ok
+test inventory::slot_style_tests::retained_slot_styles_are_ready_while_hidden_and_survive_open_close_and_restore ... ok
+test minimap::raster::tests::rectangular_3d_uses_real_unclamped_elevation_and_preserves_reprojection ... ok
+test minimap::raster::tests::reprojection_tracks_fractional_centers_rotation_scale_and_height ... ok
+test minimap::scene::tests::live_camera_matches_marker_projection_at_real_world_coordinates ... ok
+test minimap::raster::tests::rotation_projection_relief_and_circle_are_consistent ... ok
+test mob_health::tests::real_projection_aim_walls_colors_and_mode_changes_use_one_bounded_hud ... ok
+test result: ok. 470 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.60s

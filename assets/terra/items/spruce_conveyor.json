@@ -1,0 +1,5 @@
+{
+  "item": { "wooden_block": { "material": 148, "wood": "spruce" } },
+  "name": "Spruce Conveyor",
+  "description": "A spruce-framed belt that transports dropped items while driven by a mechanical network."
+}

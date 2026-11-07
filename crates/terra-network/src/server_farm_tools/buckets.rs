@@ -24,11 +24,9 @@ pub(super) fn check(
     {
         return EditOutcome::RateLimited;
     }
-    if command.revision
-        != world
-            .journal
-            .water_mesh_epoch(global_to_section(position).0)
-    {
+    let section = global_to_section(position).0;
+    let revision = world.journal.revision(section);
+    if command.revision != revision {
         return EditOutcome::Conflict;
     }
     let Ok(body) = world.bodies.get(peer.body) else {

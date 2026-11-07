@@ -23,6 +23,8 @@ pub struct StatRow {
 #[html_shared]
 #[derive(Resource, Default, Serialize, PartialEq)]
 pub struct TargetView {
+    #[serde(skip)]
+    pub tool_item: Option<ItemKind>,
     pub style: String,
     pub visible: bool,
     pub title: String,
@@ -71,6 +73,7 @@ struct Scene<'w, 's> {
     target: Res<'w, TargetWorld>,
     creature: Res<'w, TargetCreature>,
     mining: Res<'w, MiningVisual>,
+    vessel: Option<Res<'w, terra_player::interaction::VesselMotion>>,
     active: Res<'w, ActiveItem>,
     palette: Res<'w, BlockPalette>,
     chunks: Res<'w, terra_world::streaming::ChunkStore>,
@@ -144,7 +147,7 @@ fn hover_material(scene: &Scene, position: [i64; 3]) -> u16 {
 fn tool(
     properties: terra_core::block_properties::BlockProperties,
     held: Option<ItemKind>,
-) -> (bool, String, String, bool) {
+) -> (bool, String, String, bool, Option<ItemKind>) {
     let required = match properties.required_tool {
         None => None,
         Some(ToolClass::Pickaxe) => Some(match properties.mining_level {
@@ -170,6 +173,7 @@ fn tool(
             .unwrap_or_default(),
         label,
         properties.can_harvest(held),
+        required.map(ItemKind::Tool),
     )
 }
 fn stat(
@@ -204,6 +208,92 @@ fn crop_growth(progress: f32) -> StatRow {
         bar: true,
         value,
     }
+}
+
+fn sapling_growth(
+    prop: &terra_world::props::WorldProp,
+    session: Option<&ClientSession>,
+    journal: Option<&terra_world::edits::EditJournal>,
+) -> Option<StatRow> {
+    let species = prop.kind.sapling()?;
+    let support = terra_world::props::placement::support(prop);
+    let root = [support[0], support[1] + 1, support[2]];
+    let tree = match session {
+        Some(session) => session.trees.get(prop.id.0),
+        None => journal.and_then(|j| j.gameplay().trees.get(prop.id.0)),
+    }
+    .filter(|tree| {
+        !prop.removed
+            && tree.species == species
+            && tree.root == root
+            && tree.stage == terra_core::TreeStage::Sapling
+            && tree.growth_seconds.is_finite()
+    });
+    let Some(tree) = tree else {
+        return Some(StatRow {
+            id: "sapling-growth".into(),
+            label: "Wachstum".into(),
+            text: "Wird synchronisiert".into(),
+            bar: false,
+            value: 0.0,
+        });
+    };
+    let value = (f64::from(tree.growth_seconds) * 100.0 / f64::from(species.growth_seconds()))
+        .clamp(0.0, 100.0) as f32;
+    Some(StatRow {
+        id: "sapling-growth".into(),
+        label: if value >= 100.0 {
+            "Wartet auf Wachstum"
+        } else {
+            "Wachstum"
+        }
+        .into(),
+        text: format!("{}%", value.floor() as u8),
+        bar: true,
+        value,
+    })
+}
+
+fn kinetic_stats(rows: &mut Vec<StatRow>, state: terra_core::kinetic::KineticState) {
+    rows.push(StatRow {
+        id: "kinetic-rpm".into(),
+        label: "Drehzahl".into(),
+        text: format!("{} U/min", state.rpm),
+        bar: false,
+        value: 0.0,
+    });
+    rows.push(StatRow {
+        id: "kinetic-drive".into(),
+        label: "Antrieb".into(),
+        text: if state.overloaded {
+            "Ueberlastet"
+        } else if state.running() {
+            "In Betrieb"
+        } else {
+            "Stillstand"
+        }
+        .into(),
+        bar: false,
+        value: 0.0,
+    });
+    rows.push(StatRow {
+        id: "kinetic-stress".into(),
+        label: "Stress / Kapazitaet".into(),
+        text: format!("{:.1} / {:.1}", state.stress, state.capacity),
+        bar: true,
+        value: if state.capacity > 0.0 {
+            (state.stress / state.capacity * 100.0).clamp(0.0, 100.0)
+        } else {
+            0.0
+        },
+    });
+    rows.push(StatRow {
+        id: "kinetic-remaining".into(),
+        label: "Am Anschluss verfuegbar".into(),
+        text: format!("{:.1}", state.available_capacity),
+        bar: false,
+        value: 0.0,
+    });
 }
 
 fn crop_progress(prop: &terra_world::props::WorldProp, session: Option<&ClientSession>) -> f32 {
@@ -358,6 +448,77 @@ fn animal_sex(animal: &terra_core::creatures::Creature) -> StatRow {
         bar: false,
         value: 0.0,
     }
+}
+
+fn held_watering_stat(item: ItemKind) -> Option<StatRow> {
+    let capacity = item.tool_kind()?.watering_capacity();
+    (capacity > 0).then(|| StatRow {
+        id: "held-watering-can".into(),
+        label: "Gießkanne".into(),
+        text: format!("{} / {capacity}", item.watering_units()),
+        bar: true,
+        value: 100.0 * f32::from(item.watering_units()) / f32::from(capacity),
+    })
+}
+
+fn plumbing_stats(
+    rows: &mut Vec<StatRow>,
+    state: &terra_network::protocol::session::PlumbingVisual,
+    material: u16,
+    facing: u8,
+) {
+    rows.push(StatRow {
+        id: "water-storage".into(),
+        label: "Wasser".into(),
+        text: format!("{} / {}", state.amount, state.capacity),
+        bar: true,
+        value: 100.0 * f32::from(state.amount) / f32::from(state.capacity.max(1)),
+    });
+    if matches!(material, 166..=167) {
+        rows.push(StatRow {
+            id: "water-valve".into(),
+            label: if material == 166 { "Ventil" } else { "Hahn" }.into(),
+            text: if material == 167 {
+                let level = terra_core::plumbing::faucet_level(facing);
+                if level == 0 {
+                    "Zu · Stufe 0 / 3".into()
+                } else {
+                    format!("Stufe {level} / 3")
+                }
+            } else {
+                if state.open { "Offen" } else { "Geschlossen" }.into()
+            },
+            bar: false,
+            value: 0.0,
+        });
+    }
+    if material == terra_core::plumbing::FAUCET {
+        rows.push(StatRow {
+            id: "water-controls".into(),
+            label: "Bedienung".into(),
+            text: "LMB: − · RMB: + · Shift+LMB: Abbauen".into(),
+            bar: false,
+            value: 0.0,
+        });
+    }
+    rows.push(StatRow {
+        id: "water-flow".into(),
+        label: "Durchfluss".into(),
+        text: if material == terra_core::infusion::FLUID_INFUSER {
+            if state.supplied {
+                "Versorgt"
+            } else {
+                "Kein Wasser"
+            }
+        } else if state.flowing {
+            "Fliesst"
+        } else {
+            "Still"
+        }
+        .into(),
+        bar: false,
+        value: 0.0,
+    });
 }
 
 fn family_stats(
@@ -534,7 +695,7 @@ fn update(scene: Scene, mut view: ResMut<TargetView>, mut next: Local<f32>) {
                     .get(&material)
                     .copied()
                     .unwrap_or_default();
-                (v.hand, v.tool_preview, v.tool_label, v.harvest) =
+                (v.hand, v.tool_preview, v.tool_label, v.harvest, v.tool_item) =
                     tool(properties, scene.active.0);
                 if material == 41
                     && scene
@@ -546,6 +707,155 @@ fn update(scene: Scene, mut view: ResMut<TargetView>, mut next: Local<f32>) {
                     v.tool_label = "Unzerstoerbar".into();
                 }
                 v.mining = matches!(scene.mining.target,Some(terra_network::protocol::session::MiningTarget::Block{position,..}) if position==hit.position);
+                if terra_core::kinetic::is_part(material) {
+                    let state = scene
+                        .session
+                        .as_ref()
+                        .and_then(|session| {
+                            session
+                                .kinetics
+                                .iter()
+                                .find(|part| part.position == hit.position)
+                        })
+                        .map(|part| terra_core::kinetic::KineticState {
+                            rpm: part.rpm,
+                            overloaded: part.overloaded,
+                            stress: part.stress,
+                            capacity: part.capacity,
+                            available_capacity: part.available_capacity,
+                        })
+                        .or_else(|| {
+                            scene
+                                .journal
+                                .as_ref()
+                                .map(|journal| journal.kinetic_state(hit.position))
+                        })
+                        .unwrap_or_default();
+                    kinetic_stats(&mut v.stats, state);
+                }
+                if material == terra_core::infusion::HOLD_BLOCK {
+                    if scene
+                        .chunks
+                        .block_at(terra_core::infusion::infuser_above(hit.position))
+                        == Some(terra_core::infusion::FLUID_INFUSER)
+                        && scene
+                            .chunks
+                            .block_at(terra_core::infusion::gap_above(hit.position))
+                            != Some(0)
+                    {
+                        v.stats.push(StatRow {
+                            id: "hold-air-gap".into(),
+                            label: "Luftspalt".into(),
+                            text: "Blockiert · Zwischenraum freihalten".into(),
+                            bar: false,
+                            value: 0.,
+                        });
+                    }
+                    let facing = scene
+                        .session
+                        .as_ref()
+                        .and_then(|session| {
+                            session
+                                .infusion
+                                .iter()
+                                .find(|view| view.position == hit.position)
+                        })
+                        .map(|view| view.facing)
+                        .or_else(|| {
+                            scene
+                                .journal
+                                .as_ref()
+                                .and_then(|journal| {
+                                    terra_world::conveyors::infusion_geometry(hit.position, journal)
+                                })
+                                .map(|view| view.facing)
+                        })
+                        .unwrap_or(0);
+                    v.stats.push(StatRow {
+                        id: "hold-direction".into(),
+                        label: "Bandrichtung".into(),
+                        text: ["Süd", "Ost", "Nord", "West"][usize::from(facing)].into(),
+                        bar: false,
+                        value: 0.0,
+                    });
+                    if let Some(view) = scene.session.as_ref().and_then(|session| {
+                        session
+                            .infusion
+                            .iter()
+                            .find(|view| view.position == hit.position)
+                    }) {
+                        use terra_core::infusion::HoldPhase;
+                        v.stats.push(StatRow {
+                            id: "hold-phase".into(),
+                            label: "Station".into(),
+                            text: match view.phase {
+                                HoldPhase::Idle if view.speed > 0.0 => "Durchlauf",
+                                HoldPhase::Idle => "Bereit",
+                                HoldPhase::Approaching => "Gefäß wird eingelegt",
+                                HoldPhase::WaitingForFluid => "Wartet auf Wasser",
+                                HoldPhase::Filling => "Befüllt",
+                                HoldPhase::Releasing => "Weitertransport",
+                            }
+                            .into(),
+                            bar: false,
+                            value: 0.0,
+                        });
+                    }
+                }
+                if material == terra_core::infusion::FLUID_INFUSER
+                    && (scene
+                        .chunks
+                        .block_at(terra_core::infusion::hold_below(hit.position))
+                        != Some(terra_core::infusion::HOLD_BLOCK)
+                        || scene.chunks.block_at(terra_core::infusion::gap_above(
+                            terra_core::infusion::hold_below(hit.position),
+                        )) != Some(0))
+                {
+                    v.stats.push(StatRow {
+                        id: "infuser-mount".into(),
+                        label: "Montage".into(),
+                        text: "Ein freier Luftblock zwischen Hold Block und Infuser".into(),
+                        bar: false,
+                        value: 0.0,
+                    });
+                }
+                if terra_core::plumbing::is_part(material)
+                    && let Some(state) = scene.session.as_deref().and_then(|session| {
+                        session
+                            .plumbing
+                            .iter()
+                            .find(|state| state.position == hit.position)
+                    })
+                {
+                    plumbing_stats(
+                        &mut v.stats,
+                        state,
+                        material,
+                        scene
+                            .journal
+                            .as_ref()
+                            .and_then(|j| j.object_state(hit.position))
+                            .map_or(if state.open { 0 } else { 4 }, |pose| pose.facing),
+                    );
+                }
+                if let Some(motion) = scene
+                    .vessel
+                    .as_deref()
+                    .filter(|motion| motion.filling && motion.target == Some(hit.position))
+                {
+                    v.visible = true;
+                    if material == 27 {
+                        v.title = "Wasserquelle".into();
+                        v.identifier = "teramic::water".into();
+                    }
+                    v.stats.push(StatRow {
+                        id: "vessel-fill".into(),
+                        label: "Fuellen".into(),
+                        text: String::new(),
+                        bar: true,
+                        value: motion.progress.clamp(0.0, 1.0) * 100.0,
+                    });
+                }
                 if material == terra_core::farming::FARMLAND {
                     v.stats.push(farmland_stat(
                         &scene.chunks,
@@ -571,6 +881,13 @@ fn update(scene: Scene, mut view: ResMut<TargetView>, mut next: Local<f32>) {
                 v.tool_label = "Hand / Level 0".into();
                 v.mining = matches!(scene.mining.target,Some(terra_network::protocol::session::MiningTarget::Prop{id,..}) if id==hit.prop.id);
                 let style = scene.styles.0.get(&kind).copied().unwrap_or_default();
+                if let Some(growth) = sapling_growth(
+                    &hit.prop,
+                    scene.session.as_deref(),
+                    scene.journal.as_deref(),
+                ) {
+                    v.stats.push(growth);
+                }
                 if let Some(crop) = terra_core::CropKind::from_prop(kind) {
                     v.title = match crop {
                         terra_core::CropKind::Wheat => "Weizen",
@@ -650,6 +967,11 @@ fn update(scene: Scene, mut view: ResMut<TargetView>, mut next: Local<f32>) {
                 }
             }
         }
+        if v.visible
+            && let Some(row) = scene.active.0.and_then(held_watering_stat)
+        {
+            v.stats.push(row);
+        }
         v.progress = scene.mining.progress.clamp(0.0, 1.0) * 100.0;
     }
     if *view != v {
@@ -663,6 +985,246 @@ mod tests {
         props::{PropId, PropKind, WorldProp},
         streaming::LoadedSection,
     };
+
+    #[test]
+    fn hovered_saplings_show_confirmed_growth_for_each_species_and_ignore_stale_occupants() {
+        use terra_core::{PlayerUuid, TreeRecord, TreeSpecies, TreeStage};
+        use terra_world::{edits::EditJournal, props::PropHit};
+        let mut app = App::new();
+        app.init_resource::<Time>()
+            .init_resource::<terra_core::DebugSettings>()
+            .init_resource::<crate::inventory::InventoryState>()
+            .init_resource::<crate::SettingsView>()
+            .init_resource::<crate::chat::ChatState>()
+            .init_resource::<TargetCreature>()
+            .init_resource::<MiningVisual>()
+            .init_resource::<ActiveItem>()
+            .init_resource::<Presentations>()
+            .init_resource::<terra_world::streaming::WorldAccess>()
+            .init_resource::<TargetView>()
+            .init_resource::<ChunkStore>()
+            .init_resource::<EditJournal>()
+            .init_resource::<BlockPalette>()
+            .init_resource::<terra_core::block_properties::BlockPropertiesCatalog>()
+            .init_resource::<ClientSession>()
+            .init_resource::<TargetWorld>()
+            .add_systems(Update, update);
+        let root = [-17, 16, -1];
+        for species in TreeSpecies::ALL {
+            let prop = WorldProp {
+                id: PropId(201),
+                kind: species.sapling().into(),
+                position: [-16.5, 16.0, -0.5],
+                rotation: 0.0,
+                scale: 1.0,
+                variant: 0,
+                section: terra_voxel::global_to_section([-17, 15, -1]).0,
+                removed: false,
+            };
+            let tree = TreeRecord {
+                id: prop.id.0,
+                root,
+                species,
+                seed: 201,
+                planted_by: Some(PlayerUuid::from_u128(1)),
+                stage: TreeStage::Sapling,
+                growth_seconds: 0.0,
+                bounds: None,
+                wood: Vec::new(),
+                leaves: Vec::new(),
+                fruit: None,
+                revision: 0,
+            };
+            app.world_mut().resource_mut::<TargetWorld>().0 = Some(WorldTarget::Prop(PropHit {
+                prop,
+                distance: 2.0,
+            }));
+            app.world_mut()
+                .resource_mut::<ClientSession>()
+                .trees
+                .trees
+                .clear();
+            assert!(
+                app.world_mut()
+                    .resource_mut::<ClientSession>()
+                    .trees
+                    .insert(tree.clone())
+            );
+            assert!(
+                app.world_mut()
+                    .resource_mut::<EditJournal>()
+                    .gameplay_mut()
+                    .trees
+                    .insert(tree.clone())
+            );
+            for percent in [0, 37, 99, 100] {
+                app.world_mut()
+                    .resource_mut::<ClientSession>()
+                    .trees
+                    .get_mut(prop.id.0)
+                    .unwrap()
+                    .growth_seconds = species.growth_seconds() / 100.0 * percent as f32;
+                app.world_mut()
+                    .resource_mut::<Time>()
+                    .advance_by(std::time::Duration::from_millis(100));
+                app.update();
+                let view = app.world().resource::<TargetView>();
+                assert!(view.visible && !view.mining);
+                assert_eq!(view.title, species.sapling().label());
+                let row = view
+                    .stats
+                    .iter()
+                    .find(|r| r.id == "sapling-growth")
+                    .unwrap();
+                assert_eq!(row.text, format!("{percent}%"));
+                assert_eq!(row.value, percent as f32);
+                assert!(row.bar);
+                assert_eq!(
+                    row.label,
+                    if percent == 100 {
+                        "Wartet auf Wachstum"
+                    } else {
+                        "Wachstum"
+                    }
+                );
+            }
+            for stale in 0..4 {
+                let mut mismatched = tree.clone();
+                match stale {
+                    0 => mismatched.root[0] += 1,
+                    1 => {
+                        mismatched.species = TreeSpecies::ALL
+                            .into_iter()
+                            .find(|s| *s != species)
+                            .unwrap()
+                    }
+                    2 => mismatched.stage = TreeStage::Felled,
+                    _ => mismatched.id += 1,
+                }
+                {
+                    let mut session = app.world_mut().resource_mut::<ClientSession>();
+                    session.trees.trees.clear();
+                    assert!(session.trees.insert(mismatched));
+                }
+                app.world_mut()
+                    .resource_mut::<Time>()
+                    .advance_by(std::time::Duration::from_millis(100));
+                app.update();
+                let view = app.world().resource::<TargetView>();
+                let row = view
+                    .stats
+                    .iter()
+                    .find(|r| r.id == "sapling-growth")
+                    .unwrap();
+                assert_eq!(row.text, "Wird synchronisiert");
+                assert!(
+                    !row.bar,
+                    "stale progress must not override the confirmed replica"
+                );
+            }
+            app.world_mut()
+                .resource_mut::<EditJournal>()
+                .gameplay_mut()
+                .trees
+                .trees
+                .clear();
+        }
+    }
+
+    #[test]
+    fn held_watering_hud_uses_the_selected_stack_fill_including_empty_and_partial() {
+        for tool in [
+            ToolKind::WoodWateringCan,
+            ToolKind::RubyWateringCan,
+            ToolKind::IronWateringCan,
+        ] {
+            for units in 0..=tool.watering_capacity() {
+                let item = ItemKind::Tool(tool).with_watering_units(units).unwrap();
+                let row = held_watering_stat(item).unwrap();
+                assert_eq!(row.text, format!("{units} / {}", tool.watering_capacity()));
+                assert_eq!(
+                    row.value,
+                    100.0 * f32::from(units) / f32::from(tool.watering_capacity())
+                );
+            }
+        }
+        assert!(held_watering_stat(ItemKind::Tool(ToolKind::Bucket)).is_none());
+    }
+
+    #[test]
+    fn plumbing_hud_reports_real_reservoir_capacity_and_shutoff() {
+        let state = terra_network::protocol::session::PlumbingVisual {
+            intake: None,
+            position: [1, 2, 3],
+            amount: 1500,
+            capacity: 2000,
+            open: false,
+            flowing: false,
+            supplied: false,
+            pump_rpm: 0.0,
+            basin: None,
+        };
+        let mut rows = Vec::new();
+        plumbing_stats(&mut rows, &state, 169, 0);
+        assert_eq!(rows[0].text, "1500 / 2000");
+        assert_eq!(rows[0].value, 75.0);
+        assert_eq!(rows.len(), 2);
+        rows.clear();
+        plumbing_stats(&mut rows, &state, 166, 0);
+        assert_eq!(rows[1].text, "Geschlossen");
+        assert_eq!(rows[2].text, "Still");
+    }
+
+    #[test]
+    fn faucet_hud_reports_each_real_stage() {
+        let state = terra_network::protocol::session::PlumbingVisual {
+            intake: None,
+            position: [1, 2, 3],
+            amount: 8,
+            capacity: 8,
+            open: true,
+            flowing: true,
+            supplied: true,
+            pump_rpm: 0.0,
+            basin: None,
+        };
+        for level in 0..=3 {
+            let mut rows = Vec::new();
+            plumbing_stats(
+                &mut rows,
+                &state,
+                167,
+                terra_core::plumbing::faucet_facing(0, level),
+            );
+            assert!(rows[1].text.contains(&format!("{level} / 3")));
+        }
+    }
+
+    #[test]
+    fn kinetic_hud_distinguishes_signed_speed_stopped_and_overloaded_networks() {
+        for (rpm, overloaded, expected) in [
+            (30.0, false, "In Betrieb"),
+            (-30.0, false, "In Betrieb"),
+            (7.5, false, "In Betrieb"),
+            (0.0, false, "Stillstand"),
+            (0.0, true, "Ueberlastet"),
+        ] {
+            let mut rows = Vec::new();
+            kinetic_stats(
+                &mut rows,
+                terra_core::kinetic::KineticState {
+                    rpm,
+                    overloaded,
+                    ..Default::default()
+                },
+            );
+            assert_eq!(rows.len(), 4);
+            assert_eq!(rows[0].text, format!("{rpm} U/min"));
+            assert_eq!(rows[1].text, expected);
+            assert!(rows[2].bar);
+            assert_eq!(rows[2].value, 0.0);
+        }
+    }
 
     #[test]
     fn mixed_slab_hover_shows_aimed_title_identifier_and_tool_level_without_changing_edit_target() {

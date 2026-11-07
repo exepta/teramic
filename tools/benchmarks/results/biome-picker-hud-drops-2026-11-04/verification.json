@@ -1,0 +1,108 @@
+{
+  "workspace_tests_passed": 3594,
+  "workspace_tests_ignored": 7,
+  "final_focused_camera_and_biome_tests_passed": 18,
+  "build_passed": true,
+  "clippy_all_changed_crates_and_targets_passed": true,
+  "native_create_world_small_passed": true,
+  "native_biome_choice_count": 9,
+  "native_create_world_small_footer_inset_logical_px": 34.6334,
+  "native_keyboard_modal_tab_and_restore_verified": true,
+  "native_f2_hide_inventory_and_restore_verified": true,
+  "native_f1_black_shadow_offset": [
+    2,
+    2
+  ],
+  "block_inventory_drops_verified": [
+    "creative and survival",
+    "single and either double chest half",
+    "machine inventories and attached campfire",
+    "drop capacity and IDs",
+    "revision failure atomicity",
+    "open views and stale transfer",
+    "save/reload and replacement without item resurrection"
+  ],
+  "automatic_join_cursor_capture_verified": [
+    "focused join after previous frame input block",
+    "delayed session readiness and window focus",
+    "cancellation on pause, release and failure"
+  ],
+  "biome_reference": {
+    "source": "user attachment 4910884699676962925.png",
+    "method": "lossless crop of original artwork",
+    "crop_size": [
+      122,
+      59
+    ],
+    "crop_y": 587,
+    "thumbnail_x": {
+      "plains": 243,
+      "forest": 384,
+      "desert": 525,
+      "highlands": 666,
+      "cherry-forest": 807,
+      "mushroom-park": 948,
+      "ocean": 1089
+    },
+    "shared_art": {
+      "random": "plains",
+      "cliffted-desert": "desert"
+    }
+  },
+  "sources": [
+    {
+      "path": "crates/terra-ui/src/menu/create_world.rs",
+      "sha256": "2190f2c4b3378b931330c95bb9a7eea35905e82de6d096376d939b0970a7a883"
+    },
+    {
+      "path": "crates/terra-ui/src/menu/model.rs",
+      "sha256": "13e5a9c00e94133c482d429f56e76fa686958948f1fa4f6ac15f5bc63a908e17"
+    },
+    {
+      "path": "crates/terra-ui/src/menu/navigation.rs",
+      "sha256": "9304d98da5be912f2fac6725b826b76cb47e13d6ef4b78e022dcbacfef044042"
+    },
+    {
+      "path": "crates/terra-ui/src/menu/view.rs",
+      "sha256": "fb0f34029e83fdd1c21a4b636cf865f630dc92b733ed172805ef6a2e72d10b87"
+    },
+    {
+      "path": "crates/terra-ui/src/hud_visibility.rs",
+      "sha256": "1bde98a4ae50a4cc1765703fa82b4455abbae871ee14e387aebfce6c01dcc345"
+    },
+    {
+      "path": "crates/terra-player/src/camera/capture.rs",
+      "sha256": "a97cb6f2421e36a0014c56cee51bea1c474774132892140dc1955e75134bfddd"
+    },
+    {
+      "path": "crates/terra-world/src/streaming/editing.rs",
+      "sha256": "a0cf675c9ba9785337ca08d132753c4133aa534698ebc5c617627681368dbff7"
+    },
+    {
+      "path": "crates/terra-world/src/edits/containers.rs",
+      "sha256": "268c752f47c288a9b13a5bc99ff81f2688e41e44abb9772a0fa46687784c8f63"
+    },
+    {
+      "path": "crates/terra-network/src/server_furniture.rs",
+      "sha256": "e078a491a80832445f864d80f7f2db2d45708781ff1126f849706df91c20f8c0"
+    },
+    {
+      "path": "crates/terra-network/src/server_validation.rs",
+      "sha256": "c91743ddb244b25c8d2281807dd10f43d51078a1e7807942312f6d18d644996b"
+    },
+    {
+      "path": "src-ui/components/modal-dialog.component.html",
+      "sha256": "b5f0af05e3c89e7776a066e3e8c95039974d2e541fbfc9f1c22d35545a19c8b2"
+    },
+    {
+      "path": "src-ui/styles/create-world.css",
+      "sha256": "e04d1b222f10ad548d3aafe0a3caab66b44553e099eadc529f2887df1c529ac4"
+    },
+    {
+      "path": "src-ui/styles/debug-target-185.css",
+      "sha256": "17e3d5fec8a4b55a45fde69c7c3f4a67c1fad1395bb97bb67544a5c828a8883c"
+    }
+  ],
+  "native_create_world_wide_passed": true,
+  "native_create_world_wide_footer_inset_logical_px": 42.1270751953125
+}

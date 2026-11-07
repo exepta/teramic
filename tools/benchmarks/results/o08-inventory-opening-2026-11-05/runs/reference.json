@@ -1,0 +1,50 @@
+{
+  "adapters": [
+    {
+      "backend": "Vulkan",
+      "device": 29605,
+      "device_pci_bus_id": "0000:0c:00.0",
+      "device_type": "DiscreteGpu",
+      "driver": "radv",
+      "driver_info": "Mesa 26.2.5-arch3.1",
+      "name": "AMD Radeon RX 6950 XT (RADV NAVI21)",
+      "vendor": 4098
+    }
+  ],
+  "checks": [
+    {
+      "fields": {
+        "name": "Player-7916d664",
+        "player": 1,
+        "uuid": "7916d664-26ed-477c-ac32-0668b5c9295b"
+      },
+      "raw": "2026-11-05T16:43:32.970493Z  INFO terra_network::server: Player profile accepted (local, not verified online) player=1 uuid=7916d664-26ed-477c-ac32-0668b5c9295b name=Player-7916d664",
+      "source_line": 45
+    }
+  ],
+  "kind": "native reference UI behavior/layout regression, not an FPS benchmark",
+  "process": {
+    "command": [
+      "target/o08-binaries/terra-client-final-projection",
+      "--smoke-test-inventory"
+    ],
+    "exit_code": 0,
+    "peak_drm_memory_gtt_kib": null,
+    "peak_drm_memory_vram_kib": null,
+    "peak_rss_kib": 2269496,
+    "system_cpu_seconds": 26.801,
+    "user_cpu_seconds": 198.27,
+    "wall_seconds": 94.792
+  },
+  "success": [
+    {
+      "fields": {
+        "captures": 25,
+        "seconds": 93.511692482
+      },
+      "raw": "2026-11-05T16:45:04.767707Z  INFO terra_client::inventory_smoke::reference: Native inventory reference passed: 18+9 slots, equal crafting cells, equal catalog cells, trash in rail, pause and settings, square slots, stable catalog pages, right recipe pagination, no recipe catalog, four interactive wood previews, cauldron, furnace, painted hotbar, ESC/E and unchanged authoritative inventory captures=25 seconds=93.511692482",
+      "source_line": 73
+    }
+  ],
+  "valid": true
+}

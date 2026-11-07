@@ -1,20 +1,19 @@
-//! Batching of the stock Bevy 0.19 point-shadow render graph. No cached maps,
+//! Batching of the stock Bevy 0.20 point-shadow render graph. No cached maps,
 //! dropped faces, reduced geometry or changes to the camera/directional passes.
 use bevy::{
     core_pipeline::schedule::{Core3d, RootNonCameraView},
     ecs::schedule::{InternedScheduleLabel, Schedule, ScheduleLabel, SingleThreadedExecutor},
     pbr::{
         LightEntity, PreprocessPipelines, ShadowView, SkipGpuPreprocess, ViewLightEntities,
-        clear_indirect_parameters_metadata, early_gpu_preprocess,
-        early_prepass_build_indirect_parameters, per_view_shadow_pass, shared_shadow_pass,
-        unpack_bins,
+        allocate_uniforms, early_gpu_preprocess, early_prepass_build_indirect_parameters,
+        per_view_shadow_pass, shared_shadow_pass, unpack_bins,
     },
     prelude::*,
     render::{
         Render, RenderApp, RenderSystems,
         batching::gpu_preprocessing::{
-            BatchedInstanceBuffers, BinUnpackingBuffers, BinUnpackingBuffersKey,
-            GpuPreprocessingSupport, PreprocessWorkItemBuffers,
+            BatchedInstanceBuffers, GpuPreprocessingSupport, PreprocessWorkItemBuffers,
+            SceneUnpackingBuffers, SceneUnpackingBuffersKey,
         },
         occlusion_culling::OcclusionCulling,
         renderer::CurrentView,
@@ -26,7 +25,10 @@ const MAX_FACES: usize = 96;
 #[derive(ScheduleLabel, Debug, Clone, PartialEq, Eq, Hash)]
 struct PointShadowGroup;
 #[derive(ScheduleLabel, Debug, Clone, PartialEq, Eq, Hash)]
+struct GroupedShadowSibling;
+#[derive(ScheduleLabel, Debug, Clone, PartialEq, Eq, Hash)]
 enum FacePass {
+    Allocate,
     Unpack,
     Preprocess,
 }
@@ -39,6 +41,7 @@ impl FromWorld for ShadowGroupView {
     }
 }
 #[derive(Component)]
+#[component(storage = "SparseSet")]
 struct GroupedFace(InternedScheduleLabel);
 #[derive(Resource, Default)]
 struct Faces {
@@ -67,6 +70,7 @@ pub(crate) fn install(app: &mut App) {
     schedule.set_executor(SingleThreadedExecutor::new());
     render
         .add_schedule(schedule)
+        .add_schedule(Schedule::new(GroupedShadowSibling))
         .init_resource::<ShadowGroupView>()
         .insert_resource(Faces {
             batch_encoders: !(std::env::args().any(|arg| arg.starts_with("--smoke-test"))
@@ -80,7 +84,7 @@ pub(crate) fn install(app: &mut App) {
                 .after(RenderSystems::CreateViews)
                 .before(RenderSystems::Specialize),
         );
-    for label in [FacePass::Unpack, FacePass::Preprocess] {
+    for label in [FacePass::Allocate, FacePass::Unpack, FacePass::Preprocess] {
         let mut pass = Schedule::new(label);
         pass.set_executor(SingleThreadedExecutor::new());
         // A RenderContext finishes its encoder when deferred buffers apply.
@@ -90,6 +94,7 @@ pub(crate) fn install(app: &mut App) {
         render.add_schedule(pass);
     }
     render
+        .add_systems(FacePass::Allocate, allocate_uniforms)
         .add_systems(FacePass::Unpack, unpack_bins)
         .add_systems(FacePass::Preprocess, early_gpu_preprocess);
 }
@@ -111,7 +116,7 @@ fn has_preprocess_work(world: &World, face: Entity) -> bool {
     let (Some(view), Some(buffers), Some(unpack)) = (
         world.get::<ExtractedView>(face),
         world.get_resource::<BatchedInstanceBuffers<bevy::pbr::MeshUniform, bevy::pbr::MeshInputUniform>>(),
-        world.get_resource::<BinUnpackingBuffers>(),
+        world.get_resource::<SceneUnpackingBuffers>(),
     ) else { return true; };
     buffers
         .phase_instance_buffers
@@ -134,7 +139,7 @@ fn has_preprocess_work(world: &World, face: Entity) -> bool {
             direct
                 || unpack
                     .view_phase_buffers
-                    .get(&BinUnpackingBuffersKey {
+                    .get(&SceneUnpackingBuffersKey {
                         phase,
                         view: view.retained_view_entity,
                     })
@@ -231,7 +236,9 @@ fn regroup(
         if i == 0 {
             entity.insert(RootNonCameraView(PointShadowGroup.intern()));
         } else {
-            entity.remove::<RootNonCameraView>();
+            // Keep the view's table stable when prepare_lights refreshes its root.
+            // The first face already draws this sibling through the grouped pass.
+            entity.insert(RootNonCameraView(GroupedShadowSibling.intern()));
         }
     }
 }
@@ -247,23 +254,24 @@ fn render_group(world: &mut World) {
         .get_resource::<GpuPreprocessingSupport>()
         .is_some_and(GpuPreprocessingSupport::is_culling_supported)
         && world.contains_resource::<PreprocessPipelines>();
-    // Per-view jobs write disjoint ranges. Flush each complete phase in GPU
-    // order; global metadata clearing/building is needed once for the group.
+    // Per-view jobs write disjoint ranges. The stock 0.20 per-view shadow pass
+    // builds indirect parameters immediately before drawing each face.
     let result = (|| -> Result<(), String> {
         if !gpu {
             return Err(
                 "GPU indirect preprocessing unavailable; use the complete Core3d fallback".into(),
             );
         }
-        world
-            .run_system_cached(clear_indirect_parameters_metadata)
-            .map_err(|e| e.to_string())?;
         if world.resource::<Faces>().batch_encoders {
+            render_faces(world, &faces, FacePass::Allocate);
             render_faces(world, &faces, FacePass::Unpack);
             render_faces(world, &faces, FacePass::Preprocess);
         } else {
             for &face in &faces {
                 world.insert_resource(CurrentView(face));
+                world
+                    .run_system_cached(allocate_uniforms)
+                    .map_err(|e| e.to_string())?;
                 world
                     .run_system_cached(unpack_bins)
                     .map_err(|e| e.to_string())?;
@@ -272,12 +280,14 @@ fn render_group(world: &mut World) {
                     .map_err(|e| e.to_string())?;
             }
         }
-        world
-            .run_system_cached(early_prepass_build_indirect_parameters)
-            .map_err(|e| e.to_string())?;
-        if world.resource::<Faces>().batch_encoders {
+        // The 0.20 draw helper reuses indirect count buffers between faces.
+        // Diagnostic copies must happen before the next face resets them.
+        if world.resource::<Faces>().batch_encoders
+            && !crate::draw_calls::gpu_readback_active(world)
+        {
             // The stock per-view pass accepts a list of shadow views. It calls
-            // the same depth renderer for every face using a single context.
+            // the indirect builder and depth renderer for every face using a
+            // single context. A separate global build is no longer valid.
             // This helper is not a camera and never enters view extraction.
             let group_view = world.resource::<ShadowGroupView>().0;
             world
@@ -294,6 +304,9 @@ fn render_group(world: &mut World) {
             for &face in &faces {
                 world.insert_resource(CurrentView(face));
                 world
+                    .run_system_cached(early_prepass_build_indirect_parameters)
+                    .map_err(|e| e.to_string())?;
+                world
                     .run_system_cached(shared_shadow_pass::<false>)
                     .map_err(|e| e.to_string())?;
                 crate::draw_calls::capture_grouped_shadow_boundary(world)?;
@@ -309,17 +322,17 @@ fn render_group(world: &mut World) {
             let Some(original) = world.get::<GroupedFace>(face).map(|f| f.0) else {
                 continue;
             };
-            world
-                .entity_mut(face)
-                .insert(RootNonCameraView(original))
-                .remove::<GroupedFace>();
+            // camera_driver has already snapshotted every sibling root. Keep
+            // those routes inert this frame or the explicit replay below is
+            // drawn again when the driver reaches a remaining sibling. The
+            // failed flag restores the original routes during the next regroup.
             world.insert_resource(CurrentView(face));
             if let Some(shadow) = world.get::<ShadowView>(face) {
                 shadow.depth_attachment.prepare_for_new_frame();
             }
             // The stock pass clears each depth attachment, replacing any
             // partially emitted face instead of silently dropping its shadows.
-            if let Err(error) = world.try_run_schedule(Core3d) {
+            if let Err(error) = world.try_run_schedule(original) {
                 error!(%error, ?face, "Point-shadow Core3d fallback could not run");
             }
         }
@@ -357,7 +370,7 @@ mod tests {
         let entity = world.spawn(extracted).id();
         assert!(has_preprocess_work(&world, entity));
         world.init_resource::<BatchedInstanceBuffers<bevy::pbr::MeshUniform, bevy::pbr::MeshInputUniform>>();
-        world.init_resource::<BinUnpackingBuffers>();
+        world.init_resource::<SceneUnpackingBuffers>();
         assert!(!has_preprocess_work(&world, entity));
         let mut work = RawBufferVec::new(BufferUsages::STORAGE);
         work.push(PreprocessWorkItem {
@@ -371,6 +384,29 @@ mod tests {
         world.resource_mut::<BatchedInstanceBuffers<bevy::pbr::MeshUniform, bevy::pbr::MeshInputUniform>>()
             .phase_instance_buffers.insert(std::any::TypeId::of::<u8>(), phase);
         assert!(has_preprocess_work(&world, entity));
+    }
+
+    #[test]
+    fn empty_compute_passes_need_no_current_view_before_the_shadow_draw() {
+        let mut app = App::new();
+        app.init_resource::<PassTrace>()
+            .init_resource::<BatchedInstanceBuffers<bevy::pbr::MeshUniform, bevy::pbr::MeshInputUniform>>()
+            .init_resource::<SceneUnpackingBuffers>();
+        let light = app.world_mut().spawn_empty().id();
+        let faces: Vec<_> = (0..6)
+            .map(|index| app.world_mut().spawn(view(light, index)).id())
+            .collect();
+        for label in [FacePass::Allocate, FacePass::Unpack, FacePass::Preprocess] {
+            let mut schedule = Schedule::new(label.clone());
+            schedule.set_executor(SingleThreadedExecutor::new());
+            schedule.add_systems(|view: Res<CurrentView>, mut trace: ResMut<PassTrace>| {
+                trace.0.push(view.0);
+            });
+            app.add_schedule(schedule);
+            render_faces(app.world_mut(), &faces, label);
+            assert!(app.world().resource::<PassTrace>().0.is_empty());
+            assert!(!app.world().contains_resource::<CurrentView>());
+        }
     }
 
     #[test]
@@ -448,7 +484,11 @@ mod tests {
             .world_mut()
             .spawn((view(lights[0], 10), RootNonCameraView(Core3d.intern())))
             .id();
-        for _ in 0..3 {
+        let mut dense_views = app
+            .world_mut()
+            .query_filtered::<Entity, With<ExtractedView>>();
+        let original_order: Vec<_> = dense_views.iter(app.world()).collect();
+        for _ in 0..30 {
             // Model prepare_lights updating every flame's render view.
             for &face in &faces {
                 app.world_mut()
@@ -460,10 +500,27 @@ mod tests {
             assert_eq!(
                 faces
                     .iter()
-                    .filter(|&&e| app.world().get::<RootNonCameraView>(e).is_some())
+                    .filter(|&&e| {
+                        app.world()
+                            .get::<RootNonCameraView>(e)
+                            .is_some_and(|root| root.0 == PointShadowGroup.intern())
+                    })
                     .count(),
                 1
             );
+            assert_eq!(
+                dense_views.iter(app.world()).collect::<Vec<_>>(),
+                original_order,
+                "changing shadow routes must not renumber dense view metadata"
+            );
+            assert!(faces.iter().all(|&entity| {
+                app.world()
+                    .get::<RootNonCameraView>(entity)
+                    .is_some_and(|root| {
+                        root.0 == PointShadowGroup.intern()
+                            || root.0 == GroupedShadowSibling.intern()
+                    })
+            }));
             assert!(
                 faces
                     .iter()
@@ -573,6 +630,7 @@ mod tests {
                 max_supported_mode: GpuPreprocessingMode::Culling,
             })
             .init_resource::<Replayed>()
+            .add_schedule(Schedule::new(GroupedShadowSibling))
             .add_systems(Update, regroup)
             .add_systems(
                 Core3d,
@@ -595,6 +653,15 @@ mod tests {
             .collect();
         app.update();
         assert_eq!(app.world().resource::<Faces>().views.len(), 6);
+        // The real driver gathers all root entity IDs before running their
+        // schedules, then reads each schedule label when it reaches that entity.
+        let roots = app
+            .world_mut()
+            .query_filtered::<Entity, With<RootNonCameraView>>()
+            .iter(app.world())
+            .collect::<Vec<_>>();
+        let leader = app.world().resource::<Faces>().views[0];
+        assert_eq!(roots[0], leader);
         let camera = app.world_mut().spawn_empty().id();
         app.world_mut().insert_resource(CurrentView(camera));
         // No preprocessing pipelines exist in this CPU fixture: the incomplete
@@ -602,6 +669,13 @@ mod tests {
         app.world_mut().run_system_cached(render_group).unwrap();
         assert_eq!(app.world().resource::<CurrentView>().0, camera);
         assert!(app.world().resource::<Faces>().failed);
+        for &face in roots.iter().skip(1) {
+            let route = app.world().get::<RootNonCameraView>(face).unwrap().0;
+            assert_eq!(route, GroupedShadowSibling.intern());
+            assert!(app.world().get::<GroupedFace>(face).is_some());
+            app.world_mut().insert_resource(CurrentView(face));
+            app.world_mut().run_schedule(route);
+        }
         let seen = &app.world().resource::<Replayed>().0;
         assert_eq!(seen.len(), 6);
         assert!(faces.iter().all(|face| seen.contains(face)));

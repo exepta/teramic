@@ -1,0 +1,8 @@
+{
+  "id": "teramic::belt_merger", "name": "Belt Merger", "station": "workbench",
+  "output": { "item": { "block": 158 }, "count": 1 },
+  "pattern": { "kind": "shapeless", "ingredients": [
+    { "item": { "block": 153 }, "count": 3 },
+    { "item": { "mineral": "iron_ingot" }, "count": 2 }
+  ] }
+}

@@ -1,0 +1,1 @@
+{"id":"teramic::wool_stairs_dye","name":"Dyed wool stairs","station":"hand","output":{"item":{"block":104},"count":1},"pattern":{"kind":"shapeless","ingredients":[{"item":{"block":104},"count":1},{"item":{"dye":"white"},"count":1}]}}

@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "id": 170,
+  "name": "Hold Block",
+  "description": "A passive platform at conveyor height. Holds vessels below a Fluid Infuser, then hands them to the next belt.",
+  "creative_category": "technic",
+  "render_kind": "custom_mesh",
+  "struct_block": true,
+  "model_layout": "scene",
+  "model": "models/hold_block.gltf",
+  "hardness": 3,
+  "resistance": 8,
+  "mining_level": 0,
+  "required_tool": "pickaxe",
+  "textures": {
+    "wood_frame": "textures/machinery-oak-hd.png",
+    "forged_plate": "textures/machinery-iron-hd.png",
+    "brass_trim": "textures/machinery-iron-hd.png",
+    "iron_rivets": "textures/machinery-iron-hd.png",
+    "kinetic_belt": "textures/machinery-belt-hd.png",
+    "rubber_seal": "textures/machinery-belt-hd.png"
+  },
+  "collision_boxes": [
+    {
+      "minimum": [
+        0.04,
+        0,
+        0.04
+      ],
+      "maximum": [
+        0.96,
+        0.625,
+        0.96
+      ]
+    }
+  ]
+}

@@ -1,0 +1,42 @@
+{
+  "status": "passed",
+  "date": "2026-11-02",
+  "tests": {
+    "passed": 3686,
+    "failed": 0,
+    "ignored": 8,
+    "programs": 12
+  },
+  "build": "passed",
+  "clippy": "passed",
+  "format": "passed",
+  "diff_check": "passed",
+  "native": {
+    "hydraulics": {
+      "status": "passed",
+      "seconds": 74.94792175292969,
+      "captures": 35,
+      "wall_mounts": 4,
+      "pipe_materials": 4,
+      "water_views": 2,
+      "warnings": 1,
+      "errors": 0
+    },
+    "natural_water": {
+      "status": "passed",
+      "captures": 33,
+      "contacts": 6,
+      "moving_vertices": 928,
+      "pinned_contact_vertices": 72,
+      "warnings": 0,
+      "errors": 0
+    }
+  },
+  "source_files_hashed": 93,
+  "binary_sha256": {
+    "target/debug/terra-client": "2e2af2cd7c57c9cb9af764784f4a0408e83a30b7cc31f6372ff8c544dc662475",
+    "target/debug/terra-server": "fffac58cd00a6b71f37b985fca725f90fa91ac469de547847d7ec364c286cfb7"
+  },
+  "validation_note": "After the full suite passed, changes were confined to native smoke readiness/probe helpers and equivalent Clippy style. These helpers were compiled, linted, and executed by the final successful native run. Production geometry and physics were unchanged.",
+  "native_warning_note": "Hydraulics logged one Bevy RenderLayers insertion for an entity already despawned during a scene teleport; all assertions and captures completed."
+}

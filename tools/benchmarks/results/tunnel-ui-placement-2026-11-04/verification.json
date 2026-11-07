@@ -1,0 +1,26 @@
+{
+  "ui_tests_passed": 455,
+  "physics_tests_passed": 44,
+  "native_inventory_captures": 26,
+  "native_resolutions": [
+    [
+      3840,
+      2160
+    ],
+    [
+      1025,
+      641
+    ]
+  ],
+  "build_passed": true,
+  "clippy_passed": true,
+  "placement_regression": "Repeated confirmed cube placements preserve character movement outside changed cells while local changes and authored models still require fresh collision geometry.",
+  "limitation": "No frame-time benchmark of the user scene; the verified fix addresses section-wide movement pauses during collider rebuilding.",
+  "native_error_toast_verified": true,
+  "native_additional_resolutions": [
+    [
+      1680,
+      936
+    ]
+  ]
+}

@@ -25,6 +25,9 @@ use terra_ui::{
 };
 use tilt_ui::{ElementId, ImageMetadata};
 
+#[path = "inventory_reference_smoke.rs"]
+pub(crate) mod reference;
+
 #[derive(Clone, Copy, Debug, PartialEq)]
 enum Stage {
     Loading,
@@ -106,6 +109,11 @@ enum Stage {
     HudOptionsCapture,
     HudBack,
     HudResume,
+    HudHidden,
+    HudHiddenInventory,
+    HudRestore,
+    HudRestored,
+    HudCaptured,
     Done,
 }
 #[derive(Resource)]
@@ -206,6 +214,18 @@ pub(crate) fn install(app: &mut App) {
     if !std::env::args().any(|arg| arg == "--smoke-test-inventory") {
         return;
     }
+    if std::env::var("TERRA_CLAIMS_GALLERY").as_deref() == Ok("1") {
+        crate::claims_smoke::install(app);
+        return;
+    }
+    if crate::kingdom_smoke::requested() {
+        crate::kingdom_smoke::install(app);
+        return;
+    }
+    if std::env::var("TERRA_INVENTORY_REFERENCE_SMOKE").is_ok_and(|value| value == "1") {
+        reference::install(app);
+        return;
+    }
     let now = Instant::now();
     app.insert_resource(InventorySmoke {
         started: now,
@@ -302,6 +322,26 @@ fn advance(world: &mut World, state: &mut InventorySmoke) -> Result<bool, String
             if !world.contains_resource::<terra_server::IntegratedServer>() {
                 return Err("Inventory smoke requires a real integrated server".into());
             }
+            let hud_only = std::env::var_os("TERRA_INVENTORY_HUD_ONLY").is_some();
+            if state.elapsed(10.0) {
+                let shell = element(world, "inventory-shell");
+                let backdrop_present = element(world, "inventory-backdrop").is_some();
+                info!(
+                    hud_only,
+                    session_ready = world.resource::<ClientSession>().ready,
+                    world_ready = world.resource::<terra_render::RenderStatus>().ready,
+                    player_preview_ready = world.resource::<terra_render::PlayerPreviewImage>().ready,
+                    block_previews_pending = world.resource::<terra_render::RenderBlockPreviews>().pending,
+                    prop_previews = world.resource::<terra_render::RenderPropPreviews>().images.len(),
+                    page = ?world.resource::<MenuState>().page,
+                    inventory_prewarming = world.resource::<InventoryView>().prewarming,
+                    inventory_shell_present = shell.is_some(),
+                    inventory_shell_parked = shell.is_some_and(|shell| world.get::<terra_ui::ParkedUi>(shell).is_some()),
+                    inventory_backdrop_present = backdrop_present,
+                    "Native inventory smoke loading readiness"
+                );
+                state.entered = Instant::now();
+            }
             if !world.resource::<ClientSession>().ready
                 || !world.resource::<terra_render::RenderStatus>().ready
                 || !world.resource::<terra_render::PlayerPreviewImage>().ready
@@ -309,11 +349,14 @@ fn advance(world: &mut World, state: &mut InventorySmoke) -> Result<bool, String
                     .resource::<terra_render::RenderBlockPreviews>()
                     .pending
                     != 0
-                || world
-                    .resource::<terra_render::RenderPropPreviews>()
-                    .images
-                    .len()
-                    < 6
+                // HUD-only checks never request the offscreen prop catalog. Its
+                // lazy thumbnails are unrelated to HUD or retained inventory readiness.
+                || (!hud_only
+                    && world
+                        .resource::<terra_render::RenderPropPreviews>()
+                        .images
+                        .len()
+                        < 6)
             {
                 return Ok(false);
             }
@@ -353,6 +396,13 @@ fn advance(world: &mut World, state: &mut InventorySmoke) -> Result<bool, String
                     (1280, 800)
                 },
             );
+            if hud_only {
+                state.target = element(world, "inventory-hud");
+                hud_toggle_key(world)?;
+                state.started = Instant::now();
+                state.advance(Stage::HudHidden);
+                return Ok(false);
+            }
             world.write_message(InventoryAction::Toggle);
             state.started = Instant::now();
             state.advance(Stage::Open);
@@ -696,8 +746,15 @@ fn advance(world: &mut World, state: &mut InventorySmoke) -> Result<bool, String
             if dropdown {
                 begin_category_dropdown(world, state, "all", Stage::AllRelease)?;
             } else {
-                let target =
-                    category_target(world, "Block preview 1").ok_or("All category tab missing")?;
+                let preview = world
+                    .resource::<InventoryView>()
+                    .categories
+                    .iter()
+                    .find(|category| category.id == "all")
+                    .ok_or("All category missing")?
+                    .preview_key
+                    .clone();
+                let target = category_target(world, &preview).ok_or("All category tab missing")?;
                 pointer(world, target, Some(true))?;
                 state.target = Some(target);
                 state.advance(Stage::AllPress);
@@ -841,8 +898,16 @@ fn advance(world: &mut World, state: &mut InventorySmoke) -> Result<bool, String
                 if world.resource::<InventoryView>().category_dropdown {
                     begin_category_dropdown(world, state, "all", Stage::HeldTabConfirm)?;
                 } else {
-                    let target = category_target(world, "Block preview 1")
-                        .ok_or("Missing All browser category")?;
+                    let preview = world
+                        .resource::<InventoryView>()
+                        .categories
+                        .iter()
+                        .find(|category| category.id == "all")
+                        .ok_or("All category missing")?
+                        .preview_key
+                        .clone();
+                    let target =
+                        category_target(world, &preview).ok_or("Missing All browser category")?;
                     pointer(world, target, Some(true))?;
                     state.target = Some(target);
                     state.advance(Stage::HeldTabPress);
@@ -1588,9 +1653,127 @@ fn advance(world: &mut World, state: &mut InventorySmoke) -> Result<bool, String
             info!("Native pause/options retained the same hotbar entities and visible minimap");
             return Ok(true);
         }
+        Stage::HudHidden if state.elapsed(0.5) => {
+            require_hud_visibility(world, state.target, false)?;
+            capture(world, "hud-f2-hidden")?;
+            world.write_message(InventoryAction::Toggle);
+            state.advance(Stage::HudHiddenInventory);
+        }
+        Stage::HudHiddenInventory if state.elapsed(0.8) => {
+            require_hud_visibility(world, state.target, false)?;
+            if !world.resource::<InventoryView>().open || !world.resource::<PlayerInputBlock>().0 {
+                return Err("Hidden HUD prevented opening the inventory".into());
+            }
+            let viewport = world
+                .query_filtered::<&Window, With<PrimaryWindow>>()
+                .iter(world)
+                .next()
+                .ok_or("Missing native inventory window")?
+                .physical_size()
+                .as_vec2();
+            for id in ["inventory-backdrop", "inventory-shell", "inventory-grid"] {
+                let entity =
+                    element(world, id).ok_or_else(|| format!("Missing {id} with hidden HUD"))?;
+                if !world
+                    .get::<InheritedVisibility>(entity)
+                    .is_some_and(|visibility| visibility.get())
+                {
+                    return Err(format!("F2 hid the interactive inventory: {id}"));
+                }
+                let node = world
+                    .get::<ComputedNode>(entity)
+                    .ok_or("Missing inventory layout")?;
+                let transform = world
+                    .get::<bevy::ui::UiGlobalTransform>(entity)
+                    .ok_or("Missing inventory position")?;
+                let bounds = Rect::from_center_size(transform.translation, node.size());
+                if !node.size().is_finite()
+                    || node.size().min_element() <= 1.0
+                    || bounds.min.cmplt(-Vec2::splat(2.0)).any()
+                    || bounds.max.cmpgt(viewport + Vec2::splat(2.0)).any()
+                {
+                    return Err(format!(
+                        "Hidden HUD left {id} unusable: bounds={bounds:?}, viewport={viewport:?}"
+                    ));
+                }
+            }
+            hud_toggle_key(world)?;
+            capture(world, "hud-f2-inventory")?;
+            state.advance(Stage::HudRestore);
+        }
+        Stage::HudRestore if state.elapsed(0.4) => {
+            require_hud_visibility(world, state.target, false)?;
+            world.write_message(InventoryAction::Close);
+            state.advance(Stage::HudRestored);
+        }
+        Stage::HudRestored if state.elapsed(0.4) => {
+            if world.resource::<PlayerInputBlock>().0 {
+                return Err("Inventory did not release input".into());
+            }
+            hud_toggle_key(world)?;
+            state.advance(Stage::HudCaptured);
+        }
+        Stage::HudCaptured if state.elapsed(0.5) => {
+            require_hud_visibility(world, state.target, true)?;
+            capture(world, "hud-f2-restored")?;
+            state.advance(Stage::HudResume);
+            // The existing final stage also checks that the hotbar remains retained.
+            state.target = element(world, "inventory-hud-hotbar");
+        }
         _ => {}
     }
     Ok(false)
+}
+
+fn hud_toggle_key(world: &mut World) -> Result<(), String> {
+    let window = world
+        .query_filtered::<Entity, With<PrimaryWindow>>()
+        .iter(world)
+        .next()
+        .ok_or("Missing native window")?;
+    for state in [ButtonState::Pressed, ButtonState::Released] {
+        world.write_message(KeyboardInput {
+            key_code: KeyCode::F2,
+            logical_key: Key::F2,
+            state,
+            text: None,
+            repeat: false,
+            window,
+        });
+    }
+    Ok(())
+}
+
+fn require_hud_visibility(
+    world: &mut World,
+    hotbar: Option<Entity>,
+    visible: bool,
+) -> Result<(), String> {
+    if world.resource::<terra_ui::HudVisibility>().visible != visible
+        || element(world, "inventory-hud") != hotbar
+    {
+        return Err("F2 failed to toggle the retained HUD".into());
+    }
+    for id in [
+        "inventory-hud",
+        "mini-map",
+        "survival-hud",
+        "target-card",
+        "debug-overlay",
+    ] {
+        if let Some(entity) = element(world, id) {
+            let rendered = world
+                .get::<InheritedVisibility>(entity)
+                .is_some_and(|visibility| visibility.get());
+            if !visible && rendered {
+                return Err(format!("F2 left {id} rendered"));
+            }
+            if visible && id == "inventory-hud" && !rendered {
+                return Err("F2 did not restore the hotbar".into());
+            }
+        }
+    }
+    Ok(())
 }
 
 fn require_closed_inventory(world: &mut World) -> Result<(), String> {
@@ -2125,7 +2308,7 @@ fn require_popup(
             .iter(world)
             .next()
             .and_then(Window::physical_cursor_position);
-        tracing::error!(?pointer, target=?world.get::<bevy::ui::UiGlobalTransform>(target), size=?world.get::<ComputedNode>(target).map(ComputedNode::size), interaction=?world.get::<Interaction>(target), "Native tooltip hover target diagnostics");
+        tracing::error!(?pointer, target=?world.get::<bevy::ui::UiGlobalTransform>(target), size=?world.get::<ComputedNode>(target).map(ComputedNode::size), interaction=?world.get::<bevy::picking::hover::Hovered>(target), "Native tooltip hover target diagnostics");
         return Err("Hover did not open the component-local tooltip".into());
     };
     let mut ancestor = world.get::<ChildOf>(tip).map(ChildOf::parent);
@@ -2316,11 +2499,25 @@ fn require_layout(world: &mut World) -> Result<(), String> {
                 bounds.1 = bounds.1.max(transform.translation.x + node.size().x * 0.5);
             }
         }
+        let rail_node = world
+            .get::<ComputedNode>(categories)
+            .ok_or("Missing category rail bounds")?;
+        let rail_transform = world
+            .get::<bevy::ui::UiGlobalTransform>(categories)
+            .ok_or("Missing category rail transform")?;
+        let rail_rect = Rect::from_center_size(rail_transform.translation, rail_node.size());
+        let scrollable = world
+            .get::<Node>(categories)
+            .is_some_and(|node| node.overflow.y != bevy::ui::OverflowAxis::Visible);
         if !bounds.0.is_finite()
-            || ((bounds.0 + bounds.1) * 0.5 - browser_rect.center().x).abs() > 6.0 * scale
+            || bounds.0 < rail_rect.min.x - 2.0
+            || bounds.1 > rail_rect.max.x + 2.0
+            || rail_rect.max.x > browser_rect.min.x + 1.0
+            || (rail_rect.height() - browser_rect.height()).abs() > 3.0 * scale
+            || !scrollable
         {
             return Err(format!(
-                "Category cards must be centered like item slots: {bounds:?}, sidebar={browser_rect:?}"
+                "Categories must form a vertical scroll rail outside the left browser border: tabs={bounds:?}, rail={rail_rect:?}, sidebar={browser_rect:?}, scrollable={scrollable}"
             ));
         }
     }
@@ -2380,7 +2577,7 @@ fn require_layout(world: &mut World) -> Result<(), String> {
                     .into(),
             );
         }
-        let gap = if media_width > 780.0 { 100.0 } else { 8.0 };
+        let gap = if media_width > 780.0 { 100.0 } else { 68.0 };
         let expected_inset = if media_width > 1150.0 {
             16.0
         } else if media_width > 950.0 {
@@ -2451,7 +2648,10 @@ fn require_layout(world: &mut World) -> Result<(), String> {
             "Shared inventory overlaps the item browser: {panel_rect:?} {browser_rect:?}"
         ));
     }
-    for (id, expected) in [("inventory-grid", 18), ("inventory-hotbar", 9)] {
+    for (id, expected) in [
+        ("inventory-grid", terra_core::INVENTORY_SLOTS - 9),
+        ("inventory-hotbar", 9),
+    ] {
         let section = element(world, id).ok_or_else(|| format!("Missing {id}"))?;
         let slots = world
             .query::<(Entity, &ElementId)>()
@@ -2476,7 +2676,7 @@ fn require_layout(world: &mut World) -> Result<(), String> {
         }
     }
     let view = world.resource::<InventoryView>();
-    if !view.assembly && !view.container {
+    if !view.assembly && !view.container && !view.furnace && !view.crusher && !view.mixer {
         let equipment_count = world
             .query::<(&ElementId, &ComputedNode)>()
             .iter(world)
@@ -2565,7 +2765,7 @@ fn pointer_at(
     }
     os_pointer(world, &commands)
 }
-fn type_text(world: &mut World, value: &str) -> Result<(), String> {
+pub(crate) fn type_text(world: &mut World, value: &str) -> Result<(), String> {
     let window = world
         .query_filtered::<Entity, With<PrimaryWindow>>()
         .iter(world)

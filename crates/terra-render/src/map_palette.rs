@@ -71,21 +71,23 @@ fn update(
         };
         // Cartography records authored albedo, not continuously changing rain
         // tint. Transient world shading must not dirty every explored tile.
-        let base = stable_base_color(
+        colors[usize::from(id)] = material_albedo(
             blocks
                 .cube_face_definition(id, 3)
                 .map(|definition| definition.base_color),
             material,
+            &means,
         );
-        let texture = material
-            .base_color_texture
-            .as_ref()
-            .and_then(|handle| means.0.get(&handle.id()))
-            .copied()
-            .unwrap_or([1.0; 3]);
-        colors[usize::from(id)] =
-            std::array::from_fn(|axis| (base[axis] * texture[axis]).clamp(0.0, 1.0));
     }
+    // The near model shares a grass/soil atlas. Its whole-image mean is not the
+    // upper face; UpLod provides the exact tiled top used by the authored surface.
+    let authored_grass = templates.cube_lods.contains_key(&1);
+    let surface_grass = templates
+        .cube_lods
+        .get(&1)
+        .and_then(|block| blocks.materials.get(block.face_materials[3]))
+        .and_then(|handle| materials.get(handle))
+        .map(|material| authored_grass_top_palette(material_albedo(None, material, &means)));
     let biome_colors = crate::appearance::LINEAR_COLORS.map(|c| [c[0], c[1], c[2]]);
     let water_colors = std::array::from_fn(|index| {
         if index == 7 {
@@ -96,13 +98,37 @@ fn update(
     });
     if palette.colors != colors
         || palette.biome_colors != biome_colors
+        || palette.authored_grass != authored_grass
+        || palette.surface_grass != surface_grass
         || palette.water_colors != water_colors
     {
         palette.colors = colors;
         palette.biome_colors = biome_colors;
+        palette.authored_grass = authored_grass;
+        palette.surface_grass = surface_grass;
         palette.water_colors = water_colors;
         palette.revision = palette.revision.wrapping_add(1);
     }
+}
+
+fn authored_grass_top_palette(color: [f32; 3]) -> [f32; 3] {
+    // Keep in step with authored_grass_top_palette in terra_wet_surface.wesl.
+    std::array::from_fn(|axis| color[axis] * 0.22 + [0.28, 0.46, 0.08][axis] * 0.78)
+}
+
+fn material_albedo(
+    authored: Option<[f32; 4]>,
+    material: &StandardMaterial,
+    means: &TextureMeans,
+) -> [f32; 3] {
+    let base = stable_base_color(authored, material);
+    let texture = material
+        .base_color_texture
+        .as_ref()
+        .and_then(|handle| means.0.get(&handle.id()))
+        .copied()
+        .unwrap_or([1.0; 3]);
+    std::array::from_fn(|axis| (base[axis] * texture[axis]).clamp(0.0, 1.0))
 }
 
 fn stable_base_color(authored: Option<[f32; 4]>, material: &StandardMaterial) -> [f32; 3] {
@@ -163,6 +189,66 @@ fn texture_mean(image: &Image) -> Option<[f32; 3]> {
 mod tests {
     use super::*;
     use bevy::{asset::RenderAssetUsages, render::render_resource::Extent3d};
+
+    #[test]
+    fn authored_surface_uses_coarse_top_without_recoloring_the_cave_albedo() {
+        use crate::blocks::{BlockTemplate, TemplateSet, definitions::BlockRenderKind};
+
+        let block = |material| BlockTemplate {
+            surface: None,
+            render_kind: BlockRenderKind::CustomMesh,
+            bevel_width: 0.0,
+            faces: std::array::from_fn(|_| Vec::new()),
+            face_materials: [material; 6],
+            side_cap: None,
+            details: Vec::new(),
+            model: Vec::new(),
+        };
+        let mut images = Assets::<Image>::default();
+        let mut materials = Assets::<StandardMaterial>::default();
+        let handles = [[102, 51, 25, 255], [51, 153, 25, 255]].map(|pixel| {
+            let texture = images.add(Image::new(
+                Extent3d {
+                    width: 1,
+                    height: 1,
+                    depth_or_array_layers: 1,
+                },
+                TextureDimension::D2,
+                pixel.to_vec(),
+                TextureFormat::Rgba8Unorm,
+                RenderAssetUsages::default(),
+            ));
+            materials.add(StandardMaterial {
+                base_color_texture: Some(texture),
+                ..default()
+            })
+        });
+        let mut blocks = crate::blocks::BlockAssets::default();
+        blocks.materials = handles.to_vec();
+        blocks.templates = Some(std::sync::Arc::new(TemplateSet {
+            blocks: HashMap::from([(1, block(0))]),
+            cube_lods: HashMap::from([(1, block(1))]),
+            ..default()
+        }));
+        let mut app = App::new();
+        app.insert_resource(images)
+            .insert_resource(materials)
+            .insert_resource(blocks)
+            .init_resource::<TextureMeans>()
+            .init_resource::<MapPalette>()
+            .add_systems(Update, update);
+        app.update();
+
+        let palette = app.world().resource::<MapPalette>();
+        assert!(palette.authored_grass);
+        assert_eq!(palette.colors[1], [0.4, 0.2, 25.0 / 255.0]);
+        let surface = palette.surface_grass.unwrap();
+        for (actual, expected) in surface.into_iter().zip([0.2624, 0.4908, 0.083_968_63]) {
+            assert!((actual - expected).abs() < 1e-6);
+        }
+        assert!(surface[1] > palette.colors[1][1] * 2.0);
+        assert!(palette.revision > 0);
+    }
 
     #[test]
     fn rain_and_snow_tints_do_not_invalidate_authored_map_albedo() {

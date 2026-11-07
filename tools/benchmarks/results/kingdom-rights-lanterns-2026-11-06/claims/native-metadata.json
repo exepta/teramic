@@ -1,0 +1,86 @@
+{
+  "prepared_at": "2026-11-06T19:16:43.951324+00:00",
+  "private_root": "target/phase199-claims",
+  "argument": "--smoke-test-inventory",
+  "native_flag": "TERRA_CLAIMS_GALLERY",
+  "expected_captures": [
+    "diplomacy-claims",
+    "diplomacy-live-color",
+    "diplomacy-compact",
+    "diplomacy-rectangle-preview",
+    "diplomacy-rightclick-unselect"
+  ],
+  "config_sha256": {
+    "servers.toml": "ba666a45e47263bf4eff0985256014e7a14e5dd3b95340b3f39cab9b5cb466ff",
+    "client.toml": "77f34b62651c2118a41d6698eb219e7be8e5bfa406ae8b61a58ae6bd3e7d4ca2",
+    "server.toml": "05fdf1d64e22479ecaf253f213e639b9f494d8ca38e3526eaf8d3151223a28e5",
+    "world.toml": "10c618936c7fc770f1f568dfb6ae96e68a79bdf8707b86f495628f1a4320216a",
+    "graphics.toml": "967fa23c553bd06769559a6ad7fee882a479d2d7e1bf3453e569e5904f5a5887",
+    "controls.toml": "af057e943a52520848c93f3a0e4354863e7d44d3b751f6e6010fbddf48e4b2ca",
+    "audio.toml": "e483f0be5ffe3203fc4d86a8506eb0515bf300842ecb9ce89d4c25f145b0b94d",
+    "multiplayer.toml": "e187160ce08807e85d8cdce8a1bc2c33a017915c106ed2b251a1daf7b52f06f9",
+    "gameplay.toml": "c7ff511ad6b06010ca0b287fe35cda01e9705611b833d10a067a1eee1b309016"
+  },
+  "source_sha256": {
+    "apps/client/src/claims_smoke.rs": "fc8ed9d5940098f2e3cd8c99525529927b73284f5a07683d10cdf89fbb89a6c6",
+    "crates/terra-ui/src/realm_relations.rs": "d439a8ee575e544c35f5f8f0bcf01f91f4be7e5f2c53a2e0adbe181c1d97d985",
+    "crates/terra-ui/src/minimap/fullmap.rs": "0868c50e762b413c31326a7ac0bf112c356d9836a4b34b098467f91227b5831d",
+    "src-ui/components/full-map.component.html": "85b13cebd128f7bfaf0dd34ccc1a875a285784813db75d4a1f73489ce1a32733",
+    "src-ui/components/full-map.component.css": "35ef8f0ca2fb666287dbf264ace2661f6a9fb43f8e0573e7e43cc53eb6d4891f"
+  },
+  "status": "passed",
+  "environment": {
+    "TERRA_CONFIG_DIR": "/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/target/phase199-claims/configs",
+    "TERRA_MENU_CONFIG_DIR": "/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/target/phase199-claims/configs",
+    "TERRA_PROFILE_FILE": "/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/target/phase199-claims/profile.toml",
+    "TERRA_WORLD_DIR": "/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/target/phase199-claims/worlds",
+    "TERRA_ASSET_DIR": "/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/assets",
+    "TERRA_CAPTURE_DIR": "/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/tools/benchmarks/results/kingdom-rights-lanterns-2026-11-06/claims",
+    "TERRA_BENCH_GRAPHICS": "1",
+    "TERRA_COMPUTE_THREADS": "4",
+    "TERRA_CLAIMS_GALLERY": "1"
+  },
+  "exit_code": 0,
+  "captures": {
+    "diplomacy-claims": {
+      "size": [
+        2561,
+        1440
+      ],
+      "bytes": 791283,
+      "sha256": "dc39e4119b8d98dea26da32489241116f4088c6ceaff07d3a0addc9fd6808f68"
+    },
+    "diplomacy-live-color": {
+      "size": [
+        2561,
+        1440
+      ],
+      "bytes": 791077,
+      "sha256": "ef1d033dd40df66a953221455ba576b055b5bde7d6f475bc0a05398f88891cec"
+    },
+    "diplomacy-compact": {
+      "size": [
+        1025,
+        768
+      ],
+      "bytes": 271862,
+      "sha256": "736f7a2c5d9c2ff7d0f3194fa20cd363c892d6809149d6d76daaf6fdca55fc8d"
+    },
+    "diplomacy-rectangle-preview": {
+      "size": [
+        2561,
+        1440
+      ],
+      "bytes": 795230,
+      "sha256": "50eb55efc63e175cffc9da61c4b6c9285e0a32661321fe22a57054928eb4e38f"
+    },
+    "diplomacy-rightclick-unselect": {
+      "size": [
+        2561,
+        1440
+      ],
+      "bytes": 787827,
+      "sha256": "dd995664d4013eeea640aa272ac150b95dd9f92695e323a332ab77344ae4b8d8"
+    }
+  }
+}

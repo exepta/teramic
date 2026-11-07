@@ -8,6 +8,7 @@ use crate::{
 };
 
 pub(crate) mod fps;
+pub(crate) mod terrain;
 
 #[derive(Default)]
 struct DebugChord {
@@ -26,6 +27,7 @@ struct DebugContext<'w> {
 
 pub(crate) fn install(app: &mut App) {
     fps::install(app);
+    terrain::install(app);
     app.init_resource::<DebugSettings>().add_systems(
         Update,
         keyboard
@@ -38,6 +40,7 @@ fn keyboard(
     input: GameplayInput,
     context: DebugContext,
     mut debug: ResMut<DebugSettings>,
+    mut terrain: ResMut<terrain::TerrainDebug>,
     mut chord: Local<DebugChord>,
 ) {
     let active = !context.settings.open
@@ -62,6 +65,34 @@ fn keyboard(
     if overlay.just_pressed(keys, mouse) {
         chord.pending = true;
         chord.used = false;
+    }
+    if let terra_core::InputBinding::Key(modifier) = overlay
+        && modifier != KeyCode::KeyG
+    {
+        let binding = terra_core::InputBinding::Chord {
+            modifier,
+            key: KeyCode::KeyG,
+        };
+        let reserved = GameAction::ALL
+            .into_iter()
+            .filter(|action| *action != GameAction::DebugOverlay)
+            .any(|action| {
+                let other = input.binding(action);
+                match other {
+                    terra_core::InputBinding::Key(KeyCode::KeyG) => true,
+                    terra_core::InputBinding::Chord { modifier, key }
+                        if modifier == KeyCode::KeyG || key == KeyCode::KeyG =>
+                    {
+                        other.pressed(keys, mouse)
+                    }
+                    _ => false,
+                }
+            });
+        if !reserved && binding.just_pressed(keys, mouse) {
+            debug.enabled = true;
+            terrain.cycle();
+            chord.used = true;
+        }
     }
     if bounds.just_pressed(keys, mouse) {
         debug.enabled = true;
@@ -97,6 +128,7 @@ mod tests {
         let mut app = App::new();
         app.init_resource::<ButtonInput<KeyCode>>()
             .init_resource::<DebugSettings>()
+            .init_resource::<terrain::TerrainDebug>()
             .init_resource::<crate::SettingsView>()
             .init_resource::<InventoryState>()
             .insert_resource(MenuState {
@@ -105,6 +137,27 @@ mod tests {
             })
             .add_systems(Update, keyboard);
         app
+    }
+
+    #[test]
+    fn terrain_chord_cycles_layers_without_toggling_debug_on_release_or_while_typing() {
+        let mut app = app();
+        press(&mut app, KeyCode::F1);
+        press(&mut app, KeyCode::KeyG);
+        release(&mut app, KeyCode::KeyG);
+        release(&mut app, KeyCode::F1);
+        assert!(app.world().resource::<DebugSettings>().enabled);
+        assert_eq!(
+            app.world().resource::<terrain::TerrainDebug>().layer,
+            Some(terrain::TerrainDebugLayer::Continentalness)
+        );
+        app.world_mut().resource_mut::<crate::SettingsView>().open = true;
+        press(&mut app, KeyCode::F1);
+        press(&mut app, KeyCode::KeyG);
+        assert_eq!(
+            app.world().resource::<terrain::TerrainDebug>().layer,
+            Some(terrain::TerrainDebugLayer::Continentalness)
+        );
     }
 
     #[test]

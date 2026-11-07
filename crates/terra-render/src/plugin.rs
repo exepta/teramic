@@ -13,6 +13,7 @@ pub struct TerraRenderPlugin;
 impl Plugin for TerraRenderPlugin {
     fn build(&self, app: &mut App) {
         crate::preprocess_cache::install(app);
+        crate::preprocess_buffers::install(app);
         crate::meshing::install_far_batches(app);
         crate::meshing::visibility::install(app);
         crate::diagnostics::install_cpu_schedules(app);
@@ -27,6 +28,7 @@ impl Plugin for TerraRenderPlugin {
         crate::scene::caves::install(app);
         crate::water::install(app);
         crate::props::install(app);
+        crate::apple_fruit::install(app);
         crate::players::install(app);
         crate::creatures::install(app);
         crate::weather::install(app);
@@ -35,9 +37,12 @@ impl Plugin for TerraRenderPlugin {
         app.add_plugins(MaterialPlugin::<crate::PlacementOutlineMaterial>::default());
         crate::building::install(app);
         crate::furnaces::install(app);
+        crate::plumbing::install(app);
+        crate::crushers::install_materials(app);
         crate::crushers::install(app);
         crate::openings::install(app);
         crate::chests::install(app);
+        crate::settlement_banners::install(app);
         crate::chunk_borders::install(app);
         crate::previews::install(app);
         app.insert_resource(ClearColor(Color::srgb(

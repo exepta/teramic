@@ -5,6 +5,7 @@ use terra_voxel::meshing::BlockFace;
 use terra_world::generation::{TreeAppearance, sections::BlockOverrides};
 
 /// Color and shadow quads share species, player-provenance and snow boundaries.
+#[cfg(test)]
 pub(super) fn split_edited_faces(
     faces: &[BlockFace],
     origin: [i64; 3],
@@ -12,9 +13,23 @@ pub(super) fn split_edited_faces(
     exposure: Option<&crate::weather::surfaces::exposure::Exposure>,
     tree: impl Fn([i64; 3], u16) -> Option<TreeAppearance>,
 ) -> Option<Vec<BlockFace>> {
+    split_edited_faces_with_planted(faces, origin, edits, exposure, (tree, |_, _| false))
+}
+
+pub(super) fn split_edited_faces_with_planted(
+    faces: &[BlockFace],
+    origin: [i64; 3],
+    edits: &BlockOverrides,
+    exposure: Option<&crate::weather::surfaces::exposure::Exposure>,
+    provenance: (
+        impl Fn([i64; 3], u16) -> Option<TreeAppearance>,
+        impl Fn([i64; 3], u16) -> bool,
+    ),
+) -> Option<Vec<BlockFace>> {
+    let (tree, planted) = provenance;
     let mut result: Option<Vec<BlockFace>> = None;
     for (face_index, &face) in faces.iter().enumerate() {
-        if !matches!(face.material, 7..=9 | 132 | 133) {
+        if !matches!(face.material, 7..=9 | 132 | 133 | 195) {
             if let Some(result) = &mut result {
                 result.push(face);
             }
@@ -29,7 +44,7 @@ pub(super) fn split_edited_faces(
                 cell[face.v_axis] += v;
                 let global = std::array::from_fn(|axis| origin[axis] + i64::from(cell[axis]));
                 let index = (u + v * face.width) as usize;
-                let edited = edits.contains_key(&global);
+                let edited = edits.contains_key(&global) && !planted(global, face.material);
                 grid[index] = (
                     edited,
                     exposure.is_some_and(|exposure| exposure.snow_exposed(cell, origin[1])),
@@ -61,6 +76,7 @@ fn deciduous(kind: Option<TreeAppearance>, edited: bool) -> bool {
                     | TreeAppearance::Autumn
                     | TreeAppearance::Birch
                     | TreeAppearance::Cherry
+                    | TreeAppearance::Apple
             )
         )
 }
@@ -71,15 +87,40 @@ fn alpha_tag(global: [i64; 3]) -> f32 {
     0.125 + seed * 0.25
 }
 
+#[cfg(test)]
 pub(super) fn annotate(
     batches: &mut [MeshBatch],
-    _templates: &TemplateSet,
+    templates: &TemplateSet,
     origin: [i64; 3],
     edits: &BlockOverrides,
     tree: impl Fn([i64; 3], u16) -> Option<TreeAppearance>,
     temperature: impl Fn([f32; 3]) -> f32,
     snow_exposed: impl Fn([u32; 3]) -> bool,
 ) {
+    annotate_with_planted(
+        batches,
+        templates,
+        origin,
+        edits,
+        (tree, |_, _| false),
+        temperature,
+        snow_exposed,
+    )
+}
+
+pub(super) fn annotate_with_planted(
+    batches: &mut [MeshBatch],
+    _templates: &TemplateSet,
+    origin: [i64; 3],
+    edits: &BlockOverrides,
+    provenance: (
+        impl Fn([i64; 3], u16) -> Option<TreeAppearance>,
+        impl Fn([i64; 3], u16) -> bool,
+    ),
+    temperature: impl Fn([f32; 3]) -> f32,
+    snow_exposed: impl Fn([u32; 3]) -> bool,
+) {
+    let (tree, planted) = provenance;
     // Crown micro-quads and shadow shells share one provenance lookup per cell.
     let mut tags = [0.0_f32; terra_voxel::MaterialId::FOLIAGE.len() * 4096];
     for batch in batches {
@@ -102,13 +143,15 @@ pub(super) fn annotate(
             let index =
                 slot * 4096 + cell[0] as usize + 16 * (cell[1] as usize + 16 * cell[2] as usize);
             if tags[index] == 0.0 {
-                tags[index] = if edits.contains_key(&global) {
+                tags[index] = if edits.contains_key(&global) && !planted(global, owner.material) {
                     1.0
                 } else {
                     let kind = tree(global, owner.material);
                     if deciduous(kind, false) {
                         alpha_tag(global)
-                    } else if kind == Some(TreeAppearance::Spruce) && snow_exposed(cell) {
+                    } else if matches!(kind, Some(TreeAppearance::Spruce | TreeAppearance::Fir))
+                        && snow_exposed(cell)
+                    {
                         let center = cell.map(|coordinate| coordinate as f32 + 0.5);
                         0.5 + crate::weather::storage::snow::encode_temperature(temperature(center))
                             * 0.49
@@ -131,7 +174,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn sparse_cherry_material_ids_use_dense_bounded_provenance_slots() {
+    fn sparse_cherry_and_apple_material_ids_use_dense_bounded_provenance_slots() {
         use super::super::builder::FoliageOwner;
         let mut batch = MeshBatch::default();
         for material in terra_voxel::MaterialId::FOLIAGE {
@@ -149,17 +192,56 @@ mod tests {
             &TemplateSet::default(),
             [-16; 3],
             &Default::default(),
-            |_, _| Some(TreeAppearance::Cherry),
+            |_, material| {
+                Some(if material == 195 {
+                    TreeAppearance::Apple
+                } else {
+                    TreeAppearance::Cherry
+                })
+            },
             |_| 12.0,
             |_| false,
         );
-        assert_eq!(batches[0].colors.len(), 20);
+        assert_eq!(terra_voxel::MaterialId::FOLIAGE, [7, 8, 9, 132, 133, 195]);
+        assert_eq!(batches[0].foliage_owners.last().unwrap().material, 195);
+        assert_eq!(batches[0].foliage_owners.last().unwrap().cell, [15; 3]);
+        assert_eq!(batches[0].colors.len(), 24);
         assert!(
             batches[0]
                 .colors
                 .iter()
                 .all(|color| (0.125..0.375).contains(&color[3]))
         );
+    }
+    #[test]
+    fn provenance_rejects_cell_and_material_indices_beyond_the_last_apple_slot() {
+        use super::super::builder::FoliageOwner;
+        let mut batches = [MeshBatch {
+            positions: vec![[16.5; 3]; 8],
+            foliage_owners: vec![
+                FoliageOwner {
+                    vertices: 0..4,
+                    cell: [16, 15, 15],
+                    material: 195,
+                },
+                FoliageOwner {
+                    vertices: 4..8,
+                    cell: [15; 3],
+                    material: 196,
+                },
+            ],
+            ..Default::default()
+        }];
+        annotate(
+            &mut batches,
+            &TemplateSet::default(),
+            [-16; 3],
+            &Default::default(),
+            |_, _| panic!("invalid provenance must be rejected before sampling"),
+            |_| 12.,
+            |_| false,
+        );
+        assert_eq!(batches[0].colors, vec![[1.; 4]; 8]);
     }
     use crate::blocks::{BlockTemplate, definitions::BlockRenderKind};
 
@@ -169,6 +251,7 @@ mod tests {
             TreeAppearance::Oak,
             TreeAppearance::Autumn,
             TreeAppearance::Birch,
+            TreeAppearance::Apple,
         ] {
             assert!(deciduous(Some(kind), false));
             assert!(!deciduous(Some(kind), true));
@@ -176,11 +259,78 @@ mod tests {
         for kind in [
             None,
             Some(TreeAppearance::Spruce),
+            Some(TreeAppearance::Fir),
             Some(TreeAppearance::Palm),
             Some(TreeAppearance::Mushroom),
         ] {
             assert!(!deciduous(kind, false));
         }
+    }
+
+    #[test]
+    fn generated_edited_leaves_keep_natural_seasons_but_replacements_do_not() {
+        use super::super::builder::FoliageOwner;
+        let edits = [([0, 1, 0], 7), ([1, 1, 0], 7)].into();
+        for (kind, expected) in [
+            (TreeAppearance::Oak, 0.125..0.375),
+            (TreeAppearance::Spruce, 0.5..0.999),
+        ] {
+            let mut batches = [MeshBatch {
+                positions: vec![[0.5, 1.5, 0.5]; 8],
+                foliage_owners: vec![
+                    FoliageOwner {
+                        vertices: 0..4,
+                        cell: [0, 1, 0],
+                        material: 7,
+                    },
+                    FoliageOwner {
+                        vertices: 4..8,
+                        cell: [1, 1, 0],
+                        material: 7,
+                    },
+                ],
+                ..Default::default()
+            }];
+            annotate_with_planted(
+                &mut batches,
+                &TemplateSet::default(),
+                [0; 3],
+                &edits,
+                (|_, _| Some(kind), |cell, _| cell == [0, 1, 0]),
+                |_| -6.0,
+                |_| true,
+            );
+            assert!(
+                batches[0].colors[..4]
+                    .iter()
+                    .all(|c| expected.contains(&c[3]))
+            );
+            assert!(batches[0].colors[4..].iter().all(|c| c[3] == 1.0));
+        }
+        let face = BlockFace {
+            minimum: [0, 1, 0],
+            width: 2,
+            height: 1,
+            u_axis: 0,
+            v_axis: 2,
+            side: 3,
+            material: 7,
+            occupied_neighbor: false,
+            edge_mask: 15,
+        };
+        let parts = split_edited_faces_with_planted(
+            &[face],
+            [0; 3],
+            &edits,
+            None,
+            (
+                |_, _| Some(TreeAppearance::Oak),
+                |cell, _| cell == [0, 1, 0],
+            ),
+        )
+        .unwrap();
+        assert_eq!(parts.len(), 2);
+        assert!(parts.iter().all(|part| part.width == 1));
     }
 
     #[test]

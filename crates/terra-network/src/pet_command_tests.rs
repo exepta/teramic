@@ -290,4 +290,127 @@ fn real_udp_pet_commands_validate_owner_and_loaded_los_then_replicate_follow_res
     assert_eq!(state.pet_orders.get(&id), Some(&CompanionMode::None));
     assert_eq!(state.creatures.owners.get(&id), Some(&owner));
     assert!(state.valid());
+    // Realm permissions govern real owned-NPC commands too. A saved bond is
+    // insufficient after a demotion, even with valid ownership and sightline.
+    let manager = terra_core::PlayerUuid::from_u128(0x199);
+    let current = state.creatures.animals[&id].position;
+    let anchor = [
+        (current[0].floor() as i64).div_euclid(16) * 16,
+        floor + 20,
+        (current[2].floor() as i64).div_euclid(16) * 16,
+    ];
+    let kingdom = {
+        let mut journal = host.world_mut().resource_mut::<EditJournal>();
+        journal
+            .record(anchor, terra_core::castle::BERGFRIED)
+            .unwrap();
+        let registry = &mut journal.gameplay_mut().kingdoms;
+        let realm = registry.found(manager, anchor, "Companion work").unwrap();
+        registry.join(owner, realm).unwrap();
+        registry
+            .set_role(
+                manager,
+                realm,
+                owner,
+                terra_core::kingdom::KingdomRole::Worker,
+            )
+            .unwrap();
+        realm
+    };
+    std::thread::sleep(Duration::from_millis(460));
+    send(
+        &mut a,
+        ClientControl::PetCommand {
+            id,
+            mode: CompanionMode::Wait,
+        },
+    );
+    wait(&mut host, &mut [&mut a, &mut b], |host, _| {
+        host.world()
+            .resource::<EditJournal>()
+            .gameplay()
+            .pet_orders
+            .get(&id)
+            == Some(&CompanionMode::Wait)
+    });
+    host.world_mut()
+        .resource_mut::<EditJournal>()
+        .gameplay_mut()
+        .kingdoms
+        .set_role(
+            manager,
+            kingdom,
+            owner,
+            terra_core::kingdom::KingdomRole::Visitor,
+        )
+        .unwrap();
+    std::thread::sleep(Duration::from_millis(460));
+    send(
+        &mut a,
+        ClientControl::PetCommand {
+            id,
+            mode: CompanionMode::Follow,
+        },
+    );
+    pump(&mut host, &mut a, &mut b);
+    assert_eq!(
+        host.world()
+            .resource::<EditJournal>()
+            .gameplay()
+            .pet_orders
+            .get(&id),
+        Some(&CompanionMode::Wait)
+    );
+    host.world_mut()
+        .resource_mut::<EditJournal>()
+        .gameplay_mut()
+        .kingdoms
+        .set_role(
+            manager,
+            kingdom,
+            owner,
+            terra_core::kingdom::KingdomRole::Worker,
+        )
+        .unwrap();
+    send(
+        &mut a,
+        ClientControl::PetCommand {
+            id,
+            mode: CompanionMode::Follow,
+        },
+    );
+    wait(&mut host, &mut [&mut a, &mut b], |host, _| {
+        host.world()
+            .resource::<EditJournal>()
+            .gameplay()
+            .pet_orders
+            .get(&id)
+            == Some(&CompanionMode::Follow)
+    });
+    host.world_mut()
+        .resource_mut::<EditJournal>()
+        .gameplay_mut()
+        .kingdoms
+        .kick(manager, kingdom, owner)
+        .unwrap();
+    let stopped = host
+        .world()
+        .resource::<EditJournal>()
+        .gameplay()
+        .creatures
+        .animals[&id]
+        .position;
+    for _ in 0..16 {
+        pump(&mut host, &mut a, &mut b);
+    }
+    assert_eq!(
+        host.world()
+            .resource::<EditJournal>()
+            .gameplay()
+            .creatures
+            .animals[&id]
+            .position,
+        stopped,
+        "removing a member must stop an already active Follow order"
+    );
 }

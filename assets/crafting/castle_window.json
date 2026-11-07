@@ -1,0 +1,28 @@
+{
+  "id": "teramic::castle_window",
+  "name": "Mauer mit Fenster",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "block": 186
+    },
+    "count": 1
+  },
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "block": 174
+        },
+        "count": 3
+      },
+      {
+        "item": {
+          "block": 68
+        },
+        "count": 1
+      }
+    ]
+  }
+}

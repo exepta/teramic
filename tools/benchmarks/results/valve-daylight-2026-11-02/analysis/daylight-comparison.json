@@ -1,0 +1,23 @@
+{
+  "day": {
+    "region_mean_before": 0.5372357563387913,
+    "region_mean_after": 0.4364423255094862,
+    "green_pixels": 356302,
+    "green_mean_before": 0.3256361127402277,
+    "green_mean_after": 0.23819870809307941,
+    "green_p90_before": 0.5826596078431373,
+    "green_p90_after": 0.46453098039215684
+  },
+  "night": {
+    "region_mean_before": 0.12467642861732368,
+    "region_mean_after": 0.12462884707825547
+  },
+  "underwater-day": {
+    "region_mean_before": 0.589633118630004,
+    "region_mean_after": 0.4957447704588779
+  },
+  "underwater-night": {
+    "region_mean_before": 0.13346208389217956,
+    "region_mean_after": 0.13345413624642566
+  }
+}

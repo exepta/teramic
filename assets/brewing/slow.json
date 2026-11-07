@@ -1,0 +1,1 @@
+{"id":8,"key":"teramic::slow_potion","name":"Slowness Potion","inputs":[{"item":{"prop":"spider_web"},"count":1},{"item":{"block":19},"count":1}],"effects":[{"kind":"slow","level":1,"seconds":60.0}],"seconds":12.0,"color":[106,117,140]}

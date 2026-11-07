@@ -16,6 +16,8 @@ pub struct PlayerPermissions {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct ServerConfig {
+    /// Explicit dedicated-server policy overrides the saved world's kingdom settings.
+    pub kingdom_rules: Option<crate::kingdom::KingdomRules>,
     /// None uses the saved world's limit, including integrated singleplayer worlds.
     pub natural_mob_limit: Option<u16>,
     pub save_directory: Option<std::path::PathBuf>,
@@ -36,6 +38,7 @@ pub struct ServerConfig {
 impl Default for ServerConfig {
     fn default() -> Self {
         Self {
+            kingdom_rules: None,
             natural_mob_limit: None,
             save_directory: None,
             title: "TERAMIC Server".into(),
@@ -68,6 +71,10 @@ impl ServerConfig {
 }
 impl Config for ServerConfig {
     fn validate(&self) -> Result<(), ConfigError> {
+        ensure(
+            self.kingdom_rules.is_none_or(|rules| rules.valid()),
+            "Invalid server.kingdom_rules",
+        )?;
         ensure(
             self.natural_mob_limit.is_none_or(|n| n <= 4096),
             "server.natural_mob_limit must be 0..=4096",

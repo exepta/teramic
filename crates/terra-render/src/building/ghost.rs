@@ -16,6 +16,7 @@ struct Cell {
     neighbors: [Option<u16>; 6],
     neighbor_facing: [u8; 6],
     segment: Option<Segment>,
+    belt: Option<terra_world::conveyors::Span>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -38,6 +39,7 @@ fn cells(
     chunks: &ChunkStore,
     journal: &EditJournal,
 ) -> Vec<Cell> {
+    let belt = terra_world::conveyors::proposed_span(plan);
     let material = |position| {
         plan.edits
             .iter()
@@ -65,6 +67,9 @@ fn cells(
             let material = material(position)?;
             let mut object = state(position);
             if material == 0 || (object.secondary && material != 59) {
+                return None;
+            }
+            if material == 148 && belt.is_some_and(|span| span.controller != position) {
                 return None;
             }
             let peer_wood = object.peer.map(state).map_or(object.wood, |s| s.wood);
@@ -100,6 +105,7 @@ fn cells(
                 neighbors,
                 neighbor_facing,
                 segment,
+                belt: belt.filter(|span| span.controller == position),
             })
         })
         .collect()
@@ -124,7 +130,9 @@ fn geometry(cells: &[Cell], templates: &TemplateSet) -> Result<MeshBatch, String
             .blocks
             .get(&cell.material)
             .ok_or("Missing placement template")?;
-        let batches = if let Some(segment) = &cell.segment {
+        let batches = if let Some(span) = cell.belt {
+            vec![crate::crushers::conveyor_preview_geometry(span)]
+        } else if let Some(segment) = &cell.segment {
             let mut batches = std::collections::BTreeMap::new();
             crate::meshing::segments::append(
                 &mut batches,
@@ -141,9 +149,15 @@ fn geometry(cells: &[Cell], templates: &TemplateSet) -> Result<MeshBatch, String
             )?;
             batches.into_values().collect()
         } else if !block.model.is_empty() {
+            let mut state = cell.state;
+            if cell.material == terra_core::crusher::HAND_CRANK_MATERIAL {
+                state.peer = state
+                    .peer
+                    .map(|peer| std::array::from_fn(|axis| peer[axis] - cell.relative[axis]));
+            }
             crate::meshing::custom::model_geometry(
                 cell.material,
-                cell.state,
+                state,
                 cell.peer_wood,
                 cell.neighbors,
                 cell.neighbor_facing,
@@ -172,6 +186,7 @@ fn geometry(cells: &[Cell], templates: &TemplateSet) -> Result<MeshBatch, String
                     detail_level: crate::meshing::DetailLevel::Far,
                     terrain: None,
                     exposure: None,
+                    tints: Default::default(),
                     conditions: default(),
                 },
             )?
@@ -378,7 +393,7 @@ mod tests {
         for material in [
             28, 29, 40, 50, 51, 52, 53, 54, 55, 56, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70,
             71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92,
-            93, 94, 95, 96, 97, 98, 99, 100, 104, 105,
+            93, 94, 95, 96, 97, 98, 99, 100, 104, 105, 148,
         ] {
             let model = crate::blocks::cube::box_model(properties.shape(material), 0.0, [0; 6]);
             templates.blocks.insert(
@@ -396,6 +411,46 @@ mod tests {
             );
         }
         templates
+    }
+
+    #[test]
+    fn diagonal_belt_ghost_is_one_real_standing_ribbon_not_flat_unit_belts() {
+        let span = terra_world::conveyors::Span {
+            controller: [-14, 0, -14],
+            first: [-15, 0, -15],
+            start: [-16, 0, -16],
+            end: [-13, 0, -13],
+            step: [1, 0, 1],
+            length: 2,
+            facing: 4,
+            wood: default(),
+            linked: true,
+        };
+        let cell = Cell {
+            relative: [0; 3],
+            material: 148,
+            state: default(),
+            peer_wood: default(),
+            neighbors: [None; 6],
+            neighbor_facing: [0; 6],
+            segment: None,
+            belt: Some(span),
+        };
+        let batch = geometry(&[cell], &templates()).unwrap();
+        assert_eq!(batch.positions.len(), 544);
+        let low = batch
+            .positions
+            .iter()
+            .map(|p| Vec3::from_array(*p))
+            .fold(Vec3::splat(f32::INFINITY), Vec3::min);
+        let high = batch
+            .positions
+            .iter()
+            .map(|p| Vec3::from_array(*p))
+            .fold(Vec3::splat(f32::NEG_INFINITY), Vec3::max);
+        assert!((high.y - low.y - 0.64).abs() < 1e-6);
+        assert!(high.x - low.x > 3.0 && high.z - low.z > 3.0);
+        assert!(outline_mesh(&batch).is_some());
     }
 
     #[test]
@@ -436,6 +491,7 @@ mod tests {
                     neighbors: [None; 6],
                     neighbor_facing: [0; 6],
                     segment: None,
+                    belt: None,
                 };
                 let expected = crate::meshing::custom::model_geometry(
                     material,
@@ -504,6 +560,7 @@ mod tests {
                     }),
                 ),
             ],
+            belts: Vec::new(),
         };
         let mut chunks = ChunkStore::default();
         for position in [owner, origin] {
@@ -557,6 +614,7 @@ mod tests {
         let cleared = terra_world::placement::Layout {
             edits: Vec::new(),
             states: vec![(owner, None)],
+            belts: Vec::new(),
         };
         let cleared_cells = cells(&cleared, owner, &chunks, &journal);
         assert_eq!(cleared_cells.len(), 1);
@@ -641,6 +699,7 @@ mod tests {
                             material,
                         }],
                         states: Vec::new(),
+                        belts: Vec::new(),
                     };
                     let entries = cells(&plan, position, &chunks, &journal);
                     let segment = entries[0].segment.as_ref().unwrap();

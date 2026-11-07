@@ -1,0 +1,11 @@
+{
+  "item": "apple",
+  "name": "Apple",
+  "description": "A ripe orchard apple. Eat it or grow a new apple sapling from its seeds.",
+  "food": {
+    "nutrition": 14.0,
+    "saturation": 10.0,
+    "eat_seconds": 1.2,
+    "remainder": "apple_core"
+  }
+}

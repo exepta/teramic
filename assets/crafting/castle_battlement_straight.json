@@ -1,0 +1,28 @@
+{
+  "id": "teramic::castle_battlement_straight",
+  "name": "Zinnenmauer",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "block": 180
+    },
+    "count": 1
+  },
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "block": 175
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "block": 174
+        },
+        "count": 2
+      }
+    ]
+  }
+}

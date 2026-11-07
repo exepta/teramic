@@ -1,0 +1,1 @@
+{"id":"teramic::pump","name":"Kinetic Pump","station":"workbench","output":{"item":{"block":168},"count":1},"pattern":{"kind":"shapeless","ingredients":[{"item":{"block":165},"count":2},{"item":{"block":143},"count":1},{"item":{"block":146},"count":1},{"item":{"block":15},"count":2}]}}

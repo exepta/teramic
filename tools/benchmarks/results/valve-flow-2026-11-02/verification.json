@@ -1,0 +1,53 @@
+{
+  "status": "passed",
+  "wire_schema_changed": false,
+  "persistent_water_format_changed": false,
+  "source_sha256": {
+    "crates/terra-world/src/plumbing.rs": "81db26e914b83eacf1098b564c43464d905ee0e15c5213fc05679a5de96e5921",
+    "crates/terra-world/src/plumbing/network.rs": "1dc58971a2d3afe3c3da50a263fc471f6cef00d8ebe10f60a22ae914e5fc298c",
+    "crates/terra-world/src/plumbing/tests/transit.rs": "e40a8a1e32aac8eac811c16e8711a9c5b5eaaa4a603744594e9db1d928018d88",
+    "crates/terra-world/src/plumbing/tests/valve_transparency.rs": "76c82cb992353b2676273fdcc0cdb9722e8a3edbd3595d378dbe15af9eaa6fc0",
+    "crates/terra-storage/src/regions/plumbing_tests.rs": "638e252463bb48a4d40e97b746a34cac719d157796a9999a6ad7431d7fd32b31",
+    "crates/terra-network/src/client.rs": "2794f6127c2e37dbaaf9561e8b9714de0339005a24838e58eb4c66ee69560d00",
+    "crates/terra-render/src/plumbing.rs": "cf06d701c8bb2c9165bd9ddf880fd4eaa9f5e05d35b00f9566a7d4ff9919ac41",
+    "crates/terra-render/src/plumbing/glass.rs": "58e4ec4bab4b6d4ab8878a45ede7536d7cd25da4bf556411280a20950b1a64f8",
+    "crates/terra-render/src/meshing/custom_pipe.rs": "c86a363b9f42dd8ad66ff1e3c4042351119a6384f84d3032fabf287ca324af78",
+    "apps/client/src/hydraulics_smoke.rs": "b67898c01bd38468820b1bcaf84d73ae6e89ac12228da24e1b9f2214d13df0c7"
+  },
+  "tests": {
+    "targets": 12,
+    "passed": 3667,
+    "failed": 0,
+    "ignored": 8
+  },
+  "checks": {
+    "workspace_build": true,
+    "clippy": true,
+    "check_all_targets": true,
+    "fmt": true,
+    "diff_check": true
+  },
+  "native": {
+    "passed": true,
+    "seconds": 66.2143325805664,
+    "required_captures": 24,
+    "continuous_samples": 10,
+    "continuous_seconds": 3.641925573348999,
+    "transfer_samples_per_pipe": [
+      10,
+      10,
+      10
+    ],
+    "finite_runout_units": 32,
+    "warnings": 0,
+    "errors": 0,
+    "rendered_frames": 340,
+    "minimum_vertices_per_pipe": [
+      324,
+      420,
+      138
+    ],
+    "initial_receiver": 3,
+    "final_receiver": 12
+  }
+}

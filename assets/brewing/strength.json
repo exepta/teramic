@@ -1,0 +1,1 @@
+{"id":2,"key":"teramic::strength_potion","name":"Strength Potion","inputs":[{"item":{"dust":"iron"},"count":1},{"item":{"animal":"beef"},"count":1}],"effects":[{"kind":"strength","level":2,"seconds":90.0}],"seconds":16.0,"color":[222,55,83]}

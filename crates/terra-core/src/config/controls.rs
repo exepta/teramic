@@ -22,6 +22,7 @@ pub enum GameAction {
     Camera,
     Inventory,
     DebugOverlay,
+    ToggleHud,
     DebugBounds,
     Chat,
     Command,
@@ -53,10 +54,10 @@ impl GameAction {
         Self::Place,
         Self::Cursor,
         Self::Pause,
-        Self::Flight,
         Self::Camera,
         Self::Inventory,
         Self::DebugOverlay,
+        Self::ToggleHud,
         Self::DebugBounds,
         Self::Chat,
         Self::Command,
@@ -80,7 +81,7 @@ impl GameAction {
             Self::Backward => "Move Backward",
             Self::Left => "Move Left",
             Self::Right => "Move Right",
-            Self::Jump => "Jump / Fly Up",
+            Self::Jump => "Jump / Fly Up (Double Tap: Flight)",
             Self::FlyDown => "Fly Down / Mount Sprint",
             Self::Sprint => "Sprint / Flight Boost / Dive",
             Self::Precision => "Precision Flight",
@@ -92,6 +93,7 @@ impl GameAction {
             Self::Camera => "Camera Perspective",
             Self::Inventory => "Inventory / Materials",
             Self::DebugOverlay => "Debug Overlay",
+            Self::ToggleHud => "Toggle HUD",
             Self::DebugBounds => "Debug Placement Bounds",
             Self::Chat => "Open Chat",
             Self::Command => "Open Command",
@@ -140,6 +142,7 @@ impl GameAction {
             Self::MapZoomIn => KeyCode::Equal,
             Self::MapZoomOut => KeyCode::Minus,
             Self::DebugOverlay => KeyCode::F1,
+            Self::ToggleHud => KeyCode::F2,
             Self::DebugBounds => {
                 return InputBinding::Chord {
                     modifier: KeyCode::F1,
@@ -317,6 +320,8 @@ fn read_bindings<'de, D: serde::Deserializer<'de>>(
     deserializer: D,
 ) -> Result<BTreeMap<GameAction, InputBinding>, D::Error> {
     let mut bindings = BTreeMap::<GameAction, InputBinding>::deserialize(deserializer)?;
+    // Legacy F bindings remain readable; flight now follows the jump double tap.
+    bindings.remove(&GameAction::Flight);
     // N used to toggle the MiniMap; its old default now opens a quick waypoint.
     // An explicitly rebound MiniMap or any unrelated custom N remains intact.
     if !bindings.contains_key(&GameAction::QuickWaypoint)
@@ -357,6 +362,7 @@ fn read_bindings<'de, D: serde::Deserializer<'de>>(
     }
     for action in [
         GameAction::DebugOverlay,
+        GameAction::ToggleHud,
         GameAction::Chat,
         GameAction::Command,
         GameAction::PickBlock,
@@ -450,6 +456,28 @@ fn read_bindings<'de, D: serde::Deserializer<'de>>(
 mod migration_tests {
     use super::*;
     #[test]
+    fn hud_binding_migrates_without_replacing_an_existing_f2_binding() {
+        let mut old = ControlsConfig::default();
+        old.bindings.remove(&GameAction::ToggleHud);
+        let loaded = ControlsConfig::from_toml(&toml::to_string(&old).unwrap()).unwrap();
+        assert_eq!(
+            loaded.binding(GameAction::ToggleHud),
+            InputBinding::Key(KeyCode::F2)
+        );
+        old.bindings
+            .insert(GameAction::Place, InputBinding::Key(KeyCode::F2));
+        let loaded = ControlsConfig::from_toml(&toml::to_string(&old).unwrap()).unwrap();
+        assert_eq!(
+            loaded.binding(GameAction::Place),
+            InputBinding::Key(KeyCode::F2)
+        );
+        assert_ne!(
+            loaded.binding(GameAction::ToggleHud),
+            InputBinding::Key(KeyCode::F2)
+        );
+        loaded.validate().unwrap();
+    }
+    #[test]
     fn chunk_border_binding_migrates_without_stealing_an_existing_key() {
         let mut old = ControlsConfig::default();
         old.bindings.remove(&GameAction::DebugChunkBorders);
@@ -516,7 +544,7 @@ mod migration_tests {
         assert_eq!(enabled, loaded);
     }
     #[test]
-    fn legacy_bindings_gain_a_nonconflicting_camera_key() {
+    fn legacy_flight_bindings_are_retired_and_free_the_camera_key() {
         let mut legacy = ControlsConfig::default();
         legacy.bindings.remove(&GameAction::Camera);
         legacy
@@ -527,11 +555,13 @@ mod migration_tests {
         loaded.validate().unwrap();
         assert_eq!(
             loaded.binding(GameAction::Camera),
-            InputBinding::Key(KeyCode::F6)
-        );
-        assert_eq!(
-            loaded.binding(GameAction::Flight),
             InputBinding::Key(KeyCode::F5)
+        );
+        assert!(!loaded.bindings.contains_key(&GameAction::Flight));
+        assert!(!GameAction::ALL.contains(&GameAction::Flight));
+        assert_eq!(
+            ControlsConfig::from_toml(&toml::to_string(&loaded).unwrap()).unwrap(),
+            loaded
         );
     }
     #[test]
@@ -1083,6 +1113,7 @@ mod debug_input_tests {
         let mut legacy = ControlsConfig::default();
         for action in [
             GameAction::DebugOverlay,
+            GameAction::ToggleHud,
             GameAction::DebugBounds,
             GameAction::Chat,
             GameAction::Command,

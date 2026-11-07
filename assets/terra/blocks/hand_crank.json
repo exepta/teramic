@@ -1,7 +1,7 @@
 {
   "schema_version":1,"id":100,"name":"Hand Crank",
   "description":"A removable mechanical crank for the crusher drive gear.",
-  "creative_category":"decoration","render_kind":"custom_mesh","struct_block":true,
+  "creative_category":"technic","render_kind":"custom_mesh","struct_block":true,
   "model_layout":"scene","model":"models/hand_crank.gltf",
   "hardness":1.25,"resistance":4,"mining_level":0,
   "textures":{"dark_oak":"textures/oak-crafted-hd.png","iron":"textures/forged-iron-warm.png","iron_edge":"textures/forged-iron-warm.png","brass":"textures/forged-iron-warm.png","crank_rotating":"textures/forged-iron-warm.png","crank_rotating_edge":"textures/forged-iron-warm.png","crank_rotating_grip":"textures/oak-crafted-hd.png"},

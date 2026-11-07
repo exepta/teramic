@@ -10,6 +10,7 @@ use terra_world::{
 
 fn app() -> App {
     let mut app = App::new();
+    super::storage::install(&mut app);
     app.init_resource::<Assets<Mesh>>()
         .init_resource::<Assets<WaterMaterial>>()
         .init_resource::<ChunkStore>()
@@ -52,7 +53,17 @@ fn water_quality_changes_reuse_the_material_and_preserve_transmission() {
         assert!(water.extension.settings.is_finite());
         assert!(water.extension.effects.is_finite());
         assert!(water.extension.reflections.is_finite());
-        assert!(water.extension.weather.is_finite());
+        assert_eq!(
+            water.extension.dynamics,
+            super::storage::WATER_BUFFER_HANDLE
+        );
+        assert!(
+            app.world()
+                .resource::<super::storage::WaterPayload>()
+                .0
+                .weather
+                .is_finite()
+        );
     }
     app.world_mut()
         .resource_mut::<GameConfig>()
@@ -92,12 +103,10 @@ fn cave_water_disables_only_solar_caustics_and_wakes_reuse_the_shared_material()
             .daylight
             * crate::scene::caves::sky_visibility(blend);
         let expected = (expected * 128.0).round() / 128.0;
-        assert_eq!(material.extension.environment.x, expected);
-        assert_eq!(material.extension.environment.y, 1.0);
-        assert_eq!(
-            material.extension.wake_positions[0],
-            Vec4::new(2.0, 4.0, 6.0, 1.0)
-        );
+        let payload = &app.world().resource::<super::storage::WaterPayload>().0;
+        assert_eq!(payload.environment.x, expected);
+        assert_eq!(payload.environment.y, 1.0);
+        assert_eq!(payload.wake_positions[0], Vec4::new(2.0, 4.0, 6.0, 1.0));
         assert_eq!(material.base.specular_transmission, 1.0);
     }
 }
@@ -114,6 +123,7 @@ fn animated_wakes_advance_on_the_global_clock_without_modifying_the_water_materi
         ))
         .add_systems(Startup, setup_water)
         .add_systems(Update, update_water_settings);
+    super::storage::install(&mut app);
     {
         let mut wakes = app.world_mut().resource_mut::<super::contacts::WakeField>();
         wakes.positions[0] = Vec4::new(2.0, 4.0, 6.0, 0.0);
@@ -148,9 +158,7 @@ fn animated_wakes_advance_on_the_global_clock_without_modifying_the_water_materi
         );
         let materials = app.world().resource::<Assets<WaterMaterial>>();
         let extension = &materials.get(&handle).unwrap().extension;
-        assert_eq!(extension.environment, baseline.environment);
-        assert_eq!(extension.wake_positions, baseline.wake_positions);
-        assert_eq!(extension.wake_motions, baseline.wake_motions);
+        assert_eq!(*extension, baseline);
         assert_eq!(materials.len(), 1);
     }
 }
@@ -176,18 +184,13 @@ fn shader_wake_timestamps_survive_the_bevy_global_clock_hour_wrap() {
             wakes.motions[0] = Vec4::new(1.0, 0.0, 2.0, 0.5);
         }
         app.update();
-        let handle = &app.world().resource::<WaterAssets>().0;
-        let material = app
-            .world()
-            .resource::<Assets<WaterMaterial>>()
-            .get(handle)
-            .unwrap();
-        assert_eq!(material.extension.environment.z, period as f32);
-        assert_eq!(material.extension.wake_positions[0].w, period as f32 - 0.25);
+        let payload = &app.world().resource::<super::storage::WaterPayload>().0;
+        assert_eq!(payload.environment.z, period as f32);
+        assert_eq!(payload.wake_positions[0].w, period as f32 - 0.25);
         let globals_time = app.world().resource::<Time>().elapsed_secs_wrapped();
-        let mut shader_age = globals_time - material.extension.wake_positions[0].w;
+        let mut shader_age = globals_time - payload.wake_positions[0].w;
         if shader_age < 0.0 {
-            shader_age += material.extension.environment.z;
+            shader_age += payload.environment.z;
         }
         assert_eq!(shader_age, 0.5);
         assert!(
@@ -208,10 +211,8 @@ fn storms_change_one_shared_water_uniform_without_recreating_materials() {
     let handle = app.world().resource::<WaterAssets>().0.clone();
     let calm = app
         .world()
-        .resource::<Assets<WaterMaterial>>()
-        .get(&handle)
-        .unwrap()
-        .extension
+        .resource::<super::storage::WaterPayload>()
+        .0
         .weather;
     app.world_mut()
         .resource_mut::<crate::weather::WeatherVisual>()
@@ -219,7 +220,15 @@ fn storms_change_one_shared_water_uniform_without_recreating_materials() {
     app.update();
     let materials = app.world().resource::<Assets<WaterMaterial>>();
     assert_eq!(materials.len(), 1);
-    let storm = materials.get(&handle).unwrap().extension.weather;
+    assert_eq!(
+        materials.get(&handle).unwrap().extension.dynamics,
+        super::storage::WATER_BUFFER_HANDLE
+    );
+    let storm = app
+        .world()
+        .resource::<super::storage::WaterPayload>()
+        .0
+        .weather;
     assert_eq!(calm.z, 0.0);
     assert_eq!(storm.z, 1.0);
     assert!(storm.x < 0.0 && storm.y > 0.0);
@@ -243,6 +252,146 @@ fn section(epoch: u64) -> LoadedSection {
             indices: vec![0, 1, 2],
         }),
     }
+}
+
+fn event_app() -> App {
+    use terra_world::streaming::{SectionPublished, SectionRemoved, WaterPublished};
+    let mut app = app();
+    app.add_message::<SectionPublished>()
+        .add_message::<SectionRemoved>()
+        .add_message::<WaterPublished>();
+    app
+}
+
+#[test]
+fn water_publications_do_not_rescan_dry_sections_or_streaming_bookkeeping_changes() {
+    use terra_world::streaming::SectionPublished;
+    let mut app = event_app();
+    let owner = SectionPos::default();
+    {
+        let mut chunks = app.world_mut().resource_mut::<ChunkStore>();
+        for x in 0..512 {
+            let position = SectionPos::new(x, 0, 0);
+            chunks.loaded.insert(
+                position,
+                LoadedSection {
+                    data: BlockSection::empty(position).unwrap(),
+                    mesh: None,
+                    mesh_epoch: 0,
+                    water_epoch: 0,
+                    water: None,
+                    props: Vec::new(),
+                },
+            );
+        }
+        chunks.loaded.insert(owner, section(0));
+    }
+    app.update();
+    assert_eq!(app.world().resource::<WaterStatus>().scanned_sections, 512);
+    for _ in 0..8 {
+        app.world_mut().resource_mut::<ChunkStore>().set_changed();
+        app.update();
+        assert_eq!(app.world().resource::<WaterStatus>().scanned_sections, 0);
+    }
+    app.world_mut().write_message(SectionPublished {
+        position: SectionPos::new(500, 0, 0),
+    });
+    app.update();
+    let status = app.world().resource::<WaterStatus>();
+    assert_eq!(status.scanned_sections, 1);
+    assert!(status.ready && status.initial_ready);
+    assert_eq!(status.visible_tiles, 1);
+    assert_eq!(app.world().resource::<Assets<Mesh>>().len(), 1);
+}
+
+#[test]
+fn event_water_queue_deduplicates_retries_keeps_epoch_waits_and_handles_empty_patches_and_removal()
+{
+    use terra_world::streaming::{SectionPublished, SectionRemoved, WaterPublished};
+    let mut app = event_app();
+    for x in 0..9 {
+        let position = SectionPos::new(x, 0, 0);
+        let mut tile = section(0);
+        tile.data = BlockSection::empty(position).unwrap();
+        app.world_mut()
+            .resource_mut::<ChunkStore>()
+            .loaded
+            .insert(position, tile);
+    }
+    app.update();
+    assert_eq!(app.world().resource::<WaterStatus>().visible_tiles, 4);
+    for _ in 0..8 {
+        app.world_mut().write_message(SectionPublished {
+            position: SectionPos::new(100, 0, 0),
+        });
+    }
+    app.update();
+    assert_eq!(app.world().resource::<WaterStatus>().visible_tiles, 8);
+    app.update();
+    assert_eq!(app.world().resource::<WaterStatus>().visible_tiles, 9);
+    let owner = SectionPos::default();
+    app.world_mut()
+        .resource_mut::<EditJournal>()
+        .set_fluid(
+            [8, 8, 8],
+            terra_world::water::FluidCell {
+                amount: 4,
+                source: false,
+                flow: [1, 0],
+            },
+        )
+        .unwrap();
+    app.update();
+    let status = app.world().resource::<WaterStatus>();
+    assert!(!status.ready && status.initial_ready);
+    let epoch = app
+        .world()
+        .resource::<EditJournal>()
+        .water_mesh_epoch(owner);
+    app.world_mut()
+        .resource_mut::<ChunkStore>()
+        .loaded
+        .insert(owner, section(epoch));
+    for _ in 0..8 {
+        app.world_mut()
+            .write_message(WaterPublished { position: owner });
+    }
+    app.update();
+    assert!(app.world().resource::<WaterStatus>().ready);
+    assert_eq!(app.world().resource::<Assets<Mesh>>().len(), 9);
+    {
+        let mut journal = app.world_mut().resource_mut::<EditJournal>();
+        journal
+            .set_fluid([8, 8, 8], terra_world::water::FluidCell::default())
+            .unwrap();
+    }
+    let epoch = app
+        .world()
+        .resource::<EditJournal>()
+        .water_mesh_epoch(owner);
+    {
+        let mut chunks = app.world_mut().resource_mut::<ChunkStore>();
+        let section = chunks.loaded.get_mut(&owner).unwrap();
+        section.water_epoch = epoch;
+        section.water = None;
+    }
+    app.world_mut()
+        .write_message(WaterPublished { position: owner });
+    app.update();
+    assert_eq!(app.world().resource::<WaterStatus>().visible_tiles, 8);
+    assert_eq!(app.world().resource::<Assets<Mesh>>().len(), 8);
+    let removed = SectionPos::new(1, 0, 0);
+    app.world_mut()
+        .resource_mut::<ChunkStore>()
+        .loaded
+        .remove(&removed);
+    app.world_mut()
+        .write_message(SectionRemoved { position: removed });
+    app.world_mut()
+        .write_message(SectionRemoved { position: removed });
+    app.update();
+    assert_eq!(app.world().resource::<WaterStatus>().visible_tiles, 7);
+    assert_eq!(app.world().resource::<Assets<Mesh>>().len(), 7);
 }
 
 #[test]

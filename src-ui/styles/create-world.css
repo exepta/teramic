@@ -1,0 +1,93 @@
+/* A fixed copper frame and footer surround the scrollable creation form. */
+.world-create-dialog { width: 1020px !important; max-width: 94% !important; height: 86% !important; max-height: 920px !important; min-height: 0 !important; padding: 40px 42px 42px !important; gap: 12px !important; }
+.world-create-dialog > .copper-dialog-body { flex-grow: 1 !important; min-height: 0 !important; overflow: hidden !important; padding: 0 !important; display: flex; flex-direction: column; gap: 10px; }
+.world-create-dialog .copper-dialog-heading { width: 52% !important; }
+.world-create-tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; flex-shrink: 0; min-width: 0; }
+.world-create-tab { display: flex; align-items: center; justify-content: center; min-width: 0; min-height: 38px; padding: 7px 10px; border: 1px solid #805633; border-radius: 4px; background-color: #342319 !important; color: #dcc29e; }
+.world-create-dialog .world-create-tab p { font-size: 14px !important; line-height: 20px !important; color: #dcc29e !important; text-align: center; text-wrap: wrap; margin: 0 !important; pointer-events: none; }
+.world-create-tab:hover { border-color: #bf905d !important; background-color: #4b3423 !important; }
+.world-create-tab.selected { border-color: #c99a61 !important; background-color: #604129 !important; }
+.world-create-dialog .world-create-tab.selected p { color: #f4dfbc !important; }
+.world-create-form { display: flex; flex-direction: column; gap: 16px; min-height: 0; flex-grow: 1; flex-shrink: 1; overflow-y: auto; overflow-x: hidden; padding: 3px 12px 5px 3px; }
+.world-create-form::scrollbar-y-track { width: 7px; background-color: #241911 !important; border: 1px solid #805633; border-radius: 4px; }
+.world-create-form::scrollbar-y-thumb { background-color: #cb914d !important; border-radius: 3px; }
+.world-basic-fields { display: grid; grid-template-columns: 2fr 1fr; gap: 14px; flex-shrink: 0; }
+.world-field { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.world-create-dialog .world-field label { margin: 0 !important; font-size: 13px !important; }
+.world-create-dialog .world-field input { height: 36px; min-height: 36px; min-width: 0; }
+.world-create-section { display: flex; flex-direction: column; gap: 9px; padding: 12px; border: 1px solid #90643d; border-radius: 6px; background-color: #2b1d16 !important; flex-shrink: 0; min-width: 0; }
+.world-create-dialog .world-section-title { display: flex; align-items: center; gap: 9px; margin: 0 !important; padding-bottom: 7px; border-bottom: 1px solid #805633; color: #f1d8af !important; font-family: serif; font-size: 21px !important; line-height: 26px !important; flex-shrink: 0; }
+.world-create-form icon { width: 24px !important; height: 24px !important; min-width: 0 !important; min-height: 0 !important; flex-shrink: 0; pointer-events: none; color: #e7b66c !important; }
+.world-mode-grid, .world-structures-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.world-option, .world-biome-tile { display: flex; align-items: center; justify-content: center; gap: 9px; min-width: 0; padding: 9px; border: 1px solid #b17c44; border-radius: 5px; background-color: #4d3424 !important; background-image: linear-gradient(to bottom, #64432d, #302017); color: #f1d8af !important; }
+.world-option { height: 46px; min-height: 46px; }
+.world-create-dialog .world-option p { font-family: serif; font-size: 18px !important; color: #f4dfbc !important; margin: 0 !important; pointer-events: none; }
+.world-option.selected, .world-biome-tile.selected { border: 2px solid #ffd16c; background-color: #73502a !important; box-shadow: 0 0 7px #edac3b55; }
+.world-option:hover, .world-biome-tile:hover { border-color: #ffd16c !important; background-color: #76512b !important; }
+.world-rules-grid { display: grid; grid-template-columns: repeat(2, 1fr); row-gap: 7px; column-gap: 10px; }
+.world-rule-card { display: flex; align-items: center; gap: 8px; min-width: 0; min-height: 54px; padding: 8px 10px; border: 1px solid #785333; border-radius: 5px; background-color: #3b291e !important; }
+.world-rule-icon { width: 25px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.world-rule-copy { display: flex; flex-direction: column; gap: 3px; min-width: 0; flex-grow: 1; }
+.world-create-dialog .world-rule-title { font-size: 14px !important; color: #f0dab7 !important; margin: 0 !important; }
+.world-create-dialog .world-rule-hint, .world-create-dialog .world-section-hint { font-size: 11px !important; line-height: 15px !important; color: #ccb18d !important; margin: 0 !important; text-wrap: wrap; }
+.world-create-dialog .world-toggle-state { font-size: 12px !important; width: 22px; margin: 0 !important; flex-shrink: 0; color: #e3c08a !important; text-align: center; }
+.world-rule-toggle { width: 38px !important; min-width: 38px !important; height: 22px !important; min-height: 22px !important; padding: 0 !important; flex-shrink: 0 !important; }
+.world-rule-toggle::track { width: 38px !important; height: 22px !important; border: 1px solid #b8874e !important; border-radius: 11px !important; background-color: #281b14 !important; }
+.world-rule-toggle:checked::track { background-color: #a97528 !important; border-color: #e5b65e !important; }
+.world-rule-toggle::thumb { width: 16px !important; height: 16px !important; top: 2px !important; left: 2px !important; background-color: #f5d79f !important; }
+.world-rule-toggle:checked::thumb { transform: translateX(16px) !important; }
+.world-population { flex-shrink: 0; display: flex; align-items: center; gap: 12px; min-height: 34px; }
+.world-population label { width: 170px; flex-shrink: 0; font-size: 13px !important; }
+.world-population slider { flex-grow: 1; min-width: 0; }
+.world-create-dialog > .copper-dialog-actions { padding: 0 10px !important; gap: 20px !important; }
+.world-biome-selected { display: flex; align-items: center; gap: 16px; width: 100%; min-height: 82px; padding: 8px 12px; border: 1px solid #b17c44; border-radius: 5px; background-color: #3b291e !important; }
+.world-biome-selected:hover { border-color: #ffd16c !important; background-color: #513720 !important; }
+.world-biome-preview { width: 126px; height: 63px; flex-shrink: 0; border-radius: 3px; pointer-events: none; }
+.world-biome-selected-copy { display: flex; flex-direction: column; gap: 6px; flex-grow: 1; min-width: 0; pointer-events: none; }
+.world-create-dialog .world-biome-name { font-family: serif; font-size: 20px !important; color: #f4dfbc !important; text-align: left; }
+.world-create-dialog .world-biome-prompt { font-size: 12px !important; color: #ccb18d !important; text-align: left; }
+.biome-picker-backdrop { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background-color: #160f0bdd; pointer-events: auto; z-index: 230; }
+.world-biome-picker { width: 820px !important; max-width: 92% !important; height: 82% !important; max-height: 660px !important; min-height: 0 !important; padding: 44px 34px 38px !important; gap: 14px !important; }
+.world-biome-picker .copper-dialog-heading { width: 62% !important; }
+.world-biome-picker .world-biome-picker-hint { flex-shrink: 0; color: #d9bd98 !important; font-size: 14px !important; }
+.world-biome-picker-scroll { display: flex; flex-direction: column; flex-grow: 1; flex-shrink: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; padding: 3px 12px 5px 3px; }
+.world-biome-picker-scroll::scrollbar-y-track { width: 7px; background-color: #241911 !important; border: 1px solid #805633; border-radius: 4px; }
+.world-biome-picker-scroll::scrollbar-y-thumb { background-color: #cb914d !important; border-radius: 3px; }
+.world-biome-grid { display: grid; width: 100%; flex-shrink: 0; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.world-biome-tile { display: flex; flex-direction: column; align-items: stretch; justify-content: flex-start; gap: 0; height: auto; min-height: 160px; padding: 4px; overflow: hidden; border: 2px solid #a97542; border-radius: 6px; background-color: #3b291e !important; background-image: none; }
+.world-biome-image { width: 100%; max-width: 100%; min-width: 0; height: auto; flex-shrink: 0; border-radius: 3px; pointer-events: none; }
+.world-biome-caption { display: flex; align-items: center; justify-content: center; flex-grow: 1; min-height: 37px; flex-shrink: 0; gap: 7px; min-width: 0; pointer-events: none; }
+.world-biome-picker .world-biome-caption p { font-family: serif; font-size: 17px !important; color: #f4dfbc !important; text-align: center; text-wrap: wrap; }
+.world-biome-caption icon { width: 20px; height: 20px; flex-shrink: 0; color: #ffd16c; }
+.world-biome-close { justify-content: center; align-self: center; width: 210px; min-height: 42px; flex-shrink: 0; padding: 8px 16px; border: 1px solid #b17c44; background-color: #513720 !important; }
+.world-biome-picker .world-biome-close p { font-family: serif; font-size: 19px !important; color: #f4dfbc !important; pointer-events: none; }
+.world-structure-actions { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.world-create-dialog .world-structure-actions > p { flex-grow: 1; font-size: 14px !important; color: #ead0a8 !important; }
+.world-structure-card { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 10px; border: 1px solid #90643d; border-radius: 5px; background-color: #3b291e !important; }
+.world-structure-title, .world-structure-switch { display: flex; align-items: center; justify-content: center; gap: 9px; }
+.world-create-dialog .world-structure-title p { color: #f0d5ad !important; font-size: 15px !important; }
+.world-create-dialog .world-structure-switch p { color: #dfbb82 !important; font-size: 12px !important; min-width: 22px; }
+@media (max-width: 760px) {
+ .world-create-dialog { padding: 34px 28px 36px !important; }
+ .world-create-tabs { gap: 5px; }
+ .world-create-tab { padding: 6px; }
+ .world-create-dialog .world-create-tab p { font-size: 12px !important; }
+ .world-basic-fields, .world-rules-grid { grid-template-columns: 1fr; }
+ .world-biome-grid { grid-template-columns: repeat(2, 1fr); }
+ .world-biome-picker { padding: 36px 26px 34px !important; }
+ .world-biome-preview { width: 100px; height: 50px; }
+ .world-create-section { padding: 9px; }
+ .world-create-dialog .world-option p { font-size: 14px !important; }
+ .world-option { gap: 5px; padding: 6px; }
+ .world-structure-actions { flex-wrap: wrap; }
+ .world-structure-actions > p { width: 65%; }
+ .world-population { flex-direction: column; align-items: stretch; gap: 4px; }
+ .world-population label { width: 100%; }
+}
+@media (max-height: 700px) {
+ .world-create-dialog { height: 84% !important; padding-top: 30px !important; padding-bottom: 34px !important; gap: 8px !important; }
+ .world-create-form { gap: 10px; }
+ .world-create-dialog .world-section-title { font-size: 18px !important; }
+}
+
+.world-create-dialog .world-rule-input { width: 84px !important; min-width: 84px !important; max-width: 84px !important; height: 30px !important; min-height: 30px !important; padding: 5px 6px !important; font-size: 12px !important; line-height: 18px !important; flex-shrink: 0 !important; }

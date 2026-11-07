@@ -167,6 +167,7 @@ pub fn step(
         *stamina = (*stamina + dt * 5.0).min(f32::from(traits.stamina));
     }
     horse.timer = 0.0;
+    crate::conveyors::carry_creature(horse, habitat, dt);
     grounded(horse, habitat) && horse.velocity[1] <= 0.0
 }
 

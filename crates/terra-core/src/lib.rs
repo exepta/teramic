@@ -1,4 +1,7 @@
 //! Shared identities, validated configuration and optional ECS integration.
+pub mod brewing;
+pub mod campfire;
+pub mod castle;
 #[cfg(test)]
 mod cherry_tests;
 pub mod config;
@@ -15,6 +18,12 @@ mod food;
 #[cfg(feature = "bevy")]
 pub mod footsteps;
 pub mod furnace;
+pub mod infusion;
+pub mod kinetic;
+pub mod lantern;
+pub mod logistics;
+pub mod mixer;
+pub mod plumbing;
 pub use crusher::DustKind;
 pub use effects::{
     ActiveEffect, EffectDefinition, EffectKind, EffectStacking, StatusEffects,
@@ -58,10 +67,12 @@ pub use weather::{LightningEvent, LightningObserver, SnowProfile, WeatherPattern
 #[cfg(feature = "controls")]
 pub use config::controls::{ControlsConfig, GameAction, GameplayInput, InputBinding};
 pub use config::{
-    AudioConfig, BlockDetailConfig, BlockDetailQuality, ChunkAnimation, ClientConfig, Config,
-    ConfigError, GameConfig, GameplayConfig, MapMode, MinimapConfig, MobHealthBars,
-    MultiplayerConfig, PlayerPermissions, ServerConfig, WaterQuality, WeatherKind, WeatherQuality,
-    WorldConfig, config_directory,
+    AudioConfig, BiomeDefinition, BiomeDefinitions, BiomeKind, BiomeTerrain, BlockDetailConfig,
+    BlockDetailQuality, ChunkAnimation, ClientConfig, Config, ConfigError, GameConfig,
+    GameplayConfig, LandscapeDefinitions, LandscapeProfile, MapMode, MarineFloorWeights,
+    MarineHabitatConfig, MinimapConfig, MobHealthBars, MultiplayerConfig, OceanBiomeConfig,
+    PlayerPermissions, ServerConfig, StructureSettings, TerrainKind, WaterQuality, WeatherKind,
+    WeatherQuality, WorldConfig, config_directory,
 };
 pub use config::{
     CaveQuality, GraphicsConfig, ShadowQuality, TreeFallAnimation, WindowModeSetting,
@@ -69,7 +80,7 @@ pub use config::{
 };
 pub use constants::*;
 #[cfg(feature = "bevy")]
-pub use debug::DebugSettings;
+pub use debug::{DebugSettings, HudVisibility};
 pub use gameplay::{
     BellowsKind, DROP_LIFETIME_SECONDS, GameMode, GameplayState, INVENTORY_SLOTS, Inventory,
     ItemKind, ItemStack, MAX_WORLD_DROPS, PlayerStats, ResourcePropKind, STACK_LIMIT, ToolKind,
@@ -87,4 +98,9 @@ pub mod block_shapes;
 pub mod construction;
 pub mod crafting;
 pub mod flower_pot;
+pub mod kingdom;
 pub mod textiles;
+pub mod tints;
+
+pub mod trees;
+pub use trees::{FruitPhase, FruitState, TreeRecord, TreeRegistry, TreeSpecies, TreeStage};

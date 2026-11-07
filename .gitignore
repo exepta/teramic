@@ -41,5 +41,3 @@
 
 __pycache__/
 *.py[cod]
-/vendor/tilt-ui-runtime/target/
-/vendor/tilt-ui-runtime/Cargo.lock

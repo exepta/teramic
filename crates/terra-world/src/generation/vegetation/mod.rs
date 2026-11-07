@@ -1,13 +1,17 @@
 mod appearance;
 mod aquatic;
 mod forms;
-pub(in crate::generation) use appearance::TreeAppearanceCache;
+pub(in crate::generation) use appearance::{PlantedAppearanceSource, TreeAppearanceCache};
 pub use appearance::{TreeAppearance, TreeAppearanceSnapshot};
 mod geometry;
 mod ground;
 pub use ground::GroundCover;
 pub(crate) use ground::understory_cover;
 mod placement;
+#[cfg(feature = "bevy")]
+mod planted;
+#[cfg(feature = "bevy")]
+pub use planted::planted_shape;
 mod species;
 #[cfg(test)]
 mod tests;

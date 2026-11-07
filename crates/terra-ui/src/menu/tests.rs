@@ -824,6 +824,64 @@ fn custom_display_values_and_invalid_slider_values_are_not_coerced() {
 }
 
 #[test]
+fn borderless_resolution_can_return_to_windowed_and_display_revert_remains_safe() {
+    use terra_core::WindowModeSetting;
+    let mut app = app();
+    command(&mut app, "options");
+    change(&mut app, "graphics-window", "borderless");
+    command(&mut app, "apply");
+    assert_eq!(
+        app.world().resource::<MenuState>().dialog,
+        MenuDialog::Display
+    );
+    command(&mut app, "display-keep");
+    let borderless = app.world().resource::<GraphicsConfig>().clone();
+    assert_eq!(borderless.window_mode, WindowModeSetting::Borderless);
+    change(&mut app, "graphics-resolution", "desktop");
+    assert_eq!(app.world().resource::<OptionsDraft>().graphics, borderless);
+
+    change(&mut app, "graphics-resolution", "1600x900");
+    let draft = &app.world().resource::<OptionsDraft>().graphics;
+    assert_eq!(draft.window_mode, WindowModeSetting::Windowed);
+    assert_eq!((draft.width, draft.height), (1600, 900));
+    command(&mut app, "apply");
+    assert_eq!(
+        app.world().resource::<MenuState>().dialog,
+        MenuDialog::Display
+    );
+    let mut windows = app
+        .world_mut()
+        .query_filtered::<&Window, With<PrimaryWindow>>();
+    assert_eq!(
+        windows.single(app.world()).unwrap().mode,
+        bevy::window::WindowMode::Windowed
+    );
+    command(&mut app, "display-revert");
+    assert_eq!(*app.world().resource::<GraphicsConfig>(), borderless);
+    assert_eq!(app.world().resource::<OptionsDraft>().graphics, borderless);
+    assert!(matches!(
+        windows.single(app.world()).unwrap().mode,
+        bevy::window::WindowMode::BorderlessFullscreen(_)
+    ));
+
+    // Other controls still apply after returning to Borderless.
+    change(&mut app, "graphics-fps", "144");
+    command(&mut app, "apply");
+    assert_eq!(app.world().resource::<GraphicsConfig>().fps_limit, 144);
+    assert_eq!(app.world().resource::<MenuState>().dialog, MenuDialog::None);
+    let saved = GraphicsConfig::load(
+        app.world()
+            .resource::<MenuPaths>()
+            .configs
+            .join("graphics.toml"),
+    )
+    .unwrap();
+    assert_eq!(saved.fps_limit, 144);
+    assert_eq!(saved.window_mode, WindowModeSetting::Borderless);
+    cleanup(app);
+}
+
+#[test]
 fn navigation_real_world_create_delete_and_confirmation() {
     let mut app = app();
     command(&mut app, "singleplayer");
@@ -861,6 +919,318 @@ fn navigation_real_world_create_delete_and_confirmation() {
     assert!(app.world().resource::<WorldMenu>().entries.is_empty());
     cleanup(app);
 }
+#[test]
+fn biome_picker_selects_a_picture_and_blocks_the_underlying_form() {
+    let mut app = app();
+    command(&mut app, "singleplayer");
+    command(&mut app, "world-create");
+    let cards = view::world_biome_choices(app.world().resource::<WorldMenu>());
+    assert_eq!(cards.len(), super::create_world::BIOMES.len());
+    assert_eq!(
+        cards
+            .iter()
+            .filter(|card| card.class_name.ends_with(" selected"))
+            .count(),
+        1
+    );
+    for card in &cards {
+        let asset = card.image.strip_prefix("tilt-ui://").unwrap();
+        assert!(
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                .join("../../src-ui")
+                .join(asset)
+                .is_file()
+        );
+    }
+    command(&mut app, "world-biome-picker-open");
+    command(&mut app, "world-mode-creative");
+    change(&mut app, "world-name", "Hidden form edit");
+    command(&mut app, "world-create-confirm");
+    assert_eq!(app.world().resource::<WorldMenu>().mode, "survival");
+    assert!(app.world().resource::<WorldMenu>().name.is_empty());
+    assert!(app.world().resource::<WorldMenu>().entries.is_empty());
+    assert!(app.world().resource::<WorldMenu>().biome_picker_open);
+    command(&mut app, "world-biome-invalid");
+    assert!(app.world().resource::<WorldMenu>().biome_picker_open);
+    command(&mut app, "world-biome-cherry-forest");
+    let form = app.world().resource::<WorldMenu>();
+    assert!(!form.biome_picker_open);
+    assert_eq!(
+        form.preferred_spawn_biome,
+        Some(terra_core::BiomeKind::CherryForest)
+    );
+    let selected = view::world_biome_choices(form)
+        .into_iter()
+        .find(|card| card.class_name.ends_with(" selected"))
+        .unwrap();
+    assert_eq!(selected.title, "Cherry Forest");
+    assert!(selected.image.ends_with("biome-choice-cherry-forest.png"));
+    command(&mut app, "world-biome-picker-open");
+    command(&mut app, "dialog-cancel");
+    assert!(!app.world().resource::<WorldMenu>().biome_picker_open);
+    assert_eq!(
+        app.world().resource::<MenuState>().dialog,
+        MenuDialog::CreateWorld
+    );
+    command(&mut app, "dialog-cancel");
+    command(&mut app, "world-create");
+    assert!(!app.world().resource::<WorldMenu>().biome_picker_open);
+    assert_eq!(
+        app.world().resource::<WorldMenu>().preferred_spawn_biome,
+        None
+    );
+    cleanup(app);
+}
+
+#[test]
+fn biome_picker_traps_tab_focus_and_returns_to_its_trigger() {
+    use bevy::input_focus::{FocusCause, InputFocus, tab_navigation::TabGroup};
+    let mut app = App::new();
+    app.init_resource::<InputFocus>()
+        .add_systems(Update, super::create_world::focus_biome_picker);
+    let trigger = app.world_mut().spawn_empty().id();
+    app.world_mut()
+        .resource_mut::<InputFocus>()
+        .set(trigger, FocusCause::Navigated);
+    let picker = app
+        .world_mut()
+        .spawn(tilt_ui::ElementId("world-biome-picker".into()))
+        .id();
+    let done = app
+        .world_mut()
+        .spawn((
+            tilt_ui::ElementId("world-biome-picker-close".into()),
+            ChildOf(picker),
+        ))
+        .id();
+    app.update();
+    assert!(app.world().get::<TabGroup>(picker).unwrap().modal);
+    assert_eq!(app.world().resource::<InputFocus>().get(), Some(done));
+    app.world_mut()
+        .resource_mut::<InputFocus>()
+        .set(trigger, FocusCause::Navigated);
+    app.update();
+    assert_eq!(app.world().resource::<InputFocus>().get(), Some(done));
+    app.world_mut().despawn(picker);
+    app.update();
+    assert_eq!(app.world().resource::<InputFocus>().get(), Some(trigger));
+}
+
+#[test]
+fn escape_closes_biome_picker_before_create_world() {
+    let mut app = app();
+    app.init_resource::<ButtonInput<KeyCode>>().add_systems(
+        Update,
+        navigation::keyboard_navigation.before(navigation::actions),
+    );
+    command(&mut app, "singleplayer");
+    command(&mut app, "world-create");
+    command(&mut app, "world-biome-picker-open");
+    app.world_mut()
+        .resource_mut::<ButtonInput<KeyCode>>()
+        .press(KeyCode::Escape);
+    app.update();
+    assert!(!app.world().resource::<WorldMenu>().biome_picker_open);
+    assert_eq!(
+        app.world().resource::<MenuState>().dialog,
+        MenuDialog::CreateWorld
+    );
+    cleanup(app);
+}
+
+#[test]
+fn create_world_draft_resets_rules_biomes_and_structure_groups_on_reopen() {
+    let mut app = app();
+    command(&mut app, "singleplayer");
+    command(&mut app, "world-create");
+    {
+        let form = app.world().resource::<WorldMenu>();
+        assert_eq!(form.mode, "survival");
+        assert!(!form.game_rules.keep_inventory && !form.game_rules.pvp);
+        assert!(form.game_rules.daylight_cycle && form.game_rules.weather_cycle);
+        assert!(form.game_rules.mob_griefing && form.game_rules.fire_spread);
+        assert_eq!(form.preferred_spawn_biome, None);
+        assert!(
+            form.structures.villages
+                && form.structures.ruins
+                && form.structures.mines
+                && form.structures.kingdoms
+                && form.structures.outposts
+        );
+        let cards = view::world_rule_cards(form);
+        let mut actual = cards
+            .iter()
+            .map(|card| card.name.as_str())
+            .collect::<Vec<_>>();
+        let mut registered = terra_core::GameRule::ALL
+            .iter()
+            .map(|rule| rule.name())
+            .collect::<Vec<_>>();
+        actual.sort_unstable();
+        registered.sort_unstable();
+        assert_eq!(
+            actual, registered,
+            "Every registered gamerule must have a card"
+        );
+        assert_eq!(cards.iter().filter(|card| card.kind == "switch").count(), 6);
+        assert_eq!(cards.iter().filter(|card| card.kind == "number").count(), 3);
+        for (name, value) in [
+            ("sleep_percentage", "100"),
+            ("game_time_speed", "1"),
+            ("season_swap_interval", "7"),
+        ] {
+            let card = cards.iter().find(|card| card.name == name).unwrap();
+            assert_eq!(card.kind, "number");
+            assert_eq!(card.value, value);
+        }
+    }
+    change(&mut app, "world-structure-villages", "false");
+    change(&mut app, "world-structure-mines", "false");
+    {
+        let selected = app.world().resource::<WorldMenu>().structures;
+        assert!(!selected.villages && selected.ruins && !selected.mines);
+    }
+    change(&mut app, "world-structures-enabled", "false");
+    {
+        let selected = app.world().resource::<WorldMenu>().structures;
+        assert!(!selected.villages && !selected.ruins && !selected.mines);
+    }
+    change(&mut app, "world-structure-mines", "true");
+    assert!(app.world().resource::<WorldMenu>().structures.mines);
+    change(&mut app, "world-structures-enabled", "false");
+    assert!(!app.world().resource::<WorldMenu>().structures.mines);
+    change(&mut app, "world-structures-enabled", "true");
+    {
+        let selected = app.world().resource::<WorldMenu>().structures;
+        assert!(
+            selected.villages
+                && selected.ruins
+                && selected.mines
+                && selected.kingdoms
+                && selected.outposts
+        );
+    }
+    change(&mut app, "world-structures-enabled", "false");
+    change(&mut app, "world-structures-enabled", "true");
+    {
+        let selected = app.world().resource::<WorldMenu>().structures;
+        assert!(
+            selected.villages
+                && selected.ruins
+                && selected.mines
+                && selected.kingdoms
+                && selected.outposts
+        );
+    }
+    command(&mut app, "world-mode-spectator");
+    command(&mut app, "world-biome-cherry-forest");
+    change(&mut app, "world-rule-keep-inventory", "true");
+    change(&mut app, "world-rule-daylight-cycle", "false");
+    change(&mut app, "world-sleep-percentage", "25");
+    change(&mut app, "world-time-speed", "2");
+    change(&mut app, "world-season-days", "24");
+    command(&mut app, "dialog-cancel");
+    assert!(app.world().resource::<WorldMenu>().entries.is_empty());
+    command(&mut app, "world-create");
+    let form = app.world().resource::<WorldMenu>();
+    assert_eq!(form.mode, "survival");
+    assert_eq!(form.preferred_spawn_biome, None);
+    assert!(!form.game_rules.keep_inventory && form.game_rules.daylight_cycle);
+    assert_eq!(form.game_rules.sleep_percentage, 100.0);
+    assert_eq!(form.game_rules.game_time_speed, 1.0);
+    assert!(
+        form.structures.villages
+            && form.structures.ruins
+            && form.structures.mines
+            && form.structures.kingdoms
+            && form.structures.outposts
+    );
+    cleanup(app);
+}
+
+#[test]
+fn create_world_persists_spectator_rules_biome_and_individual_structures() {
+    let mut app = app();
+    command(&mut app, "singleplayer");
+    command(&mut app, "world-create");
+    change(&mut app, "world-name", "Spectator Cherry Coast");
+    change(&mut app, "world-seed", "987654321");
+    command(&mut app, "world-mode-spectator");
+    command(&mut app, "world-biome-ocean");
+    assert_eq!(
+        app.world().resource::<WorldMenu>().preferred_spawn_biome,
+        Some(terra_core::BiomeKind::Ocean)
+    );
+    command(&mut app, "world-biome-random");
+    assert_eq!(
+        app.world().resource::<WorldMenu>().preferred_spawn_biome,
+        None
+    );
+    command(&mut app, "world-biome-cherry-forest");
+    for (control, value) in [
+        ("world-rule-keep-inventory", "true"),
+        ("world-rule-daylight-cycle", "false"),
+        ("world-rule-weather-cycle", "false"),
+        ("world-rule-mob-griefing", "false"),
+        ("world-rule-fire-spread", "false"),
+        ("world-rule-pvp", "true"),
+        ("world-sleep-percentage", "35"),
+        ("world-time-speed", "1.5"),
+        ("world-season-days", "24"),
+        ("world-mob-limit", "512"),
+    ] {
+        change(&mut app, control, value);
+    }
+    change(&mut app, "world-structures-enabled", "false");
+    change(&mut app, "world-structure-ruins", "true");
+    command(&mut app, "world-create-confirm");
+    assert_eq!(app.world().resource::<MenuState>().dialog, MenuDialog::None);
+    let id = app
+        .world()
+        .resource::<WorldMenu>()
+        .selected
+        .expect("Created world selected");
+    let library = app.world().resource::<MenuPaths>().worlds.clone();
+    let saved = library.load(id).unwrap();
+    assert_eq!(saved.mode, terra_core::GameMode::Spectator);
+    let settings = &saved.manifest.world;
+    assert_eq!(settings.seed.0, 987654321);
+    assert_eq!(settings.natural_mob_limit, 512);
+    assert_eq!(
+        settings.preferred_spawn_biome,
+        Some(terra_core::BiomeKind::CherryForest)
+    );
+    assert!(settings.game_rules.keep_inventory && settings.game_rules.pvp);
+    assert!(!settings.game_rules.daylight_cycle && !settings.game_rules.weather_cycle);
+    assert!(!settings.game_rules.mob_griefing && !settings.game_rules.fire_spread);
+    assert_eq!(settings.game_rules.sleep_percentage, 35.0);
+    assert_eq!(settings.game_rules.game_time_speed, 1.5);
+    assert_eq!(
+        [
+            settings.seasons.spring_days,
+            settings.seasons.summer_days,
+            settings.seasons.autumn_days,
+            settings.seasons.winter_days
+        ],
+        [24; 4]
+    );
+    assert!(
+        !settings.structures.villages
+            && settings.structures.ruins
+            && !settings.structures.mines
+            && !settings.structures.kingdoms
+            && !settings.structures.outposts
+    );
+    let reopened = terra_storage::WorldLibrary {
+        root: library.root.clone(),
+    }
+    .load(id)
+    .unwrap();
+    assert_eq!(reopened.manifest.world, saved.manifest.world);
+    assert_eq!(reopened.mode, terra_core::GameMode::Spectator);
+    cleanup(app);
+}
+
 #[test]
 fn saved_server_add_edit_reload_and_validation() {
     let mut app = app();
@@ -1283,5 +1653,209 @@ fn exclusive_fullscreen_selects_a_real_monitor_mode_and_rejects_unsupported_mode
         app.world().get::<Window>(window).unwrap().mode,
         WindowMode::Windowed
     );
+    cleanup(app);
+}
+
+#[test]
+fn startup_screen_blocks_menu_navigation_setting_changes_and_quit() {
+    let mut app = app();
+    app.insert_resource(StartupProgress {
+        active: true,
+        ..Default::default()
+    });
+    app.world_mut()
+        .write_message(MenuAction::Command("singleplayer".into()));
+    app.world_mut()
+        .write_message(MenuAction::Command("options".into()));
+    app.world_mut().write_message(MenuAction::Change {
+        control: "world-name".into(),
+        value: "Premature edit".into(),
+    });
+    app.update();
+    assert_eq!(app.world().resource::<MenuState>().page, MenuPage::Main);
+    assert!(!app.world().resource::<MenuState>().quitting);
+    assert!(app.world().resource::<WorldMenu>().name.is_empty());
+    assert!(app.world().resource::<terra_player::PlayerInputBlock>().0);
+    assert_eq!(
+        app.world_mut()
+            .resource_mut::<Messages<SessionRequest>>()
+            .drain()
+            .count(),
+        0
+    );
+    app.world_mut()
+        .write_message(MenuAction::Command("quit".into()));
+    app.update();
+    assert!(!app.world().resource::<MenuState>().quitting);
+    assert_eq!(
+        app.world_mut()
+            .resource_mut::<Messages<SessionRequest>>()
+            .drain()
+            .count(),
+        0
+    );
+    cleanup(app);
+}
+
+#[test]
+fn startup_crossfade_is_smooth_and_menu_commands_stay_blocked_until_it_finishes() {
+    let mut progress = StartupProgress {
+        active: true,
+        fading: true,
+        reveal: 0.5,
+        ..Default::default()
+    };
+    assert_eq!(progress.blend(), 0.5);
+    progress.reveal = 0.01;
+    assert!(progress.blend() < 0.001);
+    progress.reveal = 0.99;
+    assert!(progress.blend() > 0.999);
+    let mut app = app();
+    app.insert_resource(progress);
+    app.world_mut()
+        .write_message(MenuAction::Command("singleplayer".into()));
+    app.update();
+    assert_eq!(app.world().resource::<MenuState>().page, MenuPage::Main);
+    app.world_mut().resource_mut::<StartupProgress>().active = false;
+    app.world_mut()
+        .write_message(MenuAction::Command("singleplayer".into()));
+    app.update();
+    assert_eq!(app.world().resource::<MenuState>().page, MenuPage::Worlds);
+    cleanup(app);
+}
+
+#[test]
+fn world_create_keeps_kingdom_and_outpost_switches_independent_and_persists_off() {
+    let mut app = app();
+    command(&mut app, "singleplayer");
+    command(&mut app, "world-create");
+    change(&mut app, "world-name", "Outposts without kingdoms");
+    change(&mut app, "world-structures-enabled", "false");
+    change(&mut app, "world-structure-kingdoms", "true");
+    {
+        let settings = app.world().resource::<WorldMenu>().structures;
+        assert!(settings.kingdoms);
+        assert!(!settings.villages && !settings.outposts && !settings.ruins && !settings.mines);
+    }
+    change(&mut app, "world-structure-outposts", "true");
+    change(&mut app, "world-structure-kingdoms", "false");
+    {
+        let settings = app.world().resource::<WorldMenu>().structures;
+        assert!(settings.outposts);
+        assert!(!settings.villages && !settings.kingdoms);
+    }
+    command(&mut app, "world-create-confirm");
+    let id = app.world().resource::<WorldMenu>().selected.unwrap();
+    let library = app.world().resource::<MenuPaths>().worlds.clone();
+    let saved = library.load(id).unwrap();
+    assert_eq!(saved.manifest.world.structures_revision, 9);
+    assert!(saved.manifest.world.structures.outposts);
+    assert!(!saved.manifest.world.structures.kingdoms && !saved.manifest.world.structures.villages);
+    cleanup(app);
+}
+
+#[test]
+fn world_creation_tabs_preserve_and_persist_every_kingdom_policy_field() {
+    use terra_core::kingdom::KingdomRules;
+    let mut app = app();
+    command(&mut app, "singleplayer");
+    command(&mut app, "world-create");
+    assert_eq!(
+        app.world().resource::<WorldMenu>().create_tab,
+        WorldCreateTab::General
+    );
+    change(&mut app, "world-name", "Realm Policy Tabs");
+    change(&mut app, "world-seed", "202602");
+    command(&mut app, "world-create-tab-biomes");
+    command(&mut app, "world-biome-cherry-forest");
+    change(&mut app, "world-structure-mines", "false");
+    command(&mut app, "world-create-tab-kingdom");
+    let edits = [
+        ("require_adjacent_claims", "false"),
+        ("settlements_follow_kingdom_level", "true"),
+        ("realm_min_border_gap", "24"),
+        ("kingdom_build_base", "40"),
+        ("kingdom_build_per_level", "8"),
+        ("kingdom_territory_base", "80"),
+        ("kingdom_territory_per_level", "20"),
+        ("outposts_per_level", "2"),
+        ("outpost_build_base", "12"),
+        ("outpost_build_per_level", "3"),
+        ("outpost_territory_base", "28"),
+        ("outpost_territory_per_level", "8"),
+        ("village_requires_territory", "false"),
+        ("village_build_base", "12"),
+        ("village_build_per_level", "3"),
+        ("city_min_kingdom_level", "4"),
+        ("city_requires_territory", "false"),
+        ("city_build_base", "24"),
+        ("city_build_per_level", "5"),
+        ("city_min_build_gap", "12"),
+    ];
+    for (key, value) in edits {
+        change(&mut app, &format!("world-kingdom-{key}"), value);
+        assert!(app.world().resource::<MenuState>().error.is_empty());
+    }
+    let form = app.world().resource::<WorldMenu>();
+    let rules = form.kingdom_rules;
+    let cards = super::kingdom_settings::cards(rules);
+    let serialized = serde_json::to_value(rules).unwrap();
+    assert_eq!(cards.len(), serialized.as_object().unwrap().len());
+    for (key, value) in edits {
+        let card = cards.iter().find(|card| card.name == key).unwrap();
+        assert_eq!(card.value, value);
+    }
+    assert_ne!(rules, KingdomRules::default());
+    command(&mut app, "world-create-tab-general");
+    let form = app.world().resource::<WorldMenu>();
+    assert_eq!(form.name, "Realm Policy Tabs");
+    assert_eq!(form.seed, "202602");
+    assert_eq!(form.kingdom_rules, rules);
+    assert_eq!(
+        form.preferred_spawn_biome,
+        Some(terra_core::BiomeKind::CherryForest)
+    );
+    assert!(!form.structures.mines);
+    command(&mut app, "world-create-confirm");
+    let id = app.world().resource::<WorldMenu>().selected.unwrap();
+    let library = app.world().resource::<MenuPaths>().worlds.clone();
+    let saved = library.load(id).unwrap();
+    assert_eq!(saved.manifest.world.kingdom_rules, rules);
+    assert_eq!(saved.manifest.world.structure_border_gap, 24);
+    assert_eq!(saved.manifest.world.structures_revision, 9);
+    let reopened = terra_storage::WorldLibrary { root: library.root }
+        .load(id)
+        .unwrap();
+    assert_eq!(reopened.manifest.world, saved.manifest.world);
+    command(&mut app, "world-create");
+    let form = app.world().resource::<WorldMenu>();
+    assert_eq!(form.create_tab, WorldCreateTab::General);
+    assert_eq!(form.kingdom_rules, KingdomRules::default());
+    cleanup(app);
+}
+
+#[test]
+fn invalid_world_kingdom_values_leave_the_entire_draft_unchanged() {
+    let mut app = app();
+    command(&mut app, "singleplayer");
+    command(&mut app, "world-create");
+    command(&mut app, "world-create-tab-kingdom");
+    let rules = app.world().resource::<WorldMenu>().kingdom_rules;
+    for (key, value) in [
+        ("realm_min_border_gap", "4097"),
+        ("outposts_per_level", "-1"),
+        ("village_requires_territory", "yes"),
+        ("city_min_kingdom_level", "0"),
+        ("outpost_build_base", "65536"),
+        ("unregistered", "1"),
+    ] {
+        change(&mut app, &format!("world-kingdom-{key}"), value);
+        assert!(!app.world().resource::<MenuState>().error.is_empty());
+        assert_eq!(app.world().resource::<WorldMenu>().kingdom_rules, rules);
+    }
+    command(&mut app, "world-create-tab-biomes");
+    command(&mut app, "world-biome-picker-open");
+    change(&mut app, "world-kingdom-realm_min_border_gap", "5");
+    assert_eq!(app.world().resource::<WorldMenu>().kingdom_rules, rules);
     cleanup(app);
 }

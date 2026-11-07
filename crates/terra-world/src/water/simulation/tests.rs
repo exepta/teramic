@@ -56,6 +56,138 @@ fn amount(journal: &EditJournal) -> u64 {
 }
 
 #[test]
+fn removing_blocks_at_natural_water_surfaces_does_not_create_dry_air_tombstones() {
+    for level in [-16, 8, 16] {
+        let terrain = TerraGenerator::new(WorldConfig {
+            base_height: f64::from(level) - 3.0,
+            sea_level: f64::from(level),
+            hill_amplitude: 0.0,
+            mountain_amplitude: 0.0,
+            caves: false,
+            trees: false,
+            biomes: false,
+            rivers: false,
+            landscape_revision: 0,
+            structures_revision: 0,
+            ..Default::default()
+        })
+        .unwrap();
+        for y in [i64::from(level) - 1, i64::from(level)] {
+            let p = [-1, y, -17];
+            let owner = global_to_section(p).0;
+            let mut chunks = ChunkStore::default();
+            for z in -1..=1 {
+                for y in -1..=1 {
+                    for x in -1..=1 {
+                        let neighbor = owner.offset([x, y, z]).unwrap();
+                        chunks.loaded.insert(neighbor, section(neighbor, 0));
+                    }
+                }
+            }
+            let mut journal = EditJournal::default();
+            for (expected_material, material) in [(0, 3), (3, 0)] {
+                commit_block_edit(
+                    &mut chunks,
+                    &mut journal,
+                    &BlockEditRequest {
+                        position: p,
+                        expected_material,
+                        material,
+                    },
+                )
+                .unwrap();
+                for _ in 0..12 {
+                    simulate_fluid_step(&terrain, &chunks, &mut journal, 256).unwrap();
+                }
+            }
+            assert_eq!(journal.block(p), Some(0));
+            assert_eq!(journal.fluid(p), None, "level{level} cell{p:?}");
+            let source = [p[0], i64::from(level) - 1, p[2]];
+            assert!(fluid_cell_at(&terrain, &journal, source, 0).source);
+            let mut reloaded = EditJournal::default();
+            for delta in journal.changed_sections().map(|s| journal.section_delta(s)) {
+                reloaded.import_delta(delta).unwrap();
+            }
+            assert_eq!(reloaded.fluid(p), None);
+            assert!(fluid_cell_at(&terrain, &reloaded, source, 0).source);
+
+            // Unlike an empty air-cell tick, an actual bucket withdrawal inside
+            // the reservoir must persist and never regenerate a source.
+            assert!(
+                super::super::buckets::transfer(
+                    &mut chunks,
+                    &mut reloaded,
+                    &terrain,
+                    &Default::default(),
+                    source,
+                    false,
+                )
+                .unwrap()
+            );
+            assert_eq!(reloaded.fluid(source), Some(FluidCell::default()));
+            let mut after_bucket = EditJournal::default();
+            for delta in reloaded
+                .changed_sections()
+                .map(|s| reloaded.section_delta(s))
+            {
+                after_bucket.import_delta(delta).unwrap();
+            }
+            assert_eq!(after_bucket.fluid(source), Some(FluidCell::default()));
+            for _ in 0..12 {
+                simulate_fluid_step(&terrain, &chunks, &mut after_bucket, 256).unwrap();
+            }
+            assert!(!fluid_cell_at(&terrain, &after_bucket, source, 0).source);
+        }
+    }
+}
+
+#[test]
+fn a_restored_natural_source_survives_sleeping_work_at_an_unloaded_negative_border() {
+    let terrain = terrain();
+    let p = [-1, 8, -1];
+    let owner = global_to_section(p).0;
+    let missing = owner.offset([1, 0, 0]).unwrap();
+    let mut chunks = ChunkStore::default();
+    chunks.loaded.insert(owner, section(owner, 0));
+    let mut journal = EditJournal::default();
+    for (expected_material, material) in [(0, 3), (3, 0)] {
+        commit_block_edit(
+            &mut chunks,
+            &mut journal,
+            &BlockEditRequest {
+                position: p,
+                expected_material,
+                material,
+            },
+        )
+        .unwrap();
+    }
+    simulate_fluid_step(&terrain, &chunks, &mut journal, 256).unwrap();
+    assert_eq!(journal.fluid(p), None);
+    assert!(fluid_cell_at(&terrain, &journal, [-1, 7, -1], 0).source);
+    assert!(journal.fluid_work_counts().sleeping > 0);
+    chunks.loaded.insert(missing, section(missing, 0));
+    journal.resume_fluids(missing);
+    for z in -1..=1 {
+        for y in -1..=1 {
+            for x in -1..=1 {
+                let neighbor = owner.offset([x, y, z]).unwrap();
+                chunks
+                    .loaded
+                    .entry(neighbor)
+                    .or_insert_with(|| section(neighbor, 0));
+                journal.resume_fluids(neighbor);
+            }
+        }
+    }
+    for _ in 0..12 {
+        simulate_fluid_step(&terrain, &chunks, &mut journal, 256).unwrap();
+    }
+    assert_eq!(journal.fluid(p), None);
+    assert!(fluid_cell_at(&terrain, &journal, [-1, 7, -1], 0).source);
+}
+
+#[test]
 fn placed_fluid_water_source_flows_and_remains_removable_after_reload() {
     use terra_voxel::MaterialId;
     let terrain = terrain();
@@ -321,7 +453,7 @@ fn flowing_water_beside_partial_blocks_drains_when_its_source_is_blocked_across_
                     &BlockEditRequest {
                         position: source,
                         expected_material: 27,
-                        material,
+                        material: 3,
                     }
                 )
                 .unwrap()
@@ -415,6 +547,7 @@ fn flowing_water_keeps_every_aquatic_prop_and_existing_reeds_but_removes_land_pl
     }
     let original: Vec<_> = PropKind::ALL
         .into_iter()
+        .filter(|kind| *kind != PropKind::AppleFruit)
         .enumerate()
         .map(|(index, kind)| {
             let id = PropId(index as u64 + 100);
@@ -620,6 +753,7 @@ fn mining_bed_wakes_natural_source_and_replacing_barrier_stops_its_debit() {
         .unwrap()
     );
     assert_eq!(amount(&journal) + drained, sourced - u64::from(displaced));
+    let retained = amount(&journal);
     for _ in 0..100 {
         let step = simulate_fluid_step(&terrain, &chunks, &mut journal, 64).unwrap();
         assert_eq!(step.sourced, 0);
@@ -627,7 +761,27 @@ fn mining_bed_wakes_natural_source_and_replacing_barrier_stops_its_debit() {
         drained += step.drained + step.absorbed;
         assert_eq!(amount(&journal) + drained, sourced - u64::from(displaced));
     }
-    assert_eq!(amount(&journal), 0);
+    assert!(retained > 0);
+    assert_eq!(amount(&journal), retained);
+    assert!(
+        journal
+            .fluid_cells()
+            .all(|(_, c)| !c.source && c.flow == [0; 2])
+    );
+    let fluid_epoch = journal.fluid_epoch(SectionPos::default());
+    let water_epoch = journal.water_mesh_epoch(SectionPos::default());
+    // Replacing the inlet leaves a sealed, fully supported 1x4 trough. Its
+    // finite water settles instead of vanishing after the source is cut off.
+    for _ in 0..64 {
+        let step = simulate_fluid_step(&terrain, &chunks, &mut journal, 64).unwrap();
+        assert!(!step.changed);
+        assert_eq!(
+            step.sourced + step.replenished + step.drained + step.absorbed,
+            0
+        );
+    }
+    assert_eq!(journal.fluid_epoch(SectionPos::default()), fluid_epoch);
+    assert_eq!(journal.water_mesh_epoch(SectionPos::default()), water_epoch);
     assert_eq!(journal.revision(SectionPos::default()), 2);
     assert!(journal.fluid_epoch(SectionPos::default()) > 2);
     assert_eq!(journal.mesh_epoch(SectionPos::default()), 2);

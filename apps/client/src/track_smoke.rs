@@ -39,7 +39,19 @@ fn setup(mut journal: ResMut<terra_world::edits::EditJournal>) {
     }
 }
 fn run(world: &mut World) {
-    let eye = Transform::from_xyz(8.0, 40.0, 34.0).looking_at(Vec3::new(8.0, 32.0, 24.0), Vec3::Y);
+    let age = world
+        .resource::<Probe>()
+        .born
+        .map(|born| world.resource::<Time>().elapsed_secs() - born);
+    let eye = match age {
+        Some(age) if (0.6..1.4).contains(&age) => {
+            Transform::from_xyz(3.3, 32.7, 23.5).looking_at(Vec3::new(3.3, 32.0, 22.1), Vec3::Y)
+        }
+        Some(age) if (1.4..2.4).contains(&age) => {
+            Transform::from_xyz(11.3, 32.7, 23.5).looking_at(Vec3::new(11.3, 32.0, 22.1), Vec3::Y)
+        }
+        _ => Transform::from_xyz(8.0, 40.0, 34.0).looking_at(Vec3::new(8.0, 32.0, 24.0), Vec3::Y),
+    };
     for mut camera in world
         .query_filtered::<&mut Transform, With<terra_player::TerraCamera>>()
         .iter_mut(world)
@@ -97,9 +109,12 @@ fn run(world: &mut World) {
         return;
     }
     let probe = world.resource::<Probe>();
-    let expected = if probe.shots == 0 && age > 0.3 {
+    let expected = if (probe.shots == 0 && age > 0.3)
+        || (probe.shots == 1 && age > 0.85)
+        || (probe.shots == 2 && age > 1.65)
+    {
         Some((5, 5, 5, 5))
-    } else if probe.shots == 1 && age > 11.0 {
+    } else if probe.shots == 3 && age > 11.0 {
         Some((0, 5, 0, 0))
     } else {
         None
@@ -130,11 +145,39 @@ fn run(world: &mut World) {
         return;
     }
     let shot = world.resource::<Probe>().shots;
+    let sample = if matches!(shot, 1 | 2) {
+        let point = Vec3::new(
+            if shot == 1 { 3.33 } else { 11.33 },
+            if shot == 1 { 31.974 } else { 31.955 },
+            22.32,
+        );
+        world
+            .query_filtered::<&Camera, With<terra_player::TerraCamera>>()
+            .iter(world)
+            .next()
+            .and_then(|camera| camera.world_to_ndc(&GlobalTransform::from(eye), point))
+            .map(|ndc: Vec3| Vec2::new(ndc.x * 0.5 + 0.5, 0.5 - ndc.y * 0.5))
+    } else {
+        None
+    };
     world.resource_mut::<Probe>().shots += 1;
     world
         .spawn(Screenshot::primary_window())
         .observe(save_to_disk(folder.join(format!("tracks-{shot}.png"))))
-        .observe(|_: On<ScreenshotCaptured>, mut probe: ResMut<Probe>| {
+        .observe(move |capture: On<ScreenshotCaptured>, mut probe: ResMut<Probe>, mut exit: MessageWriter<AppExit>| {
+            if matches!(shot, 1 | 2) {
+                let color = sample.and_then(|uv| {
+                    let size = capture.image.size();
+                    capture.image.get_color_at((uv.x * size.x as f32) as u32, (uv.y * size.y as f32) as u32).ok().map(|c| c.to_srgba())
+                });
+                let visible = color.is_some_and(|c| if shot == 1 { c.red > c.blue + 0.12 } else { c.red > c.blue - 0.10 });
+                if !visible {
+                    error!(shot, ?sample, ?color, "Footprint floor is missing or sky-colored; lifecycle counters alone are insufficient");
+                    exit.write(AppExit::error());
+                } else {
+                    info!(shot, ?color, "Native recessed footprint floor pixel verified");
+                }
+            }
             probe.done += 1;
         });
 }

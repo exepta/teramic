@@ -644,7 +644,7 @@ fn real_udp_cursor_drag_split_and_drops_conserve_resources_and_reject_stale_repl
             InventoryOutcome::Applied
         );
     }
-    let mut slots = [None; 27];
+    let mut slots = [None; terra_core::INVENTORY_SLOTS];
     slots[..3].copy_from_slice(&[Some(9), Some(10), Some(11)]);
     assert_eq!(
         inventory_command(
@@ -768,7 +768,10 @@ fn full_drop_budget_rolls_back_cursor_close_and_slot_drops_without_losing_items(
     let stone = ItemKind::Block(3);
     let flower = ItemKind::Prop(ResourcePropKind::Flower);
     let mut bag = terra_core::Inventory::default();
-    assert_eq!(bag.insert(stone, 27 * 128), 0);
+    assert_eq!(
+        bag.insert(stone, terra_core::INVENTORY_SLOTS as u16 * 128),
+        0
+    );
     bag.creative_cursor(ItemStack {
         item: flower,
         count: 7,
@@ -1242,5 +1245,165 @@ fn authoritative_drops_fall_collide_expire_and_keep_old_snapshot_compatibility()
             .gameplay()
             .drops
             .is_empty()
+    );
+}
+
+#[test]
+fn kingdom_capes_from_all_tmi_actions_and_crafting_keep_authoritative_heraldry_over_udp() {
+    use terra_core::{
+        CapeItem,
+        crafting::{CraftDestination, CraftStation, Ingredient, Recipe, RecipeBook, RecipePattern},
+        kingdom::{KingdomHeraldry, KingdomIcon, SettlementKind},
+    };
+    let (mut host, mut a, b) = pair();
+    let owner = a.world().resource::<client::ClientSession>().uuid.unwrap();
+    let heraldry = KingdomHeraldry {
+        color: [27, 109, 181],
+        icon: KingdomIcon::Anchor,
+    };
+    let id = host
+        .world_mut()
+        .resource_mut::<EditJournal>()
+        .gameplay_mut()
+        .kingdoms
+        .found_settlement(
+            owner,
+            "Alice",
+            [-1000, 0, -1000],
+            "Cape makers",
+            SettlementKind::Kingdom,
+            heraldry,
+        )
+        .unwrap();
+    let plain = ItemKind::Cape(CapeItem::ALL_WHITE[0]);
+    let expected = plain.with_default_heraldry(Some(heraldry));
+    for action in [
+        InventoryAction::CreativeSet {
+            slot: 0,
+            item: plain,
+            count: 1,
+        },
+        InventoryAction::CreativeQuickMove {
+            item: plain,
+            count: 1,
+        },
+        InventoryAction::CreativeCursor {
+            item: plain,
+            count: 1,
+        },
+    ] {
+        assert_eq!(
+            inventory_command(&mut host, &mut a, action),
+            InventoryOutcome::Applied
+        );
+    }
+    let bag = &a.world().resource::<client::ClientSession>().inventory;
+    assert_eq!(bag.count(expected), 2);
+    assert_eq!(bag.cursor.unwrap().item, expected);
+    assert_eq!(bag.count(plain), 0);
+    assert_eq!(
+        b.world()
+            .resource::<client::ClientSession>()
+            .inventory
+            .count(expected),
+        0
+    );
+    assert_eq!(
+        inventory_command(&mut host, &mut a, InventoryAction::ReturnCursor),
+        InventoryOutcome::Applied
+    );
+    assert_eq!(
+        inventory_command(
+            &mut host,
+            &mut a,
+            InventoryAction::CreativeSet {
+                slot: 8,
+                item: ItemKind::Stick,
+                count: 1
+            }
+        ),
+        InventoryOutcome::Applied
+    );
+    let recipe = Recipe {
+        id: "test::authoritative_cape".into(),
+        name: "Cape".into(),
+        station: CraftStation::Hand,
+        pattern: RecipePattern::Shapeless {
+            ingredients: vec![Ingredient {
+                item: ItemKind::Stick,
+                count: 1,
+                wood: false,
+            }],
+        },
+        output: ItemStack {
+            item: plain,
+            count: 1,
+        },
+    };
+    let key = recipe.key();
+    host.world_mut()
+        .resource_mut::<RecipeBook>()
+        .extend(vec![recipe])
+        .unwrap();
+    assert_eq!(
+        inventory_command(
+            &mut host,
+            &mut a,
+            InventoryAction::Recipe {
+                recipe: key,
+                count: 1,
+                station: None,
+                destination: CraftDestination::Inventory
+            }
+        ),
+        InventoryOutcome::Applied
+    );
+    assert_eq!(
+        a.world()
+            .resource::<client::ClientSession>()
+            .inventory
+            .count(expected),
+        4
+    );
+    // Changing the realm never repaints existing physical items.
+    host.world_mut()
+        .resource_mut::<EditJournal>()
+        .gameplay_mut()
+        .kingdoms
+        .change_appearance(
+            owner,
+            id,
+            KingdomHeraldry {
+                color: [201, 50, 21],
+                icon: KingdomIcon::Tree,
+            },
+        )
+        .unwrap();
+    let manual = ItemKind::Cape(CapeItem {
+        color: terra_core::beds::DyeColor::Purple,
+        ..CapeItem::ALL_WHITE[0]
+    });
+    assert_eq!(
+        inventory_command(
+            &mut host,
+            &mut a,
+            InventoryAction::CreativeSet {
+                slot: 9,
+                item: manual,
+                count: 1
+            }
+        ),
+        InventoryOutcome::Applied
+    );
+    let bag = &a.world().resource::<client::ClientSession>().inventory;
+    assert_eq!(bag.count(expected), 4);
+    assert_eq!(bag.count(manual), 1);
+    assert!(bag.valid());
+    assert_eq!(
+        host.world()
+            .resource::<EditJournal>()
+            .gameplay()
+            .inventories[&owner],
+        *bag
     );
 }

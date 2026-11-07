@@ -3542,3 +3542,2837 @@ Prop-/Speichersystem und keine zwingenden Render-/Audio-Abhaengigkeiten im Serve
 Kurze native Tests ersetzen keine mehrstuendige Lastabnahme, lokale UUID-Sitzungen
 keine verifizierten Online-Accounts und Screenshots keine vollstaendige Art-Abnahme.
 Konkrete Restaufgaben und neue Inhalte bleiben in [TODO.md](TODO.md).
+
+
+## TODO-Altstand Bis Phase 165
+
+Am 2026-10-31 aus TODO.md hierher verschobene abgeschlossene Eintraege,
+Historie, Messungen und Einschraenkungen. Angaben beziehen sich auf ihren
+jeweiligen damaligen Stand und sind keine neue Abnahme. Offene Eintraege
+stehen ausschliesslich in [TODO.md](TODO.md); bestehende Ergebnisdateien
+und ihre unverkuerzten Rohdaten bleiben unveraendert.
+
+Die urspruengliche [Altstand-Zuordnung](tools/benchmarks/results/technical-backlog-2026-10-22/migration.md)
+und der [damalige vollstaendige Backlog](tools/benchmarks/results/technical-backlog-2026-10-22/previous-todo.md)
+bleiben ebenfalls als historische Quelle erhalten.
+
+Die Oberflaechen-/HP-Balken-/Netzkorrekturen aus Phase 118 sind gesondert in
+[PATCH.md](PATCH.md) und im
+[Pruefbericht](tools/benchmarks/results/render-health-webs-2026-10-24/README.md)
+dokumentiert. F35-F39 und das groessere organische Hoehlenraum-Redesign F36
+bleiben offene Features; eine geringere Gangdichte ist nicht deren Abschluss.
+
+Die gezielten Bewegungs-, Reit-, Karten-/HP-Balken- und Vegetationskorrekturen
+aus Phase 119 sind im
+[Mob-/Streamingbericht](tools/benchmarks/results/mob-movement-streaming-2026-10-24/README.md)
+dokumentiert. Kurze native Streaming-Vergleiche ersetzen nicht A01/A04/A05.
+
+Phase 124 ergaenzt faerbbare Teppiche/Wolle, bepflanzbare Blumentoepfe und
+gemeinsam oeffnende 1x2-/2x1-/2x2-Fenster. Feldfortschritt und Wasser-Deltas
+gleichen unveraenderte Pflanzen nicht mehr erneut ab. Die getrennte Messung
+weist Fackel-Cubemaps als grossen Dorf-Engpass nach; die konservative
+Sonnenlicht-Klassifikation spart Cubemaps offen sonnenbeschienener Quellen.
+Der kurze Feldvergleich steigt von 43,33 auf 55,98 FPS; notwendige lokale
+Schatten bleiben ein erheblicher Engpass, kein allgemeiner FPS-Abschluss.
+Neue Wasserfall-Terrainrevisionen erhalten offene, felsige Uebergaenge; alte
+Weltvertraege bleiben erhalten. Nachweise und konkrete Grenzen:
+[Dorf-/Dekorationsbericht](tools/benchmarks/results/village-fields-decor-2026-10-25/README.md).
+
+#### Features
+
+##### Neue Features In Abhaengigkeitsreihenfolge
+
+F01 (Buffs/Debuffs) ist mit Phase 104 implementiert und geprueft. Die 13
+Effekte, automatische Ausloeser, HUD, PLY5-Migration und Replikation sind im
+[Status-Effekt-Bericht](tools/benchmarks/results/status-effects-2026-10-22/README.md)
+dokumentiert. Ruestung und weitere natuerliche Ausloeser bleiben getrennte Features.
+
+F02 ist mit Phase 105 implementiert: fuenf Ruestungssets, vier Accessoires,
+neun echte Plaetze, Schutz-/Werteboni, persistente Replikation und silberne
+Ruestungsleiste. Herz-/HP-Overlays verwenden nur den ersten Status-Effekt.
+Pruefungen, native Aufnahmen und Grenzen stehen im
+[Ausruestungsbericht](tools/benchmarks/results/equipment-2026-10-22/README.md).
+
+F03 ist mit Phase 106 implementiert: animierter Zweiblock-Crusher, private
+Ein-/Ausgabe, gespeicherter Fortschritt und 16 einzelne Zerkleinerungsrezepte
+mit Too-Many-Items-Ansicht und Plus-Transfer. Alte Farbstoff-Handrezepte bleiben
+gueltig. Zusaetzlich: integrierter Schild im Stamina-Rahmen und faerbbare Capes
+in fuenf Stufen mit zehntem Ausruestungsplatz. 1850 Workspace-Tests sowie die
+nativen Ausruestungs-/Crusher-Pruefungen bestanden; Nachweise und Grenzen im
+[Capes-/Crusher-Bericht](tools/benchmarks/results/capes-crusher-2026-10-22/README.md).
+
+Phase 107 erweitert F03 um eine montierbare Handkurbel und echte manuelle
+Bedienung mit getrennten Mechanik-/Mahlgeraeuschen und fallenden Spaenen.
+Capes bleiben hinten und folgen Gang/Wind. Hoeheres Inventar, direkte
+Hover-Tooltips, begrenzter Ruestungsrahmen und animierte Gifttropfen:
+[Handkurbel-/UI-Bericht](tools/benchmarks/results/manual-crusher-2026-10-22/README.md).
+
+Phase 108 ergaenzt die geschlossene Crusher-Verkleidung und Material-Foley,
+13 Farbstoffe fuer Betten/Capes, sechs Werkzeug-Materialstufen und gerade
+Blockkanten. Umsetzung und Pruefnachweise:
+[Material-/Crusher-Bericht](tools/benchmarks/results/materials-crusher-2026-10-23/README.md).
+
+F04 ist mit Phase 109 implementiert: Weizen, Mais und Salat mit acht Stufen,
+Samen, vorbereitetem Ackerboden, Ernte/Nachpflanzen, Nahrungs-/Samenrezepten
+und Too-Many-Items-Integration. Feuchtigkeit, Tageslicht und SeasonSample
+steuern gespeichertes Wachstum; gefressene Kulturen und Wildfutter wachsen
+kontrolliert nach. Umsetzung, native Aussaat-/Erntepruefung und Grenzen:
+[Anbaubericht](tools/benchmarks/results/farming-2026-10-23/README.md).
+
+Phase 110 erweitert den Anbau um Giessekannen, Hacken und Sensen in fuenf
+Materialstufen, eigene Ackertexturen, dekorative Vogelscheuchen und eine echte
+Wachstumsleiste. Werkzeughaltung, Jahreszeitenzeiger, Creative-Komplettleeren
+und der CreatureStates-Empfang sind ebenfalls ueberarbeitet. Funktionsregeln,
+Pruefungen und Grenzen:
+[Farming-Werkzeuge](tools/benchmarks/results/farming-tools-2026-10-23/README.md).
+
+Phase 111 korrigiert vorbereiteten Ackerboden/Salataussaat, zeigt auf Ackerboden
+Wachstum beziehungsweise fehlende Samen und blendet Pflanzenstufen weich um.
+Minimap-Hoehen, Hoehlen-/Unterwasserlicht und Daemmerung sind korrigiert;
+drei Spinnenarten, verankerte Netze und Schwimmspuren erweitern die vorhandenen
+Systeme. Umsetzung und Pruefgrenzen:
+[Spinnen-/Pflanzen-/Lichtbericht](tools/benchmarks/results/spiders-farming-light-2026-10-23/README.md).
+
+Phase 112 ergaenzt Wasserbedarf/Bodenfeuchte und behebt kollidierende IDs bei
+benachbarter gemischter Aussaat. Hohe Hoehlen laden ihre echte Dach-/Bodenschale;
+neue Welten nutzen organischere Hoehlenrevision 5 mit kleinen Wasserkanalauslaeufen.
+Blockige Mineralien, gezielte Tragkettenpruefung, heller abgestimmte Hoehlen und
+Fackeln, bessere Tier-Unterstuetzung/Hindernispruefung, aktivere braune Spinnen,
+F1+E-Absichtsinspektion, echte Platzierungssilhouetten, bewegliche Truhendeckel
+und budgetierte Crusher-/Vogelscheuchenlaternen sind umgesetzt. Nachweise und
+Grenzen: [Bau-/Acker-/Hoehlenbericht](tools/benchmarks/results/building-farming-caves-2026-10-23/README.md).
+
+F05 ist mit Phase 113 implementiert: Schafe, Kuehe, Schweine, Pferde und Spinnen
+verwenden artspezifisches Futter, Vertrauen und persistente Besitzer.
+Gezaehmte Tiere bleiben vom natuerlichen Spawnlimit ausgenommen. F33 ergaenzt
+explizite Follow-/Rest-/None-Befehle ueber die Pet-Bedienoberflaeche; alte
+gespeicherte Folge-Einstellungen aktivieren weiterhin kein automatisches Folgen.
+Netzprioritaet und echte Nahrungssuche der Spinnen, Nachtsicht-/Effektbefehl,
+Truhengeraeusche und Interaktionskorrekturen sind im
+[Zaehmungs-/Interaktionsbericht](tools/benchmarks/results/taming-effects-interaction-2026-10-23/README.md)
+mit Regressionstests und kurzen nativen Pruefungen dokumentiert.
+
+F06 ist mit Phase 115 implementiert: ausdrueckliche Zucht eigener erwachsener
+Schafe, Kuehe, Schweine, Pferde und Spinnen durch zusaetzliches passendes Futter.
+Nachwuchs mit weichem Wachstum, jugendlichen Proportionen/Animationen,
+groessenabhaengiger Physik, Eltern-/Besitzerdaten und Abklingzeiten ist gespeichert
+und repliziert. Rotierende Such-/Geburtsbudgets und Populationsgrenzen verhindern
+unkontrollierte Vermehrung; bestehende Tier-IDs bleiben erhalten. Dazu kommen
+autonomer Netzbau gezaehmter Spinnen ohne Folgen, echte vertikale Bodenslabs,
+getrennter Abbau gemischter Slabs und hellere Zwei-Pixel-Baukonturen.
+2091 Workspace-Tests sowie kurze native Bau-/Zuchtpruefungen bestanden.
+Regeln, Kompatibilitaet und Grenzen:
+[Nachwuchs-/Slab-/Spinnenbericht](tools/benchmarks/results/babies-slabs-spiders-2026-10-23/README.md).
+
+Phase 116 erweitert F06 um stabiles Maennlich/Weiblich fuer alle Tier-IDs.
+Neue Paarungen erfordern unterschiedliche Geschlechter; Nachwuchs erhaelt sein
+eigenes Geschlecht. Historische Familien und Tier-IDs bleiben erhalten.
+Spinnen nutzen kontaktgepruefte Wand-/Deckenwege und echte Absatzlandungen;
+der neue Stalker verwendet begrenzte Hoehlenrouten und kollisionsgeprueften
+Spielerzug. Umsetzung, kurze native Pruefungen und verbleibende Abnahmen:
+[Kletter-/Stalker-/Streamingbericht](tools/benchmarks/results/stalker-climbing-streaming-2026-10-24/README.md).
+
+F07 ist mit Phase 117 implementiert: eigene gezaehmte erwachsene Pferde per
+Platzier-/Tierinteraktion ohne Futter besteigen, mit WASD lenken, sprinten,
+individuell hoch springen und seit Phase 119 mit X sicher absteigen. Shift
+laesst das Pferd sprinten. Server und Vorhersage
+teilen denselben Pferdemotor; Sitzpose und Kamera folgen demselben Sitzpunkt.
+Pferdeausdauer wird im bestehenden HUD angezeigt. Fremde, wilde und junge Pferde
+bleiben gesperrt; Tier-IDs und feste Sprung-/Ausdauerwerte bleiben erhalten.
+Kurze native Reitprobe mit echtem UDP, Sprung, Absteigen und abschliessendem
+Speichern sowie Schnee-/Autosave-Regressionen:
+[Reit-/Schnee-/Autosavebericht](tools/benchmarks/results/riding-snow-autosave-2026-10-24/README.md).
+
+- [x] **F33 Pet-Bedienoberflaeche:** Sneak + Platzieren auf dem eigenen Tier oeffnet ein dunkel-goldenes Radialmenue mit echtem Modellportraet, HP-Herzen und Follow/Rest/None. Autoritative Besitzer-/Reichweiten-/Sichtpruefung, bestehende begrenzte Navigation, gespeicherte explizite Auftraege und kein automatisches Aktivieren alter Follow-Felder. None erlaubt autonomes Verhalten, Rest behaelt Fallen/Schwimmen/Pferdesprung bei. Phase 122 ueberarbeitet den Referenzaufbau mit vollem Ring, erhoehtem Follow-Segment, runden Medaillons, aeusseren Beschreibungstafeln und schmaler Fensteransicht. [Grundsystem](tools/benchmarks/results/pets-trees-water-location-2026-10-24/README.md), [neues HUD](tools/benchmarks/results/villages-pets-spiders-2026-10-24/README.md).
+- [x] **F08 Ganzbaumfaellen:** Shift + gehaltene Abbau-Taste an jedem natuerlich zugeordneten Holzblock, einschliesslich Aesten. Zeiten je Holz: Holz-Axt 0,1 s, Stein 0,0925 s, Eisen 0,08 s, Gold 0,09 s, Diamond/Ruby 0,05 s. Gold und Ruby zaehlen jeden dritten Block nur im Timer nicht mit; der ganze Baum bleibt Teil des Abbaus. Creative unterstuetzt die zeitbasierte Axt-Aktion ohne Gratis-Drops, ohne Shift weiterhin Sofort-Einzelabbau. Exakte vorbereitete Baumstruktur, bedarfsgesteuertes Section-Laden, begrenzte Edit-/Drop-Batches und Schutz von Spielerbauten/Nachbarbaeumen. Grafikoptionen Current, Hell Fall und Magic (5 s), materialgebuendelt und ohne Entity je fallendem Block. [Grundsystem](tools/benchmarks/results/pets-trees-water-location-2026-10-24/README.md), [aktuelle Erweiterung](tools/benchmarks/results/tree-structures-performance-2026-10-25/README.md).
+- [x] **F09 Strukturen:** Deterministische Doerfer in Wueste, Plains/Forest und Highlands, Ruinen und abgestuetzte Bergminen. Revision 2 ergaenzt drei seedabhaengige Dorfgrundrisse, gedrehte Gebaeude, Veranden, Dachueberstaende, Fensterrahmen, Marktstaende und Zaun-/Slab-Details. Verzweigte Wege verwenden ausgerichtete Dirt-Treppen und -Slabs, erhalten bestehende Steigungen und pruefen ihre Fundamente. Neue Minen betreten echte Berghaenge mit gepruefter Felsueberdeckung statt oberirdischer Huetten. Revision 3 ergaenzt Teppiche und bepflanzte Toepfe in Innenraeumen, korrigiert Maschinenfronten und gedrehte Werkbank-Peers sowie Truhen in Minen/Ruinen und verwendet Stein-Zaun/Slab/Treppen in Ruinen. Einmalige Objektregistrierung ohne kuenstliche Terrain-Edits verhindert verworfene Nachbarjobs; Treppenprofile werden je Mesh-Job begrenzt wiederverwendet. Bestehende Welten behalten ihre Strukturversion und Spielerbauten. Bewohner/Berufe gehoeren zu F10. [Urspruengliche Umsetzung](tools/benchmarks/results/villages-pets-spiders-2026-10-24/README.md), [Ueberarbeitung](tools/benchmarks/results/settlement-streaming-2026-10-24/README.md), [Revision 3](tools/benchmarks/results/tree-structures-performance-2026-10-25/README.md).
+- [x] **F10 Villager-Grundsystem:** Persistente Bewohner mit Namen, zehn Rollen-/Modellvarianten, Grundbeduerfnissen, begrenzter Navigation, Dorfspaziergaengen, Heimwegen, individuellen Schlafzeiten und Begruessung per Rechtsklick. Bestehende Mob-Snapshots, Regionsspeicherung und Bett-/Tuersysteme werden genutzt; Bewohner zaehlen nicht zum natuerlichen Tierlimit. Neue Strukturrevision 4 unterscheidet kleine (6-8), mittlere (10-16) und grosse (18-24) Wohnhaeuser plus die geforderten Medic-/Kirchen-/Schmied-/Polizeigebaeude, mit mindestens zwei Betten pro Wohnhaus. Bestehende Weltversionen behalten ihre Bauten. Handel, Berufsproduktion und Wirtschaft bleiben eine spaetere Ausbaustufe. [Umsetzung, Messungen und Grenzen](tools/benchmarks/results/villagers-pipes-physics-2026-10-25/README.md).
+
+Phase 127 ueberarbeitet alle zehn Bewohner-Modelle anhand der Referenz mit
+geschichteter Kleidung/Ruestung, Haarstraehnen, detaillierten Gesichtern,
+Korbgeflecht, Roben, Werkzeugen und Berufstaschen. Innenflaechen werden
+entfernt, gleichfarbige Flaechen verbunden; weiter sechs gemeinsam genutzte
+Koerperteile je Rolle statt Entities je Detail. Geh-/Bettpose und echte
+Clientaufnahmen sind geprueft. Keine behauptete pixelgenaue Referenzkopie:
+[NPC-Details und Performance](tools/benchmarks/results/npc-detail-performance-2026-10-25/README.md).
+
+
+##### Neue Biome Und Natur
+
+F34 ist mit Phase 128 implementiert: zusammenhaengende Sakura-Regionen mit
+pinken/weissen Kronen und Blumen, dezent rosa Wasser, Kartenfarben und schmalen
+Baechen mit natuerlichem Gefaelle. Auch Forest und Highlands erhalten solche
+Baeche ueber die bestehende Hydrologie. Neue Welten verwenden
+`ecology_revision=1`; alte Weltvertraege behalten ihre gespeicherte Revision.
+Generierte Regionen, Baeche, Save-Kompatibilitaet und Grenzen:
+[Kirschwald-/KI-/Lichtbericht](tools/benchmarks/results/cherry-ai-light-2026-10-25/README.md).
+
+- [x] **F40 Abwechslungsreichere Weltgenerierung:** Zusammenhaengende Ebenen, Huegelland, Plateaus, Felskaemme und Senken mit seltenen markanten Erhebungen. Bestehende Biome, Hydrologie und Struktur-Fundamente nutzen dasselbe Terrain; keine zweite Engine. Die spaeteren Revisionen bleiben fuer gespeicherte Welten erhalten; neue Standardwelten verwenden auf Wunsch wieder Main-Revision 1 (siehe unten). Determinismus, Grenzen, Ufer, Tunnel und Dorf-Navigation getestet; native Ansichten und CPU-Messungen fuer Seeds 42042, 71 und 918273 dokumentiert. [Urspruengliche Umsetzung](tools/benchmarks/results/landscape-streaming-2026-10-26/README.md), [Reliefkorrektur und Hydrologie](tools/benchmarks/results/hydrology-relief-performance-2026-10-26/README.md).
+- [x] **F41 Groessere Verbundene Seen:** Landschaftsrevision 3 erzeugt unterschiedlich grosse, mehrlappige Seen mit natuerlichen Ufern und gelegentlichen Fluss-Zu-/Abfluessen. Gemeinsame Pegel, echte Wasserzellen, dichte Ufer-/Grenztests und native Seeansichten geprueft. Gespeicherte Revisionen 0/1/2 bleiben unveraendert. [Umsetzung und Grenzen](tools/benchmarks/results/hydrology-relief-performance-2026-10-26/README.md).
+- [x] **F42 Laengere Fluesse:** Regionale zusammenhaengende Quelle-See-Meer-Kurse, variable Laengen, gepruefte Meeresanschluesse und natuerliches Gefaelle ueber die bestehende Hydrologie und Fluessigkeitslogik. Begrenzter gemeinsamer Cache statt zweiter Flussengine. Drei Seeds, Grenzen, Fluessigkeitszellen und native Ansichten geprueft; kein unbegrenzter globaler Flussgraph. [Nachweise und Einschraenkungen](tools/benchmarks/results/hydrology-relief-performance-2026-10-26/README.md).
+
+Aktueller Standard auf Wunsch wieder wie `main` (`d2b7956`): neue Welten
+verwenden Landschaftsrevision 1, Meeresspiegel 8 und die urspruenglichen
+Terrain-/Hydrologiefelder. Die spaeteren Revisionen 2..5 bleiben nur fuer
+bestehende Weltvertraege beziehungsweise explizite Konfigurationen erhalten;
+keine Umstellung bestehender Saves oder Spieler-Edits. F35 bleibt offen:
+Das optionale Terrainprofil Spirit Forest ersetzt nicht dessen noch fehlende Inhalte.
+[Konfiguration, Debug-Karten und Grenzen](TERRAIN.md).
+Die erweiterten JSON-Bergprofile sind nicht mehr der Standard; gespeicherte
+Landschaftsprofile bleiben unveraendert. Der neue
+[FIVERR-Grassblock](FIVERR/README.md) wird fuer ID 1 im Terrain verwendet:
+aufbereitete Nahgeometrie mit echten Graslippen/Steinchen, Face-Culling,
+geschlossene Nachbarkanten und feinere 1254x1254-PBR-Atlanten mit
+512x512-Greedy-Fern-LOD. Die Quelldatei bleibt unveraendert.
+Tannen besitzen jetzt einen
+geschlossenen 3D-Kronenkoerper mit darin verwurzelten Nadelspitzen statt einzelner Sprays.
+[Integration und Pruefungen](tools/benchmarks/results/fiverr-grass-fir-2026-10-27/README.md).
+[HD-Gras und Main-Rueckbau](tools/benchmarks/results/grass-hd-main-terrain-2026-10-27/README.md).
+Die Grasoberseite verwendet nun ein helleres, ruhigeres Gruen mit weniger
+Albedovariation; Relief, Steinchen, Seiten und saisonale Effekte bleiben erhalten.
+
+##### Kingdom
+
+
+##### Mechanische Technik
+
+- [x] **F25 Kinetik-System:** Zahnraeder und Wellen aus Holz, Stein und Eisen, verbindbare Antriebe, Drehrichtung, Drehzahl und begrenzte Belastbarkeit. Bestehenden Handkurbel-/Crusher-Anschluss weiterverwenden; Wasserraeder an das vorhandene fliessende Wasser anbinden, damit sie die Handkurbel als automatischen Antrieb ersetzen. Fliessbaender fuer budgetierten Itemtransport ergaenzen. Antriebsnetze autoritativ, zyklensicher und chunkuebergreifend speichern; kein Entity pro Zahn und keine unbegrenzte Netzsuche pro Frame. Umgesetzt und geprueft mit Phase 149; Bedienung und Grenzen im [Blockhandbuch](assets/terra/blocks/README.md#kinetic-drives-and-conveyors).
+- [x] **F26 Mixer:** Kinetischer RGB-Mischer mit sechs Grundfarbstoff-Eingaben, Ziel-Farbwaehler, transparenten Rezeptvorschlaegen und echtem RGB-Ausgang. Gemeinsame Inventar-/Kinetikpfade, TMI-Baurezept und bedarfsgenerierte Mischrezepte per R, animiertes Holz-/Eisenmodell, Maschinenklang und gespeicherter Fortschritt. Betrieb nur bei gueltigem Antrieb; Phase 158 erweitert RGB auf Wolle, Teppiche, Betten und Bandflaechen. Bedienung und Kalibrierungsmodell im [Farbstoffhandbuch](assets/terra/items/DYES_AND_TOOLS.md#calibrated-rgb-dye).
+
+##### Wassertechnik
+
+
+##### Alchemie Und Temperatur
+
+- [x] **F30 Traenke Und Kessel:** Glasflaschen und gefuellte Trankflaschen, ein Kessel sowie Loeffel aus Holz, Stein und Gold. Datengetriebene Braurezepte auf dem bestehenden Effekt-/Inventarsystem aufbauen; Einzel- und Mischtraenke wie Regeneration + Staerke mit getrennten Staerken/Laufzeiten. Zutaten, Wasser, Erhitzen und Flaschen autoritativ verbrauchen, Kesselinhalt/Fortschritt speichern und passende Rezepte in Too Many Items zeigen. Keine zweite Effekt-Registry; Materialunterschiede der Loeffel explizit festlegen. Umgesetzt in Phase 164; Bedienung und Grenzen siehe unten.
+- [x] **F31 Lagerfeuer:** Platzierbares, anzuendbares Feuer mit echtem Brennstoffverbrauch, dezenter Animation, Licht, Rauch und Geraeusch. Kessel aus F30 erhitzen, zum Waermen an F32 anbinden und vorhandene Lebensmittel-/Garrezepte zum Braten nutzen. Abstand, Brandschutz, Loeschen, Mehrspielerzugriff und gespeicherten Brennzustand beruecksichtigen; vorhandene Ofen-/Rauch-/Lichtbudgets verwenden. Umgesetzt in Phase 164; menschliche Hoerabnahme bleibt A02, das vollstaendige Temperaturmodell bleibt F32.
+
+##### Bestehende Erweiterungen Beibehalten
+
+- [x] **F12 Bienen Und Honig:** Autoritative Honigentnahme mit Platzieren/Benutzen am echten Nest, Sicht-/Reichweiten-/Baurechte-/Inventarpruefung und unveraendertem Nest. Echte Nektarbesuche bestaeuben begrenzt geeignete feuchte Nutzpflanzen. Gesunde erwachsene Eltern unterschiedlichen Geschlechts erhalten durch Nektar finanzierten Nachwuchs ueber F06 mit Wachstum, Abklingzeiten, gespeicherten Familien und monotonen IDs. Bestehende Reifung, Nektar, Honig, lokale Moblimits und zehn Nestbewohner bleiben erhalten. [Umsetzung, Tests und Grenzen](tools/benchmarks/results/tree-ai-bees-water-2026-10-24/README.md).
+- [x] **F13 Wassertransport (Eimer-Ausbaustufe):** Eisen-Eimer samt Werkbank-/Too-Many-Items-Rezept, leerer/gefuellter Inventar- und Handdarstellung sowie autoritativer Entnahme/Platzierung echter Quellen. Reichweite, Baurechte, gehaltenen Slot und Revisionen pruefen; keine Item-/Wasserduplikation. Quellen und explizit entnommenes Naturwasser ueber die bestehende Journal-/Region-Persistenz sichern. Pumpen sind ausdruecklich die spaetere Ausbaustufe zusammen mit F27; keine zweite Fluessigkeitssimulation. [Code, Tests und Grenzen](tools/benchmarks/results/cherry-water-transport-2026-10-25/README.md).
+
+#### Optimierungen
+
+Phase 128 korrigiert festgefahrene Bewohner, die Kantenpruefung der gemeinsamen
+Navigation und ruckelnde Mob-Wiedergabe aus verspaeteten Netzwerk-Snapshots.
+Konkrete weitere FPS-Vorschlaege (unveraenderte Preprocessing-Bindings cachen,
+uebergrosse Uploads staffeln, entfernte Materialbatches buendeln, leere
+Punktlicht-Schattenviews behandeln) mit Aufwand, Messgrundlage und Risiken:
+[Naechste FPS-Schritte](tools/benchmarks/results/cherry-ai-light-2026-10-25/README.md#naechste-fps-schritte).
+Phase 130 korrigiert zwei nachgewiesene Rueckschritte aus Phase 129:
+Terrain-/Prop-Uploads werden wieder pro vollstaendiger Section budgetiert,
+ohne Materialbatches kuenstlich zu zerteilen. Raeumliche Fernbatches bleiben
+ein ausdruecklicher Smoke-Test-Versuch; im Spiel bleibt das feinere
+Section-Culling erhalten. Veraltete LOD-Ergebnisse werden vor Mesh-Allokation
+verworfen. Binding-Cache und die Korrektur leerer Schattenseiten bleiben
+erhalten. Ein lokaler Bevy-0.19.1-Patch vermeidet zudem bytegleiche Uploads
+CPU-eigener Mesh-Binlisten, ohne dynamische Renderdaten einzufrieren.
+Native Vergleiche: Nacht ca. 62 -> 73 FPS; 4K-Regen ca. 42 -> 57 FPS;
+Nacht-Ladezeit ca. 42 -> 24 s. Einzelne 4K-Ausreisser bleiben offen.
+Unveraenderte Qualitaet/Sichtweite, drei Seeds, keine neuen Langzeittests.
+Vergleichsmessungen stehen im
+[Regressionsbericht](tools/benchmarks/results/streaming-regression-2026-10-25/README.md).
+Der [Phase-129-Bericht](tools/benchmarks/results/cherry-water-transport-2026-10-25/README.md)
+ist der historische Zwischenstand, keine Performance-Abnahme. A05 bleibt offen.
+
+Phase 131 ergaenzt `FPS Min` / `FPS Max` im F1-Overlay: ungeglaettete
+Einzelframe-Werte ab der spielbaren Welt, auch bei verborgenem Overlay und
+offenem Inventar. Reset beim Weltwechsel; der initiale Ladebildschirm zaehlt
+nicht dazu. Messung verwendet reale Zeit, damit auch Hanger ueber 250 ms
+nicht durch das Simulationszeit-Limit verdeckt werden.
+Kurzer nativer Regen-Flug (Seed 7, Sichtweite 12, 1280x800, 24 s):
+97,00 FPS im Mittel, p95 15,61 ms, p99 18,13 ms, schlechtester Frame
+27,80 ms (= 35,97 FPS), initiales Laden 8,68 s. Rohdaten:
+[Flugmessung](tools/benchmarks/results/session-fps-2026-10-26/flight-before.log).
+Wiederholung mit FPS-Erfassung: 97,49 FPS, p95 15,41 ms, p99 17,87 ms,
+Minimum 35,73 FPS / Maximum 283,44 FPS im 24-s-Messfenster;
+[Rohdaten](tools/benchmarks/results/session-fps-2026-10-26/flight-after.log).
+Diese Schwankung belegt keinen Performance-Gewinn. Im integrierten nativen
+HUD-Test sind die Session-Werte separat vom kurzen Benchmarkfenster geprueft:
+[Screenshot](tools/benchmarks/results/session-fps-2026-10-26/overlay.png),
+[Log](tools/benchmarks/results/session-fps-2026-10-26/overlay.log).
+Validiert: 351 UI-Tests, Client-Build, Clippy fuer UI/Client mit allen Targets
+und `-D warnings`, Workspace-Formatcheck. Keine Grafikqualitaet reduziert.
+Keine neue Performance-Korrektur aus dieser Messung abgeleitet; die
+verbleibenden Low-FPS-Ausreisser sind weiterhin offen. Keine neuen Langzeittests.
+
+Phase 132 setzt die freigegebenen Rendering-Schritte um: gemeinsame GPU-Submits
+fuer Slab-Wachstum, konservative asynchrone Hoehlen-Portale vor Komposition /
+Upload und beidseitige Schatten-Proxys ohne doppelte Indexgeometrie. Collider
+und Physikradien bleiben auf ausdruecklichen Wunsch unveraendert.
+Eine 32-MiB-Slab-Grenze wurde wegen gemessener Verschlechterung verworfen.
+Kurze native Vergleiche zeigen keinen allgemeinen FPS-Gewinn; insbesondere
+einzelne Streaming-Spitzen und A05 bleiben offen. Details, Einschraenkungen,
+Zwischenversuche und unverkuerzte Rohdaten:
+[Rendering-/Culling-Bericht](tools/benchmarks/results/render-culling-2026-10-26/README.md).
+
+O01, O03, O04, O05 und O06 sind mit Phase 102 als konkrete Codekorrekturen
+umgesetzt und geprueft. Implementierung, 1734 bestandene Tests, native
+Funktionspruefungen und unverkuerzte Vergleichsmessungen stehen im
+[Phase-102-Bericht](tools/benchmarks/results/render-water-2026-10-22/README.md).
+Das ist keine allgemeine FPS-/Speicherparitaets- oder Langzeitabnahme;
+gezielte verbleibende Pruefungen bleiben unter A01, A04 und A05 offen.
+
+Die danach gemeldete Inventar-FPS-Regression ist mit Phase 103 im UI-Runtime-
+und Vorschau-Bildpfad korrigiert: im gleichen nativen 4K-/20er-Blick offen
+32,79 -> 68,38 FPS, bei 2880x1620/12 offen 43,22 -> 90,99 FPS. Reproduzierbare
+Vergleiche, Regressionstests und ausdrueckliche Grenzen stehen im
+[Phase-103-Bericht](tools/benchmarks/results/inventory-fps-2026-10-22/README.md).
+Das ist keine vollstaendige Abnahme aller Streaming-/GPU-/Langzeitspitzen;
+A05 bleibt offen. Performance hat weiterhin Vorrang vor neuen Features.
+
+Phase 116 korrigiert den gemessenen grossen Terrain-Arbeitsvorrat nach dem
+Fliegen: einmalige Sortierschluessel je Kandidat und gezielte lokale
+Exposure-Invalidierung. Im nativen 120-s-Hin-/Rueckflug bei 4K, Regen und
+Sichtweite 20: 39,18 -> 71,33 FPS, p95 43,87 -> 25,16 ms. Sichtweite 12,
+1080p/Clear bleibt bei 123,61 -> 121,73 FPS ohne behaupteten FPS-Gewinn.
+Keine Grafikqualitaet wurde reduziert; mehr Terrain wird rechtzeitig sichtbar.
+Das ist keine Langzeitabnahme und schliesst A05 nicht. Rohdaten und Grenzen:
+[Streaming-/Stalker-Bericht](tools/benchmarks/results/stalker-climbing-streaming-2026-10-24/README.md).
+
+Phase 119 begrenzt die Prop-LOD-Auswahl und vermeidet leere globale Durchlaeufe.
+Im nativen 60-s-Flug bei 1080p, Regen und Sichtweite 20: 86,28 -> 93,45 FPS,
+p95 20,80 -> 17,32 ms, Prop-Dispatch-Aufrufe ueber 8 ms waehrend der Route
+147 -> 0. Alle 102730 Props bleiben dargestellt. Einzelne Frameausreisser
+bleiben vorhanden; A05 ist damit nicht geschlossen. Messbedingungen und Rohdaten:
+[Mob-/Streamingbericht](tools/benchmarks/results/mob-movement-streaming-2026-10-24/README.md).
+
+Phase 125 korrigiert wiederholte globale GPU-Schattenvorbereitung und den
+Executor-Overhead je Cubemap-Seite. Im kurzen nativen Dorf-/Regenvergleich:
+1280x800/Sichtweite 12: 37,91 -> 56,88 FPS;
+3840x2160/Sichtweite 20/Ultra-Wetter: 33,82 -> 47,48 FPS.
+Alle Punktlicht-Schattenseiten bleiben erhalten; keine reduzierte Sichtweite
+oder Grafikqualitaet. Der kurze Waldflug verbessert sich nur 66,06 -> 70,06 FPS.
+Verbleibende Frame-Ausreisser und A05 bleiben offen. Messpfade und Grenzen:
+[Baum-/Struktur-/Performancebericht](tools/benchmarks/results/tree-structures-performance-2026-10-25/README.md).
+
+Phase 126 untersucht verbleibende Kosten ohne weitere Performance-Eingriffe:
+Im nativen Dorf-/Regenblick 57,03 FPS, Render-Wall 16,79 ms gegen Main 9,00 ms;
+beim kurzen Hin-/Rueckflug steigt Render-Asset-Vorbereitung von stationaer
+0,50 auf 4,08 ms pro Frame. Bind-Groups kosten weiter etwa 1,5 ms.
+Priorisierte Befunde, Rohdaten und Abgrenzung noch unbewiesener Ursachen:
+[Bewohner-/Rohr-/Physikbericht](tools/benchmarks/results/villagers-pipes-physics-2026-10-25/README.md).
+Keine Langzeitabnahme, kein behaupteter weiterer FPS-Fix; A05 bleibt offen.
+
+Phase 127 behebt die danach nachgewiesenen per-face Encoder-Abschluesse bei
+Punktlichtschatten: Unpacking/Preprocessing phasenweise buendeln und die
+vollstaendige Tiefenzeichnung im bestehenden gemeinsamen Bevy-Pass ausfuehren.
+Mit den neuen NPC-Modellen auf beiden Seiten: Dorf nachts, 1280x800/Sichtweite
+12, 50,12 -> 60,86 FPS; Dorf/Regen, 4K/Sichtweite 20/Ultra-Wetter,
+46,22 -> 52,47 FPS. Keine reduzierte Sichtweite oder Schattenqualitaet;
+GPU-Readbacks bestaetigen erhaltene Schatten-Draws. Der Seed-7-Wasser-/Regenflug
+bleibt bei etwa 101 FPS, ohne behaupteten Schattengewinn in einer Szene ohne
+Punktlichtschatten. Grosse Uploads, einzelne 4K-Spitzen und A05 bleiben offen:
+[Messungen, Rohdaten und Umsetzung](tools/benchmarks/results/npc-detail-performance-2026-10-25/README.md).
+
+Phase 133 migriert den Workspace auf Bevy 0.20.0, Avian3D 0.8.0,
+Lightyear 0.31.0 und die gepinnte TiltUI-Revision aus preview-020.
+Rust 1.97.1, WESL-Shader, neue GPU-Uniform-Allocation sowie die bestehenden
+lokalen Renderer-/UI-Performance-Patches sind integriert. Native Physik-,
+Inventar- und Headless-Servertests bestanden. Kein allgemeiner FPS-Fix:
+kurzer Regenflug 97,50 -> 101,83 FPS, Dorf nachts 74,92 -> 59,74 FPS.
+Diese Dorf-Regression und A05 bleiben ausdruecklich offen; keine
+Qualitaetsreduzierung und keine neue Langzeitabnahme.
+[Migration, Messbedingungen und Tests](tools/benchmarks/results/bevy-020-2026-10-26/README.md).
+
+Phase 134 entfernt `vendor/` und lokale Bevy-Quellpatches; Bevy verwendet die
+unveraenderten Registry-Quellen. TiltUI-Fixes liegen im echten separaten
+`../../tilt-us/tilt-ui`-Repository, vorerst ueber lokale Pfadabhaengigkeiten
+statt Git-Pin eingebunden, bis der Push freigegeben ist. Min-/Max-FPS erfassen
+nur vollstaendige Frames nach zehn realen Sekunden ab Weltbeitritt, auch keine
+ueber die Warmup-Grenze reichenden Haenger. Gebuendelte Mesh-Queue-Bereinigung
+beim Entladen sowie SparseSet-Binding-/Shadow-Marker und stabile Schatten-Roots
+vermeiden wiederholte Scans und wechselnde Query-Reihenfolgen. Der Hoehlenausblick
+behaelt Sonnenlicht und sichtbaren Himmel ohne globale Nebelverdunklung.
+2534 Workspace-Tests und 322 Tests der echten TiltUI-Runtime bestanden,
+ebenso Formatierung, Check, striktes Clippy und Client-/Server-Build.
+Native Hoehlen-/Portalpruefung und F1-Extrema bestanden. Kurze Regenfluege
+bei Sichtweite 12/20 bleiben insgesamt nahezu gleich schnell; kein allgemeiner
+FPS-Gewinn oder Abschluss der offenen Dorf-/Streaming-Regression behauptet.
+A05 bleibt offen.
+[Umsetzung und Validierungsstand](tools/benchmarks/results/cave-fps-no-vendor-2026-10-26/README.md).
+
+Phase 135 behebt den Lade-Stall neuer Welten bei nahezu 100 %:
+Portalbedingt unsichtbare CPU-Meshes gelten jetzt auch fuer den Ladefortschritt
+als fertig. Fehlende Sections und laufende Spalten-Jobs blockieren weiterhin;
+Renderer, Ladebildschirm und Smoke-Tests verwenden dieselbe Bereitschaftsabfrage.
+Native neue Welten mit Seed 42042, 7 und dem Seed der Benutzerwelt Test
+erreichen wieder 100 %, Fade-in und Spielseite; im reproduzierten Fall ca. 15
+statt 74 s. 2540 Tests, Formatierung, Check, striktes Clippy und Workspace-Build
+bestanden. Bestehende Welten, Portaloptimierung und Welt-Audio-Reihenfolge
+bleiben erhalten.
+[Ursache, Regressionstests und Nachweise](tools/benchmarks/results/world-loading-2026-10-26/README.md).
+
+Phase 136 schliesst den nachgewiesenen Sonnenlicht-Durchtritt durch vorhandene
+Hoehlendaecher: gemeinsame Material-Tiefenpaesse bleiben auch ohne Near-Proxy
+und bei Middle/Far beidseitig, waehrend der Farbpass sein Culling behaelt.
+Trockenes Terrain nutzt Stock-PBR mit bindless-faehiger leerer Depth-Extension;
+Wetter-, Fade-, Draw-Readiness- und Freigabepfade sind integriert. Native
+Near/Middle/Far-Referenz/Gegenprobe sowie heller Hoehlenausgang, Fackeln und
+Unterwasser bestehen. Der begrenzte Lichtpool verwendet Entities wieder;
+identische einblendende Mesh-Ergebnisse verbrauchen vor dem Verwerfen kein
+Upload-Budget und erzeugen keine neuen Assets mehr. 2553 Workspace-Tests,
+Formatierung, Check, striktes Clippy und Client-/Server-Build bestanden.
+Kurze native Vergleiche ohne Profiler: integrierter Regenflug, Sichtweite 20,
+85.51 -> 86.09 FPS; Wasser-/Regenflug mit anderem Seed 72.80 -> 77.30 FPS.
+Die schlechtesten Frames bleiben etwa 33 bzw. 40 ms. Ein einmaliger 118-ms-
+Ausreisser wiederholte sich auch im unveraenderten Ausgangsstand nicht;
+kein behaupteter Abschluss des seltenen 9-FPS-Problems oder von A05.
+Keine neuen Langzeittests oder reduzierten Qualitaetsoptionen.
+[Code, verworfene Ansaetze und native Messungen](tools/benchmarks/results/streaming-cave-shadows-2026-10-26/README.md).
+
+Phase 137 staffelt grosse Terrain-/Prop-Ergebnisse nach Materialbatches ueber
+Frames, publiziert nur vollstaendige Ersetzungen und gibt abgebrochene
+Staging-Assets frei. Die Prop-Auswahl bereinigt ihre Queue einmal statt bis
+zu 96-mal. LOD-Wechsel und Crop-Growth sind abgesichert. Keine reduzierte
+Sichtweite oder Detaildichte. Kurze native Paare belegen jedoch keinen
+grossen allgemeinen FPS-Fix: Integrated/1080p 82.05 -> 82.82 FPS,
+Wasser/800p 73.97 -> 73.30 FPS; p99 sinkt leicht, der schlechteste Wasserframe
+wird schlechter. CPU-Renderarbeit und einzelne grosse Materialbatches bleiben
+relevante Messpunkte. A05 bleibt offen. F40 kostet zusaetzliche CPU-Zeit und
+wird getrennt von diesen identischen alten Landschaftsszenen bewertet.
+[Messwerte, Profiling und F40](tools/benchmarks/results/landscape-streaming-2026-10-26/README.md).
+
+Phase 138 reduziert wiederholte Asset-Bounds-Pruefungen fuer unveraenderliche
+Terrain-/Prop-/Wasser-Meshes, erhaelt Displacement-Padding und Frustum-Culling.
+Section-/Column-Tabellen nutzen Bevys Hash-Collections; Interest-Mengen werden
+direkt statt doppelt aufgebaut. Render-/Voxel-Pakete sind auch bei normalem
+`cargo run` mit Stufe 3 optimiert. Keine reduzierte Grafikqualitaet.
+Im abschliessenden kurzen nativen Vergleich: Integrated/1080p/Sichtweite 20/
+Regen 79,63 -> 83,44 AVG FPS; zweiter Seed/Wasser/Regen 76,84 -> 81,94 FPS.
+p95/p99 verbessern sich, die schlechtesten Frames aber nicht: weiterhin
+ca. 41 bzw. 40 ms. Die geforderte Mindest-FPS 32 ist **nicht erreicht**.
+Ein wiederholter Ausgangslauf widerlegt einen behaupteten generellen Gewinn
+aus dem einmaligen vorherigen 94-ms-Ausreisser. 2584 Workspace-Tests plus
+ein ergaenzender Interest-Test, Formatierung, All-Targets-Check, striktes
+Clippy und Workspace-Build bestanden. A05 bleibt offen.
+[Code, saemtliche Vergleiche und Grenzen](tools/benchmarks/results/flight-frame-budget-2026-10-26/README.md).
+
+Phase 139 setzt F41/F42 in Landschaftsrevision 3 um und erhaelt mehr lokales
+Relief in Ebenen, Plateaus und Senken. Alte Landschaftsrevisionen bleiben
+unveraendert. Streaming-Interest, Chunk-Animationsabfragen und Wasser-Uploads
+vermeiden wiederholte Vollscans; der Channel-Mesher sortiert verdeckte/falsche
+Hoehen vor den teuren Eckpunktsamples aus. Framegenaue native Diagnostik
+belegt zusaetzlich einen unbudgetierten ca. 25-MB-Vollhimmel-Upload waehrend
+des Flugs. Wiederverwendbare Wolkenbanken mit begrenzten Rand-Uploads ersetzen
+diesen Pfad ohne weniger Wolkendetails. Feste kleine Cloudgruppen besitzen
+shader-sichere Frustum-Bounds. Grosse stabile Prop-Batches werden im Worker
+an Prop-Grenzen geteilt; Wachstumsuhren und atomarer Rootwechsel bleiben
+erhalten. Dynamische Wasserdaten verwenden einen gemeinsamen GPU-Puffer statt
+wiederholter Material-Asset-Aenderungen fuer alle Wassertiles. Formatierung,
+All-Targets-Check, striktes Clippy und Client-/Server-Build bestanden;
+2636 Workspace-Tests und nach dem letzten Render-Schritt 691 gezielte
+Render-Tests bestanden. Native Regen-, Wasser- und Schnee-Laeufe verbessern
+AVG/p99 gegen zeitnahe Kontrollen. Ein Wiederholungslauf enthaelt jedoch
+weiter einen einzelnen 73-ms-Ausreisser; Schnee unterschreitet ebenfalls
+weiter 32 FPS. Die feste Untergrenze und A05 sind nicht abgeschlossen.
+[Umsetzung, alle Messlaeufe und native Aufnahmen](tools/benchmarks/results/hydrology-relief-performance-2026-10-26/README.md).
+
+Phase 146 korrigiert die Startup-/Play-Umschaltung bei portalverdeckten
+CPU-Meshes, begrenzt einzelne Worker-/GPU-Uebergaben samt Attributbytes,
+cached authored Nachbarformen nur innerhalb einer Komposition und verwendet
+validierte Schattenhuellen fuer das authored Gras. Bereits flache authored
+Near-Faces verwenden jetzt ebenfalls Greedy-Meshing, ohne die Detaildistanz
+oder Nahgeometrie zu reduzieren. Native Sichtweite-20-Vergleiche auf RX 6950 XT:
+klarer Flug AVG 44.64 -> 46.72, Minimum 16.59 -> 24.49 FPS;
+Regenflug mit zweitem Seed AVG 54.94 -> 55.37 FPS, kaum allgemeiner Gewinn;
+integrierter Stand AVG 78.18 -> 80.02, Minimum 26.41 -> 34.82 FPS.
+2749 Workspace-Tests bestanden, 7 ignoriert; Formatierung, All-Targets-Check,
+striktes Clippy, Client-/Server-Build sowie drei native Grasaufnahmen bestanden.
+Keine Bevy-/TiltUI-Patches oder Qualitaetsreduktion. Die feste Untergrenze
+32 FPS wird im Flug weiter unterschritten; A05 bleibt offen.
+[Messungen, verworfene Versuche und Bilder](tools/benchmarks/results/grass-palette-streaming-2026-10-27/README.md).
+
+Phase 147 bearbeitet die gemessenen Render-Prioritaeten 1 bis 3:
+Authored Terrain-Normalen/-Tangenten werden nativ komprimiert, flache
+Fallback-Schatten bleiben gebuendelt ohne redundante Huellen und
+Instanz-Ausgabepuffer wachsen mit begrenzter Kapazitaetsreserve.
+Der eigene Bindingscache kostete im Flug mehr als er einsparte; normales
+Spielen nutzt wieder den unveraenderten Bevy-Helper, der Cache bleibt eine
+explizite Smoke-Testoption. Keine Vendor-Patches oder Qualitaetsreduktion.
+Native Sichtweite-20-Vergleiche: klarer Flug AVG 47.25 -> 49.75 FPS,
+Minimum 22.23 -> 23.43; zweiter Seed/Wasser/Regen AVG 55.42 -> 59.75,
+Minimum 26.48 -> 30.05; integrierter Stand AVG 81.35 -> 84.90 FPS.
+Die feste Untergrenze 32 FPS bleibt im Flug offen. Formatierung, Check,
+striktes Clippy und Client-/Server-Build bestanden; finale Workspace-Suite
+mit zwei Testthreads: 2766 bestanden, 7 bestehende ignoriert. Ein vorheriger
+Standardparallelitaetslauf traf das bestehende Streaming-Test-Zeitlimit;
+Assertions und Weltcode wurden dafuer nicht veraendert. Native Grasgalerie
+inklusive drei GPU-Pixelpruefungen und Sichtkontrolle bestanden.
+[Alle Messlaeufe, Einschraenkungen und Bilder](tools/benchmarks/results/render-preparation-2026-10-28/README.md).
+
+Phase 148 entfernt ungenutzte Prop-Exposure-Snapshots und deren redundante
+Mesh-Invalidierung; echte Support-, Surface-, Wachstums- und Schneeaenderungen
+bleiben aktiv. Lampenfreie Sections umgehen die Einzel-Emitter-Suche.
+Der vorhandene kompakte Prop-Attributpfad gilt jetzt auch fuer Near/Middle:
+gleiche Geometrie und Distanzen, weniger Uploadbytes, quantisierte Attribute.
+Ein erster klarer Vergleich zeigte weniger langsame Frames, aber die
+Halbierung hielt im Kontrolllauf nicht stabil. Direkter finaler An/Aus-
+Vergleich derselben Binary: AVG 50.19 -> 52.53 FPS, p95 32.58 -> 31.26 ms,
+langsame Frames unter 32 FPS 117 -> 85; die schlechtesten Einzelbilder
+verbessern sich nicht. Wasser/Regen bleibt mit Packing bei rund 59.8 AVG.
+Die feste 32-FPS-Untergrenze und der kritische Min-FPS-Fix bleiben OFFEN.
+Neue Flussrevision 2 erweitert die bestehende Hydrologie um unabhaengige
+Land-Abzweige mit eigenen Muendungen; alte gespeicherte Revisionen bleiben
+unveraendert. Ein reiner Unterwasserpfad gilt ausdruecklich nicht als Split.
+Dorfbewohner tragen echte Spieler-Items mit gemeinsamer Griffpose am
+animierten rechten Arm statt eingebauten Werkzeugen; beim Schlafen verborgen.
+Native Fluss-/Dorfbewohner-Galerien samt Wasser-/Hand-Assertions und Bildern
+geprueft; keine neue Berufs-KI oder Langzeit-Performance-Abnahme.
+Formatierung, Check, striktes Clippy und Client-/Server-Build bestanden;
+abschliessende gesamte Workspace-Suite: 2780 bestanden, 7 bestehende ignoriert.
+[Messungen, Codepfade und Grenzen](tools/benchmarks/results/streaming-river-villager-2026-10-28/README.md).
+
+Phase 149 lokalisiert die Beleuchtung grosser Greedy-Grasflaechen, statt einzelne
+AO-Kanten als Farbverlauf ueber die ganze Flaeche zu ziehen. Dirt und seine
+Bauformen teilen exakt das authored Gras-Erdmaterial samt Normal-/ORM-Texturen.
+F25 ergaenzt acht Maschinenbloecke, Rezepte/TMI, sechsachsige Wellen/Kurbeln,
+vorzeichenbehaftete Antriebsnetze, Lastgrenzen, reale Wasserstroemung und
+budgetierten Transport bestehender Itemdrops. Speicherung nutzt den vorhandenen
+Section-Journal; Netzsuche ist auf geladene indexierte Knoten begrenzt.
+Streaming behaelt fertige Geometrie bei vorlaeufig ausstehender Exposure-Pruefung;
+echte Aenderungen verwerfen sie weiterhin. Statische Terrain-Attributpaare
+werden im Worker gepackt. Im gleichen nativen kurzen Klar-Flug sinkt der
+CPU-Terrain-Upload von 1.716 auf 0.648 / 0.682 ms pro Frame. Die Wiederholung
+zeigt aber keinen stabilen AVG-/Tail-FPS-Gewinn; 32 FPS werden weiter
+unterschritten. Kein abgeschlossener allgemeiner FPS-Fix, A05 bleibt offen.
+2814 Workspace-Tests bestanden, 7 bestehende ignoriert; Formatierung,
+All-Targets-Check, striktes Clippy und Client-/Server-Build bestanden.
+Native Gras-/Kinetik-Galerien und integrierte Crusher-Bedienung mit allen
+19 Rezepten geprueft; keine neuen Langzeittests oder Qualitaetsreduktion.
+[Codepfade, alle Messlaeufe, Bilder und Grenzen](tools/benchmarks/results/kinetics-grass-streaming-2026-10-28/README.md).
+
+Phase 150 erweitert F25 um grosse Holz-/Stein-/Eisenzahnraeder (149-151),
+Create-artige axiale/diagonale Verbindungen, 2:1-Uebersetzungen und
+rechtwinklige grosse Zahnraeder. Drehzahl behaelt Nachkommastellen;
+Leistungs-/Drehmomentgrenzen verhindern Energiegewinn und Ueberlast.
+Platzierung, Ghost, Kollision und Wasser-Clipping beachten reale Ueberstaende
+und den koaxialen Kurbelanschluss. Inventar-Icons zeigen die vollstaendigen
+Modelle; laufende Getriebe verwenden einen begrenzten RPM-abhaengigen Audiomix.
+Das runde Wasserrad misst 1 x 2.5 x 2.5 m, braucht reale Randkontakte und
+unterscheidet Stroemung, Wasserfall und Meereswellen samt Sturmstaerke;
+trockene Raeder und ruhige Seen treiben nichts an. Flussphysik +20%,
+Seeoberflaechen mit dezenter Welle. Karten verwenden das helle authored Gras;
+neue Cachedateien speichern rekonstruierbare Samples, alte reine RGBA-Zellen
+bleiben bis zum erneuten Besuch erhalten. Gruene Props passen zur Graspalette.
+Sand erhaelt feine goldene Koernung und sechs kleine echte Kieseldetails mit
+148-Vertex-Flaechenbudget; plane Raender halten alle Nahtpruefungen ein.
+2859 Workspace-Tests bestanden, 7 bestehende ignoriert; Formatierung,
+All-Targets-Check und striktes Clippy bestanden. Nach den letzten Cache-/
+Testkorrekturen weitere 243 Client-/Storage-Tests bestanden, 1 bestehender
+ignoriert; abschliessendes Clippy und Client-/Server-Build bestanden.
+Native Material-, Kinetik- und komplette 52-Stufen-Kartenpruefung auf der
+RX 6950 XT bestanden, einschliesslich sechs verschiedener Zahnrad-Icons und
+echtem Flug mit Nachladen. Screenshots und Logs im Bericht. Kein allgemeiner
+FPS-Fix oder neue Langzeitabnahme.
+[Codepfade, Pruefungen, Bilder und Grenzen](tools/benchmarks/results/kinetics-water-surfaces-2026-10-28/README.md).
+
+Phase 151 korrigiert mechanische Port-Ziele an Wellen/Geraeten gemeinsam fuer
+Vorschau und Authority. Gehaltene mechanische Bauteile unterdruecken dabei die
+Geraete-UI/Kurbelbenutzung statt die Platzierung im PreUpdate zu blockieren.
+Foerderbaender sind 0.625 m hoch, mit Achsen auf 0.5 m; kleine Zahnraeder
+passen mit kreisfoermigem Aussenradius 0.5 m ohne Bodenpenetration daneben.
+Sand ist komplett steinfrei, feiner gekoernt und hat dezente Windrippen;
+Geometriebudget maximal 28 statt 148 Vertices je Detailflaeche.
+Neues Werkzeug `teramic::wrench`: Rechtsklick/Place dreht ausrichtbare Bloecke,
+Shift dreht rueckwaerts. Werkbank-Rezept aus drei Eisenbarren und einem Stock,
+Tools/TMI-Eintrag, eigene offene 3D-Backen und regulaere Werkzeug-Haltepose.
+Misch-Slabs, Moebelpaare, Kurbeln, Farben, Tueren/Fenster und private Inventare
+bleiben erhalten; begrenzter atomarer Preflight ohne Weltkopie oder Drops.
+Client/Server verwenden gemeinsam Protokoll 80; Block-/Generator-IDs bleiben.
+2888 Workspace-Tests bestanden, 7 bestehende ignoriert; Formatierung,
+All-Targets-Check, striktes Clippy und Client-/Server-Build bestanden.
+Kurze native Wrench-, Kinetik- und Materialpruefungen auf der RX 6950 XT
+bestanden; Bilder und Logs archiviert. Keine neuen Langzeit-FPS-Tests.
+[Pruefungen, Bilder und Grenzen](tools/benchmarks/results/wrench-mounting-sand-2026-10-28/README.md).
+
+Phase 152 erweitert die Kinetik um Handkraft 128, Verbrauch 1 je kleinem
+Zahnrad/Welle, 2 je grossem Zahnrad und 20 je Crusher. Alte versteckte
+Material-Drehmomentgrenzen entfallen. Ein gespannter Foerderband-Span kostet
+einmal 2, nicht pro Zwischenzelle. Zwei parallele Wellen werden mit zwei
+Klicks und einem Connector verbunden; bis 32 Zwischenzellen, horizontal,
+45 Grad oder vertikale Kraftuebertragung. Echte Itemstapel folgen derselben
+Geometrie; Eigentum, atomarer Aufbau/Abbau, erhaltene Endwellen und
+Chunk-Grenzen verwenden das vorhandene Journal (Protokoll 81).
+Eiche/Birke/Fichte/Kirsche fuer Holzraeder, grosse Holzraeder, Wellen und
+Baender in Creative, Rezepten und TMI. Neue Item-Hopper (152) entnehmen nur
+fertige Ofen-/Crusher-Ausgaben; Importer (153) lagern Bandstapel atomar in
+Truhen/Doppeltruhen ein. Volle, blockierte oder ungeladene Ziele verlieren
+keine Items. Wasserrad-Spielerkollision nur an der Welle; volle Auswahl-
+und Wasserkontaktform bleibt. Zahnrad-Raender duerfen im Boden versinken,
+ohne Wandkollision oder eingegrabene Achsen freizugeben. Sand mit feiner
+mehrskaliger Koernung und granularer PBR-Wirkung, ohne Steine oder neue
+Detail-Entities.
+2932 Workspace-Tests bestanden, 7 bestehende ignoriert; Formatierung,
+All-Targets-Check, striktes Clippy und Client-/Server-Build bestanden.
+Kurze native Kinetik-/Materialpruefungen auf der RX 6950 XT bestanden,
+einschliesslich tatsaechlich gerenderter Band-Items. Drop-Interpolation erkennt
+Bewegung auch bei pausierter Item-Lebensdauer; Bilder und Logs archiviert.
+Keine neuen Langzeit-FPS-Tests oder unbelegten Performance-Versprechen.
+[Bedienung, Codepfade und Validierung](tools/benchmarks/results/owned-belts-logistics-2026-10-28/README.md).
+
+Phase 153 macht Hopper/Tunnel und Funnel regulaer abbaubar, ohne angehaengte
+Inventare als zweite Moebelhaelfte zu behandeln. Graue, mit Farbstoff
+faerbbare Baender tragen Items mittig und aufrecht; kein versehentliches
+Annaeherungs-Aufheben mehr, stattdessen gezielter Rechtsklick. Tatsaechtliche
+Transportgeschwindigkeit und Snapshot-Interpolation beseitigen das
+Bewegen/Pausieren-Muster; volle Geschwindigkeit bis 256 RPM mit begrenzten
+Kollisionsschritten. Holz bestimmt nur das bodengestuetzte Gestell,
+schwebende/schraege Baender bleiben ohne Rahmen. Geteilte Gestell-Meshes,
+passende Picking-/Kollisionsformen und keine unsichtbaren Legacy-Rahmen.
+Neue Holz-/Metallmodelle fuer Hopper als Tunnel und Importer als Funnel;
+Richtungspfeile und Wrench-Umschaltung fuer Ein-/Ausgabe an Truhen, Oefen
+und Crushern. Maschinen nehmen nur gueltige Input-/Fuel-Items an.
+Doppeltruhen richten sich an der vorhandenen Haelfte aus; ein echter
+Clearance-Selbstkollision-Bug bei angebauten Anschluessen ist behoben.
+Inhalte/Holzarten bleiben beim Verbinden/Trennen erhalten. Kinetik,
+Anschluesse und Crusher bekommen keine natuerlichen oder Shader-Schneekappen.
+Block-/Welt-IDs bleiben erhalten; gemeinsames Protokoll 82.
+2963 Workspace-Tests bestanden, 7 bestehende ignoriert; Formatierung,
+All-Targets-Check, striktes Clippy und Client-/Server-Build bestanden.
+Gezielter nativer Kinetiktest auf der RX 6950 XT bestanden, Bilder archiviert.
+Die breite Materialgalerie publizierte alle 153 GPU-geprueften Blockvorschauen,
+erreichte aber in zwei Laeufen ihr unveraendertes 120-Sekunden-Limit und gilt
+nicht als vollstaendig bestanden. Keine neue Langzeit- oder FPS-Zusage.
+[Bedienung, Pruefungen, Bilder und Grenzen](tools/benchmarks/results/conveyor-tunnels-2026-10-28/README.md).
+
+Phase 154 korrigiert Tunnel-/Funnel-Platzierung an der tatsaechlich angeklickten
+Zelle, erlaubt alleinstehende Anschluesse und begrenzte Standfuesse im Boden.
+Wellen-/Zahnrad-Ausrichtung priorisiert den angeklickten Achsanschluss statt
+entfernte Nachbarn. Gerade Baender funktionieren in allen achssenkrechten
+Ebenen und erhalten Zwischenwellen; vertikale/stehende Varianten uebertragen
+Kraft, aber keine Items. Neue horizontale/vertikale Gearboxen (154/155) haben
+vier echte, passend animierte Anschluesse, Verbrauch 2 und 1:1-Uebersetzung.
+Wasserrad-Grundkraft 128 treibt auch einen uebersetzten Crusher; Stillwasser
+und ueberlastete Netze bleiben kraftlos. Detailliertere Holz-/Metallmodelle
+und drei eigene Maschinentexturen, gemeinsamer TMI-Tab Technic.
+Fenster-Gruppen kollidieren beim Erweitern nicht mehr mit sich selbst;
+Kirschholz-Tueren/-Fenster behalten ihre Oeffnungs-/Render-Metadaten.
+Entfernte Bloecke ueber Seen maskieren vorhandene Quellen nicht mehr als
+trockene Luft. Echte Wasserentnahmen und vorhandene Speicherstaende bleiben.
+Neue Flussrevision 3 nutzt vorhandene Nebenlaeufe auch im normalen Terrain;
+drei deterministische Testgebiete zeigen zusammen 21.43% mehr wirklich nasse
+Wasserlaufstrecke. Alte Weltrevisionen erhalten keinen stillen Retrogen.
+Wind-Frames und HDR-Farben werden im vorhandenen Meshing-Worker kompakter
+vorbereitet. Nach dem finalen Prop-Split entfallen wirkungslose Growth-Daten
+nur bei nachweislich statischen Teilmeshes; keine weitere Entity oder
+Geometrie-/Dichte-/Sichtweitenreduktion. Ein getesteter LOD-Cache wurde wegen
+fehlendem messbarem Nutzen wieder entfernt. Kurze native Flugvergleiche mit
+zwei Seeds/Klarwetter/Regen liefern keinen allgemeinen AVG-/Min-FPS-Fix;
+32 FPS werden weiterhin unterschritten. A05 bleibt ausdruecklich offen.
+Native Kinetik-/Fenster-Galerien sowie echte GPU-Pass-/Drawdaten liegen vor.
+Block-/Welt-IDs und Save-Feldlayouts bleiben; gemeinsames Protokoll 83.
+3010 Workspace-Tests bestanden, 7 bestehende ignoriert; Formatierung,
+All-Targets-Check, striktes Clippy und Client-/Server-Build bestanden.
+Zusaetzliches natives CPU-Sampling (18.010 s, 12264 Samples, keine verlorenen)
+grenzt Mesh-Assetpruefungen, Sichtbarkeit und Speicherverwaltung ein, ohne
+daraus erfundene Framezeit-Anteile oder einen fertigen FPS-Fix abzuleiten.
+[Messlaeufe, Bilder, Codepfade und Grenzen](tools/benchmarks/results/kinetics-placement-water-fps-2026-10-29/README.md).
+
+Phase 155 ueberarbeitet kleine/grosse Zahnraeder und Wellen als massive,
+segmentierte Holz-/Stein-/Metallkoerper mit Naben, Beschlaegen und Schrauben.
+Die mechanisch passenden 8/16 Zaehne, vorhandenen Kollisionshuellen und
+Block-IDs bleiben erhalten. Native Modell-/Band-Galerie mit sechs Ansichten
+und elf Icons bestanden; Farbstoff betrifft nur das Band, nicht Holzrahmen
+oder Metall. Alle 14 Bandfarben und vier Holzvarianten sind gezielt geprueft.
+Innere Bandsegmente melden keine falschen Wellenanschluesse mehr; damit
+erzeugt ein kurzer gegenlaeufig uebersetzter Crusher-Abzweig keinen erfundenen
+Richtungskonflikt. Echte widerspruechliche Antriebe bleiben ueberlastet.
+
+Ein gemessener Terrain-Teilmesh-Reuse-Versuch spart Assetwechsel, verbessert
+die FPS aber auch mit begrenztem Hashaufwand nicht ueberzeugend. Deshalb sind
+Versuch, Zusatzmetadaten und direkte Hash-Abhaengigkeit wieder entfernt.
+Die Sichtbarkeitspruefung behandelt vollstaendig opake authored Cubes korrekt
+als geschlossen und unterscheidet echte Luftverbindungen innerhalb Sections.
+Beim Fokuswechsel bleiben nachweislich bereits erreichte Sichtpfade stabil,
+statt verdeckte Meshes unnoetig erneut anzufordern. Unbekannter Raum, partielle
+Bloecke, Nahfeld und der Wand-/Schattenring bleiben konservativ sichtbar.
+Allokator-, Worker-, Vulkan-Speicherblock- und Render-Scheduler-Gegenproben
+wurden gemessen; mangels ueberzeugenden Nutzens werden daraus keine
+pauschalen Produktionsaenderungen oder Abschaltungen.
+Der neue, durch Gegenproben belegte Hauptbefund liegt bei den haeufigen
+Wetter-/Terrainmaterialien: Alpha-Animationen verwendeten Non-Bindless-
+Bindungen mit wiederholtem Ressourcenaufbau. Der eigene Materialpfad nutzt
+jetzt Bevy-Bindless-POD-Daten mit unveraendertem Shader-/Materialvertrag und
+gemeinsamem Hardware-Fallback beider Materialteile; kein Engine-/Vendorpatch.
+Exakte opake LOD-Schatten werden pro Section gebuendelt, ohne Geometrie zu
+vereinfachen. Einblendungen geben ihre eigene Batching-Sperre nach dem ersten
+bestaetigten Draw frei; fremde Sperren und noch nicht gezeichnete Teilmeshes bleiben.
+Kurze native 32-s-Flugpaare auf RX 6950 XT, Sichtweite 20, 1280x800 und High:
+Seed 42042/klar AVG 53.15 -> 73.47 FPS, p99 31.77 -> 24.59 ms;
+Seed 7/Regen AVG 61.49 -> 86.28 FPS, p99 27.73 -> 21.49 ms.
+Animation, Dichte, Wasser und Schatten bleiben an. Die isolierte alte
+Wet-Bindung reduziert den neuen klaren Lauf wieder auf 56.97 FPS; fruehere
+Batching-Freigabe allein ist dagegen kein belegter AVG-Gewinn.
+Kinetikgalerie und vier native Hoehlen-/Fackel-/Unterwasseransichten bestehen
+auch mit dem neuen Binding-Pfad. 3051 Workspace-Tests bestanden, sieben bewusst
+ausgelassen. Format, All-Targets-Check, striktes Clippy und Client-/Server-Build
+bestanden. Zwei klare Frames bleiben unter 32 FPS;
+allgemeine Min-FPS-Garantie und A05 sind deshalb weiterhin offen. Keine neuen
+10-/15-/30-Minuten-Laeufe und keine unbelegte In-Game-/Mehrspieler-Abnahme.
+[Native Gegenproben, Referenzbilder und technische Grenzen](tools/benchmarks/results/kinetic-reference-cpu-2026-10-29/README.md).
+
+Phase 156 verbindet Tunnel mit Truhen und Maschinen auf gleicher Bandhoehe
+und einer Ebene darueber/darunter. Freie End-Funnels geben reale, bestehende
+Stacks kollisionsgeprueft aus. Funnel-Stuetzen entfallen ueber Luft auch in
+der Kollisionsform. Neue Crusher belegen eine Zelle; alte gespeicherte Paare
+bleiben lesbar. Der echte Modelleingang befuellt den privaten Input, faengt
+schnelle Fallitems ab und behaelt unpassende/volle Stacks sichtbar auf dem
+Modell. Einsammeln erfolgt explizit und hat vor dem Oeffnen der Maschine Vorrang.
+Inventarzugriff verlangt fuer neue Crusher keinen erfundenen zweiten Block.
+Die Sichtpruefung testet neben der Mitte vier echte Trichterrandpunkte, damit
+die eigene montierte Kurbel eine sichtbare Maschine nicht unbenutzbar macht.
+Erster tatsaechlicher Ray-Hit, Reichweite, Wandschutz und Ladepruefungen bleiben.
+Der native Ein-Block-Crusher-Durchlauf besteht mit allen 19 Rezepten, TMI,
+Kurbeln, Loslass-Pause, korrekten Outputs und fuenf Bildern; Audiozustaende sind
+technisch geprueft, nicht als menschliche Hoerabnahme ausgegeben.
+Das kompakte Crusher-Modell nutzt die vorhandenen Maschinentexturen und echte
+Speichenoeffnungen. Das Wasserrad misst jetzt 3 m im Durchmesser bei 1 m Breite;
+20 statt 30 U/min und hoeheres Drehmoment erhalten seine bisherige Leistung.
+Zwoelf Schaufeln fuellen/leeren sich an tatsaechlichen geladenen Wasserzellen;
+zwei gemeinsam genutzte Meshes, keine neue Fluidsimulation/Frame-Meshuploads.
+Das Ziel-HUD zeigt Drehzahl, Netzstress/-kapazitaet und die verbleibende Leistung
+entlang des Quellpfads. Starr gekoppelte Wellen behalten physikalisch gleiche
+Drehzahl, Zahnraduebersetzungen bleiben erhalten; Netzwerkprotokoll 84.
+Die Greedy-AO-Verfeinerung erkennt reale Yzx-Oberseiten statt falscher X/Z-
+Annahmen, damit Kontaktlicht nicht ueber ganze Grasrechtecke gezogen wird.
+Inventar-Preview-Komposition ist auf ein Item pro Frame und zwei vorbereitete
+Szenen begrenzt. Die zweite Kamera pausiert in unveraenderten mittleren
+Warmup-Frames; acht Frames Shader-Wartezeit, echte Bildpruefung und sichere
+Readbacks bleiben erhalten. Das behebt unbudgetierte Start-/Previewarbeit,
+ist aber kein Nachweis fuer die gemeldete einzelne 8.1-FPS-Spitze. A05 bleibt offen.
+Ein konkreter Autosave-Fehler entsteht durch verhungernde schwimmende Tiere:
+Null Leben ohne Dead-Zustand wurde beim fruehen Ruecksprung nicht korrigiert.
+Beduerfnisschaden setzt jetzt sofort Dead und stoppt vor weiterer Schwimm-KI.
+Regressionen pruefen Land/Wasser, wilde/gezaehmte Tiere sowie echten Save/Reload;
+ungueltige Zustaende werden weiterhin abgelehnt, jetzt mit genauer Fehlerursache.
+Die kopierte echte Testwelt laedt, laeuft 35 s und speichert erfolgreich;
+Originalwelt und Profil bleiben unveraendert. Nach 10 s Spiel-Warmup misst
+dieser andere, stationaere Ausschnitt bei Sichtweite 16 AVG 73.33/min 39.94 FPS,
+p99 20.26 ms; er ist kein Vorher-/Nachher-Flugvergleich.
+Native Kinetikgalerie: sechs Ansichten, elf verschiedene Icons, echte
+Wasserquelle an einem Rad und stabile 43 gemeinsam genutzte Maschinenmeshes.
+Ein dabei entdeckter Wasser-Shaderfehler in Nebenviews ist korrigiert:
+Transmission-Imports/SSR folgen VIEW_TRANSMISSION_TEXTURE, mit echter
+WESL-Praeprozessorpruefung aller acht Transmission-/Depth-/Native-Kombinationen.
+Der bestehende Hauptkamera-Pfad mit Transmission bleibt unveraendert.
+
+Kurze native 32-s-Flugmessungen, RX 6950 XT, 1280x800, High, Sichtweite 20:
+
+| Szene | AVG FPS | Min FPS | p99 ms |
+| --- | ---: | ---: | ---: |
+| Seed 42042/klar, vor Phase 156 | 67.36 | 26.03 | 26.57 |
+| Seed 42042/klar, aktueller Code | 70.60 | 31.46 | 26.02 |
+| Gleiches Binary, alte Preview-Warmup-Kamera als Gegenprobe | 68.58 | 29.00 | 25.87 |
+| Seed 7/Regen, aktueller Code | 80.30 | 15.27 | 24.26 |
+| Seed 7/Regen, Wiederholung mit CPU-Zeitfensteraufzeichnung | 80.04 | 37.68 | 23.21 |
+
+Im klaren Messfenster sinken Mainpass-Aufrufe pro Renderframe von 1.891 auf
+1.481, ohne Geometrie, Dichte, Wasser, Sichtweite oder Schatten zu reduzieren.
+Die Verbesserung ist begrenzt: Der erste Regenlauf enthaelt einen 65.47-ms-
+Ausreisser, der in der zeitgenau instrumentierten Wiederholung nicht auftritt.
+Keine belegte Erklaerung der gemeldeten 8.1 FPS und keine allgemeine
+32-FPS-Garantie; A05 bleibt offen. Die Wiederholung ersetzt den schlechteren
+Lauf ausdruecklich nicht. Keine neuen 10-/15-/30-Minuten-Laeufe.
+3088 Workspace-Tests bestanden, sieben bestehende bewusst ausgelassen.
+Format, All-Targets-Check, striktes Clippy und Client-/Dedicated-Server-Build
+bestanden. Keine Abhaengigkeits-Upgrades oder Engine-/Vendorpatches.
+[Crusher im Betrieb](tools/benchmarks/results/compact-crusher-save-preview-2026-10-29/crusher/crusher-running.png),
+[Kinetikgalerie](tools/benchmarks/results/compact-crusher-save-preview-2026-10-29/gallery/kinetics-forward.png),
+[klarer Flug](tools/benchmarks/results/compact-crusher-save-preview-2026-10-29/teramic156-after.log),
+[Regenlauf mit Ausreisser](tools/benchmarks/results/compact-crusher-save-preview-2026-10-29/teramic156-rain7.log).
+
+Phase 157 repariert die realen Inventarwege von Tunnel und Funnel und setzt
+F26 auf derselben Kinetik-, Inventar-, Drop- und Speicherarchitektur um.
+Freie Tunnel importieren vor ihrem Pfeil und exportieren dahinter; gleiche
+Hoehe und eine Ebene darueber/darunter bleiben kollisions- und ladegeprueft.
+Eine echte seitliche Kurbel kann genau einen Anschluss zum zugehoerigen Crusher
+oder Mixer vermitteln, aber keine beliebige Welle oder Wand. Extraktions-Funnel
+lesen den wirklichen Ergebnis-Slot und geben auch ohne angetriebenes Band nach
+unten aus. Hineingeworfene Stapel passieren freie und extrahierende Funnel mit
+gleicher Drop-ID/Menge; Inserter behalten ihre Inventarlogik. Volle/versperrte
+Ausgaenge halten zurueck. Unbeteiligte Drops koennen Mundstapel nicht mehr vor
+dem begrenzten Kandidatenbudget verdraengen. Der getestete Weg verwendet den
+echten Kurbelsolver: Crusher -> Funnel -> getragenes Band -> Tunnel -> Truhe.
+
+Der neue Ein-Block-Mixer (ID 156) nutzt wiederverwendbare Holz-/Eisenmeshes,
+seitliche Welle, Paddel-/Zahnradanimation und vorhandenes Maschinenfoley.
+Last 24, vier Sekunden pro Charge bei 30 U/min; ohne Antrieb, bei Ueberlast,
+unvollstaendiger Eingabe oder blockiertem Ergebnis wird nichts verbraucht.
+Der Farbwaehler bestimmt einen exakten RGB-Code. Ein begrenzter linearer
+Pigment-Fit mischt die 13 Grundfarben in ganzzahligen Dosen, normalerweise
+16 Eingaben fuer 16 Farbstoffe; passende Standardtoene brauchen eine Dosis.
+Die sechs Eingabeslots zeigen fehlende Dosen als transparente, nicht echte
+Items. R auf einem vorhandenen RGB-Stapel zeigt dessen Mischrezept, ohne
+Millionen Katalogeintraege oder freies Erzeugen von Zutaten. Normale Creative-
+Inventarslots behalten ihre bisherige R-Regel. RGB-Farbstoffe lassen sich
+stapeln, transportieren, speichern und zum Faerben von Capes verwenden.
+Betten, Wolle/Teppiche und Band-Posen bleiben vorerst auf der Standardpalette;
+nicht unterstuetztes RGB verbraucht dort keine Farbe. Das ist ein kalibriertes
+Spielrezeptmodell, keine physikalische Farbstoffchemie.
+
+Regionen mit Mixern erhalten die rueckwaertskompatible RGA6-Erweiterung;
+andere Regionen und bisherige IDs bleiben unveraendert. Protokoll 85 verlangt
+gemeinsam aktualisierte Clients/Server. Abbau prueft freie Dropkapazitaet vor
+jeder Mutation und erhaelt Zutaten, Ergebnis und Kurbel in allen vier Yaw-
+Ausrichtungen. Dynamische RGB-Drop-/Cape-Modellcaches sind auf je 128 Varianten
+begrenzt; aktive Entity-Handles bleiben beim Cache-Evict gueltig.
+
+TMI-Kategorien sitzen vertikal links ausserhalb der Browser-Border mit
+Scroll-Overflow. Das Crusher-Icon nutzt die aktuelle kompakte Modellgeometrie
+ohne alte Doppelbreiten-Skalierung. Der Mixer hat einen deckenden Hintergrund,
+ohne den Welt-HUD zu entfernen. Ein dabei nachgewiesener asynchroner Teleport-
+Inputfehler ist korrigiert: Der Besitzer der Sperre gibt sie nach Bestaetigung
+und Tastenrelease frei oder uebergibt sie an den offenen Dialog.
+
+3132 Workspace-Tests bestehen, sieben bestehende bleiben bewusst ausgelassen.
+Format-Check, Workspace-Check, striktes All-Targets-Clippy und Client-/Dedicated-
+Server-Build bestehen ohne Dependency-Upgrades oder Vendor-/Enginepatches.
+Der native Mixer prueft echten Farbwaehler/RPC, Kurbel-RPM, Loslass-Pause,
+exakten RGB-Ausgang, Rezeptghosts, R-Rezept und Entnahme mit drei Bildern.
+Der native Inventarlauf mit echter OS-Maus besteht mit zwoelf Aufnahmen,
+Tool-/All-Kategoriewechsel, Einzelgrant, Drag/Drop, Suche, 960x640/960x360-
+Layout, Scrollen, Muelltonne und Input-Rueckgabe. Ein vorheriger Lauf wurde
+wegen eines nicht erreichten OS-Zeigerziels abgebrochen; die vollstaendige
+Wiederholung ist separat dokumentiert. Keine neue FPS-Zusage oder Langzeit-
+Performance-Abnahme aus diesen funktionalen Szenen ableiten.
+[Mixer](tools/benchmarks/results/mixer-rgb-logistics-2026-10-29/mixer/mixer-world.png),
+[Farbwaehler](tools/benchmarks/results/mixer-rgb-logistics-2026-10-29/mixer/mixer-color-picker.png),
+[RGB-Mischrezept](tools/benchmarks/results/mixer-rgb-logistics-2026-10-29/mixer/mixer-rgb-output.png),
+[kompaktes TMI](tools/benchmarks/results/mixer-rgb-logistics-2026-10-29/inventory/inventory-creative-compact.png),
+[Logistiktests](tools/benchmarks/results/mixer-rgb-logistics-2026-10-29/teramic157-logistics-targeted.log),
+[nativer Mixer](tools/benchmarks/results/mixer-rgb-logistics-2026-10-29/teramic157-mixer-complete.log),
+[nativer Inventarlauf](tools/benchmarks/results/mixer-rgb-logistics-2026-10-29/teramic157-inventory-trace.log),
+[Workspace-Tests](tools/benchmarks/results/mixer-rgb-logistics-2026-10-29/teramic157-tests-complete.log).
+
+Phase 158 erweitert die vorhandenen Faerbe- und Logistiksysteme. Exaktes RGB
+funktioniert auf Wolle, Teppichen, Bettdecken und Foerderbaendern sowie den
+bereits faerbbaren Capes. Holzgerippe, Bettgestell und Metall bleiben dabei
+unveraendert. Faerberezepte erhalten RGB und Holzart, auch von Wolle zu Teppich;
+Platzieren, Creative-Kopieren, Abbau und Bettrotation erhalten diese Metadaten.
+R auf einem vorhandenen RGB-Stoff zeigt sein konkretes Faerberezept, ohne
+einen Katalogeintrag pro Farbe. Inventar-, Hand- und Drop-Vorschauen verwenden
+begrenzte Caches. Bewegte Baender verwenden eine gemeinsame Materialinstanz;
+Umfaerben setzt weder ihre Animation noch den Itemtransport zurueck.
+Reine Farbaenderungen loesen keine Terrain-, Wasser- oder Collider-Rebuilds aus.
+
+Filtered Funnel (ID 157) hat einen echten Ghost-Filter ohne Itemverbrauch,
+standardmaessig Allowed und umschaltbar auf Blocked. Auswahl erfolgt aus
+Inventar/Katalog oder mit dem Cursor; Rechtsklick/Muelltonne leert den Filter.
+Der Vergleich verwendet die gesamte Itemidentitaet einschliesslich RGB und
+Holzart. Ohne Auswahl passieren alle Items. Der Server prueft geoeffneten
+Dialog, Sichtlinie, Reichweite und Revision; der Ghost ist kein zusaetzliches
+Inventar. Abgewiesene Mundstapel bleiben physisch liegen, statt durch die
+Oeffnung oder in die passive Spieleraufnahme zu fallen. Stau, Entladen und
+gezielte manuelle Entnahme erhalten die wirkliche Drop-ID und Menge.
+
+Belt Merger (ID 158) sitzt auf einem vorhandenen Foerderband und verbindet
+drei Eingangsrichtungen mit dem ausgerichteten Ausgang. Ein Round-Robin-
+Cursor verhindert, dass ein dauernd belegter Eingang die anderen verdraengt.
+Ein stehendes, entladenes, versperrtes oder belegtes Ausgangsband haelt zurueck;
+die bestehende Bandlogik kann den Zusammenfuehrer nicht geradeaus umgehen.
+Kein zweiter Transportmotor, keine Kopien von Stapeln und kein neues Inventar.
+Beide neuen Bauteile sind im Technic-Katalog und als Werkbankrezepte enthalten.
+
+RGA7 umhuellt die bisherigen Regiondaten mit validierter RGB-/Filter-Metadaten-
+Erweiterung. Die binaeren alten Section-Felder bleiben eingefroren; Regionen
+ohne neue Metadaten behalten ihr bisheriges Format. Wiederholtes Save/Reload
+erhaelt Farben und Section-Revisionen, auch an negativen Regionsgrenzen.
+Protokoll 86 verlangt gemeinsam aktualisierte Clients und Server.
+
+3193 Workspace-Tests bestanden, sieben bestehende bewusst ausgelassen.
+Format, Workspace-Check, striktes All-Targets-Clippy und Client-/Dedicated-
+Server-Build bestanden. Der neue native RGB-Lauf prueft gespeicherte Farben,
+Creative-Pick, echten Ghost-/Switch-Handler, unveraenderten Inventarbestand,
+autoritaetliches Faerben und die konkrete Rezeptanzeige mit vier geprueften
+Bildern. Auch der native Mixer-Regressionslauf besteht. Keine neuen Langzeit-
+oder FPS-Zusagen, keine Dependency-Upgrades und keine Engine-/Vendorpatches.
+[Nachweise und Grenzen](tools/benchmarks/results/rgb-fabrics-filter-merger-2026-10-29/README.md),
+[Filter Allowed](tools/benchmarks/results/rgb-fabrics-filter-merger-2026-10-29/rgb/filtered-funnel-allowed.png),
+[RGB-Stoffe und neue Logistik](tools/benchmarks/results/rgb-fabrics-filter-merger-2026-10-29/rgb/rgb-world-filter-merger.png).
+
+Phase 159 erweitert RGB auf Wolltreppen und Wollslabs, einschliesslich direktem
+Faerben, Formrezepten und gemischten Materialhalbstufen. Nur die Wollhaelfte wird
+gefaerbt; Abbau bleibt getrennt. Unterschiedliche RGB-Wollhaelften in derselben
+Zelle werden ohne Verbrauch abgewiesen, da die bestehende Metadatenstruktur nur
+eine Farbe pro Zelle speichert. Ein echter Bandfarbwechsel wird auch dann
+uebernommen, wenn die Bandgeometrie unveraendert bleibt. Protokoll 88 erfordert
+gemeinsam aktualisierte Clients und Server. Funnel-Fuesse erkennen beladene
+flache Baender als Unterstuetzung; Kontaktstege schliessen die Merger-Luecken.
+Nachbar-Load/-Unload erneuert betroffene Funnel-Snapshots und verwirft alte
+Worker-Ergebnisse. Ungeladene persistierte Nachbarn gelten nicht als Boden.
+Explizit RGB-weisse und ungefaerbte Wollhaelften verlieren beim Mergen keine
+Metadaten; nach Entfernen der Wollhaelfte bleibt kein RGB auf Stein zurueck.
+Zur aktuellen visuellen Einzelreferenz fehlt der Bildanhang.
+
+Ein reproduzierbarer Grund fuer gemeinsam stehenbleibende Tiere ist korrigiert:
+Nachwuchs wilder Bienen war im Serverzustand erlaubt, wurde vom Client aber
+mangels Spielerbesitzer als ungueltig verworfen. Damit fiel das ganze Mob-Paket
+aus. Die eng begrenzte Wildbienen-Ausnahme verlangt gueltige Kolonie-/Familien-
+Daten; andere ungueltige Nachkommen bleiben gesperrt. Sichtbare Bienenmetadaten
+werden im begrenzten Paket bevorzugt. Ablehnungen erhalten einen Diagnosegrund
+und begrenzte Warnrate statt stillen Ausfaellen.
+
+Der echte Zwei-Client-UDP-Test deckt einen zweiten grundlegenden Syncfehler auf:
+PlayerStates und CreatureStates teilten denselben SequencedUnreliable-Kanal.
+Eine neuere Spielermeldung konnte dadurch eine fertige Mob-Meldung verdraengen,
+noch bevor der typisierte Empfaenger sie las. CreatureSnapshotChannel trennt
+diese Zustandsfamilien bei unveraenderter Uebertragungsart und getrennten Ticks.
+Die Regression prueft echte serverseitige Mob-Alterung und gleichzeitig
+fortschreitende Spielermeldungen bei beiden Clients; keine gelockerte Validierung.
+
+Die Performance-Arbeit entfernt Welt-Vollscans aus Maschinen-, Truhen- und
+Tueren-/Fenster-Kandidatenabfragen. Vorhandene Kinetikindizes und ein gepflegter
+Objektsection-Index ersetzen wiederholtes Durchsuchen saemtlicher geladenen
+Terrainsections. Statische Fussspuren erzeugen keine identischen Mesh-Updates
+mehr; echte neue Spuren, Fade und Ablauf bleiben erhalten. Im Original-TiltUI-
+Repository werden Shared-Abhaengigkeiten mit dem vorhandenen Parser erfasst:
+Minimap-Bewegung wertet unbeteiligte Inventar-/Menuebindungen nicht erneut aus.
+Lokale Kontexte, Aufrufe und dynamische Imports bleiben konservativ.
+
+Eine erweiterte Kurzzeitmessung belegt den vertikalen Streaming-Ausreisser:
+1606 Render-Hierarchien wurden in einem 39,71-ms-Frame synchron freigegeben
+(10,50 ms allein in den kleinen Retire-Callbacks). Sofortiges Ausblenden ist
+nun von der budgetierten ECS-/Asset-Freigabe getrennt; Mesh-/Materialbesitz
+bleibt bis dahin erhalten. Harte Queuegrenzen besitzen einen Overflow-Fallback.
+Redundante Roof-Pruefungen bei fehlenden/leeren Sections entfallen. Die Prop-
+Nachbarinvalidierung nutzt bei grossen Entladungen die kleineren Owner-Mengen,
+statt fuer jede entfernte Section alle 75 Netz-Nachbarpositionen zu pruefen.
+
+Ein GPU-only-Culling-Versuch wurde nach negativem Kurztest verworfen, statt ihn
+als weitere unbelegte Optimierung auszuliefern. Im finalen instrumentfreien
+4K-Kurzflug steigt AVG von 67,59 auf 72,82 FPS, MIN von 26,69 auf 36,98 FPS;
+p99 sinkt von 25,62 auf 20,45 ms. Ein kontrollierter Entladungsburst mit
+1606 Hierarchien sinkt von 34,99 auf 26,93 ms. Regen auf Seed 7 hat weiterhin
+Ausreisser: instrumentiert AVG 69,30 -> 71,62, aber MIN 29,29 -> 21,78 FPS.
+Auch ohne Profiler erreicht der neue Regenlauf nur MIN 24,70; kein allgemeiner
+32-FPS-Fix und kein Abschluss von A05. Alle 3253 Workspace-Tests und 328 Tests
+im Original-TiltUI bestanden, ebenso Format/Check/Clippy/Client-/Server-Build,
+nativer RGB-Test mit vier Bildern und Headless-Serverstart. Messbedingungen,
+Rohdaten, einzelne schlechtere Werte und genaue Grenzen stehen im
+[aktuellen Bericht](tools/benchmarks/results/rgb-mob-ui-performance-2026-10-30/README.md).
+Keine neuen nativen Langzeitlaeufe und keine pauschale Grafik-/Sichtweitenreduktion.
+
+Phase 160 schliesst die verbleibende seitliche Bandluecke am Merger durch
+Kontaktzungen im vorhandenen Ribbon-Mesh. Das offene Lager zeigt nun den echten,
+drehenden Shaft statt Holz bzw. einer statischen Metallkappe. Vier benachbarte
+Shafts lassen sich vom ausgewaehlten ersten bis letzten verbinden; zusaetzliche
+Shafts koennen auch im bestehenden Band und an dessen Controller gesetzt werden.
+Sparsame BeltOwner-Metadaten erhalten Bandholz und RGB unabhaengig vom Shaft.
+Protokoll 89 verlangt gemeinsam aktualisierte Clients und Server; RGA8 erweitert
+den Regionumschlag, ohne das eingefrorene alte Sectionformat zu veraendern.
+
+Neue Welten speichern die tatsaechlich verwendeten Biomeinstellungen. Highlands
+erhalten selection_weight 0.65; Flussrevision 4 nutzt die bestehende begrenzte
+Bachgenerierung mit 416 statt 512 m Rasterabstand. Fuenf Seeds ergeben 16,15 ->
+13,58 % Highlands pro Land und 0,326 -> 0,411 % tatsaechliche offene Flusswasser-
+flaeche pro Land (+26,1 %). Alte Welten und Generatorrevisionen bleiben erhalten.
+
+Ein echter 4K-Flugausreisser auf Seed 86420 ist im Render-Fensterpfad lokalisiert:
+118,93 ms prepare_windows bei 17,37 ms Main und 130,23 ms Gesamtframe. Der isolierte
+Mailbox-Gegenversuch mit demselben unveraenderten Programm verbessert MIN von
+7,68 auf 31,60 FPS; Seed 12345 mit Regen von 20,85 auf 38,80 FPS. Das ist kein
+AVG-Gewinn auf beiden Seeds und keine 32-FPS-Garantie. Die Anwendung bevorzugt
+ohne VSync nun Mailbox ausschliesslich unter Linux/AMD/RADV/Vulkan; keine Vendor-
+oder Rendererpatches, Grafikreduktion oder FPS-Limitierung.
+
+Im finalen 4K-/Sichtweite-20-Anwendungstest ohne Treiberoverride steigt Xwayland-
+MIN auf 34,98 (Seed 86420) und 41,99 FPS (Regen, Seed 12345); AVG bleibt mit
+71,96 bzw. 70,43 FPS leicht unter den Ausgangswerten. Natives Wayland verbessert
+AVG 59,98 -> 79,55 FPS und p99 26,58 -> 19,77 ms, hat aber weiter einen Frame mit
+MIN 30,32 FPS. Eine wirklich neu erstellte und gespeicherte Welt auf Seed 99173
+besteht Laden/Reveal/Audio/Save und den 20-m/s-Regenflug mit AVG 63,20 / MIN 31,94
+FPS. Damit ist die feste 32-FPS-Untergrenze nicht erreicht. Alle 3277 Workspace-
+Tests, Format/Check/Clippy/Build, der native RGB-Test mit vier Bildern und der
+Headless-Serverstart bestehen. Messbedingungen, Kontrolllaeufe, Rohdaten und
+Grenzen stehen im
+[Phase-160-Bericht](tools/benchmarks/results/belt-owners-present-biomes-2026-10-30/README.md).
+A05 bleibt offen; keine neuen nativen Langzeitlaeufe.
+
+Phase 161 fuehrt echten Item-Rueckstau auf den vorhandenen Baendern ein. Eine
+begrenzte raeumliche Belegungsabfrage verhindert ueberlappende Drops und weitere
+Inventarausgaben bei vollem Auslauf. Ports exportieren/importieren genau ein
+Item je Transfer; Reststapel und IDs bleiben erhalten. Tunnel 152, Funnel 153
+und Funnel (Filtered) 157 teilen den vorhandenen autorisierten Ghost-/Allowed-/
+Blocked-Filterpfad. Passende, bestaetigte Inventaranschluesse verlaengern das
+vorhandene Bandmesh bis an die Inventarflaeche; unbekannte oder entfernte
+Nachbarn erzeugen keine falsche Verbindung.
+
+Formbloecke erhalten Schnee auf ihrer wirklichen Oberflaeche statt flacher,
+schwebender Wetterkappen. Treppen, Slabs und Fences stapeln keine natuerlichen
+Schneeplatten; Wege erhalten nur dezenten Reif, auch bei voller gespeicherter
+Schneemenge. Duennes SnowLayer 98 ist ueberbaubar, voller SnowBlock 5 bleibt
+geschuetzt. Die natuerliche Ansammlung ist viermal langsamer; Wintererhalt und
+Spielerplatzierung bleiben bestehen. Benannte und gemischte RGB-Farbstoffe
+stehen in der neuen TMI-Kategorie Rohstoffe, ohne RGB-Katalogvervielfachung.
+
+Die Replica-Lichtsuche verarbeitet Section-Ereignisse statt jede Metadaten-
+Aenderung als Vollscan zu behandeln. Neue Rohdatenabfragen bleiben budgetiert,
+Unload/Reset und Nachbarverdeckung sind getestet. Die Portal-Wandringberechnung
+nutzt bei dicht erreichbaren Welten das kleinere Komplement, bei exakt gleichem
+Sichtbarkeitsergebnis. In zwei finalen 4K-/Sichtweite-20-Kurzfluegen sinken die
+Lichtauswahlkosten etwa 59/63 % und Portal-Workerzeiten etwa 27/25 %. AVG geht
+85,78 -> 88,75 bzw. 82,94 -> 87,47 FPS; MIN 7,67 -> 38,35 bzw. 45,53 -> 43,47.
+Die Regen-Mindestframerate ist damit leicht schlechter. Ein frueherer Lauf
+hatte weiterhin MIN 30,92 und keinen allgemeinen AVG-Gewinn. Saemtliche
+Wiederholungen, hoehere RSS-Endwerte und Fensterpfad-Ausreisser sind dokumentiert;
+keine garantierte 32-FPS-Untergrenze und kein Abschluss von A05.
+
+Alle 3308 Workspace-Tests, Format/Check/Clippy/Build, der zusaetzliche CPU-
+Vergleich, native Filter-/Bandtests mit fuenf Bildern, die 16-stufige Material-
+Galerie mit 158 GPU-Previews und der Headless-Serverstart bestehen. Die neuen
+Band- und Schneeansichten wurden tatsaechlich visuell geprueft; eine zuerst zu
+weisse Wegoberflaeche wurde anschliessend begrenzt und erneut aufgenommen.
+Details, Rohdaten und Bilder stehen im
+[Phase-161-Bericht](tools/benchmarks/results/funnel-queues-snow-cpu-2026-10-30/README.md).
+Keine neuen nativen 10-/15-/30-Minuten-Laeufe und keine Grafikreduktion.
+
+Phase 162 erweitert dieselben Band-/Drop-Pfade um fortlaufende Junction-Routen.
+Zusammenfuehrer bedienen die drei Eingaenge reihum, jeweils genau ein Item;
+historische Stapel werden ohne Mengenverlust aufgeteilt. Wartende und
+abbiegende Items bleiben vor automatischem Aufheben geschuetzt und koennen
+weiter mit Rechtsklick genommen werden. Volle/gesperrte Ausgaenge stauen sich
+zurueck, statt Items an den Auslass zu teleportieren.
+
+Tunnel (Filtered) 159 verwendet denselben Ghost-/Allowed-/Blocked-Filter wie
+Funnel (Filtered). Verteiler 160 besitzt einen Eingang und drei voneinander
+unabhaengig gefilterte Ausgaenge. Die private Konfiguration ist autorisiert,
+in RGA9 gespeichert und mit bisherigen Regionen abwaertskompatibel; alte
+Block-IDs und RGA8-Payloads bleiben unveraendert. Spieler, gerittene Pferde und
+andere aktive Mobs werden auf laufenden Baendern mit vorhandener gesweepter
+Kollisionsbewegung transportiert, nicht durch Transform-Teleports.
+Geneigte Band-Laeufe besitzen durchgehende, Section-geclippte Flaechen im
+bestehenden Terrain-Collider statt kleiner AABB-Tritte. Wellen bleiben
+kollidierbar; Picking und Mob-Abfragen behalten konservative Profilboxen.
+Bandadvektion wird nicht als Sprung gespeichert, waehrend XZ weiterhin die
+tatsaechliche Weltgeschwindigkeit fuer Replikation bleibt.
+
+Farbstoffe einschliesslich RGB stehen wieder bei den Materialien; die
+mitgelieferte Kategorie Rohstoffe entfaellt. Natuerlicher Schnee bleibt auf
+zwei Achtelschichten begrenzt. Spieler koennen manuelle Platten bis zum vollen
+Schneeblock stapeln oder Formen wie Treppen, Slabs, Fences und Wege direkt
+beschichten. Neue manuelle Schichten haben unterscheidbare gespeicherte Posen;
+alte Posen bleiben lesbar. Eine budgetierte Shape-Runde schliesst generierte
+Dorfwege ein und laesst berechtigte Oberflaechen bei Schneefall innerhalb von
+fuenf Minuten winterlich werden, ohne Schnee allein aus der Jahreszeit zu
+erzeugen.
+Eine rein optische Mindestablagerung fuer geeignete Formbloecke sichert diese
+Frist auch bei schwachem tatsaechlichem Schneefall; sie beschleunigt keine
+physischen Bodenschichten und rechnet keine vorherige Klarwetterzeit nach.
+
+Sand-/Schneefussspuren erhalten echte vertiefte Boeden und Seitenwaende in
+einem begrenzten gemeinsamen Mesh. Ein fester raeumlicher GPU-Lookup schneidet
+die passende Originaloberflaeche in Farb- und Tiefenpass aus, auch trocken
+unter Daechern. Unterstuetzung, Oberflaechenhoehe, negative Koordinaten,
+Nachbaraenderungen und Unload werden beruecksichtigt; keine Terrain-Neumeshing-
+Jobs oder ECS-Entities pro Schritt. Vergehende Spuren werden flacher und
+kleiner.
+
+Phase 162 ist mit 3359 bestandenen Workspace-Tests, 0 Fehlern und 8 ignorierten
+Tests geprueft; Format, Check, strenges Clippy und Workspace-Build bestehen.
+Die 13 echten Avian-Bewegungstests decken laufende Baender, Waende, Absaetze,
+Rampen, Gegenlaufen und Springen ab. Native Logistik-/Filterpruefung mit sieben
+Bildern, vollstaendige Material-Galerie mit 160 GPU-Previews und 15 Bildern,
+vier Fussabdruck-Aufnahmen mit verifizierten vertieften Bodenpixeln sowie der
+Headless-Serverstart mit 27 Sections bestehen. Filterbeschriftungen,
+Schneeformen und Fussabdruecke wurden tatsaechlich visuell kontrolliert.
+Details und lokale Bilder stehen im
+[Phase-162-Bericht](tools/benchmarks/results/junction-transport-snow-relief-2026-10-30/README.md).
+Keine neuen 10-/15-/30-Minuten-Laeufe und keine unbelegten FPS-Zusagen.
+
+Phase 163 korrigiert nach den echten Spielaufbauten die Junction-Regressionen:
+Der Zusammenfuehrer trennt Eingangszuordnung von Recovery, behaelt wartende
+RR-Zuege und laesst fruehes kollisionsgeprueftes Nachruecken ohne Inline-
+Vorfuellung zu. Echte verbundene Bandenden werden an ihrem tatsaechlichen
+Drop-Zentrum uebergeben statt an einer ungueltigen 0.78-m-Probe. Verteiler
+reservieren passende Allowed-Filter vor allgemeinen Ausgaengen; Links/Rechts
+stimmen mit dem Spieler-Koordinatenvertrag ueberein. Gespeicherte abgebogene
+oder blockierte Koepfe behalten pausierte Custody, ohne unabhaengige Ausgaenge
+bei Recovery zu sperren. Keine neuen Block-IDs oder Speicher-/Protokollformate.
+
+Wet-/Imprint-Shader aktivieren ihre eigene Bindless-Extension explizit. Die
+neue Kompositionsregression prueft zwoelf Varianten und reproduziert den
+urspruenglichen fehlenden Enable-Pfad als Negativkontrolle. Alle 3369 Workspace-
+Tests bestehen (0 Fehler, 8 ignoriert), einschliesslich sechs echten Linked-
+Band-/Kurbeltests, strikter Alternation und unveraenderter maximaler 0.5-m-
+Ausgangsluecke bei 1 m/s fuer alle vier Ausrichtungen. Format, Check, strenges
+Clippy und Build bestehen. Native GPU-Pixeltests bestehen in neun Phasen je
+Bindless-/Legacy-Pfad auf der RX 6950 XT ohne Shaderfehler; Headless-Serverstart
+mit 27 Sections besteht. Die frueheren Einzelzellen-/Filter-UI-Tests deckten
+diese realen Endpoint- und Tiefenpassvertraege noch nicht ab.
+Details, Rohlogs und GPU-Bilder stehen im
+[Phase-163-Bericht](tools/benchmarks/results/junction-order-bindless-2026-10-30/README.md).
+
+Phase 164 implementiert F30/F31 und die zufaellige Truhenentnahme fuer beide
+Tunnelvarianten. Der gespeicherte Zufallsschalter waehlt einen belegten,
+filterkompatiblen Slot aus beiden Haelften einer Doppeltruhe; Stackgroesse
+gewichtet nicht, Maschinen liefern weiterhin nur ihren Ergebnisslot und
+Rueckstau verbraucht keine Items. Pro Transfer bleibt es bei einem Item.
+
+Kessel 161 und Lagerfeuer 162 ergaenzen die bestehenden Block-/Inventar- und
+Effektsysteme. Sechs JSON-Braurezepte enthalten getrennte Effektstaerken und
+Laufzeiten, darunter Regeneration + Staerke. Holz-/Stein-/Goldloeffel sind
+wiederverwendbar und beschleunigen nur die Brauarbeit mit 1.0/1.2/1.5.
+Wasserflasche, Eimer, Zutaten und leere Flasche werden autoritativ verrechnet;
+Sand -> Glas im Ofen und Glas -> Flaschen schliessen die Survival-Rezeptkette.
+Trinken verwendet die gehaltene Benutzen-Aktion, gibt in Survival eine Flasche
+zurueck und kann trotz Giftschaden fertig werden, ohne den Schaden zu heilen.
+Wasser loescht nur den Feuerstatus; fremde Effekte bleiben erhalten.
+
+Lagerfeuer verwenden echte Brennstoffzeiten und vorhandene Garrezepte, heizen
+einen darueberstehenden Kessel und verwenden begrenzte vorhandene Feuer-/Rauch-/
+Licht-/Knisterpfade. Wasser, exponierter Regen, sichere Aufstellung, Flammen-
+kontakt und Sichtkontakt fuer die Waerme werden geprueft. Unbekannte Nachbar-
+Sections pausieren die Simulation, ohne gespeicherten Brennstoff zu verlieren.
+Ein kleiner Waerme-Hook fuer F32 ist vorhanden, kein vorgetaeuschtes fertiges
+Temperatursystem. Kessel, Loeffel, Flaschen und Feuer verwenden gemeinsame
+Meshes/Materialien; der Feuerunterbau bekommt nur bei einem Kessel darueber
+passende bodengestuetzte Steinpfeiler mit denselben Picking-/Kollisionsboxen.
+
+Der regionale RG10-Wrapper speichert Brauarbeit, Wasser, Brennzustand und
+Tunnelmodus; historische RGA9-Daten bleiben lesbar und unveraendert definiert.
+Bestehende Block-IDs und Generatorversion bleiben erhalten. Client und Server
+muessen gemeinsam Protokoll 91 verwenden. Beide Stations-UIs und Too Many
+Items zeigen reale Slots, Zutaten und individuelle Effekte. Bedienung steht in
+[Blocks README](assets/terra/blocks/README.md#alchemy-and-campfires).
+
+Abschlusspruefung auf dem finalen Quellstand: 3422 Workspace-Tests bestanden,
+0 fehlgeschlagen, 8 explizit ignoriert. Format, Workspace-Check, strenges Clippy
+mit allen Targets und Workspace-Build bestehen. Der Headless-Serverstart
+besteht mit 27 Sections. Neue Regressionen pruefen unter anderem beide Tunnel,
+Filter/Rueckstau, Legacy-Speicherstaende, echte Brau-/Gartransaktionen, Wasser-
+und Flaschenrueckgabe, Schaden waehrend des Trinkens, Feuer-/Ladegrenzen sowie
+identische Unterbauformen in Rendering, Picking und Physik.
+
+Der native Kurztest auf der RX 6950 XT/Vulkan besteht in 140.9 Sekunden mit
+sieben nichtleeren Aufnahmen: gespeicherter Aufbau, echter UI-Wassertransfer,
+Mischtrank, Too-Many-Items-Rezept, Anzuenden, Braten und Loeschen. Modelle,
+Rezeptauswahl und Brennstoffanzeige wurden visuell kontrolliert. Keine neuen
+10-/15-/30-Minuten-Laeufe und keine FPS-Zusagen. Die lokale Audioausgabe meldet
+allerdings ALSA-POLLERR; der finale Test erfasst 12870543 wiederholte Rodio-
+Backendfehler, im Testlog auf drei Beispiele plus Anzahl begrenzt. Keine
+Produktionsunterdrueckung, keine behauptete Hoerabnahme oder Behebung des
+Audiogeraets: A02 bleibt offen. Screenshots, native Logdatei und alle Cargo-
+Prueflogs stehen im
+[Phase-164-Ergebnisordner](tools/benchmarks/results/alchemy-campfire-2026-10-30/).
+
+Phase 165 ergaenzt sechs negative Braurezepte: Gift, Verlangsamung, Frieren,
+Blutung, Verderbnis und Feuer. Bestehende Trank-IDs 1-6 bleiben unveraendert;
+7-12 verwenden dieselben Rezept-, Effekt-, Trink- und Too-Many-Items-Pfade.
+Gift wird aus Pilz und Kohlestaub gebraut (Stufe 1, 20 Sekunden). Zutaten,
+Wasser, wiederverwendbarer Loeffel und Glasrueckgabe bleiben autoritativ.
+
+Ein Lagerfeuer passt jetzt direkt in das Kesselgestell derselben logischen
+Zelle. Beide Survival-Platzierungsreihenfolgen erhalten Brennstoff und Inhalt;
+Kessel und Feuer haben getrennte, umschaltbare Inventare. Ein veralteter
+UI-Befehl kann dadurch nicht versehentlich das andere Inventar bearbeiten.
+Die echte Platzierungstaste hat beim passenden gehaltenen Gegenstueck
+Montage-Prioritaet; ein bereits montierter Aufbau oeffnet weiterhin sein
+Inventar. Tests pruefen beide Reihenfolgen mit Rechtsklick und umgebundener
+Taste sowie normale Stationsnutzung mit Nahrung in der Hand.
+Rendering, Picking, Waermekontakt und Kollision verwenden denselben kompakten
+Aufbau; Abbau gibt beide Bloecke und beide Inhalte genau einmal zurueck.
+Alte gestapelte Aufbauten bleiben unveraendert und koennen neu aufgebaut
+werden. RG11 speichert den Zusatzaufbau samt eigenem Inventar und liest
+weiterhin RG10/RGA9. Client und Server verwenden gemeinsam Protokoll 92.
+
+Erhitzte Fluessigkeit besitzt bewegte Oberflaeche, sechs Blasenkuppen und
+Dampf, auch ohne laufendes Rezept. Kalte Fluessigkeit bleibt zeitlich stabil.
+Die vorhandenen begrenzten FX-Batches werden weiterverwendet, ohne Entities
+oder Materialien pro Blase. Beide Tunnel-UIs zeigen ein sichtbares Label
+"Random" am gespeicherten Zufallsschalter.
+
+Ein belegter vermeidbarer Renderpfad ist entfernt: Inventarvorschaubilder
+wurden vorher fuer den gesamten Katalog schon beim Weltbeitritt erzeugt.
+Nun werden nur tatsaechlich benoetigte Hotbar-, Inventar-, Rezept-, Kategorie-
+und Ziel-Icons angefordert. Veraltete wartende Jobs werden entfernt, laufende
+Readbacks korrekt beendet und RGB-Vorschaubilder bleiben begrenzt. Bestehende
+Bildgueltigkeitspruefung und Wiederholungen bleiben erhalten. Vollkatalog-
+Galerietests koennen TERRA_PREVIEW_WARMUP=1 explizit verwenden; normale Spiele,
+Alchemy- und Benchmark-Laeufe bleiben bedarfsgesteuert.
+
+Erste Messreihe nur zur bedarfsgesteuerten Icon-Erzeugung: kurze native
+Vorher-/Nachher-Flugtests auf RX 6950 XT/Vulkan, 3840 x 2160,
+Sichtweite 20, hohe Qualitaet, echte TiltUI und jeweils 48 Sekunden Messfenster:
+
+| Seed / Wetter | Stand | AVG FPS | Min FPS | p99 ms | RAM MiB |
+| --- | --- | ---: | ---: | ---: | ---: |
+| 86420 / Klar | Vorher | 88.47 | 15.76 | 18.16 | 2408.4 |
+| 86420 / Klar | Nachher | 87.29 | 40.48 | 17.94 | 2323.7 |
+| 99173 / Regen | Vorher | 82.55 | 40.96 | 18.86 | 2196.6 |
+| 99173 / Regen | Nachher | 83.80 | 40.88 | 18.82 | 2052.9 |
+
+Nachher benoetigt jeder gemessene Frame nur einen Core3d-Ansichtsdurchlauf;
+vorher kamen 2141 beziehungsweise 2294 zusaetzliche Icon-Ansichtsdurchlaeufe
+hinzu. Die Nachher-Fenster enthalten keine Frames unter 32 FPS, garantieren
+aber keine allgemeine FPS-Untergrenze. AVG ist praktisch unveraendert; ein
+grosser allgemeiner FPS-Gewinn oder eine vollstaendige Behebung aller Drops
+ist nicht nachgewiesen. Der schlechteste Klarwetter-Vorher-Frame beinhaltet
+49.52 ms Fenster-/Swapchain-Vorbereitung bei unfokussiertem Fenster. Das ist
+eine gemessene Korrelation, keine bewiesene Treiber- oder Betriebssystemursache.
+Bei diesem Zwischenstand benoetigte PostUpdate im Mittel rund 5.3 ms pro Frame.
+Keine Qualitaetsreduktion, kein FPS-Limit und keine neuen Langzeittests.
+
+Die anschliessende begrenzte GDB-Stichprobe (16 Stops, eigener Clientprozess)
+trifft zweimal den Neuaufbau von QueryState/Archetypen in den eigenen
+Tooltip-Funktionen fit_contents und position. Diese liefen auch bei
+geschlossenem Inventar pro Frame; zusammen mit fit_identifier wurden sieben
+Abfragen immer neu aufgebaut. Ein weltlokaler TooltipQueries-Cache verwendet
+jetzt persistente QueryStates und aktualisiert weiterhin neue Archetypen.
+Die Regression prueft wiederholte Frames, spaeter erzeugte Tooltips, Window,
+Pointer und Texte, Mausbewegung, Identifier-Kuerzung und Owner-Despawn bei
+genau einer Cacheinitialisierung. Keine Layout-/Hover-/Portalregeln oder
+TiltUI-/Bevy-Quellen geaendert. Die Stichprobe zeigt weitere TiltUI-/Render-
+Pfade, liefert aber keine exklusiven Systemzeiten. Deren kuenstliche Stop-
+Pausen verursachen auch Audio-Unterbrechungen; die Debugger-Framewerte sind
+ausdruecklich keine FPS-Benchmarkwerte und nicht Bestandteil der Tabelle.
+
+Zweite Messreihe mit frischen Vorher-Laeufen fuer den Tooltip-Cache, ebenfalls
+48 Sekunden pro Lauf, 4K, Sichtweite 20 und unveraenderte Grafikqualitaet:
+
+| Seed / Wetter | Tooltip-Cache | AVG FPS | Min FPS | p99 ms | PostUpdate Mittel ms |
+| --- | --- | ---: | ---: | ---: | ---: |
+| 86420 / Klar | Vorher | 86.33 | 36.93 | 18.81 | 5.37 |
+| 86420 / Klar | Nachher | 90.06 | 37.49 | 17.28 | 4.99 |
+| 99173 / Regen | Vorher | 81.66 | 34.83 | 18.27 | 5.29 |
+| 99173 / Regen | Nachher | 86.82 | 44.66 | 17.47 | 4.73 |
+
+Damit steigt AVG in diesen Fenstern um rund 4.3 beziehungsweise 6.3 Prozent;
+PostUpdate benoetigt rund 7.1 beziehungsweise 10.5 Prozent weniger Wandzeit.
+Alle vier Fenster enthalten keine Frames unter 32 FPS. Das sind begrenzte
+Messungen, keine garantierte Mindest-FPS oder vollstaendige Behebung aller
+Streaming-/Treiber-/UI-Spitzen. Asynchrone Upload-/LOD-Zeitpunkte und damit
+einzelne sichtbare Batchzahlen variieren; die Rohlogs enthalten Szene und
+effektive Konfiguration. CSV trennt die Icon- und Tooltip-Messreihen.
+
+Der native Alchemy-Kurztest auf dem finalen Build besteht mit 13 nichtleeren Aufnahmen in 35.3
+Sekunden: kompakter gespeicherter Aufbau, echter Wassertransfer, Brodeln,
+Mischtrank, Giftrezept, beide Feuerinventare, Braten, Loeschen und beide
+Random-Labels. Aufbau, brodelnde Fluessigkeit, Giftrezept und Random-Label
+wurden an den erzeugten Bildern visuell kontrolliert. Keine Shader- oder
+Rodio-Backendfehler in diesem Lauf; eine menschliche Hoerabnahme bleibt A02.
+Das Dropdown enthaelt alle zwoelf Optionen und besitzt einen Scrollpfad;
+Scrollen und Anklicken des siebten Eintrags wurde nativ nicht separat geprueft.
+Alle 3453 Workspace-Tests bestehen, 0 Fehler, 8 explizit ignoriert. Format,
+Workspace-Check mit allen Targets, strenges Clippy mit allen Targets und
+Workspace-Build bestehen. Der Headless-Serverstart besteht mit 27 Sections.
+Die neuen Tests decken unter anderem beide Montage-Reihenfolgen, getrennte
+Inventaransichten, echte Zutaten-/Brennstofftransaktionen, Pause/Reload,
+RG11/Legacy-Speicherstaende, begrenzte Icon-Anforderungen und gueltige
+Blasen-/Kollisionsgeometrie ab. Beim Nachlegen prueft die Regression den
+gesamten verbleibenden Brennstoff, nicht nur den korrekt wieder steigenden
+aktuellen Brenntimer.
+Rohlogs und Screenshots stehen im
+[Phase-165-Ergebnisordner](tools/benchmarks/results/alchemy-compact-frame-tails-2026-10-31/).
+
+## Phase 166: Start-Icons Und Wassertechnik
+
+UI- und Inventar-Icons werden beim normalen grafischen Start einmalig vor
+Weltbeitritt beziehungsweise Serverstart vorbereitet. Der endliche Katalog
+enthaelt auch die bekannten Holz-, Bett- und Cape-Varianten. Die fertigen
+Bild-Handles bleiben erhalten; frei gemischte RGB-Varianten verwenden weiter
+den begrenzten Bedarfscache. TiltUI-Symbole aller drei Laufzeitgroessen,
+statische UI-Bilder und Schriften gehoeren zum Start-Gate. Fehlende Assets
+werden als Fehler angezeigt statt eine endlose Ladephase zu erzeugen.
+
+F27/F28 sind umgesetzt: Holz-, Stein- und Eisenrohre, Ventil, Wasserhahn,
+kinetische Pumpe und modulare Becken mit angehaengten Block-IDs 163..169.
+Rohre verbinden sich entlang ihrer tatsaechlichen Nachbarn; vollstaendige
+rechteckige Becken verlieren ihre inneren Waende und halten einen gemeinsamen
+Pegel. Unterstuetzt werden Grundflaechen von 1x1 bis 5x5, auch 1x2, und bis
+zehn Bloecke Hoehe. Die Darstellung orientiert sich an der gelieferten
+Vorlage; eine pixelgenaue 1:1-Uebereinstimmung wird nicht behauptet.
+
+Die Wassertechnik verwendet bestehende FluidCells, Kinetik und den vorhandenen
+Terrain-Fluessigkeitsscheduler. Quellenaufnahme, endlicher Speicher, Gefaesse
+und echter Ausfluss am Hahn sind gekoppelt. Geschlossene Ventile, fehlender
+Antrieb und ungeladene Verbindungen verhindern ungueltige Versorgung.
+Der untere Zulauf nutzt die freie Kapazitaet des gesamten Beckens; ein
+strikt positiver Druckgradient verhindert den Ruecklauf in seine eigene
+Quellkammer im selben Update. Mengenbilanz, voller Speicher, unvollstaendige
+Formen sowie Unload/Reload sind durch Regressionen abgesichert.
+
+Flasche, Eimer und Giessekanne fuellen sich sichtbar beim Halten der
+Platzieren-/Benutzen-Aktion an einer sichtbaren echten Quelle oder einem
+versorgten Hahn. Abbruch, geaenderte Slots und Inventare sowie verdeckte Ziele
+werden geprueft. Der Server uebertraegt erst nach der Haltezeit echte Einheiten.
+Die Giessekanne kippt, zeigt einen Wasserstrahl und bewaessert bepflanzte Beete.
+Ihre bestehende Reserve bleibt sitzungslokal, nicht je einzelner Kanne gespeichert;
+eine neue Feuchtigkeits-Persistenz fuer unbepflanzten Boden wurde nicht eingefuehrt.
+
+Ein nativ gefundener Revisionskonflikt ist behoben: Gefaessaktionen an Hahn und
+Becken verwenden die stabile Blockrevision statt der bei laufendem Wasser
+fortwaehrend wechselnden Wasser-Meshrevision. Natuerliche Wasserzellen behalten
+ihren Fluessigkeits-Revisionsschutz. Unveraenderte Inventare und Drops werden
+ausserdem nicht mehr wegen jeder privaten Wassertechnik-Aenderung erneut
+versendet. RG12 speichert Leitungsinhalte und Beckenformen, ohne die RG11-Huelle
+zu aendern; alte Regionen bleiben lesbar. Netzwerkprotokoll ist 93.
+
+`TODO.md` enthaelt nur offene Aufgaben. Die bisherigen Berichte stehen im
+oben verlinkten Altstand; erledigte F27/F28 und die erledigte Vorlade-Anforderung
+wurden nach der Pruefung entfernt. Neu sind F44..F52 fuer Inventarsortierung,
+Create-artige Rezeptansichten, Rezept-UI, experimentelle Chemie, Rucksaecke,
+KI, /heal, /give mit Farbe und eine F3-artige Debugansicht. O07 und externe
+Abnahmen bleiben offen.
+
+Final erfolgreich: `cargo fmt --all --check`, `cargo check --workspace -j1`,
+`RUST_TEST_THREADS=4 cargo test --workspace -j1`,
+`cargo clippy --workspace --all-targets -j1 -- -D warnings`,
+`cargo build --workspace -j1`. Insgesamt 3511 bestandene Tests, null Fehler,
+acht explizit ignorierte Spezialtests. Der gezielte Hydrauliklauf besteht
+mit allen 14 Welt-Tests, einschliesslich der drei neuen Becken-Regressionen.
+
+Native Kurztests auf RX 6950 XT / RADV / Vulkan: neun geprueft nichtleere
+Wassertechnik-Aufnahmen in 19.51 Sekunden mit echten Rechtsklick-Aktionen,
+Ventilsperre und auf 100 Prozent bewaessertem Beet. Wasserstand von Flasche,
+Eimer und Becken sowie der Giesstrahl wurden visuell kontrolliert.
+Der getrennte Starttest bestaetigt vor jeder Welt-/Sessionerzeugung 454 fertige
+Inventar-Icons und 1611 UI-Symbole; alle 1624 UI-Vorbereitungspositionen sind
+erledigt und keine Vorschaujobs uebrig. Die finale Hauptmenue-Aufnahme enthaelt
+keinen veralteten Ladehinweis. Beide grafischen Laeufe enthalten keine
+Warnungen, Panics, Shader- oder Rodio-Backendfehler. Der separate Headless-Start
+besteht mit 45 Sections. Keine neuen FPS-Vorher-/Nachher-Messungen und keine
+10-/15-/30-Minuten-Laeufe; daraus wird kein allgemeiner FPS-Gewinn abgeleitet.
+
+[Phase-166-Nachweise Und Reproduktion](tools/benchmarks/results/water-tech-startup-2026-10-31/README.md).
+
+## Phase 167: Naturwasser-Ansaugung, Runde Rohre Und Direkte Gefaessfuellung
+
+Laufende Pumpen ziehen Wasser ueber einen zusammenhaengenden Zulauf aus Meer,
+See und Fluss auch dann an, wenn die Pumpe oberhalb des natuerlichen Pegels
+steht. Die gerichtete Suche bleibt im vorhandenen Komponentenbudget; Druck
+entsteht erst nach dem Pumpendurchtritt. Ventile, Drehrichtung, fehlender
+Antrieb, entnommene Quellen und ungeladene Verbindungen bleiben wirksame
+Sperren. Endliche Becken behalten ihre Mengenbilanz.
+
+Rohrenden und Verzweigungen verwenden runde Hohlprofile statt des bisherigen
+Wuerfelkerns. Ein einzelner Anschluss behaelt ein gegenueberliegendes offenes
+Ende; Boegen und Mehrfachverteiler besitzen passende Auswahl-/Kollisionsformen.
+Die vorhandenen Material-/Flanschslots werden weiterverwendet; ein auf 64
+Varianten begrenzter Cache je Meshing-Auftrag vermeidet wiederholten Profilbau.
+
+Externes Wasser kann den freien Raum um Rohre, Ventile, Haehne und Pumpen
+belegen. Es bleibt vom gespeicherten Leitungsinhalt getrennt. Die Wasserflaeche
+bleibt bei Konstruktionen in oder direkt ueber dem Wasser erhalten; natuerliche
+Bruchpegel werden ohne Achtel-Aufrundung gezeichnet. Ganzzahlige Oberflaechen
+an positiven und negativen Y-Section-Grenzen haben einen eindeutigen Besitzer,
+auch wenn der darunterliegende Chunk noch nicht geladen ist. Beim Reload
+beruecksichtigt die Erstpublikation Teilbloecke im Wasser-Halo.
+
+Eimer und Giessekanne senden an einer sichtbaren echten Quelle bereits beim
+ersten Rechtsklick ihre Fuellaktion. Gehaltene Eingabe wiederholt sie nicht;
+Sichtlinie, Rechte, Reichweite, Slot und Inventarrevision prueft weiterhin der
+Server. Flaschen und endliche Hahnversorgung behalten die sichtbare Halteaktion.
+
+Die BR-52-Bildreferenz liegt dauerhaft unter docs/references/br52-train-system.png.
+TODO F53 beschreibt das noch offene fahrbare Zugsystem einschliesslich Gleisen;
+F54 listet den modularen Dampflok-Baukasten, Tender, Gestaenge und Dekoration.
+
+Geprueft: `cargo fmt --all --check`,
+`cargo test --workspace --lib --bins -j1` (3515 bestanden, 0 Fehler,
+8 bestehende Tests ignoriert) und `cargo build --workspace -j1`.
+Die neuen Regressionen pruefen Naturansaugung, Sperren, endliche Mengen,
+alle 57 Rohr-Anschlussformen, Wasserflaechen bei 7.3/7.5/8/16/-16,
+positive/negative Section-Grenzen, ungeladene untere Nachbarn und echten
+Rechtsklick ohne lokale Inventarmutation.
+Der native Hydraulik-Kurztest bestand in 16.78 Sekunden mit neun Aufnahmen:
+gespeichertes Becken, Flaschen-/Eimer-/Kannenfuellung, Ventilsperre und echte
+Bewasserung. Runde Rohrkoerper und Bogen sowie der gefuellte Eimer sind in der
+[Nahaufnahme](tools/benchmarks/results/water-pipes-intake-2026-11-01/hydraulics-native/bucket-filled.png)
+sichtbar. Das native Log enthaelt keine Warnung, keinen Fehler und keine Panic.
+Naturansaugung und die Oberflaechen-Randfaelle sind durch die automatisierten
+Regressionen belegt. Logs und Aufnahmen liegen im
+[Ergebnisordner](tools/benchmarks/results/water-pipes-intake-2026-11-01/).
+
+## Phase 168: Wasserinteraktionen, Becken, Hahn-Stufen Und Start-Ladescreen
+
+Der lokale Wasser-Meshzaehler war kein zwischen Server und Replica vergleichbarer
+Transaktionszaehler. Gefaessaktionen verwenden jetzt die replizierte Blockrevision;
+Quelle, Menge, Sichtlinie, Reichweite, Rechte und Slot bleiben serverseitig geprueft.
+Prepared Naturwasser-Spalten gehoeren zur gemeinsamen Quellen-Zielerfassung.
+Ein eigener Mining-Picker durchquert Quellbloecke; Client und Server verwenden
+identische Regeln, waehrend Rohrkoerper, Props und Wasserpflanzen Ziele bleiben.
+Der native Hydrauliktest fuellt jetzt auch an echten Quellen per kurzem Rechtsklick
+und baut Boden unter Wasser ab; die vorherige Grafikfixture pruefte nur den Hahn.
+
+Uferkontaktpunkte bleiben verankert, offene Wasserflaechen behalten ihre Wellen.
+Auch aktuelle platzierte Bloecke im gepaddeten Feld zaehlen als Ufer. Bei ganzzahligen
+Pegeln prueft die Naturflaeche den tatsaechlichen Wasserraum unter der geometrischen
+Ebene, damit keine zweite transparente Flaeche auf einem Gras-/Sandblock liegt.
+Ein schmaler Naturwasser-Uebergang um Teilkoerper verbindet exakte Rohrflaechen mit
+geneigten Flusspegeln; volle explizite Quellen an 16/-16 behalten denselben oberen
+Flaechenbesitzer wie das Naturwasser. Positive/negative XZ-Naehte werden geprueft.
+
+Das Beckenmodell verwendet disjunkte Schalenzellen mit genau einer Flaeche je
+Grenze. Waende, Ecken, Rand und Metallbaender besitzen keine koplanaren Ueberlagerungen;
+Nachbarmodule unterdruecken ihre gemeinsamen Endflaechen. Vorhandene stilisierte
+Holz-, Stein- und Schmiedeeisentexturen ersetzen die frueheren Maschinenbindungen.
+
+Haehne besitzen zu/1/2/3, angezeigt im HUD: LMB schliesst eine Stufe, RMB oeffnet eine
+Stufe; Shift+LMB baut ab. Gehaltene Gefaesse behalten ihre Fuellaktion. Legacy-Facings
+bleiben lesbar; Stufen liegen im vorhandenen facing. Der gerichtete Interaktionsbefehl
+benoetigt gemeinsam Protokoll 94. Stufen entnehmen 1/2/4 echte Einheiten pro Tick,
+begrenzt durch Vorrat und freien Speicher. Ein klarer Fallweg bis 32 geladene Zellen
+kann direkt in ein separates Becken liefern, ohne zugleich Terrainwasser zu erzeugen.
+Der sichtbare Strahl endet an Beckenwasser, Naturwasser oder Hindernis und zeigt
+stufenabhaengige Dicke/Geschwindigkeit. Offene Becken sammeln bei vollem Regen eine
+Einheit je 30 Sekunden und offenem Quadratmeter; gespeicherte Daecher sperren auch
+ungeladen. Teilfortschritt bleibt begrenzt und laufzeitlokal, der Wasserinhalt wird gespeichert.
+
+Vor dem Hauptmenue erscheint ein eigener Ladescreen mit assetarmem Hintergrund,
+tatsaechlichem Fortschritt und Fehleranzeige. Menuebuttons materialisieren erst nach
+dem Gate. Das bestehende endliche Modell-/Textur-/Itemicon-/UI-/Font-Gate bleibt
+erhalten; UI-Audioclips und der Status der vorhandenen Recordingbank sind einbezogen.
+Es gibt weder einen zweiten Audio-Decode noch eine neue Assetregistry.
+
+Geprueft: `cargo fmt --all --check`,
+`cargo clippy --workspace --all-targets -j1 -- -D warnings`,
+`cargo build --workspace -j1` und
+`RUST_TEST_THREADS=4 cargo test --workspace --lib --bins --no-fail-fast -j1`
+(3537 bestanden, 0 Fehler, 8 bestehende Tests ignoriert).
+Der native Hydrauliktest bestand in 20 Sekunden mit zwoelf Aufnahmen; er prueft
+neben Hahn, Becken und Ventil auch einzelne echte Rechtsklicks mit Eimer und Kanne
+an Wasserquellen sowie den anschliessenden Bodenabbau unter Wasser.
+Langsamer Regeneintrag und Dachabschirmung sind durch Simulationstests geprueft.
+Der native Starttest zeigt zuerst den
+[Ladescreen](tools/benchmarks/results/water-controls-startup-2026-11-01/startup/startup-icons.png)
+und danach das Hauptmenue: 454 Katalogeintraege und 1627 UI-/Audio-Assets sind bereit.
+Beide nativen Logs enthalten keine Warnung, keinen Fehler und keine Panic.
+Pruefprotokolle und Aufnahmen liegen im
+[Ergebnisordner](tools/benchmarks/results/water-controls-startup-2026-11-01/).
+
+## Phase 169: Einheitliches Beckenwasser Und Rohrgespeiste Bandbefuellung
+
+Die separate, hellblaue StandardMaterial-Flaeche des Beckens entfaellt. Der
+Beckenrenderer nutzt denselben WaterAssets-Handle, Shader, Biomtint, Tiefen- und
+Wellenvertrag wie Naturwasser. Die gemeinsame endliche Pegelberechnung versorgt
+auch Schwimmen, Atempruefung, Wasserbewegung und Unterwasseroptik. Bestaetigte
+Beckenaggregate werden in den vorhandenen Replica-Zustand uebernommen, ohne
+Transaktionsrevisionen zu erhoehen oder Terrain-FluidCells zu erzeugen.
+Unveraenderte Flaechen behalten ihre Meshes. Alle vier Holzarten werden ueber
+die bestehende Item-/Objekt-Holzidentitaet verarbeitet; Block169 ist im TMI
+standardmaessig Spruce, die drei weiteren Varianten bleiben explizit.
+
+Der Ladescreen enthaelt keinen Quit-Button mehr. `Laden` steht ueber dem Balken,
+der echte Zaehler in dessen Mitte und der aktuelle Assetpfad mittig darunter;
+lange Pfade werden Unicode-sicher in der Mitte gekuerzt. Das vorhandene
+Preload-Gate bleibt fuer die Freigabe des Hauptmenues verantwortlich.
+Pumpen nutzen den vorhandenen mechanischen RPM-Mix; versorgte fliessende Haehne
+einen gemeinsamen kontinuierlichen Wasserloop. Entfernungsgrenzen, Stereo,
+Hindernisse, Kategorien, Pause und Mute begrenzen die Wiedergabe. Der native
+Hahntest prueft auch tatsaechlich dekodiertes Audio-RMS.
+
+Hold Block170 und Fluid Infuser171 sind neue angehaengte Material-IDs mit
+Workbench-Rezepten, Technic-Eintraegen, echten Kollisionshuellen und begrenzten
+glTF-Modellen nach der
+[Vorlage](docs/references/filling-machine-system.png). Der Hold liegt auf der
+vorhandenen Bandhoehe; der Infuser sitzt eine Zelle darueber, mit seitlichen
+und oberen Rohrports sowie freier Duese nach unten. Er ist ein passiver
+Netzverbraucher ohne eigenen Kinetikbedarf und ohne Terrainwasserausgabe.
+
+Der Server haelt fuellbare Drops mittig an und entnimmt echte endliche Mengen.
+Volle oder ungeeignete Items passieren direkt. Trockene Versorgung, Rueckstau
+und Entladen behalten die Gegenstaende; Flaschenstapel werden einzeln geteilt.
+Vier Foerderrichtungen und die Luecke zur ausgehenden Bandrolle verwenden die
+vorhandene Drop-Kollisions- und Besitzpruefung. Entfernen/Bewegen/Entladen setzt
+den begrenzten Fuellfortschritt zurueck. Es entsteht kein zweites Iteminventar.
+
+Giesskannen speichern Wasser jetzt in ihrer einzelnen Itemidentitaet. Refill,
+Giessen, Stapelgrenzen, Weitertransport, Aufheben, UI und Speichern beachten den
+tatsaechlichen Inhalt. Vorschauen teilen weiterhin das endliche Werkzeugicon;
+sichtbare Drops aktualisieren nach bestaetigter Befuellung auch bei gleicher ID
+ihr Modell. Alte Stapel leerer Kannen bleiben bis 128 gueltig. Handbefuellung
+trennt eine Kanne atomar ab und verteilt den Rest verlustfrei; bei fehlendem
+Inventarplatz wird vor dem Verbrauch abgebrochen. Die Bandstation bearbeitet
+gestapelte Kannen einzeln und beendet auch mehrteilige Fuellvorgaenge vor der
+Freigabe. Das Rohrsystem unterstuetzt weiterhin Wasser; der explizite
+Fluessigkeits-Konvertierungsvertrag verhindert erfundene Fremdfluessigkeiten.
+Die neue Drahtidentitaet benoetigt gemeinsam Client-/Server-Protokoll95.
+
+Geprueft: `cargo fmt --all --check`, `git diff --check`,
+`cargo clippy --workspace --all-targets -j1 -- -D warnings`,
+`cargo build --workspace -j1` und
+`RUST_TEST_THREADS=4 cargo test --workspace --lib --bins --no-fail-fast -j1`:
+3561 bestanden, 0 Fehler, 8 bestehende Tests ignoriert.
+Die sechs neuen Infuser-Transportfaelle pruefen echte Ein-/Ausgangsuebergaben,
+alle vier Richtungen, Mengenbilanz, Flaschen-/Kannenstapel, trockene Versorgung,
+Rueckstau, Aufheben und Entladen. Wiederholte Blockaktualisierung und Section-
+Reload behalten die Richtung der neuen Maschinen. Kontaktgeraeusche decken
+weiterhin jeden Materialtyp vollstaendig ab.
+
+Der native Hydrauliktest bestand in 23.42 Sekunden mit 16 Aufnahmen. Er prueft
+echte bestaetigte Schwimm-/Unterwasserwerte im endlichen Becken, dekodiertes
+Hahn-Audio, Quellenfuellung, Unterwasserabbau sowie dieselben Drop-IDs vor und
+nach der passiven Befuellung von Flasche, Eimer und Kanne. Aufnahmen zeigen den
+[Fuellvorgang](tools/benchmarks/results/basins-filling-audio-2026-11-01/hydraulics-verified/infuser-filling.png)
+und die
+[gefuellten Gefaesse](tools/benchmarks/results/basins-filling-audio-2026-11-01/hydraulics-verified/infuser-filled.png).
+Bandbewegung und genaue Mengenbilanz sind zusaetzlich durch die Transporttests
+belegt; die native Szene bestaetigt ausdruecklich den Betrieb ohne Infuser-Antrieb.
+
+Der abschliessende native Starttest bestand mit 459 Katalogicons und 1627
+UI-/Audio-Eintraegen (2086 gesamt), vor Welt-/Serverstart. Er prueft auch die
+tatsaechliche Textbreite und horizontale Zentrierung unter dem Balken. Der
+[Ladescreen](tools/benchmarks/results/basins-filling-audio-2026-11-01/startup-verified/startup-icons.png)
+zeigt eine reale Quelldatei; das Hauptmenue erscheint erst nach Freigabe.
+Beide abschliessenden nativen Logs enthalten keine Warnung, keinen Fehler und
+keine Panic. Protokolle und Aufnahmen liegen im
+[Ergebnisordner](tools/benchmarks/results/basins-filling-audio-2026-11-01/).
+
+## Phase 171: Ansaugung, Banduebergabe Und Startuebergang
+
+Das Ansaugen prueft den verbundenen Wasserkoerper mit einer begrenzten Suche.
+Ab 27 nassen Zellen oder an einer offenen ungeladenen Wassergrenze bleibt der
+Aussenwasservorrat unveraendert. Nur nachweislich isolierte Koerper unterhalb
+27 Zellen werden endlich entnommen. Dabei verlieren alle Quellen des kleinen
+Koerpers gemeinsam ihre Nachfuellmarkierung; die Entnahme verteilt sich auf
+die oberste nasse Schicht. Becken- und Rohrspeicher bleiben endlich. Physische
+Rohranschluesse bestimmen den Ansaugmund. Bestaetigte, tatsaechlich uebertragene
+Einheiten liefern die kurze Blasenaktivitaet; ein ruhendes oder gesperrtes
+System erzeugt keine dauernde Ansauganimation.
+
+Die rechteckige Vertiefung um eingetauchte Rohre entstand auch durch seitliche
+Abschwaechung der externen Wasserzelle nach dem Ersetzen einer Quelle. Verbundenes
+Naturwasser behaelt um Rohrkoerper jetzt seinen Umgebungspegel. Der Meshauftrag
+bewahrt passende gebrochene Naturpegel trotz expliziter endlicher Zellmetadaten;
+geplante trockene oder niedriger gefuellte Zellen werden nicht optisch aufgefuellt.
+Neue Regressionen beschreiben echte Quellenplatzierung, vertikale Rohre,
+Fluessigkeitsschritte und anschliessendes Meshing bei 7.3/8/16/-16 sowie die
+Grenze 26/27, Verbindungen ueber Sections, unbekannte Grenzen und endliche Tanks.
+
+Auch gesetzte Quellen oberhalb des prozeduralen Wasserpegels erhalten den
+hoechsten tatsaechlich verbundenen Quellpegel. Eine spaeter gepruefte volle
+Quelle gewinnt dabei gegen eine niedrigere natuerliche Nachbarspalte. Die
+autoritative Scheduler-Regression behaelt 49 Quellen mit 392 Einheiten und
+das endliche Umgebungswasser des eingetauchten Rohrs ueber 32 Schritte hinweg.
+Die physische Wassersaeule vereinigt beruehrende freie Teilraeume am gleichen
+X/Z, bevor sie Oberflaeche und Boden bestimmt. Echte Feststoffluecken bleiben
+getrennt; der Uebergang in Nachbarzellen waehlt den jeweils verbundenen Raum.
+Vier Rohrseiten teilen damit denselben Pegel, waehrend eine feste Welle weiter
+zwei getrennte Wasserbereiche bildet. Mesh und Wassershader bleiben gemeinsam.
+
+Der Hold Block nimmt ein einzelnes physisches Item auf. Durchgehende Bandauflage,
+angehobene Sperren und die vorhandene Kollisionspruefung steuern Einlass, Halt,
+Befuellung und Freigabe. Passende benachbarte Baender bestimmen Achse und
+Laufrichtung. Ungeeignete und volle Items passieren, Rueckstau behaelt das
+aufgenommene Item; es gibt keinen Teleport zum Ausgangsband und kein zweites
+Iteminventar. Der Fluid Infuser sitzt direkt darueber und bezieht sein Wasser
+ueber Rohre ohne eigenen Kinetikantrieb. Holz-, Eisen- und Messingmodelle folgen
+der Referenz mit ausgearbeiteter Plattform, Staendern, Flansch und Duese.
+
+Der Asset-Ladescreen verwendet keinen Zierrand. Nach erfolgreichem Preload blendet
+er in 650 ms zum Hauptmenue ueber, mit gesperrter Menueeingabe waehrend des
+Uebergangs. Die bestaetigten Stations- und Ansaugaktivitaeten benoetigen gemeinsam
+Client-/Server-Protokoll 96.
+
+Die abschliessende Suite
+`RUST_TEST_THREADS=4 cargo test --workspace --lib --bins --no-fail-fast -j1`
+bestand mit 3588 Tests, 0 Fehlern und 8 bestehenden ignorierten Tests.
+Darunter liegen 965 bestandene Welt-Tests, zwoelf Infuser-Transportfaelle und
+die echten autoritativen Wasser-Scheduler- sowie physische Saeulenregressionen.
+`cargo build --workspace --locked -j1`,
+`cargo build -p terra-client --locked -j1`,
+`cargo clippy --workspace --all-targets -j1 -- -D warnings`,
+`cargo fmt --all --check` und `git diff --check` sind ebenfalls bestanden.
+
+Der abschliessende native Hydrauliklauf bestand in 43.29 Sekunden mit 18
+Pruefaufnahmen: echte Handkurbel, beide angetriebenen Bandseiten, ein physisches
+Item auf der Station, wartende Gefaesse, sichtbare angehobene und abgesenkte
+Sperren sowie durchlaufender unveraenderter Stein. Flasche, Eimer und Kanne
+erreichen gefuellt das Ausgangsband. Der getrennte 50-Zellen-Pool behaelt seine
+49 Rohquellen mit 392 Einheiten und das endliche Umgebungswasser am Rohr vor,
+waehrend und nach dem Pumpen. Vier freie Rohrseiten behalten Pegel 19; der
+Empfaenger erhaelt Wasser, bestaetigte Ansaugung erzeugt mindestens vier reale
+Blasen, die nach dem Loslassen verschwinden. Quellenklicks, Unterwasserabbau,
+endliches Beckenschwimmen und dekodiertes Hahn-Audio bleiben geprueft.
+
+Der native Starttest bestaetigt 2086 vorgeladene Eintraege vor Welt-/Serverstart,
+den rahmenlosen Ladebereich und tatsaechliche Zwischen-Deckkraft von Ladeansicht
+und Menue. Aufnahmen zeigen die
+[Fuellstation](tools/benchmarks/results/water-station-polish-2026-11-01/hydraulics/infuser-filling.png),
+die [Ansaugung](tools/benchmarks/results/water-station-polish-2026-11-01/hydraulics/pump-natural-intake-bubbles.png)
+und den [Startuebergang](tools/benchmarks/results/water-station-polish-2026-11-01/startup/startup-transition.png).
+Beide abschliessenden nativen Logs enthalten keine Warnung, keinen Fehler und
+keine Panic. Logs und Pruefaufnahmen liegen im
+[Ergebnisordner](tools/benchmarks/results/water-station-polish-2026-11-01/).
+
+
+## Phase 172: Dichter Banddurchlauf, Infuser Abstand Und Ruhende Quellen
+
+Volle und ungeeignete Items verwenden am Hold Block jetzt denselben engen
+Durchlauf wie auf einem Foerderband. Sie reservieren keinen Einzelplatz und
+koennen die Plattform gemeinsam passieren. Erst ein fuellbares Gefaess fordert
+den Fuellplatz an: vorherige Items raeumen das Deck, danach heben die Sperren,
+das Gefaess wird angehalten und mit echtem Netzinhalt befuellt. Ungeeignete
+Nachfolger duerfen nach der Freigabe wieder dicht anschliessen.
+
+Die Ausgangsband-Items werden vor den folgenden Hold-Items mit den vorhandenen
+Kollisionsschritten bewegt. Markierte IDs verhindern eine zweite Bewegung im
+selben Tick. Dadurch bleibt die volle Restbewegung ueber dem Ausgangsroller
+bestehen; der normale Bandcursor und die allgemeine Bandphysik bleiben erhalten.
+Die Durchlauftests vergleichen die tatsaechlichen Eintrittsabstaende und pruefen
+zusaetzlich Mehrfachbelegung, volle Inhalte und Fuell-Exklusivitaet.
+
+Die Anordnung lautet Hold Block auf Y, freier Luftblock auf Y+1 und Fluid Infuser
+auf Y+2. Platzierung, Zielhilfe, Server, HUD und Fuellstrahl verwenden dieselben
+Hoehenhelfer. Ein belegter Zwischenraum sperrt die Befuellung ohne Wasserverbrauch.
+Die alte direkte Anordnung auf Y+1 fuellt nicht mehr. Der Infuser belegt nun eine
+volle Zelle einschliesslich Duese und Rohrarmaturen. Holzgehaeuse, abgeschraegte
+Kanten, Eisenrahmen, Messingbaender und erhoehte Nieten folgen der neuen
+[Sechsseitenvorlage](docs/references/fluid-infuser-block.png). Das Modell bleibt
+mit 2984 Vertices und vier verwendeten Materialien unter dem 3000er-Budget.
+Die feste seitliche Kupplung der Vorlage bleibt sichtbar; zusaetzliche
+Rohrfittings erscheinen nur an tatsaechlich verbundenen Seiten.
+
+Die flache transparente Ripple-Zweitflaeche an der Ansaugung ist entfernt.
+Sie lag nur vier Millimeter ueber dem Simulationspegel, waehrend der eigentliche
+Wassershader Wellen bewegt; Ring, Wasser und Flansch konnten sich dadurch
+ueberschneiden. Die vier runden Blasen bleiben erhalten. Ihre gesamten Koerper
+halten Abstand zum Boden, zur Oberflaeche und zum echten Flanschradius. Eine
+Regression prueft den realen Effekt an positiven und negativen Koordinaten
+ueber 96 Animationszeitpunkte, einschliesslich des Fehlens flacher Sheet-Dreiecke.
+
+F29 bildet in einem gestuetzten, geschlossenen 2x2-Becken aus zwei vollen
+Diagonalquellen vier Quellen. Einzelne oder benachbarte Quellen vermehren ihre
+Quellmarkierungen nicht. Ruhende flache Becken anderer Grundrisse werden bis
+64 Innenzellen ebenfalls konservativ nivelliert. Ohne Quellen bleibt ihre
+Gesamtmenge erhalten; alte Stroemung wird null und stabile Becken aendern ihre
+Fluid-/Wasser-Mesh-Epochen nicht weiter. Das gemeinsame Pruefbudget betraegt
+256 Zellen je Schritt. Unvollstaendige kleine Nachweise warten; nachweislich
+offene, ungestuetzte oder zu grosse Bereiche bleiben im normalen Flussablauf.
+Auch eine zuvor gesehene ungeladene Kante darf den Nachweis von mehr als 64
+bereits geladenen Innenzellen nicht ausser Kraft setzen.
+
+Eine kleine Pumpenentnahme entfernt weiterhin alle Quellflags des Gewaessers
+atomar. Danach nivelliert F29 nur noch die verbleibende endliche Menge und
+erfindet keine neuen Quellen. Boden-/Seitenflaechen, offene Raender, fallendes
+Wasser, Chunkgrenzen, Epochoverlauf, Budgetende und echte Region-Speicherung
+werden durch Regressionen abgedeckt. Ein geschlossener Endkanal oder Bodenpool
+behaelt nun sein endliches Restwasser nach dem Schliessen des Zulaufs; freie
+Wasserfallspalten und grosse offene Restwasserflaechen gehen weiterhin zurueck.
+Die vorhandenen FluidCell- und Regionformate bleiben erhalten. Clients und Server
+verwenden gemeinsam Protokoll 97 fuer den geaenderten Stationsaufbau.
+
+Die abschliessende Gesamtsuite
+`RUST_TEST_THREADS=4 cargo test --workspace --lib --bins --no-fail-fast -j1`
+bestand mit 3609 Tests, 0 Fehlern und acht bestehenden ignorierten Tests.
+Darunter liegen 981 Welt-Tests mit allen 16 Infuser-Transportfaellen, die echten
+Region-Save-/Reload-Faelle und die Modell-, Anschluss- und Ansauggeometrietests.
+`cargo build --workspace --locked -j1`,
+`cargo build -p terra-client --locked -j1`,
+`cargo clippy --workspace --all-targets -j1 -- -D warnings`,
+`cargo fmt --all --check` und `git diff --check` sind ebenfalls bestanden.
+Auch der separate Client-Build linkt mit den normalen Projektoptionen erfolgreich.
+
+Der native Hydrauliklauf am abschliessenden Stand bestand in 42.62 Sekunden
+mit 18 Pruefaufnahmen. Neun Items mit anfaenglich 0.26 Block Abstand bleiben
+neun einzelne Items. Sechs volle oder ungeeignete Items fahren unveraendert
+weiter; die Pruefung erfasst 43 Bewegungsproben und gleichzeitige Belegung des
+Hold-Decks. Flasche, Eimer und Kanne werden exklusiv befuellt und erreichen das
+Ausgangsband. Die Durchlaufpruefung misst Stillstand nur in bestaetigter
+Drop-Simulationszeit; ausbleibende Snapshots und echte Eingabepausen zaehlen
+nicht als Bewegungsausfall. Zwei Regressionen pruefen diese Uhr und eine
+weiterhin erkannte echte Sperre nach Wiederaufnahme.
+
+Der getrennte F29-Pool bildet vier Quellen mit zusammen 32 Einheiten und behaelt
+ruhende Fluid-/Wasser-Mesh-Epochen. Der grosse Ansaugpool behaelt seine 49
+Rohquellen und den endlichen wassergefuellten Raum um das Rohr. Die Pumpe
+uebertraegt tatsaechlich Wasser, erzeugt Blasen beim Ansaugen und beendet diese
+beim Loslassen. Quellenklicks, Unterwasserabbau, Beckenschwimmen und Hahn-Audio
+bleiben im selben nativen Lauf geprueft. Das Log enthaelt keine Warnung, keinen
+Fehler und keine Panic. Aufnahmen zeigen die
+[Fuellstation](tools/benchmarks/results/dense-infuser-sources-2026-11-01/hydraulics/infuser-filling.png)
+und die [Ansaugstelle](tools/benchmarks/results/dense-infuser-sources-2026-11-01/hydraulics/pump-natural-intake-bubbles.png).
+Logs und Pruefaufnahmen liegen im
+[Ergebnisordner](tools/benchmarks/results/dense-infuser-sources-2026-11-01/).
+
+
+## Phase 173: Filterfreie Normale Tunnel, Rundes Rohrwasser Und Rezeptbuch
+
+Normale Tunnel/Funnel akzeptieren keine Ghostfilter mehr. Container-Snapshots
+trennen den Random-Schalter eines normalen Tunnels von der Filterkonfiguration;
+UI, Serveraktionen und Transport verwenden dieselbe Variantenregel. Alte private
+Filter normaler Ports werden beim Region-Laden verworfen, waehrend echte
+gefilterte Varianten ihre Auswahl behalten. Normale Tunnel zeigen keinen
+Filtermodus und keinen Ghostslot, behalten aber Random-/Ordered-Extraktion.
+
+Ein eigener autoritativer Platzierungsray ueberspringt Quellwasser auch dann,
+wenn der Ursprung bereits in einer Wasserzelle liegt. Vorschau, normale
+Blockplatzierung, Orientierungen, Logistik, Baender und Schnee verwenden ihn.
+Quellenfuellung und Unterwasserabbau behalten ihre jeweils eigenen Rays. Die
+neuen Client-/Server-Regressionen pruefen insbesondere das tatsaechliche
+Bodenziel und die Ablehnung einer Platzierung in der Augenzelle.
+
+Glasrohr (172) ergaenzt den bestehenden Material-/Rohrvertrag ohne alte IDs zu
+aendern. Vier Rohre kosten drei gerahmte Glasbloecke und einen Eisenbarren.
+Das transparente Modell hat 2904 Vertices und drei benutzte Materialien;
+Flansche bleiben opak. Gespeicherter Leitungsinhalt folgt dem runden Sweep
+innerhalb der Bore, einschliesslich Boegen und Verzweigungen. Bei bestaetigtem
+Transit zeigen dezente Innenpulse auch dann reale Bewegung, wenn der Transfer
+innerhalb desselben Ticks weiterfliesst und keine gespeicherte Menge zurueckbleibt.
+Ruhende leere Rohre erzeugen keine Fluessigkeitsgeometrie; gespeicherte Mengen
+und reine Transitanzeige haben getrennte Pruefzaehler. Unvollstaendige Netze
+loeschen veraltete Flow-/Intake-Aktivitaet ohne Mengen- oder Quellveraenderung. TMI, Werkzeuge, Ausrichtung, Glas-Audio und
+Regiondaten verwenden die bestehende Registrierung. Verbundene Rohrmuender zeichnen keine
+doppelten koplanaren Stirnringe; der Innenradius ihrer Flansche passt jetzt
+lueckenlos zum Rohrkoerper, bei unveraenderten Aussenmassen.
+
+Das Einsetzen eines Rohrs entquellt eine vorhandene Wasserquelle nicht mehr.
+Rohrwechsel und Abbau zu Luft erhalten die aeussere FluidCell. Andere Teilbloecke
+bekommen dadurch keine unendlichen Quellen, und endlicher Durchfluss bleibt
+endlich. Echte kleine Pumpentnahme entfernt weiterhin alle Quellflags des
+betroffenen Gewaessers und kann es vollstaendig leeren. Die bisherige Aufnahme
+an jedem Rohrmund konnte bereits beim blossen Setzen acht Einheiten in den
+Rohrspeicher ziehen und einen kleinen Pool entquellen. Ein Rueckwaertsnachweis
+prueft jetzt vor dieser Entnahme eine gerichtete Saugroute zur laufenden Pumpe
+oder einen offenen erreichbaren Verbraucher mit ausreichendem Wasserkopf.
+Der geordnete Min-Head-Nachweis bearbeitet hoechstens 512 Knoten mit je sechs
+Kanten. Geschlossene Ventile, stehende Pumpen und zu hohe Abnehmer sind kein
+Bedarf. Gespeicherte endliche Beckenversorgung bleibt erhalten. Vier kombinierte
+Fluid-/Rohr-Scheduler-Regressionen sichern besonders den vollstaendigen
+12-Zellen-/96-Einheiten-Pool nach reiner Rohrplatzierung ab. Weitere Regressionen
+umfassen alle vier Rohrarten und sechs Richtungen, isolierte/komplett verrohrte
+Quellen, endlichen Durchfluss, Materialwechsel und Delta-/Region-Reload.
+
+Wassermesh-Auftraege behalten neben den Kollisionsboxen eine kleine Zuordnung
+der tatsaechlichen Rohranschluesse. Sichtbare Wasserflaechen werden mit dem
+16eckigen Rohr-Sweep, den Flanschen und den echten Patchdreiecken des Hubs
+beschnitten. Konkave Hubfacetten werden in Tetraeder zerlegt; weder eine ideale
+Kugel noch eine globale konvexe Huelle entfernt zusaetzliches Wasser neben dem
+Metall. An der offenen Muendung eines trockenen Rohrs wird nur der Ring
+abgezogen, sodass Wasser im sichtbaren Bore erhalten bleibt. Die Schnitte
+uebernehmen die bestehende Wasserflaeche und erzeugen keine versetzte Kopie.
+Konvexe Clipfragmente werden nach f32-Quantisierung normalisiert; leere oder
+umgekehrte Faecher an negativen Chunkgrenzen entstehen dadurch nicht.
+
+F46 baut die allgemeine Rezeptansicht zu einem JEI-aehnlichen Rezeptbuch im
+bestehenden Teramic-Stil um. Stations-Tabs, Seiten-/Alternativenwahl, zentrale
+Zutaten-/Ergebnisslots, Prozesspfeile, Mengen und Materialbedarf lesen die echten
+Rezeptkataloge. Die Ansicht reagiert auf kleine Fenster mit kleineren Slots und
+einem getrennt scrollbaren Inhalt. R navigiert auch in Rezeptzutaten und
+Ergebnisse, respektiert aber Suchfokus. Dynamische RGB-Rezepte bleiben exakt
+gefaerbt. Bestehende Stationsaktionen und Plus-Transfers bleiben autoritativ;
+reines Blaettern veraendert weder Inventar noch reservierte Crafting-Slots.
+Seitenzaehler und Alternativen gelten pro Station; Ofen und Lagerfeuer fuer
+dasselbe Ergebnis erscheinen als getrennte Tabs.
+Die nativen Rezeptpruefungen verwenden die materialisierten Tilt-Buttons und
+deren echte onclick-Handler. Stationssymbole stellen eine eigene begrenzte
+Vorschauanfrage; sie bleiben dadurch auch ohne vollstaendiges Icon-Warmup
+sichtbar. Kategorie-/Alternativenwechsel bleibt von reservierten Zutaten getrennt. Die Varianten-/Materialregeln verwenden gemeinsam
+Client-/Server-Protokoll 98; Speicherformate bleiben erhalten.
+
+Native Pruefung: Hydraulik bestand in 45,77 s mit 19 Pflichtaufnahmen,
+echtem Glasrohrspeicher und Durchfluss, Unterwasserplatzierung und erhaltener
+aeusserer Quelle. Alchemie/Logistik bestand in 36,88 s mit 13 Aufnahmen;
+normale Tunnel blieben filterfrei und gefilterte Tunnel behielten ihren Filter.
+Das gesamte Crafting-Szenario bestand mit echten OS-Mausbewegungen, Tooltips,
+Stations-/Alternativenklicks, reservierten Zutaten und binaerem Save/Reload.
+Ein zusaetzlicher Durchgang mit 960 x 640 logischen Pixeln bei 1,5-facher
+Monitor-Skalierung pruefte die kleine, scrollbare Rezeptansicht im Fenster.
+Hydraulik und Alchemie liefen ohne Warnungen oder Fehler; Crafting hatte keine
+Fehler, lediglich Monitor-/doppelte Screenshot-Anfragen als Warnungen.
+
+Die Crafting-Pruefung startet mit `TERRA_CRAFTING_SMOKE=1`,
+`TERRA_INVENTORY_MODE=survival`, `TERRA_PREVIEW_WARMUP=1` und
+`TERRA_NATIVE_OS_POINTER=1` sowie `--smoke-test-inventory --gender=f`.
+Fuer die kleine Ansicht sind Client- und Menue-Konfiguration beide auf das
+separate Fensterprofil gesetzt. Die Ergebnisse und Aufnahmen liegen unter
+`tools/benchmarks/results/recipes-glass-waterlogging-2026-11-01/`.
+
+Die nach dem IDE-Absturz vollstaendig wiederholten Workspace-Tests bestanden:
+3647 erfolgreich, keine fehlgeschlagen, acht ignoriert (zwoelf Testprogramme).
+Darunter sind 997 erfolgreiche Welt-Tests und alle 34 Rohrsystem-Regressionen.
+`cargo clippy --workspace --all-targets -j1 -- -D warnings`,
+`cargo fmt --all --check` und `git diff --check` bestanden ebenfalls.
+F46 ist nach diesen Pruefungen und den nativen Durchgaengen abgeschlossen.
+Auch `cargo build --workspace --locked -j1` bestand mit dem endgueltigen Stand
+fuer Client und Server. Beide verwenden Protokoll 98 und muessen gemeinsam
+neu gestartet werden. Die vollstaendigen Prueflogs und Quellhashes sind in
+`verification.json` und `logs/` neben den Aufnahmen hinterlegt.
+
+## Phase 174: Absperrhahn-Achsen, Endlicher Auslauf Und Mildere Sonne
+
+Die normale serverautoritative Hydraulikplatzierung verwendet den vollstaendigen
+Ausrichtungsplan. Wand-, Boden- und Deckenplatzierung liefern damit dieselben
+Rohr-/Ventilachsen wie die Vorschau. Die Ventilrotation folgt explizit derselben
+Basis wie die Kollisionsform, einschliesslich umgekehrter horizontaler Richtung.
+Die bestehende binaere Ventilbedienung bleibt erhalten.
+
+Bereits gespeicherter passiver Leitungsinhalt ist eine endliche Druckquelle,
+wenn ein offener Abnehmer mit ausreichender Hoehe erreichbar ist. Nach dem
+Schliessen der Zufuhr laeuft die Abnehmerseite weiter aus. Mengen werden durch
+echte Transfers bewegt; gesperrte Leitungen und Speicher ohne erreichbaren
+Verbraucher werden nicht geloescht.
+Hahn und Infuser sind dabei echte Terminals: Ihr Verbraucherpuffer foerdert
+nicht rueckwaerts durch den Einlass. Passive gespeicherte Mengen folgen einem
+streng abnehmenden Paar aus erforderlichem Wasserkopf und Entfernung zum
+Abnehmer. So verhindern auch leere Nebenarme einen geordneten Auslauf nicht.
+Der bestehende Bedarfsnachweis bleibt auf 512 Knoten begrenzt; gerichtete
+Pumpensaugwege und aktive Druckquellen behalten ihren bisherigen Vertrag.
+
+Die hydraulische Wassermenge wird im echten runden Profil horizontal beschnitten;
+eine obere freie Wasserflaeche schliesst Teilfuellungen. Der Renderer verwendet
+fuer Glasrohre, Pumpeninhalt und Wasserstrahlen denselben WaterAssets-Handle und
+Biomfarbvertrag wie See und Becken. Rohrvolumina liefern ihre eigene optische
+Dicke, bleiben geometrisch im Rohr und erzeugen keinen Uferschaum oder
+Spielerwellen. Bestaetigte Stroemung wird im gemeinsamen Wassershader animiert;
+aufbewahrte Menge und reiner Transit bleiben getrennt. Ansaugblaeschen behalten
+ihren eigenen Effektbatch.
+
+Die gemeinsame Sonnenkonstante fuer Setup und laufenden Tageszyklus betraegt
+65000 statt 100000 Lux. Direkte Highlights sinken um 35 Prozent (~0,62 EV),
+ohne Kamerabelichtung, ACES, Texturen, UI, Mond-, Ambient- oder Fackellicht
+umzustellen. Gezielte Tageszyklusregressionen erhalten Nacht- und Hoehlenwerte.
+
+Pruefung: Die Gesamtsuite bestand mit 3660 erfolgreichen Tests, keinem Fehler
+und acht ignorierten Tests in zwoelf Programmen. Darunter sind 1003 Welt- und
+980 Render-Tests sowie die serverautoritative Platzierung an allen sechs
+Flachennormalen. Clippy mit `--workspace --all-targets -j1 -- -D warnings`,
+Formatierung und Diffpruefung bestanden. Die Geometrie prueft alle runden
+Anschlussmasken mit acht Mengen, die vollstaendige obere Flaechenbilanz und
+sichtbare Anschlusskanten bei unterschiedlichen Nachbarpegeln.
+
+Der native Tageslichtvergleich bestand vorher und nachher mit jeweils 31
+Ansichten bei identischer Konfiguration, einschliesslich Nacht, Unterwasser,
+Schattenuebergaengen und TAA/MSAA. Die gemeinsame gruene Pixelmaske in der
+unteren Bildhaelfte zeigt in der Mittagsaufnahme rund 20 Prozent weniger
+Bildhelligkeit im oberen Dezil; sie umfasst Gras und Laub und ist keine
+physikalische Luxmessung. Die mittlere naechtliche Bildhelligkeit bleibt
+praktisch gleich. Aufnahmen, Konfiguration, Quellhashes, Vergleichsskript und
+vollstaendige Logs liegen unter
+`tools/benchmarks/results/valve-daylight-2026-11-02/`.
+
+Der abschliessende Workspace-Build fuer Client und Server bestand ebenfalls.
+Die erweiterte native Hydraulikpruefung bestand in 62,98 s mit 24
+Pflichtaufnahmen: beide Ventile wurden durch regulaere Bauaktionen gesetzt,
+Teilfuellungen sichtbar und alle 32 gespeicherten Einheiten nach Schliessen
+in den Receiver uebertragen; abgesperrter Quellvorrat und Gesamtmenge blieben
+erhalten. Die bisherige Pruefung nach dem Schliessen bilanziert nun den
+bereits vorhandenen endlichen Puffer einschliesslich exakt befuellter Gefaesse,
+statt ein sofort leeres Rohr vorauszusetzen. Alle bisherigen Hydraulik-,
+Unterwasserbau-, F29-, Pumpen- und Infuserpruefungen blieben erhalten.
+Ein vorangehender Spieltest wurde waehrend paralleler Kompilierung durch einen
+Input-ACK-Timeout unterbrochen. Der unveraenderte Wiederholungslauf ohne
+Compilerlast bestand ohne Warnungen oder Fehler; Timeouts wurden nicht erhoeht.
+
+## Phase 175: Offene Ventile Ohne Pegelpumpen Und Verschwindenden Transit
+
+Der Fehler hatte zwei Ursachen. In einer angehobenen Saugleitung konnte ein
+lokaler Stored-Druck mit groesserem Kopf die weiterhin erreichbare Wasserquelle
+verdraengen. Der Druckbaum und die Transfers konnten gespeichertes Wasser dann
+wieder in tiefere Ansaugrohre zurueckschieben. Reale Natural-/Basin-/Pump-Reichweite
+hat jetzt Vorrang vor einem reinen Restwasserseed. Ein Stored-Seed innerhalb
+aktiver Saugwege folgt in Druckausbreitung und Transfer ausschliesslich dem
+bereits bestaetigten Nachfolger zur laufenden Pumpe. Die passive gerichtete
+Restwasserentleerung bleibt erhalten.
+
+Die bisherige Flussanzeige leitete ihre Aktivitaet aus dem horizontalen
+FluidCell-Flussvektor ab. Senkrechter Transport hatte deshalb den Wert null;
+ein im selben Tick leer konsumierter Puffer verlor ebenfalls seine Anzeige.
+Ein eigenes fluechtiges Transferflag bestaetigt nun echte Aufnahme, Bewegung
+und Entnahme unabhaengig von der verbleibenden Menge. Ein Gefaess-/Terminaldraw
+markiert nur die tatsaechliche Strecke vom entnommenen Puffer zum Verbraucher,
+nicht unbeteiligte weiter oben liegende Speicher. Der naechste Hydraulikschritt
+setzt die Aktivitaet zurueck; unvollstaendige Netze loeschen sie ebenfalls.
+Der bestehende zweidimensionale Richtungsvektor bleibt unverfaelscht.
+
+Das Flag wird nicht gespeichert und veraendert das bestehende binaere
+Wasserformat nicht. Client-Snapshots verwenden weiterhin das vorhandene
+flowing-Feld. Leere Transitpuffer zeichnen einen schmalen Strom durch den
+vollstaendigen runden Verlauf statt eines erfundenen unteren Achtel-Pegels.
+Gespeicherter Fuellstand, gemessene Menge und reine Transitgeometrie bleiben
+getrennt. Der begrenzte Renderstatus weist pro Rohr die verarbeiteten
+Snapshotfolgen und realen Wasservertices aus.
+
+Gezielte Vergleiche setzen gleichzeitig horizontale und vertikale offene
+Ventile anstelle gerader Rohre ein. Mengen, Quellbedarf, Pumpenguthaben,
+Transferaktivitaet und Arbeitszaehler muessen pro Tick identisch sein. Hinzu
+kommen das angehobene Ansaug-Repro, unveraenderte Mengenbilanz, ein leer
+konsumierter realer Puffer und das sofortige Ende veralteter Transitaktivitaet.
+Die native Pumpenpruefung beobachtet alle drei Glasrohre ueber mehrere Sekunden
+und unterschiedliche tatsaechlich gerenderte Snapshots; stehendes Wasser bei
+Rueckstau ist weiterhin sichtbar, jedes Rohr muss auch eigenen echten
+Transport zeigen. Die bisherigen Druck-, Stop- und endlichen Auslaufpruefungen
+bleiben erhalten.
+
+Pruefung: `cargo check --workspace --all-targets -j1`, der gemeinsame
+Client-/Server-Build, Clippy mit `--workspace --all-targets -j1 -- -D warnings`,
+Formatierung und Diffpruefung bestanden. Die Gesamtsuite bestand mit 3667
+erfolgreichen Tests, keinem Fehler und acht ignorierten Tests in zwoelf
+Programmen, darunter 1006 Welt-Tests. Der Postcard-Vergleich bestaetigt, dass
+das fluechtige Transferflag keine gespeicherten Wasserbytes hinzufuegt.
+
+Die native Hydraulikpruefung bestand in 66,21 s mit 24 Pflichtaufnahmen ohne
+Warnungen oder Fehler. Alle drei Glasrohre behielten ueber 3,64 s und zehn
+unterschiedliche, jeweils bereits gerenderte Snapshots eigene sichtbare
+Wassergeometrie; alle drei meldeten in allen zehn Samples echte Transfers.
+Receiverzuwachs, Pumpe, Druckaufbau, korrektes Stoppen und der vollstaendige
+endliche 32-Einheiten-Auslauf wurden ebenfalls bestaetigt. Die strengere
+Zeitpruefung entdeckte eine alte unbeabsichtigte Verbindung des Receivers zu
+zwei Schau-Rohren; diese Testmodelle stehen jetzt getrennt. Der Receiver wird
+vor dem Test auf unerwuenschte Rohrnachbarn geprueft. Die Mengenassertion blieb
+streng. Das endliche A/B-Quellbecken liegt vollstaendig auf seiner tatsaechlich
+angeschlossenen Entnahmeebene und muss alle 40 Anfangseinheiten einschliesslich
+Leitungspuffer in den Empfaenger liefern.
+
+Referenzbild, Aufnahmen, Quellhashes und vollstaendige Logs liegen unter
+`tools/benchmarks/results/valve-flow-2026-11-02/`.
+
+## Phase 176: Wandfackeln, Gebundene Rohrtexturen Und Nahtlose Wasserwellen
+
+Der Wandfackelfuss ragte wegen eines gerundeten Montageversatzes geringfuegig
+in seine Stuetzwand. Die echte Clearance-Pruefung wies dadurch insbesondere
+Welten mit erweiterten Kinetikformen ab. Der gemeinsame Core-Transform setzt
+den Fuss jetzt vor die Wandflaeche; es gibt keine pauschale Kollisionsausnahme.
+world::torches vereinheitlicht Normale, Facing und Support fuer Vorschau,
+Platzierungsplan und Server. Vier Wandseiten und Boden bleiben gueltig;
+Decken-/Teilblockmontage wird nach den bestehenden Regeln abgewiesen. Ein
+ungeeigneter Supportersatz loest die Fackel genau einmal samt Drop.
+
+Das pro Quad nach dominanter Normale gewaehlte UV-Achsenpaar sprang in Boegen.
+Die neuen Zylinderkoordinaten folgen dem Sweep, einschliesslich passender
+Tangenten und Handedness der Innenflaechen. Hub und Stirnringe verwenden feste
+Charts. Kleine Messingringe lagen zuvor innerhalb der eigentlichen Bogenregion;
+sie sitzen nun axial bei .20..25 beziehungsweise .75..80 auf den geraden Armen.
+Die vier Rohrassets erhalten dazu Zylinder-UVs und Tangenten. Der eigentliche
+Rohrkoerper und sein Rund-/Bogenprofil bleiben geometrisch unveraendert.
+
+Ventile und Pumpen hatten bisher keinen sichtbaren Wasserclip-Vertrag und
+wurden ueber ihre groben Kollisionsboxen maskiert. Separate sichtbare Profile
+bilden jetzt Rohr-/Flanschachtecke, Ventilkoerper und Handradbohrung sowie das
+Pumpengehaeuse ab. Physik- und Entnahmevolumen bleiben getrennt erhalten.
+Die kleinen Rundrohr-Stuetzringclips stimmen mit den regenerierten Assets ueberein.
+
+Fuer das Flackern wurden zwei voneinander unabhaengige bewegte Randspalte
+nachgewiesen. Ein Rohr eine Zelle hinter einer X/Z-Chunkgrenze erzeugte nur im
+einen Worker virtuelle Natur-Uebergangszellen. Diese zaehlten faelschlich als
+Fluidveraenderung und pinnten dieselbe gemeinsame Ecke einmal auf null und
+beim Nachbarn auf eins. Das Pinning unterscheidet jetzt diese exakten
+Natur-Fringe-Zellen von echten Fluidveraenderungen. Zweitens erhielt dieselbe
+bewegte Ecke zuvor verschiedene Stroemungsdaten aus den angrenzenden Zellen;
+der Shader verwendete deshalb unterschiedliche Wellenamplituden. Bewegte
+natuerliche Gitterecken verwenden nun den aus denselben vier SurfaceColumns
+ermittelten gemeinsamen Flow. Der Shadervertrag bleibt erhalten, echte
+Rohrkontakte bleiben gepinnt und Fernwellen werden nicht abgeschaltet.
+
+Regressionen decken echte Survival-Fackelrequests und Itemverbrauch, negative
+Sectiongrenzen, Montagekollision, Supportersatz/Drop, Sweep-UVs und Tangenten,
+Stuetzringlage, sichtbare Valve-/Pump-Profile sowie echte getrennte Worker an
+X/Z-Grenzen plus und minus 16 ab. Der erweiterte native Lauf setzt vier
+Wandfackeln ueber gewoehnliche Bauklicks und prueft alle Rohrmaterialien,
+Glasinnenwaende aus zwei Richtungen und die Wasseroberflaeche aus zwei Ansichten.
+
+Pruefung: Workspace-Build, Clippy fuer alle Targets mit `-D warnings`,
+Formatierung und Diffpruefung bestanden. Die Gesamtsuite bestand mit 3686
+erfolgreichen Tests, keinem Fehler und acht ignorierten Tests in zwoelf
+Programmen, darunter 1016 Welt-Tests.
+
+Der native Hydrauliklauf bestand in 74,95 s mit 35 Pflichtaufnahmen. Alle vier
+Wandfackeln wurden mit normalen Rechtsklicks gesetzt und verbrauchten jeweils
+genau ein echtes Item. Alle vier Rohrmaterialien, Glasinnenwaende und beide
+Wasseransichten bestanden. Die vorhandenen Hydraulikpruefungen einschliesslich
+kontinuierlichem Glasrohrtransport und endlichem Ventilauslauf bleiben erhalten.
+Ein zusaetzlicher Naturwasserlauf bestand mit 33 Aufnahmen; sechs Teile stehen
+im echten Oasengewaesser mit erhaltenen Quellen. Die CPU-Geometrie weist 928
+bewegte und 72 gepinnte Kontaktvertices aus. Beide Nahansichten verwenden
+fortschreitende Zeit und gegenueberliegende Kameras.
+
+Der native Testaufbau prueft entfernte Galerierohre anhand tatsaechlich geladener
+Positionen und nach dem Wasserupload die dauerhaften Mesh-Entities. Wasserproben
+liegen nachweislich ausserhalb der legitimen Kollisionskoerper. Eine Bevy-Warnung
+zu einem bereits entfernten RenderLayers-Empfaenger waehrend eines Szenenwechsels
+ist im Hydrauliklog festgehalten; alle Assertions und Aufnahmen wurden beendet.
+Referenz, Aufnahmen, Konfigurationen, Quellhashes und Logs liegen unter
+`tools/benchmarks/results/torch-pipe-surfaces-2026-11-02/`.
+
+## Phase 177: Runde Rohrdurchfuehrungen, Infuser-Strahl Und Teilblockwasser
+
+Normale Rohre liessen bei Wand-/Dachdurchfuehrungen eine ganze Voxelzelle offen.
+Der bestehende Ofenrohr-Capture-/Compose-Pfad ergaenzt jetzt eine passende
+Umfassung auch fuer Holz, Stein, Eisen und Glas. Material und Textur kommen
+von den tatsaechlichen vollen Nachbarflaechen. Runde 16-Eck-Portloecher,
+Rohr-Sweep-Innenwaende und gemeinsame Flaechenkullung schliessen Boegen und
+Abzweigungen an. Messingbaender behalten ihren eigenen Platz; freie Rohrnetze
+erzeugen keine neue Terrainfuellung.
+
+Der Infuser-Strahl bestand nur aus sechs getrennten kleinen Tropfen. Er ist
+jetzt ein geschlossener runder Wasserkorper zwischen dem echten Auslass und
+dem tatsaechlichen gehaltenen Einzelitem. Ein eigener Effektmarker im
+gemeinsamen Wassermaterial verwendet reale Strahldicke, bewegte Normalen und
+dezente Glanzlichter. Wasserfarbe und Umgebungsbeleuchtung bleiben gemeinsam;
+es gibt keine leuchtende Ersatzfarbe. Die bisherige lokale Pufferpruefung
+konnte trotz bestaetigtem Fuellvorgang Wasser aus vorgeschalteten Rohren
+uebersehen. Sichtbarkeit folgt nun der autoritativen Filling-Phase samt
+Supply-, Item- und Traegerpruefung. Ohne Versorgung und bei nicht fuellbaren
+Items bleibt der Strahl aus.
+
+Zaunformen fehlten im Partial-Vertrag und wurden als trockene volle Wuerfel
+behandelt. Die vorhandenen Shape-Metadaten und der gemeinsame Collision-Visitor
+beschreiben jetzt den freien Aussenraum; Zaunarme folgen ihren echten Nachbarn.
+Eigene Basin-/Kesselreservoirs bleiben getrennt. Ein begrenzter, geometrisch
+gepruefter Quellpfad gleicht den Pegel verbundener Konstruktionshohlraeume an,
+ohne neue Sourceflags zu erfinden. Normale freie Ausbreitung behaelt ihre
+Daempfung. Ein endliches niedriges Slabbecken wird gegen seinen tatsaechlichen
+Pegel auf Dichtheit geprueft statt faelschlich gegen eine volle Wasserzelle.
+Eine vom Eimer gesetzte volle Quelle oberhalb einer halbhohen Slabwand darf
+weiterhin ueber deren Oberkante laufen.
+
+Der Mesh-Sampler unterscheidet den logischen Wasserkopf von der geklemmten
+Speicherhoehe gedeckter Taschen. Ein vollstaendig nasser geschlossener Pocket
+senkt keinen benachbarten freien Spiegel mehr ab; ein hoeherer verbundener Kopf
+wird nur uebernommen, wenn dadurch exakt kein zusaetzlicher Hohlraum nass wird.
+Trockene obere Luecken bleiben trocken. Vollstaendig untergetauchte Teilmodelle
+erhalten keine inneren vertikalen Voxelwasserwaende. Der Wasserhahn hat ebenfalls
+ein sichtbares Rundprofil mit seinen tatsaechlichen Ringspalten.
+
+Pruefung: Workspace-Build, Clippy fuer alle Targets mit `-D warnings`,
+Formatierung und Diffpruefung bestanden. Die Gesamtsuite bestand mit 3712
+erfolgreichen Tests, keinem Fehler und acht ignorierten Tests in zwoelf
+Programmen; darunter 1031 Welt- und 994 Renderer-Tests.
+
+Der native Hydrauliklauf bestand mit 35 Pflichtaufnahmen in 76,04 s. Der aktive
+Infuser zeichnete einen bestaetigten durchgehenden Strahl mit 794 Vertices;
+der geschlossene Infuser blieb ohne Strahl. Die vorhandenen Pumpen-, Eimer-,
+Kannen-, Tor-, Quellen-, Wandfackel- und endlichen Auslaufpruefungen bestanden.
+Die neue optionale Partial-Water-Szene bestand mit fuenf Aufnahmen in 11,66 s:
+16 endliche Einheiten bleiben im niedrigen Slabbecken, verbundene Treppen-/
+Zaunluecken erreichen den Quellpegel, Pfosten bleiben fest und sieben
+untergetauchte Teilblockposen bewahren ihre Quellen. Alle vier Rohrmaterialien
+schliessen Wand- und Dachdurchfuehrungen. Der bisherige Wasserfalllauf bestand
+ebenfalls mit zwei Aufnahmen und messbarem Rueckgang nach Quellverschluss.
+
+Die Gesamtsuite entdeckte einen unerwuenschten Sourcehead-Bypass ueber den
+winzigen Deckspalt abgesenkter Terrainpfade. Diese behalten ihre normale
+seitliche Daempfung; echtes fallendes Wasser darf den Freiraum weiterhin
+fuellen. Ein alter Drain-Test war allseitig unterhalb einer Slabkante
+eingeschlossen: Seine bisherige Trockenannahme widersprach dem nun korrekten
+Restwasser. Er besitzt jetzt einen echten Abfluss; die strengen Trocken- und
+Zeitpruefungen bleiben. Eine eigene Mengen-/Reloadregression sichert die
+geschlossene Resttasche ab.
+
+Eine bereits bekannte Bevy-Warnung zu einem entfernten RenderLayers-Empfaenger
+trat beim Szenenwechsel im Hydrauliklauf auf; alle Assertions und Aufnahmen
+bestanden. Referenzen, Aufnahmen, Quellhashes, Konfigurationen und Logs liegen
+unter `tools/benchmarks/results/partial-water-pipe-surrounds-2026-11-02/`.
+
+## Phase 178: Geschlossene Wasserraender Und Wassererhalt Beim Rohrsetzen
+
+Die bisherige Ueberlaufannahme entsprach nicht dem gewuenschten Verhalten.
+Treppen, Slabs und Zaeune dienen nun als Beckenrand: ihre freien Zwischenraeume
+koennen Wasser aufnehmen, geben es aber seitlich nicht an den Aussenraum weiter.
+Die Quellpfadpruefung verwendet dieselbe Flussrichtung. Ein vollstaendig aus
+Konstruktionsbloecken bestehender geschlossener Rand begrenzt den Fuellpegel
+auf seine niedrigste feste Oberkante; eine volle Eimerquelle legt dadurch keine
+Wasserflaeche ueber einen halbhohen Slabring. Endliche geschlossene Becken
+behalten ihre Mengenregeln.
+
+Beim echten Block-Commit werden auch implizite Naturwasserzellen vor dem
+Rohrsetzen aus der vorbereiteten Weltspalte gesichert und als Fluidzustand in
+die Replica-Deltas aufgenommen. Wassergefuellete Rohre erhalten keine aus
+Nachbarwaenden abgeleitete Terrainumfassung: diese konnte bisher den freien
+Wasserraum wie einen ganzen Block verdecken. Trockene Wanddurchfuehrungen
+behalten ihre runde Umfassung.
+
+Die Spielpruefung verwendet jetzt einen frei stehenden Zaunring ohne zusaetzliche
+Steinwand und kontrolliert explizit dessen trockene Aussenseiten. Neue
+Regressionen pruefen mehrere Randmaterialien, alle vier normalen Rohrarten und
+den Wassererhalt beim echten Commit samt Replica-Import.
+
+Die native Pruefung fand beim Absenken mehrerer bereits voller Slabquellen
+einen bisherigen Unsigned-Unterlauf in der Mengenbuchhaltung. Zugefuegte und
+entfernte Mengen werden nun getrennt verbucht; eine eigene Regression prueft
+jeden Schritt mit exakter Bilanz. Der abschliessende Workspace-Lauf besteht
+3716 Tests ohne Fehler (8 ignoriert); Build, Clippy mit `-D warnings`, Format-
+und Diffpruefung bestehen ebenfalls.
+
+Beide nativen Laeufe bestehen: sechs Partial-Water-Aufnahmen (12,83 s) und
+35 Hydraulik-Pflichtaufnahmen (74,75 s), einschliesslich echtem Unterwasserbau,
+Quellerhalt beim Rohrsetzen, kontinuierlichem Glasrohrfluss und Infuserbefuellung.
+Beim Hydraulik-Szenenwechsel erschien einmal die bereits bekannte Bevy-Warnung
+zum RenderLayers-Eintrag an einer entfernten Entity; keine Assertion schlug fehl.
+Referenzen, Bilder, Logs und Quellhashes liegen unter
+`tools/benchmarks/results/closed-banks-waterlogged-pipes-2026-11-02/`.
+
+## Phase 179: Nasse Zaunseite, Teilblock-Wassererhalt Und Ueberflutete Fackeln
+
+Die Zaunreferenz verlangt eine Grenze innerhalb der Zaunzelle. Verbundene
+Streben trennen nun vier horizontale Bereiche um den Pfosten. Eine begrenzte
+Suche durch diese Bereiche bestimmt die vom vorhandenen Wasser erreichbare
+Seite, auch an Ecken und ueber Section-Grenzen. Physik, Punktabfragen und
+Wassermesh benutzen dieselben Bereiche. Die trockene Seite begrenzt Wasser,
+verdeckt aber keine sichtbare Wasserflaeche in einer Strebenoeffnung. Bereits
+untergetaucht gesetzte Zaeune behalten ihr vorhandenes Quellwasser rundum.
+
+Alle wasserfuellbaren Teilbloecke behalten beim echten Commit ihr vorhandenes
+Naturwasser und echte Quellflags; endliches Wasser wird dabei nicht zur Quelle.
+Auch beim direkten Journal-Wechsel auf einen anderen Teilblock bleibt die
+vorhandene Quelle erhalten; ein Vollblock entfernt sie.
+Der bisherige Drain-Test sperrt seinen Zufluss deshalb mit einem echten
+Vollblock. Ein Rohr genau auf einer ganzzahligen Wasseroberflaeche darf seine
+trockene Zelle nicht mit Terrain auffuellen und so das Wasser darunter
+verdecken: beruehrende Naturwasserzellen werden beim Commit mitgesichert und
+die Terrainumfassung beruecksichtigt diesen Kontakt.
+
+Die Punktabfrage behaelt bei einer erhaltenen Quelle unter einer horizontalen
+Welle die Oberkante des tatsaechlich verbundenen freien Intervalls. Ohne
+prozedurale Wassersaeule darf sie nicht auf die gesamte gespeicherte
+Zellhoehe zurueckfallen. Der bestehende strenge Test fuer getrennte obere und
+untere Wasserraeume bleibt unveraendert.
+
+Fackeln werden im Wasser sowohl in der Platzierungspruefung als auch beim
+Commit abgelehnt. Erreicht Wasser eine bereits gesetzte Fackel, baut die
+Autoritaet sie ueber den normalen Editpfad ab und erzeugt genau einen Drop.
+Wasser, Posebereinigung und Replica-Deltas bleiben dabei konsistent. Leere
+Kontaktlisten loesen keine staendigen Journal-Aenderungen aus.
+
+Die native Partial-Water-Szene prueft die innere Zaunseite einschliesslich
+Ecken, wassergefuellte Teilmodelle ohne nachtraegliches Einsetzen ihres Wassers,
+Rohre auf der Wasseroberflaeche und die Fackelregeln. Sie erhaelt eine
+Zaun-Draufsicht und eine Ansicht wassergefuellter Wandmodelle.
+
+Der abschliessende Workspace-Lauf besteht 3721 Tests ohne Fehler (8 ignoriert,
+12 Testprogramme). Der unveraenderte Test fuer getrennte Wasserintervalle an
+der horizontalen Welle besteht ebenfalls. Build, Clippy fuer alle Targets mit
+`-D warnings`, Format- und Diffpruefung bestehen. Die beiden abschliessenden
+nativen Laeufe bestehen mit acht Partial-Water-Aufnahmen (14,80 s) und
+35 Hydraulik-Pflichtaufnahmen (74,87 s), ohne Warnungen oder Fehler im Log.
+Die Bildkontrolle bestaetigt die trockene aeussere Zaunhaelfte und den freien
+Wasserraum um Rohre an Beckenwaenden. Fackel-Wasserplatzierung wird abgelehnt;
+die nachtraeglich ueberflutete Fackel erzeugt genau einen Drop bei erhaltenem
+Wasser. Historische Vorschauaufnahmen sind getrennt markiert. Referenzen,
+Aufnahmen, Logs, Konfigurationen und Quellhashes stehen unter
+`tools/benchmarks/results/fence-inner-water-partial-blocks-torches-2026-11-02/`.
+
+
+## 180. Kupferinventar, Crafting Recipes Und Wasser An Rohren
+
+Player Inventory und Crafting Recipe folgen den beiden neuen Kupfer-/Braunvorlagen:
+transparenter Nine-Slice-Rahmen, Titelplakette, goldene Auswahl, Avatar zwischen
+zehn Ausruestungsplaetzen, 2x2-Crafting und Rezeptbuch. 36 Rucksack- und neun
+Hotbarplaetze sind echte Inventarplaetze. Die Rezeptansicht zeigt Stationsreiter,
+Zutatenraster, Ergebnis, Itembeschreibung und alternative Rezepte mit Miniaturen.
+Der gemeinsame Itembrowser hat Suche, Filter und Seitenauswahl. Vorschau-Icons
+werden auch fuer Alternativrezepte angefordert, der neue Rahmen vorab geladen.
+Reines Nachschlagen erzeugt im Creative-Modus keine Items.
+
+Die Ursache des noch sichtbaren Wasserkastens wurde in einer isolierten Kopie
+der gespeicherten Testwelt reproduziert: Der Terrainrenderer rekonstruierte
+Voxelkontaktflaechen von Fluid Water Block neben Rohrmodellen, zusaetzlich zum
+korrekten Fluidmesh. Diese Rekonstruktion ueberspringt jetzt Wasser. Ein Test mit
+allen vier echten Rohrmodellen deckt Innenzellen und alle sechs Sectiongrenzen ab.
+Dekoratives Solid Water erhaelt beim Rohrsetzen seine Wassermenge; interne
+Kontaktflaechen an vollstaendig nassen Modellen werden gezielt aktualisiert.
+Vorher-/Nachher-Aufnahmen verwenden dieselbe Unterwasserkamera. Der originale
+Spielstand wurde fuer diese Pruefung nicht geoeffnet oder veraendert.
+
+Alte Inventardateien bleiben lesbar. Begrenzte Tuple-Serde erweitert Reservierung,
+Drag und kombinierte Containeransichten auf 45 beziehungsweise 81 Plaetze.
+Netzwerkprotokoll 99 setzt passende Client-/Serverversionen voraus.
+Referenzen, echte native Aufnahmen und abschliessende Pruefprotokolle:
+[Phase-180-Bericht](tools/benchmarks/results/copper-inventory-underwater-pipes-2026-11-02/README.md).
+
+Abschluss: 3732 Tests bestanden, keine fehlgeschlagen, acht ignoriert;
+Workspace-Build, Clippy mit `-D warnings`, Format und Diff-Pruefung erfolgreich.
+57 native Fixture-Aufnahmen sowie der gespeicherte Vorher-/Nachher-Vergleich.
+Inventar und Rezeptbuch sind in 1680 x 936 und 1025 x 641 Pixeln mit echten
+Betriebssystem-Klicks geprueft. Der Blur auf dem Layoutroot wurde entfernt, weil
+er beim Verkleinern seine alte Breite festhielt und den Browser beschnitt.
+
+## 181. Kompaktes Inventar, Modales Rezeptbuch Und Ofenreferenz
+
+Inventar- und Rezeptansichten haben keine X-Schaltflaechen mehr. E und ESC
+schliessen zuerst das Rezept-Popup, dann das erhaltene Inventar. Das Buch am
+Craftingbereich klappt ausschliesslich den Itembrowser ein und aus. Kompaktere,
+zentrierte Kupferrahmen, vertikale Kategorie-Tabs links am Itembrowser und ein
+Filter-Reset; die Seitenzahl steht mittig zwischen den Rezeptpfeilen.
+
+Rezeptansichten liegen als eigene Ebene ueber dem abgedunkelten Inventar.
+Der Hintergrund bleibt erhalten und nimmt keine Zeigeraktionen an. Die dritte
+Vorlage ist als eigene Ofenansicht umgesetzt: Input, ausgewaehlter Brennstoff,
+vorhandenes Ofenmodell, Ergebnis, Dauer und Schmelzalternativen. Alternative
+Brennstoffe kommen aus der vorhandenen Registry; ihre Auswahl aendert nur die
+Vorschau. Tickangaben folgen dem konfigurierten Servertakt. Holz-Wildcards tragen
+nun die ausdrueckliche Angabe „Any wood planks“ mit allen vier erlaubten Arten;
+insbesondere ist die Truhe nicht auf die gerade abgebildete Holzart beschraenkt.
+
+[Referenzen, native Aufnahmen und Pruefung](tools/benchmarks/results/inventory-modal-furnace-2026-11-02/README.md).
+
+Abschluss: 3735 Tests bestanden, keine fehlgeschlagen, acht ignoriert; letzter
+vollstaendiger Lauf mit vier Testthreads. Workspace-Build, Clippy fuer alle
+Targets mit `-D warnings`, Format und Diff-Pruefung erfolgreich. 13 native
+Aufnahmen in 1680 x 936 und 1025 x 641 Pixeln mit realen Betriebssystem-Klicks
+und Tastendruecken, geprueften Ofen-Inhaltsgrenzen und unveraendertem autoritativem
+Inventar. Der erste Netzwerk-Timeout und die erfolgreichen Wiederholungen sind
+im Bericht dokumentiert. R ueber dem Katalogitem oeffnet dessen Rezept-Popup.
+
+## 182. Quadratische Slots, Pagination Und Weitere Referenz-UIs
+
+Spielerinventar passt die Breite an die Hoehe an; Rucksack und Inventar-Hotbar
+verwenden quadratische Zellen, auch bei eingeklapptem Itembrowser. Pagination
+steht rechts und stoppt an den Enden. Explizite Grid-Tracks runden physische
+Pixel stabil, Kapazitaetsaenderungen erhalten den Item-Offset und die Suche
+normalisiert den internen Seitenindex. Rezept-Popups enthalten keinen Itembrowser.
+
+Holz-Wildcards zeigen Oak, Spruce, Birch und Cherry gleichzeitig als waehlbare
+Vorschauen. Vorschauwechsel aendern weder Reservierungen noch Inventarinhalt.
+Kesselrezepte besitzen eine eigene Referenzansicht mit Zutaten/Wasser,
+wiederverwendbarem Ruehrwerkzeug, Kesselmodell, Ergebnis und echten Alternativen.
+Der Balken folgt ausschliesslich der autoritativen Kesselarbeit, inklusive
+Fortschrittsaenderungen ohne neue Inventarrevision.
+
+Hotbar mit Kupfer-/Blatt-/Kristallrahmen, neun echten Item-Slots, Mengen und
+Nummernplaketten. Startmenue mit gemalter Landschaft, freigestelltem TERAMIC-Logo
+und einzeln bedienbaren Buttons. Vier neue PNG-Assets per Builtin-Imagegen aus
+der Bildreferenz erstellt und vor dem Menue vorgeladen; Pixelbilder behalten ihr
+Original-Alpha. Transparente Randbereiche werden nur beim Rendern geclippt.
+
+[Aufnahmen, Prompts und Pruefbericht](tools/benchmarks/results/interface-pagination-square-slots-2026-11-02/README.md).
+
+Abschluss: 3740 Tests bestanden, keine fehlgeschlagen, acht ignoriert.
+Workspace-Build, Clippy fuer alle Targets mit `-D warnings`, Format und
+Diff-Pruefung erfolgreich. 24 native Aufnahmen in 1680 x 936 und 1025 x 641
+Pixeln; echte Betriebssystem-Eingaben, quadratische Slots, rechtsbuendige
+Seitennavigation, vier interaktive Holzvorschauen und unveraendertes Inventar.
+
+## 183. Inventar Mit 27 Plaetzen Und Weitere Kupfer-Menues
+
+Spieler besitzen 18 Rucksackplaetze und neun Hotbarplaetze. Character und
+Crafting nutzen die frei gewordene Hoehe. Der Itembrowser verwendet dieselbe
+quadratische Zellgroesse wie der Rucksack und leitet seine Seitenkapazitaet aus
+passenden Zeilen und Spalten ab. Die Hotbar zeigt den ganzen 2172 Pixel breiten
+Rahmen mit beiden Endornamenten und ohne zusaetzliche dunkle Hintergrundplatte.
+
+Singleplayer besitzt einen eigenen Hoverzustand. Pause verwendet das Logo und
+die Buttons des Hauptmenues. Settings und Singleplayer verwenden Kupferrahmen,
+Titelplaketten und passende Bedienfelder nach den neuen Vorlagen. Settings hat
+linke Kategorie-Tabs; die Weltliste zeigt echte Manifest-Versionen/Spielmodi.
+Vorhandene Kategorien, Einstellungen und Weltaktionen bleiben erreichbar.
+
+Protokoll 100 verwendet 27 Inventareintraege. Alte gespeicherte Inventare mit
+bis zu 45 Eintraegen bleiben lesbar. Beim Beitritt werden ueberzaehlige Items
+zuerst einsortiert und der Rest am Beitrittsort abgelegt; fehlende Drop-Kapazitaet
+bricht die Uebernahme atomar ab. Speicher-, Erhaltungs- und Netzwerkregressionen
+decken die neue Groesse und die Uebernahme ab.
+
+[Vorlagen, Aufnahmen und Pruefung](tools/benchmarks/results/interface-menus-27-slots-2026-11-02/README.md).
+
+Abschluss: 3743 Tests bestanden, keine fehlgeschlagen, acht ignoriert.
+Workspace-Build, Clippy fuer alle Targets mit `-D warnings`, Format und
+Diff-Pruefung erfolgreich. 34 native Aufnahmen in 1680 x 936 und 1025 x 641
+Pixeln, echte Betriebssystem-Eingaben und unveraendertes Inventar. Pause ist
+auf Zentrierung und Button-Grenzen geprueft; Screenshot-Aufnahmen erfolgen
+vor dem jeweils naechsten direkten Ansichtswechsel.
+
+## 184. Slotdetails, Holzalternativen Und Kesselreferenz
+
+Crafting-Zellen und Inventarzellen haben dieselben Masse. JEI-Zellen sind
+25 Prozent kleiner, Kategorien rund 20 Prozent groesser und die Tonne sitzt
+unten in der Leiste links neben JEI. Suchtext besitzt linken und vertikalen
+Innenabstand. Spieler behalten 18 Rucksack- und neun Hotbarplaetze.
+
+Holzrezepte zeigen Oak, Spruce, Birch und Cherry als eigene Alternativkarten
+mit Grid, Name und Menge. Karten und Seitenpfeile wechseln nur die Vorschau;
+Registry, Reservierungen und Items bleiben unveraendert. Kesselrezepte zeigen
+die neue freigestellte Referenzgrafik, groessere Zutaten und Ergebnisse sowie
+echte Rezeptdaten und autoritativen Fortschritt. Das PNG wurde mit dem
+eingebauten Imagegen erzeugt, mit Original-Alpha gespeichert und vorgeladen.
+
+Start- und Welt-Ladeansichten sowie Create-/Delete-Popups verwenden den
+Kupferstil. Der Startscreen bleibt rahmenlos und blendet ins Hauptmenue ueber.
+Menueaktionen sitzen mit mehr Innenabstand oberhalb der Rahmenleisten.
+
+Abschluss: 3744 Tests bestanden, keine fehlgeschlagen, acht ignoriert.
+Workspace-Build, Clippy mit `-D warnings`, Format und Diff-Pruefung erfolgreich.
+40 native Aufnahmen inklusive echtem Preload/Fade; Welt-Ladebilder verwenden
+repraesentative View-Daten. Keine bestehenden Spielstaende veraendert.
+[Vorlagen, Aufnahmen, Grafik-Prompt und Pruefung](tools/benchmarks/results/copper-ui-details-cauldron-2026-11-03/README.md).
+
+## 185. Geraeteoberflaechen, Rezeptvorlagen Und F1
+
+Ofen, Brecher, Mischer, Kessel, Lagerfeuer, Truhen, verbundene Werkbaenke
+und Logistikfilter verwenden gemeinsame Kupferrahmen und quadratische Slots.
+Schmale Fenster stapeln die Arbeitsbereiche; Listen bleiben scrollbar.
+Auch Blockinformation, Chat, Karten-/Wegpunktdialoge, Minimap-Bedienelemente,
+Multiplayer und verbleibende Einstellungen folgen den warmen Materialien.
+
+F1 zeigt rahmenlose Textspalten mit echten Leistungs-, Streaming-, Positions-,
+Welt-, Wetter-, Netzwerk- und Zieldaten. Fehlende optionale Messwerte stehen
+als `--`; Minimap und Blockkarte ueberdecken die Diagnose nicht.
+
+Crafting- und Ofenrezepte folgen den neuen Vorlagen mit grosser Prozessansicht,
+Metadaten und echten Alternativen. Rezept-Popups bleiben ohne Itembrowser
+und X-Schaltflaeche. Die neue Ofenillustration wurde mit dem eingebauten
+Imagegen erzeugt, mit Original-Alpha gespeichert und ins Preload aufgenommen.
+
+[Vorlagen, native Aufnahmen, Grafik-Prompt und Pruefung](tools/benchmarks/results/all-surfaces-recipes-debug-2026-11-03/README.md).
+
+Pruefung: 3745 Workspace-Tests bestanden, keine fehlgeschlagen, acht ignoriert.
+Nach der Korrektur bestaetigter Weltkoordinaten bestehen alle 448 UI-Tests.
+Workspace-Build, Clippy aller Targets mit `-D warnings`, Format-, Diff- und
+vier CSS-Parserpruefungen erfolgreich. 72 native Aufnahmen inklusive echter
+E-/F1-Tasten und 768-Pixel-Rezeptdokumente. Geraete verwenden validierte
+temporaere Client-Projektionen; vorhandene Spielstaende bleiben unberuehrt.
+
+## 186. Controls, Textabstaende Und Hover
+
+Verbleibende Dropdown-/Scrollbar- und Checkboxfarben vereinheitlicht.
+Hotkey-Glyphen in HUD und Inventar mit Flexlayout zentriert. Gezieltes Padding
+fuer Beschreibungen, Auswahlwerte und Kartenanzeigen; Weltkartenflaeche und
+Bedienelemente liegen weiter innerhalb der Kupferleisten. Menue-Hover als
+dezente Aufhellung ohne zusaetzliche gelbe Kontur.
+[Pruefbericht](tools/benchmarks/results/controls-padding-hover-2026-11-03/README.md).
+
+## 187. Einheitliche Inventare Und Wetter-Spaltenabfragen
+
+Wetter-/Schnee-Edits lesen implizites Wasser ueber PreparedColumn::surface_at
+statt ueber einen festen 18er-Stride. Regressionen decken beide Spaltenformate,
+alle 256 Spalten sowie positive/negative Abschnittskoordinaten und die
+Wasser-/Replica-Erhaltung ab. Die gemeldeten Array-Panics werden damit an
+ihrer Ursache behoben.
+
+Gemeinsame Slotgroesse fuer Spieler, Truhen, Werkbank, Geraete und Katalog.
+Verbundene Truhen liegen im inneren Scrollbereich; Rahmen und Katalog bleiben
+auch kompakt fest stehen. Rezeptlose Anfragen oeffnen keine leeren Popups.
+Wegpunktfelder zeigen zwei Nachkommastellen mit Komma und erhalten unveraendert
+gespeicherte Praezision. Passendere Settings-Icons, um 25 Pixel hoehere Welt-/
+Serverkarten und transparente Rahmen-Hosts mit eingerueckten Innenflaechen.
+
+3748 Tests bestanden, keine fehlgeschlagen, acht ignoriert. Build, Clippy,
+Format, Diff und CSS-Parser erfolgreich. 25 Inventar-/Rezeptaufnahmen bestanden;
+19 weitere Geraeteaufnahmen. Weitere Live-Bildpruefungen wurden durch
+Fensterschliessen beziehungsweise OS-Mausinterferenz unterbrochen und werden
+nicht als vollstaendig bestanden dargestellt.
+[Pruefbericht und Aufnahmen](tools/benchmarks/results/inventory-frame-weather-2026-11-03/README.md).
+
+## 188. Feste Slots Und Passende Inventar-Layouts
+
+Alle Inventarzellen und der Itembrowser verwenden feste 28 x 28 logische
+Pixel, Ergebnisfelder 32 x 32. Die Rahmen passen zum Inhalt; Blockinventare
+zeigen oben den Arbeitsbereich und darunter das Spielerinventar ohne
+Inhalts-Scrollbar. Angeschlossene Werkbanktruhen stehen links in einem eigenen
+Rahmen. Die Tonne sitzt immer links unten am Itembrowser. HUD-Rahmen und
+Hotbarslots sind aufeinander abgestimmt.
+
+FPS 0 wird als Unlimited ohne Current-Eintrag angezeigt. Die Aufloesung bleibt
+bei Borderless auswaehlbar; eine feste Auswahl schaltet den Entwurf auf
+Windowed. Dropdowns verwenden einen Kupfer-Chevron.
+
+3549 Library-Tests bestanden, keine fehlgeschlagen, sieben ignoriert. Build,
+Clippy, Format, Diff und drei CSS-Parserpruefungen erfolgreich. 26 native
+Layoutaufnahmen pruefen die exakten Zellengroessen und Positionen in zwei
+Fenstergroessen ohne OS-Maus-/Tastatureingaben.
+[Pruefbericht und Aufnahmen](tools/benchmarks/results/fixed-inventory-layout-2026-11-03/README.md).
+
+## 189. Aufloesungsabhaengige Inventargroesse
+
+Inventar und HUD-Hotbar wachsen mit der Aufloesung. Rahmen, Slots, Text und
+Abstaende skalieren gemeinsam; die logischen Grundmasse bleiben einheitlich.
+Bei 100 Prozent UI-Massstab sind normale Inventarslots in Full HD etwa
+56 Pixel gross, bei 1440p etwa 74 Pixel. Die gesamte Kombination mit einer
+angeschlossenen Truhe wird eingepasst; die Hotbar bleibt darunter sichtbar.
+DPI und UI-Massstab werden nicht doppelt angewendet.
+
+Tooltips beruecksichtigen die gezeichnete Groesse unter lokalem Zoom.
+Native Pruefungen messen transformierte Grenzen, sichtbare Mindestgroessen,
+passende Klickflaechen und den Abstand zur Hotbar.
+3552 Library-Tests und 26 native Ansichten bestanden; Build, Clippy,
+Format und Diff erfolgreich.
+[Pruefbericht und Aufnahmen](tools/benchmarks/results/responsive-inventory-2026-11-03/README.md).
+
+## 190. Kleinere Beschriftungen Und Bedienicons
+
+Ueberschriften, Labels, Mengenangaben und Bedienicons im Inventar sind
+kleiner, waehrend die aufloesungsabhaengigen Slot- und Rahmengroessen erhalten
+bleiben. Die redundanten Zahlen 1 bis 9 sind aus den Inventarslots entfernt.
+Die HUD-Hotbar behaelt ihre Tastenhinweise mit kleinerer Schrift.
+
+CSS-Parser und Stylesheet-Regression, Build, Clippy aller Targets, Format und
+Diff erfolgreich. 26 native Ansichten bestaetigen die passenden Layouts,
+unveraenderte Slotgroessen und fehlende Hotkeylabels im Inventar.
+[Pruefbericht und Aufnahmen](tools/benchmarks/results/inventory-typography-2026-11-03/README.md).
+
+## 191. Inventaraufteilung Und 4K-Dichte
+
+HUD-Hotbar 30 Prozent kleiner, Inventarzellen 20 Prozent groesser;
+Player-/Crafting-Bereiche 20 Prozent niedriger. Angepasste Rahmenbreiten
+und quadratische Ausruestungsfelder. Texte und Bedienicons wachsen bei
+1440p/4K langsamer; Eingaben behalten Text, Cursor und Auswahl in einem
+gemeinsamen Koordinatensystem und bleiben links verankert.
+
+Unveraenderte volle Wuerfelkollisionen bleiben bei Nachbarinvalidierungen
+nutzbar. Lokale Edits und angrenzende Modellformen erzwingen weiterhin
+einen Neuaufbau. Regressionen pruefen Bereitschaft und Jobzahl sowie den
+bestehenden UDP-Sprungschutz. Der konkrete gemeldete Teleport ist noch
+nicht reproduziert; Blockart, Modus und Schritte sind angefragt.
+
+[Pruefbericht und Aufnahmen](tools/benchmarks/results/inventory-density-collision-2026-11-04/README.md).
+
+## 192. Reproduzierbare Framezeitmatrix Und Dichte Section-Imports
+
+O07 umgesetzt: Endliche integrierte Vorher-/Nachher-Messungen fuer neue Chunks,
+Flug, Doerfer, echten Regen, schnelle autoritative Platzierungen und das
+offene Inventar bei gleicher Sichtweite und Grafikqualitaet. Der Runner
+friert Konfigurationen ein, isoliert Welten/Profile und lehnt unvollstaendige
+Szenarien ab. CPU-Wall-Zeiten, GPU-Passdiagnostik, Speicherwerte sowie
+Queue-/Uploadzaehler sind getrennt dokumentiert.
+
+Dichte Section-Deltas verwenden indizierte Validierung und bauen ihre
+Objekt-/Hold-Indizes einmal nach Installation der finalen Metadaten auf.
+Normale Edits, doppelte Blockeintraege und Fehlerteilzustaende behalten ihre
+geprueften Regeln. Der CPU-Mikrobenchmark fuer 4096 Objektposen sinkt im
+Mittel von 518,02 auf 9,35 ms. Native Kalenderuniforms bleiben kontinuierlich,
+invalidieren aber keine unbeteiligten HTML-Bindings mehr: Das offene Inventar
+steigt im gemessenen Paar von 78,62 auf 105,17 FPS, UI-Reaktivitaet sinkt von
+4,28 auf 1,10 ms. Vorhandene Biomvorschaubilder sind im Preload registriert.
+
+Flug-p99 sinkt von 18,00 auf 16,54 ms, Platzierungs-p99 von 15,37 auf
+15,08 ms. Regen verbessert sich nicht (48,12 auf 46,66 FPS); RSS ist in
+diesen kurzen Laeufen hoeher. Keine allgemeine GPU-, Speicher- oder
+Mindest-FPS-Zusage. Der separat bestaetigte erste Inventar-Oeffnungsframe
+von rund 101 ms bleibt als O08 offen; A05 behaelt weitere Hardware und
+Langzeitlast. O07 ist aus der offenen Liste entfernt.
+
+3804 Workspace-Library-/Bin-Tests bestanden (Client-Nachlauf eingeschlossen),
+neun ignoriert; ein Exampletest und acht Python-Tests bestanden. Build,
+Clippy aller Targets mit `-D warnings`, gezieltes Format und Diff erfolgreich.
+[Messbericht, Reproduktion und Vergleichsdaten](tools/benchmarks/results/o07-frame-spikes-2026-11-05/README.md).
+
+## 193. Vorgewaermte Inventarslots Und Autoritative Containerprojektion
+
+Der erste Player-Oeffnungsframe aus O08 entstand durch 63 Slot-Style-Owner,
+deren Klassen erst beim Oeffnen auf das sichtbare Layout wechselten. Slots
+verwenden jetzt bereits beim versteckten Vorwaermen ihre spaeteren Klassen;
+auch die vier Handwerksfelder und ihr Ergebnis werden vorbereitet.
+Handwerksaktionen bleiben an ein wirklich offenes Inventar gebunden.
+Der gemessene erste Player-Oeffnungsframe sinkt von 116,46 auf 25,19 ms;
+eine strengere Pruefung zweier Oeffnungszyklen misst jeweils rund 27 ms.
+
+Blockinventare bleiben waehrend ausstehender Antworten geparkt. Der Restore
+wartet zusaetzlich, bis die getaktete Ansicht tatsaechlich zum autoritativen
+Anker und zur logischen Containeransicht passt. Das verhindert den belegten
+Zwischenaufbau eines Player-Inventars nach dem ACK. Die native Identitaet
+wird nicht in HTML serialisiert. Wiederholtes Truhenoeffnen sinkt im
+gemessenen Vergleich von 107,34 auf 39,96 ms bei erhaltenem Truhengrid.
+
+Echte TiltUI-Regressionen pruefen Klassen-/Change-Tick-Stabilitaet,
+Vorwaermen ohne Aktionen, ACK vor View-Tick, fehlgeschlagene Anfragen,
+asynchrones Schliessen und Rueckkehr zum Player-Inventar. Zwei echte
+Truhenzyklen pruefen Server, Snapshot, Slots, Eingabesperre und versteckte
+Tooltips; 25 native Ansichten pruefen echte OS-Klicks, Fokus, Rezepte,
+Ofen/Kessel, Pause und Einstellungen. Das Pointer-Pruefwerkzeug erhaelt
+ein zur Entfernung passendes, begrenztes Bewegungsbudget fuer mehrere Monitore.
+
+3813 Library-/Bin-Tests einschliesslich abschliessender UI-/Client-Nachlaeufe
+bestanden, neun ignoriert. Acht Python-Tests, Build, Clippy aller Targets,
+Format und Diff erfolgreich. Die temporaere externe TiltUI-Diagnosequelle
+ist bytegenau wiederhergestellt.
+
+O08 ist abgeschlossen. Der getrennt gemessene erstmalige Aufbau neuer
+Blocklayouts bleibt mit etwa 93 bis 144 ms als O09 offen; keine allgemeine
+Mindest-FPS-Zusage. [Messbericht und native Nachweise](tools/benchmarks/results/o08-inventory-opening-2026-11-05/README.md).
+
+## 194. Bergfried-Kingdoms, Burgfamilie Und CSS-Regelindex
+
+F43 umgesetzt: Ein platzierter Bergfried oeffnet einen Dialog fuer Gruendung,
+Umbenennung, Mitglieder und bestaetigtes Aufloesen. Der Server prueft UUID,
+Baurecht fuer Gruendung, Mitgliedschaft, Gruenderrechte, Reichweite und freien
+Blick. Beitreten und Austreten sind moeglich; der Gruender muss aufloesen.
+ID, Name, Gruender-/Mitgliederidentitaeten samt Anzeigenamen, Standort und Zustand
+werden gespeichert und an alle Clients einschliesslich spaeterer Beitritte
+uebertragen. IDX8 bewahrt die bisherigen Indexmigrationen; Protokoll 102.
+Aktive Bergfriede sind gegen Abbau geschuetzt. Aufloesen behaelt Historie und
+gibt Namen, Mitgliedschaften und Bergfried frei. Eigene RPC-Nonces verhindern
+Einfluss auf Blockedits; exakte Antwort-IDs verhindern veraltete Dialogantworten.
+
+Zwanzig Burgbloecke mit IDs 173 bis 192 folgen der Bildvorlage: Bergfried,
+Stein-/Zinnenmauern, Mauerkrone, Ecken/Saeulen, Bogenhaelften, Schiessscharte,
+Fenster sowie rissige, bewachsene, moosige, verstaerkte und weitere Stile.
+Eigene glTF-Modelle, gemeinsame physische Formen, Inventarvorschauen, passende
+Oberflaechengeraeusche und 21 Rezepte. Vier Stein ergeben eine Steinmauer,
+vier Steinmauern eine Mauerkrone. Der Bogen besteht aus zwei einzeln
+platzierbaren 1 x 1 x 0,5-Teilen fuer zwei Bloecke Laenge; alle 24
+Treppenorientierungen, Schraubenschluessel, Picking und Section-Replikation
+erhalten die wirkliche Oeffnung.
+
+O09 umgesetzt: Ein unveraenderlicher Index der Dokument-CSS-Regeln wird je
+Stylesheet wiederverwendet. ID-/Klassen-/Tag-Kandidaten werden konservativ
+vorgefiltert; der vollstaendige Servo-Abgleich und die Kaskade bleiben erhalten.
+Der externe TiltUI-Stand ist angewendet und als nachvollziehbarer Patch
+im Projekt gesichert. Keine reduzierte Grafikqualitaet oder geaenderte Slots.
+Im kontrollierten Paar mit identischen finalen Spielquellen sinkt die kalte
+Truhen-Oeffnungsspitze von 94,53 auf 54,84 ms, das behaltene Layout beim erneuten
+Oeffnen von 22,45 auf 19,69 ms. `main.update` im jeweils kalten Spitzenframe
+sinkt von 80,08 auf 40,72 ms. Reaktivitaet und PostUpdate bleiben etwa gleich.
+Die verbleibenden 54,84 ms sind weiterhin ein messbarer kalter Frame; keine
+Behauptung eines ruckelfreien ersten Bildes, einer GPU-Present-Latenz oder
+allgemeiner FPS-/Speichergewinne.
+
+3836 Workspace-Library-/Bin-Tests bestanden, neun ignoriert; 331 TiltUI-Tests
+und die gesonderte reale CSS-Differentialfixture bestanden. 19 Python-Tests,
+Clippy aller Targets mit `-D warnings`, Builds, Format und Diff erfolgreich.
+Echte Mehrspieler-/Save-/Reload-Pruefungen einschliesslich eines 2.763.543 Byte
+grossen maximalen Kingdom-Snapshots; 60 native Ansichten fuer Burgmodelle,
+Kingdom-Lebenszyklus, Inventarbedienung und zwoelf Stationslayouts in zwei
+Groessen. O09 und F43 aus der offenen Liste entfernt; Claims/Diplomatie bleiben
+F55/F56/F57, weitere Hardware und Langzeitlast bleiben A05.
+
+[Pruefbericht, Modelle und Aufnahmen](tools/benchmarks/results/o09-kingdom-castle-2026-11-06/README.md),
+[O09-Messdaten und TiltUI-Patch](tools/benchmarks/results/o09-kingdom-castle-2026-11-06/O09.md).
+
+## 195. Chunk-Claims, Diplomatie Und Burgdetails
+
+F55/F56 fertiggestellt: autoritative Spieler-/Bot-Claims mit getrenntem
+Kingdom-Besitz, verbundenen Gebieten, Reichweite, Kontingenten und sicherer
+Freigabe. Geschuetztes Bauland und offenes Territorium; Persistenz ueber
+IDX9 mit IDX8-Migration und Replikation ueber Protokoll 103.
+
+Diplomatie in der grossen Karte zeigt farbige Claims, Grenzen, Legende,
+Gruender und ausfuehrenden Akteur. Live-Aenderungen, Auswahl und bestehende
+Kartenebenen bleiben erhalten. Seitenleistenklicks sind gegen Durchgreifen
+auf die Karte abgeschirmt; kleine Fenster erhalten eine passende Werkzeugleiste.
+
+Mauerkrone mit passendem Mauerwerk bis zu den Koepfen; feine Risse,
+unregelmaessiger Bewuchs und stabile Dekorvarianten. Durchgehende
+Bogenunterseiten mit passenden UVs/Tangenten und verdeckten inneren Naehten.
+F55/F56 sind aus TODO entfernt, Rollen und weitere Beziehungen bleiben F57.
+
+[Tests, native Ansichten und Referenzen](tools/benchmarks/results/claims-diplomacy-castle-2026-11-06/README.md).
+
+## 196. Kingdom-UI, Flächen-Claims, Transparente Fenster Und Wappen-Capes
+
+Kingdom-Menü mit passenden Text-/Buttongrößen, sauber abschließendem Rahmen,
+gestaltetem Colorpicker-Popup und vollständiger durchsuchbarer Symbolauswahl.
+Stabile Symbolkennungen und gemeinsame Banner-/Cape-Glyphen.
+
+Diplomatie erhält gemischte rechteckige Build-/Territorium-Auswahlen mit Vorschau,
+Apply und Cancel. Der Server validiert die gesamte Auswahl atomar; unveränderte
+Claims behalten ihren Akteur. Höhenrichtige Relief-Auswahl und Loslass-Endpunkte;
+Protokoll 104 für Client und Server.
+
+Durchsichtige Mauerfenster mit dem Glas normaler Fenster; aufrechte Seitenmontage
+und passende Ausrichtung beim Verlängern vorhandener Burgteile. Neue TMI-/Crafting-
+Capes erhalten das eigene Wappen und seine Farbe als dauerhaftes Itemmerkmal.
+
+Lutera/Betross neutral, Helteria freundlich, Petora feindlich. Stabile zufällige
+Dorfzugehörigkeit ohne Retrogen; Eintrittsanzeige und Karteninformationen.
+Die drei neuen Strukturvorlagen fehlen als Bilder und bleiben offen unter F72;
+frei verwaltbare Beziehungen und Rollen bleiben F57.
+
+[Prüfbericht und native Ansichten](tools/benchmarks/results/kingdom-polish-batchclaims-2026-11-06/README.md).
+
+Abnahme 196: 3.674 Workspace-Library-Tests bestanden, acht ignoriert; Build,
+Clippy aller Targets mit `-D warnings`, Format, Diff und 60 CSS-Stylesheets geprüft.
+24 native Ansichten, darunter QHD-/4K-/1024x768-Menüs mit echten Serverantworten,
+Colorpicker, Symbolsuche, gezogene Claim-Vorschau und transparente Mauerfenster.
+
+## 197. Reichsgebiete, Dorfwappen Und Bewohnte Kingdom-Strukturen
+
+Die Diplomatiekarte zeigt die Claims aller Spielerreiche und die Gebiete bereits
+entdeckter NPC-Siedlungen in ihren Reichsfarben. Bekannte Siedlungsgebiete bleiben
+neben den Kartendaten gespeichert, auch wenn ihre Chunks entladen werden. Direkter
+Chunk-Besitz hat Vorrang; ansonsten übernimmt eine Siedlung den Besitzer ihres
+Zentrums oder ihre ursprüngliche Bot-Zugehörigkeit. Karte, Eintrittsanzeige,
+Fassadenbanner, Dachflaggen und Soldaten-Wappenröcke verwenden dieselbe Auflösung.
+Änderungen an Farben, Wappen und Besitz werden sichtbar aktualisiert.
+
+Rechtsklick entfernt Chunks aus der unbestätigten Auswahl, gehalten auch entlang
+einer gezogenen Spur. Bestehende Claims werden dadurch nicht freigegeben.
+Die hellen Einzelumrandungen entfallen; die Auswahl bleibt als Farbfläche sichtbar.
+
+F72 umgesetzt: Die drei nun vorhandenen Bildreferenzen bilden zwei begehbare
+Kingdom-Varianten und einen Außenposten. Runde Stadtmauer, innere Burg, vierstöckiger
+Bergfried, Kirche, Wohnhäuser, Kasernen, Markt, Schmiede, Felder und Windmühle;
+die Wintervariante besitzt gestaffelte Höfe und schneebedeckte rote Dächer.
+Der Außenposten erhält Palisade, Wachturm, Tor, Mannschaftshaus, Zelte und Stall.
+Echte Türen, Fenster, Treppen, Betten, Kisten und Arbeitsstationen sowie geprüfte
+Zugänge verbinden die Anlagen mit den vorhandenen Spielsystemen.
+
+Kingdoms beginnen mit 50–80 Zivilisten und 26–64 Soldaten; Außenposten mit
+4–10 Soldaten. Schwert-, Speer- und Bogenschützen besitzen eigene Ausrüstung,
+Wachschichten und Patrouillen. Die Startbereiche sind keine laufenden
+Bevölkerungsgrenzen. Erweiterte Bewohnerkennungen erhalten alte IDs; tote Bewohner
+und Militärrollen überstehen Speichern, Streaming und spätere Netzwerkbeitritte.
+
+Neue Welten verwenden Strukturrevision 6; bestehende Welten behalten ihre
+gespeicherte Generierung. Dorfwappen und Karteninformationen funktionieren auch
+mit vorhandenen Dörfern. IDX9/PLY7 bleiben erhalten, Client und Server verwenden
+Protokoll 105. F72 ist aus der offenen Liste entfernt; Rechte und frei verwaltbare
+Beziehungen bleiben F57.
+
+[Prüfbericht, Referenzen und native Ansichten](tools/benchmarks/results/kingdom-structures-realms-2026-11-06/README.md).
+
+Abnahme 197: 3.697 Workspace-Library-Tests bestanden, acht ignoriert. Geprüft
+sind unter anderem Maximalbelegung mit 144 Bewohnern, reale Bettplätze,
+Militärrollen über UDP und Save/Reload, begehbare Bergfriedgeschosse und
+Toranschlüsse an wirkliches Gelände sowie Kartenfarben und Rechtsklick-Auswahl.
+Workspace-Build, Clippy aller Targets mit `-D warnings`, Format, Diff und alle
+60 UI-Stylesheets erfolgreich geprüft. Elf native Aufnahmen dokumentieren die
+drei Baupläne und fünf Kartenansichten.
+
+## 198. Hangfelder, Begrünte Fundamente Und Scharfe Biomvorschauen
+
+Strukturrevision 7 erhält geländeabhängige Felder und bis zu 24 Blöcke breite
+begrünte Übergänge zwischen Höfen und natürlichem Boden. Außenfelder übernehmen
+die wirklichen Spaltenhöhen; Bewässerung bleibt in eingefassten lokalen Mulden.
+Das bisherige rechteckige Ausschneiden des Hangs und senkrechte Fundamentkanten
+entfallen. Die Änderungen bleiben innerhalb der vorhandenen regionalen Suche und
+Strukturbudgets. Gespeicherte ältere Revisionen behalten ihre Generierung.
+
+Turmtüren sitzen zwischen den tatsächlichen Mauerpfosten. Der Bergfried hat eine
+zur Doppeltür passende Öffnung mit geschlossenen Seiten und Sturz. Die vorhandene
+Blattachse passt bereits zur Wand. NPCs schließen selbst geöffnete Türen nach
+freier Passage; beide Hälften, Spieler-/Tierabstand und entladene Chunks werden
+berücksichtigt. Manuell bediente Türen behalten ihren Zustand.
+
+Beim Wechsel aus einem Reich ins unbeanspruchte Gebiet erscheint die neutrale
+Eintrittsanzeige. Neutrale Nachbarchunks starten sie nicht ständig neu;
+unabhängige Dörfer erhalten eine eigene neutrale Anzeige.
+
+Kingdoms und Outposts sind in World Create unabhängig von Dörfern abschaltbar.
+Master-Schalter, Speicherung, Dedicated-Neustart und Welcome-Replikation erfassen
+alle fünf Strukturarten. Alte Einstellungen ohne die neuen Felder behalten ihre
+bisherige Dorf-Kopplung. Protokoll 106; IDX9/PLY7 bleiben erhalten.
+
+Acht echte Biomaufnahmen ersetzen die 122×59-Pixel-Ausschnitte durch
+1536×768-Pixel-Vorschauen. Eigene Filterung für Fotos, unverzerrte Proportionen
+und eine eigene Felsenwüsten-Aufnahme. Die Exportpipeline dokumentiert native
+Quellen und Prüfsummen und lehnt Hochskalieren ab.
+
+Sieben alte Teramic-Testverzeichnisse mit 10,37 GB Dateiinhalten wurden aus dem
+temporären RAM-Dateisystem auf die Datenplatte verlagert. Alte Pfade bleiben
+über Verknüpfungen erreichbar; Größen und Änderungszeiten wurden abgeglichen.
+Die Swap-Belegung sank dabei zunächst von ungefähr 24,6 auf 13,4 GiB.
+Nach erfolgreicher Systemanmeldung wurde der Swap vollständig zurückgesetzt;
+das Protokoll zeigt 0 B Belegung und die wiederhergestellte Priorität 100.
+
+3.918 Workspace-Library-/Bin-Tests bestanden, neun ignoriert. Neue Prüfungen
+decken natürliche Feldhöhen, Böschungen und Budgets, Türrahmen und Geschosse,
+gepaartes Schließen nach Streaming, neutrale Gebietseintritte und unabhängige
+Struktur-Schalter über Speicherung und Netzwerk ab.
+Build, Clippy aller Targets mit `-D warnings`, Format, Diff und 60 UI-Stylesheets
+erfolgreich. Drei native Bau-Szenen, acht Biomquellen und Menüprüfungen in Full HD
+und 4K mit tatsächlich geladenen Bildern und gespeicherten Weltoptionen bestanden.
+
+[Prüfbericht, Aufnahmen und Speicherprotokoll](tools/benchmarks/results/kingdom-terrain-worldcreate-2026-11-06/README.md).
+
+## 199. Kingdom-Rechte, Doppeltüren Und Laternen
+
+Strukturrevision 8 begrünt Kingdoms und Außenposten mit echten Hofbäumen und
+erntbaren Bodenpflanzen. Gebäude, Türen und Wege bleiben frei; Winterhöfe
+erhalten passende Nadelbäume. Die neue Verteilung ist seltener und hält die
+Startsuche mindestens 1.024 Blöcke von Kingdoms und 512 Blöcke von Outposts
+entfernt. Koordinaten und Seed bestimmen Abstände und Priorität unabhängig von
+Ladereihenfolge und Spielerposition. Bestehende Strukturrevisionen bleiben
+gespeichert erhalten; deaktivierte Arten reservieren keinen Startbereich.
+
+F57 ergänzt Founder, Officer, Member, Builder, Worker und Visitor sowie
+servergeprüfte Rechte für Bauen, Abbauen, Inventare und NPC-Arbeit. Neue Mitglieder
+beginnen als Visitor; frühere normale Mitglieder werden beim Laden zu Member.
+Rollen- und Beziehungsverwaltung, Kartenplaketten und Gebietstitel unterscheiden
+eigenes, neutrales, verbündetes und feindliches Gebiet. Spielerbündnisse erfordern
+beidseitige Zustimmung; Bot-Reiche reagieren gemäß ihrer Haltung und Reichsstufe.
+Besitzerfarben und Wappen bleiben erhalten.
+
+Rechte gelten auch für offene Lager, entfernte Mitglieder, laufende NPC-Befehle,
+entladene Halterungen und begonnene Baumarbeiten. Förderbänder und Rohrnetze
+prüfen jede tatsächlich überschrittene Reichsgrenze. Offenes Realm Territory
+behält seine Bau-/Abbau-Freigabe; geschützte Inventare lassen sich dort nicht durch
+Blockabbau ausschütten. Eigene Gegenstände können weiterhin weggeworfen werden.
+Produktive Berufe und neue Auftragsverwaltung bleiben separat in F58.
+
+Benachbarte passende Türen bilden aus ihren vorhandenen Objektpaaren eine
+Doppeltür: gemeinsamer Rahmen, äußere Scharniere, gegensinnig öffnende Flügel.
+Bedienung und Rechte prüfen alle vier Zellen vor der Änderung; Kollision,
+Auswahl, Wasser und NPC-Durchgänge verwenden dieselbe Geometrie. Abbau entfernt
+nur den getroffenen Flügel. Alle vier Holzarten und Ausrichtungen sind erfasst;
+zusätzliche gespeicherte Türdaten sind nicht erforderlich.
+
+Laterne und Kette erhalten eigene Voxelmodelle, Platzierung, Rezepte, Itemkatalog,
+Auswahlflächen und echte warme Beleuchtung. Laternen stehen auf Blöcken und
+Zaunpfosten, hängen an Decken/Ketten und verwenden an Wänden eine Halterung.
+Neue Dörfer, Outposts und Kingdoms ersetzen ihre Fackeln durch Laternen.
+Wasser, fehlende Halterungen, Streaming und Drops folgen den vorhandenen Regeln.
+
+Protokoll 107 und Index ID10 übertragen beziehungsweise speichern Rollen und
+Beziehungen. Alte Indizes werden ausdrücklich migriert; PLY7 bleibt erhalten.
+
+[Prüfbericht und native Ansichten](tools/benchmarks/results/kingdom-rights-lanterns-2026-11-06/README.md).
+
+Abnahme 199: 3.963 Workspace-Library-/Bin-Tests bestanden, neun ignoriert.
+Build, Clippy aller Targets mit `-D warnings`, Format, Diff und 60 tatsächliche
+UI-Stylesheets sind geprüft. Native Galerien kontrollieren Laternenlicht und
+Befestigungen, alle vier Holzarten der Doppeltür, Kartenbeziehungen sowie Rollen,
+Bündnisse und Besucheransichten über echte Netzwerkbestätigungen in QHD,
+kompakter Auflösung und 4K. F57 ist aus der offenen Liste entfernt; F58 bleibt offen.
+
+## 200. Setzlinge, Apfelbäume Und Verbundene Zinnen
+
+Bot-Reiche erlauben Zugriffe nach Haltung: feindlich keine Bau-, Abbau- oder
+Interaktionsaktionen, neutral nur Türen und Fenster, freundlich vollständige
+Zugriffe. Die Grundhaltung gilt ohne eigenes Spielerreich; erklärte Feindschaft
+und angenommene Bündnisse wirken unmittelbar. Spielerclaims und übernommene
+Siedlungen behalten ihre Mitgliederrollen. Villagerhandel prüft Inventarrechte.
+
+F59 ergänzt Oak-, Spruce-, Birch-, Cherry- und Apple-Setzlinge als native
+Miniaturbaum-Props. Boden, Licht, Abstand, freie Zellen, Wasser und Rechte bestimmen
+Platzierung und Wachstum. Verbaute oder entladene Bereiche pausieren; bestehende
+Spielerblöcke und Props werden erhalten. Arten, Fortschritt und genau zugeordnete
+Holz-/Laubzellen überstehen Speichern, Streaming und Netzwerkbeitritte. Ersetzte
+Spielerzellen verlieren ihre Baumzuordnung. Auch natürliche Bäume liefern passende
+Setzlinge anhand ihrer tatsächlichen Generatorart.
+Historische Fichten und Kirschbäume mit Oak-Holz verwenden ihre tatsächliche
+Generatorart für Blattdrops und vollständige Fällungen.
+
+F60 ergänzt natürliche und gepflanzte Apfelbäume mit breiter Krone, eigenem Laub,
+Blüten, unreifen/reifen Früchten, Ernte und erneutem Fruchtansatz. Acht persistente
+Fruchtplätze je Zyklus verhindern doppelte Ernte. Rechtsklick prüft Stamm- und
+Fruchtrechte, Reichweite, tatsächlichen Strahl, Blattanker, Revisionen und freien
+Inventarplatz; Inventar und Fruchtzustand ändern sich zusammen. Ganze Äpfel und
+Butzen teilen passende Voxelmodelle für Welt, Hand, Icons und Drops. Verzehr
+hinterlässt einen Butzen; Äpfel oder zwei Butzen ergeben mit Dirt einen Setzling.
+
+Natürliche Apfelvorkommen verwenden Ökologierevision 3 für neue Welten. Gespeicherte
+ältere Revisionen bleiben erhalten; manuell gepflanzte Bäume funktionieren dort
+weiterhin. Protokoll 108 und Index ID11 ergänzen Baum- und Fruchtdaten mit expliziter
+Migration der vorherigen Indizes. PLY7 bleibt erhalten. Wachstums- und Fruchtarbeit
+sind begrenzt; unveränderte Fruchtticks verändern keine normalen Pflanzenlisten.
+
+Kronen und Zinnen der vorhandenen Materialien 175/180/181/182 leiten ihre
+Verbindungen aus tatsächlichen Nachbarformen und Ausrichtungen ab. Das Eckstück
+181 erhält zwei Kronen. Alle 16 Verbindungsprofile und die bisherigen 24 Posen
+verwenden gemeinsame Mesh-, Auswahl-, Kollisions- und Wasserdaten. Nachbaränderungen
+und Sektionsgrenzen aktualisieren die Profile ohne neue Material- oder Speicherdaten.
+
+Auf ausdrücklichen Nutzerwunsch werden keine Grafiktests, Spielclients oder
+GPU-Galerien gestartet. Die Abnahme erfolgt ausschließlich kopflos, mit niedriger
+Prozesspriorität und einem Cargo-Job.
+
+[Prüfbericht und Referenzen](tools/benchmarks/results/saplings-apples-battlements-2026-11-06/README.md).
+
+Abnahme 200: 4.012 Workspace-Library-/Bin-Tests bestanden, keine fehlgeschlagen,
+neun bestehende Tests ignoriert. Build, Clippy aller Targets mit `-D warnings`,
+Format, Diff und 60 tatsächliche UI-Stylesheets sind geprüft. Die zusätzliche
+Prüfung historischer Fichten und beider Kirschvarianten besteht für echte
+Blattdrops und vollständige Queue-Fällungen. F59 und F60 sind aus der offenen
+Liste entfernt; F58 und F61 bleiben offen. Es wurden keine Grafiktests oder
+Spielclients gestartet.
+
+## 201. Setzlingsanzeige, Natürliche Wuchsformen Und Stapelbare Zinnensäulen
+
+Die Zielanzeige zeigt den bestätigten Setzlingsfortschritt als Balken mit Prozenten.
+Identität, Wurzelposition, Art und Stadium werden gegen den tatsächlich betrachteten
+Prop geprüft; 100 Prozent bedeutet wartendes Wachstum, keine vorweggenommene Reife.
+Apple-Setzlinge erhalten getrennte Apfel-/Laubflächen gegen das Flimmern, Cherry
+kleine Blüten auf allen vier Kronenseiten.
+
+Neue ausgewachsene Setzlingsbäume verwenden die größeren natürlichen Generatorformen
+und deren Darstellungsstil. Alte ausgewachsene Records behalten ihre bestehende Form;
+Generated wird als zusätzlicher Stage-Tag angehängt. Exakte Holz-/Laubzuordnung,
+Früchte und Speicherpfade bleiben maßgeblich. Die neue Ökologierevision 4 verwendet
+5 Prozent für geeignete Forest-/Plains-Baumkandidaten, ältere Revisionen bleiben
+unverändert. Neue Fortschritts- und große Baumdaten verwenden Protokoll 109.
+
+Zinnenmauer (180) bildet Ecken ohne separates Crafting-Item. Ecke (181) bleibt als
+Legacy-ID lesbar; Creative-Pick und Abbau liefern 180. Zinnensäulen behalten ihre
+vier Kronen und bekommen zusätzliche seitliche Verbinder. Innere Stapelzellen
+zeigen reine Schäfte, Fuß und Kopf erscheinen nur an den äußeren Enden. Gemeinsame
+Profile steuern Mesh, Auswahl, Kollision, Wasser und Nachbar-Cache.
+
+Keine Grafiktests oder Spielclients werden gestartet.
+[Prüfbericht und Referenz](tools/benchmarks/results/sapling-growth-natural-trees-battlements-2026-11-07/README.md).
+
+Abnahme 201: 4.050 Workspace-Library-/Bin-Tests bestanden, keine fehlgeschlagen,
+neun bestehende Tests ignoriert. Build, Clippy aller Targets mit `-D warnings`,
+Format, Diff und 60 tatsächliche Stylesheets sind geprüft. Bestätigte Section-
+importe bewahren die autoritative Baumzuordnung auch beim späten Beitritt;
+gewöhnliche lokale Änderungen geben Zellen weiter frei. Neue Apfeläste sind für
+64 Seeds flächenverbunden geprüft, alte Ecology3-Formen bleiben unverändert.
+Alle 112 Zinnenprofile und 24 Posen sowie HUD, tatsächliche Mesh-/UV-Daten, Teilpakete,
+Teilfällung und ID11-Speicherkompatibilität sind kopflos abgesichert. Es wurden
+keine Grafiktests oder Spielclients gestartet.
+
+## 202. Gebietshierarchie, Weltoptionen, Setzlinge Und Natürliche Wasserfälle
+
+Setzlinge prüfen bei der Platzierung ihre tatsächliche Miniaturform statt des
+späteren Baums. Licht, große Wuchsräume und Baumabstände betreffen das Wachstum.
+Natürlicher weicher Bodenbewuchs wird nach vollständiger Rechte-/Kapazitätsprüfung
+atomar ersetzt; konkrete Pflanzenfehler werden an den Client gemeldet. Natürliche
+Flussfälle behalten beim Landen auf Terrassen ihren Korridor. Gegrabene Kanäle,
+gesetzte Quellen, Rohre und Waterlogging behalten ihre gewöhnliche Wasserphysik.
+F2 blendet das eigene Egoperspektiven-Item aus.
+
+Claims brauchen zusammenhängendes Land derselben Siedlung, keine Bergfriednähe.
+Außenposten, Dörfer und Städte gehören zu einem Hauptkönigreich; Rollen, Mitglieder,
+Wappen, Diplomatie und Transport gelten innerhalb der Familie. Die Karte kann ein
+Untergebiet als Ziel eines atomaren Claim-Entwurfs wählen. Dörfer/Städte überlagern
+eigenes Territorium mit Build-Claims, ohne die darunterliegende Gebietsebene zu
+verlieren. Ihr Territorium kann auch zu einem eigenen Außenposten gehören.
+
+Ein Kingdom darf je Level einen Außenposten besitzen. Außenposten starten mit
+10 Build-/22 Territorialchunks und erhalten je Level 2/6 weitere. Dörfer starten
+mit 10 Build-Chunks, Städte mit 20; weitere Level geben 2 beziehungsweise 4 dazu.
+Beide haben kein eigenes Territorium. Städte verlangen Kingdom-Level 3 und zehn
+freie Chunks Abstand zum Build-Land des Hauptreichs und seiner Dörfer. Zwischen
+Kingdom-/Outpost-Landgrenzen bleiben mindestens 16 freie Chunks. Gründung und
+Erweiterung prüfen die Regeln sowie tatsächliche historische Botanlagen.
+
+Alle 20 Regeln sind im Dedicated-Server unter `[kingdom_rules]` und in World Create
+konfigurierbar. Dort gliedern die Tabs General, Biome / Structs und Kingdom die
+Einstellungen. Singleplayer erhält seine gespeicherten Weltregeln; ausdrückliche
+Server-Overrides werden nach dem Laden angewendet und gespeichert. Untersiedlungen
+haben standardmäßig eigene Level; alternativ folgen ihre Limits dem Kingdom-Level.
+
+Neue natürliche Anlagen verwenden Strukturenrevision 9 mit eingefrorenem
+`structure_border_gap`. Die typübergreifende Auswahl ist begrenzt; bestehende
+Revisionen 0–8 bleiben unverändert. Protokoll 110 und Index ID12 ergänzen Hierarchie
+und Pflanzenfehler mit expliziter Migration alter Königreichsdaten. PLY7 und
+bestehende Baumzuordnungen bleiben erhalten.
+
+Keine Grafiktests oder Spielclients werden gestartet.
+[Prüfbericht und Referenz](tools/benchmarks/results/kingdom-territories-saplings-waterfalls-2026-11-07/README.md).
+
+Abnahme 202: 4.097 Workspace-Library-/Bin-Tests bestanden, keiner fehlgeschlagen,
+neun bestehende Tests ignoriert. Build von Server und Client, Clippy aller Targets
+mit `-D warnings`, Format, Diff und 60 tatsächliche Stylesheets sind geprüft.
+Die Registry verlangt bei vorhandenen Claims weiterhin den geschützten Bergfried-
+Chunk; konfigurierte Fernclaims bleiben zulässig. Fehlende, fremde oder aufgelöste
+Ziele eines Kartenentwurfs werden beim Apply abgewiesen. Die gespeicherte Weltpolicy,
+Legacy-Migrationen und die Makrozellenabfrage bis zum 4.096-Chunk-Abstand sind kopflos
+abgesichert. Es wurden keine Grafiktests oder Spielclients gestartet.
+
+## 203. Build-Pfade, Rust-Lesbarkeit Und Fluent-TODO
+
+Neue Build-Chunks benötigen einen kantenverbundenen Build-Pfad zum Bergfried ihrer
+Siedlung. Territory darf diesen Pfad nicht ersetzen und kann weiterhin an das
+zusammenhängende eigene Land andocken. Derselbe atomare Vorher-/Nachher-Vergleich
+gilt für Einzelclaims, Batchauswahl, Typwechsel und Freigabe sowie die Legacy-APIs.
+Ein alternativer vollständiger Build-Korridor kann im selben Batch entstehen.
+Historische Inseln bleiben lesbar und reparierbar, dürfen aber nicht wachsen;
+vorher angeschlossene Build-Flächen dürfen nicht abgetrennt werden. Der explizite
+Adjazenz-Opt-out bleibt erhalten, die Bergfriedentfernung ist nicht begrenzt.
+
+Die Kingdom-UI prüft Build und Territory getrennt über dieselbe Core-Policy und
+cached die Ergebnisse nach den relevanten Revisionen und Einstellungen. Hinweise,
+Parent-Territory-Überlagerungen und Bedienbarkeit folgen der tatsächlichen
+Serverentscheidung. CPU-Regressionen prüfen Einzel-/Batch-/Releasewege, historische
+Layouts, Live-Regelwechsel und tatsächliche UDP-Bestätigungen.
+
+Alle 1.104 Rust-Dateien einschließlich UI-Quellen und Werkzeugen sind auf englische
+Rustdocs geprüft. Die vorhandenen Kommentare waren bereits Englisch. Unklare
+längerlebige Variablennamen in Welt-, Baum-, Wasser-, Physik-, Netzwerk-, Modell-
+und UI-Pfaden sind präzisiert; Spieltexte, IDs und Speicherfelder bleiben erhalten.
+F72 erfasst das neue Sprachsystem mit der vorhandenen Fluent-Unterstützung von
+TiltUI als offene Aufgabe.
+
+[Prüfbericht und Referenz](tools/benchmarks/results/build-claims-rust-cleanup-2026-11-07/README.md).
+Keine Grafiktests oder Spielclients werden gestartet.
+
+Abnahme 203: 4.111 Workspace-Library-/Bin-Tests bestanden, keiner fehlgeschlagen,
+neun bestehende Tests ignoriert. Server-/Client-Build, Clippy aller Targets mit
+`-D warnings`, Format, Diff und 60 tatsächliche UI-Stylesheets sind geprüft.
+Rustdoc-Audit, Quell-/Loghashes und echte Core-/UDP-/UI-Regressionen sind dokumentiert.
+Binärasset-Attribute schützen exakte Modell-/Textur-/Audiodaten im Git-Commit;
+historische Patch-/Profilingdaten behalten ihre ursprünglichen Leerzeichen.
+Der gesamte nicht ignorierte Projektstand wird auf GitHub `main` veröffentlicht.
+Es wurden keine Grafiktests oder Spielclients gestartet.

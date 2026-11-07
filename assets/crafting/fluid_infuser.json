@@ -1,0 +1,1 @@
+{"id":"teramic::fluid_infuser","name":"Fluid Infuser","station":"workbench","output":{"item":{"block":171},"count":1},"pattern":{"kind":"shapeless","ingredients":[{"item":{"block":165},"count":1},{"item":{"mineral":"iron_ingot"},"count":4},{"item":{"block":15},"count":1}]}}

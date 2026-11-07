@@ -17,6 +17,8 @@ pub enum DyeColor {
     Gold,
     Silver,
     LightBlue,
+    /// Calibrated pigment produced by a mixer; never expanded into the creative catalog.
+    Rgb([u8; 3]),
 }
 impl DyeColor {
     pub const ALL: [Self; 13] = [
@@ -74,6 +76,7 @@ impl DyeColor {
             Self::Gold => "gold",
             Self::Silver => "silver",
             Self::LightBlue => "light_blue",
+            Self::Rgb(_) => "mixed",
         }
     }
     pub const fn tint(self) -> [f32; 4] {
@@ -91,6 +94,13 @@ impl DyeColor {
             Self::Gold => [0.90, 0.57, 0.055, 1.0],
             Self::Silver => [0.64, 0.69, 0.75, 1.0],
             Self::LightBlue => [0.25, 0.65, 0.94, 1.0],
+            Self::Rgb([r, g, b]) => [r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0, 1.0],
+        }
+    }
+    pub fn code(self) -> String {
+        match self {
+            Self::Rgb([r, g, b]) => format!("{r:02X}{g:02X}{b:02X}"),
+            _ => self.slug().to_owned(),
         }
     }
 }
@@ -132,7 +142,7 @@ pub fn bed_color(material: u16, facing: u8) -> DyeColor {
         .unwrap_or(default_bed_color(material))
 }
 pub fn dyed_facing(facing: u8, color: DyeColor) -> u8 {
-    if color == DyeColor::White {
+    if color == DyeColor::White || matches!(color, DyeColor::Rgb(_)) {
         return facing % 4;
     }
     4 + 4 * DyeColor::BED_COLORS

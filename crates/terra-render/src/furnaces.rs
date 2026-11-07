@@ -1,4 +1,5 @@
 //! Replicated furnace fire and smoke share two meshes and a fixed local light budget.
+mod alchemy;
 use bevy::{
     asset::RenderAssetUsages,
     camera::Exposure,
@@ -28,7 +29,7 @@ pub(crate) struct SmokeExtension {
 }
 impl MaterialExtension for SmokeExtension {
     fn fragment_shader() -> ShaderRef {
-        "shaders/terra_furnace_smoke.wgsl".into()
+        "shaders/terra_furnace_smoke.wesl".into()
     }
 }
 pub(crate) type SmokeMaterial = ExtendedMaterial<StandardMaterial, SmokeExtension>;
@@ -220,6 +221,29 @@ impl Geometry {
         target.insert_attribute(Mesh::ATTRIBUTE_UV_0, self.uvs);
         target.insert_indices(Indices::U32(self.indices));
         true
+    }
+
+    fn upload(self, meshes: &mut Assets<Mesh>, handle: &Handle<Mesh>) -> bool {
+        use bevy::mesh::VertexAttributeValues as V;
+        if self.positions.is_empty() || self.indices.is_empty() {
+            return false;
+        }
+        let Some(target) = meshes.get(handle) else {
+            return false;
+        };
+        // Cold stored brews do not animate. Do not mark their shared asset
+        // modified merely because the fire-effect cadence elapsed again.
+        if matches!(target.attribute(Mesh::ATTRIBUTE_POSITION),Some(V::Float32x3(values)) if values==&self.positions)
+            && matches!(target.attribute(Mesh::ATTRIBUTE_NORMAL),Some(V::Float32x3(values)) if values==&self.normals)
+            && matches!(target.attribute(Mesh::ATTRIBUTE_COLOR),Some(V::Float32x4(values)) if values==&self.colors)
+            && matches!(target.attribute(Mesh::ATTRIBUTE_UV_0),Some(V::Float32x2(values)) if values==&self.uvs)
+            && matches!(target.indices(),Some(Indices::U32(values)) if values==&self.indices)
+        {
+            return true;
+        }
+        meshes
+            .get_mut(handle)
+            .is_some_and(|mut target| self.write(&mut target))
     }
 }
 
@@ -462,17 +486,45 @@ fn update(
         distance(a.position).total_cmp(&distance(b.position))
     });
     nearby.truncate(MAX_FIRES);
+    let mut alchemy = alchemy::nearby(
+        session.map(|session| &**session),
+        &chunks,
+        &journal,
+        eye,
+        MAX_FIRES,
+    );
+    let mut fire_cells: Vec<_> = nearby
+        .iter()
+        .map(|fire| fire.position)
+        .chain(alchemy.fire_cells())
+        .collect();
+    fire_cells.sort_by(|a, b| {
+        let distance = |p: [i64; 3]| Vec3::from_array(p.map(|v| v as f32)).distance_squared(eye);
+        distance(*a).total_cmp(&distance(*b))
+    });
+    let fire_cells: BTreeSet<_> = fire_cells.into_iter().take(MAX_FIRES).collect();
+    nearby.retain(|fire| fire_cells.contains(&fire.position));
+    alchemy.retain_fires(&fire_cells);
     let gain = 2.0_f32.powf(ev100.clamp(6.0, 13.7) - 6.0);
     let intensity = 950.0 * gain * (1.0 + 0.07 * (time.elapsed_secs() * 7.1).sin());
-    let mut desired: HashMap<_, _> = nearby
+    let mut light_positions: Vec<_> = nearby
         .iter()
         .filter(|f| f.lit)
         .filter_map(|f| {
             let position = fire_position(f.position, &journal);
             (position.distance_squared(eye) < 28.0_f32.powi(2)).then_some((f.position, position))
         })
-        .take(MAX_LIGHTS)
+        .chain(
+            alchemy
+                .lights()
+                .filter(|(_, position)| position.distance_squared(eye) < 28.0_f32.powi(2)),
+        )
         .collect();
+    light_positions.sort_by(|a, b| {
+        a.1.distance_squared(eye)
+            .total_cmp(&b.1.distance_squared(eye))
+    });
+    let mut desired: HashMap<_, _> = light_positions.into_iter().take(MAX_LIGHTS).collect();
     for (entity, lamp, mut light, mut transform) in &mut lamps {
         if let Some(position) = desired.remove(&lamp.0) {
             transform.translation = position;
@@ -502,7 +554,7 @@ fn update(
             .iter()
             .any(|furnace| !furnace.smoke_cells.is_empty())
     });
-    let active = !nearby.is_empty() || has_smoke;
+    let active = !nearby.is_empty() || has_smoke || alchemy.active();
     if !active && !effects.visible {
         return;
     }
@@ -568,10 +620,16 @@ fn update(
             }
         }
     }
-    effects.visible = !nearby.is_empty() || !cells.is_empty();
+    effects.visible = !nearby.is_empty() || !cells.is_empty() || alchemy.active();
     effects.next = time.elapsed_secs() + 0.05;
     let mut fire = Geometry::default();
     let mut smoke = Geometry::default();
+    alchemy.append(
+        &mut fire,
+        &mut smoke,
+        (&chunks, &journal),
+        (time.elapsed_secs(), right, up),
+    );
     for furnace in nearby {
         let facing = journal
             .object_state(furnace.position)
@@ -692,9 +750,7 @@ fn update(
         (fire, &effects.fire, effects.fire_entity),
         (smoke, &effects.smoke, effects.smoke_entity),
     ] {
-        let visible = meshes
-            .get_mut(handle)
-            .is_some_and(|mut mesh| geometry.write(&mut mesh));
+        let visible = geometry.upload(&mut meshes, handle);
         commands.entity(entity).insert(if visible {
             Visibility::Visible
         } else {

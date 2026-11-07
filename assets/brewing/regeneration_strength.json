@@ -1,0 +1,1 @@
+{"id":6,"key":"teramic::regeneration_strength_potion","name":"Regeneration + Strength Potion","inputs":[{"item":{"flower":"red"},"count":1},{"item":{"animal":"honey"},"count":1},{"item":{"dust":"iron"},"count":1}],"effects":[{"kind":"regeneration","level":1,"seconds":45.0},{"kind":"strength","level":2,"seconds":90.0}],"seconds":24.0,"color":[203,70,145]}

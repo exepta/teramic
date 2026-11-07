@@ -1,0 +1,2 @@
+test edits::journal::import_performance_tests::benchmark_dense_section_import_updates ... O07_IMPORT_BENCH phase=single-object-edits blocks=4096 objects=4096 updates=200 total_ms=273.732074 mean_ms=1.368660 p50_ms=1.323348 p95_ms=1.547052 p99_ms=2.075884 max_ms=2.557474
+O07_IMPORT_BENCH phase=all-object-edits blocks=4096 objects=4096 updates=4 total_ms=37.384272 mean_ms=9.346068 p50_ms=9.235696 p95_ms=9.747936 p99_ms=9.747936 max_ms=9.747936

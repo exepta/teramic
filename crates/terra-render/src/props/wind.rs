@@ -60,22 +60,22 @@ impl Default for PropExtension {
 
 impl MaterialExtension for PropExtension {
     fn fragment_shader() -> ShaderRef {
-        "shaders/terra_prop_fragment.wgsl".into()
+        "shaders/terra_prop_fragment.wesl".into()
     }
     fn prepass_fragment_shader() -> ShaderRef {
-        "shaders/terra_prop_fragment.wgsl".into()
+        "shaders/terra_prop_fragment.wesl".into()
     }
     fn deferred_fragment_shader() -> ShaderRef {
-        "shaders/terra_prop_fragment.wgsl".into()
+        "shaders/terra_prop_fragment.wesl".into()
     }
     fn vertex_shader() -> ShaderRef {
-        "shaders/terra_props.wgsl".into()
+        "shaders/terra_props.wesl".into()
     }
     fn prepass_vertex_shader() -> ShaderRef {
-        "shaders/terra_props.wgsl".into()
+        "shaders/terra_props.wesl".into()
     }
     fn deferred_vertex_shader() -> ShaderRef {
-        "shaders/terra_props.wgsl".into()
+        "shaders/terra_props.wesl".into()
     }
     fn specialize(
         _pipeline: &bevy::pbr::MaterialExtensionPipeline,
@@ -152,7 +152,7 @@ pub(super) fn parameters(kind: PropKind, variant: u8, height: f32, scale: f32) -
     terra_world::props::wind_parameters(kind, variant, height, scale)
 }
 pub(super) fn padded_bounds(mesh: &Mesh) -> Option<Aabb> {
-    let mut bounds = mesh.compute_aabb()?;
+    let mut bounds = mesh.get_aabb()?;
     let weight = match mesh.attribute(Mesh::ATTRIBUTE_UV_0)? {
         VertexAttributeValues::Float32x2(values) => values
             .iter()

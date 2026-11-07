@@ -1,0 +1,10 @@
+{
+  "id": "teramic::item_importer", "name": "Item Importer", "station": "workbench",
+  "output": { "item": { "block": 153 }, "count": 1 },
+  "pattern": { "kind": "shaped", "width": 2, "height": 2, "cells": [
+    { "item": { "mineral": "iron_ingot" }, "count": 1 },
+    { "item": { "block": 144 }, "count": 1 },
+    { "item": { "block": 16 }, "wood": true, "count": 1 },
+    { "item": { "mineral": "iron_ingot" }, "count": 1 }
+  ] }
+}

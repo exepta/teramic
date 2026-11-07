@@ -1,0 +1,180 @@
+{
+  "phase": 195,
+  "date": "2026-11-06",
+  "tests": {
+    "passed": 3647,
+    "failed": 0,
+    "ignored": 8
+  },
+  "checks": {
+    "build": true,
+    "clippy_all_targets": true,
+    "css_parser": true,
+    "format": true,
+    "diff": true
+  },
+  "native": {
+    "captures": 10,
+    "claims_ui": "temporary client projection; authority tested via real UDP separately",
+    "castle": "20 actual models, collision and picking, live heraldry",
+    "os_input": false
+  },
+  "sources": [
+    {
+      "path": "crates/terra-core/src/kingdom.rs",
+      "sha256": "81099bd1c4beaf3e0ca564daefb5647bbcc21fbacd6e8e3f01a658e7c207e1d8"
+    },
+    {
+      "path": "crates/terra-core/src/kingdom/claims.rs",
+      "sha256": "1ce4df703e9eea3e45eacd454d9750f241b96c8d1b5bfad3cb34fb51c746516a"
+    },
+    {
+      "path": "crates/terra-network/src/server_kingdoms.rs",
+      "sha256": "948dca3cf4cf17b82645b737c79c602a70ac550a1e612d4cb248ed2c76ebcc05"
+    },
+    {
+      "path": "crates/terra-network/src/protocol/kingdom.rs",
+      "sha256": "dbd2b52a65dd35502c5d073f8216c3487db2c122dbc5504614532fb282cfaf1c"
+    },
+    {
+      "path": "crates/terra-storage/src/regions.rs",
+      "sha256": "0c9d4f5d0155e61a0e9112406c01fa89bf87ea70434223f434269f13b656379c"
+    },
+    {
+      "path": "crates/terra-ui/src/minimap/fullmap.rs",
+      "sha256": "d7d8b00f862b0341a6bcf26bbdfe6f9d7a153f7ef06414408ab6b8867b6d5a4b"
+    },
+    {
+      "path": "crates/terra-ui/src/minimap/diplomacy.rs",
+      "sha256": "1a88c695433f2224d6403a557be1d795b869abdc0308e8858c76a8fd45786a6f"
+    },
+    {
+      "path": "src-ui/components/full-map.component.html",
+      "sha256": "b8076037641f4ab04b3872088f5d09f4e8f09b46c2138b9fa2c7befeb88fcea9"
+    },
+    {
+      "path": "src-ui/components/full-map.component.css",
+      "sha256": "d768e92547b44c02232745f020fb1fb766a85e9b34190867bc5ce4b340c441bd"
+    },
+    {
+      "path": "src-ui/assets/heraldry-wheat.svg",
+      "sha256": "7070b3560efeb4d809a4724b673e1704243d085ab43a0b1fb9c2db68ca4806b5"
+    },
+    {
+      "path": "src-ui/assets/heraldry-hammer.svg",
+      "sha256": "b167b6c3dd4df3efbea164a66b40ac86c11f38ead1c065639f15acd14315716e"
+    },
+    {
+      "path": "tools/assets/build_castle.py",
+      "sha256": "5facfcd0b3859a05c74fd16a5d66876e3820df62671927677681722798e7b7d4"
+    },
+    {
+      "path": "tools/assets/castle_details.py",
+      "sha256": "90bf0e37b75ae34c59adf9452ba730441817bb7efcfca2b4cdc5f8f5812748fa"
+    },
+    {
+      "path": "crates/terra-render/src/meshing/custom_castle.rs",
+      "sha256": "3c481a4b9021281606d798d00cfc17fcd02b5fc925119b0a7bd80884a622c886"
+    }
+  ],
+  "screenshots": [
+    {
+      "path": "tools/benchmarks/results/claims-diplomacy-castle-2026-11-06/native/castle/castle-back.png",
+      "sha256": "46ee79abede192e165ea2feec500d52932e88fba927511ccd6e364760f3f4396",
+      "size": [
+        2562,
+        1440
+      ]
+    },
+    {
+      "path": "tools/benchmarks/results/claims-diplomacy-castle-2026-11-06/native/castle/castle-front.png",
+      "sha256": "0286c4c6340626616beb96644b91147b5b3e91316b2c01503892d2a4e28c917c",
+      "size": [
+        2562,
+        1440
+      ]
+    },
+    {
+      "path": "tools/benchmarks/results/claims-diplomacy-castle-2026-11-06/native/castle/castle-heraldry-dissolved.png",
+      "sha256": "7c88e0f425e9a03aafabc6cc98d30f452664128aa7442ae693a58b51393aa633",
+      "size": [
+        2562,
+        1440
+      ]
+    },
+    {
+      "path": "tools/benchmarks/results/claims-diplomacy-castle-2026-11-06/native/castle/castle-heraldry-initial.png",
+      "sha256": "e15304050c052678e9ccd56156df1fba6e69c81ab4480fa644adaade10920f71",
+      "size": [
+        2562,
+        1440
+      ]
+    },
+    {
+      "path": "tools/benchmarks/results/claims-diplomacy-castle-2026-11-06/native/castle/castle-heraldry-updated.png",
+      "sha256": "b5f58f5ba86f920239ca4c5ed5d39a501243c66ccbffa7be1f78dfa53da985fb",
+      "size": [
+        2562,
+        1440
+      ]
+    },
+    {
+      "path": "tools/benchmarks/results/claims-diplomacy-castle-2026-11-06/native/castle/castle-natural-walls.png",
+      "sha256": "135bd6a04553ccb3b14a2d657f8b95148aacc4c5d8dc9f1ffcbce4f6a719e43b",
+      "size": [
+        2562,
+        1440
+      ]
+    },
+    {
+      "path": "tools/benchmarks/results/claims-diplomacy-castle-2026-11-06/native/castle/castle-openings.png",
+      "sha256": "071df585d796bd7a133653b8bd582850656f8e1b208304616197e0de2ffa28b4",
+      "size": [
+        2562,
+        1440
+      ]
+    },
+    {
+      "path": "tools/benchmarks/results/claims-diplomacy-castle-2026-11-06/native/claims/diplomacy-claims.png",
+      "sha256": "a7f07fcfe5164a0c506e5e8da9e08a013b77e44df6859a8665adf3ce4c821061",
+      "size": [
+        2562,
+        1440
+      ]
+    },
+    {
+      "path": "tools/benchmarks/results/claims-diplomacy-castle-2026-11-06/native/claims/diplomacy-compact.png",
+      "sha256": "ff24c6ad9ff46b195d8c86f49b339c68bd3203d177fb2485d1506e8b97ba32c4",
+      "size": [
+        1025,
+        768
+      ]
+    },
+    {
+      "path": "tools/benchmarks/results/claims-diplomacy-castle-2026-11-06/native/claims/diplomacy-live-color.png",
+      "sha256": "d9ba4ba0672bdfe9c65611fe475bd514b984043125e4a8c93d0769cc407d18ce",
+      "size": [
+        2562,
+        1440
+      ]
+    }
+  ],
+  "references": [
+    {
+      "path": "tools/benchmarks/results/claims-diplomacy-castle-2026-11-06/references/crown.png",
+      "sha256": "ec3509793def664459c7f7e778e9df2caeda5ccf7d734216e88ef6c8d11bfb8d",
+      "size": [
+        706,
+        1281
+      ]
+    },
+    {
+      "path": "tools/benchmarks/results/claims-diplomacy-castle-2026-11-06/references/walls.png",
+      "sha256": "26e736d67aa7c29052b7737d408d687e3645f204943b957ee57bb5e04d38271b",
+      "size": [
+        3025,
+        1534
+      ]
+    }
+  ]
+}

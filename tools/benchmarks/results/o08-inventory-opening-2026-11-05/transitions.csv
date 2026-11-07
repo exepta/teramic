@@ -1,0 +1,23 @@
+case,surface,round,stage,readiness,request_latency_paired_percent_valid,request_to_visible_ms,frames,median_ms,p95_ms,p99_ms,max_ms
+before-player,Player,1,Opening,legacy layout/open readiness,False,166.43385,3,29.877768999999997,116.459005,116.459005,116.459005
+before-player,Player,1,Closing,legacy layout/open readiness,False,37.56191,1,37.56191,37.56191,37.56191,37.56191
+after-slot-player,Player,1,Opening,legacy layout/open readiness,False,71.42737000000001,3,19.766505,38.506519000000004,38.506519000000004,38.506519000000004
+after-slot-player,Player,1,Closing,legacy layout/open readiness,False,53.643764,2,18.46957,35.174194,35.174194,35.174194
+final-player,Player,1,Opening,two consecutive actually painted frames,False,115.653611,6,15.225455,27.427301,27.427301,27.427301
+final-player,Player,1,Closing,two consecutive actually painted frames,False,66.705248,3,23.781988000000002,30.240993,30.240993,30.240993
+final-player,Player,2,Opening,two consecutive actually painted frames,False,112.717386,6,18.913446,27.189772,27.189772,27.189772
+final-player,Player,2,Closing,two consecutive actually painted frames,False,55.689589999999995,2,26.887464,28.802126,28.802126,28.802126
+chest-before-pending-gate,Chest,1,Opening,two consecutive actually painted frames,False,290.647952,8,26.561087,93.57246099999999,93.57246099999999,93.57246099999999
+chest-before-pending-gate,Chest,1,Closing,two consecutive actually painted frames,False,181.95566799999997,7,19.858948,46.437515,46.437515,46.437515
+chest-before-pending-gate,Chest,2,Opening,two consecutive actually painted frames,False,384.99742100000003,8,26.234187,107.337302,107.337302,107.337302
+chest-before-pending-gate,Chest,2,Closing,two consecutive actually painted frames,False,125.80154299999998,6,15.646163000000001,34.001147,34.001147,34.001147
+final-player-after-cache,Player,1,Opening,legacy layout/open readiness,False,53.113246000000004,3,14.076863,25.192914000000002,25.192914000000002,25.192914000000002
+final-player-after-cache,Player,1,Closing,legacy layout/open readiness,False,37.246635,2,12.620002999999999,24.626632,24.626632,24.626632
+chest-cache-stable,Chest,1,Opening,two consecutive actually painted frames,False,256.54686399999997,8,22.232023,92.820626,92.820626,92.820626
+chest-cache-stable,Chest,1,Closing,two consecutive actually painted frames,False,103.523387,7,10.656018,27.544446,27.544446,27.544446
+chest-cache-stable,Chest,2,Opening,two consecutive actually painted frames,False,323.609579,9,23.791875,87.43482700000001,87.43482700000001,87.43482700000001
+chest-cache-stable,Chest,2,Closing,two consecutive actually painted frames,False,95.590578,7,10.166479,22.936698,22.936698,22.936698
+chest-projection-final,Chest,1,Opening,two consecutive actually painted frames,False,417.409421,7,48.986126999999996,144.30020800000003,144.30020800000003,144.30020800000003
+chest-projection-final,Chest,1,Closing,two consecutive actually painted frames,False,81.212767,3,30.972394,31.675459000000004,31.675459000000004,31.675459000000004
+chest-projection-final,Chest,2,Opening,two consecutive actually painted frames,False,194.605434,7,25.899822999999998,39.957326,39.957326,39.957326
+chest-projection-final,Chest,2,Closing,two consecutive actually painted frames,False,131.106304,6,15.996423,37.68802,37.68802,37.68802

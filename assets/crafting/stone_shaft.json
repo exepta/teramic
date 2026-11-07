@@ -1,0 +1,9 @@
+{
+  "id": "teramic::stone_shaft", "name": "Stone Shaft", "station": "workbench",
+  "output": { "item": { "block": 145 }, "count": 4 },
+  "pattern": { "kind": "shaped", "width": 1, "height": 3, "cells": [
+    { "item": { "block": 3 }, "count": 1 },
+    { "item": "stick", "count": 1 },
+    { "item": { "block": 3 }, "count": 1 }
+  ] }
+}

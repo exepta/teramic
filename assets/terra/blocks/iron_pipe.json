@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "id": 165,
+  "name": "Iron Pipe",
+  "description": "A reinforced iron pipe for the finite hydraulic network.",
+  "creative_category": "technic",
+  "render_kind": "custom_mesh",
+  "struct_block": true,
+  "model_layout": "scene",
+  "model": "models/iron_pipe.gltf",
+  "hardness": 3,
+  "resistance": 8,
+  "mining_level": 0,
+  "required_tool": "pickaxe",
+  "textures": {
+    "pipe_iron": "textures/machinery-iron-hd.png",
+    "brass_flanges": "textures/machinery-iron-hd.png",
+    "iron_bolts": "textures/machinery-iron-hd.png"
+  },
+  "collision_boxes": [
+    {
+      "minimum": [
+        0,
+        0.285,
+        0.285
+      ],
+      "maximum": [
+        1,
+        0.715,
+        0.715
+      ]
+    },
+    {
+      "minimum": [
+        0.285,
+        0,
+        0.285
+      ],
+      "maximum": [
+        0.715,
+        1,
+        0.715
+      ]
+    },
+    {
+      "minimum": [
+        0.285,
+        0.285,
+        0
+      ],
+      "maximum": [
+        0.715,
+        0.715,
+        1
+      ]
+    }
+  ]
+}

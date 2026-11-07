@@ -77,7 +77,7 @@ impl Collapse {
             || !length.is_finite()
             || (length - 1.0).abs() > 0.001
             || !matches!(self.wood_material, 6 | 10 | 36 | 134)
-            || !matches!(self.leaves_material, 7..=9 | 132 | 133)
+            || !matches!(self.leaves_material, 7..=9 | 132 | 133 | 195)
             || self.sections.is_empty()
             || self.sections.len() > 128
         {

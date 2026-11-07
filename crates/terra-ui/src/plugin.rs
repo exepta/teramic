@@ -5,6 +5,7 @@ pub struct TerraUiPlugin;
 impl Plugin for TerraUiPlugin {
     fn build(&self, app: &mut App) {
         crate::cadence::install(app);
+        crate::biome_previews::install(app);
         crate::fonts::install(app);
         crate::text_editing::install(app);
         crate::settings::install(app);
@@ -12,12 +13,15 @@ impl Plugin for TerraUiPlugin {
         crate::chat::install(app);
         crate::sleep::install(app);
         crate::inventory::install(app);
+        crate::kingdom::install(app);
+        crate::realm_title::install(app);
         crate::multiplayer::install(app);
         crate::survival::install(app);
         crate::debug::install(app);
         crate::target_hud::install(app);
         crate::mob_health::install(app);
         crate::pets::install(app);
+        crate::settlement_map::install(app);
         crate::minimap::install(app);
         let benchmark_ui = std::env::var("TERRA_BENCH_UI").is_ok_and(|value| value == "1")
             && std::env::args().any(|argument| argument == "--smoke-test-benchmark")
@@ -50,6 +54,7 @@ impl Plugin for TerraUiPlugin {
             crate::menu::install(app);
         }
         crate::process_stats::install(app);
+        crate::hud_visibility::install(app);
         app.add_plugins(FrameTimeDiagnosticsPlugin::default())
             .init_resource::<__tilt_ui_generated_components::debug_overlay_component::DebugOverlay>(
             )

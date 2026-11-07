@@ -226,8 +226,10 @@ fn advance(world: &mut World, smoke: &mut Smoke) -> Result<bool, String> {
     {
         return Err(error.clone());
     }
+    // Streaming is the subject of the flight stage. Its input release and
+    // readbacks must run while movement temporarily invalidates readiness.
     if !world.resource::<ClientSession>().ready
-        || !world.resource::<terra_render::RenderStatus>().ready
+        || (!world.resource::<terra_render::RenderStatus>().ready && smoke.stage != 23)
     {
         return Ok(false);
     }
@@ -295,7 +297,7 @@ fn advance(world: &mut World, smoke: &mut Smoke) -> Result<bool, String> {
                 world.resource_mut::<GameplayConfig>().minimap.fps = 30;
                 pulse_binding(world, smoke, GameAction::MapZoomOut)?;
             }
-            2 => click(world, "map-toggle")?,
+            2 => pulse_binding(world, smoke, GameAction::MiniMap)?,
             3 => {
                 click(world, "map-toggle")?;
                 resize(world, 960.0, 720.0, 1.5);
@@ -1535,11 +1537,19 @@ fn validate_quick_waypoint(world: &mut World, smoke: &Smoke) -> Result<(), Strin
         .quick_position
         .ok_or("Quick waypoint player position missing")?;
     for (value, expected) in [&view.x, &view.y, &view.z].into_iter().zip(expected) {
+        if value
+            .split(',')
+            .nth(1)
+            .is_none_or(|fraction| fraction.len() != 2)
+        {
+            return Err("Quick waypoint coordinates must display two decimal places".into());
+        }
         let value = value
+            .replace(',', ".")
             .parse::<f64>()
             .map_err(|_| "Quick waypoint coordinate is invalid")?;
-        if (value - f64::from(expected)).abs() > 0.001 {
-            return Err("Quick waypoint defaults do not match exact player XYZ".into());
+        if (value - f64::from(expected)).abs() > 0.0051 {
+            return Err("Quick waypoint defaults do not match rounded player XYZ".into());
         }
     }
     match smoke.stage {

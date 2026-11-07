@@ -12,18 +12,24 @@ use terra_voxel::{
 fn templates() -> TemplateSet {
     let directory = terra_core::asset_directory().join("terra/blocks");
     let library = BlockLibrary::load(&directory).expect("JSON definitions");
-    let mut templates = TemplateSet::default();
+    let mut templates = crate::blocks::authored_terrain_templates();
+    // This fixture fills complete solid cells. Shaped Dirt models imported by
+    // the PBR fixture have their own construction/collision coverage tests.
+    let authored_cubes = &templates.cube_lods;
+    templates
+        .blocks
+        .retain(|id, _| authored_cubes.contains_key(id));
     let mut materials = std::collections::BTreeMap::new();
     for block in library.blocks {
         if block.render_kind != crate::blocks::definitions::BlockRenderKind::Cube {
             continue;
         }
         let face_materials = block.face_materials.expect("cube materials").map(|name| {
-            let next = materials.len();
+            let next = materials.len() + 7;
             *materials.entry(name).or_insert(next)
         });
         let side_cap = block.side_cap.map(|cap| {
-            let next = materials.len();
+            let next = materials.len() + 7;
             SideCap {
                 material: *materials.entry(cap.material).or_insert(next),
                 height: cap.height,
@@ -89,6 +95,7 @@ fn ordinary_blocks_stay_inside_their_cells_and_keep_closed_surface_shells() {
                         water_level: None,
                         terrain: None,
                         exposure: None,
+                        tints: Default::default(),
                         conditions: Default::default(),
                     },
                 )
@@ -103,6 +110,7 @@ fn ordinary_blocks_stay_inside_their_cells_and_keep_closed_surface_shells() {
                             water_level: None,
                             terrain: None,
                             exposure: None,
+                            tints: Default::default(),
                             conditions: Default::default(),
                         },
                     )
@@ -132,6 +140,7 @@ fn ordinary_blocks_stay_inside_their_cells_and_keep_closed_surface_shells() {
                                         hit.is_some_and(|d| d
                                             <= reference
                                                 + match material {
+                                                    1 => 0.0651,
                                                     2 | 19 => 0.0551,
                                                     3 | 42 | 43 => 0.0751,
                                                     _ => 0.0451,
@@ -178,6 +187,7 @@ fn ordinary_blocks_stay_inside_their_cells_and_keep_closed_surface_shells() {
                             let hit = first_hit(&batches, surface + normal, -normal);
                             let maximum = if detail_level == DetailLevel::Near {
                                 match material {
+                                    1 => 1.0651,
                                     2 | 19 => 1.0551,
                                     3 | 42 | 43 => 1.0751,
                                     _ => 1.0451,
@@ -207,6 +217,11 @@ fn joined_cube_uvs_use_the_same_projection_as_greedy_lods() {
     let templates = templates();
     for material in [1, 3, 5] {
         for level in [DetailLevel::Near, DetailLevel::Middle, DetailLevel::Far] {
+            // Authored near geometry retains its atlas UVs. Its tiled coarse
+            // counterpart, like ordinary cubes, must use the greedy projection.
+            if material == 1 && level == DetailLevel::Near {
+                continue;
+            }
             let top = terra_voxel::meshing::BlockFace {
                 edge_mask: 15,
                 occupied_neighbor: false,
@@ -227,6 +242,7 @@ fn joined_cube_uvs_use_the_same_projection_as_greedy_lods() {
                     water_level: None,
                     terrain: None,
                     exposure: None,
+                    tints: Default::default(),
                     conditions: Default::default(),
                 },
             )
@@ -283,6 +299,7 @@ fn terrain_lods(
                     water_level: None,
                     terrain: None,
                     exposure: None,
+                    tints: Default::default(),
                     conditions: Default::default(),
                 },
             )
@@ -398,6 +415,7 @@ fn fluid_source_has_a_real_animated_inventory_cube_but_no_solid_terrain_faces() 
             detail_level: super::DetailLevel::Near,
             terrain: None,
             exposure: None,
+            tints: Default::default(),
             conditions: Default::default(),
         },
     )
@@ -457,6 +475,7 @@ fn sparse_cells(templates: &TemplateSet, cells: &[([i64; 3], u16, DetailLevel)])
                 water_level: None,
                 terrain: None,
                 exposure: None,
+                tints: Default::default(),
                 conditions: Default::default(),
             },
         )

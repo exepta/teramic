@@ -1,0 +1,486 @@
+{
+  "clear": {
+    "after": {
+      "average_fps": 110.39677494508194,
+      "deferred_upload_batches": 863,
+      "inventory_phases": [],
+      "loaded_active_props": 100409,
+      "loaded_sections": 11792,
+      "mesh_assets": 20269,
+      "p95_frame_ms": 10.941279,
+      "p99_frame_ms": 12.513803000000001,
+      "peak_admitted_upload_bytes": 10548776,
+      "peak_admitted_upload_vertices": 219522,
+      "placement": [],
+      "rendered_sections": 7015,
+      "represented_props": 100340,
+      "resident_memory_kib": 2308320,
+      "resource_peak": {
+        "command": [
+          "/tmp/teramic-o07-i3w2xd60/binaries/terra-client-after",
+          "--smoke-test-benchmark"
+        ],
+        "exit_code": 0,
+        "peak_drm_memory_gtt_kib": 67588,
+        "peak_drm_memory_vram_kib": 4035904,
+        "peak_rss_kib": 2302608,
+        "system_cpu_seconds": 21.248,
+        "user_cpu_seconds": 185.343,
+        "wall_seconds": 54.732
+      },
+      "terrain_composition_jobs": 7015,
+      "terrain_composition_max_ms": 43.813481,
+      "visible_mesh_entities": 13448,
+      "worst_frame_ms": 16.090348000000002
+    },
+    "before": {
+      "average_fps": 108.43415867327428,
+      "deferred_upload_batches": 867,
+      "inventory_phases": [],
+      "loaded_active_props": 100409,
+      "loaded_sections": 11792,
+      "mesh_assets": 20269,
+      "p95_frame_ms": 11.488979,
+      "p99_frame_ms": 13.253894,
+      "peak_admitted_upload_bytes": 10556296,
+      "peak_admitted_upload_vertices": 223286,
+      "placement": [],
+      "rendered_sections": 7015,
+      "represented_props": 100340,
+      "resident_memory_kib": 2236136,
+      "resource_peak": {
+        "command": [
+          "/tmp/teramic-o07-i3w2xd60/binaries/terra-client-before",
+          "--smoke-test-benchmark"
+        ],
+        "exit_code": 0,
+        "peak_drm_memory_gtt_kib": 67588,
+        "peak_drm_memory_vram_kib": 4457560,
+        "peak_rss_kib": 2231872,
+        "system_cpu_seconds": 21.233,
+        "user_cpu_seconds": 184.153,
+        "wall_seconds": 54.742
+      },
+      "terrain_composition_jobs": 7015,
+      "terrain_composition_max_ms": 42.690101,
+      "visible_mesh_entities": 13435,
+      "worst_frame_ms": 15.799285
+    }
+  },
+  "flight": {
+    "after": {
+      "average_fps": 98.11981090251268,
+      "deferred_upload_batches": 1241,
+      "inventory_phases": [],
+      "loaded_active_props": 58368,
+      "loaded_sections": 14627,
+      "mesh_assets": 15800,
+      "p95_frame_ms": 14.091645,
+      "p99_frame_ms": 16.538227,
+      "peak_admitted_upload_bytes": 10360224,
+      "peak_admitted_upload_vertices": 218776,
+      "placement": [],
+      "rendered_sections": 4770,
+      "represented_props": 57396,
+      "resident_memory_kib": 2341676,
+      "resource_peak": {
+        "command": [
+          "/tmp/teramic-o07-i3w2xd60/binaries/terra-client-after",
+          "--smoke-test-benchmark"
+        ],
+        "exit_code": 0,
+        "peak_drm_memory_gtt_kib": 67588,
+        "peak_drm_memory_vram_kib": 4025372,
+        "peak_rss_kib": 2336968,
+        "system_cpu_seconds": 24.363,
+        "user_cpu_seconds": 231.235,
+        "wall_seconds": 65.788
+      },
+      "terrain_composition_jobs": 14867,
+      "terrain_composition_max_ms": 45.100617,
+      "visible_mesh_entities": 9894,
+      "worst_frame_ms": 24.371160999999997
+    },
+    "before": {
+      "average_fps": 91.57693107075812,
+      "deferred_upload_batches": 1238,
+      "inventory_phases": [],
+      "loaded_active_props": 58284,
+      "loaded_sections": 14621,
+      "mesh_assets": 15792,
+      "p95_frame_ms": 14.873796,
+      "p99_frame_ms": 17.996878000000002,
+      "peak_admitted_upload_bytes": 10407772,
+      "peak_admitted_upload_vertices": 219055,
+      "placement": [],
+      "rendered_sections": 4770,
+      "represented_props": 57738,
+      "resident_memory_kib": 2314080,
+      "resource_peak": {
+        "command": [
+          "/tmp/teramic-o07-i3w2xd60/binaries/terra-client-before",
+          "--smoke-test-benchmark"
+        ],
+        "exit_code": 0,
+        "peak_drm_memory_gtt_kib": 67588,
+        "peak_drm_memory_vram_kib": 4445168,
+        "peak_rss_kib": 2309960,
+        "system_cpu_seconds": 23.331,
+        "user_cpu_seconds": 228.146,
+        "wall_seconds": 65.789
+      },
+      "terrain_composition_jobs": 14845,
+      "terrain_composition_max_ms": 38.266712,
+      "visible_mesh_entities": 9895,
+      "worst_frame_ms": 26.302394
+    }
+  },
+  "inventory": {
+    "after": {
+      "inventory_phases": [
+        {
+          "entities": 31091,
+          "fps": 109.5283074252207,
+          "images": 143,
+          "max_ms": 15.924548,
+          "median_ms": 8.97513,
+          "meshes": 20269,
+          "p95_ms": 11.032214,
+          "p99_ms": 13.286772000000001,
+          "phase": "Closed",
+          "property_binding_nodes": 32,
+          "resident_memory_kib": 2289240,
+          "ui_nodes": 991
+        },
+        {
+          "entities": 31130,
+          "fps": 105.16866553385498,
+          "images": 179,
+          "max_ms": 16.960959000000003,
+          "median_ms": 9.185415,
+          "meshes": 20269,
+          "p95_ms": 12.540925,
+          "p99_ms": 13.961275,
+          "phase": "Open",
+          "property_binding_nodes": 382,
+          "resident_memory_kib": 2368856,
+          "ui_nodes": 1028
+        },
+        {
+          "entities": 31134,
+          "fps": 109.5709832225777,
+          "images": 179,
+          "max_ms": 14.052686999999999,
+          "median_ms": 8.959659,
+          "meshes": 20269,
+          "p95_ms": 11.027823000000001,
+          "p99_ms": 12.951253,
+          "phase": "ClosedAgain",
+          "property_binding_nodes": 32,
+          "resident_memory_kib": 2373576,
+          "ui_nodes": 1031
+        }
+      ],
+      "placement": [],
+      "resource_peak": {
+        "command": [
+          "/tmp/teramic-o07-i3w2xd60/binaries/terra-client-after",
+          "--smoke-test-benchmark"
+        ],
+        "exit_code": 0,
+        "peak_drm_memory_gtt_kib": 67588,
+        "peak_drm_memory_vram_kib": 4410564,
+        "peak_rss_kib": 2369040,
+        "system_cpu_seconds": 26.947,
+        "user_cpu_seconds": 238.428,
+        "wall_seconds": 70.569
+      }
+    },
+    "before": {
+      "inventory_phases": [
+        {
+          "entities": 31091,
+          "fps": 108.8415080408051,
+          "images": 144,
+          "max_ms": 15.440758,
+          "median_ms": 9.087441,
+          "meshes": 20269,
+          "p95_ms": 10.666663,
+          "p99_ms": 12.367626,
+          "phase": "Closed",
+          "property_binding_nodes": 32,
+          "resident_memory_kib": 2224380,
+          "ui_nodes": 991
+        },
+        {
+          "entities": 31130,
+          "fps": 78.6210342125441,
+          "images": 180,
+          "max_ms": 17.525289,
+          "median_ms": 12.585191,
+          "meshes": 20269,
+          "p95_ms": 14.355976,
+          "p99_ms": 16.169952000000002,
+          "phase": "Open",
+          "property_binding_nodes": 382,
+          "resident_memory_kib": 2281580,
+          "ui_nodes": 1028
+        },
+        {
+          "entities": 31116,
+          "fps": 108.98382437557258,
+          "images": 180,
+          "max_ms": 15.07441,
+          "median_ms": 9.01501,
+          "meshes": 20269,
+          "p95_ms": 11.096261,
+          "p99_ms": 13.182711999999999,
+          "phase": "ClosedAgain",
+          "property_binding_nodes": 32,
+          "resident_memory_kib": 2287356,
+          "ui_nodes": 1031
+        }
+      ],
+      "placement": [],
+      "resource_peak": {
+        "command": [
+          "/tmp/teramic-o07-i3w2xd60/binaries/terra-client-before",
+          "--smoke-test-benchmark"
+        ],
+        "exit_code": 0,
+        "peak_drm_memory_gtt_kib": 67588,
+        "peak_drm_memory_vram_kib": 4061952,
+        "peak_rss_kib": 2283876,
+        "system_cpu_seconds": 25.835,
+        "user_cpu_seconds": 230.081,
+        "wall_seconds": 70.545
+      }
+    }
+  },
+  "placement": {
+    "after": {
+      "average_fps": 100.83281228270374,
+      "deferred_upload_batches": 1346,
+      "inventory_phases": [],
+      "loaded_active_props": 100353,
+      "loaded_sections": 11792,
+      "mesh_assets": 20271,
+      "p95_frame_ms": 13.690547,
+      "p99_frame_ms": 15.080935,
+      "peak_admitted_upload_bytes": 10046264,
+      "peak_admitted_upload_vertices": 223286,
+      "placement": [
+        {
+          "acknowledged_edits": 240,
+          "cycles": 120,
+          "max_ack_replication_ms": 57.735178999999995,
+          "mean_ack_replication_ms": 43.29080423333334,
+          "p95_ack_replication_ms": 52.453988,
+          "pending_collision_acks": 240,
+          "pending_geometry_acks": 0,
+          "pending_render_acks": 240
+        }
+      ],
+      "rendered_sections": 7015,
+      "represented_props": 100340,
+      "resident_memory_kib": 2329804,
+      "resource_peak": {
+        "command": [
+          "/tmp/teramic-o07-i3w2xd60/binaries/terra-client-after",
+          "--smoke-test-benchmark"
+        ],
+        "exit_code": 0,
+        "peak_drm_memory_gtt_kib": 67588,
+        "peak_drm_memory_vram_kib": 4315616,
+        "peak_rss_kib": 2325052,
+        "system_cpu_seconds": 23.741,
+        "user_cpu_seconds": 231.646,
+        "wall_seconds": 65.778
+      },
+      "terrain_composition_jobs": 8142,
+      "terrain_composition_max_ms": 41.001678999999996,
+      "visible_mesh_entities": 10201,
+      "worst_frame_ms": 17.441515000000003
+    },
+    "before": {
+      "average_fps": 95.47715871664533,
+      "deferred_upload_batches": 1359,
+      "inventory_phases": [],
+      "loaded_active_props": 100350,
+      "loaded_sections": 11792,
+      "mesh_assets": 20271,
+      "p95_frame_ms": 14.129102,
+      "p99_frame_ms": 15.36953,
+      "peak_admitted_upload_bytes": 10452504,
+      "peak_admitted_upload_vertices": 217612,
+      "placement": [
+        {
+          "acknowledged_edits": 240,
+          "cycles": 120,
+          "max_ack_replication_ms": 62.59034,
+          "mean_ack_replication_ms": 44.89702106666666,
+          "p95_ack_replication_ms": 56.061656,
+          "pending_collision_acks": 240,
+          "pending_geometry_acks": 0,
+          "pending_render_acks": 240
+        }
+      ],
+      "rendered_sections": 7015,
+      "represented_props": 100340,
+      "resident_memory_kib": 2263256,
+      "resource_peak": {
+        "command": [
+          "/tmp/teramic-o07-i3w2xd60/binaries/terra-client-before-fixed-fixture",
+          "--smoke-test-benchmark"
+        ],
+        "exit_code": 0,
+        "peak_drm_memory_gtt_kib": 67588,
+        "peak_drm_memory_vram_kib": 4045776,
+        "peak_rss_kib": 2257296,
+        "system_cpu_seconds": 25.385,
+        "user_cpu_seconds": 231.212,
+        "wall_seconds": 66.782
+      },
+      "terrain_composition_jobs": 8150,
+      "terrain_composition_max_ms": 141.114437,
+      "visible_mesh_entities": 10204,
+      "worst_frame_ms": 19.279132
+    }
+  },
+  "rain": {
+    "after": {
+      "average_fps": 46.66237067801176,
+      "deferred_upload_batches": 1686,
+      "inventory_phases": [],
+      "loaded_active_props": 198927,
+      "loaded_sections": 11876,
+      "mesh_assets": 26139,
+      "p95_frame_ms": 25.266586,
+      "p99_frame_ms": 27.837790000000002,
+      "peak_admitted_upload_bytes": 10702560,
+      "peak_admitted_upload_vertices": 221964,
+      "placement": [],
+      "rendered_sections": 7259,
+      "represented_props": 198927,
+      "resident_memory_kib": 2815636,
+      "resource_peak": {
+        "command": [
+          "/tmp/teramic-o07-i3w2xd60/binaries/terra-client-after",
+          "--smoke-test-benchmark"
+        ],
+        "exit_code": 0,
+        "peak_drm_memory_gtt_kib": 67588,
+        "peak_drm_memory_vram_kib": 7038696,
+        "peak_rss_kib": 2822784,
+        "system_cpu_seconds": 50.137,
+        "user_cpu_seconds": 498.195,
+        "wall_seconds": 174.739
+      },
+      "terrain_composition_jobs": 14782,
+      "terrain_composition_max_ms": 45.014242,
+      "visible_mesh_entities": 16194,
+      "worst_frame_ms": 29.918554
+    },
+    "before": {
+      "average_fps": 48.123398353045815,
+      "deferred_upload_batches": 1645,
+      "inventory_phases": [],
+      "loaded_active_props": 198927,
+      "loaded_sections": 11876,
+      "mesh_assets": 26139,
+      "p95_frame_ms": 24.702162,
+      "p99_frame_ms": 26.912025,
+      "peak_admitted_upload_bytes": 10556296,
+      "peak_admitted_upload_vertices": 220198,
+      "placement": [],
+      "rendered_sections": 7259,
+      "represented_props": 198927,
+      "resident_memory_kib": 2705364,
+      "resource_peak": {
+        "command": [
+          "/tmp/teramic-o07-i3w2xd60/binaries/terra-client-before",
+          "--smoke-test-benchmark"
+        ],
+        "exit_code": 0,
+        "peak_drm_memory_gtt_kib": 67588,
+        "peak_drm_memory_vram_kib": 6546528,
+        "peak_rss_kib": 2711108,
+        "system_cpu_seconds": 44.01,
+        "user_cpu_seconds": 442.413,
+        "wall_seconds": 152.655
+      },
+      "terrain_composition_jobs": 14707,
+      "terrain_composition_max_ms": 43.462134999999996,
+      "visible_mesh_entities": 15644,
+      "worst_frame_ms": 30.829174000000002
+    }
+  },
+  "village": {
+    "after": {
+      "average_fps": 49.926469964114595,
+      "deferred_upload_batches": 1402,
+      "inventory_phases": [],
+      "loaded_active_props": 198927,
+      "loaded_sections": 11876,
+      "mesh_assets": 26138,
+      "p95_frame_ms": 21.985258,
+      "p99_frame_ms": 23.177373000000003,
+      "peak_admitted_upload_bytes": 10566888,
+      "peak_admitted_upload_vertices": 220870,
+      "placement": [],
+      "rendered_sections": 7259,
+      "represented_props": 198927,
+      "resident_memory_kib": 2647648,
+      "resource_peak": {
+        "command": [
+          "/tmp/teramic-o07-i3w2xd60/binaries/terra-client-after",
+          "--smoke-test-benchmark"
+        ],
+        "exit_code": 0,
+        "peak_drm_memory_gtt_kib": 67588,
+        "peak_drm_memory_vram_kib": 6167416,
+        "peak_rss_kib": 2642732,
+        "system_cpu_seconds": 23.523,
+        "user_cpu_seconds": 245.232,
+        "wall_seconds": 78.334
+      },
+      "terrain_composition_jobs": 14295,
+      "terrain_composition_max_ms": 40.695728,
+      "visible_mesh_entities": 10646,
+      "worst_frame_ms": 26.679076
+    },
+    "before": {
+      "average_fps": 48.63112144038509,
+      "deferred_upload_batches": 1384,
+      "inventory_phases": [],
+      "loaded_active_props": 198927,
+      "loaded_sections": 11876,
+      "mesh_assets": 26138,
+      "p95_frame_ms": 22.184994,
+      "p99_frame_ms": 23.763852,
+      "peak_admitted_upload_bytes": 10781888,
+      "peak_admitted_upload_vertices": 223720,
+      "placement": [],
+      "rendered_sections": 7259,
+      "represented_props": 198927,
+      "resident_memory_kib": 2599152,
+      "resource_peak": {
+        "command": [
+          "/tmp/teramic-o07-i3w2xd60/binaries/terra-client-before",
+          "--smoke-test-benchmark"
+        ],
+        "exit_code": 0,
+        "peak_drm_memory_gtt_kib": 67588,
+        "peak_drm_memory_vram_kib": 6248272,
+        "peak_rss_kib": 2594812,
+        "system_cpu_seconds": 25.405,
+        "user_cpu_seconds": 255.696,
+        "wall_seconds": 81.861
+      },
+      "terrain_composition_jobs": 14288,
+      "terrain_composition_max_ms": 43.116801,
+      "visible_mesh_entities": 10596,
+      "worst_frame_ms": 29.213777
+    }
+  }
+}

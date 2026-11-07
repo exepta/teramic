@@ -1,0 +1,30 @@
+    Finished `test` profile [optimized + debuginfo] target(s) in 1m 11s
+running 201 tests
+test result: ok. 200 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 3.11s
+running 339 tests
+test result: ok. 339 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+running 445 tests
+test result: ok. 444 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 16.75s
+running 45 tests
+test result: ok. 45 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.25s
+running 93 tests
+test result: ok. 93 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.38s
+running 1000 tests
+test result: ok. 998 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 2.10s
+running 5 tests
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.07s
+running 7 tests
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+running 134 tests
+test result: ok. 134 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.10s
+running 469 tests
+test inventory::cache::tests::pending_request_parks_live_bindings_and_failure_waits_for_a_real_reopen_or_prewarm ... ok
+test inventory::crafting::browser_tests::hidden_prewarm_projects_crafting_slots_without_enabling_actions_or_closed_work ... ok
+test inventory::slot_style_tests::real_recipe_machine_and_selection_changes_still_update_retained_slot_styles ... ok
+test inventory::slot_style_tests::retained_slot_styles_are_ready_while_hidden_and_survive_open_close_and_restore ... ok
+test inventory::tests::hidden_inventory_prewarms_low_cadence_browser_snapshot_without_revealing_or_capturing_input ... ok
+test result: ok. 469 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.65s
+running 24 tests
+test result: ok. 24 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+running 1059 tests
+test result: ok. 1054 passed; 0 failed; 5 ignored; 0 measured; 0 filtered out; finished in 19.16s

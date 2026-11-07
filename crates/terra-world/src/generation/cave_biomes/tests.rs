@@ -64,7 +64,15 @@ fn salt_cover_can_be_disabled_without_disabling_the_biome_or_changing_density() 
 
 #[test]
 fn lush_connector_grass_matches_direct_samples_and_prop_prefilter_is_mesh_independent() {
-    let mut config = WorldConfig::default();
+    lush_connector_grass_consistency(1);
+    lush_connector_grass_consistency(2);
+}
+
+fn lush_connector_grass_consistency(landscape_revision: u8) {
+    let mut config = WorldConfig {
+        landscape_revision,
+        ..Default::default()
+    };
     config.cave_biomes.distribution = terra_core::config::CaveDistribution {
         normal_weight: 0.0,
         salt_weight: 0.0,
@@ -77,11 +85,20 @@ fn lush_connector_grass_matches_direct_samples_and_prop_prefilter_is_mesh_indepe
     'search: for z in (-64..0).step_by(2) {
         for x in (-64..0).step_by(2) {
             let c = t.surface_column(x as f64 + 0.5, z as f64 + 0.5);
-            for y in -64..0 {
+            // Lush suitability follows depth, not an absolute sea-level band.
+            // Retain the historical revision-one floor search, and search the
+            // corresponding shallow underground band in the new landscape.
+            let range = if landscape_revision == 1 {
+                -64..0
+            } else {
+                let top = (c.height - 12.0).floor() as i64;
+                (top - 80).max(-118)..top.min(320)
+            };
+            for y in range {
                 let p = [x as f64 + 0.5, y as f64 + 0.5, z as f64 + 0.5];
                 if c.height - p[1] > 8.0
                     && !c.cave.active()
-                    && t.sample(p).material == MaterialId::Grass as u16
+                    && t.sample_with_column(p, c).material == MaterialId::Grass as u16
                 {
                     found = Some([x, y, z]);
                     break 'search;
@@ -89,7 +106,13 @@ fn lush_connector_grass_matches_direct_samples_and_prop_prefilter_is_mesh_indepe
             }
         }
     }
-    let p = found.expect("actual lush connector floor");
+    let p = found.unwrap_or_else(|| {
+        panic!("actual lush connector floor for landscape revision {landscape_revision}")
+    });
+    assert_eq!(
+        t.sample(p.map(|v| v as f64 + 0.5)).material,
+        MaterialId::Grass as u16
+    );
     assert_eq!(generator.block_at(p).unwrap(), MaterialId::Grass as u16);
     let owner = terra_voxel::global_to_section(p).0;
     for offset in [[0, 0, 0], [0, 1, 0], [1, 0, 0]] {

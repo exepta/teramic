@@ -2,18 +2,19 @@ use bevy::{
     pbr::{ExtendedMaterial, MaterialExtension},
     prelude::*,
     render::render_resource::AsBindGroup,
+    render::storage::ShaderBuffer,
     shader::ShaderRef,
 };
 use terra_core::{ClientConfig, GameConfig, WaterQuality};
 
-pub(super) const ATTRIBUTE_WAVE_WEIGHT: bevy::mesh::MeshVertexAttribute =
+pub(crate) const ATTRIBUTE_WAVE_WEIGHT: bevy::mesh::MeshVertexAttribute =
     bevy::mesh::MeshVertexAttribute::new(
         "Water_WaveWeight",
         1_883_214_072,
         bevy::render::render_resource::VertexFormat::Float32,
     );
 
-#[derive(Asset, AsBindGroup, Reflect, Debug, Clone)]
+#[derive(Asset, AsBindGroup, Reflect, Debug, Clone, PartialEq)]
 #[bind_group_data(WaterKey)]
 pub(crate) struct WaterExtension {
     pub native_depth_filter: bool,
@@ -27,16 +28,9 @@ pub(crate) struct WaterExtension {
     /// Screen-space reflection steps, refinements, range and surface thickness.
     #[uniform(103)]
     pub reflections: Vec4,
-    /// Wind direction, storm energy and wind speed. Shared by every water batch.
-    #[uniform(104)]
-    pub weather: Vec4,
-    /// Solar access, wake count and the static shader-clock wrap period.
-    #[uniform(105)]
-    pub environment: Vec4,
-    #[uniform(106)]
-    pub wake_positions: [Vec4; super::contacts::WAKE_CAPACITY],
-    #[uniform(107)]
-    pub wake_motions: [Vec4; super::contacts::WAKE_CAPACITY],
+    /// A stable binding: live weather and contacts never modify material assets.
+    #[storage(104, read_only)]
+    pub dynamics: Handle<ShaderBuffer>,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -54,10 +48,10 @@ impl From<&WaterExtension> for WaterKey {
 
 impl MaterialExtension for WaterExtension {
     fn vertex_shader() -> ShaderRef {
-        "shaders/terra_water.wgsl".into()
+        "shaders/terra_water.wesl".into()
     }
     fn fragment_shader() -> ShaderRef {
-        "shaders/terra_water.wgsl".into()
+        "shaders/terra_water.wesl".into()
     }
     fn enable_prepass() -> bool {
         false
@@ -119,7 +113,7 @@ pub(crate) type WaterMaterial = ExtendedMaterial<StandardMaterial, WaterExtensio
 #[derive(Resource)]
 pub(crate) struct WaterAssets(pub Handle<WaterMaterial>);
 
-pub(super) fn setup_water(
+pub(crate) fn setup_water(
     mut commands: Commands,
     config: Res<GameConfig>,
     mut materials: ResMut<Assets<WaterMaterial>>,
@@ -164,10 +158,7 @@ impl WaterExtension {
                 80.0,
                 0.55,
             ),
-            weather: Vec4::new(0.86, 0.51, 0.0, 0.0),
-            environment: Vec4::new(1.0, 0.0, 3600.0, 0.0),
-            wake_positions: [Vec4::ZERO; super::contacts::WAKE_CAPACITY],
-            wake_motions: [Vec4::ZERO; super::contacts::WAKE_CAPACITY],
+            dynamics: super::storage::WATER_BUFFER_HANDLE,
         }
     }
 }
@@ -185,6 +176,7 @@ pub(super) fn update_water_settings(
     mut materials: ResMut<Assets<WaterMaterial>>,
     visual: Option<Res<crate::weather::WeatherVisual>>,
     raymarch: Option<Res<super::raymarch::WaterRaymarch>>,
+    mut payload: ResMut<super::storage::WaterPayload>,
     environment: WaterEnvironment,
 ) {
     let weather = water_weather(visual.as_deref());
@@ -219,25 +211,30 @@ pub(super) fn update_water_settings(
         }
     }
     let environment = Vec4::new(solar, count as f32, wrap, 0.0);
+    let data = super::storage::WaterGpuData {
+        weather,
+        environment,
+        wake_positions,
+        wake_motions,
+    };
+    if payload.0 != data {
+        payload.0 = data;
+    }
     let Some(current) = materials.get(&assets.0) else {
         return;
     };
-    if (config.is_changed()
-        || current.extension.weather != weather
-        || current.extension.native_depth_filter != native_depth_filter
-        || current.extension.environment != environment
-        || current.extension.wake_positions != wake_positions
-        || current.extension.wake_motions != wake_motions)
+    if config.is_changed() {
+        let mut next = WaterExtension::from_config(&config.client);
+        next.native_depth_filter = native_depth_filter;
+        if current.extension != next
+            && let Some(mut material) = materials.get_mut(&assets.0)
+        {
+            material.extension = next;
+        }
+    } else if current.extension.native_depth_filter != native_depth_filter
         && let Some(mut material) = materials.get_mut(&assets.0)
     {
-        if config.is_changed() {
-            material.extension = WaterExtension::from_config(&config.client);
-        }
-        material.extension.weather = weather;
         material.extension.native_depth_filter = native_depth_filter;
-        material.extension.environment = environment;
-        material.extension.wake_positions = wake_positions;
-        material.extension.wake_motions = wake_motions;
     }
 }
 

@@ -1,0 +1,5 @@
+{
+  "item": { "wooden_block": { "material": 148, "wood": "birch" } },
+  "name": "Birch Conveyor",
+  "description": "A birch-framed belt that transports dropped items while driven by a mechanical network."
+}

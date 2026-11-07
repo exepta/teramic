@@ -19,6 +19,11 @@
 p { font-size: 13px; text-align: center; margin: 0; }
 button { border-radius: 0; border: 2px solid #8d9e74; background-color: #34462e; color: #e7efd5; padding: 8px 16px; min-height: 34px; }
 button:hover { background-color: #49613d; }
-toast p { color: #434b50; font-size: 13px; font-weight: 400; text-align: left; line-height: 1.35; margin: 0; }
-toast .toast-close { width: 26px; height: 26px; min-width: 26px; min-height: 26px; padding: 0; border: 0; color: #586168; background-color: transparent; }
-toast .toast-close:hover { color: #232b30; background-color: #eadfe3; }
+/* Match the copper borders, dark insets and warm text of the game panels. */
+toast { background-color: #30211b !important; background-image: linear-gradient(to bottom, #493122, #241916) !important; border: 2px solid #b6854b !important; border-left-width: 4px !important; border-radius: 6px !important; box-shadow: 0 3px 0 #130c08 !important; color: #efdbb6 !important; }
+toast[type="warning"] { border-left-color: #efb957 !important; }
+toast[type="error"] { border-left-color: #d67d60 !important; }
+toast::label { color: #f4e1b8 !important; font-family: serif !important; font-size: 15px !important; }
+toast::value, toast p { color: #dfc6a2 !important; font-size: 13px; font-weight: 400; text-align: left; line-height: 1.35; margin: 0; }
+toast .toast-close { width: 26px; height: 26px; min-width: 26px; min-height: 26px; padding: 0; border: 1px solid #a8794c; border-radius: 4px; color: #e7c9a4 !important; background-color: #493122 !important; }
+toast .toast-close:hover { color: #fff0d2 !important; background-color: #765341 !important; }

@@ -1,0 +1,14 @@
+{
+  "biome": "highlands",
+  "selection_weight": 0.65,
+  "terrain": {
+    "min_height": 80,
+    "max_height": 200,
+    "horizontal_scale": 560,
+    "detail_strength": 0.32,
+    "relief_strength": 0.95,
+    "soil_depth": 3,
+    "tree_density": 0.4,
+    "terrace_strength": 0.18
+  }
+}

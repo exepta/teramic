@@ -1,0 +1,1 @@
+{"id":"teramic::wood_spoon","name":"Wood Spoon","station":"hand","output":{"item":{"tool":"wood_spoon"},"count":1},"pattern":{"kind":"shaped","width":1,"height":2,"cells":[{"item":{"block":16},"wood":true,"count":1},{"item":"stick","count":1}]}}

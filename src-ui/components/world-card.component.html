@@ -1,5 +1,5 @@
-<button id="world-card" [class]="card.selected ? 'world-card selected' : 'world-card'" onclick="$set(menuIntent.command, card.id); menu_command">
-  <div class="world-emblem">@if (card.icon == 'hammer') { <icon name="tool" size="36" /> } @else { <icon name="mountain" size="36" /> }</div>
-  <div class="card-copy"><h2>{{ card.title }}</h2><p>{{ card.subtitle }}</p><p [class]="card.compatible ? 'card-detail' : 'error-text'">{{ card.detail }}</p></div>
+<button id="world-card" [class]="menuView.worlds ? (card.selected ? 'world-card copper-world-card selected' : 'world-card copper-world-card') : (card.selected ? 'world-card selected' : 'world-card')" onclick="$set(menuIntent.command, card.id); menu_command">
+  @if (menuView.worlds) { <div class="world-thumbnail"></div> } @else { <div class="world-emblem">@if (card.icon == 'hammer') { <icon name="tool" size="36" /> } @else if (card.icon == 'eye') { <icon name="eye" size="36" /> } @else { <icon name="mountain" size="36" /> }</div> }
+  <div [class]="menuView.worlds ? 'card-copy copper-world-copy' : 'card-copy'"><h2>{{ card.title }}</h2>@if (menuView.worlds) { <div class="world-badges"><p><icon name="archive" size="20" />{{ card.version }}</p><p>@if (card.icon == 'hammer') { <icon name="tool" size="20" /> } @else if (card.icon == 'eye') { <icon name="eye" size="20" /> } @else { <icon name="gamepad-2" size="20" /> }{{ card.mode }}</p></div> } @else { <p>{{ card.subtitle }}</p> }<p [class]="card.compatible ? 'card-detail' : 'error-text'">{{ card.detail }}</p></div>
   @if (card.selected) { <icon name="check" size="24" /> }
 </button>

@@ -1,0 +1,26 @@
+/* Taller backpack cells, shorter character/crafting area. */
+#inventory-shell { width: 682px !important; }
+#inventory-shell.inventory-shell-linked { left: calc(50% + 181px) !important; }
+#inventory-shell.inventory-catalog-collapsed { width: 396px !important; }
+#inventory-panel, .inventory-shell-linked #inventory-panel { left: 24px !important; width: 348px !important; }
+#inventory-shell .inventory-player-top, #inventory-shell .inventory-loadout, #inventory-shell .inventory-crafting { height: 150.4px !important; min-height: 150.4px !important; max-height: 150.4px !important; }
+#inventory-shell .inventory-loadout, #inventory-shell .inventory-crafting { width: 170px !important; }
+#inventory-shell .inventory-hotbar-section { width: 318.4px !important; height: 41px !important; }
+#inventory-shell .inventory-backpack-section { padding-top: 8px !important; padding-bottom: 8px !important; }
+#inventory-equipment { grid-template-columns: 25px 1fr 25px !important; grid-template-rows: repeat(5, 25px) !important; gap: 2px !important; }
+#item-browser.reference-browser { width: 226px !important; }
+#workbench-storage.machine-linked-storage { left: -362px !important; width: 352px !important; }
+#inventory-shell .alchemy-materials { grid-template-columns: 48px 105px 34px 26px 39px !important; }
+#inventory-shell .alchemy-supplies { grid-template-columns: 34px 6px !important; }
+
+#item-browser .inventory-rail-trash { bottom: 6px !important; }
+
+/* Leave a full inset between controls and the painted outer frame. */
+#item-browser.reference-browser { right: 32px !important; bottom: 26px !important; border: 2px solid #a56d39 !important; border-radius: 10px !important; background-color: #30211b !important; background-image: linear-gradient(to bottom, #422b20, #241916) !important; box-shadow: 0 0 0 3px #201712 !important; }
+#item-browser .browser-search { width: 100% !important; min-width: 0 !important; }
+#item-browser .browser-search input { width: 0 !important; flex-basis: 0px !important; flex-shrink: 1 !important; }
+#inventory-shell .tunnel-random-label { display: flex !important; align-items: center !important; justify-content: center !important; width: auto !important; min-width: 0 !important; height: 18px !important; min-height: 18px !important; line-height: 18px !important; text-align: center !important; }
+#inventory-shell .machine-switch { width: 30px !important; min-width: 30px !important; height: 18px !important; min-height: 18px !important; padding: 0 !important; }
+#inventory-shell .machine-switch::track { width: 30px !important; height: 16px !important; border-radius: 8px !important; }
+#inventory-shell .machine-switch::thumb { width: 10px !important; height: 10px !important; left: 2px !important; top: 2px !important; }
+#inventory-shell .machine-switch:checked::thumb { transform: translateX(14px) !important; }

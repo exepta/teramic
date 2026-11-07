@@ -1,0 +1,298 @@
+{
+  "openings": [
+    {
+      "round": 1,
+      "max_ms": 144.30020800000003,
+      "frames": 7,
+      "request_to_native_readiness_ms": 417.409421,
+      "cold_first_layout": true,
+      "retained_layout_repeat": false,
+      "worst_transition_frame": {
+        "interval_ms": 144.30020800000003,
+        "line": 463,
+        "scopes": {
+          "main.update": {
+            "stage": "Opening",
+            "window": "transition-frame",
+            "interval_ms": 144.30020800000003,
+            "scope": "main.update",
+            "calls": 1,
+            "summed_overlap_ms": 103.13931799999999,
+            "summed_total_scope_ms": 103.13931799999999,
+            "max_individual_scope_ms": 103.13931799999999
+          },
+          "ui.reactivity": {
+            "stage": "Opening",
+            "window": "transition-frame",
+            "interval_ms": 144.30020800000003,
+            "scope": "ui.reactivity",
+            "calls": 1,
+            "summed_overlap_ms": 21.232758,
+            "summed_total_scope_ms": 21.232758,
+            "max_individual_scope_ms": 21.232758
+          },
+          "ui.layout": {
+            "stage": "Opening",
+            "window": "transition-frame",
+            "interval_ms": 144.30020800000003,
+            "scope": "ui.layout",
+            "calls": 1,
+            "summed_overlap_ms": 3.193694,
+            "summed_total_scope_ms": 3.193694,
+            "max_individual_scope_ms": 3.193694
+          },
+          "ui.style": {
+            "stage": "Opening",
+            "window": "transition-frame",
+            "interval_ms": 144.30020800000003,
+            "scope": "ui.style",
+            "calls": 1,
+            "summed_overlap_ms": 102.164539,
+            "summed_total_scope_ms": 102.164539,
+            "max_individual_scope_ms": 102.164539
+          }
+        },
+        "individual_scopes": [
+          {
+            "stage": "Opening",
+            "window": "transition-frame",
+            "interval_ms": 144.30020800000003,
+            "scope": "main.update",
+            "thread": "ThreadId(16)",
+            "overlap_ms": 103.13931799999999,
+            "total_scope_ms": 103.13931799999999,
+            "start_from_window_ms": 10.281568,
+            "end_from_window_ms": 113.420886
+          },
+          {
+            "stage": "Opening",
+            "window": "transition-frame",
+            "interval_ms": 144.30020800000003,
+            "scope": "ui.style",
+            "thread": "ThreadId(17)",
+            "overlap_ms": 102.164539,
+            "total_scope_ms": 102.164539,
+            "start_from_window_ms": 10.355379,
+            "end_from_window_ms": 112.51991799999999
+          },
+          {
+            "stage": "Opening",
+            "window": "transition-frame",
+            "interval_ms": 144.30020800000003,
+            "scope": "ui.reactivity",
+            "thread": "ThreadId(12)",
+            "overlap_ms": 21.232758,
+            "total_scope_ms": 21.232758,
+            "start_from_window_ms": 10.371089999999999,
+            "end_from_window_ms": 31.603847999999996
+          }
+        ]
+      }
+    },
+    {
+      "round": 2,
+      "max_ms": 39.957326,
+      "frames": 7,
+      "request_to_native_readiness_ms": 194.605434,
+      "cold_first_layout": false,
+      "retained_layout_repeat": true,
+      "worst_transition_frame": {
+        "interval_ms": 39.957326,
+        "line": 1155,
+        "scopes": {
+          "main.update": {
+            "stage": "Opening",
+            "window": "transition-frame",
+            "interval_ms": 39.957326,
+            "scope": "main.update",
+            "calls": 1,
+            "summed_overlap_ms": 25.872231999999997,
+            "summed_total_scope_ms": 25.872231999999997,
+            "max_individual_scope_ms": 25.872231999999997
+          },
+          "ui.reactivity": {
+            "stage": "Opening",
+            "window": "transition-frame",
+            "interval_ms": 39.957326,
+            "scope": "ui.reactivity",
+            "calls": 1,
+            "summed_overlap_ms": 7.9330300000000005,
+            "summed_total_scope_ms": 7.9330300000000005,
+            "max_individual_scope_ms": 7.9330300000000005
+          },
+          "ui.layout": {
+            "stage": "Opening",
+            "window": "transition-frame",
+            "interval_ms": 39.957326,
+            "scope": "ui.layout",
+            "calls": 1,
+            "summed_overlap_ms": 1.640583,
+            "summed_total_scope_ms": 1.640583,
+            "max_individual_scope_ms": 1.640583
+          },
+          "ui.style": {
+            "stage": "Opening",
+            "window": "transition-frame",
+            "interval_ms": 39.957326,
+            "scope": "ui.style",
+            "calls": 1,
+            "summed_overlap_ms": 24.513244,
+            "summed_total_scope_ms": 24.513244,
+            "max_individual_scope_ms": 24.513244
+          }
+        },
+        "individual_scopes": [
+          {
+            "stage": "Opening",
+            "window": "transition-frame",
+            "interval_ms": 39.957326,
+            "scope": "main.update",
+            "thread": "ThreadId(15)",
+            "overlap_ms": 25.872231999999997,
+            "total_scope_ms": 25.872231999999997,
+            "start_from_window_ms": 5.848758,
+            "end_from_window_ms": 31.720989999999997
+          },
+          {
+            "stage": "Opening",
+            "window": "transition-frame",
+            "interval_ms": 39.957326,
+            "scope": "ui.style",
+            "thread": "ThreadId(21)",
+            "overlap_ms": 24.513244,
+            "total_scope_ms": 24.513244,
+            "start_from_window_ms": 5.874449,
+            "end_from_window_ms": 30.387693
+          },
+          {
+            "stage": "Opening",
+            "window": "transition-frame",
+            "interval_ms": 39.957326,
+            "scope": "ui.reactivity",
+            "thread": "ThreadId(22)",
+            "overlap_ms": 7.9330300000000005,
+            "total_scope_ms": 7.9330300000000005,
+            "start_from_window_ms": 5.890719,
+            "end_from_window_ms": 13.823749
+          },
+          {
+            "stage": "Opening",
+            "window": "transition-frame",
+            "interval_ms": 39.957326,
+            "scope": "ui.layout",
+            "thread": "ThreadId(35)",
+            "overlap_ms": 1.640583,
+            "total_scope_ms": 1.640583,
+            "start_from_window_ms": 34.769971,
+            "end_from_window_ms": 36.410554
+          }
+        ]
+      }
+    }
+  ],
+  "controls": [
+    {
+      "round": 1,
+      "phase": "Closed",
+      "window_seconds": 12.010636937,
+      "frames": 906,
+      "fps": 75.43313520775689,
+      "median_ms": 12.694446,
+      "p95_ms": 19.295138,
+      "p99_ms": 21.666597,
+      "max_ms": 24.072615,
+      "resident_memory_kib": 2253888,
+      "entities": 31137,
+      "images": 142,
+      "ui_nodes": 1016
+    },
+    {
+      "round": 1,
+      "phase": "Open",
+      "window_seconds": 12.018756025,
+      "frames": 893,
+      "fps": 74.30053477601896,
+      "median_ms": 12.863889,
+      "p95_ms": 19.057734,
+      "p99_ms": 21.730868,
+      "max_ms": 23.706288999999998,
+      "resident_memory_kib": 2308268,
+      "entities": 31214,
+      "images": 181,
+      "ui_nodes": 1056
+    },
+    {
+      "round": 1,
+      "phase": "ClosedAgain",
+      "window_seconds": 12.003554921,
+      "frames": 901,
+      "fps": 75.06109697750597,
+      "median_ms": 12.959831,
+      "p95_ms": 18.291888,
+      "p99_ms": 20.897912,
+      "max_ms": 22.460573,
+      "resident_memory_kib": 2312944,
+      "entities": 31228,
+      "images": 182,
+      "ui_nodes": 1063
+    },
+    {
+      "round": 2,
+      "phase": "Closed",
+      "window_seconds": 12.009840404,
+      "frames": 882,
+      "fps": 73.43977691046094,
+      "median_ms": 13.044103,
+      "p95_ms": 18.900971,
+      "p99_ms": 22.749848999999998,
+      "max_ms": 38.208391,
+      "resident_memory_kib": 2316736,
+      "entities": 31219,
+      "images": 182,
+      "ui_nodes": 1063
+    },
+    {
+      "round": 2,
+      "phase": "Open",
+      "window_seconds": 12.009542389,
+      "frames": 817,
+      "fps": 68.02923654679145,
+      "median_ms": 14.028493,
+      "p95_ms": 20.35473,
+      "p99_ms": 28.622467,
+      "max_ms": 59.641092,
+      "resident_memory_kib": 2321412,
+      "entities": 31192,
+      "images": 181,
+      "ui_nodes": 1056
+    },
+    {
+      "round": 2,
+      "phase": "ClosedAgain",
+      "window_seconds": 12.006189691,
+      "frames": 861,
+      "fps": 71.71300988567731,
+      "median_ms": 13.604474999999999,
+      "p95_ms": 18.387931,
+      "p99_ms": 20.901771,
+      "max_ms": 25.251559,
+      "resident_memory_kib": 2322444,
+      "entities": 31210,
+      "images": 182,
+      "ui_nodes": 1063
+    }
+  ],
+  "process_summary": {
+    "command": [
+      "target/o08-binaries/terra-client-final-projection",
+      "--smoke-test-benchmark"
+    ],
+    "wall_seconds": 115.915,
+    "peak_rss_kib": 2320868,
+    "user_cpu_seconds": 323.905,
+    "system_cpu_seconds": 39.702,
+    "peak_drm_memory_vram_kib": 4475340,
+    "peak_drm_memory_gtt_kib": 67588,
+    "exit_code": 0
+  }
+}

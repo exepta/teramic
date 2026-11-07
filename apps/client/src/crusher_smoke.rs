@@ -13,6 +13,8 @@ use terra_network::{
     protocol::inventory::{ContainerCommand, InventoryOutcome},
 };
 
+const SHARED_MACHINE_MESHES: usize = 43;
+
 pub(crate) fn prepare(
     mut config: GameConfig,
 ) -> Result<(terra_server::IntegratedServer, Vec<u8>, PlayerProfile), String> {
@@ -245,11 +247,11 @@ fn fixture_input(world: &mut World) {
             .object_state(anchor)
     {
         let point = if stage == 25 {
-            Vec3::new(1.0, 0.65, 0.5)
+            Vec3::new(0.5, 0.65, 0.5)
         } else if matches!(stage, 12 | 13) {
-            Vec3::new(1.997, 0.455, 0.515)
+            Vec3::new(0.997, 0.5, 0.5)
         } else {
-            Vec3::new(2.60, 0.64, 0.515)
+            Vec3::new(1.60, 0.685, 0.5)
         };
         aim_at(world, machine_point(anchor, object.facing, point));
     }
@@ -289,7 +291,11 @@ fn verify_drive(
     }
     inspection.drive_seen = true;
     if let Some(audio) = world.get_resource::<crate::crusher_audio::CrusherAudioStatus>() {
-        if audio.nearby != 1 || audio.turning != 1 || audio.grinding != usize::from(grinding) {
+        if audio.nearby != 1
+            || audio.turning != 1
+            || audio.grinding != usize::from(grinding)
+            || audio.kinetic_parts != 0
+        {
             return Err(format!(
                 "Mechanical audio did not follow the acknowledged crank: {audio:?}"
             ));
@@ -368,6 +374,25 @@ fn step(world: &mut World, inspection: &mut Inspection) -> Result<(), String> {
         return Ok(());
     }
     let elapsed = inspection.since.elapsed().as_secs_f32();
+    if inspection.stage == 4 && elapsed > 6.0 {
+        let view = world.resource::<terra_ui::InventoryView>();
+        return Err(format!(
+            "Crusher inventory did not open: anchor={:?}, container={:?}, view(open={}, crusher={}, error={:?}), last_inventory={:?}, inventory_response={}, target={:?}",
+            inspection.anchor,
+            session.container.as_ref().map(|c| (
+                c.anchor,
+                c.crusher.is_some(),
+                c.furnace.is_some(),
+                c.halves.len()
+            )),
+            view.open,
+            view.crusher,
+            view.error,
+            session.last_inventory,
+            session.inventory_response,
+            world.resource::<terra_player::TargetWorld>().0,
+        ));
+    }
     match inspection.stage {
         0 if world.resource::<terra_render::RenderStatus>().ready
             && world
@@ -425,7 +450,7 @@ fn step(world: &mut World, inspection: &mut Inspection) -> Result<(), String> {
             if render.machines == 0 && elapsed < 5.0 {
                 return Ok(());
             }
-            if render.machines != 1 || render.cached_meshes != 9 {
+            if render.machines != 1 || render.cached_meshes != SHARED_MACHINE_MESHES {
                 return Err(format!("Crusher moving geometry missing: {render:?}"));
             }
             let anchor = inspection.anchor.unwrap();
@@ -433,11 +458,25 @@ fn step(world: &mut World, inspection: &mut Inspection) -> Result<(), String> {
             let state = journal
                 .object_state(anchor)
                 .ok_or("Missing placed crusher orientation")?;
+            if state.peer.is_some() || state.secondary || !journal.valid_crusher(anchor) {
+                return Err("Real crusher placement did not produce a single-cell station".into());
+            }
             inspection.crank = journal.crusher_crank_position(anchor);
+            let next = std::array::from_fn(|i| anchor[i] + state.right()[i]);
+            if inspection.crank != Some(next)
+                || world
+                    .resource::<terra_world::streaming::ChunkStore>()
+                    .block_at(next)
+                    != Some(0)
+            {
+                return Err(
+                    "Single-cell crusher did not expose its adjacent free crank port".into(),
+                );
+            }
             let standing = machine_point(
                 anchor,
                 state.facing,
-                Vec3::new(4.2, terra_physics::character::PLAYER_HALF_HEIGHT, 0.515),
+                Vec3::new(3.2, terra_physics::character::PLAYER_HALF_HEIGHT, 0.5),
             );
             inspection.standing = Some(standing);
             world.write_message(terra_ui::InventoryAction::Hotbar(1));
@@ -525,7 +564,10 @@ fn step(world: &mut World, inspection: &mut Inspection) -> Result<(), String> {
         }
         14 if elapsed > 0.7 => {
             let render = world.resource::<terra_render::CrusherRenderStatus>();
-            if render.machines != 1 || render.cranks != 1 || render.cached_meshes != 9 {
+            if render.machines != 1
+                || render.cranks != 1
+                || render.cached_meshes != SHARED_MACHINE_MESHES
+            {
                 return Err(format!("Mounted crank geometry missing: {render:?}"));
             }
             if !captured(world, inspection, "crusher-placed", 1)? {
@@ -704,6 +746,7 @@ fn step(world: &mut World, inspection: &mut Inspection) -> Result<(), String> {
                 return Err("Crusher retained its consumed input".into());
             }
             world.write_message(ContainerRequest(ContainerCommand {
+                view: container.view,
                 inventory_revision: session.inventory.revision,
                 reserved: [0; terra_core::INVENTORY_SLOTS],
                 anchor: container.anchor,
@@ -772,7 +815,7 @@ fn step(world: &mut World, inspection: &mut Inspection) -> Result<(), String> {
                     || world
                         .resource::<terra_render::CrusherRenderStatus>()
                         .cached_meshes
-                        != 9
+                        != SHARED_MACHINE_MESHES
                 {
                     return Err(
                         "Mounted crank or bounded moving-mesh cache changed during recipe loops"
@@ -863,15 +906,11 @@ mod tests {
                 ..default()
             };
             let right = Vec3::from_array(state.right().map(|axis| axis as f32));
-            let forward =
-                Quat::from_rotation_y(f32::from(facing) * std::f32::consts::FRAC_PI_2) * Vec3::Z;
             let center =
                 Vec3::from_array(anchor.map(|axis| axis as f32)) + Vec3::new(0.5, 0.0, 0.5);
-            let gear = machine_point(anchor, facing, Vec3::new(1.997, 0.455, 0.515));
-            assert!(
-                gear.distance(center + right * 1.497 + Vec3::Y * 0.455 + forward * 0.015) < 0.00001
-            );
-            let operator = machine_point(anchor, facing, Vec3::new(4.2, 0.9, 0.515));
+            let gear = machine_point(anchor, facing, Vec3::new(0.997, 0.5, 0.5));
+            assert!(gear.distance(center + right * 0.497 + Vec3::Y * 0.5) < 0.00001);
+            let operator = machine_point(anchor, facing, Vec3::new(3.2, 0.9, 0.5));
             assert!((operator - gear).dot(right) > 2.2);
             assert!((operator - gear).dot(right) < 2.21);
         }

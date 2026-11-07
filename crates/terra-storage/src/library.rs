@@ -104,6 +104,18 @@ impl WorldLibrary {
         if title.is_empty() || title.chars().count() > 64 || title.chars().any(char::is_control) {
             return Err("World name must contain 1..64 printable characters".into());
         }
+        let biome_definitions = template.biome_definitions.clone().map_or_else(
+            || {
+                terra_core::BiomeDefinitions::load_directory(
+                    terra_core::asset_directory().join("biome"),
+                )
+                .map_err(|error| error.to_string())
+            },
+            Ok,
+        )?;
+        biome_definitions
+            .validate()
+            .map_err(|error| error.to_string())?;
         fs::create_dir_all(&self.root).map_err(|e| e.to_string())?;
         for sequence in 0..32_u64 {
             let mut hash = std::collections::hash_map::DefaultHasher::new();
@@ -119,13 +131,15 @@ impl WorldLibrary {
             world.id = id;
             world.seed = WorldSeed(seed.unwrap_or_else(|| id.0.rotate_left(17)));
             world.geology_revision = 4;
-            world.ecology_revision = 2;
+            world.ecology_revision = 4;
             world.landscape_revision = 1;
+            world.biome_definitions = Some(biome_definitions.clone());
             world.ocean_revision = 1;
             world.cave_structure_revision = 8;
-            world.structures_revision = 5;
+            world.structures_revision = 9;
+            world.structure_border_gap = template.kingdom_rules.realm_min_border_gap;
             world.ravine_revision = 1;
-            world.river_terrain_revision = 1;
+            world.river_terrain_revision = 4;
             if world.ores.revision == 0 {
                 world.ores.enabled = true;
             }
@@ -292,6 +306,7 @@ fn save_legacy(path: &Path, world: WorldId, journal: &EditJournal) -> Result<(),
 mod tests {
     use super::*;
     use crate::{load_edits, save_edits};
+    use terra_core::BiomeDefinitions;
     fn library() -> WorldLibrary {
         let root = std::env::temp_dir().join(format!(
             "teramic-worlds-{}-{}",
@@ -315,8 +330,15 @@ mod tests {
             )
             .unwrap();
         assert_eq!(entry.manifest.world.landscape_revision, 1);
-        assert_eq!(entry.manifest.world.structures_revision, 5);
-        assert_eq!(entry.manifest.world.river_terrain_revision, 1);
+        assert_eq!(entry.manifest.world.sea_level, 8.0);
+        assert_eq!(
+            entry.manifest.world.biome_definitions,
+            Some(BiomeDefinitions::default())
+        );
+        assert!(!entry.manifest.world.rivers);
+        assert_eq!(entry.manifest.world.structures_revision, 9);
+        assert_eq!(entry.manifest.world.ecology_revision, 4);
+        assert_eq!(entry.manifest.world.river_terrain_revision, 4);
         assert_eq!(library.list().unwrap().0.len(), 1);
         assert_eq!(
             library
@@ -337,6 +359,161 @@ mod tests {
         );
         library.delete(entry.manifest.world.id).unwrap();
         assert!(library.list().unwrap().0.is_empty());
+        fs::remove_dir_all(library.root).unwrap();
+    }
+
+    #[test]
+    fn new_singleplayer_world_snapshots_creation_gap_once_and_keeps_custom_live_rules() {
+        let library = library();
+        let template = WorldConfig {
+            structures_revision: 2,
+            structure_border_gap: 99,
+            kingdom_rules: terra_core::kingdom::KingdomRules {
+                realm_min_border_gap: 6,
+                kingdom_build_base: 47,
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+        let mut entry = library
+            .create("Custom policy", Some(20202), GameMode::Survival, &template)
+            .unwrap();
+        assert_eq!(entry.manifest.world.structures_revision, 9);
+        assert_eq!(entry.manifest.world.structure_border_gap, 6);
+        assert_eq!(entry.manifest.world.kingdom_rules, template.kingdom_rules);
+        entry.manifest.world.kingdom_rules.realm_min_border_gap = 80;
+        entry
+            .manifest
+            .world
+            .kingdom_rules
+            .settlements_follow_kingdom_level = true;
+        library.save(&entry).unwrap();
+        let loaded = library.mark_played(entry.manifest.world.id).unwrap();
+        assert_eq!(loaded.manifest.world.structure_border_gap, 6);
+        assert_eq!(
+            loaded.manifest.world.kingdom_rules,
+            entry.manifest.world.kingdom_rules
+        );
+        assert!(loaded.manifest.world.same_terrain(&entry.manifest.world));
+        let mut journal = EditJournal::default();
+        let mut rules = terra_core::WorldRuleSettings::from_world(&loaded.manifest.world);
+        rules.kingdom_rules.realm_min_border_gap = 92;
+        journal.world_rules = Some(rules);
+        crate::save_edits(
+            &library.path(entry.manifest.world.id),
+            entry.manifest.world.id,
+            &journal,
+        )
+        .unwrap();
+        let changed = library.load(entry.manifest.world.id).unwrap();
+        assert_eq!(changed.manifest.world.kingdom_rules, rules.kingdom_rules);
+        assert_eq!(changed.manifest.world.structure_border_gap, 6);
+        assert!(changed.manifest.world.same_terrain(&entry.manifest.world));
+        fs::remove_dir_all(library.root).unwrap();
+    }
+
+    #[test]
+    fn saved_landscapes_keep_their_revision_through_load_play_and_save() {
+        let library = library();
+        for revision in 0..=5 {
+            let mut entry = library
+                .create(
+                    &format!("Saved Landscape {revision}"),
+                    Some(77),
+                    GameMode::Survival,
+                    &WorldConfig::default(),
+                )
+                .unwrap();
+            entry.manifest.world.landscape_revision = revision;
+            entry.manifest.world.rivers = revision % 2 == 1;
+            entry.manifest.world.sea_level = if revision < 4 {
+                8.0 + f64::from(revision)
+            } else {
+                22.0
+            };
+            if revision < 4 && revision % 2 == 0 {
+                entry.manifest.world.biome_definitions = None;
+            } else {
+                let definitions = entry
+                    .manifest
+                    .world
+                    .biome_definitions
+                    .insert(BiomeDefinitions::default());
+                definitions.entries[terra_core::BiomeKind::Plains as usize]
+                    .terrain
+                    .max_height -= 1.0 + f64::from(revision);
+                definitions.landscapes.warp_strength += 1.0 + f64::from(revision);
+                definitions.landscapes.profiles
+                    [terra_core::config::TerrainKind::Forest as usize]
+                    .max_height -= 1.0 + f64::from(revision);
+            }
+            let id = entry.manifest.world.id;
+            let path = library.path(id);
+            save_toml(&entry, path.join("world.toml")).unwrap();
+            let saved: WorldEntry =
+                toml::from_str(&fs::read_to_string(path.join("world.toml")).unwrap()).unwrap();
+            assert_eq!(saved.manifest.world, entry.manifest.world);
+            assert_eq!(saved.manifest.world.id, id);
+            let mut journal = EditJournal::default();
+            journal.record([-17, 12, -1], 16).unwrap();
+            save_edits(&path, id, &journal).unwrap();
+            assert!(
+                library
+                    .load(id)
+                    .unwrap()
+                    .manifest
+                    .world
+                    .same_terrain(&entry.manifest.world)
+            );
+            let mut reloaded = library.mark_played(id).unwrap();
+            assert_eq!(reloaded.manifest.world.landscape_revision, revision);
+            reloaded.manifest.world.time.paused = true;
+            library.save(&reloaded).unwrap();
+            let restored = library.load(id).unwrap();
+            assert_eq!(restored.manifest.world, reloaded.manifest.world);
+            assert_eq!(restored.manifest.world.id, id);
+            assert_eq!(restored.manifest.world.landscape_revision, revision);
+            assert_eq!(
+                load_edits(&path, id).unwrap().block([-17, 12, -1]),
+                Some(16)
+            );
+        }
+        fs::remove_dir_all(library.root).unwrap();
+    }
+
+    #[test]
+    fn new_worlds_use_main_terrain_and_preserve_explicit_sea_levels_and_rivers() {
+        let library = library();
+        for (revision, sea_level, expected) in [
+            (0, 8.0, 8.0),
+            (3, 8.0, 8.0),
+            (3, 13.0, 13.0),
+            (4, 8.0, 8.0),
+            (4, 22.0, 22.0),
+            (5, 8.0, 8.0),
+            (5, 22.0, 22.0),
+        ] {
+            let template = WorldConfig {
+                landscape_revision: revision,
+                sea_level,
+                rivers: revision % 2 == 1,
+                biome_definitions: Some(BiomeDefinitions::default()),
+                ..Default::default()
+            };
+            let entry = library
+                .create("Sea Level", Some(77), GameMode::Survival, &template)
+                .unwrap();
+            assert_eq!(entry.manifest.world.landscape_revision, 1);
+            assert_eq!(entry.manifest.world.sea_level, expected);
+            assert_eq!(entry.manifest.world.rivers, template.rivers);
+            assert_eq!(
+                entry.manifest.world.biome_definitions,
+                template.biome_definitions
+            );
+            let reloaded = library.load(entry.manifest.world.id).unwrap();
+            assert_eq!(reloaded.manifest.world, entry.manifest.world);
+            assert_eq!(template.sea_level, sea_level);
+        }
         fs::remove_dir_all(library.root).unwrap();
     }
 

@@ -70,7 +70,12 @@ class Mouse:
         x = rect["x"] + point[0] * rect["width"] / size[0]
         y = rect["y"] + point[1] * rect["height"] / size[1]
         # Close the loop using compositor coordinates, independent of acceleration/scaling.
-        for _ in range(24):
+        # A multi-monitor jump can exceed 24 capped 80px steps. Budget the
+        # initial travel separately from the final closed-loop convergence.
+        initial = probe["cursor"]
+        travel = max(abs(x - initial["x"]), abs(y - initial["y"]))
+        attempts = min(256, int(travel / 80) + 25)
+        for _ in range(attempts):
             cursor = probe["cursor"]
             dx, dy = x - cursor["x"], y - cursor["y"]
             if abs(dx) <= 3 and abs(dy) <= 3:

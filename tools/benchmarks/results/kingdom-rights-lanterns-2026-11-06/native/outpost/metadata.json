@@ -1,0 +1,24 @@
+{
+  "scene": "outpost",
+  "structures_revision": 8,
+  "seed": 42042,
+  "exit_code": 0,
+  "command": [
+    "/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/target/debug/terra-client",
+    "--smoke-test-biomes"
+  ],
+  "environment": {
+    "TERRA_CONFIG_DIR": "/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/target/phase199-structures/configs",
+    "TERRA_MENU_CONFIG_DIR": "/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/target/phase199-structures/configs",
+    "TERRA_ASSET_DIR": "/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/assets",
+    "TERRA_WORLD_DIR": "/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/target/phase199-structures/worlds",
+    "TERRA_CAPTURE_DIR": "/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/tools/benchmarks/results/kingdom-rights-lanterns-2026-11-06/native/outpost",
+    "TERRA_BIOME_SCENE": "outpost",
+    "TERRA_BENCH_GRAPHICS": "1",
+    "TERRA_COMPUTE_THREADS": "4"
+  },
+  "images": {
+    "outpost-close.png": "c68a91b3a0b1368a6bfb28524df5746614370a83d68f51ee0dd2a496cb91bc58",
+    "outpost-overview.png": "ba94792cbf2fba54c7d05aba8aec95a4a29a1a6baf82d30a19461a85cb56fc00"
+  }
+}

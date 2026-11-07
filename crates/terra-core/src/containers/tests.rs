@@ -1,5 +1,8 @@
 use super::*;
 use crate::ItemKind;
+const FIRST_CHEST: u8 = INVENTORY_SLOTS as u8;
+const SECOND_CHEST: u8 = (INVENTORY_SLOTS + CHEST_SLOTS) as u8;
+const VIEW_END: u8 = CONTAINER_VIEW_SLOTS as u8;
 
 fn stack(count: u16) -> ItemStack {
     ItemStack {
@@ -109,7 +112,7 @@ fn incoming_chest_stacks_skip_slots_reserved_for_a_different_crafting_ingredient
     assert!(apply_gesture_reserved(
         &mut player,
         &mut halves,
-        ContainerGesture::QuickMove { slot: 27 },
+        ContainerGesture::QuickMove { slot: FIRST_CHEST },
         reserved
     ));
     assert_eq!(player.slot(0).unwrap().item, ItemKind::Stick);
@@ -139,7 +142,7 @@ fn cross_inventory_split_drag_collect_and_quick_move_conserve_items_and_revision
         &mut player,
         &mut halves,
         ContainerGesture::Drag {
-            slots: vec![27, 45],
+            slots: vec![FIRST_CHEST, SECOND_CHEST],
             secondary: false
         }
     ));
@@ -163,14 +166,14 @@ fn cross_inventory_split_drag_collect_and_quick_move_conserve_items_and_revision
         &mut player,
         &mut halves,
         ContainerGesture::Click {
-            slot: 27,
+            slot: FIRST_CHEST,
             secondary: false
         }
     ));
     assert!(apply_gesture(
         &mut player,
         &mut halves,
-        ContainerGesture::QuickMove { slot: 27 }
+        ContainerGesture::QuickMove { slot: FIRST_CHEST }
     ));
     assert_eq!(player.slot(0), Some(stack(127)));
     assert_eq!(total(&player, &halves), original);
@@ -184,10 +187,10 @@ fn duplicate_or_unavailable_drag_slots_invalid_inventories_and_revision_overflow
     };
     let halves = [Inventory::default()];
     for slots in [
-        vec![27, 27],
-        vec![27, 45],
-        vec![63],
-        vec![27; 64],
+        vec![FIRST_CHEST, FIRST_CHEST],
+        vec![FIRST_CHEST, SECOND_CHEST],
+        vec![VIEW_END],
+        vec![FIRST_CHEST; CONTAINER_VIEW_SLOTS + 1],
         Vec::new(),
     ] {
         let mut next = player.clone();
@@ -213,7 +216,7 @@ fn duplicate_or_unavailable_drag_slots_invalid_inventories_and_revision_overflow
         &mut next,
         &mut targets,
         ContainerGesture::Click {
-            slot: 27,
+            slot: FIRST_CHEST,
             secondary: false
         }
     ));
@@ -227,7 +230,7 @@ fn duplicate_or_unavailable_drag_slots_invalid_inventories_and_revision_overflow
         &mut next,
         &mut targets,
         ContainerGesture::Click {
-            slot: 27,
+            slot: FIRST_CHEST,
             secondary: false
         }
     ));
@@ -252,7 +255,7 @@ fn opposite_pane_moves_merge_before_empty_slots_and_preserve_unlike_stacks() {
         &mut player,
         &mut halves,
         ContainerGesture::Click {
-            slot: 27,
+            slot: FIRST_CHEST,
             secondary: true
         }
     ));
@@ -260,7 +263,7 @@ fn opposite_pane_moves_merge_before_empty_slots_and_preserve_unlike_stacks() {
         &mut player,
         &mut halves,
         ContainerGesture::Wheel {
-            slot: 28,
+            slot: FIRST_CHEST + 1,
             to_cursor: true
         }
     ));
@@ -281,7 +284,14 @@ fn opposite_pane_moves_merge_before_empty_slots_and_preserve_unlike_stacks() {
 #[test]
 fn gesture_serialization_roundtrips_variable_drag_targets() {
     let gesture = ContainerGesture::Drag {
-        slots: vec![0, 26, 27, 44, 45, 62],
+        slots: vec![
+            0,
+            FIRST_CHEST - 1,
+            FIRST_CHEST,
+            SECOND_CHEST - 1,
+            SECOND_CHEST,
+            VIEW_END - 1,
+        ],
         secondary: true,
     };
     let text = toml::to_string(&gesture).unwrap();
@@ -314,7 +324,7 @@ fn full_capacity_and_foreign_secondary_swaps_reject_without_touching_any_invento
         &mut player,
         &mut halves,
         ContainerGesture::Click {
-            slot: 27,
+            slot: FIRST_CHEST,
             secondary: true
         }
     ));
@@ -322,14 +332,14 @@ fn full_capacity_and_foreign_secondary_swaps_reject_without_touching_any_invento
     assert!(!apply_gesture(
         &mut player,
         &mut halves,
-        ContainerGesture::CollectFrom { slot: 27 }
+        ContainerGesture::CollectFrom { slot: FIRST_CHEST }
     ));
     assert_eq!((player.clone(), halves.clone()), original);
     assert!(apply_gesture(
         &mut player,
         &mut halves,
         ContainerGesture::Click {
-            slot: 27,
+            slot: FIRST_CHEST,
             secondary: false
         }
     ));

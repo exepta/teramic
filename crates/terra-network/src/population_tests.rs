@@ -4,6 +4,110 @@ use terra_core::creatures::{
 };
 
 #[test]
+fn snapshot_ecology_prioritizes_every_visible_birth_bee_without_exceeding_its_budget() {
+    use terra_core::creatures::{
+        bee_id, breeding,
+        ecology::{BeeState, NestState},
+    };
+    let mut population = CreaturePopulation::default();
+    for (id, position) in [(7, [0.0; 3]), (8, [95.0, 2.0, 0.0])] {
+        population.ecology.nests.insert(
+            id,
+            NestState {
+                position,
+                nectar: 200,
+                honey: 0,
+                progress: 0.0,
+            },
+        );
+    }
+    for x in 0..200 {
+        let home = [x, 0];
+        let id = bee_id(home, 0).unwrap();
+        population.explored.insert(home);
+        population.animals.insert(
+            id,
+            Creature {
+                id,
+                kind: CreatureKind::Bee,
+                home,
+                position: [2.0; 3],
+                velocity: [0.0; 3],
+                yaw: 0.0,
+                health: CreatureKind::Bee.health(),
+                behavior: CreatureBehavior::Fly,
+                timer: 0.0,
+                age: 0.0,
+                variant: 0,
+                needs: CreatureNeeds::full(CreatureKind::Bee),
+            },
+        );
+        population.ecology.bees.insert(
+            id,
+            BeeState {
+                nest: 7,
+                ..Default::default()
+            },
+        );
+    }
+    let mut visible = Vec::new();
+    for _ in 0..MAX_VISIBLE_CREATURES {
+        let id = breeding::next_birth_id(&population, 0).unwrap();
+        let animal = Creature {
+            id,
+            kind: CreatureKind::Bee,
+            home: [0, 0],
+            position: [95.0, 2.0, 0.0],
+            velocity: [0.0; 3],
+            yaw: 0.0,
+            health: CreatureKind::Bee.health(),
+            behavior: CreatureBehavior::Fly,
+            timer: 0.0,
+            age: 0.0,
+            variant: 0,
+            needs: CreatureNeeds::full(CreatureKind::Bee),
+        };
+        population.animals.insert(id, animal.clone());
+        population.ecology.bees.insert(
+            id,
+            BeeState {
+                nest: 8,
+                ..Default::default()
+            },
+        );
+        visible.push(animal);
+    }
+    assert!(population.valid());
+    let legacy = population.ecology.nearby([0.0; 3]);
+    assert_eq!(legacy.bees.len(), MAX_VISIBLE_CREATURES);
+    assert!(
+        visible
+            .iter()
+            .all(|animal| !legacy.bees.contains_key(&animal.id))
+    );
+    for count in [1, 64, MAX_VISIBLE_CREATURES] {
+        let snapshot = snapshot_ecology(&population, &visible[..count], [0.0; 3]);
+        assert_eq!(snapshot.bees.len(), MAX_VISIBLE_CREATURES);
+        assert!(
+            visible[..count]
+                .iter()
+                .all(|animal| snapshot.bees.get(&animal.id)
+                    == population.ecology.bees.get(&animal.id))
+        );
+        assert!(snapshot.valid());
+        assert!(snapshot.nests.len() <= 32 && snapshot.flowers.len() <= 128);
+    }
+    population.ecology.nests.remove(&8);
+    let snapshot = snapshot_ecology(&population, &visible, [0.0; 3]);
+    assert!(snapshot.valid());
+    assert!(
+        visible
+            .iter()
+            .all(|animal| snapshot.bees.contains_key(&animal.id))
+    );
+}
+
+#[test]
 fn pet_commands_preserve_a_horses_ballistic_ascent_instead_of_resetting_it_to_rest() {
     let mut horse = Creature {
         id: creature_id([0, 0], 0).unwrap(),

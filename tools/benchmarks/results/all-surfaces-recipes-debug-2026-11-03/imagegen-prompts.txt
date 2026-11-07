@@ -1,0 +1,7 @@
+Mode: built-in image_gen, generate, transparent_background=true.
+Reference: references/furnace.png (furnace illustration and painted style).
+Source: /home/exepta/.codex/generated_images/01a19401-f363-7293-84fa-4370272101fa/exec-c56956c9-d767-4ca5-93de-80ecc89f4a2c.png
+Workspace asset: src-ui/assets/furnace-recipe-185.png
+Original RGBA PNG copied without raster editing; included in UI asset preload.
+
+Use case: stylized-concept. Reference image: supplied Teramic Furnace Recipe UI, central furnace illustration only. Generate a single production game UI sprite, genuine transparent alpha background. A chunky cubic dark stone voxel furnace in three-quarter front view, warm orange glowing open firebox near the bottom front and a small darker upper slot, masonry gray and brown stone blocks, subtle warm painted highlights and readable bevels. Closely match the furnace in the central recipe process card in the reference, charming detailed pixel/voxel fantasy hand-painted game art, matching the copper interface style. Whole furnace centered, fill 85 percent of square canvas with small safe transparent margin, no clipping. No UI panel, no border, no text, no arrows, no ore or ingots, no ingredient items, no scenery, no floor, no background rectangle, no separate flames floating in front. Only the furnace with its orange inner glow.

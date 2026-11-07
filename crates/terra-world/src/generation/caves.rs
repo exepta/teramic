@@ -192,12 +192,20 @@ mod formation_tests {
     #[test]
     fn new_salt_caves_keep_legacy_bodies_only_in_saved_geology_two() {
         let old = TerraGenerator::new(WorldConfig {
+            landscape_revision: 4,
             geology_revision: 2,
+            sea_level: 22.0,
+            rivers: true,
+            biome_definitions: Some(terra_core::BiomeDefinitions::default()),
             cave_structure_revision: 2,
             ..Default::default()
         })
         .unwrap();
         let new = TerraGenerator::new(WorldConfig {
+            landscape_revision: 4,
+            sea_level: 22.0,
+            rivers: true,
+            biome_definitions: Some(terra_core::BiomeDefinitions::default()),
             cave_structure_revision: 2,
             ..Default::default()
         })
@@ -220,13 +228,21 @@ mod formation_tests {
     #[test]
     fn tall_growth_has_real_floor_and_ceiling_support_and_survives_section_boundaries() {
         let terrain = TerraGenerator::new(WorldConfig {
+            landscape_revision: 4,
             geology_revision: 2,
+            sea_level: 22.0,
+            rivers: true,
+            biome_definitions: Some(terra_core::BiomeDefinitions::default()),
             cave_structure_revision: 2,
             ..Default::default()
         })
         .unwrap();
         let old = TerraGenerator::new(WorldConfig {
+            landscape_revision: 4,
             geology_revision: 1,
+            sea_level: 22.0,
+            rivers: true,
+            biome_definitions: Some(terra_core::BiomeDefinitions::default()),
             cave_structure_revision: 2,
             ..Default::default()
         })
@@ -303,7 +319,11 @@ mod formation_tests {
         assert!(tall >= 5);
         terrain.cave_portals.2.lock().unwrap().clear();
         let fresh = TerraGenerator::new(WorldConfig {
+            landscape_revision: 4,
             geology_revision: 2,
+            sea_level: 22.0,
+            rivers: true,
+            biome_definitions: Some(terra_core::BiomeDefinitions::default()),
             cave_structure_revision: 2,
             ..Default::default()
         })
@@ -821,13 +841,38 @@ impl TerraGenerator {
                 let d = f64::from(i) * 6.0;
                 let x = mouth_x + direction[0] * d;
                 let z = mouth_z + direction[1] * d;
-                self.river_at(x, z).is_some() || self.oasis_at(x, z).is_some()
+                self.river_at(x, z).is_some()
+                    || self.oasis_at(x, z).is_some()
+                    || (self.connected_hydrology() && self.lake_at(x, z).is_some())
             }) {
                 continue;
             }
+            let mut profile = None::<[f64; LENGTH as usize]>;
             let connection = (8..=22).find_map(|drop| {
                 let y = mouth_height - f64::from(drop);
-                (self.tunnel_density([inner_x, y, inner_z]) > 0.2).then_some(y)
+                if self.tunnel_density([inner_x, y, inner_z]) <= 0.2 {
+                    return None;
+                }
+                let portal = Portal {
+                    mouth: [mouth_x, mouth_height - 0.75, mouth_z],
+                    direction,
+                    end_floor: y - 1.8,
+                    phase,
+                };
+                if self.connected_hydrology() {
+                    let profile = profile.get_or_insert_with(|| {
+                        std::array::from_fn(|index| {
+                            let along = index as f64 + 1.0;
+                            let x = (mouth_x + direction[0] * along).floor() + 0.5;
+                            let z = (mouth_z + direction[1] * along).floor() + 0.5;
+                            self.surface_height(x, z)
+                        })
+                    });
+                    if !self.portal_has_covered_corridor(portal, profile) {
+                        return None;
+                    }
+                }
+                Some(y)
             });
             let Some(connection) = connection else {
                 continue;
@@ -841,6 +886,34 @@ impl TerraGenerator {
             });
         }
         best
+    }
+
+    fn portal_has_covered_corridor(
+        &self,
+        portal: Portal,
+        profile: &[f64; LENGTH as usize],
+    ) -> bool {
+        // Endpoint rise alone can select an exposed trench on rolling ground.
+        // Try deeper existing tunnel connections until half of the entrance
+        // actually lies beneath a supported rock roof.
+        let mut covered = 0;
+        for (index, &ground) in profile.iter().enumerate() {
+            let step = index as f64 + 1.0;
+            let x = (portal.mouth[0] + portal.direction[0] * step).floor() + 0.5;
+            let z = (portal.mouth[2] + portal.direction[1] * step).floor() + 0.5;
+            let Some(interval) = portal.interval(x, z) else {
+                return false;
+            };
+            if interval[1] + 3.0 <= ground
+                && self.cave_roof_supported(portal, x, z, ground, interval)
+            {
+                covered += 1;
+                if covered >= LENGTH as usize / 2 {
+                    return true;
+                }
+            }
+        }
+        false
     }
 
     fn cave_roof_supported(
@@ -1018,8 +1091,16 @@ mod tests {
 
     #[test]
     fn entrances_have_walkable_floors_and_connect_to_variable_chambers_and_deep_caves() {
-        for seed in [42042, 7, 98173] {
-            check_walkable_entrances(&seeded_terrain(seed));
+        for (landscape_revision, rivers) in [(2, false), (3, false), (3, true)] {
+            for seed in [42042, 7, 98173] {
+                let terrain = TerraGenerator::new(WorldConfig {
+                    landscape_revision,
+                    rivers,
+                    ..seeded_terrain(seed).config().clone()
+                })
+                .unwrap();
+                check_walkable_entrances(&terrain);
+            }
         }
     }
 

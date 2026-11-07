@@ -142,9 +142,7 @@
   ],
   "materials": {
     "Root-rich earth": {
-      "texture_pattern": "earth",
-      "roughness": 1,
-      "reflectance": 0.12
+      "coarse_face": { "block": 1, "side": 2 }
     }
   },
   "face_materials": [

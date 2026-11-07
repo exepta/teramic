@@ -1,0 +1,15 @@
+{
+  "indexed_source_restored_and_verified": true,
+  "game_source_fingerprints_identical": true,
+  "all_live_ui_source_hashes_unchanged": true,
+  "initial_8_toml_config_hashes_identical": true,
+  "effective_configuration_log_exact_match_excluding_timestamp": true,
+  "exit_codes": {
+    "before": 0,
+    "after": 0
+  },
+  "gpu_present_completion_measured": false,
+  "vram_metrics_available": false,
+  "audit_phase": "Immediately after both paired native runs; before separately recorded root formatting cleanup. Original game-source-hashes.json is unchanged.",
+  "original_validation_file_written_utc": "2026-11-05T23:49:27.544388+00:00"
+}

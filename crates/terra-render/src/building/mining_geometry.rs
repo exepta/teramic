@@ -8,6 +8,7 @@ pub(super) fn cavity_faces(
     position: [i64; 3],
     target: u16,
     neighbors: [u16; 6],
+    neighbor_tints: [Option<[u8; 3]>; 6],
     templates: &crate::blocks::TemplateSet,
     options: &crate::meshing::builder::RenderOptions,
 ) -> Result<Vec<MeshBatch>, String> {
@@ -37,11 +38,20 @@ pub(super) fn cavity_faces(
             (origin[axis] - target_origin[axis]) as f32
         }));
         let face = full_faces(local.map(|value| value as u32), material)[side ^ 1];
+        // The neighbor may live in a different section; target-local metadata
+        // must never color an unrelated cell at the same wrapped coordinates.
+        let mut neighbor_options = options.clone();
+        neighbor_options.tints = std::sync::Arc::new(
+            neighbor_tints[side]
+                .map(|rgb| (local, rgb))
+                .into_iter()
+                .collect(),
+        );
         let batches = crate::meshing::builder::compose_section_with_options(
             &[face],
             &flat,
             section,
-            options,
+            &neighbor_options,
         )?;
         for mut batch in batches {
             for point in &mut batch.positions {
@@ -237,10 +247,12 @@ mod tests {
             detail_level: crate::meshing::DetailLevel::Near,
             terrain: None,
             exposure: None,
+            tints: Default::default(),
             conditions: default(),
         };
         for position in [[-1, -16, 15], [0; 3], [15; 3]] {
-            let batches = cavity_faces(position, 3, [3; 6], &templates, &options).unwrap();
+            let batches =
+                cavity_faces(position, 3, [3; 6], [None; 6], &templates, &options).unwrap();
             assert_eq!(batches.len(), 6);
             let center = Vec3::from_array(position.map(|v| v.rem_euclid(16) as f32 + 0.5));
             for side in 0..6 {
@@ -276,11 +288,48 @@ mod tests {
                 [0; 3],
                 terra_voxel::MaterialId::Glass as u16,
                 [3; 6],
+                [None; 6],
                 &templates,
                 &options
             )
             .unwrap()
             .is_empty()
         );
+        let mut wool = templates.blocks[&3].clone();
+        wool.face_materials = [0; 6];
+        wool.faces = crate::blocks::cube_faces(0.0, [0; 6], None);
+        templates.blocks.insert(103, wool);
+        let mut colored = options.clone();
+        colored.tints = std::sync::Arc::new([([0; 3], [255, 0, 0])].into());
+        let neighbor_tints = [
+            Some([71, 93, 184]),
+            None,
+            Some([237, 92, 31]),
+            None,
+            Some([20, 200, 80]),
+            None,
+        ];
+        for position in [[-1, -16, 15], [0; 3], [15; 3]] {
+            let batches = cavity_faces(
+                position,
+                103,
+                [103; 6],
+                neighbor_tints,
+                &templates,
+                &colored,
+            )
+            .unwrap();
+            assert_eq!(batches.len(), 6);
+            for (side, batch) in batches.iter().enumerate() {
+                let expected = neighbor_tints[side].map_or([1.0; 4], crate::dye_tint::rgb);
+                for index in 0..batch.positions.len() {
+                    assert_eq!(
+                        batch.colors.get(index).copied().unwrap_or([1.0; 4]),
+                        expected,
+                        "neighbor RGB must use its own section coordinates"
+                    );
+                }
+            }
+        }
     }
 }

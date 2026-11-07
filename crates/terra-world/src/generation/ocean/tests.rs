@@ -5,7 +5,11 @@ use terra_voxel::{SectionPos, global_to_section};
 
 #[test]
 fn habitats_are_continuous_and_have_coherent_clearings_on_both_sides_of_zero() {
-    let terrain = TerraGenerator::new(WorldConfig::default()).unwrap();
+    let terrain = TerraGenerator::new(WorldConfig {
+        landscape_revision: 3,
+        ..Default::default()
+    })
+    .unwrap();
     let mut biome = terrain.biome_at(0.0, 0.0);
     biome.weights.ocean = 1.0;
     for (temperature, expected) in [
@@ -114,7 +118,11 @@ fn cold_ocean_remains_open_water_in_headless_and_padded_sections() {
 
 #[test]
 fn legacy_worlds_do_not_acquire_solid_ice_or_new_seabed() {
-    let new = TerraGenerator::new(WorldConfig::default()).unwrap();
+    let new = TerraGenerator::new(WorldConfig {
+        landscape_revision: 3,
+        ..Default::default()
+    })
+    .unwrap();
     let (x, z) = cold_ocean(&new);
     let mut config = new.config().clone();
     config.ocean_revision = 0;

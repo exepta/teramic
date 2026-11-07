@@ -1,4 +1,4 @@
-<button id="server-card" [class]="card.selected ? 'world-card selected' : 'world-card'" onclick="$set(menuIntent.command, card.id); menu_command">
+<button id="server-card" [class]="card.selected ? 'world-card copper-world-card copper-server-card selected' : 'world-card copper-world-card copper-server-card'" onclick="$set(menuIntent.command, card.id); menu_command">
   <div class="world-emblem"><icon name="users-round" size="36" /></div>
   <div class="card-copy"><h2>{{ card.title }}</h2><p>{{ card.subtitle }}</p><p class="card-detail">{{ card.detail }}</p></div>
   @if (card.selected) { <icon name="check" size="24" /> }

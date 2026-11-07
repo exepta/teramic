@@ -141,7 +141,7 @@ pub const fn flower_variant(color: crate::beds::DyeColor) -> u8 {
         Purple => 5,
         Orange => 6,
         Green => 7,
-        Black | Lime | Gold | Silver | LightBlue => 0,
+        Black | Lime | Gold | Silver | LightBlue | Rgb(_) => 0,
     }
 }
 pub fn recipes() -> &'static [CrusherRecipe] {

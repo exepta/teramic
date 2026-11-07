@@ -1,6 +1,42 @@
 use super::*;
 
 #[test]
+fn kinetic_builtin_collision_matches_authored_models_and_vertical_axes() {
+    for material in 141..=151 {
+        let boxes = builtin_boxes(material);
+        assert!(!boxes.is_empty(), "missing kinetic collider {material}");
+        assert!(boxes.iter().all(|b| b.valid_for(material)));
+        if material == 148 {
+            assert!(
+                (boxes.iter().map(|b| b.maximum[1]).fold(0.0, f64::max)
+                    - f64::from(crate::kinetic::CONVEYOR_TOP))
+                .abs()
+                    < 0.001
+            );
+        } else {
+            for facing in 0..6 {
+                assert!(
+                    boxes
+                        .iter()
+                        .all(|b| b.rotated_axis(facing).valid_for(material))
+                );
+            }
+        }
+    }
+    let axle = ShapeBox {
+        minimum: [0.0, 0.4, 0.4],
+        maximum: [1.0, 0.6, 0.6],
+        hinged: false,
+    };
+    for facing in [4, 5] {
+        let vertical = axle.rotated_axis(facing);
+        assert_eq!(vertical.minimum[1], 0.0);
+        assert_eq!(vertical.maximum[1], 1.0);
+        assert!((vertical.maximum[0] - vertical.minimum[0] - 0.2).abs() < 0.0001);
+    }
+}
+
+#[test]
 fn framed_openings_keep_fixed_frames_and_explicit_hinged_collision_parts() {
     for material in 65..=70 {
         let boxes = builtin_boxes(material);
@@ -58,6 +94,24 @@ fn wall_torch_poses_stay_in_their_cell_and_vectors_preserve_length() {
         );
         let up = torch_vector(facing, [0.0, 1.0, 0.0]);
         assert!((up.iter().map(|v| v * v).sum::<f64>() - 1.0).abs() < 1e-12);
+        for shape in builtin_boxes(40) {
+            for corner in 0..8 {
+                let point = torch_point(
+                    facing,
+                    std::array::from_fn(|axis| {
+                        if corner & (1 << axis) == 0 {
+                            shape.minimum[axis]
+                        } else {
+                            shape.maximum[axis]
+                        }
+                    }),
+                );
+                assert!(
+                    point.iter().all(|value| (0.0..=1.0).contains(value)),
+                    "wall-torch collision must not enter its supporting voxel: facing={facing}, point={point:?}"
+                );
+            }
+        }
     }
     assert_eq!(torch_point(0, [0.3, 0.7, 0.4]), [0.3, 0.7, 0.4]);
     assert!(!builtin_boxes(40).is_empty());

@@ -1,0 +1,1 @@
+{"id":"teramic::faucet","name":"Faucet","station":"workbench","output":{"item":{"block":167},"count":1},"pattern":{"kind":"shapeless","ingredients":[{"item":{"block":165},"count":1},{"item":{"mineral":"iron_ingot"},"count":2},{"item":"stick","count":1}]}}

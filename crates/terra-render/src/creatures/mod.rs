@@ -1,5 +1,6 @@
 mod debug;
 pub(crate) mod horse_pose;
+mod military;
 mod model;
 mod pet_preview;
 use bevy::prelude::*;
@@ -10,6 +11,44 @@ use terra_network::client::ReplicatedCreatures;
 
 #[derive(Component)]
 pub struct CreatureAvatar(pub u64);
+
+#[derive(SystemSet, Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub(crate) struct CreatureAnimationSet;
+
+#[derive(Component)]
+pub struct VillagerHeldItem {
+    pub item: terra_core::ItemKind,
+    pub arm: Entity,
+}
+
+#[derive(Component)]
+pub(crate) struct VillagerHand {
+    pub item: terra_core::ItemKind,
+    pub visible: bool,
+    pub swing: f32,
+}
+
+impl VillagerHand {
+    pub(crate) const PALM: Vec3 = Vec3::new(0.008, -0.43, -0.028);
+
+    fn new(role: u8) -> Option<Self> {
+        use terra_core::{ItemKind, ToolKind};
+        let item = match role % terra_core::creatures::villagers::ROLE_COUNT {
+            1 => ItemKind::Tool(ToolKind::IronHoe),
+            2..=4 => ItemKind::Tool(ToolKind::IronSword),
+            5 | 6 => ItemKind::Stick,
+            7 => ItemKind::Flower(terra_core::beds::DyeColor::White),
+            8 => ItemKind::Tool(ToolKind::IronPickaxe),
+            9 => ItemKind::Tool(ToolKind::IronAxe),
+            _ => return None,
+        };
+        Some(Self {
+            item,
+            visible: true,
+            swing: 0.0,
+        })
+    }
+}
 #[derive(Component)]
 struct Motion {
     kind: Kind,
@@ -37,9 +76,14 @@ type ModelParts = Vec<(model::Part, Vec3, Handle<Mesh>)>;
 pub(crate) fn install(app: &mut App) {
     pet_preview::install(app);
     debug::install(app);
+    app.init_resource::<military::Uniforms>();
     app.add_systems(Startup, setup).add_systems(
         Update,
-        (render, animate)
+        (
+            render,
+            military::update,
+            animate.in_set(CreatureAnimationSet),
+        )
             .chain()
             .after(crate::players::MountedPresentationSet)
             .after(terra_player::PlayerSet::Movement),
@@ -305,8 +349,17 @@ fn render(
                 Transform::from_translation(*offset),
                 ChildOf(root),
             ));
+            if matches!(part, model::Part::MilitaryTabard) {
+                child.insert(military::Heraldry(id));
+            }
             if animal.kind.is_jelly() {
                 child.insert(bevy::light::NotShadowCaster);
+            }
+            if animal.kind == Kind::Villager
+                && matches!(part, model::Part::VillagerArm(side) if *side > 0.0)
+                && let Some(hand) = VillagerHand::new(animal.variant)
+            {
+                child.insert(hand);
             }
         }
     }
@@ -355,9 +408,15 @@ fn sleep_offset(kind: Kind) -> f32 {
 }
 fn animate(
     roots: Query<&Motion>,
-    mut limbs: Query<(&ChildOf, &Limb, &mut Transform, &mut Visibility)>,
+    mut limbs: Query<(
+        &ChildOf,
+        &Limb,
+        &mut Transform,
+        &mut Visibility,
+        Option<&mut VillagerHand>,
+    )>,
 ) {
-    for (parent, part, mut transform, mut visibility) in &mut limbs {
+    for (parent, part, mut transform, mut visibility, hand) in &mut limbs {
         let Ok(motion) = roots.get(parent.parent()) else {
             continue;
         };
@@ -398,7 +457,18 @@ fn animate(
             continue;
         }
         if motion.kind == Kind::Villager {
+            if matches!(part.0, model::Part::MilitaryWeapon(_)) {
+                *visibility = if motion.sleep > 0.5 {
+                    Visibility::Hidden
+                } else {
+                    Visibility::Inherited
+                };
+            }
             animate_villager(motion, part, &mut transform);
+            if let Some(mut hand) = hand {
+                hand.visible = motion.behavior != Behavior::Sleep && motion.sleep < 0.5;
+                hand.swing = villager_action(motion);
+            }
             continue;
         }
         if motion.kind.is_spider() {
@@ -490,9 +560,16 @@ fn animate_villager(motion: &Motion, part: &Limb, transform: &mut Transform) {
                 + (motion.phase.cos() * side).max(0.0) * 0.035 * movement;
             Quat::from_rotation_x(angle)
         }
-        model::Part::VillagerArm(side) => Quat::from_euler(
+        model::Part::VillagerArm(side) | model::Part::MilitaryWeapon(side) => Quat::from_euler(
             EulerRot::XYZ,
-            -motion.phase.sin() * side * stride * 0.65 - 0.06 * awake - 0.18 * motion.sleep,
+            -motion.phase.sin() * side * stride * 0.65
+                - 0.06 * awake
+                - 0.18 * motion.sleep
+                - if side > 0.0 {
+                    villager_action(motion) * 0.95
+                } else {
+                    0.0
+                },
             0.0,
             side * (0.045 * awake + 0.22 * motion.sleep),
         ),
@@ -506,7 +583,7 @@ fn animate_villager(motion: &Motion, part: &Limb, transform: &mut Transform) {
                 (motion.clock * 0.83).sin() * 0.008 * awake,
             )
         }
-        model::Part::Body => {
+        model::Part::Body | model::Part::MilitaryTabard => {
             transform.scale.y = 1.0 + (motion.clock * 1.8).sin() * 0.003;
             Quat::from_euler(
                 EulerRot::XYZ,
@@ -517,6 +594,14 @@ fn animate_villager(motion: &Motion, part: &Limb, transform: &mut Transform) {
         }
         _ => Quat::IDENTITY,
     };
+}
+
+fn villager_action(motion: &Motion) -> f32 {
+    if motion.behavior == Behavior::Attack {
+        (motion.clock * 5.0).sin().max(0.0) * (1.0 - motion.sleep)
+    } else {
+        0.0
+    }
 }
 
 fn animate_stalker(motion: &Motion, part: &Limb, transform: &mut Transform) {
@@ -865,6 +950,84 @@ fn rotation(animal: &terra_core::creatures::Creature) -> Quat {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn villager_right_hand_tracks_walk_and_action_but_hides_held_tools_during_sleep() {
+        let mut app = App::new();
+        app.add_plugins(TransformPlugin)
+            .add_systems(Update, animate);
+        let root = app
+            .world_mut()
+            .spawn((
+                Motion {
+                    kind: Kind::Villager,
+                    behavior: Behavior::Rest,
+                    phase: 0.0,
+                    clock: 0.25,
+                    speed: 0.0,
+                    sleep: 0.0,
+                    attack: 0.0,
+                    silk_length: 0.0,
+                    youth: 0.0,
+                    jump: Default::default(),
+                },
+                Transform::default(),
+                Visibility::Inherited,
+            ))
+            .id();
+        let hand = VillagerHand::new(8).unwrap();
+        assert_eq!(
+            hand.item,
+            terra_core::ItemKind::Tool(terra_core::ToolKind::IronPickaxe)
+        );
+        let arm = app
+            .world_mut()
+            .spawn((
+                ChildOf(root),
+                Limb(model::Part::VillagerArm(1.0), Vec3::new(0.3, 1.15, 0.0)),
+                Transform::default(),
+                Visibility::Inherited,
+                hand,
+            ))
+            .id();
+        let mut grips = Vec::new();
+        for (behavior, speed, phase, sleep) in [
+            (Behavior::Rest, 0.0, 0.0, 0.0),
+            (Behavior::Wander, 1.35, 0.7, 0.0),
+            (Behavior::Attack, 0.0, 0.0, 0.0),
+            (Behavior::Sleep, 0.0, 0.0, 1.0),
+        ] {
+            {
+                let mut motion = app.world_mut().get_mut::<Motion>(root).unwrap();
+                motion.behavior = behavior;
+                motion.speed = speed;
+                motion.phase = phase;
+                motion.sleep = sleep;
+            }
+            app.update();
+            let hand = app.world().get::<VillagerHand>(arm).unwrap();
+            assert_eq!(hand.visible, behavior != Behavior::Sleep);
+            assert_eq!(hand.swing > 0.0, behavior == Behavior::Attack);
+            grips.push(
+                app.world()
+                    .get::<Transform>(arm)
+                    .unwrap()
+                    .transform_point(VillagerHand::PALM),
+            );
+        }
+        assert!(
+            grips[0].distance(grips[1]) > 0.03,
+            "walking carries the tool with the arm"
+        );
+        assert!(
+            grips[0].distance(grips[2]) > 0.25,
+            "actions move the hand, not just a detached prop"
+        );
+        assert!(VillagerHand::new(0).is_none());
+        for role in 1..terra_core::creatures::villagers::CIVILIAN_ROLE_COUNT {
+            assert!(VillagerHand::new(role).is_some());
+        }
+    }
 
     #[test]
     fn villager_walk_counter_swings_arms_keeps_planted_boots_grounded_and_sleeps_on_the_pillow() {

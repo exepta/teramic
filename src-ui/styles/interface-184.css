@@ -1,0 +1,128 @@
+/* Inventory: shared crafting cells, smaller catalog cells and a usable category rail. */
+.inventory-shell-player .inventory-player-panel { width: 57% !important; }
+.inventory-catalog-collapsed .inventory-player-panel { width: 93% !important; }
+.inventory-shell-player .craft-workspace { gap: 8px !important; }
+.inventory-shell-player .craft-grid, .inventory-shell-player .craft-result { flex-shrink: 0 !important; }
+.reference-browser .browser-category-host { left: -55px !important; width: 48px !important; display: flex !important; flex-direction: column !important; gap: 8px !important; }
+.reference-browser .browser-categories { height: auto !important; flex-basis: 0px !important; flex-grow: 1 !important; min-height: 0 !important; padding-right: 0 !important; }
+.reference-browser .browser-category-cell { width: 46px !important; min-width: 46px !important; height: 46px !important; flex: 0 0 46px !important; }
+.inventory-rail-trash { width: 46px !important; height: 46px !important; min-height: 46px !important; flex-shrink: 0 !important; align-self: center !important; padding: 9px !important; border: 2px solid #9a724c !important; border-radius: 5px !important; background-color: #3e291e !important; color: #edc18b !important; }
+.inventory-rail-trash:hover { border-color: #ffd064 !important; background-color: #6b4629 !important; }
+.inventory-trash-icon { pointer-events: none !important; }
+.reference-browser .browser-search .inventory-search-field { text-align: left !important; height: 32px !important; min-height: 32px !important; padding: 6px 3px !important; font-size: 16px !important; }
+.inventory-search-field::placeholder { text-align: left !important; }
+/* Copper panels keep their action rows above and inside the ornamental rails. */
+.copper-menu-page { padding: 44px 46px 50px !important; }
+.copper-menu-actions { flex-shrink: 0 !important; }
+.copper-dialog { width: 630px !important; max-width: 90% !important; max-height: 86% !important; padding: 42px 38px 38px !important; border: 0 !important; border-radius: 8px !important; background-color: #302119 !important; overflow: visible !important; gap: 16px !important; }
+.copper-dialog-heading { min-width: 260px !important; width: 75% !important; top: -24px !important; height: 56px !important; }
+.copper-dialog-title { margin: 0 !important; font-family: serif !important; font-size: 26px !important; color: #f4dfb8 !important; }
+.copper-dialog-body { display: flex !important; flex-direction: column !important; gap: 9px !important; min-height: 0 !important; flex-shrink: 1 !important; overflow-y: auto !important; padding: 2px 7px !important; }
+.copper-dialog-body label, .copper-dialog-message { color: #e6c69c !important; font-size: 15px !important; }
+.copper-dialog-field, .copper-dialog-choice { width: 100% !important; min-height: 36px !important; flex-shrink: 0 !important; padding: 7px 9px !important; border: 1px solid #ac7846 !important; border-radius: 5px !important; color: #f2ddb9 !important; background-color: #211710 !important; text-align: left !important; }
+.copper-dialog-choice::value, .copper-dialog-choice::indicator { color: #f2ddb9 !important; }
+.copper-dialog-choice::popup { background-color: #302017 !important; border: 2px solid #ac7846 !important; }
+.copper-dialog-slider::track { background-color: #21170f !important; border: 1px solid #ad7940 !important; }
+.copper-dialog-slider::fill { background-color: #e9a52e !important; }
+.copper-dialog-slider::thumb { background-color: #ffd465 !important; border: 2px solid #fff1aa !important; }
+.copper-dialog-actions { margin-top: 0 !important; min-height: 50px !important; gap: 12px !important; flex-shrink: 0 !important; }
+/* Startup stays borderless; world loading uses the common copper frame. */
+.startup-backdrop { background-color: #1d140f !important; background-image: linear-gradient(to bottom, #39261a, #19110e) !important; }
+.copper-loading { width: 720px !important; gap: 20px !important; }
+.loading-teramic-logo { width: 480px !important; max-width: 88% !important; height: 160px !important; flex-shrink: 0 !important; }
+.copper-loading .loading-status-panel { min-height: 190px !important; padding: 32px 40px 34px !important; gap: 12px !important; border: 0 !important; border-radius: 6px !important; background-color: #302119 !important; }
+.startup-loading .loading-status-panel { background-color: transparent !important; padding: 12px !important; }
+.loading-caption { margin: 0 !important; font-family: serif !important; font-size: 30px !important; color: #f6e1b9 !important; }
+.loading-world-name { font-family: serif !important; font-size: 21px !important; color: #eccda2 !important; }
+.loading-world-status { font-size: 13px !important; color: #c6a887 !important; }
+.copper-loading .loading-progress { height: 34px !important; }
+.copper-loading-progress::track { height: 100% !important; border: 2px solid #bf8b4c !important; border-radius: 6px !important; background-color: #21160e !important; }
+.copper-loading-progress::fill { background-color: #e9a634 !important; background-image: linear-gradient(to bottom, #ffd873, #b97b27) !important; border-radius: 4px !important; }
+.copper-loading .loading-asset-path { color: #d8bc94 !important; font-size: 13px !important; text-align: center !important; }
+.loading-progress-label { pointer-events: none !important; }
+.loading-back-button { position: relative !important; width: 260px !important; height: 52px !important; min-height: 52px !important; justify-content: center !important; gap: 12px !important; border: 0 !important; background-color: transparent !important; }
+.loading-back-button p, .loading-back-button icon { position: relative !important; z-index: 1 !important; color: #f2dcb7 !important; pointer-events: none !important; font-family: serif !important; font-size: 20px !important; }
+/* Cauldron recipe: painted vessel, readable inputs/result and bronze inset cards. */
+.cauldron-reference .recipe-content { gap: 10px !important; }
+.cauldron-recipe-header, .cauldron-recipe-process, .cauldron-alternatives { border: 2px solid #a36b3d !important; border-radius: 7px !important; box-shadow: 0 0 0 2px #24180f !important; }
+.cauldron-recipe-header { height: 20% !important; min-height: 90px !important; padding: 12px 15px !important; background-image: linear-gradient(to bottom, #533726, #352218) !important; }
+.cauldron-recipe-process { height: 45% !important; min-height: 225px !important; padding: 12px 14px !important; background-image: linear-gradient(to bottom, #62432e, #3d291c) !important; gap: 9px !important; }
+.cauldron-recipe-name { font-size: 26px !important; }
+.cauldron-recipe-title p { font-size: 17px !important; }
+.cauldron-output-icon { width: 78px !important; height: 78px !important; }
+.cauldron-input-column { width: 29% !important; gap: 8px !important; }
+.cauldron-ingredient-grid { grid-template-columns: repeat(2, 68px) !important; grid-auto-rows: 68px !important; gap: 3px !important; }
+.cauldron-model-column { width: 35% !important; gap: 5px !important; }
+.cauldron-model { width: 100% !important; height: 175px !important; }
+.cauldron-painted-art { width: 100% !important; height: 100% !important; }
+.cauldron-result { width: 80px !important; height: 80px !important; border: 0 !important; }
+.recipe-cauldron-output .item-cell { overflow: hidden !important; border: 2px solid #ffd16a !important; border-radius: 5px !important; box-shadow: 0 0 9px #ffc44766 !important; background-color: #39251a !important; }
+.recipe-cauldron-output .item-image { position: absolute !important; left: 50% !important; top: 50% !important; width: 250% !important; height: 250% !important; transform: translate(-50%, -50%) !important; }
+.recipe-cauldron-output .item-count { z-index: 2 !important; }
+.cauldron-heat-track { height: 17px !important; padding: 3px !important; border: 2px solid #bd8b49 !important; border-radius: 5px !important; }
+.cauldron-heat-fill { background-image: linear-gradient(to bottom, #ffdc68, #e98a17) !important; }
+.cauldron-heat-caption { font-size: 10px !important; }
+.cauldron-alternative { min-height: 57px !important; }
+.cauldron-row-model { width: 50px !important; height: 50px !important; }
+.cauldron-row-slot { width: 42px !important; height: 42px !important; }
+.recipe-alternatives .recipe-alternative { min-height: 80px !important; }
+@media (max-width: 1100px) {
+ .reference-browser .browser-category-host { left: -41px !important; width: 36px !important; }
+ .reference-browser .browser-category-cell { width: 34px !important; min-width: 34px !important; height: 34px !important; flex: 0 0 34px !important; }
+ .inventory-rail-trash { width: 34px !important; height: 34px !important; min-height: 34px !important; padding: 5px !important; }
+}
+@media (max-height: 720px) {
+ .copper-menu-page { padding: 36px 32px 34px !important; }
+ .copper-dialog { max-height: 86% !important; padding: 32px 28px 30px !important; gap: 10px !important; }
+ .copper-dialog-heading { height: 44px !important; top: -18px !important; }
+ .copper-dialog-title { font-size: 21px !important; }
+ .copper-dialog-body { gap: 6px !important; }
+ .copper-dialog-body label, .copper-dialog-message { font-size: 13px !important; }
+ .copper-dialog-field, .copper-dialog-choice { min-height: 31px !important; padding: 5px 7px !important; }
+ .copper-dialog-actions { min-height: 42px !important; }
+ .loading-teramic-logo { height: 120px !important; }
+ .copper-loading { gap: 10px !important; }
+ .copper-loading .loading-status-panel { min-height: 145px !important; padding: 24px 28px !important; }
+ .startup-loading .loading-status-panel { padding: 8px !important; }
+ .loading-caption { font-size: 24px !important; }
+ .cauldron-recipe-header { min-height: 78px !important; padding: 7px 9px !important; }
+ .cauldron-output-icon { width: 52px !important; height: 52px !important; }
+ .cauldron-recipe-name { font-size: 20px !important; }
+ .cauldron-recipe-title p, .cauldron-recipe-facts p { font-size: 12px !important; }
+ .cauldron-recipe-process { min-height: 175px !important; gap: 6px !important; padding: 7px !important; }
+ .cauldron-ingredient-grid { grid-template-columns: repeat(2, 49px) !important; grid-auto-rows: 49px !important; }
+ .cauldron-model { height: 135px !important; }
+ .cauldron-result { width: 57px !important; height: 57px !important; }
+ .cauldron-row-model { width: 35px !important; height: 35px !important; }
+ .cauldron-row-slot { width: 29px !important; height: 29px !important; }
+ .cauldron-alternative { min-height: 43px !important; }
+}
+
+.inventory-shell-player .craft-grid { padding: 0 !important; border: 0 !important; }
+.recipe-reference .recipe-wood-alternatives { display: grid !important; grid-template-columns: repeat(2, 1fr) !important; grid-auto-rows: 60px !important; gap: 6px !important; }
+.recipe-reference .recipe-wood-alternatives .recipe-alternative { height: 60px !important; min-height: 60px !important; padding: 4px 5px 4px 20px !important; gap: 5px !important; }
+.recipe-wood-alternatives .recipe-mini-grid { width: 42px !important; height: 42px !important; }
+.recipe-wood-alternatives .recipe-mini-output { width: 30px !important; height: 30px !important; }
+.recipe-wood-alternatives .recipe-mini-arrow { width: 20px !important; height: 20px !important; }
+.recipe-wood-alternatives .recipe-alternative-name { font-size: 14px !important; }
+.recipe-reference .recipe-wood-alternatives .recipe-alternative-copy p { font-size: 11px !important; }
+.recipe-wood-alternatives .recipe-alternative-number { width: 16px !important; height: 16px !important; font-size: 12px !important; }
+.recipe-wood-alternatives .recipe-alternative-check { display: none !important; }
+.inventory-shell-player .craft-workspace { gap: 5px !important; }
+.inventory-shell-player .craft-workspace > icon { width: 20px !important; height: 20px !important; flex-shrink: 0 !important; }
+.recipe-reference .recipe-wood-alternatives { grid-auto-rows: 50px !important; }
+.recipe-reference .recipe-wood-alternatives .recipe-alternative { height: 50px !important; min-height: 50px !important; }
+.recipe-wood-alternatives .recipe-mini-grid { width: 34px !important; height: 34px !important; }
+.recipe-wood-alternatives .recipe-alternative-copy { gap: 3px !important; }
+.recipe-wood-alternatives .recipe-alternative-name { font-size: 13px !important; text-wrap: nowrap !important; }
+.recipe-reference .recipe-wood-alternatives .recipe-alternative-copy p { font-size: 10px !important; }
+.cauldron-model { height: 210px !important; }
+.cauldron-output-icon img { width: 230% !important; height: 230% !important; }
+@media (max-height: 720px) { .recipe-reference .recipe-wood-alternatives { grid-auto-rows: 48px !important; } .recipe-reference .recipe-wood-alternatives .recipe-alternative { height: 48px !important; min-height: 48px !important; } .cauldron-model { height: 145px !important; } }
+
+.recipe-cauldron-ingredient .item-cell { overflow: hidden !important; }
+.recipe-cauldron-ingredient .item-image { position: absolute !important; left: 50% !important; top: 50% !important; width: 200% !important; height: 200% !important; transform: translate(-50%, -50%) !important; }
+.recipe-cauldron-ingredient .item-count { z-index: 2 !important; }
+.cauldron-row-slot { overflow: hidden !important; }
+.cauldron-row-slot img { position: absolute !important; left: 50% !important; top: 50% !important; width: 170% !important; height: 170% !important; transform: translate(-50%, -50%) !important; }
+.cauldron-row-slot p { z-index: 2 !important; }

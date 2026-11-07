@@ -127,6 +127,7 @@ fn prepare(
                     detail_level: DetailLevel::Near,
                     terrain: None,
                     exposure: None,
+                    tints: Default::default(),
                     conditions: default(),
                 },
             ),
@@ -652,6 +653,7 @@ fn fitted_roof_fixture(
             detail_level: DetailLevel::Near,
             terrain: None,
             exposure: None,
+            tints: Default::default(),
             conditions: default(),
         },
     )?;

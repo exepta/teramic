@@ -91,6 +91,7 @@ pub(crate) fn cube_faces(
 
 fn empty_primitive(material: usize) -> PrimitiveTemplate {
     PrimitiveTemplate {
+        tangents: Vec::new(),
         positions: Vec::new(),
         normals: Vec::new(),
         uvs: Vec::new(),

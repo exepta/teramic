@@ -7,6 +7,27 @@ use terra_world::{edits::EditJournal, streaming::ChunkStore};
 pub const PLAYER_RADIUS: f32 = 0.32;
 pub const PLAYER_HALF_HEIGHT: f32 = 0.90;
 pub const PLAYER_EYE_OFFSET: f32 = 0.72;
+
+/// Shared picking against the actual capsule used by the character motor.
+pub fn melee_ray_distance(body: Vec3, origin: Vec3, direction: Vec3, reach: f64) -> Option<f64> {
+    static CAPSULE: std::sync::LazyLock<Collider> = std::sync::LazyLock::new(|| {
+        Collider::capsule(PLAYER_RADIUS, (PLAYER_HALF_HEIGHT - PLAYER_RADIUS) * 2.0)
+    });
+    if !body.is_finite()
+        || !origin.is_finite()
+        || !direction.is_finite()
+        || (direction.length_squared() - 1.0).abs() > 0.001
+        || !reach.is_finite()
+        || reach < 0.0
+        || reach > f64::from(f32::MAX)
+    {
+        return None;
+    }
+    CAPSULE
+        .cast_ray(body, Quat::IDENTITY, origin, direction, reach as f32, true)
+        .map(|(distance, _)| f64::from(distance))
+}
+
 pub const WALK_SPEED: f32 = 5.4;
 pub const SPRINT_SPEED: f32 = 8.2;
 pub const JUMP_SPEED: f32 = 7.8;
@@ -209,8 +230,11 @@ impl CharacterSimulation<'_, '_> {
         vitals: &mut terra_core::SurvivalVitals,
     ) -> bool {
         if mode == terra_core::GameMode::Spectator {
-            input.flight_speed = Some(input.flight_speed.unwrap_or(0.0));
-            return self.step(entity, collider, state, input);
+            state.velocity = input.direction.clamp_length_max(1.0)
+                * input.flight_speed.unwrap_or(0.0).clamp(0.0, 60.0);
+            state.position += state.velocity * self.time.delta_secs();
+            state.grounded = false;
+            return true;
         }
         if mode == terra_core::GameMode::Creative {
             return self.step(entity, collider, state, input);
@@ -267,6 +291,50 @@ impl CharacterSimulation<'_, '_> {
         self.step_with_movement(entity, collider, state, input, 1.0)
     }
 
+    fn flight_step(
+        &self,
+        entity: Entity,
+        collider: &Collider,
+        state: &mut CharacterState,
+        direction: Vec3,
+        speed: f32,
+    ) -> bool {
+        let target = direction.clamp_length_max(1.0) * speed.clamp(0.0, 60.0);
+        let velocity = state.velocity
+            + (target - state.velocity) * (1.0 - (-10.0 * self.time.delta_secs()).exp());
+        let next = state.position + velocity * self.time.delta_secs();
+        let half = Vec3::new(
+            PLAYER_RADIUS + 0.1,
+            PLAYER_HALF_HEIGHT + 0.15,
+            PLAYER_RADIUS + 0.1,
+        );
+        if !self.collision.ready_for_aabb(
+            state.position.min(next) - half,
+            state.position.max(next) + half,
+            &self.chunks,
+            &self.journal,
+        ) {
+            return false;
+        }
+        let filter = SpatialQueryFilter::from_excluded_entities(
+            self.characters.iter().chain(std::iter::once(entity)),
+        );
+        let output = self.movement.move_and_slide(
+            collider,
+            state.position,
+            Quat::IDENTITY,
+            velocity,
+            self.time.delta(),
+            &MoveAndSlideConfig::default(),
+            &filter,
+            |_| MoveAndSlideHitResponse::Accept,
+        );
+        state.position = output.position;
+        state.velocity = output.projected_velocity;
+        state.grounded = false;
+        true
+    }
+
     fn step_with_movement(
         &self,
         entity: Entity,
@@ -279,24 +347,20 @@ impl CharacterSimulation<'_, '_> {
         let _sample = self.profile.measure();
         let previous = *state;
         if let Some(speed) = input.flight_speed {
-            state.velocity = input.direction.clamp_length_max(1.0) * speed.clamp(0.0, 60.0);
-            state.position += state.velocity * self.time.delta_secs();
-            state.grounded = false;
-            return true;
+            return self.flight_step(entity, collider, state, input.direction, speed);
         }
         let filter = SpatialQueryFilter::from_excluded_entities(
             self.characters.iter().chain(std::iter::once(entity)),
         );
-        state.grounded = {
+        let ground_normal = {
             let _scope = terra_core::profiling::ScopeTimer::new("character.ground");
             let ground_shape = Collider::capsule(
                 PLAYER_RADIUS - 0.02,
                 (PLAYER_HALF_HEIGHT - PLAYER_RADIUS) * 2.0,
             );
-            state.velocity.y <= 0.1
-                && self
-                    .spatial
-                    .cast_shape(
+            (state.velocity.y <= 0.1)
+                .then(|| {
+                    self.spatial.cast_shape(
                         &ground_shape,
                         state.position,
                         Quat::IDENTITY,
@@ -304,8 +368,12 @@ impl CharacterSimulation<'_, '_> {
                         &ShapeCastConfig::from_max_distance(0.12),
                         &filter,
                     )
-                    .is_some_and(|hit| hit.normal1.y > 0.65)
+                })
+                .flatten()
+                .filter(|hit| hit.normal1.y > 0.65)
+                .map(|hit| hit.normal1)
         };
+        state.grounded = ground_normal.is_some();
         let direction = Vec3::new(input.direction.x, 0.0, input.direction.z).clamp_length_max(1.0);
         let desired = direction
             * movement_multiplier
@@ -393,7 +461,32 @@ impl CharacterSimulation<'_, '_> {
         // the authority and client prediction. Camera position is never sampled.
         state.velocity.x += current.x;
         state.velocity.z += current.z;
-        let next = state.position + state.velocity * self.time.delta_secs();
+        let mut carry = if state.grounded && !swimming {
+            Vec3::from_array(terra_world::conveyors::surface_velocity(
+                &self.chunks,
+                &self.journal,
+                (state.position - Vec3::Y * PLAYER_HALF_HEIGHT)
+                    .as_dvec3()
+                    .to_array(),
+                f64::from(PLAYER_RADIUS),
+            ))
+        } else {
+            Vec3::ZERO
+        };
+        let horizontal_carry = Vec3::new(carry.x, 0.0, carry.z);
+        let horizontal = Vec3::new(state.velocity.x, 0.0, state.velocity.z) + horizontal_carry;
+        if carry.y != 0.0 && horizontal_carry.length_squared() > 0.000001 {
+            // Ramp height follows the net tangent travel, including counterwalking.
+            let tangent_y =
+                carry.y * horizontal.dot(horizontal_carry) / horizontal_carry.length_squared();
+            carry.y = tangent_y;
+            // Press into the actual support without adding a downhill gravity component.
+            if let Some(normal) = ground_normal {
+                carry += normal * (state.velocity.y / normal.y) - Vec3::Y * state.velocity.y;
+            }
+        }
+        let velocity = state.velocity + carry;
+        let next = state.position + velocity * self.time.delta_secs();
         let half = Vec3::new(
             PLAYER_RADIUS + 0.1,
             PLAYER_HALF_HEIGHT + 0.15,
@@ -418,7 +511,7 @@ impl CharacterSimulation<'_, '_> {
                 collider,
                 state.position,
                 Quat::IDENTITY,
-                state.velocity,
+                velocity,
                 self.time.delta(),
                 &MoveAndSlideConfig::default(),
                 &filter,
@@ -430,7 +523,8 @@ impl CharacterSimulation<'_, '_> {
                 },
             )
         };
-        let attempted = Vec3::new(state.velocity.x, 0.0, state.velocity.z) * self.time.delta_secs();
+        // Normal support pressure is not an attempt to walk up an obstacle.
+        let attempted = horizontal * self.time.delta_secs();
         let traveled = Vec3::new(
             output.position.x - before.x,
             0.0,
@@ -477,7 +571,7 @@ impl CharacterSimulation<'_, '_> {
                             collider,
                             raised,
                             Quat::IDENTITY,
-                            Vec3::new(state.velocity.x, 0.0, state.velocity.z),
+                            horizontal,
                             self.time.delta(),
                             &MoveAndSlideConfig::default(),
                             &filter,
@@ -506,7 +600,11 @@ impl CharacterSimulation<'_, '_> {
                             {
                                 state.position = stepped.position
                                     - Vec3::Y * (hit.distance - PLAYER_HALF_HEIGHT - 0.02).max(0.0);
-                                state.velocity.y = 0.0;
+                                state.velocity = Vec3::new(
+                                    stepped.projected_velocity.x,
+                                    0.0,
+                                    stepped.projected_velocity.z,
+                                );
                                 state.grounded = true;
                                 return true;
                             }
@@ -517,6 +615,10 @@ impl CharacterSimulation<'_, '_> {
         }
         state.position = output.position;
         state.velocity = output.projected_velocity;
+        if grounded && carry != Vec3::ZERO {
+            // Ground advection is not a jump or accumulated downhill acceleration.
+            state.velocity.y = 0.0;
+        }
         true
     }
 }
@@ -650,5 +752,79 @@ mod water_tests {
             .set_fluid([-1, 194, 4], FluidCell::default())
             .unwrap();
         assert!(!in_water(&config, &terrain, &chunks, &journal, position));
+    }
+}
+
+#[cfg(test)]
+mod basin_swim_tests {
+    use super::*;
+    use terra_voxel::{BlockSection, global_to_section};
+    use terra_world::streaming::LoadedSection;
+
+    #[test]
+    fn a_deep_finite_basin_supports_swimming_and_breath_until_drained() {
+        let config = terra_core::WorldConfig {
+            sea_level: -100.0,
+            ..Default::default()
+        };
+        let terrain = terra_world::TerraGenerator::new(config.clone()).unwrap();
+        let shape = terra_core::plumbing::BasinShape {
+            origin: [0, 192, 0],
+            size: [2, 3, 2],
+        };
+        let mut chunks = ChunkStore::default();
+        let mut journal = EditJournal::default();
+        for cell in shape.cells() {
+            let (section, local) = global_to_section(cell);
+            let section = chunks
+                .loaded
+                .entry(section)
+                .or_insert_with(|| LoadedSection {
+                    data: BlockSection::empty(section).unwrap(),
+                    mesh: None,
+                    mesh_epoch: 0,
+                    water_epoch: 0,
+                    water: None,
+                    props: vec![],
+                });
+            section
+                .data
+                .set_block(local, terra_core::plumbing::BASIN)
+                .unwrap();
+        }
+        journal
+            .replace_confirmed_basins([(shape, shape.capacity())])
+            .unwrap();
+        let swimmer = Vec3::new(0.6, 193.7, 0.6);
+        assert!(swimming_column(&config, &terrain, &chunks, &journal, swimmer).is_some());
+        assert!(head_underwater(
+            &config, &terrain, &chunks, &journal, swimmer
+        ));
+        assert!(!head_underwater(
+            &config,
+            &terrain,
+            &chunks,
+            &journal,
+            Vec3::new(0.05, 193.7, 0.6)
+        ));
+        journal.replace_confirmed_basins([(shape, 0)]).unwrap();
+        assert!(!in_water(&config, &terrain, &chunks, &journal, swimmer));
+        assert!(!head_underwater(
+            &config, &terrain, &chunks, &journal, swimmer
+        ));
+    }
+}
+
+#[cfg(test)]
+mod melee_tests {
+    use super::*;
+    #[test]
+    fn player_melee_uses_rounded_capsule_caps_and_bounded_rays() {
+        let body = Vec3::ZERO;
+        assert!(melee_ray_distance(body, Vec3::new(0.0, 0.0, 3.0), Vec3::NEG_Z, 4.5).is_some());
+        // The upper corner is inside the old bounding box but outside the rounded head.
+        assert!(melee_ray_distance(body, Vec3::new(0.31, 0.89, 3.0), Vec3::NEG_Z, 4.5).is_none());
+        assert!(melee_ray_distance(body, Vec3::new(0.0, 0.0, 6.0), Vec3::NEG_Z, 4.5).is_none());
+        assert!(melee_ray_distance(body, Vec3::ZERO, Vec3::ZERO, 4.5).is_none());
     }
 }

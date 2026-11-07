@@ -1,5 +1,6 @@
 //! Shared poses for interactive openings and the single adaptive chimney item.
 use crate::edits::BlockObjectState;
+pub mod doors;
 pub mod windows;
 
 pub type Direction = [i64; 3];

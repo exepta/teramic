@@ -57,19 +57,41 @@ impl DedicatedStore {
         if requested.geology_revision == 0 {
             result.geology_revision = saved.as_ref().map_or(4, |world| world.geology_revision);
         }
-        if requested.landscape_revision == 0 {
-            result.landscape_revision = saved.as_ref().map_or(1, |world| world.landscape_revision);
+        // Saved terrain always wins over a newer global template; no retrogen.
+        result.landscape_revision = saved.as_ref().map_or_else(
+            || requested.landscape_revision.max(1),
+            |world| world.landscape_revision,
+        );
+        if let Some(saved) = &saved {
+            result.sea_level = saved.sea_level;
+            result.biome_definitions = saved.biome_definitions.clone();
+            result.structures = saved.structures;
+        } else if result.biome_definitions.is_none() {
+            result.biome_definitions = Some(
+                terra_core::BiomeDefinitions::load_directory(
+                    terra_core::asset_directory().join("biome"),
+                )
+                .map_err(|error| error.to_string())?,
+            );
         }
+        result.rivers = saved
+            .as_ref()
+            .map_or(requested.rivers, |world| world.rivers);
         // Existing saves own this contract, even when a new template defaults to 1.
         result.ocean_revision = saved.as_ref().map_or(1, |world| world.ocean_revision);
-        result.ecology_revision = saved.as_ref().map_or(2, |world| world.ecology_revision);
+        result.ecology_revision = saved.as_ref().map_or(4, |world| world.ecology_revision);
         result.cave_structure_revision = saved
             .as_ref()
             .map_or(8, |world| world.cave_structure_revision);
-        result.structures_revision = saved.as_ref().map_or(5, |world| world.structures_revision);
+        result.structures_revision = saved.as_ref().map_or(9, |world| world.structures_revision);
+        result.structure_border_gap = saved
+            .as_ref()
+            .map_or(requested.structure_border_gap, |world| {
+                world.structure_border_gap
+            });
         result.river_terrain_revision = saved
             .as_ref()
-            .map_or(1, |world| world.river_terrain_revision);
+            .map_or(4, |world| world.river_terrain_revision);
         if let Some(saved) = &saved {
             result.cave_biomes = saved.cave_biomes.clone();
         }
@@ -118,14 +140,16 @@ impl DedicatedStore {
                 let time_changed = manifest.world.time != config.time;
                 let population_changed =
                     manifest.world.natural_mob_limit != config.natural_mob_limit;
+                let kingdom_changed = manifest.world.kingdom_rules != config.kingdom_rules;
                 manifest.world.time = config.time;
                 manifest.world.natural_mob_limit = config.natural_mob_limit;
+                manifest.world.kingdom_rules = config.kingdom_rules;
                 if !matches!(manifest.save_format_version, 1 | SAVE_FORMAT_VERSION)
                     || manifest.world != *config
                 {
                     return Err("Dedicated save configuration does not match this world. Restore its world config or choose another save directory.".into());
                 }
-                if time_changed || population_changed {
+                if time_changed || population_changed || kingdom_changed {
                     save_toml(&manifest, &manifest_path).map_err(|error| error.to_string())?;
                 }
             }
@@ -160,11 +184,91 @@ impl DedicatedStore {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use terra_core::BiomeDefinitions;
     fn fresh_directory() -> PathBuf {
         std::env::temp_dir().join(format!(
             "terra-ore-policy-{}",
             terra_core::PlayerUuid::new_v4()
         ))
+    }
+    #[test]
+    fn generation_gap_is_snapshotted_for_new_worlds_and_immutable_when_live_policy_changes() {
+        let root = fresh_directory();
+        let mut requested = WorldConfig {
+            structure_border_gap: 7,
+            kingdom_rules: terra_core::kingdom::KingdomRules {
+                realm_min_border_gap: 7,
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+        let created = DedicatedStore::resolve_world_config(&root, &requested).unwrap();
+        assert_eq!(created.structures_revision, 9);
+        assert_eq!(created.structure_border_gap, 7);
+        let (store, mut journal) = DedicatedStore::open(&root, &created).unwrap();
+        journal.record([-1, 20, -1], 3).unwrap();
+        crate::save_edits(&root, created.id, &journal).unwrap();
+        drop(store);
+        let mut changed = created.clone();
+        changed.kingdom_rules.realm_min_border_gap = 50;
+        changed.kingdom_rules.require_adjacent_claims = false;
+        assert!(changed.same_terrain(&created));
+        let (store, loaded) = DedicatedStore::open(&root, &changed).unwrap();
+        assert_eq!(loaded.block([-1, 20, -1]), Some(3));
+        drop(store);
+        requested.structure_border_gap = 123;
+        requested.kingdom_rules.realm_min_border_gap = 123;
+        let resolved = DedicatedStore::resolve_world_config(&root, &requested).unwrap();
+        assert_eq!(resolved.kingdom_rules, changed.kingdom_rules);
+        assert_eq!(resolved.structure_border_gap, 7);
+        assert!(resolved.same_terrain(&created));
+        let before = std::fs::read(root.join("world.toml")).unwrap();
+        let mut invalid = resolved.clone();
+        invalid.structure_border_gap += 1;
+        assert!(DedicatedStore::open(&root, &invalid).is_err());
+        assert_eq!(std::fs::read(root.join("world.toml")).unwrap(), before);
+        std::fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn missing_legacy_generation_gap_defaults_to_sixteen_and_never_follows_new_policy() {
+        for revision in [0, 6, 7, 8] {
+            let root = fresh_directory();
+            let saved = WorldConfig {
+                structures_revision: revision,
+                kingdom_rules: terra_core::kingdom::KingdomRules {
+                    realm_min_border_gap: 3,
+                    ..Default::default()
+                },
+                ..Default::default()
+            };
+            let (store, _) = DedicatedStore::open(&root, &saved).unwrap();
+            drop(store);
+            let file = root.join("world.toml");
+            let mut value: toml::Value =
+                toml::from_str(&std::fs::read_to_string(&file).unwrap()).unwrap();
+            value
+                .get_mut("world")
+                .unwrap()
+                .as_table_mut()
+                .unwrap()
+                .remove("structure_border_gap");
+            save_toml(&value, &file).unwrap();
+            let requested = WorldConfig {
+                structure_border_gap: 77,
+                kingdom_rules: terra_core::kingdom::KingdomRules {
+                    realm_min_border_gap: 77,
+                    ..Default::default()
+                },
+                ..Default::default()
+            };
+            let resolved = DedicatedStore::resolve_world_config(&root, &requested).unwrap();
+            assert_eq!(resolved.structures_revision, revision);
+            assert_eq!(resolved.structure_border_gap, 16);
+            assert_eq!(resolved.kingdom_rules, saved.kingdom_rules);
+            assert!(resolved.same_terrain(&saved));
+            std::fs::remove_dir_all(root).unwrap();
+        }
     }
     fn remove_ore_metadata(path: &Path) {
         let text = std::fs::read_to_string(path).unwrap();
@@ -188,10 +292,16 @@ mod tests {
         assert_eq!(resolved.ores.revision, 1);
         assert_eq!(resolved.geology_revision, 4);
         assert_eq!(resolved.landscape_revision, 1);
+        assert_eq!(resolved.sea_level, 8.0);
+        assert_eq!(
+            resolved.biome_definitions,
+            Some(BiomeDefinitions::default())
+        );
+        assert!(!resolved.rivers);
         assert_eq!(resolved.ocean_revision, 1);
         assert_eq!(resolved.cave_structure_revision, 8);
-        assert_eq!(resolved.structures_revision, 5);
-        assert_eq!(resolved.river_terrain_revision, 1);
+        assert_eq!(resolved.structures_revision, 9);
+        assert_eq!(resolved.river_terrain_revision, 4);
         assert_eq!(resolved.seed, requested.seed);
         assert_eq!(resolved.generator_version, requested.generator_version);
         let (store, mut journal) = DedicatedStore::open(&root, &resolved).unwrap();
@@ -206,6 +316,195 @@ mod tests {
         assert!(!requested.ores.enabled);
         std::fs::remove_dir_all(root).unwrap();
     }
+
+    #[test]
+    fn landscape_revision_survives_new_templates_restart_and_saved_rule_changes() {
+        for revision in 0..=5 {
+            let root = fresh_directory();
+            let mut biome_definitions = BiomeDefinitions::default();
+            biome_definitions.entries[terra_core::BiomeKind::Plains as usize]
+                .terrain
+                .max_height -= 1.0 + f64::from(revision);
+            biome_definitions.landscapes.warp_strength += 1.0 + f64::from(revision);
+            biome_definitions.landscapes.profiles
+                [terra_core::config::TerrainKind::Forest as usize]
+                .max_height -= 1.0 + f64::from(revision);
+            let saved = WorldConfig {
+                landscape_revision: revision,
+                rivers: revision % 2 == 1,
+                sea_level: if revision < 4 {
+                    8.0 + f64::from(revision)
+                } else {
+                    22.0
+                },
+                biome_definitions: if revision < 4 && revision % 2 == 0 {
+                    None
+                } else {
+                    Some(biome_definitions)
+                },
+                ..Default::default()
+            };
+            let (store, mut journal) = DedicatedStore::open(&root, &saved).unwrap();
+            journal.record([-17, 12, -1], 16).unwrap();
+            crate::save_edits(&store.edits_path, saved.id, &journal).unwrap();
+            drop(store);
+            for requested_revision in 0..=5 {
+                let requested = WorldConfig {
+                    landscape_revision: requested_revision,
+                    ..Default::default()
+                };
+                let mut resolved = DedicatedStore::resolve_world_config(&root, &requested).unwrap();
+                assert_eq!(resolved.landscape_revision, revision);
+                assert_eq!(resolved.rivers, saved.rivers);
+                assert_eq!(resolved.sea_level, saved.sea_level);
+                assert_eq!(resolved.biome_definitions, saved.biome_definitions);
+                assert!(resolved.same_terrain(&saved));
+                resolved.time.paused = !resolved.time.paused;
+                let (store, restored) = DedicatedStore::open(&root, &resolved).unwrap();
+                assert_eq!(restored.block([-17, 12, -1]), Some(16));
+                drop(store);
+                let manifest: WorldManifest =
+                    toml::from_str(&std::fs::read_to_string(root.join("world.toml")).unwrap())
+                        .unwrap();
+                assert_eq!(manifest.world.landscape_revision, revision);
+                assert!(manifest.world.same_terrain(&saved));
+            }
+            std::fs::remove_dir_all(root).unwrap();
+        }
+    }
+
+    #[test]
+    fn revision_four_manifest_without_new_profiles_reopens_without_retrogen_or_template_changes() {
+        let root = fresh_directory();
+        let mut saved = WorldConfig {
+            landscape_revision: 4,
+            sea_level: 22.0,
+            biome_definitions: Some(BiomeDefinitions::default()),
+            rivers: false,
+            caves: false,
+            trees: false,
+            structures_revision: 0,
+            ..Default::default()
+        };
+        saved.biome_definitions.as_mut().unwrap().landscapes =
+            terra_core::LandscapeDefinitions::legacy_v5();
+        saved.biome_definitions.as_mut().unwrap().entries[terra_core::BiomeKind::Plains as usize]
+            .terrain
+            .max_height = 58.0;
+        let (store, mut journal) = DedicatedStore::open(&root, &saved).unwrap();
+        journal.record([-17, 12, -1], 16).unwrap();
+        crate::save_edits(&store.edits_path, saved.id, &journal).unwrap();
+        drop(store);
+        let path = root.join("world.toml");
+        let mut legacy: toml::Value =
+            toml::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
+        legacy["world"]["biome_definitions"]
+            .as_table_mut()
+            .unwrap()
+            .remove("landscapes");
+        save_toml(&legacy, &path).unwrap();
+        let mut requested = WorldConfig {
+            landscape_revision: 5,
+            sea_level: 17.0,
+            ..saved.clone()
+        };
+        requested
+            .biome_definitions
+            .as_mut()
+            .unwrap()
+            .landscapes
+            .warp_strength += 32.0;
+        let resolved = DedicatedStore::resolve_world_config(&root, &requested).unwrap();
+        assert_eq!(resolved, saved);
+        let (store, restored) = DedicatedStore::open(&root, &resolved).unwrap();
+        assert_eq!(restored.block([-17, 12, -1]), Some(16));
+        drop(store);
+
+        let reference = terra_world::TerraGenerator::new(saved.clone()).unwrap();
+        let restored = terra_world::TerraGenerator::new(resolved.clone()).unwrap();
+        let mut changed_profiles = resolved;
+        let landscapes = &mut changed_profiles
+            .biome_definitions
+            .as_mut()
+            .unwrap()
+            .landscapes;
+        landscapes.warp_strength += 48.0;
+        landscapes.profiles[terra_core::config::TerrainKind::Forest as usize].max_height -= 3.0;
+        let changed_profiles = terra_world::TerraGenerator::new(changed_profiles).unwrap();
+        for [x, z] in [
+            [-4096.5, -768.5],
+            [-16.5, 32.5],
+            [0.5, 0.5],
+            [512.5, -512.5],
+            [4096.5, 768.5],
+        ] {
+            let height = reference.surface_height(x, z).to_bits();
+            assert_eq!(restored.surface_height(x, z).to_bits(), height);
+            assert_eq!(
+                changed_profiles.surface_height(x, z).to_bits(),
+                height,
+                "revision-four sampling must ignore newly introduced landscape profiles"
+            );
+        }
+        std::fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn fresh_main_landscapes_respect_explicit_river_opt_out() {
+        for rivers in [false, true] {
+            let root = fresh_directory();
+            let requested = WorldConfig {
+                rivers,
+                ..Default::default()
+            };
+            let resolved = DedicatedStore::resolve_world_config(&root, &requested).unwrap();
+            assert_eq!(resolved.landscape_revision, 1);
+            assert_eq!(resolved.rivers, rivers);
+            let (store, _) = DedicatedStore::open(&root, &resolved).unwrap();
+            drop(store);
+            let changed_template = WorldConfig {
+                rivers: !rivers,
+                ..requested
+            };
+            let reopened = DedicatedStore::resolve_world_config(&root, &changed_template).unwrap();
+            assert!(reopened.same_terrain(&resolved));
+            std::fs::remove_dir_all(root).unwrap();
+        }
+    }
+
+    #[test]
+    fn fresh_dedicated_worlds_preserve_explicit_terrain_revisions_and_sea_levels() {
+        for (revision, sea_level, expected) in [
+            (0, 8.0, 8.0),
+            (3, 8.0, 8.0),
+            (3, 13.0, 13.0),
+            (4, 8.0, 8.0),
+            (4, 22.0, 22.0),
+            (5, 8.0, 8.0),
+            (5, 22.0, 22.0),
+        ] {
+            let root = fresh_directory();
+            let requested = WorldConfig {
+                landscape_revision: revision,
+                sea_level,
+                ..Default::default()
+            };
+            let resolved = DedicatedStore::resolve_world_config(&root, &requested).unwrap();
+            assert_eq!(resolved.landscape_revision, revision.max(1));
+            assert_eq!(resolved.sea_level, expected);
+            let (store, _) = DedicatedStore::open(&root, &resolved).unwrap();
+            drop(store);
+            let changed = WorldConfig {
+                sea_level: 17.0,
+                ..requested
+            };
+            let restored = DedicatedStore::resolve_world_config(&root, &changed).unwrap();
+            assert_eq!(restored.sea_level, expected);
+            assert!(restored.same_terrain(&resolved));
+            std::fs::remove_dir_all(root).unwrap();
+        }
+    }
+
     #[test]
     fn new_connector_clusters_do_not_upgrade_saved_cave_revisions_or_overwrite_edits() {
         for revision in 0..=7 {
@@ -261,6 +560,51 @@ mod tests {
         drop(store);
         std::fs::remove_dir_all(root).unwrap();
     }
+
+    #[test]
+    fn old_village_switch_retains_royal_policy_and_new_flags_survive_dedicated_restart() {
+        for legacy in [true, false] {
+            let root = fresh_directory();
+            let saved = WorldConfig {
+                structures_revision: if legacy { 6 } else { 7 },
+                structures: terra_core::StructureSettings {
+                    villages: false,
+                    kingdoms: false,
+                    outposts: !legacy,
+                    ..Default::default()
+                },
+                ..Default::default()
+            };
+            let (store, _) = DedicatedStore::open(&root, &saved).unwrap();
+            drop(store);
+            if legacy {
+                let file = root.join("world.toml");
+                let mut manifest: toml::Value =
+                    toml::from_str(&std::fs::read_to_string(&file).unwrap()).unwrap();
+                let structures = manifest
+                    .get_mut("world")
+                    .unwrap()
+                    .get_mut("structures")
+                    .unwrap()
+                    .as_table_mut()
+                    .unwrap();
+                structures.remove("kingdoms");
+                structures.remove("outposts");
+                save_toml(&manifest, file).unwrap();
+            }
+            let resolved =
+                DedicatedStore::resolve_world_config(&root, &WorldConfig::default()).unwrap();
+            assert_eq!(resolved.structures_revision, saved.structures_revision);
+            assert_eq!(
+                resolved.structures, saved.structures,
+                "A new server template must not re-enable disabled structures in existing saves"
+            );
+            let (store, _) = DedicatedStore::open(&root, &resolved).unwrap();
+            drop(store);
+            std::fs::remove_dir_all(root).unwrap();
+        }
+    }
+
     #[test]
     fn populated_settlements_do_not_replace_saved_revision_one_two_or_three_structures() {
         for revision in 1..=3 {
@@ -284,8 +628,8 @@ mod tests {
         }
     }
     #[test]
-    fn cherry_ecology_preserves_legacy_manifests_and_player_edits() {
-        for revision in 0..=1 {
+    fn saved_ecology_revisions_preserve_legacy_manifests_and_player_edits() {
+        for revision in 0..=4 {
             let root = fresh_directory();
             let saved = WorldConfig {
                 ecology_revision: revision,
@@ -306,7 +650,7 @@ mod tests {
                 save_toml(&manifest, &path).unwrap();
             }
             let requested = WorldConfig {
-                ecology_revision: 1,
+                ecology_revision: 4,
                 ..saved.clone()
             };
             let resolved = DedicatedStore::resolve_world_config(&root, &requested).unwrap();
@@ -321,7 +665,7 @@ mod tests {
 
     #[test]
     fn river_erosion_does_not_reinterpret_legacy_waterfalls_or_player_edits() {
-        for revision in 0..=1 {
+        for revision in 0..=4 {
             let root = fresh_directory();
             let saved = WorldConfig {
                 river_terrain_revision: revision,
@@ -345,7 +689,7 @@ mod tests {
                 save_toml(&legacy, &manifest).unwrap();
             }
             let requested = WorldConfig {
-                river_terrain_revision: 1,
+                river_terrain_revision: 4,
                 ..saved.clone()
             };
             let resolved = DedicatedStore::resolve_world_config(&root, &requested).unwrap();
@@ -419,16 +763,19 @@ mod tests {
         requested.ores.enabled = false;
         requested.ores.iron.frequency = 0.14;
         requested.ores.salt.radius = 3.0;
-        assert_eq!(
-            DedicatedStore::resolve_world_config(&root, &requested).unwrap(),
-            requested
-        );
-        let (store, _) = DedicatedStore::open(&root, &requested).unwrap();
+        let resolved = DedicatedStore::resolve_world_config(&root, &requested).unwrap();
+        assert_eq!(resolved.ores, requested.ores);
+        assert!(requested.biome_definitions.is_none());
+        let expected = WorldConfig {
+            biome_definitions: Some(BiomeDefinitions::default()),
+            ..requested.clone()
+        };
+        assert_eq!(resolved, expected);
+        let (store, _) = DedicatedStore::open(&root, &resolved).unwrap();
         drop(store);
-        assert_eq!(
-            DedicatedStore::resolve_world_config(&root, &requested).unwrap(),
-            requested
-        );
+        let restarted = DedicatedStore::resolve_world_config(&root, &requested).unwrap();
+        assert_eq!(restarted.ores, requested.ores);
+        assert_eq!(restarted, resolved);
         std::fs::remove_dir_all(root).unwrap();
     }
     #[test]

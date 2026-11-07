@@ -11,6 +11,8 @@ fn crafting_command(
         return;
     };
     let action = match id.0.as_str() {
+        "recipe-smelting-tab" => CraftingAction::FurnaceTab(false),
+        "recipe-fuels-tab" => CraftingAction::FurnaceTab(true),
         "craft-clear-grid" => CraftingAction::Clear,
         "craft-close-recipe" => CraftingAction::CloseRecipe,
         "craft-apply-recipe" => CraftingAction::ApplyRecipe,

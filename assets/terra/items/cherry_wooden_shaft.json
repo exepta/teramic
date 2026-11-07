@@ -1,0 +1,5 @@
+{
+  "item": { "wooden_block": { "material": 144, "wood": "cherry" } },
+  "name": "Cherry Wooden Shaft",
+  "description": "A cherry-wood shaft that carries rotation along its axis."
+}

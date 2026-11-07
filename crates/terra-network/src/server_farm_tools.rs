@@ -38,9 +38,7 @@ fn held(command: EditCommand, peer: &Peer, world: &ControlWorld) -> Option<ToolK
     if peer.held_slot != Some(source.slot) || bag.revision != source.revision {
         return None;
     }
-    let ItemKind::Tool(tool) = bag.slot(usize::from(source.slot))?.item else {
-        return None;
-    };
+    let tool = bag.slot(usize::from(source.slot))?.item.tool_kind()?;
     (tool.farm_kind().is_some() || matches!(tool, ToolKind::Bucket | ToolKind::WaterBucket))
         .then_some(tool)
 }
@@ -49,7 +47,15 @@ pub(super) fn check(command: EditCommand, peer: &Peer, world: &ControlWorld) -> 
     let EditAction::Farm { position, action } = command.action else {
         return EditOutcome::Invalid;
     };
-    if !peer.permissions.build
+    let permission = match action {
+        FarmingAction::Refill | FarmingAction::FillBucket => {
+            terra_core::kingdom::KingdomPermission::Inventories
+        }
+        FarmingAction::Harvest => terra_core::kingdom::KingdomPermission::Break,
+        _ => terra_core::kingdom::KingdomPermission::Build,
+    };
+    if !super::kingdoms::permission_allowed(peer.uuid, permission, position, world)
+        || !peer.permissions.build
         || peer.vitals.dead()
         || peer.game_mode(&world.config) == GameMode::Spectator
         || command.look.iter().any(|value| !value.is_finite())
@@ -168,13 +174,14 @@ pub(super) fn check(command: EditCommand, peer: &Peer, world: &ControlWorld) -> 
                 .journal
                 .crop_at(position)
                 .is_none_or(|crop| crop.moisture >= 0.999)
-                || peer.game_mode(&world.config) != GameMode::Creative && peer.farming.units == 0
+                || peer.game_mode(&world.config) != GameMode::Creative
+                    && held_water(command, peer, world) == 0
             {
                 return EditOutcome::Invalid;
             }
         }
         FarmingAction::Harvest => {
-            if harvests(position, tool, world, origin).is_empty() {
+            if harvests(position, tool, world, origin, peer.uuid).is_empty() {
                 return EditOutcome::Conflict;
             }
         }
@@ -184,16 +191,39 @@ pub(super) fn check(command: EditCommand, peer: &Peer, world: &ControlWorld) -> 
     EditOutcome::Applied
 }
 
+fn held_water(command: EditCommand, peer: &Peer, world: &ControlWorld) -> u8 {
+    command
+        .source
+        .and_then(|source| {
+            world
+                .journal
+                .gameplay()
+                .inventories
+                .get(&peer.uuid)
+                .and_then(|bag| bag.slot(usize::from(source.slot)))
+        })
+        .map_or(0, |stack| stack.item.watering_units())
+}
+
 fn harvests(
     center: [i64; 3],
     tool: ToolKind,
     world: &ControlWorld,
     eye: [f64; 3],
+    player: terra_core::PlayerUuid,
 ) -> Vec<([i64; 3], terra_core::CropState)> {
     let mut result = Vec::new();
     for z in -tool.farm_radius()..=tool.farm_radius() {
         for x in -tool.farm_radius()..=tool.farm_radius() {
             let support = [center[0] + x, center[1], center[2] + z];
+            if !super::kingdoms::permission_allowed(
+                player,
+                terra_core::kingdom::KingdomPermission::Break,
+                support,
+                world,
+            ) {
+                continue;
+            }
             let Some(crop) = world
                 .journal
                 .crop_at(support)
@@ -252,15 +282,79 @@ pub(super) fn apply(
         return buckets::apply(command, peer, sender, world, tool);
     }
     if tool.farm_kind() == Some(FarmToolKind::WateringCan) {
-        peer.farming.units = peer.farming.units.min(tool.watering_capacity());
+        let source = command.source.unwrap();
+        let bag = &world.journal.gameplay().inventories[&peer.uuid];
+        if bag.revision == u64::MAX || world.journal.gameplay().revision > u64::MAX - 512 {
+            return EditOutcome::Invalid;
+        }
+        peer.farming.units = bag
+            .slot(usize::from(source.slot))
+            .unwrap()
+            .item
+            .watering_units();
     }
     let EditAction::Farm { position, action } = command.action else {
         return EditOutcome::Invalid;
     };
+    let can_plan = if tool.watering_capacity() > 0 {
+        let units = match action {
+            FarmingAction::Refill
+                if world.chunks.block_at(position) == Some(terra_core::plumbing::FAUCET) =>
+            {
+                let available =
+                    terra_world::plumbing::visual_data(&world.chunks, &world.journal, position)
+                        .map_or(0, |state| state.amount as u8);
+                peer.farming.units
+                    + tool
+                        .watering_capacity()
+                        .saturating_sub(peer.farming.units)
+                        .min(available)
+            }
+            FarmingAction::Refill => tool.watering_capacity(),
+            FarmingAction::Water if peer.game_mode(&world.config) != GameMode::Creative => {
+                peer.farming.units.saturating_sub(1)
+            }
+            _ => peer.farming.units,
+        };
+        let source = command.source.unwrap();
+        let mut next = world.journal.gameplay().inventories[&peer.uuid].clone();
+        let current = next.slot(usize::from(source.slot)).unwrap();
+        let replacement = current.item.with_watering_units(units).unwrap();
+        if current.item != replacement && !next.transform_one(usize::from(source.slot), replacement)
+        {
+            return EditOutcome::Invalid;
+        }
+        Some(next)
+    } else {
+        None
+    };
     let result = match action {
         FarmingAction::Refill => {
-            peer.farming.units = tool.watering_capacity();
-            Ok(true)
+            if peer.farming.units >= tool.watering_capacity() {
+                return EditOutcome::Conflict;
+            }
+            if world.chunks.block_at(position) == Some(terra_core::plumbing::FAUCET) {
+                let needed = tool.watering_capacity().saturating_sub(peer.farming.units);
+                let available =
+                    terra_world::plumbing::visual_data(&world.chunks, &world.journal, position)
+                        .map_or(0, |state| state.amount as u8);
+                let units = needed.min(available);
+                match terra_world::plumbing::take_tap(
+                    &world.chunks,
+                    &mut world.journal,
+                    position,
+                    units,
+                ) {
+                    Ok(true) => {
+                        peer.farming.units += units;
+                        Ok(true)
+                    }
+                    other => other,
+                }
+            } else {
+                peer.farming.units = tool.watering_capacity();
+                Ok(true)
+            }
         }
         FarmingAction::FillBucket | FarmingAction::EmptyBucket => {
             unreachable!("bucket transfers handled above")
@@ -299,7 +393,7 @@ pub(super) fn apply(
             let eye = (body.translation + Vec3::Y * terra_physics::character::PLAYER_EYE_OFFSET)
                 .to_array()
                 .map(f64::from);
-            let crops = harvests(position, tool, world, eye);
+            let crops = harvests(position, tool, world, eye, peer.uuid);
             let survival = peer.game_mode(&world.config) == GameMode::Survival;
             let drops: Vec<_> = if survival {
                 crops
@@ -376,6 +470,16 @@ pub(super) fn apply(
         Ok(true) => {
             peer.farming.used_at = Some(Instant::now());
             if tool.farm_kind() == Some(FarmToolKind::WateringCan) {
+                let bag = can_plan.unwrap();
+                if bag.revision != world.journal.gameplay().inventories[&peer.uuid].revision {
+                    let game = world.journal.gameplay_mut();
+                    game.inventories.insert(peer.uuid, bag.clone());
+                    game.revision += 1;
+                    sender.send::<ControlChannel>(ServerControl::InventoryResult {
+                        outcome: crate::protocol::inventory::InventoryOutcome::Applied,
+                        inventory: bag,
+                    });
+                }
                 sender.send::<ControlChannel>(ServerControl::WateringReserve {
                     units: peer.farming.units.min(tool.watering_capacity()),
                     capacity: tool.watering_capacity(),

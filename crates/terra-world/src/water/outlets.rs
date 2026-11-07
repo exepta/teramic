@@ -32,6 +32,15 @@ pub(crate) fn natural_outlets(
             {
                 continue;
             }
+            // A generated river lip belongs to its channel, not to every low
+            // bank beside the fall. Dug/placed outlets are woken by block edits.
+            if layer == 0
+                && column.water_flow != [0.0; 2]
+                && neighbor.water_flow == [0.0; 2]
+                && lower.is_none()
+            {
+                continue;
+            }
             let target = [global[0] + offset[0], y, global[1] + offset[1]];
             if super::can_hold_fluid(block_at(target)) {
                 result.push(target);
@@ -45,6 +54,35 @@ pub(crate) fn natural_outlets(
 mod tests {
     use super::*;
     use crate::{TerraGenerator, water::WaterColumn};
+
+    #[test]
+    fn generated_river_lips_wake_only_the_downstream_channel_and_accept_real_lakes() {
+        let terrain = TerraGenerator::new(terra_core::WorldConfig::default()).unwrap();
+        let mut upper = terrain.surface_column(0.5, 0.5);
+        upper.height = 18.0;
+        upper.water_level = Some(23.0);
+        upper.water_flow = [0.0, 1.0];
+        upper.cave.water = None;
+        let mut bank = upper;
+        bank.height = 10.0;
+        bank.water_level = None;
+        bank.water_flow = [0.0; 2];
+        let mut downstream = bank;
+        downstream.water_flow = [0.0, 1.0];
+        let mut neighbors = [bank; 4];
+        neighbors[3] = downstream;
+        assert_eq!(
+            natural_outlets([15, 15], 1, upper, neighbors, |_| 0),
+            vec![[15, 22, 16]]
+        );
+        downstream.water_flow = [0.0; 2];
+        downstream.water_level = Some(15.0);
+        neighbors[3] = downstream;
+        assert_eq!(
+            natural_outlets([15, 15], 1, upper, neighbors, |_| 0),
+            vec![[15, 22, 16]]
+        );
+    }
 
     #[test]
     fn actual_open_lips_only_wake_their_source_section_for_surface_and_legacy_caves() {

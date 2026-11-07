@@ -1,4 +1,5 @@
 use bevy::{
+    app::TaskPoolPlugin,
     log::LogPlugin,
     prelude::*,
     render::{
@@ -19,12 +20,26 @@ use terra_render::{TerraRenderDiagnosticsPlugin, TerraRenderPlugin};
 use terra_ui::TerraUiPlugin;
 use terra_world::{TerraWorldPlugin, WorldMode};
 
+#[path = "preview_demand.rs"]
+mod preview_demand;
+#[path = "startup_ui.rs"]
+pub(crate) mod startup_ui;
+
 pub fn build_app() -> Result<App, Box<dyn Error>> {
+    let task_pool_options = crate::task_pools::options(
+        std::env::args().any(|argument| argument.starts_with("--smoke-test")),
+        std::env::var("TERRA_COMPUTE_THREADS").ok().as_deref(),
+    )?;
+    let compute_thread_cap = task_pool_options.compute.max_threads;
     terra_core::PlayerGender::from_arguments(std::env::args().skip(1))?;
     let directory = config_directory();
     let profile_path =
         terra_core::PlayerProfile::selected_path(&terra_core::menu_config_directory())?;
     let benchmark = std::env::args().any(|arg| arg == "--smoke-test-benchmark");
+    let presentation_override = benchmark_presentation(
+        benchmark,
+        std::env::var("TERRA_BENCH_PRESENT_MODE").ok().as_deref(),
+    )?;
     let integrated_benchmark =
         benchmark && std::env::var("TERRA_BENCH_MODE").is_ok_and(|mode| mode == "integrated");
     let benchmark_ui = validate_benchmark_ui(
@@ -55,6 +70,7 @@ pub fn build_app() -> Result<App, Box<dyn Error>> {
         return Err("Integrated flythrough is not supported by the camera-only LOD fixture; use --smoke-test-benchmark with TERRA_BENCH_MODE=integrated for a real integrated-server measurement".into());
     }
     let building_fixture = std::env::args().any(|arg| arg == "--smoke-test-building");
+    let fiverr_grass_fixture = crate::fiverr_grass_smoke::requested();
     let inventory_fixture = std::env::args().any(|arg| arg == "--smoke-test-inventory");
     let survival_fixture = std::env::args().any(|arg| arg == "--smoke-test-survival");
     let calendar_fixture = std::env::args().any(|arg| arg == "--smoke-test-calendar-hud");
@@ -65,6 +81,10 @@ pub fn build_app() -> Result<App, Box<dyn Error>> {
     let pet_fixture = std::env::args().any(|arg| arg == "--smoke-test-pet-commands");
     let equipment_fixture = std::env::args().any(|arg| arg == "--smoke-test-equipment");
     let crusher_fixture = std::env::args().any(|arg| arg == "--smoke-test-crusher");
+    let mixer_fixture = std::env::args().any(|arg| arg == "--smoke-test-mixer");
+    let rgb_logistics_fixture = std::env::args().any(|arg| arg == "--smoke-test-rgb-logistics");
+    let alchemy_fixture = std::env::args().any(|arg| arg == "--smoke-test-alchemy");
+    let hydraulics_fixture = std::env::args().any(|arg| arg == "--smoke-test-hydraulics");
     let farming_fixture = std::env::args().any(|arg| arg == "--smoke-test-farming");
     let food_fixture = std::env::args().any(|arg| arg == "--smoke-test-food");
     let furnace_gameplay_fixture =
@@ -89,6 +109,10 @@ pub fn build_app() -> Result<App, Box<dyn Error>> {
                 && argument != "--smoke-test-pet-commands"
                 && argument != "--smoke-test-equipment"
                 && argument != "--smoke-test-crusher"
+                && argument != "--smoke-test-mixer"
+                && argument != "--smoke-test-rgb-logistics"
+                && argument != "--smoke-test-alchemy"
+                && argument != "--smoke-test-hydraulics"
                 && argument != "--smoke-test-farming"
                 && argument != "--smoke-test-food"
                 && argument != "--smoke-test-furnace-gameplay"
@@ -124,6 +148,9 @@ pub fn build_app() -> Result<App, Box<dyn Error>> {
     };
     let mut world =
         load_config::<WorldConfig>(&directory.join("world.toml"), frontend, &mut startup_errors)?;
+    if fiverr_grass_fixture {
+        crate::fiverr_grass_smoke::configure(&mut world, &mut client);
+    }
     if std::env::args().any(|arg| arg == "--smoke-test-waterfalls") {
         world.base_height = 16.0;
         world.hill_amplitude = 0.0;
@@ -134,6 +161,11 @@ pub fn build_app() -> Result<App, Box<dyn Error>> {
         world.rivers = false;
         world.water = true;
         world.sea_level = 0.0;
+        if std::env::var("TERRA_PIPE_AIR_SMOKE").as_deref() == Ok("1") {
+            world.sea_level = 20.3;
+            world.landscape_revision = 0;
+            world.structures_revision = 0;
+        }
         client.view_distance = 3;
         client.vertical_view_distance = 3;
     }
@@ -151,20 +183,64 @@ pub fn build_app() -> Result<App, Box<dyn Error>> {
         client.view_distance = 3;
         client.vertical_view_distance = 3;
     }
+    if std::env::args().any(|arg| arg == "--smoke-test-lanterns") {
+        world.base_height = 16.0;
+        world.hill_amplitude = 0.0;
+        world.mountain_amplitude = 0.0;
+        world.terrace_strength = 0.0;
+        world.landscape_revision = 0;
+        world.ecology_revision = 0;
+        world.geology_revision = 0;
+        world.structures_revision = 0;
+        world.biomes = false;
+        world.trees = false;
+        world.caves = false;
+        world.water = false;
+        world.rivers = false;
+        world.sea_level = 0.0;
+        client.fov_degrees = 55.0;
+        client.view_distance = 3;
+        client.vertical_view_distance = 3;
+        client.fog_distance = 0.0;
+    }
     if std::env::args().any(|arg| arg == "--smoke-test-cave-structures")
         && std::env::var_os("TERRA_CAVE_SHELL_INSPECT").is_some()
     {
         world = WorldConfig::default();
     }
     if std::env::args().any(|arg| arg == "--smoke-test-biomes") {
-        world = WorldConfig::default();
-        // These fixed native regression views predate the opt-in landscape field.
-        if !std::env::var("TERRA_BIOME_SCENE").is_ok_and(|scene| scene.starts_with("cherry")) {
-            world.landscape_revision = 0;
-            world.ecology_revision = 0;
+        let scene = std::env::var("TERRA_BIOME_SCENE").unwrap_or_default();
+        if scene.starts_with("kingdom-") || scene == "outpost" {
+            world = WorldConfig::default();
+            world.structures_revision = 8;
+            client.view_distance = 12;
+            client.vertical_view_distance = 5;
+        } else if scene.starts_with("picker-") {
+            // Photograph current fresh-world biomes rather than the legacy
+            // regression world's ecology-revision-zero terrain below.
+            let requested_seed = world.seed;
+            world = WorldConfig::default();
+            world.seed = requested_seed;
+            world.biome_definitions = Some(terra_core::BiomeDefinitions::load_directory(
+                terra_core::asset_directory().join("biome"),
+            )?);
+            world.structures.set_all(false);
+            world.preferred_spawn_biome = None;
+            client.view_distance = 10;
+            client.vertical_view_distance = 5;
+        } else if scene.starts_with("landscape-") || scene.starts_with("connected-") {
+            // Keep the requested seed and saved terrain revision for paired views.
+            client.vertical_view_distance = client.vertical_view_distance.max(4);
+        } else {
+            world = WorldConfig::default();
+            world.landscape_revision = 2;
+            // These fixed native regression views predate the opt-in landscape field.
+            if !scene.starts_with("cherry") {
+                world.landscape_revision = 0;
+                world.ecology_revision = 0;
+            }
+            world.rivers = scene.starts_with("water-");
         }
-        world.rivers =
-            std::env::var("TERRA_BIOME_SCENE").is_ok_and(|scene| scene.starts_with("water-"));
     }
     if std::env::args().any(|arg| {
         matches!(
@@ -189,14 +265,17 @@ pub fn build_app() -> Result<App, Box<dyn Error>> {
     // generators or column caches. Production world configuration is untouched.
     if std::env::args().any(|a| a == "--smoke-test-caves")
         && (std::env::var_os("TERRA_TORCH_INSPECT").is_some()
-            || std::env::var_os("TERRA_CAVE_LIGHT_INSPECT").is_some())
+            || std::env::var_os("TERRA_CAVE_LIGHT_INSPECT").is_some()
+            || std::env::var_os("TERRA_CAVE_PORTAL_INSPECT").is_some()
+            || std::env::var_os("TERRA_CAVE_LOD_SHADOW_INSPECT").is_some())
     {
         world.base_height = 18.0;
         world.hill_amplitude = 0.0;
         world.mountain_amplitude = 0.0;
         world.biomes = false;
         world.caves = false;
-        world.water = std::env::var_os("TERRA_CAVE_LIGHT_INSPECT").is_some();
+        world.water = std::env::var_os("TERRA_CAVE_LIGHT_INSPECT").is_some()
+            || std::env::var_os("TERRA_CAVE_PORTAL_INSPECT").is_some();
         world.rivers = false;
         world.trees = false;
     }
@@ -262,6 +341,18 @@ pub fn build_app() -> Result<App, Box<dyn Error>> {
     if furnace_gameplay_fixture && connect_address.is_some() {
         return Err("The furnace fixture requires its own temporary integrated world".into());
     }
+    if mixer_fixture && connect_address.is_some() {
+        return Err("The Mixer fixture requires its own temporary integrated world".into());
+    }
+    if rgb_logistics_fixture && connect_address.is_some() {
+        return Err("RGB logistics fixture requires its isolated integrated server".into());
+    }
+    if alchemy_fixture && connect_address.is_some() {
+        return Err("Alchemy smoke requires the integrated server, not --connect".into());
+    }
+    if hydraulics_fixture && connect_address.is_some() {
+        return Err("Hydraulics smoke requires its isolated integrated server".into());
+    }
     if benchmark_ui && connect_address.is_some() {
         return Err("TERRA_BENCH_UI requires the integrated server, not --connect".into());
     }
@@ -310,9 +401,12 @@ pub fn build_app() -> Result<App, Box<dyn Error>> {
             } else {
                 terra_core::GameMode::Creative
             };
-            let (server, token) = if inventory_fixture
-                && std::env::var_os("TERRA_CRAFTING_SMOKE").is_some()
-            {
+            let (server, token) = if inventory_fixture && crate::kingdom_smoke::requested() {
+                let (host, token, profile) =
+                    crate::kingdom_smoke::prepare(host_config).map_err(std::io::Error::other)?;
+                survival_profile = Some(profile);
+                (host, token)
+            } else if inventory_fixture && std::env::var_os("TERRA_CRAFTING_SMOKE").is_some() {
                 let (host, token, profile) =
                     crate::crafting_smoke::prepare(host_config).map_err(std::io::Error::other)?;
                 survival_profile = Some(profile);
@@ -331,6 +425,26 @@ pub fn build_app() -> Result<App, Box<dyn Error>> {
             } else if crusher_fixture {
                 let (host, token, profile) =
                     crate::crusher_smoke::prepare(host_config).map_err(std::io::Error::other)?;
+                survival_profile = Some(profile);
+                (host, token)
+            } else if hydraulics_fixture {
+                let (host, token, profile) =
+                    crate::hydraulics_smoke::prepare(host_config).map_err(std::io::Error::other)?;
+                survival_profile = Some(profile);
+                (host, token)
+            } else if alchemy_fixture {
+                let (host, token, profile) =
+                    crate::alchemy_smoke::prepare(host_config).map_err(std::io::Error::other)?;
+                survival_profile = Some(profile);
+                (host, token)
+            } else if rgb_logistics_fixture {
+                let (host, token, profile) = crate::rgb_logistics_smoke::prepare(host_config)
+                    .map_err(std::io::Error::other)?;
+                survival_profile = Some(profile);
+                (host, token)
+            } else if mixer_fixture {
+                let (host, token, profile) =
+                    crate::mixer_smoke::prepare(host_config).map_err(std::io::Error::other)?;
                 survival_profile = Some(profile);
                 (host, token)
             } else if farming_fixture {
@@ -404,13 +518,23 @@ pub fn build_app() -> Result<App, Box<dyn Error>> {
     };
     let render_diagnostics = std::env::var("TERRA_RENDER_DIAGNOSTICS")
         .is_ok_and(|value| matches!(value.as_str(), "1" | "true"));
-    let mut gpu_settings = WgpuSettings::default();
+    let mut gpu_settings = WgpuSettings {
+        memory_hints: crate::memory_hints::options(
+            std::env::args().any(|argument| argument.starts_with("--smoke-test")),
+            std::env::var("TERRA_WGPU_MEMORY_BLOCK_MIB").ok().as_deref(),
+        )?,
+        ..default()
+    };
+    let memory_hints = gpu_settings.memory_hints.clone();
     if render_diagnostics {
         // Functionality enables only features supported by the chosen adapter,
         // including timestamps/statistics, without requiring unsupported features.
         gpu_settings.priority = WgpuSettingsPriority::Functionality;
     }
     let mut app = App::new();
+    if fiverr_grass_fixture {
+        crate::fiverr_grass_smoke::register_source(&mut app).map_err(std::io::Error::other)?;
+    }
     if food_fixture {
         app.insert_resource(terra_ui::menu::MenuPaths {
             configs: crate::food_smoke::menu_directory(),
@@ -448,8 +572,12 @@ pub fn build_app() -> Result<App, Box<dyn Error>> {
         );
     }
     app.add_plugins(TerraUiPlugin);
+    if let Some(present_mode) = presentation_override {
+        app.insert_resource(terra_ui::PresentationOverride(present_mode));
+    }
     app.add_plugins(
         DefaultPlugins
+            .set(TaskPoolPlugin { task_pool_options })
             .set(RenderPlugin {
                 render_creation: RenderCreation::Automatic(Box::new(gpu_settings)),
                 ..default()
@@ -492,7 +620,20 @@ pub fn build_app() -> Result<App, Box<dyn Error>> {
         crate::water_audio::WaterAudioPlugin,
         crate::crusher_audio::CrusherAudioPlugin,
     ))
-    .add_systems(Update, (sync_block_previews, sync_pet_portrait));
+    .add_systems(
+        Update,
+        (sync_block_previews, sync_pet_portrait, preview_demand::sync),
+    );
+    crate::memory_hints::install_report(&mut app, &memory_hints);
+    if compute_thread_cap != bevy::app::TaskPoolOptions::default().compute.max_threads {
+        tracing::info!(
+            compute_thread_cap,
+            compute_threads = bevy::tasks::ComputeTaskPool::get().thread_num(),
+            async_threads = bevy::tasks::AsyncComputeTaskPool::get().thread_num(),
+            io_threads = bevy::tasks::IoTaskPool::get().thread_num(),
+            "Smoke-test compute worker cap; IO and async policies are unchanged"
+        );
+    }
     crate::creature_audio::install(&mut app);
     if fixture && std::env::var("TERRA_FOLIAGE_REFERENCE").is_ok_and(|value| value == "1") {
         app.add_plugins(terra_render::FoliageReferenceBenchmark);
@@ -514,7 +655,16 @@ pub fn build_app() -> Result<App, Box<dyn Error>> {
         app.insert_resource(profile);
     }
     if let Some(token) = token {
-        app.insert_resource(terra_network::client::ClientLaunch { token });
+        if frontend
+            && app
+                .world()
+                .resource::<terra_render::RenderPreviewStartup>()
+                .required
+        {
+            app.insert_resource(crate::sessions::StartupLaunch(token));
+        } else {
+            app.insert_resource(terra_network::client::ClientLaunch { token });
+        }
         if frontend {
             let mut menu = app.world_mut().resource_mut::<terra_ui::menu::MenuState>();
             menu.page = terra_ui::menu::MenuPage::Loading;
@@ -530,6 +680,7 @@ pub fn build_app() -> Result<App, Box<dyn Error>> {
             .resource_mut::<terra_ui::menu::MenuState>()
             .error = startup_errors.join("\n");
         crate::sessions::install(&mut app);
+        startup_ui::install(&mut app);
         if let Some(address) = connect_address {
             let mut menu = app.world_mut().resource_mut::<terra_ui::menu::MenuState>();
             menu.page = terra_ui::menu::MenuPage::Loading;
@@ -552,6 +703,7 @@ pub fn build_app() -> Result<App, Box<dyn Error>> {
     crate::smoke_test::install(&mut app);
     crate::inventory_benchmark::install(&mut app)?;
     crate::performance_soak::install(&mut app);
+    crate::main_diagnostics::install(&mut app);
     crate::performance_route::install(&mut app)?;
     crate::performance_edits::install(&mut app)?;
     crate::physics_smoke::install(&mut app);
@@ -559,6 +711,7 @@ pub fn build_app() -> Result<App, Box<dyn Error>> {
     crate::appearance_smoke::install(&mut app);
     crate::botanical_smoke::install(&mut app);
     crate::flower_wither_smoke::install(&mut app);
+    crate::fiverr_grass_smoke::install(&mut app);
     crate::hud_smoke::install(&mut app);
     crate::status_effect_smoke::install(&mut app);
     crate::taming_smoke::install(&mut app);
@@ -570,6 +723,11 @@ pub fn build_app() -> Result<App, Box<dyn Error>> {
     crate::village_smoke::install(&mut app);
     crate::equipment_smoke::install(&mut app);
     crate::crusher_smoke::install(&mut app);
+    crate::mixer_smoke::install(&mut app);
+    crate::rgb_logistics_smoke::install(&mut app);
+    crate::alchemy_smoke::install(&mut app);
+    crate::hydraulics_smoke::install(&mut app);
+    crate::kinetic_smoke::install(&mut app);
     crate::farming_smoke::install(&mut app);
     crate::reef_smoke::install(&mut app);
     crate::ecology_smoke::install(&mut app);
@@ -606,6 +764,7 @@ pub fn build_app() -> Result<App, Box<dyn Error>> {
     crate::materials_smoke::install(&mut app);
     crate::biome_smoke::install(&mut app);
     crate::daylight_smoke::install(&mut app);
+    crate::lantern_smoke::install(&mut app);
     crate::season_smoke::install(&mut app);
     crate::survival_smoke::install(&mut app);
     crate::food_smoke::install(&mut app)?;
@@ -713,6 +872,21 @@ fn initialize_benchmark_save(save: &BenchmarkSave, world: &WorldConfig) -> Resul
         save.directory.join("world.toml"),
     )
     .map_err(|error| error.to_string())
+}
+
+fn benchmark_presentation(
+    benchmark: bool,
+    requested: Option<&str>,
+) -> Result<Option<PresentMode>, &'static str> {
+    if !benchmark {
+        return Ok(None);
+    }
+    match requested {
+        None => Ok(None),
+        Some("auto") => Ok(Some(PresentMode::AutoNoVsync)),
+        Some("mailbox") => Ok(Some(PresentMode::Mailbox)),
+        Some(_) => Err("TERRA_BENCH_PRESENT_MODE must be auto or mailbox"),
+    }
 }
 
 fn validate_benchmark_ui(
@@ -1226,6 +1400,22 @@ mod tests {
         assert!(validate_benchmark_ui(true, true, false).is_err());
         assert!(validate_benchmark_ui(true, false, true).is_err());
         assert!(validate_benchmark_ui(true, false, false).is_err());
+    }
+
+    #[test]
+    fn native_presentation_control_is_explicit_validated_and_inert_in_normal_gameplay() {
+        assert_eq!(benchmark_presentation(false, Some("auto")), Ok(None));
+        assert_eq!(benchmark_presentation(false, Some("invalid")), Ok(None));
+        assert_eq!(benchmark_presentation(true, None), Ok(None));
+        assert_eq!(
+            benchmark_presentation(true, Some("auto")),
+            Ok(Some(PresentMode::AutoNoVsync))
+        );
+        assert_eq!(
+            benchmark_presentation(true, Some("mailbox")),
+            Ok(Some(PresentMode::Mailbox))
+        );
+        assert!(benchmark_presentation(true, Some("invalid")).is_err());
     }
 
     #[test]

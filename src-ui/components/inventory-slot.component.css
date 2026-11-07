@@ -20,3 +20,5 @@
   .item-count { top: 2px; right: 2px; font-size: 10px; }
   .item-hotkey { bottom: 1px; left: 2px; font-size: 9px; }
 }
+.mixer-ghost-image { opacity: 0.30; pointer-events: none; }
+.mixer-ghost-count { opacity: 0.48; pointer-events: none; }

@@ -6,7 +6,17 @@ use bevy::{
 use terra_network::client::{ClientSession, SelectedInventorySlot};
 
 #[derive(Component)]
-pub(super) struct EatingSound;
+pub(super) struct EatingSound {
+    drinking: bool,
+}
+
+fn consumption_clip(drinking: bool) -> &'static str {
+    if drinking {
+        "audio/animals/drink.wav"
+    } else {
+        "audio/animals/eat.wav"
+    }
+}
 
 #[allow(clippy::too_many_arguments)]
 pub(super) fn update(
@@ -17,8 +27,12 @@ pub(super) fn update(
     blocked: Option<Res<terra_player::PlayerInputBlock>>,
     keys: terra_core::GameplayInput,
     config: Option<Res<terra_core::AudioConfig>>,
-    mut playing: Query<(Entity, Option<&mut AudioSink>), With<EatingSound>>,
+    mut playing: Query<(Entity, &EatingSound, Option<&mut AudioSink>)>,
 ) {
+    let drinking = session
+        .as_ref()
+        .and_then(|session| session.consumption)
+        .is_some_and(|progress| terra_core::brewing::drink_seconds(progress.item).is_some());
     let active = session.as_ref().is_some_and(|session| {
         session.ready
             && !session.dead()
@@ -40,7 +54,7 @@ pub(super) fn update(
         }
     }) * 0.12;
     if !active || gain <= 0.0 {
-        for (entity, sink) in &mut playing {
+        for (entity, _, sink) in &mut playing {
             if let Some(sink) = sink {
                 sink.stop();
             }
@@ -48,17 +62,39 @@ pub(super) fn update(
         }
         return;
     }
-    if playing.is_empty() {
-        commands.spawn((
-            EatingSound,
-            AudioPlayer::new(assets.load("audio/animals/eat.wav")),
-            PlaybackSettings::LOOP.with_volume(Volume::Linear(gain)),
-        ));
-    } else {
-        for (_, sink) in &mut playing {
+    let mut matching = false;
+    for (entity, sound, sink) in &mut playing {
+        if sound.drinking != drinking || matching {
+            if let Some(sink) = sink {
+                sink.stop();
+            }
+            commands.entity(entity).despawn();
+        } else {
+            matching = true;
             if let Some(mut sink) = sink {
                 sink.set_volume(Volume::Linear(gain));
             }
+        }
+    }
+    if !matching {
+        commands.spawn((
+            EatingSound { drinking },
+            AudioPlayer::new(assets.load(consumption_clip(drinking))),
+            PlaybackSettings::LOOP.with_volume(Volume::Linear(gain)),
+        ));
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn drinking_uses_existing_water_foley_instead_of_chewing() {
+        assert_eq!(consumption_clip(true), "audio/animals/drink.wav");
+        assert_eq!(consumption_clip(false), "audio/animals/eat.wav");
+        for clip in [consumption_clip(true), consumption_clip(false)] {
+            assert!(terra_core::asset_directory().join(clip).is_file());
         }
     }
 }

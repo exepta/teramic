@@ -2,6 +2,11 @@ use super::{WaterPatch, outlets::MIN_LIP_DROP};
 use crate::SurfaceColumn;
 use terra_voxel::SectionPos;
 
+#[cfg(test)]
+thread_local! {
+    static CORNER_SAMPLES: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+}
+
 /// Natural reservoirs have horizontal surfaces only. Falling volume belongs to
 /// authoritative fluid cells, meshed by the shared liquid-cell renderer.
 pub(crate) fn build_channel_patch(
@@ -25,6 +30,25 @@ pub(crate) fn build_channel_patch(
             let Some(level) = column.water_level else {
                 continue;
             };
+            // Most vertical sections never contain this surface. Its corner
+            // depths, slopes and normals are useful only for an emitted quad.
+            if (level.floor() as i64).div_euclid(16) != position.y {
+                continue;
+            }
+            let iy = (level - origin[1] as f64).floor() as usize + 1;
+            let index = x + 1 + 18 * (iy + 18 * (z + 1));
+            let volume = if (level - level.floor()).abs() < 1e-8 && iy > 0 {
+                padded[index - 18]
+            } else {
+                padded[index]
+            };
+            if !super::can_hold_fluid(padded[index])
+                || super::space::partial(padded[index])
+                || !super::can_hold_fluid(volume)
+                || super::space::partial(volume)
+            {
+                continue;
+            }
             let corners = [(x, z), (x, z + 1), (x + 1, z + 1), (x + 1, z)];
             let samples = corners.map(|(cx, cz)| corner(columns, cx, cz, level));
             let points = std::array::from_fn(|i| {
@@ -34,22 +58,16 @@ pub(crate) fn build_channel_patch(
                     corners[i].1 as f32,
                 ]
             });
-            if (level.floor() as i64).div_euclid(16) == position.y {
-                let iy = (level - origin[1] as f64).floor() as usize + 1;
-                let index = x + 1 + 18 * (iy + 18 * (z + 1));
-                if super::can_hold_fluid(padded[index]) && !super::space::partial(padded[index]) {
-                    quad(
-                        &mut patch,
-                        points,
-                        samples.map(|s| [s.depth, s.shore]),
-                        [[0.0; 4]; 4],
-                        column.water_flow,
-                    );
-                }
-            }
+            quad(
+                &mut patch,
+                points,
+                samples.map(|s| [s.depth, s.shore]),
+                [[0.0; 4]; 4],
+                column.water_flow,
+            );
         }
     }
-    super::geometry::assign_wave_weights(&mut patch, origin, columns, None);
+    super::geometry::assign_wave_weights(&mut patch, origin, columns, None, padded);
     (!patch.indices.is_empty()).then_some(patch)
 }
 
@@ -61,6 +79,8 @@ struct Corner {
 }
 
 fn corner(columns: &[SurfaceColumn], x: usize, z: usize, reference: f64) -> Corner {
+    #[cfg(test)]
+    CORNER_SAMPLES.set(CORNER_SAMPLES.get() + 1);
     let adjacent = [
         columns[x + 18 * z],
         columns[x + 1 + 18 * z],
@@ -158,7 +178,9 @@ pub(super) fn shared_wave_weight(columns: &[SurfaceColumn], x: usize, z: usize) 
             count += 1;
         }
     }
-    if count == 0 {
+    // A shoreline corner touches dry ground. Displacing it below the block's
+    // edge opens a visible air slit, even in deep water beside a steep bank.
+    if count < 4 {
         return 0.0;
     }
     levels[..count].sort_by(f64::total_cmp);
@@ -218,6 +240,78 @@ fn quad(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn channel_sections_outside_their_water_level_do_not_sample_surface_corners() {
+        let terrain = crate::TerraGenerator::new(terra_core::WorldConfig {
+            caves: false,
+            trees: false,
+            biomes: false,
+            rivers: false,
+            structures_revision: 0,
+            landscape_revision: 0,
+            ..Default::default()
+        })
+        .unwrap();
+        let padded = vec![0; 18 * 18 * 18];
+        for level in [-24.5_f64, -16.0, 8.0, 16.0, 24.5] {
+            let mut sample = terrain.surface_column(-16.5, -0.5);
+            sample.water_level = Some(level);
+            sample.height = level - 4.0;
+            sample.water_flow = [0.125, -0.25];
+            sample.river_cavity = None;
+            sample.cave = crate::generation::CaveStructure::default();
+            let columns = vec![sample; 18 * 18];
+            let owner = SectionPos::new(-2, (level.floor() as i64).div_euclid(16), -1);
+            for dy in [-2, -1, 1, 2] {
+                let position = owner.offset([0, dy, 0]).unwrap();
+                CORNER_SAMPLES.set(0);
+                assert!(
+                    build_channel_patch(position, position.origin().unwrap(), &columns, &padded)
+                        .is_none()
+                );
+                assert_eq!(
+                    CORNER_SAMPLES.get(),
+                    0,
+                    "water level {level}, section {position:?}"
+                );
+            }
+            CORNER_SAMPLES.set(0);
+            let patch =
+                build_channel_patch(owner, owner.origin().unwrap(), &columns, &padded).unwrap();
+            assert!(CORNER_SAMPLES.get() > 0);
+            assert_eq!(patch.positions.len(), 16 * 16 * 4);
+            assert_eq!(patch.indices.len(), 16 * 16 * 6);
+            assert!(
+                patch
+                    .positions
+                    .iter()
+                    .all(|point| point[1] + owner.origin().unwrap()[1] as f32 == level as f32)
+            );
+            assert!(patch.flow.iter().all(|flow| *flow == [0.125, -0.25]));
+            assert!(
+                patch
+                    .normals
+                    .iter()
+                    .all(|normal| *normal == [0.0, 1.0, 0.0])
+            );
+            CORNER_SAMPLES.set(0);
+            assert!(
+                build_channel_patch(
+                    owner,
+                    owner.origin().unwrap(),
+                    &columns,
+                    &vec![1; 18 * 18 * 18]
+                )
+                .is_none()
+            );
+            assert_eq!(
+                CORNER_SAMPLES.get(),
+                0,
+                "occluded reservoir cells use no natural surface corners"
+            );
+        }
+    }
 
     #[test]
     fn reservoir_lips_split_at_one_block_while_half_block_river_corners_stay_smooth() {

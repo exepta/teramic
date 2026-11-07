@@ -2,6 +2,98 @@ use super::EditJournal;
 use terra_core::{Inventory, containers::valid_chest};
 
 impl EditJournal {
+    /// Real owned stacks only: logistics filters are recipes, not inventories.
+    /// A compound hearth also owns the attached campfire block itself.
+    pub fn block_inventory_drops(&self, position: [i64; 3]) -> Vec<terra_core::ItemStack> {
+        let mut stacks: Vec<_> = self
+            .container_at(position)
+            .into_iter()
+            .flat_map(|inventory| &inventory.slots)
+            .copied()
+            .filter(|stack| stack.valid())
+            .collect();
+        if let Some(fire) = self.attached_campfire_at(position) {
+            stacks.extend(
+                fire.inventory
+                    .slots
+                    .iter()
+                    .copied()
+                    .filter(|stack| stack.valid()),
+            );
+            stacks.push(terra_core::ItemStack {
+                item: terra_core::ItemKind::Block(terra_core::campfire::MATERIAL),
+                count: 1,
+            });
+        }
+        stacks
+    }
+
+    /// Reserve the complete removal before changing any cell of a multiblock.
+    /// Callers include the block/attachment drops they will publish afterwards.
+    pub fn preflight_inventory_removal(
+        &self,
+        positions: impl IntoIterator<Item = [i64; 3]>,
+        extra_drops: usize,
+    ) -> Result<(), String> {
+        let positions: std::collections::BTreeSet<_> = positions.into_iter().collect();
+        let count = positions.iter().try_fold(extra_drops, |count, position| {
+            let stacks = self.block_inventory_drops(*position);
+            if !stacks.is_empty()
+                && position
+                    .iter()
+                    .any(|value| (*value as f64 + 0.5).abs() > 1_000_000.0)
+            {
+                return Err("Container drops are outside world bounds");
+            }
+            count
+                .checked_add(stacks.len())
+                .ok_or("Container drop count overflow")
+        })?;
+        let revisions = u64::try_from(count)
+            .ok()
+            .and_then(|count| count.checked_add(positions.len() as u64))
+            .ok_or("Container revision overflow")?;
+        let game = self.gameplay();
+        if game
+            .drops
+            .len()
+            .checked_add(count)
+            .is_none_or(|count| count > terra_core::MAX_WORLD_DROPS)
+            || game.next_drop.checked_add(count as u64).is_none()
+            || game.revision.checked_add(revisions).is_none()
+        {
+            return Err("No space or revision capacity for container drops".into());
+        }
+        Ok(())
+    }
+
+    /// Called only after the block commit succeeds and its drops were preflighted.
+    /// record() may already have retired some machine state; clear every owner
+    /// map so neither persistence nor an open container can resurrect its items.
+    pub(crate) fn finish_inventory_removal(
+        &mut self,
+        position: [i64; 3],
+        stacks: Vec<terra_core::ItemStack>,
+    ) {
+        self.containers.remove(&position);
+        self.remove_attached_campfire(position);
+        self.remove_furnace(position);
+        self.remove_crusher(position);
+        self.remove_mixer(position);
+        self.remove_cauldron(position);
+        self.remove_campfire(position);
+        for stack in stacks {
+            let accepted = self.gameplay_mut().drop_stack(
+                position.map(|value| value as f64 + 0.5),
+                stack,
+                [0.0, 1.8, 0.0],
+                0.35,
+            );
+            debug_assert!(accepted, "container removal drops were preflighted");
+        }
+        self.gameplay_mut().revision += 1;
+    }
+
     pub fn valid_container(&self, position: [i64; 3], inventory: &Inventory) -> bool {
         match self.block(position) {
             Some(29) => valid_chest(inventory),
@@ -12,6 +104,15 @@ impl EditJournal {
             Some(99) => {
                 self.object_state(position).is_some_and(|s| !s.secondary)
                     && terra_core::crusher::valid_inventory(inventory)
+            }
+            Some(terra_core::mixer::MATERIAL) => {
+                self.valid_mixer(position) && terra_core::mixer::valid_inventory(inventory)
+            }
+            Some(terra_core::brewing::MATERIAL) => {
+                self.valid_cauldron(position) && terra_core::brewing::valid_inventory(inventory)
+            }
+            Some(terra_core::campfire::MATERIAL) => {
+                self.valid_campfire(position) && terra_core::campfire::valid_inventory(inventory)
             }
             _ => false,
         }
@@ -68,7 +169,7 @@ impl EditJournal {
             && self.object_state(position).is_some_and(|state| {
                 !state.secondary
                     && state.valid_for(position, 99)
-                    && state.peer.is_some_and(|peer| {
+                    && state.peer.is_none_or(|peer| {
                         self.block(peer) == Some(99)
                             && self.object_state(peer).is_some_and(|other| {
                                 other.secondary
@@ -91,7 +192,12 @@ impl EditJournal {
     pub fn crusher_crank_position(&self, anchor: [i64; 3]) -> Option<[i64; 3]> {
         self.valid_crusher(anchor).then(|| {
             let right = self.object_state(anchor).unwrap_or_default().right();
-            std::array::from_fn(|axis| anchor[axis] + right[axis] * 2)
+            let distance = if self.object_state(anchor).unwrap_or_default().peer.is_some() {
+                2
+            } else {
+                1
+            };
+            std::array::from_fn(|axis| anchor[axis] + right[axis] * distance)
         })
     }
     pub fn crank_anchor(&self, position: [i64; 3]) -> Option<[i64; 3]> {
@@ -99,10 +205,12 @@ impl EditJournal {
         let anchor = state.peer?;
         (self.block(position) == Some(terra_core::crusher::CRANK_MATERIAL)
             && state.valid_for(position, terra_core::crusher::CRANK_MATERIAL)
-            && self.valid_crusher(anchor)
-            && self
-                .object_state(anchor)
-                .is_some_and(|crusher| crusher.facing == state.facing))
+            && (self.rotary_crank_mount(anchor, state.facing) == Some(position)
+                || self.valid_crusher(anchor)
+                    && self.crusher_crank_position(anchor) == Some(position)
+                    && self
+                        .object_state(anchor)
+                        .is_some_and(|crusher| crusher.facing == state.facing)))
         .then_some(anchor)
     }
     pub fn crushers_in_section(

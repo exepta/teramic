@@ -1,4 +1,6 @@
 mod browser;
+mod create_world;
+mod kingdom_settings;
 mod library;
 mod model;
 mod navigation;
@@ -9,10 +11,10 @@ mod view;
 use bevy::prelude::*;
 pub use model::{
     LoadingProgress, MenuAction, MenuDialog, MenuPage, MenuPaths, MenuState, ServerMenu,
-    SessionInfo, SessionRequest, WorldMenu,
+    SessionInfo, SessionRequest, StartupProgress, WorldCreateTab, WorldMenu,
 };
 pub use options::{OptionsDraft, OptionsTab};
-pub use view::{DialogView, MenuView, OptionsView, ServersView, WorldsView};
+pub use view::{DialogView, MenuView, OptionsView, ServersView, SessionView, WorldsView};
 
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
 pub(crate) struct MenuInputSet;
@@ -36,6 +38,10 @@ pub fn install(app: &mut App) {
         .add_message::<MenuAction>()
         .add_message::<SessionRequest>()
         .add_systems(Startup, options::load_preferences)
+        .add_systems(
+            PostUpdate,
+            create_world::focus_biome_picker.after(bevy::ui::UiSystems::PostLayout),
+        )
         .add_systems(
             Update,
             (

@@ -1,0 +1,33 @@
+[
+  {
+    "reason": "Fixture rejected preexisting primary-window/default-root focus before opening; corrected fixture rejects inventory-specific stale focus.",
+    "source": "/tmp/teramic-o08-439o32is/failed-after-player-focus.log",
+    "source_log_sha256": "64cf73feb31652c4ccdbf1109cc60d2e32c7b8d80031d62f156e958dbde006cf",
+    "valid": false
+  },
+  {
+    "accepted_optimization": false,
+    "first_open_max_ms": 137.604703,
+    "reason": "Component ownership extraction alone did not improve first opening; removed before slots-only/final fixes.",
+    "source": "/tmp/teramic-o08-439o32is/after-default-player.log",
+    "source_log_sha256": "05ecf9241d07f07c67ca8d327a71f1df164318aa6b06ad820ed038a6592981a3",
+    "valid_native_measurement": true
+  },
+  {
+    "reason": "Native OS-pointer helper did not reach the requested compositor target, aborting reference acceptance. No UI success is claimed from this attempt.",
+    "source": "/tmp/teramic-o08-439o32is/failed-reference-pointer-bounds.log",
+    "source_log_sha256": "3b1e4794754b894c99c0de5b4f0cfe5328b5aad07f713d638c88f93d3f87b3ea",
+    "valid": false
+  },
+  {
+    "reason": "Chest preparation left logical capture enabled, allowing OS mouse motion to move the stationary comparison camera. The fixture was corrected before chest-cache-stable. The partial run is excluded from final comparisons.",
+    "source": "/tmp/teramic-o08-439o32is/final-chest-after-cache.log",
+    "source_log_sha256": "16ead8926b7ac411572382d5fd1cd4cd37ab406f62649f8d487baf8c75d23f50",
+    "valid": false
+  },
+  {
+    "raw_log_retained": false,
+    "reason": "Earlier after-binary launch aborted when the16GiB/tmp tmpfs was full; empty launch log has no native measurement. Immutable binaries are on the project volume under target/o08-binaries.",
+    "valid": false
+  }
+]

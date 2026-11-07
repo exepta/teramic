@@ -1,0 +1,17 @@
+{
+  "id": "teramic::wrench",
+  "name": "Wrench",
+  "station": "workbench",
+  "output": { "item": { "tool": "wrench" }, "count": 1 },
+  "pattern": {
+    "kind": "shaped",
+    "width": 3,
+    "height": 3,
+    "cells": [
+      { "item": { "mineral": "iron_ingot" }, "count": 1 }, null,
+      { "item": { "mineral": "iron_ingot" }, "count": 1 },
+      null, { "item": { "mineral": "iron_ingot" }, "count": 1 }, null,
+      null, { "item": "stick", "count": 1 }, null
+    ]
+  }
+}

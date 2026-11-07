@@ -54,7 +54,7 @@ fn candidates(terrain: &TerraGenerator, start: [i64; 3], size: usize, vertical: 
             };
             let column = terrain.surface_column(root_x as f64 + 0.5, root_z as f64 + 0.5);
             let height = column.height;
-            let species = if let Some(oasis) = oasis {
+            let mut species = if let Some(oasis) = oasis {
                 if column.oasis_moisture < 0.12
                     || height <= oasis.level + 0.6
                     || height > oasis.level + 6.0
@@ -72,14 +72,23 @@ fn candidates(terrain: &TerraGenerator, start: [i64; 3], size: usize, vertical: 
                 } else {
                     seed
                 };
-                TreeSpecies::in_biome(species_seed, column.biome)
+                TreeSpecies::in_biome(
+                    species_seed,
+                    column.biome,
+                    terrain.config().landscape_revision,
+                )
             };
+            // The saved ecology revision gates this addition. Historic trees
+            // retain their exact species, cells and overlap priority.
+            if apple_replacement(seed, species, biome, terrain.config().ecology_revision) {
+                species = TreeSpecies::Apple;
+            }
             let suitable_ground = match species {
                 TreeSpecies::Palm => matches!(
                     column.surface_material,
                     terra_voxel::MaterialId::Sand | terra_voxel::MaterialId::Grass
                 ),
-                TreeSpecies::Spruce => matches!(
+                TreeSpecies::Spruce | TreeSpecies::Fir => matches!(
                     column.surface_material,
                     terra_voxel::MaterialId::Grass | terra_voxel::MaterialId::Snow
                 ),
@@ -138,7 +147,13 @@ fn candidates(terrain: &TerraGenerator, start: [i64; 3], size: usize, vertical: 
             if !supported {
                 continue;
             }
-            let mut tree = Tree::with_species(origin, seed, roots, species);
+            let mut tree = Tree::with_species_revision(
+                origin,
+                seed,
+                roots,
+                species,
+                terrain.config().ecology_revision,
+            );
             if terrain.config().ecology_revision < 2 && matches!(species, TreeSpecies::Cherry(_)) {
                 tree.wood_material = terra_voxel::MaterialId::Wood;
             }
@@ -160,4 +175,94 @@ fn candidates(terrain: &TerraGenerator, start: [i64; 3], size: usize, vertical: 
     }
     // Grid traversal defines overlap priority, independently of section order.
     trees
+}
+
+fn apple_replacement(
+    seed: u64,
+    species: TreeSpecies,
+    biome: crate::generation::biomes::BiomeSample,
+    revision: u8,
+) -> bool {
+    if revision < 3
+        || biome.weights.plains + biome.weights.forest <= 0.65
+        || biome.temperature <= 0.3
+        || biome.temperature >= 0.85
+    {
+        return false;
+    }
+    if revision == 3 {
+        matches!(species, TreeSpecies::Green | TreeSpecies::Autumn) && random(seed, 280) < 0.14
+    } else {
+        random(seed, 280) < 0.05
+    }
+}
+#[cfg(test)]
+mod apple_rate_tests {
+    use super::*;
+    use crate::generation::biomes::{BiomeSample, BiomeWeights};
+    fn habitat(forest: f64) -> BiomeSample {
+        BiomeSample {
+            temperature: 0.55,
+            humidity: 0.7,
+            weights: BiomeWeights {
+                ocean: 0.,
+                plains: 1. - forest,
+                forest,
+                desert: 0.,
+                highland: 0.,
+                mushroom_park: 0.,
+                cliffted_desert: 0.,
+                cherry_forest: 0.,
+            },
+        }
+    }
+    #[test]
+    fn revision_four_apples_use_five_percent_of_all_suitable_candidates_not_only_oaks() {
+        for forest in [0., 0.5, 1.] {
+            let b = habitat(forest);
+            let mut apples = 0;
+            for n in 0..20_000 {
+                let seed = super::super::mix(n);
+                let selected = apple_replacement(seed, TreeSpecies::Green, b, 4);
+                apples += usize::from(selected);
+                for species in [
+                    TreeSpecies::Autumn,
+                    TreeSpecies::Birch,
+                    TreeSpecies::Spruce,
+                    TreeSpecies::Fir,
+                    TreeSpecies::Cherry(false),
+                ] {
+                    assert_eq!(apple_replacement(seed, species, b, 4), selected);
+                }
+                assert_eq!(
+                    apple_replacement(seed, TreeSpecies::Green, b, 3),
+                    random(seed, 280) < 0.14
+                );
+                assert!(!apple_replacement(seed, TreeSpecies::Spruce, b, 3));
+                for revision in 0..3 {
+                    assert!(!apple_replacement(seed, TreeSpecies::Green, b, revision));
+                }
+            }
+            assert!(
+                (900..=1100).contains(&apples),
+                "{forest} forest: {apples}/20000 candidates"
+            );
+        }
+    }
+    #[test]
+    fn apple_tickets_do_not_introduce_trees_in_unsuitable_habitats() {
+        let mut b = habitat(1.);
+        for t in [0., 0.3, 0.85, 1.] {
+            b.temperature = t;
+            for n in 0..128 {
+                assert!(!apple_replacement(n, TreeSpecies::Birch, b, 4));
+            }
+        }
+        b = habitat(0.);
+        b.weights.plains = 0.;
+        b.weights.desert = 1.;
+        for n in 0..128 {
+            assert!(!apple_replacement(n, TreeSpecies::Green, b, 4));
+        }
+    }
 }

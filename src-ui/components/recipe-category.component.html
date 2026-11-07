@@ -1,0 +1,7 @@
+<div class="recipe-category-slot reference-category">
+  <button id="recipe-category" [class]="category.selected ? 'recipe-category selected' : 'recipe-category'" onclick="recipe_category">
+    @if (category.id == 'smelting') { <img class="recipe-category-image" src="tilt-ui://assets/furnace-recipe-185.png" alt="Furnace" /> } @else if (category.id == 'brewing') { <img class="recipe-category-image" src="tilt-ui://assets/cauldron-recipe-184.png" alt="Cauldron" /> } @else { <img class="recipe-category-image" [alt]="category.preview_key" /> }
+    <p class="recipe-category-name">{{ category.name }}</p><p class="recipe-category-count">{{ category.count }}</p>
+  </button>
+  <tooltip id="recipe-category-tooltip" for="recipe-category" trigger="hover" variant="follow" class="recipe-category-tooltip"><p class="recipe-category-name">{{ category.name }}</p></tooltip>
+</div>

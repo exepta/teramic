@@ -1,66 +1,15 @@
 {
   "creative_category": "terrain",
-  "description": "Living turf whose color follows the surrounding biome.",
+  "description": "Living turf using the authored Fiverr grass-block PBR model.",
   "schema_version": 1,
   "id": 1,
   "name": "Meadow Grass",
-  "render_kind": "cube",
-  "surface": "turf",
-  "bevel_width": 0.0,
-  "materials": {
-    "Painted meadow turf": {
-      "texture_pattern": "turf",
-      "roughness": 1.0,
-      "reflectance": 0.12
-    },
-    "Root-rich earth": {
-      "texture_pattern": "earth",
-      "roughness": 1.0,
-      "reflectance": 0.12
-    }
-  },
-  "face_materials": [
-    "Root-rich earth",
-    "Root-rich earth",
-    "Root-rich earth",
-    "Painted meadow turf",
-    "Root-rich earth",
-    "Root-rich earth"
-  ],
-  "side_cap": {
-    "material": "Painted meadow turf",
-    "height": 0.18
-  },
-  "details": [
-    {
-      "mesh": "MeadowTuft",
-      "probability": 0.7,
-      "density_field": "grass"
-    },
-    {
-      "mesh": "Fern",
-      "probability": 0.12,
-      "density_field": "fern"
-    },
-    {
-      "mesh": "Wildflowers",
-      "probability": 0.14,
-      "density_field": "flower"
-    },
-    {
-      "mesh": "Shrub",
-      "probability": 0.055,
-      "density_field": "bush"
-    },
-    {
-      "mesh": "ShoreReeds",
-      "probability": 0.09,
-      "water_clearance": [
-        0.05,
-        2.5
-      ]
-    }
-  ],
+  "render_kind": "custom_mesh",
+  "model_layout": "face_groups",
+  "model": "models/fiverr_grass_faces.glb",
+  "bevel_width": 0.02,
+  "faces": ["West", "East", "Down", "Up", "North", "South"],
+  "coarse_faces": ["WestLod", "EastLod", "DownLod", "UpLod", "NorthLod", "SouthLod"],
   "hardness": 0.55,
   "resistance": 0.5,
   "required_tool": null,

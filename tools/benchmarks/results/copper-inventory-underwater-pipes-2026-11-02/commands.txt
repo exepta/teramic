@@ -1,0 +1,22 @@
+Verification commands, workspace root, 2026-11-02:
+
+cargo build --workspace --locked -j1
+cargo test --workspace --locked -j1
+cargo clippy --workspace --all-targets --locked -j1 -- -D warnings
+cargo fmt --all --check
+git diff --check
+
+Native UI:
+TERRA_CONFIG_DIR=/tmp/teramic180-ui-config TERRA_MENU_CONFIG_DIR=/tmp/teramic180-ui-config TERRA_COMPUTE_THREADS=16 TERRA_INVENTORY_REFERENCE_SMOKE=1 TERRA_NATIVE_OS_POINTER=1 TERRA_CAPTURE_DIR=<report>/ui-final target/debug/terra-client --smoke-test-inventory
+
+Native hydraulics (temporary integrated authority, no user save):
+TERRA_CONFIG_DIR=/tmp/teramic165-perf-config TERRA_MENU_CONFIG_DIR=/tmp/teramic165-perf-config TERRA_COMPUTE_THREADS=16 TERRA_CAPTURE_DIR=<report>/hydraulics-final target/debug/terra-client --smoke-test-hydraulics
+
+Native partial blocks:
+TERRA_CONFIG_DIR=/tmp/teramic165-perf-config TERRA_MENU_CONFIG_DIR=/tmp/teramic165-perf-config TERRA_COMPUTE_THREADS=16 TERRA_PARTIAL_WATER_SMOKE=1 TERRA_CAPTURE_DIR=<report>/partial-final target/debug/terra-client --smoke-test-waterfalls
+
+Native shore and Solid Water pipes:
+TERRA_CONFIG_DIR=/tmp/teramic165-perf-config TERRA_MENU_CONFIG_DIR=/tmp/teramic165-perf-config TERRA_COMPUTE_THREADS=16 TERRA_PIPE_AIR_SMOKE=1 TERRA_CAPTURE_DIR=<report>/shore-final target/debug/terra-client --smoke-test-waterfalls
+
+Saved-world before/after (isolated copy only, paused journal clock at noon):
+TERRA_CONFIG_DIR=/tmp/teramic165-perf-config TERRA_MENU_CONFIG_DIR=/tmp/teramic165-perf-config TERRA_COMPUTE_THREADS=16 TERRA_WORLD_DIR=/tmp/teramic180-replay-library TERRA_BENCH_MODE=integrated TERRA_BENCH_SAVE_DIR=/tmp/teramic180-replay-library/Test TERRA_BENCH_WORLD_ID=10507773135099594380 TERRA_BENCH_CAMERA=-338.5,23.8,1104.5 TERRA_BENCH_LOOK_AT=-337.5,23.5,1103.5 TERRA_BENCH_SECONDS=3 TERRA_SCREENSHOT=<report>/after-fluid-face-fix.png target/debug/terra-client --smoke-test-benchmark

@@ -1,0 +1,831 @@
+{
+  "adapters": [
+    {
+      "backend": "Vulkan",
+      "device": 29605,
+      "device_pci_bus_id": "0000:0c:00.0",
+      "device_type": "DiscreteGpu",
+      "driver": "radv",
+      "driver_info": "Mesa 26.2.5-arch3.1",
+      "name": "AMD Radeon RX 6950 XT (RADV NAVI21)",
+      "vendor": 4098
+    }
+  ],
+  "cpu_scopes": {
+    "character.step": {
+      "calls": 4145,
+      "mean_ms": 0.021780781423401414,
+      "scope": "character.step",
+      "total_ms": 90.28133899999887
+    },
+    "chests.refresh_candidates": {
+      "calls": 386,
+      "mean_ms": 0.18887246891191659,
+      "scope": "chests.refresh_candidates",
+      "total_ms": 72.9047729999998
+    },
+    "collision.dispatch": {
+      "calls": 2590,
+      "mean_ms": 0.10191193011583184,
+      "scope": "collision.dispatch",
+      "total_ms": 263.95189900000446
+    },
+    "collision.readiness.region": {
+      "calls": 8290,
+      "mean_ms": 5.4198793727485646e-05,
+      "scope": "collision.readiness.region",
+      "total_ms": 0.449308000000856
+    },
+    "collision.receive": {
+      "calls": 2590,
+      "mean_ms": 0.012795725868725944,
+      "scope": "collision.receive",
+      "total_ms": 33.140930000000196
+    },
+    "cpu.extract_wall": {
+      "calls": 1155,
+      "mean_ms": 0.7121947238095081,
+      "scope": "cpu.extract_wall",
+      "total_ms": 822.5849059999819
+    },
+    "cpu.main_schedule_wall": {
+      "calls": 1155,
+      "mean_ms": 10.509163017315803,
+      "scope": "cpu.main_schedule_wall",
+      "total_ms": 12138.083284999753
+    },
+    "cpu.render_handoff_wall": {
+      "calls": 1155,
+      "mean_ms": 10.198502435497874,
+      "scope": "cpu.render_handoff_wall",
+      "total_ms": 11779.270313000045
+    },
+    "cpu.render_schedule_wall": {
+      "calls": 1155,
+      "mean_ms": 19.98232755584392,
+      "scope": "cpu.render_schedule_wall",
+      "total_ms": 23079.58832699973
+    },
+    "creatures.navigation.path": {
+      "calls": 51,
+      "mean_ms": 1.6192323725490183,
+      "scope": "creatures.navigation.path",
+      "total_ms": 82.58085099999994
+    },
+    "creatures.navigation.surface_path": {
+      "calls": 19,
+      "mean_ms": 0.6461530000000004,
+      "scope": "creatures.navigation.surface_path",
+      "total_ms": 12.276907000000008
+    },
+    "creatures.needs.find_water": {
+      "calls": 225,
+      "mean_ms": 0.01605466222222209,
+      "scope": "creatures.needs.find_water",
+      "total_ms": 3.61229899999997
+    },
+    "creatures.needs.water_surface": {
+      "calls": 14400,
+      "mean_ms": 0.00015802847222235448,
+      "scope": "creatures.needs.water_surface",
+      "total_ms": 2.2756100000019046
+    },
+    "creatures.server_tick": {
+      "calls": 239,
+      "mean_ms": 2.8668050376569076,
+      "scope": "creatures.server_tick",
+      "total_ms": 685.166404000001
+    },
+    "integrated.autosave.snapshot": {
+      "calls": 3,
+      "mean_ms": 0.2777326666666666,
+      "scope": "integrated.autosave.snapshot",
+      "total_ms": 0.8331979999999999
+    },
+    "lights.discover": {
+      "calls": 38,
+      "mean_ms": 0.012888894736842136,
+      "scope": "lights.discover",
+      "total_ms": 0.48977800000000116
+    },
+    "lights.select": {
+      "calls": 1155,
+      "mean_ms": 0.021109314285715518,
+      "scope": "lights.select",
+      "total_ms": 24.381258000001424
+    },
+    "lights.shadow_visibility": {
+      "calls": 1155,
+      "mean_ms": 0.006797339393939393,
+      "scope": "lights.shadow_visibility",
+      "total_ms": 7.850926999999999
+    },
+    "machines.refresh_candidates": {
+      "calls": 229,
+      "mean_ms": 0.0007776986899563288,
+      "scope": "machines.refresh_candidates",
+      "total_ms": 0.17809299999999928
+    },
+    "main.first": {
+      "calls": 1155,
+      "mean_ms": 0.18625532467532666,
+      "scope": "main.first",
+      "total_ms": 215.1249000000023
+    },
+    "main.fixed_loop": {
+      "calls": 1155,
+      "mean_ms": 0.716322044155857,
+      "scope": "main.fixed_loop",
+      "total_ms": 827.3519610000149
+    },
+    "main.last": {
+      "calls": 1155,
+      "mean_ms": 0.1027134943722943,
+      "scope": "main.last",
+      "total_ms": 118.63408599999991
+    },
+    "main.post_update": {
+      "calls": 1155,
+      "mean_ms": 5.14888093246746,
+      "scope": "main.post_update",
+      "total_ms": 5946.957476999916
+    },
+    "main.pre_update": {
+      "calls": 1155,
+      "mean_ms": 0.4194080398268435,
+      "scope": "main.pre_update",
+      "total_ms": 484.4162860000042
+    },
+    "main.update": {
+      "calls": 1155,
+      "mean_ms": 3.8249677238094764,
+      "scope": "main.update",
+      "total_ms": 4417.837720999945
+    },
+    "mapping.index.incremental": {
+      "calls": 38,
+      "mean_ms": 0.008402947368420774,
+      "scope": "mapping.index.incremental",
+      "total_ms": 0.3193119999999894
+    },
+    "mapping.index.journal": {
+      "calls": 37,
+      "mean_ms": 0.05502275675675675,
+      "scope": "mapping.index.journal",
+      "total_ms": 2.0358419999999997
+    },
+    "mapping.schedule": {
+      "calls": 116,
+      "mean_ms": 0.4788752586206904,
+      "scope": "mapping.schedule",
+      "total_ms": 55.54953000000009
+    },
+    "mapping.snapshot": {
+      "calls": 38,
+      "mean_ms": 0.03571034210526323,
+      "scope": "mapping.snapshot",
+      "total_ms": 1.3569930000000028
+    },
+    "openings.refresh_candidates": {
+      "calls": 229,
+      "mean_ms": 0.23601169432314478,
+      "scope": "openings.refresh_candidates",
+      "total_ms": 54.046678000000156
+    },
+    "props.contact_shadows": {
+      "calls": 1155,
+      "mean_ms": 0.01646917835497854,
+      "scope": "props.contact_shadows",
+      "total_ms": 19.021901000000213
+    },
+    "props.dispatch": {
+      "calls": 1156,
+      "mean_ms": 0.16947485467127907,
+      "scope": "props.dispatch",
+      "total_ms": 195.9129319999986
+    },
+    "props.prepare": {
+      "calls": 689,
+      "mean_ms": 0.0018578969521054875,
+      "scope": "props.prepare",
+      "total_ms": 1.2800910000006809
+    },
+    "props.select": {
+      "calls": 689,
+      "mean_ms": 0.12887187518142337,
+      "scope": "props.select",
+      "total_ms": 88.79272200000071
+    },
+    "props.upload": {
+      "calls": 1155,
+      "mean_ms": 0.02996963809523953,
+      "scope": "props.upload",
+      "total_ms": 34.61493200000166
+    },
+    "render.assets": {
+      "calls": 1155,
+      "mean_ms": 0.6443264294372166,
+      "scope": "render.assets",
+      "total_ms": 744.1970259999853
+    },
+    "render.bind_groups": {
+      "calls": 1155,
+      "mean_ms": 3.5479806095238176,
+      "scope": "render.bind_groups",
+      "total_ms": 4097.917604000009
+    },
+    "render.camera_mainpass": {
+      "calls": 1155,
+      "mean_ms": 0.4170462450216449,
+      "scope": "render.camera_mainpass",
+      "total_ms": 481.68841299999985
+    },
+    "render.camera_postprocess": {
+      "calls": 1155,
+      "mean_ms": 0.5579584822510784,
+      "scope": "render.camera_postprocess",
+      "total_ms": 644.4420469999955
+    },
+    "render.camera_prepass": {
+      "calls": 1155,
+      "mean_ms": 0.3468356242424267,
+      "scope": "render.camera_prepass",
+      "total_ms": 400.59514600000284
+    },
+    "render.cleanup": {
+      "calls": 1155,
+      "mean_ms": 0.04022171082251102,
+      "scope": "render.cleanup",
+      "total_ms": 46.45607600000022
+    },
+    "render.create_views": {
+      "calls": 1155,
+      "mean_ms": 0.2649499004329003,
+      "scope": "render.create_views",
+      "total_ms": 306.0171349999998
+    },
+    "render.execute": {
+      "calls": 1155,
+      "mean_ms": 10.052258556710004,
+      "scope": "render.execute",
+      "total_ms": 11610.358633000054
+    },
+    "render.graph_submit": {
+      "calls": 1155,
+      "mean_ms": 8.147657476190394,
+      "scope": "render.graph_submit",
+      "total_ms": 9410.544384999906
+    },
+    "render.mesh_allocator": {
+      "calls": 1155,
+      "mean_ms": 0.29435408744588154,
+      "scope": "render.mesh_allocator",
+      "total_ms": 339.9789709999932
+    },
+    "render.mesh_allocator.body": {
+      "calls": 1155,
+      "mean_ms": 0.2819549792207601,
+      "scope": "render.mesh_allocator.body",
+      "total_ms": 325.65800099997796
+    },
+    "render.mesh_bind_groups": {
+      "calls": 1155,
+      "mean_ms": 3.500519810389598,
+      "scope": "render.mesh_bind_groups",
+      "total_ms": 4043.1003809999856
+    },
+    "render.mesh_bind_groups.body": {
+      "calls": 1155,
+      "mean_ms": 0.13525377922077983,
+      "scope": "render.mesh_bind_groups.body",
+      "total_ms": 156.2181150000007
+    },
+    "render.meshes": {
+      "calls": 1155,
+      "mean_ms": 0.4739115861471834,
+      "scope": "render.meshes",
+      "total_ms": 547.3678819999968
+    },
+    "render.point_shadow_group": {
+      "calls": 1155,
+      "mean_ms": 1.0438098571428562,
+      "scope": "render.point_shadow_group",
+      "total_ms": 1205.6003849999988
+    },
+    "render.prepare_lights.body": {
+      "calls": 1155,
+      "mean_ms": 0.18348418701298608,
+      "scope": "render.prepare_lights.body",
+      "total_ms": 211.92423599999893
+    },
+    "render.prepare_mesh_assets": {
+      "calls": 1155,
+      "mean_ms": 0.3458309636363654,
+      "scope": "render.prepare_mesh_assets",
+      "total_ms": 399.434763000002
+    },
+    "render.prepare_mesh_assets.body": {
+      "calls": 1155,
+      "mean_ms": 0.00950948917748953,
+      "scope": "render.prepare_mesh_assets.body",
+      "total_ms": 10.983460000000406
+    },
+    "render.prepare_view_targets.body": {
+      "calls": 1155,
+      "mean_ms": 0.008085382683982664,
+      "scope": "render.prepare_view_targets.body",
+      "total_ms": 9.338616999999978
+    },
+    "render.prepare_windows.body": {
+      "calls": 1155,
+      "mean_ms": 0.05412473246753199,
+      "scope": "render.prepare_windows.body",
+      "total_ms": 62.514065999999445
+    },
+    "render.preprocess_bind_groups": {
+      "calls": 1155,
+      "mean_ms": 3.493602759307371,
+      "scope": "render.preprocess_bind_groups",
+      "total_ms": 4035.111187000013
+    },
+    "render.preprocess_bind_groups.body": {
+      "calls": 1155,
+      "mean_ms": 3.3532500709956286,
+      "scope": "render.preprocess_bind_groups.body",
+      "total_ms": 3873.003831999951
+    },
+    "render.preprocess_buffers.reserve": {
+      "calls": 1155,
+      "mean_ms": 0.0005432225108225064,
+      "scope": "render.preprocess_buffers.reserve",
+      "total_ms": 0.6274219999999948
+    },
+    "render.queue": {
+      "calls": 1155,
+      "mean_ms": 0.14316969610389532,
+      "scope": "render.queue",
+      "total_ms": 165.36099899999908
+    },
+    "render.resources": {
+      "calls": 1155,
+      "mean_ms": 0.3918081722943738,
+      "scope": "render.resources",
+      "total_ms": 452.53843900000174
+    },
+    "render.shadow_bin_uploads.body": {
+      "calls": 1155,
+      "mean_ms": 2.9846322025973886,
+      "scope": "render.shadow_bin_uploads.body",
+      "total_ms": 3447.250193999984
+    },
+    "render.sort": {
+      "calls": 1155,
+      "mean_ms": 0.044224116017315754,
+      "scope": "render.sort",
+      "total_ms": 51.078853999999694
+    },
+    "render.specialize": {
+      "calls": 1155,
+      "mean_ms": 0.19389204588744172,
+      "scope": "render.specialize",
+      "total_ms": 223.94531299999517
+    },
+    "render.views": {
+      "calls": 1155,
+      "mean_ms": 0.15026002077922465,
+      "scope": "render.views",
+      "total_ms": 173.55032400000448
+    },
+    "server.infusion_visuals": {
+      "calls": 239,
+      "mean_ms": 0.01982807531380743,
+      "scope": "server.infusion_visuals",
+      "total_ms": 4.738909999999976
+    },
+    "server.send_deltas": {
+      "calls": 1435,
+      "mean_ms": 0.02237192334494768,
+      "scope": "server.send_deltas",
+      "total_ms": 32.10370999999992
+    },
+    "storage.save_edits": {
+      "calls": 3,
+      "mean_ms": 3.296848333333331,
+      "scope": "storage.save_edits",
+      "total_ms": 9.890544999999992
+    },
+    "streaming.dispatch": {
+      "calls": 2590,
+      "mean_ms": 0.00022677335907381608,
+      "scope": "streaming.dispatch",
+      "total_ms": 0.5873430000011837
+    },
+    "streaming.interest": {
+      "calls": 2590,
+      "mean_ms": 0.0013928138996139147,
+      "scope": "streaming.interest",
+      "total_ms": 3.6073880000000393
+    },
+    "streaming.receive": {
+      "calls": 2590,
+      "mean_ms": 0.0011292370656369988,
+      "scope": "streaming.receive",
+      "total_ms": 2.924723999999827
+    },
+    "terrain.dispatch": {
+      "calls": 1155,
+      "mean_ms": 0.3105967463203287,
+      "scope": "terrain.dispatch",
+      "total_ms": 358.73924199997964
+    },
+    "terrain.invalidate.chunks": {
+      "calls": 38,
+      "mean_ms": 5.0289473684210236e-05,
+      "scope": "terrain.invalidate.chunks",
+      "total_ms": 0.001910999999999989
+    },
+    "terrain.invalidate.journal": {
+      "calls": 38,
+      "mean_ms": 2.3684210526315692e-05,
+      "scope": "terrain.invalidate.journal",
+      "total_ms": 0.0008999999999999963
+    },
+    "terrain.prepare_jobs": {
+      "calls": 483,
+      "mean_ms": 0.008701710144910453,
+      "scope": "terrain.prepare_jobs",
+      "total_ms": 4.2029259999917485
+    },
+    "terrain.prioritize_queue": {
+      "calls": 67,
+      "mean_ms": 0.00036597014927657024,
+      "scope": "terrain.prioritize_queue",
+      "total_ms": 0.024520000001530207
+    },
+    "terrain.refresh.appearance": {
+      "calls": 38,
+      "mean_ms": 0.11310126315789469,
+      "scope": "terrain.refresh.appearance",
+      "total_ms": 4.297847999999998
+    },
+    "terrain.refresh.queue": {
+      "calls": 483,
+      "mean_ms": 0.7047766604554827,
+      "scope": "terrain.refresh.queue",
+      "total_ms": 340.4071269999981
+    },
+    "terrain.refresh.queue.full": {
+      "calls": 477,
+      "mean_ms": 0.70405743815514,
+      "scope": "terrain.refresh.queue.full",
+      "total_ms": 335.83539800000176
+    },
+    "terrain.stream_exposure": {
+      "calls": 1155,
+      "mean_ms": 0.002167080519480506,
+      "scope": "terrain.stream_exposure",
+      "total_ms": 2.5029779999999846
+    },
+    "terrain.stream_exposure.publications": {
+      "calls": 1155,
+      "mean_ms": 0.00012109523809513536,
+      "scope": "terrain.stream_exposure.publications",
+      "total_ms": 0.13986499999988133
+    },
+    "terrain.stream_exposure.removals": {
+      "calls": 1155,
+      "mean_ms": 0.0001876658008655624,
+      "scope": "terrain.stream_exposure.removals",
+      "total_ms": 0.21675399999972456
+    },
+    "terrain.upload": {
+      "calls": 1155,
+      "mean_ms": 0.03419145627705873,
+      "scope": "terrain.upload",
+      "total_ms": 39.491132000002835
+    },
+    "terrain.visibility": {
+      "calls": 1155,
+      "mean_ms": 0.011693067532468715,
+      "scope": "terrain.visibility",
+      "total_ms": 13.505493000001366
+    },
+    "transitions.animate": {
+      "calls": 1155,
+      "mean_ms": 0.010549102164505412,
+      "scope": "transitions.animate",
+      "total_ms": 12.184213000003751
+    },
+    "transitions.retire_commit": {
+      "calls": 74,
+      "mean_ms": 0.012270932432432458,
+      "scope": "transitions.retire_commit",
+      "total_ms": 0.9080490000000019
+    },
+    "transitions.retirement.drain": {
+      "calls": 67,
+      "mean_ms": 0.05396653731343304,
+      "scope": "transitions.retirement.drain",
+      "total_ms": 3.615758000000014
+    },
+    "transitions.retirement.release": {
+      "calls": 74,
+      "mean_ms": 0.04455681081081068,
+      "scope": "transitions.retirement.release",
+      "total_ms": 3.29720399999999
+    },
+    "ui.frames.catalog_slot_size": {
+      "calls": 1155,
+      "mean_ms": 0.005622317748917824,
+      "scope": "ui.frames.catalog_slot_size",
+      "total_ms": 6.493777000000087
+    },
+    "ui.frames.content_density": {
+      "calls": 1155,
+      "mean_ms": 0.06543050649350622,
+      "scope": "ui.frames.content_density",
+      "total_ms": 75.5722349999997
+    },
+    "ui.frames.inventory_aspect": {
+      "calls": 1155,
+      "mean_ms": 0.03199332987012974,
+      "scope": "ui.frames.inventory_aspect",
+      "total_ms": 36.95229599999985
+    },
+    "ui.frames.inventory_slot_size": {
+      "calls": 1155,
+      "mean_ms": 0.04786906406926338,
+      "scope": "ui.frames.inventory_slot_size",
+      "total_ms": 55.288768999999206
+    },
+    "ui.frames.nine_slice": {
+      "calls": 1155,
+      "mean_ms": 0.009390045887446085,
+      "scope": "ui.frames.nine_slice",
+      "total_ms": 10.845503000000228
+    },
+    "ui.frames.responsive_inventory_scale": {
+      "calls": 1155,
+      "mean_ms": 0.006505856277056213,
+      "scope": "ui.frames.responsive_inventory_scale",
+      "total_ms": 7.514263999999926
+    },
+    "ui.reactivity": {
+      "calls": 1155,
+      "mean_ms": 1.352190326406881,
+      "scope": "ui.reactivity",
+      "total_ms": 1561.7798269999475
+    },
+    "water.upload": {
+      "calls": 1155,
+      "mean_ms": 0.0009048164502164662,
+      "scope": "water.upload",
+      "total_ms": 1.0450630000000185
+    },
+    "water_audio.column": {
+      "calls": 38,
+      "mean_ms": 0.00219236842105262,
+      "scope": "water_audio.column",
+      "total_ms": 0.08330999999999955
+    },
+    "water_audio.scan": {
+      "calls": 47,
+      "mean_ms": 0.3026492340425529,
+      "scope": "water_audio.scan",
+      "total_ms": 14.224513999999985
+    },
+    "water_audio.update": {
+      "calls": 1155,
+      "mean_ms": 0.004395580086580114,
+      "scope": "water_audio.update",
+      "total_ms": 5.076895000000032
+    },
+    "world.farming": {
+      "calls": 24,
+      "mean_ms": 0.034127041666666656,
+      "scope": "world.farming",
+      "total_ms": 0.8190489999999997
+    },
+    "world.import_section_delta": {
+      "calls": 74,
+      "mean_ms": 0.040571959459459496,
+      "scope": "world.import_section_delta",
+      "total_ms": 3.0023250000000026
+    }
+  },
+  "effective_configuration": {
+    "benchmark_mode": "integrated",
+    "benchmark_ui": true,
+    "configured_resolution": [
+      2562,
+      1440
+    ],
+    "configured_weather": "Clear",
+    "fov_degrees": 90.0,
+    "graphics": "GraphicsConfig { blocks: BlockDetailConfig { detail_quality: High, micro_geometry: true, micro_geometry_distance: 48.0, material_detail: true, normal_mapping: true, surface_variation: true, leaf_geometry_quality: High }, width: 2562, height: 1440, window_mode: Windowed, vsync: false, fps_limit: 0, render_distance: 20, fog_distance: 1.0, chunk_animation: Rise, tree_fall_animation: Current, lod_distance: 1.0, shadow_quality: High, cave_quality: Medium, water_quality: High, vegetation_density: 1.0, brightness: 1.0, ui_scale: 1.0, ui_fps: 60, hud_position: [0.0, 0.0], chat_position: None, target_position: None, minimap_position: None, fov: 90.0, water_reflections: true, water_volumetric_mist: false, water_wave_strength: 0.65, weather: Clear, weather_intensity: 1.0, weather_quality: High, debug_overlay: true }",
+    "graphics_source": "TERRA_CONFIG_DIR/graphics.toml",
+    "hotbar_visible": true,
+    "menu_page": "Playing",
+    "minimap_visible": true,
+    "physical_resolution": [
+      2562,
+      1440
+    ],
+    "render_distance": 20,
+    "rendered_weather": "WeatherRenderStatus { rain: 0.78, snow: 0.0, clouds: 0.82699996, quads: 2425, batches: 1, cached_roofs: 289, roof_queries: 0, mesh_uploads: 6, wind_strength: 2.0999997, wet_batches: 11898, cloud_faces: 6, cloud_batches: 1, cloud_uploads: 1, cloud_shaft_batches: 0, cloud_shaft_vertices: 0, snow_level: 1, snow_size: 2.0, lightning_flash: 0.0, lightning_bolts: 0 }",
+    "requested_benchmark_mode": "integrated",
+    "requested_physical_resolution": [
+      2562,
+      1440
+    ],
+    "survival_hud_visible": true,
+    "terrain_lod": "(96.0,",
+    "vertical_view_distance": 3,
+    "vsync": false,
+    "water_quality": "High",
+    "weather_quality": "High",
+    "world_weather": "WorldWeather { sequence: 1, elapsed_seconds: 134.6213140520003, elapsed_total: 151.9338805410006, duration_seconds: 240.0, transition_seconds: 8.0, from_intensity: 0.0, target_intensity: 0.78, from_wind: [0.35, 0.15], target_wind: [1.9302044, 0.8272305], wetness: 0.77940536, pattern: Rain, snow_level: 1, latest_lightning: None }"
+  },
+  "inventory_phases": [],
+  "inventory_transitions": [],
+  "measurement_kind": "CPU wall-frame intervals; GPU fields below are memory allocations, not GPU frame timings",
+  "native_wall": {
+    "average_fps": 48.123398353045815,
+    "benchmark_mode": "integrated",
+    "camera": "(Vec3(-585.5, 33.63, 976.5",
+    "chunk_animations": "ChunkAnimationStatus { queued: 0, queued_in_view: 0, active: 0, waiting_for_draw: 0, waiting_materials: [0, 0, 0, 0], started_after_draw: 4440, completed: 4448, peak_active: 96, retiring_roots: 0, retiring_meshes: 0, retiring_materials: 0, retirement_overflows: 0 }",
+    "controller_calls": 17200,
+    "controller_max_ms": 0.98434,
+    "controller_mean_ms": 0.019813026860465117,
+    "deferred_upload_batches": 1645,
+    "far_cache_bytes": 0,
+    "far_groups": 0,
+    "far_source_batches": 0,
+    "frames_below_32_fps": 0,
+    "initial_load_seconds": 57.790994404,
+    "loaded_active_props": 198927,
+    "loaded_sections": 11876,
+    "maximum_fps": 71.29296203008136,
+    "mesh_assets": 26139,
+    "mesh_draw_submissions": null,
+    "minimum_fps": 32.43680807017405,
+    "occluded_sections": 0,
+    "p95_frame_ms": 24.702162,
+    "p99_frame_ms": 26.912025,
+    "peak_admitted_upload_bytes": 10556296,
+    "peak_admitted_upload_vertices": 220198,
+    "physical_resolution": [
+      2562,
+      1440
+    ],
+    "point_lights": 8,
+    "prop_batches": 2261,
+    "prop_composition_jobs": 3605,
+    "prop_composition_worker_seconds": 3.670982498999994,
+    "rendered_sections": 7259,
+    "represented_props": 198927,
+    "requested_physical_resolution": [
+      2562,
+      1440
+    ],
+    "resident_memory_kib": 2705364,
+    "sample_frames": 1155,
+    "sample_window_seconds": 24.0,
+    "shadowed_point_lights": 8,
+    "terrain_composition_jobs": 14707,
+    "terrain_composition_max_ms": 43.462134999999996,
+    "terrain_composition_worker_seconds": 15.164043321000047,
+    "visible_mesh_entities": 15644,
+    "water_tiles": 72,
+    "worst_frame_ms": 30.829174000000002
+  },
+  "process": {
+    "command": [
+      "/tmp/teramic-o07-i3w2xd60/binaries/terra-client-before",
+      "--smoke-test-benchmark"
+    ],
+    "exit_code": 0,
+    "peak_drm_memory_gtt_kib": 67588,
+    "peak_drm_memory_vram_kib": 6546528,
+    "peak_rss_kib": 2711108,
+    "system_cpu_seconds": 44.01,
+    "user_cpu_seconds": 442.413,
+    "wall_seconds": 152.655
+  },
+  "rapid_edits": null,
+  "real_input_route": [],
+  "render_counts": {
+    "deferred_upload_batches": 1645,
+    "far_cache_bytes": 0,
+    "far_groups": 0,
+    "loaded_active_props": 198927,
+    "loaded_sections": 11876,
+    "mesh_assets": 26139,
+    "occluded_sections": 0,
+    "peak_admitted_upload_bytes": 10556296,
+    "peak_admitted_upload_vertices": 220198,
+    "point_lights": 8,
+    "prop_batches": 2261,
+    "rendered_sections": 7259,
+    "represented_props": 198927,
+    "shadowed_point_lights": 8,
+    "terrain_composition_jobs": 14707,
+    "visible_mesh_entities": 15644,
+    "water_tiles": 72
+  },
+  "resource_timeline": [
+    {
+      "cpu_interval_seconds": 30.134,
+      "cpu_percent": 429.886,
+      "cpu_ticks_delta": 12954,
+      "drm_memory_gtt_kib": 67588,
+      "drm_memory_vram_kib": 4925672,
+      "elapsed_seconds": 30.134,
+      "kind": "resource_timeline",
+      "major_faults": 98,
+      "major_faults_delta": 98,
+      "minor_faults": 481332,
+      "minor_faults_delta": 481324,
+      "rss_kib": 2501780,
+      "swap_kib": 0,
+      "system_cpu_ticks": 998,
+      "user_cpu_ticks": 11956,
+      "wall_unix_seconds": 1793870824.1056352
+    },
+    {
+      "cpu_interval_seconds": 30.128,
+      "cpu_percent": 307.091,
+      "cpu_ticks_delta": 9252,
+      "drm_memory_gtt_kib": 67588,
+      "drm_memory_vram_kib": 6524364,
+      "elapsed_seconds": 60.261,
+      "kind": "resource_timeline",
+      "major_faults": 98,
+      "major_faults_delta": 0,
+      "minor_faults": 544566,
+      "minor_faults_delta": 63234,
+      "rss_kib": 2675064,
+      "swap_kib": 0,
+      "system_cpu_ticks": 1801,
+      "user_cpu_ticks": 20405,
+      "wall_unix_seconds": 1793870854.2335393
+    },
+    {
+      "cpu_interval_seconds": 30.128,
+      "cpu_percent": 288.805,
+      "cpu_ticks_delta": 8701,
+      "drm_memory_gtt_kib": 67588,
+      "drm_memory_vram_kib": 6546368,
+      "elapsed_seconds": 90.389,
+      "kind": "resource_timeline",
+      "major_faults": 98,
+      "major_faults_delta": 0,
+      "minor_faults": 573309,
+      "minor_faults_delta": 28743,
+      "rss_kib": 2690548,
+      "swap_kib": 0,
+      "system_cpu_ticks": 2632,
+      "user_cpu_ticks": 28275,
+      "wall_unix_seconds": 1793870884.361144
+    },
+    {
+      "cpu_interval_seconds": 30.131,
+      "cpu_percent": 288.974,
+      "cpu_ticks_delta": 8707,
+      "drm_memory_gtt_kib": 67588,
+      "drm_memory_vram_kib": 6546528,
+      "elapsed_seconds": 120.52,
+      "kind": "resource_timeline",
+      "major_faults": 98,
+      "major_faults_delta": 0,
+      "minor_faults": 583477,
+      "minor_faults_delta": 10168,
+      "rss_kib": 2697380,
+      "swap_kib": 0,
+      "system_cpu_ticks": 3488,
+      "user_cpu_ticks": 36126,
+      "wall_unix_seconds": 1793870914.4918687
+    },
+    {
+      "cpu_interval_seconds": 30.128,
+      "cpu_percent": 285.179,
+      "cpu_ticks_delta": 8592,
+      "drm_memory_gtt_kib": 67588,
+      "drm_memory_vram_kib": 6546528,
+      "elapsed_seconds": 150.648,
+      "kind": "resource_timeline",
+      "major_faults": 98,
+      "major_faults_delta": 0,
+      "minor_faults": 588641,
+      "minor_faults_delta": 5164,
+      "rss_kib": 2701464,
+      "swap_kib": 0,
+      "system_cpu_ticks": 4315,
+      "user_cpu_ticks": 43891,
+      "wall_unix_seconds": 1793870944.620269
+    }
+  ],
+  "scenario": "rain",
+  "valid": true,
+  "village_residents": []
+}

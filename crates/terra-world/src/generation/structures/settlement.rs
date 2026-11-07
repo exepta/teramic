@@ -36,6 +36,7 @@ pub struct VillageResidence {
 }
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ResidentSite {
+    pub layout: SettlementLayout,
     pub slot: u16,
     pub role: u8,
     /// Primary foot cell; head = foot + cardinal forward[bed_facing].
@@ -53,6 +54,7 @@ pub struct ResidentSite {
 pub struct VillageSettlement {
     pub id: u64,
     pub size: VillageSize,
+    pub layout: SettlementLayout,
     pub style: VillageStyle,
     pub center: [i64; 3],
     pub bounds: [[i64; 3]; 2],
@@ -61,14 +63,46 @@ pub struct VillageSettlement {
     pub residents: Vec<ResidentSite>,
 }
 
+impl VillageSettlement {
+    pub fn domain(&self) -> terra_core::kingdom::SettlementDomain {
+        use terra_core::kingdom::{DomainKind, SettlementDomain};
+        let kind = match self.layout {
+            SettlementLayout::Village => DomainKind::Village,
+            SettlementLayout::Outpost => DomainKind::Outpost,
+            _ => DomainKind::Kingdom,
+        };
+        SettlementDomain {
+            id: self.id,
+            center: self.center,
+            bounds: self.bounds,
+            kind,
+            native: self.bot_kingdom(),
+        }
+    }
+
+    pub fn bot_kingdom(&self) -> Option<terra_core::kingdom::BotKingdom> {
+        terra_core::kingdom::BotKingdom::for_settlement(
+            self.id,
+            self.layout != SettlementLayout::Village,
+        )
+    }
+}
+
+impl ResidentSite {
+    pub fn bot_kingdom(&self) -> Option<terra_core::kingdom::BotKingdom> {
+        terra_core::kingdom::BotKingdom::for_settlement(
+            self.village_id,
+            self.layout != SettlementLayout::Village,
+        )
+    }
+}
+
 pub(super) fn describe(
     summary: &SiteSummary,
     sections: &BTreeMap<SectionPos, StructurePatch>,
     seed: u32,
 ) -> Option<Arc<VillageSettlement>> {
-    if summary.kind != StructureKind::Village {
-        return None;
-    }
+    let layout = summary.layout()?;
     let mut buildings: Vec<_> = summary.buildings.iter().collect();
     buildings.sort_unstable_by_key(|b| b.entrance);
     let mut homes = Vec::new();
@@ -102,7 +136,7 @@ pub(super) fn describe(
             });
         }
         for bed in beds {
-            if residents.len() >= 128 {
+            if residents.len() >= 256 {
                 break;
             }
             let role = match building.role {
@@ -110,9 +144,14 @@ pub(super) fn describe(
                 BuildingRole::Medic => 7,
                 BuildingRole::Smith => 8,
                 BuildingRole::Police => 4,
+                BuildingRole::Barracks => 10 + (residents.len() % 3) as u8,
+                _ if layout != SettlementLayout::Village => {
+                    [0, 1, 8, 9, 6][(residents.len() + seed as usize) % 5]
+                }
                 _ => [0, 1, 8, 9, 6, 2, 3][(residents.len() + seed as usize) % 7],
             };
             residents.push(ResidentSite {
+                layout,
                 slot: residents.len() as u16,
                 role,
                 bed: bed.foot,
@@ -128,6 +167,7 @@ pub(super) fn describe(
     Some(Arc::new(VillageSettlement {
         id: summary.id,
         size: VillageSize::from_seed(seed),
+        layout,
         style: summary.style,
         center: summary.center,
         bounds: summary.bounds,

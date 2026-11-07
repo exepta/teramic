@@ -1,0 +1,39 @@
+{
+  "reviewed_utc": "2026-11-06T19:19:23.857563+00:00",
+  "status": "passed",
+  "native_execution": {
+    "doors": {
+      "exit_code": 0,
+      "captures": 4
+    },
+    "claims": {
+      "exit_code": 0,
+      "captures": 5
+    }
+  },
+  "observations": {
+    "doors": [
+      "All four wood variants retain matching materials.",
+      "Closed double doors have one outer surround and no doubled central frame.",
+      "Open leaves hinge at opposite outer sides and leave the central passage clear.",
+      "Removing one birch leaf leaves one valid independently framed/open single door."
+    ],
+    "claims": [
+      "Viewer relation key and selected Own badge are readable.",
+      "Eastbank changes from Allied to Hostile without changing its orange ownership color.",
+      "The compact sidebar remains scrollable and its labels remain within its width.",
+      "Rectangle preview contains six chunks; right-click removal leaves five, without a white chunk outline."
+    ]
+  },
+  "images_reviewed": [
+    "doors/doors-closed.png",
+    "doors/doors-open.png",
+    "doors/oak-double-door-open.png",
+    "doors/birch-door-separated.png",
+    "claims/diplomacy-claims.png",
+    "claims/diplomacy-live-color.png",
+    "claims/diplomacy-compact.png",
+    "claims/diplomacy-rectangle-preview.png",
+    "claims/diplomacy-rightclick-unselect.png"
+  ]
+}

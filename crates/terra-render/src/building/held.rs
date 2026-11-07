@@ -5,12 +5,14 @@ use terra_core::farming::FarmToolKind;
 use terra_core::{ItemKind, PlayerId};
 use terra_player::{CameraPerspective, TerraCamera};
 
+#[path = "vessels.rs"]
+mod vessels;
+pub(super) fn install(app: &mut App) {
+    vessels::install(app);
+}
+
 fn farm_kind(item: ItemKind) -> Option<FarmToolKind> {
-    if let ItemKind::Tool(tool) = item {
-        tool.farm_kind()
-    } else {
-        None
-    }
+    item.tool_kind().and_then(|tool| tool.farm_kind())
 }
 
 #[derive(Component)]
@@ -32,11 +34,11 @@ fn first_person_pose(
         _ => (65.0_f32.to_radians(), 16.0 / 9.0),
     };
     let tangent = (fov * 0.5).tan();
-    let tool = matches!(item, ItemKind::Tool(_) | ItemKind::Stick);
+    let tool = item.tool_kind().is_some() || item == ItemKind::Stick;
     let scythe = farm_kind(item) == Some(FarmToolKind::Scythe);
     let watering = farm_kind(item) == Some(FarmToolKind::WateringCan);
     let half_height = 0.55 * tangent;
-    let view_scale = if matches!(item, ItemKind::Tool(_)) {
+    let view_scale = if item.tool_kind().is_some() || vessels::is_vessel(item) {
         0.46 / (bounds.1.y - bounds.0.y).max(0.01)
     } else if tool {
         1.55
@@ -46,8 +48,12 @@ fn first_person_pose(
     let mut scale = view_scale * tangent / (65.0_f32.to_radians() * 0.5).tan();
     let rotation = Quat::from_euler(
         EulerRot::XYZ,
-        -0.12 - swing * if scythe || watering { 0.20 } else { 0.75 },
-        if matches!(item, ItemKind::Tool(_)) {
+        if vessels::is_vessel(item) {
+            0.40 - swing * 0.12
+        } else {
+            -0.12 - swing * if scythe || watering { 0.20 } else { 0.75 }
+        },
+        if item.tool_kind().is_some() {
             std::f32::consts::FRAC_PI_2 + 0.10 + if scythe { swing * 0.95 } else { 0.0 }
         } else if tool {
             -0.30
@@ -94,8 +100,12 @@ fn first_person_pose(
 
 fn third_person_pose(item: ItemKind) -> Transform {
     let palm = Vec3::new(0.008, -0.54 - crate::players::model::ELBOW, -0.028);
+    hand_pose(item, palm)
+}
+
+fn hand_pose(item: ItemKind, palm: Vec3) -> Transform {
     let rotation = Quat::from_rotation_x(-0.25)
-        * if matches!(item, ItemKind::Tool(_)) {
+        * if item.tool_kind().is_some() {
             Quat::from_rotation_y(std::f32::consts::FRAC_PI_2)
         } else {
             Quat::IDENTITY
@@ -104,7 +114,7 @@ fn third_person_pose(item: ItemKind) -> Transform {
         return Transform::from_translation(palm - rotation * grip).with_rotation(rotation);
     }
     let handle = matches!(
-        item,
+        item.preview_item(),
         ItemKind::Tool(_) | ItemKind::Stick | ItemKind::Block(40)
     );
     let grip = Vec3::new(
@@ -118,7 +128,14 @@ fn third_person_pose(item: ItemKind) -> Transform {
 }
 
 fn third_person_action_pose(item: ItemKind, swing: f32) -> Transform {
-    let mut pose = third_person_pose(item);
+    action_pose(item, swing, third_person_pose(item))
+}
+
+fn hand_action_pose(item: ItemKind, swing: f32, palm: Vec3) -> Transform {
+    action_pose(item, swing, hand_pose(item, palm))
+}
+
+fn action_pose(item: ItemKind, swing: f32, mut pose: Transform) -> Transform {
     if swing > 0.0
         && let Some(grip) = crate::previews::tools::grip(item)
     {
@@ -184,13 +201,21 @@ pub(super) fn render(
     mut assets: DropAssets,
     selected: Option<Res<terra_network::client::SelectedInventorySlot>>,
     remotes: Option<Res<terra_network::client::ReplicatedPlayers>>,
-    perspective: Res<CameraPerspective>,
+    (perspective, hud): (
+        Res<CameraPerspective>,
+        Option<Res<terra_core::HudVisibility>>,
+    ),
     swing: Option<Res<crate::players::HandSwing>>,
     keys: Option<Res<ButtonInput<KeyCode>>>,
     mouse: Option<Res<ButtonInput<MouseButton>>>,
     config: Option<Res<terra_core::ControlsConfig>>,
+    (vessel, mut pour): (
+        Option<Res<terra_player::interaction::VesselMotion>>,
+        Local<(Option<ItemKind>, f32)>,
+    ),
     cameras: Query<(&Transform, Option<&Projection>), (With<TerraCamera>, Without<HeldItem>)>,
     arms: Query<(Entity, &ChildOf, &crate::players::AvatarPart)>,
+    villager_hands: Query<(Entity, &crate::creatures::VillagerHand)>,
     avatars: Query<(
         Option<&crate::players::LocalAvatar>,
         Option<&crate::players::RemoteAvatar>,
@@ -222,11 +247,33 @@ pub(super) fn render(
                 .and_then(|i| s.inventory.slot(usize::from(i)))
         })
         .map(|s| s.item);
+    let local_model = if local == Some(ItemKind::Apple)
+        && use_held
+        && world
+            .session
+            .as_ref()
+            .and_then(|s| s.display_consumption())
+            .is_some_and(|c| c.item == ItemKind::Apple && c.progress >= 0.72)
+    {
+        Some(ItemKind::AppleCore)
+    } else {
+        local
+    };
+    let pour = &mut *pour;
+    if pour.0 != local {
+        *pour = (local, 0.0);
+    }
+    let pouring = vessel
+        .as_deref()
+        .is_some_and(|motion| motion.item == local && motion.pouring);
+    let target = if pouring { 1.0 } else { 0.0 };
+    pour.1 += (target - pour.1) * (1.0 - (-12.0 * world.time.delta_secs().min(0.1)).exp());
     if *perspective == CameraPerspective::FirstPerson
+        && hud.as_ref().is_none_or(|hud| hud.visible)
         && !world.blocked.0
         && let (Some(item), Some((camera, projection))) = (local, cameras.iter().next())
-        && assets.prepare(item, &world.blocks)
-        && let Some(bounds) = assets.bounds(item)
+        && assets.prepare(vessels::base(local_model.unwrap_or(item)), &world.blocks)
+        && let Some(bounds) = assets.bounds(vessels::base(local_model.unwrap_or(item)))
     {
         let mut pose = first_person_pose(
             camera,
@@ -235,6 +282,10 @@ pub(super) fn render(
             item,
             bounds,
         );
+        pose = vessels::action_pose(pose, item, pour.1);
+        if vessels::is_vessel(item) {
+            pose = vessels::camera_safe(pose, camera, bounds);
+        }
         if let Some(consumption) = world
             .session
             .as_ref()
@@ -253,7 +304,7 @@ pub(super) fn render(
                 bounds,
             );
         }
-        desired.push((None, item, None, pose));
+        desired.push((None, local_model.unwrap_or(item), None, pose));
     }
     for (arm, parent, part) in &arms {
         if *part != crate::players::AvatarPart::Forearm(1) {
@@ -266,7 +317,7 @@ pub(super) fn render(
             continue;
         };
         let (owner, item) = if is_local.is_some() {
-            (None, local)
+            (None, local_model)
         } else if let Some(remote) = remote {
             if world.session.as_ref().is_some_and(|session| {
                 session
@@ -296,7 +347,21 @@ pub(super) fn render(
                 owner,
                 item,
                 Some(arm),
-                third_person_action_pose(item, amount),
+                vessels::action_pose(
+                    third_person_action_pose(item, amount),
+                    item,
+                    if owner.is_none() { pour.1 } else { 0.0 },
+                ),
+            ));
+        }
+    }
+    for (arm, hand) in &villager_hands {
+        if hand.visible {
+            desired.push((
+                None,
+                hand.item,
+                Some(arm),
+                hand_action_pose(hand.item, hand.swing, crate::creatures::VillagerHand::PALM),
             ));
         }
     }
@@ -310,7 +375,7 @@ pub(super) fn render(
         }
     }
     for (owner, item, parent, transform) in desired {
-        if !assets.prepare(item, &world.blocks) {
+        if !assets.prepare(vessels::base(item), &world.blocks) {
             continue;
         }
         let mut root = commands.spawn((
@@ -326,14 +391,290 @@ pub(super) fn render(
         if let Some(parent) = parent {
             root.insert(ChildOf(parent));
         }
+        let villager_arm = parent.filter(|&parent| villager_hands.get(parent).is_ok());
+        if let Some(arm) = villager_arm {
+            root.insert(crate::creatures::VillagerHeldItem { item, arm });
+        }
         let root = root.id();
-        assets.spawn(&mut commands, root, item, &world.blocks, false);
+        if villager_arm.is_some() {
+            assets.spawn_creature(&mut commands, root, vessels::base(item), &world.blocks);
+        } else {
+            assets.spawn(
+                &mut commands,
+                root,
+                vessels::base(item),
+                &world.blocks,
+                false,
+            );
+        }
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn hidden_hud_removes_only_first_person_equipment_and_restores_current_item_after_inventory() {
+        let mut app = super::super::tests::app();
+        app.init_resource::<terra_core::HudVisibility>()
+            .insert_resource(terra_network::client::SelectedInventorySlot(Some(0)));
+        let material = app
+            .world_mut()
+            .resource_mut::<Assets<StandardMaterial>>()
+            .add(StandardMaterial::default());
+        {
+            let mut blocks = app.world_mut().resource_mut::<crate::blocks::BlockAssets>();
+            blocks.templates = Some(std::sync::Arc::new(crate::blocks::TemplateSet::default()));
+            blocks.materials = vec![material];
+        }
+        app.world_mut().spawn((TerraCamera, Transform::default()));
+        let viewmodels = |app: &mut App| {
+            app.world_mut()
+                .query::<&HeldItem>()
+                .iter(app.world())
+                .filter(|item| item.owner.is_none() && item.parent.is_none())
+                .map(|item| item.item)
+                .collect::<Vec<_>>()
+        };
+        for item in [
+            ItemKind::Prop(terra_core::ResourcePropKind::OakSapling),
+            ItemKind::Tool(terra_core::ToolKind::Bucket),
+            ItemKind::Tool(terra_core::ToolKind::WoodWateringCan)
+                .with_watering_units(1)
+                .unwrap(),
+        ] {
+            app.world_mut()
+                .resource_mut::<terra_network::client::ClientSession>()
+                .inventory
+                .creative_set(0, terra_core::ItemStack { item, count: 1 });
+            app.world_mut()
+                .resource_mut::<terra_core::HudVisibility>()
+                .visible = true;
+            app.update();
+            assert_eq!(viewmodels(&mut app), vec![item]);
+            app.world_mut()
+                .resource_mut::<terra_core::HudVisibility>()
+                .visible = false;
+            app.update();
+            assert!(
+                viewmodels(&mut app).is_empty(),
+                "hidden HUD retained equipped {item:?}"
+            );
+        }
+        let avatar = app
+            .world_mut()
+            .spawn((crate::players::LocalAvatar, Transform::default()))
+            .id();
+        let shoulder = app
+            .world_mut()
+            .spawn((
+                crate::players::AvatarPart::Arm(1),
+                Transform::default(),
+                ChildOf(avatar),
+            ))
+            .id();
+        let forearm = app
+            .world_mut()
+            .spawn((
+                crate::players::AvatarPart::Forearm(1),
+                Transform::default(),
+                ChildOf(shoulder),
+            ))
+            .id();
+        for perspective in [
+            CameraPerspective::ThirdPerson,
+            CameraPerspective::ThirdPersonFront,
+        ] {
+            *app.world_mut().resource_mut::<CameraPerspective>() = perspective;
+            app.update();
+            assert!(viewmodels(&mut app).is_empty());
+            assert!(
+                app.world_mut()
+                    .query::<&HeldItem>()
+                    .iter(app.world())
+                    .any(|held| held.parent == Some(forearm)),
+                "HUD toggle hid the real third-person avatar equipment"
+            );
+        }
+        *app.world_mut().resource_mut::<CameraPerspective>() = CameraPerspective::FirstPerson;
+        app.world_mut()
+            .resource_mut::<terra_player::PlayerInputBlock>()
+            .0 = true;
+        app.world_mut()
+            .resource_mut::<terra_core::HudVisibility>()
+            .visible = true;
+        app.update();
+        assert!(
+            viewmodels(&mut app).is_empty(),
+            "opening an interactive inventory exposed a viewmodel"
+        );
+        assert!(
+            app.world_mut()
+                .query::<&HeldItem>()
+                .iter(app.world())
+                .any(|held| held.parent == Some(forearm)),
+            "inventory miniature lost its equipped item"
+        );
+        app.world_mut()
+            .resource_mut::<terra_player::PlayerInputBlock>()
+            .0 = false;
+        app.update();
+        assert_eq!(viewmodels(&mut app).len(), 1);
+    }
+
+    #[test]
+    fn villagers_share_player_tool_grips_scale_and_action_orientation() {
+        let player_palm = Vec3::new(0.008, -0.54 - crate::players::model::ELBOW, -0.028);
+        let villager_palm = crate::creatures::VillagerHand::PALM;
+        for tool in terra_core::ToolKind::ALL {
+            let item = ItemKind::Tool(tool);
+            let grip = crate::previews::tools::grip(item).unwrap();
+            for swing in [0.0, 0.5, 1.0] {
+                let player = third_person_action_pose(item, swing);
+                let villager = hand_action_pose(item, swing, villager_palm);
+                assert!(villager.rotation.abs_diff_eq(player.rotation, 1e-6));
+                assert_eq!(villager.scale, player.scale);
+                assert!(
+                    villager
+                        .transform_point(grip)
+                        .abs_diff_eq(villager_palm, 1e-5)
+                );
+                assert!(player.transform_point(grip).abs_diff_eq(player_palm, 1e-5));
+                assert!(
+                    (villager.translation - player.translation)
+                        .abs_diff_eq(villager_palm - player_palm, 1e-5)
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn villager_items_reuse_player_mesh_handles_follow_the_arm_and_hide_for_sleep() {
+        use crate::creatures::{VillagerHand, VillagerHeldItem};
+        use bevy::ecs::system::RunSystemOnce;
+        let mut app = super::super::tests::app();
+        app.add_plugins(TransformPlugin);
+        let material = app
+            .world_mut()
+            .resource_mut::<Assets<StandardMaterial>>()
+            .add(StandardMaterial::default());
+        {
+            let mut blocks = app.world_mut().resource_mut::<crate::blocks::BlockAssets>();
+            blocks.templates = Some(std::sync::Arc::new(crate::blocks::TemplateSet::default()));
+            blocks.materials = vec![material];
+        }
+        let item = ItemKind::Tool(terra_core::ToolKind::IronPickaxe);
+        let arm = app
+            .world_mut()
+            .spawn((
+                Transform::from_xyz(0.3, 1.15, 0.0),
+                Visibility::Inherited,
+                VillagerHand {
+                    item,
+                    visible: true,
+                    swing: 0.0,
+                },
+            ))
+            .id();
+        app.update();
+        let held = app
+            .world_mut()
+            .query_filtered::<Entity, With<VillagerHeldItem>>()
+            .single(app.world())
+            .unwrap();
+        assert_eq!(app.world().get::<ChildOf>(held).unwrap().parent(), arm);
+        assert_eq!(
+            app.world().get::<VillagerHeldItem>(held).unwrap().item,
+            item
+        );
+        let npc_parts: Vec<_> = app.world().get::<Children>(held).unwrap().iter().collect();
+        let mesh_count = app.world().resource::<Assets<Mesh>>().len();
+        let player = app
+            .world_mut()
+            .run_system_once(
+                move |mut commands: Commands,
+                      mut assets: DropAssets,
+                      blocks: Res<crate::blocks::BlockAssets>| {
+                    assert!(assets.prepare(item, &blocks));
+                    let root = commands
+                        .spawn((Transform::default(), Visibility::Inherited))
+                        .id();
+                    assets.spawn(&mut commands, root, item, &blocks, false);
+                    root
+                },
+            )
+            .unwrap();
+        assert_eq!(app.world().resource::<Assets<Mesh>>().len(), mesh_count);
+        let player_parts: Vec<_> = app
+            .world()
+            .get::<Children>(player)
+            .unwrap()
+            .iter()
+            .collect();
+        assert_eq!(npc_parts.len(), player_parts.len());
+        for (npc, player) in npc_parts.into_iter().zip(player_parts) {
+            assert_eq!(
+                app.world().get::<Mesh3d>(npc).unwrap().id(),
+                app.world().get::<Mesh3d>(player).unwrap().id()
+            );
+            assert_eq!(
+                app.world()
+                    .get::<MeshMaterial3d<StandardMaterial>>(npc)
+                    .unwrap()
+                    .0
+                    .id(),
+                app.world()
+                    .get::<MeshMaterial3d<StandardMaterial>>(player)
+                    .unwrap()
+                    .0
+                    .id()
+            );
+            assert_eq!(
+                app.world().get::<terra_core::miniature::MiniatureMesh>(npc),
+                Some(&terra_core::miniature::MiniatureMesh::Creature)
+            );
+        }
+        let grip = crate::previews::tools::grip(item).unwrap();
+        for angle in [-0.7, 0.0, 0.55] {
+            let pose =
+                Transform::from_xyz(0.3, 1.15, 0.0).with_rotation(Quat::from_rotation_x(angle));
+            *app.world_mut().get_mut::<Transform>(arm).unwrap() = pose;
+            app.update();
+            let held_global = app.world().get::<GlobalTransform>(held).unwrap();
+            assert!(
+                held_global
+                    .transform_point(grip)
+                    .abs_diff_eq(pose.transform_point(VillagerHand::PALM), 1e-5)
+            );
+        }
+        app.world_mut()
+            .get_mut::<VillagerHand>(arm)
+            .unwrap()
+            .visible = false;
+        app.update();
+        assert!(
+            app.world_mut()
+                .query::<&VillagerHeldItem>()
+                .iter(app.world())
+                .next()
+                .is_none()
+        );
+        assert_eq!(app.world().resource::<Assets<Mesh>>().len(), mesh_count);
+        app.world_mut()
+            .get_mut::<VillagerHand>(arm)
+            .unwrap()
+            .visible = true;
+        app.update();
+        assert_eq!(
+            app.world_mut()
+                .query::<&VillagerHeldItem>()
+                .iter(app.world())
+                .count(),
+            1
+        );
+        assert_eq!(app.world().resource::<Assets<Mesh>>().len(), mesh_count);
+    }
 
     #[test]
     fn real_size_tools_attach_to_the_grip_and_stay_in_front_of_the_first_person_camera() {

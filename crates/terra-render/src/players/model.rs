@@ -334,9 +334,9 @@ pub(super) fn parts(gender: PlayerGender) -> Result<Vec<(AvatarPart, Vec3, Mesh)
 }
 
 fn head(female: bool) -> Result<Mesh, String> {
-    let mut b = Builder::default();
+    let mut builder = Builder::default();
     let width = if female { 0.345 } else { 0.36 };
-    b.tapered(
+    builder.tapered(
         &[
             (-0.17, width * 0.57, 0.21),
             (-0.148, width * 0.78, 0.27),
@@ -349,7 +349,7 @@ fn head(female: bool) -> Result<Mesh, String> {
         SKIN,
     )?;
     for sign in [-1.0, 1.0] {
-        b.tapered(
+        builder.tapered(
             &[
                 (-0.084, 0.038, 0.043),
                 (-0.057, 0.061, 0.065),
@@ -359,46 +359,46 @@ fn head(female: bool) -> Result<Mesh, String> {
             Vec3::new(sign * (width * 0.5 + 0.018), 0.0, 0.0),
             SKIN_LIGHT,
         )?;
-        b.voxel(
+        builder.voxel(
             [sign * (width * 0.5 + 0.039), -0.027, -0.013],
             [0.012, 0.041, 0.027],
             [0.73, 0.43, 0.26],
         )?;
-        b.face_plate(
+        builder.face_plate(
             Vec3::new(sign * 0.085, EYE_CENTER, -0.166),
             Vec3::new(0.074, 0.069, 0.012),
             0.011,
             [0.95, 0.92, 0.83],
         )?;
-        b.face_plate(
+        builder.face_plate(
             Vec3::new(sign * 0.079, EYE_CENTER - 0.001, -0.174),
             Vec3::new(0.041, 0.058, 0.011),
             0.007,
             [0.32, 0.20, 0.12],
         )?;
-        b.face_plate(
+        builder.face_plate(
             Vec3::new(sign * 0.077, EYE_CENTER + 0.003, -0.181),
             Vec3::new(0.022, 0.049, 0.007),
             0.004,
             [0.15, 0.10, 0.065],
         )?;
-        b.voxel(
+        builder.voxel(
             [sign * 0.082 - 0.008, EYE_CENTER + 0.019, -0.187],
             [0.010, 0.013, 0.005],
             [1.0, 0.97, 0.84],
         )?;
-        b.voxel(
+        builder.voxel(
             [sign * 0.077 + 0.009, EYE_CENTER - 0.014, -0.185],
             [0.005, 0.006, 0.005],
             [0.71, 0.52, 0.30],
         )?;
-        b.rotated(
+        builder.rotated(
             [sign * 0.085, 0.066, -0.174],
             [0.073, if female { 0.013 } else { 0.010 }, 0.016],
             [0.23, 0.13, 0.075],
             Quat::from_rotation_z(sign * 0.05),
         )?;
-        b.rotated(
+        builder.rotated(
             [sign * 0.085, 0.099, -0.168],
             [0.075, if female { 0.018 } else { 0.025 }, 0.018],
             if female {
@@ -409,40 +409,40 @@ fn head(female: bool) -> Result<Mesh, String> {
             Quat::from_rotation_z(-sign * 0.065),
         )?;
         if female {
-            b.voxel(
+            builder.voxel(
                 [sign * 0.122, 0.066, -0.174],
                 [0.016, 0.009, 0.016],
                 [0.23, 0.13, 0.075],
             )?;
         }
     }
-    b.bevel_box(
+    builder.bevel_box(
         [0.0, -0.030, -0.173],
         [0.028, 0.035, 0.025],
         SKIN_LIGHT,
         Quat::IDENTITY,
     )?;
-    b.bevel_box(
+    builder.bevel_box(
         [0.0, -0.041, -0.186],
         [0.036, 0.018, 0.012],
         [0.86, 0.58, 0.35],
         Quat::IDENTITY,
     )?;
-    b.voxel(
+    builder.voxel(
         [0.0, -0.106, -0.158],
         [0.068, 0.006, 0.009],
         [0.45, 0.24, 0.135],
     )?;
     for sign in [-1.0, 1.0] {
-        b.rotated(
+        builder.rotated(
             [sign * 0.041, -0.101, -0.158],
             [0.019, 0.006, 0.008],
             [0.45, 0.24, 0.135],
             Quat::from_rotation_z(sign * 0.35),
         )?;
     }
-    hair(&mut b, female)?;
-    b.finish()
+    hair(&mut builder, female)?;
+    builder.finish()
 }
 
 fn hair(b: &mut Builder, female: bool) -> Result<(), String> {
@@ -569,22 +569,22 @@ pub(super) fn eyelids() -> Result<Mesh, String> {
 }
 
 fn body(female: bool) -> Result<Mesh, String> {
-    let mut b = Builder::default();
+    let mut builder = Builder::default();
     let waist = if female { 0.29 } else { 0.39 };
     let chest = if female { 0.35 } else { 0.43 };
     // The neck remains short; shoulders and head meet it without a floating gap.
-    b.voxel(
+    builder.voxel(
         [0.0, 0.33 + NECK_HEIGHT * 0.5, 0.0],
         [0.145, NECK_HEIGHT, 0.16],
         SKIN,
     )?;
     // Only the neckline is exposed; the opaque shirt replaces the hidden torso shell.
-    b.tapered(
+    builder.tapered(
         &[(0.195, chest, 0.272), (0.33, chest * 0.94, 0.22)],
         Vec3::ZERO,
         SKIN,
     )?;
-    b.tapered(
+    builder.tapered(
         &[
             (-0.084, waist + 0.016, if female { 0.242 } else { 0.263 }),
             (
@@ -599,22 +599,22 @@ fn body(female: bool) -> Result<Mesh, String> {
         Vec3::ZERO,
         CLOTH,
     )?;
-    neckline(&mut b, chest, female)?;
+    neckline(&mut builder, chest, female)?;
     for side in [-1.0, 1.0] {
-        b.bevel_box(
+        builder.bevel_box(
             [side * (chest * 0.5 - 0.038), 0.277, -0.002],
             [0.076, 0.142, 0.244],
             CLOTH,
             Quat::IDENTITY,
         )?;
     }
-    b.bevel_box(
+    builder.bevel_box(
         [0.0, -0.065, 0.0],
         [waist + 0.025, 0.038, 0.272],
         [0.87, 0.82, 0.70],
         Quat::IDENTITY,
     )?;
-    b.tapered(
+    builder.tapered(
         &[
             (-0.285, if female { 0.40 } else { 0.39 }, 0.245),
             (-0.19, if female { 0.43 } else { 0.40 }, 0.29),
@@ -624,32 +624,32 @@ fn body(female: bool) -> Result<Mesh, String> {
         Vec3::ZERO,
         TROUSERS,
     )?;
-    b.voxel(
+    builder.voxel(
         [0.0, -0.12, 0.0],
         [waist + 0.040, 0.045, 0.283],
         [0.31, 0.23, 0.15],
     )?;
     for x in -3..=3 {
-        b.voxel(
+        builder.voxel(
             [x as f32 * waist / 7.0, -0.119, -0.148],
             [0.008, 0.045, 0.008],
             CUFF,
         )?;
     }
-    b.voxel([0.0, -0.12, -0.158], [0.041, 0.038, 0.028], CORD)?;
-    b.rotated(
+    builder.voxel([0.0, -0.12, -0.158], [0.041, 0.038, 0.028], CORD)?;
+    builder.rotated(
         [-0.018, -0.178, -0.159],
         [0.025, 0.091, 0.020],
         CORD,
         Quat::from_rotation_z(-0.12),
     )?;
-    b.rotated(
+    builder.rotated(
         [0.027, -0.159, -0.160],
         [0.025, 0.065, 0.020],
         CORD,
         Quat::from_rotation_z(0.34),
     )?;
-    b.finish()
+    builder.finish()
 }
 
 fn neckline(b: &mut Builder, chest: f32, female: bool) -> Result<(), String> {
@@ -737,9 +737,9 @@ fn arm(sign: f32, female: bool) -> Result<Mesh, String> {
 }
 
 fn forearm(sign: f32, female: bool) -> Result<Mesh, String> {
-    let mut b = Builder::default();
+    let mut builder = Builder::default();
     let width = if female { 0.115 } else { 0.145 };
-    b.tapered(
+    builder.tapered(
         &[
             (-0.48 - ELBOW, width * 0.65, width * 0.77),
             (-0.40 - ELBOW, width * 0.83, width * 0.95),
@@ -749,7 +749,7 @@ fn forearm(sign: f32, female: bool) -> Result<Mesh, String> {
         Vec3::ZERO,
         SKIN,
     )?;
-    b.tapered(
+    builder.tapered(
         &[
             (-0.555 - ELBOW, width * 0.75, 0.085),
             (-0.477 - ELBOW, width * 0.84, 0.095),
@@ -758,7 +758,7 @@ fn forearm(sign: f32, female: bool) -> Result<Mesh, String> {
         SKIN_LIGHT,
     )?;
     for finger in 0..4 {
-        b.bevel_box(
+        builder.bevel_box(
             [
                 sign * 0.008 + (finger as f32 - 1.5) * width * 0.18,
                 -0.569 - ELBOW
@@ -773,7 +773,7 @@ fn forearm(sign: f32, female: bool) -> Result<Mesh, String> {
             SKIN,
             Quat::from_rotation_x(0.20),
         )?;
-        b.bevel_box(
+        builder.bevel_box(
             [
                 sign * 0.008 + (finger as f32 - 1.5) * width * 0.18,
                 -0.584 - ELBOW
@@ -789,19 +789,19 @@ fn forearm(sign: f32, female: bool) -> Result<Mesh, String> {
             Quat::from_rotation_x(0.85),
         )?;
     }
-    b.bevel_box(
+    builder.bevel_box(
         [-sign * width * 0.45, -0.515 - ELBOW, -0.041],
         [0.035, 0.067, 0.042],
         SKIN_LIGHT,
         Quat::from_rotation_z(-sign * 0.28),
     )?;
-    b.bevel_box(
+    builder.bevel_box(
         [-sign * width * 0.40, -0.542 - ELBOW, -0.064],
         [0.034, 0.031, 0.032],
         SKIN_LIGHT,
         Quat::from_rotation_y(sign * 0.30),
     )?;
-    b.finish()
+    builder.finish()
 }
 
 fn leg(sign: f32, female: bool) -> Result<Mesh, String> {

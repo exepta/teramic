@@ -1,0 +1,54 @@
+/* Native controls also cover dropdown portals and controls without a theme class. */
+*::scrollbar-y-track, *::scrollbar-x-track, choice-box::scrollbar-y-track, scrollbar::track { background-color: #281c15 !important; border-color: #795536 !important; }
+*::scrollbar-y-thumb, *::scrollbar-x-thumb, choice-box::scrollbar-y-thumb, scrollbar::thumb { background-color: #b38553 !important; border-color: #c89a65 !important; border-radius: 3px !important; }
+choice-box, choice-box::popup { background-color: #302118 !important; border-color: #a7794c !important; color: #efdab9 !important; }
+choice-box option, option { background-color: #302118 !important; color: #efdab9 !important; }
+choice-box option:hover, choice-box option:checked, option:hover, option:checked { background-color: #68492e !important; color: #fff0d1 !important; }
+choice-box::value { padding: 0 10px !important; align-items: center !important; }
+choice-box:focus, choice-box:open, input:focus { border-color: #c49661 !important; }
+input::selection { background-color: #795735 !important; }
+checkbox::indicator { background-color: #302118 !important; border-color: #ad7e4b !important; }
+checkbox:checked::indicator { background-color: #b38346 !important; border-color: #d6ac72 !important; }
+checkbox::mark { color: #fff1d7 !important; }
+checkbox:hover::indicator, checkbox:focus::indicator { border-color: #c49661 !important; }
+slider::track { background-color: #281c15 !important; border-color: #795536 !important; }
+slider::fill { background-color: #b38553 !important; background-image: none !important; }
+slider::thumb { background-color: #edcd99 !important; border-color: #b38553 !important; }
+switch-button::track { background-color: #302118 !important; border-color: #ad7e4b !important; }
+switch-button:checked::track { background-color: #a7793f !important; }
+switch-button::thumb { background-color: #edcd99 !important; border-color: #c49b64 !important; }
+/* Text nodes use flex layout: text-align alone does not center their glyphs. */
+.reference-hud-slot .hud-slot-key { display: flex !important; align-items: center !important; justify-content: center !important; padding: 0 !important; margin: 0 !important; text-align: center !important; }
+.reference-slot .item-hotkey { display: flex !important; align-items: center !important; justify-content: center !important; width: 20px !important; height: 20px !important; padding: 0 !important; margin: 0 !important; text-align: center !important; }
+.button-title, .pagination-label p, .recipe-page-button p, .map-readout p, .map-controls p { display: flex !important; align-items: center !important; justify-content: center !important; margin: 0 !important; }
+.map-readout { min-height: 27px !important; padding: 4px 9px !important; }
+.mini-map button { padding: 4px !important; }
+.mini-map .map-collapse { top: 8px !important; right: 8px !important; }
+.map-compact { padding: 5px 10px !important; }
+.setting-description { padding: 3px 5px !important; }
+.copper-options-tabs .tab { padding: 6px !important; gap: 3px !important; }
+.copper-options-tabs .tab icon { width: 26px !important; height: 26px !important; flex-shrink: 0 !important; }
+.copper-options-tabs .tab p { display: flex !important; align-items: center !important; justify-content: center !important; margin: 0 !important; min-height: 22px !important; }
+.recipe-item-description, .recipe-alternative-copy, .furnace-recipe-description { padding: 3px 6px !important; }
+.inventory-section-heading, .bench-heading { padding: 4px 8px !important; }
+.item-tooltip, .category-tooltip, .recipe-category-tooltip { padding: 9px 12px !important; }
+.map-command { padding: 7px 12px !important; }
+/* Keep map controls inside the visible copper rails. Viewport size follows Rust. */
+.full-map-header { left: 122px !important; right: 34px !important; top: 22px !important; height: 58px !important; }
+.full-map-brand { padding: 4px 20px !important; background-color: #302118 !important; }
+.full-map-tool-rail { left: 28px !important; top: 90px !important; bottom: 88px !important; }
+.full-map-viewport { left: 122px !important; top: 88px !important; }
+.full-map-footer { left: 122px !important; right: 34px !important; bottom: 26px !important; height: 46px !important; padding: 7px 5px !important; }
+.full-map-footer p, .full-map-footer label, .full-map-compass p { display: flex !important; align-items: center !important; justify-content: center !important; }
+.full-map-panel.compact .full-map-footer { height: 52px !important; padding: 5px !important; }
+.full-map-panel button:focus, .waypoint-dialog button:focus, .waypoint-icon-picker button:focus { outline: 0 !important; border-color: #c49661 !important; }
+/* A translucent inset wash keeps the painted edges intact during hover. */
+.painted-menu-button:hover, .painted-menu-button.primary:hover { border: 0 !important; outline: 0 !important; box-shadow: none !important; background-color: transparent !important; }
+.painted-menu-button .painted-menu-hover-glow { left: 9% !important; top: 17% !important; width: 82% !important; height: 66% !important; border: 0 !important; outline: 0 !important; box-shadow: none !important; border-radius: 6px !important; background-color: #f3d7a416 !important; }
+.painted-menu-button:hover .button-title { color: #fff0d2 !important; }
+.reference-item-category .category-tab:hover, .copper-server-card:hover, .map-tool:hover, .map-command:hover, .map-icon-button:hover { border-color: #bd9160 !important; box-shadow: none !important; }
+@media (max-height: 720px) {
+ .copper-options-tabs .tab { padding: 4px !important; gap: 2px !important; }
+ .copper-options-tabs .tab icon { width: 22px !important; height: 22px !important; }
+ .copper-options-tabs .tab p { min-height: 18px !important; font-size: 14px !important; }
+}

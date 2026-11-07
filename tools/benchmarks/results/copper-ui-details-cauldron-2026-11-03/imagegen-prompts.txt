@@ -1,0 +1,6 @@
+Mode: built-in image_gen; reference image inspected before generation.
+Output: src-ui/assets/cauldron-recipe-184.png
+Original: /home/exepta/.codex/generated_images/01a19401-f363-7293-84fa-4370272101fa/exec-76eca87e-556b-4ff8-bb43-20b2747a5a68.png
+transparent_background: true; original alpha preserved; no raster postprocessing.
+
+Use case: stylized-concept. Reference image: the provided Teramic Cauldron Recipe interface; use only the central cauldron illustration as the visual reference. Generate one production game UI sprite on genuine transparent alpha: a large squat round black/dark iron cauldron, chunky voxel/pixel painted style closely matching this reference, thick polygonal rim, luminous purple bubbling liquid, a graceful curling plume of purple steam with a few small sparkles above it, warm amber fire and orange coals beneath, dark stone support at the base and a little bronze/gold emblem on the front. Three-quarter front view, readable silhouette, warm hand-painted copper/fantasy game shading, crisp details like the reference. Center the complete object and steam in a square canvas, fill about 85% of the canvas, tiny safe transparent margin; no clipping. No UI frame, no text, no labels, no items or ingredient icons, no landscape, no background rectangle, no floor plane, no arrows. Keep transparent surroundings and transparent gaps.

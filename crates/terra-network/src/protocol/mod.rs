@@ -3,6 +3,7 @@ pub mod chunk_messages;
 pub mod commands;
 pub mod connection;
 pub mod inventory;
+pub mod kingdom;
 pub mod player_replication;
 pub mod session;
 pub mod social;

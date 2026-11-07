@@ -1,4 +1,5 @@
 //! One-time, isolated renders of the real block meshes and materials for TiltUI.
+pub(crate) mod alchemy;
 mod bellows;
 mod crops;
 mod dust;
@@ -6,9 +7,10 @@ mod hardware;
 mod products;
 mod sculpt;
 mod showcase;
+pub(crate) mod tints;
 pub(crate) mod tools;
 use std::{
-    collections::{HashMap, VecDeque},
+    collections::{HashMap, HashSet, VecDeque},
     time::{Duration, Instant},
 };
 
@@ -44,6 +46,94 @@ const PREVIEW_LAYER: usize = 31;
 const PREVIEW_GRACE: Duration = Duration::from_secs(10);
 const CAPTURE_TIMEOUT: Duration = Duration::from_secs(3);
 const RETRY_INTERVAL: Duration = Duration::from_millis(200);
+const PREVIEW_PREFETCH: usize = 2;
+const DYNAMIC_PREVIEW_LIMIT: usize = 128;
+const FIXED_DEMAND_LIMIT: usize = 1024;
+
+fn catalog_warmup(
+    arguments: impl IntoIterator<Item = impl AsRef<str>>,
+    explicit: Option<&str>,
+) -> bool {
+    let arguments = arguments
+        .into_iter()
+        .map(|argument| argument.as_ref().to_owned())
+        .collect::<Vec<_>>();
+    let smoke = arguments
+        .iter()
+        .any(|argument| argument.starts_with("--smoke-test"));
+    !smoke
+        || explicit == Some("1")
+            && !arguments.iter().any(|argument| {
+                argument == "--smoke-test-benchmark" || argument == "--smoke-test-alchemy"
+            })
+}
+
+fn finite_catalog(materials: impl IntoIterator<Item = u16>) -> VecDeque<ItemKind> {
+    let mut materials = materials.into_iter().collect::<Vec<_>>();
+    materials.sort_unstable();
+    let mut seen = HashSet::new();
+    materials
+        .iter()
+        .copied()
+        .map(ItemKind::Block)
+        .chain(
+            materials
+                .iter()
+                .copied()
+                .filter(|&material| ItemKind::supports_wood(material))
+                .flat_map(|material| {
+                    [
+                        terra_core::WoodSpecies::Oak,
+                        terra_core::WoodSpecies::Birch,
+                        terra_core::WoodSpecies::Spruce,
+                        terra_core::WoodSpecies::Cherry,
+                    ]
+                    .map(move |wood| ItemKind::for_wood(material, wood))
+                }),
+        )
+        .chain(ResourcePropKind::ALL.into_iter().map(ItemKind::Prop))
+        .chain(ItemKind::EXTRA)
+        .chain(terra_core::CapeItem::ALL.into_iter().map(ItemKind::Cape))
+        .chain((71..=73).flat_map(|material| {
+            terra_core::beds::DyeColor::ALL.map(move |color| ItemKind::DyedBed { material, color })
+        }))
+        .filter_map(requested_preview)
+        .filter(|&item| !dynamic_preview(item) && seen.insert(item))
+        .collect()
+}
+
+fn requested_preview(item: ItemKind) -> Option<ItemKind> {
+    if !item.valid() {
+        return None;
+    }
+    Some(match item.preview_item() {
+        // The existing UI applies the exact byte tint to the neutral dye icon.
+        ItemKind::Dye(terra_core::beds::DyeColor::Rgb(_)) => {
+            ItemKind::Dye(terra_core::beds::DyeColor::White)
+        }
+        _ => item.preview_item(),
+    })
+}
+
+fn legacy_preview_warmup(smoke_lod: bool, setting: Option<&str>) -> bool {
+    smoke_lod && setting == Some("1")
+}
+
+fn legacy_preview_warmup_enabled() -> bool {
+    static LEGACY: std::sync::LazyLock<bool> = std::sync::LazyLock::new(|| {
+        legacy_preview_warmup(
+            std::env::args().any(|argument| argument == "--smoke-test-lod"),
+            std::env::var("TERRA_BENCH_LEGACY_PREVIEW_WARMUP")
+                .ok()
+                .as_deref(),
+        )
+    });
+    *LEGACY
+}
+
+fn warmup_camera_active(frames: u16, capturing_or_retrying: bool, legacy: bool) -> bool {
+    legacy || capturing_or_retrying || frames <= 2 || frames >= 7
+}
 
 #[derive(Resource, Default)]
 pub struct RenderBlockPreviews {
@@ -59,6 +149,81 @@ pub struct RenderPropPreviews {
 #[derive(Resource, Default)]
 pub struct RenderItemPreviews {
     pub images: HashMap<ItemKind, Handle<Image>>,
+    dynamic: VecDeque<ItemKind>,
+}
+
+/// One finite startup pass; dynamic RGB icons remain bounded, on-demand work.
+#[derive(Resource, Default)]
+pub struct RenderPreviewStartup {
+    /// The real source currently being loaded or rendered into an inventory icon.
+    pub current_path: String,
+    pub required: bool,
+    pub initialized: bool,
+    pub total: usize,
+    pub completed: usize,
+    pub failed: usize,
+    pub ready: bool,
+    pub error: Option<String>,
+}
+
+/// Current visible icons, with a finite fixed-item domain and bounded real RGB demand.
+#[derive(Resource, Default)]
+pub struct RenderItemPreviewRequests {
+    items: Vec<ItemKind>,
+}
+
+fn dynamic_preview(item: ItemKind) -> bool {
+    item.valid()
+        && (terra_core::tints::canonical_item(item).is_some()
+            || item
+                .cape()
+                .is_some_and(|cape| matches!(cape.color, terra_core::beds::DyeColor::Rgb(_))))
+}
+
+impl RenderItemPreviewRequests {
+    pub fn request(&mut self, item: ItemKind) {
+        let Some(item) = requested_preview(item) else {
+            return;
+        };
+        let dynamic = dynamic_preview(item);
+        if self
+            .items
+            .iter()
+            .filter(|candidate| dynamic_preview(**candidate) == dynamic)
+            .count()
+            < if dynamic {
+                DYNAMIC_PREVIEW_LIMIT
+            } else {
+                FIXED_DEMAND_LIMIT
+            }
+            && !self.items.contains(&item)
+        {
+            self.items.push(item);
+        }
+    }
+
+    pub fn replace(&mut self, items: impl IntoIterator<Item = ItemKind>) {
+        self.items.clear();
+        for item in items {
+            self.request(item);
+        }
+    }
+}
+
+impl RenderItemPreviews {
+    fn publish(&mut self, item: ItemKind, image: Handle<Image>) {
+        if dynamic_preview(item) {
+            if !self.dynamic.contains(&item) {
+                self.dynamic.push_back(item);
+            }
+            while self.dynamic.len() > DYNAMIC_PREVIEW_LIMIT {
+                if let Some(expired) = self.dynamic.pop_front() {
+                    self.images.remove(&expired);
+                }
+            }
+        }
+        self.images.insert(item, image);
+    }
 }
 
 #[derive(Component)]
@@ -76,6 +241,9 @@ struct PreviewJob {
 #[derive(Resource, Default)]
 struct PreviewQueue {
     initialized: bool,
+    warmup: bool,
+    failed: HashSet<ItemKind>,
+    items: VecDeque<ItemKind>,
     jobs: VecDeque<PreviewJob>,
     frames: u16,
     started: Option<Instant>,
@@ -83,13 +251,34 @@ struct PreviewQueue {
     capture_delayed: bool,
     retry_at: Option<Instant>,
     received: Option<bool>,
+    captured_once: bool,
+    catalog_remaining: HashSet<ItemKind>,
+    catalog_total: usize,
+    catalog_failed: usize,
+    catalog_started: Option<Instant>,
+}
+
+impl PreviewQueue {
+    fn pending(&self) -> usize {
+        self.items.len() + self.jobs.len()
+    }
 }
 
 pub(crate) fn install(app: &mut App) {
     app.init_resource::<RenderBlockPreviews>()
         .init_resource::<RenderPropPreviews>()
         .init_resource::<RenderItemPreviews>()
+        .init_resource::<RenderItemPreviewRequests>()
+        .init_resource::<RenderPreviewStartup>()
         .init_resource::<PreviewQueue>();
+    app.world_mut().resource_mut::<PreviewQueue>().warmup = catalog_warmup(
+        std::env::args(),
+        std::env::var("TERRA_PREVIEW_WARMUP").ok().as_deref(),
+    );
+    let required = app.world().resource::<PreviewQueue>().warmup;
+    app.world_mut()
+        .resource_mut::<RenderPreviewStartup>()
+        .required = required;
     if std::env::args().any(|a| {
         matches!(
             a.as_str(),
@@ -105,11 +294,117 @@ pub(crate) fn install(app: &mut App) {
     app.add_systems(
         Update,
         (
+            admit_requested,
             prepare.after(crate::foliage::prepare_materials),
             render_next.after(bevy::render::view::screenshot::trigger_screenshots),
+            sync_startup,
         )
             .chain(),
     );
+}
+
+fn sync_startup(
+    blocks: Res<BlockAssets>,
+    previews: Res<RenderBlockPreviews>,
+    mut queue: ResMut<PreviewQueue>,
+    mut startup: ResMut<RenderPreviewStartup>,
+    server: Option<Res<AssetServer>>,
+) {
+    if !startup.required || startup.ready {
+        return;
+    }
+    let since = *queue.catalog_started.get_or_insert_with(Instant::now);
+    if startup.error.is_none()
+        && let Some(error) = &blocks.error
+    {
+        startup.error = Some(format!("Inventory icon assets failed: {error}"));
+    }
+    if startup.error.is_none()
+        && queue
+            .capture
+            .is_some_and(|(_, since)| since.elapsed() > Duration::from_secs(30))
+    {
+        startup.error =
+            Some("Inventory icon GPU readback did not finish; restart the client to retry".into());
+    }
+    if startup.error.is_none() && !queue.initialized && since.elapsed() > Duration::from_secs(90) {
+        startup.error = Some(
+            "Inventory icon models or textures did not become ready; restart the client to retry"
+                .into(),
+        );
+    }
+    startup.current_path = blocks.startup_path(
+        queue
+            .jobs
+            .front()
+            .map(|job| job.item)
+            .or_else(|| queue.items.front().copied()),
+        server.as_deref(),
+    );
+    if !queue.initialized {
+        return;
+    }
+    if !startup.initialized {
+        startup.initialized = true;
+        startup.total = queue.catalog_total;
+    }
+    startup.failed = queue.catalog_failed;
+    startup.completed = startup.total.saturating_sub(queue.catalog_remaining.len());
+    if queue.catalog_failed > 0 && startup.error.is_none() {
+        startup.error = previews.error.clone();
+    }
+    if queue.catalog_remaining.is_empty() && queue.pending() == 0 {
+        startup.ready = true;
+        queue.warmup = false;
+    }
+}
+
+fn admit_requested(
+    mut commands: Commands,
+    requests: Option<Res<RenderItemPreviewRequests>>,
+    items: Res<RenderItemPreviews>,
+    props: Res<RenderPropPreviews>,
+    mut previews: ResMut<RenderBlockPreviews>,
+    mut queue: ResMut<PreviewQueue>,
+) {
+    let Some(requests) = requests else {
+        return;
+    };
+    if !queue.warmup {
+        queue.items.retain(|item| requests.items.contains(item));
+        // Only the front job can own a render target/readback. A hidden successor
+        // can safely release its mesh/image handles when the user changes pages.
+        let mut first = true;
+        queue.jobs.retain(|job| {
+            let keep = first || requests.items.contains(&job.item);
+            first = false;
+            if !keep {
+                commands.entity(job.root).try_despawn();
+            }
+            keep
+        });
+    }
+    queue
+        .failed
+        .retain(|item| !dynamic_preview(*item) || requests.items.contains(item));
+    for item in &requests.items {
+        let cached = match item {
+            ItemKind::Block(material) => previews.images.contains_key(material),
+            ItemKind::Prop(kind) => props.images.contains_key(kind),
+            _ => items.images.contains_key(item),
+        };
+        if !cached
+            && !queue.failed.contains(item)
+            && !queue.items.contains(item)
+            && !queue.jobs.iter().any(|job| job.item == *item)
+        {
+            queue.items.push_back(*item);
+        }
+    }
+    let pending = queue.pending();
+    if previews.pending != pending {
+        previews.pending = pending;
+    }
 }
 
 #[derive(SystemParam)]
@@ -127,8 +422,9 @@ fn prepare(
     mut assets: PreviewAssets,
     mut queue: ResMut<PreviewQueue>,
     mut previews: ResMut<RenderBlockPreviews>,
+    mut cameras: Query<(&mut RenderTarget, &mut Camera), With<PreviewCamera>>,
 ) {
-    if queue.initialized {
+    if queue.initialized && (queue.items.is_empty() || queue.jobs.len() >= PREVIEW_PREFETCH) {
         return;
     }
     let Some(templates) = assets.blocks.templates.clone() else {
@@ -148,105 +444,124 @@ fn prepare(
     {
         return;
     }
-    queue.initialized = true;
+    let _scope = terra_core::profiling::ScopeTimer::new("previews.prepare");
     let options = RenderOptions {
         water_level: None,
         detail_level: DetailLevel::Near,
         terrain: assets.terrain.as_ref().map(|terrain| terrain.0.clone()),
         exposure: None,
         conditions: default(),
+        tints: default(),
     };
-    let mut materials: Vec<_> = templates.blocks.keys().copied().collect();
-    materials.sort_unstable();
-    let items = materials
-        .into_iter()
-        .map(ItemKind::Block)
-        .chain(ResourcePropKind::ALL.into_iter().map(ItemKind::Prop))
-        .chain(ItemKind::EXTRA)
-        .chain(
-            terra_core::CapeItem::ALL
-                .into_iter()
-                .filter(|cape| cape.color != terra_core::beds::DyeColor::White)
-                .map(ItemKind::Cape),
-        )
-        .chain((71..=73).flat_map(|material| {
-            terra_core::beds::DyeColor::ALL.map(move |color| ItemKind::DyedBed { material, color })
-        }))
-        .chain([28, 29].into_iter().flat_map(|material| {
-            [
-                terra_core::WoodSpecies::Birch,
-                terra_core::WoodSpecies::Spruce,
-                terra_core::WoodSpecies::Cherry,
-            ]
-            .map(move |wood| ItemKind::for_wood(material, wood))
-        }));
-    for item in items {
-        let batches = match match item {
-            ItemKind::Block(material) => block_batches(material, &templates, &options),
-            ItemKind::WoodenBlock { .. } => wooden_block_batches(item, &templates, &options),
-            ItemKind::DyedBed { material, color } => {
-                dyed_bed_batches(material, color, &templates, &options)
-            }
-            ItemKind::Dye(color) => dye_batches(color, &templates),
-            ItemKind::Prop(kind) => prop_batches(kind, &templates),
-            ItemKind::Mineral(kind) => mineral_batches(kind, &templates),
-            ItemKind::Animal(kind) => animal_batches(kind, &templates),
-            ItemKind::Bellows(kind) => bellows_batches(kind, &templates),
-            ItemKind::Armor(_) | ItemKind::Accessory(_) | ItemKind::Cape(_) => {
-                crate::armor::item_batches(item, templates.item_materials.opaque)
-            }
-            ItemKind::Dust(kind) => dust::batches(kind, templates.item_materials.opaque),
-            ItemKind::Crop(kind) => crop_batches(kind, &templates),
-            ItemKind::Flower(color) => flower_batches(color, &templates),
-            ItemKind::Tool(_) | ItemKind::Stick => tool_batches(item, &templates),
-        } {
-            Ok(batches) => batches,
-            Err(error) => {
-                previews.error = Some(error.clone());
-                tracing::error!(%error, ?item, "Cannot compose inventory item preview");
-                continue;
-            }
-        };
-        let root = commands
-            .spawn((PreviewScene, Transform::default(), Visibility::Hidden))
-            .id();
-        for batch in batches {
-            let mesh = assets.meshes.add(batch_mesh(&batch));
-            let mut entity = commands.spawn((
-                Mesh3d(mesh),
-                Transform::default(),
-                RenderLayers::layer(PREVIEW_LAYER),
-                ChildOf(root),
-            ));
-            if matches!(item, ItemKind::Block(14 | 27)) {
-                entity.insert(MeshMaterial3d::<WaterMaterial>(water.clone()));
-            } else if let Some(handle) = assets
-                .foliage
-                .as_ref()
-                .and_then(|foliage| foliage.materials.get(&batch.material))
-            {
-                entity.insert(MeshMaterial3d(handle.clone()));
-            } else if let Some(handle) = assets.blocks.materials.get(batch.material) {
-                entity.insert(MeshMaterial3d(handle.clone()));
-            }
-            if templates.glass_material(batch.material) {
-                entity.insert(bevy::light::NotShadowCaster);
-            }
+    if !queue.initialized {
+        queue.initialized = true;
+        if queue.warmup {
+            queue.items = finite_catalog(templates.blocks.keys().copied());
+            queue.catalog_remaining = queue.items.iter().copied().collect();
+            queue.catalog_total = queue.catalog_remaining.len();
         }
-        let mut image = Image::new_target_texture(
-            PREVIEW_SIZE,
-            PREVIEW_SIZE,
-            TextureFormat::Rgba8UnormSrgb,
-            None,
-        );
-        image.texture_descriptor.usage |= bevy::render::render_resource::TextureUsages::COPY_SRC;
-        let image = assets.images.add(image);
-        queue.jobs.push_back(PreviewJob { item, root, image });
     }
+    // Captures are serial. Keep only the current icon and one prepared successor
+    // instead of publishing every preview mesh/target in the same startup frame.
+    let Some(item) = queue.items.pop_front() else {
+        return;
+    };
+    let was_empty = queue.jobs.is_empty();
+    let batches = match match item {
+        ItemKind::Block(material) => block_batches(material, &templates, &options),
+        ItemKind::WoodenBlock { .. } => wooden_block_batches(item, &templates, &options),
+        ItemKind::TintedBlock { .. } => tints::batches(item, &templates, &options),
+        ItemKind::DyedBed { material, color } => {
+            dyed_bed_batches(material, color, &templates, &options)
+        }
+        ItemKind::Dye(color) => dye_batches(color, &templates),
+        ItemKind::GlassBottle | ItemKind::WaterBottle | ItemKind::Potion(_) => {
+            alchemy::batches(item, &templates)
+        }
+        ItemKind::Prop(kind) => prop_batches(kind, &templates),
+        ItemKind::Mineral(kind) => mineral_batches(kind, &templates),
+        ItemKind::Animal(kind) => animal_batches(kind, &templates),
+        ItemKind::Bellows(kind) => bellows_batches(kind, &templates),
+        ItemKind::Armor(_)
+        | ItemKind::Accessory(_)
+        | ItemKind::Cape(_)
+        | ItemKind::HeraldicCape { .. } => {
+            crate::armor::item_batches(item, templates.item_materials.opaque)
+        }
+        ItemKind::Dust(kind) => dust::batches(kind, templates.item_materials.opaque),
+        ItemKind::Crop(kind) => crop_batches(kind, &templates),
+        ItemKind::Apple | ItemKind::AppleCore => {
+            apple_batches(item == ItemKind::AppleCore, &templates)
+        }
+        ItemKind::Flower(color) => flower_batches(color, &templates),
+        ItemKind::Tool(_) | ItemKind::FilledWateringCan { .. } | ItemKind::Stick => {
+            tool_batches(item, &templates)
+        }
+    } {
+        Ok(batches) => batches,
+        Err(error) => {
+            if queue.catalog_remaining.remove(&item) {
+                queue.catalog_failed += 1;
+            }
+            queue.failed.insert(item);
+            previews.error = Some(error.clone());
+            tracing::error!(%error, ?item, "Cannot compose inventory item preview");
+            previews.pending = queue.pending();
+            return;
+        }
+    };
+    let root = commands
+        .spawn((PreviewScene, Transform::default(), Visibility::Hidden))
+        .id();
+    for batch in batches {
+        let mesh = assets.meshes.add(batch_mesh(&batch));
+        let mut entity = commands.spawn((
+            Mesh3d(mesh),
+            Transform::default(),
+            RenderLayers::layer(PREVIEW_LAYER),
+            ChildOf(root),
+        ));
+        if matches!(item, ItemKind::Block(14 | 27)) {
+            entity.insert(MeshMaterial3d::<WaterMaterial>(water.clone()));
+        } else if let Some(handle) = assets
+            .foliage
+            .as_ref()
+            .and_then(|foliage| foliage.materials.get(&batch.material))
+        {
+            entity.insert(MeshMaterial3d(handle.clone()));
+        } else if let Some(handle) = assets.blocks.materials.get(batch.material) {
+            entity.insert(MeshMaterial3d(handle.clone()));
+        }
+        if templates.glass_material(batch.material) {
+            entity.insert(bevy::light::NotShadowCaster);
+        }
+    }
+    let mut image = Image::new_target_texture(
+        PREVIEW_SIZE,
+        PREVIEW_SIZE,
+        TextureFormat::Rgba8UnormSrgb,
+        None,
+    );
+    image.texture_descriptor.usage |= bevy::render::render_resource::TextureUsages::COPY_SRC;
+    let image = assets.images.add(image);
+    queue.jobs.push_back(PreviewJob { item, root, image });
+    previews.pending = queue.pending();
+    if !was_empty {
+        return;
+    }
+    queue.started = None;
+    queue.frames = 0;
     let Some(first) = queue.jobs.front() else {
         return;
     };
     commands.entity(first.root).insert(Visibility::Visible);
+    if !cameras.is_empty() {
+        for (mut target, mut camera) in &mut cameras {
+            *target = RenderTarget::Image(first.image.clone().into());
+            camera.is_active = true;
+        }
+        return;
+    }
     commands.spawn((
         PreviewScene,
         PreviewCamera,
@@ -290,7 +605,6 @@ fn prepare(
         Transform::from_xyz(4.0, 8.0, 6.0).looking_at(Vec3::ZERO, Vec3::Y),
         RenderLayers::layer(PREVIEW_LAYER),
     ));
-    previews.pending = queue.jobs.len();
 }
 
 fn render_next(
@@ -299,10 +613,18 @@ fn render_next(
     mut previews: ResMut<RenderBlockPreviews>,
     mut prop_previews: ResMut<RenderPropPreviews>,
     mut item_previews: ResMut<RenderItemPreviews>,
-    mut cameras: Query<&mut RenderTarget, With<PreviewCamera>>,
+    mut cameras: Query<(&mut RenderTarget, &mut Camera), With<PreviewCamera>>,
     scene: Query<Entity, With<PreviewScene>>,
 ) {
-    if queue.jobs.is_empty() || cameras.is_empty() {
+    if queue.jobs.is_empty() {
+        if queue.initialized && queue.items.is_empty() {
+            for entity in &scene {
+                commands.entity(entity).try_despawn();
+            }
+        }
+        return;
+    }
+    if cameras.is_empty() {
         return;
     }
     let now = Instant::now();
@@ -316,7 +638,11 @@ fn render_next(
     let expired = queue.capture.is_none() && now.duration_since(started) >= PREVIEW_GRACE;
     if rendered == Some(true) || expired {
         if let Some(job) = queue.jobs.pop_front() {
+            if queue.catalog_remaining.remove(&job.item) && rendered != Some(true) {
+                queue.catalog_failed += 1;
+            }
             if rendered == Some(true) {
+                queue.captured_once = true;
                 match job.item {
                     ItemKind::Block(material) => {
                         previews.images.insert(material, job.image);
@@ -325,23 +651,32 @@ fn render_next(
                         prop_previews.images.insert(kind, job.image);
                     }
                     ItemKind::Tool(_)
+                    | ItemKind::FilledWateringCan { .. }
                     | ItemKind::Stick
                     | ItemKind::WoodenBlock { .. }
+                    | ItemKind::TintedBlock { .. }
                     | ItemKind::Mineral(_)
                     | ItemKind::Bellows(_)
                     | ItemKind::Dye(_)
+                    | ItemKind::GlassBottle
+                    | ItemKind::WaterBottle
+                    | ItemKind::Potion(_)
                     | ItemKind::DyedBed { .. }
                     | ItemKind::Armor(_)
                     | ItemKind::Accessory(_)
                     | ItemKind::Cape(_)
+                    | ItemKind::HeraldicCape { .. }
                     | ItemKind::Dust(_)
                     | ItemKind::Crop(_)
+                    | ItemKind::Apple
+                    | ItemKind::AppleCore
                     | ItemKind::Flower(_)
                     | ItemKind::Animal(_) => {
-                        item_previews.images.insert(job.item, job.image);
+                        item_previews.publish(job.item, job.image);
                     }
                 }
             } else {
+                queue.failed.insert(job.item);
                 let error = format!(
                     "{} inventory preview remained blank after shader readiness grace",
                     job.item.identifier()
@@ -355,12 +690,20 @@ fn render_next(
         queue.started = Some(now);
         queue.retry_at = None;
         queue.capture_delayed = false;
-        previews.pending = queue.jobs.len();
+        previews.pending = queue.pending();
         if let Some(job) = queue.jobs.front() {
             commands.entity(job.root).insert(Visibility::Visible);
-            for mut target in &mut cameras {
+            for (mut target, mut camera) in &mut cameras {
                 *target = RenderTarget::Image(job.image.clone().into());
+                camera.is_active = true;
             }
+        } else if !queue.items.is_empty() {
+            // Never clear a published icon while its successor is still being
+            // prepared (including failed compositions).
+            for (_, mut camera) in &mut cameras {
+                camera.is_active = false;
+            }
+            return;
         } else {
             // No hidden permanent render pass or preview meshes remain in gameplay.
             for entity in &scene {
@@ -381,8 +724,21 @@ fn render_next(
         }
     }
     queue.frames = queue.frames.saturating_add(1);
+    // Queue pipelines on frames 1/2, then retain the unchanged image until two
+    // active frames lead into capture. Readbacks and retries stay conservative.
+    let active = queue.captured_once
+        || warmup_camera_active(
+            queue.frames,
+            queue.capture.is_some() || queue.retry_at.is_some(),
+            legacy_preview_warmup_enabled(),
+        );
+    for (_, mut camera) in &mut cameras {
+        if camera.is_active != active {
+            camera.is_active = active;
+        }
+    }
     if queue.capture.is_some()
-        || queue.frames < 8
+        || queue.frames < if queue.captured_once { 2 } else { 8 }
         || queue.retry_at.is_some_and(|retry_at| now < retry_at)
     {
         return;
@@ -414,6 +770,7 @@ fn render_next(
                 | ItemKind::Armor(_)
                 | ItemKind::Accessory(_)
                 | ItemKind::Cape(_)
+                | ItemKind::HeraldicCape { .. }
                 | ItemKind::Dust(_)
                 | ItemKind::Crop(_)
                 | ItemKind::Flower(_)
@@ -518,6 +875,31 @@ pub(crate) fn crop_batches(
     crops::batches(kind, templates.item_materials.opaque)
 }
 
+pub(crate) fn apple_batches(core: bool, templates: &TemplateSet) -> Result<Vec<MeshBatch>, String> {
+    let palette = terra_world::props::visual::PropPalette {
+        crop: templates.item_materials.opaque,
+        ..Default::default()
+    };
+    let mut batches = terra_world::props::visual::apple(
+        if core { 3 } else { 0 },
+        terra_world::props::visual::PropDetail::Near,
+        &palette,
+    )
+    .into_iter()
+    .map(|mesh| MeshBatch {
+        material: mesh.material,
+        positions: mesh.positions,
+        normals: mesh.normals,
+        uvs: mesh.uvs,
+        colors: mesh.colors,
+        indices: mesh.indices,
+        ..Default::default()
+    })
+    .collect::<Vec<_>>();
+    fit_unit(&mut batches)?;
+    Ok(batches)
+}
+
 pub(crate) fn block_batches(
     material: u16,
     templates: &TemplateSet,
@@ -562,12 +944,14 @@ pub(crate) fn block_batches(
                 material: primitive.material,
                 positions: primitive.positions.clone(),
                 normals: primitive.normals.clone(),
+                tangents: primitive.tangents.clone(),
                 uvs: primitive.uvs.clone(),
                 indices: primitive.indices.clone(),
                 ..default()
             })
             .collect()
-    } else if material == 29 && templates.animated_chests {
+    } else if material == 29 && templates.animated_chests || terra_core::kinetic::is_part(material)
+    {
         crate::meshing::custom::model_geometry(
             material,
             Default::default(),
@@ -607,6 +991,17 @@ pub(crate) fn block_batches(
     if material == 40 {
         return hardware::torch(batches, templates).map(|batch| vec![batch]);
     }
+    if material == terra_core::plumbing::BASIN {
+        let tint = ItemKind::Block(material)
+            .wood_species()
+            .unwrap_or_default()
+            .tint();
+        for batch in &mut batches {
+            if templates.wood_materials.contains(&batch.material) {
+                batch.colors = vec![tint; batch.positions.len()];
+            }
+        }
+    }
     if material == 1
         && let Some(block) = templates.blocks.get(&1)
     {
@@ -623,20 +1018,10 @@ pub(crate) fn block_batches(
             }
         }
     }
-    if material == terra_core::crusher::MATERIAL {
-        for batch in &mut batches {
-            for point in &mut batch.positions {
-                point[0] *= 2.0;
-            }
-            for normal in &mut batch.normals {
-                *normal = (Vec3::from_array(*normal) / Vec3::new(2.0, 1.0, 1.0))
-                    .normalize_or_zero()
-                    .to_array();
-            }
-        }
-    }
     if matches!(material, 59 | 65..=67 | 71..=73 | 99..=100 | 139)
+        || terra_core::logistics::is_port(material)
         || terra_core::OreKind::from_material(material).is_some()
+        || terra_core::kinetic::is_part(material)
     {
         fit_unit(&mut batches)?;
     }
@@ -652,7 +1037,7 @@ fn fit_unit(batches: &mut [MeshBatch]) -> Result<(), String> {
     }
     let extent = (maximum - minimum).max_element();
     if !extent.is_finite() || extent <= 0.0 {
-        return Err("Invalid mineral preview bounds".into());
+        return Err("Invalid item preview bounds".into());
     }
     let center = (minimum + maximum) * 0.5;
     for vertex in batches.iter_mut().flat_map(|batch| &mut batch.positions) {
@@ -724,7 +1109,7 @@ pub(crate) fn dyed_bed_batches(
     let mut batches = block_batches(material, templates, options)?;
     for batch in &mut batches {
         if templates.blanket_materials.contains(&batch.material) {
-            batch.colors = vec![color.tint(); batch.positions.len()];
+            batch.colors = vec![crate::dye_tint::color(color); batch.positions.len()];
         }
     }
     Ok(batches)
@@ -736,6 +1121,7 @@ pub(crate) fn dye_batches(
 ) -> Result<Vec<MeshBatch>, String> {
     let mut sculpt = sculpt::Sculpt::new(32, 2);
     sculpt.cuboid([7, 5, 7], [25, 8, 25], [0.69, 0.59, 0.39]);
+    // Sculpt already decodes its sRGB source colors while writing PBR vertices.
     let [r, g, b, _] = color.tint();
     sculpt.cuboid([9, 9, 9], [23, 13, 23], [r, g, b]);
     sculpt.cuboid([12, 14, 12], [20, 17, 20], [r, g, b]);
@@ -751,6 +1137,9 @@ pub(crate) fn batch_mesh(batch: &MeshBatch) -> Mesh {
     .with_inserted_attribute(Mesh::ATTRIBUTE_NORMAL, batch.normals.clone())
     .with_inserted_attribute(Mesh::ATTRIBUTE_UV_0, batch.uvs.clone())
     .with_inserted_indices(Indices::U32(batch.indices.clone()));
+    if !batch.tangents.is_empty() {
+        mesh.insert_attribute(Mesh::ATTRIBUTE_TANGENT, batch.tangents.clone());
+    }
     if !batch.colors.is_empty() {
         mesh.insert_attribute(Mesh::ATTRIBUTE_COLOR, batch.colors.clone());
     }
@@ -763,6 +1152,327 @@ pub(crate) fn batch_mesh(batch: &MeshBatch) -> Mesh {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn filled_can_requests_reuse_one_preloaded_icon_per_tool() {
+        let mut requests = RenderItemPreviewRequests::default();
+        for tool in terra_core::ToolKind::ALL
+            .into_iter()
+            .filter(|tool| tool.watering_capacity() > 0)
+        {
+            let empty = ItemKind::Tool(tool);
+            requests.request(empty);
+            for units in 1..=tool.watering_capacity() {
+                let filled = empty.with_watering_units(units).unwrap();
+                assert_eq!(requested_preview(filled), Some(empty));
+                requests.request(filled);
+            }
+        }
+        assert_eq!(requests.items.len(), 5);
+        assert!(
+            requests
+                .items
+                .iter()
+                .all(|item| matches!(item, ItemKind::Tool(_)))
+        );
+    }
+
+    fn rgb_preview(value: u16) -> ItemKind {
+        ItemKind::TintedBlock {
+            material: 148,
+            wood: terra_core::WoodSpecies::Cherry,
+            color: [value as u8, (value >> 8) as u8, 96],
+        }
+    }
+
+    #[test]
+    fn visible_preview_requests_keep_fixed_items_and_bound_real_rgb_objects_independently() {
+        let mut requests = RenderItemPreviewRequests::default();
+        for item in [
+            ItemKind::Block(103),
+            ItemKind::Dye(terra_core::beds::DyeColor::Rgb([1, 2, 3])),
+        ] {
+            requests.request(item);
+        }
+        assert_eq!(
+            requests.items,
+            [
+                ItemKind::Block(103),
+                ItemKind::Dye(terra_core::beds::DyeColor::White)
+            ]
+        );
+        for value in 0..1000 {
+            requests.request(rgb_preview(value));
+            requests.request(rgb_preview(value));
+        }
+        assert_eq!(requests.items.len(), DYNAMIC_PREVIEW_LIMIT + 2);
+        requests.replace([rgb_preview(999), rgb_preview(999)]);
+        assert_eq!(requests.items, vec![rgb_preview(999)]);
+    }
+
+    #[test]
+    fn dynamic_icon_eviction_only_drops_cache_ownership_and_keeps_static_icons() {
+        let mut assets = Assets::<Image>::default();
+        let mut previews = RenderItemPreviews::default();
+        let static_image = assets.add(Image::default());
+        previews.publish(ItemKind::Stick, static_image.clone());
+        let live = assets.add(Image::default());
+        previews.publish(rgb_preview(0), live.clone());
+        for value in 1..1000 {
+            previews.publish(rgb_preview(value), assets.add(Image::default()));
+        }
+        assert_eq!(previews.images.len(), DYNAMIC_PREVIEW_LIMIT + 1);
+        assert_eq!(previews.dynamic.len(), DYNAMIC_PREVIEW_LIMIT);
+        assert!(!previews.images.contains_key(&rgb_preview(0)));
+        assert_eq!(previews.images[&ItemKind::Stick], static_image);
+        assert!(assets.get(&live).is_some());
+        assert_eq!(
+            assets.get(&live).unwrap().texture_descriptor.size,
+            Image::default().texture_descriptor.size
+        );
+    }
+
+    #[test]
+    fn visible_admission_deduplicates_and_discards_stale_fixed_and_dynamic_requests() {
+        let mut app = App::new();
+        app.init_resource::<RenderItemPreviewRequests>()
+            .init_resource::<RenderItemPreviews>()
+            .init_resource::<RenderBlockPreviews>()
+            .init_resource::<RenderPropPreviews>()
+            .insert_resource(PreviewQueue {
+                initialized: true,
+                items: VecDeque::from([ItemKind::Stick]),
+                ..default()
+            })
+            .add_systems(Update, admit_requested);
+        app.world_mut()
+            .resource_mut::<RenderItemPreviewRequests>()
+            .replace([rgb_preview(1), rgb_preview(1), rgb_preview(2)]);
+        for _ in 0..10 {
+            app.update();
+        }
+        assert_eq!(
+            app.world().resource::<PreviewQueue>().items,
+            VecDeque::from([rgb_preview(1), rgb_preview(2)])
+        );
+        app.world_mut()
+            .resource_mut::<RenderItemPreviewRequests>()
+            .replace([rgb_preview(3)]);
+        app.update();
+        assert_eq!(
+            app.world().resource::<PreviewQueue>().items,
+            VecDeque::from([rgb_preview(3)])
+        );
+        let image = Handle::<Image>::default();
+        app.world_mut()
+            .resource_mut::<RenderItemPreviews>()
+            .publish(rgb_preview(3), image);
+        app.world_mut().resource_mut::<PreviewQueue>().items.clear();
+        app.update();
+        assert!(app.world().resource::<PreviewQueue>().items.is_empty());
+    }
+
+    #[test]
+    fn normal_startup_preloads_the_catalog_but_benchmark_and_alchemy_remain_demand_only() {
+        for setting in [None, Some("0"), Some("1"), Some("true")] {
+            assert!(catalog_warmup(["terra-client"], setting));
+            for args in [vec!["--smoke-test-benchmark"], vec!["--smoke-test-alchemy"]] {
+                assert!(!catalog_warmup(args, setting));
+            }
+            assert_eq!(
+                catalog_warmup(["--smoke-test-lod"], setting),
+                setting == Some("1")
+            );
+        }
+    }
+
+    #[test]
+    fn startup_catalog_includes_all_fixed_families_and_wood_variants_without_rgb_expansion() {
+        let materials = [3, 28, 29, 141, 144, 148, 149];
+        let items = finite_catalog(materials);
+        assert_eq!(
+            items.iter().copied().collect::<HashSet<_>>().len(),
+            items.len()
+        );
+        assert!(
+            items
+                .iter()
+                .all(|item| item.valid() && !dynamic_preview(*item))
+        );
+        assert!(items.len() < FIXED_DEMAND_LIMIT);
+        for item in ItemKind::EXTRA
+            .into_iter()
+            .chain(ResourcePropKind::ALL.map(ItemKind::Prop))
+        {
+            assert!(items.contains(&item), "missing {item:?}");
+        }
+        for material in materials
+            .into_iter()
+            .filter(|&material| ItemKind::supports_wood(material))
+        {
+            for wood in [
+                terra_core::WoodSpecies::Oak,
+                terra_core::WoodSpecies::Birch,
+                terra_core::WoodSpecies::Spruce,
+                terra_core::WoodSpecies::Cherry,
+            ] {
+                assert!(items.contains(&ItemKind::for_wood(material, wood)));
+            }
+        }
+        for cape in terra_core::CapeItem::ALL {
+            assert!(items.contains(&ItemKind::Cape(cape)));
+        }
+        for material in 71..=73 {
+            for color in terra_core::beds::DyeColor::ALL {
+                assert!(items.contains(&ItemKind::DyedBed { material, color }));
+            }
+        }
+        assert_eq!(
+            items,
+            finite_catalog(materials.into_iter().rev().chain(materials))
+        );
+    }
+
+    #[test]
+    fn startup_completion_drains_the_finite_pass_and_reports_failures_without_retrying_it() {
+        let mut app = App::new();
+        app.init_resource::<BlockAssets>()
+            .insert_resource(RenderBlockPreviews {
+                error: Some("invalid item asset".into()),
+                ..default()
+            })
+            .insert_resource(RenderPreviewStartup {
+                required: true,
+                ..default()
+            })
+            .insert_resource(PreviewQueue {
+                initialized: true,
+                warmup: true,
+                catalog_total: 2,
+                catalog_failed: 1,
+                catalog_remaining: HashSet::from([ItemKind::Stick]),
+                ..default()
+            })
+            .add_systems(Update, sync_startup);
+        app.update();
+        let startup = app.world().resource::<RenderPreviewStartup>();
+        assert_eq!(
+            (startup.total, startup.completed, startup.failed),
+            (2, 1, 1)
+        );
+        assert!(!startup.ready);
+        assert_eq!(startup.error.as_deref(), Some("invalid item asset"));
+        app.world_mut()
+            .resource_mut::<PreviewQueue>()
+            .catalog_remaining
+            .clear();
+        for _ in 0..4 {
+            app.update();
+        }
+        let startup = app.world().resource::<RenderPreviewStartup>();
+        assert!(startup.ready);
+        assert_eq!(
+            (startup.total, startup.completed, startup.failed),
+            (2, 2, 1)
+        );
+        assert!(!app.world().resource::<PreviewQueue>().warmup);
+        assert_eq!(app.world().resource::<PreviewQueue>().pending(), 0);
+    }
+
+    #[test]
+    fn changing_visible_pages_preserves_the_active_readback_but_drops_hidden_successors() {
+        let mut app = App::new();
+        app.init_resource::<RenderItemPreviewRequests>()
+            .init_resource::<RenderBlockPreviews>()
+            .init_resource::<RenderItemPreviews>()
+            .init_resource::<RenderPropPreviews>()
+            .add_systems(Update, admit_requested);
+        let active = app.world_mut().spawn_empty().id();
+        let hidden = app.world_mut().spawn_empty().id();
+        let capture = app.world_mut().spawn_empty().id();
+        app.insert_resource(PreviewQueue {
+            initialized: true,
+            capture: Some((capture, Instant::now())),
+            jobs: VecDeque::from([
+                PreviewJob {
+                    item: ItemKind::Block(3),
+                    root: active,
+                    image: Handle::default(),
+                },
+                PreviewJob {
+                    item: rgb_preview(1),
+                    root: hidden,
+                    image: Handle::default(),
+                },
+            ]),
+            items: VecDeque::from([ItemKind::Stick]),
+            ..default()
+        });
+        app.world_mut()
+            .resource_mut::<RenderItemPreviewRequests>()
+            .replace([ItemKind::GlassBottle]);
+        app.update();
+        let queue = app.world().resource::<PreviewQueue>();
+        assert_eq!(queue.jobs.len(), 1);
+        assert_eq!(queue.jobs[0].root, active);
+        assert_eq!(queue.capture.unwrap().0, capture);
+        assert_eq!(queue.items, VecDeque::from([ItemKind::GlassBottle]));
+        assert!(app.world().get_entity(active).is_ok());
+        assert!(app.world().get_entity(capture).is_ok());
+        assert!(app.world().get_entity(hidden).is_err());
+        assert_eq!(app.world().resource::<RenderBlockPreviews>().pending, 2);
+    }
+
+    #[test]
+    fn visible_fixed_items_use_their_correct_existing_preview_cache() {
+        let mut app = App::new();
+        app.init_resource::<RenderItemPreviewRequests>()
+            .init_resource::<RenderBlockPreviews>()
+            .init_resource::<RenderItemPreviews>()
+            .init_resource::<RenderPropPreviews>()
+            .init_resource::<PreviewQueue>()
+            .add_systems(Update, admit_requested);
+        app.world_mut()
+            .resource_mut::<RenderBlockPreviews>()
+            .images
+            .insert(3, Handle::default());
+        app.world_mut()
+            .resource_mut::<RenderPropPreviews>()
+            .images
+            .insert(ResourcePropKind::Flower, Handle::default());
+        app.world_mut()
+            .resource_mut::<RenderItemPreviews>()
+            .publish(ItemKind::GlassBottle, Handle::default());
+        app.world_mut()
+            .resource_mut::<RenderItemPreviewRequests>()
+            .replace([
+                ItemKind::Block(3),
+                ItemKind::Prop(ResourcePropKind::Flower),
+                ItemKind::GlassBottle,
+                ItemKind::Tool(terra_core::ToolKind::Wrench),
+            ]);
+        app.update();
+        assert_eq!(
+            app.world().resource::<PreviewQueue>().items,
+            VecDeque::from([ItemKind::Tool(terra_core::ToolKind::Wrench)])
+        );
+    }
+
+    #[test]
+    fn preview_warmup_control_is_lod_smoke_only_and_keeps_capture_and_retry_frames_active() {
+        for setting in [None, Some("0"), Some("1"), Some("true")] {
+            assert!(!legacy_preview_warmup(false, setting));
+            assert_eq!(legacy_preview_warmup(true, setting), setting == Some("1"));
+        }
+        for frame in 0..=12 {
+            assert_eq!(
+                warmup_camera_active(frame, false, false),
+                frame <= 2 || frame >= 7
+            );
+            assert!(warmup_camera_active(frame, true, false));
+            assert!(warmup_camera_active(frame, false, true));
+        }
+    }
 
     #[test]
     fn all_thirteen_dyes_have_distinct_solid_shared_material_previews() {
@@ -816,6 +1526,7 @@ mod tests {
                 terrain,
                 exposure: None,
                 conditions: default(),
+                tints: default(),
             };
             let batches = block_batches(1, &templates, &options).unwrap();
             let top = batches.iter().find(|batch| batch.material == 0).unwrap();
@@ -851,6 +1562,7 @@ mod tests {
         }
         app.world_mut().spawn((
             PreviewCamera,
+            Camera::default(),
             RenderTarget::Image(Handle::<Image>::default().into()),
         ));
         app.world_mut()
@@ -862,6 +1574,350 @@ mod tests {
             ..default()
         });
         app
+    }
+
+    #[test]
+    fn preview_camera_pauses_middle_warmup_frames_and_reactivates_before_the_eighth_frame_capture()
+    {
+        let mut app = queue_fixture();
+        for (index, expected) in [true, true, false, false, false, false, true, true]
+            .into_iter()
+            .enumerate()
+        {
+            app.update();
+            assert_eq!(
+                app.world_mut()
+                    .query::<&Camera>()
+                    .single(app.world())
+                    .unwrap()
+                    .is_active,
+                expected,
+                "warmup frame {}",
+                index + 1
+            );
+            assert_eq!(
+                app.world().resource::<PreviewQueue>().capture.is_some(),
+                index == 7
+            );
+        }
+        let capture = app.world().resource::<PreviewQueue>().capture.unwrap().0;
+        for _ in 0..6 {
+            app.update();
+            assert!(
+                app.world_mut()
+                    .query::<&Camera>()
+                    .single(app.world())
+                    .unwrap()
+                    .is_active
+            );
+            assert_eq!(
+                app.world().resource::<PreviewQueue>().capture.unwrap().0,
+                capture
+            );
+        }
+        app.world_mut().resource_mut::<PreviewQueue>().received = Some(false);
+        app.update();
+        app.world_mut().resource_mut::<PreviewQueue>().retry_at =
+            Some(Instant::now() + Duration::from_secs(60));
+        for _ in 0..6 {
+            app.update();
+            assert!(
+                app.world_mut()
+                    .query::<&Camera>()
+                    .single(app.world())
+                    .unwrap()
+                    .is_active
+            );
+            assert!(app.world().resource::<PreviewQueue>().capture.is_none());
+            assert!(app.world().resource::<PreviewQueue>().retry_at.is_some());
+        }
+    }
+
+    fn lazy_queue_fixture(items: VecDeque<ItemKind>) -> App {
+        let mut templates = TemplateSet::default();
+        for id in [3, 4, 5] {
+            templates.blocks.insert(
+                id,
+                crate::blocks::BlockTemplate {
+                    surface: None,
+                    render_kind: crate::blocks::definitions::BlockRenderKind::Cube,
+                    bevel_width: 0.0,
+                    faces: crate::blocks::cube_faces(0.0, [0; 6], None),
+                    face_materials: [0; 6],
+                    side_cap: None,
+                    details: Vec::new(),
+                    model: Vec::new(),
+                },
+            );
+        }
+        let mut blocks = BlockAssets::default();
+        blocks.templates = Some(std::sync::Arc::new(templates));
+        blocks.materials = vec![Handle::default()];
+        let mut app = App::new();
+        app.insert_resource(blocks)
+            .insert_resource(WaterAssets(Handle::default()))
+            .init_resource::<crate::foliage::FoliageAssets>()
+            .init_resource::<Assets<Image>>()
+            .init_resource::<Assets<Mesh>>()
+            .init_resource::<RenderBlockPreviews>()
+            .init_resource::<RenderPropPreviews>()
+            .init_resource::<RenderItemPreviews>()
+            .insert_resource(PreviewQueue {
+                initialized: true,
+                items,
+                ..default()
+            })
+            .add_systems(Update, (prepare, render_next).chain());
+        app
+    }
+
+    #[test]
+    fn demand_only_smoke_initializes_without_catalog_jobs_meshes_targets_or_cameras() {
+        let mut app = lazy_queue_fixture(VecDeque::new());
+        app.world_mut().resource_mut::<PreviewQueue>().initialized = false;
+        app.update();
+        let queue = app.world().resource::<PreviewQueue>();
+        assert!(queue.initialized);
+        assert_eq!(queue.pending(), 0);
+        assert!(!queue.warmup);
+        assert_eq!(app.world().resource::<Assets<Mesh>>().len(), 0);
+        assert_eq!(app.world().resource::<Assets<Image>>().len(), 0);
+        assert_eq!(
+            app.world_mut()
+                .query::<&PreviewScene>()
+                .iter(app.world())
+                .count(),
+            0
+        );
+    }
+
+    #[test]
+    fn lazy_previews_admit_one_item_per_frame_and_publish_every_independent_image() {
+        let items = VecDeque::from([
+            ItemKind::Block(3),
+            ItemKind::Block(4),
+            ItemKind::Block(5),
+            ItemKind::Dye(terra_core::beds::DyeColor::Red),
+            ItemKind::Stick,
+            ItemKind::Tool(terra_core::ToolKind::Wrench),
+        ]);
+        let requested = items.len();
+        let mut app = lazy_queue_fixture(items);
+        app.update();
+        assert_eq!(app.world().resource::<Assets<Mesh>>().len(), 1);
+        assert_eq!(app.world().resource::<Assets<Image>>().len(), 1);
+        assert_eq!(
+            app.world().resource::<RenderBlockPreviews>().pending,
+            requested
+        );
+        app.update();
+        assert_eq!(app.world().resource::<Assets<Mesh>>().len(), 2);
+        assert_eq!(
+            app.world().resource::<Assets<Image>>().len(),
+            PREVIEW_PREFETCH
+        );
+        app.update();
+        assert_eq!(app.world().resource::<Assets<Mesh>>().len(), 2);
+        assert_eq!(
+            app.world().resource::<Assets<Image>>().len(),
+            PREVIEW_PREFETCH
+        );
+        let mut completed = Vec::new();
+        for remaining in (0..requested).rev() {
+            let job = app.world().resource::<PreviewQueue>().jobs.front().unwrap();
+            completed.push((job.item, job.image.clone()));
+            let meshes_before = app.world().resource::<Assets<Mesh>>().len();
+            app.world_mut().resource_mut::<PreviewQueue>().received = Some(true);
+            app.update();
+            assert_eq!(
+                app.world().resource::<RenderBlockPreviews>().pending,
+                remaining
+            );
+            assert!(app.world().resource::<Assets<Mesh>>().len() <= meshes_before + 1);
+            assert!(app.world().resource::<PreviewQueue>().jobs.len() <= PREVIEW_PREFETCH);
+            assert!(
+                app.world_mut().query::<&Mesh3d>().iter(app.world()).count() <= PREVIEW_PREFETCH
+            );
+        }
+        let mut image_ids = std::collections::HashSet::new();
+        for (item, expected) in completed {
+            let actual = match item {
+                ItemKind::Block(id) => &app.world().resource::<RenderBlockPreviews>().images[&id],
+                _ => &app.world().resource::<RenderItemPreviews>().images[&item],
+            };
+            assert_eq!(actual, &expected);
+            assert!(image_ids.insert(actual.id()));
+        }
+        assert!(
+            app.world()
+                .resource::<RenderBlockPreviews>()
+                .error
+                .is_none()
+        );
+        assert_eq!(
+            app.world_mut()
+                .query::<&PreviewScene>()
+                .iter(app.world())
+                .count(),
+            0,
+            "completed icons must leave no preview camera, lights or meshes"
+        );
+    }
+
+    #[test]
+    fn a_warmed_preview_captures_after_two_active_frames_without_overwriting_a_published_image() {
+        let mut app = lazy_queue_fixture(VecDeque::from([ItemKind::Block(3), ItemKind::Block(4)]));
+        for _ in 0..3 {
+            app.update();
+        }
+        assert!(
+            !app.world_mut()
+                .query::<&Camera>()
+                .single(app.world())
+                .unwrap()
+                .is_active
+        );
+        let queue = app.world().resource::<PreviewQueue>();
+        let previous = queue.jobs[0].image.clone();
+        let next = queue.jobs[1].image.clone();
+        assert_ne!(previous, next);
+        app.world_mut().resource_mut::<PreviewQueue>().received = Some(true);
+        app.update();
+        assert_eq!(app.world().resource::<PreviewQueue>().frames, 1);
+        assert_eq!(
+            app.world().resource::<RenderBlockPreviews>().images[&3],
+            previous
+        );
+        let (target, camera) = app
+            .world_mut()
+            .query_filtered::<(&RenderTarget, &Camera), With<PreviewCamera>>()
+            .single(app.world())
+            .unwrap();
+        assert!(camera.is_active);
+        let RenderTarget::Image(target) = target else {
+            panic!("preview camera must target the next independent image");
+        };
+        assert_eq!(target.handle, next);
+        app.update();
+        assert!(
+            app.world_mut()
+                .query::<&Camera>()
+                .single(app.world())
+                .unwrap()
+                .is_active
+        );
+        assert!(app.world().resource::<PreviewQueue>().capture.is_some());
+        app.world_mut().resource_mut::<PreviewQueue>().received = Some(false);
+        app.update();
+        assert!(
+            app.world_mut()
+                .query::<&Camera>()
+                .single(app.world())
+                .unwrap()
+                .is_active
+        );
+        assert!(app.world().resource::<PreviewQueue>().capture.is_none());
+        assert!(app.world().resource::<PreviewQueue>().retry_at.is_some());
+        assert!(
+            !app.world()
+                .resource::<RenderBlockPreviews>()
+                .images
+                .contains_key(&4)
+        );
+        assert_eq!(
+            app.world().resource::<RenderBlockPreviews>().images[&3],
+            previous
+        );
+    }
+
+    #[test]
+    fn failed_lazy_compositions_pause_the_camera_and_do_not_clear_the_published_target() {
+        let mut app = lazy_queue_fixture(VecDeque::from([
+            ItemKind::Block(3),
+            ItemKind::Block(u16::MAX),
+            ItemKind::Block(u16::MAX),
+            ItemKind::Block(4),
+        ]));
+        app.update();
+        let first_image = app.world().resource::<PreviewQueue>().jobs[0].image.clone();
+        app.world_mut().resource_mut::<PreviewQueue>().received = Some(true);
+        app.update();
+        assert_eq!(
+            app.world().resource::<RenderBlockPreviews>().images[&3],
+            first_image
+        );
+        assert_eq!(app.world().resource::<RenderBlockPreviews>().pending, 2);
+        let (target, camera) = app
+            .world_mut()
+            .query_filtered::<(&RenderTarget, &Camera), With<PreviewCamera>>()
+            .single(app.world())
+            .unwrap();
+        assert!(!camera.is_active);
+        let RenderTarget::Image(target) = target else {
+            panic!("preview camera must retain an image target");
+        };
+        assert_eq!(target.handle, first_image);
+        app.update();
+        assert_eq!(app.world().resource::<RenderBlockPreviews>().pending, 1);
+        assert!(app.world().resource::<PreviewQueue>().jobs.is_empty());
+        app.update();
+        let (target, camera) = app
+            .world_mut()
+            .query_filtered::<(&RenderTarget, &Camera), With<PreviewCamera>>()
+            .single(app.world())
+            .unwrap();
+        assert!(camera.is_active);
+        let RenderTarget::Image(target) = target else {
+            panic!("preview camera must switch to the next image target");
+        };
+        assert_ne!(target.handle, first_image);
+        app.world_mut().resource_mut::<PreviewQueue>().received = Some(true);
+        app.update();
+        assert_eq!(app.world().resource::<RenderBlockPreviews>().pending, 0);
+        assert_eq!(
+            app.world().resource::<RenderBlockPreviews>().images[&3],
+            first_image
+        );
+        assert!(
+            app.world()
+                .resource::<RenderBlockPreviews>()
+                .images
+                .contains_key(&4)
+        );
+    }
+
+    #[test]
+    fn a_failed_final_lazy_item_still_finishes_and_releases_the_preview_scene() {
+        let mut app = lazy_queue_fixture(VecDeque::from([
+            ItemKind::Block(3),
+            ItemKind::Block(u16::MAX),
+            ItemKind::Block(u16::MAX),
+        ]));
+        app.update();
+        app.world_mut().resource_mut::<PreviewQueue>().received = Some(true);
+        app.update();
+        assert_eq!(app.world().resource::<RenderBlockPreviews>().pending, 1);
+        app.update();
+        assert_eq!(app.world().resource::<RenderBlockPreviews>().pending, 0);
+        assert!(
+            app.world()
+                .resource::<RenderBlockPreviews>()
+                .images
+                .contains_key(&3)
+        );
+        assert!(
+            app.world()
+                .resource::<RenderBlockPreviews>()
+                .error
+                .is_some()
+        );
+        assert_eq!(
+            app.world_mut()
+                .query::<&PreviewScene>()
+                .iter(app.world())
+                .count(),
+            0
+        );
     }
 
     #[test]
@@ -1148,5 +2204,145 @@ mod tests {
                 .images
                 .is_empty()
         );
+    }
+
+    #[test]
+    fn one_cell_machine_icons_keep_body_proportions_and_include_their_moving_parts() {
+        use crate::blocks::{BlockTemplate, definitions::BlockRenderKind};
+        let mut templates = TemplateSet::default();
+        for (material, paddle, cog) in [(99, 0, 2), (156, 14, 15)] {
+            let mut model = Vec::new();
+            for (slot, minimum, maximum) in [
+                (0, [0.1, 0.0, 0.1], [0.9, 1.0, 0.9]),
+                (1, [0.3; 3], [0.7; 3]),
+                (2, [0.91, 0.35, 0.35], [1.0, 0.65, 0.65]),
+            ] {
+                model.extend(crate::blocks::cube::box_model(
+                    &[terra_core::block_shapes::ShapeBox {
+                        minimum,
+                        maximum,
+                        hinged: false,
+                    }],
+                    0.0,
+                    [slot; 6],
+                ));
+            }
+            templates
+                .crusher_moving_materials
+                .extend([(1, paddle), (2, cog)]);
+            templates.blocks.insert(
+                material,
+                BlockTemplate {
+                    surface: None,
+                    render_kind: BlockRenderKind::CustomMesh,
+                    bevel_width: 0.0,
+                    faces: std::array::from_fn(|_| Vec::new()),
+                    face_materials: [0; 6],
+                    side_cap: None,
+                    details: Vec::new(),
+                    model,
+                },
+            );
+        }
+        let options = RenderOptions {
+            water_level: None,
+            detail_level: DetailLevel::Near,
+            terrain: None,
+            exposure: None,
+            conditions: default(),
+            tints: default(),
+        };
+        for material in [99, 156] {
+            let batches = block_batches(material, &templates, &options).unwrap();
+            for slot in 0..3 {
+                assert!(batches.iter().any(|batch| batch.material == slot));
+            }
+            let mut low = Vec3::splat(f32::INFINITY);
+            let mut high = Vec3::splat(f32::NEG_INFINITY);
+            for point in batches.iter().flat_map(|batch| &batch.positions) {
+                low = low.min(Vec3::from_array(*point));
+                high = high.max(Vec3::from_array(*point));
+            }
+            assert!((high.y - low.y - 1.0).abs() < 0.00001);
+            assert!((high.x - low.x - 0.9).abs() < 0.00001);
+            assert!((high.z - low.z - 0.8).abs() < 0.00001);
+        }
+    }
+
+    #[test]
+    fn kinetic_icons_keep_their_own_rotor_material_and_fit_extended_silhouettes() {
+        use crate::blocks::{BlockTemplate, definitions::BlockRenderKind};
+        let mut templates = TemplateSet::default();
+        let ids = [141, 142, 143, 149, 150, 151, 147];
+        for id in ids {
+            let radius = f64::from(terra_core::kinetic::radial_extent(id).unwrap());
+            let moving_slot = usize::from(id);
+            let mut model = crate::blocks::cube::box_model(
+                &[terra_core::block_shapes::ShapeBox {
+                    minimum: [0.35, 0.5 - radius, 0.5 - radius],
+                    maximum: [0.65, 0.5 + radius, 0.5 + radius],
+                    hinged: false,
+                }],
+                0.0,
+                [moving_slot; 6],
+            );
+            model.extend(crate::blocks::cube::box_model(
+                &[terra_core::block_shapes::ShapeBox {
+                    minimum: [0.45; 3],
+                    maximum: [0.55; 3],
+                    hinged: false,
+                }],
+                0.0,
+                [0; 6],
+            ));
+            templates
+                .crusher_moving_materials
+                .insert(moving_slot, if id == 147 { 6 } else { 4 });
+            templates.blocks.insert(
+                id,
+                BlockTemplate {
+                    surface: None,
+                    render_kind: BlockRenderKind::CustomMesh,
+                    bevel_width: 0.0,
+                    faces: std::array::from_fn(|_| Vec::new()),
+                    face_materials: [0; 6],
+                    side_cap: None,
+                    details: Vec::new(),
+                    model,
+                },
+            );
+        }
+        let options = RenderOptions {
+            water_level: None,
+            detail_level: DetailLevel::Near,
+            terrain: None,
+            exposure: None,
+            conditions: default(),
+            tints: default(),
+        };
+        for id in ids {
+            let batches = block_batches(id, &templates, &options).unwrap();
+            assert!(
+                batches
+                    .iter()
+                    .any(|batch| batch.material == usize::from(id)),
+                "a gear icon must include its material-specific rotor, not only a shared frame"
+            );
+            assert!(
+                batches
+                    .iter()
+                    .all(|batch| batch.material == 0 || batch.material == usize::from(id))
+            );
+            let mut low = Vec3::splat(f32::INFINITY);
+            let mut high = Vec3::splat(f32::NEG_INFINITY);
+            for point in batches.iter().flat_map(|batch| &batch.positions) {
+                let point = Vec3::from_array(*point);
+                low = low.min(point);
+                high = high.max(point);
+                assert!(point.cmpge(Vec3::ZERO).all() && point.cmple(Vec3::ONE).all());
+            }
+            assert!(((high - low).max_element() - 1.0).abs() < 0.00001);
+            assert!(((low + high) * 0.5 - Vec3::splat(0.5)).length() < 0.00001);
+        }
     }
 }

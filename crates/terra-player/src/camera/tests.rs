@@ -153,6 +153,127 @@ fn menu_blocks_flight_and_mouse_look_without_relying_on_cursor_capture() {
     );
 }
 
+fn capture_app(blocked: bool, focused: bool) -> (App, Entity) {
+    use bevy::window::{CursorOptions, PrimaryWindow, WindowFocused};
+    let mut app = App::new();
+    app.insert_resource(CameraInputState::default())
+        .insert_resource(PlayerInputBlock(blocked))
+        .init_resource::<ButtonInput<KeyCode>>()
+        .init_resource::<ButtonInput<MouseButton>>()
+        .add_message::<WindowFocused>()
+        .add_message::<CaptureRequest>()
+        .add_systems(Update, update_capture);
+    let entity = app
+        .world_mut()
+        .spawn((
+            Window {
+                focused,
+                ..default()
+            },
+            PrimaryWindow,
+            CursorOptions::default(),
+        ))
+        .id();
+    (app, entity)
+}
+
+#[test]
+fn joining_a_focused_world_captures_after_loading_unblocks_without_another_click() {
+    use bevy::window::{CursorGrabMode, CursorOptions};
+    let (mut app, window) = capture_app(true, true);
+    let mut session = terra_network::client::ClientSession::default();
+    session.ready = true;
+    app.insert_resource(session);
+
+    // Loading requests capture in PostUpdate; the UI clears this blocker later.
+    app.world_mut().write_message(CaptureRequest(true));
+    app.update();
+    assert!(!app.world().resource::<CameraInputState>().captured);
+    app.world_mut().resource_mut::<PlayerInputBlock>().0 = false;
+    app.update();
+
+    let input = app.world().resource::<CameraInputState>();
+    assert!(input.captured);
+    assert!(input.just_captured);
+    assert!(!input.capture_ready());
+    let cursor = app.world().get::<CursorOptions>(window).unwrap();
+    assert_eq!(cursor.grab_mode, CursorGrabMode::Locked);
+    assert!(!cursor.visible);
+    app.update();
+    assert!(app.world().resource::<CameraInputState>().capture_ready());
+}
+
+#[test]
+fn pending_join_capture_waits_for_session_readiness_and_window_focus() {
+    let (mut app, window) = capture_app(false, false);
+    app.init_resource::<terra_network::client::ClientSession>();
+    app.world_mut().write_message(CaptureRequest(true));
+    app.update();
+    assert!(!app.world().resource::<CameraInputState>().captured);
+
+    app.world_mut().get_mut::<Window>(window).unwrap().focused = true;
+    app.update();
+    assert!(!app.world().resource::<CameraInputState>().captured);
+    app.world_mut().get_mut::<Window>(window).unwrap().focused = false;
+    app.world_mut()
+        .resource_mut::<terra_network::client::ClientSession>()
+        .ready = true;
+    app.update();
+    assert!(!app.world().resource::<CameraInputState>().captured);
+
+    app.world_mut().get_mut::<Window>(window).unwrap().focused = true;
+    app.update();
+    assert!(app.world().resource::<CameraInputState>().captured);
+}
+
+#[test]
+fn release_pause_network_failure_and_disabled_input_cancel_pending_capture() {
+    for cancellation in 0..4 {
+        let (mut app, _) = capture_app(true, true);
+        let mut session = terra_network::client::ClientSession::default();
+        session.ready = true;
+        app.insert_resource(session);
+        app.world_mut().write_message(CaptureRequest(true));
+        app.update();
+        match cancellation {
+            0 => {
+                app.world_mut().write_message(CaptureRequest(false));
+            }
+            1 => app
+                .world_mut()
+                .resource_mut::<ButtonInput<KeyCode>>()
+                .press(KeyCode::Escape),
+            2 => {
+                app.world_mut()
+                    .resource_mut::<terra_network::client::ClientSession>()
+                    .error = Some("Disconnected".into());
+            }
+            3 => {
+                app.world_mut()
+                    .resource_mut::<CameraInputState>()
+                    .accept_input = false;
+            }
+            _ => unreachable!(),
+        }
+        app.update();
+        app.world_mut()
+            .resource_mut::<ButtonInput<KeyCode>>()
+            .reset_all();
+        app.world_mut()
+            .resource_mut::<terra_network::client::ClientSession>()
+            .error = None;
+        app.world_mut()
+            .resource_mut::<CameraInputState>()
+            .accept_input = true;
+        app.world_mut().resource_mut::<PlayerInputBlock>().0 = false;
+        app.update();
+        assert!(
+            !app.world().resource::<CameraInputState>().captured,
+            "pending capture survived cancellation {cancellation}"
+        );
+    }
+}
+
 #[test]
 fn explicit_menu_resume_captures_even_on_the_escape_toggle_frame() {
     use bevy::window::{CursorGrabMode, CursorOptions, PrimaryWindow, WindowFocused};

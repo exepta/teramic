@@ -1,0 +1,132 @@
+{
+  "schema_version": 1,
+  "id": 168,
+  "name": "Kinetic Water Pump",
+  "description": "A reinforced kinetic water pump for the finite hydraulic network.",
+  "creative_category": "technic",
+  "render_kind": "custom_mesh",
+  "struct_block": true,
+  "model_layout": "scene",
+  "model": "models/pump.gltf",
+  "hardness": 3,
+  "resistance": 8,
+  "mining_level": 0,
+  "required_tool": "pickaxe",
+  "textures": {
+    "pipe_stone": "textures/stone.png",
+    "pipe_iron": "textures/machinery-iron-hd.png",
+    "brass_flanges": "textures/machinery-iron-hd.png",
+    "iron_bolts": "textures/machinery-iron-hd.png",
+    "hydraulic_drive": "textures/machinery-iron-hd.png"
+  },
+  "collision_boxes": [
+    {
+      "minimum": [
+        0.07,
+        0,
+        0.1
+      ],
+      "maximum": [
+        0.93,
+        0.15,
+        0.9
+      ]
+    },
+    {
+      "minimum": [
+        0.125,
+        0.155,
+        0.15
+      ],
+      "maximum": [
+        0.875,
+        0.3,
+        0.85
+      ]
+    },
+    {
+      "minimum": [
+        0.125,
+        0.705,
+        0.15
+      ],
+      "maximum": [
+        0.875,
+        0.85,
+        0.85
+      ]
+    },
+    {
+      "minimum": [
+        0.255,
+        0.3,
+        0.265
+      ],
+      "maximum": [
+        0.745,
+        0.715,
+        0.735
+      ]
+    },
+    {
+      "minimum": [
+        0.285,
+        0.285,
+        0
+      ],
+      "maximum": [
+        0.715,
+        0.715,
+        0.2
+      ]
+    },
+    {
+      "minimum": [
+        0.285,
+        0.285,
+        0.8
+      ],
+      "maximum": [
+        0.715,
+        0.715,
+        1
+      ]
+    },
+    {
+      "minimum": [
+        0.425,
+        0.81,
+        0.425
+      ],
+      "maximum": [
+        0.575,
+        0.99,
+        0.575
+      ]
+    },
+    {
+      "minimum": [
+        0.82,
+        0.2625,
+        0.2625
+      ],
+      "maximum": [
+        0.93,
+        0.7375,
+        0.7375
+      ]
+    },
+    {
+      "minimum": [
+        0,
+        0.418,
+        0.418
+      ],
+      "maximum": [
+        1,
+        0.582,
+        0.582
+      ]
+    }
+  ]
+}

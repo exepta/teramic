@@ -1,0 +1,123 @@
+{
+  "causal_evidence": {
+    "dense_import_all4096_poses_mean_ms": [
+      518.017894,
+      9.346068
+    ],
+    "dense_import_single_object_mean_ms": [
+      5.445177,
+      1.36866
+    ],
+    "open_inventory_fps": [
+      78.621034213,
+      105.168665534
+    ],
+    "open_inventory_main_post_update_mean_ms": [
+      4.438240978,
+      4.566296562
+    ],
+    "open_inventory_main_update_mean_ms": [
+      6.428922946,
+      3.120944637
+    ],
+    "open_inventory_ui_reactivity_mean_ms": [
+      4.275060197,
+      1.103409145
+    ],
+    "sparse_native_flight_import_after_calls": 17,
+    "sparse_native_flight_import_after_mean_ms": 0.007133765
+  },
+  "gpu_probe": {
+    "early_prepass_ms": {
+      "mean": 1.293584131,
+      "p95": 1.42448,
+      "p99": 1.66984
+    },
+    "limitations": "26 separate timestamped pass series; nested/concurrent timings cannot be summed into total GPU frame latency. DRM VRAM/GTT bytes are residency counters, not GPU time/utilization.",
+    "main_opaque_pass_ms": {
+      "mean": 2.281306271,
+      "p95": 2.45084,
+      "p99": 2.67416
+    },
+    "mode": "separate instrumented diagnostic probe, not the uninstrumented A/B matrix",
+    "source": "runs/before-probe.log",
+    "ui_pass_ms": {
+      "mean": 0.055344364,
+      "p95": 0.05708,
+      "p99": 0.05824
+    }
+  },
+  "measured_results_percent": {
+    "clear": {
+      "fps_change_percent": 1.809961266653315,
+      "p99_ms_change_percent": -5.5839514032630655,
+      "worst_ms_change_percent": 1.8422542539108688
+    },
+    "flight": {
+      "fps_change_percent": 7.14468125897243,
+      "p99_ms_change_percent": -8.105022437780619,
+      "worst_ms_change_percent": -7.34242289884336
+    },
+    "placement": {
+      "fps_change_percent": 5.609355827138485,
+      "p99_ms_change_percent": -1.8777086872532767,
+      "worst_ms_change_percent": -9.53163762766912
+    },
+    "rain": {
+      "fps_change_percent": -3.0360027035405412,
+      "p99_ms_change_percent": 3.439967821076273,
+      "worst_ms_change_percent": -2.9537606164861896
+    },
+    "village": {
+      "fps_change_percent": 2.663620507533282,
+      "p99_ms_change_percent": -2.467945853222775,
+      "worst_ms_change_percent": -8.676389225535619
+    }
+  },
+  "production_audit": {
+    "journal": "Final sparse block/object maps reused during validation; unique block coordinates get indexed lookup, duplicate block payloads fall back to historical any-match validation and last stored value. Object/hold indexes refresh once after final imported metadata; normal record refresh stays immediate; fallible block/fluid updates resynchronize indexes before returning errors. No geometry/radius/quality or protocol changes.",
+    "minimap": "Only native season_cycle/frame_rotation are omitted from HTML JSON serialization. Separate frame_style/cardinal/text fields remain serialized. Calendar binder directly consumes continuous native values; integration test covers 120 uniform updates plus genuine clock text update.",
+    "tooltip": "QueryState caching is present in final source, but was also retained when the native baseline was built with only journal/minimap optimizations reverted. It is baseline-common/preexisting work for this A/B, not evidence of an additional measured O07 fix."
+  },
+  "queues_uploads": {
+    "after_flight_final_animations": {
+      "active": 72,
+      "peak_active": 96,
+      "queued": 24,
+      "queued_in_view": 0
+    },
+    "after_flight_interval_30s": "Inspect native flight interval for true measured-window upload volume; status peak/deferred fields in final summary include startup.",
+    "lifetime_peak_admitted_bytes_range_after": [
+      10046264,
+      10702560
+    ],
+    "lifetime_peak_admitted_vertices_range_after": [
+      218776,
+      223286
+    ],
+    "meaning": "deferred_upload_batches is a cumulative count of deferral decisions, not final queue length or lost geometry; peak_admitted values measure admitted CPU geometry, not GPU stall time. 240 pending render/collision acks are counts of intermediate acknowledgment events before downstream publication, not a queue depth of 240.",
+    "quality_evidence": "Static clear/placement keep11792 loaded+7015 rendered sections and100340 represented props. Village/rain keep11876 loaded+7259 rendered and198927 represented props. Flight endpoint varies slightly because actual movement runs against wall time; do not claim bit-identical geometry.",
+    "worst_context_after": "Clear/flight/village/placement worst sampled frames had zero preceding terrain/prop generation jobs and zero admitted upload vertices; rain worst had 72172 vertices. Context is preceding-frame correlation, not a bottleneck attribution."
+  },
+  "remaining_measured_costs": [
+    "First inventory opening remains unresolved: native matrix worst transition frame is about98ms; a separate opening trace measures about101ms with main.update around92ms, ui.reactivity around10ms and layout around1.5ms. These overlap/nest and leave substantial unattributed Update work; no proven layout cause. Earlier observer-timestamp confound must not be assumed to explain the spike.",
+    "Rain did not improve:48.1234\u219246.6624FPS, p9926.9120\u219227.8378ms, although single worst frame fell30.8292\u219229.9186ms. Report this explicitly.",
+    "Bulk import9.35ms is a CPU microbenchmark, not the observed native frame maximum; actual sparse flight imports are only0.0071ms mean. Do not attribute all native FPS gain to dense import batching.",
+    "Worker composition maxima40-45ms (and141ms before placement) are asynchronous job durations including startup, not main-thread frame durations.",
+    "Main PostUpdate remains about4.5ms with open inventory, while removed redundant reactivity cuts main Update from6.43\u21923.12ms."
+  ],
+  "resource_limits": {
+    "not_proven": "No multi-hour leak/VRAM stability or hardware-wide frame floor is established by24/35-second windows. A05 remains separate.",
+    "observed": "Final snapshot RSS is higher after in all six cases (roughly1-4%). VRAM peaks vary both directions; no measured general memory reduction. Inventory retains36 new preview images and stable20269 mesh assets across closed/open/closed; one cycle cannot prove bounded long-run behavior.",
+    "wall_time": "Setup duration differs, especially rain:152.655s before vs174.739s after with same24s sample. Whole-process user/system CPU totals and peak residency therefore are not pure sample-window performance comparisons."
+  },
+  "source_selection": {
+    "after": "after/<case>",
+    "clear": "before/clear",
+    "flight": "before/flight",
+    "inventory": "before/inventory",
+    "placement": "before-placement/placement",
+    "rain": "before-warm-margin/rain",
+    "village": "before-warm-margin/village"
+  }
+}

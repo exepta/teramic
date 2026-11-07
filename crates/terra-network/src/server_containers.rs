@@ -1,12 +1,72 @@
 //! Private chest snapshots and optimistic, atomic world-inventory transactions.
 use super::*;
 use crate::protocol::inventory::{
-    ContainerCommand, ContainerHalf, ContainerSnapshot, InventoryAction, InventoryCommand,
-    InventoryOutcome,
+    ContainerCommand, ContainerHalf, ContainerSnapshot, ContainerView, InventoryAction,
+    InventoryCommand, InventoryOutcome,
 };
+#[path = "server_hearth_containers.rs"]
+mod hearths;
 
 fn snapshot(world: &ControlWorld, position: [i64; 3]) -> Option<ContainerSnapshot> {
-    if let Some(material @ (59 | 99)) = world.chunks.block_at(position) {
+    if world.chunks.block_at(position) == Some(terra_core::logistics::BELT_DISTRIBUTOR) {
+        world
+            .journal
+            .object_state(position)
+            .filter(|s| s.valid_for(position, terra_core::logistics::BELT_DISTRIBUTOR))?;
+        return Some(ContainerSnapshot {
+            anchor: position,
+            view: ContainerView::Primary,
+            attached_campfire: false,
+            workbench: None,
+            furnace: None,
+            crusher: None,
+            mixer: None,
+            cauldron: None,
+            campfire: None,
+            tunnel_random: None,
+            filter: None,
+            distributor: Some(
+                world
+                    .journal
+                    .distributor_at(position)
+                    .copied()
+                    .unwrap_or_default(),
+            ),
+            halves: Vec::new(),
+        });
+    }
+    if let Some(material) = world.chunks.block_at(position).filter(|material| {
+        terra_core::logistics::supports_filter(*material)
+            || terra_core::logistics::is_tunnel(*material)
+    }) {
+        world
+            .journal
+            .object_state(position)
+            .filter(|s| s.valid_for(position, material))?;
+        return Some(ContainerSnapshot {
+            anchor: position,
+            view: ContainerView::Primary,
+            attached_campfire: false,
+            workbench: None,
+            furnace: None,
+            crusher: None,
+            mixer: None,
+            cauldron: None,
+            campfire: None,
+            tunnel_random: terra_core::logistics::is_tunnel(material)
+                .then(|| world.journal.tunnel_random_at(position)),
+            distributor: None,
+            filter: terra_core::logistics::supports_filter(material).then(|| {
+                world
+                    .journal
+                    .logistics_filter_at(position)
+                    .copied()
+                    .unwrap_or_default()
+            }),
+            halves: Vec::new(),
+        });
+    }
+    if let Some(material @ (59 | 99 | 156 | 161 | 162)) = world.chunks.block_at(position) {
         let selected = world.journal.object_state(position)?;
         let anchor = if selected.secondary {
             selected.peer?
@@ -14,23 +74,62 @@ fn snapshot(world: &ControlWorld, position: [i64; 3]) -> Option<ContainerSnapsho
             position
         };
         let primary = world.journal.object_state(anchor)?;
-        let upper = primary.peer?;
-        let secondary = world.journal.object_state(upper)?;
+        let loaded = if material == 99 {
+            super::crushers::loaded(anchor, &world.chunks, &world.journal)
+        } else if material == 156 {
+            world
+                .journal
+                .object_state(anchor)
+                .is_some_and(|state| state.valid_for(anchor, material))
+                && world.journal.mixer_at(anchor).is_some()
+        } else if material == 161 {
+            world.journal.valid_cauldron(anchor) && world.journal.cauldron_at(anchor).is_some()
+        } else if material == 162 {
+            world.journal.valid_campfire(anchor) && world.journal.campfire_at(anchor).is_some()
+        } else {
+            super::furnaces::loaded(anchor, &world.chunks, &world.journal)
+        };
         if primary.secondary
-            || !secondary.secondary
-            || secondary.peer != Some(anchor)
-            || secondary.facing != primary.facing
             || !primary.valid_for(anchor, material)
-            || !secondary.valid_for(upper, material)
-            || world.chunks.block_at(anchor) != Some(material)
-            || world.chunks.block_at(upper) != Some(material)
-            || ![anchor, upper].contains(&position)
+            || !selected.valid_for(position, material)
+            || !loaded
+            || position != anchor && primary.peer != Some(position)
         {
             return None;
         }
         let value = ContainerSnapshot {
+            view: ContainerView::Primary,
+            attached_campfire: world.journal.has_attached_campfire(anchor),
+            tunnel_random: None,
+            cauldron: (material == 161).then(|| {
+                world.journal.cauldron_at(anchor).unwrap().view(
+                    terra_world::hearths::heated_cauldron(&world.chunks, &world.journal, anchor),
+                    world
+                        .journal
+                        .container_at(anchor)
+                        .unwrap_or(&terra_core::Inventory::default()),
+                )
+            }),
+            campfire: (material == 162).then(|| world.journal.campfire_at(anchor).unwrap().view()),
+            distributor: None,
+            filter: None,
             anchor,
             workbench: None,
+            mixer: (material == 156).then(|| {
+                let mut view = world
+                    .journal
+                    .mixer_at(anchor)
+                    .cloned()
+                    .unwrap_or_default()
+                    .view(
+                        world
+                            .journal
+                            .container_at(anchor)
+                            .unwrap_or(&terra_core::Inventory::default()),
+                    );
+                view.working &= world.journal.kinetic_state(anchor).running();
+                view
+            }),
             furnace: (material == 59).then(|| {
                 world
                     .journal
@@ -93,10 +192,18 @@ fn snapshot(world: &ControlWorld, position: [i64; 3]) -> Option<ContainerSnapsho
         positions.push(peer);
     }
     let value = ContainerSnapshot {
+        view: ContainerView::Primary,
+        attached_campfire: false,
+        distributor: None,
+        filter: None,
         anchor,
         workbench: None,
         furnace: None,
         crusher: None,
+        mixer: None,
+        cauldron: None,
+        campfire: None,
+        tunnel_random: None,
         halves: positions
             .into_iter()
             .map(|position| ContainerHalf {
@@ -116,6 +223,25 @@ fn snapshot(world: &ControlWorld, position: [i64; 3]) -> Option<ContainerSnapsho
             .iter()
             .all(|half| world.journal.block(half.position) == Some(29)))
     .then_some(value)
+}
+
+fn snapshot_view(
+    world: &ControlWorld,
+    position: [i64; 3],
+    view: ContainerView,
+) -> Option<ContainerSnapshot> {
+    let mut value = snapshot(world, position)?;
+    if view == ContainerView::AttachedCampfire {
+        let fire = world.journal.attached_campfire_at(position)?;
+        if !value.attached_campfire || value.cauldron.is_none() {
+            return None;
+        }
+        value.view = view;
+        value.cauldron = None;
+        value.campfire = Some(fire.state.view());
+        value.halves[0].inventory = fire.inventory.clone();
+    }
+    value.valid().then_some(value)
 }
 
 fn workbench_positions(world: &ControlWorld, position: [i64; 3]) -> Option<[[i64; 3]; 2]> {
@@ -149,7 +275,14 @@ fn workbench_snapshot(world: &ControlWorld, position: [i64; 3]) -> Option<Contai
 }
 
 fn target_available(peer: &Peer, world: &ControlWorld, positions: &[[i64; 3]]) -> bool {
-    if peer.vitals.dead()
+    if positions.iter().any(|p| {
+        !super::kingdoms::permission_allowed(
+            peer.uuid,
+            terra_core::kingdom::KingdomPermission::Inventories,
+            *p,
+            world,
+        )
+    }) || peer.vitals.dead()
         || peer.chat.teleport.is_some()
         || peer.game_mode(&world.config) == terra_core::GameMode::Spectator
     {
@@ -159,11 +292,7 @@ fn target_available(peer: &Peer, world: &ControlWorld, positions: &[[i64; 3]]) -
         return false;
     };
     let eye = body.translation + Vec3::Y * terra_physics::character::PLAYER_EYE_OFFSET;
-    positions.iter().any(|position| {
-        let mut aim = Vec3::from_array(position.map(|v| v as f32 + 0.5));
-        if world.chunks.block_at(*position) == Some(28) {
-            aim.y = position[1] as f32 + 0.70;
-        }
+    let visible = |aim: Vec3| {
         let delta = aim - eye;
         let distance = delta.length();
         if !(0.01..=6.0).contains(&distance) {
@@ -178,15 +307,134 @@ fn target_available(peer: &Peer, world: &ControlWorld, positions: &[[i64; 3]]) -
             f64::from(distance) + 0.1,
         )
         .is_some_and(|hit| positions.contains(&hit.position))
+    };
+    positions.iter().any(|position| {
+        let mut aim = Vec3::from_array(position.map(|v| v as f32 + 0.5));
+        if world.chunks.block_at(*position) == Some(28) {
+            aim.y = position[1] as f32 + 0.70;
+        }
+        if visible(aim) {
+            return true;
+        }
+        if world.chunks.block_at(*position).is_some_and(|m| {
+            terra_core::logistics::supports_filter(m)
+                || terra_core::logistics::is_tunnel(m)
+                || m == terra_core::logistics::BELT_DISTRIBUTOR
+                || matches!(m, 161 | 162)
+        }) {
+            let mut exposed = false;
+            terra_world::interaction_shapes::visit_boxes(
+                &world.chunks,
+                &world.journal,
+                &world.block_properties,
+                *position,
+                |bounds| {
+                    if !exposed {
+                        let point = std::array::from_fn(|axis| {
+                            ((bounds.minimum[axis] + bounds.maximum[axis]) * 0.5) as f32
+                        });
+                        exposed = visible(Vec3::from_array(point));
+                    }
+                },
+            );
+            return exposed;
+        }
+        if !matches!(world.chunks.block_at(*position), Some(99 | 156)) {
+            return false;
+        }
+        let state = world.journal.object_state(*position).unwrap_or_default();
+        if state.secondary {
+            return false;
+        }
+        let width = if state.peer.is_some() { 2.0 } else { 1.0 };
+        let origin = Vec3::from_array(position.map(|v| v as f32)) + Vec3::new(0.5, 0.0, 0.5);
+        let rotation = Quat::from_rotation_y(f32::from(state.facing) * std::f32::consts::FRAC_PI_2);
+        // The open center can be hidden by its own crank while these real rim faces remain visible.
+        [
+            [0.85, 0.85, 0.5],
+            [0.15, 0.85, 0.5],
+            [0.5, 0.85, 0.85],
+            [0.5, 0.85, 0.15],
+        ]
+        .into_iter()
+        .any(|[x, y, z]| visible(origin + rotation * Vec3::new(x * width - 0.5, y, z - 0.5)))
     })
 }
 
 fn available(peer: &Peer, world: &ControlWorld, snapshot: &ContainerSnapshot) -> bool {
+    if !super::kingdoms::permission_allowed(
+        peer.uuid,
+        terra_core::kingdom::KingdomPermission::Inventories,
+        snapshot.anchor,
+        world,
+    ) || snapshot.halves.iter().any(|half| {
+        !super::kingdoms::permission_allowed(
+            peer.uuid,
+            terra_core::kingdom::KingdomPermission::Inventories,
+            half.position,
+            world,
+        )
+    }) {
+        return false;
+    }
+    if snapshot.distributor.is_some() {
+        return world.chunks.block_at(snapshot.anchor)
+            == Some(terra_core::logistics::BELT_DISTRIBUTOR)
+            && target_available(peer, world, &[snapshot.anchor]);
+    }
+    if snapshot.filter.is_some() {
+        return world
+            .chunks
+            .block_at(snapshot.anchor)
+            .is_some_and(terra_core::logistics::supports_filter)
+            && target_available(peer, world, &[snapshot.anchor]);
+    }
+    if snapshot.tunnel_random.is_some() {
+        return world
+            .chunks
+            .block_at(snapshot.anchor)
+            .is_some_and(terra_core::logistics::is_tunnel)
+            && target_available(peer, world, &[snapshot.anchor]);
+    }
     if let Some(workbench) = snapshot.workbench {
         return workbench_positions(world, workbench)
             .is_some_and(|positions| target_available(peer, world, &positions));
     }
-    if snapshot.furnace.is_some() || snapshot.crusher.is_some() {
+    if snapshot.crusher.is_some() {
+        if !super::crushers::loaded(snapshot.anchor, &world.chunks, &world.journal) {
+            return false;
+        }
+        return match world
+            .journal
+            .object_state(snapshot.anchor)
+            .and_then(|state| state.peer)
+        {
+            Some(other) => target_available(peer, world, &[snapshot.anchor, other]),
+            None => target_available(peer, world, &[snapshot.anchor]),
+        };
+    }
+    if snapshot.mixer.is_some() {
+        return world.chunks.block_at(snapshot.anchor) == Some(156)
+            && world.journal.mixer_at(snapshot.anchor).is_some()
+            && target_available(peer, world, &[snapshot.anchor]);
+    }
+    if snapshot.cauldron.is_some() || snapshot.campfire.is_some() {
+        let material =
+            if snapshot.cauldron.is_some() || snapshot.view == ContainerView::AttachedCampfire {
+                161
+            } else {
+                162
+            };
+        return world.chunks.block_at(snapshot.anchor) == Some(material)
+            && (snapshot.view != ContainerView::AttachedCampfire
+                || world.journal.has_attached_campfire(snapshot.anchor)
+                    && world
+                        .journal
+                        .attached_campfire_at(snapshot.anchor)
+                        .is_some())
+            && target_available(peer, world, &[snapshot.anchor]);
+    }
+    if snapshot.furnace.is_some() {
         return world
             .journal
             .object_state(snapshot.anchor)
@@ -208,10 +456,11 @@ pub(super) fn refresh(
     let next = if let Some(workbench) = previous.workbench {
         workbench_snapshot(world, workbench)
     } else {
-        snapshot(world, previous.anchor)
+        snapshot_view(world, previous.anchor, previous.view)
     }
     .filter(|next| {
         next.anchor == previous.anchor
+            && next.view == previous.view
             && next
                 .halves
                 .iter()
@@ -221,7 +470,7 @@ pub(super) fn refresh(
     });
     if next.as_ref() != peer.container.as_ref() {
         peer.container = next.clone();
-        sender.send::<ControlChannel>(ServerControl::Container(next));
+        sender.send::<ControlChannel>(ServerControl::Container(next.map(Box::new)));
     }
 }
 
@@ -256,18 +505,149 @@ pub(super) fn access(
         InventoryOutcome::RateLimited
     } else if command.revision != inventory.revision {
         InventoryOutcome::Conflict
+    } else if let InventoryAction::SetBrewingRecipe { station, recipe } = command.action {
+        let outcome = hearths::set_recipe(peer, world, station, recipe);
+        if outcome == InventoryOutcome::Applied {
+            refresh(peer, sender, world);
+        }
+        outcome
+    } else if let InventoryAction::SetCampfireLit { station, lit } = command.action {
+        let outcome = hearths::set_lit(peer, world, station, lit);
+        if outcome == InventoryOutcome::Applied {
+            refresh(peer, sender, world);
+        }
+        outcome
+    } else if let InventoryAction::FillBottle { slot, position } = command.action {
+        hearths::fill_bottle(peer, world, &inventory, slot, position)
+    } else if let InventoryAction::SetTunnelRandom { station, random } = command.action {
+        let allowed = snapshot(world, station).is_some_and(|snapshot| {
+            snapshot.tunnel_random.is_some() && available(peer, world, &snapshot)
+        }) && peer
+            .container
+            .as_ref()
+            .is_some_and(|snapshot| snapshot.anchor == station && snapshot.tunnel_random.is_some());
+        if allowed {
+            match world.journal.set_tunnel_random(station, random) {
+                Ok(_) => {
+                    refresh(peer, sender, world);
+                    InventoryOutcome::Applied
+                }
+                Err(_) => InventoryOutcome::Invalid,
+            }
+        } else {
+            InventoryOutcome::ContainerUnavailable
+        }
+    } else if let InventoryAction::SetDistributorFilter {
+        station,
+        output,
+        filter,
+    } = command.action
+    {
+        let allowed = output < 3
+            && filter.valid()
+            && snapshot(world, station)
+                .is_some_and(|s| s.distributor.is_some() && available(peer, world, &s))
+            && peer
+                .container
+                .as_ref()
+                .is_some_and(|s| s.anchor == station && s.distributor.is_some());
+        if allowed {
+            let mut config = world
+                .journal
+                .distributor_at(station)
+                .copied()
+                .unwrap_or_default();
+            config.filters[usize::from(output)] = filter;
+            match world.journal.set_distributor(station, config) {
+                Ok(_) => {
+                    refresh(peer, sender, world);
+                    InventoryOutcome::Applied
+                }
+                Err(_) => InventoryOutcome::Invalid,
+            }
+        } else {
+            InventoryOutcome::ContainerUnavailable
+        }
+    } else if let InventoryAction::SetFunnelFilter { station, filter } = command.action {
+        let allowed = filter.valid()
+            && snapshot(world, station)
+                .is_some_and(|s| s.filter.is_some() && available(peer, world, &s))
+            && peer
+                .container
+                .as_ref()
+                .is_some_and(|s| s.anchor == station && s.filter.is_some());
+        if allowed {
+            match world.journal.set_logistics_filter(station, filter) {
+                Ok(_) => {
+                    refresh(peer, sender, world);
+                    InventoryOutcome::Applied
+                }
+                Err(_) => InventoryOutcome::Invalid,
+            }
+        } else {
+            InventoryOutcome::ContainerUnavailable
+        }
+    } else if let InventoryAction::SetMixerColor { station, target } = command.action {
+        let allowed = snapshot(world, station)
+            .is_some_and(|s| s.mixer.is_some() && available(peer, world, &s))
+            && peer
+                .container
+                .as_ref()
+                .is_some_and(|s| s.anchor == station && s.mixer.is_some());
+        if allowed && let Some(mut state) = world.journal.mixer_at(station).cloned() {
+            if state.target != target {
+                state.target = target;
+                state.progress_seconds = 0.0;
+            }
+            match world.journal.set_mixer(station, state) {
+                Ok(()) => {
+                    refresh(peer, sender, world);
+                    InventoryOutcome::Applied
+                }
+                Err(_) => InventoryOutcome::Invalid,
+            }
+        } else {
+            InventoryOutcome::ContainerUnavailable
+        }
+    } else if let InventoryAction::OpenCampfire { position } = command.action {
+        if inventory.cursor.is_some() {
+            InventoryOutcome::Invalid
+        } else if let Some(value) = snapshot_view(world, position, ContainerView::AttachedCampfire)
+            .filter(|s| available(peer, world, s))
+        {
+            peer.mining = None;
+            peer.container = Some(value.clone());
+            sender.send::<ControlChannel>(ServerControl::Container(Some(Box::new(value))));
+            InventoryOutcome::Applied
+        } else {
+            InventoryOutcome::ContainerUnavailable
+        }
     } else if let InventoryAction::OpenContainer { position } = command.action {
+        if inventory.cursor.is_some()
+            && peer
+                .container
+                .as_ref()
+                .is_some_and(|current| current.view != ContainerView::Primary)
+        {
+            sender.send::<ControlChannel>(ServerControl::InventoryResult {
+                inventory,
+                outcome: InventoryOutcome::Invalid,
+            });
+            return;
+        }
         let bench = workbench_positions(world, position);
         if bench.is_some_and(|positions| target_available(peer, world, &positions)) {
             peer.mining = None;
             peer.container = workbench_snapshot(world, position);
-            sender.send::<ControlChannel>(ServerControl::Container(peer.container.clone()));
+            sender.send::<ControlChannel>(ServerControl::Container(
+                peer.container.clone().map(Box::new),
+            ));
             InventoryOutcome::Applied
         } else if let Some(value) = snapshot(world, position).filter(|s| available(peer, world, s))
         {
             peer.mining = None;
             peer.container = Some(value.clone());
-            sender.send::<ControlChannel>(ServerControl::Container(Some(value)));
+            sender.send::<ControlChannel>(ServerControl::Container(Some(Box::new(value))));
             InventoryOutcome::Applied
         } else {
             peer.container = None;
@@ -277,6 +657,13 @@ pub(super) fn access(
     } else {
         InventoryOutcome::Invalid
     };
+    let inventory = world
+        .journal
+        .gameplay()
+        .inventories
+        .get(&peer.uuid)
+        .cloned()
+        .unwrap_or(inventory);
     sender.send::<ControlChannel>(ServerControl::InventoryResult { inventory, outcome });
 }
 
@@ -299,9 +686,11 @@ pub(super) fn transfer(
     } else if let Some(current) = peer
         .container
         .as_ref()
-        .filter(|s| s.anchor == command.anchor)
+        .filter(|s| s.anchor == command.anchor && s.view == command.view)
     {
-        if command.inventory_revision != player.revision
+        if current.filter.is_some() || current.distributor.is_some() {
+            InventoryOutcome::Invalid
+        } else if command.inventory_revision != player.revision
             || command.revisions
                 != current
                     .halves
@@ -309,7 +698,8 @@ pub(super) fn transfer(
                     .map(|half| half.inventory.revision)
                     .collect::<Vec<_>>()
         {
-            sender.send::<ControlChannel>(ServerControl::Container(Some(current.clone())));
+            sender
+                .send::<ControlChannel>(ServerControl::Container(Some(Box::new(current.clone()))));
             InventoryOutcome::Conflict
         } else if world.journal.gameplay().revision > u64::MAX - 4
             || (!world
@@ -328,6 +718,9 @@ pub(super) fn transfer(
                 .collect();
             if (current.workbench.is_some()
                 || current.crusher.is_some()
+                || current.mixer.is_some()
+                || current.cauldron.is_some()
+                || current.campfire.is_some()
                 || command.reserved == [0; terra_core::INVENTORY_SLOTS])
                 && if current.furnace.is_some() {
                     terra_core::furnace::apply_gesture_reserved(
@@ -338,6 +731,27 @@ pub(super) fn transfer(
                     )
                 } else if current.crusher.is_some() {
                     terra_core::crusher::apply_gesture_reserved(
+                        &mut player,
+                        &mut halves[0],
+                        command.action,
+                        command.reserved,
+                    )
+                } else if current.mixer.is_some() {
+                    terra_core::mixer::apply_gesture_reserved(
+                        &mut player,
+                        &mut halves[0],
+                        command.action,
+                        command.reserved,
+                    )
+                } else if current.cauldron.is_some() {
+                    terra_core::brewing::apply_gesture_reserved(
+                        &mut player,
+                        &mut halves[0],
+                        command.action,
+                        command.reserved,
+                    )
+                } else if current.campfire.is_some() {
+                    terra_core::campfire::apply_gesture_reserved(
                         &mut player,
                         &mut halves[0],
                         command.action,
@@ -354,15 +768,21 @@ pub(super) fn transfer(
             {
                 // Ownership, all revisions and all resulting inventories were checked before commit.
                 let positions: Vec<_> = current.halves.iter().map(|half| half.position).collect();
-                if world
-                    .journal
-                    .commit_container_transaction(
+                let committed = if current.view == ContainerView::AttachedCampfire {
+                    world.journal.commit_attached_container_transaction(
+                        peer.uuid,
+                        player.clone(),
+                        current.anchor,
+                        halves.remove(0),
+                    )
+                } else {
+                    world.journal.commit_container_transaction(
                         peer.uuid,
                         player.clone(),
                         positions.into_iter().zip(halves).collect(),
                     )
-                    .is_ok()
-                {
+                };
+                if committed.is_ok() {
                     refresh(peer, sender, world);
                     InventoryOutcome::Applied
                 } else {

@@ -133,10 +133,33 @@ fn stepped_waterfall_crosses_horizontal_and_vertical_sections_partial_outlet_and
     assert!(
         journal
             .fluid_cells()
-            .filter(|(p, _)| p[0] >= 17)
+            .filter(|(p, _)| p[0] >= 17 && p[1] > 1)
             .all(|(_, c)| c.amount == 0),
         "an unsupported waterfall cannot remain after its actual upstream gate closes"
     );
+    let bottom: Vec<_> = journal.fluid_cells().filter(|(p, _)| p[1] == 1).collect();
+    assert!(bottom.iter().any(|(_, c)| c.amount > 0));
+    assert!(bottom.iter().all(|(_, c)| !c.source && c.flow == [0; 2]));
+    // The fifty-cell bottom basin has a complete floor and four enclosing
+    // walls; closing the waterfall must retain its finite settled water.
+    let epochs: Vec<_> = [SectionPos::new(0, 0, 0), SectionPos::new(1, 0, 0)]
+        .into_iter()
+        .map(|p| (p, journal.fluid_epoch(p), journal.water_mesh_epoch(p)))
+        .collect();
+    for _ in 0..64 {
+        simulate_fluid_step(&terrain, &chunks, &mut journal, 256).unwrap();
+    }
+    assert_eq!(
+        journal
+            .fluid_cells()
+            .filter(|(p, _)| p[1] == 1)
+            .collect::<Vec<_>>(),
+        bottom
+    );
+    for (p, fluid, water) in epochs {
+        assert_eq!(journal.fluid_epoch(p), fluid);
+        assert_eq!(journal.water_mesh_epoch(p), water);
+    }
     assert_eq!(journal.fluid([15, 21, 7]).unwrap().amount, 8);
     assert_eq!(journal.fluid_cells().filter(|(_, c)| c.source).count(), 1);
 }

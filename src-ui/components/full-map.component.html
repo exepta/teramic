@@ -10,6 +10,7 @@
     <button id="fullmap-mode" [class]="fullMapView.three_dimensional_available ? (fullMapView.three_dimensional ? 'map-tool selected' : 'map-tool') : 'map-tool unavailable'" title="2.5D / 3D" [disabled]="!fullMapView.three_dimensional_available" onclick="fullmap_action"><icon name="layers" size="32" /></button>
     <button id="fullmap-center" class="map-tool" title="Center on player" onclick="fullmap_action"><icon name="target" size="32" /></button>
     <button id="fullmap-list" [class]="fullMapView.book_open ? 'map-tool selected' : 'map-tool'" title="Waypoints" onclick="fullmap_action"><icon name="flag" size="32" /></button>
+    <button id="fullmap-diplomacy" [class]="fullMapView.diplomacy ? 'map-tool selected' : 'map-tool'" title="Diplomatie" onclick="fullmap_action"><icon name="swords" size="32" /></button>
   </div>
   <tooltip for="fullmap-add" trigger="hover" variant="follow" class="map-tool-tooltip"><p>Create waypoint</p></tooltip>
   <tooltip for="fullmap-grid" trigger="hover" variant="follow" class="map-tool-tooltip" id="fullmap-grid-tooltip"><p>Show / hide grid</p></tooltip>
@@ -18,6 +19,7 @@
   <tooltip for="fullmap-mode" trigger="hover" variant="follow" class="map-tool-tooltip"><p>{{ fullMapView.three_dimensional_available ? 'Switch 2.5D / 3D' : 'Cave maps are always 2D' }}</p></tooltip>
   <tooltip for="fullmap-center" trigger="hover" variant="follow" class="map-tool-tooltip"><p>Center on player</p></tooltip>
   <tooltip for="fullmap-list" trigger="hover" variant="follow" class="map-tool-tooltip"><p>Waypoints</p></tooltip>
+  <tooltip for="fullmap-diplomacy" trigger="hover" variant="follow" class="map-tool-tooltip"><p>Diplomatie · Kingdom-Grenzen und Claims</p></tooltip>
   <div id="full-map-viewport" class="full-map-viewport" [style]="fullMapView.surface_style">
     <img id="full-map-surface" class="full-map-surface" alt="World map" />
     @for (point of fullMapView.markers; track point.id) { <waypoint-marker></waypoint-marker> }
@@ -42,6 +44,37 @@
         }
       </div>
       @if (fullMapView.selected) { <div class="full-map-editor-actions"><button id="fullmap-edit" class="map-command" onclick="fullmap_action"><icon name="edit" size="16" />Edit</button><button id="fullmap-delete" class="map-icon-button" title="Delete waypoint" onclick="fullmap_action"><icon name="trash" size="16" /></button></div> }
+    </div>
+  }
+  @if (fullMapView.diplomacy) {
+    <div id="full-map-diplomacy" class="full-map-sidebar diplomacy-sidebar" [style]="fullMapView.sidebar_style">
+      <div class="full-map-waypoint-title"><h2>Diplomatie</h2><button id="fullmap-diplomacy-close" class="map-icon-button" title="Close diplomacy" onclick="fullmap_action"><icon name="close" size="22" /></button></div>
+      <div class="diplomacy-key"><p><div class="claim-key protected"></div>Dark · protected building land</p><p><div class="claim-key territory"></div>Light · open realm territory</p></div>
+      <div class="diplomacy-relations-key"><div class="diplomacy-relation own">Your realm</div><div class="diplomacy-relation allied">Allied</div><div class="diplomacy-relation neutral">Neutral</div><div class="diplomacy-relation hostile">Hostile</div></div>
+      <p class="diplomacy-relation-help">Realm colors show ownership; badges show your relation.</p>
+      <div class="diplomacy-selection"><div class="diplomacy-realm-heading"><div class="diplomacy-swatch" [style]="fullMapView.diplomacy_color"></div><h3>{{ fullMapView.diplomacy_name }}</h3></div><p>{{ fullMapView.diplomacy_chunk }}</p><p>{{ fullMapView.diplomacy_kind }}</p><div id="diplomacy-selected-relation" [class]="'diplomacy-relation ' + fullMapView.diplomacy_relation_key">{{ fullMapView.diplomacy_relation }}</div><p>{{ fullMapView.diplomacy_owner }}</p><p>{{ fullMapView.diplomacy_actor }}</p></div>
+      <p class="diplomacy-capacity">{{ fullMapView.diplomacy_limits }}</p>
+      <p class="diplomacy-help">Choose a chunk type, drag an area, then Apply. Use Pan to move the map. Green previews are building land; blue previews are territory. Right-click removes chunks from the preview.</p>
+      @if (fullMapView.diplomacy_status) { <p id="diplomacy-status" class="full-map-error">{{ fullMapView.diplomacy_status }}</p> }
+      <div class="diplomacy-actions">
+        <button id="fullmap-claim-protected" [class]="fullMapView.claim_build_mode ? 'map-command selected' : 'map-command'" [disabled]="!fullMapView.diplomacy_can_claim" onclick="fullmap_action">Build Chunk</button>
+        <button id="fullmap-claim-territory" [class]="fullMapView.claim_territory_mode ? 'map-command selected' : 'map-command'" [disabled]="!fullMapView.diplomacy_can_claim" onclick="fullmap_action">Territorium Chunk</button>
+        <button id="fullmap-claim-pan" class="map-command" onclick="fullmap_action"><icon name="move" size="16" />Pan</button>
+        <p>{{ fullMapView.claim_draft_count }}</p>
+        <div class="diplomacy-apply"><button id="fullmap-claim-cancel" class="map-command" [disabled]="fullMapView.diplomacy_pending" onclick="fullmap_action">Cancel</button><button id="fullmap-claim-apply" class="map-command" [disabled]="!fullMapView.claim_can_apply" onclick="fullmap_action">Apply</button></div>
+        <button id="fullmap-release-claim" class="map-command" [disabled]="!fullMapView.diplomacy_can_release" onclick="fullmap_action">Release selected chunk</button>
+      </div>
+      <div id="diplomacy-legends" class="diplomacy-legends">
+        @for (realm of fullMapView.diplomacy_legends; track realm.id) {
+          <div class="diplomacy-legend"><div class="diplomacy-swatch" [style]="realm.color"><img [src]="realm.icon_source" /></div><div><h3>{{ realm.name }}</h3><div [class]="'diplomacy-relation ' + realm.relation">{{ realm.relation_label }}</div><p>{{ realm.detail }}</p></div></div>
+        }
+      </div>
+      <h3>Bot Kingdoms</h3>
+      <div class="diplomacy-legends">
+        @for (realm of fullMapView.bot_realms; track realm.id) {
+          <div class="diplomacy-legend"><div class="diplomacy-swatch" [style]="realm.color"><img [src]="realm.icon_source" /></div><div><h3>{{ realm.name }}</h3><div [class]="'diplomacy-relation ' + realm.relation">{{ realm.relation_label }}</div><p>{{ realm.detail }}</p></div></div>
+        }
+      </div>
     </div>
   }
 </div>

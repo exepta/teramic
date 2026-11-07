@@ -1,0 +1,250 @@
+{
+  "phase": 182,
+  "date": "2026-11-02",
+  "workspace_tests": {
+    "command": "cargo test --workspace --locked -j1 -- --test-threads=4",
+    "exit_code": 0,
+    "passed": 3740,
+    "failed": 0,
+    "ignored": 8,
+    "note": "Full suite preceded the final CSS-only potion scale adjustment, which was checked in the final native run."
+  },
+  "checks": {
+    "workspace_build": 0,
+    "workspace_all_targets_clippy_deny_warnings": 0,
+    "workspace_format": 0,
+    "git_diff_check": 0
+  },
+  "native": {
+    "game_exit_code": 0,
+    "menu_exit_code": 0,
+    "game_captures": 21,
+    "menu_captures": 3,
+    "real_os_input": true,
+    "unchanged_authoritative_inventory": true,
+    "existing_saves_opened": false,
+    "menu_no_server_or_terrain": true,
+    "slot_geometry_tolerance_px": 1.5,
+    "physical_window_sizes": [
+      [
+        1680,
+        936
+      ],
+      [
+        1025,
+        641
+      ]
+    ]
+  },
+  "source_hashes": "source-sha256.json",
+  "captures": {
+    "catalog-page-two.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "662c7c55b9c22902986424755228dbb57e8d0817a88b5a2c64e3561ca8fbb464"
+    },
+    "catalog-search.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "a3c901a2bc5f2585b5431473634d03ce07e4b0ae592975c695b02f61b59dda87"
+    },
+    "cauldron-recipe-compact.png": {
+      "size": [
+        1025,
+        641
+      ],
+      "sha256": "510de129cfa22271793bcbdb530dddbb930b431b93d547610d8a25ada348ff7a"
+    },
+    "cauldron-recipe-wide.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "50c57f31b6eeecffe2051512e5df2cee42268b8b55ceb1e167c8c1a327abd35e"
+    },
+    "chest-birch.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "dd39114d4180703b39d61f66c815c0b22da25e3767617467d15e2d67e8ad2e36"
+    },
+    "chest-cherry.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "6ba33d5babe7e99a3abfa46d58c5be9ace7a99aac8eae4539ea866cec5e9c6f4"
+    },
+    "chest-oak.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "44119400f0ab411707d66ed4de1e7bb83347ab13108cb3596f248c14aa813110"
+    },
+    "chest-spruce.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "8f966c3a6123c5d2058e102b40d268e7a0d650dde35a343472ddd9333f98fd93"
+    },
+    "crafting-recipe-reference-compact.png": {
+      "size": [
+        1025,
+        641
+      ],
+      "sha256": "24f8580d6a64415a19cf01588f55492f98849cb7115834b46897b4120dbe8e57"
+    },
+    "crafting-recipe-reference-wide.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "ebd916a455c7f92ab1f733792873bb934a67768a2a369855f63c6d820500ae54"
+    },
+    "furnace-alternative-fuels.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "d5fc6b2898735002c9816d38c2f39cf3e2818dddd19bb8537c6d4959d86029ad"
+    },
+    "furnace-recipe-reference-compact.png": {
+      "size": [
+        1025,
+        641
+      ],
+      "sha256": "96a4645721e4032262252b136004703ffecd2bb7fd06b15eac5975656f7f5761"
+    },
+    "furnace-recipe-reference-wide.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "c269f250adc96e9512da85093a08014f31abb38c85b8552416047868b95e1fdd"
+    },
+    "furnace-selected-fuel.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "4e4888dd2ea99d5dd18fccca1ed77a45925d61af74b761e72ffe37aaad5f7d42"
+    },
+    "hotbar-compact.png": {
+      "size": [
+        1025,
+        641
+      ],
+      "sha256": "b139182ef720ab2cd1fcf5954b8c61ce256321551ad6c67f041463f95007bd5d"
+    },
+    "hotbar-selected-wide.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "01967dc50f48474e33f23762dc80501c352b9db88755e97f62774f5d678ebf9e"
+    },
+    "hotbar-wide.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "b7d8ceb4c66cb979ae5d6546a317e6d485299b00d4fb5251d793d5b1d334ca17"
+    },
+    "inventory-left-category-tabs.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "cbbb6043065a17a04f72788103d138ee1bd638df649ba1362a198c6d633dbe7c"
+    },
+    "menu-settings-navigation.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "f1296f7e90d73260cbfd7259b77c64a8f97aab5c1397b09ad3c4449ae04fe016"
+    },
+    "player-inventory-catalog-collapsed.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "e58b1f6ce6619de834ffa24c35d764aba43f4a7469c3be898feb295af377191f"
+    },
+    "player-inventory-reference-compact.png": {
+      "size": [
+        1025,
+        641
+      ],
+      "sha256": "8b0f0bc52f2003fd2134fedd3557c91fff7147344fe2c7c4b74f21019477e941"
+    },
+    "player-inventory-reference-wide.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "25d949d1e521069f8cad4ac6a66ada999f5fd93182c94285d0539d6f8f7faa71"
+    },
+    "start-menu-compact.png": {
+      "size": [
+        1025,
+        641
+      ],
+      "sha256": "7e8b4acfb5039d3d2322e718b9eabd8d3dee8646d3175ce326be48ff3f102418"
+    },
+    "start-menu-wide.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "5f3be1ab000505334a64aa891798afc6b79a595e9b3175b230e495510864f5f8"
+    }
+  },
+  "graphics": {
+    "mode": "builtin-imagegen",
+    "prompt_set": "imagegen-prompts.txt",
+    "alpha_preserved": true,
+    "raster_postprocessing": false,
+    "runtime_source_rect_clipping": [
+      "hotbar-frame-182.png",
+      "menu-button-182.png"
+    ],
+    "assets": {
+      "src-ui/assets/hotbar-frame-182.png": {
+        "size": [
+          2172,
+          724
+        ],
+        "sha256": "b4b2605ebf8d16f5dfa55833105a114763fdf904b4a3b40c8b0c43f52a2a6aff"
+      },
+      "src-ui/assets/menu-button-182.png": {
+        "size": [
+          2172,
+          724
+        ],
+        "sha256": "1839e4fb181ddf63bf07c4577475f5cd216cec902ee96248f336af4a5ed01bdf"
+      },
+      "src-ui/assets/menu-logo-182.png": {
+        "size": [
+          2172,
+          724
+        ],
+        "sha256": "71d87110b1f535a5872a1a4b000e8cb9e569d441aecbcc6e54a28036eaf44864"
+      },
+      "src-ui/assets/menu-valley-182.png": {
+        "size": [
+          1672,
+          941
+        ],
+        "sha256": "08fe397a747541b958b382d58bf56004f5e36a0478a454b34bb047117b3499ec"
+      }
+    }
+  }
+}

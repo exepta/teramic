@@ -1,4 +1,6 @@
-use super::{MIN_WATERFALL_DROP, POINTS, RiverPath, STEP};
+#[cfg(test)]
+use super::{DrainageFrame, STEP};
+use super::{MIN_WATERFALL_DROP, POINTS, RiverPath};
 use crate::generation::biomes::smoothstep;
 
 impl RiverPath {
@@ -15,7 +17,7 @@ impl RiverPath {
             if surface <= 0.0 {
                 continue;
             }
-            let edge = (i as f64 + 0.5) * STEP;
+            let edge = (i as f64 + 0.5) * self.step;
             let upstream = (5.0 + drop * 0.18).clamp(6.0, 13.0);
             let downstream = (18.0 + drop * 0.75).clamp(24.0, 52.0);
             let along = smoothstep(edge - upstream, edge - 0.5, t)

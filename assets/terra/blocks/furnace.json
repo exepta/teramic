@@ -3,7 +3,7 @@
   "id": 59,
   "name": "Furnace",
   "description": "A two-block stone furnace. Burns fuel to smelt and cook; chimney pipes carry its smoke outside.",
-  "creative_category": "decoration",
+  "creative_category": "technic",
   "render_kind": "custom_mesh",
   "struct_block": true,
   "model_layout": "scene",

@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "id": 172,
+  "name": "Glass Pipe",
+  "description": "A reinforced glass pipe for the finite hydraulic network.",
+  "creative_category": "technic",
+  "render_kind": "custom_mesh",
+  "struct_block": true,
+  "model_layout": "scene",
+  "model": "models/glass_pipe.gltf",
+  "hardness": 0.9,
+  "resistance": 2,
+  "mining_level": 0,
+  "required_tool": "pickaxe",
+  "textures": {
+    "brass_flanges": "textures/machinery-iron-hd.png",
+    "iron_bolts": "textures/machinery-iron-hd.png"
+  },
+  "collision_boxes": [
+    {
+      "minimum": [
+        0,
+        0.285,
+        0.285
+      ],
+      "maximum": [
+        1,
+        0.715,
+        0.715
+      ]
+    },
+    {
+      "minimum": [
+        0.285,
+        0,
+        0.285
+      ],
+      "maximum": [
+        0.715,
+        1,
+        0.715
+      ]
+    },
+    {
+      "minimum": [
+        0.285,
+        0.285,
+        0
+      ],
+      "maximum": [
+        0.715,
+        0.715,
+        1
+      ]
+    }
+  ]
+}

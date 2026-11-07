@@ -19,6 +19,9 @@ use terra_world::{
     },
 };
 
+#[path = "client_trees.rs"]
+mod trees;
+
 #[path = "client_chat.rs"]
 mod chat;
 pub use chat::{ChatCommand, ChatEntry, ClientChat, ClientChatCommands, LocateResult};
@@ -41,10 +44,18 @@ pub struct ConsumptionRequest(pub Option<u8>);
 pub struct CrankInput(pub Option<[i64; 3]>);
 
 #[derive(Message, Clone, Copy, Debug)]
+pub struct TreeHarvestRequest {
+    pub id: u64,
+    pub fruit_revision: u64,
+    pub slot: u8,
+}
+
+#[derive(Message, Clone, Copy, Debug)]
 pub struct ObjectInteractionRequest {
     pub position: [i64; 3],
     pub expected: u16,
     pub facing: u8,
+    pub closing: bool,
 }
 
 #[derive(Message)]
@@ -52,6 +63,9 @@ pub struct InventoryRequest(pub crate::protocol::inventory::InventoryCommand);
 
 #[derive(Message, Clone, Debug)]
 pub struct ContainerRequest(pub crate::protocol::inventory::ContainerCommand);
+
+#[derive(Message, Clone, Debug)]
+pub struct KingdomRequest(pub crate::protocol::kingdom::KingdomCommand);
 
 #[derive(Resource, Default)]
 pub struct CursorShare(pub Option<crate::protocol::social::ChestCursorInput>);
@@ -74,6 +88,37 @@ pub struct PropPlaceRequest {
 pub struct FarmToolRequest {
     pub position: [i64; 3],
     pub action: terra_core::farming::FarmingAction,
+}
+
+#[derive(Message, Clone, Copy, Debug)]
+pub struct ObjectRotateRequest {
+    pub position: [i64; 3],
+    pub expected: u16,
+    pub facing: u8,
+    pub reverse: bool,
+}
+
+#[derive(Message, Clone, Copy, Debug)]
+pub struct ConveyorConnectRequest {
+    pub start: [i64; 3],
+    pub end: [i64; 3],
+    pub start_revision: u64,
+    pub item: terra_core::ItemKind,
+}
+
+#[derive(Message, Clone, Copy, Debug)]
+pub enum ConveyorInteractionRequest {
+    Collect {
+        id: u64,
+    },
+    Dye {
+        position: [i64; 3],
+        color: terra_core::beds::DyeColor,
+    },
+    DyeFabric {
+        position: [i64; 3],
+        color: terra_core::beds::DyeColor,
+    },
 }
 
 #[derive(Message, Clone, Copy, Debug)]
@@ -130,12 +175,23 @@ pub fn disconnect_session(world: &mut World) {
     session.crop_progress.clear();
     session.open_chests.clear();
     session.watering_reserve = (0, 0);
+    session.infusion.clear();
+    session.kingdoms = Default::default();
+    session.trees = Default::default();
+    session.tree_patch_signature = None;
+    session.last_kingdom_result = None;
+    session.kingdom_response = 0;
     world.resource_mut::<ReplicatedPlayers>().players.clear();
     terra_world::streaming::reset_replica(world);
 }
 
 #[derive(Resource)]
 pub struct ClientSession {
+    pub trees: terra_core::TreeRegistry,
+    tree_patch_signature: Option<u64>,
+    pub kingdoms: terra_core::kingdom::KingdomRegistry,
+    pub last_kingdom_result: Option<crate::protocol::kingdom::KingdomResult>,
+    pub kingdom_response: u64,
     pub sleepers: Vec<SleepingPlayer>,
     pub wake_requested: bool,
     pub container: Option<crate::protocol::inventory::ContainerSnapshot>,
@@ -153,7 +209,14 @@ pub struct ClientSession {
     consumption_received: Option<Instant>,
     pub consumption_completed: u64,
     pub furnaces: Vec<FurnaceVisual>,
+    pub cauldrons: Vec<CauldronVisual>,
+    pub campfires: Vec<CampfireVisual>,
+    pub plumbing: Vec<PlumbingVisual>,
+    /// Local receipt counter for accepted plumbing snapshots; not a wire clock.
+    pub plumbing_sequence: u64,
+    pub infusion: Vec<terra_core::infusion::HoldVisual>,
     pub crushers: Vec<CrusherVisual>,
+    pub kinetics: Vec<KineticVisual>,
     pub crop_progress: std::collections::BTreeMap<[i64; 3], CropProgress>,
     pub watering_reserve: (u8, u8),
     pub open_chests: std::collections::BTreeSet<[i64; 3]>,
@@ -177,6 +240,7 @@ pub struct ClientSession {
     pub pending_inputs: usize,
     sequence: u64,
     request: u64,
+    kingdom_request: u64,
     pending: VecDeque<MovementInput>,
     outbox: Vec<MovementInput>,
     control: VecDeque<ServerControl>,
@@ -190,6 +254,11 @@ pub struct ClientSession {
 impl Default for ClientSession {
     fn default() -> Self {
         Self {
+            kingdoms: Default::default(),
+            trees: Default::default(),
+            tree_patch_signature: None,
+            last_kingdom_result: None,
+            kingdom_response: 0,
             sleepers: Vec::new(),
             wake_requested: false,
             container: None,
@@ -207,7 +276,13 @@ impl Default for ClientSession {
             consumption_received: None,
             consumption_completed: 0,
             furnaces: Vec::new(),
+            cauldrons: Vec::new(),
+            campfires: Vec::new(),
+            plumbing: Vec::new(),
+            plumbing_sequence: 0,
+            infusion: Vec::new(),
             crushers: Vec::new(),
+            kinetics: Vec::new(),
             crop_progress: Default::default(),
             watering_reserve: (0, 0),
             open_chests: Default::default(),
@@ -231,6 +306,7 @@ impl Default for ClientSession {
             pending_inputs: 0,
             sequence: 0,
             request: 0,
+            kingdom_request: 0,
             pending: VecDeque::new(),
             outbox: Vec::new(),
             control: VecDeque::new(),
@@ -267,6 +343,19 @@ impl ClientSession {
     }
     pub fn edits_pending(&self) -> bool {
         self.last_edit.map_or(0, |(id, _)| id) < self.request
+    }
+    /// Reserve the response identity before a UI starts waiting, including when
+    /// another Bergfried request is still queued or arrives after that UI closes.
+    pub fn kingdom_request(
+        &mut self,
+        action: crate::protocol::kingdom::KingdomAction,
+    ) -> Option<KingdomRequest> {
+        let request = self.kingdom_request.checked_add(1)?;
+        self.kingdom_request = request;
+        Some(KingdomRequest(crate::protocol::kingdom::KingdomCommand {
+            request,
+            action,
+        }))
     }
     pub fn confirmed_state(&self) -> Option<PlayerState> {
         self.latest.map(|(_, state)| state)
@@ -360,6 +449,10 @@ impl ClientSession {
         true
     }
     fn fail(&mut self, error: impl Into<String>) {
+        self.kingdoms = Default::default();
+        self.trees = Default::default();
+        self.tree_patch_signature = None;
+        self.last_kingdom_result = None;
         self.mounted = None;
         self.dismount_requested = false;
         self.stalker_grip = None;
@@ -508,11 +601,16 @@ pub(crate) fn install(app: &mut App) {
         .add_message::<ObjectInteractionRequest>()
         .add_message::<InventoryRequest>()
         .add_message::<ContainerRequest>()
+        .add_message::<KingdomRequest>()
         .init_resource::<SocialState>()
         .init_resource::<CursorShare>()
         .add_message::<RespawnRequest>()
         .add_message::<PropPlaceRequest>()
+        .add_message::<TreeHarvestRequest>()
         .add_message::<FarmToolRequest>()
+        .add_message::<ObjectRotateRequest>()
+        .add_message::<ConveyorConnectRequest>()
+        .add_message::<ConveyorInteractionRequest>()
         .init_resource::<SelectedInventorySlot>()
         .add_message::<ConfirmedEdit>()
         .add_message::<TreeCollapseEvent>()
@@ -538,6 +636,7 @@ pub(crate) fn install(app: &mut App) {
         .add_systems(Update, send_mining.after(StreamingSet::Edits))
         .add_systems(Update, send_consumption.after(send_mining))
         .add_systems(Update, send_inventory.after(StreamingSet::Edits))
+        .add_systems(Update, send_kingdoms.after(StreamingSet::Edits))
         .add_systems(Update, send_cursor.after(StreamingSet::Edits))
         .add_systems(Update, send_respawn.after(StreamingSet::Edits))
         .add_systems(PostUpdate, send_inputs.before(MessageSystems::Send));
@@ -587,7 +686,8 @@ fn send_crank(
 #[path = "client_creatures.rs"]
 mod creatures;
 pub use creatures::{
-    CreatureActions, CreatureInspection, CreatureTrack, PetCommands, ReplicatedCreatures,
+    CreatureActions, CreatureInspection, CreatureTrack, PetCommands, PlayerAttacks,
+    ReplicatedCreatures,
 };
 
 fn retry(world: &mut World) {
@@ -660,7 +760,7 @@ fn start(world: &mut World) {
 }
 
 fn connected(
-    event: On<Add, Connected>,
+    event: On<Add<Connected>>,
     mut senders: Query<&mut MessageSender<ClientControl>, With<Client>>,
     config: Res<GameConfig>,
     profile: Res<PlayerProfile>,
@@ -880,7 +980,10 @@ fn receive_controls(
                 if session.player.is_none() || !weather.valid() {
                     Err("Invalid world weather snapshot".into())
                 } else {
-                    if world.weather_replica.0.is_none() || world.clock.paused {
+                    if world.weather_replica.0.is_none()
+                        || world.clock.paused
+                        || !world.config.world.game_rules.weather_cycle
+                    {
                         *world.weather = weather;
                     }
                     world.weather.latest_lightning = weather.latest_lightning;
@@ -1081,11 +1184,84 @@ fn receive_controls(
                     Ok(())
                 }
             }
+            ServerControl::Cauldrons(cauldrons) => {
+                if cauldrons.len() > 64 || cauldrons.iter().any(|value| !value.valid()) {
+                    Err("Invalid cauldron visual snapshot".into())
+                } else {
+                    session.cauldrons = cauldrons;
+                    Ok(())
+                }
+            }
+            ServerControl::Campfires(campfires) => {
+                if campfires.len() > 64 || campfires.iter().any(|value| !value.valid()) {
+                    Err("Invalid campfire visual snapshot".into())
+                } else {
+                    session.campfires = campfires;
+                    Ok(())
+                }
+            }
+            ServerControl::Infusion(infusion) => {
+                if infusion.len() > terra_core::infusion::MAX_HOLD_VISUALS
+                    || infusion.iter().any(|view| !view.valid())
+                    || infusion
+                        .iter()
+                        .map(|view| view.position)
+                        .collect::<std::collections::HashSet<_>>()
+                        .len()
+                        != infusion.len()
+                {
+                    Err("Invalid infusion station snapshot".into())
+                } else {
+                    session.infusion = infusion;
+                    Ok(())
+                }
+            }
+            ServerControl::Plumbing(plumbing) => {
+                if plumbing.len() > 256
+                    || plumbing.iter().any(|value| !value.valid())
+                    || plumbing
+                        .iter()
+                        .map(|value| value.position)
+                        .collect::<std::collections::HashSet<_>>()
+                        .len()
+                        != plumbing.len()
+                {
+                    Err("Invalid plumbing visual snapshot".into())
+                } else {
+                    world
+                        .journal
+                        .replace_confirmed_basins(
+                            plumbing
+                                .iter()
+                                .filter_map(|node| node.basin.map(|shape| (shape, node.amount))),
+                        )
+                        .map(|()| {
+                            session.plumbing = plumbing;
+                            session.plumbing_sequence = session.plumbing_sequence.wrapping_add(1);
+                        })
+                }
+            }
             ServerControl::Crushers(crushers) => {
                 if crushers.len() > 64 || crushers.iter().any(|value| !value.valid()) {
                     Err("Invalid crusher visual snapshot".into())
                 } else {
                     session.crushers = crushers;
+                    Ok(())
+                }
+            }
+            ServerControl::Kinetics(kinetics) => {
+                if kinetics.len() > 256
+                    || kinetics.iter().any(|value| !value.valid())
+                    || kinetics
+                        .iter()
+                        .map(|v| v.position)
+                        .collect::<std::collections::HashSet<_>>()
+                        .len()
+                        != kinetics.len()
+                {
+                    Err("Invalid kinetic visual snapshot".into())
+                } else {
+                    session.kinetics = kinetics;
                     Ok(())
                 }
             }
@@ -1104,7 +1280,67 @@ fn receive_controls(
                 if container.as_ref().is_some_and(|snapshot| !snapshot.valid()) {
                     Err("Invalid world inventory snapshot".into())
                 } else {
-                    session.container = container;
+                    session.container = container.map(|snapshot| *snapshot);
+                    Ok(())
+                }
+            }
+            ServerControl::TreeUpdates(patch) => trees::apply(
+                patch,
+                &mut session,
+                world.journal.bypass_change_detection(),
+                world.chunks.bypass_change_detection(),
+            )
+            .map(|applied| {
+                if let Some(visuals) = applied {
+                    world.journal.set_changed();
+                    if visuals {
+                        world.chunks.set_changed();
+                    }
+                }
+            }),
+            ServerControl::Trees(snapshot) => trees::legacy(
+                snapshot,
+                &mut session,
+                world.journal.bypass_change_detection(),
+                world.chunks.bypass_change_detection(),
+            )
+            .map(|applied| {
+                if let Some(visuals) = applied {
+                    world.journal.set_changed();
+                    if visuals {
+                        world.chunks.set_changed();
+                    }
+                }
+            }),
+            ServerControl::Kingdoms(kingdoms) => {
+                if session.player.is_none() || !kingdoms.valid() {
+                    Err("Invalid kingdom snapshot".into())
+                } else if kingdoms.revision > session.kingdoms.revision {
+                    session.kingdoms = kingdoms;
+                    Ok(())
+                } else if kingdoms.revision == session.kingdoms.revision
+                    && kingdoms != session.kingdoms
+                {
+                    Err("Conflicting kingdom snapshot revision".into())
+                } else {
+                    Ok(())
+                }
+            }
+            ServerControl::KingdomResult(result) => {
+                if session.player.is_none()
+                    || !result.valid()
+                    || result.request > session.kingdom_request
+                {
+                    Err("Invalid kingdom response".into())
+                } else {
+                    if session
+                        .last_kingdom_result
+                        .as_ref()
+                        .is_none_or(|last| result.request > last.request)
+                    {
+                        session.last_kingdom_result = Some(result);
+                        session.kingdom_response = session.kingdom_response.saturating_add(1);
+                    }
                     Ok(())
                 }
             }
@@ -1175,6 +1411,21 @@ fn send_inventory(
             && let Some(mut sender) = senders.iter_mut().next()
         {
             sender.send::<ControlChannel>(ClientControl::Container(request.0.clone()));
+        }
+    }
+}
+
+fn send_kingdoms(
+    mut requests: MessageReader<KingdomRequest>,
+    session: Res<ClientSession>,
+    mut senders: Query<&mut MessageSender<ClientControl>, With<Client>>,
+) {
+    for request in requests.read().take(8) {
+        if session.ready
+            && !session.teleporting
+            && let Some(mut sender) = senders.iter_mut().next()
+        {
+            sender.send::<ControlChannel>(ClientControl::Kingdom(request.0.clone()));
         }
     }
 }
@@ -1485,12 +1736,35 @@ fn send_inputs(
 
 #[derive(SystemParam)]
 struct EditRequests<'w, 's> {
+    belt_interactions: MessageReader<'w, 's, ConveyorInteractionRequest>,
+    conveyors: MessageReader<'w, 's, ConveyorConnectRequest>,
     objects: MessageReader<'w, 's, ObjectInteractionRequest>,
+    rotations: MessageReader<'w, 's, ObjectRotateRequest>,
     blocks: MessageReader<'w, 's, BlockEditRequest>,
     props: MessageReader<'w, 's, PropRemoveRequest>,
     planted: MessageReader<'w, 's, PropPlaceRequest>,
+    fruit: MessageReader<'w, 's, TreeHarvestRequest>,
     farming: MessageReader<'w, 's, FarmToolRequest>,
     surfaces: MessageReader<'w, 's, terra_world::environment::SurfaceConditionRequest>,
+}
+
+pub(crate) fn farming_revision(
+    journal: &EditJournal,
+    position: [i64; 3],
+    action: terra_core::farming::FarmingAction,
+) -> u64 {
+    use terra_core::farming::FarmingAction;
+    let section = terra_voxel::global_to_section(position).0;
+    match action {
+        // Mesh epochs are local render invalidation counters, not replicated
+        // transaction versions. Source/quantity and visibility are rechecked on
+        // the authority after the stable block revision is validated.
+        FarmingAction::FillBucket
+        | FarmingAction::EmptyBucket
+        | FarmingAction::Till
+        | FarmingAction::Refill => journal.revision(section),
+        _ => journal.prop_epoch(section),
+    }
 }
 
 fn send_edits(
@@ -1501,11 +1775,46 @@ fn send_edits(
     mut senders: Query<&mut MessageSender<ClientControl>, With<Client>>,
 ) {
     let mut actions = Vec::new();
+    for request in requests.fruit.read() {
+        actions.push(EditAction::HarvestTree {
+            id: request.id,
+            fruit_revision: request.fruit_revision,
+            slot: request.slot,
+        });
+    }
+    for request in requests.belt_interactions.read() {
+        actions.push(match *request {
+            ConveyorInteractionRequest::Collect { id } => EditAction::CollectConveyor { id },
+            ConveyorInteractionRequest::Dye { position, color } => {
+                EditAction::DyeConveyor { position, color }
+            }
+            ConveyorInteractionRequest::DyeFabric { position, color } => {
+                EditAction::DyeFabric { position, color }
+            }
+        });
+    }
+    for request in requests.conveyors.read() {
+        actions.push(EditAction::ConnectConveyor {
+            start: request.start,
+            end: request.end,
+            start_revision: request.start_revision,
+            item: request.item,
+        });
+    }
+    for request in requests.rotations.read() {
+        actions.push(EditAction::RotateObject {
+            position: request.position,
+            expected: request.expected,
+            facing: request.facing,
+            reverse: request.reverse,
+        });
+    }
     for request in requests.objects.read() {
         actions.push(EditAction::ToggleObject {
             position: request.position,
             expected: request.expected,
             facing: request.facing,
+            closing: request.closing,
         });
     }
     for edit in requests.blocks.read() {
@@ -1547,7 +1856,17 @@ fn send_edits(
     };
     for action in actions.into_iter().take(20) {
         let revision = match action {
-            EditAction::Block { position, .. } | EditAction::ToggleObject { position, .. } => {
+            EditAction::HarvestTree { fruit_revision, .. } => fruit_revision,
+            EditAction::CollectConveyor { .. } => 0,
+            EditAction::DyeConveyor { position, .. } | EditAction::DyeFabric { position, .. } => {
+                journal.revision(terra_voxel::global_to_section(position).0)
+            }
+            EditAction::ConnectConveyor { end, .. } => {
+                journal.revision(terra_voxel::global_to_section(end).0)
+            }
+            EditAction::Block { position, .. }
+            | EditAction::ToggleObject { position, .. }
+            | EditAction::RotateObject { position, .. } => {
                 journal.revision(terra_voxel::global_to_section(position).0)
             }
             EditAction::Prop { section, .. } => journal.prop_epoch(section),
@@ -1557,24 +1876,7 @@ fn send_edits(
             EditAction::Surface { position, .. } => {
                 journal.appearance_epoch(terra_voxel::global_to_section(position).0)
             }
-            EditAction::Farm { position, action } => {
-                let section = terra_voxel::global_to_section(position).0;
-                if matches!(
-                    action,
-                    terra_core::farming::FarmingAction::FillBucket
-                        | terra_core::farming::FarmingAction::EmptyBucket
-                ) {
-                    journal.water_mesh_epoch(section)
-                } else if matches!(
-                    action,
-                    terra_core::farming::FarmingAction::Till
-                        | terra_core::farming::FarmingAction::Refill
-                ) {
-                    journal.revision(section)
-                } else {
-                    journal.prop_epoch(section)
-                }
-            }
+            EditAction::Farm { position, action } => farming_revision(&journal, position, action),
         };
         let Some(mut command) = session.edit_command(revision, action) else {
             session.fail("Edit request sequence exhausted");
@@ -1585,6 +1887,10 @@ fn send_edits(
             EditAction::Block { material: 1.., .. }
                 | EditAction::PlaceProp { .. }
                 | EditAction::Farm { .. }
+                | EditAction::RotateObject { .. }
+                | EditAction::ConnectConveyor { .. }
+                | EditAction::DyeConveyor { .. }
+                | EditAction::DyeFabric { .. }
                 | EditAction::ToggleObject {
                     expected: 71..=73 | 131,
                     ..

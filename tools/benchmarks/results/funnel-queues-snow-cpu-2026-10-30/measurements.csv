@@ -1,0 +1,7 @@
+seed,weather,build,avg_fps,min_fps,p95_ms,p99_ms,frames_below_32_fps,end_rss_kib
+86420,clear,before,85.78,7.67,15.66,18.37,1,2454180
+86420,clear,first_validation,83.56,30.92,15.90,19.24,1,2568764
+86420,clear,final,88.75,38.35,15.10,18.08,0,2543512
+99173,rain,before,82.94,45.53,15.85,18.14,0,2172064
+99173,rain,first_validation,83.04,46.86,15.39,17.89,0,2268932
+99173,rain,final,87.47,43.47,14.66,17.19,0,2252944

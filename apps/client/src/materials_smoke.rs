@@ -15,11 +15,27 @@ use terra_world::{
     },
 };
 
-const COMPLETE_STAGE: u8 = 15;
+#[path = "materials_smoke_castle.rs"]
+mod castle;
+
+const COMPLETE_STAGE: u8 = 16;
+const SETUP_TIMEOUT: Duration = Duration::from_secs(120);
+const CAPTURE_INTERVAL_SECONDS: u64 = 4;
+const CAPTURE_TIMEOUT: Duration =
+    Duration::from_secs((COMPLETE_STAGE as u64 - 1) * CAPTURE_INTERVAL_SECONDS + 30);
+
+fn timed_out(setup_elapsed: Duration, capture_elapsed: Option<Duration>) -> bool {
+    match capture_elapsed {
+        Some(elapsed) => elapsed > CAPTURE_TIMEOUT,
+        None => setup_elapsed > SETUP_TIMEOUT,
+    }
+}
 
 #[derive(Resource)]
 struct MaterialsSmoke {
+    castle: bool,
     started: Instant,
+    capture_started: Option<Instant>,
     since: Instant,
     stage: u8,
     base_y: i64,
@@ -35,7 +51,9 @@ pub(crate) fn install(app: &mut App) {
     let now = Instant::now();
     app.insert_resource(ControllerMode::Fly)
         .insert_resource(MaterialsSmoke {
+            castle: std::env::var("TERRA_MATERIALS_CASTLE").is_ok_and(|value| value == "1"),
             started: now,
+            capture_started: None,
             since: now,
             stage: 0,
             base_y: 0,
@@ -67,7 +85,15 @@ fn setup(
     let center_z = (2.0 + platform_end_z() as f32) * 0.5;
     focus.0 = [14.0, f64::from(y + 3.0), f64::from(center_z)];
     for mut transform in &mut camera {
-        *transform = overview_camera(y);
+        *transform = if state.castle {
+            castle::camera(y, 1)
+        } else {
+            overview_camera(y)
+        };
+    }
+    if state.castle {
+        config.client.fov_degrees = 50.0;
+        focus.0 = [13.0, f64::from(y + 3.0), 14.0];
     }
 }
 
@@ -88,7 +114,7 @@ fn sample_position(material: u16, y: i64) -> [i64; 3] {
 }
 
 fn platform_end_z() -> i64 {
-    pot_row_z() + 2
+    winter_shape_row_z() + 2
 }
 
 fn mixed_slab_row_z() -> i64 {
@@ -101,6 +127,22 @@ fn snow_row_z() -> i64 {
 
 fn pot_row_z() -> i64 {
     snow_row_z() + 3
+}
+
+fn winter_shape_row_z() -> i64 {
+    pot_row_z() + 4
+}
+
+fn winter_shape_samples(y: i64) -> [([i64; 3], u16, u8); 7] {
+    let materials = [78, 74, 86, 82, 90, 93, MaterialId::Path as u16];
+    std::array::from_fn(|i| ([7 + i as i64 * 2, y, winter_shape_row_z()], materials[i], 0))
+}
+
+fn winter_shape_camera(y: f32) -> Transform {
+    Transform::from_xyz(21.5, y + 4.5, winter_shape_row_z() as f32 - 9.5).looking_at(
+        Vec3::new(13.5, y + 0.45, winter_shape_row_z() as f32 + 0.5),
+        Vec3::Y,
+    )
 }
 
 fn potted_samples(y: i64) -> [([i64; 3], u8); 4] {
@@ -220,6 +262,7 @@ fn scene_cells(y: i64) -> Vec<([i64; 3], u16)> {
         .map(|(p, id, _)| (p, id))
         .chain(textile_samples(y))
         .chain(potted_samples(y).map(|(position, _)| (position, terra_core::flower_pot::MATERIAL)))
+        .chain(winter_shape_samples(y).map(|(position, material, _)| (position, material)))
     {
         if let Some((_, id)) = cells.iter_mut().find(|(p, _)| *p == position) {
             *id = material;
@@ -317,6 +360,54 @@ fn check_window(world: &FixtureWorld, y: i64) -> Result<(), String> {
     Ok(())
 }
 
+fn check_winter_shapes(chunks: &ChunkStore, journal: &EditJournal, y: i64) -> Result<(), String> {
+    for (position, material, facing) in winter_shape_samples(y) {
+        if chunks.block_at(position) != Some(material)
+            || chunks.block_at([position[0], y - 1, position[2]])
+                != Some(MaterialId::SmoothStone as u16)
+        {
+            return Err(format!(
+                "Winter shape is not on its real platform at {position:?}"
+            ));
+        }
+        if journal.surface_condition(position).snow <= 0.0 {
+            return Err(format!(
+                "Winter shape lost its saved snowfall at {position:?}"
+            ));
+        }
+        if terra_core::construction::is_shape(material) {
+            if journal
+                .object_state(position)
+                .is_none_or(|state| state.facing != facing || !state.valid_for(position, material))
+            {
+                return Err(format!("Winter shape has an invalid pose at {position:?}"));
+            }
+            let bounds = terra_core::construction::placed_boxes(material, facing, [None; 6]);
+            if bounds.is_empty()
+                || bounds.iter().any(|bounds| {
+                    bounds.minimum.iter().any(|value| !value.is_finite())
+                        || bounds.maximum.iter().any(|value| !value.is_finite())
+                        || bounds.minimum[1] < 0.0
+                        || bounds.maximum[1] > 1.5
+                })
+            {
+                return Err(format!(
+                    "Winter shape has invalid authored geometry at {position:?}"
+                ));
+            }
+        }
+        for height in 1..=3 {
+            let above = [position[0], y + height, position[2]];
+            if chunks.block_at(above) != Some(0) {
+                return Err(format!(
+                    "Winter shape has an unexpected cap or roof at {above:?}"
+                ));
+            }
+        }
+    }
+    Ok(())
+}
+
 fn run(
     mut commands: Commands,
     mut state: ResMut<MaterialsSmoke>,
@@ -325,6 +416,17 @@ fn run(
     mut exit: MessageWriter<AppExit>,
     mut camera: Query<&mut Transform, With<TerraCamera>>,
 ) {
+    if state.castle {
+        castle::run(
+            &mut commands,
+            &mut state,
+            &mut world,
+            &mut edits,
+            &mut exit,
+            &mut camera,
+        );
+        return;
+    }
     if state.stage == COMPLETE_STAGE {
         return;
     }
@@ -348,8 +450,10 @@ fn run(
             preview_pending = world.previews.pending, stale = ?stale,
             "Materials fixture readiness");
     }
-    if state.started.elapsed() > Duration::from_secs(120)
-        || world.render.error.is_some()
+    if timed_out(
+        state.started.elapsed(),
+        state.capture_started.map(|start| start.elapsed()),
+    ) || world.render.error.is_some()
         || world.previews.error.is_some()
     {
         error!(stage = state.stage, render_error = ?world.render.error,
@@ -409,6 +513,7 @@ fn run(
         )
         .chain(textile_samples(y))
         .chain(potted_samples(y).map(|(position, _)| (position, terra_core::flower_pot::MATERIAL)))
+        .chain(winter_shape_samples(y).map(|(position, material, _)| (position, material)))
         .collect();
     // Upper door cells are occupied, but their shared model belongs to the
     // lower anchor; an otherwise empty upper section need not own terrain mesh.
@@ -444,6 +549,9 @@ fn run(
             }
         }
         for (position, material) in &samples {
+            if position[2] == winter_shape_row_z() {
+                continue;
+            }
             if let Some(facing) = construction_facing(*material)
                 && let Err(error) = terra_world::streaming::commit_object_state(
                     &mut world.chunks,
@@ -482,9 +590,11 @@ fn run(
                 &mut world.chunks,
                 &mut world.journal,
                 p,
-                Some(BlockObjectState {
-                    facing: layer,
-                    ..Default::default()
+                terra_core::construction::manual_snow_facing(layer).map(|facing| {
+                    BlockObjectState {
+                        facing,
+                        ..Default::default()
+                    }
                 }),
             ) {
                 error!(%error, "Snow fixture failed");
@@ -519,8 +629,42 @@ fn run(
                 return;
             }
         }
+        for (position, material, facing) in winter_shape_samples(y) {
+            if terra_core::construction::is_shape(material)
+                && let Err(error) = terra_world::streaming::commit_object_state(
+                    &mut world.chunks,
+                    &mut world.journal,
+                    position,
+                    Some(BlockObjectState {
+                        facing,
+                        ..Default::default()
+                    }),
+                )
+            {
+                error!(%error, "Winter shape fixture pose failed");
+                state.stage = COMPLETE_STAGE;
+                exit.write(AppExit::error());
+                return;
+            }
+            if let Err(error) = world.journal.set_surface_condition(
+                position,
+                terra_world::environment::SurfaceCondition {
+                    snow: 0.875,
+                    ..Default::default()
+                },
+            ) {
+                error!(%error, "Winter shape fixture snowfall failed");
+                state.stage = COMPLETE_STAGE;
+                exit.write(AppExit::error());
+                return;
+            }
+        }
         state.oriented = true;
-        state.since = Instant::now();
+        let now = Instant::now();
+        // Initial GPU previews have their own bounded setup budget; they must
+        // not consume the time reserved for the complete screenshot sequence.
+        state.capture_started = Some(now);
+        state.since = now;
         return;
     }
     if !state.captured
@@ -542,6 +686,14 @@ fn run(
         return;
     }
     if !state.captured {
+        if state.stage == 15
+            && let Err(error) = check_winter_shapes(&world.chunks, &world.journal, y)
+        {
+            error!(%error, "Winter shape fixture validation failed");
+            state.stage = COMPLETE_STAGE;
+            exit.write(AppExit::error());
+            return;
+        }
         let label = match state.stage {
             1 => "all-blocks",
             2 => "joined-glass",
@@ -556,6 +708,7 @@ fn run(
             11 => "village-building-blocks",
             13 => "textiles-flower-pots",
             14 => "cherry-wood",
+            15 => "snow-shapes",
             _ => "chunk-borders",
         };
         let path = std::env::var_os("TERRA_SCREENSHOT")
@@ -577,7 +730,7 @@ fn run(
         );
         state.captured = true;
     }
-    if state.since.elapsed() < Duration::from_secs(4) {
+    if state.since.elapsed() < Duration::from_secs(CAPTURE_INTERVAL_SECONDS) {
         return;
     }
     state.stage += 1;
@@ -616,12 +769,13 @@ fn run(
                 Transform::from_xyz(p[0] + 8.0, y + 4.0, p[2] + 9.0)
                     .looking_at(Vec3::new(p[0], y + 0.7, p[2] - 1.0), Vec3::Y)
             }
+            15 => winter_shape_camera(y),
             _ => *transform,
         };
     }
     if state.stage == COMPLETE_STAGE {
         info!(
-            "Materials fixture passed: all blocks and GPU previews ready, connected glass has no internal frames, solid water, textile palette and four filled flower pots rendered"
+            "Materials fixture passed: all blocks and GPU previews ready, connected glass, solid water, textiles, filled pots and surface-only winter shapes rendered"
         );
         exit.write(AppExit::Success);
     }
@@ -642,6 +796,95 @@ mod tests {
     use super::*;
 
     #[test]
+    fn slow_preview_setup_does_not_consume_the_bounded_full_capture_sequence() {
+        let setup = SETUP_TIMEOUT - Duration::from_secs(1);
+        assert!(!timed_out(setup, None));
+        for stage in 1..COMPLETE_STAGE {
+            let capture_elapsed = Duration::from_secs(u64::from(stage) * CAPTURE_INTERVAL_SECONDS);
+            assert!(!timed_out(setup + capture_elapsed, Some(capture_elapsed)));
+        }
+        assert!(timed_out(SETUP_TIMEOUT + Duration::from_secs(1), None));
+        assert!(!timed_out(setup + CAPTURE_TIMEOUT, Some(CAPTURE_TIMEOUT)));
+        let expired = CAPTURE_TIMEOUT + Duration::from_secs(1);
+        assert!(timed_out(setup + expired, Some(expired)));
+    }
+
+    #[test]
+    fn winter_shapes_follow_the_pots_with_real_saved_snow_and_no_occupied_cap_cells() {
+        use terra_world::streaming::LoadedSection;
+        let y = 63;
+        let mut chunks = ChunkStore::default();
+        for (position, material) in scene_cells(y) {
+            let (section, local) = global_to_section(position);
+            chunks
+                .loaded
+                .entry(section)
+                .or_insert_with(|| LoadedSection {
+                    data: terra_voxel::BlockSection::empty(section).unwrap(),
+                    mesh: None,
+                    mesh_epoch: 0,
+                    water_epoch: 0,
+                    water: None,
+                    props: Vec::new(),
+                })
+                .data
+                .set_block(local, material)
+                .unwrap();
+        }
+        let mut journal = EditJournal::default();
+        assert!(winter_shape_row_z() > pot_row_z());
+        assert!(winter_shape_row_z() < platform_end_z());
+        let camera = winter_shape_camera(y as f32);
+        let forward = camera.rotation * Vec3::NEG_Z;
+        let right = camera.rotation * Vec3::X;
+        let up = camera.rotation * Vec3::Y;
+        assert!(camera.translation.z < winter_shape_row_z() as f32 && forward.z > 0.0);
+        for (position, material, facing) in winter_shape_samples(y) {
+            assert!(!terra_world::weather::supports_snow_layers(material));
+            journal.record(position, material).unwrap();
+            if terra_core::construction::is_shape(material) {
+                journal
+                    .set_object_state(
+                        position,
+                        Some(BlockObjectState {
+                            facing,
+                            ..Default::default()
+                        }),
+                    )
+                    .unwrap();
+            }
+            journal
+                .set_surface_condition(
+                    position,
+                    terra_world::environment::SurfaceCondition {
+                        snow: 0.875,
+                        ..Default::default()
+                    },
+                )
+                .unwrap();
+            let relative = Vec3::from_array(position.map(|v| v as f32)) + Vec3::splat(0.5)
+                - camera.translation;
+            let depth = relative.dot(forward);
+            assert!(depth > 0.0);
+            assert!(relative.dot(right).abs() / depth < (45.0_f32.to_radians() * 0.5).tan() * 1.6);
+            assert!(relative.dot(up).abs() / depth < (45.0_f32.to_radians() * 0.5).tan());
+        }
+        check_winter_shapes(&chunks, &journal, y).unwrap();
+        let above = [7, y + 1, winter_shape_row_z()];
+        let (section, local) = global_to_section(above);
+        for forbidden in [98, 5] {
+            chunks
+                .loaded
+                .get_mut(&section)
+                .unwrap()
+                .data
+                .set_block(local, forbidden)
+                .unwrap();
+            assert!(check_winter_shapes(&chunks, &journal, y).is_err());
+        }
+    }
+
+    #[test]
     fn chunk_border_capture_enables_only_its_dedicated_group_and_cleans_up_afterward() {
         use bevy::{
             ecs::system::RunSystemOnce,
@@ -656,7 +899,9 @@ mod tests {
             .init_gizmo_group::<ChunkBorderGizmos>()
             .init_resource::<terra_core::DebugSettings>()
             .insert_resource(MaterialsSmoke {
+                castle: false,
                 started: Instant::now(),
+                capture_started: None,
                 since: Instant::now(),
                 stage: 11,
                 base_y: 0,
@@ -834,7 +1079,7 @@ mod tests {
     fn one_extra_detail_capture_frames_all_four_pots_and_their_carpet_samples() {
         let y = 63.0;
         let view = pot_camera(y).to_matrix().inverse();
-        let projection = Mat4::perspective_rh(45.0_f32.to_radians(), 1.0, 0.1, 1000.0);
+        let projection = bevy::math::proj::perspective(45.0_f32.to_radians(), 1.0, 0.1, 1000.0);
         for x in [8.0, 15.0] {
             for z in [pot_row_z() as f32 - 1.0, pot_row_z() as f32 + 1.0] {
                 for height in [0.0, 2.0] {
@@ -845,14 +1090,14 @@ mod tests {
                 }
             }
         }
-        assert_eq!(COMPLETE_STAGE, 15);
+        assert_eq!(COMPLETE_STAGE, 16);
     }
 
     #[test]
     fn overview_fits_the_complete_expanding_platform_at_square_or_wider_aspects() {
         let y = 63.0;
         let view = overview_camera(y).to_matrix().inverse();
-        let projection = Mat4::perspective_rh(45.0_f32.to_radians(), 1.0, 0.1, 1000.0);
+        let projection = bevy::math::proj::perspective(45.0_f32.to_radians(), 1.0, 0.1, 1000.0);
         for x in [6.0, 20.0] {
             for z in [2.0, platform_end_z() as f32 + 1.0] {
                 for height in [-1.0, 4.0] {

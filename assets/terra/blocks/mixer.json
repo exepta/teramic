@@ -1,0 +1,315 @@
+{
+  "schema_version": 1,
+  "id": 156,
+  "name": "Mixer",
+  "description": "A mechanically driven paddle mixer with multiple inputs and a reinforced wooden hopper.",
+  "creative_category": "technic",
+  "render_kind": "custom_mesh",
+  "struct_block": true,
+  "model_layout": "scene",
+  "model": "models/mixer.gltf",
+  "hardness": 2.5,
+  "resistance": 8,
+  "mining_level": 1,
+  "required_tool": "pickaxe",
+  "textures": {
+    "oak": "textures/machinery-oak-hd.png",
+    "dark_oak": "textures/machinery-oak-hd.png",
+    "iron": "textures/machinery-iron-hd.png",
+    "iron_edge": "textures/machinery-iron-hd.png",
+    "mixer_paddle_wood": "textures/machinery-oak-hd.png",
+    "mixer_paddle_iron": "textures/machinery-iron-hd.png",
+    "mixer_cog_wood": "textures/machinery-oak-hd.png",
+    "mixer_cog_iron": "textures/machinery-iron-hd.png"
+  },
+  "collision_boxes": [
+    {
+      "minimum": [
+        0.055,
+        0,
+        0.065
+      ],
+      "maximum": [
+        0.175,
+        0.72,
+        0.185
+      ]
+    },
+    {
+      "minimum": [
+        0.055,
+        0,
+        0.785
+      ],
+      "maximum": [
+        0.175,
+        0.72,
+        0.905
+      ]
+    },
+    {
+      "minimum": [
+        0.795,
+        0,
+        0.065
+      ],
+      "maximum": [
+        0.915,
+        0.72,
+        0.185
+      ]
+    },
+    {
+      "minimum": [
+        0.795,
+        0,
+        0.785
+      ],
+      "maximum": [
+        0.915,
+        0.72,
+        0.905
+      ]
+    },
+    {
+      "minimum": [
+        0.15,
+        0.14,
+        0.09
+      ],
+      "maximum": [
+        0.8,
+        0.22500000000000003,
+        0.185
+      ]
+    },
+    {
+      "minimum": [
+        0.15,
+        0.14,
+        0.79
+      ],
+      "maximum": [
+        0.8,
+        0.22500000000000003,
+        0.885
+      ]
+    },
+    {
+      "minimum": [
+        0.18,
+        0.225,
+        0.24
+      ],
+      "maximum": [
+        0.8,
+        0.265,
+        0.78
+      ]
+    },
+    {
+      "minimum": [
+        0.2,
+        0.275,
+        0.235
+      ],
+      "maximum": [
+        0.79,
+        0.645,
+        0.27999999999999997
+      ]
+    },
+    {
+      "minimum": [
+        0.18,
+        0.655,
+        0.28
+      ],
+      "maximum": [
+        0.245,
+        0.7100000000000001,
+        0.72
+      ]
+    },
+    {
+      "minimum": [
+        0.74,
+        0.655,
+        0.28
+      ],
+      "maximum": [
+        0.8049999999999999,
+        0.7100000000000001,
+        0.72
+      ]
+    },
+    {
+      "minimum": [
+        0.055,
+        0.725,
+        0.055
+      ],
+      "maximum": [
+        0.9450000000000001,
+        1,
+        0.135
+      ]
+    },
+    {
+      "minimum": [
+        0.055,
+        0.725,
+        0.865
+      ],
+      "maximum": [
+        0.9450000000000001,
+        1,
+        0.945
+      ]
+    },
+    {
+      "minimum": [
+        0.055,
+        0.725,
+        0.135
+      ],
+      "maximum": [
+        0.135,
+        1,
+        0.865
+      ]
+    },
+    {
+      "minimum": [
+        0.865,
+        0.725,
+        0.135
+      ],
+      "maximum": [
+        0.945,
+        1,
+        0.865
+      ]
+    },
+    {
+      "minimum": [
+        0.32,
+        0.25899999999999995,
+        0.69
+      ],
+      "maximum": [
+        0.6799999999999999,
+        0.285,
+        0.7391666666666666
+      ]
+    },
+    {
+      "minimum": [
+        0.32,
+        0.22566666666666665,
+        0.7391666666666666
+      ],
+      "maximum": [
+        0.6799999999999999,
+        0.25166666666666665,
+        0.7883333333333333
+      ]
+    },
+    {
+      "minimum": [
+        0.32,
+        0.19233333333333333,
+        0.7883333333333333
+      ],
+      "maximum": [
+        0.6799999999999999,
+        0.21833333333333332,
+        0.8375
+      ]
+    },
+    {
+      "minimum": [
+        0.32,
+        0.15899999999999995,
+        0.8374999999999999
+      ],
+      "maximum": [
+        0.6799999999999999,
+        0.18499999999999994,
+        0.8866666666666666
+      ]
+    },
+    {
+      "minimum": [
+        0.32,
+        0.12566666666666665,
+        0.8866666666666666
+      ],
+      "maximum": [
+        0.6799999999999999,
+        0.15166666666666664,
+        0.9358333333333333
+      ]
+    },
+    {
+      "minimum": [
+        0.32,
+        0.09233333333333332,
+        0.9358333333333333
+      ],
+      "maximum": [
+        0.6799999999999999,
+        0.11833333333333332,
+        0.985
+      ]
+    },
+    {
+      "minimum": [
+        0.305,
+        0.08,
+        0.71
+      ],
+      "maximum": [
+        0.33999999999999997,
+        0.3,
+        0.99
+      ]
+    },
+    {
+      "minimum": [
+        0.665,
+        0.08,
+        0.71
+      ],
+      "maximum": [
+        0.7000000000000001,
+        0.3,
+        0.99
+      ]
+    },
+    {
+      "minimum": [
+        0.91,
+        0.29,
+        0.29
+      ],
+      "maximum": [
+        1,
+        0.71,
+        0.71
+      ]
+    },
+    {
+      "minimum": [
+        0.22,
+        0.31,
+        0.31
+      ],
+      "maximum": [
+        0.78,
+        0.69,
+        0.69
+      ]
+    }
+  ]
+}

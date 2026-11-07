@@ -8,6 +8,183 @@ pub(super) struct InspectionTargets(pub std::collections::HashMap<terra_core::Pl
 #[path = "population_tests.rs"]
 mod population_tests;
 
+/// Only doors opened by residents are closed automatically. Player-operated
+/// doors retain their state; paired changes use the normal server transaction.
+#[derive(Default)]
+pub(super) struct ResidentDoors {
+    pending: std::collections::BTreeMap<[i64; 3], ManagedDoor>,
+}
+
+struct ManagedDoor {
+    material: u16,
+    facing: u8,
+    cells: Vec<([i64; 3], terra_world::edits::BlockObjectState)>,
+    deadline: f32,
+}
+
+pub(super) struct ResidentDoorWorld<'a> {
+    pub chunks: &'a mut ChunkStore,
+    pub journal: &'a mut EditJournal,
+    pub properties: &'a terra_core::block_properties::BlockPropertiesCatalog,
+    pub population: &'a terra_core::creatures::CreaturePopulation,
+    pub players: &'a [[f64; 3]],
+}
+
+fn resident_door_group(
+    chunks: &ChunkStore,
+    journal: &EditJournal,
+    position: [i64; 3],
+) -> Option<terra_world::objects::doors::Group> {
+    let material = chunks
+        .block_at(position)
+        .or_else(|| journal.block(position))?;
+    let state = journal.object_state(position)?;
+    terra_world::objects::doors::group(position, material, state, |p| {
+        Some((
+            chunks.block_at(p).or_else(|| journal.block(p))?,
+            journal.object_state(p)?,
+        ))
+    })
+}
+
+impl ResidentDoors {
+    pub(super) fn update(
+        &mut self,
+        now: f32,
+        requests: &std::collections::BTreeSet<[i64; 3]>,
+        world: ResidentDoorWorld<'_>,
+    ) {
+        let ResidentDoorWorld {
+            chunks,
+            journal,
+            properties,
+            population,
+            players,
+        } = world;
+        let requests: std::collections::BTreeSet<_> = requests
+            .iter()
+            .map(|&door| {
+                resident_door_group(chunks, journal, door).map_or(door, |group| group.anchor)
+            })
+            .collect();
+        for &door in &requests {
+            let Some(group) = resident_door_group(chunks, journal, door) else {
+                continue;
+            };
+            // A manually open leaf already provides passage. Do not acquire and
+            // later close it merely because its neighbor was still closed.
+            if group
+                .opened
+                .into_iter()
+                .take(usize::from(group.width))
+                .any(|open| open)
+                || self.pending.len() >= 1024 && !self.pending.contains_key(&door)
+            {
+                continue;
+            }
+            let Some(state) = journal.object_state(door) else {
+                continue;
+            };
+            if furniture::toggle_with_players(
+                door,
+                group.material,
+                state.facing,
+                chunks,
+                journal,
+                properties,
+                players,
+            ) != Ok(true)
+            {
+                continue;
+            }
+            let cells = group
+                .cells()
+                .filter_map(|p| journal.object_state(p).map(|state| (p, state)))
+                .collect();
+            self.pending.insert(
+                door,
+                ManagedDoor {
+                    material: group.material,
+                    facing: state.facing ^ 4,
+                    cells,
+                    deadline: now + 3.0,
+                },
+            );
+        }
+        self.pending.retain(|&door, managed| {
+            // Retain the complete expected transaction across partial unloads.
+            // Any player override, replacement or changed grouping retires it.
+            for &(cell, state) in &managed.cells {
+                match chunks.block_at(cell) {
+                    None => return true,
+                    Some(material) if material != managed.material => return false,
+                    _ => {}
+                }
+                if journal.object_state(cell) != Some(state) {
+                    return false;
+                }
+            }
+            let Some(group) = resident_door_group(chunks, journal, door) else {
+                return false;
+            };
+            if !group.cells().eq(managed.cells.iter().map(|(p, _)| *p)) {
+                return false;
+            }
+            if requests.contains(&door) {
+                managed.deadline = now + 3.0;
+                return true;
+            }
+            if now < managed.deadline {
+                return true;
+            }
+            let occupied = managed
+                .cells
+                .iter()
+                .filter(|(_, state)| !state.secondary)
+                .any(|(cell, _)| {
+                    let center = [
+                        cell[0] as f64 + 0.5,
+                        cell[1] as f64 + 1.0,
+                        cell[2] as f64 + 0.5,
+                    ];
+                    players
+                        .iter()
+                        .any(|&p| distance(p, center) < 2.5_f64.powi(2))
+                        || population.animals.values().any(|animal| {
+                            if animal.health <= 0.0 {
+                                return false;
+                            }
+                            let size = animal.size();
+                            let radius = 2.0 + size[0].max(size[2]) * 0.5;
+                            (animal.position[0] - center[0]).hypot(animal.position[2] - center[2])
+                                < radius
+                                && animal.position[1] < cell[1] as f64 + 3.0
+                                && animal.position[1] + size[1] > cell[1] as f64 - 1.0
+                        })
+                });
+            if occupied {
+                managed.deadline = now + 3.0;
+                return true;
+            }
+            match furniture::toggle_with_players(
+                door,
+                managed.material,
+                managed.facing,
+                chunks,
+                journal,
+                properties,
+                players,
+            ) {
+                Ok(_) => false,
+                Err(_) => {
+                    managed.deadline = now + 0.5;
+                    true
+                }
+            }
+        });
+    }
+}
+
 #[derive(Default)]
 pub(super) struct Schedule {
     elapsed: f32,
@@ -25,6 +202,7 @@ pub(super) struct Schedule {
     spider_cycles: terra_world::creatures::spiders::cycle::Cycles,
     residents: terra_world::creatures::villagers::Residents,
     resident_elapsed: f32,
+    resident_doors: ResidentDoors,
 }
 
 fn habitat_offset(index: usize) -> [i64; 2] {
@@ -63,6 +241,32 @@ fn natural_near(
                 && distance(position, animal.position) <= ACTIVE_RADIUS.powi(2)
         })
         .count()
+}
+
+fn snapshot_ecology(
+    population: &terra_core::creatures::CreaturePopulation,
+    visible: &[terra_core::creatures::Creature],
+    position: [f64; 3],
+) -> terra_core::creatures::ecology::Ecology {
+    let mut ecology = population.ecology.nearby(position);
+    let mut bees = std::collections::BTreeMap::new();
+    // Visible offspring need their colony identity even beyond the 80 m ecology
+    // radius or when lower natural IDs fill the nearby metadata limit.
+    for animal in visible.iter().take(MAX_VISIBLE_CREATURES) {
+        if animal.kind == CreatureKind::Bee
+            && let Some(state) = population.ecology.bees.get(&animal.id)
+        {
+            bees.insert(animal.id, state.clone());
+        }
+    }
+    for (id, state) in std::mem::take(&mut ecology.bees) {
+        if bees.len() == MAX_VISIBLE_CREATURES {
+            break;
+        }
+        bees.entry(id).or_insert(state);
+    }
+    ecology.bees = bees;
+    ecology
 }
 
 /// Creature positions are foot-centred; player positions are capsule centres.
@@ -652,11 +856,22 @@ pub(super) fn tick(
         let dt = elapsed.min(0.25);
         schedule.last_step.insert(id, now);
         let owned = population.owners.contains_key(&id);
-        let order = terra_core::creatures::taming::order(
+        let mut order = terra_core::creatures::taming::order(
             journal.gameplay(),
             id,
             population.animals[&id].kind,
         );
+        if population.owners.get(&id).is_some_and(|actor| {
+            !terra_world::kingdom_access::can_use(
+                &journal.gameplay().kingdoms,
+                &chunks,
+                *actor,
+                terra_core::kingdom::KingdomPermission::NpcWork,
+                population.animals[&id].position.map(|v| v.floor() as i64),
+            )
+        }) {
+            order = terra_core::creatures::taming::CompanionMode::Wait;
+        }
         let owner = population
             .owners
             .get(&id)
@@ -677,8 +892,10 @@ pub(super) fn tick(
                 terra_world::props::PropId(den.web_id),
             )
         });
+        let owner_uuid = population.owners.get(&id).copied();
         if let Some(a) = population.animals.get_mut(&id) {
             let previous_age = a.age;
+            let previous_position = a.position;
             schedule.navigation.begin_tick(id);
             let search = searches.contains(&id);
             let sleeping = night
@@ -701,7 +918,8 @@ pub(super) fn tick(
                     dt,
                     search,
                     navigation,
-                ) {
+                ) && config.world.game_rules.mob_griefing
+                {
                     resident_doors.insert(door);
                 }
                 terra_world::creatures::Forage::None
@@ -720,6 +938,21 @@ pub(super) fn tick(
                     search,
                     Some(&mut schedule.navigation),
                 );
+                if owner_uuid.is_some_and(|actor| {
+                    !terra_world::kingdom_access::can_use(
+                        &journal.gameplay().kingdoms,
+                        &chunks,
+                        actor,
+                        terra_core::kingdom::KingdomPermission::NpcWork,
+                        a.position.map(|v| v.floor() as i64),
+                    )
+                }) {
+                    // Keep the authorized side of a border; the persisted order is
+                    // rechecked each tick and can resume after an authorized change.
+                    a.position = previous_position;
+                    a.velocity = [0.0; 3];
+                    a.behavior = CreatureBehavior::Rest;
+                }
                 terra_world::creatures::Forage::None
             } else if a.kind == CreatureKind::Stalker {
                 let Schedule {
@@ -906,6 +1139,15 @@ pub(super) fn tick(
                     Some(&mut schedule.navigation),
                 )
             };
+            terra_world::conveyors::carry_creature(
+                a,
+                &Habitat {
+                    terrain: &terrain.0,
+                    chunks: &chunks,
+                    journal: &journal,
+                },
+                dt,
+            );
             let simulated = terra_world::creatures::breeding::constrain_growth(
                 a,
                 previous_age,
@@ -921,8 +1163,13 @@ pub(super) fn tick(
                 family.advance_active_age(previous_age, simulated);
             }
             if effect != terra_world::creatures::Forage::None
-                && let Err(error) =
-                    terra_world::creatures::apply_forage(effect, a, &mut chunks, &mut journal)
+                && let Err(error) = terra_world::creatures::apply_forage(
+                    effect,
+                    a,
+                    &mut chunks,
+                    &mut journal,
+                    config.world.game_rules,
+                )
             {
                 tracing::warn!(%error, "Animal forage could not be committed");
             }
@@ -955,7 +1202,8 @@ pub(super) fn tick(
             let mode = peer.game_mode(&config);
             spider_bite(&mut peer, bite, mode);
         }
-        if let Some(web) = effect.web
+        if config.world.game_rules.mob_griefing
+            && let Some(web) = effect.web
             && let Some(den) = spin_web(&mut chunks, &mut journal, &terrain.0, web)
         {
             journal.gameplay_mut().spider_dens.insert(id, den);
@@ -1093,32 +1341,26 @@ pub(super) fn tick(
             state.revision = state.revision.wrapping_add(1);
         }
     }
-    let occupants: Vec<_> = if resident_doors.is_empty() {
-        Vec::new()
-    } else {
-        bodies
-            .iter()
-            .map(|body| body.translation.to_array().map(f64::from))
-            .collect()
-    };
-    for door in resident_doors {
-        if let Some(state) = journal.object_state(door)
-            && state.facing < 4
-            && let Some(material) = chunks.block_at(door)
-        {
-            // Use the same paired-state and player-clearance preflight as a
-            // manual interaction. A blocked door is retried on the next tick.
-            let _ = furniture::toggle_with_players(
-                door,
-                material,
-                state.facing,
-                &mut chunks,
-                &mut journal,
-                &properties,
-                &occupants,
-            );
-        }
-    }
+    let occupants: Vec<_> =
+        if resident_doors.is_empty() && schedule.resident_doors.pending.is_empty() {
+            Vec::new()
+        } else {
+            bodies
+                .iter()
+                .map(|body| body.translation.to_array().map(f64::from))
+                .collect()
+        };
+    schedule.resident_doors.update(
+        now,
+        &resident_doors,
+        ResidentDoorWorld {
+            chunks: &mut chunks,
+            journal: &mut journal,
+            properties: &properties,
+            population: &population,
+            players: &occupants,
+        },
+    );
     journal.gameplay_mut().creatures = population;
     {
         let state = journal.gameplay_mut();
@@ -1202,9 +1444,9 @@ pub(super) fn tick(
                     .map(|family| terra_core::creatures::breeding::FamilyView::new(animal, family))
             })
             .collect();
-        sender.send::<SnapshotChannel>(CreatureStates {
+        sender.send::<CreatureSnapshotChannel>(CreatureStates {
             tick: runtime.tick,
-            ecology: journal.gameplay().creatures.ecology.nearby(position),
+            ecology: snapshot_ecology(&journal.gameplay().creatures, &visible, position),
             creatures: visible,
             intentions,
             bonds,
@@ -1233,6 +1475,7 @@ pub(super) fn pet_command(
     world: &mut ControlWorld,
 ) {
     if !peer.synced
+        || !peer.permissions.build
         || peer.vitals.dead()
         || peer.game_mode(&world.config) == terra_core::GameMode::Spectator
         || peer.chat.teleport.is_some()
@@ -1256,6 +1499,14 @@ pub(super) fn pet_command(
     else {
         return;
     };
+    if !super::kingdoms::permission_allowed(
+        peer.uuid,
+        terra_core::kingdom::KingdomPermission::NpcWork,
+        animal.position.map(|v| v.floor() as i64),
+        world,
+    ) {
+        return;
+    }
     let eye = (body.translation + Vec3::Y * terra_physics::character::PLAYER_EYE_OFFSET)
         .to_array()
         .map(f64::from);
@@ -1345,6 +1596,21 @@ pub(super) fn interact(
     let Some(animal) = world.journal.gameplay().creatures.animals.get(&id) else {
         return;
     };
+    let permission = if feed && animal.kind == CreatureKind::Villager {
+        terra_core::kingdom::KingdomPermission::Inventories
+    } else if feed {
+        terra_core::kingdom::KingdomPermission::NpcWork
+    } else {
+        terra_core::kingdom::KingdomPermission::Break
+    };
+    if !super::kingdoms::permission_allowed(
+        peer.uuid,
+        permission,
+        animal.position.map(|v| v.floor() as i64),
+        world,
+    ) {
+        return;
+    }
     let Some(hit) = terra_world::creatures::ray_distance(animal, eye, direction, 4.5) else {
         return;
     };

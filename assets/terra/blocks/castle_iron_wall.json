@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "id": 179,
+  "name": "Verstaerkte Mauer",
+  "description": "Castle masonry: wall, iron finish. Authored joints, relief and shared physical openings. Place against any face to orient; arch halves form a two-block span.",
+  "creative_category": "building",
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/castle_iron_wall.gltf",
+  "struct_block": true,
+  "hardness": 4,
+  "resistance": 20,
+  "required_tool": "pickaxe",
+  "mining_level": 1,
+  "textures": {
+    "iron": "textures/machinery-iron-hd.png",
+    "rivet": "textures/machinery-iron-hd.png"
+  },
+  "collision_boxes": [
+    {
+      "minimum": [
+        0.004,
+        0,
+        0.004
+      ],
+      "maximum": [
+        0.996,
+        1,
+        0.996
+      ]
+    }
+  ],
+  "materials": {
+    "stone_0": {
+      "texture_pattern": "stone",
+      "base_color": [
+        0.93,
+        0.93,
+        0.93,
+        1
+      ],
+      "roughness": 0.99,
+      "reflectance": 0.08
+    },
+    "stone_1": {
+      "texture_pattern": "stone",
+      "base_color": [
+        0.97,
+        0.97,
+        0.97,
+        1
+      ],
+      "roughness": 0.99,
+      "reflectance": 0.08
+    },
+    "stone_2": {
+      "texture_pattern": "stone",
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.99,
+      "reflectance": 0.08
+    },
+    "stone_3": {
+      "texture_pattern": "stone",
+      "base_color": [
+        0.985,
+        0.985,
+        0.985,
+        1
+      ],
+      "roughness": 0.99,
+      "reflectance": 0.08
+    }
+  }
+}

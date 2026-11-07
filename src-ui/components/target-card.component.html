@@ -1,6 +1,6 @@
 @if (targetView.visible) {
 <div id="target-card" class="target-card" [style]="targetView.style">
-  <div class="target-heading"><h3>{{ targetView.title }}</h3>@if (targetView.mob) { <p>{{ targetView.status }}</p> }</div>
+  <div class="target-heading"><h3 class="target-title">{{ targetView.title }}</h3>@if (targetView.mob) { <p>{{ targetView.status }}</p> }</div>
   @if (targetView.mob) {
     <div class="target-health"><progress-bar class="target-health-bar" min="0" max="100" [value]="targetView.health" /><div class="target-health-label"><p>{{ targetView.health_label }}</p></div></div>
   } @else {

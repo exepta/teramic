@@ -129,6 +129,8 @@ pub(super) fn advance(
 
 pub(super) fn begin_respawns(
     mut spawn: spawn::SpawnWorld,
+    config: Res<GameConfig>,
+    journal: Res<EditJournal>,
     mut peers: Query<(&mut Peer, &mut MessageSender<ServerControl>), With<Connected>>,
 ) {
     for (mut peer, mut sender) in &mut peers {
@@ -136,6 +138,19 @@ pub(super) fn begin_respawns(
             || !peer.vitals.dead()
             || peer.chat.teleport.is_some()
         {
+            continue;
+        }
+        // A full drop budget can defer the atomic death transfer. Keep this
+        // respawn request pending until item ownership has been transferred.
+        if !config.world.game_rules.keep_inventory
+            && (journal
+                .gameplay()
+                .inventories
+                .get(&peer.uuid)
+                .is_some_and(|bag| bag.occupied_slots() > 0 || bag.cursor.is_some())
+                || peer.equipment.iter().next().is_some())
+        {
+            peer.survival.respawn_requested = true;
             continue;
         }
         match spawn.position() {
@@ -155,6 +170,8 @@ pub(super) fn begin_respawns(
 
 pub(super) fn commit_and_send(
     mut journal: ResMut<EditJournal>,
+    config: Res<GameConfig>,
+    bodies: Query<&Transform, With<ServerCharacter>>,
     time: Res<Time<Real>>,
     mut last_sent: Local<f64>,
     mut peers: Query<(&mut Peer, &mut MessageSender<ServerControl>), With<Connected>>,
@@ -166,6 +183,29 @@ pub(super) fn commit_and_send(
     for (mut peer, mut sender) in &mut peers {
         if !peer.accepted {
             continue;
+        }
+        let owned_items = journal
+            .gameplay()
+            .inventories
+            .get(&peer.uuid)
+            .is_some_and(|bag| bag.occupied_slots() > 0 || bag.cursor.is_some())
+            || peer.equipment.iter().next().is_some();
+        if peer.vitals.dead()
+            && !config.world.game_rules.keep_inventory
+            && owned_items
+            && let Ok(body) = bodies.get(peer.body)
+        {
+            let uuid = peer.uuid;
+            journal
+                .bypass_change_detection()
+                .gameplay_mut()
+                .drop_death_inventory(
+                    uuid,
+                    &mut peer.equipment,
+                    body.translation.to_array().map(f64::from),
+                );
+            let equipment = peer.equipment;
+            peer.vitals.apply_equipment(equipment);
         }
         let mut stats = journal
             .gameplay()
@@ -197,4 +237,4 @@ pub(super) fn commit_and_send(
 
 #[cfg(test)]
 #[path = "server_survival_tests.rs"]
-mod tests;
+pub(super) mod tests;

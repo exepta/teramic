@@ -1,0 +1,536 @@
+{
+  "protocol": 98,
+  "status": "passed",
+  "native": {
+    "hydraulics": {
+      "passed": true,
+      "warnings": 0,
+      "errors": 0,
+      "captures": [
+        {
+          "path": "hydraulics/hydraulics-network.png",
+          "width": 1920,
+          "height": 1200
+        },
+        {
+          "path": "hydraulics/bottle-filling.png",
+          "width": 1920,
+          "height": 1200
+        },
+        {
+          "path": "hydraulics/bottle-filled.png",
+          "width": 1920,
+          "height": 1200
+        },
+        {
+          "path": "hydraulics/bucket-filling.png",
+          "width": 1920,
+          "height": 1200
+        },
+        {
+          "path": "hydraulics/bucket-filled.png",
+          "width": 1920,
+          "height": 1200
+        },
+        {
+          "path": "hydraulics/watering-can-filling.png",
+          "width": 1920,
+          "height": 1200
+        },
+        {
+          "path": "hydraulics/watering-can-filled.png",
+          "width": 1920,
+          "height": 1200
+        },
+        {
+          "path": "hydraulics/valve-closed-no-water.png",
+          "width": 1920,
+          "height": 1200
+        },
+        {
+          "path": "hydraulics/watering-can-pouring.png",
+          "width": 1920,
+          "height": 1200
+        },
+        {
+          "path": "hydraulics/source-bucket-filled.png",
+          "width": 1920,
+          "height": 1200
+        },
+        {
+          "path": "hydraulics/source-watering-can-filled.png",
+          "width": 1920,
+          "height": 1200
+        },
+        {
+          "path": "hydraulics/underwater-bed-mined.png",
+          "width": 1920,
+          "height": 1200
+        },
+        {
+          "path": "hydraulics/basin-swimming.png",
+          "width": 1920,
+          "height": 1200
+        },
+        {
+          "path": "hydraulics/infuser-ready.png",
+          "width": 1920,
+          "height": 1200
+        },
+        {
+          "path": "hydraulics/infuser-filling.png",
+          "width": 1920,
+          "height": 1200
+        },
+        {
+          "path": "hydraulics/diagnostic-stage-31.png",
+          "width": 1920,
+          "height": 1200
+        },
+        {
+          "path": "hydraulics/infuser-filled.png",
+          "width": 1920,
+          "height": 1200
+        },
+        {
+          "path": "hydraulics/diagnostic-stage-33.png",
+          "width": 1920,
+          "height": 1200
+        },
+        {
+          "path": "hydraulics/pump-natural-intake-bubbles.png",
+          "width": 1920,
+          "height": 1200
+        },
+        {
+          "path": "hydraulics/pump-intake-stopped.png",
+          "width": 1920,
+          "height": 1200
+        },
+        {
+          "path": "hydraulics/underwater-glass-source-preserved.png",
+          "width": 1920,
+          "height": 1200
+        }
+      ]
+    },
+    "alchemy": {
+      "passed": true,
+      "warnings": 0,
+      "errors": 0,
+      "captures": [
+        {
+          "path": "alchemy/alchemy-world.png",
+          "width": 1920,
+          "height": 1200
+        },
+        {
+          "path": "alchemy/cauldron-brewing.png",
+          "width": 1920,
+          "height": 1200
+        },
+        {
+          "path": "alchemy/compact-cauldron-boiling-a.png",
+          "width": 1920,
+          "height": 1200
+        },
+        {
+          "path": "alchemy/compact-cauldron-boiling-b.png",
+          "width": 1920,
+          "height": 1200
+        },
+        {
+          "path": "alchemy/mixed-potion-recipe.png",
+          "width": 1920,
+          "height": 1200
+        },
+        {
+          "path": "alchemy/cauldron-potion-result.png",
+          "width": 1920,
+          "height": 1200
+        },
+        {
+          "path": "alchemy/compact-attached-fire-inventory.png",
+          "width": 1920,
+          "height": 1200
+        },
+        {
+          "path": "alchemy/poison-potion-recipe.png",
+          "width": 1920,
+          "height": 1200
+        },
+        {
+          "path": "alchemy/campfire-roasting.png",
+          "width": 1920,
+          "height": 1200
+        },
+        {
+          "path": "alchemy/campfire-burning-world.png",
+          "width": 1920,
+          "height": 1200
+        },
+        {
+          "path": "alchemy/campfire-extinguished-result.png",
+          "width": 1920,
+          "height": 1200
+        },
+        {
+          "path": "alchemy/tunnel-random.png",
+          "width": 1920,
+          "height": 1200
+        },
+        {
+          "path": "alchemy/filtered-tunnel-random.png",
+          "width": 1920,
+          "height": 1200
+        }
+      ]
+    },
+    "crafting": {
+      "passed": true,
+      "warnings": 3,
+      "errors": 0,
+      "captures": [
+        {
+          "path": "crafting/inventory-large-slots.png",
+          "width": 3840,
+          "height": 2160
+        },
+        {
+          "path": "crafting/missing-recipe-filter.png",
+          "width": 3840,
+          "height": 2160
+        },
+        {
+          "path": "crafting/crafting-browser-for-sticks.png",
+          "width": 3840,
+          "height": 2160
+        },
+        {
+          "path": "crafting/crafting-browser-for-workbench.png",
+          "width": 3840,
+          "height": 2160
+        },
+        {
+          "path": "crafting/hand-crafting.png",
+          "width": 3840,
+          "height": 2160
+        },
+        {
+          "path": "crafting/placed-workbench.png",
+          "width": 3840,
+          "height": 2160
+        },
+        {
+          "path": "crafting/crafting-browser-for-wood-pickaxe.png",
+          "width": 3840,
+          "height": 2160
+        },
+        {
+          "path": "crafting/crafting-browser-for-stone-pickaxe.png",
+          "width": 3840,
+          "height": 2160
+        },
+        {
+          "path": "crafting/crafting-browser-for-stone-axe.png",
+          "width": 3840,
+          "height": 2160
+        },
+        {
+          "path": "crafting/crafting-browser-for-stone-shovel.png",
+          "width": 3840,
+          "height": 2160
+        },
+        {
+          "path": "crafting/crafting-browser-for-chest.png",
+          "width": 3840,
+          "height": 2160
+        },
+        {
+          "path": "crafting/chest-recipe.png",
+          "width": 3840,
+          "height": 2160
+        },
+        {
+          "path": "crafting/workbench-tooltip.png",
+          "width": 3840,
+          "height": 2160
+        },
+        {
+          "path": "crafting/workbench-recipes.png",
+          "width": 3840,
+          "height": 2160
+        },
+        {
+          "path": "crafting/jei-recipe-categories.png",
+          "width": 3840,
+          "height": 2160
+        },
+        {
+          "path": "crafting/jei-workbench-recipe.png",
+          "width": 3840,
+          "height": 2160
+        },
+        {
+          "path": "crafting/jei-recipe-alternatives.png",
+          "width": 3840,
+          "height": 2160
+        },
+        {
+          "path": "crafting/jei-recipe-compact.png",
+          "width": 1440,
+          "height": 960
+        },
+        {
+          "path": "crafting/crafting-compact.png",
+          "width": 1440,
+          "height": 960
+        },
+        {
+          "path": "crafting/crafted-tools-inventory.png",
+          "width": 3840,
+          "height": 2160
+        },
+        {
+          "path": "crafting/large-hotbar.png",
+          "width": 3840,
+          "height": 2160
+        },
+        {
+          "path": "crafting/single-chest.png",
+          "width": 2880,
+          "height": 1620
+        },
+        {
+          "path": "crafting/single-chest-inventory.png",
+          "width": 2880,
+          "height": 1620
+        },
+        {
+          "path": "crafting/single-chest-inventory-filled.png",
+          "width": 2880,
+          "height": 1620
+        },
+        {
+          "path": "crafting/double-chest.png",
+          "width": 2880,
+          "height": 1620
+        },
+        {
+          "path": "crafting/double-chest-inventory.png",
+          "width": 2880,
+          "height": 1620
+        },
+        {
+          "path": "crafting/double-chest-inventory-filled.png",
+          "width": 2880,
+          "height": 1620
+        },
+        {
+          "path": "crafting/workbench-linked-double-chest.png",
+          "width": 2880,
+          "height": 1620
+        },
+        {
+          "path": "crafting/workbench-linked-chest-reserved-transfer.png",
+          "width": 2880,
+          "height": 1620
+        }
+      ]
+    },
+    "crafting-compact": {
+      "passed": true,
+      "warnings": 2,
+      "errors": 0,
+      "captures": [
+        {
+          "path": "crafting-compact/inventory-large-slots.png",
+          "width": 960,
+          "height": 641
+        },
+        {
+          "path": "crafting-compact/missing-recipe-filter.png",
+          "width": 960,
+          "height": 641
+        },
+        {
+          "path": "crafting-compact/crafting-browser-for-sticks.png",
+          "width": 960,
+          "height": 641
+        },
+        {
+          "path": "crafting-compact/crafting-browser-for-workbench.png",
+          "width": 960,
+          "height": 641
+        },
+        {
+          "path": "crafting-compact/hand-crafting.png",
+          "width": 960,
+          "height": 641
+        },
+        {
+          "path": "crafting-compact/placed-workbench.png",
+          "width": 960,
+          "height": 641
+        },
+        {
+          "path": "crafting-compact/crafting-browser-for-wood-pickaxe.png",
+          "width": 960,
+          "height": 641
+        },
+        {
+          "path": "crafting-compact/crafting-browser-for-stone-pickaxe.png",
+          "width": 960,
+          "height": 641
+        },
+        {
+          "path": "crafting-compact/crafting-browser-for-stone-axe.png",
+          "width": 960,
+          "height": 641
+        },
+        {
+          "path": "crafting-compact/crafting-browser-for-stone-shovel.png",
+          "width": 960,
+          "height": 641
+        },
+        {
+          "path": "crafting-compact/crafting-browser-for-chest.png",
+          "width": 960,
+          "height": 641
+        },
+        {
+          "path": "crafting-compact/chest-recipe.png",
+          "width": 960,
+          "height": 641
+        },
+        {
+          "path": "crafting-compact/workbench-tooltip.png",
+          "width": 960,
+          "height": 641
+        },
+        {
+          "path": "crafting-compact/workbench-recipes.png",
+          "width": 960,
+          "height": 641
+        },
+        {
+          "path": "crafting-compact/jei-recipe-categories.png",
+          "width": 960,
+          "height": 641
+        },
+        {
+          "path": "crafting-compact/jei-workbench-recipe.png",
+          "width": 960,
+          "height": 641
+        },
+        {
+          "path": "crafting-compact/jei-recipe-alternatives.png",
+          "width": 960,
+          "height": 641
+        },
+        {
+          "path": "crafting-compact/jei-recipe-compact.png",
+          "width": 1440,
+          "height": 960
+        },
+        {
+          "path": "crafting-compact/crafting-compact.png",
+          "width": 1440,
+          "height": 960
+        },
+        {
+          "path": "crafting-compact/crafted-tools-inventory.png",
+          "width": 960,
+          "height": 641
+        },
+        {
+          "path": "crafting-compact/large-hotbar.png",
+          "width": 960,
+          "height": 641
+        },
+        {
+          "path": "crafting-compact/single-chest.png",
+          "width": 2880,
+          "height": 1620
+        },
+        {
+          "path": "crafting-compact/single-chest-inventory.png",
+          "width": 2880,
+          "height": 1620
+        },
+        {
+          "path": "crafting-compact/single-chest-inventory-filled.png",
+          "width": 2880,
+          "height": 1620
+        },
+        {
+          "path": "crafting-compact/double-chest.png",
+          "width": 2880,
+          "height": 1620
+        },
+        {
+          "path": "crafting-compact/double-chest-inventory.png",
+          "width": 2880,
+          "height": 1620
+        },
+        {
+          "path": "crafting-compact/double-chest-inventory-filled.png",
+          "width": 2880,
+          "height": 1620
+        },
+        {
+          "path": "crafting-compact/workbench-linked-double-chest.png",
+          "width": 2880,
+          "height": 1620
+        },
+        {
+          "path": "crafting-compact/workbench-linked-chest-reserved-transfer.png",
+          "width": 2880,
+          "height": 1620
+        }
+      ],
+      "logical_viewport": [
+        960,
+        640
+      ],
+      "dpi_scale": 1.5
+    }
+  },
+  "source_sha256": {
+    "crates/terra-world/src/plumbing/network.rs": "0e6659781e692293b1b3a838cdce0bc96744977edbeeef208ac1837ed0f06507",
+    "crates/terra-world/src/plumbing/tests/waterlogging.rs": "116d4e93574db938856c3eaa9f70b6f1d7cb467d5406eb8d3143a8babd8b7413",
+    "crates/terra-world/src/water/fluid_mesh/pipes.rs": "db5a9e63b3002ccf4be0d8492ee7c6f2a93f6b292c4735b7ffa9a585ccbc1cc6",
+    "crates/terra-world/src/water/fluid_mesh/partial.rs": "c7bcfa3f840e7c4f1ef10abe3e360858ab1baaff407841cae3b056fad7aeecd1",
+    "crates/terra-world/src/water/fluid_mesh.rs": "f3eefaaa8a00077e11b9a5077775ae867bab60dfa0b8958bafbdb5426f869aab",
+    "crates/terra-world/src/streaming/water_jobs.rs": "38c5ce65b92aa25c29917e63228c7b3529c1606962cec1194b4b8d6d91fc9dfb",
+    "crates/terra-world/src/edits/journal.rs": "e3c2f52b068ae4b3f15c965587fa91645e041a4cc5780b0c3a69e4b25ebe219d",
+    "crates/terra-core/src/plumbing.rs": "54a4151e0057cca2ac6a7c6397c986afcfda10d4f7fecbd3f92d61549bfb797a",
+    "crates/terra-core/src/logistics.rs": "f050031ccb865fd72538d9c2fbd93383575fea9c3e28367cced223edc257a7c7",
+    "crates/terra-render/src/plumbing/glass.rs": "43d504c3bc11867b42a8f0b5622500fc192e0608f2c4522f53951936530b9517",
+    "crates/terra-network/src/protocol/session.rs": "62836878cdc0ea7d5404d93070cd7144e8956a968c4bb8892c460261c775ce3f",
+    "apps/client/src/crafting_smoke.rs": "50e397bb2b01791f1afa07590ac02110db8f40b4108e112fe6a006a4484e2ab9",
+    "apps/client/src/hydraulics_smoke.rs": "98b30bab85e3880aa9b72ac3177175fe3e69c1dc08e244aff42da94693fa782a",
+    "apps/client/src/alchemy_smoke.rs": "fde1562daf1278e1d582e33c3c8f690d0881fe71adccc05a263fa5251aa676e5",
+    "src-ui/components/recipe-inspector.component.html": "da27a4e09dea00ca5f2c5da3260480c3aa04276487b32480227f7392b7d21070",
+    "src-ui/components/recipe-inspector.component.rs": "c462f6c208a9cf1e4a05fb874427f07acedffab488492cd5b5879ba771ce4d82",
+    "src-ui/components/recipe-inspector.component.css": "c1e86f882fa1fe360564f18bb138a20ee73edf40d6a32ab130ac817693551dbe",
+    "src-ui/components/recipe-category.component.html": "01661cbc7ff374e5d0938c9638afec8cafe437529ef1540792680baafaa4bb4e",
+    "src-ui/components/recipe-category.component.rs": "fc9ba553f0e27e0061ba6de99e07aee650fdada7745c8b17ec4df22aaad8fb80",
+    "src-ui/components/recipe-category.component.css": "92e3267227e173c9726ed9bf0a841b12bfc2117c943f211a1a4aed4f3aaf0a21"
+  },
+  "tests": {
+    "command": "RUST_TEST_THREADS=4 cargo test --workspace --lib --bins --no-fail-fast -j1",
+    "targets": 12,
+    "passed": 3647,
+    "failed": 0,
+    "ignored": 8
+  },
+  "checks": {
+    "clippy": true,
+    "fmt": true,
+    "diff_check": true,
+    "client_build": true,
+    "workspace_build": true
+  },
+  "workspace_build_command": "cargo build --workspace --locked -j1"
+}

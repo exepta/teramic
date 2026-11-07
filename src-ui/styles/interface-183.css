@@ -1,0 +1,132 @@
+/* Two backpack rows leave the upper workspace room for the avatar and crafting. */
+.inventory-shell-player .inventory-grid { grid-template-rows: repeat(2, auto) !important; }
+.inventory-backpack-section > .inventory-grid { grid-template-rows: repeat(2, auto) !important; }
+.inventory-shell-player .inventory-body { padding-bottom: 20px !important; }
+.inventory-shell-player .inventory-player-top { min-height: 220px !important; }
+.inventory-shell-player .inventory-crafting { padding: 16px 10px 55px !important; gap: 25px !important; }
+.inventory-shell-player .craft-grid { height: 120px !important; }
+.inventory-shell-player .inventory-character { height: 100% !important; width: 84% !important; }
+.reference-browser .browser-grid { height: auto !important; flex-basis: 0px !important; flex-grow: 1 !important; padding-right: 0 !important; gap: 3px !important; }
+.reference-browser .browser-pagination { gap: 5px !important; }
+.reference-browser .browser-pagination .pagination-label { width: 45px !important; }
+.reference-browser .browser-pagination p { font-size: 18px !important; }
+.reference-browser .browser-pagination button { min-width: 30px !important; width: 30px !important; height: 32px !important; min-height: 32px !important; padding: 3px !important; }
+.reference-browser .browser-search { min-height: 36px !important; height: 36px !important; padding-right: 34px !important; }
+.reference-browser .browser-search input { height: 32px !important; font-size: 16px !important; }
+.reference-browser .browser-filter { width: 32px !important; height: 32px !important; min-height: 32px !important; padding: 4px !important; }
+/* The transparent artwork supplies the whole frame, with no dark backing plate. */
+.inventory-hud .hud-hotbar { background-color: transparent !important; border: 0 !important; border-radius: 0 !important; padding: 12px 52px 25px !important; grid-template-columns: repeat(9, 46px) !important; grid-auto-rows: 46px !important; gap: 4px !important; overflow: visible !important; }
+.painted-hotbar-frame { top: 0 !important; left: 0 !important; width: 100% !important; height: 100% !important; }
+.reference-hud-slot { border-radius: 5px !important; }
+.reference-hud-slot .hud-slot-key { bottom: -22px !important; height: 17px !important; font-size: 13px !important; }
+/* A primary action is distinguished at rest, and every action has a hover state. */
+.painted-menu-button.primary { box-shadow: none !important; }
+.painted-menu-button:hover, .painted-menu-button.primary:hover { box-shadow: 0 0 18px #ffc33ac0 !important; }
+.painted-menu-button .button-copy, .painted-menu-button .button-title { pointer-events: none !important; }
+.painted-menu-button:disabled { opacity: 0.48 !important; box-shadow: none !important; }
+.painted-pause-menu { width: 500px !important; gap: 10px !important; }
+.painted-pause-menu .painted-menu-button .button-title { font-size: 22px !important; }
+.painted-pause-world { display: flex !important; justify-content: center !important; padding: 6px !important; }
+.painted-pause-world p { color: #f1dbb3 !important; text-shadow: 1px 2px #160e09 !important; }
+/* Copper menu panels share the inventory frame and the painted title/button style. */
+
+.menu-shade-soft { background-color: #160e0733 !important; }
+.menu-shell .menu-footer { display: none !important; }
+.menu-shell .build-label { display: none !important; }
+.copper-menu-page { position: absolute !important; top: 11% !important; bottom: 8% !important; left: 50% !important; transform: translateX(-50%) !important; width: 1050px !important; max-width: 90% !important; padding: 40px 32px 28px !important; gap: 18px !important; display: flex !important; flex-direction: column !important; background-color: #2e201a !important; border: 0 !important; border-radius: 8px !important; }
+.copper-menu-title { top: -24px !important; height: 64px !important; width: 48% !important; min-width: 260px !important; color: #e7bd76 !important; }
+.copper-page-title { margin: 0 !important; font-family: serif !important; font-size: 32px !important; color: #f6e2bb !important; }
+.copper-options-content { display: flex !important; flex-direction: row !important; gap: 14px !important; flex-grow: 1 !important; min-height: 0 !important; }
+.copper-options-tabs { width: 155px !important; flex-shrink: 0 !important; display: flex !important; flex-direction: column !important; justify-content: flex-start !important; gap: 10px !important; padding: 3px 5px !important; }
+.copper-options-tabs .tab { flex-grow: 0 !important; min-height: 70px !important; height: 70px !important; display: flex !important; flex-direction: column !important; justify-content: center !important; gap: 5px !important; padding: 8px !important; border: 2px solid #996b43 !important; border-radius: 8px !important; background-color: #37251c !important; color: #e9bb6a !important; }
+.copper-options-tabs .tab p { color: #f5dfb8 !important; font-family: serif !important; font-size: 20px !important; }
+.copper-options-tabs .tab.selected { border-color: #ffcb5c !important; background-color: #583c22 !important; box-shadow: 0 0 10px #ffc34b88 !important; }
+.copper-options-panel { flex-grow: 1 !important; min-width: 0 !important; min-height: 0 !important; padding: 8px !important; border: 2px solid #95643c !important; border-radius: 6px !important; background-color: #34231b !important; }
+.copper-options-panel .settings-list { gap: 6px !important; padding-right: 12px !important; }
+.settings-row { min-height: 62px !important; padding: 6px 8px !important; border: 1px solid #8c5f3a !important; border-radius: 5px !important; background-color: #432d21 !important; background-image: linear-gradient(to bottom, #50372a, #302118) !important; gap: 10px !important; }
+.setting-emblem { width: 42px !important; height: 42px !important; flex-shrink: 0 !important; display: flex !important; align-items: center !important; justify-content: center !important; border: 1px solid #9e703e !important; border-radius: 6px !important; background-color: #2b1d16 !important; color: #eab65b !important; }
+.setting-description { display: flex !important; flex-direction: column !important; justify-content: center !important; gap: 3px !important; width: 37% !important; flex-shrink: 0 !important; min-width: 0 !important; }
+.setting-description .setting-title { width: 100% !important; color: #f6e0b9 !important; font-family: serif !important; font-size: 18px !important; }
+.setting-hint { color: #d0b18b !important; font-family: serif !important; font-size: 12px !important; text-wrap: wrap !important; }
+.setting-control { gap: 8px !important; }
+.setting-value { width: 78px !important; color: #f5dfba !important; font-size: 13px !important; }
+.copper-setting-slider::track { background-color: #21150f !important; border: 1px solid #b48240 !important; height: 9px !important; border-radius: 5px !important; }
+.copper-setting-slider::fill { background-color: #e9a42c !important; background-image: none !important; }
+.copper-setting-slider::thumb { background-color: #ffce57 !important; border: 2px solid #fff0a3 !important; border-radius: 4px !important; }
+.copper-setting-choice, .copper-setting-binding { min-width: 110px !important; width: 100% !important; height: 34px !important; min-height: 34px !important; border: 1px solid #b2804c !important; border-radius: 4px !important; background-color: #2e1f17 !important; color: #f4ddba !important; font-size: 14px !important; }
+.copper-setting-choice::value, .copper-setting-choice::indicator { color: #f4ddba !important; }
+.copper-setting-choice::popup { background-color: #302017 !important; border: 2px solid #ac7845 !important; }
+.copper-setting-choice option { background-color: #302017 !important; color: #f3ddbb !important; }
+.copper-setting-choice option:hover, .copper-setting-choice option:checked { background-color: #78512c !important; }
+.copper-setting-switch::track { background-color: #35241a !important; border: 1px solid #d69c48 !important; }
+.copper-setting-switch:checked::track { background-color: #b3741e !important; }
+.copper-setting-switch::thumb { background-color: #ffd76e !important; }
+.copper-menu-actions { gap: 10px !important; min-height: 52px !important; }
+.copper-menu-action { height: 52px !important; min-height: 52px !important; min-width: 0 !important; padding: 4px !important; }
+.copper-menu-action .button-title { font-size: 18px !important; }
+.copper-menu-action > icon { left: 10% !important; width: 20px !important; }
+.copper-menu-action .button-copy { left: 20% !important; width: 73% !important; }
+.copper-menu-action.primary { background-color: #31520f !important; }
+.copper-worlds-panel { padding: 8px !important; background-color: #2b1e17 !important; border: 2px solid #94633b !important; border-radius: 6px !important; }
+.copper-worlds-panel .card-list { padding-top: 0 !important; padding-right: 12px !important; gap: 8px !important; }
+.copper-world-card { min-height: 94px !important; height: 94px !important; border: 2px solid #885935 !important; border-radius: 7px !important; padding: 5px !important; gap: 16px !important; background-color: #3b281d !important; background-image: linear-gradient(to bottom, #53392a, #2e2019) !important; }
+.copper-world-card.selected { border-color: #ffcb59 !important; box-shadow: 0 0 10px #ffbd4388 !important; }
+.world-thumbnail { width: 29% !important; height: 100% !important; flex-shrink: 0 !important; border: 2px solid #b3804c !important; border-radius: 5px !important; overflow: hidden !important; }
+.world-thumbnail img { width: 100% !important; height: 100% !important; }
+.copper-world-copy { gap: 6px !important; }
+.copper-world-copy headline { color: #f4dfb9 !important; font-size: 25px !important; }
+.copper-world-copy .card-detail { display: none !important; }
+.copper-world-copy .error-text { color: #ff997b !important; font-size: 12px !important; }
+.world-badges { display: flex !important; gap: 18px !important; }
+.world-badges p { display: flex !important; align-items: center !important; gap: 6px !important; padding: 3px 8px !important; border: 1px solid #8f6138 !important; border-radius: 4px !important; background-color: #302018 !important; color: #f1dcbc !important; font-family: serif !important; font-size: 16px !important; }
+.copper-options-panel .settings-list::scrollbar-y-track, .copper-worlds-panel .card-list::scrollbar-y-track { width: 7px !important; background-color: #231810 !important; border: 1px solid #8b5e37 !important; border-radius: 4px !important; }
+.copper-options-panel .settings-list::scrollbar-y-thumb, .copper-worlds-panel .card-list::scrollbar-y-thumb { background-color: #f0a630 !important; border: 1px solid #ffd56f !important; border-radius: 4px !important; }
+@media (max-height: 720px) {
+ .inventory-shell-player .inventory-player-top { min-height: 180px !important; }
+ .inventory-shell-player .inventory-crafting { padding: 9px 6px 40px !important; gap: 12px !important; }
+ .inventory-shell-player .craft-grid { height: 90px !important; }
+ .copper-menu-page { top: 12% !important; bottom: 7% !important; padding: 32px 23px 20px !important; gap: 10px !important; }
+ .copper-menu-title { height: 48px !important; top: -19px !important; }
+ .copper-page-title { font-size: 25px !important; }
+ .copper-options-tabs { width: 115px !important; gap: 6px !important; }
+ .copper-options-tabs .tab { min-height: 52px !important; height: 52px !important; padding: 5px !important; gap: 3px !important; }
+ .copper-options-tabs .tab p { font-size: 16px !important; }
+ .settings-row { min-height: 54px !important; gap: 6px !important; padding: 4px !important; }
+ .setting-emblem { width: 30px !important; height: 32px !important; }
+ .setting-description .setting-title { font-size: 15px !important; }
+ .setting-hint { font-size: 10px !important; }
+ .copper-menu-action { height: 44px !important; min-height: 44px !important; }
+ .copper-menu-action .button-title { font-size: 15px !important; }
+ .world-badges { gap: 8px !important; }
+ .world-badges p { font-size: 13px !important; }
+ .copper-world-card { min-height: 82px !important; height: 82px !important; gap: 9px !important; }
+ .copper-world-copy headline { font-size: 21px !important; }
+ .painted-pause-menu .painted-main-logo { height: 110px !important; }
+ .painted-pause-menu .painted-menu-button { height: 48px !important; min-height: 48px !important; }
+ .painted-pause-menu .painted-menu-button .button-title { font-size: 19px !important; }
+}
+@media (max-width: 800px) {
+ .inventory-hud .hud-hotbar { grid-template-columns: repeat(9, 36px) !important; grid-auto-rows: 36px !important; padding: 10px 39px 23px !important; gap: 3px !important; }
+}
+.inventory-shell-player .inventory-player-panel { width: 59% !important; }
+.inventory-catalog-collapsed .inventory-player-panel { width: 93% !important; }
+
+.copper-options-tabs .tab icon, .copper-options-tabs .tab p { pointer-events: none !important; }
+
+.button-copy, .button-title { pointer-events: none !important; }
+.settings-row { min-height: 50px !important; padding: 5px 8px !important; }
+.setting-emblem { width: 34px !important; height: 34px !important; }
+.setting-description .setting-title { font-size: 17px !important; }
+.setting-hint { font-size: 11px !important; }
+@media (max-height: 720px) { .settings-row { min-height: 48px !important; padding: 4px !important; } .setting-emblem { width: 30px !important; height: 30px !important; } }
+
+.painted-menu-hover-glow { display: none !important; pointer-events: none !important; }
+.painted-menu-button .painted-menu-hover-glow { display: flex !important; position: absolute !important; left: 4% !important; top: 5% !important; width: 92% !important; height: 90% !important; opacity: 0 !important; border: 2px solid #ffcf64 !important; border-radius: 8px !important; background-color: #ffd56f22 !important; box-shadow: 0 0 16px #ffc04baa !important; pointer-events: none !important; z-index: 1 !important; }
+.painted-menu-button:hover .painted-menu-hover-glow { opacity: 1 !important; }
+
+.copper-world-card { min-height: 78px !important; height: 78px !important; }
+.world-thumbnail { background-image: url("tilt-ui://assets/menu-valley-182.png") !important; background-size: cover !important; background-position: center !important; }
+.copper-menu-action.primary .painted-menu-hover-glow { opacity: 1 !important; background-color: #7ba92344 !important; border-color: #d0e174 !important; box-shadow: 0 0 6px #b7d24f55 !important; }
+@media (max-height: 720px) { .copper-world-card { min-height: 72px !important; height: 72px !important; } }
+.painted-menu-button .painted-menu-hover-glow { box-shadow: none !important; }
+.painted-pause-menu { position: absolute !important; left: 50% !important; transform: translateX(-50%) !important; top: 3% !important; bottom: 7% !important; display: flex !important; flex-direction: column !important; align-items: stretch !important; justify-content: center !important; }

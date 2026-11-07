@@ -32,6 +32,16 @@ const MODES: [ChunkAnimation; 4] = [
     ChunkAnimation::Slide,
 ];
 
+fn terrain_material(world: &World, entity: Entity) -> bool {
+    world
+        .get::<MeshMaterial3d<StandardMaterial>>(entity)
+        .is_some()
+        || world
+            .get::<MeshMaterial3d<TerrainDepthMaterial>>(entity)
+            .is_some()
+        || world.get::<MeshMaterial3d<WetMaterial>>(entity).is_some()
+}
+
 pub(super) fn install(app: &mut App) {
     if std::env::args().any(|arg| arg == "--smoke-test-animations") {
         app.insert_resource(Fixture {
@@ -95,9 +105,7 @@ fn advance(world: &mut World, fixture: &mut Fixture) -> Result<bool, String> {
             .filter_map(|(root, children, transform)| {
                 world.get::<EnteringChunk>(root)?;
                 let child = children.iter().find(|child| {
-                    world
-                        .get::<MeshMaterial3d<StandardMaterial>>(*child)
-                        .is_some()
+                    terrain_material(world, *child)
                         && world
                             .get::<bevy::camera::primitives::Aabb>(*child)
                             .zip(world.get::<GlobalTransform>(*child))
@@ -137,20 +145,30 @@ fn advance(world: &mut World, fixture: &mut Fixture) -> Result<bool, String> {
         return Ok(false);
     };
     if let Some(fade) = world.get::<ChunkFade>(root) {
-        let Some(FadedHandle::Standard(_, _, temporary)) = fade
+        let Some(material) = fade
             .materials
             .iter()
             .map(|material| &material.handle)
-            .find(|m| matches!(m, FadedHandle::Standard(entity, ..) if Some(*entity) == fixture.child))
+            .find(|material| Some(material.entity()) == fixture.child)
         else {
-            return Err("Real terrain section has no faded standard material".into());
+            return Err("Real terrain section has no faded terrain material".into());
         };
-        let alpha = world
-            .resource::<Assets<StandardMaterial>>()
-            .get(temporary)
-            .ok_or("Missing fade material")?
-            .base_color
-            .alpha();
+        let alpha = match material {
+            FadedHandle::Standard(_, _, temporary) => world
+                .resource::<Assets<StandardMaterial>>()
+                .get(temporary)
+                .map(FadeMaterial::alpha),
+            FadedHandle::Depth(_, _, temporary) => world
+                .resource::<Assets<TerrainDepthMaterial>>()
+                .get(temporary)
+                .map(FadeMaterial::alpha),
+            FadedHandle::Wet(_, _, temporary) => world
+                .resource::<Assets<WetMaterial>>()
+                .get(temporary)
+                .map(FadeMaterial::alpha),
+            _ => None,
+        }
+        .ok_or("Missing terrain fade material")?;
         fixture.saw_zero |= alpha == 0.0;
         fixture.saw_draw |= fade.started;
         if !fixture.saw_middle && alpha > 0.2 && alpha < 0.6 {
@@ -274,11 +292,9 @@ fn background_readiness(world: &mut World, fixture: &mut Fixture) -> Result<bool
     if !columns.iter().all(|column| {
         roots.iter().any(|(root, position)| {
             [position.x, position.z] == *column
-                && mesh_entities(world, *root).iter().any(|child| {
-                    world
-                        .get::<MeshMaterial3d<StandardMaterial>>(*child)
-                        .is_some()
-                })
+                && mesh_entities(world, *root)
+                    .iter()
+                    .any(|child| terrain_material(world, *child))
         })
     }) {
         return Ok(false);
@@ -303,7 +319,9 @@ fn background_readiness(world: &mut World, fixture: &mut Fixture) -> Result<bool
             return None;
         }
         mesh_entities(world, root).into_iter().find_map(|child| {
-            world.get::<MeshMaterial3d<StandardMaterial>>(child)?;
+            if !terrain_material(world, child) {
+                return None;
+            }
             let bounds = world.get::<bevy::camera::primitives::Aabb>(child)?;
             let transform = world.get::<GlobalTransform>(child)?;
             let target = Vec3::from(transform.affine().transform_point3a(bounds.center));

@@ -1,0 +1,555 @@
+{
+  "comparison_note": "Baseline, slots-only and final-player-after-cache use legacy readiness; repeated Player and Chest extended rounds require two actually painted frames. No request-latency percentage is asserted. Short individual runs have differing background load; closed control FPS varies and is retained in phases.csv. ui.style is an overlapping upper-bound scheduler interval.",
+  "measurements": [
+    {
+      "case": "before-player",
+      "max_frame_ms": 116.459005,
+      "readiness": "legacy layout/open readiness",
+      "request_to_visible_ms": 166.43385,
+      "round": 1,
+      "stage": "baseline",
+      "worst_frame_cpu_scope_groups": {
+        "main.update": {
+          "calls": 1,
+          "interval_ms": 116.459005,
+          "max_individual_scope_ms": 104.42862799999999,
+          "scope": "main.update",
+          "stage": "Opening",
+          "summed_overlap_ms": 104.42862799999999,
+          "summed_total_scope_ms": 104.42862799999999,
+          "window": "transition-frame"
+        },
+        "ui.layout": {
+          "calls": 1,
+          "interval_ms": 116.459005,
+          "max_individual_scope_ms": 1.583691,
+          "scope": "ui.layout",
+          "stage": "Opening",
+          "summed_overlap_ms": 1.583691,
+          "summed_total_scope_ms": 1.583691,
+          "window": "transition-frame"
+        },
+        "ui.reactivity": {
+          "calls": 1,
+          "interval_ms": 116.459005,
+          "max_individual_scope_ms": 15.820081,
+          "scope": "ui.reactivity",
+          "stage": "Opening",
+          "summed_overlap_ms": 15.820081,
+          "summed_total_scope_ms": 15.820081,
+          "window": "transition-frame"
+        },
+        "ui.style": {
+          "calls": 1,
+          "interval_ms": 116.459005,
+          "max_individual_scope_ms": 102.27119499999999,
+          "scope": "ui.style",
+          "stage": "Opening",
+          "summed_overlap_ms": 102.27119499999999,
+          "summed_total_scope_ms": 102.27119499999999,
+          "window": "transition-frame"
+        }
+      }
+    },
+    {
+      "case": "after-slot-player",
+      "max_frame_ms": 38.506519000000004,
+      "readiness": "legacy layout/open readiness",
+      "request_to_visible_ms": 71.42737000000001,
+      "round": 1,
+      "stage": "slots-only causal intermediate",
+      "worst_frame_cpu_scope_groups": {
+        "main.update": {
+          "calls": 1,
+          "interval_ms": 38.506519000000004,
+          "max_individual_scope_ms": 31.743298000000003,
+          "scope": "main.update",
+          "stage": "Opening",
+          "summed_overlap_ms": 31.743298000000003,
+          "summed_total_scope_ms": 31.743298000000003,
+          "window": "transition-frame"
+        },
+        "ui.layout": {
+          "calls": 1,
+          "interval_ms": 38.506519000000004,
+          "max_individual_scope_ms": 1.138442,
+          "scope": "ui.layout",
+          "stage": "Opening",
+          "summed_overlap_ms": 1.138442,
+          "summed_total_scope_ms": 1.138442,
+          "window": "transition-frame"
+        },
+        "ui.reactivity": {
+          "calls": 1,
+          "interval_ms": 38.506519000000004,
+          "max_individual_scope_ms": 10.279349999999999,
+          "scope": "ui.reactivity",
+          "stage": "Opening",
+          "summed_overlap_ms": 10.279349999999999,
+          "summed_total_scope_ms": 10.279349999999999,
+          "window": "transition-frame"
+        },
+        "ui.style": {
+          "calls": 1,
+          "interval_ms": 38.506519000000004,
+          "max_individual_scope_ms": 31.236568,
+          "scope": "ui.style",
+          "stage": "Opening",
+          "summed_overlap_ms": 31.236568,
+          "summed_total_scope_ms": 31.236568,
+          "window": "transition-frame"
+        }
+      }
+    },
+    {
+      "case": "final-player",
+      "max_frame_ms": 27.427301,
+      "readiness": "two consecutive actually painted frames",
+      "request_to_visible_ms": 115.653611,
+      "round": 1,
+      "stage": "slots + crafting prewarm; repeated player coverage before cache fix",
+      "worst_frame_cpu_scope_groups": {
+        "main.update": {
+          "calls": 1,
+          "interval_ms": 27.427301,
+          "max_individual_scope_ms": 21.067727,
+          "scope": "main.update",
+          "stage": "Opening",
+          "summed_overlap_ms": 21.067727,
+          "summed_total_scope_ms": 21.067727,
+          "window": "transition-frame"
+        },
+        "ui.layout": {
+          "calls": 1,
+          "interval_ms": 27.427301,
+          "max_individual_scope_ms": 1.045294,
+          "scope": "ui.layout",
+          "stage": "Opening",
+          "summed_overlap_ms": 1.045294,
+          "summed_total_scope_ms": 1.045294,
+          "window": "transition-frame"
+        },
+        "ui.reactivity": {
+          "calls": 1,
+          "interval_ms": 27.427301,
+          "max_individual_scope_ms": 8.411480000000001,
+          "scope": "ui.reactivity",
+          "stage": "Opening",
+          "summed_overlap_ms": 8.411480000000001,
+          "summed_total_scope_ms": 8.411480000000001,
+          "window": "transition-frame"
+        },
+        "ui.style": {
+          "calls": 1,
+          "interval_ms": 27.427301,
+          "max_individual_scope_ms": 20.619357,
+          "scope": "ui.style",
+          "stage": "Opening",
+          "summed_overlap_ms": 20.619357,
+          "summed_total_scope_ms": 20.619357,
+          "window": "transition-frame"
+        }
+      }
+    },
+    {
+      "case": "final-player",
+      "max_frame_ms": 27.189772,
+      "readiness": "two consecutive actually painted frames",
+      "request_to_visible_ms": 112.717386,
+      "round": 2,
+      "stage": "slots + crafting prewarm; repeated player coverage before cache fix",
+      "worst_frame_cpu_scope_groups": {
+        "main.update": {
+          "calls": 1,
+          "interval_ms": 27.189772,
+          "max_individual_scope_ms": 21.211206999999998,
+          "scope": "main.update",
+          "stage": "Opening",
+          "summed_overlap_ms": 21.211206999999998,
+          "summed_total_scope_ms": 21.211206999999998,
+          "window": "transition-frame"
+        },
+        "ui.layout": {
+          "calls": 1,
+          "interval_ms": 27.189772,
+          "max_individual_scope_ms": 1.032013,
+          "scope": "ui.layout",
+          "stage": "Opening",
+          "summed_overlap_ms": 1.032013,
+          "summed_total_scope_ms": 1.032013,
+          "window": "transition-frame"
+        },
+        "ui.reactivity": {
+          "calls": 1,
+          "interval_ms": 27.189772,
+          "max_individual_scope_ms": 9.286229,
+          "scope": "ui.reactivity",
+          "stage": "Opening",
+          "summed_overlap_ms": 9.286229,
+          "summed_total_scope_ms": 9.286229,
+          "window": "transition-frame"
+        },
+        "ui.style": {
+          "calls": 1,
+          "interval_ms": 27.189772,
+          "max_individual_scope_ms": 20.761778000000003,
+          "scope": "ui.style",
+          "stage": "Opening",
+          "summed_overlap_ms": 20.761778000000003,
+          "summed_total_scope_ms": 20.761778000000003,
+          "window": "transition-frame"
+        }
+      }
+    },
+    {
+      "case": "chest-before-pending-gate",
+      "max_frame_ms": 93.57246099999999,
+      "readiness": "two consecutive actually painted frames",
+      "request_to_visible_ms": 290.647952,
+      "round": 1,
+      "stage": "intermediate: valid functional chest run, pending gate not fixed",
+      "worst_frame_cpu_scope_groups": {
+        "main.update": {
+          "calls": 1,
+          "interval_ms": 93.57246099999999,
+          "max_individual_scope_ms": 77.225739,
+          "scope": "main.update",
+          "stage": "Opening",
+          "summed_overlap_ms": 77.225739,
+          "summed_total_scope_ms": 77.225739,
+          "window": "transition-frame"
+        },
+        "ui.layout": {
+          "calls": 1,
+          "interval_ms": 93.57246099999999,
+          "max_individual_scope_ms": 1.291909,
+          "scope": "ui.layout",
+          "stage": "Opening",
+          "summed_overlap_ms": 1.291909,
+          "summed_total_scope_ms": 1.291909,
+          "window": "transition-frame"
+        },
+        "ui.reactivity": {
+          "calls": 1,
+          "interval_ms": 93.57246099999999,
+          "max_individual_scope_ms": 13.731534,
+          "scope": "ui.reactivity",
+          "stage": "Opening",
+          "summed_overlap_ms": 13.731534,
+          "summed_total_scope_ms": 13.731534,
+          "window": "transition-frame"
+        },
+        "ui.style": {
+          "calls": 1,
+          "interval_ms": 93.57246099999999,
+          "max_individual_scope_ms": 76.486453,
+          "scope": "ui.style",
+          "stage": "Opening",
+          "summed_overlap_ms": 76.486453,
+          "summed_total_scope_ms": 76.486453,
+          "window": "transition-frame"
+        }
+      }
+    },
+    {
+      "case": "chest-before-pending-gate",
+      "max_frame_ms": 107.337302,
+      "readiness": "two consecutive actually painted frames",
+      "request_to_visible_ms": 384.99742100000003,
+      "round": 2,
+      "stage": "intermediate: valid functional chest run, pending gate not fixed",
+      "worst_frame_cpu_scope_groups": {
+        "main.update": {
+          "calls": 1,
+          "interval_ms": 107.337302,
+          "max_individual_scope_ms": 93.722323,
+          "scope": "main.update",
+          "stage": "Opening",
+          "summed_overlap_ms": 93.722323,
+          "summed_total_scope_ms": 93.722323,
+          "window": "transition-frame"
+        },
+        "ui.layout": {
+          "calls": 1,
+          "interval_ms": 107.337302,
+          "max_individual_scope_ms": 2.249059,
+          "scope": "ui.layout",
+          "stage": "Opening",
+          "summed_overlap_ms": 2.249059,
+          "summed_total_scope_ms": 2.249059,
+          "window": "transition-frame"
+        },
+        "ui.reactivity": {
+          "calls": 1,
+          "interval_ms": 107.337302,
+          "max_individual_scope_ms": 16.155836,
+          "scope": "ui.reactivity",
+          "stage": "Opening",
+          "summed_overlap_ms": 16.155836,
+          "summed_total_scope_ms": 16.155836,
+          "window": "transition-frame"
+        },
+        "ui.style": {
+          "calls": 1,
+          "interval_ms": 107.337302,
+          "max_individual_scope_ms": 92.559827,
+          "scope": "ui.style",
+          "stage": "Opening",
+          "summed_overlap_ms": 92.559827,
+          "summed_total_scope_ms": 92.559827,
+          "window": "transition-frame"
+        }
+      }
+    },
+    {
+      "case": "final-player-after-cache",
+      "max_frame_ms": 25.192914000000002,
+      "readiness": "legacy layout/open readiness",
+      "request_to_visible_ms": 53.113246000000004,
+      "round": 1,
+      "stage": "final primary comparable default player",
+      "worst_frame_cpu_scope_groups": {
+        "main.update": {
+          "calls": 1,
+          "interval_ms": 25.192914000000002,
+          "max_individual_scope_ms": 18.623067,
+          "scope": "main.update",
+          "stage": "Opening",
+          "summed_overlap_ms": 18.623067,
+          "summed_total_scope_ms": 18.623067,
+          "window": "transition-frame"
+        },
+        "ui.layout": {
+          "calls": 1,
+          "interval_ms": 25.192914000000002,
+          "max_individual_scope_ms": 1.072403,
+          "scope": "ui.layout",
+          "stage": "Opening",
+          "summed_overlap_ms": 1.072403,
+          "summed_total_scope_ms": 1.072403,
+          "window": "transition-frame"
+        },
+        "ui.reactivity": {
+          "calls": 1,
+          "interval_ms": 25.192914000000002,
+          "max_individual_scope_ms": 8.005817,
+          "scope": "ui.reactivity",
+          "stage": "Opening",
+          "summed_overlap_ms": 8.005817,
+          "summed_total_scope_ms": 8.005817,
+          "window": "transition-frame"
+        },
+        "ui.style": {
+          "calls": 1,
+          "interval_ms": 25.192914000000002,
+          "max_individual_scope_ms": 18.26488,
+          "scope": "ui.style",
+          "stage": "Opening",
+          "summed_overlap_ms": 18.26488,
+          "summed_total_scope_ms": 18.26488,
+          "window": "transition-frame"
+        }
+      }
+    },
+    {
+      "case": "chest-cache-stable",
+      "max_frame_ms": 92.820626,
+      "readiness": "two consecutive actually painted frames",
+      "request_to_visible_ms": 256.54686399999997,
+      "round": 1,
+      "stage": "intermediate: stable fixture; stale projection race remains",
+      "worst_frame_cpu_scope_groups": {
+        "main.update": {
+          "calls": 1,
+          "interval_ms": 92.820626,
+          "max_individual_scope_ms": 76.497579,
+          "scope": "main.update",
+          "stage": "Opening",
+          "summed_overlap_ms": 76.497579,
+          "summed_total_scope_ms": 76.497579,
+          "window": "transition-frame"
+        },
+        "ui.layout": {
+          "calls": 1,
+          "interval_ms": 92.820626,
+          "max_individual_scope_ms": 1.494019,
+          "scope": "ui.layout",
+          "stage": "Opening",
+          "summed_overlap_ms": 1.494019,
+          "summed_total_scope_ms": 1.494019,
+          "window": "transition-frame"
+        },
+        "ui.reactivity": {
+          "calls": 1,
+          "interval_ms": 92.820626,
+          "max_individual_scope_ms": 14.626505,
+          "scope": "ui.reactivity",
+          "stage": "Opening",
+          "summed_overlap_ms": 14.626505,
+          "summed_total_scope_ms": 14.626505,
+          "window": "transition-frame"
+        },
+        "ui.style": {
+          "calls": 1,
+          "interval_ms": 92.820626,
+          "max_individual_scope_ms": 75.621662,
+          "scope": "ui.style",
+          "stage": "Opening",
+          "summed_overlap_ms": 75.621662,
+          "summed_total_scope_ms": 75.621662,
+          "window": "transition-frame"
+        }
+      }
+    },
+    {
+      "case": "chest-cache-stable",
+      "max_frame_ms": 87.43482700000001,
+      "readiness": "two consecutive actually painted frames",
+      "request_to_visible_ms": 323.609579,
+      "round": 2,
+      "stage": "intermediate: stable fixture; stale projection race remains",
+      "worst_frame_cpu_scope_groups": {
+        "main.update": {
+          "calls": 1,
+          "interval_ms": 87.43482700000001,
+          "max_individual_scope_ms": 78.725387,
+          "scope": "main.update",
+          "stage": "Opening",
+          "summed_overlap_ms": 78.725387,
+          "summed_total_scope_ms": 78.725387,
+          "window": "transition-frame"
+        },
+        "ui.layout": {
+          "calls": 1,
+          "interval_ms": 87.43482700000001,
+          "max_individual_scope_ms": 1.2245940000000002,
+          "scope": "ui.layout",
+          "stage": "Opening",
+          "summed_overlap_ms": 1.2245940000000002,
+          "summed_total_scope_ms": 1.2245940000000002,
+          "window": "transition-frame"
+        },
+        "ui.reactivity": {
+          "calls": 1,
+          "interval_ms": 87.43482700000001,
+          "max_individual_scope_ms": 14.421322,
+          "scope": "ui.reactivity",
+          "stage": "Opening",
+          "summed_overlap_ms": 14.421322,
+          "summed_total_scope_ms": 14.421322,
+          "window": "transition-frame"
+        },
+        "ui.style": {
+          "calls": 1,
+          "interval_ms": 87.43482700000001,
+          "max_individual_scope_ms": 78.00770299999999,
+          "scope": "ui.style",
+          "stage": "Opening",
+          "summed_overlap_ms": 78.00770299999999,
+          "summed_total_scope_ms": 78.00770299999999,
+          "window": "transition-frame"
+        }
+      }
+    },
+    {
+      "case": "chest-projection-final",
+      "max_frame_ms": 144.30020800000003,
+      "readiness": "two consecutive actually painted frames",
+      "request_to_visible_ms": 417.409421,
+      "round": 1,
+      "stage": "final repeated authoritative chest",
+      "worst_frame_cpu_scope_groups": {
+        "main.update": {
+          "calls": 1,
+          "interval_ms": 144.30020800000003,
+          "max_individual_scope_ms": 103.13931799999999,
+          "scope": "main.update",
+          "stage": "Opening",
+          "summed_overlap_ms": 103.13931799999999,
+          "summed_total_scope_ms": 103.13931799999999,
+          "window": "transition-frame"
+        },
+        "ui.layout": {
+          "calls": 1,
+          "interval_ms": 144.30020800000003,
+          "max_individual_scope_ms": 3.193694,
+          "scope": "ui.layout",
+          "stage": "Opening",
+          "summed_overlap_ms": 3.193694,
+          "summed_total_scope_ms": 3.193694,
+          "window": "transition-frame"
+        },
+        "ui.reactivity": {
+          "calls": 1,
+          "interval_ms": 144.30020800000003,
+          "max_individual_scope_ms": 21.232758,
+          "scope": "ui.reactivity",
+          "stage": "Opening",
+          "summed_overlap_ms": 21.232758,
+          "summed_total_scope_ms": 21.232758,
+          "window": "transition-frame"
+        },
+        "ui.style": {
+          "calls": 1,
+          "interval_ms": 144.30020800000003,
+          "max_individual_scope_ms": 102.164539,
+          "scope": "ui.style",
+          "stage": "Opening",
+          "summed_overlap_ms": 102.164539,
+          "summed_total_scope_ms": 102.164539,
+          "window": "transition-frame"
+        }
+      }
+    },
+    {
+      "case": "chest-projection-final",
+      "max_frame_ms": 39.957326,
+      "readiness": "two consecutive actually painted frames",
+      "request_to_visible_ms": 194.605434,
+      "round": 2,
+      "stage": "final repeated authoritative chest",
+      "worst_frame_cpu_scope_groups": {
+        "main.update": {
+          "calls": 1,
+          "interval_ms": 39.957326,
+          "max_individual_scope_ms": 25.872231999999997,
+          "scope": "main.update",
+          "stage": "Opening",
+          "summed_overlap_ms": 25.872231999999997,
+          "summed_total_scope_ms": 25.872231999999997,
+          "window": "transition-frame"
+        },
+        "ui.layout": {
+          "calls": 1,
+          "interval_ms": 39.957326,
+          "max_individual_scope_ms": 1.640583,
+          "scope": "ui.layout",
+          "stage": "Opening",
+          "summed_overlap_ms": 1.640583,
+          "summed_total_scope_ms": 1.640583,
+          "window": "transition-frame"
+        },
+        "ui.reactivity": {
+          "calls": 1,
+          "interval_ms": 39.957326,
+          "max_individual_scope_ms": 7.9330300000000005,
+          "scope": "ui.reactivity",
+          "stage": "Opening",
+          "summed_overlap_ms": 7.9330300000000005,
+          "summed_total_scope_ms": 7.9330300000000005,
+          "window": "transition-frame"
+        },
+        "ui.style": {
+          "calls": 1,
+          "interval_ms": 39.957326,
+          "max_individual_scope_ms": 24.513244,
+          "scope": "ui.style",
+          "stage": "Opening",
+          "summed_overlap_ms": 24.513244,
+          "summed_total_scope_ms": 24.513244,
+          "window": "transition-frame"
+        }
+      }
+    }
+  ]
+}

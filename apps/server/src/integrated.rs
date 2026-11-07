@@ -24,9 +24,12 @@ impl IntegratedServer {
         Self::start_with_save(config, None)
     }
     pub fn start_with_save(
-        config: GameConfig,
+        mut config: GameConfig,
         save_path: Option<std::path::PathBuf>,
     ) -> Result<(Self, Vec<u8>), String> {
+        // Dedicated configuration is unrelated to this singleplayer world,
+        // including validation of an override that this server never applies.
+        config.server.kingdom_rules = None;
         config.server.validate().map_err(|e| e.to_string())?;
         config.world.validate().map_err(|e| e.to_string())?;
         let world_id = config.world.id;
@@ -181,6 +184,99 @@ impl Drop for IntegratedServer {
 #[cfg(test)]
 mod save_tests {
     use super::*;
+    #[test]
+    fn actual_singleplayer_join_and_save_keep_world_custom_rules_and_ignore_dedicated_override() {
+        let root = std::env::temp_dir().join(format!(
+            "terra-singleplayer-policy-{}",
+            terra_core::PlayerUuid::new_v4()
+        ));
+        let library = terra_storage::WorldLibrary { root: root.clone() };
+        let template = terra_core::WorldConfig {
+            trees: false,
+            kingdom_rules: terra_core::kingdom::KingdomRules {
+                realm_min_border_gap: 5,
+                kingdom_build_base: 71,
+                require_adjacent_claims: false,
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+        let entry = library
+            .create(
+                "Singleplayer rules",
+                Some(202202),
+                terra_core::GameMode::Creative,
+                &template,
+            )
+            .unwrap();
+        let mut invalid_override = template.kingdom_rules;
+        invalid_override.kingdom_build_base = 0;
+        let config = GameConfig {
+            world: entry.manifest.world.clone(),
+            server: terra_core::ServerConfig {
+                kingdom_rules: Some(invalid_override),
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+        let path = library.path(config.world.id);
+        let (server, token) =
+            IntegratedServer::start_with_save(config.clone(), Some(path)).unwrap();
+        // This client has no renderer or window; exercise the real welcome/rules wire path.
+        let mut client = App::new();
+        let mut client_config = GameConfig::default();
+        client_config.client.view_distance = 1;
+        client_config.client.vertical_view_distance = 1;
+        client
+            .add_plugins((MinimalPlugins, TransformPlugin))
+            .add_plugins(terra_core::TerraCorePlugin(client_config))
+            .add_plugins((
+                terra_world::TerraWorldPlugin {
+                    mode: terra_world::WorldMode::Client,
+                },
+                terra_physics::TerraPhysicsPlugin,
+                terra_network::TerraNetworkPlugin(terra_network::connection::NetworkRole::Client),
+            ))
+            .insert_resource(terra_network::client::ClientLaunch { token });
+        client.finish();
+        client.cleanup();
+        let deadline = Instant::now() + Duration::from_secs(15);
+        loop {
+            client.update();
+            if client
+                .world()
+                .resource::<terra_network::client::ClientSession>()
+                .ready
+            {
+                break;
+            }
+            assert!(
+                Instant::now() < deadline,
+                "headless singleplayer join timed out"
+            );
+            std::thread::sleep(Duration::from_millis(2));
+        }
+        let received = &client.world().resource::<GameConfig>().world;
+        assert_eq!(received.kingdom_rules, config.world.kingdom_rules);
+        assert_eq!(received.structure_border_gap, 5);
+        assert_eq!(received.structures_revision, 9);
+        drop(client);
+        server
+            .request_save()
+            .unwrap()
+            .recv_timeout(Duration::from_secs(10))
+            .unwrap()
+            .unwrap();
+        server.finish().unwrap();
+        let reloaded = library.load(config.world.id).unwrap();
+        assert_eq!(
+            reloaded.manifest.world.kingdom_rules,
+            config.world.kingdom_rules
+        );
+        assert_eq!(reloaded.manifest.world.structure_border_gap, 5);
+        assert!(reloaded.manifest.world.same_terrain(&config.world));
+        std::fs::remove_dir_all(root).unwrap();
+    }
     #[test]
     fn integrated_server_serializes_manual_background_save_and_reload_without_another_writer() {
         let root = std::env::temp_dir().join(format!(

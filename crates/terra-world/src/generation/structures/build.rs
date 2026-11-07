@@ -3,6 +3,7 @@ use terra_core::CropKind;
 
 const PATH: u16 = 102;
 const WOOL: u16 = 103;
+pub(super) mod royal;
 mod village;
 
 pub(super) struct Builder<'a> {
@@ -15,13 +16,40 @@ pub(super) struct Builder<'a> {
     pub(super) seed: u32,
 }
 impl Builder<'_> {
+    fn uses_lantern(&self, material: u16) -> bool {
+        material == 40
+            && self.terrain.config().structures_revision >= 8
+            && matches!(
+                self.summary.kind,
+                StructureKind::Village | StructureKind::Kingdom | StructureKind::Outpost
+            )
+    }
+    fn limits(&self) -> (usize, usize) {
+        if self.terrain.config().structures_revision >= 6
+            && matches!(
+                self.summary.kind,
+                StructureKind::Kingdom | StructureKind::Outpost
+            )
+        {
+            (MAX_SITE_CELLS, MAX_SITE_SECTIONS)
+        } else {
+            (300_000, 256)
+        }
+    }
+
     pub(super) fn set(&mut self, p: [i64; 3], material: u16) {
-        if p[1] < -120 || p[1] > 350 || self.writes > MAX_SITE_CELLS * 6 {
+        let lantern = self.uses_lantern(material);
+        let material = if lantern {
+            terra_core::lantern::LANTERN
+        } else {
+            material
+        };
+        if p[1] < -120 || p[1] > 350 || self.writes > self.limits().0 * 6 {
             self.failed = true;
             return;
         }
         let (owner, local) = global_to_section(p);
-        if self.patches.len() >= MAX_SITE_SECTIONS && !self.patches.contains_key(&owner) {
+        if self.patches.len() >= self.limits().1 && !self.patches.contains_key(&owner) {
             self.failed = true;
             return;
         }
@@ -31,6 +59,21 @@ impl Builder<'_> {
             [local[0] + 16 * (local[1] + 16 * local[2])] = material;
         self.writes += 1;
         self.objects.remove(&p);
+        if lantern {
+            self.objects.insert(
+                p,
+                StructureObject {
+                    position: p,
+                    material,
+                    state: Some(BlockObjectState {
+                        facing: terra_core::lantern::TABLE,
+                        ..Default::default()
+                    }),
+                    loot: None,
+                    crop: None,
+                },
+            );
+        }
     }
     pub(super) fn fill(&mut self, min: [i64; 3], max: [i64; 3], material: u16) {
         for z in min[2]..=max[2] {
@@ -48,6 +91,26 @@ impl Builder<'_> {
         state: Option<BlockObjectState>,
         loot: Option<Inventory>,
     ) {
+        let lantern = self.uses_lantern(material);
+        let material = if lantern {
+            terra_core::lantern::LANTERN
+        } else {
+            material
+        };
+        let state = if lantern {
+            Some(BlockObjectState {
+                facing: state.map_or(terra_core::lantern::TABLE, |s| {
+                    if (4..=7).contains(&s.facing) {
+                        s.facing
+                    } else {
+                        terra_core::lantern::TABLE
+                    }
+                }),
+                ..Default::default()
+            })
+        } else {
+            state
+        };
         self.set(p, material);
         self.objects.insert(
             p,
@@ -613,7 +676,8 @@ impl Builder<'_> {
         Some(())
     }
     fn finish(mut self) -> Option<Site> {
-        if self.failed || self.writes > MAX_SITE_CELLS * 6 {
+        let (cell_limit, section_limit) = self.limits();
+        if self.failed || self.writes > self.limits().0 * 6 {
             return None;
         }
         let mut sections = BTreeMap::new();
@@ -647,7 +711,7 @@ impl Builder<'_> {
                 },
             );
         }
-        if count > MAX_SITE_CELLS || sections.len() > MAX_SITE_SECTIONS || sections.is_empty() {
+        if count > cell_limit || sections.len() > section_limit || sections.is_empty() {
             return None;
         }
         self.summary.containers.retain(|p| {
@@ -678,7 +742,14 @@ impl Builder<'_> {
 }
 
 pub(super) fn plan(terrain: &TerraGenerator, region: [i64; 2], seed: u32) -> Option<Site> {
-    if terrain.config().structures_revision >= 2 {
+    let selected = if terrain.config().structures_revision >= 8 {
+        super::distribution::configured_candidate(terrain.config(), region).is_some()
+    } else {
+        royal::selected(seed)
+    };
+    if terrain.config().structures_revision >= 6 && selected {
+        royal::plan(terrain, region, seed)
+    } else if terrain.config().structures_revision >= 2 {
         village::plan(terrain, region, seed)
     } else {
         plan_legacy(terrain, region, seed)
@@ -707,6 +778,11 @@ pub(super) fn plan_legacy(terrain: &TerraGenerator, region: [i64; 2], seed: u32)
         4..=6 => StructureKind::Ruin,
         _ => StructureKind::Mine,
     };
+    // Keep the original seeded category: disabling one kind must not reroll
+    // its regions into different structures or alter enabled neighbors.
+    if !kind.enabled(terrain.config().structures) {
+        return None;
+    }
     if kind == StructureKind::Village
         && style == VillageStyle::Temperate
         && !matches!(
@@ -780,6 +856,7 @@ pub(super) fn plan_legacy(terrain: &TerraGenerator, region: [i64; 2], seed: u32)
         }
         StructureKind::Ruin => b.ruin(x - 7, z - 6)?,
         StructureKind::Mine => b.mine(x - 4, z - 5)?,
+        StructureKind::Kingdom | StructureKind::Outpost => return None,
     }
     b.finish()
 }

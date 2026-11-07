@@ -98,6 +98,11 @@ pub(super) fn plan(terrain: &TerraGenerator, region: [i64; 2], seed: u32) -> Opt
         4..=6 => StructureKind::Ruin,
         _ => StructureKind::Mine,
     };
+    // Keep the original seeded category: disabling one kind must not reroll
+    // its regions into different structures or alter enabled neighbors.
+    if !kind.enabled(terrain.config().structures) {
+        return None;
+    }
     if kind == StructureKind::Village
         && style == VillageStyle::Temperate
         && !matches!(
@@ -130,6 +135,7 @@ pub(super) fn plan(terrain: &TerraGenerator, region: [i64; 2], seed: u32) -> Opt
         StructureKind::Village => build(&mut builder, x, z)?,
         StructureKind::Ruin => builder.ruin(x - 7, z - 6)?,
         StructureKind::Mine => super::super::mine::build(&mut builder, x, z)?,
+        StructureKind::Kingdom | StructureKind::Outpost => return None,
     }
     builder.finish()
 }

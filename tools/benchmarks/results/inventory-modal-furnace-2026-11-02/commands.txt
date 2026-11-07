@@ -1,0 +1,16 @@
+Workspace root, 2026-11-02:
+
+cargo build --workspace --locked -j1
+cargo test --workspace --locked -j1 -- --test-threads=4
+cargo clippy --workspace --all-targets --locked -j1 -- -D warnings
+cargo fmt --all --check
+git diff --check
+
+Native acceptance uses a temporary integrated authority, not a player save:
+TERRA_CONFIG_DIR=/tmp/teramic180-ui-config TERRA_MENU_CONFIG_DIR=/tmp/teramic180-ui-config TERRA_COMPUTE_THREADS=16 TERRA_INVENTORY_REFERENCE_SMOKE=1 TERRA_NATIVE_OS_POINTER=1 TERRA_CAPTURE_DIR=<report>/native target/debug/terra-client --smoke-test-inventory
+
+The native helper presses and releases keys in separate game frames. It checks
+actual screenshot sizes with a one-pixel tolerance for fractional Wayland DPI,
+centered frames and page labels, retained inventory, category/workspace separation,
+furnace header/process child bounds, all ten equipment positions and an unchanged
+authoritative inventory after navigation, preview fuel selection and closing.

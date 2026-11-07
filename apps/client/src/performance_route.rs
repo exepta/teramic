@@ -1,13 +1,18 @@
 //! Opt-in real-input exploration route; prediction and authority move the body.
 use bevy::{app::AppExit, prelude::*};
 use std::{
-    collections::HashSet,
+    collections::{HashMap, HashSet, VecDeque},
     time::{Duration, Instant},
 };
 use terra_core::{ControlsConfig, GameAction, GameConfig, InputBinding};
 use terra_network::client::ClientSession;
-use terra_player::{CameraInputState, ControllerMode, PlayerBody, TerraCamera};
-use terra_world::streaming::WorldTerrain;
+use terra_player::{
+    CameraInputState, ControllerMode, PLAYER_HALF_HEIGHT, PLAYER_RADIUS, PlayerBody, TerraCamera,
+};
+use terra_world::{
+    edits::EditJournal,
+    streaming::{ChunkStore, WorldTerrain},
+};
 
 #[path = "performance_route/walk.rs"]
 mod walk;
@@ -16,15 +21,20 @@ const SPEED: f32 = 12.0;
 const PERIOD: f64 = 120.0;
 const LEG_SECONDS: f64 = 50.0;
 const DISTANCE: f32 = SPEED * LEG_SECONDS as f32;
+const APPROACH_RADIUS: i32 = 16;
+const ASCENT_CLEARANCE: f32 = 32.0;
+const APPROACH_TOLERANCE: f32 = 0.075;
 
 #[derive(Resource, Default)]
 pub(crate) struct Route {
     walking: Option<walk::Walk>,
+    speed: f32,
     delay: Duration,
     waiting_at: Option<Instant>,
     ready_at: Option<Instant>,
     cruising_at: Option<Instant>,
     origin: Vec3,
+    approach: VecDeque<Vec3>,
     cruise_y: f32,
     previous_phase: Option<(u64, &'static str)>,
     last_ack: u64,
@@ -60,8 +70,10 @@ pub(crate) fn install(app: &mut App) -> Result<(), String> {
             }
         })?;
     let delay = parse_delay(configured_delay.as_deref())?;
+    let speed = parse_speed(std::env::var("TERRA_SOAK_ROUTE_SPEED").ok().as_deref())?;
     app.insert_resource(Route {
         walking: (route == "walk").then(walk::Walk::default),
+        speed,
         delay,
         ..Default::default()
     })
@@ -79,6 +91,16 @@ fn parse_delay(value: Option<&str>) -> Result<Duration, String> {
         );
     }
     Ok(Duration::from_secs_f64(seconds))
+}
+
+fn parse_speed(value: Option<&str>) -> Result<f32, String> {
+    let speed = value
+        .map_or(Ok(SPEED), str::parse::<f32>)
+        .map_err(|_| "TERRA_SOAK_ROUTE_SPEED requires a finite number from 1 through 20")?;
+    if !speed.is_finite() || !(1.0..=20.0).contains(&speed) {
+        return Err("TERRA_SOAK_ROUTE_SPEED requires a finite number from 1 through 20".into());
+    }
+    Ok(speed)
 }
 
 fn route_target(elapsed: f64) -> (u64, &'static str, f32) {
@@ -129,6 +151,7 @@ fn advance(world: &mut World, route: &mut Route) -> Result<(), String> {
     if let Some(walking) = route.walking.as_mut() {
         return walking.advance(world);
     }
+    let planned_distance = route.speed * LEG_SECONDS as f32;
     let session = world
         .get_resource::<ClientSession>()
         .ok_or("Performance route requires the real network client")?;
@@ -163,20 +186,26 @@ fn advance(world: &mut World, route: &mut Route) -> Result<(), String> {
         let highest = (0..=12)
             .map(|probe| {
                 terrain.surface_height(
-                    f64::from(position.x + DISTANCE * probe as f32 / 12.0),
+                    f64::from(position.x + planned_distance * probe as f32 / 12.0),
                     f64::from(position.z),
                 ) as f32
             })
             .fold(position.y, f32::max);
         route.cruise_y = (highest + 48.0).min(344.0);
-        world.resource_mut::<GameConfig>().client.fly_speed = SPEED;
+        route.approach = ascent_approach(position, route.cruise_y, |from, to| {
+            loaded_sweep_clear(world, from, to)
+        })
+        .ok_or("No loaded, collision-free ascent column reachable within 16m of the spawn")?;
+        set_route_speed(world, route.speed);
         tracing::info!(
             origin=?position.to_array(),
             authoritative=?confirmed.position,
             cruise_y=route.cruise_y,
-            speed=SPEED,
+            speed=route.speed,
             period=PERIOD,
-            distance=DISTANCE,
+            distance=planned_distance,
+            approach_waypoints=route.approach.len(),
+            ascent_column=?route.approach.back().copied().unwrap_or(position).to_array(),
             "Real-input performance route armed at the ready player's actual spawn"
         );
     }
@@ -189,8 +218,21 @@ fn advance(world: &mut World, route: &mut Route) -> Result<(), String> {
     {
         return Err("Authoritative movement acknowledgements stalled for 15 seconds".into());
     }
+    let was_approaching = !route.approach.is_empty();
+    while route
+        .approach
+        .front()
+        .is_some_and(|target| target.distance(position) <= APPROACH_TOLERANCE)
+    {
+        route.approach.pop_front();
+    }
+    if was_approaching && route.approach.is_empty() {
+        route.origin = position;
+        tracing::info!(origin=?position.to_array(), "Real-input route reached its unobstructed ascent column");
+    }
+    let approaching = !route.approach.is_empty();
     let height_error = route.cruise_y - position.y;
-    if route.cruising_at.is_none() && height_error.abs() <= 0.5 {
+    if !approaching && route.cruising_at.is_none() && height_error.abs() <= 0.5 {
         route.cruising_at = Some(now);
     }
     if route.cruising_at.is_none()
@@ -202,19 +244,34 @@ fn advance(world: &mut World, route: &mut Route) -> Result<(), String> {
             "Performance route could not reach its cruise altitude within 60 seconds".into(),
         );
     }
-    let (cycle, phase, distance) = route
-        .cruising_at
-        .map(|started| route_target(started.elapsed().as_secs_f64()))
-        .unwrap_or((0, "climb", 0.0));
-    let target = Vec3::new(route.origin.x + distance, route.cruise_y, route.origin.z);
+    let (cycle, phase, distance) = if approaching {
+        (0, "canopy-exit", 0.0)
+    } else {
+        route
+            .cruising_at
+            .map(|started| {
+                let (cycle, phase, distance) = route_target(started.elapsed().as_secs_f64());
+                (cycle, phase, distance * route.speed / SPEED)
+            })
+            .unwrap_or((0, "climb", 0.0))
+    };
+    let target =
+        route.approach.front().copied().unwrap_or_else(|| {
+            Vec3::new(route.origin.x + distance, route.cruise_y, route.origin.z)
+        });
+    if approaching && !loaded_sweep_clear(world, position, target) {
+        return Err(
+            "The loaded ascent approach became obstructed before reaching its waypoint".into(),
+        );
+    }
     if route.previous_phase != Some((cycle, phase)) {
         if route
             .previous_phase
             .is_some_and(|(previous_cycle, _)| previous_cycle < cycle)
         {
-            if route.maximum_outbound < DISTANCE * 0.75 {
+            if route.maximum_outbound < planned_distance * 0.75 {
                 return Err(format!(
-                    "Exploration reached only {:.1}m of the {DISTANCE}m route; movement was blocked",
+                    "Exploration reached only {:.1}m of the {planned_distance}m route; movement was blocked",
                     route.maximum_outbound
                 ));
             }
@@ -250,16 +307,114 @@ fn advance(world: &mut World, route: &mut Route) -> Result<(), String> {
         camera.rotation = Quat::from_euler(EulerRot::YXZ, 0.0, -0.22, 0.0);
     }
     let error = target - position;
+    // Slow down at corners so flight acceleration cannot cut across an unchecked cell.
+    let speed = if approaching {
+        (error.length() * 2.5).clamp(0.2, 2.5)
+    } else {
+        route.speed
+    };
+    set_route_speed(world, speed);
+    let deadzone = if approaching { 0.025 } else { 0.35 };
     let desired = [
-        (GameAction::Right, error.x > 0.35),
-        (GameAction::Left, error.x < -0.35),
-        (GameAction::Backward, error.z > 0.35),
-        (GameAction::Forward, error.z < -0.35),
-        (GameAction::Jump, error.y > 0.35),
-        (GameAction::FlyDown, error.y < -0.35),
+        (GameAction::Right, error.x > deadzone),
+        (GameAction::Left, error.x < -deadzone),
+        (GameAction::Backward, error.z > deadzone),
+        (GameAction::Forward, error.z < -deadzone),
+        (GameAction::Jump, error.y > deadzone),
+        (GameAction::FlyDown, error.y < -deadzone),
     ];
     inject_bindings(world, &desired);
     Ok(())
+}
+
+fn set_route_speed(world: &mut World, speed: f32) {
+    if world.resource::<GameConfig>().client.fly_speed != speed {
+        world.resource_mut::<GameConfig>().client.fly_speed = speed;
+    }
+}
+
+fn ascent_approach(
+    origin: Vec3,
+    cruise_y: f32,
+    mut clear: impl FnMut(Vec3, Vec3) -> bool,
+) -> Option<VecDeque<Vec3>> {
+    if !origin.is_finite() || !cruise_y.is_finite() {
+        return None;
+    }
+    // The cruise plane may not be streamed yet. Check the entire local canopy
+    // clearance against loaded cells; authority checks the remaining ascent normally.
+    let top = cruise_y.min(origin.y + ASCENT_CLEARANCE).max(origin.y);
+    let point = |[x, z]: [i32; 2]| origin + Vec3::new(x as f32, 0.0, z as f32);
+    let mut parents = HashMap::from([([0, 0], [0, 0])]);
+    let mut pending = VecDeque::from([[0, 0]]);
+    while let Some(cell) = pending.pop_front() {
+        let current = point(cell);
+        if clear(current, Vec3::new(current.x, top, current.z)) {
+            let mut path = VecDeque::new();
+            let mut cursor = cell;
+            while cursor != [0, 0] {
+                path.push_front(point(cursor));
+                cursor = parents[&cursor];
+            }
+            return Some(path);
+        }
+        for [dx, dz] in [[1, 0], [-1, 0], [0, 1], [0, -1]] {
+            let next = [cell[0] + dx, cell[1] + dz];
+            if next[0] * next[0] + next[1] * next[1] > APPROACH_RADIUS * APPROACH_RADIUS
+                || parents.contains_key(&next)
+                || !clear(current, point(next))
+            {
+                continue;
+            }
+            parents.insert(next, cell);
+            pending.push_back(next);
+        }
+    }
+    None
+}
+
+fn swept_cells_clear(
+    from: Vec3,
+    to: Vec3,
+    mut clear: impl FnMut([i64; 3], Vec3, Vec3) -> bool,
+) -> bool {
+    if !from.is_finite() || !to.is_finite() {
+        return false;
+    }
+    // An AABB enclosing the capsule sweep is conservative, including a small
+    // horizontal steering margin. Keep the real half-height so the floor is not hit.
+    let half = Vec3::new(PLAYER_RADIUS + 0.1, PLAYER_HALF_HEIGHT, PLAYER_RADIUS + 0.1);
+    let minimum = from.min(to) - half;
+    let maximum = from.max(to) + half;
+    let low = minimum.floor().as_i64vec3();
+    let high = (maximum - Vec3::splat(0.001)).floor().as_i64vec3();
+    for z in low.z..=high.z {
+        for y in low.y..=high.y {
+            for x in low.x..=high.x {
+                if !clear([x, y, z], minimum, maximum) {
+                    return false;
+                }
+            }
+        }
+    }
+    true
+}
+
+fn loaded_sweep_clear(world: &World, from: Vec3, to: Vec3) -> bool {
+    let chunks = world.resource::<ChunkStore>();
+    let journal = world.resource::<EditJournal>();
+    let properties = world.resource::<terra_core::block_properties::BlockPropertiesCatalog>();
+    swept_cells_clear(from, to, |cell, minimum, maximum| {
+        chunks.block_at(cell).is_some()
+            && !terra_world::interaction_shapes::space_intersects(
+                chunks,
+                journal,
+                properties,
+                cell,
+                minimum.to_array().map(f64::from),
+                maximum.to_array().map(f64::from),
+            )
+    })
 }
 
 fn inject_bindings(world: &mut World, desired: &[(GameAction, bool)]) {
@@ -315,6 +470,176 @@ fn inject_bindings(world: &mut World, desired: &[(GameAction, bool)]) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn flight_speed_override_preserves_the_comparison_default_and_tests_real_saved_speed() {
+        assert_eq!(parse_speed(None).unwrap(), SPEED);
+        assert_eq!(parse_speed(Some("20")).unwrap(), 20.0);
+        assert_eq!(parse_speed(Some("2.5")).unwrap(), 2.5);
+        for invalid in ["0", "-1", "NaN", "inf", "20.01", "invalid"] {
+            assert!(parse_speed(Some(invalid)).is_err(), "accepted {invalid}");
+        }
+    }
+
+    #[test]
+    fn an_unchanged_flight_speed_does_not_invalidate_the_world_configuration() {
+        let mut world = World::new();
+        world.init_resource::<GameConfig>();
+        set_route_speed(&mut world, SPEED);
+        let changed = world
+            .get_resource_ref::<GameConfig>()
+            .unwrap()
+            .last_changed();
+        world.increment_change_tick();
+        for _ in 0..128 {
+            set_route_speed(&mut world, SPEED);
+        }
+        assert_eq!(
+            world
+                .get_resource_ref::<GameConfig>()
+                .unwrap()
+                .last_changed(),
+            changed
+        );
+        set_route_speed(&mut world, 2.5);
+        assert_eq!(world.resource::<GameConfig>().client.fly_speed, 2.5);
+        assert_ne!(
+            world
+                .get_resource_ref::<GameConfig>()
+                .unwrap()
+                .last_changed(),
+            changed
+        );
+    }
+
+    fn voxel_clear(from: Vec3, to: Vec3, mut block: impl FnMut([i64; 3]) -> Option<u16>) -> bool {
+        swept_cells_clear(from, to, |cell, _, _| block(cell) == Some(0))
+    }
+
+    #[test]
+    fn a_spawn_below_a_tree_canopy_reaches_a_loaded_free_column_before_ascending() {
+        let origin = Vec3::new(8.5, 103.91, 24.5);
+        let blocks = |[x, y, z]: [i64; 3]| {
+            Some(if y <= 102 {
+                1
+            } else if (110..116).contains(&y) && (5..=12).contains(&x) && (20..=28).contains(&z) {
+                7
+            } else {
+                0
+            })
+        };
+        assert!(!voxel_clear(origin, origin + Vec3::Y * 32.0, blocks));
+        let path = ascent_approach(origin, 200.0, |from, to| voxel_clear(from, to, blocks))
+            .expect("the clear natural column beside the canopy is reachable");
+        assert_eq!(
+            path.len(),
+            4,
+            "the nearest free canopy edge is four cells away"
+        );
+        assert!((path.back().unwrap().distance(origin) - 4.0).abs() < 0.001);
+        let mut previous = origin;
+        for &point in &path {
+            assert_eq!(point.y, origin.y);
+            assert!((point.distance(previous) - 1.0).abs() < 0.001);
+            assert!(voxel_clear(previous, point, blocks));
+            previous = point;
+        }
+        assert!(voxel_clear(previous, previous + Vec3::Y * 32.0, blocks));
+    }
+
+    #[test]
+    fn the_ascent_approach_routes_around_a_wall_without_cutting_its_corner() {
+        let origin = Vec3::new(-0.5, 1.91, -0.5);
+        let blocks = |[x, y, z]: [i64; 3]| {
+            Some(
+                if y <= 0
+                    || y == 6 && [x, z] != [2, -1]
+                    || x == 0 && (1..=4).contains(&y) && (-2..=0).contains(&z)
+                {
+                    3
+                } else {
+                    0
+                },
+            )
+        };
+        assert!(!voxel_clear(origin, origin + Vec3::X, blocks));
+        let path = ascent_approach(origin, 34.0, |from, to| voxel_clear(from, to, blocks))
+            .expect("the wall has a reachable route around its end");
+        assert_eq!(path.back(), Some(&Vec3::new(2.5, origin.y, -0.5)));
+        assert!(path.len() > 3);
+        let mut previous = origin;
+        for point in path {
+            assert!(voxel_clear(previous, point, blocks));
+            previous = point;
+        }
+    }
+
+    #[test]
+    fn unknown_columns_and_out_of_radius_openings_are_not_treated_as_safe() {
+        let origin = Vec3::new(0.5, 1.91, 0.5);
+        assert!(
+            ascent_approach(origin, 100.0, |from, to| {
+                voxel_clear(from, to, |[_, y, _]| (y < 16).then_some(0))
+            })
+            .is_none()
+        );
+        let mut visited = 0;
+        assert!(
+            ascent_approach(origin, 100.0, |from, to| {
+                visited += 1;
+                if to.y > from.y {
+                    assert!((from - origin).with_y(0.0).length() <= 16.001);
+                    from.x >= 17.5
+                } else {
+                    true
+                }
+            })
+            .is_none()
+        );
+        assert!(visited <= 33 * 33 * 5);
+        assert!(ascent_approach(Vec3::NAN, 100.0, |_, _| true).is_none());
+        assert!(ascent_approach(origin, f32::INFINITY, |_, _| true).is_none());
+        assert!(
+            ascent_approach(origin, 100.0, |_, _| true)
+                .unwrap()
+                .is_empty()
+        );
+    }
+
+    #[test]
+    fn runtime_sweeps_require_loaded_cells_and_respect_the_real_shared_collider() {
+        use terra_voxel::{BlockSection, SectionPos};
+        use terra_world::streaming::LoadedSection;
+        let mut world = World::new();
+        world.init_resource::<ChunkStore>();
+        world.init_resource::<EditJournal>();
+        world.init_resource::<terra_core::block_properties::BlockPropertiesCatalog>();
+        let origin = Vec3::new(8.5, 2.91, 8.5);
+        assert!(!loaded_sweep_clear(&world, origin, origin + Vec3::Y));
+        let section = SectionPos::new(0, 0, 0);
+        world.resource_mut::<ChunkStore>().loaded.insert(
+            section,
+            LoadedSection {
+                data: BlockSection::empty(section).unwrap(),
+                mesh: None,
+                mesh_epoch: 0,
+                water_epoch: 0,
+                water: None,
+                props: Vec::new(),
+            },
+        );
+        assert!(loaded_sweep_clear(&world, origin, origin + Vec3::Y));
+        world
+            .resource_mut::<ChunkStore>()
+            .loaded
+            .get_mut(&section)
+            .unwrap()
+            .data
+            .set_block([8, 4, 8], 7)
+            .unwrap();
+        assert!(!loaded_sweep_clear(&world, origin, origin + Vec3::Y));
+        assert!(!loaded_sweep_clear(&world, origin, origin + Vec3::Y * 20.0));
+    }
 
     #[test]
     fn route_repeats_identical_outbound_and_return_targets_every_two_minutes() {

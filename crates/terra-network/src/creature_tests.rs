@@ -3,7 +3,211 @@ use terra_core::creatures::*;
 use terra_world::edits::EditJournal;
 
 #[test]
-fn real_udp_villagers_replicate_named_roles_greet_only_the_actor_and_keep_identity_on_late_join() {
+fn wild_bee_birth_snapshots_keep_two_udp_clients_updating_and_invalid_births_recover() {
+    use lightyear::prelude::{MessageSender, MessageSystems};
+    use protocol::session::{CreatureSnapshotChannel, CreatureStates};
+    #[derive(Resource, Default)]
+    struct FixtureSnapshot(Option<CreatureStates>);
+    fn publish(
+        mut fixture: ResMut<FixtureSnapshot>,
+        mut senders: Query<&mut MessageSender<CreatureStates>>,
+    ) {
+        let Some(packet) = fixture.0.take() else {
+            return;
+        };
+        let mut sent = 0;
+        for mut sender in &mut senders {
+            sender.send::<CreatureSnapshotChannel>(packet.clone());
+            sent += 1;
+        }
+        assert_eq!(sent, 2);
+    }
+    fn send(host: &mut App, packet: &CreatureStates) {
+        assert!(packet.creatures.iter().all(Creature::valid));
+        assert!(packet.ecology.valid());
+        assert!(packet.families.iter().all(|family| family.valid()));
+        host.world_mut().resource_mut::<FixtureSnapshot>().0 = Some(packet.clone());
+    }
+    let (mut host, mut a, mut b) = pair();
+    host.init_resource::<FixtureSnapshot>()
+        .add_systems(PostUpdate, publish.before(MessageSystems::Send));
+    let child = breeding::next_birth_id(&CreaturePopulation::default(), 0).unwrap();
+    let parents = [bee_id([0, 0], 0).unwrap(), bee_id([0, 0], 1).unwrap()];
+    let cow = creature_id([0, 0], 0).unwrap();
+    let make = |id, kind: CreatureKind| Creature {
+        id,
+        kind,
+        home: [0, 0],
+        position: [3.0, 2.0, 3.0],
+        velocity: [0.0; 3],
+        yaw: 0.0,
+        health: kind.health(),
+        behavior: CreatureBehavior::Rest,
+        timer: 0.0,
+        age: 1.0,
+        variant: 0,
+        needs: CreatureNeeds::full(kind),
+    };
+    let bee = make(child, CreatureKind::Bee);
+    let mut ecology = ecology::Ecology::default();
+    ecology.bees.insert(
+        child,
+        ecology::BeeState {
+            nest: 7,
+            ..Default::default()
+        },
+    );
+    let family = breeding::FamilyView::new(
+        &bee,
+        breeding::AnimalFamily {
+            parents: Some(parents),
+            ..Default::default()
+        },
+    );
+    // Keep ordinary, independently running server snapshots older than this
+    // transport fixture so they cannot replace the exact regression payload.
+    let base = host.world().resource::<server::ServerRuntime>().tick + 1_000_000;
+    let mut packet = CreatureStates {
+        tick: base,
+        creatures: vec![bee, make(cow, CreatureKind::Cow)],
+        ecology,
+        intentions: Vec::new(),
+        bonds: Vec::new(),
+        families: vec![family],
+        stalker_grip: None,
+    };
+    for phase in 0..4 {
+        packet.tick = base + phase;
+        packet.creatures[1].position[0] = 3.0 + phase as f64 * 0.25;
+        let expected = packet.creatures[1].position;
+        send(&mut host, &packet);
+        wait(&mut host, &mut [&mut a, &mut b], |_, clients| {
+            clients.iter().all(|client| {
+                let creatures = client.world().resource::<client::ReplicatedCreatures>();
+                creatures.creatures.contains_key(&child)
+                    && creatures
+                        .creatures
+                        .get(&cow)
+                        .is_some_and(|track| track.current.position == expected)
+            })
+        });
+        for client in [&a, &b] {
+            assert!(client.world().resource::<client::ClientSession>().ready);
+            assert_eq!(
+                client
+                    .world()
+                    .resource::<client::ReplicatedCreatures>()
+                    .rejected_snapshots,
+                0
+            );
+        }
+    }
+    let mut invalid = packet.clone();
+    invalid.tick += 1;
+    invalid.creatures[0] = make(child, CreatureKind::Cow);
+    invalid.families[0].growth = invalid.creatures[0].growth();
+    send(&mut host, &invalid);
+    wait(&mut host, &mut [&mut a, &mut b], |_, clients| {
+        clients.iter().all(|client| {
+            let creatures = client.world().resource::<client::ReplicatedCreatures>();
+            creatures.rejected_snapshots == 1
+                && creatures.last_rejected_tick == invalid.tick
+                && creatures.creatures[&child].current.kind == CreatureKind::Bee
+        })
+    });
+    packet.tick = invalid.tick;
+    packet.creatures[1].position[0] += 1.0;
+    let expected = packet.creatures[1].position;
+    send(&mut host, &packet);
+    wait(&mut host, &mut [&mut a, &mut b], |_, clients| {
+        clients.iter().all(|client| {
+            let creatures = client.world().resource::<client::ReplicatedCreatures>();
+            creatures.creatures[&cow].current.position == expected
+                && creatures.creatures[&child].current.kind == CreatureKind::Bee
+                && creatures.rejected_snapshots == 1
+        })
+    });
+}
+
+#[test]
+fn independent_authoritative_creature_and_player_snapshots_keep_both_udp_clients_advancing() {
+    let (mut host, mut a, mut b) = pair();
+    let p = a
+        .world()
+        .resource::<client::ClientSession>()
+        .confirmed_state()
+        .unwrap()
+        .position;
+    let id = spawning::next_command_id(&CreaturePopulation::default()).unwrap();
+    host.world_mut()
+        .resource_mut::<GameConfig>()
+        .server
+        .natural_mob_limit = Some(0);
+    {
+        let mut journal = host.world_mut().resource_mut::<EditJournal>();
+        let state = journal.gameplay_mut();
+        state.creatures = CreaturePopulation::default();
+        state.animal_bonds.clear();
+        state.animal_families.clear();
+        state.pet_orders.clear();
+        let animal = Creature {
+            id,
+            kind: CreatureKind::Cow,
+            home: [0, 0],
+            position: [
+                f64::from(p[0]),
+                f64::from(p[1] - terra_physics::character::PLAYER_HALF_HEIGHT),
+                f64::from(p[2]) - 3.5,
+            ],
+            velocity: [0.0; 3],
+            yaw: 0.0,
+            health: CreatureKind::Cow.health(),
+            behavior: CreatureBehavior::Rest,
+            timer: 60.0,
+            age: 0.0,
+            variant: 0,
+            needs: CreatureNeeds::full(CreatureKind::Cow),
+        };
+        assert!(animal.valid());
+        state.creatures.animals.insert(id, animal);
+        state.revision = state.revision.wrapping_add(1);
+    }
+    for _ in 0..4 {
+        let player_ticks =
+            [&a, &b].map(|client| client.world().resource::<client::ReplicatedPlayers>().tick);
+        let target_age = host
+            .world()
+            .resource::<EditJournal>()
+            .gameplay()
+            .creatures
+            .animals[&id]
+            .age
+            + 0.15;
+        // No injected snapshots: the real 10 Hz creature tick and 20 Hz player
+        // publisher must both survive their simultaneous sequenced transport.
+        wait(&mut host, &mut [&mut a, &mut b], |_, clients| {
+            clients.iter().enumerate().all(|(index, client)| {
+                client.world().resource::<client::ReplicatedPlayers>().tick > player_ticks[index]
+                    && client
+                        .world()
+                        .resource::<client::ReplicatedCreatures>()
+                        .creatures
+                        .get(&id)
+                        .is_some_and(|track| track.current.age >= target_age)
+            })
+        });
+        for client in [&a, &b] {
+            let creatures = client.world().resource::<client::ReplicatedCreatures>();
+            assert!(creatures.creatures[&id].current.valid());
+            assert_eq!(creatures.rejected_snapshots, 0);
+            assert!(client.world().resource::<client::ClientSession>().ready);
+        }
+    }
+}
+
+#[test]
+fn real_udp_villagers_and_high_slot_military_roles_replicate_greet_and_keep_identity_on_late_join()
+{
     use terra_core::{CropItem, ItemKind};
     let (mut host, mut a, mut b) = pair();
     let owner = a.world().resource::<client::ClientSession>().uuid.unwrap();
@@ -21,7 +225,17 @@ fn real_udp_villagers_replicate_named_roles_greet_only_the_actor_and_keep_identi
     let target_role = 7;
     let target = villagers::id(home, u16::from(target_role)).unwrap();
     let ids: Vec<_> = (0..villagers::ROLE_COUNT)
-        .map(|role| villagers::id(home, u16::from(role)).unwrap())
+        .map(|role| {
+            villagers::id(
+                home,
+                if role >= villagers::CIVILIAN_ROLE_COUNT {
+                    128 + u16::from(role - villagers::CIVILIAN_ROLE_COUNT)
+                } else {
+                    u16::from(role)
+                },
+            )
+            .unwrap()
+        })
         .collect();
     host.world_mut()
         .resource_mut::<GameConfig>()

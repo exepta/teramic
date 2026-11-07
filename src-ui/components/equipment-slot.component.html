@@ -1,4 +1,4 @@
-<div id="equipment-slot" class="equipment-slot">
+<div id="equipment-slot" [class]="inventoryView.player ? 'equipment-slot reference-equipment' : 'equipment-slot'">
   <button id="inventory-cell" class="item-cell" onmousedown="inventory_pointer" onmouseenter="inventory_pointer" onmouseleave="inventory_pointer">
     @if (equipment.empty) {
       <div [class]="'equipment-symbol ' + equipment.kind"><div class="equipment-outline"></div><div class="equipment-detail"></div></div>

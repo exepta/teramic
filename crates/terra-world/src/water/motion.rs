@@ -4,6 +4,7 @@ use crate::{TerraGenerator, edits::EditJournal, streaming::ChunkStore};
 /// Bodies inherit forty percent of the local current, not its full travel speed.
 pub const CURRENT_RESPONSE: f32 = 0.4;
 pub const CURRENT_SPEED: f32 = 2.4;
+pub const RIVER_CURRENT_SCALE: f32 = 1.2;
 
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
 pub struct FluidMotion {
@@ -30,9 +31,24 @@ pub fn fluid_motion_at(
     let Some(block) = chunks.block_at(global) else {
         return FluidMotion::default();
     };
+    if block == terra_core::plumbing::BASIN {
+        return crate::plumbing::basin_water_column(chunks, journal, position).map_or_else(
+            FluidMotion::default,
+            |water| FluidMotion {
+                velocity: [0.0; 3],
+                immersion: ((water.level - position[1]) / 0.35).clamp(0.0, 1.0) as f32,
+            },
+        );
+    }
     let cell = chunks.fluid_cell_at(terrain, journal, global, block);
-    if super::space::partial(block)
-        && !super::space::FluidSpace::at(journal, global, |p| chunks.block_at(p)).contains(
+    if (super::space::partial(block) || journal.has_extended_kinetics())
+        && !super::space::FluidSpace::wet_at(
+            journal,
+            global,
+            |p| chunks.block_at(p),
+            |p, material| chunks.raw_fluid_cell_at(terrain, journal, p, material),
+        )
+        .contains(
             cell,
             std::array::from_fn(|i| position[i] - global[i] as f64),
         )
@@ -73,8 +89,24 @@ pub fn fluid_motion_at(
         )
     };
     let length = flow[0].hypot(flow[1]);
+    let river_current = river.is_some()
+        || chunks
+            .surface_column_at(global[0], global[2])
+            .is_some_and(|column| {
+                column
+                    .cave
+                    .water
+                    .is_some_and(|water| position[1] >= water.bed && position[1] < water.level)
+                    && column.cave.river_flow(position[0]) != [0.0; 2]
+            });
     let horizontal = if length > 0.0 {
-        flow.map(|component| component / length * CURRENT_SPEED)
+        let speed = CURRENT_SPEED
+            * if river_current {
+                RIVER_CURRENT_SCALE
+            } else {
+                1.0
+            };
+        flow.map(|component| component / length * speed)
     } else {
         [0.0; 2]
     };
@@ -213,6 +245,12 @@ mod tests {
     use crate::{streaming::LoadedSection, water::FluidCell};
     use terra_core::WorldConfig;
     use terra_voxel::{BlockSection, MaterialId, SectionPos};
+
+    #[test]
+    fn river_current_scale_is_twenty_percent_stronger_without_changing_canal_baseline() {
+        assert!((CURRENT_SPEED * RIVER_CURRENT_SCALE - 2.88).abs() < 0.0001);
+        assert!((CURRENT_RESPONSE * CURRENT_SPEED - 0.96).abs() < 0.0001);
+    }
 
     #[test]
     fn full_exposed_waterfall_has_real_downward_current_but_a_deep_calm_pool_does_not() {

@@ -13,6 +13,7 @@ bevy = ["dep:bevy", "terra-core/bevy"]
 terra-core.workspace = true
 terra-voxel.workspace = true
 noise.workspace = true
+fastnoise-lite.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
 serde.workspace = true

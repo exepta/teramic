@@ -1,0 +1,26 @@
+{
+  "id": "teramic::apple_sapling_from_core",
+  "name": "Apple Sapling",
+  "station": "hand",
+  "output": {
+    "item": {
+      "prop": "apple_sapling"
+    },
+    "count": 1
+  },
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": "apple_core",
+        "count": 2
+      },
+      {
+        "item": {
+          "block": 2
+        },
+        "count": 1
+      }
+    ]
+  }
+}

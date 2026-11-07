@@ -4,11 +4,15 @@ use std::time::{Duration, Instant};
 use terra_player::TerraCamera;
 use terra_world::streaming::{ChunkFocus, GenerationStatus, WorldGeneration, WorldTerrain};
 
+mod distributary;
+
 #[derive(Resource)]
 struct Fixture {
     benchmark: bool,
     tunnel: bool,
     bifurcation: Option<[Vec3; 2]>,
+    distributary_check: bool,
+    distributary: Option<distributary::View>,
     started: Instant,
     since: Instant,
     phase: u8,
@@ -26,6 +30,8 @@ pub(crate) fn install(app: &mut App) {
         benchmark,
         tunnel: std::env::var_os("TERRA_RIVER_TUNNEL").is_some(),
         bifurcation: None,
+        distributary_check: std::env::var("TERRA_RIVER_DISTRIBUTARY").is_ok_and(|v| v == "1"),
+        distributary: None,
         started: now,
         since: now,
         phase: 0,
@@ -49,7 +55,19 @@ fn locate(
         config.client.water_volumetric_mist = std::env::var_os("TERRA_RIVER_MIST").is_some();
     }
     let baseline_view = std::env::var_os("TERRA_RIVER_BASELINE_VIEW").is_some();
-    let best = if std::env::var_os("TERRA_RIVER_BIFURCATION").is_some() {
+    let best = if state.distributary_check {
+        match distributary::find(&terrain.0) {
+            Ok(view) => {
+                let point = view.split(&terrain.0);
+                state.distributary = Some(view);
+                Some((point, point.y))
+            }
+            Err(error) => {
+                tracing::error!(%error, "Native distributary fixture lookup failed");
+                None
+            }
+        }
+    } else if std::env::var_os("TERRA_RIVER_BIFURCATION").is_some() {
         find_bifurcation(&terrain.0).map(|[main, side, island]| {
             state.bifurcation = Some([side, island]);
             (main, main.y)
@@ -84,6 +102,11 @@ fn locate(
         state.point = point;
         state.upper = upper;
         for mut camera in &mut cameras {
+            if let Some(view) = &state.distributary {
+                *camera = view.camera(&terrain.0, false);
+                focus.0 = camera.translation.to_array().map(f64::from);
+                continue;
+            }
             if state.spray_check {
                 let Some(view) = waterfall_overview(&terrain.0, point, upper) else {
                     state.phase = 254;
@@ -125,6 +148,7 @@ fn locate(
             baseline_view,
             tunnel = state.tunnel,
             bifurcation = ?state.bifurcation,
+            distributary = state.distributary.is_some(),
             "Native river fixture view anchor (automatic mode uses a generated reach)"
         );
     } else {
@@ -451,6 +475,11 @@ fn run(world: &mut World) {
             || !world.resource::<terra_render::RenderStatus>().ready
             || !world.resource::<terra_render::WaterStatus>().ready
             || state.since.elapsed() < Duration::from_secs(3) { return; }
+        if state.distributary.is_some() {
+            distributary::run(world, &mut state);
+            state.since = Instant::now();
+            return;
+        }
         if state.phase == 0 {
             if world.resource::<terra_render::WaterStatus>().triangles == 0 { return; }
             if state.tunnel {
@@ -597,6 +626,9 @@ mod tunnel_tests {
     #[test]
     fn native_portal_fixture_has_real_air_and_roof_with_caves_and_trees() {
         let terrain = terra_world::TerraGenerator::new(terra_core::WorldConfig {
+            landscape_revision: 5,
+            sea_level: 22.0,
+            biome_definitions: Some(terra_core::BiomeDefinitions::default()),
             rivers: true,
             ..Default::default()
         })

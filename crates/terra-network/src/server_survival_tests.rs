@@ -1,7 +1,7 @@
 use super::*;
 use terra_core::EffectKind;
 
-fn resting_peer(health: f32) -> Peer {
+pub(crate) fn resting_peer(health: f32) -> Peer {
     let now = Instant::now();
     Peer {
         farming: Default::default(),

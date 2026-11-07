@@ -27,10 +27,23 @@ const HALF_FACINGS: [u8; 6] = [0, 4, 5, 6, 7, 8];
 pub const SLAB_MATERIALS: [u16; 10] = [82, 83, 84, 85, 86, 87, 88, 89, 105, 137];
 pub const LAST_MIXED_SLAB: u8 = 69;
 
+/// Weather retains legacy 1..=7 poses. New player layers use a disjoint range,
+/// so later weather reconciliation never mistakes their height for ownership.
+pub fn snow_layers(state: u8) -> u8 {
+    match state {
+        17..=23 => state - 16,
+        _ => state.clamp(1, 8),
+    }
+}
+
+pub fn manual_snow_facing(layers: u8) -> Option<u8> {
+    (1..=7).contains(&layers).then(|| 16 + layers)
+}
+
 pub fn snow_bounds(state: u8) -> ShapeBox {
     ShapeBox {
         minimum: [0.0; 3],
-        maximum: [1.0, f64::from(state.clamp(1, 8)) / 8.0, 1.0],
+        maximum: [1.0, f64::from(snow_layers(state)) / 8.0, 1.0],
         hinged: false,
     }
 }
@@ -613,6 +626,15 @@ mod tests {
             assert!(b.valid());
             assert_eq!(volume(&[b]), f64::from(state) / 8.0);
         }
+        for layer in 1..=7 {
+            let facing = manual_snow_facing(layer).unwrap();
+            assert_eq!(snow_layers(facing), layer);
+            assert_eq!(snow_bounds(facing), snow_bounds(layer));
+        }
+        assert_eq!(snow_layers(0), 1);
+        assert_eq!(manual_snow_facing(0), None);
+        assert_eq!(manual_snow_facing(8), None);
+        assert_eq!(manual_snow_facing(255), None);
     }
     #[test]
     fn slab_halves_cover_all_six_faces_and_merge_only_on_the_inner_face() {

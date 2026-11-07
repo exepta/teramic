@@ -31,6 +31,9 @@ impl View {
             match self.machine {
                 1 => return crate::furnace::slot_capacity(slot - INVENTORY_SLOTS, item),
                 2 => return crate::crusher::slot_capacity(slot - INVENTORY_SLOTS, item),
+                3 => return crate::mixer::slot_capacity(slot - INVENTORY_SLOTS, item),
+                4 => return crate::brewing::slot_capacity(slot - INVENTORY_SLOTS, item),
+                5 => return crate::campfire::slot_capacity(slot - INVENTORY_SLOTS, item),
                 _ => {}
             }
         }
@@ -322,7 +325,7 @@ pub(crate) fn apply_crusher_filtered(
     apply_filtered_kind(player, halves, gesture, reserved, 2)
 }
 
-fn apply_filtered_kind(
+pub(crate) fn apply_filtered_kind(
     player: &mut Inventory,
     halves: &mut [Inventory],
     gesture: ContainerGesture,
@@ -332,6 +335,9 @@ fn apply_filtered_kind(
     let size = match machine {
         1 => crate::furnace::SLOTS,
         2 => crate::crusher::SLOTS,
+        3 => crate::mixer::SLOTS,
+        4 => crate::brewing::SLOTS,
+        5 => crate::campfire::SLOTS,
         _ => CHEST_SLOTS,
     };
     if !player.valid()
@@ -339,6 +345,9 @@ fn apply_filtered_kind(
         || match machine {
             1 => halves.len() != 1 || !halves.iter().all(crate::furnace::valid_inventory),
             2 => halves.len() != 1 || !halves.iter().all(crate::crusher::valid_inventory),
+            3 => halves.len() != 1 || !halves.iter().all(crate::mixer::valid_inventory),
+            4 => halves.len() != 1 || !halves.iter().all(crate::brewing::valid_inventory),
+            5 => halves.len() != 1 || !halves.iter().all(crate::campfire::valid_inventory),
             _ => !halves.iter().all(valid_chest),
         }
     {

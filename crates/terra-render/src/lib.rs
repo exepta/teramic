@@ -1,5 +1,6 @@
 //! Chunk mesh upload, material presentation and lighting. Generation stays in terra-world.
 mod appearance;
+mod apple_fruit;
 mod armor;
 pub use armor::ArmorRenderStatus;
 mod building;
@@ -9,15 +10,23 @@ pub use crushers::CrusherRenderStatus;
 pub mod blocks;
 mod diagnostics;
 mod draw_calls;
+mod dye_tint;
 pub use draw_calls::{DrawCallSnapshot, DrawCallStatus, GpuSubdrawSnapshot};
 mod chests;
+mod settlement_banners;
+pub use settlement_banners::VillageHeraldryStatus;
 mod chunk_borders;
 pub use chunk_borders::ChunkBorderGizmos;
 mod foliage;
 mod footprints;
 mod furnaces;
 mod openings;
+mod plumbing;
 pub use footprints::FootprintStatus;
+pub use plumbing::glass::{GlassPipeNodeRenderStatus, GlassPipeRenderStatus};
+pub use plumbing::infusion::InfusionRenderStatus;
+pub use plumbing::intake::IntakeRenderStatus;
+pub use plumbing::jet::InfuserJetRenderStatus;
 mod graphics;
 mod map_palette;
 mod miniature;
@@ -29,7 +38,10 @@ mod players;
 pub use player_preview::PlayerPreviewImage;
 mod plugin;
 mod previews;
-pub use previews::{RenderBlockPreviews, RenderItemPreviews, RenderPropPreviews};
+pub use previews::{
+    RenderBlockPreviews, RenderItemPreviewRequests, RenderItemPreviews, RenderPreviewStartup,
+    RenderPropPreviews,
+};
 mod weather;
 pub use players::{AvatarBlink, RemoteAvatar};
 pub use weather::{CosmeticSnowPreview, WeatherPreview, WeatherRenderStatus};
@@ -43,6 +55,7 @@ mod upload_budget;
 pub use upload_budget::MeshUploadStatus;
 mod water;
 pub use diagnostics::TerraRenderDiagnosticsPlugin;
+pub use meshing::visibility::TerrainVisibility;
 pub use meshing::{CoastalWashQuads, RenderStatus, RenderedSections, TerrainSection};
 pub use plugin::TerraRenderPlugin;
 pub use props::{PropGrowthStatus, PropRenderStatus, WindProp};
@@ -50,5 +63,9 @@ pub use transitions::{ChunkAnimationStatus, LodSwapStatus};
 pub use water::{InkExposure, UnderwaterState, WaterStatus};
 mod grouped_point_shadows;
 mod mesh_buffers;
+mod preprocess_buffers;
 mod preprocess_cache;
 mod render_schedule;
+
+#[cfg(test)]
+mod shader_migration_tests;

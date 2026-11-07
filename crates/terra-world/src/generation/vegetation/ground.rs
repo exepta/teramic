@@ -413,6 +413,8 @@ mod tests {
     fn clearing_tree_bases_never_creates_new_props_including_across_section_ceiling() {
         let generator = SectionGenerator::new(
             TerraGenerator::new(WorldConfig {
+                landscape_revision: 3,
+                sea_level: 8.0,
                 base_height: 16.0,
                 hill_amplitude: 0.0,
                 mountain_amplitude: 0.0,

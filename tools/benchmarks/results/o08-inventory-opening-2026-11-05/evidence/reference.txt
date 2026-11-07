@@ -1,0 +1,29 @@
+2026-11-05T16:43:31.125878Z  INFO bevy_render::renderer: AdapterInfo { name: "AMD Radeon RX 6950 XT (RADV NAVI21)", vendor: 4098, device: 29605, device_type: DiscreteGpu, device_pci_bus_id: "0000:0c:00.0", driver: "radv", driver_info: "Mesa 26.2.5-arch3.1", backend: Vulkan, subgroup_min_size: 32, subgroup_max_size: 64, transient_saves_memory: Some(false), limit_bucket: None }
+2026-11-05T16:43:32.970493Z  INFO terra_network::server: Player profile accepted (local, not verified online) player=1 uuid=7916d664-26ed-477c-ac32-0668b5c9295b name=Player-7916d664
+2026-11-05T16:43:54.360900Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /tmp/teramic-o08-439o32is/reference2-captures/player-inventory-reference-wide.png
+2026-11-05T16:43:56.314411Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /tmp/teramic-o08-439o32is/reference2-captures/player-inventory-catalog-collapsed.png
+2026-11-05T16:44:00.320686Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /tmp/teramic-o08-439o32is/reference2-captures/inventory-left-category-tabs.png
+2026-11-05T16:44:05.026790Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /tmp/teramic-o08-439o32is/reference2-captures/catalog-page-two.png
+2026-11-05T16:44:09.340301Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /tmp/teramic-o08-439o32is/reference2-captures/catalog-search.png
+2026-11-05T16:44:15.928072Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /tmp/teramic-o08-439o32is/reference2-captures/crafting-recipe-reference-wide.png
+2026-11-05T16:44:18.317678Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /tmp/teramic-o08-439o32is/reference2-captures/chest-oak.png
+2026-11-05T16:44:20.629285Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /tmp/teramic-o08-439o32is/reference2-captures/chest-spruce.png
+2026-11-05T16:44:22.650945Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /tmp/teramic-o08-439o32is/reference2-captures/chest-birch.png
+2026-11-05T16:44:23.942152Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /tmp/teramic-o08-439o32is/reference2-captures/chest-cherry.png
+2026-11-05T16:44:27.734038Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /tmp/teramic-o08-439o32is/reference2-captures/chest-birch-alternative.png
+2026-11-05T16:44:29.600882Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /tmp/teramic-o08-439o32is/reference2-captures/furnace-recipe-reference-wide.png
+2026-11-05T16:44:33.104085Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /tmp/teramic-o08-439o32is/reference2-captures/furnace-alternative-fuels.png
+2026-11-05T16:44:35.025117Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /tmp/teramic-o08-439o32is/reference2-captures/furnace-selected-fuel.png
+2026-11-05T16:44:37.568150Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /tmp/teramic-o08-439o32is/reference2-captures/cauldron-recipe-wide.png
+2026-11-05T16:44:39.925341Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /tmp/teramic-o08-439o32is/reference2-captures/hotbar-wide.png
+2026-11-05T16:44:41.924661Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /tmp/teramic-o08-439o32is/reference2-captures/hotbar-selected-wide.png
+2026-11-05T16:44:44.906954Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /tmp/teramic-o08-439o32is/reference2-captures/player-inventory-reference-compact.png
+2026-11-05T16:44:46.740159Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /tmp/teramic-o08-439o32is/reference2-captures/crafting-recipe-reference-compact.png
+2026-11-05T16:44:48.577028Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /tmp/teramic-o08-439o32is/reference2-captures/furnace-recipe-reference-compact.png
+2026-11-05T16:44:50.812390Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /tmp/teramic-o08-439o32is/reference2-captures/cauldron-recipe-compact.png
+2026-11-05T16:44:53.359965Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /tmp/teramic-o08-439o32is/reference2-captures/hotbar-compact.png
+2026-11-05T16:44:55.005844Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /tmp/teramic-o08-439o32is/reference2-captures/pause-menu-compact.png
+2026-11-05T16:44:59.168013Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /tmp/teramic-o08-439o32is/reference2-captures/pause-menu-wide.png
+2026-11-05T16:45:01.275213Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /tmp/teramic-o08-439o32is/reference2-captures/settings-paused-wide.png
+2026-11-05T16:45:04.767707Z  INFO terra_client::inventory_smoke::reference: Native inventory reference passed: 18+9 slots, equal crafting cells, equal catalog cells, trash in rail, pause and settings, square slots, stable catalog pages, right recipe pagination, no recipe catalog, four interactive wood previews, cauldron, furnace, painted hotbar, ESC/E and unchanged authoritative inventory captures=25 seconds=93.511692482
+{"command": ["target/o08-binaries/terra-client-final-projection", "--smoke-test-inventory"], "wall_seconds": 94.792, "peak_rss_kib": 2269496, "user_cpu_seconds": 198.27, "system_cpu_seconds": 26.801, "peak_drm_memory_vram_kib": null, "peak_drm_memory_gtt_kib": null, "exit_code": 0}

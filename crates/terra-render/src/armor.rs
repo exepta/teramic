@@ -4,7 +4,7 @@ mod model;
 
 use crate::players::{AvatarJoint, AvatarPart, WorldAvatarPart};
 use bevy::{camera::visibility::RenderLayers, prelude::*};
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use terra_core::{AccessoryKind, ArmorItem, ArmorMaterial, EquipmentSlots, ItemKind, PlayerGender};
 
 #[derive(Component)]
@@ -35,6 +35,29 @@ type WearableParts = Vec<(AvatarPart, Handle<Mesh>)>;
 struct ArmorAssets {
     parts: HashMap<(ItemKind, bool), WearableParts>,
     materials: Vec<Handle<StandardMaterial>>,
+    dynamic_order: VecDeque<(ItemKind, bool)>,
+}
+
+const MAX_DYNAMIC_CAPES: usize = 128;
+
+impl ArmorAssets {
+    fn cache_cape(&mut self, item: ItemKind, female: bool, parts: WearableParts) {
+        let key = (item, female);
+        if item
+            .cape()
+            .is_some_and(|cape| matches!(cape.color, terra_core::beds::DyeColor::Rgb(_)))
+            && !self.parts.contains_key(&key)
+        {
+            while self.dynamic_order.len() >= MAX_DYNAMIC_CAPES {
+                if let Some(expired) = self.dynamic_order.pop_front() {
+                    // Equipped avatars own their mesh handles independently of this cache.
+                    self.parts.remove(&expired);
+                }
+            }
+            self.dynamic_order.push_back(key);
+        }
+        self.parts.insert(key, parts);
+    }
 }
 
 #[derive(Resource, Default, Debug)]
@@ -132,7 +155,7 @@ fn material_index(item: ItemKind) -> usize {
             .iter()
             .position(|tier| *tier == armor.material)
             .unwrap_or(0),
-        ItemKind::Cape(_) => 6,
+        ItemKind::Cape(_) | ItemKind::HeraldicCape { .. } => 6,
         _ => 5,
     }
 }
@@ -175,7 +198,7 @@ fn sync(
         }
         let female = gender.is_some_and(|gender| gender.0 == PlayerGender::Female);
         for item in equipment.0.into_iter().flatten() {
-            if matches!(item, ItemKind::Cape(_)) && !assets.parts.contains_key(&(item, female)) {
+            if item.cape().is_some() && !assets.parts.contains_key(&(item, female)) {
                 let gender = if female {
                     PlayerGender::Female
                 } else {
@@ -188,14 +211,14 @@ fn sync(
                             (part, meshes.add(crate::previews::batch_mesh(&batch)))
                         })
                         .collect();
-                    status.cached_meshes += parts.len();
-                    assets.parts.insert((item, female), parts);
+                    assets.cache_cape(item, female, parts);
+                    status.cached_meshes = assets.parts.values().map(Vec::len).sum();
                 }
             }
             let Some(parts) = assets.parts.get(&(item, female)) else {
                 continue;
             };
-            let is_cape = matches!(item, ItemKind::Cape(_));
+            let is_cape = item.cape().is_some();
             let mut upper_cape = None;
             for (index, (part, mesh)) in parts.iter().enumerate() {
                 let Some((joint_entity, _, _, layers)) = joints

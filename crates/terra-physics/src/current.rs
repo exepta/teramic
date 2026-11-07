@@ -36,11 +36,12 @@ pub fn body_motion(
         low.y + ((high.y - low.y) * 0.2).clamp(0.01, 0.05),
         center.z,
     );
-    let a = fluid_motion_at(terrain, chunks, journal, feet.to_array().map(f64::from));
-    let b = fluid_motion_at(terrain, chunks, journal, center.to_array().map(f64::from));
-    let weight = a.immersion + b.immersion;
+    let feet_motion = fluid_motion_at(terrain, chunks, journal, feet.to_array().map(f64::from));
+    let center_motion = fluid_motion_at(terrain, chunks, journal, center.to_array().map(f64::from));
+    let weight = feet_motion.immersion + center_motion.immersion;
     let velocity = if weight > 0.0 {
-        (Vec3::from_array(a.velocity) * a.immersion + Vec3::from_array(b.velocity) * b.immersion)
+        (Vec3::from_array(feet_motion.velocity) * feet_motion.immersion
+            + Vec3::from_array(center_motion.velocity) * center_motion.immersion)
             / weight
     } else {
         Vec3::ZERO

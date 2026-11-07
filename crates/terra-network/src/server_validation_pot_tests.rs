@@ -40,6 +40,7 @@ fn command(app: &App, peer: &Peer, position: [i64; 3]) -> EditCommand {
             position,
             expected: terra_core::flower_pot::MATERIAL,
             facing: journal.object_state(position).unwrap().facing,
+            closing: false,
         },
         source: peer.held_slot.map(|slot| InventorySource {
             slot,

@@ -21,6 +21,7 @@ use bevy::{
 };
 
 #[derive(Component, Clone, Copy, ExtractComponent, ShaderType)]
+#[extract_app(bevy::render::RenderApp)]
 pub(crate) struct CaveSettings {
     pub view_from_clip: Mat4,
     pub parameters: Vec4,
@@ -75,7 +76,7 @@ fn setup(
     cache: Res<PipelineCache>,
 ) {
     let mut variants = Vec::new();
-    let shader = assets.load("shaders/terra_caves.wgsl");
+    let shader = assets.load("shaders/terra_caves.wesl");
     for format in [
         TextureFormat::Rgba16Float,
         TextureFormat::Rgba8UnormSrgb,
@@ -148,7 +149,6 @@ fn draw(
     // The same optional pass serves caves, underwater optics and short ink hits.
     // Dry outdoor views and Low water quality without ink have no extra pass.
     if settings.parameters.x <= 0.001
-        && settings.parameters.z <= 0.001
         && settings.underwater.x <= 0.001
         && settings.ink.x <= 0.001
         && settings.smoke.x <= 0.001
@@ -163,7 +163,7 @@ fn draw(
     let (Some(pipeline), Some(binding), Some(depth)) = (
         cache.get_render_pipeline(*id),
         uniforms.uniforms().binding(),
-        prepass.depth_view(),
+        prepass.depth_only_view(),
     ) else {
         return;
     };

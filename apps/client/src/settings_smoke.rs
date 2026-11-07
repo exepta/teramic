@@ -2,7 +2,7 @@ use bevy::{
     app::AppExit,
     input::InputSystems,
     prelude::*,
-    window::{CursorGrabMode, CursorOptions, PresentMode, PrimaryWindow},
+    window::{CursorGrabMode, CursorOptions, PrimaryWindow},
 };
 use std::{
     path::PathBuf,
@@ -177,11 +177,15 @@ fn step(world: &mut World, test: &mut SettingsSmoke) -> Result<(), String> {
             )?;
             let mut cameras = world.query_filtered::<&Projection, With<TerraCamera>>();
             require(cameras.iter(world).all(|projection| matches!(projection, Projection::Perspective(p) if (p.fov - 78.0_f32.to_radians()).abs() < 0.00001)), "FOV was not applied to the live camera")?;
+            let present_mode = terra_ui::preferred_present_mode(
+                false,
+                world.get_resource::<bevy::render::renderer::RenderAdapterInfo>(),
+            );
             let mut windows = world.query_filtered::<&Window, With<PrimaryWindow>>();
             require(
                 windows
                     .iter(world)
-                    .all(|window| window.present_mode == PresentMode::AutoNoVsync),
+                    .all(|window| window.present_mode == present_mode),
                 "VSync was not applied to the live window",
             )?;
             let journal = world.resource::<EditJournal>();

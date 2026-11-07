@@ -27,7 +27,8 @@ impl SurfaceTint {
     pub fn tree_tint(&self, cell: [u32; 3], material: u16) -> [f32; 3] {
         match (material, self.tree(cell, material)) {
             (6, Some(TreeAppearance::Spruce)) => [0.54, 0.58, 0.55],
-            (7, Some(TreeAppearance::Spruce)) => [0.38, 0.55, 0.43],
+            (7, Some(TreeAppearance::Spruce)) => [0.34, 0.48, 1.18],
+            (7, Some(TreeAppearance::Fir)) => [0.24, 0.34, 0.95],
             (6, Some(TreeAppearance::Palm)) => [1.16, 1.08, 0.88],
             _ => [1.0; 3],
         }

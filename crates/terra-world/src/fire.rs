@@ -8,6 +8,7 @@ use bevy::prelude::*;
 pub(crate) fn tick(
     time: Res<Time>,
     access: Res<WorldAccess>,
+    config: Option<Res<terra_core::GameConfig>>,
     chunks: Res<ChunkStore>,
     mut journal: ResMut<EditJournal>,
     mut last: Local<f64>,
@@ -38,6 +39,12 @@ pub(crate) fn tick(
             condition.fire = (condition.fire - 0.125 * elapsed).max(0.0);
             condition.charred = (condition.charred + 0.13 * elapsed).min(1.0);
             for offset in [[-1, 0, 0], [1, 0, 0], [0, 0, -1], [0, 0, 1], [0, 1, 0]] {
+                if config
+                    .as_ref()
+                    .is_some_and(|config| !config.world.game_rules.fire_spread)
+                {
+                    break;
+                }
                 let target = std::array::from_fn(|i| position[i] + offset[i]);
                 if !chunks
                     .block_at(target)
@@ -160,6 +167,21 @@ mod tests {
                 .fire,
             0.0
         );
+    }
+    #[test]
+    fn disabling_fire_spread_preserves_existing_fire_decay_without_igniting_neighbors() {
+        let mut app = scene(WorldAccess::Local);
+        let mut config = terra_core::GameConfig::default();
+        config.world.game_rules.fire_spread = false;
+        app.insert_resource(config);
+        for _ in 0..5 {
+            app.update();
+        }
+        let journal = app.world().resource::<EditJournal>();
+        assert_eq!(journal.active_fires().count(), 1);
+        assert!(journal.surface_condition([3, 0, 3]).fire < 1.0);
+        assert!(journal.surface_condition([3, 0, 3]).charred > 0.0);
+        assert_eq!(journal.surface_condition([4, 0, 3]).fire, 0.0);
     }
     #[test]
     fn replicas_never_advance_fire_and_old_surface_data_defaults_safely() {

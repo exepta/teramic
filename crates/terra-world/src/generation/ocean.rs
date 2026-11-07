@@ -6,11 +6,14 @@ use super::{
 use noise::NoiseFn;
 use terra_voxel::MaterialId;
 
+mod modern;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum OceanArea {
     CoralReef,
     SeagrassForest,
     ColdOcean,
+    Swamp,
 }
 
 impl OceanArea {
@@ -19,6 +22,7 @@ impl OceanArea {
             Self::CoralReef => "Coral Reef",
             Self::SeagrassForest => "Seagrass Forest",
             Self::ColdOcean => "Cold Ocean",
+            Self::Swamp => "Swamp",
         }
     }
 }
@@ -30,6 +34,14 @@ pub struct OceanHabitat {
     pub colony: f32,
     pub cover: f32,
     pub rock: f32,
+    /// Revision-four organic coastal/marine habitat, without changing legacy weight slots.
+    pub swamp: f32,
+    pub coral_density: f32,
+    pub seagrass_density: f32,
+    pub max_vegetation_depth: f32,
+    /// Connected clay deposit thickness; zero retains the underlying substrate.
+    pub clay_depth: f32,
+    substrate: Option<MaterialId>,
     /// Solid sea ice extends downward from sea level + 1; zero means open water.
     pub ice_depth: u8,
 }
@@ -38,6 +50,9 @@ impl OceanHabitat {
     pub fn area(self) -> Option<OceanArea> {
         if self.weights.iter().copied().sum::<f32>() < 0.1 {
             return None;
+        }
+        if self.swamp > self.weights.iter().copied().sum::<f32>() * 0.5 {
+            return Some(OceanArea::Swamp);
         }
         let index = (0..3).max_by(|&a, &b| self.weights[a].total_cmp(&self.weights[b]))?;
         Some(
@@ -50,7 +65,9 @@ impl OceanHabitat {
     }
 
     pub(super) fn floor_material(self) -> Option<MaterialId> {
-        if self.weights[0] > 0.45 && self.rock > 0.38 {
+        if let Some(substrate) = self.substrate {
+            Some(substrate)
+        } else if self.weights[0] > 0.45 && self.rock > 0.38 {
             Some(if self.rock > 0.54 && self.colony > 0.30 {
                 if self.colony > 0.90 {
                     MaterialId::CoralPurple
@@ -84,6 +101,9 @@ impl TerraGenerator {
         if !self.config().water || sea == 0.0 {
             return OceanHabitat::default();
         }
+        if self.config().landscape_revision >= 4 {
+            return self.modern_ocean_habitat(x, z, biome, sea);
+        }
         let district = self.hills.get([x / 240.0 + 84.3, z / 240.0 - 61.7]);
         let cold = 1.0 - smoothstep(0.23, 0.39, biome.temperature);
         let reef = (1.0 - cold)
@@ -107,6 +127,7 @@ impl TerraGenerator {
             cover: cover as f32,
             rock: rock as f32,
             ice_depth,
+            ..Default::default()
         }
     }
 
@@ -123,5 +144,7 @@ impl TerraGenerator {
     }
 }
 
+#[cfg(test)]
+mod modern_tests;
 #[cfg(test)]
 mod tests;

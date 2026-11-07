@@ -1,0 +1,9 @@
+{
+  "id": "teramic::gearbox_horizontal", "name": "Gearbox Horizontal", "station": "workbench",
+  "output": { "item": { "block": 154 }, "count": 1 },
+  "pattern": { "kind": "shaped", "width": 3, "height": 3, "cells": [
+    { "item": { "block": 16 }, "count": 1 }, { "item": { "block": 141 }, "count": 1 }, { "item": { "block": 16 }, "count": 1 },
+    { "item": { "block": 141 }, "count": 1 }, { "item": { "block": 146 }, "count": 1 }, { "item": { "block": 141 }, "count": 1 },
+    { "item": { "block": 16 }, "count": 1 }, { "item": { "mineral": "iron_ingot" }, "count": 1 }, { "item": { "block": 16 }, "count": 1 }
+  ] }
+}

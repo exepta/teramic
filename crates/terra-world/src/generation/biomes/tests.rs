@@ -73,7 +73,10 @@ fn transitions_are_continuous_even_where_the_dominant_weight_changes() {
                 .into_iter()
                 .zip(next.weights.values())
             {
-                assert!((a - b).abs() < 0.06);
+                assert!(
+                    (a - b).abs() < 0.06,
+                    "biome seam at {x},{z}: {a} -> {b}; {previous:?} -> {next:?}"
+                );
             }
             assert!((next.profile().soil_depth - previous.profile().soil_depth).abs() < 0.12);
             previous = next;
@@ -89,7 +92,12 @@ fn transitions_are_continuous_even_where_the_dominant_weight_changes() {
 
 #[test]
 fn highland_has_real_mountain_relief_and_never_appears_below_y80() {
-    let terrain = TerraGenerator::new(WorldConfig::default()).unwrap();
+    let terrain = TerraGenerator::new(WorldConfig {
+        landscape_revision: 3,
+        sea_level: 8.0,
+        ..Default::default()
+    })
+    .unwrap();
     let mut highland = 0;
     let mut low_mountains = 0;
     for z in (-12288..=12288).step_by(256) {

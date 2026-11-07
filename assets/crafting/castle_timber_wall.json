@@ -1,0 +1,34 @@
+{
+  "id": "teramic::castle_timber_wall",
+  "name": "Holzverstaerkte Mauer",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "block": 192
+    },
+    "count": 1
+  },
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "block": 174
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "block": 16
+        },
+        "count": 2
+      },
+      {
+        "item": {
+          "mineral": "iron_ingot"
+        },
+        "count": 1
+      }
+    ]
+  }
+}

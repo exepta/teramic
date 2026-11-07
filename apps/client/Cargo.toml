@@ -20,3 +20,5 @@ tracing.workspace = true
 terra-server = { path = "../server" }
 terra-storage.workspace=true
 tilt-ui.workspace=true
+tilt-ui-runtime.workspace=true
+serde_json.workspace=true

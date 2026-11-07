@@ -9,13 +9,20 @@ use terra_world::{
     streaming::{ChunkStore, LoadedSection, WorldTerrain},
 };
 
+#[path = "server_conveyor_interaction_tests.rs"]
+mod conveyor_interaction_tests;
 #[path = "server_validation_pot_tests.rs"]
 mod pot_tests;
+#[path = "server_sapling_placement_tests.rs"]
+mod sapling_placement_tests;
+#[path = "server_wrench_tests.rs"]
+mod wrench_tests;
 
 fn fixture(kind: ResourcePropKind, wet: bool) -> (App, Peer, [i64; 3]) {
     let support = [4, 3, 4];
     let mut config = GameConfig::default();
     config.server.game_mode = GameMode::Survival;
+    config.world.landscape_revision = 3;
     config.world.base_height = 3.0;
     config.world.sea_level = 0.0;
     config.world.hill_amplitude = 0.0;
@@ -44,6 +51,9 @@ fn fixture(kind: ResourcePropKind, wet: bool) -> (App, Peer, [i64; 3]) {
             data.set_block([x, 3, z], 3).unwrap();
         }
     }
+    if terra_core::TreeSpecies::from_sapling(kind).is_some() {
+        data.set_block([4, 3, 4], MaterialId::Dirt as u16).unwrap();
+    }
     if wet {
         data.set_block([4, 4, 4], MaterialId::FluidWater as u16)
             .unwrap();
@@ -59,6 +69,20 @@ fn fixture(kind: ResourcePropKind, wet: bool) -> (App, Peer, [i64; 3]) {
             props: Vec::new(),
         },
     );
+    if terra_core::TreeSpecies::from_sapling(kind).is_some() {
+        let upper = owner.offset([0, 1, 0]).unwrap();
+        app.world_mut().resource_mut::<ChunkStore>().loaded.insert(
+            upper,
+            LoadedSection {
+                data: terra_voxel::BlockSection::empty(upper).unwrap(),
+                mesh: None,
+                mesh_epoch: 0,
+                water_epoch: 0,
+                water: None,
+                props: vec![],
+            },
+        );
+    }
     let uuid = PlayerUuid::new_v4();
     {
         let mut journal = app.world_mut().resource_mut::<EditJournal>();
@@ -150,6 +174,300 @@ fn fixture(kind: ResourcePropKind, wet: bool) -> (App, Peer, [i64; 3]) {
     (app, peer, support)
 }
 
+#[test]
+fn conveyor_connection_consumes_one_connector_and_middle_removal_returns_one_without_removing_shafts()
+ {
+    let (mut app, mut peer, _) = fixture(ResourcePropKind::SmallStones, false);
+    let owner = terra_voxel::SectionPos::default();
+    let start = [7, 6, 5];
+    let end = [7, 6, 9];
+    let item = ItemKind::for_wood(148, terra_core::WoodSpecies::Birch);
+    for p in [start, end] {
+        app.world_mut()
+            .resource_mut::<ChunkStore>()
+            .loaded
+            .get_mut(&owner)
+            .unwrap()
+            .data
+            .set_block(p.map(|v| v as usize), 144)
+            .unwrap();
+        let mut journal = app.world_mut().resource_mut::<EditJournal>();
+        journal.record(p, 144).unwrap();
+        journal
+            .set_object_state(p, Some(Default::default()))
+            .unwrap();
+    }
+    app.world_mut()
+        .resource_mut::<EditJournal>()
+        .gameplay_mut()
+        .inventories
+        .get_mut(&peer.uuid)
+        .unwrap()
+        .creative_set(0, ItemStack { item, count: 2 });
+    let eye = Vec3::new(7.5, 6.5, 12.5);
+    app.world_mut()
+        .get_mut::<Transform>(peer.body)
+        .unwrap()
+        .translation = eye - Vec3::Y * PLAYER_EYE_OFFSET;
+    let journal = app.world().resource::<EditJournal>();
+    let command = EditCommand {
+        request: 1,
+        revision: journal.revision(owner),
+        look: [0.0; 2],
+        source: Some(InventorySource {
+            slot: 0,
+            revision: journal.gameplay().inventories[&peer.uuid].revision,
+        }),
+        action: EditAction::ConnectConveyor {
+            start,
+            end,
+            start_revision: journal.revision(owner),
+            item,
+        },
+    };
+    {
+        let mut system = SystemState::<ControlWorld>::new(app.world_mut());
+        let mut world = system.get_mut(app.world_mut()).unwrap();
+        assert_eq!(
+            check(
+                EditCommand {
+                    source: None,
+                    ..command
+                },
+                &peer,
+                &world
+            ),
+            EditOutcome::Invalid
+        );
+        assert_eq!(
+            apply(command, &peer, &mut world, false),
+            EditOutcome::Applied
+        );
+        assert_eq!(
+            world.journal.gameplay().inventories[&peer.uuid].count(item),
+            1
+        );
+        assert_eq!(
+            apply(command, &peer, &mut world, false),
+            EditOutcome::Conflict
+        );
+        assert_eq!(
+            world.journal.gameplay().inventories[&peer.uuid].count(item),
+            1
+        );
+        for z in 6..=8 {
+            assert_eq!(world.chunks.block_at([7, 6, z]), Some(148));
+        }
+    }
+    {
+        let mut journal = app.world_mut().resource_mut::<EditJournal>();
+        let bag = journal
+            .gameplay_mut()
+            .inventories
+            .get_mut(&peer.uuid)
+            .unwrap();
+        bag.creative_set(1, ItemStack { item, count: 1 });
+        bag.creative_set(
+            0,
+            ItemStack {
+                item: ItemKind::Tool(terra_core::ToolKind::IronPickaxe),
+                count: 1,
+            },
+        );
+    }
+    let eye = Vec3::new(7.5, 8.5, 7.5);
+    app.world_mut()
+        .get_mut::<Transform>(peer.body)
+        .unwrap()
+        .translation = eye - Vec3::Y * PLAYER_EYE_OFFSET;
+    peer.look = [0.0, -1.4];
+    let remove = EditCommand {
+        request: 2,
+        revision: app.world().resource::<EditJournal>().revision(owner),
+        look: peer.look,
+        source: None,
+        action: EditAction::Block {
+            position: [7, 6, 7],
+            expected: 148,
+            material: 0,
+        },
+    };
+    let mut system = SystemState::<ControlWorld>::new(app.world_mut());
+    let mut world = system.get_mut(app.world_mut()).unwrap();
+    assert_eq!(apply(remove, &peer, &mut world, true), EditOutcome::Applied);
+    for z in 6..=8 {
+        assert_eq!(world.chunks.block_at([7, 6, z]), Some(0));
+    }
+    for p in [start, end] {
+        assert_eq!(world.chunks.block_at(p), Some(144));
+    }
+    let drops = &world.journal.gameplay().drops;
+    assert_eq!(drops.len(), 1);
+    assert_eq!(drops[0].stack, ItemStack { item, count: 1 });
+}
+
+#[test]
+fn side_clicked_shaft_places_the_gear_at_the_selected_face_and_rejects_the_old_off_face_snap() {
+    let (mut app, mut peer, _) = fixture(ResourcePropKind::SmallStones, false);
+    peer.mode = Some(GameMode::Creative);
+    let owner = terra_voxel::SectionPos::default();
+    let shaft = [7, 6, 7];
+    let target = [7, 6, 8];
+    app.world_mut()
+        .resource_mut::<ChunkStore>()
+        .loaded
+        .get_mut(&owner)
+        .unwrap()
+        .data
+        .set_block(shaft.map(|v| v as usize), 146)
+        .unwrap();
+    {
+        let mut journal = app.world_mut().resource_mut::<EditJournal>();
+        journal.record(shaft, 146).unwrap();
+        journal
+            .set_object_state(shaft, Some(Default::default()))
+            .unwrap();
+    }
+    let eye = Vec3::new(7.5, 6.5, 10.5);
+    app.world_mut()
+        .get_mut::<Transform>(peer.body)
+        .unwrap()
+        .translation = eye - Vec3::Y * PLAYER_EYE_OFFSET;
+    let command = EditCommand {
+        request: 1,
+        revision: app.world().resource::<EditJournal>().revision(owner),
+        look: [0.0; 2],
+        source: None,
+        action: EditAction::Block {
+            position: target,
+            expected: 0,
+            material: 143,
+        },
+    };
+    let mut system = SystemState::<ControlWorld>::new(app.world_mut());
+    let mut world = system.get_mut(app.world_mut()).unwrap();
+    let (hit, _) = pick_world_with_context(
+        &world.chunks,
+        &world.journal,
+        &world.block_properties,
+        eye.to_array().map(f64::from),
+        [0.0, 0.0, -1.0],
+        PropPose::Rest,
+    );
+    let hit = hit.unwrap();
+    assert_eq!((hit.position, hit.normal), (shaft, [0, 0, 1]));
+    let forged = EditCommand {
+        action: EditAction::Block {
+            position: [8, 6, 7],
+            expected: 0,
+            material: 143,
+        },
+        ..command
+    };
+    assert_eq!(check(forged, &peer, &world), EditOutcome::Occluded);
+    assert_eq!(check(command, &peer, &world), EditOutcome::Applied);
+    assert_eq!(
+        apply(command, &peer, &mut world, false),
+        EditOutcome::Applied
+    );
+    assert_eq!(world.chunks.block_at(target), Some(143));
+    assert_eq!(world.chunks.block_at([8, 5, 7]), Some(0));
+    assert_eq!(
+        terra_core::kinetic::axis(world.journal.object_state(target).unwrap().facing).map(i64::abs),
+        [0, 0, 1]
+    );
+}
+
+#[test]
+fn ordinary_block_commit_cannot_bypass_a_failed_mechanical_overhang_preview() {
+    let (mut app, mut peer, _) = fixture(ResourcePropKind::SmallStones, false);
+    peer.mode = Some(GameMode::Creative);
+    let owner = terra_voxel::SectionPos::default();
+    let gear = [7, 5, 7];
+    let support = [8, 4, 7];
+    let target = [8, 5, 7];
+    {
+        let mut chunks = app.world_mut().resource_mut::<ChunkStore>();
+        let data = &mut chunks.loaded.get_mut(&owner).unwrap().data;
+        data.set_block(gear.map(|v| v as usize), 151).unwrap();
+        data.set_block(support.map(|v| v as usize), 3).unwrap();
+    }
+    {
+        let mut journal = app.world_mut().resource_mut::<EditJournal>();
+        journal.record(gear, 151).unwrap();
+        journal
+            .set_object_state(
+                gear,
+                Some(terra_world::edits::BlockObjectState {
+                    facing: 4,
+                    ..Default::default()
+                }),
+            )
+            .unwrap();
+    }
+    let eye = Vec3::new(8.85, 6.0, 10.5);
+    app.world_mut()
+        .get_mut::<Transform>(peer.body)
+        .unwrap()
+        .translation = eye - Vec3::Y * PLAYER_EYE_OFFSET;
+    let direction = (Vec3::new(8.85, 5.0, 7.85) - eye).normalize();
+    let look = [(-direction.x).atan2(-direction.z), direction.y.asin()];
+    peer.look = look;
+    let revision = app.world().resource::<EditJournal>().revision(owner);
+    let mut command = EditCommand {
+        request: 1,
+        revision,
+        look,
+        source: None,
+        action: EditAction::Block {
+            position: target,
+            expected: 0,
+            material: 3,
+        },
+    };
+    {
+        let mut system = SystemState::<ControlWorld>::new(app.world_mut());
+        let mut world = system.get_mut(app.world_mut()).unwrap();
+        let (hit, _) = pick_world_with_context(
+            &world.chunks,
+            &world.journal,
+            &world.block_properties,
+            eye.to_array().map(f64::from),
+            direction.to_array().map(f64::from),
+            PropPose::Rest,
+        );
+        assert_eq!(hit.unwrap().position, support);
+        assert_eq!(check(command, &peer, &world), EditOutcome::Invalid);
+        assert_eq!(
+            apply(command, &peer, &mut world, false),
+            EditOutcome::Invalid
+        );
+        assert_eq!(world.chunks.block_at(target), Some(0));
+        assert_eq!(world.journal.revision(owner), revision);
+    }
+    app.world_mut()
+        .resource_mut::<ChunkStore>()
+        .loaded
+        .get_mut(&owner)
+        .unwrap()
+        .data
+        .set_block(gear.map(|v| v as usize), 0)
+        .unwrap();
+    app.world_mut()
+        .resource_mut::<EditJournal>()
+        .record(gear, 0)
+        .unwrap();
+    command.revision = app.world().resource::<EditJournal>().revision(owner);
+    let mut system = SystemState::<ControlWorld>::new(app.world_mut());
+    let mut world = system.get_mut(app.world_mut()).unwrap();
+    assert_eq!(check(command, &peer, &world), EditOutcome::Applied);
+    assert_eq!(
+        apply(command, &peer, &mut world, false),
+        EditOutcome::Applied
+    );
+    assert_eq!(world.chunks.block_at(target), Some(3));
+}
+
 fn aim(app: &App, peer: &Peer, target: [f64; 3]) -> [f32; 2] {
     let eye =
         app.world().get::<Transform>(peer.body).unwrap().translation + Vec3::Y * PLAYER_EYE_OFFSET;
@@ -189,10 +507,11 @@ fn farm_command(
         action: EditAction::Farm { position, action },
         revision: if matches!(
             action,
-            FarmingAction::FillBucket | FarmingAction::EmptyBucket
+            FarmingAction::FillBucket
+                | FarmingAction::EmptyBucket
+                | FarmingAction::Till
+                | FarmingAction::Refill
         ) {
-            journal.water_mesh_epoch(section)
-        } else if matches!(action, FarmingAction::Till | FarmingAction::Refill) {
             journal.revision(section)
         } else {
             journal.prop_epoch(section)
@@ -397,7 +716,7 @@ fn watering_refills_real_water_and_persists_crop_moisture_without_terrain_rebuil
         FarmingAction::Refill,
         aim(&app, &peer, [6.5, 4.5, 4.5]),
     );
-    let water = farm_command(
+    let mut water = farm_command(
         &app,
         &peer,
         support,
@@ -418,6 +737,21 @@ fn watering_refills_real_water_and_persists_crop_moisture_without_terrain_rebuil
     );
     assert_eq!(peer.farming.water(), 12);
     assert_eq!(
+        world.journal.gameplay().inventories[&peer.uuid]
+            .slot(0)
+            .unwrap()
+            .item
+            .watering_units(),
+        12
+    );
+    assert_eq!(
+        super::super::farm_tools::apply(water, &mut peer, &mut sender, &mut world),
+        EditOutcome::Conflict,
+        "refilling changes the actual vessel inventory revision"
+    );
+    water.source.as_mut().unwrap().revision =
+        world.journal.gameplay().inventories[&peer.uuid].revision;
+    assert_eq!(
         super::super::farm_tools::apply(water, &mut peer, &mut sender, &mut world),
         EditOutcome::RateLimited
     );
@@ -433,6 +767,8 @@ fn watering_refills_real_water_and_persists_crop_moisture_without_terrain_rebuil
         mesh_epoch
     );
     peer.farming.reset_cooldown();
+    water.source.as_mut().unwrap().revision =
+        world.journal.gameplay().inventories[&peer.uuid].revision;
     assert_eq!(
         super::super::farm_tools::apply(water, &mut peer, &mut sender, &mut world),
         EditOutcome::Invalid
@@ -1048,6 +1384,7 @@ fn scarecrow_requires_a_full_cube_and_two_dry_free_cells() {
 fn marine_placement_checks_real_source_cells_depth_and_loaded_ground() {
     for kind in ResourcePropKind::ALL
         .into_iter()
+        .filter(|kind| ItemKind::Prop(*kind).valid())
         .filter(|kind| terra_core::CropKind::from_prop(*kind).is_none())
     {
         let (mut app, _, support) = fixture(kind, true);
@@ -1140,6 +1477,7 @@ fn marine_placement_checks_real_source_cells_depth_and_loaded_ground() {
 fn every_prop_uses_authority_placement_accurate_picking_harvest_drop_and_reload_tombstone() {
     for kind in ResourcePropKind::ALL
         .into_iter()
+        .filter(|kind| ItemKind::Prop(*kind).valid())
         .filter(|kind| terra_core::CropKind::from_prop(*kind).is_none())
     {
         let (mut app, peer, support) = fixture(kind, PropKind::from(kind).aquatic());
@@ -1712,4 +2050,36 @@ fn legacy_prop_items_cannot_forge_seeds_and_wild_seed_drops_are_stable_and_obtai
         }
     }
     assert_eq!(found.len(), 3);
+}
+
+#[path = "server_water_interaction_tests.rs"]
+mod water_interaction_tests;
+
+#[test]
+fn derived_apple_fruit_is_rejected_by_the_actual_prop_placement_transaction() {
+    let (mut app, peer, support) = fixture(ResourcePropKind::AppleFruit, false);
+    let look = aim(&app, &peer, [4.5, 4., 4.5]);
+    let command = EditCommand {
+        request: 1,
+        revision: 0,
+        look,
+        source: None,
+        action: EditAction::PlaceProp {
+            support,
+            kind: ResourcePropKind::AppleFruit,
+        },
+    };
+    let mut system = SystemState::<ControlWorld>::new(app.world_mut());
+    let mut world = system.get_mut(app.world_mut()).unwrap();
+    assert_eq!(
+        apply(command, &peer, &mut world, false),
+        EditOutcome::Invalid
+    );
+    assert!(
+        world
+            .journal
+            .section_delta(terra_voxel::global_to_section(support).0)
+            .placed_props
+            .is_empty()
+    );
 }

@@ -316,9 +316,20 @@ pub(super) fn receive_jobs(
                     let has_fluids = journal
                         .fluid_snapshot(position)
                         .is_ok_and(|snapshot| !snapshot.is_empty())
-                        || journal
-                            .blocks_in_section(position)
-                            .any(|(_, material)| crate::water::space::partial(material));
+                        || journal.snapshot(position).is_ok_and(|snapshot| {
+                            let Ok(origin) = position.origin() else {
+                                return false;
+                            };
+                            // A dry construction at an integral water plane can
+                            // replace the wet cell below, across a section edge.
+                            // Inspect sparse edits in the same one-cell halo as
+                            // the water job, not its wider mineral clearance.
+                            snapshot.into_iter().any(|(p, material)| {
+                                crate::water::space::partial(material)
+                                    && (0..3)
+                                        .all(|i| (origin[i] - 1..=origin[i] + 16).contains(&p[i]))
+                            })
+                        });
                     if output.remesh
                         && let Some(live) = chunks.loaded.get_mut(&position)
                     {
@@ -925,76 +936,94 @@ mod tests {
 
     #[test]
     fn reloading_a_naturally_waterlogged_partial_block_requests_a_geometry_patch() {
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins)
-            .init_resource::<PendingSections>()
-            .init_resource::<ChunkStore>()
-            .init_resource::<EditJournal>()
-            .init_resource::<WorldGeneration>()
-            .insert_resource(WorldAccess::Replica { ready: true })
-            .add_message::<SectionPublished>()
-            .add_message::<PreparedColumnChanged>()
-            .add_systems(Update, receive_jobs);
-        let position = [-1, -1, -1];
-        let (owner, local) = global_to_section(position);
-        app.world_mut()
-            .resource_mut::<EditJournal>()
-            .record(position, 82)
-            .unwrap();
-        assert!(
-            app.world()
-                .resource::<EditJournal>()
-                .fluid_snapshot(owner)
-                .unwrap()
-                .is_empty()
-        );
-        let mut data = BlockSection::empty(owner).unwrap();
-        data.set_block(local, 82).unwrap();
-        let journal = app.world().resource::<EditJournal>();
-        let epoch = journal.mesh_epoch(owner);
-        let water_epoch = journal.water_mesh_epoch(owner);
-        let generated = GeneratedSection {
-            data,
-            mesh: None,
-            surface_sections: None,
-            water: None,
-            props: Vec::new(),
-            fluid_wake: Vec::new(),
-        };
-        app.world_mut()
-            .resource_mut::<ChunkStore>()
-            .wanted
-            .insert(owner);
-        app.world_mut().resource_mut::<PendingSections>().0.insert(
-            owner,
-            SectionJob {
-                positions: vec![owner],
-                task: AsyncComputeTaskPool::get().spawn(async move {
-                    ColumnOutput {
-                        coordinate: [owner.x, owner.z],
-                        remesh: false,
-                        prepared: None,
-                        sections: vec![(owner, epoch, water_epoch, Ok(generated))],
-                    }
-                }),
-            },
-        );
-        let deadline = Instant::now() + Duration::from_secs(5);
-        while !app.world().resource::<PendingSections>().0.is_empty() {
-            app.update();
-            assert!(Instant::now() < deadline);
-            std::thread::sleep(Duration::from_millis(1));
+        for (position, material, owner, needs_patch) in [
+            ([-1, -1, -1], 82, SectionPos::new(-1, -1, -1), true),
+            ([-8, 16, -8], 163, SectionPos::new(-1, 0, -1), true),
+            ([-8, -16, -8], 163, SectionPos::new(-1, -2, -1), true),
+            ([-8, 17, -8], 163, SectionPos::new(-1, 0, -1), false),
+        ] {
+            let mut app = App::new();
+            app.add_plugins(MinimalPlugins)
+                .init_resource::<PendingSections>()
+                .init_resource::<ChunkStore>()
+                .init_resource::<EditJournal>()
+                .init_resource::<WorldGeneration>()
+                .insert_resource(WorldAccess::Replica { ready: true })
+                .add_message::<SectionPublished>()
+                .add_message::<PreparedColumnChanged>()
+                .add_systems(Update, receive_jobs);
+            let (construction_owner, local) = global_to_section(position);
+            let mut saved = EditJournal::default();
+            saved.record(position, material).unwrap();
+            for section in saved.changed_sections() {
+                app.world_mut()
+                    .resource_mut::<EditJournal>()
+                    .import_delta(saved.section_delta(section))
+                    .unwrap();
+            }
+            assert!(
+                app.world()
+                    .resource::<EditJournal>()
+                    .fluid_snapshot(owner)
+                    .unwrap()
+                    .is_empty()
+            );
+            let mut data = BlockSection::empty(owner).unwrap();
+            if owner == construction_owner {
+                data.set_block(local, material).unwrap();
+            }
+            let journal = app.world().resource::<EditJournal>();
+            let epoch = journal.mesh_epoch(owner);
+            let water_epoch = journal.water_mesh_epoch(owner);
+            let generated = GeneratedSection {
+                data,
+                mesh: None,
+                surface_sections: None,
+                water: None,
+                props: Vec::new(),
+                fluid_wake: Vec::new(),
+            };
+            app.world_mut()
+                .resource_mut::<ChunkStore>()
+                .wanted
+                .insert(owner);
+            app.world_mut().resource_mut::<PendingSections>().0.insert(
+                owner,
+                SectionJob {
+                    positions: vec![owner],
+                    task: AsyncComputeTaskPool::get().spawn(async move {
+                        ColumnOutput {
+                            coordinate: [owner.x, owner.z],
+                            remesh: false,
+                            prepared: None,
+                            sections: vec![(owner, epoch, water_epoch, Ok(generated))],
+                        }
+                    }),
+                },
+            );
+            let deadline = Instant::now() + Duration::from_secs(5);
+            while !app.world().resource::<PendingSections>().0.is_empty() {
+                app.update();
+                assert!(Instant::now() < deadline);
+                std::thread::sleep(Duration::from_millis(1));
+            }
+            assert_eq!(
+                app.world()
+                    .resource::<ChunkStore>()
+                    .water_dirty
+                    .contains(&owner),
+                needs_patch,
+                "construction at {position:?} must affect only the one-cell water halo"
+            );
+            assert_eq!(
+                app.world().resource::<ChunkStore>().loaded[&owner].water_epoch,
+                if needs_patch {
+                    water_epoch - 1
+                } else {
+                    water_epoch
+                }
+            );
         }
-        assert!(
-            app.world()
-                .resource::<ChunkStore>()
-                .water_dirty
-                .contains(&owner)
-        );
-        assert_eq!(
-            app.world().resource::<ChunkStore>().loaded[&owner].water_epoch,
-            water_epoch - 1
-        );
     }
 
     #[test]

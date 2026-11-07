@@ -399,7 +399,7 @@ pub(super) fn markers(
     out
 }
 
-pub(super) fn albedo(sample: &MapSample, palette: &MapPalette) -> [f32; 3] {
+pub(super) fn albedo(sample: &MapSample, palette: &MapPalette, layer: MapLayer) -> [f32; 3] {
     let mut rgb = palette
         .colors
         .get(usize::from(sample.material))
@@ -426,6 +426,14 @@ pub(super) fn albedo(sample: &MapSample, palette: &MapPalette) -> [f32; 3] {
                 .map(|(w, c)| w * c[a])
                 .sum()
         });
+        if layer == MapLayer::Surface
+            && sample.material == 1
+            && palette.authored_grass
+            && let Some(top) = palette.surface_grass
+        {
+            let tint = palette.authored_grass_tint(grass);
+            return std::array::from_fn(|axis| top[axis] * tint[axis]);
+        }
         let turf = palette.colors.get(1).copied().unwrap_or([0.38; 3]);
         let sand = palette.colors.get(4).copied().unwrap_or([0.72, 0.60, 0.34]);
         let snow = palette.colors.get(5).copied().unwrap_or([0.94, 0.97, 1.0]);
@@ -465,7 +473,11 @@ pub(super) fn tile(detail: &DetailTile, palette: &MapPalette) -> MapTile {
     };
     for (i, sample) in detail.cells.iter().enumerate() {
         if sample.known {
-            tile.pixels[i * 4..i * 4 + 4].copy_from_slice(&srgb(albedo(sample, palette)));
+            tile.pixels[i * 4..i * 4 + 4].copy_from_slice(&srgb(albedo(
+                sample,
+                palette,
+                detail.layer,
+            )));
             if let Some(relief) = tile.relief.as_mut() {
                 relief.heights[i] = sample.height;
                 if sample.water_depth > 0 {
@@ -515,7 +527,7 @@ fn sample(
         .filter(|s| s.known)
     {
         return Pixel {
-            color: color.unwrap_or_else(|| srgb(albedo(&sample, palette))),
+            color: color.unwrap_or_else(|| srgb(albedo(&sample, palette, layer))),
             height: sample.height,
             known: sample.known,
             water: sample.water_depth > 0,
@@ -792,14 +804,27 @@ pub(super) fn overlay_at(
     pixels
 }
 
+#[cfg(test)]
 pub(super) fn marker_overlay(
     projection: &Projection,
     level: i64,
     markers: &[Marker],
     icon_scale: f32,
 ) -> Vec<u8> {
+    marker_overlay_with_underlay(projection, level, markers, icon_scale, None)
+}
+
+pub(super) fn marker_overlay_with_underlay(
+    projection: &Projection,
+    level: i64,
+    markers: &[Marker],
+    icon_scale: f32,
+    underlay: Option<&[u8]>,
+) -> Vec<u8> {
     let size = projection.size;
-    let mut pixels = vec![0; size * size * 4];
+    let mut pixels = underlay
+        .filter(|p| p.len() == size * size * 4)
+        .map_or_else(|| vec![0; size * size * 4], <[u8]>::to_vec);
     let icon_scale = if icon_scale.is_finite() {
         icon_scale.clamp(1.0, 2.5)
     } else {
@@ -904,6 +929,7 @@ mod tests {
                         water: 0,
                     })),
                     source_revision: None,
+                    palette_fingerprint: MapPalette::default().fingerprint(),
                     used: 0,
                 },
             );
@@ -992,6 +1018,7 @@ mod tests {
                     water: u16::MAX,
                 })),
                 source_revision: None,
+                palette_fingerprint: MapPalette::default().fingerprint(),
                 used: 0,
             },
         )]);
@@ -1196,6 +1223,7 @@ mod tests {
                 detail: Some(std::sync::Arc::new(detail)),
                 overview: None,
                 source_revision: Some(2),
+                palette_fingerprint: palette.fingerprint(),
                 used: 1,
             },
         )]);
@@ -1227,6 +1255,7 @@ mod tests {
                 tile: None,
                 detail: None,
                 source_revision: None,
+                palette_fingerprint: MapPalette::default().fingerprint(),
                 used: 0,
             },
         )]);
@@ -1449,7 +1478,7 @@ mod tests {
             known: true,
             ..Default::default()
         };
-        let grass = albedo(&sample, &palette);
+        let grass = albedo(&sample, &palette, MapLayer::Surface);
         assert!(grass[1] > grass[0] && grass[1] > grass[2]);
         palette.colors[3] = [0.8, 0.1, 0.2];
         assert_eq!(
@@ -1458,7 +1487,8 @@ mod tests {
                     material: 3,
                     ..sample
                 },
-                &palette
+                &palette,
+                MapLayer::Surface
             ),
             [0.8, 0.1, 0.2]
         );
@@ -1469,10 +1499,128 @@ mod tests {
                     material: 3,
                     ..sample
                 },
-                &palette
+                &palette,
+                MapLayer::Surface
             )
         );
     }
+
+    fn authored_palette() -> MapPalette {
+        let mut palette = MapPalette {
+            colors: vec![[0.15, 0.09, 0.03]; 44],
+            biome_colors: [[0.28, 0.40, 0.08]; 8],
+            authored_grass: true,
+            surface_grass: Some([0.28, 0.46, 0.08]),
+            ..Default::default()
+        };
+        palette.biome_colors[2] = [0.2, 0.5, 0.1];
+        palette.biome_colors[3] = [0.8, 0.6, 0.05];
+        palette
+    }
+
+    #[test]
+    fn authored_surface_grass_uses_the_painted_top_and_relative_biome_color() {
+        let palette = authored_palette();
+        let forest = MapSample {
+            material: 1,
+            biome_weights: [0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            shore: 0.8,
+            snow: 0.9,
+            known: true,
+            ..Default::default()
+        };
+        // Authored world grass uses its own top, including at transition bands.
+        assert_eq!(
+            albedo(&forest, &palette, MapLayer::Surface),
+            palette.surface_grass.unwrap()
+        );
+        let blend = MapSample {
+            biome_weights: [0.0, 0.0, 0.5, 0.5, 0.0, 0.0, 0.0, 0.0],
+            ..forest
+        };
+        for (actual, expected) in albedo(&blend, &palette, MapLayer::Surface)
+            .into_iter()
+            .zip([0.448, 0.506, 0.06])
+        {
+            assert!((actual - expected).abs() < 1e-6);
+        }
+    }
+
+    #[test]
+    fn surface_grass_palette_does_not_brighten_caves_or_other_materials() {
+        let authored = authored_palette();
+        let neutral = MapPalette {
+            authored_grass: false,
+            surface_grass: None,
+            ..authored.clone()
+        };
+        for material in [1, 3, 4, 5, 7, 14, 27] {
+            let sample = MapSample {
+                material,
+                shore: 0.6,
+                snow: 0.2,
+                known: true,
+                ..Default::default()
+            };
+            let cave = MapLayer::Cave { level: -32 };
+            assert_eq!(
+                albedo(&sample, &authored, cave),
+                albedo(&sample, &neutral, cave)
+            );
+            if material != 1 {
+                assert_eq!(
+                    albedo(&sample, &authored, MapLayer::Surface),
+                    albedo(&sample, &neutral, MapLayer::Surface)
+                );
+            }
+        }
+        let grass = MapSample {
+            material: 1,
+            ..Default::default()
+        };
+        for (actual, expected) in albedo(&grass, &authored, MapLayer::Cave { level: -32 })
+            .into_iter()
+            .zip([0.15 * 0.28, 0.09 * 0.40, 0.03 * 0.08])
+        {
+            assert!((actual - expected).abs() < 1e-7);
+        }
+    }
+
+    #[test]
+    fn baked_tiles_and_live_fallbacks_respect_the_surface_and_cave_palette() {
+        let palette = authored_palette();
+        let mut colors = Vec::new();
+        for layer in [MapLayer::Surface, MapLayer::Cave { level: -32 }] {
+            let mut detail = DetailTile {
+                coordinate: [0, 0],
+                layer,
+                revision: 0,
+                cells: [MapSample::default(); 256],
+            };
+            detail.cells[0] = MapSample {
+                material: 1,
+                known: true,
+                ..Default::default()
+            };
+            let baked = tile(&detail, &palette);
+            let entries = HashMap::from([(
+                ([0, 0], layer),
+                Entry {
+                    tile: None,
+                    detail: Some(std::sync::Arc::new(detail)),
+                    overview: None,
+                    source_revision: None,
+                    palette_fingerprint: palette.fingerprint(),
+                    used: 0,
+                },
+            )]);
+            let live = sample(&entries, layer, [0, 0], &palette, -32);
+            assert_eq!(&baked.pixels[..4], &live.color);
+            colors.push(live.color);
+        }
+        assert!(colors[0][1] > colors[1][1] * 2);
+    }
+
     #[test]
     fn rotation_projection_relief_and_circle_are_consistent() {
         let p = Projection::new([-8, -8], 192, 0.0, false, true);
@@ -1520,6 +1668,7 @@ mod tests {
                 detail: Some(std::sync::Arc::new(detail)),
                 overview: None,
                 source_revision: None,
+                palette_fingerprint: MapPalette::default().fingerprint(),
                 used: 0,
             },
         );

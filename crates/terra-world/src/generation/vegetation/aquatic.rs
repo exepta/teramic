@@ -15,7 +15,14 @@ impl TerraGenerator {
         column: SurfaceColumn,
         depth: f64,
     ) -> Option<WorldProp> {
-        if !(0.65..=40.0).contains(&depth)
+        let modern =
+            self.config().landscape_revision >= 4 && column.ocean.max_vegetation_depth > 0.0;
+        let max_depth = if modern && column.ocean.max_vegetation_depth > 0.0 {
+            f64::from(column.ocean.max_vegetation_depth)
+        } else {
+            40.0
+        };
+        if !(0.65..=max_depth).contains(&depth)
             || !MaterialId::from_raw(material).is_some_and(MaterialId::supports_water_plants)
         {
             return None;
@@ -31,12 +38,36 @@ impl TerraGenerator {
             MaterialId::from_raw(material),
             Some(MaterialId::Sand | MaterialId::Dirt | MaterialId::Clay | MaterialId::Mud)
         );
-        let light = (1.0 - ((depth - 16.0) / 24.0).clamp(0.0, 1.0)) as f32;
+        let light = if modern {
+            // Deep meadows thin out gradually; the configurable marine floor
+            // range no longer falls through a hard legacy forty-metre cutoff.
+            (1.0 - ((depth / max_depth - 0.45) / 0.55).clamp(0.0, 0.85)) as f32
+        } else {
+            (1.0 - ((depth - 16.0) / 24.0).clamp(0.0, 1.0)) as f32
+        };
         let shelf = habitat.rock * (1.0 - (column.slope as f32 / 3.5).clamp(0.0, 0.75));
-        let coral = reef * shelf * habitat.cover * light;
-        let meadow = forest * habitat.cover * light * if soft { 1.0 } else { 0.30 };
+        let coral = if modern {
+            habitat.coral_density * shelf * habitat.cover * light
+        } else {
+            reef * shelf * habitat.cover * light
+        };
+        let meadow = if modern {
+            let substrate = match MaterialId::from_raw(material) {
+                Some(MaterialId::Gravel) => 0.70,
+                Some(MaterialId::Stone) => 0.25,
+                _ if soft => 1.0,
+                _ => 0.30,
+            };
+            habitat.seagrass_density * habitat.cover * light * substrate
+        } else {
+            forest * habitat.cover * light * if soft { 1.0 } else { 0.30 }
+        };
         let density = if marine > 0.1 {
-            (0.025 + coral * 0.47 + meadow * 0.48 + cold * habitat.cover * 0.12).min(0.52)
+            if modern {
+                (0.015 + coral + meadow).min(0.60)
+            } else {
+                (0.025 + coral * 0.47 + meadow * 0.48 + cold * habitat.cover * 0.12).min(0.52)
+            }
         } else if depth < 12.0 && soft {
             0.08
         } else {
@@ -55,11 +86,20 @@ impl TerraGenerator {
             } else {
                 PropKind::BranchingCoral
             }
-        } else if reef > 0.35 && habitat.cover > 0.25 && shelf > 0.25 && choice < 0.18 {
+        } else if reef > 0.35
+            && habitat.cover > 0.25
+            && shelf > 0.25
+            && choice < 0.18
+            && (!modern || habitat.coral_density > 0.0)
+        {
             PropKind::SeaAnemone
         } else if marine > 0.2 && soft && habitat.cover < 0.60 && choice > 0.91 {
             PropKind::SeaCucumber
-        } else if (habitat.cover < 0.1 && marine > 0.1) || choice > 0.85 || depth > 29.0 {
+        } else if (habitat.cover < 0.1 && marine > 0.1)
+            || choice > 0.85
+            || (!modern && depth > 29.0)
+            || (modern && meadow <= 0.0)
+        {
             PropKind::SmallStones
         } else {
             PropKind::Seagrass
@@ -100,7 +140,11 @@ mod tests {
     use super::*;
     #[test]
     fn reefs_are_deterministic_rooted_underwater_and_include_all_seven_species() {
-        let terrain = TerraGenerator::new(Default::default()).unwrap();
+        let terrain = TerraGenerator::new(terra_core::WorldConfig {
+            landscape_revision: 3,
+            ..Default::default()
+        })
+        .unwrap();
         let mut column = terrain.surface_column(0.5, 0.5);
         column.biome.weights.ocean = 1.0;
         column.biome.temperature = 0.85;
@@ -157,7 +201,11 @@ mod tests {
 
     #[test]
     fn kelp_forests_have_tall_fronds_and_cold_water_excludes_tropical_corals() {
-        let terrain = TerraGenerator::new(Default::default()).unwrap();
+        let terrain = TerraGenerator::new(terra_core::WorldConfig {
+            landscape_revision: 3,
+            ..Default::default()
+        })
+        .unwrap();
         let mut column = terrain.surface_column(0.5, 0.5);
         column.biome.weights.ocean = 1.0;
         column.slope = 0.1;
@@ -194,5 +242,112 @@ mod tests {
             tall > 50 && cold_plants > 50,
             "tall={tall}, cold={cold_plants}"
         );
+    }
+
+    #[test]
+    fn revision_four_seagrass_reaches_deep_warm_cold_and_swamp_floors() {
+        let terrain = TerraGenerator::new(terra_core::WorldConfig {
+            landscape_revision: 4,
+            sea_level: 22.0,
+            rivers: true,
+            biome_definitions: None,
+            ..Default::default()
+        })
+        .unwrap();
+        let mut column = terrain.surface_column(0.5, 0.5);
+        column.slope = 0.1;
+        column.water_level = Some(terrain.config().sea_level);
+        for (temperature, humidity, ocean) in [(0.9, 0.25, 1.0), (0.1, 0.8, 1.0), (0.9, 0.95, 0.6)]
+        {
+            column.biome.temperature = temperature;
+            column.biome.humidity = humidity;
+            column.biome.weights.ocean = ocean;
+            let mut seagrass = 0;
+            let mut coral = 0;
+            for z in (-96..96).step_by(2) {
+                for x in (-96..96).step_by(2) {
+                    column.ocean = terrain.ocean_with_biome(
+                        f64::from(x) + 0.5,
+                        f64::from(z) + 0.5,
+                        column.biome,
+                    );
+                    let support = [
+                        i64::from(x),
+                        terrain.config().sea_level.floor() as i64 - 65,
+                        i64::from(z),
+                    ];
+                    let section = terra_voxel::global_to_section(support).0;
+                    let material = column.ocean.floor_material().unwrap() as u16;
+                    let prop = terrain.aquatic_prop(support, section, material, column, 64.0);
+                    assert_eq!(
+                        prop,
+                        terrain.aquatic_prop(support, section, material, column, 64.0)
+                    );
+                    if let Some(prop) = prop {
+                        seagrass += usize::from(prop.kind == PropKind::Seagrass);
+                        coral += usize::from(matches!(
+                            prop.kind,
+                            PropKind::PlateCoral | PropKind::TubeCoral | PropKind::BranchingCoral
+                        ));
+                        assert_eq!(crate::props::placement::support(&prop), support);
+                        assert!(prop.bounds()[1][1] <= column.water_level.unwrap());
+                    }
+                    assert!(
+                        terrain
+                            .aquatic_prop(
+                                support,
+                                section,
+                                material,
+                                column,
+                                f64::from(column.ocean.max_vegetation_depth) + 1.0
+                            )
+                            .is_none()
+                    );
+                }
+            }
+            assert!(
+                seagrass > 50,
+                "temperature={temperature} humidity={humidity} seagrass={seagrass}"
+            );
+            if temperature < 0.2 {
+                assert_eq!(coral, 0);
+            }
+        }
+    }
+
+    #[test]
+    fn revision_four_preserves_the_freshwater_vegetation_path_exactly() {
+        let config = terra_core::WorldConfig {
+            landscape_revision: 4,
+            sea_level: 22.0,
+            rivers: true,
+            biome_definitions: Some(terra_core::BiomeDefinitions::default()),
+            ..Default::default()
+        };
+        let modern = TerraGenerator::new(config.clone()).unwrap();
+        let legacy = TerraGenerator::new(terra_core::WorldConfig {
+            landscape_revision: 3,
+            ..config
+        })
+        .unwrap();
+        let mut column = modern.surface_column(0.5, 0.5);
+        column.ocean = Default::default();
+        column.water_level = Some(modern.config().sea_level);
+        let mut seagrass = 0;
+        for z in -48..48 {
+            for x in -48..48 {
+                let support = [x, modern.config().sea_level.floor() as i64 - 9, z];
+                let section = terra_voxel::global_to_section(support).0;
+                let current =
+                    modern.aquatic_prop(support, section, MaterialId::Sand as u16, column, 8.0);
+                assert_eq!(
+                    current,
+                    legacy.aquatic_prop(support, section, MaterialId::Sand as u16, column, 8.0)
+                );
+                seagrass +=
+                    usize::from(current.is_some_and(|prop| prop.kind == PropKind::Seagrass));
+            }
+        }
+        assert!(seagrass > 50);
     }
 }

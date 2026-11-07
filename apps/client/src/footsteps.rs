@@ -146,6 +146,11 @@ fn update(
         events.write(Footstep {
             position: if matches!(material, 4 | 5) {
                 Vec3::new(feet.x, (support[1] + 1) as f32, feet.z)
+            } else if material == 98 {
+                let layers = world.journal.object_state(support).map_or(1, |state| {
+                    terra_core::construction::snow_layers(state.facing)
+                });
+                Vec3::new(feet.x, support[1] as f32 + f32::from(layers) / 8.0, feet.z)
             } else {
                 feet
             },

@@ -12,6 +12,8 @@ pub enum BlockError {
     CoordinateOverflow,
     #[error("block revision exhausted")]
     RevisionOverflow,
+    #[error("block is bound to an active structure; dissolve it before removal")]
+    ProtectedStructure,
 }
 /// Each block has exactly one owner. Neighbor data is read-only meshing padding.
 #[derive(Debug, Clone, PartialEq, Eq)]

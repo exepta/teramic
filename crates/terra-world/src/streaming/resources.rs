@@ -1,6 +1,7 @@
 use crate::{TerraGenerator, generation::sections::GeneratedSection};
+use bevy::platform::collections::{HashMap, HashSet};
 use bevy::{prelude::*, tasks::Task};
-use std::collections::{HashMap, HashSet, VecDeque};
+use std::collections::VecDeque;
 use std::sync::Arc;
 use terra_voxel::meshing::BlockMesh;
 use terra_voxel::{BlockSection, SectionPos, global_to_section};
@@ -167,6 +168,15 @@ impl ChunkStore {
         self.columns.get(&coordinate).cloned()
     }
 
+    /// Unique callers may deduplicate by stable settlement ID. Never plans regions.
+    pub fn village_settlements(
+        &self,
+    ) -> impl Iterator<Item = &Arc<crate::generation::structures::VillageSettlement>> {
+        self.columns
+            .values()
+            .flat_map(|column| column.village_settlements())
+    }
+
     /// Settlement metadata already prepared by streaming; never schedules generation.
     pub fn village_residents(
         &self,
@@ -198,10 +208,33 @@ impl ChunkStore {
         global: [i64; 3],
         block: u16,
     ) -> crate::water::FluidCell {
+        let fluid = self.raw_fluid_cell_at(terrain, journal, global, block);
+        if crate::water::space::partial(block) {
+            crate::water::space::FluidSpace::wet_at(
+                journal,
+                global,
+                |p| self.block_at(p),
+                |p, material| self.raw_fluid_cell_at(terrain, journal, p, material),
+            )
+            .clamp(fluid)
+        } else {
+            fluid
+        }
+    }
+
+    /// Unclipped occupancy for bounded shape-region queries. Never recurse
+    /// through the neighbouring fence's own clipping query.
+    pub(crate) fn raw_fluid_cell_at(
+        &self,
+        terrain: &TerraGenerator,
+        journal: &crate::edits::EditJournal,
+        global: [i64; 3],
+        block: u16,
+    ) -> crate::water::FluidCell {
         if !terrain.config().water || !crate::water::can_hold_fluid(block) {
             return crate::water::FluidCell::default();
         }
-        let fluid = if let Some(fluid) = journal.fluid(global) {
+        if let Some(fluid) = journal.fluid(global) {
             fluid
         } else if let Some(surface) = self
             .columns
@@ -210,12 +243,7 @@ impl ChunkStore {
         {
             crate::water::fluid::from_columns(surface.water_columns(), global[1])
         } else {
-            crate::water::fluid_cell_at(terrain, journal, global, block)
-        };
-        if crate::water::space::partial(block) {
-            crate::water::space::FluidSpace::at(journal, global, |p| self.block_at(p)).clamp(fluid)
-        } else {
-            fluid
+            crate::water::fluid::natural_cell(terrain, global)
         }
     }
     pub fn apply_confirmed_delta(
@@ -260,6 +288,11 @@ impl ChunkStore {
     pub fn is_wanted(&self, p: SectionPos) -> bool {
         self.wanted.contains(&p)
     }
+    pub(crate) fn mark_dirty_if_wanted(&mut self, position: SectionPos) {
+        if self.is_wanted(position) {
+            self.dirty.insert(position);
+        }
+    }
     /// Current streaming interest, including sections whose jobs have not finished.
     pub fn wanted_sections(&self) -> impl Iterator<Item = SectionPos> + '_ {
         self.wanted.iter().copied()
@@ -303,6 +336,9 @@ impl ChunkStore {
         if !terrain.config().water {
             return None;
         }
+        if self.block_at(global) == Some(terra_core::plumbing::BASIN) {
+            return crate::plumbing::basin_water_column(self, journal, position);
+        }
         let natural = self
             .columns
             .get(&[global[0].div_euclid(16), global[2].div_euclid(16)])
@@ -311,7 +347,9 @@ impl ChunkStore {
                 || terrain.water_columns(global[0] as f64 + 0.5, global[2] as f64 + 0.5),
                 |s| s.water_columns(),
             );
-        let cell_at = |y| {
+        // The entry face selects the connected segment in neighbouring cells:
+        // -1 enters their bottom, +1 their top, 0 samples the initial point.
+        let cell_at = |y, entry_face: i8| {
             let p = [global[0], y, global[2]];
             if !self.block_at(p).is_some_and(crate::water::can_hold_fluid) {
                 return None;
@@ -326,25 +364,47 @@ impl ChunkStore {
             if !crate::water::space::partial(block) {
                 return Some((0.0, cell.height(), cell));
             }
-            let space = crate::water::space::FluidSpace::at(journal, p, |q| self.block_at(q));
+            let space = crate::water::space::FluidSpace::wet_at(
+                journal,
+                p,
+                |q| self.block_at(q),
+                |q, material| self.raw_fluid_cell_at(terrain, journal, q, material),
+            );
             let x = position[0] - global[0] as f64;
             let z = position[2] - global[2] as f64;
-            space
+            let mut intervals: Vec<_> = space
                 .wet_boxes(cell.height())
                 .into_iter()
                 .filter(|b| {
                     x >= b.minimum[0] && x < b.maximum[0] && z >= b.minimum[2] && z < b.maximum[2]
                 })
-                .filter(|b| {
-                    y != global[1]
-                        || !exact
-                        || position[1] >= y as f64 + b.minimum[1]
-                            && position[1] < y as f64 + b.maximum[1]
+                .map(|b| (b.minimum[1], b.maximum[1]))
+                .collect();
+            intervals.sort_unstable_by(|a, b| a.0.total_cmp(&b.0).then(a.1.total_cmp(&b.1)));
+            let mut merged = Vec::<(f64, f64)>::with_capacity(intervals.len());
+            for (lo, hi) in intervals {
+                if let Some(previous) = merged.last_mut()
+                    && lo <= previous.1 + 1e-8
+                {
+                    previous.1 = previous.1.max(hi);
+                } else {
+                    merged.push((lo, hi));
+                }
+            }
+            // wet_boxes partitions the same connected liquid into many AABBs.
+            // Their touching vertical boundaries are not a bed or surface;
+            // retain only genuine gaps made by solid geometry at this X/Z.
+            merged
+                .into_iter()
+                .filter(|&(lo, hi)| match entry_face {
+                    -1 => lo <= 1e-8,
+                    1 => hi >= 1.0 - 1e-8,
+                    _ => !exact || position[1] >= y as f64 + lo && position[1] < y as f64 + hi,
                 })
-                .map(|b| (b.minimum[1], b.maximum[1], space.clamp(cell)))
+                .map(|(lo, hi)| (lo, hi, space.clamp(cell)))
                 .max_by(|a, b| a.1.total_cmp(&b.1))
         };
-        let (mut lower, mut upper_height, mut upper) = cell_at(global[1])?;
+        let (mut lower, mut upper_height, mut upper) = cell_at(global[1], 0)?;
         let mut top = global[1];
         let mut bottom = top;
         for _ in 0..256 {
@@ -352,7 +412,7 @@ impl ChunkStore {
                 break;
             }
             let next = top.checked_add(1)?;
-            let Some((lo, hi, above)) = cell_at(next) else {
+            let Some((lo, hi, above)) = cell_at(next, -1) else {
                 break;
             };
             if lo > 1e-8 {
@@ -367,7 +427,7 @@ impl ChunkStore {
                 break;
             }
             let next = bottom.checked_sub(1)?;
-            let Some((lo, hi, _)) = cell_at(next) else {
+            let Some((lo, hi, _)) = cell_at(next, 1) else {
                 break;
             };
             if hi < 1.0 - 1e-8 {
@@ -379,11 +439,9 @@ impl ChunkStore {
         let top_is_placed = self.block_at([global[0], top, global[2]])
             == Some(terra_voxel::MaterialId::FluidWater as u16);
         let level = if upper.source && !top_is_placed {
-            natural
-                .at(top)
-                .map_or(top as f64 + upper.height(), |column| {
-                    column.level.min(top as f64 + upper_height)
-                })
+            natural.at(top).map_or(top as f64 + upper_height, |column| {
+                column.level.min(top as f64 + upper_height)
+            })
         } else {
             top as f64 + upper_height
         };
@@ -431,3 +489,7 @@ pub enum StreamingSet {
     Receive,
     Dispatch,
 }
+
+#[cfg(test)]
+#[path = "water_column_tests.rs"]
+mod water_column_tests;

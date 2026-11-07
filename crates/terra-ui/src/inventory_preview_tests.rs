@@ -201,6 +201,51 @@ fn unchanged_previews_do_not_write_image_or_visibility_change_ticks() {
 }
 
 #[test]
+fn arbitrary_rgb_dyes_share_one_preview_preserve_opacity_and_reset_when_rebound() {
+    use terra_core::beds::DyeColor;
+    let mut app = fixture();
+    let handle = image(&mut app);
+    app.world_mut()
+        .resource_mut::<ItemPreviewImages>()
+        .0
+        .insert(ItemKind::Dye(DyeColor::White), handle.clone());
+    app.world_mut()
+        .resource_mut::<ItemPreviewImages>()
+        .0
+        .insert(ItemKind::Stick, handle.clone());
+    let rgb = [32, 144, 240];
+    let entity = node(&mut app, &preview_key(ItemKind::Dye(DyeColor::Rgb(rgb))));
+    app.update();
+    let image = app.world().get::<ImageNode>(entity).unwrap();
+    assert_eq!(image.image, handle);
+    assert_eq!(
+        image.color,
+        Color::srgba_u8(32, 144, 240, 255).with_alpha(0.37)
+    );
+    assert_eq!(app.world().resource::<ItemPreviewImages>().0.len(), 2);
+    app.world_mut()
+        .get_mut::<ImageNode>(entity)
+        .unwrap()
+        .color
+        .set_alpha(0.12);
+    app.update();
+    assert_eq!(
+        app.world().get::<ImageNode>(entity).unwrap().color.alpha(),
+        0.12
+    );
+    app.world_mut()
+        .get_mut::<ImageMetadata>(entity)
+        .unwrap()
+        .alt = Some(preview_key(ItemKind::Stick));
+    app.update();
+    assert_eq!(
+        app.world().get::<ImageNode>(entity).unwrap().color,
+        Color::srgba(0.2, 0.3, 0.4, 0.12)
+    );
+    assert!(app.world().get::<PreviewTint>(entity).is_none());
+}
+
+#[test]
 fn portrait_blinks_do_not_rebind_unchanged_item_images() {
     let mut app = fixture();
     let item_handle = image(&mut app);

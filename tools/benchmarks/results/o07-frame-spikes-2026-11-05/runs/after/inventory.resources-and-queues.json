@@ -1,0 +1,2942 @@
+{
+  "inventory_phase_cpu_scopes": {
+    "Closed": {
+      "character.current": {
+        "calls": 1905,
+        "cumulative_max_ms": 0.031180999999999997,
+        "mean_ms": 0.0017963905511810838,
+        "over_8_ms": 0,
+        "phase": "Closed",
+        "scope": "character.current",
+        "total_ms": 3.4221239999999646
+      },
+      "character.ground": {
+        "calls": 1905,
+        "cumulative_max_ms": 0.5030600000000001,
+        "mean_ms": 0.013819301837270221,
+        "over_8_ms": 0,
+        "phase": "Closed",
+        "scope": "character.ground",
+        "total_ms": 26.32576999999977
+      },
+      "character.move": {
+        "calls": 1905,
+        "cumulative_max_ms": 0.48199000000000003,
+        "mean_ms": 0.022409841469816144,
+        "over_8_ms": 0,
+        "phase": "Closed",
+        "scope": "character.move",
+        "total_ms": 42.69074799999976
+      },
+      "character.step": {
+        "calls": 1905,
+        "cumulative_max_ms": 0.549952,
+        "mean_ms": 0.04347448398950146,
+        "over_8_ms": 0,
+        "phase": "Closed",
+        "scope": "character.step",
+        "total_ms": 82.81889200000029
+      },
+      "character.water": {
+        "calls": 1905,
+        "cumulative_max_ms": 0.014221,
+        "mean_ms": 0.00040240419947504323,
+        "over_8_ms": 0,
+        "phase": "Closed",
+        "scope": "character.water",
+        "total_ms": 0.7665799999999574
+      },
+      "chests.refresh_candidates": {
+        "calls": 220,
+        "cumulative_max_ms": 0.0012699999999999999,
+        "mean_ms": 0.00031682727272727343,
+        "over_8_ms": 0,
+        "phase": "Closed",
+        "scope": "chests.refresh_candidates",
+        "total_ms": 0.06970200000000015
+      },
+      "collision.dispatch": {
+        "calls": 2033,
+        "cumulative_max_ms": 0.8889180000000001,
+        "mean_ms": 0.1383227437284799,
+        "over_8_ms": 0,
+        "phase": "Closed",
+        "scope": "collision.dispatch",
+        "total_ms": 281.2101379999997
+      },
+      "collision.receive": {
+        "calls": 2033,
+        "cumulative_max_ms": 0.193904,
+        "mean_ms": 0.01576157697983268,
+        "over_8_ms": 0,
+        "phase": "Closed",
+        "scope": "collision.receive",
+        "total_ms": 32.04328599999984
+      },
+      "cpu.extract_wall": {
+        "calls": 1315,
+        "cumulative_max_ms": 205.410428,
+        "mean_ms": 0.5440729847908706,
+        "over_8_ms": 0,
+        "phase": "Closed",
+        "scope": "cpu.extract_wall",
+        "total_ms": 715.4559749999949
+      },
+      "cpu.main_schedule_wall": {
+        "calls": 1315,
+        "cumulative_max_ms": 1109.836135,
+        "mean_ms": 8.346762913308012,
+        "over_8_ms": 794,
+        "phase": "Closed",
+        "scope": "cpu.main_schedule_wall",
+        "total_ms": 10975.993231000037
+      },
+      "cpu.render_handoff_wall": {
+        "calls": 1315,
+        "cumulative_max_ms": 205.438588,
+        "mean_ms": 0.7154031467680584,
+        "over_8_ms": 0,
+        "phase": "Closed",
+        "scope": "cpu.render_handoff_wall",
+        "total_ms": 940.7551379999968
+      },
+      "cpu.render_schedule_wall": {
+        "calls": 1314,
+        "cumulative_max_ms": 132.211806,
+        "mean_ms": 7.476101910958897,
+        "over_8_ms": 418,
+        "phase": "Closed",
+        "scope": "cpu.render_schedule_wall",
+        "total_ms": 9823.59791099999
+      },
+      "creatures.navigation.path": {
+        "calls": 4,
+        "cumulative_max_ms": 0.097402,
+        "mean_ms": 0.041108000000000006,
+        "over_8_ms": 0,
+        "phase": "Closed",
+        "scope": "creatures.navigation.path",
+        "total_ms": 0.16443200000000002
+      },
+      "creatures.navigation.surface_path": {
+        "calls": 12,
+        "cumulative_max_ms": 1.158495,
+        "mean_ms": 0.567358,
+        "over_8_ms": 0,
+        "phase": "Closed",
+        "scope": "creatures.navigation.surface_path",
+        "total_ms": 6.808296
+      },
+      "creatures.needs.find_water": {
+        "calls": 140,
+        "cumulative_max_ms": 0.035741,
+        "mean_ms": 0.015719799999999985,
+        "over_8_ms": 0,
+        "phase": "Closed",
+        "scope": "creatures.needs.find_water",
+        "total_ms": 2.200771999999998
+      },
+      "creatures.needs.water_surface": {
+        "calls": 8959,
+        "cumulative_max_ms": 0.01305,
+        "mean_ms": 0.00015289563567364082,
+        "over_8_ms": 0,
+        "phase": "Closed",
+        "scope": "creatures.needs.water_surface",
+        "total_ms": 1.3697920000001482
+      },
+      "creatures.server_tick": {
+        "calls": 120,
+        "cumulative_max_ms": 4.609458,
+        "mean_ms": 1.846785774999996,
+        "over_8_ms": 0,
+        "phase": "Closed",
+        "scope": "creatures.server_tick",
+        "total_ms": 221.61429299999952
+      },
+      "integrated.autosave.snapshot": {
+        "calls": 2,
+        "cumulative_max_ms": 0.027311,
+        "mean_ms": 0.0258705,
+        "over_8_ms": 0,
+        "phase": "Closed",
+        "scope": "integrated.autosave.snapshot",
+        "total_ms": 0.051741
+      },
+      "lights.discover": {
+        "calls": 12,
+        "cumulative_max_ms": 1.42214,
+        "mean_ms": 0.085265083333334,
+        "over_8_ms": 0,
+        "phase": "Closed",
+        "scope": "lights.discover",
+        "total_ms": 1.0231810000000081
+      },
+      "lights.select": {
+        "calls": 1315,
+        "cumulative_max_ms": 1.471631,
+        "mean_ms": 0.0024631923954373043,
+        "over_8_ms": 0,
+        "phase": "Closed",
+        "scope": "lights.select",
+        "total_ms": 3.2390980000000553
+      },
+      "lights.shadow_visibility": {
+        "calls": 1315,
+        "cumulative_max_ms": 0.017669999999999998,
+        "mean_ms": 0.0018601315589353493,
+        "over_8_ms": 0,
+        "phase": "Closed",
+        "scope": "lights.shadow_visibility",
+        "total_ms": 2.446072999999984
+      },
+      "machines.refresh_candidates": {
+        "calls": 115,
+        "cumulative_max_ms": 0.00591,
+        "mean_ms": 0.0006888782608695639,
+        "over_8_ms": 0,
+        "phase": "Closed",
+        "scope": "machines.refresh_candidates",
+        "total_ms": 0.07922099999999985
+      },
+      "main.first": {
+        "calls": 1315,
+        "cumulative_max_ms": 1.607384,
+        "mean_ms": 0.14518380304182393,
+        "over_8_ms": 0,
+        "phase": "Closed",
+        "scope": "main.first",
+        "total_ms": 190.91670099999845
+      },
+      "main.fixed_loop": {
+        "calls": 1315,
+        "cumulative_max_ms": 5.775433,
+        "mean_ms": 0.40700620152091216,
+        "over_8_ms": 0,
+        "phase": "Closed",
+        "scope": "main.fixed_loop",
+        "total_ms": 535.2131549999995
+      },
+      "main.last": {
+        "calls": 1315,
+        "cumulative_max_ms": 1.686456,
+        "mean_ms": 0.12056573079847958,
+        "over_8_ms": 0,
+        "phase": "Closed",
+        "scope": "main.last",
+        "total_ms": 158.54393600000066
+      },
+      "main.post_update": {
+        "calls": 1315,
+        "cumulative_max_ms": 72.475517,
+        "mean_ms": 4.5063245247147945,
+        "over_8_ms": 0,
+        "phase": "Closed",
+        "scope": "main.post_update",
+        "total_ms": 5925.8167499999545
+      },
+      "main.pre_update": {
+        "calls": 1315,
+        "cumulative_max_ms": 5.0105059999999995,
+        "mean_ms": 0.37801788136882364,
+        "over_8_ms": 0,
+        "phase": "Closed",
+        "scope": "main.pre_update",
+        "total_ms": 497.0935140000031
+      },
+      "main.update": {
+        "calls": 1315,
+        "cumulative_max_ms": 238.168643,
+        "mean_ms": 2.674136393916378,
+        "over_8_ms": 1,
+        "phase": "Closed",
+        "scope": "main.update",
+        "total_ms": 3516.489358000037
+      },
+      "mapping.index.incremental": {
+        "calls": 12,
+        "cumulative_max_ms": 0.237455,
+        "mean_ms": 0.012239500000000033,
+        "over_8_ms": 0,
+        "phase": "Closed",
+        "scope": "mapping.index.incremental",
+        "total_ms": 0.1468740000000004
+      },
+      "mapping.index.journal": {
+        "calls": 12,
+        "cumulative_max_ms": 0.014191,
+        "mean_ms": 0.008096916666666667,
+        "over_8_ms": 0,
+        "phase": "Closed",
+        "scope": "mapping.index.journal",
+        "total_ms": 0.097163
+      },
+      "mapping.schedule": {
+        "calls": 59,
+        "cumulative_max_ms": 0.51764,
+        "mean_ms": 0.34421561016949176,
+        "over_8_ms": 0,
+        "phase": "Closed",
+        "scope": "mapping.schedule",
+        "total_ms": 20.308721000000013
+      },
+      "mapping.snapshot": {
+        "calls": 236,
+        "cumulative_max_ms": 0.048501,
+        "mean_ms": 0.01179049152542373,
+        "over_8_ms": 0,
+        "phase": "Closed",
+        "scope": "mapping.snapshot",
+        "total_ms": 2.7825560000000005
+      },
+      "openings.refresh_candidates": {
+        "calls": 115,
+        "cumulative_max_ms": 0.0024,
+        "mean_ms": 0.0008635913043478255,
+        "over_8_ms": 0,
+        "phase": "Closed",
+        "scope": "openings.refresh_candidates",
+        "total_ms": 0.09931299999999993
+      },
+      "props.contact_shadows": {
+        "calls": 1315,
+        "cumulative_max_ms": 0.986741,
+        "mean_ms": 0.0061733619771863904,
+        "over_8_ms": 0,
+        "phase": "Closed",
+        "scope": "props.contact_shadows",
+        "total_ms": 8.117971000000104
+      },
+      "props.dispatch": {
+        "calls": 1315,
+        "cumulative_max_ms": 43.166275,
+        "mean_ms": 0.03909200304182496,
+        "over_8_ms": 0,
+        "phase": "Closed",
+        "scope": "props.dispatch",
+        "total_ms": 51.40598399999982
+      },
+      "props.prepare": {
+        "calls": 180,
+        "cumulative_max_ms": 0.176354,
+        "mean_ms": 0.005605900000000257,
+        "over_8_ms": 0,
+        "phase": "Closed",
+        "scope": "props.prepare",
+        "total_ms": 1.0090620000000463
+      },
+      "props.select": {
+        "calls": 180,
+        "cumulative_max_ms": 0.7916569999999999,
+        "mean_ms": 0.1321158833333332,
+        "over_8_ms": 0,
+        "phase": "Closed",
+        "scope": "props.select",
+        "total_ms": 23.780858999999978
+      },
+      "props.upload": {
+        "calls": 1315,
+        "cumulative_max_ms": 0.715305,
+        "mean_ms": 0.007387158935361137,
+        "over_8_ms": 0,
+        "phase": "Closed",
+        "scope": "props.upload",
+        "total_ms": 9.714113999999896
+      },
+      "render.assets": {
+        "calls": 1315,
+        "cumulative_max_ms": 72.513648,
+        "mean_ms": 0.3115665634980944,
+        "over_8_ms": 0,
+        "phase": "Closed",
+        "scope": "render.assets",
+        "total_ms": 409.71003099999416
+      },
+      "render.bind_groups": {
+        "calls": 1315,
+        "cumulative_max_ms": 2.769839,
+        "mean_ms": 0.9255809057034255,
+        "over_8_ms": 0,
+        "phase": "Closed",
+        "scope": "render.bind_groups",
+        "total_ms": 1217.1388910000046
+      },
+      "render.camera_mainpass": {
+        "calls": 1315,
+        "cumulative_max_ms": 1.8600590000000001,
+        "mean_ms": 0.42385634752851953,
+        "over_8_ms": 0,
+        "phase": "Closed",
+        "scope": "render.camera_mainpass",
+        "total_ms": 557.3710970000031
+      },
+      "render.camera_postprocess": {
+        "calls": 1315,
+        "cumulative_max_ms": 2.8283,
+        "mean_ms": 0.5635399665399232,
+        "over_8_ms": 0,
+        "phase": "Closed",
+        "scope": "render.camera_postprocess",
+        "total_ms": 741.055055999999
+      },
+      "render.camera_prepass": {
+        "calls": 1315,
+        "cumulative_max_ms": 2.134065,
+        "mean_ms": 0.3527692220532306,
+        "over_8_ms": 0,
+        "phase": "Closed",
+        "scope": "render.camera_prepass",
+        "total_ms": 463.8915269999982
+      },
+      "render.cleanup": {
+        "calls": 1314,
+        "cumulative_max_ms": 1.648444,
+        "mean_ms": 0.04404017656012187,
+        "over_8_ms": 0,
+        "phase": "Closed",
+        "scope": "render.cleanup",
+        "total_ms": 57.86879200000014
+      },
+      "render.create_views": {
+        "calls": 1315,
+        "cumulative_max_ms": 0.745646,
+        "mean_ms": 0.09850437414448707,
+        "over_8_ms": 0,
+        "phase": "Closed",
+        "scope": "render.create_views",
+        "total_ms": 129.5332520000005
+      },
+      "render.execute": {
+        "calls": 1314,
+        "cumulative_max_ms": 10.290118,
+        "mean_ms": 3.238875817351593,
+        "over_8_ms": 0,
+        "phase": "Closed",
+        "scope": "render.execute",
+        "total_ms": 4255.882823999993
+      },
+      "render.graph_submit": {
+        "calls": 1314,
+        "cumulative_max_ms": 9.229956,
+        "mean_ms": 2.3772369353120397,
+        "over_8_ms": 0,
+        "phase": "Closed",
+        "scope": "render.graph_submit",
+        "total_ms": 3123.6893330000203
+      },
+      "render.mesh_allocator": {
+        "calls": 1315,
+        "cumulative_max_ms": 71.048867,
+        "mean_ms": 0.041738852471482166,
+        "over_8_ms": 0,
+        "phase": "Closed",
+        "scope": "render.mesh_allocator",
+        "total_ms": 54.886590999999044
+      },
+      "render.mesh_allocator.body": {
+        "calls": 1315,
+        "cumulative_max_ms": 71.023837,
+        "mean_ms": 0.028505993916350728,
+        "over_8_ms": 0,
+        "phase": "Closed",
+        "scope": "render.mesh_allocator.body",
+        "total_ms": 37.48538200000121
+      },
+      "render.mesh_bind_groups": {
+        "calls": 1315,
+        "cumulative_max_ms": 2.7241269999999997,
+        "mean_ms": 0.884742403041822,
+        "over_8_ms": 0,
+        "phase": "Closed",
+        "scope": "render.mesh_bind_groups",
+        "total_ms": 1163.4362599999959
+      },
+      "render.mesh_bind_groups.body": {
+        "calls": 1315,
+        "cumulative_max_ms": 0.8867389999999999,
+        "mean_ms": 0.1278169437262366,
+        "over_8_ms": 0,
+        "phase": "Closed",
+        "scope": "render.mesh_bind_groups.body",
+        "total_ms": 168.07928100000112
+      },
+      "render.meshes": {
+        "calls": 1315,
+        "cumulative_max_ms": 2.37745,
+        "mean_ms": 0.24479957566539826,
+        "over_8_ms": 0,
+        "phase": "Closed",
+        "scope": "render.meshes",
+        "total_ms": 321.9114419999987
+      },
+      "render.prepare_lights.body": {
+        "calls": 1315,
+        "cumulative_max_ms": 0.612733,
+        "mean_ms": 0.057763733840304386,
+        "over_8_ms": 0,
+        "phase": "Closed",
+        "scope": "render.prepare_lights.body",
+        "total_ms": 75.95931000000027
+      },
+      "render.prepare_mesh_assets": {
+        "calls": 1315,
+        "cumulative_max_ms": 72.455267,
+        "mean_ms": 0.06731190190114072,
+        "over_8_ms": 0,
+        "phase": "Closed",
+        "scope": "render.prepare_mesh_assets",
+        "total_ms": 88.51515100000006
+      },
+      "render.prepare_mesh_assets.body": {
+        "calls": 1315,
+        "cumulative_max_ms": 1.264287,
+        "mean_ms": 0.004145542965779456,
+        "over_8_ms": 0,
+        "phase": "Closed",
+        "scope": "render.prepare_mesh_assets.body",
+        "total_ms": 5.451388999999985
+      },
+      "render.prepare_view_targets.body": {
+        "calls": 1315,
+        "cumulative_max_ms": 0.142343,
+        "mean_ms": 0.007557215969581787,
+        "over_8_ms": 0,
+        "phase": "Closed",
+        "scope": "render.prepare_view_targets.body",
+        "total_ms": 9.93773900000005
+      },
+      "render.prepare_windows.body": {
+        "calls": 1315,
+        "cumulative_max_ms": 3.3804220000000003,
+        "mean_ms": 0.7372137954372616,
+        "over_8_ms": 0,
+        "phase": "Closed",
+        "scope": "render.prepare_windows.body",
+        "total_ms": 969.436140999999
+      },
+      "render.preprocess_bind_groups": {
+        "calls": 1315,
+        "cumulative_max_ms": 2.725158,
+        "mean_ms": 0.878497953612162,
+        "over_8_ms": 0,
+        "phase": "Closed",
+        "scope": "render.preprocess_bind_groups",
+        "total_ms": 1155.224808999993
+      },
+      "render.preprocess_bind_groups.body": {
+        "calls": 1315,
+        "cumulative_max_ms": 2.630505,
+        "mean_ms": 0.7838518030418247,
+        "over_8_ms": 0,
+        "phase": "Closed",
+        "scope": "render.preprocess_bind_groups.body",
+        "total_ms": 1030.7651209999995
+      },
+      "render.preprocess_buffers.reserve": {
+        "calls": 1315,
+        "cumulative_max_ms": 0.131343,
+        "mean_ms": 0.00046034296577946647,
+        "over_8_ms": 0,
+        "phase": "Closed",
+        "scope": "render.preprocess_buffers.reserve",
+        "total_ms": 0.6053509999999984
+      },
+      "render.queue": {
+        "calls": 1315,
+        "cumulative_max_ms": 1.41843,
+        "mean_ms": 0.09646499695817426,
+        "over_8_ms": 0,
+        "phase": "Closed",
+        "scope": "render.queue",
+        "total_ms": 126.85147099999915
+      },
+      "render.resources": {
+        "calls": 1315,
+        "cumulative_max_ms": 20.054736,
+        "mean_ms": 0.38509484638783475,
+        "over_8_ms": 0,
+        "phase": "Closed",
+        "scope": "render.resources",
+        "total_ms": 506.3997230000027
+      },
+      "render.shadow_bin_uploads.body": {
+        "calls": 1315,
+        "cumulative_max_ms": 1.583253,
+        "mean_ms": 0.42039502585551447,
+        "over_8_ms": 0,
+        "phase": "Closed",
+        "scope": "render.shadow_bin_uploads.body",
+        "total_ms": 552.8194590000015
+      },
+      "render.sort": {
+        "calls": 1315,
+        "cumulative_max_ms": 0.367408,
+        "mean_ms": 0.02625861140684416,
+        "over_8_ms": 0,
+        "phase": "Closed",
+        "scope": "render.sort",
+        "total_ms": 34.53007400000007
+      },
+      "render.specialize": {
+        "calls": 1315,
+        "cumulative_max_ms": 1.447001,
+        "mean_ms": 0.0674213809885924,
+        "over_8_ms": 0,
+        "phase": "Closed",
+        "scope": "render.specialize",
+        "total_ms": 88.65911599999902
+      },
+      "render.views": {
+        "calls": 1315,
+        "cumulative_max_ms": 3.629357,
+        "mean_ms": 0.827557047908745,
+        "over_8_ms": 0,
+        "phase": "Closed",
+        "scope": "render.views",
+        "total_ms": 1088.2375179999997
+      },
+      "server.infusion_visuals": {
+        "calls": 120,
+        "cumulative_max_ms": 0.055661,
+        "mean_ms": 0.02072689999999996,
+        "over_8_ms": 0,
+        "phase": "Closed",
+        "scope": "server.infusion_visuals",
+        "total_ms": 2.4872279999999956
+      },
+      "server.send_deltas": {
+        "calls": 718,
+        "cumulative_max_ms": 0.096822,
+        "mean_ms": 0.004754250696378839,
+        "over_8_ms": 0,
+        "phase": "Closed",
+        "scope": "server.send_deltas",
+        "total_ms": 3.4135520000000064
+      },
+      "storage.save_edits": {
+        "calls": 2,
+        "cumulative_max_ms": 0.8958889999999999,
+        "mean_ms": 0.8211675000000002,
+        "over_8_ms": 0,
+        "phase": "Closed",
+        "scope": "storage.save_edits",
+        "total_ms": 1.6423350000000003
+      },
+      "streaming.dispatch": {
+        "calls": 2033,
+        "cumulative_max_ms": 1.150844,
+        "mean_ms": 0.00025604131824897506,
+        "over_8_ms": 0,
+        "phase": "Closed",
+        "scope": "streaming.dispatch",
+        "total_ms": 0.5205320000001663
+      },
+      "streaming.interest": {
+        "calls": 2033,
+        "cumulative_max_ms": 2.415962,
+        "mean_ms": 0.0012606871618298003,
+        "over_8_ms": 0,
+        "phase": "Closed",
+        "scope": "streaming.interest",
+        "total_ms": 2.562976999999984
+      },
+      "streaming.receive": {
+        "calls": 2033,
+        "cumulative_max_ms": 2.259478,
+        "mean_ms": 0.0012965120511559316,
+        "over_8_ms": 0,
+        "phase": "Closed",
+        "scope": "streaming.receive",
+        "total_ms": 2.635809000000009
+      },
+      "terrain.dispatch": {
+        "calls": 1315,
+        "cumulative_max_ms": 6.287693,
+        "mean_ms": 0.07831738479087243,
+        "over_8_ms": 0,
+        "phase": "Closed",
+        "scope": "terrain.dispatch",
+        "total_ms": 102.98736099999724
+      },
+      "terrain.invalidate.chunks": {
+        "calls": 12,
+        "cumulative_max_ms": 0.00047999999999999996,
+        "mean_ms": 5.333333333333289e-05,
+        "over_8_ms": 0,
+        "phase": "Closed",
+        "scope": "terrain.invalidate.chunks",
+        "total_ms": 0.0006399999999999947
+      },
+      "terrain.invalidate.journal": {
+        "calls": 12,
+        "cumulative_max_ms": 8.999999999999999e-05,
+        "mean_ms": 2.5e-05,
+        "over_8_ms": 0,
+        "phase": "Closed",
+        "scope": "terrain.invalidate.journal",
+        "total_ms": 0.00030000000000000003
+      },
+      "terrain.prepare_jobs": {
+        "calls": 144,
+        "cumulative_max_ms": 3.685898,
+        "mean_ms": 0.00019696527779760546,
+        "over_8_ms": 0,
+        "phase": "Closed",
+        "scope": "terrain.prepare_jobs",
+        "total_ms": 0.028363000002855188
+      },
+      "terrain.refresh.appearance": {
+        "calls": 12,
+        "cumulative_max_ms": 0.079952,
+        "mean_ms": 0.050659249999999996,
+        "over_8_ms": 0,
+        "phase": "Closed",
+        "scope": "terrain.refresh.appearance",
+        "total_ms": 0.607911
+      },
+      "terrain.refresh.queue": {
+        "calls": 144,
+        "cumulative_max_ms": 2.723428,
+        "mean_ms": 0.6614072013888916,
+        "over_8_ms": 0,
+        "phase": "Closed",
+        "scope": "terrain.refresh.queue",
+        "total_ms": 95.2426370000004
+      },
+      "terrain.refresh.queue.full": {
+        "calls": 144,
+        "cumulative_max_ms": 2.722648,
+        "mean_ms": 0.6508975902777776,
+        "over_8_ms": 0,
+        "phase": "Closed",
+        "scope": "terrain.refresh.queue.full",
+        "total_ms": 93.72925299999997
+      },
+      "terrain.stream_exposure": {
+        "calls": 1315,
+        "cumulative_max_ms": 0.051121,
+        "mean_ms": 0.002148736121673021,
+        "over_8_ms": 0,
+        "phase": "Closed",
+        "scope": "terrain.stream_exposure",
+        "total_ms": 2.825588000000023
+      },
+      "terrain.stream_exposure.publications": {
+        "calls": 1315,
+        "cumulative_max_ms": 0.039480999999999995,
+        "mean_ms": 0.00013895133079853508,
+        "over_8_ms": 0,
+        "phase": "Closed",
+        "scope": "terrain.stream_exposure.publications",
+        "total_ms": 0.18272100000007363
+      },
+      "terrain.stream_exposure.removals": {
+        "calls": 1315,
+        "cumulative_max_ms": 0.00658,
+        "mean_ms": 0.00016630494296577825,
+        "over_8_ms": 0,
+        "phase": "Closed",
+        "scope": "terrain.stream_exposure.removals",
+        "total_ms": 0.21869099999999841
+      },
+      "terrain.upload": {
+        "calls": 1315,
+        "cumulative_max_ms": 1.319788,
+        "mean_ms": 0.00732010266159687,
+        "over_8_ms": 0,
+        "phase": "Closed",
+        "scope": "terrain.upload",
+        "total_ms": 9.625934999999885
+      },
+      "terrain.visibility": {
+        "calls": 1315,
+        "cumulative_max_ms": 1.8128689999999998,
+        "mean_ms": 0.002087031178707232,
+        "over_8_ms": 0,
+        "phase": "Closed",
+        "scope": "terrain.visibility",
+        "total_ms": 2.7444460000000106
+      },
+      "transitions.animate": {
+        "calls": 1315,
+        "cumulative_max_ms": 1.3615890000000002,
+        "mean_ms": 0.010855900380229908,
+        "over_8_ms": 0,
+        "phase": "Closed",
+        "scope": "transitions.animate",
+        "total_ms": 14.27550900000233
+      },
+      "ui.frames.catalog_slot_size": {
+        "calls": 1315,
+        "cumulative_max_ms": 0.09539199999999999,
+        "mean_ms": 0.006203318631178692,
+        "over_8_ms": 0,
+        "phase": "Closed",
+        "scope": "ui.frames.catalog_slot_size",
+        "total_ms": 8.15736399999998
+      },
+      "ui.frames.content_density": {
+        "calls": 1315,
+        "cumulative_max_ms": 0.220694,
+        "mean_ms": 0.06222300304182525,
+        "over_8_ms": 0,
+        "phase": "Closed",
+        "scope": "ui.frames.content_density",
+        "total_ms": 81.8232490000002
+      },
+      "ui.frames.inventory_aspect": {
+        "calls": 1315,
+        "cumulative_max_ms": 0.9911010000000001,
+        "mean_ms": 0.030116531558935396,
+        "over_8_ms": 0,
+        "phase": "Closed",
+        "scope": "ui.frames.inventory_aspect",
+        "total_ms": 39.603239000000045
+      },
+      "ui.frames.inventory_slot_size": {
+        "calls": 1315,
+        "cumulative_max_ms": 0.668905,
+        "mean_ms": 0.050760034220532456,
+        "over_8_ms": 0,
+        "phase": "Closed",
+        "scope": "ui.frames.inventory_slot_size",
+        "total_ms": 66.74944500000018
+      },
+      "ui.frames.nine_slice": {
+        "calls": 1315,
+        "cumulative_max_ms": 0.204654,
+        "mean_ms": 0.009102000000000008,
+        "over_8_ms": 0,
+        "phase": "Closed",
+        "scope": "ui.frames.nine_slice",
+        "total_ms": 11.96913000000001
+      },
+      "ui.frames.responsive_inventory_scale": {
+        "calls": 1315,
+        "cumulative_max_ms": 0.272496,
+        "mean_ms": 0.00677972091254751,
+        "over_8_ms": 0,
+        "phase": "Closed",
+        "scope": "ui.frames.responsive_inventory_scale",
+        "total_ms": 8.915332999999976
+      },
+      "ui.reactivity": {
+        "calls": 1315,
+        "cumulative_max_ms": 33.055142000000004,
+        "mean_ms": 0.7239269756653984,
+        "over_8_ms": 0,
+        "phase": "Closed",
+        "scope": "ui.reactivity",
+        "total_ms": 951.963972999999
+      },
+      "water.motion": {
+        "calls": 3810,
+        "cumulative_max_ms": 0.029641,
+        "mean_ms": 0.0002851750656167651,
+        "over_8_ms": 0,
+        "phase": "Closed",
+        "scope": "water.motion",
+        "total_ms": 1.086516999999875
+      },
+      "water.upload": {
+        "calls": 1315,
+        "cumulative_max_ms": 0.058441,
+        "mean_ms": 0.0007580623574144382,
+        "over_8_ms": 0,
+        "phase": "Closed",
+        "scope": "water.upload",
+        "total_ms": 0.9968519999999863
+      },
+      "water_audio.column": {
+        "calls": 12,
+        "cumulative_max_ms": 4.996866,
+        "mean_ms": 0.0017724999999998807,
+        "over_8_ms": 0,
+        "phase": "Closed",
+        "scope": "water_audio.column",
+        "total_ms": 0.021269999999998568
+      },
+      "water_audio.scan": {
+        "calls": 24,
+        "cumulative_max_ms": 1.944352,
+        "mean_ms": 0.297865041666667,
+        "over_8_ms": 0,
+        "phase": "Closed",
+        "scope": "water_audio.scan",
+        "total_ms": 7.1487610000000075
+      },
+      "water_audio.update": {
+        "calls": 1315,
+        "cumulative_max_ms": 5.009706,
+        "mean_ms": 0.00311164790874526,
+        "over_8_ms": 0,
+        "phase": "Closed",
+        "scope": "water_audio.update",
+        "total_ms": 4.091817000000017
+      },
+      "world.farming": {
+        "calls": 12,
+        "cumulative_max_ms": 0.006350000000000001,
+        "mean_ms": 0.0021183333333333345,
+        "over_8_ms": 0,
+        "phase": "Closed",
+        "scope": "world.farming",
+        "total_ms": 0.025420000000000012
+      },
+      "world.import_section_delta": {
+        "calls": 42,
+        "cumulative_max_ms": 0.01955,
+        "mean_ms": 0.006720809523809525,
+        "over_8_ms": 0,
+        "phase": "Closed",
+        "scope": "world.import_section_delta",
+        "total_ms": 0.282274
+      }
+    },
+    "ClosedAgain": {
+      "character.current": {
+        "calls": 1892,
+        "cumulative_max_ms": 0.037341,
+        "mean_ms": 0.001799012156448222,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "character.current",
+        "total_ms": 3.403731000000036
+      },
+      "character.ground": {
+        "calls": 1892,
+        "cumulative_max_ms": 0.5030600000000001,
+        "mean_ms": 0.013692344608879345,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "character.ground",
+        "total_ms": 25.90591599999972
+      },
+      "character.move": {
+        "calls": 1892,
+        "cumulative_max_ms": 0.48199000000000003,
+        "mean_ms": 0.02235381818181798,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "character.move",
+        "total_ms": 42.29342399999962
+      },
+      "character.step": {
+        "calls": 1892,
+        "cumulative_max_ms": 0.549952,
+        "mean_ms": 0.043507300211416695,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "character.step",
+        "total_ms": 82.31581200000039
+      },
+      "character.water": {
+        "calls": 1892,
+        "cumulative_max_ms": 0.02604,
+        "mean_ms": 0.00039547780126847695,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "character.water",
+        "total_ms": 0.7482439999999584
+      },
+      "chests.refresh_candidates": {
+        "calls": 222,
+        "cumulative_max_ms": 0.00526,
+        "mean_ms": 0.0003207342342342326,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "chests.refresh_candidates",
+        "total_ms": 0.07120299999999963
+      },
+      "collision.dispatch": {
+        "calls": 2033,
+        "cumulative_max_ms": 0.8889180000000001,
+        "mean_ms": 0.15103502115100806,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "collision.dispatch",
+        "total_ms": 307.05419799999936
+      },
+      "collision.receive": {
+        "calls": 2033,
+        "cumulative_max_ms": 0.200515,
+        "mean_ms": 0.015957154943433395,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "collision.receive",
+        "total_ms": 32.440896000000095
+      },
+      "cpu.extract_wall": {
+        "calls": 1315,
+        "cumulative_max_ms": 205.410428,
+        "mean_ms": 0.5517683908745273,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "cpu.extract_wall",
+        "total_ms": 725.5754340000035
+      },
+      "cpu.main_schedule_wall": {
+        "calls": 1315,
+        "cumulative_max_ms": 1109.836135,
+        "mean_ms": 8.449436147528601,
+        "over_8_ms": 862,
+        "phase": "ClosedAgain",
+        "scope": "cpu.main_schedule_wall",
+        "total_ms": 11111.00853400011
+      },
+      "cpu.render_handoff_wall": {
+        "calls": 1315,
+        "cumulative_max_ms": 205.438588,
+        "mean_ms": 0.6099493414448603,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "cpu.render_handoff_wall",
+        "total_ms": 802.0833839999914
+      },
+      "cpu.render_schedule_wall": {
+        "calls": 1316,
+        "cumulative_max_ms": 132.211806,
+        "mean_ms": 6.908415962765995,
+        "over_8_ms": 142,
+        "phase": "ClosedAgain",
+        "scope": "cpu.render_schedule_wall",
+        "total_ms": 9091.475407000049
+      },
+      "creatures.navigation.path": {
+        "calls": 3,
+        "cumulative_max_ms": 0.146193,
+        "mean_ms": 0.07854833333333329,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "creatures.navigation.path",
+        "total_ms": 0.23564499999999988
+      },
+      "creatures.navigation.surface_path": {
+        "calls": 8,
+        "cumulative_max_ms": 1.563892,
+        "mean_ms": 0.4424805000000003,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "creatures.navigation.surface_path",
+        "total_ms": 3.539844000000002
+      },
+      "creatures.needs.find_water": {
+        "calls": 129,
+        "cumulative_max_ms": 0.071491,
+        "mean_ms": 0.015436457364341143,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "creatures.needs.find_water",
+        "total_ms": 1.9913030000000074
+      },
+      "creatures.needs.water_surface": {
+        "calls": 8208,
+        "cumulative_max_ms": 0.016861,
+        "mean_ms": 0.000146309332358683,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "creatures.needs.water_surface",
+        "total_ms": 1.2009070000000701
+      },
+      "creatures.server_tick": {
+        "calls": 120,
+        "cumulative_max_ms": 4.609458,
+        "mean_ms": 1.8568061666666722,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "creatures.server_tick",
+        "total_ms": 222.81674000000066
+      },
+      "integrated.autosave.snapshot": {
+        "calls": 1,
+        "cumulative_max_ms": 0.034641000000000005,
+        "mean_ms": 0.03464100000000002,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "integrated.autosave.snapshot",
+        "total_ms": 0.03464100000000002
+      },
+      "lights.discover": {
+        "calls": 22,
+        "cumulative_max_ms": 1.42214,
+        "mean_ms": 0.09624286363636388,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "lights.discover",
+        "total_ms": 2.1173430000000053
+      },
+      "lights.select": {
+        "calls": 1315,
+        "cumulative_max_ms": 1.471631,
+        "mean_ms": 0.0032541307984791244,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "lights.select",
+        "total_ms": 4.2791820000000484
+      },
+      "lights.shadow_visibility": {
+        "calls": 1315,
+        "cumulative_max_ms": 0.043121,
+        "mean_ms": 0.0019216365019011404,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "lights.shadow_visibility",
+        "total_ms": 2.5269519999999996
+      },
+      "machines.refresh_candidates": {
+        "calls": 114,
+        "cumulative_max_ms": 0.00591,
+        "mean_ms": 0.0007107368421052636,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "machines.refresh_candidates",
+        "total_ms": 0.08102400000000004
+      },
+      "main.first": {
+        "calls": 1315,
+        "cumulative_max_ms": 1.607384,
+        "mean_ms": 0.14448474144486725,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "main.first",
+        "total_ms": 189.99743500000045
+      },
+      "main.fixed_loop": {
+        "calls": 1315,
+        "cumulative_max_ms": 5.775433,
+        "mean_ms": 0.39133058250950825,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "main.fixed_loop",
+        "total_ms": 514.5997160000034
+      },
+      "main.last": {
+        "calls": 1315,
+        "cumulative_max_ms": 1.686456,
+        "mean_ms": 0.12035751482889595,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "main.last",
+        "total_ms": 158.27013199999817
+      },
+      "main.post_update": {
+        "calls": 1315,
+        "cumulative_max_ms": 72.475517,
+        "mean_ms": 4.4950539916349745,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "main.post_update",
+        "total_ms": 5910.995998999992
+      },
+      "main.pre_update": {
+        "calls": 1315,
+        "cumulative_max_ms": 5.0105059999999995,
+        "mean_ms": 0.3831463650190093,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "main.pre_update",
+        "total_ms": 503.8374699999972
+      },
+      "main.update": {
+        "calls": 1315,
+        "cumulative_max_ms": 238.168643,
+        "mean_ms": 2.802781463117912,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "main.update",
+        "total_ms": 3685.657624000054
+      },
+      "mapping.index.incremental": {
+        "calls": 43,
+        "cumulative_max_ms": 0.237455,
+        "mean_ms": 0.010028418604651328,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "mapping.index.incremental",
+        "total_ms": 0.4312220000000071
+      },
+      "mapping.index.journal": {
+        "calls": 12,
+        "cumulative_max_ms": 0.014191,
+        "mean_ms": 0.0070409166666666745,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "mapping.index.journal",
+        "total_ms": 0.0844910000000001
+      },
+      "mapping.schedule": {
+        "calls": 58,
+        "cumulative_max_ms": 0.564932,
+        "mean_ms": 0.4199573103448273,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "mapping.schedule",
+        "total_ms": 24.357523999999984
+      },
+      "mapping.snapshot": {
+        "calls": 232,
+        "cumulative_max_ms": 0.080321,
+        "mean_ms": 0.011318952586206896,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "mapping.snapshot",
+        "total_ms": 2.625997
+      },
+      "openings.refresh_candidates": {
+        "calls": 114,
+        "cumulative_max_ms": 0.006121000000000001,
+        "mean_ms": 0.0009045087719298253,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "openings.refresh_candidates",
+        "total_ms": 0.1031140000000001
+      },
+      "props.contact_shadows": {
+        "calls": 1315,
+        "cumulative_max_ms": 0.986741,
+        "mean_ms": 0.006020953612167081,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "props.contact_shadows",
+        "total_ms": 7.917553999999711
+      },
+      "props.dispatch": {
+        "calls": 1315,
+        "cumulative_max_ms": 43.166275,
+        "mean_ms": 0.03846465627376393,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "props.dispatch",
+        "total_ms": 50.58102299999956
+      },
+      "props.prepare": {
+        "calls": 180,
+        "cumulative_max_ms": 0.176354,
+        "mean_ms": 0.006449055555555717,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "props.prepare",
+        "total_ms": 1.1608300000000291
+      },
+      "props.select": {
+        "calls": 180,
+        "cumulative_max_ms": 0.7916569999999999,
+        "mean_ms": 0.12823829999999942,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "props.select",
+        "total_ms": 23.082893999999897
+      },
+      "props.upload": {
+        "calls": 1315,
+        "cumulative_max_ms": 0.715305,
+        "mean_ms": 0.008844759695817415,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "props.upload",
+        "total_ms": 11.630858999999901
+      },
+      "render.assets": {
+        "calls": 1315,
+        "cumulative_max_ms": 72.513648,
+        "mean_ms": 0.31900774144485233,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "render.assets",
+        "total_ms": 419.4951799999808
+      },
+      "render.bind_groups": {
+        "calls": 1315,
+        "cumulative_max_ms": 2.769839,
+        "mean_ms": 0.9100911346007589,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "render.bind_groups",
+        "total_ms": 1196.7698419999979
+      },
+      "render.camera_mainpass": {
+        "calls": 1315,
+        "cumulative_max_ms": 1.8600590000000001,
+        "mean_ms": 0.4155242235741476,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "render.camera_mainpass",
+        "total_ms": 546.4143540000041
+      },
+      "render.camera_postprocess": {
+        "calls": 1315,
+        "cumulative_max_ms": 2.8283,
+        "mean_ms": 0.5545535726235696,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "render.camera_postprocess",
+        "total_ms": 729.237947999994
+      },
+      "render.camera_prepass": {
+        "calls": 1315,
+        "cumulative_max_ms": 2.134065,
+        "mean_ms": 0.3465475026615986,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "render.camera_prepass",
+        "total_ms": 455.70996600000217
+      },
+      "render.cleanup": {
+        "calls": 1316,
+        "cumulative_max_ms": 1.729677,
+        "mean_ms": 0.04235168085106463,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "render.cleanup",
+        "total_ms": 55.73481200000106
+      },
+      "render.create_views": {
+        "calls": 1315,
+        "cumulative_max_ms": 0.745646,
+        "mean_ms": 0.09929987072243426,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "render.create_views",
+        "total_ms": 130.57933000000105
+      },
+      "render.execute": {
+        "calls": 1316,
+        "cumulative_max_ms": 13.764611,
+        "mean_ms": 3.1791573427051287,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "render.execute",
+        "total_ms": 4183.771062999949
+      },
+      "render.graph_submit": {
+        "calls": 1315,
+        "cumulative_max_ms": 12.612088,
+        "mean_ms": 2.3065600136882143,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "render.graph_submit",
+        "total_ms": 3033.1264180000016
+      },
+      "render.mesh_allocator": {
+        "calls": 1315,
+        "cumulative_max_ms": 71.048867,
+        "mean_ms": 0.054285906463880526,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "render.mesh_allocator",
+        "total_ms": 71.38596700000289
+      },
+      "render.mesh_allocator.body": {
+        "calls": 1315,
+        "cumulative_max_ms": 71.023837,
+        "mean_ms": 0.041456739163499595,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "render.mesh_allocator.body",
+        "total_ms": 54.515612000001965
+      },
+      "render.mesh_bind_groups": {
+        "calls": 1315,
+        "cumulative_max_ms": 2.7241269999999997,
+        "mean_ms": 0.8691572326996067,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "render.mesh_bind_groups",
+        "total_ms": 1142.9417609999828
+      },
+      "render.mesh_bind_groups.body": {
+        "calls": 1315,
+        "cumulative_max_ms": 0.8867389999999999,
+        "mean_ms": 0.12583039695817547,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "render.mesh_bind_groups.body",
+        "total_ms": 165.46697200000074
+      },
+      "render.meshes": {
+        "calls": 1315,
+        "cumulative_max_ms": 2.37745,
+        "mean_ms": 0.2432866768060844,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "render.meshes",
+        "total_ms": 319.921980000001
+      },
+      "render.prepare_lights.body": {
+        "calls": 1315,
+        "cumulative_max_ms": 0.612733,
+        "mean_ms": 0.057458997718632,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "render.prepare_lights.body",
+        "total_ms": 75.55858200000108
+      },
+      "render.prepare_mesh_assets": {
+        "calls": 1315,
+        "cumulative_max_ms": 72.455267,
+        "mean_ms": 0.08164834524714577,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "render.prepare_mesh_assets",
+        "total_ms": 107.3675739999967
+      },
+      "render.prepare_mesh_assets.body": {
+        "calls": 1315,
+        "cumulative_max_ms": 1.264287,
+        "mean_ms": 0.004929654752851709,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "render.prepare_mesh_assets.body",
+        "total_ms": 6.482495999999998
+      },
+      "render.prepare_view_targets.body": {
+        "calls": 1315,
+        "cumulative_max_ms": 0.192584,
+        "mean_ms": 0.007576972623574142,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "render.prepare_view_targets.body",
+        "total_ms": 9.963718999999998
+      },
+      "render.prepare_windows.body": {
+        "calls": 1315,
+        "cumulative_max_ms": 5.470656,
+        "mean_ms": 0.2649118281368823,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "render.prepare_windows.body",
+        "total_ms": 348.35905400000024
+      },
+      "render.preprocess_bind_groups": {
+        "calls": 1315,
+        "cumulative_max_ms": 2.725158,
+        "mean_ms": 0.8637072699619764,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "render.preprocess_bind_groups",
+        "total_ms": 1135.775059999999
+      },
+      "render.preprocess_bind_groups.body": {
+        "calls": 1315,
+        "cumulative_max_ms": 2.630505,
+        "mean_ms": 0.7723316441064768,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "render.preprocess_bind_groups.body",
+        "total_ms": 1015.616112000017
+      },
+      "render.preprocess_buffers.reserve": {
+        "calls": 1315,
+        "cumulative_max_ms": 0.131343,
+        "mean_ms": 0.0004776722433459914,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "render.preprocess_buffers.reserve",
+        "total_ms": 0.6281389999999787
+      },
+      "render.queue": {
+        "calls": 1315,
+        "cumulative_max_ms": 1.41843,
+        "mean_ms": 0.09554081901140743,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "render.queue",
+        "total_ms": 125.63617700000077
+      },
+      "render.resources": {
+        "calls": 1315,
+        "cumulative_max_ms": 20.054736,
+        "mean_ms": 0.37920266463878216,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "render.resources",
+        "total_ms": 498.65150399999857
+      },
+      "render.shadow_bin_uploads.body": {
+        "calls": 1315,
+        "cumulative_max_ms": 1.669895,
+        "mean_ms": 0.4041885954372599,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "render.shadow_bin_uploads.body",
+        "total_ms": 531.5080029999967
+      },
+      "render.sort": {
+        "calls": 1315,
+        "cumulative_max_ms": 0.367408,
+        "mean_ms": 0.02531184562737606,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "render.sort",
+        "total_ms": 33.28507699999952
+      },
+      "render.specialize": {
+        "calls": 1315,
+        "cumulative_max_ms": 1.447001,
+        "mean_ms": 0.06962639011406872,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "render.specialize",
+        "total_ms": 91.55870300000038
+      },
+      "render.views": {
+        "calls": 1315,
+        "cumulative_max_ms": 5.573138,
+        "mean_ms": 0.3534690828897337,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "render.views",
+        "total_ms": 464.81184399999984
+      },
+      "server.infusion_visuals": {
+        "calls": 120,
+        "cumulative_max_ms": 0.062591,
+        "mean_ms": 0.019048916666666735,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "server.infusion_visuals",
+        "total_ms": 2.285870000000008
+      },
+      "server.send_deltas": {
+        "calls": 718,
+        "cumulative_max_ms": 0.14733300000000002,
+        "mean_ms": 0.004633866295264624,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "server.send_deltas",
+        "total_ms": 3.327116
+      },
+      "storage.save_edits": {
+        "calls": 1,
+        "cumulative_max_ms": 0.8958889999999999,
+        "mean_ms": 0.7291759999999998,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "storage.save_edits",
+        "total_ms": 0.7291759999999998
+      },
+      "streaming.dispatch": {
+        "calls": 2033,
+        "cumulative_max_ms": 1.150844,
+        "mean_ms": 0.0031895017215937283,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "streaming.dispatch",
+        "total_ms": 6.484257000000049
+      },
+      "streaming.interest": {
+        "calls": 2033,
+        "cumulative_max_ms": 2.415962,
+        "mean_ms": 0.0012313787506148606,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "streaming.interest",
+        "total_ms": 2.5033930000000115
+      },
+      "streaming.publish_section": {
+        "calls": 69,
+        "cumulative_max_ms": 2.144676,
+        "mean_ms": 0.036098999999999895,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "streaming.publish_section",
+        "total_ms": 2.490830999999993
+      },
+      "streaming.publish_water_patch": {
+        "calls": 44,
+        "cumulative_max_ms": 0.00087,
+        "mean_ms": 0.00024113636363636367,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "streaming.publish_water_patch",
+        "total_ms": 0.010610000000000001
+      },
+      "streaming.receive": {
+        "calls": 2033,
+        "cumulative_max_ms": 2.259478,
+        "mean_ms": 0.0026701165764881594,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "streaming.receive",
+        "total_ms": 5.428347000000429
+      },
+      "streaming.remesh_loaded": {
+        "calls": 37,
+        "cumulative_max_ms": 0.36799800000000005,
+        "mean_ms": 0.2977505405405404,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "streaming.remesh_loaded",
+        "total_ms": 11.016769999999996
+      },
+      "terrain.custom_snapshot": {
+        "calls": 37,
+        "cumulative_max_ms": 0.981161,
+        "mean_ms": 0.16875370270271117,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "terrain.custom_snapshot",
+        "total_ms": 6.2438870000003135
+      },
+      "terrain.dispatch": {
+        "calls": 1315,
+        "cumulative_max_ms": 6.287693,
+        "mean_ms": 0.09843631102662463,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "terrain.dispatch",
+        "total_ms": 129.4437490000114
+      },
+      "terrain.exposure_snapshot": {
+        "calls": 74,
+        "cumulative_max_ms": 1.325687,
+        "mean_ms": 0.184225810810812,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "terrain.exposure_snapshot",
+        "total_ms": 13.632710000000088
+      },
+      "terrain.invalidate.chunks": {
+        "calls": 43,
+        "cumulative_max_ms": 0.00047999999999999996,
+        "mean_ms": 4.39534883720922e-05,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "terrain.invalidate.chunks",
+        "total_ms": 0.0018899999999999646
+      },
+      "terrain.invalidate.journal": {
+        "calls": 12,
+        "cumulative_max_ms": 8.999999999999999e-05,
+        "mean_ms": 2.58333333333334e-05,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "terrain.invalidate.journal",
+        "total_ms": 0.0003100000000000008
+      },
+      "terrain.model_snapshot": {
+        "calls": 37,
+        "cumulative_max_ms": 0.978051,
+        "mean_ms": 0.16343032432430882,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "terrain.model_snapshot",
+        "total_ms": 6.046921999999427
+      },
+      "terrain.prepare_jobs": {
+        "calls": 145,
+        "cumulative_max_ms": 3.685898,
+        "mean_ms": 0.17557784137932936,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "terrain.prepare_jobs",
+        "total_ms": 25.458787000002758
+      },
+      "terrain.prioritize_queue": {
+        "calls": 74,
+        "cumulative_max_ms": 1.262516,
+        "mean_ms": 0.0006878513513564836,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "terrain.prioritize_queue",
+        "total_ms": 0.05090100000037978
+      },
+      "terrain.refresh.appearance": {
+        "calls": 12,
+        "cumulative_max_ms": 0.087852,
+        "mean_ms": 0.05051858333333329,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "terrain.refresh.appearance",
+        "total_ms": 0.6062229999999995
+      },
+      "terrain.refresh.coastal.incremental": {
+        "calls": 12,
+        "cumulative_max_ms": 0.023760999999999997,
+        "mean_ms": 0.0066991666666667005,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "terrain.refresh.coastal.incremental",
+        "total_ms": 0.0803900000000004
+      },
+      "terrain.refresh.queue": {
+        "calls": 145,
+        "cumulative_max_ms": 2.723428,
+        "mean_ms": 0.6617000482758636,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "terrain.refresh.queue",
+        "total_ms": 95.94650700000022
+      },
+      "terrain.refresh.queue.full": {
+        "calls": 145,
+        "cumulative_max_ms": 2.722648,
+        "mean_ms": 0.6526480896551698,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "terrain.refresh.queue.full",
+        "total_ms": 94.63397299999963
+      },
+      "terrain.refresh.queue.incremental": {
+        "calls": 21,
+        "cumulative_max_ms": 0.008981,
+        "mean_ms": 0.003874809523809523,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "terrain.refresh.queue.incremental",
+        "total_ms": 0.08137099999999999
+      },
+      "terrain.shadows.exact": {
+        "calls": 44,
+        "cumulative_max_ms": 0.087782,
+        "mean_ms": 0.007634454545454487,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "terrain.shadows.exact",
+        "total_ms": 0.33591599999999744
+      },
+      "terrain.stream_exposure": {
+        "calls": 1315,
+        "cumulative_max_ms": 0.46591,
+        "mean_ms": 0.00769536958174906,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "terrain.stream_exposure",
+        "total_ms": 10.119411000000014
+      },
+      "terrain.stream_exposure.publications": {
+        "calls": 1315,
+        "cumulative_max_ms": 0.039480999999999995,
+        "mean_ms": 0.00019927452471487736,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "terrain.stream_exposure.publications",
+        "total_ms": 0.26204600000006373
+      },
+      "terrain.stream_exposure.removals": {
+        "calls": 1315,
+        "cumulative_max_ms": 0.010509999999999999,
+        "mean_ms": 0.0001791733840304195,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "terrain.stream_exposure.removals",
+        "total_ms": 0.23561300000000163
+      },
+      "terrain.upload": {
+        "calls": 1315,
+        "cumulative_max_ms": 1.319788,
+        "mean_ms": 0.024493114828898124,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "terrain.upload",
+        "total_ms": 32.20844600000103
+      },
+      "terrain.visibility": {
+        "calls": 1315,
+        "cumulative_max_ms": 1.8128689999999998,
+        "mean_ms": 0.011778098859315118,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "terrain.visibility",
+        "total_ms": 15.488199999999381
+      },
+      "terrain.visibility.worker": {
+        "calls": 10,
+        "cumulative_max_ms": 10.608665,
+        "mean_ms": 9.077015199999996,
+        "over_8_ms": 9,
+        "phase": "ClosedAgain",
+        "scope": "terrain.visibility.worker",
+        "total_ms": 90.77015199999997
+      },
+      "transitions.animate": {
+        "calls": 1315,
+        "cumulative_max_ms": 1.3615890000000002,
+        "mean_ms": 0.011144834980990892,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "transitions.animate",
+        "total_ms": 14.655458000003023
+      },
+      "transitions.retire_commit": {
+        "calls": 121,
+        "cumulative_max_ms": 0.038981,
+        "mean_ms": 0.007349256198347111,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "transitions.retire_commit",
+        "total_ms": 0.8892600000000004
+      },
+      "transitions.retirement.drain": {
+        "calls": 74,
+        "cumulative_max_ms": 0.078191,
+        "mean_ms": 0.030415770270270256,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "transitions.retirement.drain",
+        "total_ms": 2.250766999999999
+      },
+      "transitions.retirement.release": {
+        "calls": 121,
+        "cumulative_max_ms": 0.046491,
+        "mean_ms": 0.015778396694214877,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "transitions.retirement.release",
+        "total_ms": 1.9091860000000003
+      },
+      "ui.frames.catalog_slot_size": {
+        "calls": 1315,
+        "cumulative_max_ms": 0.286246,
+        "mean_ms": 0.006189174904942971,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "ui.frames.catalog_slot_size",
+        "total_ms": 8.138765000000006
+      },
+      "ui.frames.content_density": {
+        "calls": 1315,
+        "cumulative_max_ms": 0.25554499999999997,
+        "mean_ms": 0.0650995984790865,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "ui.frames.content_density",
+        "total_ms": 85.60597199999876
+      },
+      "ui.frames.inventory_aspect": {
+        "calls": 1315,
+        "cumulative_max_ms": 0.9911010000000001,
+        "mean_ms": 0.030242339923954132,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "ui.frames.inventory_aspect",
+        "total_ms": 39.768676999999684
+      },
+      "ui.frames.inventory_slot_size": {
+        "calls": 1315,
+        "cumulative_max_ms": 0.668905,
+        "mean_ms": 0.055188542965779235,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "ui.frames.inventory_slot_size",
+        "total_ms": 72.57293399999969
+      },
+      "ui.frames.nine_slice": {
+        "calls": 1315,
+        "cumulative_max_ms": 0.392578,
+        "mean_ms": 0.011564313307984658,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "ui.frames.nine_slice",
+        "total_ms": 15.207071999999826
+      },
+      "ui.frames.responsive_inventory_scale": {
+        "calls": 1315,
+        "cumulative_max_ms": 0.272496,
+        "mean_ms": 0.006943876045627377,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "ui.frames.responsive_inventory_scale",
+        "total_ms": 9.131197
+      },
+      "ui.reactivity": {
+        "calls": 1315,
+        "cumulative_max_ms": 33.055142000000004,
+        "mean_ms": 0.751809806844104,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "ui.reactivity",
+        "total_ms": 988.6298959999967
+      },
+      "water.motion": {
+        "calls": 3784,
+        "cumulative_max_ms": 0.035970999999999996,
+        "mean_ms": 0.0002729630021141678,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "water.motion",
+        "total_ms": 1.032892000000011
+      },
+      "water.upload": {
+        "calls": 1315,
+        "cumulative_max_ms": 0.058441,
+        "mean_ms": 0.0009445087452471446,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "water.upload",
+        "total_ms": 1.2420289999999952
+      },
+      "water_audio.column": {
+        "calls": 43,
+        "cumulative_max_ms": 4.996866,
+        "mean_ms": 0.001892558139534889,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "water_audio.column",
+        "total_ms": 0.08138000000000023
+      },
+      "water_audio.scan": {
+        "calls": 24,
+        "cumulative_max_ms": 1.944352,
+        "mean_ms": 0.2936917500000001,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "water_audio.scan",
+        "total_ms": 7.0486020000000025
+      },
+      "water_audio.update": {
+        "calls": 1315,
+        "cumulative_max_ms": 5.009706,
+        "mean_ms": 0.00319830722433464,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "water_audio.update",
+        "total_ms": 4.205774000000051
+      },
+      "world.farming": {
+        "calls": 12,
+        "cumulative_max_ms": 0.01378,
+        "mean_ms": 0.0023525833333333294,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "world.farming",
+        "total_ms": 0.02823099999999995
+      },
+      "world.import_section_delta": {
+        "calls": 42,
+        "cumulative_max_ms": 0.04127,
+        "mean_ms": 0.013917690476190474,
+        "over_8_ms": 0,
+        "phase": "ClosedAgain",
+        "scope": "world.import_section_delta",
+        "total_ms": 0.5845429999999999
+      }
+    },
+    "Open": {
+      "character.current": {
+        "calls": 1901,
+        "cumulative_max_ms": 0.037341,
+        "mean_ms": 0.0017473082588111428,
+        "over_8_ms": 0,
+        "phase": "Open",
+        "scope": "character.current",
+        "total_ms": 3.3216329999999825
+      },
+      "character.ground": {
+        "calls": 1901,
+        "cumulative_max_ms": 0.5030600000000001,
+        "mean_ms": 0.013551384008416484,
+        "over_8_ms": 0,
+        "phase": "Open",
+        "scope": "character.ground",
+        "total_ms": 25.761180999999738
+      },
+      "character.move": {
+        "calls": 1901,
+        "cumulative_max_ms": 0.48199000000000003,
+        "mean_ms": 0.021947496054708533,
+        "over_8_ms": 0,
+        "phase": "Open",
+        "scope": "character.move",
+        "total_ms": 41.72219000000092
+      },
+      "character.step": {
+        "calls": 1901,
+        "cumulative_max_ms": 0.549952,
+        "mean_ms": 0.04261572698579602,
+        "over_8_ms": 0,
+        "phase": "Open",
+        "scope": "character.step",
+        "total_ms": 81.01249699999823
+      },
+      "character.water": {
+        "calls": 1901,
+        "cumulative_max_ms": 0.02604,
+        "mean_ms": 0.0003881683324565656,
+        "over_8_ms": 0,
+        "phase": "Open",
+        "scope": "character.water",
+        "total_ms": 0.7379079999999312
+      },
+      "chests.refresh_candidates": {
+        "calls": 218,
+        "cumulative_max_ms": 0.00526,
+        "mean_ms": 0.0003410642201834861,
+        "over_8_ms": 0,
+        "phase": "Open",
+        "scope": "chests.refresh_candidates",
+        "total_ms": 0.07435199999999997
+      },
+      "collision.dispatch": {
+        "calls": 1981,
+        "cumulative_max_ms": 0.8889180000000001,
+        "mean_ms": 0.13557751489146685,
+        "over_8_ms": 0,
+        "phase": "Open",
+        "scope": "collision.dispatch",
+        "total_ms": 268.5790569999958
+      },
+      "collision.receive": {
+        "calls": 1981,
+        "cumulative_max_ms": 0.193904,
+        "mean_ms": 0.015686344270570387,
+        "over_8_ms": 0,
+        "phase": "Open",
+        "scope": "collision.receive",
+        "total_ms": 31.07464799999994
+      },
+      "cpu.extract_wall": {
+        "calls": 1263,
+        "cumulative_max_ms": 205.410428,
+        "mean_ms": 0.572253409342834,
+        "over_8_ms": 0,
+        "phase": "Open",
+        "scope": "cpu.extract_wall",
+        "total_ms": 722.7560559999993
+      },
+      "cpu.main_schedule_wall": {
+        "calls": 1263,
+        "cumulative_max_ms": 1109.836135,
+        "mean_ms": 8.823536762470336,
+        "over_8_ms": 904,
+        "phase": "Open",
+        "scope": "cpu.main_schedule_wall",
+        "total_ms": 11144.126931000035
+      },
+      "cpu.render_handoff_wall": {
+        "calls": 1263,
+        "cumulative_max_ms": 205.438588,
+        "mean_ms": 0.6160922082343688,
+        "over_8_ms": 0,
+        "phase": "Open",
+        "scope": "cpu.render_handoff_wall",
+        "total_ms": 778.1244590000078
+      },
+      "cpu.render_schedule_wall": {
+        "calls": 1263,
+        "cumulative_max_ms": 132.211806,
+        "mean_ms": 6.997910860649334,
+        "over_8_ms": 142,
+        "phase": "Open",
+        "scope": "cpu.render_schedule_wall",
+        "total_ms": 8838.36141700011
+      },
+      "creatures.navigation.path": {
+        "calls": 5,
+        "cumulative_max_ms": 0.100872,
+        "mean_ms": 0.062153400000000004,
+        "over_8_ms": 0,
+        "phase": "Open",
+        "scope": "creatures.navigation.path",
+        "total_ms": 0.310767
+      },
+      "creatures.navigation.surface_path": {
+        "calls": 14,
+        "cumulative_max_ms": 1.563892,
+        "mean_ms": 0.3908769285714285,
+        "over_8_ms": 0,
+        "phase": "Open",
+        "scope": "creatures.navigation.surface_path",
+        "total_ms": 5.472276999999998
+      },
+      "creatures.needs.find_water": {
+        "calls": 132,
+        "cumulative_max_ms": 0.035741,
+        "mean_ms": 0.015240886363636408,
+        "over_8_ms": 0,
+        "phase": "Open",
+        "scope": "creatures.needs.find_water",
+        "total_ms": 2.011797000000006
+      },
+      "creatures.needs.water_surface": {
+        "calls": 8431,
+        "cumulative_max_ms": 0.016861,
+        "mean_ms": 0.00014993227375164792,
+        "over_8_ms": 0,
+        "phase": "Open",
+        "scope": "creatures.needs.water_surface",
+        "total_ms": 1.2640790000001436
+      },
+      "creatures.server_tick": {
+        "calls": 120,
+        "cumulative_max_ms": 4.609458,
+        "mean_ms": 1.5389669499999996,
+        "over_8_ms": 0,
+        "phase": "Open",
+        "scope": "creatures.server_tick",
+        "total_ms": 184.67603399999996
+      },
+      "integrated.autosave.snapshot": {
+        "calls": 1,
+        "cumulative_max_ms": 0.027311,
+        "mean_ms": 0.014369999999999994,
+        "over_8_ms": 0,
+        "phase": "Open",
+        "scope": "integrated.autosave.snapshot",
+        "total_ms": 0.014369999999999994
+      },
+      "lights.discover": {
+        "calls": 12,
+        "cumulative_max_ms": 1.42214,
+        "mean_ms": 0.08416916666666789,
+        "over_8_ms": 0,
+        "phase": "Open",
+        "scope": "lights.discover",
+        "total_ms": 1.0100300000000146
+      },
+      "lights.select": {
+        "calls": 1263,
+        "cumulative_max_ms": 1.471631,
+        "mean_ms": 0.0025461797307995446,
+        "over_8_ms": 0,
+        "phase": "Open",
+        "scope": "lights.select",
+        "total_ms": 3.2158249999998247
+      },
+      "lights.shadow_visibility": {
+        "calls": 1263,
+        "cumulative_max_ms": 0.021381,
+        "mean_ms": 0.0019453816310372148,
+        "over_8_ms": 0,
+        "phase": "Open",
+        "scope": "lights.shadow_visibility",
+        "total_ms": 2.4570170000000022
+      },
+      "machines.refresh_candidates": {
+        "calls": 115,
+        "cumulative_max_ms": 0.00591,
+        "mean_ms": 0.0007597739130434759,
+        "over_8_ms": 0,
+        "phase": "Open",
+        "scope": "machines.refresh_candidates",
+        "total_ms": 0.08737399999999973
+      },
+      "main.first": {
+        "calls": 1263,
+        "cumulative_max_ms": 1.607384,
+        "mean_ms": 0.14538362470308697,
+        "over_8_ms": 0,
+        "phase": "Open",
+        "scope": "main.first",
+        "total_ms": 183.61951799999883
+      },
+      "main.fixed_loop": {
+        "calls": 1263,
+        "cumulative_max_ms": 5.775433,
+        "mean_ms": 0.37982274663500065,
+        "over_8_ms": 0,
+        "phase": "Open",
+        "scope": "main.fixed_loop",
+        "total_ms": 479.7161290000058
+      },
+      "main.last": {
+        "calls": 1263,
+        "cumulative_max_ms": 1.686456,
+        "mean_ms": 0.11690123357086239,
+        "over_8_ms": 0,
+        "phase": "Open",
+        "scope": "main.last",
+        "total_ms": 147.6462579999992
+      },
+      "main.post_update": {
+        "calls": 1263,
+        "cumulative_max_ms": 72.475517,
+        "mean_ms": 4.566296562153562,
+        "over_8_ms": 0,
+        "phase": "Open",
+        "scope": "main.post_update",
+        "total_ms": 5767.232557999949
+      },
+      "main.pre_update": {
+        "calls": 1263,
+        "cumulative_max_ms": 5.0105059999999995,
+        "mean_ms": 0.38634465162311704,
+        "over_8_ms": 0,
+        "phase": "Open",
+        "scope": "main.pre_update",
+        "total_ms": 487.95329499999684
+      },
+      "main.update": {
+        "calls": 1263,
+        "cumulative_max_ms": 238.168643,
+        "mean_ms": 3.1209446373713003,
+        "over_8_ms": 7,
+        "phase": "Open",
+        "scope": "main.update",
+        "total_ms": 3941.753076999952
+      },
+      "mapping.index.incremental": {
+        "calls": 12,
+        "cumulative_max_ms": 0.237455,
+        "mean_ms": 0.012020999999999837,
+        "over_8_ms": 0,
+        "phase": "Open",
+        "scope": "mapping.index.incremental",
+        "total_ms": 0.14425199999999805
+      },
+      "mapping.index.journal": {
+        "calls": 12,
+        "cumulative_max_ms": 0.014191,
+        "mean_ms": 0.007136000000000001,
+        "over_8_ms": 0,
+        "phase": "Open",
+        "scope": "mapping.index.journal",
+        "total_ms": 0.08563200000000001
+      },
+      "mapping.schedule": {
+        "calls": 58,
+        "cumulative_max_ms": 0.564932,
+        "mean_ms": 0.40759994827586155,
+        "over_8_ms": 0,
+        "phase": "Open",
+        "scope": "mapping.schedule",
+        "total_ms": 23.64079699999997
+      },
+      "mapping.snapshot": {
+        "calls": 232,
+        "cumulative_max_ms": 0.080321,
+        "mean_ms": 0.012001715517241354,
+        "over_8_ms": 0,
+        "phase": "Open",
+        "scope": "mapping.snapshot",
+        "total_ms": 2.784397999999994
+      },
+      "openings.refresh_candidates": {
+        "calls": 115,
+        "cumulative_max_ms": 0.0024,
+        "mean_ms": 0.0008806347826086971,
+        "over_8_ms": 0,
+        "phase": "Open",
+        "scope": "openings.refresh_candidates",
+        "total_ms": 0.10127300000000017
+      },
+      "previews.prepare": {
+        "calls": 14,
+        "cumulative_max_ms": 1.269267,
+        "mean_ms": 0.33377007142857135,
+        "over_8_ms": 0,
+        "phase": "Open",
+        "scope": "previews.prepare",
+        "total_ms": 4.672780999999999
+      },
+      "props.contact_shadows": {
+        "calls": 1263,
+        "cumulative_max_ms": 0.986741,
+        "mean_ms": 0.006075511480601626,
+        "over_8_ms": 0,
+        "phase": "Open",
+        "scope": "props.contact_shadows",
+        "total_ms": 7.673370999999854
+      },
+      "props.dispatch": {
+        "calls": 1263,
+        "cumulative_max_ms": 43.166275,
+        "mean_ms": 0.040520294536817145,
+        "over_8_ms": 0,
+        "phase": "Open",
+        "scope": "props.dispatch",
+        "total_ms": 51.17713200000006
+      },
+      "props.prepare": {
+        "calls": 180,
+        "cumulative_max_ms": 0.176354,
+        "mean_ms": 0.005594344444444606,
+        "over_8_ms": 0,
+        "phase": "Open",
+        "scope": "props.prepare",
+        "total_ms": 1.0069820000000291
+      },
+      "props.select": {
+        "calls": 180,
+        "cumulative_max_ms": 0.7916569999999999,
+        "mean_ms": 0.13293796111111053,
+        "over_8_ms": 0,
+        "phase": "Open",
+        "scope": "props.select",
+        "total_ms": 23.928832999999898
+      },
+      "props.upload": {
+        "calls": 1263,
+        "cumulative_max_ms": 0.715305,
+        "mean_ms": 0.007575946951702128,
+        "over_8_ms": 0,
+        "phase": "Open",
+        "scope": "props.upload",
+        "total_ms": 9.568420999999788
+      },
+      "render.assets": {
+        "calls": 1263,
+        "cumulative_max_ms": 72.513648,
+        "mean_ms": 0.31899368883611023,
+        "over_8_ms": 0,
+        "phase": "Open",
+        "scope": "render.assets",
+        "total_ms": 402.8890290000072
+      },
+      "render.bind_groups": {
+        "calls": 1263,
+        "cumulative_max_ms": 2.769839,
+        "mean_ms": 0.9499313483768836,
+        "over_8_ms": 0,
+        "phase": "Open",
+        "scope": "render.bind_groups",
+        "total_ms": 1199.763293000004
+      },
+      "render.camera_mainpass": {
+        "calls": 1335,
+        "cumulative_max_ms": 1.8600590000000001,
+        "mean_ms": 0.3921554591760254,
+        "over_8_ms": 0,
+        "phase": "Open",
+        "scope": "render.camera_mainpass",
+        "total_ms": 523.5275379999939
+      },
+      "render.camera_postprocess": {
+        "calls": 1335,
+        "cumulative_max_ms": 2.8283,
+        "mean_ms": 0.5766327767790245,
+        "over_8_ms": 0,
+        "phase": "Open",
+        "scope": "render.camera_postprocess",
+        "total_ms": 769.8047569999976
+      },
+      "render.camera_prepass": {
+        "calls": 1335,
+        "cumulative_max_ms": 2.134065,
+        "mean_ms": 0.32523558576779266,
+        "over_8_ms": 0,
+        "phase": "Open",
+        "scope": "render.camera_prepass",
+        "total_ms": 434.18950700000323
+      },
+      "render.cleanup": {
+        "calls": 1263,
+        "cumulative_max_ms": 1.729677,
+        "mean_ms": 0.06076134045922406,
+        "over_8_ms": 0,
+        "phase": "Open",
+        "scope": "render.cleanup",
+        "total_ms": 76.74157299999999
+      },
+      "render.create_views": {
+        "calls": 1263,
+        "cumulative_max_ms": 0.745646,
+        "mean_ms": 0.10023517735550279,
+        "over_8_ms": 0,
+        "phase": "Open",
+        "scope": "render.create_views",
+        "total_ms": 126.59702900000002
+      },
+      "render.execute": {
+        "calls": 1263,
+        "cumulative_max_ms": 13.764611,
+        "mean_ms": 3.3473868091844876,
+        "over_8_ms": 0,
+        "phase": "Open",
+        "scope": "render.execute",
+        "total_ms": 4227.749540000008
+      },
+      "render.graph_submit": {
+        "calls": 1263,
+        "cumulative_max_ms": 12.612088,
+        "mean_ms": 2.394380010292934,
+        "over_8_ms": 0,
+        "phase": "Open",
+        "scope": "render.graph_submit",
+        "total_ms": 3024.1019529999758
+      },
+      "render.mesh_allocator": {
+        "calls": 1263,
+        "cumulative_max_ms": 71.048867,
+        "mean_ms": 0.046477266825019334,
+        "over_8_ms": 0,
+        "phase": "Open",
+        "scope": "render.mesh_allocator",
+        "total_ms": 58.70078799999942
+      },
+      "render.mesh_allocator.body": {
+        "calls": 1263,
+        "cumulative_max_ms": 71.023837,
+        "mean_ms": 0.033592577988916156,
+        "over_8_ms": 0,
+        "phase": "Open",
+        "scope": "render.mesh_allocator.body",
+        "total_ms": 42.427426000001105
+      },
+      "render.mesh_bind_groups": {
+        "calls": 1263,
+        "cumulative_max_ms": 2.7241269999999997,
+        "mean_ms": 0.9084127585114796,
+        "over_8_ms": 0,
+        "phase": "Open",
+        "scope": "render.mesh_bind_groups",
+        "total_ms": 1147.3253139999988
+      },
+      "render.mesh_bind_groups.body": {
+        "calls": 1263,
+        "cumulative_max_ms": 0.8867389999999999,
+        "mean_ms": 0.11789958115597779,
+        "over_8_ms": 0,
+        "phase": "Open",
+        "scope": "render.mesh_bind_groups.body",
+        "total_ms": 148.90717099999995
+      },
+      "render.meshes": {
+        "calls": 1263,
+        "cumulative_max_ms": 2.37745,
+        "mean_ms": 0.24518220348376935,
+        "over_8_ms": 0,
+        "phase": "Open",
+        "scope": "render.meshes",
+        "total_ms": 309.6651230000007
+      },
+      "render.prepare_lights.body": {
+        "calls": 1263,
+        "cumulative_max_ms": 0.612733,
+        "mean_ms": 0.05856046634996026,
+        "over_8_ms": 0,
+        "phase": "Open",
+        "scope": "render.prepare_lights.body",
+        "total_ms": 73.96186899999981
+      },
+      "render.prepare_mesh_assets": {
+        "calls": 1263,
+        "cumulative_max_ms": 72.455267,
+        "mean_ms": 0.07414662470309223,
+        "over_8_ms": 0,
+        "phase": "Open",
+        "scope": "render.prepare_mesh_assets",
+        "total_ms": 93.64718700000549
+      },
+      "render.prepare_mesh_assets.body": {
+        "calls": 1263,
+        "cumulative_max_ms": 1.264287,
+        "mean_ms": 0.004200718923198724,
+        "over_8_ms": 0,
+        "phase": "Open",
+        "scope": "render.prepare_mesh_assets.body",
+        "total_ms": 5.305507999999989
+      },
+      "render.prepare_view_targets.body": {
+        "calls": 1263,
+        "cumulative_max_ms": 0.142343,
+        "mean_ms": 0.007578240696753807,
+        "over_8_ms": 0,
+        "phase": "Open",
+        "scope": "render.prepare_view_targets.body",
+        "total_ms": 9.571318000000058
+      },
+      "render.prepare_windows.body": {
+        "calls": 1263,
+        "cumulative_max_ms": 3.3804220000000003,
+        "mean_ms": 0.05669924465557976,
+        "over_8_ms": 0,
+        "phase": "Open",
+        "scope": "render.prepare_windows.body",
+        "total_ms": 71.61114599999723
+      },
+      "render.preprocess_bind_groups": {
+        "calls": 1263,
+        "cumulative_max_ms": 2.725158,
+        "mean_ms": 0.9019242383214515,
+        "over_8_ms": 0,
+        "phase": "Open",
+        "scope": "render.preprocess_bind_groups",
+        "total_ms": 1139.1303129999933
+      },
+      "render.preprocess_bind_groups.body": {
+        "calls": 1263,
+        "cumulative_max_ms": 2.630505,
+        "mean_ms": 0.7952504267616796,
+        "over_8_ms": 0,
+        "phase": "Open",
+        "scope": "render.preprocess_bind_groups.body",
+        "total_ms": 1004.4012890000013
+      },
+      "render.preprocess_buffers.reserve": {
+        "calls": 1263,
+        "cumulative_max_ms": 0.131343,
+        "mean_ms": 0.0004586650831353947,
+        "over_8_ms": 0,
+        "phase": "Open",
+        "scope": "render.preprocess_buffers.reserve",
+        "total_ms": 0.5792940000000035
+      },
+      "render.queue": {
+        "calls": 1263,
+        "cumulative_max_ms": 1.41843,
+        "mean_ms": 0.13882953523357036,
+        "over_8_ms": 0,
+        "phase": "Open",
+        "scope": "render.queue",
+        "total_ms": 175.34170299999937
+      },
+      "render.resources": {
+        "calls": 1263,
+        "cumulative_max_ms": 20.054736,
+        "mean_ms": 0.3819737624703094,
+        "over_8_ms": 0,
+        "phase": "Open",
+        "scope": "render.resources",
+        "total_ms": 482.4328620000008
+      },
+      "render.shadow_bin_uploads.body": {
+        "calls": 1263,
+        "cumulative_max_ms": 1.669895,
+        "mean_ms": 0.4099737205067262,
+        "over_8_ms": 0,
+        "phase": "Open",
+        "scope": "render.shadow_bin_uploads.body",
+        "total_ms": 517.7968089999952
+      },
+      "render.sort": {
+        "calls": 1263,
+        "cumulative_max_ms": 0.367408,
+        "mean_ms": 0.04454311718131431,
+        "over_8_ms": 0,
+        "phase": "Open",
+        "scope": "render.sort",
+        "total_ms": 56.257956999999976
+      },
+      "render.specialize": {
+        "calls": 1263,
+        "cumulative_max_ms": 1.447001,
+        "mean_ms": 0.06764931195566215,
+        "over_8_ms": 0,
+        "phase": "Open",
+        "scope": "render.specialize",
+        "total_ms": 85.4410810000013
+      },
+      "render.views": {
+        "calls": 1263,
+        "cumulative_max_ms": 3.629357,
+        "mean_ms": 0.14441729374505094,
+        "over_8_ms": 0,
+        "phase": "Open",
+        "scope": "render.views",
+        "total_ms": 182.39904199999933
+      },
+      "server.infusion_visuals": {
+        "calls": 120,
+        "cumulative_max_ms": 0.062591,
+        "mean_ms": 0.020004633333333303,
+        "over_8_ms": 0,
+        "phase": "Open",
+        "scope": "server.infusion_visuals",
+        "total_ms": 2.4005559999999964
+      },
+      "server.send_deltas": {
+        "calls": 718,
+        "cumulative_max_ms": 0.14733300000000002,
+        "mean_ms": 0.00466646657381614,
+        "over_8_ms": 0,
+        "phase": "Open",
+        "scope": "server.send_deltas",
+        "total_ms": 3.3505229999999884
+      },
+      "storage.save_edits": {
+        "calls": 1,
+        "cumulative_max_ms": 0.8958889999999999,
+        "mean_ms": 0.7780770000000001,
+        "over_8_ms": 0,
+        "phase": "Open",
+        "scope": "storage.save_edits",
+        "total_ms": 0.7780770000000001
+      },
+      "streaming.dispatch": {
+        "calls": 1981,
+        "cumulative_max_ms": 1.150844,
+        "mean_ms": 0.0002582337203432755,
+        "over_8_ms": 0,
+        "phase": "Open",
+        "scope": "streaming.dispatch",
+        "total_ms": 0.5115610000000288
+      },
+      "streaming.interest": {
+        "calls": 1981,
+        "cumulative_max_ms": 2.415962,
+        "mean_ms": 0.0012041701161029771,
+        "over_8_ms": 0,
+        "phase": "Open",
+        "scope": "streaming.interest",
+        "total_ms": 2.3854609999999976
+      },
+      "streaming.receive": {
+        "calls": 1981,
+        "cumulative_max_ms": 2.259478,
+        "mean_ms": 0.001421845532559436,
+        "over_8_ms": 0,
+        "phase": "Open",
+        "scope": "streaming.receive",
+        "total_ms": 2.8166760000002427
+      },
+      "terrain.dispatch": {
+        "calls": 1263,
+        "cumulative_max_ms": 6.287693,
+        "mean_ms": 0.08069241092637294,
+        "over_8_ms": 0,
+        "phase": "Open",
+        "scope": "terrain.dispatch",
+        "total_ms": 101.91451500000903
+      },
+      "terrain.invalidate.chunks": {
+        "calls": 12,
+        "cumulative_max_ms": 0.00047999999999999996,
+        "mean_ms": 4.999999999999999e-05,
+        "over_8_ms": 0,
+        "phase": "Open",
+        "scope": "terrain.invalidate.chunks",
+        "total_ms": 0.0005999999999999998
+      },
+      "terrain.invalidate.journal": {
+        "calls": 12,
+        "cumulative_max_ms": 8.999999999999999e-05,
+        "mean_ms": 2.5833333333333346e-05,
+        "over_8_ms": 0,
+        "phase": "Open",
+        "scope": "terrain.invalidate.journal",
+        "total_ms": 0.00031000000000000016
+      },
+      "terrain.model_snapshot": {
+        "calls": 7,
+        "cumulative_max_ms": 0.978051,
+        "mean_ms": 0.08940628571428988,
+        "over_8_ms": 0,
+        "phase": "Open",
+        "scope": "terrain.model_snapshot",
+        "total_ms": 0.6258440000000292
+      },
+      "terrain.prepare_jobs": {
+        "calls": 144,
+        "cumulative_max_ms": 3.685898,
+        "mean_ms": 0.00018770833335995322,
+        "over_8_ms": 0,
+        "phase": "Open",
+        "scope": "terrain.prepare_jobs",
+        "total_ms": 0.027030000003833266
+      },
+      "terrain.refresh.appearance": {
+        "calls": 12,
+        "cumulative_max_ms": 0.087852,
+        "mean_ms": 0.05422608333333332,
+        "over_8_ms": 0,
+        "phase": "Open",
+        "scope": "terrain.refresh.appearance",
+        "total_ms": 0.6507129999999999
+      },
+      "terrain.refresh.queue": {
+        "calls": 144,
+        "cumulative_max_ms": 2.723428,
+        "mean_ms": 0.6529604583333332,
+        "over_8_ms": 0,
+        "phase": "Open",
+        "scope": "terrain.refresh.queue",
+        "total_ms": 94.02630599999998
+      },
+      "terrain.refresh.queue.full": {
+        "calls": 144,
+        "cumulative_max_ms": 2.722648,
+        "mean_ms": 0.6429484236111134,
+        "over_8_ms": 0,
+        "phase": "Open",
+        "scope": "terrain.refresh.queue.full",
+        "total_ms": 92.58457300000032
+      },
+      "terrain.stream_exposure": {
+        "calls": 1263,
+        "cumulative_max_ms": 0.08566199999999999,
+        "mean_ms": 0.0022634513064132694,
+        "over_8_ms": 0,
+        "phase": "Open",
+        "scope": "terrain.stream_exposure",
+        "total_ms": 2.858738999999959
+      },
+      "terrain.stream_exposure.publications": {
+        "calls": 1263,
+        "cumulative_max_ms": 0.039480999999999995,
+        "mean_ms": 0.0001445471100554855,
+        "over_8_ms": 0,
+        "phase": "Open",
+        "scope": "terrain.stream_exposure.publications",
+        "total_ms": 0.1825630000000782
+      },
+      "terrain.stream_exposure.removals": {
+        "calls": 1263,
+        "cumulative_max_ms": 0.010509999999999999,
+        "mean_ms": 0.00017069833729215915,
+        "over_8_ms": 0,
+        "phase": "Open",
+        "scope": "terrain.stream_exposure.removals",
+        "total_ms": 0.215591999999997
+      },
+      "terrain.upload": {
+        "calls": 1263,
+        "cumulative_max_ms": 1.319788,
+        "mean_ms": 0.007099045130641779,
+        "over_8_ms": 0,
+        "phase": "Open",
+        "scope": "terrain.upload",
+        "total_ms": 8.966094000000567
+      },
+      "terrain.visibility": {
+        "calls": 1263,
+        "cumulative_max_ms": 1.8128689999999998,
+        "mean_ms": 0.0019777315914484535,
+        "over_8_ms": 0,
+        "phase": "Open",
+        "scope": "terrain.visibility",
+        "total_ms": 2.4978749999993966
+      },
+      "transitions.animate": {
+        "calls": 1263,
+        "cumulative_max_ms": 1.3615890000000002,
+        "mean_ms": 0.010966800475060774,
+        "over_8_ms": 0,
+        "phase": "Open",
+        "scope": "transitions.animate",
+        "total_ms": 13.851069000001758
+      },
+      "ui.frames.catalog_slot_size": {
+        "calls": 1263,
+        "cumulative_max_ms": 0.09539199999999999,
+        "mean_ms": 0.008569966745843257,
+        "over_8_ms": 0,
+        "phase": "Open",
+        "scope": "ui.frames.catalog_slot_size",
+        "total_ms": 10.823868000000033
+      },
+      "ui.frames.content_density": {
+        "calls": 1263,
+        "cumulative_max_ms": 0.220694,
+        "mean_ms": 0.06140545447347574,
+        "over_8_ms": 0,
+        "phase": "Open",
+        "scope": "ui.frames.content_density",
+        "total_ms": 77.55508899999987
+      },
+      "ui.frames.inventory_aspect": {
+        "calls": 1263,
+        "cumulative_max_ms": 0.9911010000000001,
+        "mean_ms": 0.028906741884401878,
+        "over_8_ms": 0,
+        "phase": "Open",
+        "scope": "ui.frames.inventory_aspect",
+        "total_ms": 36.50921499999957
+      },
+      "ui.frames.inventory_slot_size": {
+        "calls": 1263,
+        "cumulative_max_ms": 0.668905,
+        "mean_ms": 0.053782887569279514,
+        "over_8_ms": 0,
+        "phase": "Open",
+        "scope": "ui.frames.inventory_slot_size",
+        "total_ms": 67.92778700000002
+      },
+      "ui.frames.nine_slice": {
+        "calls": 1263,
+        "cumulative_max_ms": 0.204654,
+        "mean_ms": 0.011162560570071312,
+        "over_8_ms": 0,
+        "phase": "Open",
+        "scope": "ui.frames.nine_slice",
+        "total_ms": 14.098314000000066
+      },
+      "ui.frames.responsive_inventory_scale": {
+        "calls": 1263,
+        "cumulative_max_ms": 0.272496,
+        "mean_ms": 0.006322095011876459,
+        "over_8_ms": 0,
+        "phase": "Open",
+        "scope": "ui.frames.responsive_inventory_scale",
+        "total_ms": 7.984805999999967
+      },
+      "ui.reactivity": {
+        "calls": 1263,
+        "cumulative_max_ms": 33.055142000000004,
+        "mean_ms": 1.103409144893109,
+        "over_8_ms": 0,
+        "phase": "Open",
+        "scope": "ui.reactivity",
+        "total_ms": 1393.6057499999965
+      },
+      "water.motion": {
+        "calls": 3802,
+        "cumulative_max_ms": 0.035970999999999996,
+        "mean_ms": 0.0002783963703314141,
+        "over_8_ms": 0,
+        "phase": "Open",
+        "scope": "water.motion",
+        "total_ms": 1.0584630000000366
+      },
+      "water.upload": {
+        "calls": 1263,
+        "cumulative_max_ms": 0.058441,
+        "mean_ms": 0.0007645811559778338,
+        "over_8_ms": 0,
+        "phase": "Open",
+        "scope": "water.upload",
+        "total_ms": 0.9656660000000041
+      },
+      "water_audio.column": {
+        "calls": 12,
+        "cumulative_max_ms": 4.996866,
+        "mean_ms": 0.0019017499999999614,
+        "over_8_ms": 0,
+        "phase": "Open",
+        "scope": "water_audio.column",
+        "total_ms": 0.022820999999999536
+      },
+      "water_audio.scan": {
+        "calls": 24,
+        "cumulative_max_ms": 1.944352,
+        "mean_ms": 0.29912062499999975,
+        "over_8_ms": 0,
+        "phase": "Open",
+        "scope": "water_audio.scan",
+        "total_ms": 7.178894999999994
+      },
+      "water_audio.update": {
+        "calls": 1263,
+        "cumulative_max_ms": 5.009706,
+        "mean_ms": 0.0033322620744259835,
+        "over_8_ms": 0,
+        "phase": "Open",
+        "scope": "water_audio.update",
+        "total_ms": 4.208647000000017
+      },
+      "world.farming": {
+        "calls": 12,
+        "cumulative_max_ms": 0.01378,
+        "mean_ms": 0.0027700000000000016,
+        "over_8_ms": 0,
+        "phase": "Open",
+        "scope": "world.farming",
+        "total_ms": 0.03324000000000002
+      },
+      "world.import_section_delta": {
+        "calls": 43,
+        "cumulative_max_ms": 0.020550000000000002,
+        "mean_ms": 0.006537604651162786,
+        "over_8_ms": 0,
+        "phase": "Open",
+        "scope": "world.import_section_delta",
+        "total_ms": 0.2811169999999998
+      }
+    }
+  },
+  "mesh_allocator_capacity": {
+    "event_count": 80,
+    "largest_reported_copy_bytes": 459187728,
+    "measurement_kind": "Allocator buffer capacity/copy accounting; neither used VRAM nor GPU execution time",
+    "peak_reserved_bytes": 2152481064
+  },
+  "queue_samples": [
+    {
+      "event": "Performance soak terrain ownership; near/middle/far live mesh handles, not draw calls",
+      "fields": {
+        "elapsed_seconds": 30.000906004,
+        "meshes": [
+          3294,
+          5111,
+          9287
+        ],
+        "sections": [
+          1104,
+          1992,
+          3919
+        ]
+      }
+    },
+    {
+      "event": "Performance soak generation",
+      "fields": {
+        "elapsed_seconds": 30.000906004,
+        "pending_jobs": 0,
+        "prepared_columns": 1681,
+        "sections": 11792,
+        "status": "Ready",
+        "wanted_sections": 11792
+      }
+    },
+    {
+      "event": "Performance soak terrain",
+      "fields": {
+        "completed_jobs": 7046,
+        "composition_seconds": 4.782145230000007,
+        "elapsed_seconds": 30.000906004,
+        "jobs": 0,
+        "max_composition_seconds": 0.042476311,
+        "pending_columns": 0,
+        "ready": true
+      }
+    },
+    {
+      "event": "Performance soak props",
+      "fields": {
+        "batches": 1586,
+        "completed_jobs": 1478,
+        "composition_seconds": 0.9924350260000002,
+        "elapsed_seconds": 30.000906004,
+        "jobs": 0,
+        "props": 100340
+      }
+    },
+    {
+      "event": "Performance soak water rendering",
+      "fields": {
+        "elapsed_seconds": 30.000906004,
+        "mist": 0,
+        "spray": 0,
+        "tiles": 75,
+        "triangles": 4502
+      }
+    },
+    {
+      "event": "Performance soak upload budgets",
+      "fields": {
+        "deferred_batches": 872,
+        "elapsed_seconds": 30.000906004,
+        "peak_frame_vertices": 219723
+      }
+    },
+    {
+      "event": "Performance soak latest fluid step",
+      "fields": {
+        "elapsed_ms": 0.0,
+        "elapsed_seconds": 30.000906004,
+        "visited": 0
+      }
+    }
+  ],
+  "soak_intervals": [
+    {
+      "allocated_entity_indices": 32768,
+      "cpu_capacity_percent": 14.757623287343039,
+      "cpu_mesh_vertices": 635923,
+      "dropped_samples": 0,
+      "elapsed_seconds": 30.000906004,
+      "entities": 31124,
+      "fps": 106.2301251693892,
+      "frames": 3187,
+      "gpu_only_mesh_entities": 0,
+      "image_assets": 179,
+      "interval_seconds": 30.000906004,
+      "max_ms": 98.128287,
+      "median_ms": 9.100023,
+      "mesh_assets": 20269,
+      "mesh_entities": 20092,
+      "p95_ms": 12.164567,
+      "p99_ms": 14.436586,
+      "physical_resolution": [
+        2562,
+        1440
+      ],
+      "rss_bytes": 2430029824,
+      "standard_material_assets": 448,
+      "upload_frames": 50,
+      "upload_vertices": 363068,
+      "visible_mesh_entities": 13430
+    }
+  ],
+  "worst_frame_context": []
+}

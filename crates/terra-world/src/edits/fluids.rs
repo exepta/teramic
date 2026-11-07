@@ -27,7 +27,8 @@ impl EditJournal {
         self.water_mesh_epochs.get(&section).copied().unwrap_or(0)
     }
     #[cfg(feature = "bevy")]
-    pub(crate) fn water_mesh_epochs(&self) -> impl Iterator<Item = (SectionPos, u64)> + '_ {
+    /// Sections invalidated by fluid edits, including their shared mesh borders.
+    pub fn water_mesh_epochs(&self) -> impl Iterator<Item = (SectionPos, u64)> + '_ {
         self.water_mesh_epochs.iter().map(|(&p, &epoch)| (p, epoch))
     }
     pub fn fluid(&self, global: [i64; 3]) -> Option<FluidCell> {
@@ -65,6 +66,20 @@ impl EditJournal {
         } else {
             self.write_fluid(global, cell)?
         })
+    }
+    /// Recession may retain an existing override, but an already empty air
+    /// cell is not a deliberate source withdrawal. Only explicit edits/buckets
+    /// may introduce a new dry tombstone into an otherwise implicit reservoir.
+    #[cfg(feature = "bevy")]
+    pub(crate) fn set_simulated_fluid(
+        &mut self,
+        global: [i64; 3],
+        cell: FluidCell,
+    ) -> Result<bool, FluidError> {
+        if !cell.validate() {
+            return Err(FluidError::InvalidCell);
+        }
+        Ok(self.write_fluid(global, cell)?)
     }
     pub(super) fn write_fluid(
         &mut self,

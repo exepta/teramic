@@ -1,6 +1,6 @@
 {
   "creative_category": "terrain",
-  "description": "Loose grains from deserts, beaches and river banks.",
+  "description": "Fine cohesive golden sand with subtle wind ripples from deserts, beaches and river banks.",
   "schema_version": 1,
   "id": 4,
   "name": "Sand",
@@ -10,7 +10,8 @@
   "materials": {
     "Fine sand": {
       "texture_pattern": "sand",
-      "roughness": 1.0
+      "roughness": 1.0,
+      "reflectance": 0.12
     }
   },
   "face_materials": [

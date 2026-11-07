@@ -1,0 +1,13 @@
+{
+  "biome": "cliffted_desert",
+  "terrain": {
+    "min_height": 65,
+    "max_height": 145,
+    "horizontal_scale": 500,
+    "detail_strength": 0.2,
+    "relief_strength": 0.85,
+    "soil_depth": 3,
+    "tree_density": 0,
+    "terrace_strength": 0.3
+  }
+}

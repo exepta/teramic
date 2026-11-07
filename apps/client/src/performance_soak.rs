@@ -134,6 +134,10 @@ fn report(world: &mut World, state: &mut Soak, now: Instant) {
         .iter(world)
         .filter(|(_, visible)| visible.get())
         .count();
+    let gpu_only_mesh_entities = world
+        .query_filtered::<Entity, (With<Mesh3d>, With<bevy::camera::visibility::NoCpuCulling>)>()
+        .iter(world)
+        .count();
     let meshes = world.get_resource::<Assets<Mesh>>().map_or(0, Assets::len);
     let cpu_mesh_vertices: usize = world.get_resource::<Assets<Mesh>>().map_or(0, |assets| {
         assets.iter().map(|(_, mesh)| readable_vertices(mesh)).sum()
@@ -151,7 +155,7 @@ fn report(world: &mut World, state: &mut Soak, now: Instant) {
     tracing::info!(elapsed_seconds = elapsed, interval_seconds = interval, frames = state.frames,
         fps = state.frames as f64 / interval, median_ms = summary[0], p95_ms = summary[1], p99_ms = summary[2], max_ms = summary[3],
         rss_bytes = ?rss, cpu_capacity_percent = ?cpu, physical_resolution = ?physical_resolution,
-        entities, allocated_entity_indices, mesh_entities, visible_mesh_entities,
+        entities, allocated_entity_indices, mesh_entities, visible_mesh_entities, gpu_only_mesh_entities,
         mesh_assets = meshes, cpu_mesh_vertices, standard_material_assets = materials, image_assets = images.assets,
         upload_vertices = state.upload_vertices, upload_frames = state.uploaded_frames, dropped_samples = state.dropped_samples,
         "Performance soak interval");
@@ -246,6 +250,25 @@ fn report(world: &mut World, state: &mut Soak, now: Instant) {
             sections = chunks.loaded.len(),
             stored_props = props,
             "Performance soak world resources"
+        );
+    }
+    if let Some(terrain) = world.get_resource::<terra_render::RenderedSections>() {
+        let mut sections = [0_usize; 3];
+        let mut meshes = [0_usize; 3];
+        for section in terrain.sections.values() {
+            let index = match section.detail_level {
+                terra_render::meshing::DetailLevel::Near => 0,
+                terra_render::meshing::DetailLevel::Middle => 1,
+                terra_render::meshing::DetailLevel::Far => 2,
+            };
+            sections[index] += 1;
+            meshes[index] += section.meshes.len();
+        }
+        tracing::info!(
+            elapsed_seconds = elapsed,
+            ?sections,
+            ?meshes,
+            "Performance soak terrain ownership; near/middle/far live mesh handles, not draw calls"
         );
     }
     if let Some(generation) = world.get_resource::<WorldGeneration>() {

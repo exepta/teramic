@@ -8,6 +8,7 @@ pub use ink::InkExposure;
 pub(crate) mod mist;
 mod raymarch;
 pub(crate) mod spray;
+mod storage;
 #[cfg(test)]
 mod tests;
 mod upload;
@@ -17,6 +18,7 @@ use terra_world::streaming::StreamingSet;
 pub use upload::WaterStatus;
 
 pub(super) fn install(app: &mut App) {
+    storage::install(app);
     contacts::install(app);
     raymarch::install(app);
     app.add_plugins(MaterialPlugin::<material::WaterMaterial>::default())

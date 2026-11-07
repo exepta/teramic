@@ -37,6 +37,11 @@ impl Mounts {
         if horse.kind != CreatureKind::Horse
             || horse.health <= 0.0
             || horse.growth() < 1.0
+            || !state.kingdoms.can(
+                uuid,
+                terra_core::kingdom::KingdomPermission::NpcWork,
+                horse.position.map(|v| v.floor() as i64),
+            )
             || state.creatures.owners.get(&horse.id) != Some(&uuid)
             || self.active.contains_key(&uuid)
             || self.contains(horse.id)
@@ -74,6 +79,7 @@ pub(super) fn publish(
     mut journal: ResMut<EditJournal>,
     peers: Query<&Peer, With<Connected>>,
     config: Res<GameConfig>,
+    chunks: Res<ChunkStore>,
 ) {
     // Removed animals and disconnected riders cannot keep runtime handles alive.
     let state = journal.gameplay();
@@ -100,7 +106,14 @@ pub(super) fn publish(
                 .animals
                 .get(&mount.horse.id)
                 .is_some_and(|a| a.health > 0.0)
-                || state.creatures.owners.get(&mount.horse.id) != Some(uuid))
+                || state.creatures.owners.get(&mount.horse.id) != Some(uuid)
+                || !terra_world::kingdom_access::can_use(
+                    &state.kingdoms,
+                    &chunks,
+                    *uuid,
+                    terra_core::kingdom::KingdomPermission::NpcWork,
+                    mount.horse.position.map(|v| v.floor() as i64),
+                ))
             .then_some(*uuid)
         })
         .collect();

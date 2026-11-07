@@ -3,7 +3,7 @@
   "id": 62,
   "name": "Horizontal Chimney Pipe",
   "description": "A straight horizontal connector between opposite chimney ports.",
-  "creative_category": "decoration",
+  "creative_category": "technic",
   "render_kind": "custom_mesh",
   "struct_block": true,
   "model_layout": "scene",

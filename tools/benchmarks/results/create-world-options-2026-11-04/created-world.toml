@@ -1,0 +1,425 @@
+title = "Cedar Valley"
+game_version = "0.1.0"
+mode = "spectator"
+
+[manifest]
+save_format_version = 2
+
+[manifest.world]
+ecology_revision = 2
+natural_mob_limit = 256
+bounded_world = true
+ravine_revision = 1
+river_terrain_revision = 4
+id = 5436077360350160213
+seed = 42042
+generator_version = 5
+base_height = 16.0
+hill_amplitude = 12.0
+mountain_amplitude = 48.0
+sea_level = 8.0
+snow_height = 112.0
+caves = true
+geology_revision = 4
+landscape_revision = 1
+ocean_revision = 1
+cave_structure_revision = 8
+structures_revision = 5
+preferred_spawn_biome = "cherry_forest"
+trees = true
+water = true
+rivers = true
+tree_density = 0.8
+biome_scale = 2048.0
+ocean_scale = 4096.0
+biomes = true
+terrace_height = 4.0
+terrace_strength = 0.72
+
+[manifest.world.time]
+day_length_seconds = 1440.0
+start_hour = 10.0
+paused = false
+
+[manifest.world.seasons]
+enabled = true
+spring_days = 24
+summer_days = 24
+autumn_days = 24
+winter_days = 24
+start_season = "spring"
+transition_days = 2.0
+
+[manifest.world.game_rules]
+keep_inventory = true
+daylight_cycle = false
+weather_cycle = false
+mob_griefing = false
+fire_spread = false
+pvp = true
+sleep_percentage = 35.0
+game_time_speed = 1.5
+
+[[manifest.world.biome_definitions.entries]]
+biome = "ocean"
+selection_weight = 1.0
+
+[manifest.world.biome_definitions.entries.terrain]
+min_height = -98.0
+max_height = 22.0
+horizontal_scale = 700.0
+detail_strength = 0.12
+relief_strength = 0.75
+soil_depth = 3.0
+tree_density = 0.0
+terrace_strength = 0.03
+
+[manifest.world.biome_definitions.entries.ocean]
+cold_temperature = 0.36
+warm_temperature = 0.58
+swamp_humidity = 0.72
+clay_frequency = 0.14
+clay_cluster_scale = 18.0
+clay_depth = 2.5
+
+[manifest.world.biome_definitions.entries.ocean.warm]
+coral_density = 0.8
+seagrass_density = 0.55
+max_vegetation_depth = 90.0
+
+[manifest.world.biome_definitions.entries.ocean.warm.floor]
+sand = 0.7
+gravel = 0.05
+mud = 0.04
+dirt = 0.01
+stone = 0.2
+
+[manifest.world.biome_definitions.entries.ocean.cold]
+coral_density = 0.0
+seagrass_density = 0.7
+max_vegetation_depth = 110.0
+
+[manifest.world.biome_definitions.entries.ocean.cold.floor]
+sand = 0.08
+gravel = 0.47
+mud = 0.35
+dirt = 0.02
+stone = 0.08
+
+[manifest.world.biome_definitions.entries.ocean.swamp]
+coral_density = 0.0
+seagrass_density = 0.88
+max_vegetation_depth = 85.0
+
+[manifest.world.biome_definitions.entries.ocean.swamp.floor]
+sand = 0.2
+gravel = 0.03
+mud = 0.5
+dirt = 0.25
+stone = 0.02
+
+[[manifest.world.biome_definitions.entries]]
+biome = "plains"
+selection_weight = 1.0
+
+[manifest.world.biome_definitions.entries.terrain]
+min_height = 32.0
+max_height = 60.0
+horizontal_scale = 360.0
+detail_strength = 0.18
+relief_strength = 0.4
+soil_depth = 5.0
+tree_density = 0.22
+terrace_strength = 0.08
+
+[[manifest.world.biome_definitions.entries]]
+biome = "forest"
+selection_weight = 1.0
+
+[manifest.world.biome_definitions.entries.terrain]
+min_height = 40.0
+max_height = 90.0
+horizontal_scale = 400.0
+detail_strength = 0.26
+relief_strength = 0.65
+soil_depth = 5.0
+tree_density = 1.15
+terrace_strength = 0.08
+
+[[manifest.world.biome_definitions.entries]]
+biome = "desert"
+selection_weight = 1.0
+
+[manifest.world.biome_definitions.entries.terrain]
+min_height = 50.0
+max_height = 100.0
+horizontal_scale = 450.0
+detail_strength = 0.13
+relief_strength = 0.42
+soil_depth = 6.0
+tree_density = 0.0
+terrace_strength = 0.03
+
+[[manifest.world.biome_definitions.entries]]
+biome = "highlands"
+selection_weight = 0.65
+
+[manifest.world.biome_definitions.entries.terrain]
+min_height = 80.0
+max_height = 200.0
+horizontal_scale = 560.0
+detail_strength = 0.32
+relief_strength = 0.95
+soil_depth = 3.0
+tree_density = 0.4
+terrace_strength = 0.18
+
+[[manifest.world.biome_definitions.entries]]
+biome = "mushroom_park"
+selection_weight = 1.0
+
+[manifest.world.biome_definitions.entries.terrain]
+min_height = 38.0
+max_height = 82.0
+horizontal_scale = 380.0
+detail_strength = 0.22
+relief_strength = 0.48
+soil_depth = 5.2
+tree_density = 0.7
+terrace_strength = 0.08
+
+[[manifest.world.biome_definitions.entries]]
+biome = "cliffted_desert"
+selection_weight = 1.0
+
+[manifest.world.biome_definitions.entries.terrain]
+min_height = 65.0
+max_height = 145.0
+horizontal_scale = 500.0
+detail_strength = 0.2
+relief_strength = 0.85
+soil_depth = 3.0
+tree_density = 0.0
+terrace_strength = 0.3
+
+[[manifest.world.biome_definitions.entries]]
+biome = "cherry_forest"
+selection_weight = 1.0
+
+[manifest.world.biome_definitions.entries.terrain]
+min_height = 45.0
+max_height = 115.0
+horizontal_scale = 460.0
+detail_strength = 0.24
+relief_strength = 0.68
+soil_depth = 5.0
+tree_density = 1.15
+terrace_strength = 0.1
+
+[manifest.world.biome_definitions.landscapes]
+warp_scale = 680.0
+warp_strength = 110.0
+region_scale = 1700.0
+dune_wind_angle = 28.0
+
+[[manifest.world.biome_definitions.landscapes.profiles]]
+kind = "plains"
+min_height = 32.0
+max_height = 60.0
+horizontal_scale = 480.0
+roughness = 0.16
+ridge_strength = 0.05
+erosion = 0.8
+overhangs = 0.0
+weight = 1.0
+
+[[manifest.world.biome_definitions.landscapes.profiles]]
+kind = "rolling_plains"
+min_height = 35.0
+max_height = 105.0
+horizontal_scale = 620.0
+roughness = 0.25
+ridge_strength = 0.2
+erosion = 0.6
+overhangs = 0.0
+weight = 1.0
+
+[[manifest.world.biome_definitions.landscapes.profiles]]
+kind = "forest"
+min_height = 40.0
+max_height = 90.0
+horizontal_scale = 420.0
+roughness = 0.3
+ridge_strength = 0.22
+erosion = 0.55
+overhangs = 0.0
+weight = 1.0
+
+[[manifest.world.biome_definitions.landscapes.profiles]]
+kind = "mountain_forest"
+min_height = 50.0
+max_height = 160.0
+horizontal_scale = 1050.0
+roughness = 0.36
+ridge_strength = 0.6
+erosion = 0.6
+overhangs = 0.1
+weight = 1.0
+
+[[manifest.world.biome_definitions.landscapes.profiles]]
+kind = "fantasy_mountains"
+min_height = 65.0
+max_height = 200.0
+horizontal_scale = 1500.0
+roughness = 0.38
+ridge_strength = 0.7
+erosion = 0.55
+overhangs = 0.2
+weight = 0.35
+
+[[manifest.world.biome_definitions.landscapes.profiles]]
+kind = "snowy_highlands"
+min_height = 75.0
+max_height = 200.0
+horizontal_scale = 1300.0
+roughness = 0.28
+ridge_strength = 0.65
+erosion = 0.6
+overhangs = 0.1
+weight = 0.75
+
+[[manifest.world.biome_definitions.landscapes.profiles]]
+kind = "cherry_grove"
+min_height = 45.0
+max_height = 115.0
+horizontal_scale = 540.0
+roughness = 0.22
+ridge_strength = 0.16
+erosion = 0.72
+overhangs = 0.0
+weight = 1.0
+
+[[manifest.world.biome_definitions.landscapes.profiles]]
+kind = "spirit_forest"
+min_height = 45.0
+max_height = 145.0
+horizontal_scale = 850.0
+roughness = 0.3
+ridge_strength = 0.4
+erosion = 0.65
+overhangs = 0.2
+weight = 0.7
+
+[[manifest.world.biome_definitions.landscapes.profiles]]
+kind = "desert"
+min_height = 50.0
+max_height = 100.0
+horizontal_scale = 680.0
+roughness = 0.18
+ridge_strength = 0.2
+erosion = 0.65
+overhangs = 0.05
+weight = 1.0
+
+[[manifest.world.biome_definitions.landscapes.profiles]]
+kind = "ocean"
+min_height = -98.0
+max_height = 22.0
+horizontal_scale = 1200.0
+roughness = 0.18
+ridge_strength = 0.22
+erosion = 0.75
+overhangs = 0.0
+weight = 1.0
+
+[manifest.world.structures]
+villages = false
+ruins = true
+mines = false
+
+[manifest.world.cave_biomes]
+enabled = true
+salt_surfaces = [
+    0.55,
+    0.3,
+    0.1,
+    0.05,
+]
+lush_density = 0.72
+
+[manifest.world.cave_biomes.distribution]
+normal_weight = 0.45
+salt_weight = 0.2
+lush_weight = 0.2
+cascade_weight = 0.15
+
+[manifest.world.cave_biomes.regions]
+normal_diameter = [
+    100.0,
+    400.0,
+]
+salt_diameter = [
+    80.0,
+    250.0,
+]
+lush_diameter = [
+    100.0,
+    300.0,
+]
+cascade_diameter = [
+    120.0,
+    350.0,
+]
+transition_distance = 24.0
+
+[manifest.world.cave_biomes.connectors]
+inherit_biomes = true
+blend_biomes = true
+biome_decorations = true
+density = 0.84
+
+[manifest.world.ores]
+enabled = true
+revision = 1
+
+[manifest.world.ores.salt]
+min_depth = 6.0
+max_depth = 160.0
+frequency = 0.9
+radius = 6.0
+cave_affinity = 0.92
+
+[manifest.world.ores.iron]
+min_depth = 8.0
+max_depth = 240.0
+frequency = 0.85
+radius = 4.2
+cave_affinity = 0.28
+
+[manifest.world.ores.coal]
+min_depth = 5.0
+max_depth = 180.0
+frequency = 0.95
+radius = 4.8
+cave_affinity = 0.18
+
+[manifest.world.ores.gold]
+min_depth = 32.0
+max_depth = 320.0
+frequency = 0.42
+radius = 3.0
+cave_affinity = 0.4
+
+[manifest.world.ores.diamond]
+min_depth = 70.0
+max_depth = 400.0
+frequency = 0.2
+radius = 2.4
+cave_affinity = 0.55
+
+[manifest.world.ores.ruby]
+min_depth = 55.0
+max_depth = 360.0
+frequency = 0.25
+radius = 2.8
+cave_affinity = 0.6

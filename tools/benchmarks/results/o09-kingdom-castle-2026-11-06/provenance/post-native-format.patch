@@ -1,0 +1,64 @@
+--- a/crates/terra-core/src/lib.rs
++++ b/crates/terra-core/src/lib.rs
+@@ -96,7 +96,7 @@
+ pub mod block_shapes;
+ pub mod construction;
+ pub mod crafting;
++pub mod flower_pot;
+ pub mod kingdom;
+-pub mod flower_pot;
+ pub mod textiles;
+ pub mod tints;
+--- a/crates/terra-network/src/tests.rs
++++ b/crates/terra-network/src/tests.rs
+@@ -9,10 +9,10 @@
+ 
+ #[path = "bee_tests.rs"]
+ mod bee_tests;
++#[path = "kingdom_tests.rs"]
++mod kingdom_tests;
+ #[path = "location_tests.rs"]
+ mod location_tests;
+-#[path = "kingdom_tests.rs"]
+-mod kingdom_tests;
+ #[path = "pet_command_tests.rs"]
+ mod pet_command_tests;
+ #[path = "riding_tests.rs"]
+--- a/crates/terra-ui/src/chat.rs
++++ b/crates/terra-ui/src/chat.rs
+@@ -177,8 +177,8 @@
+         .get_resource::<crate::kingdom::KingdomMenuState>()
+         .is_some_and(|k| k.blocks_input())
+         && !world
+-        .get_resource::<crate::pets::PetMenuState>()
+-        .is_some_and(|p| p.blocks_input())
++            .get_resource::<crate::pets::PetMenuState>()
++            .is_some_and(|p| p.blocks_input())
+         && world
+             .get_resource::<ClientSession>()
+             .is_some_and(|session| session.ready && session.error.is_none() && !session.dead())
+--- a/crates/terra-ui/src/lib.rs
++++ b/crates/terra-ui/src/lib.rs
+@@ -39,8 +39,8 @@
+     BlockPreviewImages, InventoryAction, InventoryView, ItemPreviewImages, PlayerPreviewImage,
+     PropPreviewImages, TooltipOwner,
+ };
++pub use kingdom::{KingdomInputSet, KingdomMemberView, KingdomMenuAction, KingdomView};
+ pub use plugin::TerraUiPlugin;
+-pub use kingdom::{KingdomInputSet, KingdomMemberView, KingdomMenuAction, KingdomView};
+ pub use presentation::{PresentationOverride, preferred_present_mode};
+ pub use process_stats::AppProcessStats;
+ pub use settings::{SettingsAction, SettingsConfigPath};
+--- a/crates/terra-ui/src/pets.rs
++++ b/crates/terra-ui/src/pets.rs
+@@ -136,8 +136,8 @@
+         .get_resource::<crate::kingdom::KingdomMenuState>()
+         .is_some_and(|k| k.blocks_input())
+         && !world
+-        .get_resource::<crate::inventory::InventoryState>()
+-        .is_some_and(|s| s.blocks_input())
++            .get_resource::<crate::inventory::InventoryState>()
++            .is_some_and(|s| s.blocks_input())
+         && !world
+             .get_resource::<crate::chat::ChatState>()
+             .is_some_and(|s| s.blocks_input())

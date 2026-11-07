@@ -1,0 +1,302 @@
+{
+  "phase": 197,
+  "recorded_utc": "2026-11-06T14:41:32.557440+00:00",
+  "workspace_library": {
+    "command": "cargo test --workspace --lib --locked -j2 -- --test-threads=8",
+    "exit_code": 0,
+    "totals": {
+      "passed": 3697,
+      "failed": 0,
+      "ignored": 8
+    },
+    "suites": [
+      {
+        "crate": "terra_core",
+        "passed": 359,
+        "failed": 0,
+        "ignored": 0
+      },
+      {
+        "crate": "terra_network",
+        "passed": 450,
+        "failed": 0,
+        "ignored": 1
+      },
+      {
+        "crate": "terra_physics",
+        "passed": 45,
+        "failed": 0,
+        "ignored": 0
+      },
+      {
+        "crate": "terra_player",
+        "passed": 93,
+        "failed": 0,
+        "ignored": 0
+      },
+      {
+        "crate": "terra_render",
+        "passed": 1014,
+        "failed": 0,
+        "ignored": 2
+      },
+      {
+        "crate": "terra_server",
+        "passed": 5,
+        "failed": 0,
+        "ignored": 0
+      },
+      {
+        "crate": "terra_storage",
+        "passed": 141,
+        "failed": 0,
+        "ignored": 0
+      },
+      {
+        "crate": "terra_ui",
+        "passed": 500,
+        "failed": 0,
+        "ignored": 0
+      },
+      {
+        "crate": "terra_voxel",
+        "passed": 24,
+        "failed": 0,
+        "ignored": 0
+      },
+      {
+        "crate": "terra_world",
+        "passed": 1066,
+        "failed": 0,
+        "ignored": 5
+      }
+    ],
+    "log": "logs/workspace-lib-tests.log"
+  },
+  "checks": [
+    {
+      "command": "cargo clippy --workspace --all-targets --locked -j2 -- -D warnings",
+      "exit_code": 0,
+      "log": "logs/workspace-clippy.log"
+    },
+    {
+      "command": "cargo build --workspace --locked -j2",
+      "exit_code": 0,
+      "log": "logs/workspace-build.log"
+    },
+    {
+      "command": "cargo fmt --all -- --check",
+      "exit_code": 0,
+      "log": "logs/format.log"
+    },
+    {
+      "command": "git diff --check",
+      "exit_code": 0,
+      "log": "logs/diff.log"
+    },
+    {
+      "command": "parse all 60 src-ui CSS stylesheets with real TiltUI parser",
+      "exit_code": 0,
+      "log": "logs/ui-stylesheets.log"
+    }
+  ],
+  "native_scenes": [
+    {
+      "scene": "kingdom-temperate",
+      "seed": 42042,
+      "terrain_revision": 1,
+      "structures_revision": 6,
+      "region": [
+        -1,
+        -1
+      ],
+      "civilians": 53,
+      "soldiers": 28,
+      "exit_code": 0,
+      "log": "logs/native-temperate.log"
+    },
+    {
+      "scene": "kingdom-winter",
+      "seed": 42042,
+      "terrain_revision": 1,
+      "structures_revision": 6,
+      "region": [
+        0,
+        -1
+      ],
+      "civilians": 51,
+      "soldiers": 38,
+      "exit_code": 0,
+      "log": "logs/native-winter.log"
+    },
+    {
+      "scene": "outpost",
+      "seed": 42042,
+      "terrain_revision": 1,
+      "structures_revision": 6,
+      "region": [
+        1,
+        4
+      ],
+      "civilians": 0,
+      "soldiers": 9,
+      "exit_code": 0,
+      "log": "logs/native-outpost.log"
+    },
+    {
+      "scene": "claims",
+      "projection_only": true,
+      "server_authority_tested_separately_by_udp": true,
+      "exit_code": 0,
+      "log": "logs/native-claims.log"
+    }
+  ],
+  "native_images": [
+    {
+      "path": "native/claims/diplomacy-claims.png",
+      "width": 2562,
+      "height": 1440,
+      "bytes": 1723430,
+      "sha256": "16ca6da9b1758a783c3cf0ac0bfc1d8404e7db81c602b73d0123b652651e12f9"
+    },
+    {
+      "path": "native/claims/diplomacy-compact.png",
+      "width": 1025,
+      "height": 768,
+      "bytes": 591615,
+      "sha256": "25a0ca066f9cd6d8ad0f3c5dfa53df546ced7a609871e923c28f07635360d08c"
+    },
+    {
+      "path": "native/claims/diplomacy-live-color.png",
+      "width": 2562,
+      "height": 1440,
+      "bytes": 1722686,
+      "sha256": "589c92ded78e00711bb264005b63f77ab42049a389f6d285bb316b8f2bb2451c"
+    },
+    {
+      "path": "native/claims/diplomacy-rectangle-preview.png",
+      "width": 2561,
+      "height": 1440,
+      "bytes": 1719722,
+      "sha256": "754801d584b624e6aa037741fb7bfc2fc02fb608175f1ff481d1059bbc7f5689"
+    },
+    {
+      "path": "native/claims/diplomacy-rightclick-unselect.png",
+      "width": 2561,
+      "height": 1440,
+      "bytes": 1712324,
+      "sha256": "3b1fd55f5d15284e5f8b0472ad2a8f6bcf9f179b814dd2dacb02e5d0b5a2327b"
+    },
+    {
+      "path": "native/kingdom-temperate/kingdom-temperate-close.png",
+      "width": 2562,
+      "height": 1440,
+      "bytes": 5372819,
+      "sha256": "1c682339617807d98b3c52e88b8906fe6e6a0fb509f864508b9bcbabb8d15fcf"
+    },
+    {
+      "path": "native/kingdom-temperate/kingdom-temperate-overview.png",
+      "width": 2562,
+      "height": 1440,
+      "bytes": 4625381,
+      "sha256": "d78a26ad947a45d27676db52e90e46d36cd588888f7add94eca558f7336cb775"
+    },
+    {
+      "path": "native/kingdom-winter/kingdom-winter-close.png",
+      "width": 2562,
+      "height": 1440,
+      "bytes": 5773404,
+      "sha256": "dadf9f62281c1f6038fd93ce9a7b62d9826475d7aa11e5063c78ade10b9b0c59"
+    },
+    {
+      "path": "native/kingdom-winter/kingdom-winter-overview.png",
+      "width": 2562,
+      "height": 1440,
+      "bytes": 4846036,
+      "sha256": "bb26857a7a97d2e2258c64ad6c024bea65295888dfa58f3b87ad9405a2b3452b"
+    },
+    {
+      "path": "native/outpost/outpost-close.png",
+      "width": 2562,
+      "height": 1440,
+      "bytes": 5382311,
+      "sha256": "5fd0c3861aa49998ad9117efffa83bd0450e021fb75e302d349891c6e7d6aa31"
+    },
+    {
+      "path": "native/outpost/outpost-overview.png",
+      "width": 2562,
+      "height": 1440,
+      "bytes": 5054500,
+      "sha256": "d3be7bd0cb14a82a98ae061e07405f38ab275e3883e758d1590db1d357908fb2"
+    }
+  ],
+  "references": {
+    "docs/references/kingdom-outpost.png": "8cd7751fd256e16950ae572c59609d7473742545c6daaa0bc752d4848762faf3",
+    "docs/references/kingdom-temperate.png": "88d2ede8544590a60be32cfa42bfc1cd98232d9961ca8de055611a34630747d1",
+    "docs/references/kingdom-winter.png": "3aef6e4da332f91b2be219bb5d73ec832e26d7f4e393dcacf0f3e804e8866adf"
+  },
+  "source_sha256": {
+    "TODO.md": "5995d7727c53fef93745e943553aa72c1f2040fd13adf3d2d899e5c751ed9782",
+    "PATCH.md": "81b09554caeaf3c191c0964fab2d0858007fab36e6962c4bbc113188c589f91f",
+    "configs/world.toml": "3a36a5896489a6a3c5f0b212a41a6f76e6a1a82353b7f6b7790dce8db452aba5",
+    "apps/client/src/biome_smoke.rs": "2ece420d5587ace5ebf6b7183abf61ca48603d4d89b553e621c43f2f3c8dcd87",
+    "apps/client/src/bootstrap.rs": "abdd26b3fb38db2b5d4dc7f60021daabc9aedcd9d531cdb204bd852d1645fa59",
+    "apps/client/src/claims_smoke.rs": "af7885b7125f495ed7a0ffc23be94849410217e75010a46460c93e8a12d3bcfa",
+    "crates/terra-core/src/config/world.rs": "312f4f70e078431d285d779a069ea2c091b6f7a8c48dec99c4f44bedc22503d2",
+    "crates/terra-core/src/creatures.rs": "7e9701aa3601a5386c0463a42f34a8d099918ba737043d8488fff09d7f479ce5",
+    "crates/terra-core/src/creatures/villagers.rs": "ac19a10bee8e317cc9bd5a3dc2bb8799026dc8f7f72eb538941f4d3921510c37",
+    "crates/terra-core/src/creatures/soldiers.rs": "bbc19e950d7e61a726d1072bb2b9b96c21f2253d15a9525d87e8cb38c79ed1eb",
+    "crates/terra-core/src/kingdom.rs": "085438661c15d5b33db478dfc708a45086f5d9f04a7a1f6a9a79f73034cfab87",
+    "crates/terra-core/src/kingdom/bots.rs": "7c86539d67c4b41754fac74519d5dbbaab554b58cd25125f4585e0258ad5392f",
+    "crates/terra-core/src/kingdom/domains.rs": "4f7ebded09eeb66cc148ae492fe1174151ca0230baccbc147f400f8d852ed1b9",
+    "crates/terra-network/src/protocol/session.rs": "5c8f47e6092bfab255f12635bcd1d7e71d932dba3a643c5218b37bcda436e2c4",
+    "crates/terra-network/src/protocol/commands.rs": "83c1116ad6d8581aa781d3d521423d56359d317ac88a71dcec3f9113ee87080f",
+    "crates/terra-network/src/server_chat.rs": "d2fd872b34df641acc56422e707c9b7301850b7912e36c1d636e11f2f6c5e5e2",
+    "crates/terra-network/src/server_console.rs": "e5f4db3d857e8dc58f4327325c5cfdfdbee67d296441d9e12dad7441cf07e5f0",
+    "crates/terra-network/src/creature_tests.rs": "90dfcda15ac7121a6012d17aab008dae5094f3aeea5c13ccbcd2a76218e1d727",
+    "crates/terra-render/src/settlement_banners.rs": "f6e545002adcdb602d2507400dae7168c374eb0ec978e0e24481bfa4eb744a8b",
+    "crates/terra-render/src/meshing/custom.rs": "eff54f815f9499b207b1f9a09b83999896a56d10303dd3958e6526de31afaa57",
+    "crates/terra-render/src/creatures/mod.rs": "2060fbdb735ca7404d4470770b814c73530341f0f27bba5771e35d54ab08c16c",
+    "crates/terra-render/src/creatures/model/villager.rs": "f2540f85cdffe1bef39a4e676fcf62c022d35f4bbe58aa38882400ab3c3038cf",
+    "crates/terra-render/src/creatures/model/villager/gear.rs": "49ca11a8920115df4b71434b727df07db98142578b33567f54e6e2479583dce4",
+    "crates/terra-storage/src/maps.rs": "13b1cf0c92904e913f0671cc0cee3e4a250225de828ca99e52f130ed5e3e6ed7",
+    "crates/terra-storage/src/maps/domains.rs": "7f07cbfc23225b7a2ff59ed3428e6dc9df0d4edb67348c3f0520add75ab970de",
+    "crates/terra-storage/src/regions/tests.rs": "60388b7fc19d548a70df33bf3d436ca03705f72fb8ae2e83e7192ec72fa99edb",
+    "crates/terra-ui/src/minimap.rs": "3e3da601c68ea5b380f82ad567818921f6d58272fc6ac288477f907f1bcc0a81",
+    "crates/terra-ui/src/minimap/diplomacy.rs": "0dbc7fc922dc26750fa2bccff32afe9ecd09d67145eccdff08973aa21ad7756a",
+    "crates/terra-ui/src/minimap/fullmap.rs": "b461e0aa37195b4b676e35f4a4848bd3dded98524a28d557b1172e181ec80597",
+    "crates/terra-ui/src/settlement_map.rs": "a00e76343ceab5e75ce753f2d6f3fde2e3fd89827da08c814b094ee005264657",
+    "crates/terra-ui/src/realm_title.rs": "74f49b0af2646d8836ce31b58e85725694f721ce7bbccd90059c12be4fc67576",
+    "crates/terra-world/src/generation/structures.rs": "f870b279566d12342ade9f3cc008b5438a064e0f83cc1f3d3ed6b8af2d621be4",
+    "crates/terra-world/src/generation/structures/build.rs": "b527a1064d36175dfae716addec44dded94f6fd2718f25eb18bda9ff067a4c8a",
+    "crates/terra-world/src/generation/structures/build/royal.rs": "5ccebaff959e87b252bd91e7c208f4e79c62c559ad874378f7bbcc24dde12941",
+    "crates/terra-world/src/generation/structures/build/royal/buildings.rs": "fb3e6861030da4945241c0ef296518c883a4553025c0a728aceb8f23af9e2d39",
+    "crates/terra-world/src/generation/structures/build/royal/fortifications.rs": "2340a28c968ad7def43564d6cb0b0a1bb573c9bce40611927c8421ba6b6acfb1",
+    "crates/terra-world/src/generation/structures/build/royal/tests.rs": "0de7063ce0839615b62b7fc5c85a041e98332974963124f4bf34b456b1862b4a",
+    "crates/terra-world/src/generation/structures/settlement.rs": "5af0dcfe5358a72abffe7c74435a39f75c36a0d89d32b19478bd7adc22a7b222",
+    "crates/terra-world/src/creatures/villagers.rs": "c3b21b80f58a9baf97fde3fee158ded3847890abd5ea41cffcc3d21c886fd428",
+    "crates/terra-world/src/creatures/villagers/settlement_tests.rs": "226084f9272c199879d31d2eecbc369c97a83add197dfad615b310f5731ec105",
+    "crates/terra-world/src/streaming/resources.rs": "8347394582914dd03c6c170001483d1f5c5124050e8365b4f78dc135fa338ff0",
+    "src-ui/components/full-map.component.html": "027e4c30b15e3eee1ffdc4003521661259951caf9000de1848d151b68079c813"
+  },
+  "log_sha256": {
+    "logs/diff.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "logs/format.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "logs/gate-road-regression.log": "73b1163d913c6a9e82852595b30152042c8ffd18467b3cf285d718ca6c9f0f04",
+    "logs/native-claims.log": "e8fd1c150f2c2ce23697a74204b2106dfc6ce39ce60491d3ae9fcbc1f17f86a5",
+    "logs/native-outpost.log": "1bef1428e2be6f741302743b13a0a8fe60f0390fbff5025ff3eff823d8cba17f",
+    "logs/native-temperate.log": "a0185acf6054d49ea2343db8604e77f8fa26e02a6ed80966349e5fd9dc44e4f5",
+    "logs/native-winter.log": "074f5ffb252461672c4c668e5b4c350ecc8f3f1208a1e95601354cd833b85d2f",
+    "logs/ui-stylesheets.log": "69f7d6f4d64314faaf7b23eea6ed992d71c917a41ef14e4736614846739646e0",
+    "logs/workspace-build.log": "05401b9abe2ac05a5738929f0aae2cf0e620666dfe926f88f04c405b7e9fa09f",
+    "logs/workspace-clippy.log": "233cf0882837558b8a35c9fb482bfc1e23f4c613715f7ce84849a5d92d11f0c9",
+    "logs/workspace-lib-tests.log": "f24d4690db342f36fca0fbddb2b0594fd092672e9c3c68475df48e8e10e9180c"
+  },
+  "scope_notes": [
+    "New structure generation uses revision 6; existing saved world revisions retain old generation.",
+    "Known NPC settlement areas survive chunk unload in optional settlements.dom metadata; undiscovered terrain is not planned by the map.",
+    "Initial populations are generation targets, not permanent caps; recruitment/growth UI is not added.",
+    "The private native inspection configuration disables fog and extends the overview camera; no performance claim.",
+    "Claims gallery contains nonfatal Wayland cursor and final screenshot-channel messages after all five screenshots were saved."
+  ]
+}

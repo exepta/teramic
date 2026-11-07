@@ -4,6 +4,7 @@ use terra_voxel::MaterialId;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct SurfaceColumn {
+    pub(crate) surface_shape: super::advanced::SurfaceShape,
     pub cave_biome: super::CaveBiomeColumn,
     pub cave: super::CaveStructure,
     pub seagrass_height: u8,
@@ -100,10 +101,10 @@ impl TerraGenerator {
 
     pub fn biome_at(&self, x: f64, z: f64) -> BiomeSample {
         let climate = self.climate_biome_at(x, z);
-        if climate.weights.highland == 0.0 {
+        if self.config().landscape_revision < 4 && climate.weights.highland == 0.0 {
             return climate;
         }
-        climate.at_height(self.height_with_biome(x, z, climate))
+        self.surface_ecology(climate, self.height_with_biome(x, z, climate))
     }
 
     /// Visible surface identity: ocean requires a real marine water column.
@@ -114,15 +115,22 @@ impl TerraGenerator {
 
     pub(super) fn climate_biome_at(&self, x: f64, z: f64) -> BiomeSample {
         if self.config().biomes {
-            let mut biome = self.climate.sample(x, z);
-            if self.config().ecology_revision > 0 {
-                biome = self.climate.with_cherries(biome, x, z);
-            }
-            if self.config().geology_revision > 0 {
-                self.climate.with_cliffs(biome, x, z)
+            let biome = if self.config().landscape_revision >= 5 {
+                self.advanced_biome(x, z)
             } else {
+                let mut biome = self.climate.sample(x, z);
+                if self.config().ecology_revision > 0 {
+                    biome = self.climate.with_cherries(biome, x, z);
+                }
+                if self.config().geology_revision > 0 {
+                    biome = self.climate.with_cliffs(biome, x, z);
+                }
                 biome
-            }
+            };
+            self.config()
+                .biome_definitions
+                .as_ref()
+                .map_or(biome, |definitions| biome.with_distribution(definitions))
         } else {
             BiomeSample {
                 temperature: 0.5,
@@ -145,7 +153,7 @@ impl TerraGenerator {
     pub fn surface_column(&self, x: f64, z: f64) -> SurfaceColumn {
         let climate = self.climate_biome_at(x, z);
         let height = self.height_with_biome(x, z, climate);
-        let biome = climate.at_height(height);
+        let biome = self.surface_ecology(climate, height);
         let river = self.river_at(x, z);
         let oasis = self.oasis_at(x, z).or_else(|| self.lake_at(x, z));
         let level = oasis
@@ -207,7 +215,13 @@ impl TerraGenerator {
         } else {
             MaterialId::Grass
         };
-        let clay_depth = if water_level.is_some()
+        let marine_clay = self.config().landscape_revision >= 4
+            && self.config().ocean_revision > 0
+            && ocean.weights.iter().copied().sum::<f32>() > 0.1
+            && water_level.is_some_and(|water| (water - self.config().sea_level).abs() < 0.01);
+        let clay_depth = if marine_clay {
+            f64::from(ocean.clay_depth)
+        } else if water_level.is_some()
             && (surface_material == MaterialId::Sand || river_cavity.is_some())
         {
             let patch = self.valleys.get([x * 0.061 + 73.4, z * 0.061 - 29.8])
@@ -243,9 +257,13 @@ impl TerraGenerator {
         } else {
             f64::INFINITY
         };
-        let mut soil_depth = (biome.profile().soil_depth.max(5.0) + (1.0 - rocky) * 4.0)
-            * (1.0 - exposure)
-            + 4.5 * exposure;
+        let profile_soil = if self.config().landscape_revision >= 4 {
+            self.configured_soil_depth(biome)
+        } else {
+            biome.profile().soil_depth.max(5.0)
+        };
+        let mut soil_depth =
+            (profile_soil + (1.0 - rocky) * 4.0) * (1.0 - exposure) + 4.5 * exposure;
         if let Some(river) = river.filter(|river| river.fall_erosion > 0.0) {
             let raw = self.base_height_with_biome(x, z, climate);
             let stripped = river.fall_erosion
@@ -263,6 +281,18 @@ impl TerraGenerator {
             }
         }
         let mut column = SurfaceColumn {
+            surface_shape: super::advanced::SurfaceShape {
+                strength: if self.config().landscape_revision >= 5
+                    && water_level.is_none()
+                    && river.is_none()
+                    && oasis.is_none()
+                    && self.config().hill_amplitude + self.config().mountain_amplitude > 0.0
+                {
+                    self.advanced.sample(x, z).overhangs * smoothstep(0.25, 1.1, slope)
+                } else {
+                    0.0
+                },
+            },
             cave_biome: self.cave_biome_column_with_surface(x, z, height),
             cave: self.cave_structure_at(x, z),
             seagrass_height: 0,
@@ -314,7 +344,12 @@ impl TerraGenerator {
     }
 
     pub(crate) fn forest_probability_with_biome(&self, x: f64, z: f64, biome: BiomeSample) -> f64 {
-        (biome.profile().forest_cover * self.climate.forest_mask(x, z)).clamp(0.0, 1.0)
+        let density = if self.config().landscape_revision >= 4 {
+            self.configured_tree_density(biome)
+        } else {
+            biome.profile().forest_cover
+        };
+        (density * self.climate.forest_mask(x, z)).clamp(0.0, 1.0)
             * self.climate.ground_masks(x, z).1
     }
 
@@ -326,6 +361,16 @@ impl TerraGenerator {
     ) -> MaterialId {
         if density > 0.0 {
             MaterialId::Air
+        } else if self.config().landscape_revision >= 4
+            && self.config().ocean_revision > 0
+            && column.ocean.weights.iter().copied().sum::<f32>() > 0.1
+            && column.clay_depth > 0.0
+            && {
+                let bed_depth = column.water_bed() - 0.5 - (column.height - depth);
+                (-0.1..column.clay_depth).contains(&bed_depth)
+            }
+        {
+            MaterialId::Clay
         } else if self.config().ocean_revision > 0
             && depth < 5.0
             && column.water_level.is_some()

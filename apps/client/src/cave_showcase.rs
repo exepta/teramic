@@ -17,6 +17,51 @@ use terra_world::streaming::{
     ChunkFoci, ChunkFocus, ChunkStore, GenerationStatus, LoadedSection, WorldGeneration,
 };
 
+// The floor cell is Y=-21, so its upward-facing surface is Y=-20.
+const PORTAL_GROUND_TARGET: Vec3 = Vec3::new(3.5, -19.995, 35.5);
+const PORTAL_SKY_TARGET: Vec3 = Vec3::new(80.0, 20.0, 35.0);
+const LOD_SHADOW_GROUND_TARGET: Vec3 = Vec3::new(-28.5, -30.995, 10.5);
+
+fn lod_shadow_fixture() -> bool {
+    static ENABLED: std::sync::LazyLock<bool> =
+        std::sync::LazyLock::new(|| std::env::var_os("TERRA_CAVE_LOD_SHADOW_INSPECT").is_some());
+    *ENABLED
+}
+
+fn lod_shadow_block([_, y, _]: [i64; 3]) -> u16 {
+    // Infinite overburden has no camera-visible top face. Its underside must
+    // still block the sun when the actual caster section reaches another LOD.
+    if y >= 0 || y <= -32 { 3 } else { 0 }
+}
+
+fn lod_shadow_caster(world: &mut World) -> Option<(SectionPos, Vec3)> {
+    let layer = bevy::camera::visibility::RenderLayers::default();
+    let direction = world
+        .query::<(
+            &DirectionalLight,
+            &Transform,
+            Option<&bevy::camera::visibility::RenderLayers>,
+        )>()
+        .iter(world)
+        .filter(|(light, _, layers)| {
+            light.illuminance > 1.0
+                && light.shadow_maps_enabled
+                && layers.is_none_or(|layers| layers.intersects(&layer))
+        })
+        .max_by(|(a, ..), (b, ..)| a.illuminance.total_cmp(&b.illuminance))
+        .map(|(_, transform, _)| transform.rotation * Vec3::Z)?;
+    // Terrain lighting may clamp the celestial elevation. Trace the actual
+    // light transform, not the unclamped sun drawn by the sky renderer.
+    let chunks = world.resource::<ChunkStore>();
+    let hit = terra_voxel::blocks::raycast_blocks(
+        LOD_SHADOW_GROUND_TARGET.as_dvec3().to_array(),
+        direction.as_dvec3().to_array(),
+        128.0,
+        |cell| chunks.block_at(cell),
+    )?;
+    (hit.position[1] == 0).then_some((terra_voxel::global_to_section(hit.position).0, direction))
+}
+
 #[derive(Resource)]
 struct Showcase {
     start: Instant,
@@ -28,6 +73,8 @@ struct Showcase {
     frames: Vec<f64>,
     contact_time: f32,
     torch_definition: Option<terra_render::blocks::definitions::BlockLight>,
+    portal_luminance: Option<(f32, f32)>,
+    lod_shadow_luminance: Option<f32>,
 }
 pub(crate) fn install(app: &mut App) {
     if !std::env::args().any(|a| a == "--smoke-test-caves") {
@@ -35,6 +82,16 @@ pub(crate) fn install(app: &mut App) {
     }
     let now = Instant::now();
     let lighting_only = std::env::var_os("TERRA_CAVE_LIGHT_INSPECT").is_some();
+    let portal_only = std::env::var_os("TERRA_CAVE_PORTAL_INSPECT").is_some();
+    let initial_stage = if lod_shadow_fixture() {
+        22
+    } else if portal_only {
+        18
+    } else if lighting_only {
+        14
+    } else {
+        0
+    };
     let torch_definition = terra_render::blocks::definitions::BlockLibrary::load(
         &terra_core::asset_directory().join("terra/blocks"),
     )
@@ -50,12 +107,14 @@ pub(crate) fn install(app: &mut App) {
         start: now,
         entered: now,
         built: false,
-        stage: if lighting_only { 14 } else { 0 },
-        captured: if lighting_only { 14 } else { 0 },
+        stage: initial_stage,
+        captured: initial_stage,
         requested: false,
         frames: Vec::new(),
         contact_time: 0.0,
         torch_definition,
+        portal_luminance: None,
+        lod_shadow_luminance: None,
     })
     .init_resource::<ChunkFoci>()
     .insert_resource(GraphicsConfig::default())
@@ -69,7 +128,17 @@ pub(crate) fn install(app: &mut App) {
 }
 
 fn eye(stage: usize) -> Transform {
-    if stage >= 16 {
+    if stage >= 22 {
+        Transform::from_xyz(-28.5, -27.0, 5.5).looking_at(Vec3::new(-28.5, -29.0, 12.0), Vec3::Y)
+    } else if stage == 18 {
+        Transform::from_xyz(-19.0, -17.0, 35.0).looking_at(Vec3::new(4.0, -16.5, 35.0), Vec3::Y)
+    } else if stage == 19 {
+        Transform::from_xyz(-6.0, -17.0, 35.0).looking_at(Vec3::new(16.0, -16.5, 35.0), Vec3::Y)
+    } else if stage == 20 {
+        eye(14)
+    } else if stage == 21 {
+        eye(16)
+    } else if stage >= 16 {
         Transform::from_xyz(-10.2, -26.3, -40.6).looking_at(Vec3::new(-7.3, -27.0, -39.2), Vec3::Y)
     } else if stage >= 14 {
         Transform::from_xyz(-5.8, -24.4, -36.7).looking_at(Vec3::new(-8.1, -26.8, -40.4), Vec3::Y)
@@ -95,6 +164,9 @@ fn eye(stage: usize) -> Transform {
 }
 
 fn block([x, y, z]: [i64; 3]) -> u16 {
+    if lod_shadow_fixture() {
+        return lod_shadow_block([x, y, z]);
+    }
     let xf = x as f64 + 0.5;
     let yf = y as f64 + 0.5;
     let zf = z as f64 + 0.5;
@@ -165,11 +237,22 @@ fn block([x, y, z]: [i64; 3]) -> u16 {
             material = 27;
         }
     }
+    // A roofed entrance and its genuinely open courtyard share the same floor
+    // material. The portal regression compares those exact sunlit world points
+    // from an enclosed camera and from outside, not two unrelated screenshots.
+    if x >= -25 && z >= 27 && y >= -22 {
+        material = if y <= -21 { 3 } else { 0 };
+        if x <= -12 && y <= 18 {
+            let room =
+                (-24..=-12).contains(&x) && (-20..=-12).contains(&y) && (29..=43).contains(&z);
+            material = if room { 0 } else { 3 };
+        }
+    }
     material
 }
 
 fn build(world: &mut World) -> Result<(), String> {
-    {
+    if !lod_shadow_fixture() {
         let mut journal = world.resource_mut::<terra_world::edits::EditJournal>();
         journal
             .record([5, -29, -15], 40)
@@ -330,7 +413,9 @@ fn build(world: &mut World) -> Result<(), String> {
 fn run(world: &mut World) {
     world.resource_scope(|world, mut state: Mut<Showcase>| {
         let lighting_only=std::env::var_os("TERRA_CAVE_LIGHT_INSPECT").is_some();
-        let stages=if lighting_only {18}else if std::env::var_os("TERRA_TORCH_INSPECT").is_some(){16}else{8};
+        let portal_only=std::env::var_os("TERRA_CAVE_PORTAL_INSPECT").is_some();
+        let lod_shadow_only=lod_shadow_fixture();
+        let stages=if lod_shadow_only {25}else if portal_only {22}else if lighting_only {18}else if std::env::var_os("TERRA_TORCH_INSPECT").is_some(){16}else{8};
         if state.stage>=stages {return;}
         if state.start.elapsed()>Duration::from_secs(180) || world.resource::<terra_render::RenderStatus>().error.is_some() {
             error!("Cave showcase failed"); state.stage=8; world.write_message(AppExit::error()); return;
@@ -360,7 +445,7 @@ fn run(world: &mut World) {
         }
         let quality=match state.stage {0=>CaveQuality::Low,2=>CaveQuality::High,3=>CaveQuality::Ultra,_=>CaveQuality::Medium};
         if state.stage>=14 {
-            let phase=if state.stage==17 {0.0}else if state.stage==15 {0.5 + f64::from(world.resource::<Time>().elapsed_secs())*0.000001}else{0.5};
+            let phase=if lod_shadow_only {8.0/24.0}else if state.stage==17 {0.0}else if state.stage==15 {0.5 + f64::from(world.resource::<Time>().elapsed_secs())*0.000001}else{0.5};
             let mut clock=world.resource_mut::<terra_core::WorldClock>();
             if clock.phase!=phase {clock.phase=phase;}
             let paused=state.stage!=15;
@@ -394,15 +479,68 @@ fn run(world: &mut World) {
             });
         }
         if world.resource::<GraphicsConfig>().cave_quality!=quality { world.resource_mut::<GraphicsConfig>().cave_quality=quality; }
+        if lod_shadow_only {
+            let (near,far)=match state.stage {22=>(96.0,160.0),23=>(16.0,96.0),_=>(16.0,20.0)};
+            let mut config=world.resource_mut::<terra_core::GameConfig>();
+            if config.client.lod_near_distance!=near || config.client.lod_far_distance!=far || config.client.lod_hysteresis!=0.0 {
+                config.client.lod_near_distance=near;
+                config.client.lod_far_distance=far;
+                config.client.lod_hysteresis=0.0;
+            }
+        }
         if !world.resource::<terra_render::RenderStatus>().ready || state.entered.elapsed()<Duration::from_secs(4) {return;}
+        if lod_shadow_only {
+            let expected=match state.stage {22=>terra_render::meshing::DetailLevel::Near,23=>terra_render::meshing::DetailLevel::Middle,_=>terra_render::meshing::DetailLevel::Far};
+            let Some((caster,_))=lod_shadow_caster(world) else {
+                error!("Cave LOD fixture has no active sunlight ray hitting its actual ceiling");
+                state.stage=stages;world.write_message(AppExit::error());return;
+            };
+            if world.resource::<terra_render::RenderedSections>().sections.get(&caster).is_none_or(|s|s.detail_level!=expected) {
+                state.frames.clear();
+                return;
+            }
+        }
         if !world.resource::<terra_render::TorchLightingStatus>().ready {
             error!("Native Bevy PBR source did not accept the guarded torch attenuation extension");
             state.stage=stages; world.write_message(AppExit::error()); return;
         }
         if !state.requested {
             state.frames.push(f64::from(world.resource::<Time>().delta_secs())*1000.0);
-            let frame_count=if lighting_only {60}else{180};
+            let frame_count=if lighting_only || portal_only || lod_shadow_only {60}else{180};
             if state.frames.len()<frame_count {return;}
+            if lod_shadow_only {
+                let (caster,sun_direction)=lod_shadow_caster(world).expect("active ceiling caster was verified before sampling");
+                let (root,level)={let section=&world.resource::<terra_render::RenderedSections>().sections[&caster];(section.entity,section.detail_level)};
+                let children=world.get::<Children>(root).map_or_else(Vec::new,|children|children.iter().collect::<Vec<_>>());
+                let layer=bevy::camera::visibility::RenderLayers::default();
+                let mut shared=0;
+                let mut standard=0;
+                let mut proxies=0;
+                let mut mesh_count=0;
+                for child in children {
+                    let Some(mesh)=world.get::<Mesh3d>(child) else{continue;};
+                    if !world.resource::<Assets<Mesh>>().contains(mesh.0.id()) {continue;}
+                    mesh_count+=1;
+                    if world.get::<bevy::camera::visibility::RenderLayers>(child).is_some_and(|layers|!layers.intersects(&layer)) {
+                        proxies+=1;
+                    } else if terra_render::meshing::uses_shared_surface_material(world,child) {
+                        shared+=1;
+                    } else if world.get::<MeshMaterial3d<StandardMaterial>>(child).is_some() {
+                        standard+=1;
+                    }
+                }
+                let active_suns=world.query::<(&DirectionalLight,Option<&bevy::camera::visibility::RenderLayers>)>().iter(world)
+                    .filter(|(light,layers)|light.illuminance>1.0 && light.shadow_maps_enabled && layers.is_none_or(|layers|layers.intersects(&layer))).count();
+                let reference=std::env::var("TERRA_CAVE_LOD_SHADOW_REFERENCE").is_ok_and(|value|value=="1");
+                let material_matches=if reference {standard>0 && shared==0}else{shared>0 && standard==0};
+                let visible=world.get::<InheritedVisibility>(root).is_some_and(|visibility|visibility.get());
+                info!(stage=state.stage,?caster,?sun_direction,?level,mesh_count,shared,standard,proxies,active_suns,visible,reference,
+                    "Native cave LOD actual caster material and live sunlight verified");
+                if !material_matches || active_suns==0 || !visible || mesh_count==0 {
+                    error!("Cave LOD fixture did not render the expected real ceiling material with active sunlight");
+                    state.stage=stages;world.write_message(AppExit::error());return;
+                }
+            }
             if state.stage==1 {
                 let chunks=world.resource::<ChunkStore>();
                 let mismatches:Vec<_>=chunks.loaded.iter().filter(|(p,_)|(-2..=1).contains(&p.x)&&(-3..=3).contains(&p.y)&&(-3..=2).contains(&p.z)).filter_map(|(p,s)|{
@@ -435,7 +573,7 @@ fn run(world: &mut World) {
                 error!("Ultra cave fixture did not activate its volumetric path");world.write_message(AppExit::error());state.stage=8;return;
             }
             let exposure=world.query_filtered::<&bevy::camera::Exposure,With<terra_player::TerraCamera>>().iter(world).next().map_or(0.0,|e|e.ev100);
-            if state.stage>=14 {
+            if matches!(state.stage,14..=17|20|21) {
                 let blend=world.resource::<terra_render::CaveState>().blend;
                 let intensities:Vec<_>=world.query::<(&PointLight,&Transform)>().iter(world)
                     .filter(|(_,t)|t.translation.distance_squared(Vec3::new(-7.5,-26.02,-39.5))<1.0)
@@ -457,12 +595,12 @@ fn run(world: &mut World) {
                 let world_layers=bevy::camera::visibility::RenderLayers::default();
                 let solar:Vec<_>=world.query::<(&DirectionalLight,Option<&bevy::camera::visibility::RenderLayers>)>().iter(world)
                     .filter(|(_,layers)|layers.is_none_or(|layers|layers.intersects(&world_layers)))
-                    .map(|(light,_)|light.illuminance).collect();
-                if solar.len()!=2 || solar.iter().any(|lux|*lux>0.01) {
-                    error!(stage=state.stage,?solar,"Enclosed cave leaked celestial direct light");
+                    .map(|(light,_)|(light.illuminance,light.shadow_maps_enabled)).collect();
+                if solar.len()!=2 || solar.iter().any(|(lux,shadows)|*lux>0.01 && !shadows) {
+                    error!(stage=state.stage,?solar,"Cave roof must cast shadows without extinguishing the outdoor sun");
                     state.stage=stages;world.write_message(AppExit::error());return;
                 }
-                if state.stage>=16 && world.resource::<terra_render::UnderwaterState>().blend<0.99 {
+                if matches!(state.stage,16|17|21) && world.resource::<terra_render::UnderwaterState>().blend<0.99 {
                     error!(stage=state.stage,"Cave-diving fixture did not activate actual underwater optics");
                     state.stage=stages;world.write_message(AppExit::error());return;
                 }
@@ -479,15 +617,24 @@ fn run(world: &mut World) {
             info!(stage=state.stage,?quality,fps=1000.0/mean,p95_ms=frames[frames.len()*95/100],p99_ms=frames[frames.len()*99/100],lights,volumes,ssao,exposure,underwater=world.resource::<terra_render::UnderwaterState>().blend,blend=world.resource::<terra_render::CaveState>().blend,"Cave showcase measured frame sample");
             let stage=state.stage;
             let probes=if stage==8 || stage==13 {ground_probes(world)}else{Vec::new()};
-            world.spawn((Screenshot::primary_window(), GroundProbes(probes), CaveExposureProbe(stage)))
+            let portal=portal_probe(world,stage);
+            world.spawn((Screenshot::primary_window(), GroundProbes(probes), CaveExposureProbe(stage),portal))
                 .observe(save_to_disk(folder.join(format!("cave-{stage}-{quality:?}.png"))))
                 .observe(measure_ground)
                 .observe(measure_cave_exposure)
+                .observe(measure_portal)
                 .observe(|_:On<ScreenshotCaptured>,mut state:ResMut<Showcase>|state.captured+=1);
             state.requested=true;
         } else if state.captured>state.stage {
             state.stage+=1; state.requested=false; state.entered=Instant::now(); state.frames.clear();
-            if state.stage==stages {info!(stages,"Cave showcase passed: quality levels, floor/wall torches, optional night/retention/carried-light views and live-clock exposure regression");world.write_message(AppExit::Success);}
+            if state.stage==stages {
+                if lod_shadow_only && std::env::var("TERRA_CAVE_LOD_SHADOW_REFERENCE").is_ok_and(|value|value=="1") {
+                    info!(stages,"Cave ceiling LOD reference captured; not a passing light-isolation validation");
+                } else {
+                    info!(stages,"Cave showcase passed: quality levels, floor/wall torches, optional night/retention/carried-light views and live-clock exposure regression");
+                }
+                world.write_message(AppExit::Success);
+            }
         }
     });
 }
@@ -498,6 +645,144 @@ struct GroundProbes(Vec<(f32, Vec2)>);
 #[derive(Component)]
 struct CaveExposureProbe(usize);
 
+#[derive(Component)]
+struct PortalProbe {
+    stage: usize,
+    ground: Option<Vec2>,
+    sky: Option<Vec2>,
+}
+
+fn portal_probe(world: &mut World, stage: usize) -> PortalProbe {
+    let mut probe = PortalProbe {
+        stage,
+        ground: None,
+        sky: None,
+    };
+    if !matches!(stage, 18 | 19 | 22..=24) {
+        return probe;
+    }
+    let scale = world
+        .query::<&Window>()
+        .iter(world)
+        .next()
+        .map_or(1.0, Window::scale_factor);
+    let mut cameras =
+        world.query_filtered::<(&Camera, &GlobalTransform), With<terra_player::TerraCamera>>();
+    if let Some((camera, transform)) = cameras.iter(world).next() {
+        probe.ground = camera
+            .world_to_viewport(
+                transform,
+                if stage >= 22 {
+                    LOD_SHADOW_GROUND_TARGET
+                } else {
+                    PORTAL_GROUND_TARGET
+                },
+            )
+            .ok()
+            .map(|p| p * scale);
+        if stage < 22 {
+            probe.sky = camera
+                .world_to_viewport(transform, PORTAL_SKY_TARGET)
+                .ok()
+                .map(|p| p * scale);
+        }
+    }
+    probe
+}
+
+fn measure_portal(
+    event: On<ScreenshotCaptured>,
+    probes: Query<&PortalProbe>,
+    cave: Res<terra_render::CaveState>,
+    mut state: ResMut<Showcase>,
+    mut exit: MessageWriter<AppExit>,
+) {
+    let Ok(probe) = probes.get(event.entity) else {
+        return;
+    };
+    if !matches!(probe.stage, 18 | 19 | 22..=24) {
+        return;
+    }
+    let sample = |pixel: Option<Vec2>| {
+        let pixel = pixel?;
+        let mut total = 0.0;
+        let mut count = 0;
+        for dy in -3..=3 {
+            for dx in -3..=3 {
+                let x = pixel.x.round() as i32 + dx;
+                let y = pixel.y.round() as i32 + dy;
+                if x < 0 || y < 0 {
+                    continue;
+                }
+                if let Ok(color) = event.image.get_color_at(x as u32, y as u32) {
+                    let c = color.to_linear();
+                    total += c.red * 0.2126 + c.green * 0.7152 + c.blue * 0.0722;
+                    count += 1;
+                }
+            }
+        }
+        (count > 0).then_some(total / count as f32)
+    };
+    if probe.stage >= 22 {
+        let ground = sample(probe.ground);
+        if probe.stage == 22 {
+            state.lod_shadow_luminance = ground;
+        }
+        let ceiling_shadow = ground.is_some_and(|current| current <= 0.015);
+        let reference =
+            std::env::var("TERRA_CAVE_LOD_SHADOW_REFERENCE").is_ok_and(|value| value == "1");
+        info!(
+            stage = probe.stage,
+            blend = cave.blend,
+            ?ground,
+            baseline = state.lod_shadow_luminance,
+            ceiling_shadow,
+            reference,
+            "Native cave ceiling LOD shadow photometry (same receiver and real caster section)"
+        );
+        if cave.blend < 0.99 || ground.is_none() || (!ceiling_shadow && !reference) {
+            error!(
+                "Closed cave ceiling lost its physical directional shadow after a terrain LOD change"
+            );
+            state.stage = usize::MAX;
+            exit.write(AppExit::error());
+        }
+        return;
+    }
+    let measurements = sample(probe.ground).zip(sample(probe.sky));
+    let enclosed = probe.stage == 18;
+    let position_matches = if enclosed {
+        cave.blend > 0.99
+    } else {
+        cave.blend < 0.01
+    };
+    let visible = measurements.is_some_and(|(ground, sky)| ground > 0.01 && sky > 0.03);
+    let comparison = if enclosed {
+        true
+    } else {
+        state.portal_luminance.zip(measurements).is_some_and(
+            |((inside_ground, inside_sky), (outside_ground, outside_sky))| {
+                inside_ground >= outside_ground * 0.40 && inside_sky >= outside_sky * 0.40
+            },
+        )
+    };
+    info!(
+        stage = probe.stage,
+        blend = cave.blend,
+        ?measurements,
+        ?position_matches,
+        ?comparison,
+        "Native cave-entrance daylight photometry (same world-space outdoor targets)"
+    );
+    if !position_matches || !visible || !comparison {
+        error!("Cave entrance lost its sunlit outdoor terrain or visible daytime sky");
+        state.stage = usize::MAX;
+        exit.write(AppExit::error());
+    } else if enclosed {
+        state.portal_luminance = measurements;
+    }
+}
+
 fn measure_cave_exposure(
     event: On<ScreenshotCaptured>,
     probes: Query<&CaveExposureProbe>,
@@ -507,7 +792,7 @@ fn measure_cave_exposure(
     let Ok(probe) = probes.get(event.entity) else {
         return;
     };
-    if probe.0 < 14 {
+    if probe.0 < 14 || matches!(probe.0, 18 | 19 | 22..=24) {
         return;
     }
     let size = event.image.size();
@@ -621,5 +906,105 @@ mod tests {
         assert_eq!(block([-8, -28, -40]), 3);
         assert_eq!(block([-8, -20, -40]), 3);
         assert_eq!(block([-8, -25, -40]), 0);
+    }
+
+    #[test]
+    fn daylight_portal_fixture_has_real_roof_opening_and_shared_sunlit_ground() {
+        let inside = eye(18).translation.as_dvec3().to_array();
+        let outside = eye(19).translation.as_dvec3().to_array();
+        assert_eq!(
+            terra_world::enclosure::sample(inside, 18.0, |p| Some(block(p))).cave,
+            1.0
+        );
+        assert_eq!(
+            terra_world::enclosure::sample(outside, 18.0, |p| Some(block(p))).cave,
+            0.0
+        );
+        assert_eq!(block([-19, -11, 35]), 3);
+        assert_eq!(block([3, -21, 35]), 3);
+        assert_eq!(block([3, 18, 35]), 0);
+        assert_eq!(block([3, 63, 35]), 0);
+        assert_eq!(
+            block(PORTAL_GROUND_TARGET.floor().as_i64vec3().to_array()),
+            0,
+            "The projected target must be above the floor, never inside it"
+        );
+        let target = PORTAL_GROUND_TARGET.as_dvec3();
+        for position in [inside, outside] {
+            let direction = (target - bevy::math::DVec3::from_array(position))
+                .normalize()
+                .to_array();
+            let hit =
+                terra_voxel::blocks::raycast_blocks(position, direction, 64.0, |p| Some(block(p)))
+                    .unwrap();
+            assert_eq!(hit.position, [3, -21, 35]);
+            let sky_direction = (PORTAL_SKY_TARGET.as_dvec3()
+                - bevy::math::DVec3::from_array(position))
+            .normalize()
+            .to_array();
+            assert!(
+                terra_voxel::blocks::raycast_blocks(position, sky_direction, 64.0, |p| {
+                    Some(block(p))
+                })
+                .is_none(),
+                "The sky sample must pass through the real opening"
+            );
+        }
+    }
+
+    #[test]
+    fn lod_ceiling_fixture_uses_a_real_distant_underside_without_an_exterior_top_face() {
+        use terra_core::Config;
+        let receiver = LOD_SHADOW_GROUND_TARGET.as_dvec3();
+        let rotation = (8.0_f64 / 24.0 - 0.25) * std::f64::consts::TAU;
+        // 08:00 terrain lighting uses its documented 45-degree minimum;
+        // runtime acceptance traces the real light transform independently.
+        let horizontal =
+            bevy::math::DVec2::new(rotation.cos(), rotation.sin() * 0.4358899).normalize();
+        let height = std::f64::consts::FRAC_1_SQRT_2;
+        let direction =
+            bevy::math::DVec3::new(horizontal.x * height, height, horizontal.y * height);
+        let hit = terra_voxel::blocks::raycast_blocks(
+            receiver.to_array(),
+            direction.to_array(),
+            128.0,
+            |p| Some(lod_shadow_block(p)),
+        )
+        .unwrap();
+        assert_eq!(hit.position[1], 0);
+        assert_eq!(
+            terra_voxel::global_to_section(hit.position).0,
+            SectionPos::new(0, 0, 1)
+        );
+        let camera = eye(22).translation.as_dvec3().to_array();
+        let mut config = terra_core::ClientConfig {
+            lod_hysteresis: 0.0,
+            ..default()
+        };
+        for (near, far, expected) in [
+            (96.0, 160.0, terra_render::meshing::DetailLevel::Near),
+            (16.0, 96.0, terra_render::meshing::DetailLevel::Middle),
+            (16.0, 20.0, terra_render::meshing::DetailLevel::Far),
+        ] {
+            config.lod_near_distance = near;
+            config.lod_far_distance = far;
+            assert!(config.validate().is_ok());
+            // Public render output is asserted natively; here the geometric
+            // distance is clearly outside the configured near/far intervals.
+            let dx = (0.0 - camera[0]).max(0.0);
+            let dz = (16.0 - camera[2]).max(0.0);
+            let distance = (dx * dx + dz * dz).sqrt();
+            let actual = if distance < f64::from(near) * 1.5 {
+                terra_render::meshing::DetailLevel::Near
+            } else if distance < f64::from(far) * 1.5 {
+                terra_render::meshing::DetailLevel::Middle
+            } else {
+                terra_render::meshing::DetailLevel::Far
+            };
+            assert_eq!(actual, expected);
+        }
+        for y in 0..=64 {
+            assert_eq!(lod_shadow_block([hit.position[0], y, hit.position[2]]), 3);
+        }
     }
 }

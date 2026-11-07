@@ -1,0 +1,25 @@
+{
+  "reason": "Rustfmt-only module/export ordering and indentation after the completed A/B and native checks; original paired-source manifest preserved.",
+  "files": {
+    "crates/terra-core/src/lib.rs": {
+      "before": "48ba29916ccacdc9ff515dac32b6d178c8bcad2687c3f51d728566809509e536",
+      "after": "ed7560a79e7d3f4010a2dac14c6c8bc1bba7930fa0051528c515806f5b81af8a"
+    },
+    "crates/terra-network/src/tests.rs": {
+      "before": "f64bdec5fb07d33c155f8015f486b44b5caa130be397aa18fd6c419b02602701",
+      "after": "70145656c00082e72eacd38501edd67efaf91849409dec2aeaea51a5527235db"
+    },
+    "crates/terra-ui/src/chat.rs": {
+      "before": "65e14c7a289a6a2a68b037a07f99a18d1c7b09e8befbf69485b8fb0314289a09",
+      "after": "2d581d897bc6e37d68c18f2ea7e2949ae3bc0b83e23cd2c634d5a78c7edd3974"
+    },
+    "crates/terra-ui/src/lib.rs": {
+      "before": "70bda50db8f850578b5a74cb70dc208ea0f0f02ae8d227cc0aac9782b4469159",
+      "after": "f68d168d9de80c2a9866574897b8885626f479e474794c0aa501220770325e41"
+    },
+    "crates/terra-ui/src/pets.rs": {
+      "before": "97a7e79ae1d2ad2ddd347d93befe8e5a641ca96e8d556d16d0cdea5bf8e69f3b",
+      "after": "fbd31e7d87af2038bfb9e6c1bd0dddb5cb4398ad9350a4bbc440d7ae28fb0ac4"
+    }
+  }
+}

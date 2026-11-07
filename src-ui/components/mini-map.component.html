@@ -13,7 +13,6 @@
       <div class="map-cardinal" [style]="miniMapView.east"><p>E</p></div>
       <div class="map-cardinal" [style]="miniMapView.south"><p>S</p></div>
       <div class="map-cardinal" [style]="miniMapView.west"><p>W</p></div>
-      <button id="map-toggle" class="map-collapse" title="Collapse map" onclick="minimap_action"><icon name="chevron-up" size="14" /></button>
     </div>
     <div class="map-readouts">
       @if (miniMapView.coordinates) { <div class="map-readout"><icon name="map-pin" size="14" /><p>{{ miniMapView.coordinates }}</p></div> }

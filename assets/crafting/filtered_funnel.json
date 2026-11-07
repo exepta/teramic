@@ -1,0 +1,9 @@
+{
+  "id": "teramic::filtered_funnel", "name": "Filtered Funnel", "station": "workbench",
+  "output": { "item": { "block": 157 }, "count": 1 },
+  "pattern": { "kind": "shapeless", "ingredients": [
+    { "item": { "block": 153 }, "count": 1 },
+    { "item": { "mineral": "iron_ingot" }, "count": 1 },
+    { "item": { "dust": "diamond" }, "count": 1 }
+  ] }
+}

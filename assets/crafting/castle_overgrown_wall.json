@@ -1,0 +1,28 @@
+{
+  "id": "teramic::castle_overgrown_wall",
+  "name": "Bewachsene Mauer",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "block": 177
+    },
+    "count": 1
+  },
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "block": 174
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "block": 7
+        },
+        "count": 2
+      }
+    ]
+  }
+}

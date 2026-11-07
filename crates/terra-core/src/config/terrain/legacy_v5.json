@@ -1,0 +1,18 @@
+{
+  "warp_scale": 680,
+  "warp_strength": 110,
+  "region_scale": 1700,
+  "dune_wind_angle": 28,
+  "profiles": [
+    {"kind":"plains","min_height":32,"max_height":60,"horizontal_scale":480,"roughness":0.16,"ridge_strength":0.05,"erosion":0.80,"overhangs":0,"weight":1},
+    {"kind":"rolling_plains","min_height":35,"max_height":105,"horizontal_scale":620,"roughness":0.25,"ridge_strength":0.20,"erosion":0.60,"overhangs":0,"weight":1},
+    {"kind":"forest","min_height":40,"max_height":90,"horizontal_scale":420,"roughness":0.30,"ridge_strength":0.22,"erosion":0.55,"overhangs":0,"weight":1},
+    {"kind":"mountain_forest","min_height":60,"max_height":240,"horizontal_scale":760,"roughness":0.44,"ridge_strength":0.75,"erosion":0.44,"overhangs":0.15,"weight":1},
+    {"kind":"fantasy_mountains","min_height":90,"max_height":348,"horizontal_scale":1000,"roughness":0.64,"ridge_strength":1,"erosion":0.22,"overhangs":0.90,"weight":1},
+    {"kind":"snowy_highlands","min_height":80,"max_height":270,"horizontal_scale":940,"roughness":0.38,"ridge_strength":0.82,"erosion":0.40,"overhangs":0.25,"weight":1},
+    {"kind":"cherry_grove","min_height":45,"max_height":115,"horizontal_scale":540,"roughness":0.22,"ridge_strength":0.16,"erosion":0.72,"overhangs":0,"weight":1},
+    {"kind":"spirit_forest","min_height":45,"max_height":195,"horizontal_scale":610,"roughness":0.35,"ridge_strength":0.50,"erosion":0.55,"overhangs":0.48,"weight":0.7},
+    {"kind":"desert","min_height":50,"max_height":100,"horizontal_scale":680,"roughness":0.18,"ridge_strength":0.20,"erosion":0.65,"overhangs":0.05,"weight":1},
+    {"kind":"ocean","min_height":-98,"max_height":22,"horizontal_scale":1200,"roughness":0.18,"ridge_strength":0.22,"erosion":0.75,"overhangs":0,"weight":1}
+  ]
+}

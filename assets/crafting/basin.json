@@ -1,0 +1,1 @@
+{"id":"teramic::basin","name":"Basin Module","station":"workbench","output":{"item":{"block":169},"count":1},"pattern":{"kind":"shapeless","ingredients":[{"item":{"block":16},"wood":true,"count":4},{"item":{"mineral":"iron_ingot"},"count":2}]}}

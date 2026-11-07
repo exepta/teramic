@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-27",
+  "mode": "built-in image_gen",
+  "source_model": "FIVERR/VoxelGrassBlock glb file.glb",
+  "reference_image": "ai-chat-custom-attachment-temp-file-52c7944a-6e33-484f-92c3-d51d47598a0d-459236964603954738.png",
+  "actual_dimensions": [
+    1254,
+    1254
+  ],
+  "note": "The requested 2048px size was not produced by the image tool. The original 1254px outputs are used without upscaling. Generated normals are subsequently normalized and attenuated by the deterministic importer.",
+  "outputs": [
+    {
+      "path": "assets/terra/blocks/textures/grass-reference-hd-v1.png",
+      "inputs": [
+        "Original embedded base-color atlas, image index 2",
+        "User grass-block reference"
+      ],
+      "prompt": "Use case: style-transfer. Asset type: production game texture atlas (base-color/albedo), exactly square 2048x2048 pixels, opaque. Input image 1 is the edit target, the existing grass block UV atlas; image 2 is the user's visual reference, not an image to reproduce as a scene. Make image 1 a much finer, richer, high-resolution stylized voxel grass/dirt material matching the tiny individually shaped grassy plates, warm earthen clods and pale-gray pebble clusters of image 2. CRITICAL invariant: preserve the EXACT existing 2x2 quadrant UV layout of image1, with no padding/borders/gaps: upper-left quadrant is entirely green grass TOP; upper-right quadrant is earth SIDE with irregular hanging green grass across its uppermost 20-30%; lower-left quadrant is entirely brown earth BOTTOM with scattered light gray stones; lower-right quadrant is a second earth SIDE, also with hanging green grass across its uppermost 20-30%. Keep those four regions at their exact positions and preserve the approximate existing pebble cluster locations and grass/soil boundary silhouettes. Each quadrant must fill its entire rectangle, seen FLAT ORTHOGRAPHIC FACE-ON, never an isometric cube. Replace the simplistic regular checkerboard of the source with dense small interlocking blocky plates and clumps, approximately 24-32 elements across each quadrant; irregular square/rectangular edge shapes, restrained soft bevels, many subtle natural green tones, warm varied medium browns, small angular pale grey rocks with irregular clustered sizes. Grass is yellow-green/moss-green like reference2, not neon lime. Detailed material painting, not photoreal grass blades. Keep albedo relatively neutral, flat diffuse illumination; no baked cast shadows, no broad directional lighting, no black seams between plates, no vignette, no gloss highlights. This is ONLY a seamlessly filled texture atlas, no 3D object, scenery, labels, text, flowers, water, sky, pink trees, frame, grid lines, captions, or extra assets. Preserve the existing region proportions exactly; increase actual painted detail, not merely upscale the old checkerboard."
+    },
+    {
+      "path": "assets/terra/blocks/textures/grass-reference-normal-v1.png",
+      "inputs": [
+        "Generated grass-reference-hd-v1.png"
+      ],
+      "prompt": "Use case: precise-object-edit. Asset type: tangent-space normal texture for an actual game shader. Input image is the EXACT existing base-color atlas that the map must follow; DO NOT produce another color/albedo texture. Produce ONLY its corresponding OpenGL tangent-space RGB normal map, flat face-on, exactly same square dimensions and EXACT feature alignment and 2x2 UV layout, opaque. Every little grassy plate, earth clod and grey pebble must be at the same pixel position and outline as in the input. Flat surfaces must be neutral periwinkle-blue RGB(128,128,255). Tiny gently bevelled edges get subtle tangent normals encoded ONLY as purple/blue with slight pink/cyan directional transitions, representing low shallow relief. White-grey pebble tops are mildly rounded small block plateaus, not pits. No brown, green, yellow or ordinary scene colors, no black AO, no illumination or cast shadows. No major broad normal gradients, no tilt of whole quadrants. A clean, physically useful normal map, never a lit render, never an isometric object. Keep all four atlas regions, contours, edges, stone clusters, grass hanging lengths completely fixed. No text, labels, frames, padding, alpha, or grid lines. High-detail smooth tiny bevels, no oversized pillow bumps; material should look matte and finely faceted rather than wet or inflated."
+    }
+  ]
+}

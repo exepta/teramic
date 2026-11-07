@@ -1,0 +1,5 @@
+{
+  "item": { "wooden_block": { "material": 169, "wood": "oak" } },
+  "name": "Oak Basin",
+  "description": "A reinforced oak basin module storing finite water."
+}

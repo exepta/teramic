@@ -6,6 +6,171 @@ use terra_physics::TerraPhysicsPlugin;
 use terra_voxel::{BlockSection, SectionPos};
 use terra_world::streaming::LoadedSection;
 
+fn flight_toggle_app() -> App {
+    let mut app = App::new();
+    let mut session = ClientSession::default();
+    session.ready = true;
+    session.allow_flight = true;
+    session.game_mode = terra_core::GameMode::Creative;
+    app.init_resource::<Time>()
+        .init_resource::<ButtonInput<KeyCode>>()
+        .init_resource::<ControllerMode>()
+        .init_resource::<PlayerInputBlock>()
+        .insert_resource(CameraInputState {
+            captured: true,
+            ..default()
+        })
+        .insert_resource(session)
+        .add_systems(Update, toggle_flight);
+    app
+}
+
+fn tap_flight_key(app: &mut App, key: KeyCode, elapsed_ms: u64) {
+    app.world_mut()
+        .resource_mut::<Time>()
+        .advance_by(Duration::from_millis(elapsed_ms));
+    let mut keys = app.world_mut().resource_mut::<ButtonInput<KeyCode>>();
+    keys.reset_all();
+    keys.press(key);
+    app.update();
+}
+
+#[test]
+fn creative_flight_uses_fast_jump_pairs_and_ignores_held_jump_slow_taps_and_old_f() {
+    let mut app = flight_toggle_app();
+    tap_flight_key(&mut app, KeyCode::KeyF, 0);
+    tap_flight_key(&mut app, KeyCode::KeyF, 100);
+    assert_eq!(
+        *app.world().resource::<ControllerMode>(),
+        ControllerMode::Walk
+    );
+    tap_flight_key(&mut app, KeyCode::Space, 0);
+    app.world_mut()
+        .resource_mut::<ButtonInput<KeyCode>>()
+        .clear();
+    app.world_mut()
+        .resource_mut::<Time>()
+        .advance_by(Duration::from_millis(100));
+    app.update();
+    assert_eq!(
+        *app.world().resource::<ControllerMode>(),
+        ControllerMode::Walk
+    );
+    tap_flight_key(&mut app, KeyCode::Space, 250);
+    assert_eq!(
+        *app.world().resource::<ControllerMode>(),
+        ControllerMode::Walk
+    );
+    tap_flight_key(&mut app, KeyCode::Space, 100);
+    assert_eq!(
+        *app.world().resource::<ControllerMode>(),
+        ControllerMode::Fly
+    );
+    tap_flight_key(&mut app, KeyCode::Space, 100);
+    assert_eq!(
+        *app.world().resource::<ControllerMode>(),
+        ControllerMode::Fly
+    );
+    tap_flight_key(&mut app, KeyCode::Space, 100);
+    assert_eq!(
+        *app.world().resource::<ControllerMode>(),
+        ControllerMode::Walk
+    );
+}
+
+#[test]
+fn flight_double_tap_obeys_jump_rebinding_and_discards_menu_input() {
+    let mut app = flight_toggle_app();
+    let mut controls = terra_core::ControlsConfig::default();
+    controls
+        .rebind(Action::Jump, terra_core::InputBinding::Key(KeyCode::KeyP))
+        .unwrap();
+    app.insert_resource(controls);
+    tap_flight_key(&mut app, KeyCode::Space, 0);
+    tap_flight_key(&mut app, KeyCode::Space, 100);
+    assert_eq!(
+        *app.world().resource::<ControllerMode>(),
+        ControllerMode::Walk
+    );
+    tap_flight_key(&mut app, KeyCode::KeyP, 0);
+    app.world_mut().resource_mut::<PlayerInputBlock>().0 = true;
+    app.update();
+    app.world_mut().resource_mut::<PlayerInputBlock>().0 = false;
+    tap_flight_key(&mut app, KeyCode::KeyP, 100);
+    assert_eq!(
+        *app.world().resource::<ControllerMode>(),
+        ControllerMode::Walk
+    );
+    tap_flight_key(&mut app, KeyCode::KeyP, 100);
+    assert_eq!(
+        *app.world().resource::<ControllerMode>(),
+        ControllerMode::Fly
+    );
+}
+
+#[test]
+fn double_jump_flight_requires_ready_authorized_non_spectator_gameplay() {
+    for (mode, ready, permission, captured) in [
+        (terra_core::GameMode::Survival, true, false, true),
+        (terra_core::GameMode::Spectator, true, true, true),
+        (terra_core::GameMode::Creative, false, true, true),
+        (terra_core::GameMode::Creative, true, false, true),
+        (terra_core::GameMode::Creative, true, true, false),
+    ] {
+        let mut app = flight_toggle_app();
+        let mut session = app.world_mut().resource_mut::<ClientSession>();
+        session.game_mode = mode;
+        session.ready = ready;
+        session.allow_flight = permission;
+        app.world_mut().resource_mut::<CameraInputState>().captured = captured;
+        tap_flight_key(&mut app, KeyCode::Space, 0);
+        tap_flight_key(&mut app, KeyCode::Space, 100);
+        assert_eq!(
+            *app.world().resource::<ControllerMode>(),
+            ControllerMode::Walk
+        );
+    }
+}
+
+#[test]
+fn authorized_survival_can_leave_and_reenter_flight_after_a_creative_mode_change() {
+    let mut app = flight_toggle_app();
+    app.init_resource::<ChunkStore>()
+        .init_resource::<PlayerControllerStatus>()
+        .add_systems(Update, sync_controller.before(toggle_flight));
+    tap_flight_key(&mut app, KeyCode::Space, 0);
+    tap_flight_key(&mut app, KeyCode::Space, 100);
+    assert_eq!(
+        *app.world().resource::<ControllerMode>(),
+        ControllerMode::Fly
+    );
+    app.world_mut().resource_mut::<ClientSession>().game_mode = terra_core::GameMode::Survival;
+    app.world_mut()
+        .resource_mut::<ButtonInput<KeyCode>>()
+        .reset_all();
+    app.update();
+    assert_eq!(
+        *app.world().resource::<ControllerMode>(),
+        ControllerMode::Fly
+    );
+    tap_flight_key(&mut app, KeyCode::Space, 100);
+    assert_eq!(
+        *app.world().resource::<ControllerMode>(),
+        ControllerMode::Fly
+    );
+    tap_flight_key(&mut app, KeyCode::Space, 100);
+    assert_eq!(
+        *app.world().resource::<ControllerMode>(),
+        ControllerMode::Walk
+    );
+    tap_flight_key(&mut app, KeyCode::Space, 100);
+    tap_flight_key(&mut app, KeyCode::Space, 100);
+    assert_eq!(
+        *app.world().resource::<ControllerMode>(),
+        ControllerMode::Fly
+    );
+}
+
 #[test]
 fn restored_join_applies_saved_camera_aim_and_flight_once_before_first_body_frame() {
     let location = terra_core::PlayerLocation {

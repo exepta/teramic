@@ -144,7 +144,7 @@ impl GrassTint {
     }
     pub fn relative_at(&self, position: [f32; 3]) -> [f32; 3] {
         let tint = self.at(position);
-        std::array::from_fn(|axis| (tint[axis] / LINEAR_COLORS[1][axis]).clamp(0.45, 1.45))
+        std::array::from_fn(|axis| (tint[axis] / LINEAR_COLORS[2][axis]).clamp(0.65, 1.6))
     }
 }
 
@@ -153,7 +153,7 @@ impl GrassTint {
 const TURF_ALBEDO: [f32; 3] = [0.387662, 0.383565, 0.382015];
 const SNOW_ALBEDO: [f32; 3] = [0.94, 0.97, 1.0];
 static SAND_ALBEDO: std::sync::LazyLock<[f32; 3]> = std::sync::LazyLock::new(|| {
-    let c = Color::srgb(220.0 / 255.0, 204.0 / 255.0, 156.0 / 255.0).to_linear();
+    let c = Color::srgb(238.0 / 255.0, 203.0 / 255.0, 129.0 / 255.0).to_linear();
     [c.red, c.green, c.blue]
 });
 
@@ -165,6 +165,11 @@ pub(crate) struct GroundTint {
 }
 
 impl GroundTint {
+    /// Painted PBR grass already has its own albedo, unlike the neutral turf texture.
+    pub fn authored_grass_at(&self, position: [f32; 3]) -> [f32; 3] {
+        self.grass.relative_at(position)
+    }
+
     pub fn cave_grass_at(&self, position: [f32; 3]) -> [f32; 3] {
         self.grass.at(position)
     }
@@ -277,6 +282,36 @@ mod tests {
     }
 
     #[test]
+    fn plant_and_authored_grass_tints_use_the_same_forest_reference_and_section_edges() {
+        let terrain = terra_world::TerraGenerator::new(terra_core::WorldConfig {
+            rivers: false,
+            structures_revision: 0,
+            ..default()
+        })
+        .unwrap();
+        for origin in [[-16, 48, -16], [0, 48, -16]] {
+            let plants = GrassTint::new(&terrain, origin);
+            let ground = GroundTint::new(&terrain, origin);
+            for point in [[0.0, 1.0, 0.0], [8.0, 1.0, 8.0], [16.0, 1.0, 16.0]] {
+                assert_eq!(plants.relative_at(point), ground.authored_grass_at(point));
+            }
+        }
+        let forest = GrassTint([LINEAR_COLORS[2][..3].try_into().unwrap(); 4]);
+        assert_eq!(forest.relative_at([8.0, 1.0, 8.0]), [1.0; 3]);
+        let left = GrassTint::new(&terrain, [-16, 48, -16]);
+        let right = GrassTint::new(&terrain, [0, 48, -16]);
+        for z in [0.0, 4.0, 8.0, 16.0] {
+            for (a, b) in left
+                .relative_at([16.0, 1.0, z])
+                .into_iter()
+                .zip(right.relative_at([0.0, 1.0, z]))
+            {
+                assert!((a - b).abs() < 1e-6);
+            }
+        }
+    }
+
+    #[test]
     fn different_surface_materials_share_the_same_blended_top_albedo() {
         let terrain = terra_world::TerraGenerator::new(Default::default()).unwrap();
         let grass = biome_tint(terrain.biome_at(0.0, 0.0));
@@ -324,5 +359,27 @@ mod tests {
         assert_eq!(tint.at([8.0, 30.0, 8.0], 5), [1.0; 3]);
         assert_eq!(tint.at([8.0, 6.0, 8.0], 4), [1.0; 3]);
         assert_eq!(tint.at([8.0, 130.0, 8.0], 5), [1.0; 3]);
+    }
+}
+#[test]
+fn authored_grass_keeps_original_forest_albedo_and_bounds_other_biome_tints() {
+    let tint = GroundTint {
+        grass: GrassTint([LINEAR_COLORS[2][..3].try_into().unwrap(); 4]),
+        bands: GrassTint([[0.0, 22.0, 112.0]; 4]),
+        origin_y: 32.0,
+    };
+    assert_eq!(tint.authored_grass_at([8.0, 0.0, 8.0]), [1.0; 3]);
+    for biome in LINEAR_COLORS.iter() {
+        let sample = GroundTint {
+            grass: GrassTint([biome[..3].try_into().unwrap(); 4]),
+            bands: GrassTint([[0.0, 22.0, 112.0]; 4]),
+            origin_y: 32.0,
+        };
+        assert!(
+            sample
+                .authored_grass_at([0.0; 3])
+                .into_iter()
+                .all(|v| (0.65..=1.6).contains(&v))
+        );
     }
 }

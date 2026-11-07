@@ -31,7 +31,7 @@ pub(crate) struct MapMaterial {
 }
 impl UiMaterial for MapMaterial {
     fn fragment_shader() -> ShaderRef {
-        "shaders/terra_map_ui.wgsl".into()
+        "shaders/terra_map_ui.wesl".into()
     }
 }
 pub(crate) fn install(app: &mut App) {
@@ -172,6 +172,7 @@ mod tests {
 
         let old = Projection::at([0.0; 2], 192, 0.0, false, true, 320, true);
         let refreshed = Projection::at([12.0, -3.0], 192, 0.0, false, true, 320, true).cached();
+        let palette = MapPalette::default();
         let key = PaintKey {
             center: [12, 80, -3],
             layer: MapLayer::Surface,
@@ -180,7 +181,7 @@ mod tests {
             three_dimensional: false,
             aspect: 1.0f32.to_bits(),
             revision: 1,
-            palette: 0,
+            palette: palette.fingerprint(),
         };
         let result = PaintResult {
             pixels: vec![120; 320 * 320 * 4],
@@ -221,7 +222,7 @@ mod tests {
                 &mut canvas,
                 &HashMap::new(),
                 MapLayer::Surface,
-                &MapPalette::default(),
+                &palette,
                 &current,
                 level,
                 192,
@@ -233,6 +234,7 @@ mod tests {
                 1.0,
                 player,
                 &mut assets,
+                None,
             );
             assert_eq!(
                 canvas.overlay, overlay_handle,

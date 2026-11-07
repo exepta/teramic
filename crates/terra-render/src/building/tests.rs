@@ -17,6 +17,26 @@ use terra_player::{
 use terra_voxel::{BlockSection, SectionPos};
 use terra_world::streaming::LoadedSection;
 
+#[derive(Resource)]
+struct SharedAssets {
+    meshes: usize,
+    materials: usize,
+}
+
+fn assert_asset_counts(app: &App, transient_meshes: usize) {
+    let shared = app.world().resource::<SharedAssets>();
+    assert_eq!(
+        app.world().resource::<Assets<Mesh>>().len(),
+        shared.meshes + transient_meshes,
+        "only the requested overlay/drop may add a mesh beyond shared startup assets"
+    );
+    assert_eq!(
+        app.world().resource::<Assets<StandardMaterial>>().len(),
+        shared.materials,
+        "feedback and drops must reuse shared materials"
+    );
+}
+
 pub(super) fn app() -> App {
     let mut app = App::new();
     app.add_plugins(MinimalPlugins)
@@ -52,6 +72,12 @@ pub(super) fn app() -> App {
     );
     install(&mut app);
     app.update();
+    // Includes the two shared vessel meshes and their one water material.
+    let shared = SharedAssets {
+        meshes: app.world().resource::<Assets<Mesh>>().len(),
+        materials: app.world().resource::<Assets<StandardMaterial>>().len(),
+    };
+    app.insert_resource(shared);
     app
 }
 
@@ -89,6 +115,7 @@ fn oriented_preview(app: &mut App, position: [i64; 3], material: u16) {
         position: Some(position),
         material,
         valid: false,
+        conveyor_start: None,
         plan: Some(terra_world::placement::Layout {
             edits: vec![terra_world::streaming::BlockEditRequest {
                 position,
@@ -96,6 +123,7 @@ fn oriented_preview(app: &mut App, position: [i64; 3], material: u16) {
                 material,
             }],
             states: Vec::new(),
+            belts: Vec::new(),
         }),
     };
 }
@@ -235,7 +263,7 @@ fn cracks_only_cover_visible_faces_and_cancel_with_gameplay_input() {
             .count(),
         0
     );
-    assert_eq!(app.world().resource::<Assets<Mesh>>().len(), 2);
+    assert_asset_counts(&app, 0);
     app.world_mut().resource_mut::<PlayerInputBlock>().0 = false;
     app.world_mut().resource_mut::<MiningVisual>().target = None;
     app.update();
@@ -276,8 +304,7 @@ fn oriented_outline_reuses_one_entity_mesh_and_orange_material_for_both_validiti
     assert_eq!(next_entity, entity);
     assert_eq!(material.0, app.world().resource::<BuildingAssets>().outline);
     assert!(app.world().resource::<BuildingStatus>().preview_valid);
-    assert_eq!(app.world().resource::<Assets<Mesh>>().len(), 3);
-    assert_eq!(app.world().resource::<Assets<StandardMaterial>>().len(), 2);
+    assert_asset_counts(&app, 1);
     assert_eq!(
         app.world()
             .resource::<Assets<PlacementOutlineMaterial>>()
@@ -401,8 +428,7 @@ fn placement_outline_pulses_orange_without_rebuilding_geometry_or_growing_assets
         range[0] = range[0].min(color.alpha);
         range[1] = range[1].max(color.alpha);
         assert_eq!(app.world().get::<Mesh3d>(entity).unwrap().0, mesh);
-        assert_eq!(app.world().resource::<Assets<Mesh>>().len(), 3);
-        assert_eq!(app.world().resource::<Assets<StandardMaterial>>().len(), 2);
+        assert_asset_counts(&app, 1);
         assert_eq!(
             app.world()
                 .resource::<Assets<PlacementOutlineMaterial>>()
@@ -421,6 +447,7 @@ fn missing_orientation_geometry_never_falls_back_to_a_filled_cube() {
         position: Some([8; 3]),
         material: 29,
         valid: true,
+        conveyor_start: None,
         plan: None,
     };
     app.update();
@@ -432,7 +459,7 @@ fn missing_orientation_geometry_never_falls_back_to_a_filled_cube() {
             .count(),
         0
     );
-    assert_eq!(app.world().resource::<Assets<Mesh>>().len(), 2);
+    assert_asset_counts(&app, 0);
 }
 
 #[test]
@@ -456,7 +483,7 @@ fn progressive_chipping_reuses_one_overlay_and_never_mutates_the_block() {
         app.world_mut().resource_mut::<MiningVisual>().progress = stage as f32 / 12.0;
         app.update();
         if app.world().resource::<BuildingStatus>().crack_segments == 0 {
-            assert_eq!(app.world().resource::<Assets<Mesh>>().len(), 2);
+            assert_asset_counts(&app, 0);
             continue;
         }
         let current = app
@@ -473,7 +500,7 @@ fn progressive_chipping_reuses_one_overlay_and_never_mutates_the_block() {
             Some(3)
         );
         assert!(app.world().resource::<BuildingStatus>().particles <= 48);
-        assert_eq!(app.world().resource::<Assets<Mesh>>().len(), 3);
+        assert_asset_counts(&app, 1);
     }
     assert!(app.world().resource::<BuildingStatus>().particles > 0);
     app.world_mut().resource_mut::<MiningVisual>().target = None;
@@ -481,7 +508,7 @@ fn progressive_chipping_reuses_one_overlay_and_never_mutates_the_block() {
         app.update();
     }
     assert_eq!(app.world().resource::<BuildingStatus>().particles, 0);
-    assert_eq!(app.world().resource::<Assets<Mesh>>().len(), 2);
+    assert_asset_counts(&app, 0);
     assert_eq!(
         app.world().resource::<ChunkStore>().block_at([8; 3]),
         Some(3)
@@ -502,7 +529,7 @@ fn empty_initial_damage_stage_never_uploads_a_zero_byte_mesh() {
     }
     app.update();
     assert_eq!(app.world().resource::<BuildingStatus>().crack_segments, 0);
-    assert_eq!(app.world().resource::<Assets<Mesh>>().len(), 2);
+    assert_asset_counts(&app, 0);
     assert_eq!(
         app.world_mut()
             .query_filtered::<Entity, With<fracture::FractureOverlay>>()
@@ -515,7 +542,7 @@ fn empty_initial_damage_stage_never_uploads_a_zero_byte_mesh() {
     assert!(app.world().resource::<BuildingStatus>().crack_segments > 0);
     app.world_mut().resource_mut::<MiningVisual>().progress = 0.03;
     app.update();
-    assert_eq!(app.world().resource::<Assets<Mesh>>().len(), 2);
+    assert_asset_counts(&app, 0);
     assert_eq!(
         app.world_mut()
             .query_filtered::<Entity, With<fracture::FractureOverlay>>()
@@ -685,8 +712,7 @@ fn confirmed_break_particles_have_a_hard_budget_and_expire_without_asset_growth(
             .count(),
         0
     );
-    assert_eq!(app.world().resource::<Assets<Mesh>>().len(), 2);
-    assert_eq!(app.world().resource::<Assets<StandardMaterial>>().len(), 2);
+    assert_asset_counts(&app, 0);
     app.world_mut()
         .write_message(removal(100, EditOutcome::Applied));
     app.update();
@@ -801,8 +827,7 @@ fn resource_drop_markers_share_assets_obey_the_cap_and_cleanup_on_disconnect() {
         .iter(app.world())
         .collect();
     assert_eq!(before, after);
-    assert_eq!(app.world().resource::<Assets<Mesh>>().len(), 3);
-    assert_eq!(app.world().resource::<Assets<StandardMaterial>>().len(), 2);
+    assert_asset_counts(&app, 1);
     app.world_mut()
         .resource_mut::<ClientSession>()
         .drops

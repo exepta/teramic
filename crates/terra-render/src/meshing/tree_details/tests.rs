@@ -205,6 +205,7 @@ fn leaf_micro_geometry_replaces_the_cube_for_all_existing_leaf_materials() {
             detail_level: DetailLevel::Near,
             terrain: None,
             exposure: None,
+            tints: Default::default(),
             conditions: Default::default(),
         };
         let batches = compose_section_with_options(

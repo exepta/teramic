@@ -3,7 +3,7 @@ use crate::{
     camera::{
         CaptureRequest, ControllerMode, PlayerControllerStatus, PlayerInputBlock, WalkIntent,
         capture_on_start, follow_player_camera, move_camera, read_walk_input, sync_controller,
-        update_capture, walk_step,
+        toggle_flight, update_capture, walk_step,
     },
     interaction::{BlockPalette, edit_target_block, select_block, target_block},
 };
@@ -33,9 +33,13 @@ impl Plugin for TerraPlayerPlugin {
             .init_resource::<crate::interaction::MiningVisual>()
             .init_resource::<crate::interaction::PlacementPreview>()
             .init_resource::<crate::interaction::InteractionMotion>()
+            .init_resource::<crate::interaction::VesselMotion>()
             .add_message::<terra_network::client::MiningRequest>()
             .add_message::<terra_network::client::PropPlaceRequest>()
             .add_message::<terra_network::client::FarmToolRequest>()
+            .add_message::<terra_network::client::ObjectRotateRequest>()
+            .add_message::<terra_network::client::ConveyorConnectRequest>()
+            .add_message::<terra_network::client::ConveyorInteractionRequest>()
             .add_message::<terra_network::client::ConfirmedEdit>()
             .configure_sets(
                 Update,
@@ -62,7 +66,7 @@ impl Plugin for TerraPlayerPlugin {
             .add_systems(Startup, capture_on_start)
             .add_systems(
                 RunFixedMainLoop,
-                (update_capture, move_camera, read_walk_input)
+                (update_capture, toggle_flight, move_camera, read_walk_input)
                     .chain()
                     .in_set(bevy::app::RunFixedMainLoopSystems::BeforeFixedMainLoop),
             )

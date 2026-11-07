@@ -1,0 +1,338 @@
+{
+  "phase": 183,
+  "date": "2026-11-02",
+  "protocol": 100,
+  "player_slots": {
+    "backpack": 18,
+    "hotbar": 9,
+    "total": 27
+  },
+  "workspace_tests": {
+    "command": "cargo test --workspace --locked -j1 -- --test-threads=4",
+    "exit_code": 0,
+    "passed": 3743,
+    "failed": 0,
+    "ignored": 8
+  },
+  "checks": {
+    "workspace_build": 0,
+    "all_targets_clippy_deny_warnings": 0,
+    "workspace_format": 0,
+    "git_diff_check": 0,
+    "current_stylesheet_parser": 0
+  },
+  "last_change": "Native driver only: screenshot/view sequencing and pause geometry; covered by build, Clippy, and final native acceptance.",
+  "native": {
+    "game_exit_code": 0,
+    "menu_exit_code": 0,
+    "game_captures": 24,
+    "menu_captures": 10,
+    "real_os_input": true,
+    "inventory_slot_count_and_catalog_size_checked": true,
+    "pause_geometry_checked": true,
+    "singleplayer_hover_state_checked": true,
+    "unchanged_authoritative_inventory": true,
+    "existing_saves_opened": false,
+    "private_fixture_world_manifests": 5,
+    "fixture_worlds_started": 0,
+    "private_world_library_removed": true,
+    "physical_sizes": [
+      [
+        1680,
+        936
+      ],
+      [
+        1025,
+        641
+      ]
+    ]
+  },
+  "source_hashes": "source-sha256.json",
+  "captures": {
+    "catalog-page-two.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "8922ce559b82a1c2b6096c2c7bb4d17324971bf24a6019825932bcc9a0bef1ec"
+    },
+    "catalog-search.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "8d81acc63333180af3c2bb70fbdb9a4efdfa050977d73797cb65aeff46f13ad4"
+    },
+    "cauldron-recipe-compact.png": {
+      "size": [
+        1025,
+        641
+      ],
+      "sha256": "eeb78d229c46db2d37cec1db3d059d7c057d7d748109bb8812b91da2bfb660f7"
+    },
+    "cauldron-recipe-wide.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "9f50524aacfe655baa88bcb2f8ef5465bd5073660629a78e2109e1fefd3f2172"
+    },
+    "chest-birch.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "6158e5be86303225bcb61dfe9f9595ae8d3ac2d78e0f7c8cc0d8b8d4b321fa27"
+    },
+    "chest-cherry.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "b209bd50b15867c9c9e20f24065ade12c0dc2b3415f8da82b6401856aa779fa8"
+    },
+    "chest-oak.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "7463a7e1a3c2360aef8a734aa3c072df8b99052e9ec9dbe4affb379ac3139c9f"
+    },
+    "chest-spruce.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "b9db4f8c6e3a9ae6b497bfc0abbbeee0fa013cb7eeba1e73f35164fe1e156c4f"
+    },
+    "crafting-recipe-reference-compact.png": {
+      "size": [
+        1025,
+        641
+      ],
+      "sha256": "ced6c4b3a60aef47b822f1f313854e56fd83af103696b0a92bbb12c353bc7960"
+    },
+    "crafting-recipe-reference-wide.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "5fd02af8598c07802b2a504aebc435969a2b6f57d05950b8492ca9df7a35e3be"
+    },
+    "furnace-alternative-fuels.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "723c0fb78f7827f3a403e8e76d7b24d707bb1f2dc02e8f9fb3a8e3f5ffc16105"
+    },
+    "furnace-recipe-reference-compact.png": {
+      "size": [
+        1025,
+        641
+      ],
+      "sha256": "2135d4bfb7a2d3ce0b0710bc5263c2ff66191aafcd9d8c5c2d004202344438af"
+    },
+    "furnace-recipe-reference-wide.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "683a5bc640b660b9d0113c83fcb26335147eb9a85686f0e789e6aa3f23f6729e"
+    },
+    "furnace-selected-fuel.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "fbb2e6598aa9ee9cf9829f1225a51f1430b7445027ab76645793298bd74660f5"
+    },
+    "hotbar-compact.png": {
+      "size": [
+        1025,
+        641
+      ],
+      "sha256": "7fdd970924078d64572a1bab554a355248e4ab1cc6e519f25009ecaed51a6468"
+    },
+    "hotbar-selected-wide.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "642bb5da8d787b035543497c0ecb891468ae7391de5a07591cec7304d90fbc06"
+    },
+    "hotbar-wide.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "65a3318622d0c3f22e1eed9d873f1e80ddd89c32ff33109b444c724585586af6"
+    },
+    "inventory-left-category-tabs.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "bc8b960d5ef9da5775702aebc068238ef9d4d6b4e77d1b3f38f3d71011767a41"
+    },
+    "pause-menu-compact.png": {
+      "size": [
+        1025,
+        641
+      ],
+      "sha256": "dc4a89fc7d705b346e0cd9a7e1e82f703e0b244cbf70d67d69521327ba38092a"
+    },
+    "pause-menu-wide.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "287f37befb2a6cfe0c4900ccf4c35de287eb94a5f2e9b55eb4525f58d951349a"
+    },
+    "player-inventory-catalog-collapsed.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "7699929372f01456ba1b7ff66369a11ca8572d71d905b6d84e41b57031cfdba2"
+    },
+    "player-inventory-reference-compact.png": {
+      "size": [
+        1025,
+        641
+      ],
+      "sha256": "5db94c62f3b41acdc6f85722242512770ac4e45e400f7b13578aa0b7afebf85a"
+    },
+    "player-inventory-reference-wide.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "2985cec9ab594ba4f7e65aab3887e37d32fe7d900dd4d3b967a431db893bdc14"
+    },
+    "settings-compact.png": {
+      "size": [
+        1025,
+        641
+      ],
+      "sha256": "c82cc0c9afbdf1186c26c4f554b51329ac806cfbbdb4619e0c5e41d9fde18a36"
+    },
+    "settings-controls-wide.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "ab4f4780459994f339396d0e75431ca03320eeee9bb01ed4d60a5d6a44c7f9d3"
+    },
+    "settings-paused-wide.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "ebd8c935c9049644c41f320215663eda7e32b26ca8f978c2134766a8eabdad56"
+    },
+    "settings-wide.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "2552cfed0ab117585b727da6bea8ed02494aa51b095858df93e8fd055a742afa"
+    },
+    "singleplayer-button-hover.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "dadb38f7db05bbe7520f64b8a50aa729491d772d7b1b0b16185fcc5c38808a95"
+    },
+    "singleplayer-compact.png": {
+      "size": [
+        1025,
+        641
+      ],
+      "sha256": "1956c0796fd18298c349482285482da37b9e2003efc303c6d011d0944e254f7b"
+    },
+    "singleplayer-create-dialog.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "468e7c1b10aa2d6d9bbc4bc124a90155da7776f12bdce068a9eae0f5f63ad3c9"
+    },
+    "singleplayer-delete-dialog.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "7214efd0e9d9f1573822658ff39d052de81bbbb5dd8efc2fd83a2aee3ef0ad03"
+    },
+    "singleplayer-wide.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "c75b5a3a5dd2eeb0357779d8c6ed94a20e6ef9a2dab50325beb3ca78cc458d3f"
+    },
+    "start-menu-compact.png": {
+      "size": [
+        1025,
+        641
+      ],
+      "sha256": "8803666fd96ad3aca42a3d3e9407d462c392cc18d2af0ae9b522408df64a18b9"
+    },
+    "start-menu-wide.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "a49ffdb7626e9674d67418ca0c853699cb08b64fb467102c7cc5bf46535053a6"
+    }
+  },
+  "graphics": {
+    "new_raster_images": 0,
+    "reused_assets_unchanged_from_phase182": true,
+    "assets": {
+      "src-ui/assets/hotbar-frame-182.png": {
+        "size": [
+          2172,
+          724
+        ],
+        "sha256": "b4b2605ebf8d16f5dfa55833105a114763fdf904b4a3b40c8b0c43f52a2a6aff"
+      },
+      "src-ui/assets/menu-button-182.png": {
+        "size": [
+          2172,
+          724
+        ],
+        "sha256": "1839e4fb181ddf63bf07c4577475f5cd216cec902ee96248f336af4a5ed01bdf"
+      },
+      "src-ui/assets/menu-logo-182.png": {
+        "size": [
+          2172,
+          724
+        ],
+        "sha256": "71d87110b1f535a5872a1a4b000e8cb9e569d441aecbcc6e54a28036eaf44864"
+      },
+      "src-ui/assets/menu-valley-182.png": {
+        "size": [
+          1672,
+          941
+        ],
+        "sha256": "08fe397a747541b958b382d58bf56004f5e36a0478a454b34bb047117b3499ec"
+      }
+    },
+    "hotbar_rect": [
+      0,
+      195,
+      2172,
+      515
+    ],
+    "button_rect": [
+      55,
+      140,
+      2117,
+      565
+    ],
+    "world_thumbnails": "Shared landscape illustration; not individual world captures."
+  }
+}

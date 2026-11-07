@@ -184,6 +184,9 @@ pub struct BlockDefinition {
     pub crystal_material: Option<String>,
     #[serde(default = "face_names")]
     pub faces: [String; 6],
+    /// Optional tiled cube faces for distant rendering of an authored terrain model.
+    #[serde(default)]
+    pub coarse_faces: Option<[String; 6]>,
     #[serde(default)]
     pub details: Vec<DetailDefinition>,
 }
@@ -263,6 +266,9 @@ pub enum ModelLayout {
 #[derive(Clone, Debug, Deserialize, PartialEq)]
 #[serde(deny_unknown_fields)]
 pub struct CubeMaterialDefinition {
+    /// Reuse an authored model's tiled face, including all PBR texture bindings.
+    #[serde(default)]
+    pub coarse_face: Option<CoarseFaceMaterial>,
     #[serde(default)]
     pub emission: [f32; 3],
     /// Linear RGBA, matching glTF's baseColorFactor convention.
@@ -278,6 +284,13 @@ pub struct CubeMaterialDefinition {
     pub double_sided: bool,
     #[serde(default)]
     pub texture_pattern: Option<TexturePattern>,
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct CoarseFaceMaterial {
+    pub block: u16,
+    pub side: usize,
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, PartialEq, Eq, Hash)]
@@ -340,6 +353,7 @@ fn reflectance() -> f32 {
 impl Default for CubeMaterialDefinition {
     fn default() -> Self {
         Self {
+            coarse_face: None,
             emission: [0.0; 3],
             base_color: white(),
             roughness: roughness(),
@@ -428,6 +442,20 @@ impl BlockLibrary {
                 return Err(format!("Duplicate block ID {} ({})", block.id, block.name));
             }
         }
+        for block in &self.blocks {
+            for reference in block.materials.values().filter_map(|m| m.coarse_face) {
+                if self
+                    .blocks
+                    .iter()
+                    .all(|source| source.id != reference.block || source.coarse_faces.is_none())
+                {
+                    return Err(format!(
+                        "Block {}: coarse material source {} lacks tiled authored faces",
+                        block.id, reference.block
+                    ));
+                }
+            }
+        }
         Ok(())
     }
 }
@@ -491,8 +519,24 @@ impl BlockDefinition {
                 .iter()
                 .any(|(material, path)| material.trim().is_empty() || !relative_asset(path, "png"))
             || self.faces.iter().any(|s| s.trim().is_empty())
+            || self.coarse_faces.as_ref().is_some_and(|faces| {
+                self.render_kind != BlockRenderKind::CustomMesh
+                    || self.model_layout != ModelLayout::FaceGroups
+                    || faces.iter().any(|name| name.trim().is_empty())
+            })
             || self.materials.iter().any(|(name, material)| {
                 name.trim().is_empty()
+                    || material.coarse_face.is_some_and(|reference| {
+                        reference.block == 0
+                            || reference.block == self.id
+                            || reference.side >= 6
+                            || !matches!(
+                                self.render_kind,
+                                BlockRenderKind::Cube | BlockRenderKind::Boxes
+                            )
+                            || material.texture_pattern.is_some()
+                            || self.textures.contains_key(name)
+                    })
                     || (material.texture_pattern.is_some() && self.textures.contains_key(name))
                     || material
                         .base_color

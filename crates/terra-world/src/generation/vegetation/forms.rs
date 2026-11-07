@@ -7,6 +7,44 @@ use super::{
 };
 
 impl Tree {
+    pub(super) fn apple(origin: [i64; 3], seed: u64, connected_branches: bool) -> Self {
+        let height = 7.0 + random(seed, 1) * 3.0;
+        let trunk_top = [0.5, height * 0.68, 0.5];
+        let mut wood = vec![WoodSegment::new([0.5, 0.0, 0.5], trunk_top, [0.68, 0.48])];
+        let mut crowns = vec![Crown::new([0.5, height * 0.85, 0.5], [2.7, 2.1, 2.7])];
+        for (index, direction) in DIRECTIONS.into_iter().step_by(2).enumerate() {
+            let reach = 2.5 + random(seed, 100 + index as u64) * 1.1;
+            let branch = [
+                0.5 + direction[0] * reach,
+                height * 0.50 + 0.7 * (index % 2) as f32,
+                0.5 + direction[1] * reach,
+            ];
+            wood.push(WoodSegment::new(
+                [0.5, height * 0.38, 0.5],
+                branch,
+                // Thin diagonal capsules can rasterize to disconnected tips.
+                // New ecology keeps the authored axes while giving every branch
+                // the same face-connected minimum radius as broad native trees.
+                if connected_branches {
+                    [0.9; 2]
+                } else {
+                    [0.58, 0.48]
+                },
+            ));
+            crowns.push(Crown::new(
+                [branch[0], branch[1] + 1.4, branch[2]],
+                [2.35, 1.9, 2.35],
+            ));
+        }
+        Self::from_shapes(
+            origin,
+            TreeSpecies::Apple,
+            TreeForm::Spreading,
+            wood,
+            crowns,
+        )
+    }
+
     pub(super) fn palm(origin: [i64; 3], seed: u64) -> Self {
         let height = 8.0 + random(seed, 1) * 6.0;
         let direction = DIRECTIONS[(seed % 8) as usize];
@@ -70,6 +108,25 @@ impl Tree {
         }
         crowns.push(Crown::new(trunk(0.98), [1.3, 1.8, 1.3]));
         Self::from_shapes(origin, TreeSpecies::Spruce, TreeForm::Tiered, wood, crowns)
+    }
+
+    pub(super) fn fir(origin: [i64; 3], seed: u64) -> Self {
+        let (low, high) = TreeSpecies::Fir.height_range();
+        let height = low + random(seed, 1) * (high - low);
+        let trunk = |t: f32| [0.5, height * t, 0.5];
+        let wood = vec![WoodSegment::new(trunk(0.0), trunk(0.94), [0.48; 2])];
+        let mut crowns = Vec::with_capacity(11);
+        for tier in 0..10 {
+            let t = 0.16 + tier as f32 * 0.076;
+            let width = (5.8 * (1.0 - t) + 0.35) * (0.92 + random(seed, 90 + tier) * 0.16);
+            crowns.push(Crown::conifer_tier(
+                trunk(t),
+                [width, height * 0.13 + 0.6, width * 0.92],
+                random(seed, 110 + tier) * std::f32::consts::TAU,
+            ));
+        }
+        crowns.push(Crown::new(trunk(0.98), [0.85, 1.55, 0.85]));
+        Self::from_shapes(origin, TreeSpecies::Fir, TreeForm::Tiered, wood, crowns)
     }
 
     pub(super) fn mushroom(origin: [i64; 3], seed: u64, variant: u8) -> Self {

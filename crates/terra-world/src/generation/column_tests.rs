@@ -72,6 +72,36 @@ fn prepared_columns_reject_changed_terrain_or_world_identity() {
 }
 
 #[test]
+fn prepared_columns_reject_every_other_landscape_revision() {
+    for revision in 0..=5 {
+        let config = WorldConfig {
+            landscape_revision: revision,
+            ..Default::default()
+        };
+        let generator = SectionGenerator::new(TerraGenerator::new(config.clone()).unwrap());
+        let prepared = generator.prepare_column([-1, -1], true).unwrap();
+        for changed in (0..=5).filter(|other| *other != revision) {
+            let other = SectionGenerator::new(
+                TerraGenerator::new(WorldConfig {
+                    landscape_revision: changed,
+                    ..config.clone()
+                })
+                .unwrap(),
+            );
+            assert!(matches!(
+                other.build_prepared(
+                    SectionPos::new(-1, 0, -1),
+                    0,
+                    &Default::default(),
+                    &prepared
+                ),
+                Err(SectionGenerationError::ColumnMismatch)
+            ));
+        }
+    }
+}
+
+#[test]
 fn prepared_columns_match_uncached_generation_and_never_cache_edits() {
     let generator = SectionGenerator::new(TerraGenerator::new(WorldConfig::default()).unwrap());
     let prepared = generator.prepare_column([-1, -1], true).unwrap();
@@ -116,7 +146,14 @@ fn prepared_columns_match_uncached_generation_and_never_cache_edits() {
 
 #[test]
 fn ocean_desert_and_forest_profiles_generate_distinct_wide_regions() {
-    let terrain = TerraGenerator::new(WorldConfig::default()).unwrap();
+    let terrain = TerraGenerator::new(WorldConfig {
+        landscape_revision: 4,
+        sea_level: 22.0,
+        rivers: true,
+        biome_definitions: Some(terra_core::BiomeDefinitions::default()),
+        ..Default::default()
+    })
+    .unwrap();
     let ocean = [-3328.0, -8192.0];
     let mut wet = 0;
     for z in (-256..=256).step_by(16) {

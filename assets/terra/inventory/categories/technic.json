@@ -1,0 +1,6 @@
+{
+  "id": "technic",
+  "name": "Technic",
+  "icon": { "block": 141 },
+  "order": 70
+}

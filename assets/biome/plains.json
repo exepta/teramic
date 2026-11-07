@@ -1,0 +1,13 @@
+{
+  "biome": "plains",
+  "terrain": {
+    "min_height": 32,
+    "max_height": 60,
+    "horizontal_scale": 360,
+    "detail_strength": 0.18,
+    "relief_strength": 0.4,
+    "soil_depth": 5,
+    "tree_density": 0.22,
+    "terrace_strength": 0.08
+  }
+}

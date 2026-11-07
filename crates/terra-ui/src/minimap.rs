@@ -1,4 +1,5 @@
 //! Shared asynchronous cartography for the MiniMap and FullMap.
+mod diplomacy;
 pub mod fullmap;
 mod gpu;
 mod markers;
@@ -155,8 +156,12 @@ pub struct MiniMapView {
     pub clock: String,
     pub seasons: bool,
     pub season: String,
+    // Native calendar uniforms stay continuous without invalidating unrelated
+    // HTML bindings, including the open inventory's lexical item scopes.
+    #[serde(skip)]
     pub season_cycle: f32,
     pub frame_style: String,
+    #[serde(skip)]
     pub frame_rotation: f32,
     pub cave: bool,
     pub layer: String,
@@ -180,6 +185,7 @@ struct Entry {
     detail: Option<Arc<DetailTile>>,
     overview: Option<Arc<Overview>>,
     source_revision: Option<u64>,
+    palette_fingerprint: u64,
     used: u64,
 }
 
@@ -335,6 +341,7 @@ struct Canvas {
     job: Option<Task<PaintResult>>,
     next_terrain: f64,
     next_frame: f64,
+    diplomacy: diplomacy::ClaimRasterCache,
 }
 #[derive(Resource)]
 struct Atlas {
@@ -356,7 +363,7 @@ struct Atlas {
     expanded: bool,
     zoom: usize,
     preference: Option<MinimapConfig>,
-    palette_revision: u64,
+    palette_fingerprint: u64,
     error: String,
     revision: u64,
     display: Option<[f64; 3]>,
@@ -383,7 +390,7 @@ impl Default for Atlas {
             expanded: true,
             zoom: 1,
             preference: None,
-            palette_revision: 0,
+            palette_fingerprint: 0,
             error: String::new(),
             revision: 0,
             display: None,
@@ -475,6 +482,7 @@ pub(crate) fn install(app: &mut App) {
         .add_systems(
             Update,
             update
+                .after(crate::settlement_map::SettlementMapSet)
                 .after(terra_player::PlayerSet::Movement)
                 .after(terra_world::streaming::StreamingSet::Dispatch),
         );
@@ -502,6 +510,7 @@ struct MapData<'w> {
     players: Option<Res<'w, ReplicatedPlayers>>,
     social: Option<Res<'w, terra_network::client::SocialState>>,
     fullmap: Res<'w, fullmap::FullMapState>,
+    settlements: Option<Res<'w, crate::settlement_map::SettlementMap>>,
     fullview: ResMut<'w, fullmap::FullMapView>,
     probe: ResMut<'w, LayerProbe>,
 }
@@ -578,6 +587,7 @@ fn update(
         players,
         social,
         fullmap,
+        settlements,
         mut fullview,
         mut probe,
     } = data;
@@ -668,7 +678,8 @@ fn update(
             .map_or(MapLayer::Surface, DetailTileIndex::layer);
         atlas.refresh_detail_index(&chunks, &journal, layer, DetailChanges::default());
         let used = atlas.tick;
-        for result in results.into_iter().filter(|_| revision == palette.revision) {
+        let current_palette = palette.fingerprint();
+        for result in results.into_iter().filter(|_| revision == current_palette) {
             if !atlas.accepts(&result) {
                 continue;
             }
@@ -717,6 +728,7 @@ fn update(
                         .or_else(|| previous.and_then(|e| e.detail)),
                     overview,
                     source_revision,
+                    palette_fingerprint: revision,
                     used,
                 },
             );
@@ -804,12 +816,9 @@ fn update(
                 1.0
             };
         atlas.tick = atlas.tick.wrapping_add(1);
-        if atlas.palette_revision != palette.revision {
-            atlas.palette_revision = palette.revision;
-            for entry in atlas.entries.values_mut() {
-                entry.detail = None;
-                entry.source_revision = None;
-            }
+        if atlas.palette_fingerprint != palette.fingerprint() {
+            atlas.palette_fingerprint = palette.fingerprint();
+            atlas.revision = atlas.revision.wrapping_add(1);
         }
         schedule(
             &mut atlas,
@@ -875,6 +884,21 @@ fn update(
             settings.players,
             Vec2::new(fullview.map_width, fullview.map_height),
         );
+        let draft = fullmap.preview_claims();
+        let center = fullmap.viewing([display[0], display[2]]);
+        let margin = fullmap.span as f64 * 3.0;
+        let domains: Vec<_> = settlements
+            .as_ref()
+            .into_iter()
+            .flat_map(|sites| sites.domains())
+            .filter(|d| {
+                d.bounds[1][0] as f64 >= center[0] - margin
+                    && (d.bounds[0][0] as f64) <= center[0] + margin
+                    && d.bounds[1][2] as f64 >= center[1] - margin
+                    && (d.bounds[0][2] as f64) <= center[1] + margin
+            })
+            .copied()
+            .collect();
         let revision = atlas.revision;
         let Atlas { full, entries, .. } = &mut *atlas;
         full.grid = fullmap.grid;
@@ -902,6 +926,15 @@ fn update(
                 [display[0] as f32, level as f32, display[2] as f32]
             },
             &mut assets,
+            session
+                .as_ref()
+                .filter(|_| fullmap.diplomacy)
+                .map(|session| diplomacy::RasterSource {
+                    registry: &session.kingdoms,
+                    domains: &domains,
+                    draft: &draft,
+                    selected: fullmap.diplomacy_chunk,
+                }),
         );
     } else {
         let canvas = windows
@@ -1019,6 +1052,7 @@ fn update(
                 settings.icon_scale,
                 [display[0] as f32, level as f32, display[2] as f32],
                 &mut assets,
+                None,
             );
         }
     }
@@ -1085,6 +1119,7 @@ fn present(
     icon_scale: f32,
     player: [f32; 3],
     assets: &mut RenderAssets,
+    diplomacy: Option<diplomacy::RasterSource<'_>>,
 ) {
     if canvas.key.as_ref().is_some_and(|key| {
         key.layer != layer
@@ -1103,7 +1138,7 @@ fn present(
     {
         canvas.job = None;
         if result.key.layer == layer
-            && result.key.palette == palette.revision
+            && result.key.palette == palette.fingerprint()
             && result.key.relief == projection.relief_enabled()
             && result.key.three_dimensional == projection.is_three_dimensional()
             && result.key.aspect == projection.aspect().to_bits()
@@ -1130,7 +1165,7 @@ fn present(
         three_dimensional: projection.is_three_dimensional(),
         aspect: projection.aspect().to_bits(),
         revision,
-        palette: palette.revision,
+        palette: palette.fingerprint(),
     };
     if projection.is_three_dimensional() {
         canvas.job = None;
@@ -1170,7 +1205,13 @@ fn present(
         return;
     };
     if frame_due(&mut canvas.next_frame, now, fps) || canvas.overlay_reference.is_none() {
-        let pixels = raster::marker_overlay(projection, level, markers, icon_scale);
+        let underlay = diplomacy.map(|source| {
+            canvas
+                .diplomacy
+                .pixels(source, projection, entries, layer, level, revision)
+        });
+        let pixels =
+            raster::marker_overlay_with_underlay(projection, level, markers, icon_scale, underlay);
         upload(
             &mut assets.images,
             &mut canvas.overlay,
@@ -1352,15 +1393,18 @@ fn schedule(
     // Only four live snapshots and 128 total jobs can be admitted. Keep those
     // best candidates rather than allocating and sorting the complete atlas.
     let mut candidates = planning::Candidates::default();
+    let palette_fingerprint = palette.fingerprint();
     for coordinate in revisions.keys().copied().chain(catalog) {
         let revision = index.source_revision(coordinate);
         let mut previously_live = false;
         if let Some(entry) = atlas.entries.get_mut(&(coordinate, layer)) {
             entry.used = atlas.tick;
-            if revision.is_some() && entry.source_revision == revision {
+            let same_palette = entry.palette_fingerprint == palette_fingerprint;
+            if same_palette && revision.is_some() && entry.source_revision == revision {
                 continue;
             }
-            if revision.is_none()
+            if same_palette
+                && revision.is_none()
                 && !(entry.detail.is_some() && entry.tile.is_none() && entry.overview.is_none())
             {
                 continue;
@@ -1527,47 +1571,41 @@ fn load_tiles(root: PathBuf, work: Vec<Work>, palette: MapPalette) -> (u64, Vec<
             let directory = layer_root(&root, work.key.1);
             if let Some(snapshot) = work.snapshot {
                 let detail = snapshot.render();
-                let mut tile = raster::tile(&detail, &palette);
-                let previous = work
-                    .previous
-                    .or_else(|| maps::load(&directory, work.key.0).ok().flatten());
-                if let Some(previous) = previous.as_ref() {
-                    for index in 0..256 {
-                        if tile.pixels[index * 4 + 3] == 0 && previous.pixels[index * 4 + 3] != 0 {
-                            tile.pixels[index * 4..index * 4 + 4]
-                                .copy_from_slice(&previous.pixels[index * 4..index * 4 + 4]);
-                            if let (Some(current), Some(previous)) =
-                                (tile.relief.as_mut(), previous.relief.as_ref())
-                            {
-                                current.heights[index] = previous.heights[index];
-                                if previous.is_water(index) {
-                                    current.water[index / 8] |= 1 << (index % 8);
-                                }
-                            }
-                        }
-                    }
-                }
-                let error = if previous.as_ref() == Some(&tile) {
+                let previous = maps::load_cached(&directory, work.key.0)
+                    .ok()
+                    .flatten()
+                    .or_else(|| work.previous.map(Into::into));
+                let cached = merge_cached(&detail, &palette, previous.clone());
+                let error = if previous.as_ref() == Some(&cached) {
                     None
                 } else {
-                    maps::save(&directory, &tile).err()
+                    maps::save_cached(&directory, &cached).err()
                 };
                 TileResult {
                     key: work.key,
-                    tile: Some(tile),
+                    tile: Some(cached.tile),
                     detail: Some(detail),
                     error,
                     source_revision: work.source_revision,
                 }
             } else {
-                match maps::load(&directory, work.key.0) {
-                    Ok(tile) => TileResult {
-                        key: work.key,
-                        tile,
-                        detail: None,
-                        error: None,
-                        source_revision: None,
-                    },
+                match maps::load_cached(&directory, work.key.0) {
+                    Ok(cached) => {
+                        let mut error = None;
+                        let tile = cached.map(|mut cached| {
+                            if recolor_cached(&mut cached, &palette, work.key.1) {
+                                error = maps::save_cached(&directory, &cached).err();
+                            }
+                            cached.tile
+                        });
+                        TileResult {
+                            key: work.key,
+                            tile,
+                            detail: None,
+                            error,
+                            source_revision: None,
+                        }
+                    }
                     Err(error) => TileResult {
                         key: work.key,
                         tile: None,
@@ -1579,7 +1617,72 @@ fn load_tiles(root: PathBuf, work: Vec<Work>, palette: MapPalette) -> (u64, Vec<
             }
         })
         .collect();
-    (palette.revision, tiles)
+    (palette.fingerprint(), tiles)
+}
+
+fn recolor_cached(cached: &mut maps::CachedMapTile, palette: &MapPalette, layer: MapLayer) -> bool {
+    let Some(source) = cached.source.as_mut() else {
+        // Old RGBA pixels have no material identity. Keeping their old color is
+        // preferable to deleting exploration or guessing which pixels are grass.
+        return false;
+    };
+    let fingerprint = palette.fingerprint();
+    if source.palette == fingerprint {
+        return false;
+    }
+    let detail = DetailTile {
+        coordinate: cached.tile.coordinate,
+        layer,
+        revision: 0,
+        cells: source.cells,
+    };
+    let repainted = raster::tile(&detail, palette);
+    for (index, sample) in source.cells.iter().enumerate() {
+        if sample.known {
+            let pixel = index * 4..index * 4 + 4;
+            cached.tile.pixels[pixel.clone()].copy_from_slice(&repainted.pixels[pixel]);
+        }
+    }
+    source.palette = fingerprint;
+    true
+}
+
+fn merge_cached(
+    detail: &DetailTile,
+    palette: &MapPalette,
+    mut previous: Option<maps::CachedMapTile>,
+) -> maps::CachedMapTile {
+    if let Some(previous) = previous.as_mut() {
+        recolor_cached(previous, palette, detail.layer);
+    }
+    let mut cached = maps::CachedMapTile {
+        tile: raster::tile(detail, palette),
+        source: Some(Box::new(maps::MapRasterSource {
+            palette: palette.fingerprint(),
+            cells: detail.cells,
+        })),
+    };
+    if let Some(previous) = previous {
+        for index in 0..256 {
+            if detail.cells[index].known {
+                continue;
+            }
+            let pixel = index * 4..index * 4 + 4;
+            cached.tile.pixels[pixel.clone()].copy_from_slice(&previous.tile.pixels[pixel]);
+            if let (Some(current), Some(previous)) =
+                (cached.tile.relief.as_mut(), previous.tile.relief.as_ref())
+            {
+                current.heights[index] = previous.heights[index];
+                if previous.is_water(index) {
+                    current.water[index / 8] |= 1 << (index % 8);
+                }
+            }
+            if let Some(previous_source) = previous.source.as_ref() {
+                cached.source.as_mut().unwrap().cells[index] = previous_source.cells[index];
+            }
+        }
+    }
+    cached
 }
 fn distance(coordinate: [i64; 2], center: [i64; 2]) -> i64 {
     (coordinate[0] * 16 + 8 - center[0]).pow(2) + (coordinate[1] * 16 + 8 - center[1]).pow(2)
@@ -1641,6 +1744,181 @@ fn trim(entries: &mut HashMap<Key, Entry>) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn cache_palette() -> MapPalette {
+        MapPalette {
+            colors: vec![[0.2, 0.3, 0.1]; 8],
+            biome_colors: [[0.2, 0.5, 0.1]; 8],
+            ..default()
+        }
+    }
+
+    fn cache_detail(layer: MapLayer) -> DetailTile {
+        use terra_world::cartography::MapSample;
+        let mut cells = [MapSample::default(); 256];
+        cells[0] = MapSample {
+            material: 1,
+            height: -42,
+            known: true,
+            biome_weights: [0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            ..default()
+        };
+        DetailTile {
+            coordinate: [-3, -2],
+            layer,
+            revision: 17,
+            cells,
+        }
+    }
+
+    #[test]
+    fn persisted_samples_recolor_on_reload_without_brightening_caves_or_losing_unknown_cells() {
+        let root = std::env::temp_dir().join(format!(
+            "terra-map-recolor-{}",
+            terra_core::PlayerUuid::new_v4()
+        ));
+        let old_palette = cache_palette();
+        let mut palette = old_palette.clone();
+        palette.authored_grass = true;
+        palette.surface_grass = Some([0.3, 0.5, 0.1]);
+        assert_eq!(old_palette.revision, palette.revision);
+        assert_ne!(old_palette.fingerprint(), palette.fingerprint());
+        for layer in [MapLayer::Surface, MapLayer::Cave { level: -48 }] {
+            let detail = cache_detail(layer);
+            let first = merge_cached(&detail, &old_palette, None);
+            let directory = layer_root(&root, layer);
+            let expected = raster::tile(&detail, &palette);
+            if layer == MapLayer::Surface {
+                assert_ne!(first.tile.pixels, expected.pixels);
+            } else {
+                assert_eq!(first.tile.pixels, expected.pixels);
+            }
+            // Also simulate an old-palette worker finishing after a palette
+            // change. Its truthfully stamped source cannot resurrect old colors.
+            for _ in 0..2 {
+                maps::save_cached(&directory, &first).unwrap();
+                let (fingerprint, results) = load_tiles(
+                    root.clone(),
+                    vec![Work {
+                        key: (detail.coordinate, layer),
+                        snapshot: None,
+                        previous: None,
+                        source_revision: None,
+                    }],
+                    palette.clone(),
+                );
+                assert_eq!(fingerprint, palette.fingerprint());
+                assert_eq!(results.len(), 1);
+                assert_eq!(results[0].tile.as_ref(), Some(&expected));
+                assert!(results[0].error.is_none());
+                let saved = maps::load_cached(&directory, detail.coordinate)
+                    .unwrap()
+                    .unwrap();
+                assert_eq!(
+                    saved.source.as_ref().unwrap().palette,
+                    palette.fingerprint()
+                );
+                assert!(saved.fully_recolorable());
+                assert_eq!(&saved.tile.pixels[4..], &[0; 1020]);
+            }
+        }
+        std::fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn partially_revisited_legacy_tiles_keep_exploration_and_never_claim_legacy_cells_as_new() {
+        use terra_world::cartography::MapRelief;
+        let mut detail = cache_detail(MapLayer::Surface);
+        detail.cells[1] = detail.cells[0];
+        detail.cells[0].known = false;
+        let mut legacy = MapTile {
+            coordinate: detail.coordinate,
+            pixels: [0; 1024],
+            relief: Some(Box::new(MapRelief {
+                heights: [MapRelief::UNKNOWN; 256],
+                water: [0; 32],
+            })),
+        };
+        legacy.pixels[..8].copy_from_slice(&[12, 30, 14, 255, 20, 40, 10, 255]);
+        legacy.relief.as_mut().unwrap().heights[0] = -71;
+        legacy.relief.as_mut().unwrap().water[0] = 1;
+        let palette = cache_palette();
+        let mut cached = merge_cached(&detail, &palette, Some(legacy.clone().into()));
+        assert_eq!(&cached.tile.pixels[..4], &legacy.pixels[..4]);
+        assert_eq!(cached.tile.relief.as_ref().unwrap().height(0), Some(-71));
+        assert!(cached.tile.relief.as_ref().unwrap().is_water(0));
+        assert!(!cached.fully_recolorable());
+        assert!(!cached.source.as_ref().unwrap().cells[0].known);
+        let mut next = palette.clone();
+        next.authored_grass = true;
+        next.surface_grass = Some([0.3, 0.5, 0.1]);
+        assert!(recolor_cached(&mut cached, &next, detail.layer));
+        assert_eq!(&cached.tile.pixels[..4], &legacy.pixels[..4]);
+        assert_ne!(&cached.tile.pixels[4..8], &legacy.pixels[4..8]);
+        assert!(!cached.fully_recolorable());
+        assert!(!recolor_cached(&mut cached, &next, detail.layer));
+        detail.cells[0] = detail.cells[1];
+        detail.cells[1].known = false;
+        let cached = merge_cached(&detail, &next, Some(cached));
+        assert!(cached.fully_recolorable());
+        assert!(cached.source.as_ref().unwrap().cells[1].known);
+        assert_eq!(cached.tile.relief.as_ref().unwrap().height(0), Some(-42));
+        assert!(!cached.tile.relief.as_ref().unwrap().is_water(0));
+        assert_eq!(&cached.tile.pixels[8..], &[0; 1016]);
+    }
+
+    #[test]
+    fn palette_changes_reschedule_already_loaded_distant_tiles_with_the_same_runtime_revision() {
+        use bevy::tasks::TaskPool;
+        IoTaskPool::get_or_init(TaskPool::new);
+        let root = std::env::temp_dir().join(format!(
+            "terra-map-palette-epoch-{}",
+            terra_core::PlayerUuid::new_v4()
+        ));
+        let layer = MapLayer::Surface;
+        let detail = cache_detail(layer);
+        let old_palette = cache_palette();
+        let cached = merge_cached(&detail, &old_palette, None);
+        maps::save_cached(&root, &cached).unwrap();
+        let mut palette = old_palette.clone();
+        palette.authored_grass = true;
+        palette.surface_grass = Some([0.3, 0.5, 0.1]);
+        let mut atlas = Atlas {
+            identity: Some(test_identity(1)),
+            root: root.clone(),
+            catalogs: HashMap::from([(layer, HashSet::from([detail.coordinate]))]),
+            entries: HashMap::from([(
+                (detail.coordinate, layer),
+                Entry {
+                    tile: Some(Arc::new(cached.tile)),
+                    detail: None,
+                    overview: None,
+                    source_revision: None,
+                    palette_fingerprint: old_palette.fingerprint(),
+                    used: 0,
+                },
+            )]),
+            ..default()
+        };
+        schedule(
+            &mut atlas,
+            &ChunkStore::default(),
+            &EditJournal::default(),
+            layer,
+            [-40, -24],
+            [-40, -24],
+            &palette,
+            &raster::Projection::new([-40, -24], 96, 0.0, false, true),
+        );
+        let (fingerprint, results) = future::block_on(atlas.job.take().unwrap());
+        assert_eq!(fingerprint, palette.fingerprint());
+        assert_eq!(results.len(), 1);
+        assert_eq!(
+            results[0].tile.as_ref(),
+            Some(&raster::tile(&detail, &palette))
+        );
+        std::fs::remove_dir_all(root).unwrap();
+    }
 
     #[test]
     fn confirmed_prop_metadata_refreshes_only_its_column_without_global_map_invalidation() {
@@ -2145,6 +2423,7 @@ mod tests {
         use bevy::{ecs::system::SystemState, tasks::TaskPool};
         AsyncComputeTaskPool::get_or_init(TaskPool::new);
         let projection = raster::Projection::at([0.0, 0.0], 192, 0.0, false, true, SIZE, true);
+        let palette = MapPalette::default();
         let mut canvas = Canvas {
             key: Some(PaintKey {
                 center: [0, 80, 0],
@@ -2154,7 +2433,7 @@ mod tests {
                 three_dimensional: false,
                 aspect: 1.0f32.to_bits(),
                 revision: 1,
-                palette: 0,
+                palette: palette.fingerprint(),
             }),
             ..default()
         };
@@ -2167,7 +2446,7 @@ mod tests {
             &mut canvas,
             &HashMap::new(),
             MapLayer::Surface,
-            &MapPalette::default(),
+            &palette,
             &projection,
             80,
             192,
@@ -2179,6 +2458,7 @@ mod tests {
             1.0,
             [0.0, 80.0, 0.0],
             &mut assets,
+            None,
         );
         assert!(
             canvas.job.is_some(),
@@ -2274,6 +2554,7 @@ mod tests {
                         })),
                         overview: None,
                         source_revision: Some(1),
+                        palette_fingerprint: 0,
                         used: 1,
                     },
                 );
@@ -2328,6 +2609,7 @@ mod tests {
                     detail: None,
                     overview: Some(small.clone()),
                     source_revision: None,
+                    palette_fingerprint: 0,
                     used: i as u64,
                 },
             );
@@ -2370,6 +2652,7 @@ mod tests {
             detail: None,
             overview: Some(Arc::new(overview(&tile))),
             source_revision: Some(15),
+            palette_fingerprint: 0,
             used: 0,
         };
         assert_eq!(entry.height_at(0), Some(72));
@@ -2415,6 +2698,7 @@ mod tests {
                     detail: None,
                     overview: None,
                     source_revision: Some(revision),
+                    palette_fingerprint: 0,
                     used: 0,
                 },
             )]),
@@ -2424,6 +2708,9 @@ mod tests {
             colors: vec![[0.5; 3]; 2],
             ..default()
         };
+        for entry in atlas.entries.values_mut() {
+            entry.palette_fingerprint = palette.fingerprint();
+        }
         let projection = raster::Projection::new([0, 0], 192, 0.0, false, true);
         for _ in 0..20 {
             schedule(
@@ -2534,6 +2821,7 @@ mod tests {
                     detail: None,
                     overview: None,
                     source_revision: None,
+                    palette_fingerprint: 0,
                     used: i as u64,
                 },
             );

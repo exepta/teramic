@@ -1,0 +1,83 @@
+{
+  "schema_version": 1,
+  "id": 169,
+  "name": "Basin",
+  "description": "A reinforced basin for the finite hydraulic network.",
+  "creative_category": "technic",
+  "render_kind": "custom_mesh",
+  "struct_block": true,
+  "model_layout": "scene",
+  "model": "models/basin.gltf",
+  "hardness": 3,
+  "resistance": 8,
+  "mining_level": 0,
+  "required_tool": "axe",
+  "textures": {
+    "oak_frame": "textures/oak-crafted-hd.png",
+    "pipe_stone": "textures/stone-strata-hd.png",
+    "pipe_iron": "textures/forged-iron-warm.png",
+    "iron_bolts": "textures/forged-iron-warm.png"
+  },
+  "collision_boxes": [
+    {
+      "minimum": [
+        0,
+        0,
+        0
+      ],
+      "maximum": [
+        1,
+        0.13,
+        1
+      ]
+    },
+    {
+      "minimum": [
+        0,
+        0.13,
+        0
+      ],
+      "maximum": [
+        0.16,
+        0.95,
+        1
+      ]
+    },
+    {
+      "minimum": [
+        0.84,
+        0.13,
+        0
+      ],
+      "maximum": [
+        1,
+        0.95,
+        1
+      ]
+    },
+    {
+      "minimum": [
+        0.16,
+        0.13,
+        0
+      ],
+      "maximum": [
+        0.84,
+        0.95,
+        0.16
+      ]
+    },
+    {
+      "minimum": [
+        0.16,
+        0.13,
+        0.84
+      ],
+      "maximum": [
+        0.84,
+        0.95,
+        1
+      ]
+    }
+  ]
+}

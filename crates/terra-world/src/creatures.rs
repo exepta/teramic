@@ -39,7 +39,7 @@ impl Habitat<'_> {
     ) -> bool {
         static PROFILES: std::sync::OnceLock<terra_core::block_properties::BlockPropertiesCatalog> =
             std::sync::OnceLock::new();
-        crate::interaction_shapes::visit_boxes_with(
+        crate::interaction_shapes::visit_collision_boxes_with(
             self.journal,
             PROFILES.get_or_init(Default::default),
             cell,
@@ -762,6 +762,9 @@ pub(super) fn step_with_flowers(
     }
     if animal.kind != Kind::Fish && support::swimming(animal, habitat) {
         let forage = needs::update(animal, habitat, dt, search);
+        if animal.health <= 0.0 {
+            return forage;
+        }
         let target = [
             animal.position[0] - f64::from(animal.yaw.sin()) * 4.0,
             animal.position[1],

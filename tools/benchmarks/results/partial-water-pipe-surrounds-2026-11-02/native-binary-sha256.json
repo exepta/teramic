@@ -1,0 +1,7 @@
+{
+  "binaries": {
+    "target/debug/terra-client": "a4cc49e4bc9ff2f46c2f42c680765b77fee5c7808b0192be78e9a7aec94b5cc7",
+    "target/debug/terra-server": "7b1ef9c06548f44f20588aca9e725b532a0816edbea9b29485286af69e44931a"
+  },
+  "native_runs_use_final_production_build": true
+}

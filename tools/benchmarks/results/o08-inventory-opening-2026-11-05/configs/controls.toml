@@ -1,0 +1,99 @@
+mouse_sensitivity = 0.0015
+auto_climb = false
+
+[bindings.forward]
+key = "KeyW"
+
+[bindings.backward]
+key = "KeyS"
+
+[bindings.left]
+key = "KeyA"
+
+[bindings.right]
+key = "KeyD"
+
+[bindings.jump]
+key = "Space"
+
+[bindings.fly_down]
+key = "ShiftLeft"
+
+[bindings.sprint]
+key = "ControlLeft"
+
+[bindings.precision]
+key = "AltLeft"
+
+[bindings.break]
+mouse = "Left"
+
+[bindings.place]
+mouse = "Right"
+
+[bindings.cursor]
+key = "Tab"
+
+[bindings.pause]
+key = "Escape"
+
+[bindings.camera]
+key = "F5"
+
+[bindings.inventory]
+key = "KeyE"
+
+[bindings.debug_overlay]
+key = "F1"
+
+[bindings.debug_bounds.chord]
+modifier = "F1"
+key = "KeyB"
+
+[bindings.chat]
+key = "KeyT"
+
+[bindings.command]
+key = "Slash"
+
+[bindings.pick_block]
+mouse = "Middle"
+
+[bindings.drop]
+key = "KeyQ"
+
+[bindings.drop_stack.chord]
+modifier = "ShiftLeft"
+key = "KeyQ"
+
+[bindings.use]
+key = "KeyR"
+
+[bindings.debug_creature.chord]
+modifier = "F1"
+key = "KeyE"
+
+[bindings.mini_map]
+key = "KeyJ"
+
+[bindings.map_zoom_in]
+key = "NumpadAdd"
+
+[bindings.map_zoom_out]
+key = "NumpadSubtract"
+
+[bindings.full_map]
+key = "KeyM"
+
+[bindings.quick_waypoint]
+key = "KeyN"
+
+[bindings.dismount]
+key = "KeyX"
+
+[bindings.debug_mob_bounds.chord]
+modifier = "F1"
+key = "KeyH"
+
+[bindings.debug_chunk_borders]
+key = "F9"

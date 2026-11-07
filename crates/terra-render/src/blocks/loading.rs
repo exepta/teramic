@@ -22,6 +22,15 @@ use std::{
 #[path = "loading_tests.rs"]
 mod tests;
 
+#[cfg(test)]
+pub(crate) fn test_static_scene(path: &'static str, id: u16) -> Vec<PrimitiveTemplate> {
+    tests::load_static_scene(path, id)
+}
+
+#[cfg(test)]
+#[path = "authored_terrain_tests.rs"]
+pub(crate) mod authored_terrain_tests;
+
 #[derive(Resource, Default)]
 pub(crate) struct BlockAssets {
     library: Option<BlockLibrary>,
@@ -41,6 +50,65 @@ pub(crate) struct BlockAssets {
 }
 
 impl BlockAssets {
+    pub(crate) fn startup_path(
+        &self,
+        item: Option<terra_core::ItemKind>,
+        server: Option<&AssetServer>,
+    ) -> String {
+        if let Some(server) = server {
+            for handle in self.models.values() {
+                if !server.is_loaded_with_dependencies(handle.id()) {
+                    return server
+                        .get_path(handle.id())
+                        .map_or_else(String::new, |path| path.to_string());
+                }
+            }
+            for (path, handle) in &self.textures {
+                if !server.is_loaded_with_dependencies(handle.id())
+                    || !self.mipmaps_ready.contains(path)
+                {
+                    return server
+                        .get_path(handle.id())
+                        .map_or_else(|| path.clone(), |path| path.to_string());
+                }
+            }
+        }
+        if let Some(item) = item {
+            if let Some(block) = item.block_material().and_then(|id| {
+                self.library
+                    .as_ref()?
+                    .blocks
+                    .iter()
+                    .find(|block| block.id == id)
+            }) && !block.model.is_empty()
+            {
+                return format!("Icon: terra/blocks/{}", block.model);
+            }
+            // Registry identifiers name existing independent definition files.
+            // Variants share that source; only their icon composition differs.
+            let base = item.block_material().map_or_else(
+                || item.preview_item().identifier(),
+                |id| terra_core::ItemKind::Block(id).identifier(),
+            );
+            let slug = base
+                .strip_prefix("teramic::")
+                .unwrap_or(&base)
+                .split('#')
+                .next()
+                .unwrap_or(&base);
+            let category = if item.block_material().is_some() {
+                "blocks"
+            } else {
+                "items"
+            };
+            let path = format!("terra/{category}/{slug}.json");
+            if terra_core::asset_directory().join(&path).is_file() {
+                return format!("Icon: {path}");
+            }
+            return format!("Inventar-Icon: {}", item.identifier());
+        }
+        "terra/blocks".into()
+    }
     pub(crate) fn lights(
         &self,
     ) -> impl Iterator<Item = (u16, super::definitions::BlockLight)> + '_ {
@@ -183,11 +251,14 @@ pub(crate) fn load_blocks(
                 }
             }
             for block in &library.blocks {
-                if matches!(
-                    block.render_kind,
-                    BlockRenderKind::Cube | BlockRenderKind::Segment | BlockRenderKind::Boxes
-                ) {
+                // Custom scene materials may opt into the same declared PBR
+                // palette/patterns as ordinary blocks, rather than multiplying
+                // a photographed texture by a second unrelated tint.
+                if !block.materials.is_empty() {
                     for (name, definition) in &block.materials {
+                        if definition.coarse_face.is_some() {
+                            continue;
+                        }
                         if let Some(pattern) = definition.texture_pattern {
                             assets.patterns.entry(pattern).or_insert_with(|| {
                                 let mut image = super::textures::generate(pattern);
@@ -347,11 +418,11 @@ fn load_prop_materials(
     PropMaterials {
         crop: material([1.0, 1.0, 1.0, 1.0]),
         foliage: [
-            material([0.128, 0.256, 0.060, 1.0]),
-            material([0.224, 0.368, 0.096, 1.0]),
-            material([0.300, 0.4275, 0.150, 1.0]),
+            material([0.245, 0.405, 0.072, 1.0]),
+            material([0.280, 0.460, 0.080, 1.0]),
+            material([0.310, 0.495, 0.095, 1.0]),
         ],
-        stem: material([0.144, 0.232, 0.060, 1.0]),
+        stem: material([0.225, 0.360, 0.063, 1.0]),
         dry_grass: [
             material([0.36, 0.31, 0.10, 1.0]),
             material([0.47, 0.39, 0.16, 1.0]),
@@ -388,7 +459,13 @@ pub(crate) fn poll_blocks(mut source: SourceAssets, mut assets: ResMut<BlockAsse
     if assets.templates.is_some() || assets.error.is_some() {
         return;
     }
-    match prepare_mipmaps(&mut source, &mut assets) {
+    match register_authored_textures(&source, &mut assets).and_then(|ready| {
+        if ready {
+            prepare_mipmaps(&mut source, &mut assets)
+        } else {
+            Ok(false)
+        }
+    }) {
         Ok(true) => {}
         Ok(false) => return,
         Err(error) => {
@@ -417,6 +494,71 @@ pub(crate) fn poll_blocks(mut source: SourceAssets, mut assets: ResMut<BlockAsse
             assets.error = Some(error);
         }
     }
+}
+
+fn register_authored_textures(
+    source: &SourceAssets,
+    assets: &mut BlockAssets,
+) -> Result<bool, String> {
+    let Some(library) = &assets.library else {
+        return Ok(false);
+    };
+    for block in library
+        .blocks
+        .iter()
+        .filter(|block| block.coarse_faces.is_some())
+    {
+        let handle = assets
+            .models
+            .get(&block.id)
+            .ok_or("Authored terrain model unavailable")?;
+        if let Some(LoadState::Failed(error)) = source.server.get_load_state(handle.id()) {
+            return Err(error.to_string());
+        }
+        if !source.server.is_loaded_with_dependencies(handle.id()) {
+            return Ok(false);
+        }
+        let gltf = source
+            .gltfs
+            .get(handle)
+            .ok_or("Authored terrain GLTF unavailable")?;
+        for index in 0..gltf.materials.len() {
+            let Some(handle) = source.server.get_handle::<StandardMaterial>(format!(
+                "terra/blocks/{}#Material{index}/std",
+                block.model
+            )) else {
+                continue;
+            };
+            let Some(material) = source.materials.get(&handle) else {
+                return Ok(false);
+            };
+            // Bindings can already exist before section meshes. Register these
+            // handles before replacing image views so every PBR binding is invalidated.
+            if !assets.material_slots.contains_key(&(block.id, index)) {
+                assets
+                    .material_slots
+                    .insert((block.id, index), assets.materials.len());
+                assets.materials.push(handle);
+            }
+            for texture in [
+                &material.base_color_texture,
+                &material.normal_map_texture,
+                &material.metallic_roughness_texture,
+                &material.occlusion_texture,
+            ]
+            .into_iter()
+            .flatten()
+            {
+                if !assets.textures.values().any(|known| known == texture) {
+                    assets.textures.insert(
+                        format!("model:{}:{:?}", block.id, texture.id()),
+                        texture.clone(),
+                    );
+                }
+            }
+        }
+    }
+    Ok(true)
 }
 
 fn prepare_mipmaps(source: &mut SourceAssets, assets: &mut BlockAssets) -> Result<bool, String> {
@@ -449,11 +591,14 @@ fn prepare_mipmaps(source: &mut SourceAssets, assets: &mut BlockAssets) -> Resul
         {
             let image = image.clone();
             let canopy = path == "textures/canopy-stylized.png";
+            let authored = path.starts_with("model:");
             assets.mipmap_jobs.insert(
                 path,
                 AsyncComputeTaskPool::get().spawn(async move {
                     if canopy {
                         crate::foliage::masked_canopy(image)
+                    } else if authored {
+                        super::mipmaps::generate_authored(image)
                     } else {
                         super::mipmaps::generate(image)
                     }
@@ -478,11 +623,18 @@ fn publish_mipmapped_image(
     let mut changed = 0;
     for handle in handles {
         if let Some(material) = materials.get_mut(handle)
-            && material.base_color_texture.as_ref() == Some(texture)
+            && [
+                &material.base_color_texture,
+                &material.normal_map_texture,
+                &material.metallic_roughness_texture,
+                &material.occlusion_texture,
+            ]
+            .into_iter()
+            .any(|binding| binding.as_ref() == Some(texture))
         {
             // Bevy does not invalidate material bindings when an Image gets a new
             // GPU view. Emit a material modification to replace cached bind groups.
-            material.into_inner().base_color_texture = Some(texture.clone());
+            let _ = material.into_inner();
             changed += 1;
         }
     }
@@ -501,11 +653,38 @@ fn collect_templates(
         item_materials: assets.item_materials,
         ..default()
     };
-    for definition in &library.blocks {
+    // Authored models supply shared tiled PBR slots to ordinary cube materials.
+    for definition in library
+        .blocks
+        .iter()
+        .filter(|block| block.render_kind == BlockRenderKind::CustomMesh)
+        .chain(
+            library
+                .blocks
+                .iter()
+                .filter(|block| block.render_kind != BlockRenderKind::CustomMesh),
+        )
+    {
         if matches!(
             definition.render_kind,
             BlockRenderKind::Cube | BlockRenderKind::Segment | BlockRenderKind::Boxes
         ) {
+            let mut authored_materials = HashSet::new();
+            for (name, material) in &definition.materials {
+                if let Some(reference) = material.coarse_face {
+                    let source = templates.cube_lods.get(&reference.block).ok_or_else(|| {
+                        format!(
+                            "Block {}: authored material source unavailable",
+                            definition.id
+                        )
+                    })?;
+                    let slot = source.face_materials[reference.side];
+                    assets
+                        .cube_material_slots
+                        .insert((definition.id, name.clone()), slot);
+                    authored_materials.insert(slot);
+                }
+            }
             let names = definition
                 .face_materials
                 .as_ref()
@@ -552,33 +731,46 @@ fn collect_templates(
                     .ok_or("Missing crystal material")?;
                 templates.ore_materials.insert(definition.id, slot);
             }
-            templates.blocks.insert(
-                definition.id,
-                BlockTemplate {
-                    surface: definition.surface.map(super::surface::SurfaceTemplate::new),
-                    render_kind: definition.render_kind,
-                    bevel_width: definition.bevel_width,
-                    faces: if definition.render_kind == BlockRenderKind::Boxes {
-                        std::array::from_fn(|_| Vec::new())
-                    } else if definition.render_kind == BlockRenderKind::Segment {
-                        segment_preview(definition.id, face_materials[0])
-                    } else {
-                        cube_faces(definition.bevel_width, face_materials, side_cap)
-                    },
-                    face_materials,
-                    side_cap,
-                    details: Vec::new(),
-                    model: if definition.render_kind == BlockRenderKind::Boxes {
-                        super::cube::box_model(
-                            &definition.collision_boxes,
-                            definition.bevel_width,
-                            face_materials,
-                        )
-                    } else {
-                        Vec::new()
-                    },
+            let mut block = BlockTemplate {
+                surface: definition.surface.map(super::surface::SurfaceTemplate::new),
+                render_kind: definition.render_kind,
+                bevel_width: definition.bevel_width,
+                faces: if definition.render_kind == BlockRenderKind::Boxes {
+                    std::array::from_fn(|_| Vec::new())
+                } else if definition.render_kind == BlockRenderKind::Segment {
+                    segment_preview(definition.id, face_materials[0])
+                } else {
+                    cube_faces(definition.bevel_width, face_materials, side_cap)
                 },
-            );
+                face_materials,
+                side_cap,
+                details: Vec::new(),
+                model: if definition.render_kind == BlockRenderKind::Boxes {
+                    super::cube::box_model(
+                        &definition.collision_boxes,
+                        definition.bevel_width,
+                        face_materials,
+                    )
+                } else {
+                    Vec::new()
+                },
+            };
+            for primitive in block.faces.iter_mut().flatten().chain(&mut block.model) {
+                if authored_materials.contains(&primitive.material) {
+                    primitive.tangents = primitive
+                        .normals
+                        .iter()
+                        .map(|&normal| {
+                            let normal = Vec3::from_array(normal);
+                            let axis = (0..3)
+                                .max_by(|&a, &b| normal[a].abs().total_cmp(&normal[b].abs()))
+                                .unwrap();
+                            super::projected_tangent(normal, axis * 2)
+                        })
+                        .collect();
+                }
+            }
+            templates.blocks.insert(definition.id, block);
             continue;
         }
         let handle = assets
@@ -613,6 +805,20 @@ fn collect_templates(
                 continue;
             }
             if !assets.material_slots.contains_key(&(definition.id, index)) {
+                let declared = gltf.named_materials.iter().find_map(|(name, handle)| {
+                    if *handle == gltf.materials[index] {
+                        assets
+                            .cube_material_slots
+                            .get(&(definition.id, name.to_string()))
+                            .copied()
+                    } else {
+                        None
+                    }
+                });
+                if let Some(slot) = declared {
+                    assets.material_slots.insert((definition.id, index), slot);
+                    continue;
+                }
                 // The PBR loader already created these subassets while loading
                 // the root. Starting labelled loads can re-enter the root loader
                 // and replace its retained source under concurrent asset work.
@@ -658,10 +864,42 @@ fn collect_templates(
         }
         if definition.model_layout == ModelLayout::Scene {
             for (name, handle) in &gltf.named_materials {
-                if matches!(
-                    definition.id,
-                    terra_core::crusher::MATERIAL | terra_core::crusher::HAND_CRANK_MATERIAL
-                ) && let Some(rotor) = crate::crushers::rotor_material(name)
+                if let Some(index) = gltf
+                    .materials
+                    .iter()
+                    .position(|material| material == handle)
+                    && let Some(slot) = assets.material_slots.get(&(definition.id, index))
+                {
+                    if terra_core::castle::is_castle(definition.id) {
+                        templates.register_castle_material(name, *slot);
+                    }
+                    if definition.id == terra_core::lantern::LANTERN
+                        && let Some(variant) = name
+                            .strip_prefix("lantern_")
+                            .and_then(|suffix| suffix.split('_').next())
+                            .and_then(|number| number.parse::<u8>().ok())
+                    {
+                        templates.lantern_variants.insert(*slot, variant);
+                    }
+                    if matches!(definition.id, 148 | 170) && name.as_ref() == "kinetic_belt" {
+                        templates.conveyor_ribbon_materials.insert(*slot);
+                    }
+                    if terra_core::logistics::is_port(definition.id)
+                        && name.as_ref() == "port_arrow"
+                    {
+                        templates.logistics_arrow_materials.insert(*slot);
+                    }
+                    if matches!(definition.id, 153 | 157) && name.starts_with("port_support_") {
+                        templates.logistics_support_materials.insert(*slot);
+                    }
+                    if definition.id == terra_core::campfire::MATERIAL
+                        && name.as_ref() == "stone_ring"
+                    {
+                        templates.campfire_support_material = Some(*slot);
+                    }
+                }
+                if crate::crushers::articulated_material(definition.id)
+                    && let Some(rotor) = crate::crushers::rotor_material(name)
                     && let Some(index) = gltf
                         .materials
                         .iter()
@@ -690,7 +928,8 @@ fn collect_templates(
                 {
                     templates.hinge_materials.insert(*slot);
                 }
-                if matches!(name.as_ref(), "oak" | "dark_oak")
+                if (matches!(name.as_ref(), "oak" | "dark_oak" | "oak_frame")
+                    || crate::crushers::wood_material(name))
                     && let Some(index) = gltf
                         .materials
                         .iter()
@@ -734,6 +973,35 @@ fn collect_templates(
         let mut faces = std::array::from_fn(|_| Vec::new());
         for (side, name) in definition.faces.iter().enumerate() {
             faces[side] = read_mesh(name, definition.id, gltf, source, assets, true)?;
+        }
+        if let Some(names) = &definition.coarse_faces {
+            let mut coarse = std::array::from_fn(|_| Vec::new());
+            for (side, name) in names.iter().enumerate() {
+                coarse[side] = read_mesh(name, definition.id, gltf, source, assets, true)?;
+                validate_tiled_face(&coarse[side], side)?;
+            }
+            if faces.iter().chain(&coarse).flatten().all(|primitive| {
+                assets
+                    .materials
+                    .get(primitive.material)
+                    .and_then(|handle| source.materials.get(handle))
+                    .is_some_and(|material| material.alpha_mode == AlphaMode::Opaque)
+            }) {
+                templates.opaque_cube_lods.insert(definition.id);
+            }
+            templates.cube_lods.insert(
+                definition.id,
+                BlockTemplate {
+                    surface: None,
+                    render_kind: BlockRenderKind::Cube,
+                    bevel_width: 0.0,
+                    face_materials: coarse.each_ref().map(|p| dominant_material(p)),
+                    faces: coarse,
+                    side_cap: None,
+                    details: Vec::new(),
+                    model: Vec::new(),
+                },
+            );
         }
         let mut details = Vec::new();
         for detail in &definition.details {
@@ -820,10 +1088,54 @@ fn apply_textures(source: &mut SourceAssets, assets: &BlockAssets) -> Result<(),
     Ok(())
 }
 
+fn validate_tiled_face(primitives: &[PrimitiveTemplate], side: usize) -> Result<(), String> {
+    let (u, v) = match side / 2 {
+        0 => (2, 1),
+        1 => (0, 2),
+        _ => (0, 1),
+    };
+    let plane = (side % 2) as f32;
+    let sign = if side.is_multiple_of(2) { -1.0 } else { 1.0 };
+    if primitives.len() != 1
+        || primitives[0].positions.len() != 4
+        || primitives[0].indices.len() != 6
+    {
+        return Err("Coarse terrain faces must be single tiled cube quads".into());
+    }
+    let primitive = &primitives[0];
+    let mut corners = std::collections::BTreeSet::new();
+    for ((p, n), uv) in primitive
+        .positions
+        .iter()
+        .zip(&primitive.normals)
+        .zip(&primitive.uvs)
+    {
+        if (p[side / 2] - plane).abs() > 0.00001
+            || (n[side / 2] - sign).abs() > 0.00001
+            || (uv[0] - p[u]).abs() > 0.00001
+            || (uv[1] - p[v]).abs() > 0.00001
+            || [p[u], p[v]]
+                .into_iter()
+                .any(|c| c.abs() > 0.00001 && (c - 1.0).abs() > 0.00001)
+        {
+            return Err(
+                "Coarse terrain quad must match cube plane, normals and tiled world-axis UVs"
+                    .into(),
+            );
+        }
+        corners.insert([(p[u] > 0.5) as u8, (p[v] > 0.5) as u8]);
+    }
+    if corners.len() != 4 {
+        return Err("Coarse terrain quad lacks a cube corner".into());
+    }
+    Ok(())
+}
+
 fn segment_preview(material: u16, slot: usize) -> [Vec<PrimitiveTemplate>; 6] {
     let mut primitive = PrimitiveTemplate {
         positions: Vec::new(),
         normals: Vec::new(),
+        tangents: Vec::new(),
         uvs: Vec::new(),
         indices: Vec::new(),
         material: slot,
@@ -1007,19 +1319,23 @@ fn bake_transform(
             .transform_point3(Vec3::from_array(*position))
             .to_array();
         if position.iter().enumerate().any(|(axis, value)| {
-            let maximum = if id == terra_core::crusher::MATERIAL && axis == 1 {
-                1.25
+            let (minimum, maximum) = if axis != 0
+                && let Some(radius) = terra_core::kinetic::radial_extent(id)
+            {
+                (0.5 - radius, 0.5 + radius)
+            } else if terra_core::logistics::is_port(id) && axis == 1 {
+                (-0.385, 1.0)
             } else if (matches!(id, 59 | 65..=67 | 139) && axis == 1)
                 || (terra_core::beds::is_bed(id) && axis == 2)
             {
-                2.0
+                (0.0, 2.0)
             } else {
-                1.0
+                (0.0, 1.0)
             };
-            !value.is_finite() || !(-0.00001..=maximum + 0.00001).contains(value)
+            !value.is_finite() || !(minimum - 0.00001..=maximum + 0.00001).contains(value)
         }) {
             return Err(format!(
-                "Block {id}: static model exceeds its cell bounds after node transforms"
+                "Block {id}: static model exceeds its allowed bounds after node transforms"
             ));
         }
     }
@@ -1031,6 +1347,13 @@ fn bake_transform(
             return Err("Static model contains an invalid normal".into());
         }
         *normal = transformed.to_array();
+    }
+    for (tangent, normal) in primitive.tangents.iter_mut().zip(&primitive.normals) {
+        *tangent = super::tangent_frame(
+            transform.transform_vector3(Vec3::from_array([tangent[0], tangent[1], tangent[2]])),
+            Vec3::from_array(*normal),
+            tangent[3] * determinant.signum(),
+        );
     }
     if determinant < 0.0 {
         for triangle in primitive.indices.chunks_exact_mut(3) {
@@ -1070,6 +1393,11 @@ fn read_geometry(
             None if !is_face => vec![[0.0; 2]; positions.len()],
             _ => return Err(format!("{name}: missing UVs")),
         };
+        let tangents = match geometry.attribute(Mesh::ATTRIBUTE_TANGENT) {
+            Some(VertexAttributeValues::Float32x4(tangents)) => tangents.clone(),
+            None => Vec::new(),
+            _ => return Err(format!("{name}: invalid tangents")),
+        };
         let indices: Vec<u32> = match geometry.indices() {
             Some(indices) => indices.iter().map(|i| i as u32).collect(),
             None if !is_face => (0..u32::try_from(positions.len())
@@ -1080,6 +1408,7 @@ fn read_geometry(
         if geometry.primitive_topology() != bevy::mesh::PrimitiveTopology::TriangleList
             || positions.len() != normals.len()
             || positions.len() != uvs.len()
+            || !tangents.is_empty() && tangents.len() != positions.len()
             || positions.is_empty()
             || indices.is_empty()
             || !indices.len().is_multiple_of(3)
@@ -1090,6 +1419,11 @@ fn read_geometry(
                 .flatten()
                 .any(|v| !v.is_finite())
             || uvs.iter().flatten().any(|v| !v.is_finite())
+            || tangents.iter().any(|tangent| {
+                tangent.iter().any(|v| !v.is_finite())
+                    || Vec3::from_array([tangent[0], tangent[1], tangent[2]]).length_squared() < 0.5
+                    || (tangent[3].abs() - 1.0).abs() > 0.0001
+            })
         {
             return Err(format!("{name}: invalid triangle geometry"));
         }
@@ -1118,6 +1452,7 @@ fn read_geometry(
         output.push(PrimitiveTemplate {
             positions: positions.clone(),
             normals: normals.clone(),
+            tangents,
             uvs,
             indices,
             material: slot,

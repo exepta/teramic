@@ -952,8 +952,7 @@ fn watering_can_ray_uses_negative_coordinates_and_stops_at_walls_and_unloaded_se
         water_target(&chunks, &journal, [-3.5, 3.5, -1.5], [0.0, 0.0, -1.0]),
         Some([-4, 3, -4])
     );
-    // Generated water is an implicit reservoir. Draining is represented by
-    // finite liquid in an air cell, not an empty override of a source voxel.
+    // Finite runoff is not a refill source. Explicit source overrides remain usable.
     chunks
         .loaded
         .get_mut(&owner)
@@ -968,6 +967,20 @@ fn watering_can_ray_uses_negative_coordinates_and_stops_at_walls_and_unloaded_se
                 amount: 4,
                 flow: [0; 2],
                 source: false,
+            },
+        )
+        .unwrap();
+    assert_eq!(
+        water_target(&chunks, &journal, [-3.5, 3.5, -1.5], [0.0, 0.0, -1.0]),
+        None
+    );
+    journal
+        .set_fluid(
+            [-4, 3, -4],
+            crate::water::FluidCell {
+                amount: 4,
+                flow: [0; 2],
+                source: true,
             },
         )
         .unwrap();
@@ -989,6 +1002,20 @@ fn watering_can_ray_uses_negative_coordinates_and_stops_at_walls_and_unloaded_se
         .data
         .set_block([12, 3, 12], 27)
         .unwrap();
+    journal
+        .set_fluid(
+            [-4, 3, -4],
+            crate::water::FluidCell {
+                amount: 8,
+                flow: [0; 2],
+                source: true,
+            },
+        )
+        .unwrap();
+    assert_eq!(
+        water_target(&chunks, &journal, [-3.5, 3.5, -1.5], [0.0, 0.0, -1.0]),
+        Some([-4, 3, -4])
+    );
     chunks
         .loaded
         .get_mut(&owner)
@@ -1008,4 +1035,68 @@ fn watering_can_ray_uses_negative_coordinates_and_stops_at_walls_and_unloaded_se
         water_target(&chunks, &journal, [f64::NAN; 3], [0.0, 0.0, -1.0]),
         None
     );
+}
+
+#[test]
+fn natural_water_columns_are_valid_fill_targets_without_recorded_source_blocks() {
+    use crate::{SectionGenerator, streaming::LoadedSection};
+    use std::sync::Arc;
+    use terra_voxel::BlockSection;
+    let terrain = crate::TerraGenerator::new(terra_core::WorldConfig {
+        base_height: 3.,
+        sea_level: 8.,
+        hill_amplitude: 0.,
+        mountain_amplitude: 0.,
+        biomes: false,
+        caves: false,
+        rivers: false,
+        trees: false,
+        landscape_revision: 0,
+        structures_revision: 0,
+        ..Default::default()
+    })
+    .unwrap();
+    let generator = SectionGenerator::new(terrain);
+    let column = Arc::new(generator.prepare_column([0, 0], true).unwrap());
+    let owner = SectionPos::default();
+    let mut chunks = ChunkStore::default();
+    chunks.loaded.insert(
+        owner,
+        LoadedSection {
+            data: BlockSection::empty(owner).unwrap(),
+            mesh: None,
+            mesh_epoch: 0,
+            water_epoch: 0,
+            water: None,
+            props: vec![],
+        },
+    );
+    chunks.set_prepared_column_for_test([0, 0], Some(column));
+    let mut journal = EditJournal::default();
+    let origin = [6.5, 10.5, 4.5];
+    let direction = [0., -1., 0.];
+    assert_eq!(
+        water_target(&chunks, &journal, origin, direction),
+        Some([6, 7, 4])
+    );
+    assert!(journal.fluid([6, 7, 4]).is_none());
+    journal.record([6, 7, 4], 0).unwrap();
+    journal
+        .set_fluid([6, 7, 4], crate::water::FluidCell::default())
+        .unwrap();
+    assert_eq!(
+        water_target(&chunks, &journal, origin, direction),
+        Some([6, 6, 4]),
+        "explicitly emptied top source cannot be silently reselected"
+    );
+    chunks
+        .loaded
+        .get_mut(&owner)
+        .unwrap()
+        .data
+        .set_block([6, 8, 4], 3)
+        .unwrap();
+    assert_eq!(water_target(&chunks, &journal, origin, direction), None);
+    chunks.loaded.clear();
+    assert_eq!(water_target(&chunks, &journal, origin, direction), None);
 }

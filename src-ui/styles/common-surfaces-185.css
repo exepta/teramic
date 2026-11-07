@@ -1,0 +1,100 @@
+/* Remaining interactive surfaces share copper/leather materials and warm text. */
+.item-tooltip, .item-tooltip p, .category-tooltip, .recipe-category-tooltip, .map-tool-tooltip { color: #f1dabc !important; }
+.item-tooltip, .category-tooltip, .recipe-category-tooltip, .map-tool-tooltip { background-color: #271b15f5 !important; border: 1px solid #b37b48 !important; border-radius: 5px !important; }
+.tooltip-name { color: #ffe2aa !important; }
+.tooltip-identifier { color: #c8a882 !important; }
+.tooltip-description { color: #e0c8a9 !important; }
+.chat-panel { background-color: #211811b8 !important; border-radius: 5px !important; }
+.chat-panel.open { border: 1px solid #ad794b !important; background-color: #2c2018ef !important; }
+.chat-row p, .chat-heading p, .chat-message { color: #f2dfc4 !important; }
+.chat-row .chat-author { color: #ffcc78 !important; }
+.chat-icon, .chat-suggestion.selected { background-color: #63452b !important; border-color: #bc8a55 !important; color: #ffe5b9 !important; }
+.chat-suggestions { background-color: #2b1e16f5 !important; border-left-color: #c8944f !important; }
+.chat-help-command { color: #f0c78d !important; }
+.chat-help-description { color: #d6bd9c !important; }
+.chat-compose input { background-color: #1c140f !important; border: 1px solid #ad794b !important; color: #f5e2c7 !important; }
+.network-notice { border: 2px solid #b27c49 !important; border-radius: 6px !important; background-color: #302219ed !important; color: #f1ddbd !important; }
+.network-notice button { border: 1px solid #bf8b50 !important; background-color: #573b26 !important; color: #f6dfb5 !important; }
+.full-map-panel { background-color: #2b2019 !important; border-color: #b8824c !important; }
+.full-map-header, .full-map-footer { color: #ead1aa !important; border-color: #a16d3f !important; }
+.full-map-brand headline, .full-map-waypoint-title headline { color: #f5dfba !important; }
+.map-tool, .map-icon-button, .map-command { color: #efd0a0 !important; background-color: #432e20 !important; border-color: #a87645 !important; }
+.map-tool.selected, .map-tool:hover, .map-command:hover, .map-icon-button:hover { color: #ffe6a2 !important; border-color: #efb456 !important; background-color: #76512b !important; }
+.full-map-sidebar, .waypoint-dialog, .waypoint-dialog-panel { background-color: #302118 !important; border-color: #b6814b !important; color: #eed3ae !important; }
+.full-map-waypoint { background-color: #3a291e !important; border-color: #95683f !important; }
+.full-map-waypoint.selected { background-color: #654525 !important; border-color: #ffcf68 !important; }
+.waypoint-name { color: #f4ddb8 !important; }
+.waypoint-position, .waypoint-distance { color: #cfb089 !important; }
+.waypoint-dialog, .waypoint-icon-picker { background-color: #302118f5 !important; border: 2px solid #b6814b !important; border-radius: 6px !important; color: #eed3ae !important; }
+.waypoint-dialog-header headline { color: #f5dfba !important; }
+.full-map-editor label { color: #dec4a0 !important; }
+.full-map-editor input, .waypoint-icon-search, .full-map-editor color-picker { background-color: #20170f !important; color: #f1d9b6 !important; border-color: #a67748 !important; }
+.full-map-editor color-picker::popup { background-color: #342419f5 !important; border-color: #bc8b52 !important; color: #f1d9b6 !important; }
+.full-map-editor color-picker::format { background-color: #4c3421 !important; color: #ecd0a5 !important; }
+.full-map-editor color-picker::selected-format { background-color: #7d552f !important; color: #ffe6b6 !important; }
+.waypoint-dialog button, .waypoint-icon-picker button { background-color: #4c3421 !important; border-color: #aa7846 !important; color: #f3d9ae !important; }
+.waypoint-dialog button:hover, .waypoint-icon-picker button:hover, .waypoint-icon-picker button.selected, .waypoint-dialog .primary { background-color: #78532e !important; border-color: #ebba68 !important; }
+.world-waypoint-symbol, .world-waypoint-caption, .player-name, .shared-cursor-name { background-color: #302118bc !important; }
+.world-waypoint .world-waypoint-distance { color: #ddc4a0 !important; }
+.mob-health-track { background-color: #291c14dd !important; border-color: #bd8e5d !important; }
+.death-panel, .hud-editor-toolbar, .settings-panel { background-color: #302118ed !important; border: 0 !important; padding: 30px !important; color: #f2d9b3 !important; }
+.death-panel headline, .hud-editor-toolbar headline { color: #ffe1b5 !important; }
+.death-panel button, .hud-editor-actions button, .surface-actions button, .settings-actions button { background-color: #5a3d27 !important; border: 1px solid #b7834c !important; color: #f7dfba !important; }
+.settings-heading { border-color: #986c40 !important; }
+.settings-brand, .settings-title, .section-title { color: #efcb95 !important; }
+.settings-content .setting-line, .settings-content .setting-label { color: #eed3ad !important; }
+/* Native color widgets keep their real color samples inside warm copper controls. */
+.copper-setting-color { width: 100% !important; min-width: 0 !important; height: 36px !important; min-height: 36px !important; border: 1px solid #b6854b !important; border-radius: 4px !important; background-color: #2a1c14 !important; color: #f0d8af !important; }
+.copper-setting-color:hover, .copper-setting-color:focus, .copper-setting-color:open { border-color: #ffd06a !important; }
+.copper-setting-color:disabled { opacity: 0.45 !important; }
+.copper-setting-color::popup { background-color: #2d1e16 !important; color: #f0d8af !important; border: 2px solid #b6854b !important; border-radius: 5px !important; z-index: 550 !important; }
+.copper-setting-color::format { background-color: #3c291d !important; color: #e9cc9e !important; }
+.copper-setting-color::selected-format { background-color: #906330 !important; color: #fff0d0 !important; }
+.copper-setting-color::preview, .copper-setting-color::swatch, .copper-setting-color::recent-color { border-color: #b6854b !important; }
+/* The map artwork and seasonal icon colors retain their meaning. */
+.map-readout, .map-controls, .map-season, .cave-map .map-readout { background-color: #302118ed !important; border-color: #ad7948 !important; }
+.map-readout p, .map-controls p { color: #efd8b5 !important; }
+.mini-map button { background-color: #432e20 !important; color: #efd0a0 !important; border-color: #ad7948 !important; }
+.mini-map button:hover { background-color: #76512b !important; border-color: #efb456 !important; }
+.map-editable, .hud-editable { outline-color: #dca251 !important; }
+.map-peer-name { background-color: #302118bc !important; }
+.full-map-brand, .full-map-loading { background-color: #302118ed !important; }
+.map-tool icon, .full-map-footer icon { color: #d5b27c !important; }
+.map-tool.unavailable icon { color: #a1917a !important; }
+/* Saved servers use the same cards and inset list as the world library. */
+.copper-server-heading { border-color: #94633b !important; }
+.copper-server-count { margin: 0 !important; color: #f2d7ad !important; font-family: serif !important; font-size: 18px !important; }
+.copper-server-heading p, .copper-server-card .card-copy p { color: #d7bb94 !important; }
+.copper-server-card .card-copy headline { color: #f4dfb9 !important; font-family: serif !important; font-size: 25px !important; }
+.copper-server-card .card-copy { min-height: 0 !important; gap: 3px !important; }
+.copper-server-card .card-copy headline { margin: 0 !important; font-size: 21px !important; line-height: 24px !important; }
+.copper-server-card .card-copy p { margin: 0 !important; font-size: 12px !important; line-height: 15px !important; text-wrap: nowrap !important; max-width: 100% !important; overflow: hidden !important; }
+.copper-server-card .world-emblem { color: #e7bd76 !important; }
+.copper-server-card:hover { border-color: #efb456 !important; background-image: linear-gradient(to bottom, #68472f, #3c291d) !important; }
+/* Painted primary actions use their artwork and the shared gold hover. */
+.copper-menu-action.primary, .painted-menu-button.primary { background-color: transparent !important; }
+.copper-menu-action.primary .painted-menu-hover-glow, .painted-menu-button.primary .painted-menu-hover-glow { opacity: 0 !important; background-color: #ffd56f22 !important; border-color: #ffcf64 !important; box-shadow: none !important; }
+.copper-menu-action.primary:hover .painted-menu-hover-glow, .painted-menu-button.primary:hover .painted-menu-hover-glow { opacity: 1 !important; }
+/* The in-world settings fallback exposes the same native control styling. */
+.legacy-setting-choice { width: 190px !important; max-width: 55% !important; }
+.copper-setting-checkbox { color: #eed3ad !important; }
+.copper-setting-checkbox::indicator { background-color: #35241a !important; border: 2px solid #b7834c !important; border-radius: 3px !important; }
+.copper-setting-checkbox:hover::indicator, .copper-setting-checkbox:focus::indicator { border-color: #ffda82 !important; }
+.copper-setting-checkbox:checked::indicator { background-color: #d59a35 !important; border-color: #ffda82 !important; }
+.copper-setting-checkbox::mark { color: #302118 !important; }
+.settings-content p { color: #eed3ad !important; }
+.settings-content .value, .surface-label { color: #d9b47f !important; }
+.section-title { border-left-color: #d7a04e !important; }
+.settings-content::scrollbar-y-track { background-color: #271a12 !important; }
+.settings-content::scrollbar-y-thumb { background-color: #d7a04e !important; }
+.settings-panel button { background-color: #5a3d27 !important; border: 1px solid #b7834c !important; color: #f7dfba !important; }
+.settings-panel button:hover, .settings-panel button:focus { background-color: #78532e !important; border-color: #ebba68 !important; }
+@media (max-height: 720px) {
+ .copper-server-card .card-copy { gap: 2px !important; }
+ .copper-server-card .card-copy headline { font-size: 18px !important; line-height: 21px !important; }
+ .copper-server-card .card-copy p { font-size: 11px !important; line-height: 14px !important; }
+}
+@media (max-width: 800px) { .chat-panel { left: 10px !important; max-width: 94% !important; } .network-notice { max-width: 90% !important; } }
+
+/* Center the color chip in both compact inventory and full-height fields. */
+color-picker::preview { top: 50% !important; transform: translateY(-50%) !important; }

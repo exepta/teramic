@@ -1,0 +1,1097 @@
+{
+  "baseline_binary_variants_note": "Placement baseline was rebuilt with benchmark-only held-source/restoration fixes while the measured production optimizations were disabled; per-case hashes are retained.",
+  "comparisons": [
+    {
+      "after_artifacts": {
+        "binary_sha256": "bbef2d6b27a4402896b14325857edbf2e3956ec8592f280bfcabe9c016c4b12b",
+        "manifest": "runs/after/clear.manifest.json",
+        "original_native_log_sha256": "121d0324cdf6a448bcd44d224973bf5049406665a66416b1cec4dc2aa4637f53",
+        "raw_evidence": "evidence/after-clear.txt",
+        "resources_and_queues": "runs/after/clear.resources-and-queues.json",
+        "source": "/tmp/teramic-o07-i3w2xd60/after/clear",
+        "summary": "runs/after/clear.summary.json"
+      },
+      "before_artifacts": {
+        "binary_sha256": "b248277db6c9f46c1cb5f03ae821907cabd45972235aa243628b8cc6bad04ed4",
+        "manifest": "runs/before/clear.manifest.json",
+        "original_native_log_sha256": "6986fa30936c2d3fc1f1bfb821c82c89d550d340b4c3b1d220ba423c275a1545",
+        "raw_evidence": "evidence/before-clear.txt",
+        "resources_and_queues": "runs/before/clear.resources-and-queues.json",
+        "source": "/tmp/teramic-o07-i3w2xd60/before/clear",
+        "summary": "runs/before/clear.summary.json"
+      },
+      "configuration_checks": {
+        "all_scenario_toml_hashes_identical": true,
+        "game_mode_after": "survival",
+        "game_mode_before": "survival",
+        "gpu_environment_matches": null,
+        "gpu_environment_recorded_for_both": false,
+        "graphics_and_world_hashes_identical": true,
+        "paired_workload_environment_matches": true,
+        "physical_resolution_after": [
+          2562,
+          1440
+        ],
+        "physical_resolution_before": [
+          2562,
+          1440
+        ],
+        "same_adapter_and_driver": true
+      },
+      "resources": {
+        "after_process_including_startup": {
+          "command": [
+            "/tmp/teramic-o07-i3w2xd60/binaries/terra-client-after",
+            "--smoke-test-benchmark"
+          ],
+          "exit_code": 0,
+          "peak_drm_memory_gtt_kib": 67588,
+          "peak_drm_memory_vram_kib": 4035904,
+          "peak_rss_kib": 2302608,
+          "system_cpu_seconds": 21.248,
+          "user_cpu_seconds": 185.343,
+          "wall_seconds": 54.732
+        },
+        "before_process_including_startup": {
+          "command": [
+            "/tmp/teramic-o07-i3w2xd60/binaries/terra-client-before",
+            "--smoke-test-benchmark"
+          ],
+          "exit_code": 0,
+          "peak_drm_memory_gtt_kib": 67588,
+          "peak_drm_memory_vram_kib": 4457560,
+          "peak_rss_kib": 2231872,
+          "system_cpu_seconds": 21.233,
+          "user_cpu_seconds": 184.153,
+          "wall_seconds": 54.742
+        }
+      },
+      "scenario": "clear",
+      "windows": [
+        {
+          "after": {
+            "average_fps": 110.39677494508194,
+            "initial_load_seconds": 28.868480835,
+            "loaded_sections": 11792,
+            "mesh_assets": 20269,
+            "p95_frame_ms": 10.941279,
+            "p99_frame_ms": 12.513803000000001,
+            "rendered_sections": 7015,
+            "resident_memory_kib_at_summary": 2308320,
+            "sample_frames": 2649,
+            "sample_window_seconds": 24.0,
+            "worst_frame_ms": 16.090348000000002
+          },
+          "before": {
+            "average_fps": 108.43415867327428,
+            "initial_load_seconds": 28.939999177,
+            "loaded_sections": 11792,
+            "mesh_assets": 20269,
+            "p95_frame_ms": 11.488979,
+            "p99_frame_ms": 13.253894,
+            "rendered_sections": 7015,
+            "resident_memory_kib_at_summary": 2236136,
+            "sample_frames": 2602,
+            "sample_window_seconds": 24.0,
+            "worst_frame_ms": 15.799285
+          },
+          "delta": {
+            "average_fps": {
+              "absolute": 1.9626162718076614,
+              "percent": 1.809961266653315
+            },
+            "initial_load_seconds": {
+              "absolute": -0.07151834200000096,
+              "percent": -0.24712627516879637
+            },
+            "loaded_sections": {
+              "absolute": 0,
+              "percent": 0.0
+            },
+            "mesh_assets": {
+              "absolute": 0,
+              "percent": 0.0
+            },
+            "p95_frame_ms": {
+              "absolute": -0.5477000000000007,
+              "percent": -4.767177309663461
+            },
+            "p99_frame_ms": {
+              "absolute": -0.7400909999999996,
+              "percent": -5.5839514032630655
+            },
+            "rendered_sections": {
+              "absolute": 0,
+              "percent": 0.0
+            },
+            "resident_memory_kib_at_summary": {
+              "absolute": 72184,
+              "percent": 3.2280684180210795
+            },
+            "sample_frames": {
+              "absolute": 47,
+              "percent": 1.80630284396619
+            },
+            "sample_window_seconds": {
+              "absolute": 0.0,
+              "percent": 0.0
+            },
+            "worst_frame_ms": {
+              "absolute": 0.29106300000000296,
+              "percent": 1.8422542539108688
+            }
+          },
+          "phase": null
+        }
+      ]
+    },
+    {
+      "after_artifacts": {
+        "binary_sha256": "bbef2d6b27a4402896b14325857edbf2e3956ec8592f280bfcabe9c016c4b12b",
+        "manifest": "runs/after/rain.manifest.json",
+        "original_native_log_sha256": "8eaba6a5cfaf02845f115f83ac4b03145437a34ac7d079beaf598722237d1bdd",
+        "raw_evidence": "evidence/after-rain.txt",
+        "resources_and_queues": "runs/after/rain.resources-and-queues.json",
+        "source": "/tmp/teramic-o07-i3w2xd60/after/rain",
+        "summary": "runs/after/rain.summary.json"
+      },
+      "before_artifacts": {
+        "binary_sha256": "b248277db6c9f46c1cb5f03ae821907cabd45972235aa243628b8cc6bad04ed4",
+        "manifest": "runs/before/rain.manifest.json",
+        "original_native_log_sha256": "40d8390f9493bcd3accf20fb7baffdbdffeb3663b7f32d03f8e18abae1b86486",
+        "raw_evidence": "evidence/before-rain.txt",
+        "resources_and_queues": "runs/before/rain.resources-and-queues.json",
+        "source": "/tmp/teramic-o07-i3w2xd60/before-warm-margin/rain",
+        "summary": "runs/before/rain.summary.json"
+      },
+      "configuration_checks": {
+        "all_scenario_toml_hashes_identical": true,
+        "game_mode_after": "survival",
+        "game_mode_before": "survival",
+        "gpu_environment_matches": true,
+        "gpu_environment_recorded_for_both": true,
+        "graphics_and_world_hashes_identical": true,
+        "paired_workload_environment_matches": true,
+        "physical_resolution_after": [
+          2562,
+          1440
+        ],
+        "physical_resolution_before": [
+          2562,
+          1440
+        ],
+        "same_adapter_and_driver": true
+      },
+      "observed_regression": {
+        "average_fps_percent": -3.0360027035405412,
+        "interpretation": "Observed regression in this single paired sample; rain rendering is not demonstrated improved.",
+        "p95_frame_ms_percent": 2.284917409253495,
+        "p99_frame_ms_percent": 3.439967821076273
+      },
+      "resources": {
+        "after_process_including_startup": {
+          "command": [
+            "/tmp/teramic-o07-i3w2xd60/binaries/terra-client-after",
+            "--smoke-test-benchmark"
+          ],
+          "exit_code": 0,
+          "peak_drm_memory_gtt_kib": 67588,
+          "peak_drm_memory_vram_kib": 7038696,
+          "peak_rss_kib": 2822784,
+          "system_cpu_seconds": 50.137,
+          "user_cpu_seconds": 498.195,
+          "wall_seconds": 174.739
+        },
+        "before_process_including_startup": {
+          "command": [
+            "/tmp/teramic-o07-i3w2xd60/binaries/terra-client-before",
+            "--smoke-test-benchmark"
+          ],
+          "exit_code": 0,
+          "peak_drm_memory_gtt_kib": 67588,
+          "peak_drm_memory_vram_kib": 6546528,
+          "peak_rss_kib": 2711108,
+          "system_cpu_seconds": 44.01,
+          "user_cpu_seconds": 442.413,
+          "wall_seconds": 152.655
+        }
+      },
+      "scenario": "rain",
+      "windows": [
+        {
+          "after": {
+            "average_fps": 46.66237067801176,
+            "initial_load_seconds": 56.737375455,
+            "loaded_sections": 11876,
+            "mesh_assets": 26139,
+            "p95_frame_ms": 25.266586,
+            "p99_frame_ms": 27.837790000000002,
+            "rendered_sections": 7259,
+            "resident_memory_kib_at_summary": 2815636,
+            "sample_frames": 1120,
+            "sample_window_seconds": 24.0,
+            "worst_frame_ms": 29.918554
+          },
+          "before": {
+            "average_fps": 48.123398353045815,
+            "initial_load_seconds": 57.790994404,
+            "loaded_sections": 11876,
+            "mesh_assets": 26139,
+            "p95_frame_ms": 24.702162,
+            "p99_frame_ms": 26.912025,
+            "rendered_sections": 7259,
+            "resident_memory_kib_at_summary": 2705364,
+            "sample_frames": 1155,
+            "sample_window_seconds": 24.0,
+            "worst_frame_ms": 30.829174000000002
+          },
+          "delta": {
+            "average_fps": {
+              "absolute": -1.4610276750340532,
+              "percent": -3.0360027035405412
+            },
+            "initial_load_seconds": {
+              "absolute": -1.053618949000004,
+              "percent": -1.8231542126346922
+            },
+            "loaded_sections": {
+              "absolute": 0,
+              "percent": 0.0
+            },
+            "mesh_assets": {
+              "absolute": 0,
+              "percent": 0.0
+            },
+            "p95_frame_ms": {
+              "absolute": 0.5644239999999989,
+              "percent": 2.284917409253495
+            },
+            "p99_frame_ms": {
+              "absolute": 0.925765000000002,
+              "percent": 3.439967821076273
+            },
+            "rendered_sections": {
+              "absolute": 0,
+              "percent": 0.0
+            },
+            "resident_memory_kib_at_summary": {
+              "absolute": 110272,
+              "percent": 4.076050394697339
+            },
+            "sample_frames": {
+              "absolute": -35,
+              "percent": -3.0303030303030276
+            },
+            "sample_window_seconds": {
+              "absolute": 0.0,
+              "percent": 0.0
+            },
+            "worst_frame_ms": {
+              "absolute": -0.9106200000000015,
+              "percent": -2.9537606164861896
+            }
+          },
+          "phase": null
+        }
+      ]
+    },
+    {
+      "after_artifacts": {
+        "binary_sha256": "bbef2d6b27a4402896b14325857edbf2e3956ec8592f280bfcabe9c016c4b12b",
+        "manifest": "runs/after/village.manifest.json",
+        "original_native_log_sha256": "ec0205378e8a8a1911fae681da520d1996f27b4946921819fa859978b76185eb",
+        "raw_evidence": "evidence/after-village.txt",
+        "resources_and_queues": "runs/after/village.resources-and-queues.json",
+        "source": "/tmp/teramic-o07-i3w2xd60/after/village",
+        "summary": "runs/after/village.summary.json"
+      },
+      "before_artifacts": {
+        "binary_sha256": "b248277db6c9f46c1cb5f03ae821907cabd45972235aa243628b8cc6bad04ed4",
+        "manifest": "runs/before/village.manifest.json",
+        "original_native_log_sha256": "d78dd77f02ab6efd3e064b54bb8238555cc7d581a6e5aee7cbe056f2ca4cc86e",
+        "raw_evidence": "evidence/before-village.txt",
+        "resources_and_queues": "runs/before/village.resources-and-queues.json",
+        "source": "/tmp/teramic-o07-i3w2xd60/before-warm-margin/village",
+        "summary": "runs/before/village.summary.json"
+      },
+      "configuration_checks": {
+        "all_scenario_toml_hashes_identical": true,
+        "game_mode_after": "survival",
+        "game_mode_before": "survival",
+        "gpu_environment_matches": true,
+        "gpu_environment_recorded_for_both": true,
+        "graphics_and_world_hashes_identical": true,
+        "paired_workload_environment_matches": true,
+        "physical_resolution_after": [
+          2562,
+          1440
+        ],
+        "physical_resolution_before": [
+          2562,
+          1440
+        ],
+        "same_adapter_and_driver": true
+      },
+      "resources": {
+        "after_process_including_startup": {
+          "command": [
+            "/tmp/teramic-o07-i3w2xd60/binaries/terra-client-after",
+            "--smoke-test-benchmark"
+          ],
+          "exit_code": 0,
+          "peak_drm_memory_gtt_kib": 67588,
+          "peak_drm_memory_vram_kib": 6167416,
+          "peak_rss_kib": 2642732,
+          "system_cpu_seconds": 23.523,
+          "user_cpu_seconds": 245.232,
+          "wall_seconds": 78.334
+        },
+        "before_process_including_startup": {
+          "command": [
+            "/tmp/teramic-o07-i3w2xd60/binaries/terra-client-before",
+            "--smoke-test-benchmark"
+          ],
+          "exit_code": 0,
+          "peak_drm_memory_gtt_kib": 67588,
+          "peak_drm_memory_vram_kib": 6248272,
+          "peak_rss_kib": 2594812,
+          "system_cpu_seconds": 25.405,
+          "user_cpu_seconds": 255.696,
+          "wall_seconds": 81.861
+        }
+      },
+      "scenario": "village",
+      "windows": [
+        {
+          "after": {
+            "average_fps": 49.926469964114595,
+            "initial_load_seconds": 52.533308731,
+            "loaded_sections": 11876,
+            "mesh_assets": 26138,
+            "p95_frame_ms": 21.985258,
+            "p99_frame_ms": 23.177373000000003,
+            "rendered_sections": 7259,
+            "resident_memory_kib_at_summary": 2647648,
+            "sample_frames": 1198,
+            "sample_window_seconds": 24.0,
+            "worst_frame_ms": 26.679076
+          },
+          "before": {
+            "average_fps": 48.63112144038509,
+            "initial_load_seconds": 55.833739571,
+            "loaded_sections": 11876,
+            "mesh_assets": 26138,
+            "p95_frame_ms": 22.184994,
+            "p99_frame_ms": 23.763852,
+            "rendered_sections": 7259,
+            "resident_memory_kib_at_summary": 2599152,
+            "sample_frames": 1167,
+            "sample_window_seconds": 24.0,
+            "worst_frame_ms": 29.213777
+          },
+          "delta": {
+            "average_fps": {
+              "absolute": 1.2953485237295084,
+              "percent": 2.663620507533282
+            },
+            "initial_load_seconds": {
+              "absolute": -3.300430840000004,
+              "percent": -5.911176405805795
+            },
+            "loaded_sections": {
+              "absolute": 0,
+              "percent": 0.0
+            },
+            "mesh_assets": {
+              "absolute": 0,
+              "percent": 0.0
+            },
+            "p95_frame_ms": {
+              "absolute": -0.19973599999999792,
+              "percent": -0.9003202795547227
+            },
+            "p99_frame_ms": {
+              "absolute": -0.5864789999999971,
+              "percent": -2.467945853222775
+            },
+            "rendered_sections": {
+              "absolute": 0,
+              "percent": 0.0
+            },
+            "resident_memory_kib_at_summary": {
+              "absolute": 48496,
+              "percent": 1.8658393199012524
+            },
+            "sample_frames": {
+              "absolute": 31,
+              "percent": 2.65638389031706
+            },
+            "sample_window_seconds": {
+              "absolute": 0.0,
+              "percent": 0.0
+            },
+            "worst_frame_ms": {
+              "absolute": -2.534701000000002,
+              "percent": -8.676389225535619
+            }
+          },
+          "phase": null
+        }
+      ]
+    },
+    {
+      "after_artifacts": {
+        "binary_sha256": "bbef2d6b27a4402896b14325857edbf2e3956ec8592f280bfcabe9c016c4b12b",
+        "manifest": "runs/after/flight.manifest.json",
+        "original_native_log_sha256": "414800cf33ad97e9934615cf44fe127968995b4d2f35fde6cddc4cc4b89c583f",
+        "raw_evidence": "evidence/after-flight.txt",
+        "resources_and_queues": "runs/after/flight.resources-and-queues.json",
+        "source": "/tmp/teramic-o07-i3w2xd60/after/flight",
+        "summary": "runs/after/flight.summary.json"
+      },
+      "before_artifacts": {
+        "binary_sha256": "b248277db6c9f46c1cb5f03ae821907cabd45972235aa243628b8cc6bad04ed4",
+        "manifest": "runs/before/flight.manifest.json",
+        "original_native_log_sha256": "4ffa2bf6c3d767300f0c20de39d9e56632e2ad74c109fa9616b8de272fbffa11",
+        "raw_evidence": "evidence/before-flight.txt",
+        "resources_and_queues": "runs/before/flight.resources-and-queues.json",
+        "source": "/tmp/teramic-o07-i3w2xd60/before/flight",
+        "summary": "runs/before/flight.summary.json"
+      },
+      "configuration_checks": {
+        "all_scenario_toml_hashes_identical": true,
+        "game_mode_after": "survival",
+        "game_mode_before": "survival",
+        "gpu_environment_matches": null,
+        "gpu_environment_recorded_for_both": false,
+        "graphics_and_world_hashes_identical": true,
+        "paired_workload_environment_matches": true,
+        "physical_resolution_after": [
+          2562,
+          1440
+        ],
+        "physical_resolution_before": [
+          2562,
+          1440
+        ],
+        "same_adapter_and_driver": true
+      },
+      "resources": {
+        "after_process_including_startup": {
+          "command": [
+            "/tmp/teramic-o07-i3w2xd60/binaries/terra-client-after",
+            "--smoke-test-benchmark"
+          ],
+          "exit_code": 0,
+          "peak_drm_memory_gtt_kib": 67588,
+          "peak_drm_memory_vram_kib": 4025372,
+          "peak_rss_kib": 2336968,
+          "system_cpu_seconds": 24.363,
+          "user_cpu_seconds": 231.235,
+          "wall_seconds": 65.788
+        },
+        "before_process_including_startup": {
+          "command": [
+            "/tmp/teramic-o07-i3w2xd60/binaries/terra-client-before",
+            "--smoke-test-benchmark"
+          ],
+          "exit_code": 0,
+          "peak_drm_memory_gtt_kib": 67588,
+          "peak_drm_memory_vram_kib": 4445168,
+          "peak_rss_kib": 2309960,
+          "system_cpu_seconds": 23.331,
+          "user_cpu_seconds": 228.146,
+          "wall_seconds": 65.789
+        }
+      },
+      "scenario": "flight",
+      "windows": [
+        {
+          "after": {
+            "average_fps": 98.11981090251268,
+            "initial_load_seconds": 29.149236887,
+            "loaded_sections": 14627,
+            "mesh_assets": 15800,
+            "p95_frame_ms": 14.091645,
+            "p99_frame_ms": 16.538227,
+            "rendered_sections": 4770,
+            "resident_memory_kib_at_summary": 2341676,
+            "sample_frames": 3434,
+            "sample_window_seconds": 35.0,
+            "worst_frame_ms": 24.371160999999997
+          },
+          "before": {
+            "average_fps": 91.57693107075812,
+            "initial_load_seconds": 28.799853086,
+            "loaded_sections": 14621,
+            "mesh_assets": 15792,
+            "p95_frame_ms": 14.873796,
+            "p99_frame_ms": 17.996878000000002,
+            "rendered_sections": 4770,
+            "resident_memory_kib_at_summary": 2314080,
+            "sample_frames": 3205,
+            "sample_window_seconds": 35.0,
+            "worst_frame_ms": 26.302394
+          },
+          "delta": {
+            "average_fps": {
+              "absolute": 6.542879831754561,
+              "percent": 7.14468125897243
+            },
+            "initial_load_seconds": {
+              "absolute": 0.3493838010000019,
+              "percent": 1.2131443863852232
+            },
+            "loaded_sections": {
+              "absolute": 6,
+              "percent": 0.04103686478353907
+            },
+            "mesh_assets": {
+              "absolute": 8,
+              "percent": 0.050658561296867965
+            },
+            "p95_frame_ms": {
+              "absolute": -0.7821510000000007,
+              "percent": -5.25858361913798
+            },
+            "p99_frame_ms": {
+              "absolute": -1.4586510000000033,
+              "percent": -8.105022437780619
+            },
+            "rendered_sections": {
+              "absolute": 0,
+              "percent": 0.0
+            },
+            "resident_memory_kib_at_summary": {
+              "absolute": 27596,
+              "percent": 1.192525755375784
+            },
+            "sample_frames": {
+              "absolute": 229,
+              "percent": 7.1450858034321385
+            },
+            "sample_window_seconds": {
+              "absolute": 0.0,
+              "percent": 0.0
+            },
+            "worst_frame_ms": {
+              "absolute": -1.9312330000000024,
+              "percent": -7.34242289884336
+            }
+          },
+          "phase": null
+        }
+      ]
+    },
+    {
+      "after_artifacts": {
+        "binary_sha256": "bbef2d6b27a4402896b14325857edbf2e3956ec8592f280bfcabe9c016c4b12b",
+        "manifest": "runs/after/inventory.manifest.json",
+        "original_native_log_sha256": "8658dba594a98b226afa20ab6ea2c353b0db5e15bcaba83953717aabe0c520eb",
+        "raw_evidence": "evidence/after-inventory.txt",
+        "resources_and_queues": "runs/after/inventory.resources-and-queues.json",
+        "source": "/tmp/teramic-o07-i3w2xd60/after/inventory",
+        "summary": "runs/after/inventory.summary.json"
+      },
+      "before_artifacts": {
+        "binary_sha256": "b248277db6c9f46c1cb5f03ae821907cabd45972235aa243628b8cc6bad04ed4",
+        "manifest": "runs/before/inventory.manifest.json",
+        "original_native_log_sha256": "8056090667a84421eb5bd4c163afa96e3deff53294e248ceefd7fcbb785db625",
+        "raw_evidence": "evidence/before-inventory.txt",
+        "resources_and_queues": "runs/before/inventory.resources-and-queues.json",
+        "source": "/tmp/teramic-o07-i3w2xd60/before/inventory",
+        "summary": "runs/before/inventory.summary.json"
+      },
+      "configuration_checks": {
+        "all_scenario_toml_hashes_identical": true,
+        "game_mode_after": "survival",
+        "game_mode_before": "survival",
+        "gpu_environment_matches": null,
+        "gpu_environment_recorded_for_both": false,
+        "graphics_and_world_hashes_identical": true,
+        "paired_workload_environment_matches": true,
+        "physical_resolution_after": [
+          2562,
+          1440
+        ],
+        "physical_resolution_before": [
+          2562,
+          1440
+        ],
+        "same_adapter_and_driver": true
+      },
+      "legacy_transition_observations": {
+        "after": [
+          {
+            "frames": 3,
+            "max_ms": 98.13158800000001,
+            "median_ms": 21.525045,
+            "p95_ms": 98.13158800000001,
+            "p99_ms": 98.13158800000001,
+            "request_to_visible_ms": 136.638183,
+            "stage": "Opening"
+          },
+          {
+            "frames": 2,
+            "max_ms": 28.312879,
+            "median_ms": 14.003686,
+            "p95_ms": 28.312879,
+            "p99_ms": 28.312879,
+            "request_to_visible_ms": 42.316565,
+            "stage": "Closing"
+          }
+        ],
+        "before": [
+          {
+            "frames": 3,
+            "max_ms": 101.597903,
+            "median_ms": 25.809314,
+            "p95_ms": 101.597903,
+            "p99_ms": 101.597903,
+            "request_to_visible_ms": 146.502167,
+            "stage": "Opening"
+          },
+          {
+            "frames": 2,
+            "max_ms": 28.743753,
+            "median_ms": 13.017548999999999,
+            "p95_ms": 28.743753,
+            "p99_ms": 28.743753,
+            "request_to_visible_ms": 41.761302,
+            "stage": "Closing"
+          }
+        ],
+        "limitation": "Legacy request/transition intervals include phase-report overhead. Treat steady-state phase comparisons separately; do not claim a validated first-open improvement.",
+        "validated_improvement": false
+      },
+      "resources": {
+        "after_process_including_startup": {
+          "command": [
+            "/tmp/teramic-o07-i3w2xd60/binaries/terra-client-after",
+            "--smoke-test-benchmark"
+          ],
+          "exit_code": 0,
+          "peak_drm_memory_gtt_kib": 67588,
+          "peak_drm_memory_vram_kib": 4410564,
+          "peak_rss_kib": 2369040,
+          "system_cpu_seconds": 26.947,
+          "user_cpu_seconds": 238.428,
+          "wall_seconds": 70.569
+        },
+        "before_process_including_startup": {
+          "command": [
+            "/tmp/teramic-o07-i3w2xd60/binaries/terra-client-before",
+            "--smoke-test-benchmark"
+          ],
+          "exit_code": 0,
+          "peak_drm_memory_gtt_kib": 67588,
+          "peak_drm_memory_vram_kib": 4061952,
+          "peak_rss_kib": 2283876,
+          "system_cpu_seconds": 25.835,
+          "user_cpu_seconds": 230.081,
+          "wall_seconds": 70.545
+        }
+      },
+      "scenario": "inventory",
+      "windows": [
+        {
+          "after": {
+            "average_fps": 109.5283074252207,
+            "initial_load_seconds": null,
+            "loaded_sections": null,
+            "mesh_assets": 20269,
+            "p95_frame_ms": 11.032214,
+            "p99_frame_ms": 13.286772000000001,
+            "rendered_sections": null,
+            "resident_memory_kib_at_summary": 2289240,
+            "sample_frames": 1315,
+            "sample_window_seconds": 12.006028678,
+            "worst_frame_ms": 15.924548
+          },
+          "before": {
+            "average_fps": 108.8415080408051,
+            "initial_load_seconds": null,
+            "loaded_sections": null,
+            "mesh_assets": 20269,
+            "p95_frame_ms": 10.666663,
+            "p99_frame_ms": 12.367626,
+            "rendered_sections": null,
+            "resident_memory_kib_at_summary": 2224380,
+            "sample_frames": 1307,
+            "sample_window_seconds": 12.008286393,
+            "worst_frame_ms": 15.440758
+          },
+          "delta": {
+            "average_fps": {
+              "absolute": 0.6867993844156075,
+              "percent": 0.6310086995102271
+            },
+            "mesh_assets": {
+              "absolute": 0,
+              "percent": 0.0
+            },
+            "p95_frame_ms": {
+              "absolute": 0.36555099999999996,
+              "percent": 3.4270418030456273
+            },
+            "p99_frame_ms": {
+              "absolute": 0.9191460000000014,
+              "percent": 7.431870918477013
+            },
+            "resident_memory_kib_at_summary": {
+              "absolute": 64860,
+              "percent": 2.915868691500556
+            },
+            "sample_frames": {
+              "absolute": 8,
+              "percent": 0.6120887528691554
+            },
+            "sample_window_seconds": {
+              "absolute": -0.002257715000000715,
+              "percent": -0.01880130874724051
+            },
+            "worst_frame_ms": {
+              "absolute": 0.48378999999999905,
+              "percent": 3.1332011032100926
+            }
+          },
+          "phase": "Closed"
+        },
+        {
+          "after": {
+            "average_fps": 105.16866553385498,
+            "initial_load_seconds": null,
+            "loaded_sections": null,
+            "mesh_assets": 20269,
+            "p95_frame_ms": 12.540925,
+            "p99_frame_ms": 13.961275,
+            "rendered_sections": null,
+            "resident_memory_kib_at_summary": 2368856,
+            "sample_frames": 1263,
+            "sample_window_seconds": 12.00928046,
+            "worst_frame_ms": 16.960959000000003
+          },
+          "before": {
+            "average_fps": 78.6210342125441,
+            "initial_load_seconds": null,
+            "loaded_sections": null,
+            "mesh_assets": 20269,
+            "p95_frame_ms": 14.355976,
+            "p99_frame_ms": 16.169952000000002,
+            "rendered_sections": null,
+            "resident_memory_kib_at_summary": 2281580,
+            "sample_frames": 944,
+            "sample_window_seconds": 12.006964923,
+            "worst_frame_ms": 17.525289
+          },
+          "delta": {
+            "average_fps": {
+              "absolute": 26.547631321310874,
+              "percent": 33.766576066071586
+            },
+            "mesh_assets": {
+              "absolute": 0,
+              "percent": 0.0
+            },
+            "p95_frame_ms": {
+              "absolute": -1.8150510000000004,
+              "percent": -12.643173825311493
+            },
+            "p99_frame_ms": {
+              "absolute": -2.2086770000000016,
+              "percent": -13.659143824298315
+            },
+            "resident_memory_kib_at_summary": {
+              "absolute": 87276,
+              "percent": 3.8252439099220714
+            },
+            "sample_frames": {
+              "absolute": 319,
+              "percent": 33.792372881355924
+            },
+            "sample_window_seconds": {
+              "absolute": 0.0023155369999994235,
+              "percent": 0.01928494848488782
+            },
+            "worst_frame_ms": {
+              "absolute": -0.5643299999999982,
+              "percent": -3.2200895517329187
+            }
+          },
+          "phase": "Open"
+        },
+        {
+          "after": {
+            "average_fps": 109.5709832225777,
+            "initial_load_seconds": null,
+            "loaded_sections": null,
+            "mesh_assets": 20269,
+            "p95_frame_ms": 11.027823000000001,
+            "p99_frame_ms": 12.951253,
+            "rendered_sections": null,
+            "resident_memory_kib_at_summary": 2373576,
+            "sample_frames": 1315,
+            "sample_window_seconds": 12.00135256,
+            "worst_frame_ms": 14.052686999999999
+          },
+          "before": {
+            "average_fps": 108.98382437557258,
+            "initial_load_seconds": null,
+            "loaded_sections": null,
+            "mesh_assets": 20269,
+            "p95_frame_ms": 11.096261,
+            "p99_frame_ms": 13.182711999999999,
+            "rendered_sections": null,
+            "resident_memory_kib_at_summary": 2287356,
+            "sample_frames": 1308,
+            "sample_window_seconds": 12.001781067,
+            "worst_frame_ms": 15.07441
+          },
+          "delta": {
+            "average_fps": {
+              "absolute": 0.5871588470051137,
+              "percent": 0.5387577930663134
+            },
+            "mesh_assets": {
+              "absolute": 0,
+              "percent": 0.0
+            },
+            "p95_frame_ms": {
+              "absolute": -0.06843799999999867,
+              "percent": -0.6167663143467728
+            },
+            "p99_frame_ms": {
+              "absolute": -0.2314589999999992,
+              "percent": -1.755776808292553
+            },
+            "resident_memory_kib_at_summary": {
+              "absolute": 86220,
+              "percent": 3.7694176157974546
+            },
+            "sample_frames": {
+              "absolute": 7,
+              "percent": 0.5351681957186605
+            },
+            "sample_window_seconds": {
+              "absolute": -0.00042850699999874564,
+              "percent": -0.0035703617455307146
+            },
+            "worst_frame_ms": {
+              "absolute": -1.0217230000000015,
+              "percent": -6.7778639429337595
+            }
+          },
+          "phase": "ClosedAgain"
+        }
+      ]
+    },
+    {
+      "after_artifacts": {
+        "binary_sha256": "bbef2d6b27a4402896b14325857edbf2e3956ec8592f280bfcabe9c016c4b12b",
+        "manifest": "runs/after/placement.manifest.json",
+        "original_native_log_sha256": "5be2999d93e19b7880783af971aaf06b97f4838552ae9a0972fff3798a773585",
+        "raw_evidence": "evidence/after-placement.txt",
+        "resources_and_queues": "runs/after/placement.resources-and-queues.json",
+        "source": "/tmp/teramic-o07-i3w2xd60/after/placement",
+        "summary": "runs/after/placement.summary.json"
+      },
+      "before_artifacts": {
+        "binary_sha256": "4ec46df6acaf02251f3a2482fe00857e4a8929e9cb3143f710371eba408b81e4",
+        "manifest": "runs/before/placement.manifest.json",
+        "original_native_log_sha256": "7afe75d4931d5fb87f6e1d9cc91980839bf5798db393c6b1ab0742b115157e37",
+        "raw_evidence": "evidence/before-placement.txt",
+        "resources_and_queues": "runs/before/placement.resources-and-queues.json",
+        "source": "/tmp/teramic-o07-i3w2xd60/before-placement/placement",
+        "summary": "runs/before/placement.summary.json"
+      },
+      "configuration_checks": {
+        "all_scenario_toml_hashes_identical": true,
+        "game_mode_after": "creative",
+        "game_mode_before": "creative",
+        "gpu_environment_matches": true,
+        "gpu_environment_recorded_for_both": true,
+        "graphics_and_world_hashes_identical": true,
+        "paired_workload_environment_matches": true,
+        "physical_resolution_after": [
+          2562,
+          1440
+        ],
+        "physical_resolution_before": [
+          2562,
+          1440
+        ],
+        "same_adapter_and_driver": true
+      },
+      "rapid_edits": {
+        "after": {
+          "acknowledged_edits": 240,
+          "cycles": 120,
+          "elapsed_ready_s": 26.434306282,
+          "final_collision_ready": false,
+          "final_geometry_ready": true,
+          "final_render_ready": false,
+          "ground_after": 2,
+          "ground_before": 1,
+          "ground_unchanged": false,
+          "max_ack_replication_ms": 57.735178999999995,
+          "mean_ack_replication_ms": 43.29080423333334,
+          "natural_grass_conversion": true,
+          "p95_ack_replication_ms": 52.453988,
+          "pending_collision_acks": 240,
+          "pending_geometry_acks": 0,
+          "pending_render_acks": 240,
+          "restoration_scope": "source_cell",
+          "restored": true,
+          "source_restored": true
+        },
+        "before": {
+          "acknowledged_edits": 240,
+          "cycles": 120,
+          "elapsed_ready_s": 26.37541593,
+          "final_collision_ready": false,
+          "final_geometry_ready": true,
+          "final_render_ready": false,
+          "ground_after": 2,
+          "ground_before": 1,
+          "ground_unchanged": false,
+          "max_ack_replication_ms": 62.59034,
+          "mean_ack_replication_ms": 44.89702106666666,
+          "natural_grass_conversion": true,
+          "p95_ack_replication_ms": 56.061656,
+          "pending_collision_acks": 240,
+          "pending_geometry_acks": 0,
+          "pending_render_acks": 240,
+          "restoration_scope": "source_cell",
+          "restored": true,
+          "source_restored": true
+        },
+        "readiness_scope": "Fields describe the moment of final acknowledgement, not completed GPU drawing or settled colliders.",
+        "restoration_scope": "Only source cell is restored; natural Grass(1)->Dirt(2) conversion is recorded."
+      },
+      "resources": {
+        "after_process_including_startup": {
+          "command": [
+            "/tmp/teramic-o07-i3w2xd60/binaries/terra-client-after",
+            "--smoke-test-benchmark"
+          ],
+          "exit_code": 0,
+          "peak_drm_memory_gtt_kib": 67588,
+          "peak_drm_memory_vram_kib": 4315616,
+          "peak_rss_kib": 2325052,
+          "system_cpu_seconds": 23.741,
+          "user_cpu_seconds": 231.646,
+          "wall_seconds": 65.778
+        },
+        "before_process_including_startup": {
+          "command": [
+            "/tmp/teramic-o07-i3w2xd60/binaries/terra-client-before-fixed-fixture",
+            "--smoke-test-benchmark"
+          ],
+          "exit_code": 0,
+          "peak_drm_memory_gtt_kib": 67588,
+          "peak_drm_memory_vram_kib": 4045776,
+          "peak_rss_kib": 2257296,
+          "system_cpu_seconds": 25.385,
+          "user_cpu_seconds": 231.212,
+          "wall_seconds": 66.782
+        }
+      },
+      "scenario": "placement",
+      "windows": [
+        {
+          "after": {
+            "average_fps": 100.83281228270374,
+            "initial_load_seconds": 28.894176747,
+            "loaded_sections": 11792,
+            "mesh_assets": 20271,
+            "p95_frame_ms": 13.690547,
+            "p99_frame_ms": 15.080935,
+            "rendered_sections": 7015,
+            "resident_memory_kib_at_summary": 2329804,
+            "sample_frames": 3530,
+            "sample_window_seconds": 35.0,
+            "worst_frame_ms": 17.441515000000003
+          },
+          "before": {
+            "average_fps": 95.47715871664533,
+            "initial_load_seconds": 29.583292,
+            "loaded_sections": 11792,
+            "mesh_assets": 20271,
+            "p95_frame_ms": 14.129102,
+            "p99_frame_ms": 15.36953,
+            "rendered_sections": 7015,
+            "resident_memory_kib_at_summary": 2263256,
+            "sample_frames": 3342,
+            "sample_window_seconds": 35.0,
+            "worst_frame_ms": 19.279132
+          },
+          "delta": {
+            "average_fps": {
+              "absolute": 5.3556535660584075,
+              "percent": 5.609355827138485
+            },
+            "initial_load_seconds": {
+              "absolute": -0.6891152530000006,
+              "percent": -2.3294069267206674
+            },
+            "loaded_sections": {
+              "absolute": 0,
+              "percent": 0.0
+            },
+            "mesh_assets": {
+              "absolute": 0,
+              "percent": 0.0
+            },
+            "p95_frame_ms": {
+              "absolute": -0.43855499999999914,
+              "percent": -3.1039127610516193
+            },
+            "p99_frame_ms": {
+              "absolute": -0.28859499999999905,
+              "percent": -1.8777086872532767
+            },
+            "rendered_sections": {
+              "absolute": 0,
+              "percent": 0.0
+            },
+            "resident_memory_kib_at_summary": {
+              "absolute": 66548,
+              "percent": 2.940365561827729
+            },
+            "sample_frames": {
+              "absolute": 188,
+              "percent": 5.625374027528429
+            },
+            "sample_window_seconds": {
+              "absolute": 0.0,
+              "percent": 0.0
+            },
+            "worst_frame_ms": {
+              "absolute": -1.837616999999998,
+              "percent": -9.53163762766912
+            }
+          },
+          "phase": null
+        }
+      ]
+    }
+  ],
+  "conditions": "conditions.json",
+  "created_utc": "2026-11-05T10:33:13.226167+00:00",
+  "excluded_runs": "excluded-runs.json",
+  "limitations": [
+    "One short paired native run per scenario; no significance, minimum-FPS, long-term stability or cross-GPU guarantee.",
+    "Rain average FPS and p95/p99 regress in this sample; retain that result.",
+    "Inventory steady-state frames and opening transitions are separate measurements. Legacy transition intervals include phase-report overhead; corrected standalone trace still observes a long opening frame.",
+    "Legacy first baseline cases lack a GPU environment snapshot; actual adapter/backend/driver is recovered from raw logs.",
+    "Moving-route terminal loaded-section counts differ slightly because actual networked movement and streaming progress differ; paired input/configuration are identical.",
+    "Process resource peaks include startup and differ across runs; after-run RSS snapshots are higher in all six cases (roughly1-4percent), with no general memory reduction demonstrated. No memory leak or GPU-time conclusion follows from one finite sample."
+  ],
+  "microbenchmarks": "microbenchmarks.json",
+  "opening_diagnostic": "opening-diagnostic.json",
+  "schema_version": 1,
+  "separate_gpu_probe": "gpu-probe.json",
+  "server_audit": "audit.json",
+  "server_audit_measurements": "audit-measurements.json",
+  "validation": "validation.json"
+}

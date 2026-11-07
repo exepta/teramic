@@ -12,17 +12,23 @@ use terra_voxel::MaterialId;
 const MAX_SURFACES: usize = 65_536;
 const NEAR_REVISIT_SECONDS: f64 = 18.0;
 const MAX_COLUMN_HISTORY: usize = 8192;
+const SHAPE_COATING_SECONDS: f32 = 210.0;
 
 #[derive(Default)]
 pub(crate) struct SurfaceWork {
     next: f64,
+    next_shape: f64,
+    shape_cursor: usize,
+    shapes: Vec<[i64; 2]>,
+    columns: BTreeMap<[i64; 2], Vec<terra_voxel::SectionPos>>,
     cursor: usize,
     visited: HashMap<[i64; 2], f64>,
     sequence: u64,
     weather_elapsed: Option<f64>,
 }
 
-/// One already-loaded 16x16 column per two seconds. Never dispatches generation.
+/// Weather keeps its ordinary two-second sweep. Sparse joinery columns also
+/// share a thirty-second ring, with at most one column processed per frame.
 #[allow(clippy::type_complexity)]
 pub(crate) fn tick(
     time: Res<Time<Real>>,
@@ -42,11 +48,15 @@ pub(crate) fn tick(
     let (mut chunks, focus, foci, clock, properties) = loaded;
     if !access.authoritative()
         || clock.as_ref().is_some_and(|clock| clock.paused)
-        || time.elapsed_secs_f64() < work.next
+        || time.elapsed_secs_f64() < work.next.min(work.next_shape)
     {
         return;
     }
-    work.next = time.elapsed_secs_f64() + 2.0;
+    let now = time.elapsed_secs_f64();
+    let ordinary = now >= work.next;
+    if ordinary {
+        work.next = now + 2.0;
+    }
     let previous_tick = work
         .weather_elapsed
         .replace(weather.elapsed_total)
@@ -64,19 +74,54 @@ pub(crate) fn tick(
         .season(terrain.0.config().seasons);
     let winter = season.enabled && season.season == terra_core::Season::Winter;
     if weather.intensity() < 0.01 && existing == 0 {
+        work.next_shape = f64::INFINITY;
         return;
     }
-    let mut columns: BTreeMap<[i64; 2], Vec<terra_voxel::SectionPos>> = BTreeMap::new();
-    for &section in chunks.loaded.keys() {
-        columns
-            .entry([section.x, section.z])
-            .or_default()
-            .push(section);
+    if ordinary {
+        let mut columns: BTreeMap<[i64; 2], Vec<terra_voxel::SectionPos>> = BTreeMap::new();
+        for &section in chunks.loaded.keys() {
+            columns
+                .entry([section.x, section.z])
+                .or_default()
+                .push(section);
+        }
+        columns.retain(|coordinate, _| chunks.prepared_column(*coordinate).is_some());
+        let mut shapes = std::collections::BTreeSet::new();
+        for section in journal.object_sections() {
+            let coordinate = [section.x, section.z];
+            if columns.contains_key(&coordinate)
+                && chunks.loaded.contains_key(&section)
+                && journal
+                    .object_states_in_section(section)
+                    .any(|(_, material, _)| crate::snow::coatable(material))
+            {
+                shapes.insert(coordinate);
+            }
+        }
+        for (coordinate, sections) in &columns {
+            if !shapes.contains(coordinate)
+                && (sections.iter().any(|section| {
+                    journal
+                        .blocks_in_section(*section)
+                        .any(|(_, material)| crate::snow::coatable(material))
+                }) || chunks
+                    .prepared_column(*coordinate)
+                    .is_some_and(|column| column.has_snow_coatable_structure(sections)))
+            {
+                shapes.insert(*coordinate);
+            }
+        }
+        work.columns = columns;
+        work.shapes = shapes.into_iter().collect();
+        let shape_count = work.shapes.len();
+        work.shape_cursor %= shape_count.max(1);
+        if work.shapes.is_empty() {
+            work.next_shape = f64::INFINITY;
+        } else {
+            work.next_shape = work.next_shape.min(now + shape_interval(shape_count));
+        }
     }
-    // A still-streaming column without prepared climate data is not a job yet;
-    // otherwise its unchanged "unvisited" priority could block all ready work.
-    columns.retain(|coordinate, _| chunks.prepared_column(*coordinate).is_some());
-    if columns.is_empty() {
+    if work.columns.is_empty() {
         return;
     }
     // Retain unloaded columns so returning after a season change catches up
@@ -87,7 +132,7 @@ pub(crate) fn tick(
         && let Some(oldest) = work
             .visited
             .iter()
-            .filter(|(coordinate, _)| !columns.contains_key(*coordinate))
+            .filter(|(coordinate, _)| !work.columns.contains_key(*coordinate))
             .min_by(|a, b| a.1.total_cmp(b.1))
             .map(|(coordinate, _)| *coordinate)
             .or_else(|| {
@@ -100,19 +145,31 @@ pub(crate) fn tick(
         work.visited.remove(&oldest);
     }
     let centers = observer_centers(focus.as_deref(), foci.as_deref());
-    let Some(coordinate) = select_column(
-        &columns,
-        &work.visited,
-        &centers,
-        weather.elapsed_total,
-        work.cursor,
-    ) else {
+    let coordinate = if now >= work.next_shape && !work.shapes.is_empty() {
+        let coordinate = work.shapes[work.shape_cursor];
+        let shape_count = work.shapes.len();
+        work.shape_cursor = (work.shape_cursor + 1) % shape_count;
+        work.next_shape = now + shape_interval(shape_count);
+        Some(coordinate)
+    } else if ordinary {
+        select_column(
+            &work.columns,
+            &work.visited,
+            &centers,
+            weather.elapsed_total,
+            work.cursor,
+        )
+    } else {
+        None
+    };
+    let Some(coordinate) = coordinate else {
         return;
     };
     work.cursor = work.cursor.wrapping_add(1);
-    let Some(mut sections) = columns.remove(&coordinate) else {
+    let Some(mut sections) = work.columns.get(&coordinate).cloned() else {
         return;
     };
+    sections.retain(|section| chunks.loaded.contains_key(section));
     let Some(prepared) = chunks.prepared_column(coordinate) else {
         return;
     };
@@ -187,8 +244,15 @@ pub(crate) fn tick(
             let snow_elapsed = elapsed.min(weather.elapsed_seconds.max(0.0) as f32);
             deposition.snow *= weather.snow_accumulation_multiplier() * snow_elapsed / elapsed
                 * deposition_rate(terrain.0.config().seed.0, position);
-            let mut next = evolve(before, deposition, elapsed, winter);
-            if !super::retains_snow(chunks.block_at(position).unwrap_or(0)) {
+            let material = chunks.block_at(position).unwrap_or(0);
+            let mut next = coat_shape_snow(
+                before,
+                evolve(before, deposition, elapsed, winter),
+                material,
+                local,
+                snow_elapsed,
+            );
+            if !super::retains_snow(material) {
                 next.snow = 0.0;
             }
             if snow_edit(&chunks, &journal, position, next.snow).is_some()
@@ -208,6 +272,10 @@ pub(crate) fn tick(
             }
         }
     }
+}
+
+fn shape_interval(columns: usize) -> f64 {
+    24.0 / columns.max(1) as f64
 }
 
 fn observer_centers(
@@ -361,7 +429,7 @@ fn snow_edit(
     // Natural accumulation stops at a full snow voxel, even on generated snow.
     // Player placement is handled separately and remains unrestricted.
     let material = chunks.block_at(support)?;
-    let sheds_snow = material == 5 || !super::retains_snow(material);
+    let sheds_snow = !super::supports_snow_layers(material);
     let position = [support[0], support[1] + 1, support[2]];
     let current = chunks.block_at(position)?;
     let owned = matches!(current, 5 | 98)
@@ -379,7 +447,7 @@ fn snow_edit(
         return None;
     }
     let state = if !sheds_snow && amount.is_finite() {
-        (amount.clamp(0.0, 1.0) * 8.0 + 0.0001).floor() as u8
+        ((amount.clamp(0.0, 1.0) * 8.0 + 0.0001).floor() as u8).min(super::NATURAL_SNOW_MAX_LAYERS)
     } else {
         0
     };
@@ -473,7 +541,8 @@ fn evolve(
     // Fractional weather accumulation is retained between the eight physical states.
     let melt =
         (local.temperature.max(0.0) * 0.00014 + local.rain * 0.008 + before.fire * 0.08) * elapsed;
-    next.snow = (before.snow + local.snow * 0.003 * elapsed - melt).clamp(0.0, 1.0);
+    next.snow = (before.snow + local.snow * super::SNOW_ACCUMULATION_PER_SECOND * elapsed - melt)
+        .clamp(0.0, 1.0);
     if winter {
         next.snow = next.snow.max(before.snow);
     }
@@ -494,10 +563,437 @@ fn evolve(
     next
 }
 
+fn coat_shape_snow(
+    before: SurfaceCondition,
+    mut next: SurfaceCondition,
+    material: u16,
+    local: super::LocalWeather,
+    snow_elapsed: f32,
+) -> SurfaceCondition {
+    if crate::snow::coatable(material)
+        && local.snow > 0.0
+        && local.temperature <= 3.0
+        && before.fire == 0.0
+        && snow_elapsed > 0.0
+    {
+        // Only cosmetic joinery coverage has a deadline, not physical snow layers.
+        // Reserve a full weather transition and sparse ring before five minutes.
+        let cover = super::SHAPED_SNOW_FULL_COVER;
+        let floor = (before.snow + cover / SHAPE_COATING_SECONDS * snow_elapsed).min(cover);
+        next.snow = next.snow.max(floor);
+    }
+    next
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use terra_voxel::{BlockSection, SectionPos};
+
+    #[test]
+    fn player_layer_poses_survive_natural_cap_limits_and_legacy_full_weather_caps_are_repaired() {
+        let section = SectionPos::new(-1, 0, -1);
+        let support = [-1, 1, -1];
+        let cap = [-1, 2, -1];
+        let mut data = BlockSection::empty(section).unwrap();
+        data.set_block([15, 1, 15], 3).unwrap();
+        let mut chunks = ChunkStore::default();
+        chunks.loaded.insert(
+            section,
+            crate::streaming::LoadedSection {
+                data,
+                mesh: None,
+                mesh_epoch: 0,
+                water_epoch: 0,
+                water: None,
+                props: Vec::new(),
+            },
+        );
+        let mut journal = EditJournal::default();
+        let properties = terra_core::block_properties::BlockPropertiesCatalog::default();
+        for layers in 1..=7 {
+            let expected = if layers == 1 { 0 } else { 98 };
+            crate::snow::commit(&mut chunks, &mut journal, cap, expected, &properties).unwrap();
+            let facing = journal.object_state(cap).unwrap().facing;
+            let revision = journal.revision(section);
+            for amount in [0.0, 0.125, 0.25, 1.0] {
+                reconcile_snow(&mut chunks, &mut journal, &properties, support, amount).unwrap();
+                assert_eq!(journal.object_state(cap).unwrap().facing, facing);
+                assert_eq!(journal.revision(section), revision);
+            }
+        }
+        crate::streaming::commit_block_edit(
+            &mut chunks,
+            &mut journal,
+            &crate::streaming::BlockEditRequest {
+                position: cap,
+                expected_material: 98,
+                material: 5,
+            },
+            &properties,
+        )
+        .unwrap();
+        journal
+            .set_object_state(
+                cap,
+                Some(crate::edits::BlockObjectState {
+                    facing: 8,
+                    ..default()
+                }),
+            )
+            .unwrap();
+        reconcile_snow(&mut chunks, &mut journal, &properties, support, 1.0).unwrap();
+        assert_eq!(chunks.block_at(cap), Some(98));
+        assert_eq!(journal.object_state(cap).unwrap().facing, 2);
+    }
+
+    #[test]
+    fn normal_snow_coats_joinery_within_five_minutes_and_shape_work_is_spread_over_a_bounded_ring()
+    {
+        for rate in [0.55_f32, 0.8, 1.0, 1.45] {
+            let local = super::super::LocalWeather {
+                snow: rate * 0.85,
+                temperature: -8.0,
+                ..default()
+            };
+            let condition = coat_shape_snow(
+                SurfaceCondition::default(),
+                evolve(SurfaceCondition::default(), local, 270.0, true),
+                78,
+                local,
+                270.0,
+            );
+            assert!(condition.snow >= super::super::SHAPED_SNOW_FULL_COVER);
+            let melted = evolve(
+                condition,
+                super::super::LocalWeather {
+                    temperature: 18.0,
+                    rain: 0.8,
+                    ..default()
+                },
+                3600.0,
+                false,
+            );
+            assert_eq!(melted.snow, 0.0);
+        }
+        for columns in [1, 9, 64, 256, 1024] {
+            let interval = shape_interval(columns);
+            assert!((interval * columns as f64 - 24.0).abs() < 0.00001);
+            assert!(interval > 0.0);
+        }
+        assert_eq!(SurfaceWork::default().shapes.len(), 0);
+    }
+
+    #[test]
+    fn normal_snow_real_transition_and_sparse_round_finish_before_five_minutes_but_dry_winter_does_not()
+     {
+        for transition in [8.0, 24.0, 60.0] {
+            let mut weather = terra_core::WorldWeather::new(42042);
+            weather.set_pattern(terra_core::WeatherPattern::Snow);
+            weather.transition_seconds = transition;
+            weather.duration_seconds = 1000.0;
+            let mut condition = SurfaceCondition::default();
+            let mut coated_at = None;
+            for second in 1..=300 {
+                weather.advance(1.0, 42042);
+                let local = super::super::LocalWeather {
+                    snow: weather.intensity(),
+                    temperature: -8.0,
+                    ..default()
+                };
+                let mut deposition = local;
+                deposition.snow *= weather.snow_accumulation_multiplier() * 0.55;
+                condition = coat_shape_snow(
+                    condition,
+                    evolve(condition, deposition, 1.0, true),
+                    78,
+                    local,
+                    1.0,
+                );
+                if condition.snow >= super::super::SHAPED_SNOW_FULL_COVER {
+                    coated_at = Some(second);
+                    break;
+                }
+            }
+            assert!(
+                coated_at.is_some_and(|second| second + 30 <= 300),
+                "transition {transition}: {coated_at:?}"
+            );
+        }
+        assert_eq!(
+            evolve(
+                SurfaceCondition::default(),
+                super::super::LocalWeather {
+                    temperature: -8.0,
+                    ..default()
+                },
+                3600.0,
+                true
+            )
+            .snow,
+            0.0
+        );
+    }
+
+    #[test]
+    fn weak_climate_snow_coats_shapes_before_five_minutes_without_accelerating_ground_layers() {
+        use crate::generation::biomes::{BiomeSample, BiomeWeights};
+        let biome = BiomeSample {
+            temperature: 0.0,
+            humidity: 0.05,
+            weights: BiomeWeights {
+                ocean: 0.0,
+                plains: 1.0,
+                forest: 0.0,
+                desert: 0.0,
+                highland: 0.0,
+                mushroom_park: 0.0,
+                cliffted_desert: 0.0,
+                cherry_forest: 0.0,
+            },
+        };
+        for forced_snow in [false, true] {
+            let mut weather = WorldWeather::new(42042);
+            if forced_snow {
+                weather.set_pattern(terra_core::WeatherPattern::Snow);
+            }
+            weather.from_intensity = 0.0;
+            weather.target_intensity = 0.28;
+            weather.transition_seconds = 60.0;
+            weather.duration_seconds = 1000.0;
+            let mut shape = SurfaceCondition::default();
+            let mut ground = SurfaceCondition::default();
+            let mut reference_ground = ground;
+            let mut coated_at = None;
+            for second in 1..=300 {
+                weather.advance(1.0, 42042);
+                let local = super::super::from_climate(&weather, biome, 8.0, 8.0);
+                assert!(local.snow > 0.0 && local.snow <= weather.intensity());
+                if !forced_snow {
+                    assert!(local.rain > 0.0 && local.snow < weather.intensity() * 0.5);
+                }
+                // Even discarding the entire fade reserves its full sixty seconds.
+                if weather.elapsed_seconds < weather.transition_seconds {
+                    continue;
+                }
+                let mut deposition = local;
+                deposition.snow *= weather.snow_accumulation_multiplier() * 0.55;
+                shape =
+                    coat_shape_snow(shape, evolve(shape, deposition, 1.0, true), 78, local, 1.0);
+                ground =
+                    coat_shape_snow(ground, evolve(ground, deposition, 1.0, true), 3, local, 1.0);
+                reference_ground = evolve(reference_ground, deposition, 1.0, true);
+                assert_eq!(ground, reference_ground);
+                if shape.snow >= super::super::SHAPED_SNOW_FULL_COVER {
+                    coated_at = Some(second);
+                    break;
+                }
+            }
+            assert!(
+                coated_at.is_some_and(|second| second + 30 <= 300),
+                "forced_snow={forced_snow}, coated_at={coated_at:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn shape_coating_counts_only_current_snow_time_and_preserves_dry_rain_fire_and_warm_melting() {
+        let before = SurfaceCondition::default();
+        let snow = super::super::LocalWeather {
+            snow: 0.28 * 0.4 * 0.25,
+            temperature: -1.0,
+            ..default()
+        };
+        let mut weather = WorldWeather::new(42042);
+        weather.set_pattern(terra_core::WeatherPattern::Snow);
+        weather.elapsed_seconds = 1.0;
+        let elapsed = 3600.0_f32;
+        let active = elapsed.min(weather.elapsed_seconds.max(0.0) as f32);
+        let mut deposition = snow;
+        deposition.snow *= 0.55 * active / elapsed;
+        let next = coat_shape_snow(
+            before,
+            evolve(before, deposition, elapsed, true),
+            78,
+            snow,
+            active,
+        );
+        assert!(next.snow > 0.0 && next.snow < 0.001, "{next:?}");
+        assert_eq!(
+            coat_shape_snow(before, before, 78, snow, 0.0),
+            before,
+            "No elapsed snowfall must never backfill the clear-weather history"
+        );
+        for material in [78, 86, 90, 102, 3, 71, 147, 159, 160] {
+            let dry = super::super::LocalWeather {
+                temperature: -8.0,
+                ..default()
+            };
+            assert_eq!(
+                coat_shape_snow(
+                    before,
+                    evolve(before, dry, 3600.0, true),
+                    material,
+                    dry,
+                    3600.0
+                )
+                .snow,
+                0.0
+            );
+            for (condition, local) in [
+                (
+                    SurfaceCondition {
+                        snow: 0.04,
+                        ..default()
+                    },
+                    super::super::LocalWeather {
+                        rain: 0.7,
+                        temperature: 8.0,
+                        ..default()
+                    },
+                ),
+                (
+                    SurfaceCondition {
+                        snow: 0.04,
+                        fire: 0.1,
+                        ..default()
+                    },
+                    snow,
+                ),
+                (
+                    SurfaceCondition {
+                        snow: 0.04,
+                        ..default()
+                    },
+                    super::super::LocalWeather {
+                        temperature: 8.0,
+                        ..snow
+                    },
+                ),
+            ] {
+                let expected = evolve(condition, local, 30.0, false);
+                assert_eq!(
+                    coat_shape_snow(condition, expected, material, local, 30.0),
+                    expected
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn shaped_surfaces_repair_only_old_weather_caps_and_preserve_player_snow_and_surface_state() {
+        let section = SectionPos::new(-1, 0, -1);
+        let support = [-1, 4, -1];
+        let cap = [-1, 5, -1];
+        let properties = terra_core::block_properties::BlockPropertiesCatalog::default();
+        for material in [
+            74, 77, 78, 82, 85, 86, 90, 94, 101, 102, 104, 105, 106, 131, 136, 137, 138,
+        ] {
+            let mut data = BlockSection::empty(section).unwrap();
+            data.set_block([15, 4, 15], material).unwrap();
+            let mut chunks = ChunkStore::default();
+            chunks.loaded.insert(
+                section,
+                crate::streaming::LoadedSection {
+                    data,
+                    mesh: None,
+                    mesh_epoch: 0,
+                    water_epoch: 0,
+                    water: None,
+                    props: Vec::new(),
+                },
+            );
+            let mut journal = EditJournal::default();
+            let condition = SurfaceCondition {
+                snow: 0.75,
+                wetness: 0.2,
+                ..default()
+            };
+            journal.set_surface_condition(support, condition).unwrap();
+            reconcile_snow(&mut chunks, &mut journal, &properties, support, 1.0).unwrap();
+            assert_eq!(chunks.block_at(cap), Some(0), "material {material}");
+            for old_material in [98, 5] {
+                crate::streaming::commit_weather_cap(
+                    &mut chunks,
+                    &mut journal,
+                    &crate::streaming::BlockEditRequest {
+                        position: cap,
+                        expected_material: 0,
+                        material: old_material,
+                    },
+                    &properties,
+                )
+                .unwrap();
+                journal
+                    .set_object_state(
+                        cap,
+                        Some(crate::edits::BlockObjectState {
+                            facing: if old_material == 98 { 4 } else { 8 },
+                            ..default()
+                        }),
+                    )
+                    .unwrap();
+                reconcile_snow(&mut chunks, &mut journal, &properties, support, 1.0).unwrap();
+                assert_eq!(chunks.block_at(cap), Some(0), "weather cap over {material}");
+            }
+            for player_material in [98, 5] {
+                crate::streaming::commit_block_edit(
+                    &mut chunks,
+                    &mut journal,
+                    &crate::streaming::BlockEditRequest {
+                        position: cap,
+                        expected_material: 0,
+                        material: player_material,
+                    },
+                    &properties,
+                )
+                .unwrap();
+                assert!(journal.object_state(cap).is_none());
+                reconcile_snow(&mut chunks, &mut journal, &properties, support, 1.0).unwrap();
+                assert_eq!(
+                    chunks.block_at(cap),
+                    Some(player_material),
+                    "player cap over {material}"
+                );
+                crate::streaming::commit_block_edit(
+                    &mut chunks,
+                    &mut journal,
+                    &crate::streaming::BlockEditRequest {
+                        position: cap,
+                        expected_material: player_material,
+                        material: 0,
+                    },
+                    &properties,
+                )
+                .unwrap();
+            }
+            assert_eq!(journal.surface_condition(support), condition);
+            assert_eq!(chunks.block_at(support), Some(material));
+        }
+    }
+
+    #[test]
+    fn normal_snow_takes_minutes_per_layer_without_changing_existing_winter_snow() {
+        let snowfall = super::super::LocalWeather {
+            snow: 1.0,
+            temperature: -8.0,
+            ..default()
+        };
+        let one_minute = evolve(SurfaceCondition::default(), snowfall, 60.0, true);
+        assert_eq!((one_minute.snow * 8.0).floor(), 0.0);
+        assert!((one_minute.snow - 0.045).abs() < 0.00001);
+        let three_minutes = evolve(SurfaceCondition::default(), snowfall, 180.0, true);
+        assert_eq!((three_minutes.snow * 8.0).floor(), 1.0);
+        assert!(three_minutes.snow < 0.003 * 180.0 * 0.251);
+        let saved = SurfaceCondition {
+            snow: 0.9,
+            ..default()
+        };
+        assert_eq!(
+            evolve(saved, super::super::LocalWeather::default(), 3600.0, true).snow,
+            saved.snow
+        );
+    }
 
     #[test]
     fn deposition_is_per_block_seeded_and_independent_of_chunk_boundaries_and_visit_order() {
@@ -514,7 +1010,9 @@ mod tests {
         assert!(rates.values().all(|rate| (0.55..=1.45).contains(rate)));
         let states: Vec<_> = rates
             .values()
-            .map(|rate| (0.003 * 50.0 * rate * 8.0).floor() as u8)
+            .map(|rate| {
+                (super::super::SNOW_ACCUMULATION_PER_SECOND * 200.0 * rate * 8.0).floor() as u8
+            })
             .collect();
         assert!(
             states.contains(&0) && states.contains(&1),
@@ -532,7 +1030,7 @@ mod tests {
     }
 
     #[test]
-    fn natural_snow_preserves_prop_identity_and_buries_it_only_at_the_third_layer() {
+    fn natural_snow_stops_below_prop_burial_and_manual_third_layer_hides_without_removing_props() {
         use crate::props::{PropId, PropKind, WorldProp};
         let section = SectionPos::new(-1, 0, -1);
         let support = [-1, 1, -1];
@@ -574,11 +1072,27 @@ mod tests {
             .unwrap();
             assert_eq!(chunks.loaded[&section].props, vec![prop]);
             assert!(!journal.prop_removed(section, prop.id));
-            assert_eq!(
-                crate::props::seasonal::snow_buried(&prop, &chunks, &journal),
-                state >= 3
-            );
+            assert!(!crate::props::seasonal::snow_buried(
+                &prop, &chunks, &journal
+            ));
         }
+        crate::snow::commit(&mut chunks, &mut journal, [-1, 2, -1], 98, &properties).unwrap();
+        assert!(crate::props::seasonal::snow_buried(
+            &prop, &chunks, &journal
+        ));
+        assert!(!journal.prop_removed(section, prop.id));
+        assert_eq!(chunks.loaded[&section].props, vec![prop]);
+        crate::streaming::commit_block_edit(
+            &mut chunks,
+            &mut journal,
+            &crate::streaming::BlockEditRequest {
+                position: [-1, 2, -1],
+                expected_material: 98,
+                material: 0,
+            },
+            &properties,
+        )
+        .unwrap();
         reconcile_snow(&mut chunks, &mut journal, &properties, support, 0.0).unwrap();
         assert!(!crate::props::seasonal::snow_buried(
             &prop, &chunks, &journal
@@ -627,7 +1141,7 @@ mod tests {
     }
 
     #[test]
-    fn beds_furnaces_chests_and_workbenches_shed_snow_without_snowing_through_them() {
+    fn furniture_mechanics_and_ports_shed_snow_without_snowing_through_them() {
         let mut chunks = ChunkStore::default();
         let p = SectionPos::new(-1, 0, -1);
         chunks.loaded.insert(
@@ -646,7 +1160,10 @@ mod tests {
             &terra_core::asset_directory().join("terra/blocks"),
         )
         .unwrap();
-        for id in [28, 29, 59, 71, 72, 73] {
+        for id in [28, 29, 59, 71, 72, 73, 99, 100]
+            .into_iter()
+            .chain(141..=153)
+        {
             chunks
                 .loaded
                 .get_mut(&p)
@@ -688,7 +1205,7 @@ mod tests {
     }
 
     #[test]
-    fn snow_builds_eight_real_layers_under_trees_and_never_overwrites_player_blocks() {
+    fn natural_snow_stops_at_two_layers_under_trees_and_never_overwrites_player_blocks() {
         let mut chunks = ChunkStore::default();
         let section = SectionPos::new(-1, 0, -1);
         let ground = [-1, 1, -1];
@@ -726,15 +1243,14 @@ mod tests {
             )
             .unwrap();
             assert_eq!(chunks.block_at(ground), Some(1));
-            assert_eq!(chunks.block_at(cap), Some(if state == 8 { 5 } else { 98 }));
-            assert_eq!(journal.object_state(cap).unwrap().facing, state);
+            assert_eq!(chunks.block_at(cap), Some(98));
+            let natural = state.min(super::super::NATURAL_SNOW_MAX_LAYERS);
+            assert_eq!(journal.object_state(cap).unwrap().facing, natural);
             let mut actual = Vec::new();
             crate::interaction_shapes::visit_boxes(&chunks, &journal, &properties, cap, |b| {
                 actual.push(b)
             });
-            if state < 8 {
-                assert_eq!(actual[0].maximum[1], 2.0 + f64::from(state) / 8.0);
-            }
+            assert_eq!(actual[0].maximum[1], 2.0 + f64::from(natural) / 8.0);
             let revision = journal.revision(section);
             assert!(snow_edit(&chunks, &journal, ground, f32::from(state) / 8.0).is_none());
             reconcile_snow(
@@ -753,7 +1269,7 @@ mod tests {
         }
         assert!(
             snow_edit(&chunks, &journal, cap, 1.0).is_none(),
-            "a full natural snow cap cannot grow another cap"
+            "a thin natural cap cannot grow a separate second cap"
         );
         chunks
             .loaded
@@ -782,7 +1298,7 @@ mod tests {
         );
         reconcile_snow(&mut chunks, &mut journal, &properties, ground, 0.5).unwrap();
         assert_eq!(chunks.block_at(cap), Some(98));
-        assert_eq!(journal.object_state(cap).unwrap().facing, 4);
+        assert_eq!(journal.object_state(cap).unwrap().facing, 2);
         reconcile_snow(&mut chunks, &mut journal, &properties, ground, 0.0).unwrap();
         assert_eq!(chunks.block_at(cap), Some(0));
         crate::streaming::commit_block_edit(
@@ -841,7 +1357,7 @@ mod tests {
             ..default()
         };
         assert_eq!(
-            evolve(SurfaceCondition::default(), cold, 600.0, false).snow,
+            evolve(SurfaceCondition::default(), cold, 2400.0, false).snow,
             1.0
         );
     }
@@ -1142,7 +1658,9 @@ mod tests {
         for _ in 0..120 {
             condition = evolve(condition, snow, 2.0, false);
         }
-        assert!(condition.snow > 0.5 && condition.snow < 0.6);
+        let expected = 0.8 * super::super::SNOW_ACCUMULATION_PER_SECOND * 240.0;
+        assert!((condition.snow - expected).abs() < 0.00001);
+        assert!(condition.snow > 0.14 && condition.snow < 0.15);
         let rain = super::super::LocalWeather {
             rain: 0.7,
             wetness: 0.8,

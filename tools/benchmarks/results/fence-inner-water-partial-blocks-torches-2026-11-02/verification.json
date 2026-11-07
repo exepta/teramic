@@ -1,0 +1,98 @@
+{
+  "date": "2026-11-02",
+  "phase": 179,
+  "tests": {
+    "command": "RUST_TEST_THREADS=4 cargo test --workspace --lib --bins --no-fail-fast -j1",
+    "exit": 0,
+    "programs": 12,
+    "passed": 3721,
+    "failed": 0,
+    "ignored": 8
+  },
+  "build": {
+    "command": "cargo build --workspace --locked -j1",
+    "exit": 0
+  },
+  "clippy": {
+    "command": "cargo clippy --workspace --all-targets -j1 -- -D warnings",
+    "exit": 0
+  },
+  "fmt_exit": 0,
+  "diff_check_exit": 0,
+  "partial_water": {
+    "exit": 0,
+    "seconds": 14.796968811,
+    "captures": 8,
+    "inner_fence_regions_and_corners_wet": true,
+    "outer_fence_regions_dry": true,
+    "partial_placement_preserves_water": true,
+    "torch_placement_rejected_in_water": true,
+    "flooded_torch_removed_once": true,
+    "flooded_torch_water_preserved": true
+  },
+  "hydraulics": {
+    "exit": 0,
+    "seconds": 74.87449645996094,
+    "captures": 35,
+    "underwater_build": true,
+    "external_source_preserved": true,
+    "glass_continuous_samples": 10,
+    "wall_torch_placements": 4
+  },
+  "native_warnings": 0,
+  "native_errors": 0,
+  "required_captures": {
+    "partial-water": [
+      "all-pipe-wall-roof-surrounds.png",
+      "fence-inward-water-top.png",
+      "partial-basins-close.png",
+      "slab-stair-fence-basins.png",
+      "waterlogged-enclosed-pipes.png",
+      "waterlogged-partial-pool.png",
+      "waterlogged-pipe-valve-fall.png",
+      "waterlogged-wall-parts.png"
+    ],
+    "hydraulics": [
+      "basin-swimming.png",
+      "bottle-filled.png",
+      "bottle-filling.png",
+      "bucket-filled.png",
+      "bucket-filling.png",
+      "glass-valves-empty-after-shutoff.png",
+      "glass-valves-running-out.png",
+      "glass-valves-stored-water.png",
+      "hydraulics-network.png",
+      "infuser-filled.png",
+      "infuser-filling.png",
+      "infuser-ready.png",
+      "pipe-bend-glass-reverse.png",
+      "pipe-bend-glass.png",
+      "pipe-bend-iron.png",
+      "pipe-bend-stone.png",
+      "pipe-bend-wood.png",
+      "pump-intake-stopped.png",
+      "pump-natural-intake-bubbles.png",
+      "source-bucket-filled.png",
+      "source-watering-can-filled.png",
+      "underwater-bed-mined.png",
+      "underwater-glass-source-preserved.png",
+      "valve-closed-finite-buffer.png",
+      "valve-horizontal-authoritative.png",
+      "valve-vertical-authoritative.png",
+      "wall-torch-facing-4.png",
+      "wall-torch-facing-5.png",
+      "wall-torch-facing-6.png",
+      "wall-torch-facing-7.png",
+      "watering-can-filled.png",
+      "watering-can-filling.png",
+      "watering-can-pouring.png",
+      "waterlogged-round-parts-front.png",
+      "waterlogged-round-parts-oblique.png"
+    ]
+  },
+  "notes": [
+    "The unchanged horizontal-shaft water-interval regression exposed an overestimated source span; fixed and confirmed by the final full workspace run.",
+    "partial-preview contains the separate early visual review before the final span correction; final validation uses partial-water and hydraulics only.",
+    "The final source-only change after runtime verification was rustfmt whitespace around the corrected span expression; executable code is unchanged."
+  ]
+}

@@ -126,12 +126,13 @@ pub(crate) fn update(
         let old_depth = state.depth;
         let cell = p.floor().as_i64vec3().to_array();
         state.depth = if config.world.water
-            && chunks
-                .block_at(cell)
-                .is_some_and(terra_world::water::can_hold_fluid)
-        {
+            && chunks.block_at(cell).is_some_and(|id| {
+                id == terra_core::plumbing::BASIN || terra_world::water::can_hold_fluid(id)
+            }) {
             if chunks.block_at(cell).is_some_and(|id| {
-                terra_core::construction::is_slab(id) || terra_core::construction::is_stair(id)
+                id == terra_core::plumbing::BASIN
+                    || terra_core::construction::is_slab(id)
+                    || terra_core::construction::is_stair(id)
             }) {
                 chunks
                     .water_column_at_point(&terrain.0, &journal, p.as_dvec3().to_array())

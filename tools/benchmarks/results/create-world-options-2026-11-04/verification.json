@@ -1,0 +1,82 @@
+{
+  "tests": {
+    "passed": 3579,
+    "failed": 0,
+    "ignored": 7,
+    "suites": 10
+  },
+  "build_passed": true,
+  "clippy_all_targets_passed": true,
+  "native": {
+    "resolutions": [
+      [
+        1448,
+        1086
+      ],
+      [
+        960,
+        640
+      ]
+    ],
+    "spectator_button": true,
+    "real_wheel_scroll": true,
+    "fixed_footer_contained": true,
+    "world_manifest_reload": true,
+    "isolated_fixtures": true
+  },
+  "features": {
+    "game_modes": [
+      "survival",
+      "creative",
+      "spectator"
+    ],
+    "gamerules": [
+      "keep_inventory",
+      "daylight_cycle",
+      "weather_cycle",
+      "mob_griefing",
+      "fire_spread",
+      "pvp",
+      "sleep_percentage",
+      "game_time_speed",
+      "season_swap_interval"
+    ],
+    "preferred_biome": "safe initial spawn; Ocean means coast",
+    "structures": [
+      "villages",
+      "ruins",
+      "mines"
+    ],
+    "protocol_version": 101
+  },
+  "sources": [
+    {
+      "path": "src-ui/components/modal-dialog.component.html",
+      "sha256": "8fc273e39059f3f3ab4cede71aa9343e8b750bcd5bb789c844fb9fee5af52e64"
+    },
+    {
+      "path": "src-ui/styles/create-world.css",
+      "sha256": "034c4582b47dba3ce91a068506d18d77bc99c3c7aebcf55735e8d535792a317d"
+    },
+    {
+      "path": "crates/terra-ui/src/menu/create_world.rs",
+      "sha256": "24c1ad828e2ad590db945a9f3f24f98b9c2648d6dd00c331c67b8f2533d0ea88"
+    },
+    {
+      "path": "crates/terra-core/src/config/world.rs",
+      "sha256": "83bf775bcb0ff974951e328e71069e58c2a70df2837f2012fa2501ea95c87dcf"
+    },
+    {
+      "path": "crates/terra-core/src/game_rules.rs",
+      "sha256": "a0a3cc41a0e3b85cee33c9e089985d21e350cb7284e1da88632e159b2798bf7d"
+    },
+    {
+      "path": "crates/terra-world/src/spawn.rs",
+      "sha256": "d0a723de4252de8fdba13de0ef97149191241e6ff666fa1726542b0917900d4f"
+    },
+    {
+      "path": "crates/terra-network/src/server_pvp.rs",
+      "sha256": "e439d2aeb31f8215ac6da9f11b2e7758a5bb04d2215036539abf20340e3b0a76"
+    }
+  ]
+}

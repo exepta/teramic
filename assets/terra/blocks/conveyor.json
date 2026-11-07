@@ -1,0 +1,263 @@
+{
+  "schema_version": 1,
+  "id": 148,
+  "name": "Conveyor",
+  "description": "A powered conveyor that moves loose items in its placement direction.",
+  "hardness": 2.5,
+  "resistance": 8,
+  "mining_level": 1,
+  "required_tool": "pickaxe",
+  "creative_category": "technic",
+  "render_kind": "custom_mesh",
+  "struct_block": true,
+  "model_layout": "scene",
+  "model": "models/conveyor.gltf",
+  "textures": {
+    "kinetic_belt": "textures/machinery-belt-hd.png",
+    "kinetic_belt_edge": "textures/machinery-iron-hd.png",
+    "oak_frame": "textures/machinery-oak-hd.png",
+    "iron_frame": "textures/machinery-iron-hd.png"
+  },
+  "collision_boxes": [
+    {
+      "minimum": [
+        0.035,
+        0.27,
+        0
+      ],
+      "maximum": [
+        0.165,
+        0.36,
+        1
+      ]
+    },
+    {
+      "minimum": [
+        0.035,
+        0.36,
+        0
+      ],
+      "maximum": [
+        0.165,
+        0.6,
+        0.33
+      ]
+    },
+    {
+      "minimum": [
+        0.035,
+        0.36,
+        0.67
+      ],
+      "maximum": [
+        0.165,
+        0.6,
+        1
+      ]
+    },
+    {
+      "minimum": [
+        0.045000000000000005,
+        0,
+        0.045
+      ],
+      "maximum": [
+        0.155,
+        0.3,
+        0.175
+      ]
+    },
+    {
+      "minimum": [
+        0.045000000000000005,
+        0,
+        0.825
+      ],
+      "maximum": [
+        0.155,
+        0.3,
+        0.955
+      ]
+    },
+    {
+      "minimum": [
+        0.835,
+        0.27,
+        0
+      ],
+      "maximum": [
+        0.965,
+        0.36,
+        1
+      ]
+    },
+    {
+      "minimum": [
+        0.835,
+        0.36,
+        0
+      ],
+      "maximum": [
+        0.965,
+        0.6,
+        0.33
+      ]
+    },
+    {
+      "minimum": [
+        0.835,
+        0.36,
+        0.67
+      ],
+      "maximum": [
+        0.965,
+        0.6,
+        1
+      ]
+    },
+    {
+      "minimum": [
+        0.845,
+        0,
+        0.045
+      ],
+      "maximum": [
+        0.955,
+        0.3,
+        0.175
+      ]
+    },
+    {
+      "minimum": [
+        0.845,
+        0,
+        0.825
+      ],
+      "maximum": [
+        0.955,
+        0.3,
+        0.955
+      ]
+    },
+    {
+      "minimum": [
+        0.16,
+        0.325,
+        0.1
+      ],
+      "maximum": [
+        0.84,
+        0.35,
+        0.9
+      ]
+    },
+    {
+      "minimum": [
+        0.125,
+        0.375,
+        0.375
+      ],
+      "maximum": [
+        0.18,
+        0.625,
+        0.389
+      ]
+    },
+    {
+      "minimum": [
+        0.125,
+        0.375,
+        0.611
+      ],
+      "maximum": [
+        0.18,
+        0.625,
+        0.625
+      ]
+    },
+    {
+      "minimum": [
+        0.125,
+        0.375,
+        0.389
+      ],
+      "maximum": [
+        0.18,
+        0.389,
+        0.611
+      ]
+    },
+    {
+      "minimum": [
+        0.125,
+        0.611,
+        0.389
+      ],
+      "maximum": [
+        0.18,
+        0.625,
+        0.611
+      ]
+    },
+    {
+      "minimum": [
+        0.82,
+        0.375,
+        0.375
+      ],
+      "maximum": [
+        0.875,
+        0.625,
+        0.389
+      ]
+    },
+    {
+      "minimum": [
+        0.82,
+        0.375,
+        0.611
+      ],
+      "maximum": [
+        0.875,
+        0.625,
+        0.625
+      ]
+    },
+    {
+      "minimum": [
+        0.82,
+        0.375,
+        0.389
+      ],
+      "maximum": [
+        0.875,
+        0.389,
+        0.611
+      ]
+    },
+    {
+      "minimum": [
+        0.82,
+        0.611,
+        0.389
+      ],
+      "maximum": [
+        0.875,
+        0.625,
+        0.611
+      ]
+    },
+    {
+      "minimum": [
+        0.17,
+        0.575,
+        0.015
+      ],
+      "maximum": [
+        0.83,
+        0.625,
+        0.985
+      ]
+    }
+  ]
+}

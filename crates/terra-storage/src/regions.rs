@@ -7,13 +7,18 @@ use std::{
     path::Path,
 };
 use terra_core::{GameplayState, Inventory, PlayerStats, PlayerUuid, WorldDrop, WorldId};
-use terra_world::edits::{EditJournal, SectionDelta};
+use terra_world::edits::{BeltOwner, EditJournal, SectionDelta};
 
 const MAX_FILE: u64 = 64 * 1024 * 1024;
 const TRANSACTION: &str = ".save-transaction";
 const INDEX: &str = "level.data";
 const MAGIC: &[u8; 8] = b"TERAMIC\0";
 mod creature_legacy;
+mod kingdom_legacy;
+use kingdom_legacy::{KingdomIndex10, KingdomRecord9, TreeIndex11};
+#[cfg(test)]
+#[path = "regions/hierarchy_tests.rs"]
+mod hierarchy_tests;
 
 #[derive(Serialize, Deserialize)]
 struct Index {
@@ -30,6 +35,101 @@ struct TimedIndex {
     ecology_seconds: f64,
     weather: Option<terra_core::WorldWeather>,
     next_animal_birth: u32,
+}
+
+// IDX7 remains frozen: kingdom identity is appended in an explicit new wrapper.
+#[derive(Serialize, Deserialize)]
+struct KingdomIndex {
+    prior: TimedIndex,
+    kingdoms: terra_core::kingdom::KingdomRegistry,
+}
+// ID12 carries hierarchy; ID10/ID11 use frozen records in kingdom_legacy.
+#[derive(Serialize, Deserialize)]
+struct TreeIndex {
+    prior: KingdomIndex,
+    trees: terra_core::TreeRegistry,
+}
+
+// Frozen IDX9/F56 registry: capabilities were introduced in ID10.
+#[derive(Serialize, Deserialize)]
+struct KingdomIndex9 {
+    prior: TimedIndex,
+    kingdoms: KingdomRegistry9,
+}
+#[derive(Serialize, Deserialize)]
+struct KingdomRegistry9 {
+    next_id: u64,
+    revision: u64,
+    kingdoms: Vec<KingdomRecord9>,
+    claims: Vec<terra_core::kingdom::KingdomClaim>,
+}
+impl From<KingdomRegistry9> for terra_core::kingdom::KingdomRegistry {
+    fn from(old: KingdomRegistry9) -> Self {
+        let mut registry = Self {
+            next_id: old.next_id,
+            revision: old.revision,
+            kingdoms: old.kingdoms.into_iter().map(Into::into).collect(),
+            claims: old.claims,
+            roles: Vec::new(),
+            relations: Vec::new(),
+        };
+        registry.migrate_legacy_roles();
+        registry
+    }
+}
+// Frozen IDX8/F43 postcard layout: serde defaults do not cover appended binary fields.
+#[derive(Serialize, Deserialize)]
+struct KingdomIndex8 {
+    prior: TimedIndex,
+    kingdoms: KingdomRegistry8,
+}
+#[derive(Serialize, Deserialize)]
+struct KingdomRegistry8 {
+    next_id: u64,
+    revision: u64,
+    kingdoms: Vec<KingdomRecord8>,
+}
+#[derive(Serialize, Deserialize)]
+struct KingdomRecord8 {
+    id: terra_core::kingdom::KingdomId,
+    name: String,
+    founder: PlayerUuid,
+    founder_name: String,
+    members: Vec<PlayerUuid>,
+    member_names: Vec<(PlayerUuid, String)>,
+    location: [i64; 3],
+    state: terra_core::kingdom::KingdomState,
+}
+impl From<KingdomRegistry8> for terra_core::kingdom::KingdomRegistry {
+    fn from(old: KingdomRegistry8) -> Self {
+        let mut registry = Self {
+            roles: Vec::new(),
+            relations: Vec::new(),
+            next_id: old.next_id,
+            revision: old.revision,
+            claims: Vec::new(),
+            kingdoms: old
+                .kingdoms
+                .into_iter()
+                .map(|k| terra_core::kingdom::KingdomRecord {
+                    id: k.id,
+                    name: k.name,
+                    founder: k.founder,
+                    founder_name: k.founder_name,
+                    members: k.members,
+                    member_names: k.member_names,
+                    location: k.location,
+                    state: k.state,
+                    kind: Default::default(),
+                    level: 1,
+                    heraldry: Default::default(),
+                    parent: None,
+                })
+                .collect(),
+        };
+        registry.migrate_legacy_roles();
+        registry
+    }
 }
 #[derive(Serialize, Deserialize)]
 struct Index6 {
@@ -110,12 +210,61 @@ struct Index2 {
     index: Index,
     clock: Option<terra_core::WorldClock>,
 }
-fn read_index(root: &Path) -> Result<TimedIndex, String> {
+fn read_index(root: &Path) -> Result<KingdomIndex, String> {
     let bytes = read(&root.join(INDEX))?;
+    if matches!(bytes.get(12..16), Some(b"ID11" | b"ID12")) {
+        let data: TreeIndex = if bytes.get(12..16) == Some(b"ID12") {
+            decode(b"ID12", &bytes)?
+        } else {
+            let old: TreeIndex11 = decode(b"ID11", &bytes)?;
+            TreeIndex {
+                prior: old.prior.into(),
+                trees: old.trees,
+            }
+        };
+        validate_index(
+            data.prior.prior.clock,
+            data.prior.prior.weather,
+            data.prior.prior.ecology_seconds,
+        )?;
+        if !data.trees.valid() || !data.prior.kingdoms.valid() {
+            return Err("Invalid persistent tree or kingdom registry".into());
+        }
+        return Ok(data.prior);
+    }
+    if matches!(bytes.get(12..16), Some(b"IDX8" | b"IDX9" | b"ID10")) {
+        let data: KingdomIndex = if bytes.get(12..16) == Some(b"ID10") {
+            decode::<KingdomIndex10>(b"ID10", &bytes)?.into()
+        } else if bytes.get(12..16) == Some(b"IDX9") {
+            let old: KingdomIndex9 = decode(b"IDX9", &bytes)?;
+            KingdomIndex {
+                prior: old.prior,
+                kingdoms: old.kingdoms.into(),
+            }
+        } else {
+            let old: KingdomIndex8 = decode(b"IDX8", &bytes)?;
+            KingdomIndex {
+                prior: old.prior,
+                kingdoms: old.kingdoms.into(),
+            }
+        };
+        validate_index(
+            data.prior.clock,
+            data.prior.weather,
+            data.prior.ecology_seconds,
+        )?;
+        if !data.kingdoms.valid() {
+            return Err("Invalid persistent kingdom registry".into());
+        }
+        return Ok(data);
+    }
     if bytes.get(12..16) == Some(b"IDX7") {
         let timed: TimedIndex = decode(b"IDX7", &bytes)?;
         validate_index(timed.clock, timed.weather, timed.ecology_seconds)?;
-        return Ok(timed);
+        return Ok(KingdomIndex {
+            prior: timed,
+            kingdoms: Default::default(),
+        });
     }
     let timed: Index6 = if bytes.get(12..16) == Some(b"IDX6") {
         decode(b"IDX6", &bytes)?
@@ -160,12 +309,15 @@ fn read_index(root: &Path) -> Result<TimedIndex, String> {
         }
     };
     validate_index(timed.clock, timed.weather, timed.ecology_seconds)?;
-    Ok(TimedIndex {
-        index: timed.index,
-        clock: timed.clock,
-        ecology_seconds: timed.ecology_seconds,
-        weather: timed.weather,
-        next_animal_birth: 0,
+    Ok(KingdomIndex {
+        prior: TimedIndex {
+            index: timed.index,
+            clock: timed.clock,
+            ecology_seconds: timed.ecology_seconds,
+            weather: timed.weather,
+            next_animal_birth: 0,
+        },
+        kingdoms: Default::default(),
     })
 }
 fn validate_index(
@@ -186,7 +338,7 @@ fn validate_index(
 struct Region {
     world: WorldId,
     position: [i64; 2],
-    sections: Vec<SectionDelta>,
+    sections: Vec<StoredSectionDelta>,
     drops: Vec<WorldDrop>,
     containers: Vec<([i64; 3], Inventory)>,
     furniture_order: Vec<([i64; 3], u64)>,
@@ -228,6 +380,102 @@ struct PetRegion {
     prior: BreedingRegion,
     orders: Vec<(u64, terra_core::creatures::taming::CompanionMode)>,
 }
+#[derive(Serialize, Deserialize)]
+struct MixerRegion {
+    prior: PetRegion,
+    mixers: Vec<([i64; 3], terra_core::mixer::MixerState)>,
+}
+#[derive(Serialize, Deserialize)]
+struct FabricRegion {
+    prior: MixerRegion,
+    tints: Vec<([i64; 3], [u8; 3])>,
+    filters: Vec<([i64; 3], terra_core::logistics::FilterConfig)>,
+}
+
+#[derive(Serialize, Deserialize)]
+struct BeltRegion {
+    prior: FabricRegion,
+    belts: Vec<([i64; 3], BeltOwner)>,
+}
+
+#[derive(Serialize, Deserialize)]
+struct DistributorRegion {
+    prior: BeltRegion,
+    distributors: Vec<([i64; 3], terra_core::logistics::DistributorConfig)>,
+}
+
+/// RGA10 uses a four-byte RG10 tag; every earlier region payload stays frozen.
+#[derive(Serialize, Deserialize)]
+struct HearthRegion {
+    prior: DistributorRegion,
+    cauldrons: Vec<([i64; 3], terra_core::brewing::CauldronState)>,
+    campfires: Vec<([i64; 3], terra_core::campfire::CampfireState)>,
+    random_tunnels: Vec<[i64; 3]>,
+}
+
+#[derive(Serialize, Deserialize)]
+struct CompoundHearthRegion {
+    prior: HearthRegion,
+    attached_campfires: Vec<([i64; 3], terra_core::campfire::AttachedCampfire)>,
+}
+
+#[derive(Serialize, Deserialize)]
+struct PlumbingRegion {
+    prior: CompoundHearthRegion,
+    plumbing: Vec<([i64; 3], terra_world::plumbing::PlumbingState)>,
+}
+
+/// Frozen pre-RGB wire layout. New appearance metadata lives in RGA7, never in old section bytes.
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+struct StoredSectionDelta {
+    position: terra_voxel::SectionPos,
+    revision: u64,
+    prop_epoch: u64,
+    appearance_epoch: u64,
+    fluid_epoch: u64,
+    blocks: Vec<([u8; 3], u16)>,
+    removed_props: Vec<terra_world::props::PropId>,
+    placed_props: Vec<terra_world::props::WorldProp>,
+    conditions: Vec<([u8; 3], terra_world::environment::SurfaceCondition)>,
+    fluids: Vec<([u8; 3], terra_world::water::FluidCell)>,
+    objects: Vec<([u8; 3], terra_world::edits::BlockObjectState)>,
+}
+impl From<SectionDelta> for StoredSectionDelta {
+    fn from(delta: SectionDelta) -> Self {
+        Self {
+            position: delta.position,
+            revision: delta.revision,
+            prop_epoch: delta.prop_epoch,
+            appearance_epoch: delta.appearance_epoch,
+            fluid_epoch: delta.fluid_epoch,
+            blocks: delta.blocks,
+            removed_props: delta.removed_props,
+            placed_props: delta.placed_props,
+            conditions: delta.conditions,
+            fluids: delta.fluids,
+            objects: delta.objects,
+        }
+    }
+}
+impl From<StoredSectionDelta> for SectionDelta {
+    fn from(delta: StoredSectionDelta) -> Self {
+        Self {
+            position: delta.position,
+            revision: delta.revision,
+            prop_epoch: delta.prop_epoch,
+            appearance_epoch: delta.appearance_epoch,
+            fluid_epoch: delta.fluid_epoch,
+            blocks: delta.blocks,
+            removed_props: delta.removed_props,
+            placed_props: delta.placed_props,
+            conditions: delta.conditions,
+            fluids: delta.fluids,
+            objects: delta.objects,
+            tints: Vec::new(),
+            belts: Vec::new(),
+        }
+    }
+}
 #[cfg(test)]
 #[path = "regions/bees_tests.rs"]
 mod bees_tests;
@@ -235,6 +483,34 @@ mod bees_tests;
 #[path = "regions/pets_tests.rs"]
 mod pet_tests;
 fn read_creature_region(bytes: &[u8]) -> Result<CreatureRegion, String> {
+    if bytes.get(12..16) == Some(b"RG12") {
+        let data: PlumbingRegion = decode(b"RG12", bytes)?;
+        return read_creature_region(&encode(b"RG11", &data.prior)?);
+    }
+    if bytes.get(12..16) == Some(b"RG11") {
+        let data: CompoundHearthRegion = decode(b"RG11", bytes)?;
+        return read_creature_region(&encode(b"RG10", &data.prior)?);
+    }
+    if bytes.get(12..16) == Some(b"RG10") {
+        let data: HearthRegion = decode(b"RG10", bytes)?;
+        return read_creature_region(&encode(b"RGA9", &data.prior)?);
+    }
+    if bytes.get(12..16) == Some(b"RGA9") {
+        let data: DistributorRegion = decode(b"RGA9", bytes)?;
+        return read_creature_region(&encode(b"RGA8", &data.prior)?);
+    }
+    if bytes.get(12..16) == Some(b"RGA8") {
+        let data: BeltRegion = decode(b"RGA8", bytes)?;
+        return read_creature_region(&encode(b"RGA7", &data.prior)?);
+    }
+    if bytes.get(12..16) == Some(b"RGA7") {
+        let data: FabricRegion = decode(b"RGA7", bytes)?;
+        return read_creature_region(&encode(b"RGA6", &data.prior)?);
+    }
+    if bytes.get(12..16) == Some(b"RGA6") {
+        return decode::<MixerRegion>(b"RGA6", bytes)
+            .map(|data| data.prior.prior.prior.prior.prior.prior.prior);
+    }
     if bytes.get(12..16) == Some(b"RGA5") {
         return decode::<PetRegion>(b"RGA5", bytes)
             .map(|data| data.prior.prior.prior.prior.prior.prior);
@@ -309,7 +585,7 @@ struct Reg7 {
 struct ContainerRegion {
     world: WorldId,
     position: [i64; 2],
-    sections: Vec<SectionDelta>,
+    sections: Vec<StoredSectionDelta>,
     drops: Vec<WorldDrop>,
     containers: Vec<([i64; 3], Inventory)>,
 }
@@ -317,7 +593,7 @@ struct ContainerRegion {
 struct WoodRegion {
     world: WorldId,
     position: [i64; 2],
-    sections: Vec<SectionDelta>,
+    sections: Vec<StoredSectionDelta>,
     drops: Vec<WorldDrop>,
 }
 #[derive(Serialize, Deserialize)]
@@ -381,6 +657,13 @@ fn read_region(bytes: &[u8]) -> Result<Region, String> {
                 | b"RGA3"
                 | b"RGA4"
                 | b"RGA5"
+                | b"RGA6"
+                | b"RGA7"
+                | b"RGA8"
+                | b"RGA9"
+                | b"RG10"
+                | b"RG11"
+                | b"RG12"
         )
     ) {
         return read_creature_region(bytes).map(|data| data.region);
@@ -421,7 +704,7 @@ fn read_region(bytes: &[u8]) -> Result<Region, String> {
             sections: old
                 .sections
                 .into_iter()
-                .map(|s| SectionDelta {
+                .map(|s| StoredSectionDelta {
                     position: s.position,
                     revision: s.revision,
                     prop_epoch: s.prop_epoch,
@@ -461,7 +744,7 @@ fn read_region(bytes: &[u8]) -> Result<Region, String> {
         sections: old
             .sections
             .into_iter()
-            .map(|s| SectionDelta {
+            .map(|s| StoredSectionDelta {
                 position: s.position,
                 revision: s.revision,
                 prop_epoch: s.prop_epoch,
@@ -1031,6 +1314,7 @@ fn region_at(position: [i64; 3]) -> [i64; 2] {
 }
 
 fn commit(root: &Path, world: WorldId, journal: &EditJournal) -> Result<(), String> {
+    validate_kingdom_anchors(journal)?;
     if journal.clock.is_some_and(|clock| !clock.valid()) {
         return Err("Cannot save invalid world clock".into());
     }
@@ -1038,7 +1322,38 @@ fn commit(root: &Path, world: WorldId, journal: &EditJournal) -> Result<(), Stri
         return Err("Cannot save invalid world weather".into());
     }
     if !journal.gameplay().valid() {
-        return Err("Cannot save invalid gameplay state".into());
+        let gameplay = journal.gameplay();
+        let detail =
+            if let Some(animal) = gameplay
+                .creatures
+                .animals
+                .values()
+                .find(|animal| !animal.valid())
+            {
+                format!("creature {animal:?}")
+            } else if !gameplay.creatures.valid() {
+                format!(
+                    "creature population/ecology (animals={}, explored={}, ecology_valid={})",
+                    gameplay.creatures.animals.len(),
+                    gameplay.creatures.explored.len(),
+                    gameplay.creatures.ecology.valid()
+                )
+            } else if let Some(drop) = gameplay.drops.iter().find(|drop| !drop.valid()) {
+                format!("world drop {drop:?}")
+            } else if let Some((id, stats)) = gameplay.player_stats.iter().find(|(id, stats)| {
+                id.is_nil() || !stats.survival.valid() || !stats.equipment.valid()
+            }) {
+                format!("player {id:?} stats {stats:?}")
+            } else if let Some((id, _)) = gameplay
+                .inventories
+                .iter()
+                .find(|(id, bag)| id.is_nil() || !bag.valid())
+            {
+                format!("player {id:?} inventory")
+            } else {
+                "gameplay identity, ownership, family or collection limits".into()
+            };
+        return Err(format!("Cannot save invalid gameplay state: {detail}"));
     }
     let mut regions: BTreeMap<[i64; 2], Region> = BTreeMap::new();
     let new_region = |position| Region {
@@ -1051,13 +1366,37 @@ fn commit(root: &Path, world: WorldId, journal: &EditJournal) -> Result<(), Stri
     };
     let mut sections: Vec<_> = journal.changed_sections().collect();
     sections.sort_unstable_by_key(|p| (p.x, p.y, p.z));
+    let mut belts: BTreeMap<[i64; 2], Vec<_>> = BTreeMap::new();
     for p in sections {
         let position = [p.x.div_euclid(32), p.z.div_euclid(32)];
+        let delta = journal.section_delta(p);
+        for (local, owner) in &delta.belts {
+            let cell = p
+                .global_block(local.map(usize::from))
+                .map_err(|error| error.to_string())?;
+            if !owner.valid_at(cell)
+                || journal.block(cell).is_none_or(|material| {
+                    !matches!(material, 144..=146 | 148)
+                        || journal
+                            .object_state(cell)
+                            .is_none_or(|state| !state.valid_for(cell, material))
+                })
+            {
+                return Err("Cannot save invalid or orphaned belt owner".into());
+            }
+            belts.entry(position).or_default().push((cell, *owner));
+        }
         regions
             .entry(position)
             .or_insert_with(|| new_region(position))
             .sections
-            .push(journal.section_delta(p));
+            .push(delta.into());
+    }
+    for records in belts.values_mut() {
+        if records.len() > 131_072 {
+            return Err("Too many belt owner records in region".into());
+        }
+        records.sort_unstable_by_key(|(cell, _)| *cell);
     }
     let gameplay = journal.gameplay();
     let mut populations: BTreeMap<[i64; 2], terra_core::creatures::CreaturePopulation> =
@@ -1163,6 +1502,173 @@ fn commit(root: &Path, world: WorldId, journal: &EditJournal) -> Result<(), Stri
             .push((position, state.clone()));
     }
     let mut furniture_order: Vec<_> = journal.furniture_orders().collect();
+    let mut tints: BTreeMap<[i64; 2], Vec<_>> = BTreeMap::new();
+    for (position, rgb) in journal.tints() {
+        tints
+            .entry(region_at(position))
+            .or_default()
+            .push((position, rgb));
+    }
+    let mut filters: BTreeMap<[i64; 2], Vec<_>> = BTreeMap::new();
+    for (position, filter) in journal.logistics_filters() {
+        filters
+            .entry(region_at(position))
+            .or_default()
+            .push((position, *filter));
+    }
+    let mut distributors: BTreeMap<[i64; 2], Vec<_>> = BTreeMap::new();
+    let mut cauldrons: BTreeMap<[i64; 2], Vec<_>> = BTreeMap::new();
+    for (position, state) in journal.cauldrons() {
+        if !state.valid() || !journal.valid_cauldron(position) {
+            return Err("Cannot save invalid or orphaned cauldron".into());
+        }
+        let owner = region_at(position);
+        regions.entry(owner).or_insert_with(|| new_region(owner));
+        cauldrons
+            .entry(owner)
+            .or_default()
+            .push((position, state.clone()));
+    }
+    let mut campfires: BTreeMap<[i64; 2], Vec<_>> = BTreeMap::new();
+    for (position, state) in journal.campfires() {
+        if !state.valid() || !journal.valid_campfire(position) {
+            return Err("Cannot save invalid or orphaned campfire".into());
+        }
+        let owner = region_at(position);
+        regions.entry(owner).or_insert_with(|| new_region(owner));
+        campfires
+            .entry(owner)
+            .or_default()
+            .push((position, state.clone()));
+    }
+    for values in cauldrons.values_mut() {
+        values.sort_unstable_by_key(|(p, _)| *p);
+    }
+    for values in campfires.values_mut() {
+        values.sort_unstable_by_key(|(p, _)| *p);
+    }
+    let mut attached_campfires: BTreeMap<[i64; 2], Vec<_>> = BTreeMap::new();
+    for (position, fire) in journal.attached_campfires() {
+        if !fire.valid() || !journal.has_attached_campfire(position) {
+            return Err("Cannot save invalid or orphaned attached campfire".into());
+        }
+        let owner = region_at(position);
+        regions.entry(owner).or_insert_with(|| new_region(owner));
+        attached_campfires
+            .entry(owner)
+            .or_default()
+            .push((position, fire.clone()));
+    }
+    for (position, material, state) in journal.object_states() {
+        if material == 161
+            && terra_core::brewing::has_fire(state.facing)
+            && journal.attached_campfire_at(position).is_none()
+        {
+            return Err("Attached campfire has no private state".into());
+        }
+    }
+    for values in attached_campfires.values_mut() {
+        values.sort_unstable_by_key(|(position, _)| *position);
+    }
+    let mut plumbing: BTreeMap<[i64; 2], Vec<_>> = BTreeMap::new();
+    let mut plumbing_count = 0;
+    for (position, state) in journal.plumbing() {
+        plumbing_count += 1;
+        if plumbing_count > terra_world::plumbing::MAX_NODES
+            || journal.block(position).is_none_or(|material| {
+                !state.valid(material)
+                    || journal
+                        .object_state(position)
+                        .is_none_or(|pose| !pose.valid_for(position, material))
+            })
+            || state.basin.is_some_and(|shape| !shape.contains(position))
+        {
+            return Err("Cannot save invalid, orphaned or over-capacity plumbing state".into());
+        }
+        let owner = region_at(position);
+        regions.entry(owner).or_insert_with(|| new_region(owner));
+        plumbing
+            .entry(owner)
+            .or_default()
+            .push((position, state.clone()));
+    }
+    for values in plumbing.values_mut() {
+        values.sort_unstable_by_key(|(position, _)| *position);
+    }
+    let mut random_tunnels: BTreeMap<[i64; 2], Vec<_>> = BTreeMap::new();
+    for position in journal.tunnel_random() {
+        if !journal
+            .block(position)
+            .is_some_and(terra_core::logistics::is_tunnel)
+            || journal
+                .object_state(position)
+                .is_none_or(|state| !state.valid_for(position, journal.block(position).unwrap()))
+        {
+            return Err("Cannot save invalid random tunnel".into());
+        }
+        let owner = region_at(position);
+        regions.entry(owner).or_insert_with(|| new_region(owner));
+        random_tunnels.entry(owner).or_default().push(position);
+    }
+    for values in random_tunnels.values_mut() {
+        values.sort_unstable();
+    }
+    if random_tunnels.values().any(|values| values.len() > 131_072) {
+        return Err("Too many random tunnel records".into());
+    }
+    for (position, config) in journal.distributors() {
+        if !config.valid()
+            || journal.block(position) != Some(terra_core::logistics::BELT_DISTRIBUTOR)
+            || journal.object_state(position).is_none_or(|state| {
+                !state.valid_for(position, terra_core::logistics::BELT_DISTRIBUTOR)
+            })
+        {
+            return Err("Cannot save invalid or orphaned distributor".into());
+        }
+        distributors
+            .entry(region_at(position))
+            .or_default()
+            .push((position, *config));
+    }
+    for list in distributors.values_mut() {
+        list.sort_unstable_by_key(|(p, _)| *p);
+    }
+    if distributors.values().any(|list| list.len() > 131_072) {
+        return Err("Too many distributor records".into());
+    }
+    for list in tints.values_mut() {
+        list.sort_unstable_by_key(|(p, _)| *p);
+    }
+    for list in filters.values_mut() {
+        list.sort_unstable_by_key(|(p, _)| *p);
+    }
+    if tints.values().any(|list| list.len() > 131_072)
+        || filters.values().any(|list| list.len() > 131_072)
+    {
+        return Err("Too many fabric/filter records".into());
+    }
+    let mut mixers: BTreeMap<[i64; 2], Vec<_>> = BTreeMap::new();
+    let mut stations: Vec<_> = journal.mixers().collect();
+    stations.sort_unstable_by_key(|(p, _)| *p);
+    for (position, state) in stations {
+        if !state.valid()
+            || journal.block(position) != Some(156)
+            || !journal.valid_container(
+                position,
+                journal
+                    .container_at(position)
+                    .unwrap_or(&Inventory::default()),
+            )
+        {
+            return Err("Cannot save invalid or orphaned mixer state".into());
+        }
+        let owner = region_at(position);
+        regions.entry(owner).or_insert_with(|| new_region(owner));
+        mixers
+            .entry(owner)
+            .or_default()
+            .push((position, state.clone()));
+    }
     let mut crushers: BTreeMap<[i64; 2], Vec<_>> = BTreeMap::new();
     let mut stations: Vec<_> = journal.crushers().collect();
     stations.sort_unstable_by_key(|(position, _)| *position);
@@ -1324,7 +1830,116 @@ fn commit(root: &Path, world: WorldId, journal: &EditJournal) -> Result<(), Stri
         };
         let families = families.remove(&p).unwrap_or_default();
         let orders = pet_orders.remove(&p).unwrap_or_default();
-        let bytes = if !orders.is_empty() {
+        let rgb = tints.remove(&p).unwrap_or_default();
+        let filter = filters.remove(&p).unwrap_or_default();
+        let belt = belts.remove(&p).unwrap_or_default();
+        let distributor = distributors.remove(&p).unwrap_or_default();
+        let cauldron = cauldrons.remove(&p).unwrap_or_default();
+        let campfire = campfires.remove(&p).unwrap_or_default();
+        let random_tunnel = random_tunnels.remove(&p).unwrap_or_default();
+        let attached = attached_campfires.remove(&p).unwrap_or_default();
+        let plumbing = plumbing.remove(&p).unwrap_or_default();
+        let bytes = if !rgb.is_empty()
+            || !filter.is_empty()
+            || !belt.is_empty()
+            || !distributor.is_empty()
+            || !cauldron.is_empty()
+            || !campfire.is_empty()
+            || !random_tunnel.is_empty()
+            || !attached.is_empty()
+            || !plumbing.is_empty()
+        {
+            let fabric = FabricRegion {
+                prior: MixerRegion {
+                    prior: PetRegion {
+                        prior: BreedingRegion {
+                            prior: data,
+                            families,
+                        },
+                        orders,
+                    },
+                    mixers: mixers.remove(&p).unwrap_or_default(),
+                },
+                tints: rgb,
+                filters: filter,
+            };
+            if !cauldron.is_empty()
+                || !campfire.is_empty()
+                || !random_tunnel.is_empty()
+                || !attached.is_empty()
+                || !plumbing.is_empty()
+            {
+                let hearths = HearthRegion {
+                    prior: DistributorRegion {
+                        prior: BeltRegion {
+                            prior: fabric,
+                            belts: belt,
+                        },
+                        distributors: distributor,
+                    },
+                    cauldrons: cauldron,
+                    campfires: campfire,
+                    random_tunnels: random_tunnel,
+                };
+                if !plumbing.is_empty() {
+                    encode(
+                        b"RG12",
+                        &PlumbingRegion {
+                            prior: CompoundHearthRegion {
+                                prior: hearths,
+                                attached_campfires: attached,
+                            },
+                            plumbing,
+                        },
+                    )?
+                } else if attached.is_empty() {
+                    encode(b"RG10", &hearths)?
+                } else {
+                    encode(
+                        b"RG11",
+                        &CompoundHearthRegion {
+                            prior: hearths,
+                            attached_campfires: attached,
+                        },
+                    )?
+                }
+            } else if !distributor.is_empty() {
+                encode(
+                    b"RGA9",
+                    &DistributorRegion {
+                        prior: BeltRegion {
+                            prior: fabric,
+                            belts: belt,
+                        },
+                        distributors: distributor,
+                    },
+                )?
+            } else if belt.is_empty() {
+                encode(b"RGA7", &fabric)?
+            } else {
+                encode(
+                    b"RGA8",
+                    &BeltRegion {
+                        prior: fabric,
+                        belts: belt,
+                    },
+                )?
+            }
+        } else if let Some(mixers) = mixers.remove(&p) {
+            encode(
+                b"RGA6",
+                &MixerRegion {
+                    prior: PetRegion {
+                        prior: BreedingRegion {
+                            prior: data,
+                            families,
+                        },
+                        orders,
+                    },
+                    mixers,
+                },
+            )?
+        } else if !orders.is_empty() {
             encode(
                 b"RGA5",
                 &PetRegion {
@@ -1383,7 +1998,24 @@ fn commit(root: &Path, world: WorldId, journal: &EditJournal) -> Result<(), Stri
         };
         stage(format!("players/{player}.data"), bytes)?;
     }
-    let bytes = if gameplay.next_animal_birth == 0 {
+    let bytes = if gameplay.trees != Default::default() || gameplay.kingdoms != Default::default() {
+        encode(
+            b"ID12",
+            &TreeIndex {
+                prior: KingdomIndex {
+                    prior: TimedIndex {
+                        index,
+                        clock: journal.clock,
+                        ecology_seconds: ecology.seconds,
+                        weather: journal.weather,
+                        next_animal_birth: gameplay.next_animal_birth,
+                    },
+                    kingdoms: gameplay.kingdoms.clone(),
+                },
+                trees: gameplay.trees.clone(),
+            },
+        )?
+    } else if gameplay.next_animal_birth == 0 {
         encode(
             b"IDX6",
             &Index6 {
@@ -1421,8 +2053,21 @@ fn commit(root: &Path, world: WorldId, journal: &EditJournal) -> Result<(), Stri
 }
 
 fn load(root: &Path, world: WorldId) -> Result<EditJournal, String> {
-    let timed = read_index(root)?;
+    let KingdomIndex {
+        prior: timed,
+        kingdoms,
+    } = read_index(root)?;
     let index = timed.index;
+    let trees = {
+        let bytes = read(&root.join(INDEX))?;
+        if bytes.get(12..16) == Some(b"ID12") {
+            decode::<TreeIndex>(b"ID12", &bytes)?.trees
+        } else if bytes.get(12..16) == Some(b"ID11") {
+            decode::<TreeIndex11>(b"ID11", &bytes)?.trees
+        } else {
+            Default::default()
+        }
+    };
     if index.world != world || index.regions.len() > 100_000 || index.players.len() > 8192 {
         return Err("Region index belongs to an incompatible world".into());
     }
@@ -1430,6 +2075,8 @@ fn load(root: &Path, world: WorldId) -> Result<EditJournal, String> {
     journal.clock = timed.clock;
     journal.weather = timed.weather;
     let mut gameplay = GameplayState {
+        trees,
+        kingdoms,
         next_drop: index.next_drop,
         revision: index.revision,
         next_animal_birth: timed.next_animal_birth,
@@ -1445,6 +2092,26 @@ fn load(root: &Path, world: WorldId) -> Result<EditJournal, String> {
     let mut furnaces = Vec::new();
     let mut crusher_positions = BTreeSet::new();
     let mut crushers = Vec::new();
+    let mut mixers = Vec::new();
+    let mut tints: BTreeMap<_, Vec<_>> = BTreeMap::new();
+    let mut belts: BTreeMap<_, Vec<_>> = BTreeMap::new();
+    let mut belt_positions = BTreeSet::new();
+    let mut filters = Vec::new();
+    let mut distributors = Vec::new();
+    let mut cauldrons = Vec::new();
+    let mut campfires = Vec::new();
+    let mut random_tunnels = Vec::new();
+    let mut attached_campfires = Vec::new();
+    let mut attached_positions = BTreeSet::new();
+    let mut plumbing = Vec::new();
+    let mut plumbing_positions = BTreeSet::new();
+    let mut cauldron_positions = BTreeSet::new();
+    let mut campfire_positions = BTreeSet::new();
+    let mut random_tunnel_positions = BTreeSet::new();
+    let mut distributor_positions = BTreeSet::new();
+    let mut tint_positions = BTreeSet::new();
+    let mut filter_positions = BTreeSet::new();
+    let mut mixer_positions = BTreeSet::new();
     let mut crop_positions = BTreeSet::new();
     let mut crops = Vec::new();
     let mut forage_ids = BTreeSet::new();
@@ -1453,7 +2120,141 @@ fn load(root: &Path, world: WorldId) -> Result<EditJournal, String> {
         if !regions.insert(p) {
             return Err("Duplicate region index".into());
         }
-        let bytes = read(&root.join(region_name(p)))?;
+        let mut bytes = read(&root.join(region_name(p)))?;
+        if bytes.get(12..16) == Some(b"RG12") {
+            let data: PlumbingRegion = decode(b"RG12", &bytes)?;
+            if data.plumbing.len() > terra_world::plumbing::MAX_NODES - plumbing.len() {
+                return Err("Too many saved plumbing nodes".into());
+            }
+            for (position, state) in data.plumbing {
+                if region_at(position) != p || !plumbing_positions.insert(position) {
+                    return Err("Duplicate or misplaced plumbing state".into());
+                }
+                plumbing.push((position, state));
+            }
+            bytes = encode(b"RG11", &data.prior)?;
+        }
+        if bytes.get(12..16) == Some(b"RG11") {
+            let data: CompoundHearthRegion = decode(b"RG11", &bytes)?;
+            if data.attached_campfires.len() > 4096 {
+                return Err("Too many attached campfires".into());
+            }
+            for (position, fire) in data.attached_campfires {
+                if region_at(position) != p || !fire.valid() || !attached_positions.insert(position)
+                {
+                    return Err("Invalid, duplicate or misplaced attached campfire".into());
+                }
+                attached_campfires.push((position, fire));
+            }
+            bytes = encode(b"RG10", &data.prior)?;
+        }
+        if bytes.get(12..16) == Some(b"RG10") {
+            let data: HearthRegion = decode(b"RG10", &bytes)?;
+            if data.cauldrons.len() > 4096
+                || data.campfires.len() > 4096
+                || data.random_tunnels.len() > 131_072
+            {
+                return Err("Too many hearth/random tunnel records".into());
+            }
+            for (position, state) in data.cauldrons {
+                if region_at(position) != p
+                    || !state.valid()
+                    || !cauldron_positions.insert(position)
+                {
+                    return Err("Invalid, duplicate or misplaced cauldron".into());
+                }
+                cauldrons.push((position, state));
+            }
+            for (position, state) in data.campfires {
+                if region_at(position) != p
+                    || !state.valid()
+                    || !campfire_positions.insert(position)
+                {
+                    return Err("Invalid, duplicate or misplaced campfire".into());
+                }
+                campfires.push((position, state));
+            }
+            for position in data.random_tunnels {
+                if region_at(position) != p || !random_tunnel_positions.insert(position) {
+                    return Err("Duplicate or misplaced random tunnel".into());
+                }
+                random_tunnels.push(position);
+            }
+            bytes = encode(b"RGA9", &data.prior)?;
+        }
+        if bytes.get(12..16) == Some(b"RGA9") {
+            let data: DistributorRegion = decode(b"RGA9", &bytes)?;
+            if data.distributors.len() > 131_072 {
+                return Err("Too many distributor records in region".into());
+            }
+            for (position, config) in data.distributors {
+                if region_at(position) != p
+                    || !config.valid()
+                    || !distributor_positions.insert(position)
+                {
+                    return Err("Invalid, duplicate or misplaced distributor".into());
+                }
+                distributors.push((position, config));
+            }
+            bytes = encode(b"RGA8", &data.prior)?;
+        }
+        if bytes.get(12..16) == Some(b"RGA8") {
+            let data: BeltRegion = decode(b"RGA8", &bytes)?;
+            if data.belts.len() > 131_072 {
+                return Err("Too many belt owner records in region".into());
+            }
+            for (position, owner) in data.belts {
+                if region_at(position) != p
+                    || !owner.valid_at(position)
+                    || !belt_positions.insert(position)
+                {
+                    return Err("Invalid, duplicate or misplaced belt owner".into());
+                }
+                let (section, local) = terra_voxel::global_to_section(position);
+                belts
+                    .entry((section.x, section.y, section.z))
+                    .or_default()
+                    .push((local.map(|value| value as u8), owner));
+            }
+            bytes = encode(b"RGA7", &data.prior)?;
+        }
+        if bytes.get(12..16) == Some(b"RGA7") {
+            let data: FabricRegion = decode(b"RGA7", &bytes)?;
+            if data.tints.len() > 131_072 || data.filters.len() > 131_072 {
+                return Err("Too many fabric/filter records".into());
+            }
+            for (position, rgb) in data.tints {
+                if region_at(position) != p || !tint_positions.insert(position) {
+                    return Err("Duplicate or misplaced RGB tint".into());
+                }
+                let (owner, local) = terra_voxel::global_to_section(position);
+                tints
+                    .entry((owner.x, owner.y, owner.z))
+                    .or_default()
+                    .push((local.map(|v| v as u8), rgb));
+            }
+            for (position, filter) in data.filters {
+                if region_at(position) != p || !filter.valid() || !filter_positions.insert(position)
+                {
+                    return Err("Invalid, duplicate or misplaced funnel filter".into());
+                }
+                filters.push((position, filter));
+            }
+            bytes = encode(b"RGA6", &data.prior)?;
+        }
+        if bytes.get(12..16) == Some(b"RGA6") {
+            let data: MixerRegion = decode(b"RGA6", &bytes)?;
+            if data.mixers.len() > 131_072 {
+                return Err("Too many mixer records in region".into());
+            }
+            for (position, state) in data.mixers {
+                if region_at(position) != p || !state.valid() || !mixer_positions.insert(position) {
+                    return Err("Duplicate, misplaced or invalid mixer".into());
+                }
+                mixers.push((position, state));
+            }
+            bytes = encode(b"RGA5", &data.prior)?;
+        }
         let region = read_region(&bytes)?;
         if matches!(
             bytes.get(12..16),
@@ -1701,6 +2502,13 @@ fn load(root: &Path, world: WorldId) -> Result<EditJournal, String> {
             {
                 return Err("Duplicate or misplaced section in region".into());
             }
+            let mut delta: SectionDelta = delta.into();
+            delta.tints = tints
+                .remove(&(owner.x, owner.y, owner.z))
+                .unwrap_or_default();
+            delta.belts = belts
+                .remove(&(owner.x, owner.y, owner.z))
+                .unwrap_or_default();
             journal.import_delta(delta)?;
         }
         for drop in region.drops {
@@ -1731,12 +2539,57 @@ fn load(root: &Path, world: WorldId) -> Result<EditJournal, String> {
             journal.import_furniture_order(position, order)?;
         }
     }
+    if !tints.is_empty() {
+        return Err("RGB tint has no saved section".into());
+    }
+    if !belts.is_empty() {
+        return Err("Belt owner has no saved section".into());
+    }
     // Multi-block stations may refer to another section; validate after all imports.
+    for (position, state) in plumbing {
+        journal.set_plumbing(position, state)?;
+    }
+    for (position, filter) in filters {
+        // Older builds exposed ghost filters on the ordinary port variants.
+        // They own no items and must not turn those variants into filtered ones.
+        if matches!(
+            journal.block(position),
+            Some(terra_core::logistics::TUNNEL | terra_core::logistics::FUNNEL)
+        ) {
+            continue;
+        }
+        journal.set_logistics_filter(position, filter)?;
+    }
+    for (position, config) in distributors {
+        journal.set_distributor(position, config)?;
+    }
     for (position, state) in furnaces {
         journal.set_furnace(position, state)?;
     }
     for (position, state) in crushers {
         journal.set_crusher(position, state)?;
+    }
+    for (position, state) in mixers {
+        journal.set_mixer(position, state)?;
+    }
+    for (position, state) in cauldrons {
+        journal.set_cauldron(position, state)?;
+    }
+    for (position, state) in campfires {
+        journal.set_campfire(position, state)?;
+    }
+    for (position, fire) in attached_campfires {
+        journal.commit_attached_campfire(position, fire)?;
+    }
+    if journal.object_states().any(|(position, material, state)| {
+        material == 161
+            && terra_core::brewing::has_fire(state.facing)
+            && journal.attached_campfire_at(position).is_none()
+    }) {
+        return Err("Attached campfire has no saved private state".into());
+    }
+    for position in random_tunnels {
+        journal.set_tunnel_random(position, true)?;
     }
     for (support, state) in crops {
         journal.set_crop(support, state)?;
@@ -1752,7 +2605,7 @@ fn load(root: &Path, world: WorldId) -> Result<EditJournal, String> {
         let (data, location) = read_saved_player(&read(&root.join(format!("players/{id}.data")))?)?;
         if data.world != world
             || data.player != id
-            || !data.inventory.valid()
+            || !data.inventory.valid_saved_player()
             || !data.stats.survival.valid()
             || !data.stats.equipment.valid()
         {
@@ -1770,7 +2623,19 @@ fn load(root: &Path, world: WorldId) -> Result<EditJournal, String> {
     }
     gameplay.drops.sort_unstable_by_key(|drop| drop.id);
     journal.import_gameplay(gameplay)?;
+    validate_kingdom_anchors(&journal)?;
     Ok(journal)
+}
+
+fn validate_kingdom_anchors(journal: &EditJournal) -> Result<(), String> {
+    for kingdom in &journal.gameplay().kingdoms.kingdoms {
+        if kingdom.state == terra_core::kingdom::KingdomState::Active
+            && journal.block(kingdom.location) != Some(terra_core::castle::BERGFRIED)
+        {
+            return Err("Active kingdom is missing its saved Bergfried structure block".into());
+        }
+    }
+    Ok(())
 }
 
 pub(crate) fn root(path: &Path) -> &Path {
@@ -1840,7 +2705,7 @@ pub fn save_edits(path: &Path, world: WorldId, journal: &EditJournal) -> Result<
     recover(root)?;
     reject_orphans(root)?;
     if root.join(INDEX).exists() {
-        let index = read_index(root)?.index;
+        let index = read_index(root)?.prior.index;
         if index.world != world {
             return Err("Cannot overwrite another world's region save".into());
         }
@@ -1853,4 +2718,35 @@ pub fn save_edits(path: &Path, world: WorldId, journal: &EditJournal) -> Result<
 }
 
 #[cfg(test)]
+#[path = "regions/automation_tests.rs"]
+mod automation_tests;
+#[cfg(test)]
+#[path = "regions/belt_owner_tests.rs"]
+mod belt_owner_tests;
+#[cfg(test)]
+#[path = "regions/castle_tests.rs"]
+mod castle_tests;
+#[cfg(test)]
+#[path = "regions/distributor_tests.rs"]
+mod distributor_tests;
+#[cfg(test)]
+#[path = "regions/fabric_tests.rs"]
+mod fabric_tests;
+#[cfg(test)]
+#[path = "regions/hearth_tests.rs"]
+mod hearth_tests;
+#[cfg(test)]
+#[path = "regions/kingdom_tests.rs"]
+mod kingdom_tests;
+#[cfg(test)]
+#[path = "regions/plumbing_tests.rs"]
+mod plumbing_tests;
+#[cfg(test)]
 mod tests;
+#[cfg(test)]
+#[path = "regions/water_source_tests.rs"]
+mod water_source_tests;
+
+#[cfg(test)]
+#[path = "regions/tree_tests.rs"]
+mod tree_tests;

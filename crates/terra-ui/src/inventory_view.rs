@@ -10,14 +10,28 @@ pub(super) struct SessionViewStamp {
     equipment: terra_core::EquipmentSlots,
     outcome: Option<terra_network::protocol::inventory::InventoryOutcome>,
     container_anchor: Option<[i64; 3]>,
+    container_view: Option<ContainerView>,
+    attached_campfire: bool,
+    container_material: Option<u16>,
     container_workbench: Option<[i64; 3]>,
     furnace: Option<terra_core::furnace::FurnaceView>,
     crusher: Option<terra_core::crusher::CrusherView>,
+    mixer: Option<terra_core::mixer::MixerView>,
+    cauldron: Option<terra_core::brewing::CauldronView>,
+    campfire: Option<terra_core::campfire::CampfireView>,
+    filter: Option<terra_core::logistics::FilterConfig>,
+    distributor: Option<terra_core::logistics::DistributorConfig>,
+    tunnel_random: Option<bool>,
+    mixer_drive: Option<terra_network::protocol::session::KineticVisual>,
     container_revisions: [Option<([i64; 3], u64)>; 2],
 }
 
 #[derive(Clone, Debug, Default, Serialize, PartialEq)]
 pub struct InventoryItemView {
+    #[serde(skip)]
+    pub item: Option<ItemKind>,
+    #[serde(skip)]
+    pub ghost_item: Option<ItemKind>,
     pub id: String,
     pub item_id: String,
     pub index: String,
@@ -28,6 +42,9 @@ pub struct InventoryItemView {
     pub category: String,
     pub count: String,
     pub preview_key: String,
+    pub ghost_preview: String,
+    pub ghost_count: String,
+    pub ghost_name: String,
     pub prop: bool,
     pub selected: bool,
     pub empty: bool,
@@ -38,10 +55,23 @@ pub struct InventoryItemView {
 
 #[derive(Clone, Debug, Serialize, PartialEq)]
 pub struct CategoryView {
+    #[serde(skip)]
+    pub item: Option<ItemKind>,
     pub id: String,
     pub name: String,
     pub selected: bool,
     pub preview_key: String,
+}
+
+#[derive(Clone, Debug, Serialize, PartialEq)]
+pub struct DistributorFilterView {
+    pub index: u8,
+    pub name: String,
+    pub slots: Vec<InventoryItemView>,
+    pub allowed: bool,
+    pub mode: String,
+    pub has_item: bool,
+    pub selecting: bool,
 }
 
 #[derive(Clone, Debug, Serialize, PartialEq)]
@@ -55,6 +85,11 @@ pub struct EquipmentSlotView {
 #[html_shared]
 #[derive(Resource, Default, Debug, Serialize, PartialEq)]
 pub struct InventoryView {
+    /// Native identity of the authoritative snapshot used for this projection.
+    #[serde(skip)]
+    pub source_container: Option<([i64; 3], ContainerView)>,
+    pub player: bool,
+    pub browser_visible: bool,
     pub layout_style: String,
     pub prewarming: bool,
     pub open: bool,
@@ -66,6 +101,11 @@ pub struct InventoryView {
     pub container_capacity: String,
     pub container_items: Vec<InventoryItemView>,
     pub furnace: bool,
+    pub cauldron: alchemy::CauldronWorkspace,
+    pub campfire: alchemy::CampfireWorkspace,
+    pub hearth_navigation: bool,
+    pub hearth_show_fire: bool,
+    pub hearth_navigation_enabled: bool,
     pub furnace_input: Vec<InventoryItemView>,
     pub furnace_fuel: Vec<InventoryItemView>,
     pub furnace_output: Vec<InventoryItemView>,
@@ -79,6 +119,24 @@ pub struct InventoryView {
     pub crusher_output: Vec<InventoryItemView>,
     pub crusher_progress_style: String,
     pub crusher_working: bool,
+    pub mixer: bool,
+    pub mixer_input: Vec<InventoryItemView>,
+    pub mixer_output: Vec<InventoryItemView>,
+    pub mixer_color: String,
+    pub mixer_progress_style: String,
+    pub mixer_status: String,
+    pub mixer_recipe: String,
+    pub mixer_working: bool,
+    pub filtered_funnel: bool,
+    pub funnel_filter: Vec<InventoryItemView>,
+    pub distributor_filters: Vec<DistributorFilterView>,
+    pub distributor: bool,
+    pub tunnel_options: bool,
+    pub tunnel_random: bool,
+    pub filter_allowed: bool,
+    pub filter_mode: String,
+    pub filter_selecting: bool,
+    pub filter_has_item: bool,
     pub visible: bool,
     pub creative: bool,
     pub trash_available: bool,
@@ -113,6 +171,7 @@ pub struct InventoryView {
     pub equipment: Vec<EquipmentSlotView>,
     pub browser_items: Vec<InventoryItemView>,
     pub browser_capacity: usize,
+    pub browser_pages: usize,
     pub browser_page: String,
     pub browser_previous: bool,
     pub browser_next: bool,
@@ -122,13 +181,23 @@ fn item_category(item: ItemKind, palette: &BlockPalette) -> &str {
     palette
         .item_categories
         .get(&item)
+        .or_else(|| palette.item_categories.get(&item.preview_item()))
         .or_else(|| {
+            item.cape()
+                .and_then(|cape| palette.item_categories.get(&ItemKind::Cape(cape.undyed())))
+        })
+        .or_else(|| {
+            if matches!(item, ItemKind::Dye(_)) {
+                return palette
+                    .item_categories
+                    .get(&ItemKind::Dye(terra_core::beds::DyeColor::White));
+            }
             item.block_material()
                 .and_then(|id| palette.item_categories.get(&ItemKind::Block(id)))
         })
         .map_or(
-            if matches!(item, ItemKind::Mineral(_)) {
-                "resources"
+            if matches!(item, ItemKind::Dye(_) | ItemKind::Mineral(_)) {
+                "materials"
             } else {
                 "terrain"
             },
@@ -136,18 +205,58 @@ fn item_category(item: ItemKind, palette: &BlockPalette) -> &str {
         )
 }
 
+fn color_label(color: terra_core::beds::DyeColor) -> String {
+    match color {
+        terra_core::beds::DyeColor::Rgb(rgb) => mixer::format_target(rgb),
+        _ => color.slug().into(),
+    }
+}
+
 fn item_metadata(item: ItemKind, palette: &BlockPalette) -> (String, String, String) {
+    if let ItemKind::HeraldicCape { cape, heraldry } = item {
+        let (name, _, description) = item_metadata(ItemKind::Cape(cape), palette);
+        return (
+            name,
+            item.identifier(),
+            format!("{description}\nHeraldry: {}", heraldry.icon.label()),
+        );
+    }
+    if let ItemKind::Potion(id) = item
+        && let Some(recipe) = terra_core::brewing::recipe(id)
+    {
+        return (
+            recipe.name.clone(),
+            item.identifier(),
+            alchemy::effects(recipe),
+        );
+    }
+    if let ItemKind::Dye(terra_core::beds::DyeColor::Rgb(rgb)) = item {
+        let hex = mixer::format_target(rgb);
+        return (
+            format!("Mixed Dye {hex}"),
+            item.identifier(),
+            format!("RGB: {}, {}, {}", rgb[0], rgb[1], rgb[2]),
+        );
+    }
     if let ItemKind::Cape(cape) = item
         && cape.color != terra_core::beds::DyeColor::White
     {
         let (name, _, description) = item_metadata(ItemKind::Cape(cape.undyed()), palette);
         return (
-            format!("{name} ({})", cape.color.slug()),
+            format!("{name} ({})", color_label(cape.color)),
             item.identifier(),
             description,
         );
     }
     match item {
+        ItemKind::FilledWateringCan { tool, units } => {
+            let (name, _, description) = item_metadata(ItemKind::Tool(tool), palette);
+            (
+                format!("{name} ({units}/{})", tool.watering_capacity()),
+                item.identifier(),
+                description,
+            )
+        }
         ItemKind::Tool(_)
         | ItemKind::Stick
         | ItemKind::Mineral(_)
@@ -156,10 +265,16 @@ fn item_metadata(item: ItemKind, palette: &BlockPalette) -> (String, String, Str
         | ItemKind::Armor(_)
         | ItemKind::Accessory(_)
         | ItemKind::Cape(_)
+        | ItemKind::HeraldicCape { .. }
         | ItemKind::Dust(_)
         | ItemKind::Crop(_)
         | ItemKind::Flower(_)
-        | ItemKind::Dye(_) => {
+        | ItemKind::Dye(_)
+        | ItemKind::GlassBottle
+        | ItemKind::WaterBottle
+        | ItemKind::Potion(_)
+        | ItemKind::Apple
+        | ItemKind::AppleCore => {
             let (name, description) =
                 palette
                     .item_metadata
@@ -180,7 +295,17 @@ fn item_metadata(item: ItemKind, palette: &BlockPalette) -> (String, String, Str
         ItemKind::DyedBed { material, color } => {
             let (name, _, description) = item_metadata(ItemKind::Block(material), palette);
             (
-                format!("{name} ({})", color.slug()),
+                format!("{name} ({})", color_label(color)),
+                item.identifier(),
+                description,
+            )
+        }
+        ItemKind::TintedBlock { color, .. } => {
+            let canonical = terra_core::tints::canonical_item(item)
+                .expect("Tinted blocks have canonical previews");
+            let (name, _, description) = item_metadata(canonical, palette);
+            (
+                format!("{name} ({})", mixer::format_target(color)),
                 item.identifier(),
                 description,
             )
@@ -198,14 +323,25 @@ fn item_metadata(item: ItemKind, palette: &BlockPalette) -> (String, String, Str
                     )
                 },
                 |choice| {
-                    let identifier = if choice.identifier.contains("::") {
+                    let mut identifier = if choice.identifier.contains("::") {
                         choice.identifier.clone()
                     } else {
                         format!("teramic::{}", choice.identifier)
                     };
+                    if let ItemKind::WoodenBlock { wood, .. } = item {
+                        identifier.push('#');
+                        identifier.push_str(wood.slug());
+                    }
                     let name = item
                         .wood_species()
-                        .filter(|wood| *wood != terra_core::WoodSpecies::Oak)
+                        .filter(|wood| {
+                            *wood
+                                != if id == terra_core::plumbing::BASIN {
+                                    terra_core::WoodSpecies::Spruce
+                                } else {
+                                    terra_core::WoodSpecies::Oak
+                                }
+                        })
                         .map_or_else(
                             || choice.name.clone(),
                             |wood| format!("{} ({})", choice.name, wood.slug()),
@@ -227,6 +363,28 @@ fn item_metadata(item: ItemKind, palette: &BlockPalette) -> (String, String, Str
 
 pub(super) fn item_view(item: ItemKind, count: u16, palette: &BlockPalette) -> InventoryItemView {
     let (name, identifier, mut description) = item_metadata(item, palette);
+    if let Some(tool) = item.tool_kind().filter(|tool| tool.watering_capacity() > 0) {
+        if !description.is_empty() {
+            description.push('\n');
+        }
+        description.push_str(&format!(
+            "Wasser: {} / {}",
+            item.watering_units(),
+            tool.watering_capacity()
+        ));
+    }
+    if let Some(speed) = terra_core::brewing::spoon_speed(item) {
+        if !description.is_empty() {
+            description.push('\n');
+        }
+        description.push_str(&format!("Brewing speed: {speed:.1}x | Reusable"));
+    }
+    if let Some(seconds) = terra_core::brewing::drink_seconds(item) {
+        if !description.is_empty() {
+            description.push('\n');
+        }
+        description.push_str(&format!("Drink: {seconds:.1} s | Returns a glass bottle"));
+    }
     if let Some(equipment) = terra_core::equipment_definition(item) {
         use std::fmt::Write;
         if !description.is_empty() {
@@ -288,6 +446,7 @@ pub(super) fn item_view(item: ItemKind, count: u16, palette: &BlockPalette) -> I
         }
     }
     InventoryItemView {
+        item: Some(item),
         id: item_id(item),
         item_id: item_id(item),
         name,
@@ -387,7 +546,7 @@ impl CatalogViewCache {
 
 #[allow(clippy::too_many_arguments)]
 pub(super) fn update_view(
-    state: Res<InventoryState>,
+    mut state: ResMut<InventoryState>,
     palette: Res<BlockPalette>,
     active: Res<ActiveItem>,
     context: InventoryContext,
@@ -409,6 +568,15 @@ pub(super) fn update_view(
         equipment: session.stats.equipment,
         outcome: session.last_inventory,
         container_anchor: session.container.as_ref().map(|container| container.anchor),
+        container_view: session.container.as_ref().map(|container| container.view),
+        attached_campfire: session
+            .container
+            .as_ref()
+            .is_some_and(|container| container.attached_campfire),
+        container_material: session
+            .container
+            .as_ref()
+            .and_then(|container| context.chunks.as_ref()?.block_at(container.anchor)),
         container_workbench: session
             .container
             .as_ref()
@@ -421,6 +589,41 @@ pub(super) fn update_view(
             .container
             .as_ref()
             .and_then(|container| container.crusher.clone()),
+        mixer: session
+            .container
+            .as_ref()
+            .and_then(|container| container.mixer.clone()),
+        cauldron: session
+            .container
+            .as_ref()
+            .and_then(|container| container.cauldron.clone()),
+        campfire: session
+            .container
+            .as_ref()
+            .and_then(|container| container.campfire.clone()),
+        filter: session
+            .container
+            .as_ref()
+            .and_then(|container| container.filter),
+        distributor: session
+            .container
+            .as_ref()
+            .and_then(|container| container.distributor),
+        tunnel_random: session
+            .container
+            .as_ref()
+            .and_then(|container| container.tunnel_random),
+        mixer_drive: session
+            .container
+            .as_ref()
+            .filter(|container| container.mixer.is_some())
+            .and_then(|container| {
+                session
+                    .kinetics
+                    .iter()
+                    .find(|drive| drive.position == container.anchor)
+                    .copied()
+            }),
         container_revisions: std::array::from_fn(|index| {
             session
                 .container
@@ -461,6 +664,45 @@ pub(super) fn update_view(
     let container = session.container.as_ref();
     let furnace = container.and_then(|container| container.furnace.as_ref());
     let crusher = container.and_then(|container| container.crusher.as_ref());
+    let mixer = container.and_then(|container| container.mixer.as_ref());
+    let cauldron = container.and_then(|container| container.cauldron.as_ref());
+    let campfire = container.and_then(|container| container.campfire.as_ref());
+    let funnel_filter = container.and_then(|container| {
+        container.filter.map(|filter| {
+            queue
+                .as_ref()
+                .and_then(|queue| queue.funnel_filter(container.anchor))
+                .unwrap_or(filter)
+        })
+    });
+    let distributor = container.and_then(|container| container.distributor);
+    let distributor_filters = distributor.map_or_else(Vec::new, |distributor| {
+        distributor
+            .filters
+            .into_iter()
+            .enumerate()
+            .map(|(index, confirmed)| {
+                let index = index as u8;
+                let config = queue
+                    .as_ref()
+                    .and_then(|queue| {
+                        container
+                            .and_then(|container| queue.distributor_filter(container.anchor, index))
+                    })
+                    .unwrap_or(confirmed);
+                let selecting = state.filter_selecting && state.filter_output == index;
+                DistributorFilterView {
+                    index,
+                    name: ["Left", "Forward", "Right"][usize::from(index)].into(),
+                    slots: vec![filter::output_slot(index, config, selecting, &palette)],
+                    allowed: config.allowed,
+                    mode: if config.allowed { "Allowed" } else { "Blocked" }.into(),
+                    has_item: config.item.is_some(),
+                    selecting,
+                }
+            })
+            .collect()
+    });
     let container_items = container.map_or_else(Vec::new, |container| {
         container
             .halves
@@ -471,10 +713,16 @@ pub(super) fn update_view(
                     .as_ref()
                     .and_then(|p| p.halves.get(half_index))
                     .unwrap_or(&half.inventory);
-                let slots = if furnace.is_some() {
+                let slots = if cauldron.is_some() {
+                    terra_core::brewing::SLOTS as u8
+                } else if campfire.is_some() {
+                    terra_core::campfire::SLOTS as u8
+                } else if furnace.is_some() {
                     4
                 } else if crusher.is_some() {
                     2
+                } else if mixer.is_some() {
+                    terra_core::mixer::SLOTS as u8
                 } else {
                     terra_core::containers::CHEST_SLOTS as u8
                 };
@@ -488,6 +736,22 @@ pub(super) fn update_view(
                 slot
             })
             .collect::<Vec<_>>()
+    });
+    let mixer_recipe = mixer.zip(container).and_then(|(machine, container)| {
+        let inventory = projection
+            .as_ref()
+            .and_then(|p| p.halves.first())
+            .or_else(|| container.halves.first().map(|half| &half.inventory))?;
+        let target = queue
+            .as_ref()
+            .and_then(|q| q.mixer_target(container.anchor))
+            .unwrap_or(machine.target);
+        Some(mixer::recipe_view(
+            &container_items,
+            inventory,
+            target,
+            &palette,
+        ))
     });
     let selected = active
         .0
@@ -508,6 +772,9 @@ pub(super) fn update_view(
     };
     let (browser_items, pages, page) =
         catalog.page(category, &query, page_size, state.page, selected);
+    if state.page != page {
+        state.page = page;
+    }
     let items: Vec<_> = (9..terra_core::INVENTORY_SLOTS as u8)
         .map(|index| {
             let mut slot = slot_view(
@@ -580,6 +847,34 @@ pub(super) fn update_view(
         });
     let can_craft = crafting.can_cursor;
     let next = InventoryView {
+        source_container: container.map(|container| (container.anchor, container.view)),
+        hearth_navigation: container.is_some_and(|container| {
+            container.attached_campfire
+                && (container.cauldron.is_some() || container.campfire.is_some())
+        }),
+        hearth_show_fire: cauldron.is_some(),
+        hearth_navigation_enabled: session.inventory.cursor.is_none()
+            && queue.as_ref().is_none_or(|queue| queue.is_empty())
+            && state.container_open_response.is_none(),
+        cauldron: alchemy::cauldron(
+            container,
+            projection
+                .as_ref()
+                .and_then(|p| p.halves.first())
+                .or_else(|| container?.halves.first().map(|half| &half.inventory)),
+            &container_items,
+            queue.as_deref(),
+            &palette,
+        ),
+        campfire: alchemy::campfire(
+            container,
+            projection
+                .as_ref()
+                .and_then(|p| p.halves.first())
+                .or_else(|| container?.halves.first().map(|half| &half.inventory)),
+            &container_items,
+            queue.as_deref(),
+        ),
         prewarming: view.prewarming || !view.visible,
         layout_style: if state.open && !view.open {
             "opacity: 0; pointer-events: none;".into()
@@ -587,11 +882,82 @@ pub(super) fn update_view(
             view.layout_style.clone()
         },
         open: state.open,
+        player: container.is_none() && !state.assembly,
+        browser_visible: !state.browser_collapsed,
         assembly: state.assembly,
         container: container.is_some_and(|container| {
             container.workbench.is_none()
                 && container.furnace.is_none()
                 && container.crusher.is_none()
+                && container.mixer.is_none()
+                && container.filter.is_none()
+                && container.distributor.is_none()
+                && container.tunnel_random.is_none()
+                && container.cauldron.is_none()
+                && container.campfire.is_none()
+        }),
+        filtered_funnel: funnel_filter.is_some() || distributor.is_some(),
+        distributor_filters,
+        distributor: distributor.is_some(),
+        tunnel_options: container.is_some_and(|container| container.tunnel_random.is_some()),
+        tunnel_random: container.is_some_and(|container| {
+            queue
+                .as_ref()
+                .and_then(|queue| queue.tunnel_random(container.anchor))
+                .or(container.tunnel_random)
+                .unwrap_or(false)
+        }),
+        funnel_filter: funnel_filter
+            .map(|config| filter::slot(config, state.filter_selecting, &palette))
+            .into_iter()
+            .collect(),
+        filter_allowed: funnel_filter.is_none_or(|filter| filter.allowed),
+        filter_mode: if funnel_filter.is_none_or(|filter| filter.allowed) {
+            "Allowed"
+        } else {
+            "Blocked"
+        }
+        .into(),
+        filter_selecting: state.filter_selecting,
+        filter_has_item: funnel_filter.is_some_and(|filter| filter.item.is_some()),
+        mixer: mixer.is_some(),
+        mixer_input: mixer_recipe
+            .as_ref()
+            .map_or_else(Vec::new, |recipe| recipe.inputs.clone()),
+        mixer_recipe: mixer_recipe
+            .as_ref()
+            .map_or_else(String::new, |recipe| recipe.requirements.clone()),
+        mixer_output: mixer
+            .and_then(|_| container_items.get(terra_core::mixer::OUTPUT).cloned())
+            .into_iter()
+            .collect(),
+        mixer_color: mixer.map_or_else(String::new, |machine| {
+            mixer::format_target(
+                container
+                    .and_then(|c| queue.as_ref().and_then(|q| q.mixer_target(c.anchor)))
+                    .unwrap_or(machine.target),
+            )
+        }),
+        mixer_progress_style: format!(
+            "width: {:.1}%;",
+            mixer.map_or(0.0, |machine| machine.progress.clamp(0.0, 1.0) * 100.0)
+        ),
+        mixer_working: mixer.is_some_and(|machine| machine.working)
+            && container.is_some_and(|container| {
+                session.kinetics.iter().any(|drive| {
+                    drive.position == container.anchor && !drive.overloaded && drive.rpm != 0.0
+                })
+            }),
+        mixer_status: mixer.map_or_else(String::new, |machine| {
+            mixer::status(
+                machine,
+                container.and_then(|c| {
+                    session
+                        .kinetics
+                        .iter()
+                        .find(|drive| drive.position == c.anchor)
+                }),
+            )
         }),
         crusher: crusher.is_some(),
         crusher_input: crusher
@@ -676,7 +1042,9 @@ pub(super) fn update_view(
             )
         }),
         container_items,
-        visible: !session.dead() && menu.as_ref().is_none_or(|menu| menu.world_hud_active()),
+        visible: !session.dead()
+            && session.game_mode != GameMode::Spectator
+            && menu.as_ref().is_none_or(|menu| menu.world_hud_active()),
         creative,
         trash_available: creative
             && (session.inventory.cursor.is_some()
@@ -685,11 +1053,33 @@ pub(super) fn update_view(
         empty: browser_items.is_empty(),
         title: container
             .map_or("Inventory", |container| {
+                if container.cauldron.is_some() {
+                    return "Cauldron";
+                }
+                if container.campfire.is_some() {
+                    return "Campfire";
+                }
                 if container.furnace.is_some() {
                     return "Furnace";
                 }
                 if container.crusher.is_some() {
                     return "Crusher";
+                }
+                if container.mixer.is_some() {
+                    return "Mixer";
+                }
+                if container.distributor.is_some() {
+                    return "Belt Distributor";
+                }
+                if container.filter.is_some() {
+                    return if container.tunnel_random.is_some() {
+                        "Tunnel (Filtered)"
+                    } else {
+                        "Funnel (Filtered)"
+                    };
+                }
+                if container.tunnel_random.is_some() {
+                    return "Tunnel";
                 }
                 if container.workbench.is_some() {
                     return "Workbench";
@@ -760,6 +1150,7 @@ pub(super) fn update_view(
         craft_result,
         browser_items,
         browser_capacity: page_size,
+        browser_pages: pages,
         browser_page: format!("{} / {}", page + 1, pages),
         browser_previous: page > 0,
         browser_next: page + 1 < pages,
@@ -786,6 +1177,7 @@ pub(super) fn update_view(
             .collect(),
         category_dropdown: state.category_dropdown,
         categories: std::iter::once(CategoryView {
+            item: Some(ItemKind::Block(3)),
             id: "all".into(),
             name: "All".into(),
             selected: category == "all",
@@ -797,6 +1189,7 @@ pub(super) fn update_view(
                 .iter()
                 .filter(|entry| entry.id != "all")
                 .map(|entry| CategoryView {
+                    item: Some(entry.icon),
                     id: entry.id.clone(),
                     name: entry.name.clone(),
                     selected: entry.id == category,
@@ -814,6 +1207,121 @@ pub(super) fn update_view(
 mod tests {
     use super::*;
     use terra_network::protocol::inventory::{ContainerHalf, ContainerSnapshot};
+
+    #[test]
+    fn heraldic_capes_keep_the_base_cape_category_and_their_own_preview_identity() {
+        let mut palette = BlockPalette::default();
+        let base = ItemKind::Cape(terra_core::CapeItem::ALL_WHITE[0]);
+        palette
+            .item_categories
+            .insert(base, "example::equipment".into());
+        let cape =
+            base.with_default_heraldry(Some(terra_core::kingdom::KingdomHeraldry::default()));
+        let view = item_view(cape, 1, &palette);
+        assert_eq!(view.category, "example::equipment");
+        assert_eq!(view.identifier, cape.identifier());
+        assert_ne!(view.preview_key, preview_key(base));
+        palette
+            .item_categories
+            .insert(cape, "example::royal_cloth".into());
+        assert_eq!(
+            item_view(cape, 1, &palette).category,
+            "example::royal_cloth"
+        );
+    }
+
+    #[test]
+    fn named_and_rgb_dyes_share_materials_without_catalog_growth_or_overriding_resource_packs() {
+        use terra_core::beds::DyeColor;
+        let mut palette = BlockPalette::default();
+        for color in DyeColor::ALL {
+            palette
+                .item_categories
+                .insert(ItemKind::Dye(color), "materials".into());
+        }
+        let mut catalog = CatalogViewCache::default();
+        catalog.rebuild(&palette);
+        let (page, _, _) = catalog.page("materials", "", 128, 0, None);
+        assert_eq!(
+            page.iter()
+                .filter(|view| matches!(view.item, Some(ItemKind::Dye(_))))
+                .count(),
+            DyeColor::ALL.len()
+        );
+        assert!(page.iter().all(|item| item.category == "materials"));
+        for mineral in terra_core::MineralItem::ALL {
+            let item = ItemKind::Mineral(mineral);
+            assert_eq!(item_view(item, 1, &palette).category, "materials");
+            assert!(page.iter().any(|view| view.item == Some(item)));
+        }
+        let rgb = ItemKind::Dye(DyeColor::Rgb([71, 93, 184]));
+        let view = item_view(rgb, 3, &palette);
+        assert_eq!(view.category, "materials");
+        assert_eq!(view.identifier, rgb.identifier());
+        assert!(view.name.contains("#475DB8"));
+        assert!(view.description.contains("71, 93, 184"));
+        assert!(!catalog.entries.iter().any(|entry| entry.0 == rgb));
+
+        palette.item_categories.clear();
+        palette
+            .item_categories
+            .insert(ItemKind::Dye(DyeColor::White), "example::pigments".into());
+        assert_eq!(item_view(rgb, 1, &palette).category, "example::pigments");
+        palette
+            .item_categories
+            .insert(rgb, "example::special".into());
+        assert_eq!(item_view(rgb, 1, &palette).category, "example::special");
+        let iron = ItemKind::Mineral(terra_core::MineralItem::IronIngot);
+        palette
+            .item_categories
+            .insert(iron, "example::metals".into());
+        assert_eq!(item_view(iron, 1, &palette).category, "example::metals");
+    }
+
+    #[test]
+    fn creative_mechanic_variants_have_distinct_species_metadata_and_previews() {
+        use terra_core::WoodSpecies::{Birch, Cherry, Spruce};
+        let palette = BlockPalette {
+            choices: [141, 144, 148, 149]
+                .into_iter()
+                .map(|id| terra_player::interaction::BlockChoice {
+                    id,
+                    name: format!("Mechanical part {id}"),
+                    identifier: ItemKind::Block(id).identifier(),
+                    description: "A wooden mechanical part".into(),
+                })
+                .collect(),
+            ..Default::default()
+        };
+        let mut catalog = CatalogViewCache::default();
+        catalog.rebuild(&palette);
+        let mut identifiers = std::collections::BTreeSet::new();
+        let mut previews = std::collections::BTreeSet::new();
+        for material in [141, 144, 148, 149] {
+            for wood in [Birch, Spruce, Cherry] {
+                let item = ItemKind::for_wood(material, wood);
+                let entries: Vec<_> = catalog
+                    .entries
+                    .iter()
+                    .filter(|(candidate, ..)| *candidate == item)
+                    .collect();
+                assert_eq!(entries.len(), 1);
+                let view = &entries[0].1;
+                assert_eq!(view.identifier, item.identifier());
+                assert!(view.name.contains(wood.slug()));
+                assert_eq!(view.item_id, item_id(item));
+                assert_eq!(view.preview_key, preview_key(item));
+                assert!(identifiers.insert(view.identifier.clone()));
+                assert!(previews.insert(view.preview_key.clone()));
+                let (page, _, _) =
+                    catalog.page("all", &format!("#{}", wood.slug()), 128, 0, Some(item));
+                assert!(
+                    page.iter()
+                        .any(|entry| entry.item_id == item_id(item) && entry.selected)
+                );
+            }
+        }
+    }
 
     #[test]
     fn catalog_metadata_is_reused_and_only_the_visible_filtered_page_is_cloned() {
@@ -910,8 +1418,16 @@ mod tests {
         app.world_mut().resource_mut::<ClientSession>().container = Some(ContainerSnapshot {
             anchor,
             workbench: None,
+            view: ContainerView::Primary,
+            attached_campfire: false,
+            cauldron: None,
+            campfire: None,
+            tunnel_random: None,
             furnace: None,
             crusher: None,
+            mixer: None,
+            filter: None,
+            distributor: None,
             halves: vec![ContainerHalf {
                 position: anchor,
                 inventory: default(),
@@ -920,6 +1436,16 @@ mod tests {
         app.update();
         let view = app.world().resource::<InventoryView>();
         assert_eq!(view.title, "Chest");
+        assert_eq!(
+            view.source_container,
+            Some((anchor, ContainerView::Primary))
+        );
+        assert!(
+            tilt_ui::serde_json::to_value(view)
+                .unwrap()
+                .get("source_container")
+                .is_none()
+        );
         assert!(view.container);
         assert_eq!(view.container_items.len(), 18);
         assert_eq!(view.container_items[17].index, "17");
@@ -949,8 +1475,16 @@ mod tests {
         app.world_mut().resource_mut::<ClientSession>().container = Some(ContainerSnapshot {
             anchor,
             workbench: Some([-11, 60, 8]),
+            view: ContainerView::Primary,
+            attached_campfire: false,
+            cauldron: None,
+            campfire: None,
+            tunnel_random: None,
             furnace: None,
             crusher: None,
+            mixer: None,
+            filter: None,
+            distributor: None,
             halves: vec![ContainerHalf {
                 position: anchor,
                 inventory: default(),
@@ -980,8 +1514,16 @@ mod tests {
         app.world_mut().resource_mut::<ClientSession>().container = Some(ContainerSnapshot {
             anchor,
             workbench: None,
+            view: ContainerView::Primary,
+            attached_campfire: false,
+            cauldron: None,
+            campfire: None,
+            tunnel_random: None,
             furnace: None,
             crusher: None,
+            mixer: None,
+            filter: None,
+            distributor: None,
             halves: vec![ContainerHalf {
                 position: anchor,
                 inventory: default(),
@@ -1018,6 +1560,11 @@ mod tests {
         app.world_mut().resource_mut::<ClientSession>().container = Some(ContainerSnapshot {
             anchor,
             workbench: None,
+            view: ContainerView::Primary,
+            attached_campfire: false,
+            cauldron: None,
+            campfire: None,
+            tunnel_random: None,
             furnace: Some(terra_core::furnace::FurnaceView {
                 progress: 0.25,
                 burn_remaining: 12.0,
@@ -1027,6 +1574,9 @@ mod tests {
                 vented: true,
             }),
             crusher: None,
+            mixer: None,
+            filter: None,
+            distributor: None,
             halves: vec![ContainerHalf {
                 position: anchor,
                 inventory: default(),

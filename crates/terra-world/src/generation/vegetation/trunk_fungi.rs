@@ -90,6 +90,8 @@ mod tests {
         use terra_core::{WorldConfig, WorldSeed};
         let terrain = TerraGenerator::new(WorldConfig {
             seed: WorldSeed(42042),
+            landscape_revision: 3,
+            sea_level: 8.0,
             base_height: 12.0,
             hill_amplitude: 0.0,
             mountain_amplitude: 0.0,

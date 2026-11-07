@@ -381,16 +381,19 @@ pub(super) fn readback(
                 staging
                     .slice(..copied)
                     .map_async(MapMode::Read, move |result| {
-                        if result.is_ok() {
-                            let mapped = buffer.slice(..copied).get_mapped_range();
+                        if result.is_ok()
+                            && let Ok(mapped) = buffer.slice(..copied).get_mapped_range()
+                        {
                             let sample = decode(&mapped, &parts, sample);
                             drop(mapped);
-                            buffer.unmap();
                             if let Ok(mut last) = collector.last.lock() {
                                 *last = Some(sample);
                             }
                         } else {
                             tracing::warn!("Indirect draw diagnostics readback failed");
+                        }
+                        if result.is_ok() {
+                            buffer.unmap();
                         }
                         collector.in_flight.store(false, Ordering::Relaxed);
                     });

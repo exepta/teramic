@@ -6,9 +6,13 @@ use bevy::{
 };
 
 pub(crate) fn install(app: &mut App) {
-    let reference = std::env::args().any(|arg| arg.starts_with("--smoke-test"))
-        && std::env::var("TERRA_CORE3D_EXECUTOR").is_ok_and(|mode| mode == "parallel");
-    if !reference && let Some(render) = app.get_sub_app_mut(RenderApp) {
+    let smoke = std::env::args().any(|arg| arg.starts_with("--smoke-test"));
+    let reference =
+        smoke && std::env::var("TERRA_CORE3D_EXECUTOR").is_ok_and(|mode| mode == "parallel");
+    if reference {
+        return;
+    }
+    if let Some(render) = app.get_sub_app_mut(RenderApp) {
         render.edit_schedule(Core3d, |schedule| {
             schedule.set_executor(SingleThreadedExecutor::new());
         });

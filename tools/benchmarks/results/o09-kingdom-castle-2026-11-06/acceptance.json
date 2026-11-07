@@ -1,0 +1,64 @@
+{
+  "completed_ids": [
+    "O09",
+    "F43"
+  ],
+  "workspace_tests": {
+    "command": "cargo test --workspace --lib --bins --no-fail-fast",
+    "passed": 3836,
+    "failed": 0,
+    "ignored": 9,
+    "log": "logs/workspace-tests-final.log"
+  },
+  "python_tests": {
+    "passed": 19,
+    "failed": 0,
+    "log": "logs/python-tests.log"
+  },
+  "clippy": {
+    "command": "cargo clippy --workspace --all-targets -- -D warnings",
+    "exit_code": 0,
+    "log": "logs/clippy-final.log"
+  },
+  "format": {
+    "checked_task_rust_files": 46,
+    "exit_code": 0,
+    "note": "45 files in format-check.log plus terra-voxel/src/materials.rs checked separately"
+  },
+  "native": {
+    "castle_gallery": {
+      "exit_code": 0,
+      "captures": 3
+    },
+    "kingdom_create_and_reload": {
+      "exit_code": [
+        0,
+        0
+      ],
+      "captures": 6,
+      "persistent_save_acknowledged": true
+    },
+    "inventory_reference": {
+      "exit_code": 0,
+      "captures": 25,
+      "os_pointer": true
+    },
+    "station_surfaces": {
+      "exit_code": 0,
+      "captures": 26,
+      "projection_only": true
+    }
+  },
+  "performance": {
+    "before_cold_transition_max_ms": 94.525945,
+    "after_cold_transition_max_ms": 54.843919,
+    "before_retained_transition_max_ms": 22.446119,
+    "after_retained_transition_max_ms": 19.694211,
+    "readiness_is_gpu_present_acknowledgement": false
+  },
+  "source_provenance": {
+    "paired_sources": "provenance/game-source-hashes.json",
+    "later_formatting_only_cleanup": "provenance/post-native-format.json"
+  },
+  "open_hardware_and_long_soak_acceptance": "A05 remains open"
+}

@@ -1,7 +1,11 @@
 //! Shared, validated recipe data and atomic inventory transactions.
 use crate::{Inventory, ItemKind, ItemStack, STACK_LIMIT};
 use serde::{Deserialize, Serialize};
-use std::{collections::BTreeMap, path::Path, sync::OnceLock};
+use std::{
+    collections::BTreeMap,
+    path::Path,
+    sync::{Arc, OnceLock},
+};
 
 pub const MAX_CRAFT_BATCH: u16 = 128;
 pub const MAX_RECIPES: usize = 512;
@@ -13,6 +17,12 @@ pub enum CraftStation {
     Workbench,
 }
 
+#[cfg(test)]
+mod heraldry_tests;
+#[cfg(test)]
+mod rgb_tests;
+#[cfg(test)]
+mod shape_rgb_tests;
 #[cfg(test)]
 mod tests;
 
@@ -27,12 +37,19 @@ impl Ingredient {
     pub fn matches(self, item: ItemKind) -> bool {
         if self.wood {
             matches!(item, ItemKind::Block(16..=18 | 135))
+        } else if let ItemKind::Block(material) = self.item
+            && ItemKind::supports_wood(material)
+        {
+            item.block_material() == Some(material)
         } else if let ItemKind::Block(material @ 71..=73) = self.item {
             item.block_material() == Some(material)
         } else if let ItemKind::Block(material @ (103 | 106)) = self.item {
             item.block_material().and_then(crate::textiles::base) == Some(material)
+        } else if let ItemKind::Block(material @ (104 | 105)) = self.item {
+            item.block_material() == Some(material)
         } else if let ItemKind::Cape(cape) = self.item {
-            matches!(item, ItemKind::Cape(candidate) if candidate.material == cape.material)
+            item.cape()
+                .is_some_and(|candidate| candidate.material == cape.material)
         } else if self.item == ItemKind::Prop(crate::ResourcePropKind::Flower) {
             matches!(
                 item,
@@ -59,8 +76,49 @@ pub struct CraftGridCell {
     pub count: u16,
 }
 
-fn resolved_output(mut output: ItemStack, wood: [u32; 4]) -> ItemStack {
-    if let Some(material @ 28..=29) = output.item.block_material() {
+#[derive(Default)]
+struct WoodInputs {
+    planks: [u32; 4],
+    parts: [u32; 4],
+    pigment: Option<crate::beds::DyeColor>,
+    source_pigments: BTreeMap<crate::beds::DyeColor, u32>,
+}
+impl WoodInputs {
+    fn consume(&mut self, item: ItemKind, count: u16) {
+        if let ItemKind::Dye(color) = item {
+            self.pigment = Some(color);
+        }
+        if let Some(color) = crate::tints::color(item)
+            .map(crate::beds::DyeColor::Rgb)
+            .or_else(|| item.block_material().and_then(crate::textiles::color))
+        {
+            *self.source_pigments.entry(color).or_default() += u32::from(count);
+        }
+        if let Some(species) = item.wood_species() {
+            let counts = if matches!(item, ItemKind::Block(16..=18 | 135)) {
+                &mut self.planks
+            } else {
+                &mut self.parts
+            };
+            counts[species as usize] += u32::from(count);
+        }
+    }
+}
+
+fn resolved_output(mut output: ItemStack, inputs: WoodInputs) -> ItemStack {
+    if let (ItemKind::Cape(mut cape), Some(color)) = (output.item, inputs.pigment) {
+        cape.color = color;
+        output.item = ItemKind::Cape(cape);
+    }
+    if let Some(material) = output.item.block_material()
+        && ItemKind::supports_wood(material)
+    {
+        // Fresh planks choose the finish; an existing axle or gear may use another wood.
+        let wood = if inputs.planks.iter().any(|count| *count > 0) {
+            inputs.planks
+        } else {
+            inputs.parts
+        };
         let species = if wood[3] > wood[0].max(wood[1]).max(wood[2]) {
             crate::WoodSpecies::Cherry
         } else if wood[1] > wood[0] && wood[1] >= wood[2] {
@@ -71,6 +129,24 @@ fn resolved_output(mut output: ItemStack, wood: [u32; 4]) -> ItemStack {
             crate::WoodSpecies::Oak
         };
         output.item = ItemKind::for_wood(material, species);
+    }
+    let pigment = inputs.pigment.or_else(|| {
+        inputs
+            .source_pigments
+            .iter()
+            .max_by_key(|(color, count)| (**count, std::cmp::Reverse(**color)))
+            .map(|(&color, _)| color)
+            .filter(|color| {
+                // Unpainted white wool cuts into canonical white shapes. Explicit
+                // dye and RGB metadata remain distinct and are preserved above.
+                *color != crate::beds::DyeColor::White
+                    || !matches!(output.item, ItemKind::Block(104 | 105))
+            })
+    });
+    if let Some(color) = pigment
+        && let Some(item) = crate::tints::recolored(output.item, color)
+    {
+        output.item = item;
     }
     output
 }
@@ -127,8 +203,9 @@ impl CraftError {
 #[derive(Debug, Clone, Default)]
 #[cfg_attr(feature = "bevy", derive(bevy::prelude::Resource))]
 pub struct RecipeBook {
-    recipes: BTreeMap<u64, Recipe>,
+    recipes: Arc<BTreeMap<u64, Recipe>>,
     pub error: Option<String>,
+    cape_heraldry: Option<crate::kingdom::KingdomHeraldry>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -280,6 +357,23 @@ fn match_shapeless(
 }
 
 impl RecipeBook {
+    /// A cheap request-local view; the immutable catalog remains shared and the
+    /// authoritative server supplies heraldry, never the inventory packet.
+    pub fn with_cape_heraldry(&self, heraldry: Option<crate::kingdom::KingdomHeraldry>) -> Self {
+        Self {
+            cape_heraldry: heraldry,
+            ..self.clone()
+        }
+    }
+
+    fn resolve_output(&self, output: ItemStack, inputs: WoodInputs) -> ItemStack {
+        let explicitly_dyed = inputs.pigment.is_some();
+        let mut output = resolved_output(output, inputs);
+        if !explicitly_dyed {
+            output.item = output.item.with_default_heraldry(self.cape_heraldry);
+        }
+        output
+    }
     pub fn from_json(text: &str) -> Result<Self, String> {
         if text.len() > 1024 * 1024 {
             return Err("Recipe catalog exceeds 1 MiB".into());
@@ -331,14 +425,14 @@ impl RecipeBook {
         if self.recipes.len() + recipes.len() > MAX_RECIPES {
             return Err("Too many recipes (maximum 512)".into());
         }
-        let mut next = self.recipes.clone();
+        let mut next = self.recipes.as_ref().clone();
         for recipe in recipes {
             recipe.validate()?;
             if next.insert(recipe.key(), recipe).is_some() {
                 return Err("Duplicate recipe ID or key collision".into());
             }
         }
-        self.recipes = next;
+        self.recipes = Arc::new(next);
         Ok(())
     }
     /// Mod packs add namespaced recipes; a bad file never partly changes the book.
@@ -409,7 +503,7 @@ impl RecipeBook {
             return Err(CraftError::WrongStation);
         }
         let mut next = inventory.clone();
-        let mut wood = [0_u32; 4];
+        let mut wood = WoodInputs::default();
         for ingredient in recipe.ingredients() {
             let needed = ingredient
                 .count
@@ -422,9 +516,7 @@ impl RecipeBook {
             for stack in &mut next.slots {
                 if ingredient.matches(stack.item) && remaining > 0 {
                     let used = remaining.min(stack.count);
-                    if let Some(species) = stack.item.wood_species() {
-                        wood[species as usize] += u32::from(used);
-                    }
+                    wood.consume(stack.item, used);
                     stack.count -= used;
                     remaining -= used;
                     if stack.count == 0 {
@@ -434,7 +526,7 @@ impl RecipeBook {
             }
         }
         let amount = recipe.output.count * count;
-        let output = resolved_output(recipe.output, wood);
+        let output = self.resolve_output(recipe.output, wood);
         match destination {
             CraftDestination::Inventory => {
                 if next.insert(output.item, amount) > 0 {
@@ -574,13 +666,11 @@ impl RecipeBook {
         key: u64,
         consumed: &[(u8, u16)],
     ) -> Option<ItemStack> {
-        let mut wood = [0_u32; 4];
+        let mut wood = WoodInputs::default();
         for &(slot, count) in consumed {
-            if let Some(species) = inventory.slot(usize::from(slot))?.item.wood_species() {
-                wood[species as usize] += u32::from(count);
-            }
+            wood.consume(inventory.slot(usize::from(slot))?.item, count);
         }
-        Some(resolved_output(self.get(key)?.output, wood))
+        Some(self.resolve_output(self.get(key)?.output, wood))
     }
     pub fn output_for_reserved_grid(
         &self,
@@ -657,6 +747,41 @@ impl RecipeBook {
         self.iter()
             .filter(|r| r.station == CraftStation::Hand || station == CraftStation::Workbench)
             .find_map(|recipe| {
+                let mut custom;
+                let recipe = if (matches!(recipe.output.item, ItemKind::Cape(_))
+                    || recipe
+                        .output
+                        .item
+                        .block_material()
+                        .is_some_and(crate::tints::dyeable))
+                    && let Some(color) = cells
+                        .iter()
+                        .flatten()
+                        .filter_map(|slot| inventory.slot(usize::from(*slot)))
+                        .find_map(|stack| match stack.item {
+                            ItemKind::Dye(c)
+                                if matches!(c, crate::beds::DyeColor::Rgb(_))
+                                    || matches!(
+                                        recipe.output.item.block_material(),
+                                        Some(104 | 105 | 148)
+                                    ) =>
+                            {
+                                Some(c)
+                            }
+                            _ => None,
+                        }) {
+                    custom = recipe.clone();
+                    if let RecipePattern::Shapeless { ingredients } = &mut custom.pattern {
+                        for ingredient in ingredients {
+                            if matches!(ingredient.item, ItemKind::Dye(_)) {
+                                ingredient.item = ItemKind::Dye(color);
+                            }
+                        }
+                    }
+                    &custom
+                } else {
+                    recipe
+                };
                 let ingredients: Vec<_> = match &recipe.pattern {
                     RecipePattern::Shapeless { ingredients } => {
                         match_shapeless(inventory, cells, ingredients)?
@@ -762,15 +887,13 @@ impl RecipeBook {
             return false;
         };
         let mut next = inventory.clone();
-        let mut wood = [0_u32; 4];
+        let mut wood = WoodInputs::default();
         for (slot, needed) in consumed {
             let Some(needed) = needed.checked_mul(count) else {
                 return false;
             };
             let stack = &mut next.slots[usize::from(slot)];
-            if let Some(species) = stack.item.wood_species() {
-                wood[species as usize] += u32::from(needed);
-            }
+            wood.consume(stack.item, needed);
             if stack.count < needed {
                 return false;
             }
@@ -779,7 +902,7 @@ impl RecipeBook {
                 *stack = ItemStack::EMPTY;
             }
         }
-        let output = resolved_output(recipe.output, wood);
+        let output = self.resolve_output(recipe.output, wood);
         match destination {
             CraftDestination::Inventory => {
                 if next.insert(output.item, output.count * count) > 0 {

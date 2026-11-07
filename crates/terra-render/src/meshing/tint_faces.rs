@@ -1,8 +1,22 @@
 use terra_voxel::meshing::BlockFace;
 
-pub(super) fn split(face: BlockFace, tint: &crate::appearance::GroundTint) -> Vec<BlockFace> {
+pub(super) fn split(
+    face: BlockFace,
+    tint: &crate::appearance::GroundTint,
+    authored: bool,
+) -> Vec<BlockFace> {
     let mut result = Vec::new();
-    subdivide(face, &|point| tint.at(point, face.material), &mut result);
+    subdivide(
+        face,
+        &|point| {
+            if authored && face.material == 1 {
+                tint.authored_grass_at(point)
+            } else {
+                tint.at(point, face.material)
+            }
+        },
+        &mut result,
+    );
     result
 }
 

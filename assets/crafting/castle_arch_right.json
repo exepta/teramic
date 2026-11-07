@@ -1,0 +1,22 @@
+{
+  "id": "teramic::castle_arch_right",
+  "name": "Mauerbogen Rechts",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "block": 184
+    },
+    "count": 1
+  },
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "block": 183
+        },
+        "count": 1
+      }
+    ]
+  }
+}

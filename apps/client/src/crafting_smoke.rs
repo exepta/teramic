@@ -60,6 +60,9 @@ struct Fixture {
     failure_started: Option<Instant>,
     page_probes: u8,
     hover_attempts: u8,
+    browser_inventory: Option<terra_core::Inventory>,
+    browser_grid: Vec<(String, String, String)>,
+    browser_resolution: Option<UVec2>,
 }
 pub(crate) fn install(app: &mut App) {
     let now = Instant::now();
@@ -74,6 +77,9 @@ pub(crate) fn install(app: &mut App) {
         failure_started: None,
         page_probes: 0,
         hover_attempts: 0,
+        browser_inventory: None,
+        browser_grid: Vec::new(),
+        browser_resolution: None,
     })
     .insert_resource(bevy::winit::WinitSettings::continuous())
     .add_systems(PreUpdate, run.after(bevy::input::InputSystems));
@@ -137,6 +143,317 @@ fn capture(world: &mut World, name: &str) -> Result<(), String> {
         ));
     Ok(())
 }
+fn recipe_grid_stamp(world: &World) -> Vec<(String, String, String)> {
+    world
+        .resource::<terra_ui::CraftingView>()
+        .grid
+        .iter()
+        .map(|slot| (slot.item_id.clone(), slot.count.clone(), slot.index.clone()))
+        .collect()
+}
+
+fn restore_browser_resolution(world: &mut World, f: &Fixture) {
+    if let Some(size) = f.browser_resolution {
+        for mut window in world
+            .query_filtered::<&mut Window, With<bevy::window::PrimaryWindow>>()
+            .iter_mut(world)
+        {
+            window.resolution.set_physical_resolution(size.x, size.y);
+        }
+    }
+}
+
+fn recipe_probe_phase(f: &mut Fixture, phase: u8) {
+    f.phase = phase;
+    f.entered = Instant::now();
+}
+
+fn recipe_button(
+    world: &mut World,
+    root_id: &str,
+    id: &str,
+    index: usize,
+) -> Result<Entity, String> {
+    let root = world
+        .query::<(Entity, &tilt_ui::ElementId)>()
+        .iter(world)
+        .find_map(|(entity, actual)| (actual.0 == root_id).then_some(entity))
+        .ok_or_else(|| format!("Recipe UI root {root_id} is not materialized"))?;
+    fn walk(world: &World, root: Entity, id: &str, rows: &mut Vec<Entity>) {
+        if let Some(children) = world.get::<Children>(root) {
+            for child in children {
+                if world
+                    .get::<tilt_ui::ElementId>(*child)
+                    .is_some_and(|actual| actual.0 == id)
+                {
+                    rows.push(*child);
+                }
+                walk(world, *child, id, rows);
+            }
+        }
+    }
+    let mut rows = Vec::new();
+    walk(world, root, id, &mut rows);
+    rows.get(index)
+        .copied()
+        .ok_or_else(|| format!("Recipe button {id} row {index} is missing"))
+}
+
+fn recipe_click(world: &mut World, target: Entity) -> Result<(), String> {
+    let handler = world
+        .get::<tilt_ui::StaticAttributes>(target)
+        .and_then(|attributes| attributes.attributes.iter().find(|a| a.name == "onclick"))
+        .map(|a| a.value.clone())
+        .ok_or("Recipe button has no live click handler")?;
+    world.write_message(tilt_ui::HtmlEvent {
+        target,
+        kind: "click",
+        value: None,
+        submitter: None,
+        data: default(),
+        form_data: None,
+        handler,
+    });
+    Ok(())
+}
+
+fn recipe_bounds(world: &mut World) -> Result<(), String> {
+    let viewport = world
+        .query_filtered::<&Window, With<bevy::window::PrimaryWindow>>()
+        .iter(world)
+        .next()
+        .map(|w| Vec2::new(w.physical_width() as f32, w.physical_height() as f32))
+        .ok_or("Recipe UI has no viewport")?;
+    let wanted = [
+        "recipe-inspector",
+        "recipe-category-tabs",
+        "recipe-preview-grid",
+        "recipe-preview-output",
+        "craft-apply-recipe",
+        "craft-recipe-page",
+    ];
+    for id in wanted {
+        let bounds = world
+            .query::<(
+                &tilt_ui::ElementId,
+                &ComputedNode,
+                &bevy::ui::UiGlobalTransform,
+            )>()
+            .iter(world)
+            .find_map(|(actual, node, transform)| {
+                (actual.0 == id && node.size().min_element() > 1.0)
+                    .then_some((transform.translation, node.size()))
+            })
+            .ok_or_else(|| format!("Recipe UI element {id} is not laid out"))?;
+        let minimum = bounds.0 - bounds.1 * 0.5;
+        let maximum = bounds.0 + bounds.1 * 0.5;
+        if minimum.min_element() < -2.0
+            || maximum.x > viewport.x + 2.0
+            || maximum.y > viewport.y + 2.0
+        {
+            return Err(format!(
+                "Recipe UI element {id} exceeds its viewport: min={minimum:?} max={maximum:?} viewport={viewport:?}"
+            ));
+        }
+    }
+    let view = world.resource::<terra_ui::CraftingView>();
+    if view
+        .recipe_categories
+        .iter()
+        .filter(|row| row.selected)
+        .count()
+        != 1
+    {
+        return Err("Recipe UI needs exactly one selected station tab".into());
+    }
+    if view
+        .recipe_grid
+        .iter()
+        .chain(&view.recipe_output)
+        .filter(|slot| !slot.empty)
+        .any(|slot| {
+            slot.name.is_empty() || slot.identifier.is_empty() || slot.description.is_empty()
+        })
+    {
+        return Err("Recipe UI contains an empty item tooltip".into());
+    }
+    let categories: Vec<_> = view
+        .recipe_categories
+        .iter()
+        .map(|category| (category.item, category.preview_key.clone()))
+        .collect();
+    let tabs = world
+        .query::<(Entity, &tilt_ui::ElementId)>()
+        .iter(world)
+        .find_map(|(entity, id)| (id.0 == "recipe-category-tabs").then_some(entity))
+        .ok_or("Recipe station tabs are not materialized")?;
+    let mut nodes = Vec::new();
+    descendants(world, tabs, &mut nodes);
+    for (item, key) in categories {
+        let item = item.ok_or("Recipe station tab has no actual icon item")?;
+        let expected = match item {
+            ItemKind::Block(material) => world
+                .resource::<terra_ui::BlockPreviewImages>()
+                .0
+                .get(&material),
+            item => world.resource::<terra_ui::ItemPreviewImages>().0.get(&item),
+        }
+        .ok_or_else(|| format!("Recipe station tab icon was not requested/generated: {key}"))?;
+        if !nodes.iter().any(|&entity| {
+            world
+                .get::<tilt_ui::ImageMetadata>(entity)
+                .and_then(|m| m.alt.as_deref())
+                == Some(key.as_str())
+                && world
+                    .get::<bevy::ui::widget::ImageNode>(entity)
+                    .is_some_and(|image| image.image == *expected && image.color.alpha() > 0.01)
+                && world
+                    .get::<ComputedNode>(entity)
+                    .is_some_and(|node| node.size().min_element() > 1.0)
+                && world.get::<Visibility>(entity) != Some(&Visibility::Hidden)
+        }) {
+            return Err(format!(
+                "Recipe station tab image is empty, hidden or unbound: {key}"
+            ));
+        }
+    }
+    Ok(())
+}
+
+fn recipe_browser_probe(world: &mut World, f: &mut Fixture) -> Result<bool, String> {
+    if f.phase != 0 && f.entered.elapsed() < Duration::from_millis(400) {
+        return Ok(false);
+    }
+    match f.phase {
+        0 => {
+            f.browser_inventory = Some(world.resource::<ClientSession>().inventory.clone());
+            f.browser_grid = recipe_grid_stamp(world);
+            f.browser_resolution = world
+                .query_filtered::<&Window, With<bevy::window::PrimaryWindow>>()
+                .iter(world)
+                .next()
+                .map(Window::physical_size);
+            browser_search(world, "")?;
+            world.write_message(terra_ui::InventoryAction::Recipe("block-154".into()));
+            recipe_probe_phase(f, 1);
+        }
+        1 => {
+            recipe_bounds(world)?;
+            let categories = &world.resource::<terra_ui::CraftingView>().recipe_categories;
+            if !categories.iter().any(|row| row.id == "crafting")
+                || !categories.iter().any(|row| row.id == "workbench")
+            {
+                return Err(
+                    "Real gearbox recipes did not expose both available station tabs".into(),
+                );
+            }
+            capture(world, "jei-recipe-categories")?;
+            recipe_probe_phase(f, 2);
+        }
+        2 => {
+            let index = world
+                .resource::<terra_ui::CraftingView>()
+                .recipe_categories
+                .iter()
+                .position(|row| row.id == "workbench")
+                .ok_or("Missing workbench recipe tab")?;
+            let target = recipe_button(world, "recipe-category-tabs", "recipe-category", index)?;
+            recipe_click(world, target)?;
+            recipe_probe_phase(f, 3);
+        }
+        3 => {
+            recipe_bounds(world)?;
+            if world.resource::<terra_ui::CraftingView>().recipe_category != "Workbench" {
+                return Err("The real category click did not select the workbench recipe".into());
+            }
+            capture(world, "jei-workbench-recipe")?;
+            recipe_probe_phase(f, 4);
+        }
+        4 => {
+            world.write_message(terra_ui::InventoryAction::Recipe("block-103".into()));
+            recipe_probe_phase(f, 5);
+        }
+        5 => {
+            let count = world
+                .resource::<terra_ui::CraftingView>()
+                .recipe_alternatives
+                .len();
+            if count < 2 {
+                return Err("Real white-wool recipes did not expose their alternatives".into());
+            }
+            let target = recipe_button(
+                world,
+                "recipe-alternative-list",
+                "recipe-alternative",
+                count - 1,
+            )?;
+            recipe_click(world, target)?;
+            recipe_probe_phase(f, 6);
+        }
+        6 => {
+            recipe_bounds(world)?;
+            let view = world.resource::<terra_ui::CraftingView>();
+            if view.recipe_alternatives.last().is_none_or(|r| !r.selected)
+                || view.recipe_page != format!("{0} / {0}", view.recipe_alternatives.len())
+            {
+                return Err(
+                    "Direct alternative click did not select the last visible recipe".into(),
+                );
+            }
+            capture(world, "jei-recipe-alternatives")?;
+            recipe_probe_phase(f, 7);
+        }
+        7 => {
+            let target = recipe_button(world, "recipe-inspector", "craft-alternative-previous", 0)?;
+            recipe_click(world, target)?;
+            for mut window in world
+                .query_filtered::<&mut Window, With<bevy::window::PrimaryWindow>>()
+                .iter_mut(world)
+            {
+                window.resolution.set(960.0, 640.0);
+            }
+            recipe_probe_phase(f, 8);
+        }
+        8 => {
+            recipe_bounds(world)?;
+            let view = world.resource::<terra_ui::CraftingView>();
+            if !view.recipe_alternatives[0].selected
+                || view.recipe_page != format!("1 / {}", view.recipe_alternatives.len())
+            {
+                return Err("Recipe pagination did not return to the first alternative".into());
+            }
+            capture(world, "jei-recipe-compact")?;
+            recipe_probe_phase(f, 9);
+        }
+        9 => {
+            world.write_message(terra_ui::CraftingAction::CloseRecipe);
+            restore_browser_resolution(world, f);
+            recipe_probe_phase(f, 10);
+        }
+        _ => {
+            let restored = world
+                .query_filtered::<&Window, With<bevy::window::PrimaryWindow>>()
+                .iter(world)
+                .next()
+                .map(Window::physical_size);
+            if f.browser_resolution.is_none() || restored != f.browser_resolution {
+                return Err("Recipe browser did not restore its original viewport".into());
+            }
+            if world.resource::<terra_ui::CraftingView>().recipe_open
+                || f.browser_inventory.as_ref()
+                    != Some(&world.resource::<ClientSession>().inventory)
+                || f.browser_grid != recipe_grid_stamp(world)
+            {
+                return Err(
+                    "Recipe browsing changed inventory/reservations or failed to close".into(),
+                );
+            }
+            return Ok(true);
+        }
+    }
+    Ok(false)
+}
+
 fn diagnose_ui(world: &mut World, label: &str) {
     let mut ids = std::collections::BTreeMap::<String, usize>::new();
     for id in world.query::<&tilt_ui::ElementId>().iter(world) {
@@ -219,6 +536,40 @@ fn slot_target(world: &mut World, root: &str, alt: Option<&str>) -> Result<Entit
         })
         .ok_or_else(|| format!("Missing TiltUI slot {alt:?}"))
 }
+fn browser_search(world: &mut World, value: &str) -> Result<(), String> {
+    let target = world
+        .query::<(Entity, &tilt_ui::ElementId, &ComputedNode)>()
+        .iter(world)
+        .find_map(|(entity, id, node)| {
+            (id.0 == "inventory-search" && node.size().min_element() > 1.0).then_some(entity)
+        })
+        .ok_or("Catalog search input is not materialized")?;
+    let handler = world
+        .get::<tilt_ui::StaticAttributes>(target)
+        .and_then(|attributes| attributes.attributes.iter().find(|a| a.name == "onchange"))
+        .map(|a| a.value.clone())
+        .ok_or("Catalog search input has no live change handler")?;
+    world.write_message(tilt_ui::HtmlEvent {
+        target,
+        kind: "change",
+        value: Some(value.into()),
+        submitter: None,
+        data: default(),
+        form_data: None,
+        handler,
+    });
+    Ok(())
+}
+
+fn browser_preview(world: &World, item: ItemKind) -> Option<String> {
+    world
+        .resource::<terra_ui::InventoryView>()
+        .browser_items
+        .iter()
+        .find(|row| row.item == Some(item))
+        .map(|row| row.preview_key.clone())
+}
+
 fn press_slot(world: &mut World, root: &str, alt: Option<&str>) -> Result<(), String> {
     let entity = slot_target(world, root, alt)?;
     press_entity(world, entity)
@@ -286,16 +637,17 @@ fn craft(
             .iter()
             .find(|r| r.name == *name)
             .ok_or_else(|| format!("Recipe {name} missing"))?;
-        let alt = match recipe.output.item {
-            ItemKind::Block(id) => format!("Block preview {id}"),
-            item => format!("Item preview {}", item.identifier()),
-        };
-        if !world
-            .resource::<terra_ui::InventoryView>()
-            .browser_items
-            .iter()
-            .any(|item| item.preview_key == alt)
-        {
+        let output = recipe.output.item;
+        let requested_search = output.identifier();
+        let alt = browser_preview(world, output);
+        if alt.is_none() {
+            if world.resource::<terra_ui::InventoryView>().search != requested_search {
+                browser_search(world, &requested_search)?;
+                f.phase = 5;
+                f.entered = Instant::now();
+                return Ok(false);
+            }
+            let alt = format!("{requested_search} ({output:?})");
             if f.page_probes >= 8 {
                 return Err(format!(
                     "Recipe item {alt} was not found after bounded catalog paging"
@@ -340,6 +692,7 @@ fn craft(
             return Ok(false);
         }
         f.page_probes = 0;
+        let alt = alt.ok_or("Visible recipe item lost its catalog preview")?;
         press_slot(world, "inventory-browser-grid", Some(&alt))?;
         f.phase = 1;
         f.entered = Instant::now();
@@ -432,7 +785,9 @@ fn craft(
                     f.entered = Instant::now();
                     return Ok(false);
                 }
-                crate::inventory_smoke::require_tooltip(world, target, "teramic::chest")?;
+                // The output preserves its actual wood variant. The tooltip
+                // checker compares the complete identifier, including #birch.
+                crate::inventory_smoke::require_tooltip(world, target, &item.identifier())?;
                 capture(world, "workbench-tooltip")?;
             }
             capture(world, "workbench-valid-pattern")?;
@@ -523,50 +878,83 @@ fn step(world: &mut World, f: &mut Fixture) -> Result<(), String> {
             advance(f);
         }
         1 if elapsed > Duration::from_millis(700) => {
-            if f.phase == 0 {
-                let mounted = world
-                    .query::<&tilt_ui::ElementId>()
-                    .iter(world)
-                    .any(|id| id.0 == "inventory-browser-grid");
-                if !mounted {
-                    if elapsed < Duration::from_secs(3) {
-                        return Ok(());
+            match f.phase {
+                0 => {
+                    let mounted = world
+                        .query::<&tilt_ui::ElementId>()
+                        .iter(world)
+                        .any(|id| id.0 == "inventory-browser-grid");
+                    if !mounted {
+                        if elapsed < Duration::from_secs(3) {
+                            return Ok(());
+                        }
+                        return Err(
+                            "Inventory browser did not mount after real inventory opening".into(),
+                        );
                     }
-                    return Err(
-                        "Inventory browser did not mount after real inventory opening".into(),
-                    );
+                    capture(world, "inventory-large-slots")?;
+                    recipe_probe_phase(f, 1);
                 }
-                capture(world, "inventory-large-slots")?;
-                press_slot(
-                    world,
-                    "inventory-browser-grid",
-                    Some("Item preview teramic::stone_pickaxe"),
-                )?;
-                f.phase = 1;
-                f.entered = Instant::now();
-            } else {
-                let view = world.resource::<terra_ui::CraftingView>();
-                if !view.recipe_open || !view.missing || view.enabled {
-                    return Err("Missing ingredients or wrong station not represented by the recipe preview".into());
+                1 => {
+                    browser_search(world, &ItemKind::Tool(ToolKind::StonePickaxe).identifier())?;
+                    recipe_probe_phase(f, 2);
                 }
-                let filtered = world
-                    .query::<&tilt_ui::RuntimeComputedStyle>()
-                    .iter(world)
-                    .any(|style| {
-                        style.0.animated_effects.as_ref().is_some_and(|effects| {
-                            effects.iter().any(|effect| {
-                                effect.kind == tilt_ui::tilt_ui_css::AnimatedEffectKind::SignalLost
+                2 => {
+                    let item = ItemKind::Tool(ToolKind::StonePickaxe);
+                    let alt = browser_preview(world, item).ok_or_else(|| format!(
+                        "Exact searched tool {item:?} missing from catalog: query={} page={} rows={:?}",
+                        world.resource::<terra_ui::InventoryView>().search,
+                        world.resource::<terra_ui::InventoryView>().browser_page,
+                        world.resource::<terra_ui::InventoryView>().browser_items.iter().map(|row| (&row.item_id, &row.preview_key)).collect::<Vec<_>>()
+                    ))?;
+                    press_slot(world, "inventory-browser-grid", Some(&alt))?;
+                    recipe_probe_phase(f, 3);
+                }
+                3 => {
+                    let view = world.resource::<terra_ui::CraftingView>();
+                    if !view.recipe_open
+                        || !view.missing
+                        || view.enabled
+                        || view.recipe_output.first().and_then(|slot| slot.item)
+                            != Some(ItemKind::Tool(ToolKind::StonePickaxe))
+                    {
+                        return Err("Missing ingredients or wrong station not represented by the exact stone-pickaxe recipe preview".into());
+                    }
+                    let filtered = world
+                        .query::<&tilt_ui::RuntimeComputedStyle>()
+                        .iter(world)
+                        .any(|style| {
+                            style.0.animated_effects.as_ref().is_some_and(|effects| {
+                                effects.iter().any(|effect| {
+                                    effect.kind
+                                        == tilt_ui::tilt_ui_css::AnimatedEffectKind::SignalLost
+                                })
                             })
-                        })
-                    });
-                if !filtered {
-                    return Err(
-                        "Missing recipe images have no real TiltUI distortion filter".into(),
-                    );
+                        });
+                    if !filtered {
+                        return Err(
+                            "Missing recipe images have no real TiltUI distortion filter".into(),
+                        );
+                    }
+                    capture(world, "missing-recipe-filter")?;
+                    recipe_probe_phase(f, 4);
                 }
-                capture(world, "missing-recipe-filter")?;
-                world.write_message(terra_ui::CraftingAction::CloseRecipe);
-                advance(f);
+                4 => {
+                    world.write_message(terra_ui::CraftingAction::CloseRecipe);
+                    browser_search(world, "")?;
+                    recipe_probe_phase(f, 5);
+                }
+                _ => {
+                    if world.resource::<terra_ui::CraftingView>().recipe_open
+                        || !world
+                            .resource::<terra_ui::InventoryView>()
+                            .search
+                            .is_empty()
+                    {
+                        return Err("Missing-ingredient preview failed to close or clear its catalog search".into());
+                    }
+                    advance(f);
+                }
             }
         }
         2 if elapsed > Duration::from_millis(400)
@@ -687,19 +1075,30 @@ fn step(world: &mut World, f: &mut Fixture) -> Result<(), String> {
                 advance(f);
             }
         }
-        7 if elapsed > Duration::from_millis(500) => {
-            for mut window in world
-                .query_filtered::<&mut Window, With<bevy::window::PrimaryWindow>>()
-                .iter_mut(world)
-            {
-                window.resolution.set(960.0, 640.0);
+        7 if elapsed > Duration::from_millis(300) => {
+            if recipe_browser_probe(world, f)? {
+                advance(f);
             }
-            advance(f);
         }
-        8 if elapsed > Duration::from_millis(900) => {
-            capture(world, "crafting-compact")?;
-            advance(f);
-        }
+        8 if elapsed > Duration::from_millis(900) => match f.phase {
+            0 => {
+                for mut window in world
+                    .query_filtered::<&mut Window, With<bevy::window::PrimaryWindow>>()
+                    .iter_mut(world)
+                {
+                    window.resolution.set(960.0, 640.0);
+                }
+                recipe_probe_phase(f, 1);
+            }
+            1 => {
+                capture(world, "crafting-compact")?;
+                recipe_probe_phase(f, 2);
+            }
+            _ => {
+                restore_browser_resolution(world, f);
+                advance(f);
+            }
+        },
         9 if elapsed > Duration::from_millis(900) => {
             world.write_message(terra_ui::InventoryAction::Assembly(false));
             advance(f);
@@ -1045,7 +1444,7 @@ fn step(world: &mut World, f: &mut Fixture) -> Result<(), String> {
                 return Err("Crafted items did not survive binary save/reload".into());
             }
             info!(
-                "Crafting native smoke passed: sidebar recipes, reserved 2x2/3x3 grids, four-plank shapeless workbench, four tools, unclipped double chest, linked chest layout and reserved TiltUI transfers, compact layout and REG5 binary save/reload"
+                "Crafting native smoke passed: category tabs, direct alternatives, per-category pagination and compact recipe bounds, sidebar recipes, reserved 2x2/3x3 grids, four-plank shapeless workbench, four tools, unclipped double chest, linked chest layout and reserved TiltUI transfers, compact layout and REG5 binary save/reload"
             );
             f.stage = 255;
             world.write_message(AppExit::Success);

@@ -7,6 +7,7 @@ use std::{
 /// Only animation candidates are copied into the render world. Feedback is
 /// emitted after the complete color draw command succeeds, not merely upload.
 #[derive(Resource, Clone, Default, ExtractResource)]
+#[extract_app(bevy::render::RenderApp)]
 pub(crate) struct TransitionDraws {
     pub pending: HashSet<Entity>,
     ready: Arc<Mutex<HashSet<Entity>>>,

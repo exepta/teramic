@@ -2,7 +2,7 @@ use super::{TerraGenerator, seed::layer_seed};
 use crate::water::MIN_WATERFALL_DROP;
 use std::{
     collections::HashMap,
-    sync::{Arc, Mutex},
+    sync::{Arc, Mutex, OnceLock},
 };
 
 const SPACING: f64 = 512.0;
@@ -16,10 +16,52 @@ const SUPPORT_REACH: i32 = 20;
 
 #[cfg(test)]
 mod brook_tests;
+mod connected;
+#[cfg(test)]
+mod density_tests;
+mod distributaries;
 mod erosion;
+mod network;
 
 #[derive(Default)]
-pub(super) struct RiverCache(Mutex<HashMap<[i64; 3], Option<Arc<RiverPath>>>>);
+pub(super) struct RiverCache(
+    Mutex<HashMap<[i64; 3], Option<Arc<RiverPath>>>>,
+    Mutex<HashMap<[i64; 2], RegionalPathCell>>,
+);
+type RegionalPathCell = Arc<OnceLock<Option<Arc<network::RiverNetwork>>>>;
+
+/// Read-only diagnostics for the same immutable course used by water columns.
+#[derive(Clone, Debug, PartialEq)]
+pub struct HydrologyRegion {
+    pub region: [i64; 2],
+    pub source: [f64; 3],
+    pub mouth: [f64; 3],
+    pub course: [[f64; 3]; POINTS],
+    pub course_length: f64,
+    pub reaches_sea: bool,
+    pub lake: Option<super::OasisSample>,
+    pub tributaries: Vec<HydrologyTributary>,
+    pub distributaries: Vec<HydrologyDistributary>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct HydrologyDistributary {
+    /// Index of the shared split point in the parent river's course.
+    pub split_index: usize,
+    pub source: [f64; 3],
+    pub mouth: [f64; 3],
+    pub course: [[f64; 3]; POINTS],
+    pub reaches_sea: bool,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct HydrologyTributary {
+    pub source: [f64; 3],
+    pub mouth: [f64; 3],
+    pub course: [[f64; 3]; POINTS],
+    /// Humidity-weighted contributing surface area in square metres.
+    pub accumulated_runoff: f64,
+}
 struct RiverPath {
     points: [[f64; 3]; POINTS],
     ground: [f64; POINTS],
@@ -28,6 +70,38 @@ struct RiverPath {
     phase: f64,
     branch: Option<RiverBranch>,
     brook: bool,
+    step: f64,
+    frame: DrainageFrame,
+    lake: Option<super::lakes::Lake>,
+}
+
+#[derive(Clone, Copy)]
+struct DrainageFrame {
+    origin: [f64; 2],
+    downstream: [f64; 2],
+}
+
+impl DrainageFrame {
+    const WORLD: Self = Self {
+        origin: [0.0; 2],
+        downstream: [0.0, 1.0],
+    };
+
+    fn project(self, x: f64, z: f64) -> [f64; 2] {
+        let dx = x - self.origin[0];
+        let dz = z - self.origin[1];
+        [
+            dx * self.downstream[1] - dz * self.downstream[0],
+            dx * self.downstream[0] + dz * self.downstream[1],
+        ]
+    }
+
+    fn world(self, x: f64, z: f64) -> [f64; 2] {
+        [
+            self.origin[0] + x * self.downstream[1] + z * self.downstream[0],
+            self.origin[1] - x * self.downstream[0] + z * self.downstream[1],
+        ]
+    }
 }
 
 #[derive(Clone, Copy)]
@@ -69,7 +143,7 @@ impl RiverPath {
             if drop < MIN_WATERFALL_DROP {
                 continue;
             }
-            let edge = (i as f64 + 0.5) * STEP;
+            let edge = (i as f64 + 0.5) * self.step;
             let reach = (8.0 + drop * 0.65).clamp(12.0, 36.0);
             let erosion = (lateral * 0.11 + self.phase).sin() * reach * 0.12
                 + (lateral * 0.27 - self.phase * 0.7).sin() * 1.1;
@@ -85,7 +159,7 @@ impl RiverPath {
     fn cascade_height(&self, index: usize, t: f64, level: f64, lateral: f64) -> f64 {
         let mut height = 0.0_f64;
         for i in index.saturating_sub(4)..=index.min(POINTS - 2) {
-            let edge = (i as f64 + 0.5) * STEP;
+            let edge = (i as f64 + 0.5) * self.step;
             if t < edge || self.points[i][1] - self.points[i + 1][1] < MIN_WATERFALL_DROP {
                 continue;
             }
@@ -155,10 +229,29 @@ impl RiverSample {
 }
 
 impl TerraGenerator {
+    pub(in crate::generation) fn connected_hydrology(&self) -> bool {
+        self.config().landscape_revision >= 3
+            || (self.config().rivers && self.config().river_terrain_revision >= 2)
+    }
+
     /// Small bounded immutable drainage paths, shared by all vertical jobs and clones.
     pub fn river_at(&self, x: f64, z: f64) -> Option<RiverSample> {
         if !self.config().water || !x.is_finite() || !z.is_finite() {
             return None;
+        }
+        if self.connected_hydrology() {
+            let main = self
+                .config()
+                .rivers
+                .then(|| self.connected_river_at(x, z))
+                .flatten();
+            if main.is_some_and(|r| r.distance <= r.width + 1.0) {
+                return main;
+            }
+            let brook = (self.config().ecology_revision > 0)
+                .then(|| self.drainage_at(x, z, true))
+                .flatten();
+            return brook.or(main);
         }
         let main = self
             .config()
@@ -175,11 +268,12 @@ impl TerraGenerator {
     }
 
     fn drainage_at(&self, x: f64, z: f64, brook: bool) -> Option<RiverSample> {
+        let [spacing, _, _] = self.drainage_layout(brook);
         let cell = [
-            ((x + SPACING * 0.5) / SPACING).floor() as i64,
-            ((z + SPACING * 0.5) / SPACING).floor() as i64,
+            ((x + spacing * 0.5) / spacing).floor() as i64,
+            ((z + spacing * 0.5) / spacing).floor() as i64,
         ];
-        let local_x = x - cell[0] as f64 * SPACING;
+        let local_x = x - cell[0] as f64 * spacing;
         if !(if brook { -156.0..=-8.0 } else { -96.0..=224.0 }).contains(&local_x) {
             return None;
         }
@@ -193,7 +287,12 @@ impl TerraGenerator {
         let path = cached.unwrap_or_else(|| {
             let path = self
                 .drainage_enabled(cell, brook)
-                .then(|| Arc::new(self.build_drainage(cell, brook)));
+                .then(|| self.build_drainage(cell, brook));
+            let path = path
+                .filter(|path| {
+                    !self.connected_hydrology() || !brook || !self.brook_conflicts_with_region(path)
+                })
+                .map(Arc::new);
             if let Ok(mut cache) = self.rivers.0.lock() {
                 if cache.len() >= 256 {
                     cache.clear();
@@ -203,29 +302,60 @@ impl TerraGenerator {
                 path
             }
         })?;
-        let length = (POINTS - 1) as f64 * STEP;
+        self.sample_drainage(&path, x, z, Some(cell))
+    }
+
+    fn sample_drainage(
+        &self,
+        path: &RiverPath,
+        world_x: f64,
+        world_z: f64,
+        legacy_cell: Option<[i64; 2]>,
+    ) -> Option<RiverSample> {
+        let [x, z] = path.frame.project(world_x, world_z);
+        let step = path.step;
+        let length = (POINTS - 1) as f64 * step;
         let t = (z - path.points[0][2]).clamp(-path.extensions[0], length + path.extensions[1]);
         let core_t = t.clamp(0.0, length);
-        let index = (core_t / STEP).floor() as usize;
+        let index = (core_t / step).floor() as usize;
         let next = (index + 1).min(POINTS - 1);
         let a = path.points[index];
         let b = path.points[next];
-        let along = (core_t / STEP).fract();
+        let along = (core_t / step).fract();
         let dx = if t >= length {
-            (path.points[POINTS - 1][0] - path.points[POINTS - 2][0]) / STEP
+            (path.points[POINTS - 1][0] - path.points[POINTS - 2][0]) / step
         } else {
-            (b[0] - a[0]) / STEP
+            (b[0] - a[0]) / step
         };
         let center_x = a[0] + (b[0] - a[0]) * along + dx * (t - core_t);
         let center_z = path.points[0][2] + t;
         let mut lateral = x - center_x;
         let mut distance = lateral.hypot(z - center_z);
-        let pool = super::biomes::smoothstep(POINTS as f64 * STEP - 40.0, length, core_t);
+        if legacy_cell.is_none() && distance > path.width * 1.38 + 7.0 + 36.0 {
+            return None;
+        }
+        let pool_start = if legacy_cell.is_some() {
+            POINTS as f64 * step - 40.0
+        } else {
+            length - step * 4.0
+        };
+        let pool = super::biomes::smoothstep(pool_start, length, core_t);
         let mut width = path.width
             * (1.0
                 + 0.26 * (core_t * 0.024 + path.phase).sin()
                 + 0.12 * (core_t * 0.067 + path.phase * 0.4).sin())
             + pool * if path.brook { 1.2 } else { 4.0 };
+        let plunge = if legacy_cell.is_none() {
+            (index.saturating_sub(1)..=index.min(POINTS - 2))
+                .filter(|&i| path.points[i][1] - path.points[i + 1][1] >= MIN_WATERFALL_DROP)
+                .map(|i| core_t - (i as f64 + 0.5) * step)
+                .filter(|&below| below >= 0.0)
+                .map(|below| 1.0 - super::biomes::smoothstep(2.0, 16.0, below))
+                .fold(0.0_f64, f64::max)
+        } else {
+            0.0
+        };
+        width += plunge * 3.0;
         let mut flow_dx = dx;
         let mut branch_depth = 1.0;
         let mut island_height = None;
@@ -246,16 +376,38 @@ impl TerraGenerator {
                 branch_depth = 0.76;
             }
         }
-        let bank_reach = if path.brook { 12.0 } else { BANK_REACH };
+        let bank_reach = if path.brook {
+            12.0
+        } else if legacy_cell.is_some() {
+            BANK_REACH
+        } else {
+            36.0
+        };
         (distance <= width + bank_reach).then(|| {
             let length = flow_dx.hypot(1.0);
-            let level = path.level(index, along);
+            let mut level = path.level(index, along);
+            if let Some(lake) = path.lake {
+                let sample = lake.sample(world_x, world_z);
+                let shore = sample.radius + super::oases::BANK_REACH;
+                let blend = 1.0 - super::biomes::smoothstep(shore, shore + 32.0, sample.distance);
+                if blend >= 1.0 {
+                    level = sample.level;
+                } else {
+                    level += (sample.level - level) * blend;
+                }
+            }
             let bank_level = path.bank_level(index, core_t, level, lateral);
             let ground = path.ground[index] + (path.ground[next] - path.ground[index]) * along;
             let erosion = (core_t * 0.075 + lateral * 0.055 + path.phase).sin() * 1.6
                 + (lateral * 0.09 + path.phase * 1.7).sin() * 0.5;
             let mut roof_blend =
                 super::biomes::smoothstep(8.0, 23.0, ground - bank_level + erosion);
+            if path.lake.is_some_and(|lake| {
+                let sample = lake.sample(world_x, world_z);
+                sample.distance <= sample.radius + super::oases::BANK_REACH
+            }) {
+                roof_blend = 0.0;
+            }
             let fall_erosion = if self.config().river_terrain_revision > 0 && !path.brook {
                 path.fall_erosion(index, core_t, lateral, width)
             } else {
@@ -271,12 +423,17 @@ impl TerraGenerator {
                     + 2.3 * (0.5 + 0.5 * (core_t * 0.033 + path.phase).sin()).powi(2)
                     + 1.6 * (0.5 + 0.5 * (core_t * 0.071 + path.phase * 0.4).sin()))
                     * branch_depth
-            };
+            } + plunge * 2.0;
             RiverSample {
                 level,
                 distance,
                 width,
-                flow: [(flow_dx / length) as f32, (1.0 / length) as f32],
+                flow: [
+                    ((flow_dx * path.frame.downstream[1] + path.frame.downstream[0]) / length)
+                        as f32,
+                    ((path.frame.downstream[1] - flow_dx * path.frame.downstream[0]) / length)
+                        as f32,
+                ],
                 depth,
                 covered: roof_blend >= 1.0,
                 roof_blend,
@@ -284,8 +441,11 @@ impl TerraGenerator {
                     + (core_t * 0.27 - lateral * 0.53).sin() * 0.35,
                 bed_detail: (core_t * 0.21 + lateral * 0.75 + path.phase).sin() * 0.24,
                 island_height,
-                bank_reach: (SPACING * 0.5 - (center_z - cell[1] as f64 * SPACING).abs() - width)
-                    .clamp(1.0, bank_reach),
+                bank_reach: legacy_cell.map_or(bank_reach, |cell| {
+                    let [spacing, _, _] = self.drainage_layout(path.brook);
+                    (spacing * 0.5 - (center_z - cell[1] as f64 * spacing).abs() - width)
+                        .clamp(1.0, bank_reach)
+                }),
                 bank_level,
                 bank_erosion: (core_t * 0.13 + lateral * 0.23 + path.phase).sin() * 0.9
                     + (core_t * 0.047 - lateral * 0.11 + path.phase * 0.6).sin() * 1.3,
@@ -323,15 +483,28 @@ impl TerraGenerator {
         if !brook {
             return self.river_enabled(cell);
         }
+        let [spacing, _, _] = self.drainage_layout(brook);
         // Select whole courses from the same climate field as the trees. Never
         // clip a flowing reach at an individual voxel/biome boundary.
         [-128.0, 0.0, 128.0].into_iter().any(|dz| {
             let biome = self.climate_biome_at(
-                cell[0] as f64 * SPACING - 80.0,
-                cell[1] as f64 * SPACING + dz,
+                cell[0] as f64 * spacing - 80.0,
+                cell[1] as f64 * spacing + dz,
             );
             let w = biome.weights;
-            w.forest + w.cherry_forest + w.highland > 0.45 && biome.aridity() < 0.35
+            let wooded = w.forest + w.cherry_forest + w.highland;
+            if self.config().rivers && self.config().river_terrain_revision >= 4 {
+                biome.aridity() < 0.50
+                    && (wooded > 0.12 || w.plains > 0.22 && biome.humidity >= 0.30)
+            } else if self.config().rivers && self.config().river_terrain_revision >= 3 {
+                // A brook also belongs in moist meadow/woodland transitions,
+                // not just in the dense cores of three forest biomes. Keep the
+                // entire finite course and the existing regional conflict test.
+                biome.aridity() < 0.45
+                    && (wooded > 0.20 || w.plains > 0.35 && biome.humidity >= 0.40)
+            } else {
+                wooded > 0.45 && biome.aridity() < 0.35
+            }
         })
     }
 
@@ -340,7 +513,18 @@ impl TerraGenerator {
         self.build_drainage(cell, false)
     }
 
+    fn drainage_layout(&self, brook: bool) -> [f64; 3] {
+        if brook && self.config().rivers && self.config().river_terrain_revision >= 4 {
+            // More independent temperate catchments, not wider channels. The
+            // existing finite course still fits its cell, including both banks.
+            [416.0, START, STEP]
+        } else {
+            [SPACING, START, STEP]
+        }
+    }
+
     fn build_drainage(&self, cell: [i64; 2], brook: bool) -> RiverPath {
+        let [spacing, start, step] = self.drainage_layout(brook);
         let seed = layer_seed(
             self.config().seed.0
                 ^ (cell[0] as u64).wrapping_mul(0x9e3779b97f4a7c15)
@@ -354,32 +538,32 @@ impl TerraGenerator {
             40.0 + f64::from(seed % 45)
         };
         let branch = (!brook && seed.is_multiple_of(3)).then(|| {
-            let start = f64::from(6 + ((seed >> 4) % 16)) * STEP;
+            let start = f64::from(6 + ((seed >> 4) % 16)) * step;
             RiverBranch {
                 start,
-                end: start + f64::from(10 + ((seed >> 9) % 5)) * STEP,
+                end: start + f64::from(10 + ((seed >> 9) % 5)) * step,
                 offset: (16.0 + f64::from((seed >> 14) % 7))
                     * if seed & (1 << 20) == 0 { -1.0 } else { 1.0 },
             }
         });
         let mut previous = f64::INFINITY;
         let mut points = std::array::from_fn(|index| {
-            let z = cell[1] as f64 * SPACING + START + index as f64 * STEP;
-            let x = cell[0] as f64 * SPACING
+            let z = cell[1] as f64 * spacing + start + index as f64 * step;
+            let x = cell[0] as f64 * spacing
                 + offset
-                + (index as f64 * STEP * 0.014 + phase).sin() * 22.0
-                + (index as f64 * STEP * 0.032 + phase * 0.7).sin() * 8.0;
+                + (index as f64 * step * 0.014 + phase).sin() * 22.0
+                + (index as f64 * step * 0.032 + phase * 0.7).sin() * 8.0;
             let end = index == 0 || index == POINTS - 1;
             let longitudinal = if end && !brook {
                 SUPPORT_REACH
             } else {
-                STEP as i32 / 2
+                step as i32 / 2
             };
             let mut spill = f64::INFINITY;
             let support = if brook {
                 4
             } else if branch.is_some_and(|branch| {
-                (branch.start - STEP..=branch.end + STEP).contains(&(index as f64 * STEP))
+                (branch.start - step..=branch.end + step).contains(&(index as f64 * step))
             }) {
                 32
             } else {
@@ -425,11 +609,11 @@ impl TerraGenerator {
             }
             let direction = if end == 0 { -1.0 } else { 1.0 };
             let other = if end == 0 { 1 } else { POINTS - 2 };
-            let dx = (points[index][0] - points[other][0]) / STEP;
+            let dx = (points[index][0] - points[other][0]) / step;
             let mut extent = 0.0;
-            for step in 1..=5 {
-                let z = points[index][2] + direction * f64::from(step) * STEP;
-                let x = points[index][0] + dx * f64::from(step) * STEP;
+            for extension in 1..=5 {
+                let z = points[index][2] + direction * f64::from(extension) * step;
+                let x = points[index][0] + dx * f64::from(extension) * step;
                 let roof = self.base_height_with_biome(x, z, self.climate_biome_at(x, z));
                 let supported = [-16.0, 0.0, 16.0].into_iter().all(|offset| {
                     self.base_height_with_biome(x + offset, z, self.climate_biome_at(x + offset, z))
@@ -438,7 +622,7 @@ impl TerraGenerator {
                 if roof < points[index][1] + 10.0 || !supported {
                     break;
                 }
-                extent = f64::from(step) * STEP;
+                extent = f64::from(extension) * step;
             }
             extent
         });
@@ -454,6 +638,9 @@ impl TerraGenerator {
             phase,
             branch,
             brook,
+            step,
+            frame: DrainageFrame::WORLD,
+            lake: None,
         }
     }
 }
@@ -516,7 +703,10 @@ mod tests {
 
     fn river_terrain() -> TerraGenerator {
         TerraGenerator::new(WorldConfig {
+            river_terrain_revision: 1,
             rivers: true,
+            landscape_revision: 2,
+            sea_level: 8.0,
             caves: false,
             trees: false,
             ..Default::default()
@@ -657,11 +847,16 @@ mod tests {
     fn eroded_portal_roofs_remain_face_connected_to_their_banks() {
         use std::collections::VecDeque;
 
-        for caves in [false, true] {
+        for (caves, landscape_revision) in [false, true]
+            .into_iter()
+            .flat_map(|caves| [1, 2].map(|revision| (caves, revision)))
+        {
             let terrain = TerraGenerator::new(WorldConfig {
+                river_terrain_revision: 1,
                 rivers: true,
                 caves,
                 trees: false,
+                landscape_revision,
                 ..Default::default()
             })
             .unwrap();
@@ -671,6 +866,9 @@ mod tests {
                 [55.5, -1081.5],  // Cave noise cutting off the arch underside.
             ]
             .into_iter()
+            // Fixed screenshot anchors describe revision-one terrain. New
+            // regional relief receives the same invariant at its own portals.
+            .filter(|_| landscape_revision == 1)
             .chain(
                 (-2..=2)
                     .flat_map(|z| (-2..=2).map(move |x| [x, z]))
@@ -689,7 +887,7 @@ mod tests {
                     .take(8),
             )
             .collect();
-            assert_eq!(fixtures.len(), 11);
+            assert_eq!(fixtures.len(), if landscape_revision == 1 { 11 } else { 8 });
             for [cx, cz] in fixtures {
                 const SIDE: usize = 48;
                 let origin = [cx.floor() as i64 - 24, cz.floor() as i64 - 24];
@@ -783,7 +981,7 @@ mod tests {
                                 retained_roof_blocks += usize::from(solid[id]);
                                 assert!(
                                     !solid[id] || connected[id],
-                                    "floating river roof: caves={caves} position={:?} column={column:?}",
+                                    "floating river roof: landscape={landscape_revision}, caves={caves} position={:?} column={column:?}",
                                     [
                                         origin[0] + x as i64,
                                         bottom + y as i64,
@@ -796,7 +994,7 @@ mod tests {
                 }
                 assert!(
                     retained_roof_blocks >= 16,
-                    "portal fixture must retain a real supported roof: caves={caves}, centre={cx},{cz}, blocks={retained_roof_blocks}"
+                    "portal fixture must retain a real supported roof: landscape={landscape_revision}, caves={caves}, centre={cx},{cz}, blocks={retained_roof_blocks}"
                 );
             }
         }
@@ -819,6 +1017,9 @@ mod tests {
                 phase: 0.0,
                 branch: None,
                 brook: false,
+                step: STEP,
+                frame: DrainageFrame::WORLD,
+                lake: None,
             };
             if drop < MIN_WATERFALL_DROP {
                 assert_eq!(path.level(0, 0.25), 20.0 - drop * 0.25);
@@ -842,6 +1043,9 @@ mod tests {
             phase: 0.3,
             branch: None,
             brook: false,
+            step: STEP,
+            frame: DrainageFrame::WORLD,
+            lake: None,
         };
         let edge = STEP * 0.5;
         for lateral in [-45.0, -17.0, 0.0, 19.0, 43.0] {
@@ -913,6 +1117,9 @@ mod tests {
             phase: 0.0,
             branch: None,
             brook: false,
+            step: STEP,
+            frame: DrainageFrame::WORLD,
+            lake: None,
         };
         assert_eq!(path.cascade_height(0, 4.5, 10.0, 0.0), 36.0);
         let middle = path.cascade_height(2, 16.0, 10.0, 0.0);
@@ -927,7 +1134,9 @@ mod tests {
     #[test]
     fn river_valleys_only_carve_land_and_blend_back_into_the_original_terrain() {
         let terrain = TerraGenerator::new(WorldConfig {
+            river_terrain_revision: 1,
             rivers: true,
+            landscape_revision: 2,
             ..Default::default()
         })
         .unwrap();
@@ -950,10 +1159,17 @@ mod tests {
     }
     #[test]
     fn paths_are_deterministic_downhill_and_legacy_worlds_are_unchanged() {
-        let legacy = TerraGenerator::new(WorldConfig::default()).unwrap();
+        let legacy = TerraGenerator::new(WorldConfig {
+            landscape_revision: 2,
+            rivers: false,
+            ..Default::default()
+        })
+        .unwrap();
         assert!(legacy.river_at(64.0, 24.0).is_none());
         let config = WorldConfig {
+            river_terrain_revision: 1,
             rivers: true,
+            landscape_revision: 2,
             ..Default::default()
         };
         let a = TerraGenerator::new(config.clone()).unwrap();
@@ -987,7 +1203,9 @@ mod tests {
     #[test]
     fn desert_rarity_selects_whole_paths_deterministically() {
         let a = TerraGenerator::new(WorldConfig {
+            river_terrain_revision: 1,
             rivers: true,
+            landscape_revision: 2,
             ..Default::default()
         })
         .unwrap();
@@ -1023,8 +1241,10 @@ mod tests {
     fn river_water_has_supported_banks_including_negative_and_terminal_edges() {
         for seed in [42042, 7, 98173] {
             let terrain = TerraGenerator::new(WorldConfig {
+                river_terrain_revision: 1,
                 seed: terra_core::WorldSeed(seed),
                 rivers: true,
+                landscape_revision: 2,
                 ..Default::default()
             })
             .unwrap();
@@ -1059,7 +1279,9 @@ mod tests {
     #[test]
     fn covered_rivers_keep_solid_roofs_and_real_water_in_headless_and_render_sections() {
         let terrain = TerraGenerator::new(WorldConfig {
+            river_terrain_revision: 1,
             rivers: true,
+            landscape_revision: 2,
             caves: false,
             trees: false,
             ..Default::default()
@@ -1132,7 +1354,9 @@ mod tests {
     #[test]
     fn buried_terminal_galleries_extend_the_wet_channel_without_cutting_the_roof() {
         let terrain = TerraGenerator::new(WorldConfig {
+            river_terrain_revision: 1,
             rivers: true,
+            landscape_revision: 2,
             caves: false,
             trees: false,
             ..Default::default()
@@ -1172,14 +1396,21 @@ mod tests {
             tested > 0,
             "at least one covered terminal must continue into a wet gallery"
         );
-        let legacy = TerraGenerator::new(WorldConfig::default()).unwrap();
+        let legacy = TerraGenerator::new(WorldConfig {
+            landscape_revision: 2,
+            rivers: false,
+            ..Default::default()
+        })
+        .unwrap();
         assert!(legacy.surface_column(64.5, 192.5).river_cavity.is_none());
     }
 
     #[test]
     fn generated_long_cataract_has_an_open_shaft_and_water_in_every_vertical_section() {
         let terrain = TerraGenerator::new(WorldConfig {
+            river_terrain_revision: 1,
             rivers: true,
+            landscape_revision: 2,
             trees: false,
             caves: false,
             ..Default::default()

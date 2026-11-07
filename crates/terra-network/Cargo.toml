@@ -23,3 +23,5 @@ tracing.workspace = true
 serde_json.workspace = true
 socket2.workspace = true
 avian3d.workspace = true
+
+postcard.workspace = true

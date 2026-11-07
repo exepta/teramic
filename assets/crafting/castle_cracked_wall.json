@@ -1,0 +1,22 @@
+{
+  "id": "teramic::castle_cracked_wall",
+  "name": "Rissige Mauer",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "block": 176
+    },
+    "count": 1
+  },
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "block": 174
+        },
+        "count": 1
+      }
+    ]
+  }
+}

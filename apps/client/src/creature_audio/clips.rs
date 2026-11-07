@@ -145,29 +145,84 @@ impl Surface {
             Some(
                 Dirt | Farmland | Path | Clay | Mud | MushroomStem | PurpleMushroomCap
                 | RedMushroomCap | YellowMushroomCap | GreenMushroomCap | BlueMushroomCap
-                | WhiteMushroomCap,
+                | WhiteMushroomCap | Conveyor,
             ) => Self::Dirt,
-            Some(Snow | SnowLayer) => Self::Snow,
+            Some(Snow | SnowLayer | CastleSnowWall) => Self::Snow,
             Some(
                 Wood | WeatheredWood | OakPlanks | BirchPlanks | SprucePlanks | Workbench | Chest
                 | SpruceLog | Torch | OakDoor | BirchDoor | SpruceDoor | OakWindow | BirchWindow
                 | SpruceWindow | OakBed | BirchBed | SpruceBed | HandCrank | CherryLog
-                | CherryPlanks | CherryDoor | CherryWindow,
+                | CherryPlanks | CherryDoor | CherryWindow | WoodenGear | WoodenShaft | WaterWheel
+                | WoodenLargeGear | ItemHopper | ItemImporter | GearboxHorizontal | GearboxVertical
+                | Mixer | FilteredFunnel | BeltMerger | FilteredTunnel | BeltDistributor | Campfire
+                | WoodPipe | Basin | HoldBlock | CastleTimberWall,
             ) => Self::Wood,
             Some(Gravel) => Self::Gravel,
-            Some(Glass | Ice | SaltCrystal | IceCrystal) => Self::Glass,
+            Some(Glass | GlassPipe | Ice | SaltCrystal | IceCrystal) => Self::Glass,
             Some(
-                Leaves | AutumnLeaves | SilverLeaves | CherryLeaves | WhiteCherryLeaves | Seagrass
-                | CaveVine | CaveMushroom,
+                Leaves | AutumnLeaves | SilverLeaves | CherryLeaves | WhiteCherryLeaves
+                | AppleLeaves | Seagrass | CaveVine | CaveMushroom,
             ) => Self::Leaves,
             Some(CaveRoot) => Self::Wood,
             Some(DripstoneTip | terra_voxel::MaterialId::FlowerPot) => Self::Stone,
             Some(
-                Air | Stone | Sandstone | SmoothStone | MossyStone | SolidWater | FluidWater
-                | SaltOre | IronOre | CoalOre | GoldOre | DiamondOre | RubyOre | Dripstone
-                | SaltFormation | DripstoneFormation | Bedrock | StructureStone | CoralRed
-                | CoralBlue | CoralYellow | CoralPurple | Furnace | ChimneyStraight | ChimneyElbow
-                | ChimneyHorizontal | ChimneyBendUp | ChimneyBendDown | Crusher,
+                Air
+                | Stone
+                | Sandstone
+                | SmoothStone
+                | MossyStone
+                | SolidWater
+                | FluidWater
+                | SaltOre
+                | IronOre
+                | CoalOre
+                | GoldOre
+                | DiamondOre
+                | RubyOre
+                | Dripstone
+                | SaltFormation
+                | DripstoneFormation
+                | Bedrock
+                | StructureStone
+                | CoralRed
+                | CoralBlue
+                | CoralYellow
+                | CoralPurple
+                | Furnace
+                | ChimneyStraight
+                | ChimneyElbow
+                | ChimneyHorizontal
+                | ChimneyBendUp
+                | ChimneyBendDown
+                | Crusher
+                | StoneGear
+                | IronGear
+                | StoneShaft
+                | IronShaft
+                | StoneLargeGear
+                | IronLargeGear
+                | Cauldron
+                | FluidInfuser
+                | Lantern
+                | Chain
+                | Bergfried
+                | CastleStoneWall
+                | BergfriedWall
+                | CastleCrackedWall
+                | CastleOvergrownWall
+                | CastleMossWall
+                | CastleIronWall
+                | CastleBattlementStraight
+                | CastleBattlementCorner
+                | CastleBattlementPillar
+                | CastleArchLeft
+                | CastleArchRight
+                | CastleArrowSlit
+                | CastleWindow
+                | CastleSandstoneWall
+                | CastleDesertWall
+                | CastleBlackstoneWall
+                | CastleRoyalWall,
             )
             | Some(terra_voxel::MaterialId::SaltStone | terra_voxel::MaterialId::PinkSaltStone)
             | None => Self::Stone,
@@ -349,6 +404,22 @@ mod tests {
         expected.push(Stone); // The flower pot is hard fired ceramic, not loose raw clay.
         expected.extend([Leaves; 2]);
         expected.extend([Wood; 7]);
+        expected.extend([Wood, Stone, Stone, Wood, Stone, Stone, Wood, Dirt]);
+        expected.extend([Wood, Stone, Stone]); // Large gears retain each physical material.
+        expected.extend([Wood; 4]); // Port and gearbox housings are timber with narrow metal straps.
+        expected.push(Wood); // The mixer hopper and frame use the same timber contacts.
+        expected.extend([Wood; 2]); // Filter cassette housing and four-way merger frame.
+        expected.extend([Wood; 2]); // Filtered tunnel and distributor retain their timber frames.
+        expected.extend([Stone, Wood]); // Iron brewing bowl and the campfire's charred logs.
+        expected.extend([Wood, Stone, Stone, Stone, Stone, Stone, Wood]); // Pipe bodies, metal fittings, pump and timber basin.
+        expected.extend([Wood, Stone]); // Timber Hold Block platform and hard metal Fluid Infuser casing.
+        expected.push(Glass); // Transparent glass pipe retains glass contact sounds.
+        expected.extend([Stone; 16]); // Founding keep, masonry, battlements, arches, slit/window and warm stone styles.
+        expected.push(Snow); // Snow-covered wall has a real snow cap underfoot.
+        expected.extend([Stone; 2]); // Blackstone and royal heraldry retain their masonry contact.
+        expected.push(Wood); // Timber reinforcement is the same contact family as strapped wooden machinery.
+        expected.extend([Stone; 2]); // Iron lantern feet/frame and chain links use the hard metal family.
+        expected.push(Leaves); // The apple canopy keeps the same leaf contact sounds.
         assert_eq!(
             expected.len(),
             usize::from(terra_voxel::MaterialId::LAST) + 1
@@ -361,6 +432,71 @@ mod tests {
             );
         }
         assert_eq!(Surface::material(u16::MAX), Stone);
+    }
+
+    #[test]
+    fn castle_contacts_use_stone_iron_timber_and_snow_foley_without_visual_finish_leaking_into_sound()
+     {
+        use terra_core::castle;
+        let mut variation = ContactVariation::default();
+        for material in castle::BLOCKS {
+            let expected = match material {
+                castle::TIMBER_WALL => Surface::Wood,
+                castle::SNOW_WALL => Surface::Snow,
+                _ => Surface::Stone,
+            };
+            assert_eq!(
+                Surface::material(material),
+                expected,
+                "castle material {material}"
+            );
+            for _ in 0..12 {
+                assert!(
+                    expected
+                        .clips()
+                        .contains(&variation.next(material, false).sound)
+                );
+            }
+        }
+        // The existing hard-contact family includes iron drives and fittings;
+        // reinforcement must not sound like the banner cloth or climbing ivy.
+        assert_eq!(
+            Surface::material(castle::IRON_WALL),
+            Surface::material(terra_voxel::MaterialId::IronGear as u16)
+        );
+        assert_eq!(Surface::material(castle::ROYAL_WALL), Surface::Stone);
+        assert_eq!(Surface::material(castle::OVERGROWN_WALL), Surface::Stone);
+    }
+
+    #[test]
+    fn filtered_logistics_keep_timber_contacts_while_iron_drives_remain_hard() {
+        use terra_voxel::MaterialId;
+        let mut variation = ContactVariation::default();
+        for (material, base) in [
+            (MaterialId::FilteredTunnel, MaterialId::ItemHopper),
+            (MaterialId::BeltDistributor, MaterialId::BeltMerger),
+            (MaterialId::HoldBlock, MaterialId::ItemHopper),
+        ] {
+            assert_eq!(Surface::material(material as u16), Surface::Wood);
+            assert_eq!(
+                Surface::material(material as u16),
+                Surface::material(base as u16)
+            );
+            for alternate in [false, true] {
+                assert!(
+                    Surface::Wood
+                        .clips()
+                        .contains(&variation.next(material as u16, alternate).sound)
+                );
+            }
+        }
+        for material in [
+            MaterialId::IronGear,
+            MaterialId::IronShaft,
+            MaterialId::FluidInfuser,
+        ] {
+            assert_eq!(Surface::material(material as u16), Surface::Stone);
+        }
     }
 
     #[test]

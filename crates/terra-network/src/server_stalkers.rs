@@ -18,7 +18,12 @@ pub(super) fn held_light(peer: &Peer, journal: &EditJournal) -> bool {
                 .get(&peer.uuid)?
                 .slot(usize::from(slot))
         })
-        .is_some_and(|stack| stack.item == ItemKind::Block(40))
+        .is_some_and(|stack| {
+            matches!(
+                stack.item,
+                ItemKind::Block(40 | terra_core::lantern::LANTERN)
+            )
+        })
 }
 
 impl Grips {

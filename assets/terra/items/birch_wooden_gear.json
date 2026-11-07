@@ -1,0 +1,5 @@
+{
+  "item": { "wooden_block": { "material": 141, "wood": "birch" } },
+  "name": "Birch Wooden Gear",
+  "description": "A birch-wood gear that transfers rotation between connected mechanical parts."
+}

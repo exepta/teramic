@@ -1,4 +1,5 @@
 //! Shadow-only cube shells omit subpixel relief, retaining leaf cutouts and wind.
+//! Middle/far depth batches preserve complete opaque geometry.
 use crate::{
     blocks::TemplateSet,
     meshing::{
@@ -6,8 +7,9 @@ use crate::{
         builder::{MeshBatch, append_greedy},
     },
 };
-use bevy::prelude::*;
+use bevy::{ecs::system::SystemParam, prelude::*};
 use std::collections::{BTreeMap, BTreeSet};
+use std::sync::{Arc, LazyLock};
 use terra_voxel::meshing::BlockFace;
 
 pub(crate) const LAYER: usize = 61;
@@ -31,6 +33,175 @@ pub(crate) fn prepare_material(
 
 #[derive(Component)]
 pub(crate) struct ReplacedShadowCaster;
+
+#[derive(SystemParam)]
+pub(super) struct ExactInputs<'w> {
+    standard: Option<Res<'w, Assets<StandardMaterial>>>,
+    foliage: Option<Res<'w, crate::foliage::FoliageAssets>>,
+    wet: Option<Res<'w, crate::weather::surfaces::WetMaterials>>,
+    depth: Option<Res<'w, crate::weather::surfaces::TerrainDepthMaterials>>,
+    shadow: Option<Res<'w, OpaqueShadowMaterial>>,
+}
+
+fn exact_control(smoke: bool, setting: Option<&str>, full_reference: bool) -> bool {
+    !smoke || (setting != Some("0") && !full_reference)
+}
+
+fn exact_enabled() -> bool {
+    static ENABLED: LazyLock<bool> = LazyLock::new(|| {
+        exact_control(
+            std::env::args().any(|arg| arg.starts_with("--smoke-test")),
+            std::env::var("TERRA_EXACT_LOD_SHADOWS").ok().as_deref(),
+            full_geometry_reference(),
+        )
+    });
+    *ENABLED
+}
+
+impl ExactInputs<'_> {
+    pub(super) fn capture(
+        &self,
+        blocks: &crate::blocks::BlockAssets,
+    ) -> Option<Arc<BTreeSet<usize>>> {
+        if !exact_enabled() || self.shadow.is_none() {
+            return None;
+        }
+        Some(Arc::new(exact_materials(
+            blocks,
+            self.standard.as_deref()?,
+            self.foliage.as_deref()?,
+            self.wet.as_deref()?,
+            self.depth.as_deref()?,
+        )))
+    }
+}
+
+fn exact_materials(
+    blocks: &crate::blocks::BlockAssets,
+    standard: &Assets<StandardMaterial>,
+    foliage: &crate::foliage::FoliageAssets,
+    wet: &crate::weather::surfaces::WetMaterials,
+    depth: &crate::weather::surfaces::TerrainDepthMaterials,
+) -> BTreeSet<usize> {
+    let Some(templates) = &blocks.templates else {
+        return BTreeSet::new();
+    };
+    if !crate::weather::surfaces::dry_terrain_uses_shared_surface_material() {
+        return BTreeSet::new();
+    }
+    blocks
+        .materials
+        .iter()
+        .enumerate()
+        .filter_map(|(slot, handle)| {
+            let material = standard.get(handle)?;
+            // Both selected extensions retain stock shadow vertices and force
+            // two-sided depth culling, matching OpaqueShadowMaterial exactly.
+            (material.alpha_mode == AlphaMode::Opaque
+                && !material.unlit
+                && material.depth_bias == 0.0
+                && wet.0.contains_key(&slot)
+                && depth.0.contains_key(&slot)
+                && !templates.water_material(slot)
+                && !templates.glass_material(slot)
+                && !templates.torch_material(slot)
+                && !templates.torch_palette.contains_key(&slot)
+                && !templates.ore_materials.values().any(|&ore| ore == slot)
+                && !foliage.materials.contains_key(&slot)
+                && !foliage.fibres.contains_key(&slot)
+                && !foliage.flames.contains_key(&slot)
+                && !foliage.reference.contains_key(&slot))
+            .then_some(slot)
+        })
+        .collect()
+}
+
+fn exact_batch(batch: &MeshBatch) -> bool {
+    let indices = if batch.compact_indices.is_empty() {
+        batch.indices.len()
+    } else {
+        batch.compact_indices.len()
+    };
+    batch.staged.is_none()
+        && !batch.shadow_only
+        && batch.shadow_sources.is_empty()
+        && batch.rooted_wind.is_empty()
+        && batch.growth_anchors.is_empty()
+        && batch.growth_ranges.is_empty()
+        && !batch.positions.is_empty()
+        && indices != 0
+        && indices % 3 == 0
+        && (batch.indices.is_empty() || batch.compact_indices.is_empty())
+        && batch.positions.iter().flatten().all(|v| v.is_finite())
+        && batch
+            .indices
+            .iter()
+            .all(|&i| (i as usize) < batch.positions.len())
+        && batch
+            .compact_indices
+            .iter()
+            .all(|&i| (i as usize) < batch.positions.len())
+}
+
+/// Preserve complete static depth geometry while reducing section caster batches.
+pub(super) fn append_exact(
+    batches: &mut Vec<MeshBatch>,
+    materials: &BTreeSet<usize>,
+    level: DetailLevel,
+) -> Result<(), String> {
+    if level == DetailLevel::Near || materials.is_empty() {
+        return Ok(());
+    }
+    let mut groups = BTreeMap::new();
+    for batch in batches.iter().filter(|batch| !batch.shadow_only) {
+        let eligible = materials.contains(&batch.material) && exact_batch(batch);
+        groups
+            .entry(batch.material)
+            .and_modify(|safe| *safe &= eligible)
+            .or_insert(eligible);
+    }
+    let sources: Vec<_> = batches
+        .iter()
+        .filter(|batch| !batch.shadow_only && groups.get(&batch.material) == Some(&true))
+        .collect();
+    if sources.len() < 2 {
+        return Ok(());
+    }
+    let _scope = terra_core::profiling::ScopeTimer::new("terrain.shadows.exact");
+    let mut combined = MeshBatch {
+        material: sources[0].material,
+        shadow_only: true,
+        shadow_sources: groups
+            .into_iter()
+            .filter_map(|(material, safe)| safe.then_some(material))
+            .collect(),
+        ..default()
+    };
+    for batch in &sources {
+        let base = u32::try_from(combined.positions.len()).map_err(|_| "Shadow fusion overflow")?;
+        combined.positions.extend_from_slice(&batch.positions);
+        if batch.compact_indices.is_empty() {
+            for &index in &batch.indices {
+                combined
+                    .indices
+                    .push(base.checked_add(index).ok_or("Shadow fusion overflow")?);
+            }
+        } else {
+            for &index in &batch.compact_indices {
+                combined.indices.push(
+                    base.checked_add(u32::from(index))
+                        .ok_or("Shadow fusion overflow")?,
+                );
+            }
+        }
+    }
+    // Retain the normal worker handoff bounds, including indivisible quad pairs.
+    let proxies = crate::upload_budget::split_batches(vec![combined])?;
+    if proxies.len() < sources.len() {
+        batches.extend(proxies);
+    }
+    Ok(())
+}
 
 pub(crate) fn enabled(graphics: Option<&terra_core::GraphicsConfig>) -> bool {
     graphics.is_none_or(|graphics| graphics.shadow_quality != terra_core::ShadowQuality::Off)
@@ -89,6 +260,8 @@ pub(crate) fn append(
         return Ok(());
     }
     let mut shadows = BTreeMap::new();
+    let mut flat_shadows = BTreeMap::new();
+    let mut source_materials = BTreeMap::<(usize, bool), BTreeSet<usize>>::new();
     let mut masked_materials = BTreeSet::new();
     // Color batches can combine model and cube geometry with shared materials.
     // Keep those casters intact rather than replacing the model's shadow too.
@@ -98,9 +271,28 @@ pub(crate) fn append(
         .flat_map(|block| block.model.iter().map(|primitive| primitive.material))
         .collect();
     for &face in faces {
-        if let Some(block) = templates.blocks.get(&face.material) {
+        if let Some(original) = templates.blocks.get(&face.material) {
+            let flat = original.render_kind == crate::blocks::definitions::BlockRenderKind::Cube
+                && templates.opaque_cube_lods.contains(&face.material)
+                && templates.cube_lods.contains_key(&face.material);
+            let authored = original.render_kind
+                == crate::blocks::definitions::BlockRenderKind::CustomMesh
+                && original.model.is_empty()
+                && templates.opaque_cube_lods.contains(&face.material);
+            let block = if authored {
+                let Some(coarse) = templates.cube_lods.get(&face.material) else {
+                    continue;
+                };
+                coarse
+            } else {
+                original
+            };
             if block.render_kind != crate::blocks::definitions::BlockRenderKind::Cube
-                || model_materials.contains(&block.face_materials[face.side])
+                || model_materials.contains(&original.face_materials[face.side])
+                || authored
+                    && original.faces[face.side]
+                        .iter()
+                        .any(|primitive| model_materials.contains(&primitive.material))
                 || block.side_cap.is_some_and(|cap| {
                     face.side / 2 != 1 && model_materials.contains(&cap.material)
                 })
@@ -113,21 +305,57 @@ pub(crate) fn append(
             {
                 continue;
             }
-            if matches!(face.material, 7..=9 | 132 | 133) {
+            if matches!(face.material, 7..=9 | 132 | 133 | 195) {
                 masked_materials.insert(block.face_materials[face.side]);
             }
-            append_greedy(&mut shadows, face, block)?;
+            let sources = source_materials
+                .entry((block.face_materials[face.side], flat))
+                .or_default();
+            if authored {
+                sources.extend(original.faces[face.side].iter().map(|p| p.material));
+            } else {
+                sources.insert(block.face_materials[face.side]);
+                if let Some(cap) = block.side_cap {
+                    source_materials
+                        .entry((cap.material, flat))
+                        .or_default()
+                        .insert(cap.material);
+                }
+            }
+            // Keep flat authored fallbacks separate until shell construction:
+            // a shared material slot can also contain ordinary detailed cubes.
+            append_greedy(
+                if flat {
+                    &mut flat_shadows
+                } else {
+                    &mut shadows
+                },
+                face,
+                block,
+            )?;
         }
     }
     let mut opaque: Option<MeshBatch> = None;
-    for mut batch in shadows.into_values() {
+    for (mut batch, flat) in shadows
+        .into_values()
+        .map(|batch| (batch, false))
+        .chain(flat_shadows.into_values().map(|batch| (batch, true)))
+    {
         batch.shadow_only = true;
-        batch.shadow_sources.push(batch.material);
+        batch.shadow_sources = source_materials
+            .remove(&(batch.material, flat))
+            .map_or_else(
+                || vec![batch.material],
+                |sources| sources.into_iter().collect(),
+            );
         // Opaque depth casters need only position; cutout foliage keeps its UVs
         // and original wind shader. No reduced color or collision geometry.
-        if !masked_materials.contains(&batch.material) {
-            recessed_shell(&mut batch)?;
+        if flat || !masked_materials.contains(&batch.material) {
+            if !flat {
+                recessed_shell(&mut batch)?;
+            }
             batch.normals = Vec::new();
+            batch.tangents = Vec::new();
             batch.uvs = Vec::new();
             // The shared depth-only material is two-sided: cave ceilings still
             // block sunlight without submitting every triangle twice.
@@ -150,6 +378,9 @@ pub(crate) fn append(
         }
     }
     if let Some(batch) = opaque {
+        let mut batch = batch;
+        batch.shadow_sources.sort_unstable();
+        batch.shadow_sources.dedup();
         batches.push(batch);
     }
     Ok(())
@@ -203,8 +434,169 @@ fn full_geometry_reference() -> bool {
 }
 
 #[cfg(test)]
+#[path = "shadows_exact_tests.rs"]
+mod exact_tests;
+
+#[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn authored_coarse_near_combines_flat_proxies_without_flattening_other_cube_shells() {
+        let mut templates = crate::blocks::authored_terrain_templates();
+        templates.blocks.insert(1, templates.cube_lods[&1].clone());
+        let grass = BlockFace {
+            minimum: [0; 3],
+            width: 2,
+            height: 1,
+            side: 3,
+            u_axis: 0,
+            v_axis: 2,
+            material: 1,
+            edge_mask: 15,
+            occupied_neighbor: false,
+        };
+        let mut proxies = Vec::new();
+        append(&mut proxies, &[grass], &templates, DetailLevel::Near).unwrap();
+        assert_eq!(proxies.len(), 1);
+        assert!(proxies[0].shadow_only);
+        assert_eq!(proxies[0].shadow_sources, vec![4]);
+        assert_eq!(proxies[0].positions.len(), 4);
+        assert_eq!(proxies[0].indices.len(), 6);
+        assert!(proxies[0].positions.iter().all(|point| point[1] == 1.0));
+        assert!(
+            proxies[0].normals.is_empty()
+                && proxies[0].tangents.is_empty()
+                && proxies[0].uvs.is_empty()
+        );
+        let stone = BlockFace {
+            minimum: [2, 0, 0],
+            material: 3,
+            width: 1,
+            ..grass
+        };
+        // Reusing the grass slot must not flatten the stone's recessed shell.
+        for material in [4, 7] {
+            templates.blocks.insert(
+                3,
+                crate::blocks::BlockTemplate {
+                    render_kind: crate::blocks::definitions::BlockRenderKind::Cube,
+                    face_materials: [material; 6],
+                    faces: crate::blocks::cube_faces(0.0, [material; 6], None),
+                    side_cap: None,
+                    model: Vec::new(),
+                    details: Vec::new(),
+                    bevel_width: 0.0,
+                    surface: None,
+                },
+            );
+            proxies.clear();
+            append(&mut proxies, &[grass, stone], &templates, DetailLevel::Near).unwrap();
+            assert_eq!(proxies.len(), 1);
+            let proxy = &proxies[0];
+            assert!(proxy.shadow_only);
+            assert_eq!(
+                proxy.shadow_sources,
+                if material == 4 { vec![4] } else { vec![4, 7] }
+            );
+            assert_eq!(proxy.positions.len(), 12);
+            assert_eq!(proxy.indices.len(), 36);
+            assert_eq!(
+                proxy
+                    .positions
+                    .iter()
+                    .filter(|point| point[1] < 1.0)
+                    .count(),
+                4
+            );
+            assert!(
+                proxy
+                    .indices
+                    .iter()
+                    .all(|&index| (index as usize) < proxy.positions.len())
+            );
+        }
+    }
+
+    #[test]
+    fn authored_grass_shadow_shell_keeps_dense_color_faces_and_maps_near_materials() {
+        let templates = crate::blocks::authored_terrain_templates();
+        let mut padded = [0; terra_voxel::meshing::PADDED_VOLUME];
+        for x in 1..=2 {
+            padded[x + 18 * (1 + 18)] = 1;
+        }
+        let geometry = terra_voxel::meshing::mesh_section(&padded).unwrap();
+        let compose = || {
+            super::super::builder::compose_section_with_options(
+                &geometry.faces,
+                &templates,
+                terra_voxel::SectionPos::default(),
+                &super::super::builder::RenderOptions {
+                    water_level: None,
+                    detail_level: DetailLevel::Near,
+                    terrain: None,
+                    exposure: None,
+                    tints: Default::default(),
+                    conditions: default(),
+                },
+            )
+            .unwrap()
+        };
+        let original = compose();
+        let mut batches = compose();
+        assert!(batches[0].indices.len() >= 10 * 128 * 3);
+        append(&mut batches, &geometry.faces, &templates, DetailLevel::Near).unwrap();
+        assert_eq!(&batches[..original.len()], original);
+        assert_eq!(batches.len(), original.len() + 1);
+        let proxy = batches.last().unwrap();
+        assert!(proxy.shadow_only);
+        assert_eq!(
+            proxy.shadow_sources,
+            vec![templates.blocks[&1].face_materials[0]]
+        );
+        assert!(proxy.normals.is_empty() && proxy.tangents.is_empty() && proxy.uvs.is_empty());
+        assert_eq!(proxy.positions.len(), geometry.faces.len() * 8);
+        assert_eq!(proxy.indices.len(), geometry.faces.len() * 30);
+        assert!(
+            proxy
+                .positions
+                .iter()
+                .flatten()
+                .all(|value| value.is_finite())
+        );
+        assert!(
+            proxy
+                .indices
+                .iter()
+                .all(|&index| (index as usize) < proxy.positions.len())
+        );
+        assert!(
+            proxy
+                .positions
+                .iter()
+                .all(|point| point.iter().all(|&v| (0.0..=2.0).contains(&v)))
+        );
+
+        let mut model = templates.clone();
+        model.blocks.get_mut(&1).unwrap().model = model.blocks[&1].faces[0].clone();
+        let mut skipped = Vec::new();
+        append(&mut skipped, &geometry.faces, &model, DetailLevel::Near).unwrap();
+        assert!(
+            skipped.is_empty(),
+            "standalone custom models keep their exact caster"
+        );
+        append(
+            &mut skipped,
+            &geometry.faces,
+            &templates,
+            DetailLevel::Middle,
+        )
+        .unwrap();
+        assert!(
+            skipped.is_empty(),
+            "the existing coarse terrain already casts its own shadow"
+        );
+    }
 
     #[test]
     fn shared_opaque_shadow_material_keeps_both_sides_without_reverse_triangles() {
@@ -370,6 +762,7 @@ mod tests {
         let mut model = cube.clone();
         model.render_kind = crate::blocks::definitions::BlockRenderKind::CustomMesh;
         model.model.push(crate::blocks::PrimitiveTemplate {
+            tangents: Vec::new(),
             positions: vec![],
             normals: vec![],
             uvs: vec![],

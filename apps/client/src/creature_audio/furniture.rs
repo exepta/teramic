@@ -126,6 +126,14 @@ pub(super) fn update(
                     ))
                 })
                 .anchor
+            } else if terra_world::objects::is_door(material) {
+                terra_world::objects::doors::group(cell, material, state, |p| {
+                    Some((
+                        chunks.block_at(p).or_else(|| journal.block(p))?,
+                        journal.object_state(p)?,
+                    ))
+                })
+                .map_or(cell, |group| group.anchor)
             } else {
                 cell
             };
@@ -170,9 +178,37 @@ pub(super) fn update(
     chest_status.tracked = timing.chests.len();
     let mut energy = [0.0_f32; 2];
     if let Some(session) = session.as_ref() {
-        for furnace in session.furnaces.iter().filter(|f| f.lit).take(32) {
-            let position =
-                Vec3::from_array(furnace.position.map(|v| v as f32)) + Vec3::new(0.5, 0.8, 0.5);
+        let mut fires: Vec<_> = session
+            .furnaces
+            .iter()
+            .filter(|f| f.lit)
+            .map(|f| (f.position, 59, 0.8))
+            .chain(session.campfires.iter().filter(|f| f.lit).map(|f| {
+                if journal
+                    .object_state(f.position)
+                    .is_some_and(|state| terra_core::brewing::has_fire(state.facing))
+                    && chunks.block_at(f.position) == Some(161)
+                {
+                    (f.position, 161, 0.27)
+                } else {
+                    (f.position, 162, 0.4)
+                }
+            }))
+            .filter(|(cell, material, _)| {
+                chunks
+                    .block_at(*cell)
+                    .is_some_and(|raw| journal.block(*cell).unwrap_or(raw) == *material)
+            })
+            .map(|(cell, _, height)| {
+                Vec3::from_array(cell.map(|v| v as f32)) + Vec3::new(0.5, height, 0.5)
+            })
+            .filter(|position| position.distance_squared(listener) < 16.0_f32.powi(2))
+            .collect();
+        fires.sort_by(|a, b| {
+            a.distance_squared(listener)
+                .total_cmp(&b.distance_squared(listener))
+        });
+        for position in fires.into_iter().take(32) {
             let delta = position - listener;
             if delta.length_squared() > 16.0_f32.powi(2) {
                 continue;

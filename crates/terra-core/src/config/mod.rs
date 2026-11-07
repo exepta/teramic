@@ -1,4 +1,11 @@
 mod audio;
+mod biomes;
+mod terrain;
+pub use biomes::{
+    BiomeDefinition, BiomeDefinitions, BiomeKind, BiomeTerrain, MarineFloorWeights,
+    MarineHabitatConfig, OceanBiomeConfig,
+};
+pub use terrain::{LandscapeDefinitions, LandscapeProfile, TerrainKind};
 mod block_details;
 pub use block_details::{BlockDetailConfig, BlockDetailQuality};
 mod cave_biomes;
@@ -29,7 +36,7 @@ pub use load::{Config, config_directory, menu_config_directory};
 pub use multiplayer::MultiplayerConfig;
 pub use persist::save_toml;
 pub use server::{PlayerPermissions, ServerConfig};
-pub use world::WorldConfig;
+pub use world::{StructureSettings, WorldConfig};
 
 fn ensure(condition: bool, message: &str) -> Result<(), ConfigError> {
     if condition {

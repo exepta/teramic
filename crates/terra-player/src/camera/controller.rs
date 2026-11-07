@@ -40,6 +40,46 @@ pub(crate) struct WalkIntent {
     diving: bool,
 }
 
+pub(crate) fn toggle_flight(
+    time: Res<Time>,
+    keys: GameplayInput,
+    input: Res<CameraInputState>,
+    blocked: Res<PlayerInputBlock>,
+    session: Option<Res<ClientSession>>,
+    mut mode: ResMut<ControllerMode>,
+    mut previous_jump: Local<Option<f64>>,
+) {
+    let eligible = input.captured
+        && !input.just_captured
+        && !blocked.0
+        && session.as_ref().is_some_and(|session| {
+            session.ready
+                && session.error.is_none()
+                && session.game_mode != terra_core::GameMode::Spectator
+                && session.allow_flight
+                && session.mounted.is_none()
+                && session.sleeping().is_none()
+                && !session.dead()
+        });
+    if !eligible {
+        *previous_jump = None;
+        return;
+    }
+    if keys.just_pressed(Action::Jump) {
+        let now = time.elapsed_secs_f64();
+        if previous_jump.is_some_and(|previous| now >= previous && now - previous <= 0.25) {
+            *mode = if *mode == ControllerMode::Walk {
+                ControllerMode::Fly
+            } else {
+                ControllerMode::Walk
+            };
+            *previous_jump = None;
+        } else {
+            *previous_jump = Some(now);
+        }
+    }
+}
+
 pub(crate) fn sync_controller(
     mut commands: Commands,
     mut mode: ResMut<ControllerMode>,

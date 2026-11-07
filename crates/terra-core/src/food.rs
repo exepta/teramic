@@ -61,7 +61,11 @@ impl ItemFood {
     }
 }
 
-const SOURCES: [(&str, &str); 15] = [
+const SOURCES: [(&str, &str); 16] = [
+    (
+        "items/apple.json",
+        include_str!("../../../assets/terra/items/apple.json"),
+    ),
     (
         "items/corn.json",
         include_str!("../../../assets/terra/items/corn.json"),
@@ -212,6 +216,25 @@ mod tests {
         assert!(food(ItemKind::Animal(AnimalProduct::Wool)).is_none());
         assert!(food(ItemKind::Animal(AnimalProduct::Leather)).is_none());
         assert!(food(ItemKind::Block(3)).is_none());
+    }
+
+    #[test]
+    fn orchard_food_and_remainder_are_registered_exactly_once_in_the_item_catalog() {
+        for item in [ItemKind::Apple, ItemKind::AppleCore] {
+            assert!(item.valid());
+            assert_eq!(
+                ItemKind::EXTRA
+                    .iter()
+                    .filter(|&&registered| registered == item)
+                    .count(),
+                1
+            );
+        }
+        assert_eq!(
+            food(ItemKind::Apple).unwrap().remainder,
+            Some(ItemKind::AppleCore)
+        );
+        assert!(food(ItemKind::AppleCore).is_none());
     }
 
     #[test]

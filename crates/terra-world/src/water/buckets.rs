@@ -27,6 +27,9 @@ pub fn target(
         crate::props::PropPose::Rest,
     );
     let hit = block?;
+    if chunks.block_at(hit.position) == Some(terra_core::plumbing::BASIN) {
+        return Some(hit.position);
+    }
     let position = if super::space::partial(chunks.block_at(hit.position)?) {
         hit.position
     } else {
@@ -43,6 +46,17 @@ pub fn source(
     position: [i64; 3],
 ) -> Option<FluidCell> {
     let material = chunks.block_at(position)?;
+    if material == terra_core::plumbing::FAUCET {
+        return Some(FluidCell {
+            amount: if crate::plumbing::tap_available(chunks, journal, position, 1) {
+                crate::plumbing::visual_data(chunks, journal, position)?.amount as u8
+            } else {
+                0
+            },
+            source: crate::plumbing::tap_available(chunks, journal, position, 8),
+            flow: [0; 2],
+        });
+    }
     Some(chunks.fluid_cell_at(terrain, journal, position, material))
 }
 
@@ -57,6 +71,20 @@ pub fn transfer(
     let Some(material) = chunks.block_at(position) else {
         return Ok(false);
     };
+    if material == terra_core::plumbing::BASIN {
+        return if filled {
+            crate::plumbing::fill_basin(chunks, journal, position, 8)
+        } else {
+            Ok(false)
+        };
+    }
+    if material == terra_core::plumbing::FAUCET {
+        return if filled {
+            Ok(false)
+        } else {
+            crate::plumbing::take_tap(chunks, journal, position, 8)
+        };
+    }
     let Some(current) = source(chunks, terrain, journal, position) else {
         return Ok(false);
     };

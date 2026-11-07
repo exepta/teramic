@@ -426,38 +426,63 @@ fn bridge_clearance_uses_full_deck_top_and_each_lanes_own_water_level() {
 }
 
 #[test]
+fn revision_four_terrain_preserves_all_village_styles_for_three_real_seeds() {
+    for seed in [42042, 1337, 99173] {
+        assert_village_styles(
+            WorldConfig {
+                seed: WorldSeed(seed),
+                landscape_revision: 4,
+                sea_level: 22.0,
+                rivers: true,
+                biome_definitions: Some(terra_core::BiomeDefinitions::default()),
+                structures_revision: 2,
+                ..Default::default()
+            },
+            12,
+        );
+    }
+}
+
+#[test]
 fn default_terrain_discovers_all_village_styles_for_three_real_seeds() {
     for seed in [42042, 1337, 99173] {
-        let terrain = TerraGenerator::new(WorldConfig {
-            seed: WorldSeed(seed),
-            structures_revision: 2,
-            ..Default::default()
-        })
-        .unwrap();
-        let mut found = BTreeSet::new();
-        'regions: for radius in 0_i64..=12 {
-            for z in -radius..=radius {
-                for x in -radius..=radius {
-                    if radius > 0 && x.abs() != radius && z.abs() != radius {
-                        continue;
-                    }
-                    if let Some(site) = terrain.structure_site([x, z])
-                        && site.kind == StructureKind::Village
-                    {
-                        found.insert(site.style as u8);
-                    }
-                    if found.len() == 3 {
-                        break 'regions;
-                    }
+        assert_village_styles(
+            WorldConfig {
+                seed: WorldSeed(seed),
+                ..Default::default()
+            },
+            32,
+        );
+    }
+}
+
+fn assert_village_styles(config: WorldConfig, radius_limit: i64) {
+    let seed = config.seed.0;
+    let revision = config.landscape_revision;
+    let terrain = TerraGenerator::new(config).unwrap();
+    let mut found = BTreeSet::new();
+    'regions: for radius in 0..=radius_limit {
+        for z in -radius..=radius {
+            for x in -radius..=radius {
+                if radius > 0 && x.abs() != radius && z.abs() != radius {
+                    continue;
+                }
+                if let Some(site) = terrain.structure_site([x, z])
+                    && site.kind == StructureKind::Village
+                {
+                    found.insert(site.style as u8);
+                }
+                if found.len() == 3 {
+                    break 'regions;
                 }
             }
         }
-        assert_eq!(
-            found.len(),
-            3,
-            "actual default terrain seed={seed}: found={found:?}"
-        );
     }
+    assert_eq!(
+        found.len(),
+        3,
+        "actual terrain revision={revision} seed={seed}: found={found:?}"
+    );
 }
 
 #[test]

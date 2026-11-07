@@ -1,3 +1,6 @@
+mod advanced;
+mod biome_terrain;
+pub use advanced::{TerrainDebugSample, TerrainFields};
 pub mod biomes;
 mod cave_biomes;
 mod cave_ecology;
@@ -19,13 +22,15 @@ mod lakes;
 mod landforms;
 mod landscape;
 pub use landscape::LandscapeNoise;
+mod landscape_regions;
+pub use landscape_regions::{LandformKind, LandscapeRegionSample};
 mod oases;
 mod ocean;
 pub use ocean::{OceanArea, OceanHabitat};
 mod ores;
 pub use oases::OasisSample;
 mod rivers;
-pub use rivers::RiverSample;
+pub use rivers::{HydrologyDistributary, HydrologyRegion, HydrologyTributary, RiverSample};
 #[cfg(test)]
 mod landscape_tests;
 #[cfg(test)]
@@ -50,3 +55,6 @@ pub use sections::{SectionGenerationError, SectionGenerator};
 pub use surface::SurfaceColumn;
 pub use terrain::{MAX_SAMPLE_COORDINATE, TerrainGenerator};
 pub use vegetation::{GroundCover, TreeAppearance, TreeAppearanceSnapshot};
+
+#[cfg(feature = "bevy")]
+pub use vegetation::planted_shape;

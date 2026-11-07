@@ -1,0 +1,3 @@
+stage,classification,before_request_to_visible_ms,after_request_to_visible_ms,before_max_frame_ms,after_max_frame_ms,before_frames,after_frames
+Opening,legacy diagnostic; not validated paired improvement,146.502167,136.638183,101.597903,98.13158800000001,3,3
+Closing,legacy diagnostic; not validated paired improvement,41.761302,42.316565,28.743753,28.312879,2,2

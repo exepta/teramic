@@ -211,11 +211,7 @@ pub(super) fn sample(pattern: TexturePattern, px: u32, py: u32) -> Option<[f32; 
             )
         }
         TexturePattern::Sand => {
-            let pore = hash((x * 2.0) as u32, (y * 2.0) as u32).is_multiple_of(43);
-            (
-                [230.0, 204.0, 148.0],
-                0.98 + grain * 0.09 - if pore { 0.09 } else { 0.0 },
-            )
+            return Some(super::super::sand::color(px, py));
         }
         TexturePattern::Clay => {
             let p = plate(x, y, 113);

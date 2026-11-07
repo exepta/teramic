@@ -61,6 +61,7 @@ pub(super) fn update(
     mut assets: ResMut<Assets<RecordedSoundscape>>,
     mut commands: Commands,
     mut weather_probe: Local<terra_world::weather::SurfaceWeatherProbe>,
+    mut startup: Option<ResMut<super::RecordedAudioStartup>>,
 ) {
     if let Some(result) = sounds
         .loading
@@ -75,8 +76,16 @@ pub(super) fn update(
                     "Recorded animal/environment audio decoded"
                 );
                 sounds.bank = Some(bank);
+                if let Some(startup) = startup.as_mut() {
+                    startup.ready = true;
+                }
             }
-            Err(error) => tracing::error!(%error, "Cannot load recorded animal/environment audio"),
+            Err(error) => {
+                tracing::error!(%error, "Cannot load recorded animal/environment audio");
+                if let Some(startup) = startup.as_mut() {
+                    startup.error = Some(error);
+                }
+            }
         }
     }
     let active = world.access.ready() && world.menu.as_ref().is_none_or(|m| m.world_audio_active());
@@ -94,6 +103,9 @@ pub(super) fn update(
             gain.store(0, Ordering::Relaxed);
         }
         for gain in &sounds.controls.fire {
+            gain.store(0, Ordering::Relaxed);
+        }
+        for gain in &sounds.controls.faucet {
             gain.store(0, Ordering::Relaxed);
         }
         for gain in &sounds.controls.rain {

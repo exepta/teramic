@@ -43,14 +43,21 @@ pub fn fluid_cell_at(
     let cell = journal
         .fluid(global)
         .unwrap_or_else(|| natural_cell(terrain, global));
-    if super::space::partial(block) {
-        super::space::FluidSpace::at(journal, global, |p| {
-            if p == global {
-                Some(block)
-            } else {
-                journal.block(p)
-            }
-        })
+    if super::space::partial(block) || journal.has_extended_kinetics() {
+        super::space::FluidSpace::wet_at(
+            journal,
+            global,
+            |p| {
+                if p == global {
+                    Some(block)
+                } else {
+                    journal
+                        .block(p)
+                        .or_else(|| (natural_cell(terrain, p).amount > 0).then_some(0))
+                }
+            },
+            |p, _| journal.fluid(p).unwrap_or_else(|| natural_cell(terrain, p)),
+        )
         .clamp(cell)
     } else {
         cell
@@ -74,7 +81,7 @@ pub fn can_hold_fluid(block: u16) -> bool {
         )
 }
 
-pub(super) fn natural_cell(terrain: &TerraGenerator, global: [i64; 3]) -> FluidCell {
+pub(crate) fn natural_cell(terrain: &TerraGenerator, global: [i64; 3]) -> FluidCell {
     from_columns(
         terrain.water_columns(global[0] as f64 + 0.5, global[2] as f64 + 0.5),
         global[1],

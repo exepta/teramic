@@ -74,18 +74,21 @@ fn build(
             if original.iter().any(|p| (p[axis] - plane).abs() > 0.00001)
                 || high[u] - low[u] < 0.35
                 || high[v] - low[v] < 0.35
-                || side == 2
+                || side == 2 && !matches!(style, CubeSurface::Sand)
                 || (matches!(style, CubeSurface::Turf) && side == 3)
             {
                 let normal = Vec3::from_array(primitive.normals[index * 4]);
                 push(&mut result, primitive.material, points, normal, 1.0, (u, v));
                 continue;
             }
+            if matches!(style, CubeSurface::Sand) {
+                sand_substrate(&mut result, primitive.material, points, outward, (u, v));
+                continue;
+            }
             let fine = matches!(
                 style,
                 CubeSurface::Turf
                     | CubeSurface::Farmland
-                    | CubeSurface::Sand
                     | CubeSurface::Snow
                     | CubeSurface::CoralRed
                     | CubeSurface::CoralBlue
@@ -312,8 +315,82 @@ fn build(
     }
     for patch in &mut result {
         index_vertices(&mut patch.primitive);
+        if source.iter().any(|primitive| {
+            primitive.material == patch.primitive.material && !primitive.tangents.is_empty()
+        }) {
+            patch.primitive.tangents = patch
+                .primitive
+                .normals
+                .iter()
+                .map(|&normal| super::projected_tangent(Vec3::from_array(normal), side))
+                .collect();
+        }
     }
     result
+}
+
+fn sand_substrate(
+    patches: &mut Vec<SurfacePatch>,
+    material: usize,
+    face: [Vec3; 4],
+    outward: Vec3,
+    axes: (usize, usize),
+) {
+    // A flat collar seals nearby and mixed-LOD seams at the exact block plane.
+    // Fine grains stay in the texture rather than a per-grain geometry grid.
+    let border = [(0.04, 0.04), (0.96, 0.04), (0.96, 0.96), (0.04, 0.96)]
+        .map(|(x, y)| face[0].lerp(face[1], x).lerp(face[3].lerp(face[2], x), y));
+    let inner = [(0.08, 0.08), (0.92, 0.08), (0.92, 0.92), (0.08, 0.92)]
+        .map(|(x, y)| face[0].lerp(face[1], x).lerp(face[3].lerp(face[2], x), y) - outward * 0.004);
+    sand_quad(patches, material, inner, outward, 1.0, axes);
+    for (a, b) in [(0, 1), (1, 2), (2, 3), (3, 0)] {
+        sand_quad(
+            patches,
+            material,
+            [face[a], face[b], border[b], border[a]],
+            outward,
+            1.0,
+            axes,
+        );
+        sand_quad(
+            patches,
+            material,
+            [border[a], border[b], inner[b], inner[a]],
+            outward,
+            1.0,
+            axes,
+        );
+    }
+}
+
+fn sand_quad(
+    patches: &mut Vec<SurfacePatch>,
+    material: usize,
+    points: [Vec3; 4],
+    outward: Vec3,
+    shade: f32,
+    axes: (usize, usize),
+) {
+    let start = patches
+        .iter()
+        .find(|patch| patch.primitive.material == material && patch.shade == shade)
+        .map_or(0, |patch| patch.primitive.normals.len());
+    push(patches, material, points, outward, shade, axes);
+    let mut normal = (points[1] - points[0])
+        .cross(points[2] - points[0])
+        .normalize_or_zero();
+    if normal.cross(outward).length_squared() < 1e-10 {
+        normal = outward;
+    } else if normal.dot(outward) < 0.0 {
+        normal = -normal;
+    }
+    // Each sand quad is planar. Sharing its normal also avoids float-bit
+    // differences across its diagonal multiplying otherwise identical vertices.
+    let patch = patches
+        .iter_mut()
+        .find(|patch| patch.primitive.material == material && patch.shade == shade)
+        .unwrap();
+    patch.primitive.normals[start..].fill(normal.to_array());
 }
 
 fn index_vertices(mesh: &mut PrimitiveTemplate) {
@@ -365,6 +442,7 @@ fn push(
         .unwrap_or_else(|| {
             result.push(SurfacePatch {
                 primitive: PrimitiveTemplate {
+                    tangents: Vec::new(),
                     positions: Vec::new(),
                     normals: Vec::new(),
                     uvs: Vec::new(),
@@ -484,6 +562,58 @@ mod tests {
                 && (!(p[0] == 0.0 || p[0] == 1.0 || p[2] == 0.0 || p[2] == 1.0) || p[1] == 1.0)
         }));
         assert!(patches.iter().any(|patch| patch.shade < 0.9));
+    }
+
+    #[test]
+    fn stone_free_sand_keeps_a_closed_shallow_surface_in_one_shared_batch() {
+        let template = SurfaceTemplate::new(CubeSurface::Sand);
+        let faces = cube_faces(0.0, [7; 6], None);
+        for (side, face) in faces.iter().enumerate() {
+            for variant in 0..12 {
+                let patches = template.face(face, side, variant, 63, |p| p);
+                assert_eq!(patches.len(), 1);
+                let (u, v) = match side / 2 {
+                    0 => (2, 1),
+                    1 => (0, 2),
+                    _ => (0, 1),
+                };
+                let plane = (side % 2) as f32;
+                let sign = if side % 2 == 0 { -1.0 } else { 1.0 };
+                let mut vertices = 0;
+                for patch in patches {
+                    assert_eq!(patch.primitive.material, 7);
+                    vertices += patch.primitive.positions.len();
+                    for position in &patch.primitive.positions {
+                        assert!(
+                            position
+                                .iter()
+                                .all(|v| v.is_finite() && (0.0..=1.0).contains(v))
+                        );
+                        let depth = (plane - position[side / 2]) * sign;
+                        assert!((-1e-6..=0.0041).contains(&depth));
+                        for axis in [u, v] {
+                            assert!(
+                                [0.0_f32, 0.04, 0.08, 0.92, 0.96, 1.0]
+                                    .into_iter()
+                                    .any(|coordinate| (position[axis] - coordinate).abs() < 1e-6)
+                            );
+                        }
+                        if position[u] <= 0.04
+                            || position[u] >= 0.96
+                            || position[v] <= 0.04
+                            || position[v] >= 0.96
+                        {
+                            assert_eq!(position[side / 2], plane);
+                        }
+                    }
+                }
+                assert!(vertices <= 28, "sand geometry budget: {vertices}");
+                assert!(std::ptr::eq(
+                    patches,
+                    template.face(face, side, variant, 63, |p| p)
+                ));
+            }
+        }
     }
 
     #[test]

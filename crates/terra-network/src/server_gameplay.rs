@@ -3,6 +3,10 @@ use terra_core::GameMode;
 #[path = "server_equipment.rs"]
 mod equipment;
 
+#[cfg(test)]
+#[path = "server_gameplay_funnel_tests.rs"]
+mod funnel_tests;
+
 pub(super) fn held_tool(peer: &Peer, world: &ControlWorld) -> Option<terra_core::ItemKind> {
     world
         .journal
@@ -200,6 +204,10 @@ pub(super) fn intent(
                 sender.send::<ControlChannel>(ServerControl::Mining(None));
                 return;
             };
+            if !plan.allowed_for(peer.uuid, &world.chunks, &world.journal) {
+                sender.send::<ControlChannel>(ServerControl::Mining(None));
+                return;
+            }
             Some(plan)
         } else {
             None
@@ -335,6 +343,11 @@ pub(super) fn tick(
                 .iter()
                 .filter(|drop| {
                     drop.pickup_delay_seconds <= 0.0
+                        && terra_world::conveyors::carrying_segment(drop, &world.journal).is_none()
+                        && terra_world::crushers::carrying(drop, &world.journal).is_none()
+                        && terra_world::funnels::carrying(drop, &world.journal).is_none()
+                        && terra_world::conveyors::routing_carrying(drop, &world.journal).is_none()
+                        && terra_world::conveyors::infusion_carrying(drop, &world.journal).is_none()
                         && (drop.grounded
                             || !matches!(drop.stack.item, terra_core::ItemKind::Block(51..=53)))
                         && pickup_visible_with_context(
@@ -359,6 +372,14 @@ pub(super) fn tick(
                 else {
                     continue;
                 };
+                if !super::kingdoms::permission_allowed(
+                    peer.uuid,
+                    terra_core::kingdom::KingdomPermission::Inventories,
+                    drop.position.map(|v| v.floor() as i64),
+                    &world,
+                ) {
+                    continue;
+                }
                 let capacity = world
                     .journal
                     .gameplay()
@@ -420,7 +441,9 @@ pub(super) fn inventory(
     world: &mut ControlWorld,
 ) {
     use crate::protocol::inventory::{InventoryAction, InventoryOutcome};
-    if peer.game_mode(&world.config) == GameMode::Spectator {
+    if peer.game_mode(&world.config) == GameMode::Spectator
+        || !super::kingdoms::inventory_allowed(command.action, peer, world)
+    {
         sender.send::<ControlChannel>(ServerControl::InventoryResult {
             outcome: InventoryOutcome::Denied,
             inventory: world
@@ -435,7 +458,16 @@ pub(super) fn inventory(
     }
     if matches!(
         command.action,
-        InventoryAction::OpenContainer { .. } | InventoryAction::CloseContainer
+        InventoryAction::OpenContainer { .. }
+            | InventoryAction::CloseContainer
+            | InventoryAction::SetMixerColor { .. }
+            | InventoryAction::SetFunnelFilter { .. }
+            | InventoryAction::SetDistributorFilter { .. }
+            | InventoryAction::SetTunnelRandom { .. }
+            | InventoryAction::SetBrewingRecipe { .. }
+            | InventoryAction::SetCampfireLit { .. }
+            | InventoryAction::FillBottle { .. }
+            | InventoryAction::OpenCampfire { .. }
     ) {
         super::containers::access(command, peer, sender, world);
         return;
@@ -447,6 +479,12 @@ pub(super) fn inventory(
         super::containers::load_recipe(command, peer, sender, world);
         return;
     }
+    let cape_heraldry = world
+        .journal
+        .gameplay()
+        .kingdoms
+        .heraldry_for_member(peer.uuid);
+    let recipes = world.recipes.with_cape_heraldry(cape_heraldry);
     let current = world
         .journal
         .gameplay()
@@ -524,17 +562,23 @@ pub(super) fn inventory(
             }
             InventoryAction::Collect { slot } => next.collect(usize::from(slot)),
             InventoryAction::CollectFrom { slot } => next.collect_from(usize::from(slot)),
-            InventoryAction::CraftCursor { slots } => world.recipes.craft_cells(
+            InventoryAction::CraftCursor { slots } => recipes.craft_cells(
                 &mut next,
                 slots,
                 terra_core::crafting::CraftDestination::Cursor,
             ),
             InventoryAction::Wheel { slot, to_cursor } => next.wheel(usize::from(slot), to_cursor),
             InventoryAction::CreativeCursor { item, count } => {
-                next.creative_cursor(terra_core::ItemStack { item, count })
+                next.creative_cursor(terra_core::ItemStack {
+                    item: item.with_default_heraldry(cape_heraldry),
+                    count,
+                })
             }
             InventoryAction::CreativeQuickMove { item, count } => {
-                next.creative_quick_move(terra_core::ItemStack { item, count })
+                next.creative_quick_move(terra_core::ItemStack {
+                    item: item.with_default_heraldry(cape_heraldry),
+                    count,
+                })
             }
             InventoryAction::CreativeTrash { slot } => {
                 next.take_stack(slot.map(usize::from), true).is_some()
@@ -569,7 +613,7 @@ pub(super) fn inventory(
             InventoryAction::Move { from, to, count } => {
                 next.move_slot(usize::from(from), usize::from(to), count)
             }
-            InventoryAction::Craft { slots } => world.recipes.craft_cells(
+            InventoryAction::Craft { slots } => recipes.craft_cells(
                 &mut next,
                 slots,
                 terra_core::crafting::CraftDestination::Inventory,
@@ -581,7 +625,7 @@ pub(super) fn inventory(
                 destination,
             } => {
                 workbench_available(peer, world, station)
-                    && world.recipes.craft_grid(
+                    && recipes.craft_grid(
                         &mut next,
                         &slots,
                         3,
@@ -607,7 +651,7 @@ pub(super) fn inventory(
                 };
                 valid_station.is_some_and(|station| {
                     cells[size * size..].iter().all(Option::is_none)
-                        && world.recipes.craft_reserved_grid(
+                        && recipes.craft_reserved_grid(
                             &mut next,
                             &cells[..size * size],
                             size,
@@ -635,11 +679,7 @@ pub(super) fn inventory(
                 } else {
                     terra_core::crafting::CraftStation::Hand
                 };
-                if let Err(error) =
-                    world
-                        .recipes
-                        .craft(&mut next, recipe, count, station, destination)
-                {
+                if let Err(error) = recipes.craft(&mut next, recipe, count, station, destination) {
                     use terra_core::crafting::CraftError;
                     let outcome = match error {
                         CraftError::UnknownRecipe => InventoryOutcome::UnknownRecipe,
@@ -656,11 +696,23 @@ pub(super) fn inventory(
                 }
                 true
             }
-            InventoryAction::CreativeSet { slot, item, count } => {
-                next.creative_set(usize::from(slot), terra_core::ItemStack { item, count })
-            }
+            InventoryAction::CreativeSet { slot, item, count } => next.creative_set(
+                usize::from(slot),
+                terra_core::ItemStack {
+                    item: item.with_default_heraldry(cape_heraldry),
+                    count,
+                },
+            ),
             InventoryAction::OpenContainer { .. }
             | InventoryAction::CloseContainer
+            | InventoryAction::SetMixerColor { .. }
+            | InventoryAction::SetFunnelFilter { .. }
+            | InventoryAction::SetDistributorFilter { .. }
+            | InventoryAction::SetTunnelRandom { .. }
+            | InventoryAction::SetBrewingRecipe { .. }
+            | InventoryAction::SetCampfireLit { .. }
+            | InventoryAction::FillBottle { .. }
+            | InventoryAction::OpenCampfire { .. }
             | InventoryAction::LoadSmeltingRecipe { .. }
             | InventoryAction::LoadCrushingRecipe { .. }
             | InventoryAction::ViewDrag { .. } => false,
@@ -829,13 +881,56 @@ pub(super) fn simulate_drops(
     let count = drops.len();
     let mut moved = false;
     for (drop, current) in drops.iter_mut().zip(currents) {
-        let before = (drop.position, drop.rotation, drop.grounded);
+        let before = (drop.position, drop.rotation, drop.grounded, drop.velocity);
         let impact_speed = drop.velocity[1].abs();
         let falling = matches!(drop.stack.item, terra_core::ItemKind::Block(51..=53))
             && !drop.grounded
             && drop.velocity[1] < -4.0;
-        drop.age_seconds += dt;
         drop.pickup_delay_seconds = (drop.pickup_delay_seconds - dt).max(0.0);
+        if let Some(position) = terra_world::conveyors::infusion_carrying(drop, &journal) {
+            let velocity = drop.velocity;
+            let transported = drop.grounded
+                && drop.angular_velocity == [0.0; 3]
+                && drop.rotation == [0.0, 0.0, 0.0, 1.0]
+                && journal
+                    .infusion_view(position)
+                    .is_some_and(|view| view.speed > 0.0);
+            terra_world::conveyors::stabilize_infusion_drop(drop, position);
+            if transported {
+                drop.velocity = velocity;
+            }
+            moved |= (drop.position, drop.rotation, drop.grounded, drop.velocity) != before;
+            continue;
+        }
+        if terra_world::conveyors::routing_carrying(drop, &journal).is_some() {
+            drop.grounded = true;
+            drop.angular_velocity = [0.0; 3];
+            drop.rotation = [0.0, 0.0, 0.0, 1.0];
+            continue;
+        }
+        if let Some(segment) = terra_world::conveyors::carrying_segment(drop, &journal) {
+            let velocity = drop.velocity;
+            let transported = drop.grounded
+                && drop.angular_velocity == [0.0; 3]
+                && drop.rotation == [0.0, 0.0, 0.0, 1.0];
+            terra_world::conveyors::stabilize_carried_drop(drop, segment);
+            if transported && journal.kinetic_state(segment.position()).running() {
+                drop.velocity = velocity;
+            }
+            moved |= (drop.position, drop.rotation, drop.grounded, drop.velocity) != before;
+            continue;
+        }
+        if let Some(primary) = terra_world::crushers::carrying(drop, &journal) {
+            terra_world::crushers::stabilize(drop, primary, &journal);
+            moved |= (drop.position, drop.rotation, drop.grounded, drop.velocity) != before;
+            continue;
+        }
+        if let Some(position) = terra_world::funnels::carrying(drop, &journal) {
+            terra_world::funnels::stabilize(drop, position);
+            moved |= (drop.position, drop.rotation, drop.grounded, drop.velocity) != before;
+            continue;
+        }
+        drop.age_seconds += dt;
         if chunks
             .block_at(drop.position.map(|v| v.floor() as i64))
             .is_none()
@@ -884,7 +979,7 @@ pub(super) fn simulate_drops(
         if drop.grounded && drop.stack.item == terra_core::ItemKind::Block(51) {
             drop.stack.item = terra_core::ItemKind::Mineral(terra_core::OreKind::Salt.resource());
         }
-        moved |= (drop.position, drop.rotation, drop.grounded) != before;
+        moved |= (drop.position, drop.rotation, drop.grounded, drop.velocity) != before;
     }
     drops.retain(|drop| drop.age_seconds < terra_core::DROP_LIFETIME_SECONDS);
     let state = journal.gameplay_mut();
@@ -905,13 +1000,27 @@ fn step_drop(drop: &mut terra_core::WorldDrop, chunks: &ChunkStore, dt: f32) {
         dt,
     )
 }
-fn step_drop_with_context(
+pub(super) fn step_drop_with_context(
     drop: &mut terra_core::WorldDrop,
     chunks: &ChunkStore,
     journal: &EditJournal,
     properties: &terra_core::block_properties::BlockPropertiesCatalog,
     dt: f32,
 ) {
+    if let Some(position) = terra_world::conveyors::infusion_carrying(drop, journal) {
+        terra_world::conveyors::stabilize_infusion_drop(drop, position);
+        return;
+    }
+    if terra_world::conveyors::routing_carrying(drop, journal).is_some() {
+        drop.grounded = true;
+        drop.angular_velocity = [0.0; 3];
+        drop.rotation = [0.0, 0.0, 0.0, 1.0];
+        return;
+    }
+    if let Some(position) = terra_world::funnels::carrying(drop, journal) {
+        terra_world::funnels::stabilize(drop, position);
+        return;
+    }
     let drop_bounds_clear = |chunks: &ChunkStore, center, half| {
         drop_bounds_clear_with_context(chunks, journal, properties, center, half)
     };
@@ -973,6 +1082,42 @@ fn step_drop_with_context(
             }
             let mut next = drop.position;
             next[axis] += f64::from(drop.velocity[axis] * dt / steps as f32);
+            if axis == 1
+                && drop.velocity[axis] < 0.0
+                && let Some(position) = terra_world::funnels::crossed_inlet(
+                    drop.position,
+                    next,
+                    f64::from(half.y),
+                    journal,
+                )
+                && terra_world::funnels::loaded(position, chunks, journal)
+            {
+                let mut supported = drop.clone();
+                terra_world::funnels::stabilize(&mut supported, position);
+                if drop_bounds_clear(chunks, supported.position, [0.12; 3]) {
+                    *drop = supported;
+                    half = Vec3::splat(0.12);
+                    continue;
+                }
+            }
+            if axis == 1
+                && drop.velocity[axis] < 0.0
+                && let Some(primary) = terra_world::crushers::crossed_inlet(
+                    drop.position,
+                    next,
+                    f64::from(half.y),
+                    journal,
+                )
+                && terra_world::crushers::loaded(primary, chunks, journal)
+            {
+                let mut supported = drop.clone();
+                terra_world::crushers::stabilize(&mut supported, primary, journal);
+                if drop_bounds_clear(chunks, supported.position, [0.12; 3]) {
+                    *drop = supported;
+                    half = Vec3::splat(0.12);
+                    continue;
+                }
+            }
             if drop_bounds_clear(chunks, next, half.to_array()) {
                 drop.position = next;
             } else {
@@ -1018,7 +1163,7 @@ fn drop_clear(chunks: &ChunkStore, center: [f64; 3]) -> bool {
     )
 }
 
-fn drop_bounds_clear_with_context(
+pub(super) fn drop_bounds_clear_with_context(
     chunks: &ChunkStore,
     journal: &EditJournal,
     properties: &terra_core::block_properties::BlockPropertiesCatalog,
@@ -1093,17 +1238,56 @@ fn pickup_visible_with_context(
     .is_none()
 }
 
+pub(super) struct CachedGameplay {
+    generation: u32,
+    inventory: terra_core::Inventory,
+    drops: Vec<terra_core::WorldDrop>,
+}
+
+impl CachedGameplay {
+    fn matches(
+        &self,
+        generation: u32,
+        inventory: &terra_core::Inventory,
+        drops: &[(f64, &terra_core::WorldDrop)],
+    ) -> bool {
+        self.generation == generation
+            && &self.inventory == inventory
+            && self.drops.len() == drops.len()
+            && self
+                .drops
+                .iter()
+                .zip(drops)
+                .all(|(previous, (_, current))| previous == *current)
+    }
+
+    fn capture(
+        generation: u32,
+        inventory: &terra_core::Inventory,
+        drops: &[(f64, &terra_core::WorldDrop)],
+    ) -> Self {
+        Self {
+            generation,
+            inventory: inventory.clone(),
+            drops: drops.iter().map(|(_, drop)| (*drop).clone()).collect(),
+        }
+    }
+}
+
 pub(super) fn send_gameplay(
     mut peers: Query<(&mut Peer, &mut MessageSender<ServerControl>), With<Connected>>,
     bodies: Query<&Transform, With<ServerCharacter>>,
     journal: Res<EditJournal>,
     mut last: Local<Option<Instant>>,
+    mut sent: Local<HashMap<PlayerId, CachedGameplay>>,
 ) {
     if last.is_some_and(|last| last.elapsed() < Duration::from_millis(100)) {
         return;
     }
     *last = Some(Instant::now());
+    sent.retain(|id, _| peers.iter().any(|(peer, _)| peer.synced && peer.id == *id));
     let state = journal.gameplay();
+    let empty_inventory = terra_core::Inventory::default();
     for (mut peer, mut sender) in &mut peers {
         if !peer.synced {
             continue;
@@ -1116,7 +1300,11 @@ pub(super) fn send_gameplay(
             .to_array()
             .map(|v| (v / 8.0).floor() as i64);
         let version = (state.revision, center);
-        if peer.gameplay_sent == Some(version) {
+        if peer.gameplay_sent == Some(version)
+            && sent
+                .get(&peer.id)
+                .is_some_and(|cached| cached.generation == peer.generation)
+        {
             continue;
         }
         let mut drops: Vec<_> = state
@@ -1130,21 +1318,30 @@ pub(super) fn send_gameplay(
             })
             .collect();
         drops.sort_by(|a, b| a.0.total_cmp(&b.0).then(a.1.id.cmp(&b.1.id)));
-        sender.send::<ControlChannel>(ServerControl::Gameplay {
-            inventory: state
-                .inventories
-                .get(&peer.uuid)
-                .cloned()
-                .unwrap_or_default(),
-            drops: drops
-                .into_iter()
-                .take(256)
-                .map(|(_, drop)| drop.clone())
-                .collect(),
-        });
+        drops.truncate(256);
+        let inventory = state
+            .inventories
+            .get(&peer.uuid)
+            .unwrap_or(&empty_inventory);
+        let unchanged = sent
+            .get(&peer.id)
+            .is_some_and(|cached| cached.matches(peer.generation, inventory, &drops));
         peer.gameplay_sent = Some(version);
+        if unchanged {
+            continue;
+        }
+        let next = CachedGameplay::capture(peer.generation, inventory, &drops);
+        sender.send::<ControlChannel>(ServerControl::Gameplay {
+            inventory: next.inventory.clone(),
+            drops: next.drops.clone(),
+        });
+        sent.insert(peer.id, next);
     }
 }
+
+#[cfg(test)]
+#[path = "server_gameplay_payload_tests.rs"]
+mod payload_tests;
 
 #[cfg(test)]
 mod drop_tests {
@@ -1209,6 +1406,230 @@ mod drop_tests {
             .set_block([8, 7, 7], 3)
             .unwrap();
         assert!(!pickup_visible(&chunks, [7.5, 7.5, 7.5], [8.5, 7.5, 7.5]));
+    }
+
+    #[test]
+    fn fast_falling_items_land_on_the_real_crusher_inlet_without_crossing_a_blocked_ceiling() {
+        for obstructed in [false, true] {
+            let owner = terra_voxel::SectionPos::default();
+            let mut chunks = ChunkStore::default();
+            let mut data = terra_voxel::BlockSection::empty(owner).unwrap();
+            data.set_block([8, 2, 8], 99).unwrap();
+            if obstructed {
+                data.set_block([8, 3, 8], 3).unwrap();
+            }
+            chunks.loaded.insert(
+                owner,
+                terra_world::streaming::LoadedSection {
+                    data,
+                    mesh: None,
+                    mesh_epoch: 0,
+                    water_epoch: 0,
+                    water: None,
+                    props: Vec::new(),
+                },
+            );
+            let mut journal = EditJournal::default();
+            journal.record([8, 2, 8], 99).unwrap();
+            journal
+                .set_object_state([8, 2, 8], Some(Default::default()))
+                .unwrap();
+            if obstructed {
+                journal.record([8, 3, 8], 3).unwrap();
+            }
+            assert!(journal.gameplay_mut().drop_stack(
+                [8.5, 5.9, 8.5],
+                terra_core::ItemStack {
+                    item: terra_core::ItemKind::Block(3),
+                    count: 9
+                },
+                [0.0, -12.0, 0.0],
+                0.0
+            ));
+            let mut drop = journal.gameplay().drops[0].clone();
+            drop.angular_velocity = [0.0; 3];
+            for _ in 0..100 {
+                step_drop_with_context(&mut drop, &chunks, &journal, &Default::default(), 0.05);
+            }
+            if obstructed {
+                assert!(drop.position[1] - 0.12 >= 4.0 - 0.000001);
+                assert!(terra_world::crushers::carrying(&drop, &journal).is_none());
+            } else {
+                assert_eq!(drop.position, [8.5, 3.13, 8.5]);
+                assert_eq!(drop.velocity, [0.0; 3]);
+                assert_eq!(
+                    terra_world::crushers::carrying(&drop, &journal),
+                    Some([8, 2, 8])
+                );
+            }
+            assert_eq!(drop.stack.count, 9);
+            assert!(drop.valid());
+        }
+    }
+
+    #[test]
+    fn rejected_crusher_inlet_items_survive_unload_until_the_machine_is_removed() {
+        use bevy::time::TimeUpdateStrategy;
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .insert_resource(Time::<Fixed>::from_hz(60.0))
+            .insert_resource(TimeUpdateStrategy::ManualDuration(Duration::from_secs_f64(
+                1.0 / 60.0,
+            )))
+            .init_resource::<ChunkStore>()
+            .init_resource::<EditJournal>()
+            .init_resource::<terra_core::block_properties::BlockPropertiesCatalog>()
+            .add_systems(FixedUpdate, simulate_drops);
+        let crusher = [7, 3, 7];
+        let age = terra_core::DROP_LIFETIME_SECONDS - 0.01;
+        {
+            let mut journal = app.world_mut().resource_mut::<EditJournal>();
+            journal.record(crusher, 99).unwrap();
+            journal
+                .set_object_state(crusher, Some(Default::default()))
+                .unwrap();
+            assert!(journal.gameplay_mut().drop_stack(
+                [7.5, 4.13, 7.5],
+                terra_core::ItemStack {
+                    item: terra_core::ItemKind::Block(3),
+                    count: 9
+                },
+                [0.0; 3],
+                0.0
+            ));
+            journal.gameplay_mut().drops[0].age_seconds = age;
+        }
+        for _ in 0..30 {
+            app.update();
+        }
+        {
+            let journal = app.world().resource::<EditJournal>();
+            assert_eq!(journal.gameplay().drops.len(), 1);
+            assert_eq!(journal.gameplay().drops[0].age_seconds, age);
+            assert_eq!(journal.gameplay().drops[0].stack.count, 9);
+            assert!(journal.gameplay().valid());
+        }
+        app.world_mut()
+            .resource_mut::<EditJournal>()
+            .record(crusher, 0)
+            .unwrap();
+        for _ in 0..10 {
+            app.update();
+        }
+        assert!(
+            app.world()
+                .resource::<EditJournal>()
+                .gameplay()
+                .drops
+                .is_empty()
+        );
+    }
+
+    #[test]
+    fn stopped_belt_items_do_not_expire_when_unloaded_but_removal_resumes_normal_aging() {
+        use bevy::time::TimeUpdateStrategy;
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .insert_resource(Time::<Fixed>::from_hz(60.0))
+            .insert_resource(TimeUpdateStrategy::ManualDuration(Duration::from_secs_f64(
+                1.0 / 60.0,
+            )))
+            .init_resource::<ChunkStore>()
+            .init_resource::<EditJournal>()
+            .init_resource::<terra_core::block_properties::BlockPropertiesCatalog>()
+            .add_systems(FixedUpdate, simulate_drops);
+        let owner = terra_voxel::SectionPos::default();
+        let belt = [7, 3, 7];
+        let mut data = terra_voxel::BlockSection::empty(owner).unwrap();
+        data.set_block(belt.map(|v| v as usize), 148).unwrap();
+        app.world_mut().resource_mut::<ChunkStore>().loaded.insert(
+            owner,
+            terra_world::streaming::LoadedSection {
+                data,
+                mesh: None,
+                mesh_epoch: 0,
+                water_epoch: 0,
+                water: None,
+                props: Vec::new(),
+            },
+        );
+        let age = terra_core::DROP_LIFETIME_SECONDS - 0.01;
+        let id;
+        {
+            let mut journal = app.world_mut().resource_mut::<EditJournal>();
+            journal.record(belt, 148).unwrap();
+            journal
+                .set_object_state(belt, Some(Default::default()))
+                .unwrap();
+            assert!(!journal.kinetic_state(belt).running());
+            let height = 3.0 + f64::from(terra_core::kinetic::CONVEYOR_TOP) + 0.125;
+            for position in [[7.7, height, 7.5], [10.5, height, 10.5]] {
+                assert!(
+                    journal
+                        .gameplay_mut()
+                        .drop_one(position, terra_core::ItemKind::Block(3))
+                );
+                let drop = journal.gameplay_mut().drops.last_mut().unwrap();
+                drop.age_seconds = age;
+                drop.grounded = true;
+                drop.angular_velocity = [0.0; 3];
+                drop.velocity = [0.0; 3];
+            }
+            assert!(
+                terra_world::conveyors::carrying_segment(&journal.gameplay().drops[0], &journal)
+                    .is_some()
+            );
+            assert!(
+                terra_world::conveyors::carrying_segment(&journal.gameplay().drops[1], &journal)
+                    .is_none()
+            );
+            id = journal.gameplay().drops[0].id;
+        }
+        for _ in 0..10 {
+            app.update();
+        }
+        {
+            let journal = app.world().resource::<EditJournal>();
+            assert_eq!(journal.gameplay().drops.len(), 1);
+            assert_eq!(
+                (
+                    journal.gameplay().drops[0].id,
+                    journal.gameplay().drops[0].age_seconds
+                ),
+                (id, age)
+            );
+            let drop = &journal.gameplay().drops[0];
+            assert!((drop.position[0] - 7.5).abs() < 0.00001);
+            assert_eq!(drop.velocity, [0.0; 3]);
+            assert_eq!(drop.angular_velocity, [0.0; 3]);
+            assert_eq!(drop.rotation, [0.0, 0.0, 0.0, 1.0]);
+        }
+        app.world_mut()
+            .resource_mut::<ChunkStore>()
+            .loaded
+            .remove(&owner);
+        for _ in 0..10 {
+            app.update();
+        }
+        {
+            let journal = app.world().resource::<EditJournal>();
+            assert_eq!(journal.gameplay().drops.len(), 1);
+            assert_eq!(journal.gameplay().drops[0].age_seconds, age);
+        }
+        app.world_mut()
+            .resource_mut::<EditJournal>()
+            .record(belt, 0)
+            .unwrap();
+        for _ in 0..3 {
+            app.update();
+        }
+        assert!(
+            app.world()
+                .resource::<EditJournal>()
+                .gameplay()
+                .drops
+                .is_empty()
+        );
     }
 
     #[test]

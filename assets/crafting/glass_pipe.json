@@ -1,0 +1,1 @@
+{"id":"teramic::glass_pipe","name":"Glass Pipe","station":"workbench","output":{"item":{"block":172},"count":4},"pattern":{"kind":"shapeless","ingredients":[{"item":{"block":15},"count":3},{"item":{"mineral":"iron_ingot"},"count":1}]}}

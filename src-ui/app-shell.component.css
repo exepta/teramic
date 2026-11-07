@@ -1,1 +1,6 @@
 .menu-shell { width: 100%; height: 100%; z-index: 400; }
+
+.startup-backdrop { position: absolute; left: 0; top: 0; width: 100%; height: 100%; background-color: #101914; }
+
+.menu-content, .startup-overlay { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
+.startup-overlay { z-index: 1; pointer-events: none; }

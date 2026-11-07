@@ -1,0 +1,84 @@
+{
+  "date": "2026-11-02",
+  "phase": 178,
+  "build_exit": 0,
+  "clippy_exit": 0,
+  "fmt_exit": 0,
+  "diff_check_exit": 0,
+  "tests": {
+    "programs": 12,
+    "passed": 3716,
+    "failed": 0,
+    "ignored": 8,
+    "exit": 0
+  },
+  "partial_water": {
+    "exit": 0,
+    "captures": 6,
+    "seconds": 12.834050055,
+    "outside_banks_dry": true,
+    "slab_interior_units": 16,
+    "four_wet_pipe_materials_preserved": true
+  },
+  "hydraulics": {
+    "exit": 0,
+    "captures": 35,
+    "seconds": 74.75270080566406,
+    "underwater_build": true,
+    "external_source_preserved": true,
+    "glass_continuous_samples": 10,
+    "wall_torch_placements": 4
+  },
+  "required_captures": {
+    "partial-water": [
+      "all-pipe-wall-roof-surrounds.png",
+      "partial-basins-close.png",
+      "slab-stair-fence-basins.png",
+      "waterlogged-enclosed-pipes.png",
+      "waterlogged-partial-pool.png",
+      "waterlogged-pipe-valve-fall.png"
+    ],
+    "hydraulics": [
+      "basin-swimming.png",
+      "bottle-filled.png",
+      "bottle-filling.png",
+      "bucket-filled.png",
+      "bucket-filling.png",
+      "glass-valves-empty-after-shutoff.png",
+      "glass-valves-running-out.png",
+      "glass-valves-stored-water.png",
+      "hydraulics-network.png",
+      "infuser-filled.png",
+      "infuser-filling.png",
+      "infuser-ready.png",
+      "pipe-bend-glass-reverse.png",
+      "pipe-bend-glass.png",
+      "pipe-bend-iron.png",
+      "pipe-bend-stone.png",
+      "pipe-bend-wood.png",
+      "pump-intake-stopped.png",
+      "pump-natural-intake-bubbles.png",
+      "source-bucket-filled.png",
+      "source-watering-can-filled.png",
+      "underwater-bed-mined.png",
+      "underwater-glass-source-preserved.png",
+      "valve-closed-finite-buffer.png",
+      "valve-horizontal-authoritative.png",
+      "valve-vertical-authoritative.png",
+      "wall-torch-facing-4.png",
+      "wall-torch-facing-5.png",
+      "wall-torch-facing-6.png",
+      "wall-torch-facing-7.png",
+      "watering-can-filled.png",
+      "watering-can-filling.png",
+      "watering-can-pouring.png",
+      "waterlogged-round-parts-front.png",
+      "waterlogged-round-parts-oblique.png"
+    ]
+  },
+  "notes": [
+    "Initial native run exposed unsigned accounting underflow when source water is capped at a slab crest. Fixed with exact added/drained accounting and a regression; all final checks pass.",
+    "One previously known Bevy RenderLayers insertion warning on a despawned entity during hydraulic scene changes; no failed assertions.",
+    "One explanatory fixture comment was corrected after compilation; executable code is unchanged."
+  ]
+}

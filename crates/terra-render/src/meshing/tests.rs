@@ -27,6 +27,7 @@ fn adjacent_partial_segments_render_once_even_without_exposed_cube_interfaces() 
         detail_level: super::DetailLevel::Near,
         terrain: None,
         exposure: None,
+        tints: Default::default(),
         conditions: Default::default(),
     };
     let compose = |segments: &[terra_voxel::meshing::BlockSegment]| {
@@ -116,6 +117,7 @@ fn replacing_fixture_sections_cancels_old_snapshots_even_when_edit_epoch_is_unch
 
 fn templates() -> TemplateSet {
     let primitive = PrimitiveTemplate {
+        tangents: Vec::new(),
         positions: vec![[0.0, 1.0, 0.0], [1.0, 1.0, 0.0], [0.0, 1.0, 1.0]],
         normals: vec![[0.0, 1.0, 0.0]; 3],
         uvs: vec![[0.0, 0.0]; 3],
@@ -123,8 +125,15 @@ fn templates() -> TemplateSet {
         material: 0,
     };
     TemplateSet {
+        lantern_variants: Default::default(),
+        opaque_cube_lods: Default::default(),
         animated_chests: false,
+        cube_lods: Default::default(),
         crusher_moving_materials: Default::default(),
+        conveyor_ribbon_materials: Default::default(),
+        logistics_arrow_materials: Default::default(),
+        logistics_support_materials: Default::default(),
+        campfire_support_material: None,
         block_details: Default::default(),
         blocks: [(
             1,
@@ -153,6 +162,10 @@ fn templates() -> TemplateSet {
         wood_materials: Default::default(),
         blanket_materials: Default::default(),
         hinge_materials: Default::default(),
+        castle_cloth_materials: Default::default(),
+        castle_icon_materials: Default::default(),
+        castle_arch_join_materials: Default::default(),
+        castle_decor_materials: Default::default(),
     }
 }
 
@@ -179,6 +192,7 @@ fn coastal_wash_is_one_batched_film_with_valid_indices_and_distinct_water_metada
         detail_level: super::DetailLevel::Near,
         terrain: None,
         exposure: Some(Arc::new(exposure)),
+        tints: Default::default(),
         conditions: Default::default(),
     };
     let batches =
@@ -232,6 +246,7 @@ fn dry_exposed_faces_carry_rain_exposure_without_whole_block_wet_tint() {
         detail_level: super::DetailLevel::Near,
         terrain: None,
         exposure: Some(std::sync::Arc::new(exposure)),
+        tints: Default::default(),
         conditions: Default::default(),
     };
     let batches =
@@ -347,6 +362,7 @@ fn detailed_trunks_surrounded_by_masked_crowns_have_no_open_faces() {
                     detail_level: level,
                     terrain: None,
                     exposure: None,
+                    tints: Default::default(),
                     conditions: Default::default(),
                 },
             )
@@ -812,6 +828,7 @@ fn far_lod_uses_four_vertices_per_greedy_rectangle_and_correct_winding() {
         detail_level: DetailLevel::Far,
         terrain: None,
         exposure: None,
+        tints: Default::default(),
         conditions: Default::default(),
     };
     for side in 0..6 {
@@ -929,6 +946,7 @@ fn coarse_grass_preserves_top_and_side_cap_independently_of_primitive_order() {
             water_level: None,
             terrain: None,
             exposure: None,
+            tints: Default::default(),
             conditions: Default::default(),
         };
         let top = BlockFace {
@@ -1003,6 +1021,7 @@ fn custom_mesh_keeps_every_authored_face_material_at_far_lod() {
             water_level: None,
             terrain: None,
             exposure: None,
+            tints: Default::default(),
             conditions: Default::default(),
         },
     )
@@ -1813,13 +1832,13 @@ fn render_lod_rebuilds_from_cached_faces_and_eviction_frees_every_mesh() {
         let mut meshes = app.world_mut().resource_mut::<Assets<Mesh>>();
         let mut mesh = meshes.get_mut(&handle).unwrap();
         assert_eq!(mesh.asset_usage, RenderAssetUsages::RENDER_WORLD);
-        let before = mesh.compute_aabb().unwrap();
+        let before = mesh.get_aabb().unwrap();
         let gpu_data = mesh.take_gpu_data().unwrap();
         assert_eq!(gpu_data.count_vertices(), 4);
         assert_eq!(gpu_data.asset_usage, RenderAssetUsages::RENDER_WORLD);
         assert!(mesh.try_attribute(Mesh::ATTRIBUTE_POSITION).is_err());
         assert!(mesh.final_aabb.is_some());
-        let after = mesh.compute_aabb().unwrap();
+        let after = mesh.get_aabb().unwrap();
         assert_eq!(after.center, before.center);
         assert_eq!(after.half_extents, before.half_extents);
     }
@@ -1899,6 +1918,7 @@ fn local_ground_condition_is_confined_to_one_cell_at_every_lod() {
             detail_level,
             terrain: None,
             exposure: None,
+            tints: Default::default(),
             conditions: [(
                 [0, 0, 0],
                 terra_world::environment::SurfaceCondition::new(0.0, 1.0).unwrap(),
@@ -1967,6 +1987,7 @@ fn sparse_snow_cover_preserves_materials_and_neighbor_payloads_at_every_lod() {
             detail_level: level,
             terrain: None,
             exposure: None,
+            tints: Default::default(),
             conditions: [(
                 [0; 3],
                 terra_world::environment::SurfaceCondition {
@@ -2066,6 +2087,7 @@ fn bare_natural_canopies_expose_only_snow_without_wetting_the_ground() {
             detail_level,
             terrain: Some(terrain.clone()),
             exposure: Some(exposure.clone()),
+            tints: Default::default(),
             conditions: Default::default(),
         };
         let batches =
@@ -2107,6 +2129,73 @@ fn bare_natural_canopies_expose_only_snow_without_wetting_the_ground() {
 }
 
 #[test]
+fn dry_sand_and_snow_keep_imprint_uv1_under_roofs_at_every_terrain_lod() {
+    use super::{
+        DetailLevel,
+        builder::{RenderOptions, compose_section_with_options},
+    };
+    let mut templates = templates();
+    let mut cube = templates.blocks[&1].clone();
+    cube.details.clear();
+    for material in [3, 4, 5] {
+        templates.blocks.insert(material, cube.clone());
+    }
+    let exposure = std::sync::Arc::new(crate::weather::surfaces::exposure::Exposure {
+        natural: None,
+        roofs: [64; 256],
+        snow_roofs: [64; 256],
+        coast: [0.0; 256],
+        coast_vertices: [0.0; 289],
+        water: [f32::NEG_INFINITY; 256],
+    });
+    for detail_level in [DetailLevel::Near, DetailLevel::Middle, DetailLevel::Far] {
+        for material in [3, 4, 5] {
+            let face = BlockFace {
+                minimum: [0; 3],
+                width: 1,
+                height: 1,
+                u_axis: 0,
+                v_axis: 2,
+                side: 3,
+                material,
+                edge_mask: 15,
+                occupied_neighbor: false,
+            };
+            let options = RenderOptions {
+                water_level: None,
+                detail_level,
+                terrain: None,
+                exposure: Some(exposure.clone()),
+                tints: Default::default(),
+                conditions: Default::default(),
+            };
+            let batches = compose_section_with_options(
+                &[face],
+                &templates,
+                SectionPos::new(-1, 0, -1),
+                &options,
+            )
+            .unwrap();
+            assert!(!batches.is_empty());
+            for batch in batches {
+                if material == 3 {
+                    assert!(batch.surface_water.is_empty());
+                } else {
+                    assert_eq!(batch.surface_water.len(), batch.positions.len());
+                    assert!(
+                        batch
+                            .surface_water
+                            .iter()
+                            .all(|payload| *payload == [0.0; 2])
+                    );
+                    assert!(batch.rooted_wind.is_empty());
+                }
+            }
+        }
+    }
+}
+
+#[test]
 fn wet_pbr_payload_is_sparse_and_never_wets_the_neighboring_dry_cell() {
     use super::{
         DetailLevel,
@@ -2131,6 +2220,7 @@ fn wet_pbr_payload_is_sparse_and_never_wets_the_neighboring_dry_cell() {
             detail_level,
             terrain: None,
             exposure: None,
+            tints: Default::default(),
             conditions: [(
                 [0; 3],
                 terra_world::environment::SurfaceCondition::new(0.8, 0.0).unwrap(),
@@ -2186,6 +2276,7 @@ fn biome_vertex_colors_agree_at_shared_lod_vertices_and_negative_section_edges()
                 water_level: None,
                 terrain: Some(terrain.clone()),
                 exposure: None,
+                tints: Default::default(),
                 conditions: Default::default(),
             },
         )
@@ -2247,6 +2338,7 @@ fn sparse_surface_edit_keeps_large_coarse_faces_greedy() {
             detail_level,
             terrain: None,
             exposure: None,
+            tints: Default::default(),
             conditions: [(
                 [7, 0, 7],
                 terra_world::environment::SurfaceCondition::new(0.0, 1.0).unwrap(),
@@ -2312,6 +2404,7 @@ fn sand_and_snow_top_colors_are_seamless_without_splitting_greedy_faces() {
                         water_level: None,
                         terrain: Some(terrain.clone()),
                         exposure: None,
+                        tints: Default::default(),
                         conditions: Default::default(),
                     },
                 )

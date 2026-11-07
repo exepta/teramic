@@ -2,6 +2,17 @@
 use crate::{edits::EditJournal, streaming::ChunkStore};
 use terra_core::{block_properties::BlockPropertiesCatalog, block_shapes::ShapeBox};
 use terra_voxel::blocks::BlockHit;
+mod belts;
+#[cfg(test)]
+#[path = "castle_geometry_tests.rs"]
+mod castle_geometry_tests;
+mod hearths;
+pub use belts::{
+    conveyor_boxes, conveyor_casing_boxes, conveyor_casing_supported, conveyor_triangles,
+};
+pub use hearths::{
+    ATTACHED_FIRE_SCALE, attached_campfire_box, attached_campfire_point, campfire_support_boxes,
+};
 
 pub fn visit_boxes(
     chunks: &ChunkStore,
@@ -21,7 +32,70 @@ pub fn visit_boxes_with(
     mut block_at: impl FnMut([i64; 3]) -> Option<u16>,
     visit: impl FnMut(ShapeBox),
 ) -> bool {
-    visit_boxes_with_state(journal, properties, position, &mut block_at, None, visit)
+    visit_boxes_with_state(
+        journal,
+        properties,
+        position,
+        &mut block_at,
+        None,
+        false,
+        visit,
+    )
+}
+
+/// Attachments only; the physics section mesh supplies the linked belt's continuous profile.
+pub fn visit_belt_attachment_boxes(
+    chunks: &ChunkStore,
+    journal: &EditJournal,
+    properties: &BlockPropertiesCatalog,
+    position: [i64; 3],
+    visit: impl FnMut(ShapeBox),
+) -> bool {
+    visit_boxes_with_state(
+        journal,
+        properties,
+        position,
+        |p| chunks.block_at(p),
+        None,
+        true,
+        visit,
+    )
+}
+
+/// Physical contact volumes, independent of the full picking and water-contact model.
+pub fn visit_collision_boxes(
+    chunks: &ChunkStore,
+    journal: &EditJournal,
+    properties: &BlockPropertiesCatalog,
+    position: [i64; 3],
+    visit: impl FnMut(ShapeBox),
+) -> bool {
+    visit_collision_boxes_with(journal, properties, position, |p| chunks.block_at(p), visit)
+}
+
+pub fn visit_collision_boxes_with(
+    journal: &EditJournal,
+    properties: &BlockPropertiesCatalog,
+    position: [i64; 3],
+    mut block_at: impl FnMut([i64; 3]) -> Option<u16>,
+    mut visit: impl FnMut(ShapeBox),
+) -> bool {
+    if block_at(position) == Some(terra_core::kinetic::WATER_WHEEL) {
+        let facing = journal.object_state(position).unwrap_or_default().facing;
+        let mut axle = ShapeBox {
+            minimum: [0.0, 0.407, 0.407],
+            maximum: [1.0, 0.593, 0.593],
+            hinged: false,
+        }
+        .rotated_axis(facing);
+        for (axis, value) in position.iter().enumerate() {
+            axle.minimum[axis] += *value as f64;
+            axle.maximum[axis] += *value as f64;
+        }
+        visit(axle);
+        return true;
+    }
+    visit_boxes_with(journal, properties, position, block_at, visit)
 }
 
 /// Test a proposed block with the same authored shape and orientation as collision.
@@ -69,6 +143,7 @@ pub fn visit_proposed_boxes(
             }
         },
         Some(state),
+        false,
         visit,
     )
 }
@@ -79,6 +154,7 @@ fn visit_boxes_with_state(
     position: [i64; 3],
     mut block_at: impl FnMut([i64; 3]) -> Option<u16>,
     override_state: Option<crate::edits::BlockObjectState>,
+    attachments_only: bool,
     mut visit: impl FnMut(ShapeBox),
 ) -> bool {
     let Some(material) = block_at(position) else {
@@ -110,6 +186,28 @@ fn visit_boxes_with_state(
     }
     let selected =
         override_state.unwrap_or_else(|| journal.object_state(position).unwrap_or_default());
+    if terra_core::lantern::is_part(material) {
+        for mut bounds in terra_core::lantern::boxes(material, selected.facing) {
+            for (axis, coordinate) in position.into_iter().enumerate() {
+                bounds.minimum[axis] += coordinate as f64;
+                bounds.maximum[axis] += coordinate as f64;
+            }
+            visit(bounds);
+        }
+        return true;
+    }
+    if terra_core::plumbing::is_part(material) {
+        for mut bounds in
+            crate::plumbing::plumbing_boxes(journal, position, material, selected, &mut block_at)
+        {
+            for (axis, value) in position.into_iter().enumerate() {
+                bounds.minimum[axis] += value as f64;
+                bounds.maximum[axis] += value as f64;
+            }
+            visit(bounds);
+        }
+        return true;
+    }
     if crate::objects::is_window(material) {
         let group = crate::objects::windows::group(position, material, selected.facing, |p| {
             let id = block_at(p).or_else(|| journal.block(p))?;
@@ -134,6 +232,27 @@ fn visit_boxes_with_state(
             return true;
         }
     }
+    if crate::objects::is_door(material)
+        && let Some(group) = crate::objects::doors::group(position, material, selected, |p| {
+            Some((
+                block_at(p).or_else(|| journal.block(p))?,
+                if p == position {
+                    selected
+                } else {
+                    journal.object_state(p)?
+                },
+            ))
+        })
+        && group.width == 2
+    {
+        for piece in crate::objects::doors::pieces()
+            .into_iter()
+            .filter(|p| p.solid)
+        {
+            visit(group.world_box(piece));
+        }
+        return true;
+    }
     let owner = if selected.secondary {
         selected.peer.unwrap_or(position)
     } else {
@@ -144,13 +263,45 @@ fn visit_boxes_with_state(
     } else {
         journal.object_state(owner).unwrap_or_default()
     };
-    if material == terra_core::crusher::CRANK_MATERIAL {
+    if matches!(material, 144..=146 | 148)
+        && let Some(segment) =
+            crate::conveyors::segment_at(journal, position).filter(|segment| segment.span.linked)
+    {
+        if !attachments_only {
+            for bounds in conveyor_boxes(segment) {
+                visit(bounds);
+            }
+        }
+        if belts::conveyor_casing_supported_with(segment, &mut block_at) {
+            for bounds in conveyor_casing_boxes(segment) {
+                visit(bounds);
+            }
+        }
+        if material == terra_core::kinetic::CONVEYOR {
+            return true;
+        }
+    }
+    if material == terra_core::kinetic::CONVEYOR
+        && !belts::floor_supported_with(position, &mut block_at)
+    {
+        visit(belts::bare_legacy_conveyor_box(position, state.facing));
+        return true;
+    }
+    if material == terra_core::crusher::CRANK_MATERIAL || terra_core::kinetic::is_rotary(material) {
         let boxes = properties.shape(material);
         if boxes.is_empty() {
             return false;
         }
         for source in boxes {
-            let mut bounds = source.rotated_y(state.facing);
+            let mut local = *source;
+            if material == terra_core::crusher::CRANK_MATERIAL {
+                let offset = terra_core::kinetic::crank_local_offset(owner, state.peer);
+                for (axis, value) in offset.into_iter().enumerate() {
+                    local.minimum[axis] += f64::from(value);
+                    local.maximum[axis] += f64::from(value);
+                }
+            }
+            let mut bounds = local.rotated_axis(state.facing);
             for (axis, value) in owner.iter().enumerate() {
                 bounds.minimum[axis] += *value as f64;
                 bounds.maximum[axis] += *value as f64;
@@ -184,6 +335,31 @@ fn visit_boxes_with_state(
         }
         return true;
     }
+    if terra_core::castle::is_castle(material) {
+        let neighbors = std::array::from_fn(|side| {
+            let mut cell = position;
+            cell[side / 2] += if side % 2 == 0 { -1 } else { 1 };
+            block_at(cell).map(|id| (id, journal.object_state(cell).unwrap_or_default().facing))
+        });
+        let connected = terra_core::castle::connections::is_connecting(material);
+        let sources = if connected {
+            terra_core::castle::connections::profile_boxes(
+                material,
+                terra_core::castle::connections::profile_key(material, state.facing, neighbors),
+            )
+        } else {
+            properties.shape(material)
+        };
+        for source in sources {
+            let mut bounds = terra_core::castle::rotated_box(*source, state.facing);
+            for (axis, coordinate) in position.into_iter().enumerate() {
+                bounds.minimum[axis] += coordinate as f64;
+                bounds.maximum[axis] += coordinate as f64;
+            }
+            visit(bounds);
+        }
+        return true;
+    }
     let template = if material == 60 {
         crate::objects::chimney_basis(state.facing).map_or(material, |(id, _)| id)
     } else {
@@ -192,6 +368,30 @@ fn visit_boxes_with_state(
     let boxes = properties.shape(template);
     if boxes.is_empty() {
         return false;
+    }
+    if material == terra_core::brewing::MATERIAL && terra_core::brewing::has_fire(state.facing) {
+        for source in properties.shape(terra_core::campfire::MATERIAL) {
+            let mut bounds = attached_campfire_box(*source).rotated_y(state.facing % 4);
+            for (axis, value) in owner.into_iter().enumerate() {
+                bounds.minimum[axis] += value as f64;
+                bounds.maximum[axis] += value as f64;
+            }
+            visit(bounds);
+        }
+    }
+    if material == terra_core::campfire::MATERIAL
+        && owner[1]
+            .checked_add(1)
+            .and_then(|y| block_at([owner[0], y, owner[2]]))
+            == Some(terra_core::brewing::MATERIAL)
+    {
+        for mut bounds in campfire_support_boxes() {
+            for (axis, value) in owner.into_iter().enumerate() {
+                bounds.minimum[axis] += value as f64;
+                bounds.maximum[axis] += value as f64;
+            }
+            visit(bounds);
+        }
     }
     let width = if matches!(material, 28 | 29 | 99) && state.peer.is_some() {
         2.0
@@ -221,6 +421,12 @@ fn visit_boxes_with_state(
         visit(bounds);
     }
     for (box_index, source) in boxes.iter().enumerate() {
+        if terra_core::logistics::is_funnel(material)
+            && source.minimum[1] <= -0.305
+            && !crate::funnels::supported_with(owner, journal, &mut block_at)
+        {
+            continue;
+        }
         if terra_core::construction::is_fence(material)
             && let Some(arm) = terra_core::construction::fence_arm(box_index)
         {
@@ -296,7 +502,7 @@ pub fn raycast(
         origin,
         direction,
         reach,
-        (false, crate::props::PropPose::Rest),
+        (false, false, crate::props::PropPose::Rest),
     )
 }
 
@@ -316,7 +522,7 @@ pub fn raycast_with_pose(
         origin,
         direction,
         reach,
-        (false, pose),
+        (false, false, pose),
     )
 }
 
@@ -335,7 +541,28 @@ pub fn raycast_solid(
         origin,
         direction,
         reach,
-        (true, crate::props::PropPose::Rest),
+        (true, false, crate::props::PropPose::Rest),
+    )
+}
+
+/// Ignore only liquid source blocks. Aquatic plants and mineral segments remain mineable.
+pub fn raycast_through_water(
+    chunks: &ChunkStore,
+    journal: &EditJournal,
+    properties: &BlockPropertiesCatalog,
+    origin: [f64; 3],
+    direction: [f64; 3],
+    reach: f64,
+    pose: crate::props::PropPose,
+) -> Option<BlockHit> {
+    cast(
+        chunks,
+        journal,
+        properties,
+        origin,
+        direction,
+        reach,
+        (false, true, pose),
     )
 }
 
@@ -346,9 +573,9 @@ fn cast(
     origin: [f64; 3],
     direction: [f64; 3],
     reach: f64,
-    options: (bool, crate::props::PropPose),
+    options: (bool, bool, crate::props::PropPose),
 ) -> Option<BlockHit> {
-    let (solid_only, pose) = options;
+    let (solid_only, ignore_water, pose) = options;
     let length = direction.iter().map(|v| v * v).sum::<f64>().sqrt();
     if !length.is_finite() || length < 1.0e-12 {
         return None;
@@ -363,6 +590,9 @@ fn cast(
         reach,
         |position| {
             let material = chunks.block_at(position).unwrap_or(1);
+            journal.visit_extended_kinetics_near(position, |owner| {
+                openings.insert(owner);
+            });
             let below = [position[0], position[1] - 1, position[2]];
             if chunks.block_at(below) == Some(99) {
                 openings.insert(below);
@@ -435,9 +665,10 @@ fn cast(
                 }
             }
             Some(
-                if solid_only
-                    && terra_voxel::MaterialId::from_raw(material)
-                        .is_some_and(|material| !material.is_solid())
+                if ignore_water && material == terra_voxel::MaterialId::FluidWater as u16
+                    || solid_only
+                        && terra_voxel::MaterialId::from_raw(material)
+                            .is_some_and(|material| !material.is_solid())
                 {
                     0
                 } else {
@@ -483,6 +714,9 @@ fn cast(
                     if crate::objects::is_window(material) {
                         position =
                             window_hit_cell(chunks, journal, cell_hit.position, material, point);
+                    } else if crate::objects::is_door(material) {
+                        position =
+                            door_hit_cell(chunks, journal, cell_hit.position, material, point);
                     }
                     nearest = Some(BlockHit {
                         position,
@@ -506,6 +740,17 @@ fn cast(
                         .is_some_and(crate::objects::is_window)
                     {
                         window_hit_cell(
+                            chunks,
+                            journal,
+                            position,
+                            chunks.block_at(position).unwrap(),
+                            std::array::from_fn(|a| origin[a] + direction[a] * distance),
+                        )
+                    } else if chunks
+                        .block_at(position)
+                        .is_some_and(crate::objects::is_door)
+                    {
+                        door_hit_cell(
                             chunks,
                             journal,
                             position,
@@ -604,6 +849,23 @@ fn window_hit_cell(
     .nearest_cell(point)
 }
 
+fn door_hit_cell(
+    chunks: &ChunkStore,
+    journal: &EditJournal,
+    position: [i64; 3],
+    material: u16,
+    point: [f64; 3],
+) -> [i64; 3] {
+    let state = journal.object_state(position).unwrap_or_default();
+    crate::objects::doors::group(position, material, state, |p| {
+        Some((
+            chunks.block_at(p).or_else(|| journal.block(p))?,
+            journal.object_state(p)?,
+        ))
+    })
+    .map_or(position, |group| group.nearest_cell(point))
+}
+
 pub fn space_intersects(
     chunks: &ChunkStore,
     journal: &EditJournal,
@@ -613,7 +875,7 @@ pub fn space_intersects(
     maximum: [f64; 3],
 ) -> bool {
     let mut hit = false;
-    if visit_boxes(chunks, journal, properties, position, |bounds| {
+    let occupied = if visit_collision_boxes(chunks, journal, properties, position, |bounds| {
         hit |= bounds.intersects(minimum, maximum)
     }) {
         hit
@@ -622,9 +884,41 @@ pub fn space_intersects(
             .block_at(position)
             .and_then(terra_voxel::MaterialId::from_raw)
             .is_none_or(terra_voxel::MaterialId::is_solid)
+    };
+    if occupied {
+        return true;
     }
+    journal.visit_extended_kinetics_near(position, |owner| {
+        if owner != position {
+            visit_collision_boxes(chunks, journal, properties, owner, |b| {
+                hit |= b.intersects(minimum, maximum)
+            });
+        }
+    });
+    // An opened leaf extends into the neighboring air cell. Spawn/teleport
+    // clearance must agree with the section collider's existing hinge halo.
+    for direction in [[-1, 0, 0], [1, 0, 0], [0, 0, -1], [0, 0, 1]] {
+        let Some(neighbor) = position[0]
+            .checked_add(direction[0])
+            .zip(position[2].checked_add(direction[2]))
+            .map(|(x, z)| [x, position[1], z])
+        else {
+            continue;
+        };
+        if chunks
+            .block_at(neighbor)
+            .is_some_and(crate::objects::is_opening)
+        {
+            visit_collision_boxes(chunks, journal, properties, neighbor, |bounds| {
+                hit |= bounds.intersects(minimum, maximum)
+            });
+        }
+    }
+    hit
 }
 
+#[cfg(test)]
+mod connected_doors;
 #[cfg(test)]
 mod connected_windows;
 #[cfg(test)]

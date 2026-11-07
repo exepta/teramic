@@ -1,0 +1,36 @@
+{
+  "ui_tests_passed": 457,
+  "build_passed": true,
+  "clippy_passed": true,
+  "f1_font_increase_logical_px": 2,
+  "native_f1_toggle_and_diagnostics_verified": true,
+  "native_card_rule_count": 9,
+  "native_card_types": {
+    "switch": 6,
+    "number": 3
+  },
+  "numeric_handler_and_save_reload_verified": true,
+  "all_on_off_controls_removed": true,
+  "sources": [
+    {
+      "path": "src-ui/styles/debug-target-185.css",
+      "sha256": "53fb318ba1a265cbed6de428f96bb0a7c69e1cc3904c60e25e2fa1cb26d43783"
+    },
+    {
+      "path": "src-ui/styles/create-world.css",
+      "sha256": "915ae14760d7049a24afc25c4fed9978d67b3f1e22c87f4f41355e29a4a6764d"
+    },
+    {
+      "path": "src-ui/components/modal-dialog.component.html",
+      "sha256": "91b62bb321c9c7eaa395022248be16ceb77b3bc276e598775263e82681ea6245"
+    },
+    {
+      "path": "crates/terra-ui/src/menu/view.rs",
+      "sha256": "c16f594d318a28a02a422b7b38c941360c8d41cc9d2b520b13a6ebc323c37a7a"
+    },
+    {
+      "path": "crates/terra-ui/src/menu/create_world.rs",
+      "sha256": "ea211b444f22b58c33cd22b7656abb3557fd4be6cd10489249c9a8540c5fea4b"
+    }
+  ]
+}

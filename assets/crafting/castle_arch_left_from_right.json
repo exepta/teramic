@@ -1,0 +1,22 @@
+{
+  "id": "teramic::castle_arch_left_from_right",
+  "name": "Mauerbogen Links",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "block": 183
+    },
+    "count": 1
+  },
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "block": 184
+        },
+        "count": 1
+      }
+    ]
+  }
+}

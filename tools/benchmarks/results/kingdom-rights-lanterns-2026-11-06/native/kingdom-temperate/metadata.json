@@ -1,0 +1,24 @@
+{
+  "scene": "kingdom-temperate",
+  "structures_revision": 8,
+  "seed": 42042,
+  "exit_code": 0,
+  "command": [
+    "/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/target/debug/terra-client",
+    "--smoke-test-biomes"
+  ],
+  "environment": {
+    "TERRA_CONFIG_DIR": "/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/target/phase199-structures/configs",
+    "TERRA_MENU_CONFIG_DIR": "/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/target/phase199-structures/configs",
+    "TERRA_ASSET_DIR": "/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/assets",
+    "TERRA_WORLD_DIR": "/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/target/phase199-structures/worlds",
+    "TERRA_CAPTURE_DIR": "/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/tools/benchmarks/results/kingdom-rights-lanterns-2026-11-06/native/kingdom-temperate",
+    "TERRA_BIOME_SCENE": "kingdom-temperate",
+    "TERRA_BENCH_GRAPHICS": "1",
+    "TERRA_COMPUTE_THREADS": "4"
+  },
+  "images": {
+    "kingdom-temperate-close.png": "ab438a83924022d27ae2ff4c24e7e384ebd9cdfd96c57c32b03ace715c6fe2cc",
+    "kingdom-temperate-overview.png": "f7c4a3b540e8fdc83f4077afb303e121b8632b53b1185cc93f5d8797ba03ca5a"
+  }
+}

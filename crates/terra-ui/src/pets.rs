@@ -133,8 +133,11 @@ fn playing(world: &World) -> bool {
 
 fn unoccupied(world: &World) -> bool {
     !world
-        .get_resource::<crate::inventory::InventoryState>()
-        .is_some_and(|s| s.blocks_input())
+        .get_resource::<crate::kingdom::KingdomMenuState>()
+        .is_some_and(|k| k.blocks_input())
+        && !world
+            .get_resource::<crate::inventory::InventoryState>()
+            .is_some_and(|s| s.blocks_input())
         && !world
             .get_resource::<crate::chat::ChatState>()
             .is_some_and(|s| s.blocks_input())

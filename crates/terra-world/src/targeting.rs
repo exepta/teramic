@@ -22,7 +22,11 @@ pub fn item_placement(
         let position = crate::segments::extension(hit.position, material, |p| chunks.block_at(p))?;
         return Some((position, chunks.block_at(position)?));
     }
-    block_placement(chunks, hit)
+    block_placement_with_snow(
+        chunks,
+        hit,
+        material != terra_voxel::MaterialId::SnowLayer as u16,
+    )
 }
 
 pub fn item_placement_with_state(
@@ -31,7 +35,64 @@ pub fn item_placement_with_state(
     hit: BlockHit,
     material: u16,
 ) -> Option<([i64; 3], u16)> {
+    if material == terra_core::infusion::FLUID_INFUSER {
+        let direct = (chunks.block_at(hit.position) == Some(terra_core::infusion::HOLD_BLOCK))
+            .then_some(hit.position);
+        let ordinary = item_placement(chunks, hit, material).map(|(p, _)| p);
+        let mut supports = std::collections::BTreeSet::new();
+        if let Some(p) = direct {
+            supports.insert(p);
+        } else if let Some(p) = ordinary {
+            for dx in -1..=1 {
+                for dz in -1..=1 {
+                    let support = [
+                        p[0] + dx,
+                        p[1] - terra_core::infusion::INFUSER_OFFSET,
+                        p[2] + dz,
+                    ];
+                    if chunks.block_at(support) == Some(terra_core::infusion::HOLD_BLOCK)
+                        && journal.object_state(support).is_some_and(|state| {
+                            state.valid_for(support, terra_core::infusion::HOLD_BLOCK)
+                        })
+                    {
+                        supports.insert(support);
+                    }
+                }
+            }
+        }
+        if supports.len() != 1 {
+            return None;
+        }
+        let support = *supports.first()?;
+        let position = terra_core::infusion::infuser_above(support);
+        if chunks.block_at(terra_core::infusion::gap_above(support)) != Some(0) {
+            return None;
+        }
+        let expected = chunks.block_at(position)?;
+        return matches!(expected, 0 | 27 | 98).then_some((position, expected));
+    }
+    if material == terra_voxel::MaterialId::SnowLayer as u16 {
+        return crate::snow::target(chunks, journal, hit);
+    }
+    if let Some(expected) = chunks.block_at(hit.position)
+        && matches!((expected, material), (161, 162) | (162, 161))
+        && !journal.has_attached_campfire(hit.position)
+    {
+        return Some((hit.position, expected));
+    }
+    if matches!(material, 144..=146)
+        && chunks.block_at(hit.position) == Some(terra_core::kinetic::CONVEYOR)
+        && crate::conveyors::span_at(journal, hit.position).is_some_and(|span| span.linked)
+    {
+        return Some((hit.position, terra_core::kinetic::CONVEYOR));
+    }
     if material == terra_core::crusher::CRANK_MATERIAL {
+        if let Some(facing) = terra_core::kinetic::facing(hit.normal.map(i64::from))
+            && let Some(position) = journal.rotary_crank_mount(hit.position, facing)
+        {
+            let expected = chunks.block_at(position)?;
+            return matches!(expected, 0 | 27 | 98).then_some((position, expected));
+        }
         let anchor = journal.crusher_primary(hit.position)?;
         let state = journal.object_state(anchor)?;
         if hit.normal.map(i64::from) != state.right() {
@@ -39,7 +100,14 @@ pub fn item_placement_with_state(
         }
         let position = journal.crusher_crank_position(anchor)?;
         let expected = chunks.block_at(position)?;
-        return matches!(expected, 0 | 27).then_some((position, expected));
+        return matches!(expected, 0 | 27 | 98).then_some((position, expected));
+    }
+    if terra_core::kinetic::uses_adaptive_facing(material)
+        && chunks
+            .block_at(hit.position)
+            .is_some_and(|id| terra_core::kinetic::is_part(id) && id != 100)
+    {
+        return kinetic_placement(chunks, journal, hit, material);
     }
     if terra_core::construction::is_slab(material)
         && chunks
@@ -58,12 +126,31 @@ pub fn item_placement_with_state(
     item_placement(chunks, hit, material)
 }
 
+fn kinetic_placement(
+    chunks: &ChunkStore,
+    journal: &crate::edits::EditJournal,
+    hit: BlockHit,
+    _material: u16,
+) -> Option<([i64; 3], u16)> {
+    let clicked_material = chunks.block_at(hit.position)?;
+    let state = journal.object_state(hit.position)?;
+    if !state.valid_for(hit.position, clicked_material) || hit.normal == [0; 3] {
+        return None;
+    }
+    block_placement(chunks, hit)
+}
+
 /// A crank connects to the gear face, never another face of the same machine cell.
 pub fn hand_crank_mount_hit(
     journal: &crate::edits::EditJournal,
     hit: BlockHit,
     ray: ([f64; 3], [f64; 3]),
 ) -> bool {
+    if let Some(facing) = terra_core::kinetic::facing(hit.normal.map(i64::from))
+        && journal.rotary_crank_mount(hit.position, facing).is_some()
+    {
+        return true;
+    }
     let Some(anchor) = journal.crusher_primary(hit.position) else {
         return false;
     };
@@ -88,8 +175,8 @@ pub fn hand_crank_mount_hit(
         .map(|axis| point[axis] * forward[axis] as f64)
         .sum::<f64>()
         + 0.5;
-    (x - 1.997).abs() <= 0.07
-        && (point[1] - 0.455).powi(2) + (z - 0.515).powi(2) <= 0.235f64.powi(2)
+    let drive_x = if state.peer.is_some() { 1.997 } else { 0.997 };
+    (x - drive_x).abs() <= 0.07 && (point[1] - 0.5).powi(2) + (z - 0.5).powi(2) <= 0.235f64.powi(2)
 }
 
 /// The same proposed half-cell volume drives local and authoritative body checks.
@@ -149,7 +236,71 @@ pub fn placement_facing(
     material: u16,
     ray: ([f64; 3], [f64; 3]),
 ) -> u8 {
+    if terra_core::lantern::is_part(material) {
+        return terra_core::lantern::facing(material, hit.normal).unwrap_or_default();
+    }
+    if material == 40 {
+        return crate::torches::facing(hit.normal).unwrap_or(0);
+    }
+    if terra_core::castle::is_castle(material) {
+        // Extending the edge of an existing wall must not turn the next panel
+        // sideways. This also preserves explicitly wrenched wall/arch poses.
+        if let Some(clicked) = chunks.block_at(hit.position)
+            && terra_core::castle::has_wall_plane(clicked)
+            && let Some(state) = journal.object_state(hit.position)
+            && state.valid_for(hit.position, clicked)
+        {
+            let forward = terra_core::construction::stair_basis(state.facing)[2];
+            let across = forward
+                .into_iter()
+                .zip(hit.normal)
+                .map(|(a, b)| i32::from(a) * b)
+                .sum::<i32>();
+            if across == 0 {
+                return state.facing;
+            }
+        }
+        return terra_core::castle::placement_facing(hit.normal.map(|v| v as i8), ray.1);
+    }
+    if terra_core::plumbing::is_pipe(material) || material == terra_core::plumbing::VALVE {
+        return terra_core::kinetic::facing(hit.normal.map(i64::from)).unwrap_or(0);
+    }
+    if matches!(material, 144..=146)
+        && chunks.block_at(hit.position) == Some(148)
+        && let Some(span) =
+            crate::conveyors::span_at(journal, hit.position).filter(|span| span.linked)
+    {
+        return span.facing;
+    }
+    if terra_core::kinetic::uses_adaptive_facing(material)
+        && let Some((position, _)) = item_placement_with_state(chunks, journal, hit, material)
+    {
+        let length = ray
+            .1
+            .iter()
+            .map(|v| v * v)
+            .sum::<f64>()
+            .sqrt()
+            .max(0.000001);
+        let look = [
+            (-ray.1[0]).atan2(-ray.1[2]) as f32,
+            (ray.1[1] / length).clamp(-1.0, 1.0).asin() as f32,
+        ];
+        return crate::placement::kinetic_facing(
+            chunks,
+            journal,
+            position,
+            material,
+            Some(hit),
+            look,
+        );
+    }
     if material == terra_core::crusher::CRANK_MATERIAL {
+        if let Some(facing) = terra_core::kinetic::facing(hit.normal.map(i64::from))
+            && journal.rotary_crank_mount(hit.position, facing).is_some()
+        {
+            return facing;
+        }
         return journal
             .crusher_primary(hit.position)
             .and_then(|anchor| journal.object_state(anchor))
@@ -176,11 +327,22 @@ pub fn placement_facing(
     )
 }
 
-/// A source is replaceable fluid, not a solid placement support. Ordinary liquid
-/// occupies air cells already, so placing against the bed displaces it as well.
+/// Fluid and incomplete snow caps yield their cell to ordinary construction.
+/// A completed snow block is solid support and must never be replaced this way.
 pub fn block_placement(chunks: &ChunkStore, hit: BlockHit) -> Option<([i64; 3], u16)> {
+    block_placement_with_snow(chunks, hit, true)
+}
+
+fn block_placement_with_snow(
+    chunks: &ChunkStore,
+    hit: BlockHit,
+    replace_snow: bool,
+) -> Option<([i64; 3], u16)> {
     use terra_voxel::MaterialId;
-    let position = if chunks.block_at(hit.position) == Some(MaterialId::FluidWater as u16) {
+    let clicked = chunks.block_at(hit.position)?;
+    let position = if clicked == MaterialId::FluidWater as u16
+        || replace_snow && clicked == MaterialId::SnowLayer as u16
+    {
         hit.position
     } else if hit.normal != [0; 3] {
         hit.adjacent()
@@ -188,11 +350,11 @@ pub fn block_placement(chunks: &ChunkStore, hit: BlockHit) -> Option<([i64; 3], 
         return None;
     };
     let expected = chunks.block_at(position)?;
-    matches!(
+    (matches!(
         MaterialId::from_raw(expected),
         Some(MaterialId::Air | MaterialId::FluidWater)
-    )
-    .then_some((position, expected))
+    ) || replace_snow && expected == MaterialId::SnowLayer as u16)
+        .then_some((position, expected))
 }
 
 pub fn pick_world(
@@ -235,7 +397,15 @@ pub fn pick_world_with_context(
     direction: [f64; 3],
     pose: PropPose,
 ) -> (Option<BlockHit>, Option<WorldTarget>) {
-    pick_context(chunks, journal, properties, origin, direction, pose, false)
+    pick_context(
+        chunks,
+        journal,
+        properties,
+        origin,
+        direction,
+        pose,
+        PickPurpose::Interaction,
+    )
 }
 
 /// Planting targets the bed through source water, while actual prop geometry still occludes it.
@@ -247,7 +417,86 @@ pub fn pick_world_for_planting(
     direction: [f64; 3],
     pose: PropPose,
 ) -> (Option<BlockHit>, Option<WorldTarget>) {
-    pick_context(chunks, journal, properties, origin, direction, pose, true)
+    pick_context(
+        chunks,
+        journal,
+        properties,
+        origin,
+        direction,
+        pose,
+        PickPurpose::Planting,
+    )
+}
+
+/// Saplings may replace authentic natural ground cover. Saved plants and other
+/// props still occlude the support; the planting transaction validates removal.
+pub fn pick_world_for_saplings(
+    chunks: &ChunkStore,
+    journal: &crate::edits::EditJournal,
+    properties: &terra_core::block_properties::BlockPropertiesCatalog,
+    origin: [f64; 3],
+    direction: [f64; 3],
+    pose: PropPose,
+) -> (Option<BlockHit>, Option<WorldTarget>) {
+    pick_context(
+        chunks,
+        journal,
+        properties,
+        origin,
+        direction,
+        pose,
+        PickPurpose::Sapling,
+    )
+}
+
+/// Break rays pass through liquid while retaining solid machinery and prop occlusion.
+pub fn pick_world_for_mining(
+    chunks: &ChunkStore,
+    journal: &crate::edits::EditJournal,
+    properties: &terra_core::block_properties::BlockPropertiesCatalog,
+    origin: [f64; 3],
+    direction: [f64; 3],
+    pose: PropPose,
+) -> (Option<BlockHit>, Option<WorldTarget>) {
+    pick_context(
+        chunks,
+        journal,
+        properties,
+        origin,
+        direction,
+        pose,
+        PickPurpose::Mining,
+    )
+}
+
+/// Construction anchors on the visible bed or machinery through liquid, even
+/// when the eye itself lies inside a water cell. Vessel sampling stays separate.
+pub fn pick_world_for_placement(
+    chunks: &ChunkStore,
+    journal: &crate::edits::EditJournal,
+    properties: &terra_core::block_properties::BlockPropertiesCatalog,
+    origin: [f64; 3],
+    direction: [f64; 3],
+    pose: PropPose,
+) -> (Option<BlockHit>, Option<WorldTarget>) {
+    pick_context(
+        chunks,
+        journal,
+        properties,
+        origin,
+        direction,
+        pose,
+        PickPurpose::Placement,
+    )
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum PickPurpose {
+    Interaction,
+    Planting,
+    Sapling,
+    Mining,
+    Placement,
 }
 
 fn pick_context(
@@ -257,8 +506,9 @@ fn pick_context(
     origin: [f64; 3],
     direction: [f64; 3],
     pose: PropPose,
-    planting: bool,
+    purpose: PickPurpose,
 ) -> (Option<BlockHit>, Option<WorldTarget>) {
+    let planting = matches!(purpose, PickPurpose::Planting | PickPurpose::Sapling);
     if origin
         .iter()
         .any(|v| !v.is_finite() || v.abs() > (1_i64 << 40) as f64 - 32.0)
@@ -271,7 +521,11 @@ fn pick_context(
             chunks, journal, properties, origin, direction, 8.0,
         )
     };
-    let obstruction = if planting {
+    let obstruction = if matches!(purpose, PickPurpose::Mining | PickPurpose::Placement) {
+        crate::interaction_shapes::raycast_through_water(
+            chunks, journal, properties, origin, direction, 8.0, pose,
+        )
+    } else if planting {
         solid()
     } else {
         crate::interaction_shapes::raycast_with_pose(
@@ -309,6 +563,8 @@ fn pick_context(
                         section.props.iter().filter(|p| {
                             !p.removed
                                 && (!planting || p.kind.crop().is_none())
+                                && (purpose != PickPurpose::Sapling
+                                    || !crate::saplings::soft_natural(p, journal))
                                 && crate::props::placement::supported(p, |p| chunks.block_at(p))
                                     == Some(true)
                                 && !crate::props::seasonal::snow_buried(p, chunks, journal)
@@ -378,6 +634,10 @@ fn pick_context(
             .or_else(|| block.map(WorldTarget::Block)),
     )
 }
+
+#[cfg(test)]
+#[path = "targeting_snow_tests.rs"]
+mod snow_tests;
 
 #[cfg(test)]
 mod tests {
@@ -459,14 +719,16 @@ mod tests {
     }
 
     #[test]
-    fn hand_crank_targets_the_same_gear_from_either_parent_half_and_rejects_other_faces() {
+    fn hand_crank_targets_single_cell_and_legacy_pair_drives_but_rejects_other_faces() {
         use super::*;
         use crate::{
             edits::{BlockObjectState, EditJournal},
             streaming::LoadedSection,
         };
         use terra_voxel::BlockSection;
-        for facing in 0..4 {
+        for (facing, legacy) in
+            (0..4).flat_map(|facing| [false, true].map(|legacy| (facing, legacy)))
+        {
             let anchor = [-1, 4, -1];
             let state = BlockObjectState {
                 facing,
@@ -491,7 +753,9 @@ mod tests {
                     );
                 }
             }
-            for (position, other, secondary) in [(anchor, peer, false), (peer, anchor, true)] {
+            let cells = std::iter::once((anchor, peer, false))
+                .chain(legacy.then_some((peer, anchor, true)));
+            for (position, other, secondary) in cells {
                 let (owner, local) = terra_voxel::global_to_section(position);
                 chunks
                     .loaded
@@ -505,7 +769,7 @@ mod tests {
                     .set_object_state(
                         position,
                         Some(BlockObjectState {
-                            peer: Some(other),
+                            peer: legacy.then_some(other),
                             secondary,
                             ..state
                         }),
@@ -514,20 +778,33 @@ mod tests {
             }
             let mount = journal.crusher_crank_position(anchor).unwrap();
             let right = state.right();
-            let forward = [[0, 0, 1], [1, 0, 0], [0, 0, -1], [-1, 0, 0]][usize::from(facing)];
             let point: [f64; 3] = std::array::from_fn(|axis| {
                 anchor[axis] as f64
                     + if axis == 1 {
-                        0.455
+                        0.5
                     } else {
-                        0.5 + right[axis] as f64 * 1.497 + forward[axis] as f64 * 0.015
+                        0.5 + right[axis] as f64 * if legacy { 1.497 } else { 0.497 }
                     }
             });
             let ray = (
                 std::array::from_fn(|axis| point[axis] + right[axis] as f64 * 2.0),
                 right.map(|value| -(value as f64)),
             );
-            for position in [anchor, peer] {
+            let actual = crate::interaction_shapes::raycast(
+                &chunks,
+                &journal,
+                &Default::default(),
+                ray.0,
+                ray.1,
+                6.0,
+            )
+            .expect("authored Crusher drive must be pickable");
+            assert!(hand_crank_mount_hit(&journal, actual, ray));
+            assert_eq!(
+                item_placement_with_state(&chunks, &journal, actual, 100),
+                Some((mount, 0))
+            );
+            for position in std::iter::once(anchor).chain(legacy.then_some(peer)) {
                 let hit = BlockHit {
                     position,
                     normal: right.map(|value| value as i32),
@@ -746,6 +1023,92 @@ mod tests {
     }
 
     #[test]
+    fn sapling_picker_ignores_only_natural_ground_cover_while_saved_plants_still_occlude() {
+        let owner = SectionPos::default();
+        let mut data = BlockSection::empty(owner).unwrap();
+        data.set_block([4, 3, 4], 2).unwrap();
+        let grass = WorldProp {
+            id: PropId(9971),
+            kind: PropKind::Grass,
+            position: [4.5, 4., 4.5],
+            rotation: 0.,
+            scale: 1.,
+            variant: 0,
+            section: owner,
+            removed: false,
+        };
+        let mut chunks = ChunkStore::default();
+        chunks.loaded.insert(
+            owner,
+            LoadedSection {
+                data,
+                mesh: None,
+                mesh_epoch: 0,
+                water_epoch: 0,
+                water: None,
+                props: vec![grass],
+            },
+        );
+        let mut journal = crate::edits::EditJournal::default();
+        let properties = terra_core::block_properties::BlockPropertiesCatalog::default();
+        // Vertical rays can pass between upright grass blades. Aim obliquely
+        // through an actual authored triangle, with the same soil behind it.
+        let origin = [4.5, 7., 7.5];
+        let meshes = crate::props::visual::template(
+            PropKind::Grass,
+            grass.template_variant(),
+            crate::props::visual::PropDetail::Near,
+            &crate::props::visual::PropPalette::default(),
+        )
+        .unwrap();
+        let direction = meshes
+            .iter()
+            .flat_map(|mesh| {
+                mesh.indices.chunks_exact(3).map(move |triangle| {
+                    let target: [f64; 3] = std::array::from_fn(|axis| {
+                        grass.position[axis]
+                            + triangle
+                                .iter()
+                                .map(|i| {
+                                    f64::from(mesh.positions[*i as usize][axis])
+                                        * f64::from(grass.visual_scale())
+                                        / 3.
+                                })
+                                .sum::<f64>()
+                    });
+                    let delta: [f64; 3] = std::array::from_fn(|axis| target[axis] - origin[axis]);
+                    let length = delta.into_iter().map(|v| v * v).sum::<f64>().sqrt();
+                    delta.map(|v| v / length)
+                })
+            })
+            .find(|direction| {
+                let (block, hit) = pick_world_for_planting(
+                    &chunks,
+                    &journal,
+                    &properties,
+                    origin,
+                    *direction,
+                    PropPose::Rest,
+                );
+                block.is_some_and(|hit| hit.position == [4, 3, 4] && hit.normal == [0, 1, 0])
+                    && matches!(hit,Some(WorldTarget::Prop(hit)) if hit.prop.id==grass.id)
+            })
+            .expect("the real grass mesh must expose an oblique ray with soil behind it");
+        let ray = (origin, direction);
+        assert!(matches!(
+            pick_world_for_planting(&chunks, &journal, &properties, ray.0, ray.1, PropPose::Rest).1,
+            Some(WorldTarget::Prop(_))
+        ));
+        assert!(
+            matches!(pick_world_for_saplings(&chunks,&journal,&properties,ray.0,ray.1,PropPose::Rest).1,Some(WorldTarget::Block(hit)) if hit.position==[4,3,4])
+        );
+        assert!(journal.place_prop(grass).unwrap());
+        assert!(
+            matches!(pick_world_for_saplings(&chunks,&journal,&properties,ray.0,ray.1,PropPose::Rest).1,Some(WorldTarget::Prop(hit)) if hit.prop.id==grass.id)
+        );
+    }
+
+    #[test]
     fn planting_ignores_overhanging_crop_leaves_but_mining_decorations_and_walls_keep_real_geometry()
      {
         let mut chunks = ChunkStore::default();
@@ -932,3 +1295,7 @@ mod tests {
         );
     }
 }
+
+#[cfg(test)]
+#[path = "targeting_mining_water_tests.rs"]
+mod mining_water_tests;

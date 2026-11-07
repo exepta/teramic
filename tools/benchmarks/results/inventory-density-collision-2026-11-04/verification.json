@@ -1,0 +1,269 @@
+{
+  "phase": 191,
+  "tests": {
+    "passed": 3554,
+    "failed": 0,
+    "ignored": 7
+  },
+  "native": {
+    "captures": 26,
+    "resolutions": [
+      [
+        3840,
+        2160
+      ],
+      [
+        1025,
+        641
+      ]
+    ],
+    "success": true,
+    "os_input": false,
+    "authority_inventory_preserved": true
+  },
+  "known_limit": "Reported placement teleport not reproduced; requested block, mode and reproduction steps. Collision reuse regression verified.",
+  "sources": [
+    {
+      "path": "crates/terra-ui/src/frames.rs",
+      "sha256": "51de4b631576edf707b7a129e5ea2d0820bca5b708a630b87e2cc6b9b26a15c3"
+    },
+    {
+      "path": "src-ui/styles/inventory-191.css",
+      "sha256": "98eea2112668fa50cdc6492d0072af72faf9e2a652429e38eb24d358cd859e1b"
+    },
+    {
+      "path": "src-ui/index.html",
+      "sha256": "efea97f2e19882fa5905e26c1c19b1c7568a4aabd8923b553e13079c6de9cfe6"
+    },
+    {
+      "path": "crates/terra-physics/src/terrain.rs",
+      "sha256": "f9f732666d558b9e479ce5b17b01687a3ce026067aeef752ec94e9f5e0ab70b6"
+    },
+    {
+      "path": "crates/terra-physics/src/terrain/tests.rs",
+      "sha256": "81b31a5db91ba9e2724e38862b45487ea54a5c470eb9d689d6658d24e9c6fcb8"
+    },
+    {
+      "path": "crates/terra-physics/src/terrain/model_tests.rs",
+      "sha256": "826127d8fe11ce79700c0a2d19e929a05843cac780f1b849040b13504e81f30f"
+    },
+    {
+      "path": "apps/client/src/inventory_reference_smoke.rs",
+      "sha256": "3873bfbdae7c7661746359e5e62ddf4339ebc8e9b9829191bb344affc420e447"
+    },
+    {
+      "path": "apps/client/src/inventory_reference_smoke/surfaces.rs",
+      "sha256": "fca5b2c8ce7117f486f98eb6f488994e720b103e8b1042ed6f629101abbb96d3"
+    }
+  ],
+  "screenshots": [
+    {
+      "path": "tools/benchmarks/results/inventory-density-collision-2026-11-04/native/fixed-player-compact.png",
+      "sha256": "1384b4fc0105629830b0e8d9295a11c1b1ddbad63df8c12c5ced090a97c49e25",
+      "size": [
+        1025,
+        641
+      ]
+    },
+    {
+      "path": "tools/benchmarks/results/inventory-density-collision-2026-11-04/native/fixed-player-wide.png",
+      "sha256": "6e7d481118232b635c789d49aa704b440257f059ff2420bc8745ccddfbb9f201",
+      "size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "path": "tools/benchmarks/results/inventory-density-collision-2026-11-04/native/surface-campfire-compact.png",
+      "sha256": "320d53b74435c2d06994a098b1a80f478ac43d071a09e663d8cae3072ceaf23b",
+      "size": [
+        1025,
+        641
+      ]
+    },
+    {
+      "path": "tools/benchmarks/results/inventory-density-collision-2026-11-04/native/surface-campfire-wide.png",
+      "sha256": "be72bc59a2ac5158a555a4f3664e04191454bd881a1570d4a26cd136a9310d1e",
+      "size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "path": "tools/benchmarks/results/inventory-density-collision-2026-11-04/native/surface-cauldron-compact.png",
+      "sha256": "c7554e974974b6d3fba84df3eb0a7f1c998ab067bb0baa8d2bd8526a1ac78afa",
+      "size": [
+        1025,
+        641
+      ]
+    },
+    {
+      "path": "tools/benchmarks/results/inventory-density-collision-2026-11-04/native/surface-cauldron-wide.png",
+      "sha256": "d926c72637e123a7648b039e3e912c5eb75b31f2734c634e505bd5c6361a4409",
+      "size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "path": "tools/benchmarks/results/inventory-density-collision-2026-11-04/native/surface-chest-compact.png",
+      "sha256": "78715446bfecce6a5e46e5d000b546fdf69fd0149ef3b2fd590dc99dad532c58",
+      "size": [
+        1025,
+        641
+      ]
+    },
+    {
+      "path": "tools/benchmarks/results/inventory-density-collision-2026-11-04/native/surface-chest-wide.png",
+      "sha256": "71d9e68369d7014edcc09eed4489125b9b0b432581db8b98af825fb2540ca81c",
+      "size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "path": "tools/benchmarks/results/inventory-density-collision-2026-11-04/native/surface-crusher-compact.png",
+      "sha256": "458246f087ed705c857ab8f3eeca2d4af06759dfd46de1161c0b76a4cdf38997",
+      "size": [
+        1025,
+        641
+      ]
+    },
+    {
+      "path": "tools/benchmarks/results/inventory-density-collision-2026-11-04/native/surface-crusher-wide.png",
+      "sha256": "a5898004486d94a40d135c83d2d1312bffeda2aecb8c8c63b34215d506e13061",
+      "size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "path": "tools/benchmarks/results/inventory-density-collision-2026-11-04/native/surface-distributor-compact.png",
+      "sha256": "a0427fe98604c8a56fcabafc4ad3530870353c1f6a34947289352c18c085f13c",
+      "size": [
+        1025,
+        641
+      ]
+    },
+    {
+      "path": "tools/benchmarks/results/inventory-density-collision-2026-11-04/native/surface-distributor-wide.png",
+      "sha256": "8def82060160f7c27385960b824a409226c7b87481fa08e7a16dbca3181761ca",
+      "size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "path": "tools/benchmarks/results/inventory-density-collision-2026-11-04/native/surface-double-chest-compact.png",
+      "sha256": "f8321248564699558ce8387419e200798f23d1209058abdfafbc3dfa82e4fd29",
+      "size": [
+        1025,
+        641
+      ]
+    },
+    {
+      "path": "tools/benchmarks/results/inventory-density-collision-2026-11-04/native/surface-double-chest-wide.png",
+      "sha256": "fadb5b5b9a3cdaeeaabbe4be109d6003907e961fb16ab94ab08d1f08eb2e6bd5",
+      "size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "path": "tools/benchmarks/results/inventory-density-collision-2026-11-04/native/surface-filtered-funnel-compact.png",
+      "sha256": "036d9f0889080fd97dc6f23b0b5db05c1f23c7e312ace00b702980d8cb68c407",
+      "size": [
+        1025,
+        641
+      ]
+    },
+    {
+      "path": "tools/benchmarks/results/inventory-density-collision-2026-11-04/native/surface-filtered-funnel-wide.png",
+      "sha256": "2c0ad56db938e6669ae4cc2a0a41c0043e528c134f37763b86274d60e421e287",
+      "size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "path": "tools/benchmarks/results/inventory-density-collision-2026-11-04/native/surface-filtered-tunnel-compact.png",
+      "sha256": "018eb62bc44abe321006132bc33f013bd40605d1184979212f30d63ae698e993",
+      "size": [
+        1025,
+        641
+      ]
+    },
+    {
+      "path": "tools/benchmarks/results/inventory-density-collision-2026-11-04/native/surface-filtered-tunnel-wide.png",
+      "sha256": "77f657f5f41b60e679e5b351d98eb60af44ed5be83bd0b46881fb1085567c791",
+      "size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "path": "tools/benchmarks/results/inventory-density-collision-2026-11-04/native/surface-furnace-compact.png",
+      "sha256": "a40428375691c6ddd05c4f690066c0c8906a75adbdfe1de271aaff02ed9e4e91",
+      "size": [
+        1025,
+        641
+      ]
+    },
+    {
+      "path": "tools/benchmarks/results/inventory-density-collision-2026-11-04/native/surface-furnace-wide.png",
+      "sha256": "ce7892c9dba2a09153fccc850a558a7ba5f50c9643490006a68f05b06cbc07ac",
+      "size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "path": "tools/benchmarks/results/inventory-density-collision-2026-11-04/native/surface-mixer-compact.png",
+      "sha256": "e770e34dd5ee1e328096b3a21ac9413e506437804e65277330a25aafd46d9623",
+      "size": [
+        1025,
+        641
+      ]
+    },
+    {
+      "path": "tools/benchmarks/results/inventory-density-collision-2026-11-04/native/surface-mixer-wide.png",
+      "sha256": "e4cba43cee630ad6c10cb287b32b87ab9d35b42bca7c96db99fa54986aefeb20",
+      "size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "path": "tools/benchmarks/results/inventory-density-collision-2026-11-04/native/surface-tunnel-compact.png",
+      "sha256": "2cf94ed41dd47f05a247dd0a7b0526a42622302e99ef54f339f83015183c4717",
+      "size": [
+        1025,
+        641
+      ]
+    },
+    {
+      "path": "tools/benchmarks/results/inventory-density-collision-2026-11-04/native/surface-tunnel-wide.png",
+      "sha256": "a29aa9cb866b9853ab2f4f107708f53c100b7c850a910a5d6743ef6ee5450ea5",
+      "size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "path": "tools/benchmarks/results/inventory-density-collision-2026-11-04/native/surface-workbench-linked-compact.png",
+      "sha256": "0b15f8f7bbd93d7b19a9d80589886ccbc2f83f5810ad8e1aeb8ed20f2414e027",
+      "size": [
+        1025,
+        641
+      ]
+    },
+    {
+      "path": "tools/benchmarks/results/inventory-density-collision-2026-11-04/native/surface-workbench-linked-wide.png",
+      "sha256": "ececa7a077cb4944560e20e961920159875368154f0a8a8bef9f952c48bd8f4c",
+      "size": [
+        3840,
+        2160
+      ]
+    }
+  ]
+}

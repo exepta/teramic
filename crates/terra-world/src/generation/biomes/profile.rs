@@ -27,17 +27,7 @@ pub struct TerrainProfile {
     pub terrace_scale: f64,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum BiomeKind {
-    Ocean,
-    Plains,
-    Forest,
-    Desert,
-    Highland,
-    MushroomPark,
-    ClifftedDesert,
-    CherryForest,
-}
+pub use terra_core::BiomeKind;
 
 impl BiomeWeights {
     pub fn values(self) -> [f64; 8] {
@@ -75,6 +65,40 @@ impl BiomeWeights {
 }
 
 impl BiomeSample {
+    /// Reweight climate's existing coherent regions without changing continental
+    /// coverage. Legacy snapshots with unit weights take the exact old path.
+    pub(crate) fn with_distribution(mut self, definitions: &terra_core::BiomeDefinitions) -> Self {
+        if definitions.entries[1..]
+            .iter()
+            .all(|definition| definition.selection_weight == 1.0)
+        {
+            return self;
+        }
+        let mut values = self.weights.values();
+        let land: f64 = values[1..].iter().sum();
+        for (value, definition) in values[1..].iter_mut().zip(&definitions.entries[1..]) {
+            *value *= definition.selection_weight;
+        }
+        let selected: f64 = values[1..].iter().sum();
+        if selected <= f64::EPSILON {
+            return self;
+        }
+        for value in &mut values[1..] {
+            *value *= land / selected;
+        }
+        self.weights = BiomeWeights {
+            ocean: values[0],
+            plains: values[1],
+            forest: values[2],
+            desert: values[3],
+            highland: values[4],
+            mushroom_park: values[5],
+            cliffted_desert: values[6],
+            cherry_forest: values[7],
+        };
+        self
+    }
+
     pub fn aridity(self) -> f64 {
         self.weights.desert + self.weights.cliffted_desert
     }

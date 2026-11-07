@@ -2,6 +2,53 @@ use super::*;
 use terra_voxel::SectionPos;
 
 #[test]
+fn all_opening_species_keep_their_pose_and_pair_when_the_same_block_is_recorded_again() {
+    let primary = [-16, 15, -16];
+    let upper = [-16, 16, -16];
+    for material in (65..=70).chain([139, 140]) {
+        for facing in 0..8 {
+            let mut journal = EditJournal::default();
+            let mut cells = vec![(
+                primary,
+                BlockObjectState {
+                    facing,
+                    peer: crate::objects::is_door(material).then_some(upper),
+                    ..BlockObjectState::default()
+                },
+            )];
+            if crate::objects::is_door(material) {
+                cells.push((
+                    upper,
+                    BlockObjectState {
+                        facing,
+                        peer: Some(primary),
+                        secondary: true,
+                        ..BlockObjectState::default()
+                    },
+                ));
+            }
+            for &(position, state) in &cells {
+                journal.record(position, material).unwrap();
+                journal.set_object_state(position, Some(state)).unwrap();
+            }
+            let mut replica = EditJournal::default();
+            for &(position, state) in &cells {
+                journal.record(position, material).unwrap();
+                assert_eq!(journal.object_state(position), Some(state));
+                replica
+                    .import_delta(journal.section_delta(terra_voxel::global_to_section(position).0))
+                    .unwrap();
+                assert_eq!(replica.object_state(position), Some(state));
+            }
+            for &(position, _) in &cells {
+                journal.record(position, 3).unwrap();
+                assert_eq!(journal.object_state(position), None);
+            }
+        }
+    }
+}
+
+#[test]
 fn object_rotation_and_pair_state_replicate_and_invalidate_same_material_meshes() {
     let p = [-1, 16, 0];
     let peer = [0, 16, 0];
@@ -145,6 +192,8 @@ fn solid_water_is_a_barrier_not_a_fluid_source_even_after_removal() {
         water::{FluidCell, fluid_cell_at},
     };
     let terrain = TerraGenerator::new(terra_core::WorldConfig {
+        landscape_revision: 3,
+        sea_level: 8.0,
         base_height: 16.0,
         hill_amplitude: 0.0,
         mountain_amplitude: 0.0,

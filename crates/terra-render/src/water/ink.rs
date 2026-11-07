@@ -211,7 +211,7 @@ mod tests {
 
     #[test]
     fn ink_shader_is_the_same_gameplay_effect_at_every_water_quality() {
-        let shader = include_str!("../../../../assets/shaders/terra_caves.wgsl");
+        let shader = include_str!("../../../../assets/shaders/terra_caves.wesl");
         assert!(shader.contains("cave.ink.x"));
         assert!(shader.contains("fn ink_mask"));
         let pipeline = include_str!("../scene/caves/shader.rs");

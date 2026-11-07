@@ -7,6 +7,8 @@ use terra_voxel::global_to_section;
 
 fn flat_config() -> WorldConfig {
     WorldConfig {
+        landscape_revision: 3,
+        sea_level: 8.0,
         base_height: 16.0,
         hill_amplitude: 0.0,
         mountain_amplitude: 0.0,
@@ -46,6 +48,8 @@ fn ocean_origin_relocates_to_dry_land_deterministically_without_world_edits() {
     for seed in [1, 42] {
         let config = WorldConfig {
             seed: WorldSeed(seed),
+            landscape_revision: 3,
+            sea_level: 8.0,
             ..Default::default()
         };
         let terrain = TerraGenerator::new(config.clone()).unwrap();
@@ -65,7 +69,12 @@ fn ocean_origin_relocates_to_dry_land_deterministically_without_world_edits() {
 
 #[test]
 fn negative_ocean_origin_finds_land_without_coordinate_rounding_errors() {
-    let terrain = TerraGenerator::new(WorldConfig::default()).unwrap();
+    let terrain = TerraGenerator::new(WorldConfig {
+        landscape_revision: 3,
+        sea_level: 8.0,
+        ..Default::default()
+    })
+    .unwrap();
     let journal = EditJournal::default();
     let origin = [-3328, -8192];
     assert!(terrain.water_column(-3327.5, -8191.5).is_some());
@@ -100,6 +109,9 @@ fn new_ground_materials_are_valid_but_glass_and_fixed_water_are_not_land() {
 #[test]
 fn river_above_sea_level_is_not_dry_land() {
     let terrain = TerraGenerator::new(WorldConfig {
+        landscape_revision: 2,
+        river_terrain_revision: 1,
+        sea_level: 8.0,
         rivers: true,
         ..Default::default()
     })
@@ -119,6 +131,57 @@ fn river_above_sea_level_is_not_dry_land() {
     let spawn = find_land_spawn(&terrain, &journal, origin).unwrap();
     assert_ne!([spawn.ground[0], spawn.ground[2]], origin);
     assert_dry_support(&terrain, &journal, spawn);
+}
+
+#[test]
+fn connected_river_and_distributary_water_are_never_selected_as_land_spawn() {
+    let terrain = TerraGenerator::new(WorldConfig {
+        seed: WorldSeed(42042),
+        landscape_revision: 1,
+        river_terrain_revision: 2,
+        sea_level: 8.0,
+        rivers: true,
+        ecology_revision: 0,
+        caves: false,
+        trees: false,
+        structures_revision: 0,
+        ..Default::default()
+    })
+    .unwrap();
+    let region = terrain.hydrology_region_at(1024.0, -1024.0).unwrap();
+    assert_eq!(region.region, [0, -1]);
+    assert!(!region.distributaries.is_empty());
+    let wet_origin = |point: [f64; 3]| {
+        let origin = [point[0].floor() as i64, point[2].floor() as i64];
+        let x = origin[0] as f64 + 0.5;
+        let z = origin[1] as f64 + 0.5;
+        let water = terrain.water_column(x, z)?;
+        let river = terrain.river_at(x, z)?;
+        (water.level > terrain.config().sea_level + 1.0
+            && water.bed < water.level
+            && terrain.surface_height(x, z) < water.level
+            && river.distance < river.width)
+            .then_some(origin)
+    };
+    let trunk = std::iter::once(region.source)
+        .chain(region.course)
+        .find_map(wet_origin)
+        .expect("known catchment needs elevated exposed trunk water");
+    let branch = region
+        .distributaries
+        .iter()
+        .flat_map(|branch| std::iter::once(branch.source).chain(branch.course))
+        .filter_map(wet_origin)
+        .find(|origin| *origin != trunk)
+        .expect("known catchment needs a distinct elevated exposed distributary cell");
+    let journal = EditJournal::default();
+    for origin in [trunk, branch] {
+        let spawn = find_land_spawn(&terrain, &journal, origin).unwrap();
+        assert_ne!([spawn.ground[0], spawn.ground[2]], origin);
+        assert_dry_support(&terrain, &journal, spawn);
+    }
+    assert_eq!(journal.edited_blocks(), 0);
+    assert_eq!(journal.fluid_cells().count(), 0);
 }
 
 #[test]
@@ -243,4 +306,91 @@ fn out_of_precision_range_origins_fail_without_wrapping() {
     for origin in [[i64::MIN, 0], [0, i64::MAX]] {
         assert!(find_land_spawn(&terrain, &journal, origin).is_err());
     }
+}
+
+#[test]
+fn preferred_biomes_choose_real_safe_deterministic_land_without_replacing_terrain() {
+    for biome in terra_core::BiomeKind::ALL {
+        let config = WorldConfig {
+            seed: WorldSeed(42042),
+            preferred_spawn_biome: Some(biome),
+            trees: false,
+            caves: false,
+            structures_revision: 0,
+            rivers: false,
+            ..Default::default()
+        };
+        let terrain = TerraGenerator::new(config.clone()).unwrap();
+        let journal = EditJournal::default();
+        let spawn = find_land_spawn(&terrain, &journal, [8, 24])
+            .unwrap_or_else(|error| panic!("{biome:?}: {error}"));
+        assert_dry_support(&terrain, &journal, spawn);
+        let [x, _, z] = spawn.ground;
+        assert!(super::matches_preferred_biome(&terrain, x, z, biome));
+        if biome != terra_core::BiomeKind::Ocean {
+            assert_eq!(
+                terrain.surface_biome(&terrain.surface_column(x as f64 + 0.5, z as f64 + 0.5)),
+                biome
+            );
+        }
+        let repeated = find_land_spawn(
+            &TerraGenerator::new(config.clone()).unwrap(),
+            &journal,
+            [8, 24],
+        )
+        .unwrap();
+        assert_eq!(repeated, spawn);
+        let natural = TerraGenerator::new(WorldConfig {
+            preferred_spawn_biome: None,
+            ..config
+        })
+        .unwrap();
+        assert!(natural.config().same_terrain(terrain.config()));
+        assert_eq!(
+            SectionGenerator::new(natural)
+                .generate(global_to_section(spawn.ground).0)
+                .unwrap(),
+            SectionGenerator::new(terrain)
+                .generate(global_to_section(spawn.ground).0)
+                .unwrap()
+        );
+        assert_eq!(journal.edited_blocks(), 0);
+        assert_eq!(journal.fluid_cells().count(), 0);
+    }
+}
+
+#[test]
+fn impossible_biome_preferences_fail_clearly_without_wet_or_invented_spawns() {
+    for (biome, water) in [
+        (terra_core::BiomeKind::Plains, true),
+        (terra_core::BiomeKind::Ocean, false),
+    ] {
+        let terrain = TerraGenerator::new(WorldConfig {
+            preferred_spawn_biome: Some(biome),
+            water,
+            ..flat_config()
+        })
+        .unwrap();
+        let journal = EditJournal::default();
+        let error = find_land_spawn(&terrain, &journal, [8, 24]).unwrap_err();
+        assert!(error.contains("selected biome"));
+        assert_eq!(journal.edited_blocks(), 0);
+        assert_eq!(journal.changed_sections().count(), 0);
+    }
+}
+
+#[test]
+fn preferred_biome_never_invalidates_an_existing_safe_saved_position() {
+    let config = flat_config();
+    let original = TerraGenerator::new(config.clone()).unwrap();
+    let journal = EditJournal::default();
+    let position = find_land_spawn(&original, &journal, [-17, -33]).unwrap();
+    let selected = TerraGenerator::new(WorldConfig {
+        preferred_spawn_biome: Some(terra_core::BiomeKind::Desert),
+        ..config
+    })
+    .unwrap();
+    // Reconnect and respawn validity tests the actual saved location, not the
+    // initial menu preference. It must not silently relocate a returning player.
+    assert!(position.is_valid(&selected, &journal));
 }

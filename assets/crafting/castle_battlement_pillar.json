@@ -1,0 +1,22 @@
+{
+  "id": "teramic::castle_battlement_pillar",
+  "name": "Zinnen Saeule",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "block": 182
+    },
+    "count": 1
+  },
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "block": 175
+        },
+        "count": 4
+      }
+    ]
+  }
+}

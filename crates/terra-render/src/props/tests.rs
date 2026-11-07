@@ -317,7 +317,7 @@ fn settle(app: &mut App) {
 }
 
 #[test]
-fn dense_prop_sections_keep_shared_batches_and_release_them_on_unload() {
+fn dense_prop_sections_keep_bounded_shared_batches_and_release_them_on_unload() {
     let mut app = app();
     let owner = SectionPos::default();
     let props = (1..=64)
@@ -339,19 +339,53 @@ fn dense_prop_sections_keep_shared_batches_and_release_them_on_unload() {
     settle(&mut app);
     let rendered = jobs::testing::snapshot(app.world(), owner).unwrap();
     assert_eq!(rendered.count, 64);
+    assert!(rendered.meshes.len() > 1);
+    let bush_batches = shapes::template(
+        PropKind::Bush,
+        0,
+        DetailLevel::Near,
+        &PropMaterials::default(),
+    )
+    .unwrap();
+    let expected_vertices = bush_batches
+        .iter()
+        .map(|batch| batch.positions.len())
+        .sum::<usize>()
+        * 64;
+    let expected_indices = bush_batches
+        .iter()
+        .map(|batch| batch.indices.len())
+        .sum::<usize>()
+        * 64;
+    let mut vertices = 0;
+    let mut indices = 0;
+    for id in &rendered.meshes {
+        let mesh = app.world().resource::<Assets<Mesh>>().get(*id).unwrap();
+        assert!(mesh.count_vertices() <= usize::from(u16::MAX) + 1);
+        vertices += mesh.count_vertices();
+        indices += mesh.indices().unwrap().len();
+    }
     assert_eq!(
-        rendered.meshes.len(),
-        1,
-        "one material layout must remain one GPU batch"
+        vertices, expected_vertices,
+        "all 64 bushes retain their full geometry"
     );
+    assert_eq!(indices, expected_indices);
+    assert!(vertices > crate::upload_budget::PROP_VERTICES);
     assert!(
         app.world()
-            .resource::<Assets<Mesh>>()
-            .get(rendered.meshes[0])
-            .unwrap()
-            .count_vertices()
-            > crate::upload_budget::PROP_VERTICES
+            .resource::<crate::MeshUploadStatus>()
+            .peak_admitted_vertices
+            <= crate::upload_budget::PROP_VERTICES
     );
+    let mut query = app
+        .world_mut()
+        .query::<(&Mesh3d, &MeshMaterial3d<PropMaterial>)>();
+    let materials = query
+        .iter(app.world())
+        .filter(|(mesh, _)| rendered.meshes.contains(&mesh.0.id()))
+        .map(|(_, material)| material.0.id())
+        .collect::<std::collections::HashSet<_>>();
+    assert_eq!(materials.len(), 1, "pieces still share one material");
     app.world_mut().resource_mut::<ChunkStore>().loaded.clear();
     settle(&mut app);
     assert!(app.world().resource::<Assets<Mesh>>().is_empty());
@@ -748,7 +782,7 @@ fn all_prop_colors_share_one_mesh_and_material_with_linear_vertex_colors() {
     assert_eq!(app.world().resource::<PropRenderStatus>().visible_props, 14);
     let mesh_id = jobs::testing::snapshot(app.world(), owner).unwrap().meshes[0];
     let mesh = app.world().resource::<Assets<Mesh>>().get(mesh_id).unwrap();
-    let Some(VertexAttributeValues::Float32x4(colors)) = mesh.attribute(Mesh::ATTRIBUTE_COLOR)
+    let Some(VertexAttributeValues::Unorm8x4(colors)) = mesh.attribute(Mesh::ATTRIBUTE_COLOR)
     else {
         panic!("missing vertex colors");
     };
@@ -805,43 +839,35 @@ fn all_prop_colors_share_one_mesh_and_material_with_linear_vertex_colors() {
         )
         .unwrap()
         {
-            let source = if kind != PropKind::Mushroom {
-                tinted_colors[part.material]
-            } else {
-                source_colors[part.material]
-            };
+            let source = source_colors[part.material];
+            let green = kind != PropKind::Mushroom
+                && (palette.foliage.contains(&part.material) || part.material == palette.stem);
             for vertex in 0..part.positions.len() {
                 let shade = part.colors.get(vertex).copied().unwrap_or([1.0; 4]);
-                expected_colors.push([
-                    source[0] * shade[0],
-                    source[1] * shade[1],
-                    source[2] * shade[2],
+                expected_colors.push(crate::foliage::packing::color([
+                    source[0] * shade[0] * if green { biome[0] } else { 1.0 },
+                    source[1] * shade[1] * if green { biome[1] } else { 1.0 },
+                    source[2] * shade[2] * if green { biome[2] } else { 1.0 },
                     rank,
-                ]);
+                ]));
             }
         }
     }
-    let same_color =
-        |a: &[f32; 4], b: &[f32; 4]| a.iter().zip(b).all(|(a, b)| (a - b).abs() < 0.000001);
-    assert!(colors.iter().all(|color| {
-        expected_colors
-            .iter()
-            .any(|expected| same_color(color, expected))
-    }));
+    assert!(colors.iter().all(|color| expected_colors.contains(color)));
     for shade in [base, tip] {
-        let source = tinted_colors[0];
-        let expected = [
-            source[0] * shade[0],
-            source[1] * shade[1],
-            source[2] * shade[2],
+        let source = source_colors[0];
+        let expected = crate::foliage::packing::color([
+            source[0] * shade[0] * biome[0],
+            source[1] * shade[1] * biome[1],
+            source[2] * shade[2] * biome[2],
             source[3],
-        ];
+        ]);
         assert!(
-            colors.iter().any(|color| same_color(color, &expected)),
+            colors.contains(&expected),
             "dark roots and warm square tips must survive linear batching"
         );
     }
-    assert!(colors.contains(&tinted_colors[0]));
+    assert!(colors.contains(&crate::foliage::packing::color(tinted_colors[0])));
     for (kind, material) in [
         (PropKind::Flower, palette.flowers[0]),
         (PropKind::Mushroom, palette.flowers[5]),
@@ -862,11 +888,13 @@ fn all_prop_colors_share_one_mesh_and_material_with_linear_vertex_colors() {
             ..prop(index as u64, owner)
         });
         assert!(
-            colors.iter().any(|color| same_color(color, &expected)),
+            colors.contains(&crate::foliage::packing::color(expected)),
             "{kind:?} keeps its authored material and local surface shading"
         );
     }
-    assert!(colors.contains(&source_colors[palette.stone]));
+    assert!(colors.contains(&crate::foliage::packing::color(
+        source_colors[palette.stone]
+    )));
     assert_ne!(
         source_colors[0],
         [0.16, 0.32, 0.075, 1.0],
@@ -1259,6 +1287,124 @@ fn arrivals_preserve_pending_prop_lod_replacements() {
 }
 
 #[test]
+fn prepared_columns_and_distant_roofs_keep_live_prop_handles_without_requeue() {
+    use terra_world::streaming::{PreparedColumnChanged, SectionPublished, SectionRemoved};
+    let mut app = app();
+    app.add_message::<PreparedColumnChanged>()
+        .add_message::<SectionPublished>()
+        .add_message::<SectionRemoved>();
+    app.world_mut()
+        .resource_mut::<terra_core::GameConfig>()
+        .client
+        .chunk_animation = terra_core::ChunkAnimation::None;
+    let owner = SectionPos::default();
+    let flower = WorldProp {
+        kind: PropKind::Flower,
+        ..prop(2, owner)
+    };
+    app.world_mut()
+        .resource_mut::<ChunkStore>()
+        .loaded
+        .insert(owner, section(owner, vec![prop(1, owner), flower]));
+    settle(&mut app);
+    let before = jobs::testing::snapshot(app.world(), owner).unwrap();
+    let completed = app.world().resource::<PropRenderStatus>().completed_jobs;
+    let mesh_count = app.world().resource::<Assets<Mesh>>().len();
+    let upper = SectionPos::new(0, 3, 0);
+    for phase in 0..4 {
+        if phase % 2 == 0 {
+            app.world_mut()
+                .resource_mut::<ChunkStore>()
+                .loaded
+                .insert(upper, section(upper, Vec::new()));
+            app.world_mut()
+                .write_message(SectionPublished { position: upper });
+        } else {
+            app.world_mut()
+                .resource_mut::<ChunkStore>()
+                .loaded
+                .remove(&upper);
+            app.world_mut()
+                .write_message(SectionRemoved { position: upper });
+        }
+        app.world_mut()
+            .write_message(PreparedColumnChanged { coordinate: [0, 0] });
+        app.world_mut()
+            .resource_mut::<EditJournal>()
+            .set_fluid(
+                [12, 2, 12],
+                terra_world::water::FluidCell {
+                    amount: if phase % 2 == 0 { 4 } else { 0 },
+                    source: false,
+                    flow: [0; 2],
+                },
+            )
+            .unwrap();
+        for _ in 0..4 {
+            app.update();
+            assert_eq!(jobs::testing::pending(app.world()), 0);
+            assert_eq!(jobs::testing::snapshot(app.world(), owner).unwrap(), before);
+            assert_eq!(app.world().resource::<Assets<Mesh>>().len(), mesh_count);
+            assert_eq!(
+                app.world().resource::<PropRenderStatus>().completed_jobs,
+                completed
+            );
+        }
+    }
+}
+
+#[test]
+fn actual_snow_burial_and_support_edits_still_replace_visible_props() {
+    use terra_world::streaming::SectionPublished;
+    let mut app = app();
+    app.add_message::<SectionPublished>();
+    app.world_mut()
+        .resource_mut::<terra_core::GameConfig>()
+        .client
+        .chunk_animation = terra_core::ChunkAnimation::None;
+    let owner = SectionPos::default();
+    let selected = WorldProp {
+        kind: PropKind::Flower,
+        ..prop(1, owner)
+    };
+    app.world_mut()
+        .resource_mut::<ChunkStore>()
+        .loaded
+        .insert(owner, section(owner, vec![selected]));
+    settle(&mut app);
+    let before = jobs::testing::snapshot(app.world(), owner).unwrap();
+    let support = terra_world::props::placement::support(&selected);
+    let cap = [support[0], support[1] + 1, support[2]];
+    for (cell, material, expected) in [(cap, 5, 0), (cap, 0, 1), (support, 0, 0)] {
+        app.world_mut()
+            .resource_mut::<EditJournal>()
+            .record(cell, material)
+            .unwrap();
+        let epoch = app.world().resource::<EditJournal>().mesh_epoch(owner);
+        let (_, local) = terra_voxel::global_to_section(cell);
+        {
+            let mut chunks = app.world_mut().resource_mut::<ChunkStore>();
+            let section = chunks.loaded.get_mut(&owner).unwrap();
+            section.data.set_block(local, material).unwrap();
+            section.mesh_epoch = epoch;
+        }
+        app.world_mut()
+            .write_message(SectionPublished { position: owner });
+        settle(&mut app);
+        let visible = jobs::testing::snapshot(app.world(), owner).unwrap();
+        assert_eq!(visible.count, expected);
+        assert_eq!(visible.terrain_epoch, epoch);
+        assert!(!app.world().resource::<ChunkStore>().loaded[&owner].props[0].removed);
+    }
+    assert!(
+        before
+            .meshes
+            .iter()
+            .all(|id| { !app.world().resource::<Assets<Mesh>>().contains(*id) })
+    );
+}
+
+#[test]
 fn streamed_prop_messages_survive_full_workers_and_preserve_pending_lods_and_stable_batches() {
     use terra_world::streaming::{PreparedColumnChanged, SectionPublished, SectionRemoved};
     let mut app = app();
@@ -1532,15 +1678,70 @@ fn transformed_geometry_fits_picking_bounds_for_every_species() {
     }
 }
 
+fn decode_prop_color(color: [u8; 4]) -> [f32; 4] {
+    [
+        f32::from(color[0]) / 255.0 * 2.0,
+        f32::from(color[1]) / 255.0 * 2.0,
+        f32::from(color[2]) / 255.0 * 2.0,
+        f32::from(color[3]) / 255.0,
+    ]
+}
+
 fn colors(world: &World, section: SectionPos) -> Vec<[f32; 4]> {
     let id = jobs::testing::snapshot(world, section).unwrap().meshes[0];
     let mesh = world.resource::<Assets<Mesh>>().get(id).unwrap();
-    let Some(bevy::mesh::VertexAttributeValues::Float32x4(colors)) =
-        mesh.attribute(Mesh::ATTRIBUTE_COLOR)
-    else {
-        panic!("missing prop colors");
-    };
-    colors.clone()
+    match mesh.attribute(Mesh::ATTRIBUTE_COLOR) {
+        Some(bevy::mesh::VertexAttributeValues::Unorm8x4(colors)) => {
+            colors.iter().copied().map(decode_prop_color).collect()
+        }
+        Some(bevy::mesh::VertexAttributeValues::Float32x4(colors)) => colors.clone(),
+        _ => panic!("missing prop colors"),
+    }
+}
+
+fn expected_packed_prop_colors(
+    world: &World,
+    prop: &WorldProp,
+    condition: terra_world::environment::SurfaceCondition,
+) -> Vec<[f32; 4]> {
+    let blocks = world.resource::<crate::blocks::BlockAssets>();
+    let materials = world.resource::<Assets<StandardMaterial>>();
+    let palette = &blocks.templates.as_ref().unwrap().prop_materials;
+    let origin = prop.section.origin().unwrap();
+    let biome = crate::appearance::GrassTint::new(&world.resource::<WorldTerrain>().0, origin)
+        .relative_at(std::array::from_fn(|axis| {
+            (prop.position[axis] - origin[axis] as f64) as f32
+        }));
+    let tint = crate::appearance::condition_tint(condition);
+    let mut expected = Vec::new();
+    for part in shapes::template(
+        prop.kind,
+        prop.template_variant(),
+        DetailLevel::Near,
+        palette,
+    )
+    .unwrap()
+    {
+        let source = materials
+            .get(&blocks.materials[part.material])
+            .unwrap()
+            .base_color
+            .to_linear()
+            .to_f32_array();
+        let green = prop.kind != PropKind::Mushroom
+            && prop.kind.crop().is_none()
+            && (palette.foliage.contains(&part.material) || part.material == palette.stem);
+        for vertex in 0..part.positions.len() {
+            let shade = part.colors.get(vertex).copied().unwrap_or([1.0; 4]);
+            let mut color = std::array::from_fn(|channel| source[channel] * shade[channel]);
+            for channel in 0..3 {
+                color[channel] *= tint[channel] * if green { biome[channel] } else { 1.0 };
+            }
+            color[3] = terra_world::props::seasonal::flower_rank(prop);
+            expected.push(decode_prop_color(crate::foliage::packing::color(color)));
+        }
+    }
+    expected
 }
 
 #[test]
@@ -1564,6 +1765,11 @@ fn local_conditions_rebuild_only_owner_and_persist_at_negative_section_ceiling()
     let before = jobs::testing::snapshot(app.world(), owner).unwrap();
     let next_before = jobs::testing::snapshot(app.world(), neighbor).unwrap();
     let before_colors = colors(app.world(), owner);
+    let expected_before: Vec<_> = original
+        .iter()
+        .flat_map(|prop| expected_packed_prop_colors(app.world(), prop, Default::default()))
+        .collect();
+    assert_eq!(before_colors, expected_before);
     let support = [
         selected.position[0].floor() as i64,
         -17,
@@ -1593,20 +1799,21 @@ fn local_conditions_rebuild_only_owner_and_persist_at_negative_section_ceiling()
     );
     assert_eq!(app.world().resource::<Assets<Mesh>>().len(), 2);
     let after_colors = colors(app.world(), owner);
-    let tint = crate::appearance::condition_tint(condition);
-    let vertices_per_prop = after_colors.len() / 2;
-    for (index, (before, after)) in before_colors.iter().zip(&after_colors).enumerate() {
-        for axis in 0..3 {
-            let expected = before[axis]
-                * if index < vertices_per_prop {
-                    tint[axis]
+    let expected_after: Vec<_> = original
+        .iter()
+        .flat_map(|prop| {
+            expected_packed_prop_colors(
+                app.world(),
+                prop,
+                if prop.id == selected.id {
+                    condition
                 } else {
-                    1.0
-                };
-            assert!((after[axis] - expected).abs() < 1e-7);
-        }
-        assert_eq!(after[3], before[3]);
-    }
+                    Default::default()
+                },
+            )
+        })
+        .collect();
+    assert_eq!(after_colors, expected_after);
     app.world_mut()
         .resource_mut::<ChunkStore>()
         .loaded

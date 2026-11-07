@@ -3,6 +3,7 @@ use crate::water::{FluidCell, space::FluidSpace};
 
 /// Only cells touching construction geometry take this exact path. Open water
 /// retains the existing smoothed surface and shared, inexpensive channel mesh.
+#[allow(clippy::too_many_arguments)]
 pub(super) fn append(
     patch: &mut Option<WaterPatch>,
     p: [i64; 3],
@@ -10,13 +11,13 @@ pub(super) fn append(
     origin: [i64; 3],
     occluders: &FluidOccluders,
     effects: [f32; 4],
+    natural_surface: bool,
     sample: impl Fn([i64; 3]) -> Option<f64>,
 ) {
-    let space = FluidSpace::from_global(occluders.get(&p).map_or(&[], Vec::as_slice), p);
+    let space = occluders.space(p);
     let above = [p[0], p[1] + 1, p[2]];
     let covered = sample(above).is_some_and(|height| {
-        let upper =
-            FluidSpace::from_global(occluders.get(&above).map_or(&[], Vec::as_slice), above);
+        let upper = occluders.space(above);
         space.connected(
             FluidCell { amount: 8, ..cell },
             &upper,
@@ -27,11 +28,33 @@ pub(super) fn append(
             [0, 1, 0],
         )
     });
-    let water = space.wet_boxes(if covered { 1.0 } else { cell.height() });
+    // Materialized natural reservoirs retain their exact fractional level;
+    // eighth-cell storage is only the authoritative amount representation.
+    let height = sample(p).map_or(cell.height(), |level| level - p[1] as f64);
+    let round_pipe = occluders.profiled(&p);
+    let render_space = if round_pipe {
+        FluidSpace { solids: vec![] }
+    } else {
+        space.clone()
+    };
+    let water = render_space.wet_boxes(if covered { 1.0 } else { height });
     let surface =
         water.iter().map(|b| b.maximum[1]).fold(0.0, f64::max) as f32 + (p[1] - origin[1]) as f32;
     for (index, bounds) in water.iter().enumerate() {
         for direction in super::super::fluid::NEIGHBORS {
+            let top = p[1] as f64 + bounds.maximum[1];
+            if p[1] < origin[1]
+                && (direction != [0, 1, 0] || (top - origin[1] as f64).abs() >= 1e-8)
+            {
+                continue;
+            }
+            if natural_surface
+                && direction == [0, 1, 0]
+                && (top - (origin[1] + 16) as f64).abs() < 1e-8
+            {
+                // This natural surface belongs to the section immediately above.
+                continue;
+            }
             let axis = direction.iter().position(|&v| v != 0).unwrap();
             let high = direction[axis] > 0;
             let tangents: Vec<_> = (0..3).filter(|&i| i != axis).collect();
@@ -70,18 +93,20 @@ pub(super) fn append(
                     .filter(|(i, _)| *i != index)
                     .map(|(_, b)| global(b, p)),
             );
-            masks.extend(space.solids.iter().map(|b| global(b, p)));
+            if !round_pipe {
+                // A dry fence region limits occupancy, but is not an opaque
+                // solid hiding the visible liquid face in a rail's opening.
+                masks.extend(occluders.get(&p).into_iter().flatten().copied());
+            }
             if let Some(q) = super::super::fluid::adjacent(p, direction) {
-                masks.extend(occluders.get(&q).into_iter().flatten().copied());
+                if !occluders.profiled(&q) {
+                    masks.extend(occluders.get(&q).into_iter().flatten().copied());
+                }
                 if let Some(height) = sample(q) {
-                    let neighbor =
-                        FluidSpace::from_global(occluders.get(&q).map_or(&[], Vec::as_slice), q);
+                    let neighbor = occluders.space(q);
                     let upper_position = [q[0], q[1] + 1, q[2]];
                     let neighbor_covered = sample(upper_position).is_some_and(|upper_height| {
-                        let upper = FluidSpace::from_global(
-                            occluders.get(&upper_position).map_or(&[], Vec::as_slice),
-                            upper_position,
-                        );
+                        let upper = occluders.space(upper_position);
                         neighbor.connected(
                             FluidCell { amount: 8, ..cell },
                             &upper,
@@ -105,10 +130,40 @@ pub(super) fn append(
                     } else {
                         height
                     };
+                    // Water and the round pipe together fill the neighbor's
+                    // wetted band. Its coarse collision hole is never exposed.
+                    let neighbor = if occluders.profiled(&q) {
+                        FluidSpace { solids: vec![] }
+                    } else {
+                        neighbor
+                    };
                     masks.extend(neighbor.wet_boxes(height).iter().map(|b| global(b, q)));
                 }
             }
-            for fragment in occlusion::fragments(face, normal, origin, &masks) {
+            let mut fragments = occlusion::fragments(face, normal, origin, &masks);
+            for q in std::iter::once(p).chain(super::super::fluid::adjacent(p, direction)) {
+                if let Some(&mask) = occluders.pipes.get(&q) {
+                    fragments = super::pipes::fragments(
+                        fragments,
+                        face,
+                        normal,
+                        std::array::from_fn(|axis| (q[axis] - origin[axis]) as f32),
+                        mask,
+                        q == p,
+                    );
+                } else if let Some(&(material, facing)) = occluders.fixtures.get(&q) {
+                    fragments = super::pipes::fixture_fragments(
+                        fragments,
+                        face,
+                        normal,
+                        std::array::from_fn(|axis| (q[axis] - origin[axis]) as f32),
+                        material,
+                        facing,
+                        q == p,
+                    );
+                }
+            }
+            for fragment in fragments {
                 let target = patch.get_or_insert_with(empty_patch);
                 target
                     .normals
@@ -148,6 +203,56 @@ mod tests {
     use crate::water::{FluidCell, space::FluidSpace};
 
     #[test]
+    fn a_dry_fence_region_clips_the_top_but_does_not_hide_the_water_face_between_rails() {
+        let p = [8, 7, 8];
+        let mut occluders = FluidOccluders::from([(
+            p,
+            vec![ShapeBox {
+                minimum: [8.35, 7., 8.35],
+                maximum: [8.65, 8., 8.65],
+                hinged: false,
+            }],
+        )]);
+        occluders.dry_regions.insert(
+            p,
+            vec![ShapeBox {
+                minimum: [8.5, 7., 8.],
+                maximum: [9., 8., 9.],
+                hinged: false,
+            }],
+        );
+        let mut patch = None;
+        append(
+            &mut patch,
+            p,
+            FluidCell {
+                amount: 8,
+                ..Default::default()
+            },
+            [0; 3],
+            &occluders,
+            [0.; 4],
+            false,
+            |q| (q == p).then_some(8.),
+        );
+        let patch = patch.unwrap();
+        assert!(patch.positions.iter().all(|point| point[0] <= 8.5));
+        let area: f32 = patch
+            .indices
+            .chunks_exact(3)
+            .filter(|triangle| {
+                patch.normals[triangle[0] as usize] == [1., 0., 0.]
+                    && (patch.positions[triangle[0] as usize][0] - 8.5).abs() < 1e-6
+            })
+            .map(|triangle| {
+                let [a, b, c] = std::array::from_fn(|i| patch.positions[triangle[i] as usize]);
+                ((b[1] - a[1]) * (c[2] - a[2]) - (b[2] - a[2]) * (c[1] - a[1])).abs() * 0.5
+            })
+            .sum();
+        assert!((area - 0.7).abs() < 1e-5, "clipped bank face area={area}");
+    }
+
+    #[test]
     fn covered_neighbor_uses_the_same_falling_height_for_occlusion_as_its_actual_mesh() {
         let p = [8, 7, 8];
         let q = [9, 7, 8];
@@ -170,6 +275,7 @@ mod tests {
             [0; 3],
             &occluders,
             [0.0, 8.0, 1.0, 5.0],
+            false,
             |position| {
                 if position == p {
                     Some(8.0)
@@ -220,6 +326,7 @@ mod tests {
                         origin,
                         &occluders,
                         [0.0; 4],
+                        false,
                         |q| (q == p).then_some(p[1] as f64 + 1.0),
                     );
                     let space = FluidSpace { solids };

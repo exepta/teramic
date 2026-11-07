@@ -1,0 +1,28 @@
+{
+  "id": "teramic::castle_moss_wall",
+  "name": "Moos Mauer",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "block": 178
+    },
+    "count": 1
+  },
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "block": 174
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "block": 13
+        },
+        "count": 1
+      }
+    ]
+  }
+}

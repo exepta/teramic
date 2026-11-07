@@ -1,0 +1,471 @@
+{
+  "phase": 180,
+  "date": "2026-11-02",
+  "checks": {
+    "workspace_build": {
+      "command": "cargo build --workspace --locked -j1",
+      "exit_code": 0
+    },
+    "workspace_tests": {
+      "command": "cargo test --workspace --locked -j1",
+      "exit_code": 0,
+      "passed": 3732,
+      "failed": 0,
+      "ignored": 8
+    },
+    "clippy": {
+      "command": "cargo clippy --workspace --all-targets --locked -j1 -- -D warnings",
+      "exit_code": 0
+    },
+    "format": {
+      "command": "cargo fmt --all --check",
+      "exit_code": 0
+    },
+    "diff": {
+      "command": "git diff --check",
+      "exit_code": 0
+    },
+    "native_ui": {
+      "exit_code": 0,
+      "captures": 8,
+      "real_os_pointer": true,
+      "authoritative_inventory_unchanged": true
+    },
+    "native_hydraulics": {
+      "exit_code": 0,
+      "captures": 35
+    },
+    "native_partial_water": {
+      "exit_code": 0,
+      "captures": 9,
+      "asserted_underwater_view": true
+    },
+    "native_shore_pipes": {
+      "exit_code": 0,
+      "captures": 5
+    }
+  },
+  "saved_world_replay": {
+    "original_save_modified": false,
+    "isolated_copy": true,
+    "same_camera": true,
+    "before_and_after_captures": 2
+  },
+  "source_hashes": "source-sha256.json",
+  "capture_count": 59,
+  "captures": {
+    "ui-final/crafting-recipe-alternatives.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "d40c7a110709e7762064ee6c33c734a3b77991fe01292436bc2c2b88b86eb403"
+    },
+    "ui-final/crafting-recipe-reference-compact.png": {
+      "size": [
+        1025,
+        641
+      ],
+      "sha256": "39be1576bd91bfd89a6f6bfb39b706642c7b98859981c33887c425ece968ff15"
+    },
+    "ui-final/crafting-recipe-reference-wide.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "ee8e2217824d66689e7b23df1282d20f19a87bf0be2387aaeb8699950dc64d94"
+    },
+    "ui-final/player-inventory-reference-compact.png": {
+      "size": [
+        1025,
+        641
+      ],
+      "sha256": "7d9a76cb90c020276b6379767223b7c31cffd5e2e4ff42ce8c54d0a4aac57289"
+    },
+    "ui-final/player-inventory-reference-wide.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "d060f163d91837291ef648c6f12987048237026d7b749171f9374957a657990f"
+    },
+    "ui-final/recipe-browser-search.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "ec9abe1686ecd1cf428e73200680b03f0a45d9f64dbcc9cff17356cddd343ad5"
+    },
+    "ui-final/recipe-category-filter.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "c74371ed66dfcf4051a4f0e5aa3625abd84ee1010817a996a57242b969e8c42f"
+    },
+    "ui-final/recipe-item-browser-next-page.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "bb0e58e3d9ead0aa00b27b29433a8e63914666b5eea03d5287b87143a8c806fb"
+    },
+    "hydraulics-final/basin-swimming.png": {
+      "size": [
+        1920,
+        1200
+      ],
+      "sha256": "6618673ec368e3208f0d3e03137a2d09099a84bd95de3f7a9f3a123bc2266550"
+    },
+    "hydraulics-final/bottle-filled.png": {
+      "size": [
+        1920,
+        1200
+      ],
+      "sha256": "29bdd419ac568096e3090ec1e5ad2c98f6f8f7e96c186d381aa9a2ac04cd8dce"
+    },
+    "hydraulics-final/bottle-filling.png": {
+      "size": [
+        1920,
+        1200
+      ],
+      "sha256": "8bd7bd8aa53cd38b31d175f486e6c8b9376403fbf4c3bd21679687332f42d074"
+    },
+    "hydraulics-final/bucket-filled.png": {
+      "size": [
+        1920,
+        1200
+      ],
+      "sha256": "3939ea44f0cbf5bf0592dd000bd623b6a8d6473b418868688881b44c6d3d036b"
+    },
+    "hydraulics-final/bucket-filling.png": {
+      "size": [
+        1920,
+        1200
+      ],
+      "sha256": "31af547d80399f421c73d6e9fc9b68b22cc6fd2bc9d57b480cbbd382d0c98bbb"
+    },
+    "hydraulics-final/glass-valves-empty-after-shutoff.png": {
+      "size": [
+        1920,
+        1200
+      ],
+      "sha256": "88f1a7b7d867fad62c047ab501cb6c0f1ed8dab42d1a7015abc25b86f498c7ff"
+    },
+    "hydraulics-final/glass-valves-running-out.png": {
+      "size": [
+        1920,
+        1200
+      ],
+      "sha256": "ddb0b8ae12820059e1a0ea1c9e5bc283fe0fe2f656e609e2787eb6a477214019"
+    },
+    "hydraulics-final/glass-valves-stored-water.png": {
+      "size": [
+        1920,
+        1200
+      ],
+      "sha256": "659a136fc854a84ed6fbce7376aa4256431d6730949f9c71f9e281b8ea6fd24e"
+    },
+    "hydraulics-final/hydraulics-network.png": {
+      "size": [
+        1920,
+        1200
+      ],
+      "sha256": "db6ead585228ae9de4b3db9ce2db4c45b9fdaa740a2bf0098aeed7ec5763571d"
+    },
+    "hydraulics-final/infuser-filled.png": {
+      "size": [
+        1920,
+        1200
+      ],
+      "sha256": "c99449380fe9817adaec36174f12896b2fd3e2c4ca62e10a567b7d27ddf449d5"
+    },
+    "hydraulics-final/infuser-filling.png": {
+      "size": [
+        1920,
+        1200
+      ],
+      "sha256": "e6b61b811776bc307c170fa31f9d7a0361fe4a4e8f44354a6df090d422572dc6"
+    },
+    "hydraulics-final/infuser-ready.png": {
+      "size": [
+        1920,
+        1200
+      ],
+      "sha256": "69636c2705ff80d3a027ec12e5cefc24096d9a7a314cab78383462775093ffd9"
+    },
+    "hydraulics-final/pipe-bend-glass-reverse.png": {
+      "size": [
+        1920,
+        1200
+      ],
+      "sha256": "6cff581175b1c3f32c1c58c35a764fa6b599d8a94b56b608f91c3c84a107fa18"
+    },
+    "hydraulics-final/pipe-bend-glass.png": {
+      "size": [
+        1920,
+        1200
+      ],
+      "sha256": "679175618f1e831234115706d63b5601b36da135c3b438e0a7bc6d60e220dd70"
+    },
+    "hydraulics-final/pipe-bend-iron.png": {
+      "size": [
+        1920,
+        1200
+      ],
+      "sha256": "2b99b7cd65565ec377366fab69896c94d3411ce852e9a371c2c7c7cd63870f69"
+    },
+    "hydraulics-final/pipe-bend-stone.png": {
+      "size": [
+        1920,
+        1200
+      ],
+      "sha256": "45bf5dee80ad21ac887f437f3acbf2f13dfa61184c182e60286c47e27dae87ca"
+    },
+    "hydraulics-final/pipe-bend-wood.png": {
+      "size": [
+        1920,
+        1200
+      ],
+      "sha256": "bf7f33352b791337c170ae3eca4549a0c4072dc232ce162923c3296cf7ed7ff1"
+    },
+    "hydraulics-final/pump-intake-stopped.png": {
+      "size": [
+        1920,
+        1200
+      ],
+      "sha256": "b49e721cad62d143f6f51776b7fd4d52e540bca89f7fe2b87dc10d0bbb1775c8"
+    },
+    "hydraulics-final/pump-natural-intake-bubbles.png": {
+      "size": [
+        1920,
+        1200
+      ],
+      "sha256": "4f5a97eea750bae491813e4a811ce0eddc940b9648c7a8f39d1f4cccbe5d2592"
+    },
+    "hydraulics-final/source-bucket-filled.png": {
+      "size": [
+        1920,
+        1200
+      ],
+      "sha256": "e637d9584e9b7de905b4843c7f9117c2bb92e700ae37179dafc93015f6c120d3"
+    },
+    "hydraulics-final/source-watering-can-filled.png": {
+      "size": [
+        1920,
+        1200
+      ],
+      "sha256": "14ed15a35d7414d223a39620efb356b69e13019b7dc6bbc6498ffe6e4b3154f1"
+    },
+    "hydraulics-final/underwater-bed-mined.png": {
+      "size": [
+        1920,
+        1200
+      ],
+      "sha256": "e82d2d899f281754fd828ca5b9f7b9a5b7b97e8a656a3fc571128711cceb8b0c"
+    },
+    "hydraulics-final/underwater-glass-source-preserved.png": {
+      "size": [
+        1920,
+        1200
+      ],
+      "sha256": "ba626011215ca13d0f76282d1cc4b55e83e02e28ff3208b4cae8ff4dee6e8418"
+    },
+    "hydraulics-final/valve-closed-finite-buffer.png": {
+      "size": [
+        1920,
+        1200
+      ],
+      "sha256": "5211af6307bbdebb771f81c07a2772096a836d1f699c1e0b2c993e01291d5344"
+    },
+    "hydraulics-final/valve-horizontal-authoritative.png": {
+      "size": [
+        1920,
+        1200
+      ],
+      "sha256": "cfa397885c1ae1fc1a9efc4dca6ea1196ef79d7453daf302dd9b31e32b1414c7"
+    },
+    "hydraulics-final/valve-vertical-authoritative.png": {
+      "size": [
+        1920,
+        1200
+      ],
+      "sha256": "cb18d0d6139e5ae4aa2c17d8da9398be37f2d11ad5014457782c17a9865e02a0"
+    },
+    "hydraulics-final/wall-torch-facing-4.png": {
+      "size": [
+        1920,
+        1200
+      ],
+      "sha256": "348bf3572575fed554a3fba34d8cb57bc23ec5ee6857fb6c3d8feb08221b6650"
+    },
+    "hydraulics-final/wall-torch-facing-5.png": {
+      "size": [
+        1920,
+        1200
+      ],
+      "sha256": "2eb011fd05c0cfc8fa6b81219a170ff61e2c038655180e3700a836e3542a1c8e"
+    },
+    "hydraulics-final/wall-torch-facing-6.png": {
+      "size": [
+        1920,
+        1200
+      ],
+      "sha256": "db283f8f0558accd69c7bf5563a2acdb6cbb2c3a3c4fc67ee2925a85c0d43afd"
+    },
+    "hydraulics-final/wall-torch-facing-7.png": {
+      "size": [
+        1920,
+        1200
+      ],
+      "sha256": "b1ddfe498106452a51db3150bd3a1fd584d9c24478a72d316d4e26efd6f10b71"
+    },
+    "hydraulics-final/watering-can-filled.png": {
+      "size": [
+        1920,
+        1200
+      ],
+      "sha256": "bf93267d69756770555d5bef2636881980b72a061149c5ea017df50ea222b323"
+    },
+    "hydraulics-final/watering-can-filling.png": {
+      "size": [
+        1920,
+        1200
+      ],
+      "sha256": "38e02b2571d084ec5292a886618bd87361583d53740fed7ab26e054752a994f2"
+    },
+    "hydraulics-final/watering-can-pouring.png": {
+      "size": [
+        1920,
+        1200
+      ],
+      "sha256": "a357228d24a6ba79a62fca1af1056e61cb70006fd8cf7de8f79b8ff50d903eea"
+    },
+    "hydraulics-final/waterlogged-round-parts-front.png": {
+      "size": [
+        1920,
+        1200
+      ],
+      "sha256": "6abe611c7fabeb8a569d4f91c1d18919ae4ba0f38e55d46ef3f678492e039aac"
+    },
+    "hydraulics-final/waterlogged-round-parts-oblique.png": {
+      "size": [
+        1920,
+        1200
+      ],
+      "sha256": "29b64bbd6d4149d316c6160a629e73635814bf4fad4b402e2e584b591b7c7540"
+    },
+    "partial-final/all-pipe-wall-roof-surrounds.png": {
+      "size": [
+        1920,
+        1200
+      ],
+      "sha256": "2a15a84eb8190381c003a083d6129a18fc08a5a88a627f8975045ec4113b659e"
+    },
+    "partial-final/fence-inward-water-top.png": {
+      "size": [
+        1920,
+        1200
+      ],
+      "sha256": "f606a21a3a5c639b5787463ba1f18ba9cf8ca7a0b93f42ac3b75d0fd8006d80c"
+    },
+    "partial-final/partial-basins-close.png": {
+      "size": [
+        1920,
+        1200
+      ],
+      "sha256": "433b4e7610a038e1ea0ecb11dfa218ba914f32d2324e5fb38f71acf7ab3423f1"
+    },
+    "partial-final/slab-stair-fence-basins.png": {
+      "size": [
+        1920,
+        1200
+      ],
+      "sha256": "cb63d295569f7810f1ffefcbfb4e6b368d31dc52fbefdb6ffda45b875c1eae7f"
+    },
+    "partial-final/underwater-wall-pipes.png": {
+      "size": [
+        1920,
+        1200
+      ],
+      "sha256": "005a9c2890dcbcca4e38d69b1a90c464ebbfd4ba2bd23bba881df1caeec5fcdc"
+    },
+    "partial-final/waterlogged-enclosed-pipes.png": {
+      "size": [
+        1920,
+        1200
+      ],
+      "sha256": "f178fe183de99711e601f3acdec543f32533481670f6bde794a1a5a0f8a1f14e"
+    },
+    "partial-final/waterlogged-partial-pool.png": {
+      "size": [
+        1920,
+        1200
+      ],
+      "sha256": "21c34cf7958e84402b6bcbc0cc246b215b35fa0e72fa3346dff1b371fe635ad7"
+    },
+    "partial-final/waterlogged-pipe-valve-fall.png": {
+      "size": [
+        1920,
+        1200
+      ],
+      "sha256": "a2f2a923c8f0aa12694ec5ffce0507bcc87968c1a716cf2c04f407a7dec89dc2"
+    },
+    "partial-final/waterlogged-wall-parts.png": {
+      "size": [
+        1920,
+        1200
+      ],
+      "sha256": "a2832cd7f798f090511ad1444104ed5355c5bb3891e179afce777a1830e96d51"
+    },
+    "shore-final/legacy-glass.png": {
+      "size": [
+        1920,
+        1200
+      ],
+      "sha256": "65782b9a931ac7c56050010085f99b631280794a8cd77c825e4c40d309513250"
+    },
+    "shore-final/natural-stone.png": {
+      "size": [
+        1920,
+        1200
+      ],
+      "sha256": "150879b9bc4ff24bcb72fe7324443103a1905b2fd9c207cb9bce53434c9c2237"
+    },
+    "shore-final/natural-wood.png": {
+      "size": [
+        1920,
+        1200
+      ],
+      "sha256": "07403226a29a0c86f1f059d47bba396bc085bf04011bf3ae89e02e1f50c77309"
+    },
+    "shore-final/solid-water-glass.png": {
+      "size": [
+        1920,
+        1200
+      ],
+      "sha256": "ef05ceee455468c9266c8036870e4ef38dfb5b26affb1ba862cc659f13070245"
+    },
+    "shore-final/surface-glass.png": {
+      "size": [
+        1920,
+        1200
+      ],
+      "sha256": "1eb0d2f63b4c4ce710948815a1e58a8eb922d785682fbeef67a35106708d1468"
+    },
+    "before-fluid-face-fix.png": {
+      "size": [
+        1920,
+        1200
+      ],
+      "sha256": "8f407fcd4dd068f4ac1dbfdc3cce1a878ddd046607cce709f74b2f6824e42e9c"
+    },
+    "after-fluid-face-fix.png": {
+      "size": [
+        1920,
+        1200
+      ],
+      "sha256": "4779bf5fbbb8b44e6a17df2032ecfc87d2c589bf13f42ed9cdb07c80b35f492e"
+    }
+  }
+}

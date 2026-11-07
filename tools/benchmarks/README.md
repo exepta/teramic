@@ -1,5 +1,18 @@
 # Benchmark Artifacts
 
+`run-frame-spikes.py` runs a finite integrated comparison of clear weather,
+rain, a real village, flight into new chunks, the actual inventory and rapid
+acknowledged block edits. It freezes configurations, isolates runtime state
+and rejects incomplete scenarios. Run `python3 tools/benchmarks/run-frame-spikes.py --help`
+for options; the [O07 report](results/o07-frame-spikes-2026-11-05/README.md)
+contains measured results, reproduction settings and interpretation limits.
+
+The [O08 inventory report](results/o08-inventory-opening-2026-11-05/README.md)
+documents first-open and repeated player/chest transitions. The inventory
+benchmark accepts optional `TERRA_BENCH_INVENTORY_ROUNDS=2` and
+`TERRA_BENCH_INVENTORY_SURFACE=player|chest`; the report includes isolated
+configuration and readiness requirements.
+
 Benchmark scripts, measurement reports, summaries and reproducible settings are
 part of the repository. Runtime assets under `assets/` and `src-ui/assets/` are
 also versioned; the benchmark exclusions do not apply to them.

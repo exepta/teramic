@@ -88,6 +88,11 @@ enum CrownShape {
         phase: f32,
     },
     Frond(WoodSegment),
+    ConiferTier {
+        center: [f32; 3],
+        radius: [f32; 3],
+        phase: f32,
+    },
 }
 
 impl Crown {
@@ -122,6 +127,18 @@ impl Crown {
         Self {
             bounds: segment.bounds,
             shape: CrownShape::Frond(segment),
+        }
+    }
+    pub fn conifer_tier(center: [f32; 3], radius: [f32; 3], phase: f32) -> Self {
+        let mut bounds = Bounds::around(center, center, radius);
+        bounds.min[1] = (center[1] - 0.6).floor() as i32;
+        Self {
+            bounds,
+            shape: CrownShape::ConiferTier {
+                center,
+                radius,
+                phase,
+            },
         }
     }
     pub fn contains(&self, point: [f32; 3]) -> bool {
@@ -166,6 +183,23 @@ impl Crown {
                 x * x + z * z <= (profile * lobes * underside).powi(2)
             }
             CrownShape::Frond(segment) => segment.contains(point),
+            CrownShape::ConiferTier {
+                center,
+                radius,
+                phase,
+            } => {
+                let y = point[1] - center[1];
+                if y < -0.6 || y > radius[1] {
+                    return false;
+                }
+                let x = (point[0] - center[0]) / radius[0];
+                let z = (point[2] - center[2]) / radius[2];
+                let angle = z.atan2(x);
+                let boughs = 0.93 + (angle * 6.0 + phase).cos() * 0.07;
+                let taper = (1.0 - (y / radius[1]).max(0.0)).powf(0.72);
+                let underside = if y < 0.0 { 1.0 + y * 0.5 } else { 1.0 };
+                x * x + z * z <= (taper * boughs * underside).powi(2)
+            }
         }
     }
 }

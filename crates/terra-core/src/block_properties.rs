@@ -255,6 +255,21 @@ mod tests {
         assert!(!catalog.0[&3].struct_block);
     }
     #[test]
+    fn logistics_port_mechanics_are_registered_and_mineable_with_normal_pickaxes() {
+        let catalog =
+            BlockPropertiesCatalog::load(&crate::asset_directory().join("terra/blocks")).unwrap();
+        for material in [crate::logistics::HOPPER, crate::logistics::IMPORTER] {
+            let properties = catalog.0[&material];
+            assert!(properties.valid() && properties.struct_block);
+            assert!(properties.hardness > 0.0);
+            assert!(!properties.can_harvest(None));
+            assert!(!properties.can_harvest(Some(ItemKind::Tool(ToolKind::StoneAxe))));
+            assert!(properties.can_harvest(Some(ItemKind::Tool(ToolKind::WoodPickaxe))));
+            assert!(properties.can_harvest(Some(ItemKind::Tool(ToolKind::IronPickaxe))));
+            assert!(!catalog.shape(material).is_empty());
+        }
+    }
+    #[test]
     fn legacy_definitions_default_to_terrain_covering_blocks() {
         let properties: BlockProperties = serde_json::from_str("{}").unwrap();
         assert!(!properties.struct_block);

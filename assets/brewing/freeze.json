@@ -1,0 +1,1 @@
+{"id":9,"key":"teramic::freeze_potion","name":"Freezing Potion","inputs":[{"item":{"block":49},"count":1},{"item":{"mineral":"salt_crystal"},"count":1}],"effects":[{"kind":"freeze","level":1,"seconds":20.0}],"seconds":16.0,"color":[102,199,230]}

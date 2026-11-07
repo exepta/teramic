@@ -1,15 +1,18 @@
 use super::material::{WaterAssets, WaterMaterial};
+use bevy::platform::collections::{HashMap, HashSet};
 use bevy::{
     asset::RenderAssetUsages,
     camera::primitives::MeshAabb,
-    ecs::system::SystemParam,
+    ecs::{message::MessageCursor, system::SystemParam},
     mesh::{Indices, PrimitiveTopology},
     prelude::*,
 };
-use std::collections::HashMap;
 use terra_core::GameConfig;
 use terra_voxel::SectionPos;
-use terra_world::{edits::EditJournal, streaming::ChunkStore};
+use terra_world::{
+    edits::EditJournal,
+    streaming::{ChunkStore, SectionPublished, SectionRemoved, WaterPublished},
+};
 
 use super::biome::{ATTRIBUTE_BIOME_TINT, WaterTint};
 
@@ -23,6 +26,8 @@ pub struct WaterStatus {
     pub triangles: usize,
     pub spray_particles: usize,
     pub mist_volumes: usize,
+    #[cfg(test)]
+    pub(super) scanned_sections: usize,
 }
 
 struct WaterTile {
@@ -38,6 +43,24 @@ pub struct WaterSurface;
 #[derive(Default)]
 pub(super) struct WaterUploadQueue {
     pending: Vec<SectionPos>,
+    queued: HashSet<SectionPos>,
+    publications: MessageCursor<SectionPublished>,
+    water: MessageCursor<WaterPublished>,
+    removals: MessageCursor<SectionRemoved>,
+    seeded: bool,
+}
+
+impl WaterUploadQueue {
+    fn enqueue(&mut self, position: SectionPos) {
+        if self.queued.insert(position) {
+            self.pending.push(position);
+        }
+    }
+
+    fn clear(&mut self) {
+        self.pending.clear();
+        self.queued.clear();
+    }
 }
 
 #[derive(SystemParam)]
@@ -47,6 +70,9 @@ pub(super) struct WaterWorld<'w> {
     config: Res<'w, GameConfig>,
     focus: Option<Res<'w, terra_world::streaming::ChunkFocus>>,
     terrain: Option<Res<'w, terra_world::streaming::WorldTerrain>>,
+    publications: Option<Res<'w, Messages<SectionPublished>>>,
+    water: Option<Res<'w, Messages<WaterPublished>>>,
+    removals: Option<Res<'w, Messages<SectionRemoved>>>,
 }
 
 pub(super) fn upload_water(
@@ -62,19 +88,68 @@ pub(super) fn upload_water(
     ),
 ) {
     let _scope = terra_core::profiling::ScopeTimer::new("water.upload");
+    #[cfg(test)]
+    {
+        status.scanned_sections = 0;
+    }
+    let notifications =
+        world.publications.is_some() && world.water.is_some() && world.removals.is_some();
+    let publications = world
+        .publications
+        .as_ref()
+        .map_or_else(Vec::new, |messages| {
+            queue
+                .publications
+                .read(messages)
+                .map(|message| message.position)
+                .collect()
+        });
+    let water = world.water.as_ref().map_or_else(Vec::new, |messages| {
+        queue
+            .water
+            .read(messages)
+            .map(|message| message.position)
+            .collect()
+    });
+    let removals = world.removals.as_ref().map_or_else(Vec::new, |messages| {
+        queue
+            .removals
+            .read(messages)
+            .map(|message| message.position)
+            .collect()
+    });
+    let reset = world.config.is_changed()
+        || world
+            .terrain
+            .as_ref()
+            .is_some_and(|terrain| terrain.is_changed())
+        || world.chunks.loaded.is_empty();
+    let rescan = reset
+        || !queue.seeded
+        || (!notifications && (world.chunks.is_changed() || world.journal.is_changed()));
     if status.ready
-        && !world.chunks.is_changed()
+        && queue.pending.is_empty()
+        && !rescan
         && !world.journal.is_changed()
-        && !world.config.is_changed()
+        && publications.is_empty()
+        && water.is_empty()
+        && removals.is_empty()
     {
         return;
     }
-    let removed: Vec<_> = tiles
-        .0
-        .keys()
-        .copied()
-        .filter(|p| !world.config.world.water || !world.chunks.loaded.contains_key(p))
-        .collect();
+    let removed: Vec<_> = if rescan || !world.config.world.water {
+        tiles
+            .0
+            .keys()
+            .copied()
+            .filter(|p| !world.config.world.water || !world.chunks.loaded.contains_key(p))
+            .collect()
+    } else {
+        removals
+            .into_iter()
+            .filter(|p| !world.chunks.loaded.contains_key(p))
+            .collect()
+    };
     for p in removed {
         if let Some(tile) = tiles.0.remove(&p)
             && let Some((entity, mesh, _)) = tile.render
@@ -88,7 +163,8 @@ pub(super) fn upload_water(
         }
     }
     if !world.config.world.water {
-        queue.pending.clear();
+        queue.clear();
+        queue.seeded = false;
         *status = WaterStatus {
             ready: true,
             initial_ready: true,
@@ -99,21 +175,55 @@ pub(super) fn upload_water(
     let mut uploads = 0;
     let mut ready = true;
     let mut initial_ready = true;
-    // Keep upload-budget retries instead of scanning every dry loaded section
-    // again while the small water queue drains.
-    if world.chunks.is_changed() || world.journal.is_changed() || world.config.is_changed() {
-        queue.pending.clear();
-        queue
-            .pending
-            .extend(world.chunks.loaded.iter().filter_map(|(&p, section)| {
-                let pending = section.water.is_some()
-                    || section.water_epoch != world.journal.water_mesh_epoch(p)
+    // Terrain publications, fluid patches and removals already name their
+    // sections. Streaming bookkeeping must not rescan thousands of dry cells.
+    if rescan {
+        queue.clear();
+        for (&p, section) in &world.chunks.loaded {
+            #[cfg(test)]
+            {
+                status.scanned_sections += 1;
+            }
+            let pending = section.water.is_some()
+                || section.water_epoch != world.journal.water_mesh_epoch(p)
+                || tiles
+                    .0
+                    .get(&p)
+                    .is_some_and(|tile| tile.epoch != section.water_epoch);
+            if pending {
+                queue.enqueue(p);
+            }
+        }
+        queue.seeded = !world.chunks.loaded.is_empty();
+    } else {
+        for position in publications.into_iter().chain(water) {
+            #[cfg(test)]
+            {
+                status.scanned_sections += 1;
+            }
+            if world.chunks.loaded.get(&position).is_some_and(|section| {
+                section.water.is_some()
+                    || section.water_epoch != world.journal.water_mesh_epoch(position)
                     || tiles
                         .0
-                        .get(&p)
-                        .is_some_and(|tile| tile.epoch != section.water_epoch);
-                pending.then_some(p)
-            }));
+                        .get(&position)
+                        .is_some_and(|tile| tile.epoch != section.water_epoch)
+            }) {
+                queue.enqueue(position);
+            }
+        }
+        if world.journal.is_changed() {
+            for (position, epoch) in world.journal.water_mesh_epochs() {
+                if world
+                    .chunks
+                    .loaded
+                    .get(&position)
+                    .is_some_and(|section| section.water_epoch != epoch)
+                {
+                    queue.enqueue(position);
+                }
+            }
+        }
     }
     let focus = world.focus.as_ref().map_or([0.0; 3], |f| f.0);
     queue.pending.sort_by_key(|p| {
@@ -125,13 +235,16 @@ pub(super) fn upload_water(
         )
     });
     let pending = std::mem::take(&mut queue.pending);
+    queue.queued.clear();
     for position in pending {
-        let section = &world.chunks.loaded[&position];
+        let Some(section) = world.chunks.loaded.get(&position) else {
+            continue;
+        };
         let represented = tiles.0.contains_key(&position);
         if section.water_epoch != world.journal.water_mesh_epoch(position) {
             ready = false;
             initial_ready &= represented;
-            queue.pending.push(position);
+            queue.enqueue(position);
             continue;
         }
         if tiles
@@ -148,7 +261,7 @@ pub(super) fn upload_water(
         if renderable && uploads == 4 {
             ready = false;
             initial_ready &= represented;
-            queue.pending.push(position);
+            queue.enqueue(position);
             continue;
         }
         let vertices = section
@@ -162,7 +275,7 @@ pub(super) fn upload_water(
         {
             ready = false;
             initial_ready &= represented;
-            queue.pending.push(position);
+            queue.enqueue(position);
             continue;
         }
         let epoch = section.water_epoch;
@@ -182,7 +295,7 @@ pub(super) fn upload_water(
             let Ok(origin) = position.origin() else {
                 ready = false;
                 initial_ready &= represented;
-                queue.pending.push(position);
+                queue.enqueue(position);
                 continue;
             };
             let triangles = patch.indices.len() / 3;
@@ -244,7 +357,7 @@ pub(super) fn upload_water(
             if let Some(tints) = biome_tints {
                 mesh.insert_attribute(ATTRIBUTE_BIOME_TINT, tints);
             }
-            let bounds = mesh.compute_aabb().map(|mut bounds| {
+            let bounds = mesh.get_aabb().map(|mut bounds| {
                 bounds.half_extents.y += 0.24;
                 bounds
             });
@@ -263,7 +376,9 @@ pub(super) fn upload_water(
                 ))
                 .id();
             if let Some(bounds) = bounds {
-                commands.entity(entity).insert(bounds);
+                commands
+                    .entity(entity)
+                    .insert((bounds, bevy::camera::visibility::NoAutoAabb));
             }
             uploads += 1;
             if tiles

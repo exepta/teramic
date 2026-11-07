@@ -141,137 +141,47 @@ pub(super) fn backpack(b: &mut Sculpt, role: u8) {
     }
 }
 
-pub(super) fn hand(b: &mut Sculpt, role: u8, side: f32) {
-    if side < 0.0 {
-        if role == 4 {
-            shield(b);
-        }
-        return;
-    }
-    if role == 0 {
-        return;
-    }
-    if role == 7 {
-        b.block([0.0, -0.21, -0.15], [0.025, 0.40, 0.025], GREEN);
-        for i in 0..3 {
-            let p = Vec3::new(
-                if i % 2 == 0 { 0.05 } else { -0.05 },
-                -0.08 + i as f32 * 0.065,
-                -0.15,
-            );
-            b.rotated(
-                (p - Vec3::Y * 0.04).to_array(),
-                [0.10, 0.025, 0.05],
-                GREEN,
-                Quat::from_rotation_z(0.4),
-            );
-            flower(b, p, CREAM);
-        }
-        return;
-    }
+pub(super) fn back_tools(b: &mut Sculpt, role: u8) {
+    // These profession props have no corresponding equippable player item.
+    // Keep them stowed; the right hand uses the shared held-item renderer.
+    let rot = Quat::from_rotation_z(if role == 3 { -0.35 } else { 0.18 });
+    let origin = Vec3::new(0.10, 0.82, 0.34);
+    let mut piece =
+        |p: Vec3, size, color| b.rotated((origin + rot * p).to_array(), size, color, rot);
     if role == 3 {
         for i in 0..11 {
             let t = i as f32 / 10.0;
-            b.block(
-                [
+            piece(
+                Vec3::new(
                     0.0,
-                    -0.75 + t * 1.05,
-                    -0.15 - (t * std::f32::consts::PI).sin() * 0.225,
-                ],
+                    -0.30 + t * 1.05,
+                    (t * std::f32::consts::PI).sin() * 0.225,
+                ),
                 [0.05, 0.125, 0.075],
                 tint(LEATHER, 1.0 + (i % 3) as f32 * 0.1),
             );
         }
-        b.block([0.0, -0.225, -0.15], [0.025, 1.05, 0.025], CREAM);
-        for y in [-0.70, 0.25, -0.225] {
-            b.block([0.0, y, -0.18], [0.10, 0.075, 0.125], GOLD);
+        piece(Vec3::Y * 0.225, [0.025, 1.05, 0.025], CREAM);
+        for y in [-0.25, 0.70, 0.225] {
+            piece(Vec3::new(0.0, y, 0.0), [0.10, 0.075, 0.125], GOLD);
         }
-        return;
-    }
-    if role == 6 {
-        b.block([0.0, -0.15, -0.15], [0.025, 0.70, 0.025], LEATHER);
-        b.block([0.0, 0.19, -0.15], [0.075, 0.10, 0.025], EDGE);
-        return;
-    }
-    if role == 2 {
-        let rot = Quat::from_rotation_z(-1.30);
-        let origin = Vec3::new(0.0, -0.40, -0.15);
-        let mut piece = |p: Vec3, s, c| b.rotated((origin + rot * p).to_array(), s, c, rot);
-        piece(Vec3::ZERO, [0.075, 0.225, 0.075], LEATHER);
-        piece(Vec3::Y * -0.125, [0.10, 0.05, 0.10], GOLD);
-        piece(Vec3::Y * 0.15, [0.35, 0.05, 0.10], GOLD);
-        for i in 0..8 {
-            piece(
-                Vec3::Y * (0.225 + i as f32 * 0.075),
-                [if i == 7 { 0.075 } else { 0.125 }, 0.075, 0.05],
-                tint(EDGE, 0.95 + (i % 3) as f32 * 0.025),
-            );
-            piece(
-                Vec3::new(0.0, 0.225 + i as f32 * 0.075, -0.0375),
-                [0.025, 0.075, 0.025],
-                METAL,
-            );
+    } else if role == 5 {
+        piece(Vec3::Y * 0.13, [0.05, 1.10, 0.05], LEATHER);
+        for y in [-0.3, 0.0, 0.48, 0.60] {
+            piece(Vec3::Y * y, [0.075, 0.05, 0.075], GOLD);
         }
-        return;
-    }
-    let tilt = if matches!(role, 8 | 9) { 0.45 } else { 0.0 };
-    let rot = Quat::from_rotation_z(tilt);
-    let origin = Vec3::new(0.0, -0.4, -0.15);
-    let mut piece = |p: Vec3, s, c| b.rotated((origin + rot * p).to_array(), s, c, rot);
-    piece(Vec3::Y * 0.13, [0.05, 1.10, 0.05], LEATHER);
-    for y in [-0.3, 0.0, 0.48, 0.60] {
-        piece(Vec3::Y * y, [0.075, 0.05, 0.075], GOLD);
-    }
-    match role {
-        1 => {
-            piece(Vec3::Y * 0.70, [0.30, 0.075, 0.075], METAL);
-            for x in [-0.125, 0.0, 0.125] {
-                piece(Vec3::new(x, 0.84, 0.0), [0.05, 0.30, 0.05], EDGE);
-            }
+        for (x, y, w, h) in [
+            (-0.125, 0.75, 0.05, 0.20),
+            (0.125, 0.75, 0.05, 0.20),
+            (0.0, 0.875, 0.20, 0.05),
+            (0.0, 0.625, 0.20, 0.05),
+        ] {
+            piece(Vec3::new(x, y, 0.0), [w, h, 0.075], GOLD);
         }
-        4 => {
-            piece(Vec3::Y * 0.77, [0.125, 0.25, 0.05], EDGE);
-            piece(Vec3::Y * 0.93, [0.05, 0.15, 0.05], EDGE);
-            piece(Vec3::new(0.0, 0.75, -0.025), [0.05, 0.25, 0.025], METAL);
-        }
-        5 => {
-            for (x, y, w, h) in [
-                (-0.125, 0.75, 0.05, 0.20),
-                (0.125, 0.75, 0.05, 0.20),
-                (0.0, 0.875, 0.20, 0.05),
-                (0.0, 0.625, 0.20, 0.05),
-            ] {
-                piece(Vec3::new(x, y, 0.0), [w, h, 0.075], GOLD);
-            }
-            gem(b, [0.0, 0.35, -0.17], 0.15);
-        }
-        8 => {
-            for x in -3_i32..=3 {
-                piece(
-                    Vec3::new(x as f32 * 0.075, 0.65 - x.abs() as f32 * 0.025, 0.0),
-                    [0.075, 0.10, 0.125],
-                    tint(METAL, 1.1 + (x.abs() % 2) as f32 * 0.15),
-                );
-            }
-        }
-        9 => {
-            for i in 0..4 {
-                piece(
-                    Vec3::new(-0.075 - i as f32 * 0.05, 0.66, 0.0),
-                    [0.075, 0.175 + i as f32 * 0.05, 0.10],
-                    if i == 3 {
-                        EDGE
-                    } else {
-                        tint(METAL, 1.0 + (i % 2) as f32 * 0.13)
-                    },
-                );
-            }
-        }
-        _ => {}
     }
 }
 
-fn shield(b: &mut Sculpt) {
+pub(super) fn shield(b: &mut Sculpt) {
     for row in 0..7 {
         let width = if row < 3 {
             0.15 + row as f32 * 0.10

@@ -1,6 +1,7 @@
 use super::{ControlWorld, Peer};
 use crate::protocol::session::*;
 use bevy::prelude::*;
+use terra_core::trees::SaplingPlacementError as PlantError;
 use terra_physics::character::{PLAYER_EYE_OFFSET, PLAYER_HALF_HEIGHT, PLAYER_RADIUS};
 use terra_voxel::{MaterialId, global_to_section};
 use terra_world::{
@@ -8,8 +9,25 @@ use terra_world::{
     targeting::{WorldTarget, pick_world_with_context},
 };
 
+#[path = "server_conveyors.rs"]
+mod conveyors;
+#[path = "server_fabric_dyes.rs"]
+mod fabric_dyes;
 #[path = "server_pots.rs"]
 mod pots;
+#[path = "server_snow.rs"]
+mod snow;
+#[path = "server_wrench.rs"]
+mod wrench;
+
+fn planting_rejection(action: EditAction, reason: PlantError) -> EditOutcome {
+    if matches!(action, EditAction::PlaceProp { kind, .. } if terra_core::TreeSpecies::from_sapling(kind).is_some())
+    {
+        EditOutcome::Planting(reason)
+    } else {
+        EditOutcome::Invalid
+    }
+}
 
 pub(super) fn mined_slab(
     command: EditCommand,
@@ -45,11 +63,37 @@ pub(super) fn mined_slab(
 }
 
 pub(super) fn check(command: EditCommand, peer: &Peer, world: &ControlWorld) -> EditOutcome {
+    if matches!(command.action, EditAction::HarvestTree { .. }) {
+        return super::fruit::check(command, peer, world);
+    }
+    if super::kingdoms::bound_keep(command.action, &world.journal)
+        || !super::kingdoms::edit_allowed(command.action, peer, world)
+    {
+        return planting_rejection(command.action, PlantError::Protected);
+    }
+    if matches!(command.action, EditAction::Block { material: 98, .. }) {
+        return snow::check(command, peer, world);
+    }
+    if matches!(command.action, EditAction::DyeFabric { .. }) {
+        return fabric_dyes::check(command, peer, world);
+    }
+    if matches!(
+        command.action,
+        EditAction::ConnectConveyor { .. }
+            | EditAction::CollectConveyor { .. }
+            | EditAction::DyeConveyor { .. }
+            | EditAction::DyeFabric { .. }
+    ) {
+        return conveyors::check(command, peer, world);
+    }
     if peer.vitals.dead() || peer.game_mode(&world.config) == terra_core::GameMode::Spectator {
         return EditOutcome::Invalid;
     }
     if matches!(command.action, EditAction::Farm { .. }) {
         return super::farm_tools::check(command, peer, world);
+    }
+    if matches!(command.action, EditAction::RotateObject { .. }) {
+        return wrench::check(command, peer, world);
     }
     if match command.action {
         EditAction::Surface { .. } => !peer.permissions.environment,
@@ -57,25 +101,30 @@ pub(super) fn check(command: EditCommand, peer: &Peer, world: &ControlWorld) -> 
         | EditAction::Prop { .. }
         | EditAction::PlaceProp { .. }
         | EditAction::Farm { .. }
-        | EditAction::ToggleObject { .. } => !peer.permissions.build,
+        | EditAction::RotateObject { .. }
+        | EditAction::ConnectConveyor { .. }
+        | EditAction::CollectConveyor { .. }
+        | EditAction::DyeConveyor { .. }
+        | EditAction::DyeFabric { .. }
+        | EditAction::ToggleObject { .. }
+        | EditAction::HarvestTree { .. } => !peer.permissions.build,
     } {
-        return EditOutcome::Invalid;
+        return planting_rejection(command.action, PlantError::Protected);
     }
-    if peer.game_mode(&world.config) == terra_core::GameMode::Survival
-        && let Some(item) = placement_item(command.action)
+    if let Some(item) = placement_item(command.action)
         && let Some(source) = command.source
     {
         let Some(bag) = world.journal.gameplay().inventories.get(&peer.uuid) else {
-            return EditOutcome::Invalid;
+            return planting_rejection(command.action, PlantError::MissingItem);
         };
         if bag.revision != source.revision {
             return EditOutcome::Conflict;
         }
         if bag
             .slot(usize::from(source.slot))
-            .is_none_or(|stack| !same_placement_item(stack.item, item))
+            .is_none_or(|stack| !stack.valid() || !same_placement_item(stack.item, item))
         {
-            return EditOutcome::Invalid;
+            return planting_rejection(command.action, PlantError::MissingItem);
         }
     }
     if command.look.iter().any(|v| !v.is_finite())
@@ -83,6 +132,28 @@ pub(super) fn check(command: EditCommand, peer: &Peer, world: &ControlWorld) -> 
         || command.look[1].abs() > 1.501
     {
         return EditOutcome::Invalid;
+    }
+    if let EditAction::Block {
+        position,
+        expected: 105,
+        material: 105,
+    } = command.action
+    {
+        let bag = world.journal.gameplay().inventories.get(&peer.uuid);
+        let item = command
+            .source
+            .and_then(|source| bag?.slot(usize::from(source.slot)))
+            .or_else(|| {
+                bag?.slots
+                    .iter()
+                    .find(|stack| stack.item.block_material() == Some(105) && stack.count > 0)
+                    .copied()
+            })
+            .map(|stack| stack.item);
+        let placed = item.and_then(terra_core::tints::color);
+        if placed != world.journal.tint_at(position) {
+            return EditOutcome::Invalid;
+        }
     }
     let Ok(body) = world.bodies.get(peer.body) else {
         return EditOutcome::Invalid;
@@ -93,8 +164,16 @@ pub(super) fn check(command: EditCommand, peer: &Peer, world: &ControlWorld) -> 
     let target = match command.action {
         EditAction::Block { position, .. }
         | EditAction::Farm { position, .. }
+        | EditAction::RotateObject { position, .. }
         | EditAction::Surface { position, .. }
         | EditAction::ToggleObject { position, .. } => position.map(|v| v as f64 + 0.5),
+        EditAction::DyeConveyor { position, .. } | EditAction::DyeFabric { position, .. } => {
+            position.map(|v| v as f64 + 0.5)
+        }
+        EditAction::CollectConveyor { .. } | EditAction::HarvestTree { .. } => {
+            unreachable!("specialized actions use their validator")
+        }
+        EditAction::ConnectConveyor { end, .. } => end.map(|v| v as f64 + 0.5),
         EditAction::Prop { section, id } => {
             let Some(prop) = world
                 .chunks
@@ -127,7 +206,17 @@ pub(super) fn check(command: EditCommand, peer: &Peer, world: &ControlWorld) -> 
     if !distance.is_finite() || (distance > 9.5 * 9.5 && !crystal_placement) {
         return EditOutcome::OutOfReach;
     }
-    let (block, selected) = pick_world_with_context(
+    let picker = if matches!(
+        command.action,
+        EditAction::Block { material: 0, .. } | EditAction::Prop { .. }
+    ) {
+        terra_world::targeting::pick_world_for_mining
+    } else if matches!(command.action, EditAction::Block { .. }) {
+        terra_world::targeting::pick_world_for_placement
+    } else {
+        pick_world_with_context
+    };
+    let (block, selected) = picker(
         &world.chunks,
         &world.journal,
         &world.block_properties,
@@ -145,16 +234,33 @@ pub(super) fn check(command: EditCommand, peer: &Peer, world: &ControlWorld) -> 
         ),
     );
     match command.action {
-        EditAction::Farm { .. } => unreachable!("farm actions use their shared validator"),
+        EditAction::HarvestTree { .. }
+        | EditAction::ConnectConveyor { .. }
+        | EditAction::CollectConveyor { .. }
+        | EditAction::DyeConveyor { .. }
+        | EditAction::DyeFabric { .. }
+        | EditAction::Farm { .. }
+        | EditAction::RotateObject { .. } => {
+            unreachable!("tool actions use their shared validator")
+        }
         EditAction::ToggleObject {
             position,
             expected,
             facing,
+            closing,
         } => {
+            if closing && expected != terra_core::plumbing::FAUCET {
+                return EditOutcome::Invalid;
+            }
             if if terra_core::beds::is_bed(expected) {
                 facing >= terra_core::beds::BED_FACING_COUNT
             } else if expected == terra_core::flower_pot::MATERIAL {
                 facing >= terra_core::flower_pot::STATES
+            } else if matches!(
+                expected,
+                terra_core::plumbing::VALVE | terra_core::plumbing::FAUCET
+            ) {
+                !terra_core::plumbing::valid_facing(expected, facing)
             } else {
                 !terra_world::objects::is_opening(expected) || facing >= 8
             } {
@@ -209,8 +315,14 @@ pub(super) fn check(command: EditCommand, peer: &Peer, world: &ControlWorld) -> 
                 || (material != 0
                     && expected != 0
                     && expected != MaterialId::FluidWater as u16
+                    && expected != MaterialId::SnowLayer as u16
+                    && !matches!((expected, material), (161, 162) | (162, 161))
                     && !(terra_core::construction::is_slab(material)
-                        && terra_core::construction::is_slab(expected)))
+                        && terra_core::construction::is_slab(expected))
+                    && !(expected == 148
+                        && matches!(material, 144..=146)
+                        && terra_world::conveyors::span_at(&world.journal, position)
+                            .is_some_and(|span| span.linked)))
             {
                 return EditOutcome::Invalid;
             }
@@ -251,16 +363,32 @@ pub(super) fn check(command: EditCommand, peer: &Peer, world: &ControlWorld) -> 
             }
             if material == 40
                 && block.is_none_or(|hit| {
-                    hit.normal == [0, -1, 0]
-                        || !world
-                            .chunks
-                            .block_at(hit.position)
-                            .and_then(MaterialId::from_raw)
-                            .is_some_and(MaterialId::is_solid)
-                        || world
-                            .chunks
-                            .block_at(hit.position)
-                            .is_none_or(|m| !world.block_properties.shape(m).is_empty())
+                    terra_world::torches::facing(hit.normal).is_none_or(|facing| {
+                        terra_world::torches::support(position, facing) != Some(hit.position)
+                            || !terra_world::torches::supported(
+                                &world.chunks,
+                                &world.block_properties,
+                                position,
+                                facing,
+                            )
+                    })
+                })
+            {
+                return EditOutcome::Invalid;
+            }
+            if terra_core::lantern::is_part(material)
+                && block.is_none_or(|hit| {
+                    terra_core::lantern::facing(material, hit.normal).is_none_or(|facing| {
+                        terra_core::lantern::support(position, material, facing)
+                            != Some(hit.position)
+                            || !terra_world::lanterns::supported(
+                                &world.chunks,
+                                &world.block_properties,
+                                position,
+                                material,
+                                facing,
+                            )
+                    })
                 })
             {
                 return EditOutcome::Invalid;
@@ -319,7 +447,10 @@ pub(super) fn check(command: EditCommand, peer: &Peer, world: &ControlWorld) -> 
                             material,
                         )
                         .unwrap_or(terra_core::construction::DOUBLE_SLAB)
-                    } else if terra_core::construction::is_shape(material) {
+                    } else if terra_core::construction::is_shape(material)
+                        || terra_core::castle::is_castle(material)
+                        || terra_core::kinetic::uses_adaptive_facing(material)
+                    {
                         terra_world::targeting::placement_facing(
                             &world.chunks,
                             &world.journal,
@@ -362,6 +493,33 @@ pub(super) fn check(command: EditCommand, peer: &Peer, world: &ControlWorld) -> 
                             &world.block_properties,
                         )
                     });
+                // Ordinary blocks commit directly, without the furniture
+                // transaction's environment check. Keep the legacy body-box
+                // fallback, but never let it bypass mechanical overhangs.
+                if exact.is_none()
+                    && world.journal.has_extended_kinetics()
+                    && !terra_world::placement::furniture(material)
+                    && terra_world::placement::layout(
+                        &world.chunks,
+                        &world.journal,
+                        position,
+                        expected,
+                        material,
+                        command.look,
+                        None,
+                    )
+                    .and_then(|plan| {
+                        terra_world::placement::environment(
+                            &plan,
+                            &world.chunks,
+                            &world.journal,
+                            world.config.world.bounded_world,
+                        )
+                    })
+                    .is_err()
+                {
+                    return EditOutcome::Invalid;
+                }
                 if world.bodies.iter().any(|body| {
                     let low = (body.translation - half).to_array().map(f64::from);
                     let high = (body.translation + half).to_array().map(f64::from);
@@ -395,6 +553,13 @@ pub(super) fn check(command: EditCommand, peer: &Peer, world: &ControlWorld) -> 
             }
         }
         EditAction::Prop { section, id } => {
+            if world.chunks.loaded.get(&section).is_some_and(|s| {
+                s.props
+                    .iter()
+                    .any(|p| p.id == id && p.kind == terra_world::props::PropKind::AppleFruit)
+            }) {
+                return EditOutcome::Invalid;
+            }
             if world.journal.prop_epoch(section) != command.revision {
                 return EditOutcome::Conflict;
             }
@@ -435,11 +600,41 @@ pub(super) fn check(command: EditCommand, peer: &Peer, world: &ControlWorld) -> 
             }
         }
         EditAction::PlaceProp { support, kind } => {
+            if kind == terra_core::ResourcePropKind::AppleFruit {
+                return EditOutcome::Invalid;
+            }
             let section = global_to_section(support).0;
             if world.journal.prop_epoch(section) != command.revision {
                 return EditOutcome::Conflict;
             }
-            let (_, planting_target) = terra_world::targeting::pick_world_for_planting(
+            let sapling = terra_core::TreeSpecies::from_sapling(kind).is_some();
+            if sapling
+                && (world.chunks.block_at(support).is_none()
+                    || world
+                        .chunks
+                        .block_at([support[0], support[1] + 1, support[2]])
+                        .is_none())
+            {
+                return EditOutcome::Planting(PlantError::Unloaded);
+            }
+            if sapling {
+                let prop = placed_prop(support, kind, command.revision);
+                if let Err(reason) = terra_world::saplings::placement_check_in_world(
+                    &world.chunks,
+                    &world.journal,
+                    &world.terrain.0,
+                    prop,
+                    Some(peer.uuid),
+                ) {
+                    return EditOutcome::Planting(reason);
+                }
+            }
+            let picker = if sapling {
+                terra_world::targeting::pick_world_for_saplings
+            } else {
+                terra_world::targeting::pick_world_for_planting
+            };
+            let (_, planting_target) = picker(
                 &world.chunks,
                 &world.journal,
                 &world.block_properties,
@@ -461,24 +656,32 @@ pub(super) fn check(command: EditCommand, peer: &Peer, world: &ControlWorld) -> 
             {
                 return EditOutcome::Occluded;
             }
-            if !prop_environment_valid_for_face(
-                &world.chunks,
-                &world.terrain.0,
-                &world.journal,
-                &world.block_properties,
-                support,
-                kind,
-                match planting_target {
-                    Some(WorldTarget::Block(hit)) => hit.normal.map(|v| v as i8),
-                    _ => [0, 1, 0],
-                },
-            ) {
+            if !sapling
+                && !prop_environment_valid_for_face(
+                    &world.chunks,
+                    &world.terrain.0,
+                    &world.journal,
+                    &world.block_properties,
+                    support,
+                    kind,
+                    match planting_target {
+                        Some(WorldTarget::Block(hit)) => hit.normal.map(|v| v as i8),
+                        _ => [0, 1, 0],
+                    },
+                )
+            {
                 return EditOutcome::Invalid;
             }
-            if world.chunks.loaded.get(&section).is_none_or(|section| {
-                terra_world::props::placement::next_slot(&section.props, support, prop_kind(kind))
+            if !sapling
+                && world.chunks.loaded.get(&section).is_none_or(|section| {
+                    terra_world::props::placement::next_slot(
+                        &section.props,
+                        support,
+                        prop_kind(kind),
+                    )
                     .is_none()
-            }) {
+                })
+            {
                 return EditOutcome::Conflict;
             }
             if peer.game_mode(&world.config) == terra_core::GameMode::Survival
@@ -494,7 +697,7 @@ pub(super) fn check(command: EditCommand, peer: &Peer, world: &ControlWorld) -> 
                         })
                     })
             {
-                return EditOutcome::Invalid;
+                return planting_rejection(command.action, PlantError::MissingItem);
             }
         }
     }
@@ -507,6 +710,30 @@ pub(super) fn apply(
     world: &mut ControlWorld,
     timed: bool,
 ) -> EditOutcome {
+    if matches!(command.action, EditAction::HarvestTree { .. }) {
+        return super::fruit::harvest(command, peer, world);
+    }
+    if !super::kingdoms::edit_allowed(command.action, peer, world) {
+        return planting_rejection(command.action, PlantError::Protected);
+    }
+    if matches!(command.action, EditAction::Block { material: 98, .. }) {
+        return snow::apply(command, peer, world);
+    }
+    if matches!(command.action, EditAction::DyeFabric { .. }) {
+        return fabric_dyes::apply(command, peer, world);
+    }
+    if matches!(
+        command.action,
+        EditAction::ConnectConveyor { .. }
+            | EditAction::CollectConveyor { .. }
+            | EditAction::DyeConveyor { .. }
+            | EditAction::DyeFabric { .. }
+    ) {
+        return conveyors::apply(command, peer, world);
+    }
+    if matches!(command.action, EditAction::RotateObject { .. }) {
+        return wrench::apply(command, peer, world);
+    }
     let survival = peer.game_mode(&world.config) == terra_core::GameMode::Survival;
     let removal = matches!(
         command.action,
@@ -543,14 +770,20 @@ pub(super) fn apply(
             Err(_) => EditOutcome::Invalid,
         };
     }
-    let torch_facing = if matches!(command.action, EditAction::Block { material: 40, .. }) {
+    let torch_facing = if matches!(
+        command.action,
+        EditAction::Block {
+            material: 40 | terra_core::lantern::LANTERN | terra_core::lantern::CHAIN,
+            ..
+        }
+    ) {
         let Ok(body) = world.bodies.get(peer.body) else {
             return EditOutcome::Invalid;
         };
         let eye = body.translation + Vec3::Y * PLAYER_EYE_OFFSET;
         let direction =
             Quat::from_euler(EulerRot::YXZ, command.look[0], command.look[1], 0.0) * Vec3::NEG_Z;
-        pick_world_with_context(
+        terra_world::targeting::pick_world_for_placement(
             &world.chunks,
             &world.journal,
             &world.block_properties,
@@ -568,13 +801,13 @@ pub(super) fn apply(
             ),
         )
         .0
-        .map_or(0, |hit| match hit.normal {
-            [1, 0, 0] => 4,
-            [-1, 0, 0] => 5,
-            [0, 0, 1] => 6,
-            [0, 0, -1] => 7,
-            _ => 0,
+        .and_then(|hit| match command.action {
+            EditAction::Block { material, .. } if terra_core::lantern::is_part(material) => {
+                terra_core::lantern::facing(material, hit.normal)
+            }
+            _ => terra_world::torches::facing(hit.normal),
         })
+        .unwrap_or(0)
     } else {
         0
     };
@@ -583,6 +816,7 @@ pub(super) fn apply(
         command
             .source
             .and_then(|source| bag?.slot(usize::from(source.slot)))
+            .filter(|stack| stack.valid() && same_placement_item(stack.item, fallback))
             .or_else(|| {
                 bag?.slots
                     .iter()
@@ -597,7 +831,9 @@ pub(super) fn apply(
         expected,
     } = command.action
         && (terra_core::construction::is_stair(material)
-            || terra_core::construction::is_slab(material))
+            || terra_core::construction::is_slab(material)
+            || terra_core::castle::is_castle(material)
+            || terra_core::kinetic::uses_adaptive_facing(material))
     {
         if terra_core::construction::is_slab(expected) {
             terra_core::construction::merged_slab(
@@ -616,7 +852,7 @@ pub(super) fn apply(
             let eye = body.translation + Vec3::Y * PLAYER_EYE_OFFSET;
             let direction = Quat::from_euler(EulerRot::YXZ, command.look[0], command.look[1], 0.0)
                 * Vec3::NEG_Z;
-            let hit = pick_world_with_context(
+            let hit = terra_world::targeting::pick_world_for_placement(
                 &world.chunks,
                 &world.journal,
                 &world.block_properties,
@@ -655,7 +891,7 @@ pub(super) fn apply(
         let eye = body.translation + Vec3::Y * PLAYER_EYE_OFFSET;
         let direction =
             Quat::from_euler(EulerRot::YXZ, command.look[0], command.look[1], 0.0) * Vec3::NEG_Z;
-        pick_world_with_context(
+        terra_world::targeting::pick_world_for_placement(
             &world.chunks,
             &world.journal,
             &world.block_properties,
@@ -670,12 +906,77 @@ pub(super) fn apply(
             ),
         )
         .0
-        .and_then(|hit| world.journal.crusher_primary(hit.position))
+        .and_then(|hit| {
+            world.journal.crusher_primary(hit.position).or_else(|| {
+                world
+                    .journal
+                    .block(hit.position)
+                    .filter(|id| terra_core::kinetic::is_crank_mount(*id))
+                    .map(|_| hit.position)
+            })
+        })
     } else {
         None
     };
-    let furniture = match if let Some(anchor) = crank_owner {
+    let port_layout = if let EditAction::Block {
+        material, expected, ..
+    } = command.action
+        && (terra_core::logistics::is_port(material)
+            || terra_core::plumbing::is_pipe(material)
+            || material == terra_core::plumbing::VALVE
+            || expected == 148 && matches!(material, 144..=146))
+    {
+        let Ok(body) = world.bodies.get(peer.body) else {
+            return EditOutcome::Invalid;
+        };
+        let eye = (body.translation + Vec3::Y * PLAYER_EYE_OFFSET)
+            .to_array()
+            .map(f64::from);
+        let direction = (Quat::from_euler(EulerRot::YXZ, command.look[0], command.look[1], 0.0)
+            * Vec3::NEG_Z)
+            .to_array()
+            .map(f64::from);
+        let Some(hit) = terra_world::targeting::pick_world_for_placement(
+            &world.chunks,
+            &world.journal,
+            &world.block_properties,
+            eye,
+            direction,
+            terra_world::props::PropPose::WeatherSwept {
+                frame: terra_world::props::weather_wind_frame(world.weather.wind()),
+            }
+            .with_season(
+                world
+                    .journal
+                    .clock
+                    .unwrap_or_default()
+                    .season(world.config.world.seasons),
+            ),
+        )
+        .0
+        else {
+            return EditOutcome::Invalid;
+        };
+        match terra_world::placement::propose(
+            &world.chunks,
+            &world.journal,
+            hit,
+            placed.unwrap_or(terra_core::ItemKind::Block(material)),
+            (eye, direction),
+            command.look,
+        ) {
+            Ok(layout) => Some(layout),
+            Err(_) => return EditOutcome::Invalid,
+        }
+    } else {
+        None
+    };
+    let furniture = match if let Some(layout) = port_layout {
+        super::furniture::plan_from_layout(command,world,layout)
+    } else if let Some(anchor) = crank_owner {
         super::furniture::plan_crank(command, world, anchor)
+    } else if let Some(facing)=construction_facing.filter(|_|matches!(command.action,EditAction::Block{material,..} if terra_core::kinetic::uses_adaptive_facing(material))) {
+        super::furniture::plan_kinetic(command,world,facing)
     } else {
         super::furniture::plan(command, world)
     } {
@@ -699,7 +1000,25 @@ pub(super) fn apply(
     } else {
         Vec::new()
     };
+    if furniture
+        .as_ref()
+        .is_some_and(|plan| !plan.allowed(peer, world))
+    {
+        return EditOutcome::Invalid;
+    }
     for (_, stack) in &mut drops {
+        if let EditAction::Block {
+            position,
+            expected: 148,
+            material: 0,
+        } = command.action
+            && stack.item.block_material() == Some(148)
+            && let Some(span) =
+                terra_world::conveyors::span_at(&world.journal, position).filter(|span| span.linked)
+        {
+            stack.item = terra_world::conveyors::item(span, &world.journal);
+            continue;
+        }
         stack.item = if let EditAction::Block {
             position,
             expected,
@@ -722,6 +1041,17 @@ pub(super) fn apply(
         } else {
             stack.item
         };
+        if let EditAction::Block {
+            position,
+            material: 0,
+            ..
+        } = command.action
+            && let Some(rgb) = world.journal.tint_at(position)
+            && let Some(item) =
+                terra_core::tints::recolored(stack.item, terra_core::beds::DyeColor::Rgb(rgb))
+        {
+            stack.item = item;
+        }
     }
     if let Some(part) = slab_half
         && survival
@@ -730,7 +1060,16 @@ pub(super) fn apply(
         drops = vec![(
             part.center(position),
             terra_core::ItemStack {
-                item: terra_core::ItemKind::Block(part.removed),
+                item: world
+                    .journal
+                    .tint_at(position)
+                    .and_then(|rgb| {
+                        terra_core::tints::recolored(
+                            terra_core::ItemKind::Block(part.removed),
+                            terra_core::beds::DyeColor::Rgb(rgb),
+                        )
+                    })
+                    .unwrap_or(terra_core::ItemKind::Block(part.removed)),
                 count: 1,
             },
         )];
@@ -751,13 +1090,33 @@ pub(super) fn apply(
             terra_core::ItemStack { item, count: 1 },
         ));
     }
-    if !drops.is_empty()
-        && (world.journal.gameplay().drops.len() + drops.len() > terra_core::MAX_WORLD_DROPS
+    let support_drops = match command.action {
+        EditAction::Block {
+            position, material, ..
+        } => terra_world::lanterns::released_dependents(
+            &world.chunks,
+            &world.journal,
+            position,
+            material,
+            &world.block_properties,
+        )
+        .len(),
+        _ => 0,
+    };
+    let all_drops = drops.len().saturating_add(support_drops);
+    if all_drops > 0
+        && (world
+            .journal
+            .gameplay()
+            .drops
+            .len()
+            .saturating_add(all_drops)
+            > terra_core::MAX_WORLD_DROPS
             || world
                 .journal
                 .gameplay()
                 .next_drop
-                .checked_add(drops.len() as u64)
+                .checked_add(all_drops as u64)
                 .is_none())
     {
         return EditOutcome::RateLimited;
@@ -782,12 +1141,31 @@ pub(super) fn apply(
         return EditOutcome::Invalid;
     }
     let result = match command.action {
-        EditAction::Farm { .. } => return EditOutcome::Invalid,
+        EditAction::HarvestTree { .. }
+        | EditAction::ConnectConveyor { .. }
+        | EditAction::CollectConveyor { .. }
+        | EditAction::DyeConveyor { .. }
+        | EditAction::DyeFabric { .. }
+        | EditAction::Farm { .. }
+        | EditAction::RotateObject { .. } => return EditOutcome::Invalid,
         EditAction::ToggleObject {
             position,
             expected,
             facing,
-        } => super::furniture::toggle(position, expected, facing, world),
+            closing,
+        } => {
+            if expected == terra_core::plumbing::FAUCET {
+                terra_world::plumbing::adjust_faucet(
+                    &mut world.chunks,
+                    &mut world.journal,
+                    position,
+                    facing,
+                    closing,
+                )
+            } else {
+                super::furniture::toggle(position, expected, facing, world)
+            }
+        }
         EditAction::Block {
             position,
             expected,
@@ -802,8 +1180,21 @@ pub(super) fn apply(
                 } else {
                     plan
                 };
-                super::furniture::commit(plan.with_construction_facing(construction_facing), world)
+                super::furniture::commit(
+                    plan.with_construction_facing(construction_facing)
+                        .with_resource_drops(drops.len()),
+                    world,
+                )
             } else {
+                if material != 0 && placed.and_then(terra_core::tints::color).is_some() {
+                    let section = global_to_section(position).0;
+                    if world.journal.revision(section) > u64::MAX - 16
+                        || world.journal.appearance_epoch(section) > u64::MAX - 16
+                        || world.journal.mesh_epoch(section) > u64::MAX - 16
+                    {
+                        return EditOutcome::Invalid;
+                    }
+                }
                 let result = commit_block_edit(
                     &mut world.chunks,
                     &mut world.journal,
@@ -814,7 +1205,9 @@ pub(super) fn apply(
                     },
                     &world.block_properties,
                 );
-                if result.is_ok() && material == 40 {
+                if matches!(result, Ok(true))
+                    && (material == 40 || terra_core::lantern::is_part(material))
+                {
                     let facing = torch_facing;
                     if let Err(error) = world.journal.set_object_state(
                         position,
@@ -828,6 +1221,14 @@ pub(super) fn apply(
                             EditOutcome::Invalid
                         };
                     }
+                }
+                if matches!(result, Ok(true))
+                    && material != 0
+                    && let Some(rgb) = placed.and_then(terra_core::tints::color)
+                    && let Err(error) = world.journal.set_tint(position, Some(rgb))
+                {
+                    tracing::error!(%error,"Placed RGB metadata commit failed");
+                    return EditOutcome::Invalid;
                 }
                 result
             }
@@ -888,7 +1289,9 @@ pub(super) fn apply(
             if let Some(terra_core::ItemKind::Flower(color)) = placed {
                 prop.variant = terra_core::crusher::flower_variant(color);
             }
-            if prop.kind.crop().is_some() {
+            if prop.kind.sapling().is_some() {
+                terra_world::saplings::plant(&mut world.chunks, &mut world.journal, prop, peer.uuid)
+            } else if prop.kind.crop().is_some() {
                 terra_world::farming::plant_crop(
                     &mut world.chunks,
                     &mut world.journal,
@@ -1028,11 +1431,11 @@ fn placed_prop(
     kind: terra_core::ResourcePropKind,
     epoch: u64,
 ) -> terra_world::props::WorldProp {
-    use terra_world::props::{PropId, WorldProp};
-    let mut hash = 0xcbf2_9ce4_8422_2325_u64 ^ epoch.rotate_left(23) ^ kind as u64;
-    for value in support {
-        hash = (hash ^ value as u64).wrapping_mul(0x100_0000_01b3);
+    if let Some(species) = terra_core::TreeSpecies::from_sapling(kind) {
+        return terra_world::saplings::placement_prop(support, species, epoch);
     }
+    use terra_world::props::{PropId, WorldProp};
+    let hash = terra_world::saplings::placement_seed(support, kind, epoch);
     if kind == terra_core::ResourcePropKind::SpiderWeb {
         return terra_world::props::webs::attached(support, [0, 1, 0], 5, PropId(hash))
             .expect("cardinal web support");
@@ -1111,6 +1514,19 @@ fn prop_environment_valid_for_face(
                 )
             })
         });
+    }
+    if let Some(species) = terra_core::TreeSpecies::from_sapling(kind) {
+        return terra_world::saplings::planting_environment_valid(
+            chunks, journal, support, species,
+        ) && chunks
+            .fluid_cell_at(
+                terrain,
+                journal,
+                [support[0], support[1] + 1, support[2]],
+                0,
+            )
+            .amount
+            == 0;
     }
     if kind == terra_core::ResourcePropKind::Scarecrow {
         return chunks.block_at(support).is_some_and(|material| {
@@ -1213,7 +1629,9 @@ fn resource_drop(
             material: 0,
         } => Some((
             position.map(|v| v as f64 + 0.5),
-            if expected == terra_voxel::MaterialId::Grass as u16 {
+            if terra_core::castle::retired_item(expected) {
+                ItemKind::Block(terra_core::castle::item_material(expected))
+            } else if expected == terra_voxel::MaterialId::Grass as u16 {
                 ItemKind::Block(terra_voxel::MaterialId::Dirt as u16)
             } else if expected == terra_voxel::MaterialId::SaltCrystal as u16 {
                 ItemKind::Mineral(terra_core::OreKind::Salt.resource())
@@ -1231,6 +1649,9 @@ fn resource_drop(
                 .props
                 .iter()
                 .find(|p| p.id == id && !p.removed)?;
+            if prop.kind == terra_world::props::PropKind::AppleFruit {
+                return None;
+            }
             let kind: ResourcePropKind = prop.kind.into();
             let mut position = prop.position;
             position[1] += 0.25;
@@ -1284,6 +1705,32 @@ fn resource_stacks(
         .map(|(position, item)| (position, terra_core::ItemStack { item, count: 1 }))
         .into_iter()
         .collect();
+    if let EditAction::Block {
+        position,
+        expected,
+        material: 0,
+    } = action
+        && let Some(species) = terra_world::saplings::leaf_drop(chunks, journal, position, expected)
+    {
+        drops.push((
+            position.map(|v| v as f64 + 0.5),
+            terra_core::ItemStack {
+                item: terra_core::ItemKind::Prop(species.sapling()),
+                count: 1,
+            },
+        ));
+    }
+    if let EditAction::Block {
+        position,
+        expected: 98,
+        material: 0,
+    } = action
+        && let Some((_, stack)) = drops.first_mut()
+    {
+        stack.count = u16::from(terra_core::construction::snow_layers(
+            journal.object_state(position).unwrap_or_default().facing,
+        ));
+    }
     if let EditAction::Block {
         position,
         expected,
@@ -1350,6 +1797,27 @@ mod aquatic_tests;
 mod tests {
     use super::*;
     #[test]
+    fn retired_castle_corner_break_returns_the_adaptive_wall_without_reusing_the_saved_id() {
+        let (_, item) = resource_drop(
+            EditAction::Block {
+                position: [-1, 15, 16],
+                expected: terra_core::castle::BATTLEMENT_CORNER,
+                material: 0,
+            },
+            &Default::default(),
+        )
+        .unwrap();
+        assert_eq!(
+            item,
+            terra_core::ItemKind::Block(terra_core::castle::BATTLEMENT_STRAIGHT)
+        );
+        assert_eq!(
+            terra_voxel::MaterialId::from_raw(181).unwrap(),
+            terra_voxel::MaterialId::CastleBattlementCorner
+        );
+    }
+
+    #[test]
     fn grass_harvest_drops_dirt_without_changing_creative_pick() {
         let chunks = terra_world::streaming::ChunkStore::default();
         let (_, item) = resource_drop(
@@ -1375,9 +1843,11 @@ mod tests {
     };
 
     #[test]
-    fn reverse_placement_checks_rotated_crusher_hoppers_but_preserves_free_upper_slabs() {
+    fn one_block_crusher_and_legacy_pairs_leave_the_whole_cell_above_free() {
         use terra_world::edits::BlockObjectState;
-        for facing in 0..4 {
+        for (facing, legacy) in
+            (0..4).flat_map(|facing| [false, true].map(|legacy| (facing, legacy)))
+        {
             let config = GameConfig::default();
             let terrain = terra_world::TerraGenerator::new(config.world.clone()).unwrap();
             let mut app = App::new();
@@ -1399,7 +1869,10 @@ mod tests {
             let peer = std::array::from_fn(|axis| anchor[axis] + state.right()[axis]);
             let section = terra_voxel::SectionPos::default();
             let mut data = terra_voxel::BlockSection::empty(section).unwrap();
-            for (position, other, secondary) in [(anchor, peer, false), (peer, anchor, true)] {
+            let cells: Vec<_> = std::iter::once((anchor, peer, false))
+                .chain(legacy.then_some((peer, anchor, true)))
+                .collect();
+            for &(position, other, secondary) in &cells {
                 data.set_block(terra_voxel::global_to_section(position).1, 99)
                     .unwrap();
                 let mut journal = app.world_mut().resource_mut::<EditJournal>();
@@ -1408,7 +1881,7 @@ mod tests {
                     .set_object_state(
                         position,
                         Some(BlockObjectState {
-                            peer: Some(other),
+                            peer: legacy.then_some(other),
                             secondary,
                             ..state
                         }),
@@ -1428,15 +1901,33 @@ mod tests {
             );
             let mut system = SystemState::<ControlWorld>::new(app.world_mut());
             let world = system.get_mut(app.world_mut()).unwrap();
-            for cell in [anchor, peer] {
-                let above = [cell[0], cell[1] + 1, cell[2]];
+            for cell in cells.into_iter().map(|(cell, _, _)| cell) {
+                let mut shapes = Vec::new();
+                assert!(terra_world::interaction_shapes::visit_boxes(
+                    &world.chunks,
+                    &world.journal,
+                    &world.block_properties,
+                    cell,
+                    |shape| shapes.push(shape)
+                ));
                 assert!(
-                    overlaps_crusher_hoppers(above, 3, 0, &world),
-                    "full cube must not overwrite hoppers facing {facing}"
+                    shapes
+                        .iter()
+                        .all(|b| b.maximum[1] <= anchor[1] as f64 + 1.0)
                 );
                 assert!(
-                    overlaps_crusher_hoppers(above, 82, 0, &world),
-                    "lower slab must not overwrite hoppers facing {facing}"
+                    shapes
+                        .iter()
+                        .any(|b| (b.maximum[1] - anchor[1] as f64 - 1.0).abs() < 0.000001)
+                );
+                let above = [cell[0], cell[1] + 1, cell[2]];
+                assert!(
+                    !overlaps_crusher_hoppers(above, 3, 0, &world),
+                    "a full cube above the compact machine no longer overlaps old protruding hoppers facing {facing}"
+                );
+                assert!(
+                    !overlaps_crusher_hoppers(above, 82, 0, &world),
+                    "a lower slab above the compact machine is also clear facing {facing}"
                 );
                 assert!(
                     !overlaps_crusher_hoppers(above, 82, 4, &world),

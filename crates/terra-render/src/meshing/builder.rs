@@ -1,12 +1,14 @@
 use super::DetailLevel;
 use super::connectivity::connected_position;
 use crate::blocks::definitions::{BlockRenderKind, DetailDensity};
-use crate::blocks::{PrimitiveTemplate, TemplateSet};
+use crate::blocks::{PrimitiveTemplate, TemplateSet, projected_tangent};
 use bevy::prelude::*;
 use std::collections::BTreeMap;
 use terra_voxel::blocks::{SECTION_SIZE, SECTION_VOLUME};
 use terra_voxel::{SectionPos, meshing::BlockFace};
 
+#[path = "block_tints.rs"]
+mod block_tints;
 #[path = "condition_faces.rs"]
 pub(super) mod condition_faces;
 
@@ -17,6 +19,7 @@ pub(crate) struct RenderOptions {
     pub terrain: Option<terra_world::TerraGenerator>,
     pub exposure: Option<std::sync::Arc<crate::weather::surfaces::exposure::Exposure>>,
     pub conditions: terra_world::environment::SurfaceSnapshot,
+    pub tints: std::sync::Arc<std::collections::HashMap<[usize; 3], [u8; 3]>>,
 }
 
 #[derive(Default, Debug, PartialEq)]
@@ -27,6 +30,8 @@ pub(crate) struct MeshBatch {
     pub material: usize,
     pub positions: Vec<[f32; 3]>,
     pub normals: Vec<[f32; 3]>,
+    /// Empty or aligned to positions; retained for authored normal-mapped meshes.
+    pub tangents: Vec<[f32; 4]>,
     pub uvs: Vec<[f32; 2]>,
     /// Optional UV1 weights: rooted terrain wind, or prop growth timing/ratio.
     pub rooted_wind: Vec<[f32; 2]>,
@@ -37,16 +42,95 @@ pub(crate) struct MeshBatch {
     /// CPU-only source cells; micro geometry must not infer provenance from its surface.
     pub foliage_owners: Vec<FoliageOwner>,
     pub colors: Vec<[f32; 4]>,
+    /// Worker-prepared HDR tints. The main thread only moves this GPU payload.
+    pub half_colors: Option<bevy::mesh::VertexAttributeValues>,
     pub indices: Vec<u32>,
     pub compact_indices: Vec<u16>,
     pub packed_normals: Vec<[i8; 4]>,
+    pub packed_tangents: Vec<[i8; 4]>,
     pub packed_colors: Vec<[u8; 4]>,
 }
 
 impl MeshBatch {
+    /// Worker-only, after geometry/AO edits. PBR and rooted-fibre shaders read
+    /// normalized frames directly, including exact tangent handedness at +/-1.
+    pub(crate) fn pack_static_frame(&mut self) {
+        if self.staged.is_some()
+            || self.shadow_only
+            || (!self.rooted_wind.is_empty() && !rooted_frame_packing_enabled())
+        {
+            return;
+        }
+        if !self.tangents.is_empty() {
+            self.fill_tangents(self.positions.len());
+        }
+        if self.packed_normals.is_empty()
+            && self.normals.len() == self.positions.len()
+            && self.normals.iter().all(|normal| unit_direction(*normal))
+        {
+            self.packed_normals = std::mem::take(&mut self.normals)
+                .into_iter()
+                .map(crate::foliage::packing::normal)
+                .collect();
+            self.packed_normals.shrink_to_fit();
+        }
+        if self.packed_tangents.is_empty()
+            && self.tangents.len() == self.positions.len()
+            && self.tangents.iter().all(|tangent| {
+                unit_direction([tangent[0], tangent[1], tangent[2]])
+                    && tangent[3].is_finite()
+                    && (tangent[3].abs() - 1.0).abs() <= 0.001
+            })
+        {
+            self.packed_tangents = std::mem::take(&mut self.tangents)
+                .into_iter()
+                .map(|tangent| {
+                    let mut packed =
+                        crate::foliage::packing::normal([tangent[0], tangent[1], tangent[2]]);
+                    packed[3] = if tangent[3] < 0.0 { -127 } else { 127 };
+                    packed
+                })
+                .collect();
+            self.packed_tangents.shrink_to_fit();
+        }
+    }
+
+    pub(crate) fn append_tangents(&mut self, start: usize, values: impl Iterator<Item = [f32; 4]>) {
+        let mut values = values.peekable();
+        if self.tangents.is_empty() && values.peek().is_none() {
+            return;
+        }
+        self.fill_tangents(start);
+        self.tangents.extend(values);
+        self.fill_tangents(self.positions.len());
+    }
+
+    fn fill_tangents(&mut self, length: usize) {
+        for index in self.tangents.len()..length {
+            let normal = self
+                .normals
+                .get(index)
+                .copied()
+                .or_else(|| {
+                    self.packed_normals
+                        .get(index)
+                        .map(|normal| std::array::from_fn(|axis| f32::from(normal[axis]) / 127.0))
+                })
+                .unwrap_or([0.0, 1.0, 0.0]);
+            self.tangents.push(crate::blocks::tangent_frame(
+                Vec3::X,
+                Vec3::from_array(normal),
+                1.0,
+            ));
+        }
+    }
+
     /// Final worker step, after all geometry edits. Smaller section batches do
     /// not need four-byte indices in ready queues or uploaded GPU buffers.
     pub(crate) fn compact_indices(&mut self) {
+        if !self.tangents.is_empty() {
+            self.fill_tangents(self.positions.len());
+        }
         if self.indices.is_empty()
             || self.positions.len() > usize::from(u16::MAX) + 1
             || self
@@ -77,6 +161,27 @@ impl MeshBatch {
     }
 }
 
+fn unit_direction(direction: [f32; 3]) -> bool {
+    direction.iter().all(|value| value.is_finite())
+        && (Vec3::from_array(direction).length_squared() - 1.0).abs() <= 0.001
+}
+
+pub(super) fn static_frame_packing_enabled() -> bool {
+    static ENABLED: std::sync::LazyLock<bool> = std::sync::LazyLock::new(|| {
+        !(std::env::args().any(|argument| argument.starts_with("--smoke-test"))
+            && std::env::var("TERRA_PACKED_TERRAIN").is_ok_and(|value| value == "0"))
+    });
+    *ENABLED
+}
+
+fn rooted_frame_packing_enabled() -> bool {
+    static ENABLED: std::sync::LazyLock<bool> = std::sync::LazyLock::new(|| {
+        !(std::env::args().any(|argument| argument.starts_with("--smoke-test"))
+            && std::env::var("TERRA_PACKED_ROOTED").is_ok_and(|value| value == "0"))
+    });
+    *ENABLED
+}
+
 #[cfg(test)]
 #[path = "index_packing_tests.rs"]
 mod index_packing_tests;
@@ -86,6 +191,101 @@ pub(crate) struct FoliageOwner {
     pub vertices: std::ops::Range<usize>,
     pub cell: [u32; 3],
     pub material: u16,
+}
+
+#[derive(Default)]
+struct AuthoredFaceCache(BTreeMap<(u16, usize, u8), Vec<PrimitiveTemplate>>);
+
+fn coarse_authored(templates: &TemplateSet, material: u16) -> bool {
+    // Dispatch replaces only authored terrain with its validated cube fallback
+    // after micro-detail hysteresis. A nearby original remains CustomMesh.
+    templates.opaque_cube_lods.contains(&material)
+        && templates.cube_lods.contains_key(&material)
+        && templates
+            .blocks
+            .get(&material)
+            .is_some_and(|block| block.render_kind == BlockRenderKind::Cube)
+}
+
+impl AuthoredFaceCache {
+    const LIMIT: usize = 6 * 64;
+
+    fn append(
+        &mut self,
+        batches: &mut BTreeMap<usize, MeshBatch>,
+        material: u16,
+        block: &crate::blocks::BlockTemplate,
+        side: usize,
+        offset: Vec3,
+        mask: u8,
+    ) -> Result<(), String> {
+        let key = (material, side, mask);
+        if !self.0.contains_key(&key) {
+            if self.0.len() == Self::LIMIT {
+                for primitive in &block.faces[side] {
+                    append(
+                        batches,
+                        primitive,
+                        offset,
+                        Quat::IDENTITY,
+                        Some((mask, block.bevel_width)),
+                        None,
+                    )?;
+                }
+                return Ok(());
+            }
+            let prepared = block.faces[side]
+                .iter()
+                .map(|primitive| {
+                    let mut batch = MeshBatch::default();
+                    append_connected(
+                        &mut batch,
+                        primitive,
+                        Vec3::ZERO,
+                        mask,
+                        block.bevel_width,
+                        None,
+                    )?;
+                    Ok(PrimitiveTemplate {
+                        material: primitive.material,
+                        positions: batch.positions,
+                        normals: batch.normals,
+                        tangents: batch.tangents,
+                        uvs: batch.uvs,
+                        indices: batch.indices,
+                    })
+                })
+                .collect::<Result<Vec<_>, String>>()?;
+            self.0.insert(key, prepared);
+        }
+        for primitive in &self.0[&key] {
+            let batch = batches
+                .entry(primitive.material)
+                .or_insert_with(|| MeshBatch {
+                    material: primitive.material,
+                    ..default()
+                });
+            let start =
+                u32::try_from(batch.positions.len()).map_err(|_| "Section mesh index overflow")?;
+            batch.positions.extend(
+                primitive
+                    .positions
+                    .iter()
+                    .map(|&point| (Vec3::from_array(point) + offset).to_array()),
+            );
+            batch.normals.extend_from_slice(&primitive.normals);
+            batch.uvs.extend_from_slice(&primitive.uvs);
+            batch.append_tangents(start as usize, primitive.tangents.iter().copied());
+            for &index in &primitive.indices {
+                batch.indices.push(
+                    start
+                        .checked_add(index)
+                        .ok_or("Section mesh index overflow")?,
+                );
+            }
+        }
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -104,6 +304,7 @@ pub(crate) fn compose_section(
             detail_level: DetailLevel::Near,
             terrain: None,
             exposure: None,
+            tints: Default::default(),
             conditions: Default::default(),
         },
     )
@@ -141,6 +342,8 @@ pub(crate) fn compose_section_with_segments(
         .map(|&(cell, side, height)| ((cell.map(u32::from), usize::from(side)), height))
         .collect();
     let mut batches: BTreeMap<usize, MeshBatch> = BTreeMap::new();
+    // Only authored join poses are cached, and only for this worker composition.
+    let mut authored_faces = AuthoredFaceCache::default();
     let mut emitted_segments = [false; SECTION_VOLUME];
     // Partial cells remain visible through adjacent partial cells, even when
     // the cube mesher correctly finds no exposed full-cell interfaces.
@@ -207,7 +410,11 @@ pub(crate) fn compose_section_with_segments(
         trees: options
             .terrain
             .as_ref()
-            .filter(|_| faces.iter().any(|face| matches!(face.material, 6..=10)))
+            .filter(|_| {
+                faces
+                    .iter()
+                    .any(|face| matches!(face.material, 6..=10|36|132..=134|195))
+            })
             .map(|terrain| terrain.tree_appearance(origin)),
         origin,
     };
@@ -229,15 +436,22 @@ pub(crate) fn compose_section_with_segments(
     for &face in faces {
         if face.side == 3
             && matches!(face.material, 1 | 4 | 5)
-            && options.detail_level != DetailLevel::Near
+            && (options.detail_level != DetailLevel::Near
+                || coarse_authored(templates, face.material))
             && let Some(ground) = &tint.ground
         {
-            tree_faces.extend(super::tint_faces::split(face, ground));
+            tree_faces.extend(super::tint_faces::split(
+                face,
+                ground,
+                templates.cube_lods.contains_key(&face.material),
+            ));
         } else if tint.trees.is_some()
             && options.detail_level != DetailLevel::Near
             && matches!(face.material, 6..=10)
         {
             tree_faces.extend(tint.split(face));
+        } else if face.material == 103 && !options.tints.is_empty() {
+            tree_faces.extend(block_tints::split(face, &options.tints));
         } else {
             tree_faces.push(face);
         }
@@ -274,9 +488,16 @@ pub(crate) fn compose_section_with_segments(
             )?;
             continue;
         }
-        let block = base_block;
+        let block = if options.detail_level == DetailLevel::Near {
+            base_block
+        } else {
+            templates
+                .cube_lods
+                .get(&face.material)
+                .unwrap_or(base_block)
+        };
         if block.render_kind == BlockRenderKind::Cube
-            && matches!(face.material, 7..=9 | 132 | 133)
+            && matches!(face.material, 7..=9 | 132 | 133 | 195)
             && options.detail_level != DetailLevel::Far
             && templates.block_details.leaf_geometry_quality != terra_core::BlockDetailQuality::Low
         {
@@ -312,11 +533,7 @@ pub(crate) fn compose_section_with_segments(
                         } else {
                             DetailLevel::Middle
                         },
-                        (
-                            face.material,
-                            tint.tree(cell, face.material)
-                                == Some(terra_world::generation::TreeAppearance::Spruce),
-                        ),
+                        (face.material, tint.tree(cell, face.material)),
                     )?;
                     for (slot, start) in starts {
                         if let Some(batch) = batches.get_mut(&slot) {
@@ -335,7 +552,8 @@ pub(crate) fn compose_section_with_segments(
         }
         if block.render_kind == BlockRenderKind::Cube
             && (options.detail_level != DetailLevel::Near
-                || matches!(face.material, 7..=9 | 132 | 133)
+                || coarse_authored(templates, face.material)
+                || matches!(face.material, 7..=9 | 132 | 133 | 195)
                     && templates.block_details.leaf_geometry_quality
                         == terra_core::BlockDetailQuality::Low)
         {
@@ -346,7 +564,6 @@ pub(crate) fn compose_section_with_segments(
                 origin[1],
             );
             for part in split.as_deref().unwrap_or(std::slice::from_ref(face)) {
-                let block = base_block;
                 let starts = tint_starts(&batches, block, face.side);
                 append_greedy(&mut batches, *part, block)?;
                 tint_surface(
@@ -397,7 +614,6 @@ pub(crate) fn compose_section_with_segments(
             continue;
         }
         for cell in cells(*face) {
-            let block = base_block;
             let starts = tint_starts(&batches, block, face.side);
             let translation = Vec3::from_array(cell.map(|i| i as f32));
             let connection = (block.bevel_width > 0.0)
@@ -433,6 +649,18 @@ pub(crate) fn compose_section_with_segments(
                         batch.colors[start..].fill([patch.shade, patch.shade, patch.shade, 1.0]);
                     }
                 }
+            } else if block.render_kind == BlockRenderKind::CustomMesh
+                && templates.cube_lods.contains_key(&face.material)
+                && let Some((mask, _)) = connection
+            {
+                authored_faces.append(
+                    &mut batches,
+                    face.material,
+                    block,
+                    face.side,
+                    translation,
+                    mask,
+                )?;
             } else {
                 for primitive in &block.faces[face.side] {
                     append(
@@ -445,7 +673,9 @@ pub(crate) fn compose_section_with_segments(
                     )?;
                 }
             }
-            if block.render_kind == BlockRenderKind::Cube {
+            if block.render_kind == BlockRenderKind::Cube
+                || templates.cube_lods.contains_key(&face.material)
+            {
                 tint_surface(
                     &mut batches,
                     starts,
@@ -724,22 +954,52 @@ fn tint_surface(
             .as_ref()
             .is_some_and(|e| e.snow_exposed(cell, tint.origin[1]));
     let snow_sky_override = snow_sky && exposure == 0.0;
+    // Imprints cut the real surface even when the material is perfectly dry
+    // beneath a roof; UV1 selects the shared wet/imprint material, not wetness.
+    let imprint_surface = matches!(face.material, 4 | 5);
     let grass = templates
         .blocks
         .get(&1)
         .map(|block| block.face_materials[3]);
+    let authored = templates.cube_lods.contains_key(&face.material)
+        || templates.blocks.get(&face.material).is_some_and(|block| {
+            block
+                .face_materials
+                .iter()
+                .any(|&slot| templates.authored_terrain_material(slot))
+        });
     let tree_tint = tint.tree_tint(cell, face.material);
+    let placed_tint = if face.material == 103 {
+        options
+            .tints
+            .get(&cell.map(|v| v as usize))
+            .copied()
+            .map_or([1.0; 3], |rgb| {
+                let [r, g, b, _] = crate::dye_tint::rgb(rgb);
+                [r, g, b]
+            })
+    } else {
+        [1.0; 3]
+    };
     for (index, &(slot, start)) in starts.iter().enumerate() {
         if index == 1 && slot == starts[0].0 {
             continue;
         }
-        let is_grass = face.material == 1 && Some(slot) == grass;
+        let is_grass = face.material == 1
+            && if templates.cube_lods.contains_key(&1) {
+                face.side == 3
+            } else {
+                Some(slot) == grass
+            };
         let is_ground = is_grass || (face.side == 3 && matches!(face.material, 4 | 5));
         if (!is_ground || tint.ground.is_none())
             && condition == Default::default()
             && tree_tint == [1.0; 3]
+            && placed_tint == [1.0; 3]
             && exposure == 0.0
             && !snow_sky_override
+            && !imprint_surface
+            && !authored
         {
             continue;
         }
@@ -749,7 +1009,9 @@ fn tint_surface(
         if (condition.wetness > 0.003
             || condition.snow > 0.0
             || exposure != 0.0
-            || snow_sky_override)
+            || snow_sky_override
+            || imprint_surface
+            || authored)
             && batch.rooted_wind.is_empty()
         {
             batch.surface_water.resize(batch.positions.len(), [0.0; 2]);
@@ -773,7 +1035,9 @@ fn tint_surface(
         {
             let biome = if is_ground {
                 tint.ground.as_ref().map_or([1.0; 3], |t| {
-                    if cave_grass && is_grass {
+                    if authored && is_grass {
+                        t.authored_grass_at(*position)
+                    } else if cave_grass && is_grass {
                         t.cave_grass_at(*position)
                     } else {
                         t.at(*position, face.material)
@@ -783,7 +1047,7 @@ fn tint_surface(
                 [1.0; 3]
             };
             for axis in 0..3 {
-                color[axis] *= biome[axis] * factor[axis] * tree_tint[axis];
+                color[axis] *= biome[axis] * factor[axis] * tree_tint[axis] * placed_tint[axis];
             }
             if let Some(climate) = snow_climate {
                 color[3] = if snow_sky || options.exposure.is_none() && condition.snow > 0.0 {
@@ -804,6 +1068,10 @@ pub(crate) fn append_greedy(
     block: &crate::blocks::BlockTemplate,
 ) -> Result<(), String> {
     let material = block.face_materials[face.side];
+    let tangent = block.faces[face.side]
+        .iter()
+        .find_map(|p| p.tangents.first())
+        .copied();
     if let Some(cap) = block.side_cap.filter(|_| face.side / 2 != 1) {
         let vertical_u = face.u_axis == 1;
         let rows = if vertical_u { face.width } else { face.height };
@@ -829,6 +1097,7 @@ pub(crate) fn append_greedy(
                     } else {
                         height
                     },
+                    tangent,
                 )?;
             }
         }
@@ -841,6 +1110,7 @@ pub(crate) fn append_greedy(
         face.minimum.map(|v| v as f32),
         face.width as f32,
         face.height as f32,
+        tangent,
     )
 }
 
@@ -851,6 +1121,7 @@ fn append_rectangle(
     minimum: [f32; 3],
     width: f32,
     height: f32,
+    tangent: Option<[f32; 4]>,
 ) -> Result<(), String> {
     let batch = batches.entry(material).or_insert_with(|| MeshBatch {
         material,
@@ -876,7 +1147,7 @@ fn append_rectangle(
         .cross(Vec3::from_array(d) - Vec3::from_array(a));
     let start = u32::try_from(batch.positions.len()).map_err(|_| "Mesh index overflow")?;
     batch.positions.extend([a, b, c, d]);
-    if matches!(face.material, 7..=9 | 132 | 133) {
+    if matches!(face.material, 7..=9 | 132 | 133 | 195) {
         batch.foliage_owners.push(FoliageOwner {
             vertices: start as usize..batch.positions.len(),
             cell: face.minimum,
@@ -890,6 +1161,7 @@ fn append_rectangle(
         _ => (0, 1),
     };
     batch.uvs.extend([a, b, c, d].map(|p| [p[u], p[v]]));
+    batch.append_tangents(start as usize, tangent.into_iter().flat_map(|t| [t; 4]));
     let indices = if cross.dot(Vec3::from_array(normal)) > 0.0 {
         [0, 1, 2, 0, 2, 3]
     } else {
@@ -990,6 +1262,25 @@ fn append(
     } else {
         batch.uvs.extend_from_slice(&primitive.uvs);
     }
+    batch.append_tangents(
+        start as usize,
+        primitive
+            .tangents
+            .iter()
+            .enumerate()
+            .map(|(index, tangent)| {
+                let normal = rotation * Vec3::from_array(primitive.normals[index]);
+                if let Some(side) = cube_side {
+                    projected_tangent(normal, side)
+                } else {
+                    crate::blocks::tangent_frame(
+                        rotation * Vec3::from_array([tangent[0], tangent[1], tangent[2]]),
+                        normal,
+                        tangent[3],
+                    )
+                }
+            }),
+    );
     for triangle in primitive.indices.chunks_exact(3) {
         let indices = [triangle[0], triangle[1], triangle[2]].map(|i| start.checked_add(i));
         let [Some(a), Some(b), Some(c)] = indices else {
@@ -1008,10 +1299,11 @@ fn append_connected(
     bevel: f32,
     cube_side: Option<usize>,
 ) -> Result<(), String> {
+    let has_tangents = !primitive.tangents.is_empty() || !batch.tangents.is_empty();
     // Local six-vertex indexing shares each quad's identical corners without
     // a per-block heap/hash table. Hard normals and UV seams remain distinct.
     for pair in primitive.indices.chunks(6) {
-        let mut keys = [[0_u32; 8]; 6];
+        let mut keys = [[0_u32; 12]; 6];
         let mut count = 0;
         let base =
             u32::try_from(batch.positions.len()).map_err(|_| "Section mesh index overflow")?;
@@ -1028,9 +1320,10 @@ fn append_connected(
             if normal.length_squared() < 1e-12 {
                 continue;
             }
-            let normal = normal.normalize().to_array();
-            for (point, index) in points.into_iter().zip(source) {
-                let uv = if let Some(side) = cube_side {
+            let normal = normal.normalize();
+            let uvs = std::array::from_fn(|corner| {
+                let point = points[corner];
+                if let Some(side) = cube_side {
                     let (u, v) = match side / 2 {
                         0 => (2, 1),
                         1 => (0, 2),
@@ -1038,11 +1331,20 @@ fn append_connected(
                     };
                     [point[u], point[v]]
                 } else {
-                    primitive.uvs[index as usize]
-                };
+                    primitive.uvs[source[corner] as usize]
+                }
+            });
+            let tangent = if has_tangents {
+                triangle_tangent(points, uvs, normal)
+            } else {
+                [0.0; 4]
+            };
+            let normal = normal.to_array();
+            for (point, uv) in points.into_iter().zip(uvs) {
                 let p = point.to_array();
                 let key = [
-                    p[0], p[1], p[2], normal[0], normal[1], normal[2], uv[0], uv[1],
+                    p[0], p[1], p[2], normal[0], normal[1], normal[2], uv[0], uv[1], tangent[0],
+                    tangent[1], tangent[2], tangent[3],
                 ]
                 .map(f32::to_bits);
                 let existing = keys[..count].iter().position(|old| *old == key);
@@ -1051,6 +1353,9 @@ fn append_connected(
                     batch.positions.push(p);
                     batch.normals.push(normal);
                     batch.uvs.push(uv);
+                    if has_tangents {
+                        batch.append_tangents(batch.positions.len() - 1, std::iter::once(tangent));
+                    }
                     count += 1;
                     count - 1
                 });
@@ -1064,12 +1369,27 @@ fn append_connected(
     Ok(())
 }
 
+fn triangle_tangent(points: [Vec3; 3], uvs: [[f32; 2]; 3], normal: Vec3) -> [f32; 4] {
+    let edge_u = points[1] - points[0];
+    let edge_v = points[2] - points[0];
+    let uv_u = Vec2::from_array(uvs[1]) - Vec2::from_array(uvs[0]);
+    let uv_v = Vec2::from_array(uvs[2]) - Vec2::from_array(uvs[0]);
+    let determinant = uv_u.perp_dot(uv_v);
+    if determinant.abs() < 1.0e-12 {
+        return crate::blocks::tangent_frame(Vec3::X, normal, 1.0);
+    }
+    let tangent = (edge_u * uv_v.y - edge_v * uv_u.y) / determinant;
+    let bitangent = (edge_v * uv_u.x - edge_u * uv_v.x) / determinant;
+    crate::blocks::tangent_frame(tangent, normal, normal.cross(tangent).dot(bitangent))
+}
+
 #[cfg(test)]
 mod indexing_tests {
     use super::*;
     #[test]
     fn connected_quads_share_vertices_without_changing_triangles_or_hard_edges() {
         let mut primitive = PrimitiveTemplate {
+            tangents: Vec::new(),
             material: 0,
             positions: vec![
                 [0.0, 1.0, 0.0],
@@ -1113,3 +1433,11 @@ mod indexing_tests {
         );
     }
 }
+
+#[cfg(test)]
+#[path = "tangent_tests.rs"]
+mod tangent_tests;
+
+#[cfg(test)]
+#[path = "authored_cache_tests.rs"]
+mod authored_cache_tests;

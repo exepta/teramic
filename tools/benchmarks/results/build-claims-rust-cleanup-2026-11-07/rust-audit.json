@@ -1,0 +1,11 @@
+{
+  "rust_files": 1104,
+  "rustdoc_lines": 1780,
+  "language_candidates": [],
+  "notes": [
+    "All existing Rustdoc blocks reviewed in the assigned scopes; English documentation was already present.",
+    "User-visible text, serialized fields, asset IDs and public API names are preserved.",
+    "Descriptive local names replace ambiguous long-lived aliases; mathematical coordinates and indices retain conventional names.",
+    "Archived before/after source snapshots retain their historical identifiers."
+  ]
+}

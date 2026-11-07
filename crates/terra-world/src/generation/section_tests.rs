@@ -31,6 +31,8 @@ fn section_generation_matches_global_blocks_in_negative_regions_and_any_order() 
 #[test]
 fn trees_and_subsurface_layers_are_deterministic_across_sections() {
     let terrain = TerraGenerator::new(WorldConfig {
+        landscape_revision: 3,
+        sea_level: 8.0,
         base_height: 12.0,
         hill_amplitude: 0.0,
         mountain_amplitude: 0.0,

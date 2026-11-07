@@ -1,0 +1,557 @@
+{
+  "phase": 185,
+  "date": "2026-11-03",
+  "timezone": "Europe/Berlin",
+  "workspace_tests_before_final_coordinate_regression": {
+    "passed": 3745,
+    "failed": 0,
+    "ignored": 8
+  },
+  "final_ui_tests": {
+    "passed": 448,
+    "failed": 0,
+    "ignored": 0
+  },
+  "checks": {
+    "workspace_build": 0,
+    "all_targets_clippy_deny_warnings": 0,
+    "format": 0,
+    "diff_check": 0,
+    "all_four_current_css_parsers": 0
+  },
+  "native": {
+    "inventory_recipe_exit_code": 0,
+    "inventory_recipe_captures": 25,
+    "surfaces_exit_code": 0,
+    "surfaces_captures": 28,
+    "menus_exit_code": 0,
+    "menus_captures": 15,
+    "narrow_recipes_exit_code": 0,
+    "narrow_recipes_captures": 4,
+    "total_captures": 72,
+    "os_input": true,
+    "square_slots": true,
+    "unfiltered_tunnel_has_no_filter": true,
+    "linked_workbench_has_nine_crafting_cells": true,
+    "f1_borderless": true,
+    "f1_matches_confirmed_world_position": true,
+    "inventory_baseline_preserved": true,
+    "existing_saves_opened": false,
+    "stations": "Validated representative client snapshots, not throughput tests.",
+    "world_loading": "Representative view data, no generation run claimed.",
+    "narrow_scroll": "Native wheel required to move overflowing documents; fitting documents remain bounded."
+  },
+  "imagegen": {
+    "mode": "built-in image_gen",
+    "asset": "src-ui/assets/furnace-recipe-185.png",
+    "prompt_set": "imagegen-prompts.txt",
+    "alpha_preserved": true
+  },
+  "source_hashes": "source-sha256.json",
+  "captures": {
+    "catalog-page-two.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "513602f9dc52881bdf8f345d8453e31b7052407173b8707d1e90151df9143c1e"
+    },
+    "catalog-search.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "5cfc1dd1fa856759d08c58d60a7683bdee8fd928bf9a522ae4a313d2b14800fd"
+    },
+    "cauldron-recipe-compact.png": {
+      "size": [
+        1025,
+        641
+      ],
+      "sha256": "46c8500b9064148603af2809da90ba7442e03abdee2c7932f64c508abf9882d4"
+    },
+    "cauldron-recipe-wide.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "ade83858e67182542bc27284ac315093def042bc73ce1a5e81c1700cef8d6d3a"
+    },
+    "chest-birch-alternative.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "561a39f6bcf71c4d256611ab30765dc48de634a11d2e1d28d9ac722bf9705365"
+    },
+    "chest-birch.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "0bdc8b4cdf1c91ef6a55502dd4cb35a26d962687eecb944428cd28b520e417d7"
+    },
+    "chest-cherry.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "6052215a54b54412bae4827775dbb93e3eac8182a5b8784bd4946f9cede6742f"
+    },
+    "chest-oak.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "8954d732e1a6d80462d456828054b87a371e5dd1e60e201cb48bc4e06257c29f"
+    },
+    "chest-spruce.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "4e7ce37d3e21d94cfd56201816eb2050abaedd78dacc7413874b7d93cfbc417a"
+    },
+    "crafting-recipe-reference-compact.png": {
+      "size": [
+        1025,
+        641
+      ],
+      "sha256": "f1682a9f2ab4333f09d273bd958af74f6c66eec350426f8a74105416b8da5b8c"
+    },
+    "crafting-recipe-reference-narrow.png": {
+      "size": [
+        768,
+        641
+      ],
+      "sha256": "3a713703f89c9e3e4562fa43808ee518137a73a28e72cae331623d5894ff56aa"
+    },
+    "crafting-recipe-reference-wide.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "85f69c3039f8c93033dc85b5113531db56e5f465f51ec1344ee78499f3edf38f"
+    },
+    "crafting-recipe-scrolled-narrow.png": {
+      "size": [
+        768,
+        641
+      ],
+      "sha256": "fa4d883d6fa3c2246d857b9f54b88726630b7b2cd735a0cacc515029e99ec19d"
+    },
+    "furnace-alternative-fuels.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "bf26371ca47fe60ba659f8f82b3e3c2e9c7b816b083d5734ee51fc2ccf158f26"
+    },
+    "furnace-recipe-reference-compact.png": {
+      "size": [
+        1025,
+        641
+      ],
+      "sha256": "9ef49b0f13fbb110ed6c79a439814d551e3f64cee569ba38a42dbb0dc9af3429"
+    },
+    "furnace-recipe-reference-narrow.png": {
+      "size": [
+        768,
+        641
+      ],
+      "sha256": "ddb49923066b7df27bc526d70271b8c8436747c0d3dbadef9d52c07c147950ac"
+    },
+    "furnace-recipe-reference-wide.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "49bef587c9c430633fbe6e53eabacd235f6d9d805465b62b99a7e6ae7ff0b84c"
+    },
+    "furnace-recipe-scrolled-narrow.png": {
+      "size": [
+        768,
+        641
+      ],
+      "sha256": "71b601841a2f342bbb2130a326af085f28ddbd6649fdb56019729c73de6115fc"
+    },
+    "furnace-selected-fuel.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "d41c35d933f8e2f7139f26262f1ec68721f6890a4a634e994f0f29d2b82de8ff"
+    },
+    "hotbar-compact.png": {
+      "size": [
+        1025,
+        641
+      ],
+      "sha256": "7be046e9d5e583698b1466d267bf484ec2e40065d92d4828771131d13bb6a929"
+    },
+    "hotbar-selected-wide.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "805efa1a7d785ac4bc7214401c87c420998f45426cd03410896b79745479e771"
+    },
+    "hotbar-wide.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "643636f33c2e82e760f8a4a8b14900963cd82d5dc3bb0de5602902b1fc0abb28"
+    },
+    "inventory-left-category-tabs.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "1cbf389ffb262668ad016b980d93fec8030a85a34422bec89d52943ef9815bd2"
+    },
+    "multiplayer-add-dialog.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "35a96291ce10838cc29a324b921ebe856af282dcc179f9d5fefff7be0493044b"
+    },
+    "multiplayer-compact.png": {
+      "size": [
+        1025,
+        641
+      ],
+      "sha256": "3e5df05b4095fd3a25265d3af1190fc3cf5629f2fbcf6d5b03664c265d231e3e"
+    },
+    "multiplayer-wide.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "6f5383f3077fe61aefa8b94d0768de8cd2f6c9007e8d66e3f821c1819331b1f7"
+    },
+    "pause-menu-compact.png": {
+      "size": [
+        1025,
+        641
+      ],
+      "sha256": "f2ea756787dcf6cfdf138e5775e2c1accb4d521ea14c55b030beb47604a235df"
+    },
+    "pause-menu-wide.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "09ff453f4889bc25eaf884cd25fe768e1f317b1e49aa268a925572ee2741041d"
+    },
+    "player-inventory-catalog-collapsed.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "b2397bf43796dae13dbfdb0b3379dea7f216c3b2851826bf06d31a854930e451"
+    },
+    "player-inventory-reference-compact.png": {
+      "size": [
+        1025,
+        641
+      ],
+      "sha256": "7fa13e9cb354699bf145b3d2d0ac08c2b068023f290f29d6678c80f7d6874e5e"
+    },
+    "player-inventory-reference-wide.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "1af8472dc0a3fa54e54d53e00c6b09c51755f7c283b124ad647d0d9fccfdaac7"
+    },
+    "settings-compact.png": {
+      "size": [
+        1025,
+        641
+      ],
+      "sha256": "71db2d0b42d9df4ed28a131fd3251604e23b55b58182b67089359fc94e2286f8"
+    },
+    "settings-controls-wide.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "b90bc74e2e53bc44f94d64cec6376d56d807ef9a03cbaffd5ea4b26da527a393"
+    },
+    "settings-paused-wide.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "cc630c8cad12c9ee2a9e3db5cc4e8259744254718ccc86f48c2e6e93c8712a7e"
+    },
+    "settings-wide.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "984e02e9ae6fe30a02c154b150a1356ae9012345826352889200ff278d9fd45e"
+    },
+    "singleplayer-button-hover.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "dadb38f7db05bbe7520f64b8a50aa729491d772d7b1b0b16185fcc5c38808a95"
+    },
+    "singleplayer-compact.png": {
+      "size": [
+        1025,
+        641
+      ],
+      "sha256": "dceba2b447d92741236eb79a6506ce3efa594c5d1824fc46d0cef7fa28263351"
+    },
+    "singleplayer-create-dialog.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "07dd881585ea0ad60a55707d74f1bd15cb455715f8df3226470040d563bb41bd"
+    },
+    "singleplayer-delete-dialog.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "208bce64942e98ccde959267da1051ac1f520065baea8711464e04c52a460229"
+    },
+    "singleplayer-wide.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "90cf517bba502a6194e708f11a2dc1eb51fca3088bd9b9bc94fbe737ecede222"
+    },
+    "start-menu-compact.png": {
+      "size": [
+        1025,
+        641
+      ],
+      "sha256": "8803666fd96ad3aca42a3d3e9407d462c392cc18d2af0ae9b522408df64a18b9"
+    },
+    "start-menu-wide.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "a49ffdb7626e9674d67418ca0c853699cb08b64fb467102c7cc5bf46535053a6"
+    },
+    "surface-campfire-compact.png": {
+      "size": [
+        1025,
+        641
+      ],
+      "sha256": "5b72c3fe660f1546bb61c1bc94f742f0e4a5422494078fd8736e613aa85e4176"
+    },
+    "surface-campfire-wide.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "787727bcaf029116c6f19e2889f28ac4078e261c5191bbfbf6db2ab8f7fac2d9"
+    },
+    "surface-cauldron-compact.png": {
+      "size": [
+        1025,
+        641
+      ],
+      "sha256": "2bd29d14c0937e1509294ebf83ee7417c8a58f2c35cf16dca45147db0ae7ff16"
+    },
+    "surface-cauldron-wide.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "7998d6733f953d6a57d2ca2a01e6a5c9b69c66cd76e257f31530ae45b4eaaafe"
+    },
+    "surface-chest-compact.png": {
+      "size": [
+        1025,
+        641
+      ],
+      "sha256": "e21aff8ec2d6cd84f68606c05f6ca9d1ec1c300674e0738cd769a7162ddbdbfc"
+    },
+    "surface-chest-wide.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "f71271536c07c0fdcacb7fa5e19851daf16ee76f5da463f6033b417759274af3"
+    },
+    "surface-crusher-compact.png": {
+      "size": [
+        1025,
+        641
+      ],
+      "sha256": "f136fad7b2e9bd95b09470aa7fc8f47c8ef261fe3e667ddcb7cf94d919905bf9"
+    },
+    "surface-crusher-wide.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "bc2d18dd384d2c2263bb48621dfa5375137eb6766aa229eb44ea37a01343da87"
+    },
+    "surface-debug-compact.png": {
+      "size": [
+        1025,
+        641
+      ],
+      "sha256": "a5e132e99c982e0386b6d4d4a77037967474673fe088ae46e09658e747c14d3c"
+    },
+    "surface-debug-wide.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "0702a57fe45c355408bfa8c3b8b56ef6013ee894060251fa8b5ab6f4eb4fe757"
+    },
+    "surface-distributor-compact.png": {
+      "size": [
+        1025,
+        641
+      ],
+      "sha256": "2c47baf4ae04c4e0fce42aaaec3f615662605f25ff77cc93dc25c655f6c254d3"
+    },
+    "surface-distributor-wide.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "7b8e770bfd35e66e9b925113d7ec2888d1db65638193d167872167f6d5f6a998"
+    },
+    "surface-double-chest-compact.png": {
+      "size": [
+        1025,
+        641
+      ],
+      "sha256": "857ff9675dedd9b9779f6aa80d9b178c00e4dbe48a8dfc9b478f07fef05340ba"
+    },
+    "surface-double-chest-wide.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "614619740c9e776ff68d2269776cb471b96822015f7fac598621350303e1157a"
+    },
+    "surface-filtered-funnel-compact.png": {
+      "size": [
+        1025,
+        641
+      ],
+      "sha256": "ae06f786cf6af9cea7fdfd7acb2201c084b62208d1f851547038833f5c2336d1"
+    },
+    "surface-filtered-funnel-wide.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "27e179cd9aa25ea30d6ed4bbdc73b722552b6c67071c8906f59829dd1661f325"
+    },
+    "surface-filtered-tunnel-compact.png": {
+      "size": [
+        1025,
+        641
+      ],
+      "sha256": "feb810a15dc438e6ee09f98f2a6048ef54d01bf3410f5ab797b61f3fab867f7c"
+    },
+    "surface-filtered-tunnel-wide.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "545e61162507c61664563dec3408521d61b5f5ba616f5dc0f0d6f5e0dfd8fcce"
+    },
+    "surface-furnace-compact.png": {
+      "size": [
+        1025,
+        641
+      ],
+      "sha256": "c895d4f7f1b3853408f029583ce753f515bc2aee15cea71f81321532fd99aef1"
+    },
+    "surface-furnace-wide.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "bf8fee436e6f674b532b049321ed2698f11f3cc0d86815298432c1a2e3e386d9"
+    },
+    "surface-mixer-compact.png": {
+      "size": [
+        1025,
+        641
+      ],
+      "sha256": "198d4b0802552fb2973d9241a8ddffebd05c0a29dff603edcaeedc506a4e5e82"
+    },
+    "surface-mixer-wide.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "ebcbab372cf53370002e29bf29407fb6c535dd8452cc8b9eb9e15f362526f664"
+    },
+    "surface-target-compact.png": {
+      "size": [
+        1025,
+        641
+      ],
+      "sha256": "f7e4cd465dddac96c2172822e61cd49720ea16d8eee126459087dcec3f7ed2d5"
+    },
+    "surface-target-wide.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "21b3c3f09c9383f75755df44ffae4530926f62cb7769159bdd380753a9866cd5"
+    },
+    "surface-tunnel-compact.png": {
+      "size": [
+        1025,
+        641
+      ],
+      "sha256": "a77bf03e71041f20170e51144f6c561def11f8c5267b8ad3ad04895bec05edf4"
+    },
+    "surface-tunnel-wide.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "ea2030d88cf1188c287a297cb00eef394fda2cedebea8528379c1dd74e72c228"
+    },
+    "surface-workbench-linked-compact.png": {
+      "size": [
+        1025,
+        641
+      ],
+      "sha256": "1ab593b3ef1f1b1a69cfc6031a6c8cc4ca47c4131dcb7a10726699e6a1106145"
+    },
+    "surface-workbench-linked-wide.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "599fd705e6d6a83768c60f08658c7653b6cd925f3fa28b4d5e72c3e1a8643d84"
+    },
+    "world-loading-compact.png": {
+      "size": [
+        1025,
+        641
+      ],
+      "sha256": "d376ccb5fec914311950c5857f3d9ee3ebf68036ce7fb8dfaf513fe4eae483d9"
+    },
+    "world-loading-wide.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "54ac95c43b4a30591b424b9762b2c472a690830ff5b6011da385029c9e726d65"
+    }
+  }
+}

@@ -7,8 +7,14 @@ use bevy::{
     prelude::*,
     ui::UiGlobalTransform,
 };
+use std::collections::BTreeMap;
+use terra_core::kingdom::{ClaimActor, ClaimKind, DiplomaticTarget, claim_chunk};
 use terra_core::{GameAction, GameplayConfig, GameplayInput};
 use terra_network::client::ClientSession;
+use terra_network::{
+    client::KingdomRequest,
+    protocol::kingdom::{KingdomAction, KingdomOutcome},
+};
 use terra_storage::{
     maps::MapIdentity,
     waypoints::{Waypoint, WaypointBook, WaypointIcon},
@@ -28,6 +34,15 @@ pub(crate) struct FullMapState {
     pub three_dimensional: bool,
     pub grid: bool,
     pub mobs: bool,
+    pub diplomacy: bool,
+    pub diplomacy_chunk: Option<[i64; 2]>,
+    diplomacy_pending: Option<(u64, f64)>,
+    diplomacy_status: String,
+    pub(super) claim_draft: BTreeMap<[i64; 2], ClaimKind>,
+    claim_mode: Option<ClaimKind>,
+    claim_settlement: Option<terra_core::kingdom::KingdomId>,
+    claim_rules: terra_core::kingdom::KingdomRules,
+    claim_rectangle: Option<([i64; 2], [i64; 2])>,
     automatic_layer: MapLayer,
     identity: Option<MapIdentity>,
     loaded: bool,
@@ -54,6 +69,15 @@ impl Default for FullMapState {
             three_dimensional: false,
             grid: false,
             mobs: true,
+            diplomacy: false,
+            diplomacy_chunk: None,
+            diplomacy_pending: None,
+            diplomacy_status: String::new(),
+            claim_draft: BTreeMap::new(),
+            claim_mode: None,
+            claim_settlement: None,
+            claim_rules: Default::default(),
+            claim_rectangle: None,
             automatic_layer: MapLayer::Surface,
             identity: None,
             loaded: false,
@@ -70,6 +94,17 @@ impl Default for FullMapState {
 }
 
 impl FullMapState {
+    pub(super) fn preview_claims(&self) -> BTreeMap<[i64; 2], ClaimKind> {
+        let mut draft = self.claim_draft.clone();
+        if let (Some((start, end)), Some(kind)) = (self.claim_rectangle, self.claim_mode)
+            && let Some(cells) = rectangle_cells(start, end)
+        {
+            for p in cells {
+                draft.insert(p, kind);
+            }
+        }
+        draft
+    }
     pub fn blocks_input(&self) -> bool {
         self.open || self.editor.is_some() || self.deleting
     }
@@ -118,6 +153,7 @@ struct Editor {
     id: Option<u64>,
     name: String,
     coordinates: [String; 3],
+    original_position: [f64; 3],
     cave_level: Option<i16>,
     color: [u8; 3],
     icon: WaypointIcon,
@@ -129,13 +165,19 @@ impl Editor {
         Self {
             id: Some(point.id),
             name: point.name.clone(),
-            coordinates: point.position.map(|v| v.to_string()),
+            coordinates: point.position.map(coordinate_label),
+            original_position: point.position,
             cave_level: point.cave_level,
             color: point.color,
             icon: point.icon.clone(),
             show_in_world: point.show_in_world,
         }
     }
+}
+
+fn coordinate_label(value: f64) -> String {
+    let value = if value.abs() < 0.005 { 0.0 } else { value };
+    format!("{value:.2}").replace('.', ",")
 }
 
 #[derive(Clone, serde::Serialize, PartialEq)]
@@ -157,6 +199,17 @@ pub struct WaypointIconChoice {
     pub title: String,
     pub source: String,
     pub selected: bool,
+}
+
+#[derive(Clone, serde::Serialize, PartialEq)]
+pub struct DiplomacyLegend {
+    pub id: String,
+    pub name: String,
+    pub detail: String,
+    pub color: String,
+    pub icon_source: String,
+    pub relation: String,
+    pub relation_label: String,
 }
 
 #[html_shared]
@@ -208,6 +261,26 @@ pub struct FullMapView {
     pub editor_style: String,
     pub picker_style: String,
     pub compact: bool,
+    pub diplomacy: bool,
+    pub diplomacy_chunk: String,
+    pub diplomacy_name: String,
+    pub diplomacy_kind: String,
+    pub diplomacy_actor: String,
+    pub diplomacy_owner: String,
+    pub diplomacy_relation: String,
+    pub diplomacy_relation_key: String,
+    pub diplomacy_color: String,
+    pub diplomacy_status: String,
+    pub diplomacy_limits: String,
+    pub diplomacy_pending: bool,
+    pub diplomacy_can_claim: bool,
+    pub diplomacy_can_release: bool,
+    pub diplomacy_legends: Vec<DiplomacyLegend>,
+    pub claim_build_mode: bool,
+    pub claim_territory_mode: bool,
+    pub claim_draft_count: String,
+    pub bot_realms: Vec<DiplomacyLegend>,
+    pub claim_can_apply: bool,
 }
 
 #[derive(Message, Debug)]
@@ -221,6 +294,7 @@ pub(super) fn install(app: &mut App) {
         .init_resource::<super::LayerProbe>()
         .init_resource::<FullMapView>()
         .add_message::<FullMapAction>()
+        .add_message::<KingdomRequest>()
         .add_systems(
             Update,
             update
@@ -231,15 +305,17 @@ pub(super) fn install(app: &mut App) {
 
 #[derive(SystemParam)]
 struct Context<'w, 's> {
-    session: Option<Res<'w, ClientSession>>,
+    session: Option<ResMut<'w, ClientSession>>,
     menu: Option<Res<'w, crate::menu::MenuState>>,
     inventory: Option<Res<'w, crate::inventory::InventoryState>>,
     chat: Option<Res<'w, crate::chat::ChatState>>,
     pets: Option<Res<'w, crate::pets::PetMenuState>>,
+    kingdom: Option<Res<'w, crate::kingdom::KingdomMenuState>>,
     settings: Res<'w, GameplayConfig>,
     atlas: Res<'w, Atlas>,
     config: Option<Res<'w, terra_core::GameConfig>>,
     chunks: Option<Res<'w, ChunkStore>>,
+    settlements: Option<Res<'w, crate::settlement_map::SettlementMap>>,
     journal: Option<Res<'w, terra_world::edits::EditJournal>>,
     time: Option<Res<'w, Time>>,
     probe: ResMut<'w, super::LayerProbe>,
@@ -258,6 +334,7 @@ fn update(
     mut view: ResMut<FullMapView>,
     mut capture: MessageWriter<terra_player::CaptureRequest>,
     mut blocked: ResMut<terra_player::PlayerInputBlock>,
+    mut kingdoms: MessageWriter<KingdomRequest>,
     mut focus: Option<ResMut<InputFocus>>,
     nodes: Query<(&ElementId, &ComputedNode, &UiGlobalTransform)>,
 ) {
@@ -284,6 +361,7 @@ fn update(
         .as_ref()
         .is_some_and(|s| s.ready && !s.teleporting && !s.dead());
     let occupied = context.inventory.as_ref().is_some_and(|s| s.blocks_input())
+        || context.kingdom.as_ref().is_some_and(|k| k.blocks_input())
         || context.chat.as_ref().is_some_and(|s| s.blocks_input())
         || context.pets.as_ref().is_some_and(|p| p.blocks_input());
     let pose = context.session.as_ref().and_then(|s| s.confirmed_state());
@@ -318,6 +396,11 @@ fn update(
         }
     };
     state.enforce_layer(automatic_layer);
+    poll_diplomacy(
+        &mut state,
+        context.session.as_deref(),
+        context.time.as_ref().map_or(0.0, |t| t.elapsed_secs_f64()),
+    );
     if !ready || !playing {
         state.open = false;
         state.drag = None;
@@ -361,6 +444,9 @@ fn update(
             capture.write(terra_player::CaptureRequest(true));
         }
     }
+    if !state.open {
+        state.claim_rectangle = None;
+    }
     if !state.blocks_input() {
         actions.clear();
         scroll.clear();
@@ -384,6 +470,20 @@ fn update(
             continue;
         }
         let result = handle_action(&mut state, action, player, &context.atlas);
+        if let FullMapAction::Command { control, .. } = action {
+            let now = context.time.as_ref().map_or(0.0, |t| t.elapsed_secs_f64());
+            if let Some(config) = context.config.as_deref() {
+                state.claim_rules = config.world.kingdom_rules;
+            }
+            request_claim(
+                &mut state,
+                control,
+                player,
+                context.session.as_deref_mut(),
+                &mut kingdoms,
+                now,
+            );
+        }
         state.enforce_layer(automatic_layer);
         if let Err(error) = result {
             state.error = error;
@@ -425,8 +525,15 @@ fn update(
         .map(|(pointer, (size, inverse))| {
             inverse.transform_point2(pointer) / size + Vec2::splat(0.5)
         });
-    let inside =
-        pointer.is_some_and(|uv| (0.0..=1.0).contains(&uv.x) && (0.0..=1.0).contains(&uv.y));
+    let over_sidebar = screen_pointer.is_some_and(|point| {
+        nodes.iter().any(|(id, node, transform)| {
+            matches!(id.0.as_str(), "full-map-diplomacy" | "full-map-sidebar")
+                && !node.is_empty()
+                && node.contains_point(*transform, point)
+        })
+    });
+    let inside = !over_sidebar
+        && pointer.is_some_and(|uv| (0.0..=1.0).contains(&uv.x) && (0.0..=1.0).contains(&uv.y));
     let editing = state.editor.is_some() || state.deleting;
     let aspect = viewport.map_or(1.0, |(size, _)| f64::from(size.y / size.x.max(1.0)));
     let projection_tilt = tilt / aspect;
@@ -447,18 +554,49 @@ fn update(
                 && let (Some(pointer), Some((size, inverse))) = (screen_pointer, viewport)
             {
                 state.cursor = Some(position);
-                state.center = Some(center);
-                state.drag = Some(Drag {
-                    pointer,
-                    center,
-                    inverse,
-                    meters_per_pixel: Vec2::new(
-                        state.span as f32,
-                        state.span as f32 / projection_tilt as f32,
-                    ) / size,
-                });
+                if state.diplomacy {
+                    state.diplomacy_chunk = Some(claim_chunk(position.map(|v| v.floor() as i64)));
+                }
+                if state.diplomacy
+                    && state.claim_mode.is_some()
+                    && state.diplomacy_pending.is_none()
+                {
+                    let chunk = claim_chunk(position.map(|v| v.floor() as i64));
+                    state.claim_rectangle = Some((chunk, chunk));
+                } else {
+                    state.center = Some(center);
+                    state.drag = Some(Drag {
+                        pointer,
+                        center,
+                        inverse,
+                        meters_per_pixel: Vec2::new(
+                            state.span as f32,
+                            state.span as f32 / projection_tilt as f32,
+                        ) / size,
+                    });
+                }
             }
-            if mouse.just_pressed(MouseButton::Right) && state.loaded {
+            if (mouse.pressed(MouseButton::Left) || mouse.just_released(MouseButton::Left))
+                && let Some((start, _)) = state.claim_rectangle
+            {
+                let end = claim_chunk(position.map(|v| v.floor() as i64));
+                state.claim_rectangle = Some((start, end));
+            }
+            if state.diplomacy
+                && state.diplomacy_pending.is_none()
+                && (mouse.pressed(MouseButton::Right) || mouse.just_released(MouseButton::Right))
+            {
+                let chunk = claim_chunk(position.map(|v| v.floor() as i64));
+                state.claim_rectangle = None;
+                state.drag = None;
+                state.diplomacy_chunk = Some(chunk);
+                if state.claim_draft.remove(&chunk).is_some() {
+                    state.diplomacy_status =
+                        "Chunk removed from the preview. Apply confirms the remaining selection."
+                            .into();
+                }
+            }
+            if mouse.just_pressed(MouseButton::Right) && state.loaded && !state.diplomacy {
                 begin_editor(&mut state, position, layer);
             }
             let wheel: f32 = scroll
@@ -477,6 +615,7 @@ fn update(
                     projection_tilt,
                 );
                 state.drag = None;
+                state.claim_rectangle = None;
             }
         } else {
             scroll.clear();
@@ -489,7 +628,15 @@ fn update(
     } else {
         scroll.clear();
     }
+    if !state.open {
+        state.claim_rectangle = None;
+    }
     if !mouse.pressed(MouseButton::Left) || !window.focused {
+        if let Some((start, end)) = state.claim_rectangle.take()
+            && window.focused
+        {
+            stage_rectangle(&mut state, start, end);
+        }
         state.drag = None;
     }
     let canvas = window.size() / context.scale.as_ref().map_or(1.0, |s| s.0).max(0.1);
@@ -515,6 +662,16 @@ fn update(
         .unwrap_or_else(|| "Unexplored".into());
     next.markers.clone_from(&view.markers);
     next.peers.clone_from(&view.peers);
+    if let Some(config) = context.config.as_deref() {
+        state.claim_rules = config.world.kingdom_rules;
+    }
+    diplomacy_view(
+        &mut next,
+        &state,
+        context.session.as_deref(),
+        context.settlements.as_deref(),
+        player,
+    );
     if *view != next {
         *view = next;
     }
@@ -547,8 +704,9 @@ fn pick_position(
         .relief_base
         .map_or(fallback as i64, |(_, level)| level);
     let pixel = (uv * 640.0).to_array();
-    if projection.is_three_dimensional() {
+    if projection.relief_enabled() {
         // Front-to-back orthographic ray through the explored heightfield only.
+        // Both relief views shift elevated terrain away from the flat map plane.
         // This also selects visible cliff faces instead of the plane behind them.
         for y in (-128..=356).rev() {
             let xz = projection.world_at_height(pixel, y as f32, level);
@@ -592,7 +750,8 @@ fn begin_editor(state: &mut FullMapState, position: [f64; 3], layer: MapLayer) {
     state.editor = Some(Editor {
         id: None,
         name: String::new(),
-        coordinates: position.map(|v| v.to_string()),
+        coordinates: position.map(coordinate_label),
+        original_position: position,
         cave_level: match layer {
             MapLayer::Surface => None,
             MapLayer::Cave { level } => Some(level),
@@ -658,13 +817,25 @@ fn handle_action(
             }
         }
         FullMapAction::Command { control, id } => match control.as_str() {
+            "fullmap-diplomacy" => {
+                state.diplomacy = !state.diplomacy;
+                state.book_open = false;
+                state.drag = None;
+            }
+            "fullmap-diplomacy-close" => {
+                state.diplomacy = false;
+                state.claim_rectangle = None;
+            }
             "fullmap-grid" => state.grid = !state.grid,
             "fullmap-mobs" => state.mobs = !state.mobs,
             "fullmap-mode" if state.resolved_layer() == MapLayer::Surface => {
                 state.three_dimensional = !state.three_dimensional;
                 state.drag = None;
             }
-            "fullmap-list" => state.book_open = !state.book_open,
+            "fullmap-list" => {
+                state.book_open = !state.book_open;
+                state.diplomacy = false;
+            }
             "fullmap-list-close" => state.book_open = false,
             "fullmap-icon" | "fullmap-icons" if state.editor.is_some() => {
                 state.icon_picker = true;
@@ -759,8 +930,16 @@ fn save_editor(state: &mut FullMapState, atlas: &Atlas) -> Result<(), String> {
     };
     let mut position = [0.0; 3];
     for (index, coordinate) in editor.coordinates.iter().enumerate() {
+        // Formatting a name-only edit must not quantize its stored world position.
+        if editor.original_position[index].is_finite()
+            && coordinate.trim() == coordinate_label(editor.original_position[index])
+        {
+            position[index] = editor.original_position[index];
+            continue;
+        }
         position[index] = coordinate
             .trim()
+            .replace(',', ".")
             .parse::<f64>()
             .ok()
             .filter(|v| v.is_finite())
@@ -822,8 +1001,8 @@ fn zoom_at(state: &mut FullMapState, center: [f64; 2], uv: Vec2, wheel: f32, til
 fn make_view(state: &FullMapState, player: [f64; 3], canvas: Vec2, loading: bool) -> FullMapView {
     let width = canvas.x.max(280.0);
     let height = canvas.y.max(240.0);
-    let map_width = (width - 126.0).max(96.0);
-    let map_height = (height - 130.0).max(96.0);
+    let map_width = (width - 156.0).max(96.0);
+    let map_height = (height - 168.0).max(96.0);
     let center = state.viewing([player[0], player[2]]);
     let editor = state.editor.as_ref();
     FullMapView {
@@ -912,6 +1091,26 @@ fn make_view(state: &FullMapState, player: [f64; 3], canvas: Vec2, loading: bool
         editor_style: format!("width: {:.0}px; max-height: {:.0}px;",(width-48.0).clamp(232.0,460.0),(height-40.0).max(180.0)),
         picker_style: format!("width: {:.0}px; height: {:.0}px;",(width-48.0).clamp(232.0,640.0),(height-48.0).clamp(180.0,560.0)),
         compact: width<850.0 || height<560.0,
+        diplomacy: state.diplomacy,
+        diplomacy_chunk: String::new(),
+        diplomacy_name: String::new(),
+        diplomacy_kind: String::new(),
+        diplomacy_actor: String::new(),
+        diplomacy_owner: String::new(),
+        diplomacy_relation: String::new(),
+        diplomacy_relation_key: String::new(),
+        diplomacy_color: String::new(),
+        diplomacy_status: state.diplomacy_status.clone(),
+        diplomacy_limits: String::new(),
+        diplomacy_pending: state.diplomacy_pending.is_some(),
+        diplomacy_can_claim: false,
+        diplomacy_can_release: false,
+        diplomacy_legends: Vec::new(),
+        claim_build_mode: state.claim_mode == Some(ClaimKind::ProtectedBuilding),
+        claim_territory_mode: state.claim_mode == Some(ClaimKind::RealmTerritory),
+        bot_realms: Vec::new(),
+        claim_draft_count: format!("{} chunks selected",state.preview_claims().len()),
+        claim_can_apply: !state.claim_draft.is_empty() && state.claim_rectangle.is_none() && state.diplomacy_pending.is_none(),
     }
 }
 
@@ -921,9 +1120,1141 @@ pub(super) fn icon_source(icon: &WaypointIcon) -> String {
         .source(tilt_ui::IconSize::Px32)
 }
 
+fn rectangle_cells(a: [i64; 2], b: [i64; 2]) -> Option<Vec<[i64; 2]>> {
+    if !terra_core::kingdom::valid_claim_chunk(a) || !terra_core::kingdom::valid_claim_chunk(b) {
+        return None;
+    }
+    let width = a[0].abs_diff(b[0]) + 1;
+    let height = a[1].abs_diff(b[1]) + 1;
+    if width.checked_mul(height)? > terra_core::kingdom::KingdomRegistry::MAX_BATCH_CLAIMS as u64 {
+        return None;
+    }
+    Some(
+        (a[0].min(b[0])..=a[0].max(b[0]))
+            .flat_map(|x| (a[1].min(b[1])..=a[1].max(b[1])).map(move |z| [x, z]))
+            .collect(),
+    )
+}
+fn stage_rectangle(state: &mut FullMapState, a: [i64; 2], b: [i64; 2]) {
+    let (Some(kind), Some(cells)) = (state.claim_mode, rectangle_cells(a, b)) else {
+        state.diplomacy_status = "Select at most 256 chunks per Apply.".into();
+        return;
+    };
+    let mut draft = state.claim_draft.clone();
+    for p in cells {
+        draft.insert(p, kind);
+    }
+    if draft.len() > terra_core::kingdom::KingdomRegistry::MAX_BATCH_CLAIMS {
+        state.diplomacy_status = "Select at most 256 chunks per Apply.".into();
+        return;
+    }
+    state.claim_draft = draft;
+    state.diplomacy_status = "Preview only. Apply confirms all selected chunks.".into();
+}
+
+fn poll_diplomacy(state: &mut FullMapState, session: Option<&ClientSession>, now: f64) {
+    let Some((request, since)) = state.diplomacy_pending else {
+        return;
+    };
+    if let Some(result) = session
+        .and_then(|s| s.last_kingdom_result.as_ref())
+        .filter(|r| r.request == request)
+    {
+        state.diplomacy_pending = None;
+        state.diplomacy_status = match &result.outcome {
+            KingdomOutcome::Rejected(error) => error.to_string(),
+            KingdomOutcome::ClaimsApplied { count, .. } => {
+                state.claim_draft.clear();
+                format!("{count} chunks applied.")
+            }
+            KingdomOutcome::Claimed { .. } => "Chunk claimed.".into(),
+            KingdomOutcome::Released { .. } => "Chunk released.".into(),
+            _ => "Realm updated.".into(),
+        };
+    } else if now - since > 10.0 {
+        state.diplomacy_pending = None;
+        state.diplomacy_status =
+            "No server response yet. The map refreshes when the authoritative update arrives."
+                .into();
+    }
+}
+
+fn managed_settlement<'a>(
+    session: &'a ClientSession,
+    state: &FullMapState,
+    player: [f64; 3],
+) -> Option<&'a terra_core::kingdom::KingdomRecord> {
+    let actor = session.uuid?;
+    let main = session.kingdoms.active_for_member(actor)?;
+    let selected = state
+        .diplomacy_chunk
+        .and_then(|chunk| session.kingdoms.claim_at(chunk))
+        .map(|claim| claim.kingdom);
+    let local = session
+        .kingdoms
+        .claim_at(claim_chunk(player.map(|v| v.floor() as i64)))
+        .map(|claim| claim.kingdom);
+    [state.claim_settlement, selected, local, Some(main.id)]
+        .into_iter()
+        .flatten()
+        .filter_map(|id| session.kingdoms.get(id))
+        .find(|record| {
+            record.state == terra_core::kingdom::KingdomState::Active
+                && session.kingdoms.realm_id(record.id) == main.id
+                && session.kingdoms.can_manage(actor, record.id)
+        })
+}
+
+fn request_claim(
+    state: &mut FullMapState,
+    control: &str,
+    player: [f64; 3],
+    session: Option<&mut ClientSession>,
+    writer: &mut MessageWriter<KingdomRequest>,
+    now: f64,
+) {
+    if !state.diplomacy || state.diplomacy_pending.is_some() {
+        return;
+    }
+    match control {
+        "fullmap-claim-protected" | "fullmap-claim-territory" => {
+            let previous = state.claim_settlement.take();
+            let selected = session
+                .as_deref()
+                .and_then(|session| managed_settlement(session, state, player))
+                .map(|record| record.id);
+            if previous != selected {
+                state.claim_draft.clear();
+            }
+            state.claim_settlement = selected;
+            state.claim_mode = Some(if control == "fullmap-claim-protected" {
+                ClaimKind::ProtectedBuilding
+            } else {
+                ClaimKind::RealmTerritory
+            });
+            state.claim_rectangle = None;
+            state.drag = None;
+            state.diplomacy_status = "Drag an area on the map, then Apply.".into();
+            return;
+        }
+        "fullmap-claim-pan" => {
+            state.claim_mode = None;
+            state.claim_rectangle = None;
+            return;
+        }
+        "fullmap-claim-cancel" => {
+            state.claim_draft.clear();
+            state.claim_rectangle = None;
+            state.claim_settlement = None;
+            state.diplomacy_status.clear();
+            return;
+        }
+        _ => {}
+    }
+    if !matches!(control, "fullmap-claim-apply" | "fullmap-release-claim") {
+        return;
+    }
+    let Some(session) = session else { return };
+    let Some(kingdom) = managed_settlement(session, state, player) else {
+        state.diplomacy_status =
+            "Join or found a kingdom, village or city before claiming land.".into();
+        return;
+    };
+    let id = kingdom.id;
+    if control == "fullmap-claim-apply" && state.claim_settlement.is_some_and(|locked| locked != id)
+    {
+        state.diplomacy_status =
+            "Selected settlement is no longer available. Choose it again before applying.".into();
+        return;
+    }
+    if !session
+        .uuid
+        .is_some_and(|uuid| session.kingdoms.can_manage(uuid, id))
+    {
+        state.diplomacy_status = "Only founders and officers can manage realm claims.".into();
+        return;
+    }
+    let chunk = state
+        .diplomacy_chunk
+        .unwrap_or_else(|| claim_chunk(player.map(|v| v.floor() as i64)));
+    let action = if control == "fullmap-claim-apply" {
+        if state.claim_draft.is_empty() || state.claim_rectangle.is_some() {
+            return;
+        }
+        KingdomAction::ClaimBatch {
+            id,
+            claims: state.claim_draft.iter().map(|(p, k)| (*p, *k)).collect(),
+        }
+    } else {
+        KingdomAction::ReleaseChunk { id, chunk }
+    };
+    if let Some(request) = session.kingdom_request(action) {
+        state.diplomacy_pending = Some((request.0.request, now));
+        state.diplomacy_status = "Waiting for the server…".into();
+        writer.write(request);
+    }
+}
+
+fn diplomacy_view(
+    view: &mut FullMapView,
+    state: &FullMapState,
+    session: Option<&ClientSession>,
+    settlements: Option<&crate::settlement_map::SettlementMap>,
+    player: [f64; 3],
+) {
+    if !state.diplomacy {
+        return;
+    }
+    let Some(session) = session else {
+        return;
+    };
+    let registry = &session.kingdoms;
+    let chunk = state
+        .diplomacy_chunk
+        .unwrap_or_else(|| claim_chunk(player.map(|v| v.floor() as i64)));
+    view.diplomacy_chunk = format!("Chunk {} / {} · 16 × 16", chunk[0], chunk[1]);
+    let managed = managed_settlement(session, state, player);
+    let claim = registry.claim_at(chunk);
+    let record = claim.and_then(|claim| registry.get(claim.kingdom));
+    view.diplomacy_name = record.map_or("Unclaimed", |k| k.name.as_str()).into();
+    view.diplomacy_owner =
+        record.map_or_else(String::new, |k| format!("Founder: {}", k.founder_name));
+    view.diplomacy_kind = claim
+        .map_or("No building protection", |claim| match claim.kind {
+            ClaimKind::ProtectedBuilding => "Protected building land",
+            ClaimKind::RealmTerritory => "Open realm territory",
+        })
+        .into();
+    let relation = record.map(|record| {
+        crate::realm_relations::display(registry, session.uuid, DiplomaticTarget::Player(record.id))
+    });
+    view.diplomacy_relation = relation.map_or("Wilderness", |(_, label)| label).into();
+    view.diplomacy_relation_key = relation
+        .map_or("neutral", |(relation, _)| relation.key())
+        .into();
+    view.diplomacy_actor = claim.map_or_else(String::new, |claim| {
+        let uuid = claim.actor.authorizer();
+        let name = record
+            .and_then(|k| k.member_names.iter().find(|(id, _)| *id == uuid))
+            .map_or_else(
+                || format!("Player {}", &uuid.simple().to_string()[..8]),
+                |(_, name)| name.clone(),
+            );
+        match claim.actor {
+            ClaimActor::Player(_) => format!("Claimed by {name}"),
+            ClaimActor::Bot { id, .. } => format!("Claimed by bot #{id} · {name}"),
+        }
+    });
+    view.diplomacy_color = record.map_or_else(
+        || "background-color: #867957;".into(),
+        |k| {
+            let [r, g, b] = k.heraldry.color;
+            format!("background-color: #{r:02x}{g:02x}{b:02x};")
+        },
+    );
+    let manages_claims = managed.is_some_and(|managed| {
+        session
+            .uuid
+            .is_some_and(|uuid| registry.can_manage(uuid, managed.id))
+    });
+    view.claim_can_apply &= manages_claims
+        && session.allow_build
+        && session.game_mode != terra_core::GameMode::Spectator;
+    view.diplomacy_can_claim = manages_claims
+        && !view.diplomacy_pending
+        && session.allow_build
+        && session.game_mode != terra_core::GameMode::Spectator;
+    view.diplomacy_can_release = manages_claims
+        && managed.is_some_and(|managed| claim.is_some_and(|c| c.kingdom == managed.id))
+        && !view.diplomacy_pending;
+    view.diplomacy_limits = managed.map_or_else(
+        || "Membership in a kingdom, village or city is required to claim.".into(),
+        |managed| {
+            let used = registry.claim_counts(managed.id);
+            let limits = registry.limits_with_rules(managed.id, &state.claim_rules);
+            format!(
+                "{} · Level {}\nBuilding {} / {} · Territory {} / {}",
+                managed.name,
+                managed.level,
+                used.protected,
+                limits.protected,
+                used.territory,
+                limits.territory
+            )
+        },
+    );
+    let mut visible = std::collections::BTreeSet::new();
+    // Only visible claims and the player's realm enter the legend.
+    let center = state.viewing([player[0], player[2]]);
+    let margin = state.span as f64 * 2.5;
+    for claim in &registry.claims {
+        if (claim.chunk[0] as f64 * 16.0 + 8.0 - center[0]).abs() < margin
+            && (claim.chunk[1] as f64 * 16.0 + 8.0 - center[1]).abs() < margin
+        {
+            visible.insert(claim.kingdom);
+        }
+    }
+    if let Some(managed) = managed {
+        visible.insert(managed.id);
+    }
+    let domains: Vec<_> = settlements.into_iter().flat_map(|s| s.domains()).collect();
+    if claim.is_none()
+        && let Some(domain) = domains.iter().find(|d| d.contains_chunk(chunk))
+    {
+        let position = [chunk[0] * 16 + 8, domain.center[1], chunk[1] * 16 + 8];
+        let owner = registry.domain_owner(domain, position);
+        if let Some(owner) = owner {
+            view.diplomacy_name = owner.name.clone();
+            view.diplomacy_owner =
+                format!("Founder: {} · settlement affiliation", owner.founder_name);
+            let (relation, label) = crate::realm_relations::display(
+                registry,
+                session.uuid,
+                DiplomaticTarget::Player(owner.id),
+            );
+            view.diplomacy_relation = label.into();
+            view.diplomacy_relation_key = relation.key().into();
+        } else if let Some(realm) = domain.native {
+            view.diplomacy_name = realm.name().into();
+            let (relation, label) = crate::realm_relations::display(
+                registry,
+                session.uuid,
+                DiplomaticTarget::Bot(realm),
+            );
+            view.diplomacy_relation = label.into();
+            view.diplomacy_relation_key = relation.key().into();
+            view.diplomacy_owner = "NPC settlement affiliation".into();
+        } else {
+            view.diplomacy_name = format!("Independent {}", domain.kind.label());
+            view.diplomacy_kind = format!("{} · unclaimed settlement", domain.kind.label());
+            view.diplomacy_relation = "Neutral".into();
+            view.diplomacy_relation_key = "neutral".into();
+            view.diplomacy_owner = "Independent settlement".into();
+        }
+        if let Some(heraldry) = registry.domain_heraldry(domain, position) {
+            let [r, g, b] = heraldry.color;
+            view.diplomacy_color = format!("background-color: #{r:02x}{g:02x}{b:02x};");
+            view.diplomacy_kind = format!("{} · realm territory", domain.kind.label());
+        }
+    }
+    for domain in &domains {
+        if (domain.center[0] as f64 - center[0]).abs() < margin
+            && (domain.center[2] as f64 - center[1]).abs() < margin
+            && let Some(owner) = registry.domain_owner(domain, domain.center)
+        {
+            visible.insert(owner.id);
+        }
+    }
+    view.bot_realms = terra_core::kingdom::BotKingdom::ALL
+        .into_iter()
+        .map(|realm| {
+            let heraldry = realm.heraldry();
+            let [r, g, b] = heraldry.color;
+            let known = domains
+                .iter()
+                .filter(|d| d.native == Some(realm) && registry.domain_owner(d, d.center).is_none())
+                .count();
+            let (relation, label) = crate::realm_relations::display(
+                registry,
+                session.uuid,
+                DiplomaticTarget::Bot(realm),
+            );
+            DiplomacyLegend {
+                relation: relation.key().into(),
+                relation_label: label.into(),
+                id: realm.name().into(),
+                name: realm.name().into(),
+                detail: format!("NPC · {} known settlements", known),
+                color: format!("background-color: #{r:02x}{g:02x}{b:02x};"),
+                icon_source: crate::kingdom::emblem_source(heraldry.icon),
+            }
+        })
+        .collect();
+    view.diplomacy_legends = visible
+        .into_iter()
+        .filter_map(|id| registry.get(id))
+        .map(|k| {
+            let [r, g, b] = k.heraldry.color;
+            let (relation, label) = crate::realm_relations::display(
+                registry,
+                session.uuid,
+                DiplomaticTarget::Player(k.id),
+            );
+            DiplomacyLegend {
+                relation: relation.key().into(),
+                relation_label: label.into(),
+                id: k.id.to_string(),
+                name: k.name.clone(),
+                detail: format!("{} · Level {}", k.kind.label(), k.level),
+                color: format!("background-color: #{r:02x}{g:02x}{b:02x};"),
+                icon_source: crate::kingdom::emblem_source(k.heraldry.icon),
+            }
+        })
+        .collect();
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    struct HierarchicalClaimFixture {
+        session: ClientSession,
+        rules: terra_core::kingdom::KingdomRules,
+        main: terra_core::kingdom::KingdomId,
+        children: [(terra_core::kingdom::KingdomId, [i64; 2]); 3],
+        foreign: terra_core::kingdom::KingdomId,
+    }
+
+    fn hierarchical_claim_session() -> HierarchicalClaimFixture {
+        use terra_core::kingdom::{KingdomRules, SettlementKind};
+        let actor = terra_core::PlayerUuid::from_u128(202_551);
+        let rules = KingdomRules {
+            require_adjacent_claims: false,
+            realm_min_border_gap: 0,
+            city_min_build_gap: 0,
+            city_min_kingdom_level: 1,
+            village_build_base: 47,
+            city_build_base: 59,
+            outpost_build_base: 71,
+            ..default()
+        };
+        let mut session = ClientSession::default();
+        session.uuid = Some(actor);
+        session.ready = true;
+        session.allow_build = true;
+        let main = session
+            .kingdoms
+            .found_settlement_with_rules(
+                actor,
+                "Founder",
+                [0, 20, 0],
+                "Parent Realm",
+                SettlementKind::Kingdom,
+                default(),
+                &rules,
+                &[],
+            )
+            .unwrap();
+        let children = [
+            (SettlementKind::Village, [4, 0], "Village"),
+            (SettlementKind::City, [8, 0], "City"),
+            (SettlementKind::Outpost, [12, 0], "Outpost"),
+        ]
+        .map(|(kind, chunk, name)| {
+            if kind != SettlementKind::Outpost {
+                session
+                    .kingdoms
+                    .claim_with_rules(
+                        main,
+                        chunk,
+                        ClaimKind::RealmTerritory,
+                        ClaimActor::Player(actor),
+                        &rules,
+                        &[],
+                    )
+                    .unwrap();
+            }
+            let id = session
+                .kingdoms
+                .found_settlement_with_rules(
+                    actor,
+                    "Founder",
+                    [chunk[0] * 16, 20, chunk[1] * 16],
+                    name,
+                    kind,
+                    default(),
+                    &rules,
+                    &[],
+                )
+                .unwrap();
+            (id, chunk)
+        });
+        session
+            .kingdoms
+            .claim_with_rules(
+                main,
+                [5, 0],
+                ClaimKind::RealmTerritory,
+                ClaimActor::Player(actor),
+                &rules,
+                &[],
+            )
+            .unwrap();
+        let foreign = session
+            .kingdoms
+            .found_settlement_with_rules(
+                terra_core::PlayerUuid::from_u128(202_552),
+                "Other founder",
+                [1024, 20, 0],
+                "Other Realm",
+                SettlementKind::Kingdom,
+                default(),
+                &rules,
+                &[],
+            )
+            .unwrap();
+        HierarchicalClaimFixture {
+            session,
+            rules,
+            main,
+            children,
+            foreign,
+        }
+    }
+
+    #[test]
+    fn claim_management_selects_real_children_and_rejects_foreign_or_missing_targets() {
+        use terra_core::kingdom::KingdomId;
+        let HierarchicalClaimFixture {
+            session,
+            main,
+            children,
+            foreign,
+            ..
+        } = hierarchical_claim_session();
+        let mut state = FullMapState::default();
+        for (child, chunk) in children {
+            state.diplomacy_chunk = Some(chunk);
+            assert_eq!(
+                managed_settlement(&session, &state, [0.0; 3]).unwrap().id,
+                child
+            );
+            state.diplomacy_chunk = None;
+            let player = [
+                chunk[0] as f64 * 16.0 + 8.0,
+                20.0,
+                chunk[1] as f64 * 16.0 + 8.0,
+            ];
+            assert_eq!(
+                managed_settlement(&session, &state, player).unwrap().id,
+                child
+            );
+        }
+        state.diplomacy_chunk = Some(children[1].1);
+        state.claim_settlement = Some(children[0].0);
+        assert_eq!(
+            managed_settlement(&session, &state, [192.0, 20.0, 0.0])
+                .unwrap()
+                .id,
+            children[0].0
+        );
+        for invalid in [foreign, KingdomId(u64::MAX)] {
+            state.claim_settlement = Some(invalid);
+            assert_eq!(
+                managed_settlement(&session, &state, [0.0; 3]).unwrap().id,
+                children[1].0
+            );
+        }
+        state.diplomacy_chunk = Some([64, 0]);
+        assert_eq!(
+            managed_settlement(&session, &state, [64.0, 20.0, 0.0])
+                .unwrap()
+                .id,
+            children[0].0
+        );
+        assert_eq!(
+            managed_settlement(&session, &state, [1024.0, 20.0, 0.0])
+                .unwrap()
+                .id,
+            main
+        );
+        let mut anonymous = session;
+        anonymous
+            .kingdoms
+            .dissolve(anonymous.uuid.unwrap(), children[0].0)
+            .unwrap();
+        state.claim_settlement = Some(children[0].0);
+        state.diplomacy_chunk = None;
+        assert_eq!(
+            managed_settlement(&anonymous, &state, [64.0, 20.0, 0.0])
+                .unwrap()
+                .id,
+            main,
+            "an old draft cannot keep targeting a dissolved settlement"
+        );
+        anonymous.uuid = None;
+        assert!(managed_settlement(&anonymous, &state, [0.0; 3]).is_none());
+    }
+
+    #[test]
+    fn child_claim_draft_sends_its_original_settlement_and_cancel_releases_selection() {
+        #[derive(Resource)]
+        struct ClaimControl(&'static str);
+        let HierarchicalClaimFixture {
+            session,
+            rules,
+            children,
+            ..
+        } = hierarchical_claim_session();
+        let before = session.kingdoms.clone();
+        let mut app = App::new();
+        app.insert_resource(session)
+            .insert_resource(FullMapState {
+                diplomacy: true,
+                diplomacy_chunk: Some(children[0].1),
+                claim_rules: rules,
+                ..default()
+            })
+            .insert_resource(ClaimControl("fullmap-claim-protected"))
+            .add_message::<KingdomRequest>()
+            .add_systems(
+                Update,
+                |mut state: ResMut<FullMapState>,
+                 mut session: ResMut<ClientSession>,
+                 control: Res<ClaimControl>,
+                 mut writer: MessageWriter<KingdomRequest>| {
+                    request_claim(
+                        &mut state,
+                        control.0,
+                        [128.0, 20.0, 0.0],
+                        Some(&mut session),
+                        &mut writer,
+                        1.0,
+                    );
+                },
+            );
+        app.update();
+        assert_eq!(
+            app.world().resource::<FullMapState>().claim_settlement,
+            Some(children[0].0)
+        );
+        assert!(
+            app.world_mut()
+                .resource_mut::<Messages<KingdomRequest>>()
+                .drain()
+                .next()
+                .is_none()
+        );
+        {
+            let mut state = app.world_mut().resource_mut::<FullMapState>();
+            state.diplomacy_chunk = Some(children[1].1);
+            state
+                .claim_draft
+                .insert([5, 0], ClaimKind::ProtectedBuilding);
+        }
+        app.world_mut().resource_mut::<ClaimControl>().0 = "fullmap-claim-apply";
+        app.update();
+        let sent = app
+            .world_mut()
+            .resource_mut::<Messages<KingdomRequest>>()
+            .drain()
+            .collect::<Vec<_>>();
+        assert_eq!(sent.len(), 1);
+        assert_eq!(
+            sent[0].0.action,
+            KingdomAction::ClaimBatch {
+                id: children[0].0,
+                claims: vec![([5, 0], ClaimKind::ProtectedBuilding)],
+            }
+        );
+        assert_eq!(app.world().resource::<ClientSession>().kingdoms, before);
+        let mut authoritative = before;
+        authoritative
+            .claim_with_rules(
+                children[0].0,
+                [5, 0],
+                ClaimKind::ProtectedBuilding,
+                ClaimActor::Player(app.world().resource::<ClientSession>().uuid.unwrap()),
+                &rules,
+                &[],
+            )
+            .unwrap();
+        app.world_mut()
+            .resource_mut::<FullMapState>()
+            .diplomacy_pending = None;
+        app.world_mut().resource_mut::<ClaimControl>().0 = "fullmap-claim-cancel";
+        app.update();
+        let state = app.world().resource::<FullMapState>();
+        assert!(
+            state.claim_settlement.is_none()
+                && state.claim_draft.is_empty()
+                && state.claim_rectangle.is_none()
+        );
+        app.world_mut().resource_mut::<ClaimControl>().0 = "fullmap-claim-protected";
+        app.update();
+        assert_eq!(
+            app.world().resource::<FullMapState>().claim_settlement,
+            Some(children[1].0)
+        );
+    }
+
+    #[test]
+    fn unavailable_locked_settlement_cannot_redirect_a_claim_draft_to_another_realm() {
+        for unavailable in ["dissolved", "missing", "foreign"] {
+            let HierarchicalClaimFixture {
+                mut session,
+                rules,
+                children,
+                foreign,
+                ..
+            } = hierarchical_claim_session();
+            let child = children[0].0;
+            let locked = if unavailable == "foreign" {
+                foreign
+            } else {
+                session
+                    .kingdoms
+                    .dissolve(session.uuid.unwrap(), child)
+                    .unwrap();
+                if unavailable == "missing" {
+                    session
+                        .kingdoms
+                        .kingdoms
+                        .retain(|record| record.id != child);
+                }
+                child
+            };
+            assert!(session.kingdoms.valid());
+            let before = session.kingdoms.clone();
+            let draft = BTreeMap::from([([5, 0], ClaimKind::ProtectedBuilding)]);
+            let mut app = App::new();
+            app.insert_resource(session)
+                .insert_resource(FullMapState {
+                    diplomacy: true,
+                    diplomacy_chunk: Some(children[1].1),
+                    claim_settlement: Some(locked),
+                    claim_mode: Some(ClaimKind::ProtectedBuilding),
+                    claim_draft: draft.clone(),
+                    claim_rules: rules,
+                    ..default()
+                })
+                .add_message::<KingdomRequest>()
+                .add_systems(
+                    Update,
+                    |mut state: ResMut<FullMapState>,
+                     mut session: ResMut<ClientSession>,
+                     mut writer: MessageWriter<KingdomRequest>| {
+                        request_claim(
+                            &mut state,
+                            "fullmap-claim-apply",
+                            [0.0, 20.0, 0.0],
+                            Some(&mut session),
+                            &mut writer,
+                            1.0,
+                        );
+                    },
+                );
+            assert_ne!(
+                managed_settlement(
+                    app.world().resource::<ClientSession>(),
+                    app.world().resource::<FullMapState>(),
+                    [0.0; 3],
+                )
+                .unwrap()
+                .id,
+                locked,
+                "the ordinary view can still fall back to another active settlement"
+            );
+            app.update();
+            assert!(
+                app.world_mut()
+                    .resource_mut::<Messages<KingdomRequest>>()
+                    .drain()
+                    .next()
+                    .is_none(),
+                "{unavailable}: applying must not reinterpret the locked draft's owner"
+            );
+            let state = app.world().resource::<FullMapState>();
+            assert!(state.diplomacy_pending.is_none());
+            assert_eq!(state.claim_settlement, Some(locked));
+            assert_eq!(state.claim_draft, draft);
+            assert!(state.diplomacy_status.contains("no longer available"));
+            assert_eq!(app.world().resource::<ClientSession>().kingdoms, before);
+        }
+    }
+
+    #[test]
+    fn child_claim_limits_use_the_confirmed_world_rule_snapshot() {
+        let HierarchicalClaimFixture {
+            session,
+            rules,
+            children,
+            ..
+        } = hierarchical_claim_session();
+        for ((id, chunk), expected) in children.into_iter().zip([47, 59, 71]) {
+            let mut state = FullMapState {
+                diplomacy: true,
+                diplomacy_chunk: Some(chunk),
+                claim_rules: rules,
+                ..default()
+            };
+            let mut view = FullMapView::default();
+            diplomacy_view(&mut view, &state, Some(&session), None, [0.0; 3]);
+            assert!(
+                view.diplomacy_limits
+                    .contains(&format!("Building 1 / {expected}")),
+                "{}",
+                view.diplomacy_limits
+            );
+            assert!(
+                view.diplomacy_limits
+                    .starts_with(&session.kingdoms.get(id).unwrap().name)
+            );
+            state.claim_rules = Default::default();
+            diplomacy_view(&mut view, &state, Some(&session), None, [0.0; 3]);
+            let fallback = session
+                .kingdoms
+                .limits_with_rules(id, &state.claim_rules)
+                .protected;
+            assert!(
+                view.diplomacy_limits
+                    .contains(&format!("Building 1 / {fallback}"))
+            );
+            assert_ne!(expected, fallback);
+        }
+    }
+
+    #[test]
+    fn diplomacy_labels_all_relations_live_and_resolves_known_native_capture_and_dissolution() {
+        use terra_core::{
+            PlayerUuid,
+            kingdom::{BotKingdom, DiplomaticRelation as R, DomainKind, SettlementDomain},
+        };
+        let viewer = PlayerUuid::from_u128(201);
+        let allied = PlayerUuid::from_u128(202);
+        let hostile = PlayerUuid::from_u128(203);
+        let neutral = PlayerUuid::from_u128(204);
+        let mut session = ClientSession::default();
+        session.uuid = Some(viewer);
+        let own = session
+            .kingdoms
+            .found(viewer, [0, 20, 0], "Homewatch")
+            .unwrap();
+        let ally = session
+            .kingdoms
+            .found(allied, [32, 20, 0], "Eastbank")
+            .unwrap();
+        let enemy = session
+            .kingdoms
+            .found(hostile, [128, 20, 0], "Ironhold")
+            .unwrap();
+        session
+            .kingdoms
+            .found(neutral, [192, 20, 0], "Farplain")
+            .unwrap();
+        session
+            .kingdoms
+            .set_relation(viewer, own, DiplomaticTarget::Player(ally), R::Allied)
+            .unwrap();
+        session
+            .kingdoms
+            .set_relation(allied, ally, DiplomaticTarget::Player(own), R::Allied)
+            .unwrap();
+        session
+            .kingdoms
+            .set_relation(hostile, enemy, DiplomaticTarget::Player(own), R::Hostile)
+            .unwrap();
+        let mut known = crate::settlement_map::SettlementMap::default();
+        known.remember(SettlementDomain {
+            id: 901,
+            center: [56, 20, 8],
+            bounds: [[48, 0, 0], [79, 40, 31]],
+            kind: DomainKind::Outpost,
+            native: Some(BotKingdom::Helteria),
+        });
+        let mut state = FullMapState {
+            diplomacy: true,
+            span: 256,
+            ..default()
+        };
+        let mut view = FullMapView::default();
+        for (chunk, label) in [
+            ([0, 0], "own"),
+            ([2, 0], "allied"),
+            ([8, 0], "hostile"),
+            ([12, 0], "neutral"),
+        ] {
+            state.diplomacy_chunk = Some(chunk);
+            diplomacy_view(
+                &mut view,
+                &state,
+                Some(&session),
+                Some(&known),
+                [0.0, 20.0, 0.0],
+            );
+            assert_eq!(view.diplomacy_relation_key, label);
+            assert_eq!(
+                view.diplomacy_legends
+                    .iter()
+                    .map(|r| r.relation.as_str())
+                    .collect::<std::collections::BTreeSet<_>>(),
+                std::collections::BTreeSet::from(["own", "allied", "hostile", "neutral"])
+            );
+        }
+        state.diplomacy_chunk = Some([2, 0]);
+        diplomacy_view(&mut view, &state, Some(&session), Some(&known), [0.0; 3]);
+        let owner_color = view.diplomacy_color.clone();
+        session
+            .kingdoms
+            .set_relation(viewer, own, DiplomaticTarget::Player(ally), R::Hostile)
+            .unwrap();
+        diplomacy_view(&mut view, &state, Some(&session), Some(&known), [0.0; 3]);
+        assert_eq!(view.diplomacy_relation_key, "hostile");
+        assert_eq!(view.diplomacy_color, owner_color);
+        session
+            .kingdoms
+            .set_relation(viewer, own, DiplomaticTarget::Player(ally), R::Allied)
+            .unwrap();
+        session
+            .kingdoms
+            .set_relation(
+                viewer,
+                own,
+                DiplomaticTarget::Bot(BotKingdom::Helteria),
+                R::Hostile,
+            )
+            .unwrap();
+        state.diplomacy_chunk = Some([4, 0]);
+        diplomacy_view(&mut view, &state, Some(&session), Some(&known), [0.0; 3]);
+        assert_eq!(
+            (
+                view.diplomacy_name.as_str(),
+                view.diplomacy_relation_key.as_str()
+            ),
+            ("Helteria", "hostile")
+        );
+        session
+            .kingdoms
+            .claim(
+                ally,
+                [3, 0],
+                ClaimKind::RealmTerritory,
+                ClaimActor::Player(allied),
+            )
+            .unwrap();
+        diplomacy_view(&mut view, &state, Some(&session), Some(&known), [0.0; 3]);
+        assert_eq!(
+            (
+                view.diplomacy_name.as_str(),
+                view.diplomacy_relation_key.as_str()
+            ),
+            ("Eastbank", "allied")
+        );
+        session.kingdoms.dissolve(allied, ally).unwrap();
+        diplomacy_view(&mut view, &state, Some(&session), Some(&known), [0.0; 3]);
+        assert_eq!(
+            (
+                view.diplomacy_name.as_str(),
+                view.diplomacy_relation_key.as_str()
+            ),
+            ("Helteria", "hostile")
+        );
+        session.uuid = None;
+        diplomacy_view(&mut view, &state, Some(&session), Some(&known), [0.0; 3]);
+        assert_eq!(view.diplomacy_relation, "Friendly");
+    }
+
+    #[test]
+    fn diplomacy_displays_owner_sends_authority_commands_and_preserves_map_without_world_loads() {
+        let mut app = App::new();
+        app.init_resource::<Atlas>()
+            .init_resource::<GameplayConfig>()
+            .init_resource::<ChunkStore>()
+            .init_resource::<ButtonInput<KeyCode>>()
+            .init_resource::<ButtonInput<MouseButton>>()
+            .init_resource::<terra_player::PlayerInputBlock>()
+            .init_resource::<crate::menu::MenuState>()
+            .add_message::<terra_player::CaptureRequest>()
+            .add_message::<MouseWheel>();
+        let uuid = terra_core::PlayerUuid::from_u128(55);
+        let mut session = ClientSession::default();
+        session.ready = true;
+        session.uuid = Some(uuid);
+        session.allow_build = true;
+        let id = session
+            .kingdoms
+            .found_with_name(uuid, "Alice", [0, 0, 0], "Northwatch")
+            .unwrap();
+        let before = session.kingdoms.clone();
+        app.insert_resource(session);
+        app.world_mut()
+            .resource_mut::<crate::menu::MenuState>()
+            .page = crate::menu::MenuPage::Playing;
+        app.world_mut()
+            .spawn((Window::default(), bevy::window::PrimaryWindow));
+        install(&mut app);
+        {
+            let mut state = app.world_mut().resource_mut::<FullMapState>();
+            state.open = true;
+            state.span = 256;
+            state.diplomacy_chunk = Some([0, 0]);
+        }
+        app.world_mut().write_message(FullMapAction::Command {
+            control: "fullmap-diplomacy".into(),
+            id: None,
+        });
+        app.update();
+        let view = app.world().resource::<FullMapView>();
+        assert!(view.diplomacy && view.visible);
+        assert_eq!(view.diplomacy_owner, "Founder: Alice");
+        assert_eq!(view.diplomacy_name, "Northwatch");
+        assert_eq!(view.diplomacy_relation, "Your realm");
+        let mut sites = crate::settlement_map::SettlementMap::default();
+        sites.remember(terra_core::kingdom::SettlementDomain {
+            id: 70,
+            center: [24, 20, 8],
+            bounds: [[16, 0, 0], [47, 40, 31]],
+            kind: terra_core::kingdom::DomainKind::Village,
+            native: Some(terra_core::kingdom::BotKingdom::Helteria),
+        });
+        app.insert_resource(sites);
+        app.world_mut()
+            .resource_mut::<FullMapState>()
+            .diplomacy_chunk = Some([1, 0]);
+        app.update();
+        assert_eq!(
+            app.world().resource::<FullMapView>().diplomacy_name,
+            "Helteria"
+        );
+        assert_eq!(
+            app.world().resource::<FullMapView>().diplomacy_relation,
+            "Neutral"
+        );
+        assert!(
+            app.world()
+                .resource::<FullMapView>()
+                .diplomacy_kind
+                .contains("Village")
+        );
+        app.world_mut()
+            .resource_mut::<FullMapState>()
+            .diplomacy_chunk = Some([0, 0]);
+        app.world_mut().spawn((
+            Node::default(),
+            ElementId("full-map-viewport".into()),
+            ComputedNode {
+                size: Vec2::splat(256.0),
+                ..default()
+            },
+            UiGlobalTransform::from_xy(128.0, 128.0),
+        ));
+        app.world_mut().spawn((
+            Node::default(),
+            ElementId("full-map-diplomacy".into()),
+            ComputedNode {
+                size: Vec2::new(64.0, 256.0),
+                ..default()
+            },
+            UiGlobalTransform::from_xy(224.0, 128.0),
+        ));
+        for mut window in app
+            .world_mut()
+            .query::<&mut Window>()
+            .iter_mut(app.world_mut())
+        {
+            window.focused = true;
+            window.set_physical_cursor_position(Some(bevy::math::DVec2::new(200.0, 128.0)));
+        }
+        app.world_mut()
+            .resource_mut::<ButtonInput<MouseButton>>()
+            .press(MouseButton::Left);
+        app.update();
+        assert_eq!(
+            app.world().resource::<FullMapState>().diplomacy_chunk,
+            Some([0, 0]),
+            "Sidebar clicks must not select the map beneath them"
+        );
+        app.world_mut()
+            .insert_resource(ButtonInput::<MouseButton>::default());
+
+        app.world_mut()
+            .resource_mut::<FullMapState>()
+            .diplomacy_chunk = Some([1, 0]);
+        app.world_mut().write_message(FullMapAction::Command {
+            control: "fullmap-claim-territory".into(),
+            id: None,
+        });
+        app.update();
+        assert!(
+            app.world_mut()
+                .resource_mut::<Messages<KingdomRequest>>()
+                .drain()
+                .next()
+                .is_none(),
+            "Choosing a paint mode must not claim anything"
+        );
+        app.world_mut()
+            .resource_mut::<GameplayConfig>()
+            .minimap
+            .relief = false;
+        for mut window in app
+            .world_mut()
+            .query::<&mut Window>()
+            .iter_mut(app.world_mut())
+        {
+            window.set_physical_cursor_position(Some(bevy::math::DVec2::new(145.0, 129.0)));
+        }
+        app.world_mut()
+            .resource_mut::<ButtonInput<MouseButton>>()
+            .press(MouseButton::Left);
+        app.update();
+        app.world_mut()
+            .resource_mut::<ButtonInput<MouseButton>>()
+            .clear();
+        for mut window in app
+            .world_mut()
+            .query::<&mut Window>()
+            .iter_mut(app.world_mut())
+        {
+            window.set_physical_cursor_position(Some(bevy::math::DVec2::new(161.0, 145.0)));
+        }
+        app.update();
+        assert_eq!(
+            app.world()
+                .resource::<FullMapState>()
+                .preview_claims()
+                .len(),
+            4
+        );
+        app.world_mut()
+            .resource_mut::<ButtonInput<MouseButton>>()
+            .release(MouseButton::Left);
+        app.update();
+        {
+            let mut state = app.world_mut().resource_mut::<FullMapState>();
+            assert_eq!(state.claim_draft.len(), 4);
+            let before = state.claim_draft.clone();
+            stage_rectangle(&mut state, [-100, -100], [100, 100]);
+            assert_eq!(
+                state.claim_draft, before,
+                "Oversized gestures must preserve the selection"
+            );
+        }
+        app.world_mut().write_message(FullMapAction::Command {
+            control: "fullmap-claim-apply".into(),
+            id: None,
+        });
+        app.update();
+        let requests = app
+            .world_mut()
+            .resource_mut::<Messages<KingdomRequest>>()
+            .drain()
+            .collect::<Vec<_>>();
+        assert_eq!(requests.len(), 1);
+        assert_eq!(
+            requests[0].0.action,
+            KingdomAction::ClaimBatch {
+                id,
+                claims: vec![
+                    ([1, 0], ClaimKind::RealmTerritory),
+                    ([1, 1], ClaimKind::RealmTerritory),
+                    ([2, 0], ClaimKind::RealmTerritory),
+                    ([2, 1], ClaimKind::RealmTerritory)
+                ]
+            }
+        );
+        assert_eq!(app.world().resource::<ClientSession>().kingdoms, before);
+        assert!(app.world().resource::<FullMapView>().diplomacy_pending);
+        app.world_mut().write_message(FullMapAction::Command {
+            control: "fullmap-diplomacy-close".into(),
+            id: None,
+        });
+        app.update();
+        assert!(!app.world().resource::<FullMapView>().diplomacy);
+        assert_eq!(app.world().resource::<FullMapState>().span, 256);
+        assert!(app.world().resource::<ChunkStore>().loaded.is_empty());
+    }
+
     #[test]
     fn cave_layers_never_enable_relief_or_the_live_three_dimensional_camera() {
         let mut state = FullMapState {
@@ -1018,7 +2349,7 @@ mod tests {
     }
 
     #[test]
-    fn map_tool_rail_is_icon_only_with_hover_tooltips_for_all_seven_actions() {
+    fn map_tool_rail_is_icon_only_with_hover_tooltips_for_all_eight_actions() {
         let template = include_str!("../../../../src-ui/components/full-map.component.html");
         let rail = template
             .split("<div class=\"full-map-tool-rail\">")
@@ -1027,16 +2358,202 @@ mod tests {
             .split("</div>")
             .next()
             .unwrap();
-        assert_eq!(rail.matches("<button ").count(), 7);
-        assert_eq!(rail.matches("<icon ").count(), 7);
+        assert_eq!(rail.matches("<button ").count(), 8);
+        assert_eq!(rail.matches("<icon ").count(), 8);
         assert!(!rail.contains("<p>"));
         assert!(!rail.contains("map-icon-button"));
-        for action in ["add", "grid", "layer", "mobs", "mode", "center", "list"] {
+        for action in [
+            "add",
+            "grid",
+            "layer",
+            "mobs",
+            "mode",
+            "center",
+            "list",
+            "diplomacy",
+        ] {
             assert!(template.contains(&format!(
                 "<tooltip for=\"fullmap-{action}\" trigger=\"hover\""
             )));
         }
         assert!(rail.contains("[disabled]=\"!fullMapView.three_dimensional_available\""));
+    }
+
+    #[test]
+    fn claim_drag_includes_the_release_frame_endpoint_without_sending_a_command() {
+        let mut app = App::new();
+        app.init_resource::<Atlas>()
+            .init_resource::<GameplayConfig>()
+            .init_resource::<ChunkStore>()
+            .init_resource::<ButtonInput<KeyCode>>()
+            .init_resource::<ButtonInput<MouseButton>>()
+            .init_resource::<terra_player::PlayerInputBlock>()
+            .init_resource::<crate::menu::MenuState>()
+            .add_message::<terra_player::CaptureRequest>()
+            .add_message::<MouseWheel>();
+        let uuid = terra_core::PlayerUuid::from_u128(651);
+        let mut session = ClientSession::default();
+        session.ready = true;
+        session.uuid = Some(uuid);
+        session.allow_build = true;
+        session
+            .kingdoms
+            .found(uuid, [0, 0, 0], "Northwatch")
+            .unwrap();
+        let saved = session.kingdoms.clone();
+        app.insert_resource(session);
+        app.world_mut()
+            .resource_mut::<crate::menu::MenuState>()
+            .page = crate::menu::MenuPage::Playing;
+        app.world_mut()
+            .resource_mut::<GameplayConfig>()
+            .minimap
+            .relief = false;
+        let mut window = Window {
+            focused: true,
+            ..default()
+        };
+        window.set_physical_cursor_position(Some(bevy::math::DVec2::new(145.0, 129.0)));
+        let window = app
+            .world_mut()
+            .spawn((window, bevy::window::PrimaryWindow))
+            .id();
+        app.world_mut().spawn((
+            ElementId("full-map-viewport".into()),
+            ComputedNode {
+                size: Vec2::splat(256.0),
+                ..default()
+            },
+            UiGlobalTransform::from_xy(128.0, 128.0),
+        ));
+        install(&mut app);
+        {
+            let mut state = app.world_mut().resource_mut::<FullMapState>();
+            state.open = true;
+            state.diplomacy = true;
+            state.span = 256;
+            state.claim_mode = Some(ClaimKind::RealmTerritory);
+        }
+        app.world_mut()
+            .resource_mut::<ButtonInput<MouseButton>>()
+            .press(MouseButton::Left);
+        app.update();
+        app.world_mut()
+            .resource_mut::<ButtonInput<MouseButton>>()
+            .clear();
+        app.world_mut()
+            .get_mut::<Window>(window)
+            .unwrap()
+            .set_physical_cursor_position(Some(bevy::math::DVec2::new(161.0, 145.0)));
+        app.world_mut()
+            .resource_mut::<ButtonInput<MouseButton>>()
+            .release(MouseButton::Left);
+        app.update();
+        let state = app.world().resource::<FullMapState>();
+        assert!(state.claim_rectangle.is_none());
+        assert_eq!(
+            state.claim_draft.keys().copied().collect::<Vec<_>>(),
+            vec![[1, 0], [1, 1], [2, 0], [2, 1]]
+        );
+        assert_eq!(app.world().resource::<ClientSession>().kingdoms, saved);
+        assert!(app.world().resource::<ChunkStore>().loaded.is_empty());
+        assert!(
+            app.world_mut()
+                .resource_mut::<Messages<KingdomRequest>>()
+                .drain()
+                .next()
+                .is_none()
+        );
+        app.world_mut()
+            .resource_mut::<ButtonInput<MouseButton>>()
+            .clear();
+        app.world_mut()
+            .resource_mut::<ButtonInput<MouseButton>>()
+            .press(MouseButton::Right);
+        app.update();
+        let state = app.world().resource::<FullMapState>();
+        assert_eq!(
+            state.claim_draft.keys().copied().collect::<Vec<_>>(),
+            vec![[1, 0], [1, 1], [2, 0]],
+            "Right-click removes only the hovered draft chunk"
+        );
+        assert_eq!(
+            app.world().resource::<ClientSession>().kingdoms,
+            saved,
+            "Unselecting must never release saved ownership"
+        );
+        assert!(app.world().resource::<ChunkStore>().loaded.is_empty());
+    }
+
+    #[test]
+    fn relief_pointer_inverts_cached_slopes_across_chunk_edges_at_each_aspect() {
+        use terra_world::cartography::{MapRelief, MapTile};
+        let mut atlas = Atlas::default();
+        atlas.full.relief_base = Some((MapLayer::Surface, 80));
+        atlas.entries.insert(
+            ([-1, 0], MapLayer::Surface),
+            super::super::Entry {
+                tile: Some(std::sync::Arc::new(MapTile {
+                    coordinate: [-1, 0],
+                    pixels: [100; 1024],
+                    relief: Some(Box::new(MapRelief {
+                        heights: std::array::from_fn(|index| 120 + (index / 16) as i16 * 2),
+                        water: [0; 32],
+                    })),
+                })),
+                detail: None,
+                overview: None,
+                source_revision: None,
+                palette_fingerprint: terra_core::MapPalette::default().fingerprint(),
+                used: 0,
+            },
+        );
+        let state = FullMapState {
+            span: 96,
+            ..default()
+        };
+        for aspect in [0.5, 1.0, 2.0] {
+            let projection =
+                super::super::raster::Projection::at([-8.0, 8.0], 96, 0.0, false, true, 640, false)
+                    .with_aspect(aspect);
+            for z in [0.25_f32, 7.25, 15.75] {
+                let height = 120.0 + z.floor() * 2.0;
+                let uv = Vec2::from_array(projection.project([-8.25, height, z], 80)) / 640.0;
+                let position = pick_position(
+                    &atlas,
+                    &state,
+                    MapLayer::Surface,
+                    [-8.0, 8.0],
+                    uv,
+                    aspect,
+                    true,
+                    80.0,
+                );
+                assert!((position[0] + 8.25).abs() < 0.001, "{position:?}");
+                assert!(
+                    (position[1] - f64::from(height)).abs() < 0.001,
+                    "{position:?}"
+                );
+                assert!((position[2] - f64::from(z)).abs() < 0.001, "{position:?}");
+                assert_eq!(claim_chunk(position.map(|v| v.floor() as i64)), [-1, 0]);
+            }
+        }
+        let unknown = pick_position(
+            &atlas,
+            &state,
+            MapLayer::Surface,
+            [512.0, 512.0],
+            Vec2::splat(0.5),
+            1.0,
+            true,
+            80.0,
+        );
+        assert_eq!(unknown, [512.0, 80.0, 512.0]);
+        assert_eq!(
+            atlas.entries.len(),
+            1,
+            "Picking must never request or invent map tiles"
+        );
     }
 
     #[test]
@@ -1059,6 +2576,7 @@ mod tests {
                 detail: None,
                 overview: None,
                 source_revision: None,
+                palette_fingerprint: terra_core::MapPalette::default().fingerprint(),
                 used: 0,
             },
         );
@@ -1330,8 +2848,8 @@ mod tests {
             let view = make_view(&state, [-12.0, 83.0, -34.0], canvas, true);
             assert!(view.visible && view.loading);
             assert_eq!(view.coordinates, "X -12  Y 83  Z -34");
-            assert!(view.map_width + 126.0 <= canvas.x + 1.0);
-            assert!(view.map_height + 130.0 <= canvas.y + 1.0);
+            assert!(view.map_width + 156.0 <= canvas.x + 1.0);
+            assert!(view.map_height + 168.0 <= canvas.y + 1.0);
             assert!(view.map_width > canvas.x * 0.7);
         }
     }
@@ -1418,7 +2936,12 @@ mod tests {
             ..default()
         };
         let mut state = FullMapState::default();
-        begin_editor(&mut state, [-20.0, 81.0, 44.0], MapLayer::Surface);
+        let original = [-20.123456, 81.251234, 44.987654];
+        begin_editor(&mut state, original, MapLayer::Surface);
+        assert_eq!(
+            state.editor.as_ref().unwrap().coordinates,
+            ["-20,12", "81,25", "44,99"]
+        );
         assert!(save_editor(&mut state, &atlas).is_err());
         assert!(state.waypoints.entries.is_empty());
         state.editor.as_mut().unwrap().name = "Home".into();
@@ -1428,9 +2951,18 @@ mod tests {
         assert!(state.editor.is_none());
         let saved = WaypointBook::load_directory(&root).unwrap();
         assert_eq!(state.waypoints, saved);
-        assert_eq!(saved.entries[0].position, [-20.0, 81.0, 44.0]);
+        assert_eq!(saved.entries[0].position, original);
         assert_eq!(saved.entries[0].icon, WaypointIcon::Home);
         assert!(saved.entries[0].show_in_world);
+        state.editor = Some(Editor::from_point(&saved.entries[0]));
+        assert_eq!(
+            state.editor.as_ref().unwrap().coordinates,
+            ["-20,12", "81,25", "44,99"]
+        );
+        state.editor.as_mut().unwrap().coordinates[0] = "65,89".into();
+        save_editor(&mut state, &atlas).unwrap();
+        let saved = WaypointBook::load_directory(&root).unwrap();
+        assert_eq!(saved.entries[0].position, [65.89, original[1], original[2]]);
         state.editor = Some(Editor::from_point(&saved.entries[0]));
         state.editor.as_mut().unwrap().coordinates[0] = "NaN".into();
         assert!(save_editor(&mut state, &atlas).is_err());
@@ -1473,13 +3005,8 @@ mod tests {
         let state = app.world().resource::<FullMapState>();
         assert!(!state.open && state.blocks_input());
         let editor = state.editor.as_ref().unwrap();
-        assert_eq!(
-            editor
-                .coordinates
-                .clone()
-                .map(|v| v.parse::<f64>().unwrap()),
-            position
-        );
+        assert_eq!(editor.coordinates, ["100,12", "81,25", "-204,06"]);
+        assert_eq!(editor.original_position, position);
         assert!(editor.show_in_world);
         let view = app.world().resource::<FullMapView>();
         assert!(view.editing && !view.visible && view.show_in_world);

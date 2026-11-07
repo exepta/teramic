@@ -1,0 +1,70 @@
+{
+  "after": {
+    "all-object-edits": {
+      "blocks": 4096,
+      "max_ms": 9.747936,
+      "mean_ms": 9.346068,
+      "objects": 4096,
+      "p50_ms": 9.235696,
+      "p95_ms": 9.747936,
+      "p99_ms": 9.747936,
+      "phase": "all-object-edits",
+      "total_ms": 37.384272,
+      "updates": 4
+    },
+    "single-object-edits": {
+      "blocks": 4096,
+      "max_ms": 2.557474,
+      "mean_ms": 1.36866,
+      "objects": 4096,
+      "p50_ms": 1.323348,
+      "p95_ms": 1.547052,
+      "p99_ms": 2.075884,
+      "phase": "single-object-edits",
+      "total_ms": 273.732074,
+      "updates": 200
+    }
+  },
+  "before": {
+    "all-object-edits": {
+      "blocks": 4096,
+      "max_ms": 550.926087,
+      "mean_ms": 518.017894,
+      "objects": 4096,
+      "p50_ms": 502.937357,
+      "p95_ms": 550.926087,
+      "p99_ms": 550.926087,
+      "phase": "all-object-edits",
+      "total_ms": 2072.071574,
+      "updates": 4
+    },
+    "single-object-edits": {
+      "blocks": 4096,
+      "max_ms": 6.708424,
+      "mean_ms": 5.445177,
+      "objects": 4096,
+      "p50_ms": 5.342447,
+      "p95_ms": 5.991879,
+      "p99_ms": 6.51066,
+      "phase": "single-object-edits",
+      "total_ms": 1089.035487,
+      "updates": 200
+    }
+  },
+  "comparisons": {
+    "all-object-edits": {
+      "mean_ms_after": 9.346068,
+      "mean_ms_before": 518.017894,
+      "mean_ms_delta_percent": -98.19580209327671,
+      "speedup_factor": 55.42629199787546
+    },
+    "single-object-edits": {
+      "mean_ms_after": 1.36866,
+      "mean_ms_before": 5.445177,
+      "mean_ms_delta_percent": -74.86472891514822,
+      "speedup_factor": 3.9784731050808824
+    }
+  },
+  "fixture": "edits::journal::import_performance_tests::benchmark_dense_section_import_updates",
+  "scope": "CPU-only actual dense EditJournal section import; 4096 blocks/4096 objects, 200 single-object or 4 all-object updates; not a native FPS or GPU timing result."
+}

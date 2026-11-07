@@ -1,0 +1,3 @@
+    Finished `test` profile [optimized + debuginfo] target(s) in 35.51s
+     Running unittests src/main.rs (target/debug/deps/terra_client-af8230f55fb30b7f)
+test result: ok. 197 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 3.07s

@@ -278,9 +278,26 @@ fn chamber_presence_uses_the_same_clusters_without_shrinking_selected_rooms() {
 
 #[test]
 fn actual_underground_air_volume_and_discovered_chambers_are_reduced_across_seeds() {
+    underground_air_volume_reduction(1, true);
+}
+
+#[test]
+fn revision_two_landscape_preserves_clustered_underground_air_subset_and_volume_reduction() {
+    underground_air_volume_reduction(2, false);
+}
+
+fn underground_air_volume_reduction(landscape_revision: u8, numeric_density_contract: bool) {
     for seed in [7, 42042, 98173] {
-        let old = generator(seed, 6);
-        let new = generator(seed, 7);
+        let old = TerraGenerator::new(WorldConfig {
+            landscape_revision,
+            ..generator(seed, 6).config().clone()
+        })
+        .unwrap();
+        let new = TerraGenerator::new(WorldConfig {
+            landscape_revision,
+            ..generator(seed, 7).config().clone()
+        })
+        .unwrap();
         let mut air_before = 0;
         let mut air_after = 0;
         let mut chamber_columns_before = 0;
@@ -300,7 +317,11 @@ fn actual_underground_air_volume_and_discovered_chambers_are_reduced_across_seed
                     let before = old.cave_density_with_column([x, y, z], a).0;
                     let after = new.cave_density_with_column([x, y, z], b).0;
                     assert!(
-                        after <= before,
+                        if numeric_density_contract {
+                            after <= before
+                        } else {
+                            after <= 0.0 || before > 0.0
+                        },
                         "seed {seed}: clustering may not create another cave network at [{x}, {y}, {z}]: {before}->{after}"
                     );
                     air_before += usize::from(before > 0.0);

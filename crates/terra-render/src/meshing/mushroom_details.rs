@@ -270,6 +270,7 @@ mod tests {
             water_level: None,
             terrain: None,
             exposure: None,
+            tints: Default::default(),
             conditions: Default::default(),
         };
         let near =

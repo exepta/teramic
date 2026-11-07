@@ -1,0 +1,139 @@
+{
+  "status": "passed",
+  "native_functional_status": "passed",
+  "native_exit_code": 0,
+  "gallery_captures": 17,
+  "extra_setup_capture": "kingdom-unbound.png",
+  "window_rounding_tolerance_pixels": 1,
+  "actual_4k_sizes": [
+    3840,
+    2160
+  ],
+  "reviewed": [
+    {
+      "path": "kingdom-ui-qhd.png",
+      "status": "passed",
+      "note": "Final run QHD: frame, labels, controls and intended scroll clipping fit; actual window width rounds to 2561 pixels.",
+      "review_stage": "final-run"
+    },
+    {
+      "path": "kingdom-ui-icons-qhd.png",
+      "status": "passed",
+      "note": "Inspected: frame, text, controls, role/relation state and intended scroll clipping are consistent.",
+      "review_stage": "initial-layout-review-and-final-native-assertions"
+    },
+    {
+      "path": "kingdom-ui-icons-search.png",
+      "status": "passed",
+      "note": "Inspected: frame, text, controls, role/relation state and intended scroll clipping are consistent.",
+      "review_stage": "initial-layout-review-and-final-native-assertions"
+    },
+    {
+      "path": "kingdom-ui-colorpicker.png",
+      "status": "passed",
+      "note": "Inspected: frame, text, controls, role/relation state and intended scroll clipping are consistent.",
+      "review_stage": "initial-layout-review-and-final-native-assertions"
+    },
+    {
+      "path": "kingdom-ui-compact.png",
+      "status": "passed",
+      "note": "Final run compact: labels, controls and ornate frame fit the 1025x768 actual window; lower content stays in the intended scroll viewport.",
+      "review_stage": "final-run"
+    },
+    {
+      "path": "kingdom-ui-icons-compact.png",
+      "status": "passed",
+      "note": "Inspected: frame, text, controls, role/relation state and intended scroll clipping are consistent.",
+      "review_stage": "initial-layout-review-and-final-native-assertions"
+    },
+    {
+      "path": "kingdom-ui-4k.png",
+      "status": "passed",
+      "note": "Final run 4K: centered frame and consistent font/control sizing at exact 3840x2160; intended scroll clipping remains within the frame.",
+      "review_stage": "final-run"
+    },
+    {
+      "path": "kingdom-ui-icons-4k.png",
+      "status": "passed",
+      "note": "Inspected: frame, text, controls, role/relation state and intended scroll clipping are consistent.",
+      "review_stage": "initial-layout-review-and-final-native-assertions"
+    },
+    {
+      "path": "kingdom-rights-visitor.png",
+      "status": "passed",
+      "note": "Inspected: frame, text, controls, role/relation state and intended scroll clipping are consistent.",
+      "review_stage": "initial-layout-review-and-final-native-assertions"
+    },
+    {
+      "path": "kingdom-role-choices.png",
+      "status": "passed",
+      "note": "Final run: all five authorized role buttons (Officer, Member, Builder, Worker, Visitor) are fully visible in the real scrolled editor; Founder is absent.",
+      "review_stage": "final-run"
+    },
+    {
+      "path": "kingdom-rights-worker.png",
+      "status": "passed",
+      "note": "Final run: authoritative Worker role grant shown with Inventories and NPC Work; card text and role controls fit.",
+      "review_stage": "final-run"
+    },
+    {
+      "path": "kingdom-diplomacy-neutral.png",
+      "status": "passed",
+      "note": "Inspected: frame, text, controls, role/relation state and intended scroll clipping are consistent.",
+      "review_stage": "initial-layout-review-and-final-native-assertions"
+    },
+    {
+      "path": "kingdom-diplomacy-allied.png",
+      "status": "passed",
+      "note": "Inspected: frame, text, controls, role/relation state and intended scroll clipping are consistent.",
+      "review_stage": "initial-layout-review-and-final-native-assertions"
+    },
+    {
+      "path": "kingdom-diplomacy-pending.png",
+      "status": "passed",
+      "note": "Final run: Helteria is effectively Allied; Lutera remains Neutral with an explicit pending offer and settlement-level-2 condition; labels and controls fit.",
+      "review_stage": "final-run"
+    },
+    {
+      "path": "kingdom-rights-revoked.png",
+      "status": "passed",
+      "note": "Inspected: frame, text, controls, role/relation state and intended scroll clipping are consistent.",
+      "review_stage": "initial-layout-review-and-final-native-assertions"
+    },
+    {
+      "path": "kingdom-member-readonly.png",
+      "status": "passed",
+      "note": "Final run: actual Visitor, four denied protected-land capabilities, no management controls, and short management/new-join/legacy hint contained within its card.",
+      "review_stage": "final-run"
+    },
+    {
+      "path": "kingdom-diplomacy-readonly.png",
+      "status": "passed",
+      "note": "Final run: rendered client authenticated as Visitor, no diplomacy action buttons, accurate effective/offer states and contained management hint.",
+      "review_stage": "final-run"
+    }
+  ],
+  "narrow_source_fixes": [
+    "crates/terra-ui/src/kingdom.rs",
+    "src-ui/components/kingdom-menu.component.html",
+    "src-ui/components/kingdom-menu.component.css",
+    "apps/client/src/kingdom_ui_smoke.rs"
+  ],
+  "private_run_directory": "/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/target/phase199-rights/run.mMf89j",
+  "review_method": "All 17 layouts inspected in the initial successful run; after the narrow hint/editor fixes the final successful run was rechecked for both corrected frames, QHD/compact/4K layouts, Worker grant, pending alliance and authenticated Visitor read-only diplomacy. Every final capture also passed native authority/layout assertions and dimension checks.",
+  "actual_sizes": {
+    "qhd": [
+      2561,
+      1440
+    ],
+    "compact": [
+      1025,
+      768
+    ],
+    "4k": [
+      3840,
+      2160
+    ]
+  },
+  "product_source_changes_in_final_run": false
+}

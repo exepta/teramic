@@ -208,9 +208,16 @@ pub(super) fn change(world: &mut World, control: &str, value: &str) -> Result<()
     let graphics = &mut draft.graphics;
     match control {
         "graphics-resolution" => {
-            let (w, h) = value.split_once('x').ok_or("Invalid resolution")?;
-            graphics.width = w.parse().map_err(|_| "Invalid width")?;
-            graphics.height = h.parse().map_err(|_| "Invalid height")?;
+            if value != "desktop" || graphics.window_mode != WindowModeSetting::Borderless {
+                let (w, h) = value.split_once('x').ok_or("Invalid resolution")?;
+                let width = w.parse().map_err(|_| "Invalid width")?;
+                let height = h.parse().map_err(|_| "Invalid height")?;
+                graphics.width = width;
+                graphics.height = height;
+                if graphics.window_mode == WindowModeSetting::Borderless {
+                    graphics.window_mode = WindowModeSetting::Windowed;
+                }
+            }
         }
         "graphics-window" => {
             graphics.window_mode = match value {

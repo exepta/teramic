@@ -6,15 +6,19 @@ const SPACING: f64 = 256.0;
 #[derive(Default)]
 pub(super) struct LakeCache(Mutex<HashMap<[i64; 2], Option<Lake>>>);
 #[derive(Clone, Copy)]
-struct Lake {
-    center: [f64; 2],
-    radius: f64,
-    level: f64,
+pub(super) struct Lake {
+    pub(super) center: [f64; 2],
+    pub(super) radius: f64,
+    pub(super) level: f64,
     depth: f64,
     phase: f64,
+    lobes: bool,
 }
 impl Lake {
-    fn sample(self, x: f64, z: f64) -> OasisSample {
+    pub(super) fn sample(self, x: f64, z: f64) -> OasisSample {
+        if self.lobes {
+            return self.regional_sample(x, z);
+        }
         let dx = (x - self.center[0]) * 0.90;
         let dz = (z - self.center[1]) / 0.90;
         let angle = dz.atan2(dx);
@@ -33,7 +37,7 @@ impl Lake {
 impl TerraGenerator {
     pub fn lake_at(&self, x: f64, z: f64) -> Option<OasisSample> {
         let config = self.config();
-        if config.landscape_revision == 0
+        if (config.landscape_revision == 0 && !self.connected_hydrology())
             || !config.water
             || !config.biomes
             || (config.hill_amplitude == 0.0 && config.mountain_amplitude == 0.0)
@@ -41,6 +45,9 @@ impl TerraGenerator {
             || !z.is_finite()
         {
             return None;
+        }
+        if self.connected_hydrology() {
+            return self.connected_lake_at(x, z);
         }
         let cell = [(x / SPACING).floor() as i64, (z / SPACING).floor() as i64];
         let seed = layer_seed(
@@ -96,6 +103,7 @@ impl TerraGenerator {
             level: 0.0,
             depth: 2.5 + f64::from((seed >> 25) % 8) * 0.5,
             phase: f64::from(seed % 1024) * std::f64::consts::TAU / 1024.0,
+            lobes: false,
         };
         let mut low = f64::INFINITY;
         let mut high = f64::NEG_INFINITY;
@@ -124,12 +132,19 @@ impl TerraGenerator {
     }
 }
 
+mod regional;
+
 #[cfg(test)]
 mod tests {
     use super::*;
     #[test]
     fn generated_lakes_are_deterministic_locally_level_and_have_closed_banks() {
-        let terrain = TerraGenerator::new(terra_core::WorldConfig::default()).unwrap();
+        let terrain = TerraGenerator::new(terra_core::WorldConfig {
+            landscape_revision: 2,
+            rivers: false,
+            ..Default::default()
+        })
+        .unwrap();
         let mut found = None;
         'find: for z in -16..=16 {
             for x in -16..=16 {

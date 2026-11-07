@@ -28,6 +28,26 @@ impl ShapeBox {
         }
     }
 
+    /// Rotary models are authored along +X; vertical poses rotate about the
+    /// same cell center as their moving mesh and selection geometry.
+    pub fn rotated_axis(self, facing: u8) -> Self {
+        if facing < 4 {
+            return self.rotated_y(facing);
+        }
+        let [x, y, z] = self.minimum;
+        let [u, v, w] = self.maximum;
+        let (minimum, maximum) = match facing {
+            4 => ([1.0 - v, x, z], [1.0 - y, u, w]),
+            5 => ([y, 1.0 - u, z], [v, 1.0 - x, w]),
+            _ => return self,
+        };
+        Self {
+            minimum,
+            maximum,
+            ..self
+        }
+    }
+
     pub fn valid(&self) -> bool {
         self.valid_for(0)
     }
@@ -35,10 +55,29 @@ impl ShapeBox {
         (0..3).all(|axis| {
             self.minimum[axis].is_finite()
                 && self.maximum[axis].is_finite()
-                && self.minimum[axis] >= -0.01
+                && self.minimum[axis]
+                    >= if matches!(material, 152 | 153 | 157..=160) && axis == 1 {
+                        -0.385
+                    } else if material == 147 {
+                        -1.01
+                    } else if material == 148 {
+                        -0.15
+                    } else if crate::kinetic::is_large_gear(material) {
+                        -0.56
+                    } else if crate::kinetic::is_gear(material) {
+                        -0.06
+                    } else {
+                        -0.01
+                    }
                 && self.maximum[axis]
-                    <= if material == 99 && axis == 1 {
-                        1.25
+                    <= if material == 147 {
+                        2.01
+                    } else if material == 148 {
+                        1.15
+                    } else if crate::kinetic::is_large_gear(material) {
+                        1.56
+                    } else if crate::kinetic::is_gear(material) {
+                        1.06
                     } else if matches!(material, 59 | 65..=67 | 139) && axis == 1
                         || matches!(material, 71..=73) && axis == 2
                     {
@@ -85,6 +124,9 @@ impl ShapeBox {
 }
 
 pub fn builtin_boxes(material: u16) -> &'static [ShapeBox] {
+    if crate::castle::is_castle(material) {
+        return crate::castle::boxes(material);
+    }
     if material == 139 {
         return builtin_boxes(65);
     }
@@ -128,8 +170,11 @@ pub fn builtin_boxes(material: u16) -> &'static [ShapeBox] {
     static BENCH: OnceLock<Vec<ShapeBox>> = OnceLock::new();
     static CHEST: OnceLock<Vec<ShapeBox>> = OnceLock::new();
     static TORCH: OnceLock<Vec<ShapeBox>> = OnceLock::new();
+    static LANTERN: OnceLock<Vec<ShapeBox>> = OnceLock::new();
+    static CHAIN: OnceLock<Vec<ShapeBox>> = OnceLock::new();
     static FURNACE: OnceLock<Vec<ShapeBox>> = OnceLock::new();
     static CRUSHER: OnceLock<Vec<ShapeBox>> = OnceLock::new();
+    static MIXER: OnceLock<Vec<ShapeBox>> = OnceLock::new();
     static CRANK: OnceLock<Vec<ShapeBox>> = OnceLock::new();
     static STRAIGHT: OnceLock<Vec<ShapeBox>> = OnceLock::new();
     static ELBOW: OnceLock<Vec<ShapeBox>> = OnceLock::new();
@@ -144,7 +189,124 @@ pub fn builtin_boxes(material: u16) -> &'static [ShapeBox] {
     static SPRUCE_WINDOW: OnceLock<Vec<ShapeBox>> = OnceLock::new();
     static BED: OnceLock<Vec<ShapeBox>> = OnceLock::new();
     static POT: OnceLock<Vec<ShapeBox>> = OnceLock::new();
+    static HOPPER: OnceLock<Vec<ShapeBox>> = OnceLock::new();
+    static IMPORTER: OnceLock<Vec<ShapeBox>> = OnceLock::new();
+    static FILTERED_FUNNEL: OnceLock<Vec<ShapeBox>> = OnceLock::new();
+    static BELT_MERGER: OnceLock<Vec<ShapeBox>> = OnceLock::new();
+    static FILTERED_TUNNEL: OnceLock<Vec<ShapeBox>> = OnceLock::new();
+    static BELT_DISTRIBUTOR: OnceLock<Vec<ShapeBox>> = OnceLock::new();
+    static CAULDRON: OnceLock<Vec<ShapeBox>> = OnceLock::new();
+    static CAMPFIRE: OnceLock<Vec<ShapeBox>> = OnceLock::new();
+    static FILLING: [OnceLock<Vec<ShapeBox>>; 2] = [const { OnceLock::new() }; 2];
+    static GLASS_PIPE: OnceLock<Vec<ShapeBox>> = OnceLock::new();
+    static PLUMBING: [OnceLock<Vec<ShapeBox>>; 7] = [const { OnceLock::new() }; 7];
+    static GEARBOXES: [OnceLock<Vec<ShapeBox>>; 2] = [const { OnceLock::new() }; 2];
+    static KINETICS: [OnceLock<Vec<ShapeBox>>; 11] = [const { OnceLock::new() }; 11];
     match material {
+        172 => GLASS_PIPE.get_or_init(|| {
+            read(
+                include_str!("../../../assets/terra/blocks/glass_pipe.json"),
+                172,
+            )
+        }),
+        170..=171 => FILLING[usize::from(material - 170)].get_or_init(|| {
+            const SOURCES: [&str; 2] = [
+                include_str!("../../../assets/terra/blocks/hold_block.json"),
+                include_str!("../../../assets/terra/blocks/fluid_infuser.json"),
+            ];
+            read(SOURCES[usize::from(material - 170)], material)
+        }),
+        161 => CAULDRON.get_or_init(|| {
+            read(
+                include_str!("../../../assets/terra/blocks/cauldron.json"),
+                161,
+            )
+        }),
+        162 => CAMPFIRE.get_or_init(|| {
+            read(
+                include_str!("../../../assets/terra/blocks/campfire.json"),
+                162,
+            )
+        }),
+        163..=169 => PLUMBING[usize::from(material - 163)].get_or_init(|| {
+            const SOURCES: [&str; 7] = [
+                include_str!("../../../assets/terra/blocks/wood_pipe.json"),
+                include_str!("../../../assets/terra/blocks/stone_pipe.json"),
+                include_str!("../../../assets/terra/blocks/iron_pipe.json"),
+                include_str!("../../../assets/terra/blocks/valve.json"),
+                include_str!("../../../assets/terra/blocks/faucet.json"),
+                include_str!("../../../assets/terra/blocks/pump.json"),
+                include_str!("../../../assets/terra/blocks/basin.json"),
+            ];
+            read(SOURCES[usize::from(material - 163)], material)
+        }),
+        159 => FILTERED_TUNNEL.get_or_init(|| {
+            read(
+                include_str!("../../../assets/terra/blocks/filtered_tunnel.json"),
+                159,
+            )
+        }),
+        160 => BELT_DISTRIBUTOR.get_or_init(|| {
+            read(
+                include_str!("../../../assets/terra/blocks/belt_distributor.json"),
+                160,
+            )
+        }),
+        157 => FILTERED_FUNNEL.get_or_init(|| {
+            read(
+                include_str!("../../../assets/terra/blocks/filtered_funnel.json"),
+                157,
+            )
+        }),
+        158 => BELT_MERGER.get_or_init(|| {
+            read(
+                include_str!("../../../assets/terra/blocks/belt_merger.json"),
+                158,
+            )
+        }),
+        156 => {
+            MIXER.get_or_init(|| read(include_str!("../../../assets/terra/blocks/mixer.json"), 156))
+        }
+        154..=155 => GEARBOXES[usize::from(material - 154)].get_or_init(|| {
+            read(
+                if material == 154 {
+                    include_str!("../../../assets/terra/blocks/gearbox_horizontal.json")
+                } else {
+                    include_str!("../../../assets/terra/blocks/gearbox_vertical.json")
+                },
+                material,
+            )
+        }),
+        152 => HOPPER.get_or_init(|| {
+            read(
+                include_str!("../../../assets/terra/blocks/item_hopper.json"),
+                152,
+            )
+        }),
+        153 => IMPORTER.get_or_init(|| {
+            read(
+                include_str!("../../../assets/terra/blocks/item_importer.json"),
+                153,
+            )
+        }),
+        141..=151 => KINETICS[usize::from(material - 141)].get_or_init(|| {
+            read(
+                match material {
+                    141 => include_str!("../../../assets/terra/blocks/wooden_gear.json"),
+                    142 => include_str!("../../../assets/terra/blocks/stone_gear.json"),
+                    143 => include_str!("../../../assets/terra/blocks/iron_gear.json"),
+                    144 => include_str!("../../../assets/terra/blocks/wooden_shaft.json"),
+                    145 => include_str!("../../../assets/terra/blocks/stone_shaft.json"),
+                    146 => include_str!("../../../assets/terra/blocks/iron_shaft.json"),
+                    147 => include_str!("../../../assets/terra/blocks/water_wheel.json"),
+                    148 => include_str!("../../../assets/terra/blocks/conveyor.json"),
+                    149 => include_str!("../../../assets/terra/blocks/wooden_large_gear.json"),
+                    150 => include_str!("../../../assets/terra/blocks/stone_large_gear.json"),
+                    _ => include_str!("../../../assets/terra/blocks/iron_large_gear.json"),
+                },
+                material,
+            )
+        }),
         131 => POT.get_or_init(|| {
             read(
                 include_str!("../../../assets/terra/blocks/flower_pot.json"),
@@ -181,6 +343,8 @@ pub fn builtin_boxes(material: u16) -> &'static [ShapeBox] {
         40 => {
             TORCH.get_or_init(|| read(include_str!("../../../assets/terra/blocks/torch.json"), 40))
         }
+        crate::lantern::LANTERN => LANTERN.get_or_init(|| crate::lantern::boxes(material, 0)),
+        crate::lantern::CHAIN => CHAIN.get_or_init(|| crate::lantern::boxes(material, 0)),
         59 => FURNACE.get_or_init(|| {
             read(
                 include_str!("../../../assets/terra/blocks/furnace.json"),
@@ -275,10 +439,13 @@ pub fn torch_point(facing: u8, point: [f64; 3]) -> [f64; 3] {
     }
     let v = torch_vector(facing, [point[0] - 0.5, point[1], point[2] - 0.5]);
     let n = torch_normal(facing);
+    // The authored stem is 0.1 blocks wide. Put its rear bottom corner on
+    // the wall face; the former rounded offset pushed it into the support.
+    let offset = 0.5 - 0.05 * 25.0_f64.to_radians().cos() - 0.000001;
     [
-        v[0] + 0.5 - n[0] * 0.455,
+        v[0] + 0.5 - n[0] * offset,
         v[1] + 0.13,
-        v[2] + 0.5 - n[2] * 0.455,
+        v[2] + 0.5 - n[2] * offset,
     ]
 }
 pub fn torch_normal(facing: u8) -> [f64; 3] {

@@ -18,7 +18,7 @@ pub struct PlacementOutlineMaterial {
 
 impl Material for PlacementOutlineMaterial {
     fn vertex_shader() -> ShaderRef {
-        "shaders/terra_placement_outline.wgsl".into()
+        "shaders/terra_placement_outline.wesl".into()
     }
 
     fn fragment_shader() -> ShaderRef {

@@ -199,6 +199,19 @@ pub(super) fn scythe(b: &mut Builder, p: &Palette) -> Result<(), String> {
     Ok(())
 }
 
+pub(super) fn watering_can_water(b: &mut Builder, fill: f32) -> Result<(), String> {
+    let center = Vec3::new(0.35, 0.105 + 0.47 * fill.clamp(0., 1.), 0.5);
+    let rim = |angle: f32| center + Vec3::new(angle.sin(), 0., angle.cos()) * 0.145;
+    for i in 0..12 {
+        let angle = i as f32 * std::f32::consts::TAU / 12.;
+        b.triangle(
+            [center, rim(angle), rim(angle + std::f32::consts::TAU / 12.)],
+            [0.12, 0.52, 0.68],
+        )?;
+    }
+    Ok(())
+}
+
 pub(super) fn watering_can(b: &mut Builder, p: &Palette) -> Result<(), String> {
     let wood = p.kind == ToolMaterial::Wood;
     let body = if wood { WOOD } else { p.body };
@@ -228,8 +241,13 @@ pub(super) fn watering_can(b: &mut Builder, p: &Palette) -> Result<(), String> {
     }
     part(b, [0.35, 0.028, 0.5], [0.395, 0.056, 0.395], p.fitting_dark)?;
     part(b, [0.35, 0.062, 0.5], [0.435, 0.068, 0.435], p.fitting)?;
-    part(b, [0.35, 0.568, 0.5], [0.435, 0.072, 0.435], p.fitting)?;
-    part(b, [0.35, 0.584, 0.5], [0.33, 0.013, 0.33], dark)?;
+    // An actual open mouth lets the shared held-water surface show every fill level.
+    for x in [0.15, 0.55] {
+        part(b, [x, 0.568, 0.5], [0.035, 0.072, 0.435], p.fitting)?;
+    }
+    for z in [0.30, 0.70] {
+        part(b, [0.35, 0.568, z], [0.365, 0.072, 0.035], p.fitting)?;
+    }
     for y in [0.06, 0.56] {
         for x in [0.18, 0.29, 0.41, 0.52] {
             for z in [0.271, 0.729] {

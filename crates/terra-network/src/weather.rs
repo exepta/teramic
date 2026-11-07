@@ -21,7 +21,7 @@ pub(crate) fn advance_server(
     mut weather: ResMut<WorldWeather>,
     mut journal: ResMut<terra_world::edits::EditJournal>,
 ) {
-    if !clock.paused {
+    if automatic_weather(&config, &clock) {
         weather.advance_seasonal(
             time.delta_secs_f64() * 1440.0 / clock.day_length_seconds,
             config.world.seed.0,
@@ -32,6 +32,15 @@ pub(crate) fn advance_server(
     if journal.weather != Some(*weather) {
         journal.bypass_change_detection().weather = Some(*weather);
     }
+}
+
+// Daylight and weather are independent. An explicitly paused world/time-speed
+// still freezes both as before; disabling only daylight leaves weather running.
+fn automatic_weather(config: &GameConfig, clock: &WorldClock) -> bool {
+    config.world.game_rules.weather_cycle
+        && !config.world.time.paused
+        && config.world.game_rules.game_time_speed > 0.0
+        && (!clock.paused || !config.world.game_rules.daylight_cycle)
 }
 
 #[derive(Resource, Default)]
@@ -46,7 +55,7 @@ pub(crate) fn advance_client(
     mut weather: ResMut<WorldWeather>,
     mut replica: ResMut<WeatherReplica>,
 ) {
-    if replica.0.is_none() || clock.paused {
+    if replica.0.is_none() || !automatic_weather(&config, &clock) {
         return;
     }
     let dt = time.delta_secs_f64() * 1440.0 / clock.day_length_seconds;
@@ -111,5 +120,28 @@ mod tests {
                 .weather,
             Some(before)
         );
+        // Only the daylight toggle freezes the calendar: weather can continue.
+        app.world_mut()
+            .resource_mut::<GameConfig>()
+            .world
+            .game_rules
+            .daylight_cycle = false;
+        app.update();
+        assert!(app.world().resource::<WorldWeather>().elapsed_total > before.elapsed_total);
+        let running = *app.world().resource::<WorldWeather>();
+        app.world_mut()
+            .resource_mut::<GameConfig>()
+            .world
+            .game_rules
+            .weather_cycle = false;
+        app.update();
+        assert_eq!(*app.world().resource::<WorldWeather>(), running);
+        app.world_mut()
+            .resource_mut::<GameConfig>()
+            .world
+            .game_rules
+            .weather_cycle = true;
+        app.update();
+        assert!(app.world().resource::<WorldWeather>().elapsed_total > running.elapsed_total);
     }
 }

@@ -1,0 +1,17 @@
+<div [class]="(craftingView.brewing && slot.id == 'brewing-result') ? 'item-slot reference-slot reference-result recipe-cauldron-output' : (craftingView.brewing && slot.command == 'recipe-preview') ? 'item-slot reference-slot recipe-cauldron-ingredient' : (slot.id == 'smelting-result' || slot.id == 'crushing-result' || slot.id == 'campfire-result') ? 'item-slot reference-slot reference-result recipe-machine-result' : (slot.id == 'smelting-input') ? 'item-slot reference-slot recipe-machine-input' : (inventoryView.visible || craftingView.recipe_open) ? ((slot.id == 'result' || slot.id == 'recipe-result') ? 'item-slot reference-slot reference-result' : ((inventoryView.player && (slot.command == 'slot' || slot.command == 'hotbar')) ? 'item-slot reference-slot square-player-slot' : 'item-slot reference-slot')) : 'item-slot'">
+<button id="inventory-cell" [class]="slot.missing ? 'item-cell missing' : (slot.selected ? 'item-cell selected' : 'item-cell')" [disabled]="(slot.disabled && slot.command != 'preview' && slot.command != 'recipe-preview') || (slot.command == 'craft' && slot.empty)" onmousedown="inventory_pointer" onmouseenter="inventory_pointer" onmouseleave="inventory_pointer">
+  @if (!slot.empty) {
+    <img [class]="slot.missing ? 'item-image missing-image' : 'item-image'" [alt]="slot.preview_key" />
+    @if (slot.count != '') { <p [class]="(inventoryView.visible && !craftingView.recipe_open) ? 'item-count inventory-stack-count' : 'item-count'">{{ slot.count }}</p> }
+  }
+  @if (slot.empty && slot.ghost_preview != '') {
+    <img class="item-image mixer-ghost-image" [alt]="slot.ghost_preview" />
+    <p [class]="(inventoryView.visible && !craftingView.recipe_open) ? 'item-count mixer-ghost-count inventory-stack-count' : 'item-count mixer-ghost-count'">{{ slot.ghost_count }}</p>
+  }
+</button>
+  <tooltip id="inventory-tooltip" for="inventory-cell" trigger="hover" variant="follow" class="item-tooltip" [disabled]="inventoryCursor.visible || (slot.empty && slot.ghost_preview == '')">
+    <p class="tooltip-name">{{ slot.empty ? slot.ghost_name : slot.name }}</p>
+    <p class="tooltip-identifier">{{ slot.identifier }}</p>
+    <p class="tooltip-description">{{ slot.description }}</p>
+  </tooltip>
+</div>

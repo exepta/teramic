@@ -6,7 +6,10 @@ use terra_network::{TerraNetworkPlugin, connection::NetworkRole};
 use terra_physics::TerraPhysicsPlugin;
 use terra_world::{TerraWorldPlugin, WorldMode};
 
-pub fn headless_app(config: GameConfig) -> App {
+pub fn headless_app(mut config: GameConfig) -> App {
+    if let Some(rules) = config.server.kingdom_rules {
+        config.world.kingdom_rules = rules;
+    }
     build_server(config, true)
 }
 pub(crate) fn build_server(config: GameConfig, logging: bool) -> App {
@@ -37,4 +40,25 @@ fn log_startup(config: Res<GameConfig>) {
     tracing::info!(seed=config.world.seed.0,generator_version=config.world.generator_version,
         tick_rate=config.server.tick_rate,save_format_version=manifest.save_format_version,
         configured_address=%config.server.bind_address,"Authoritative server initialized");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn headless_override_applies_live_policy_without_rewriting_the_generation_snapshot() {
+        let mut config = GameConfig::default();
+        config.world.structures_revision = 8;
+        config.world.structure_border_gap = 16;
+        config.world.kingdom_rules.realm_min_border_gap = 7;
+        let mut rules = config.world.kingdom_rules;
+        rules.realm_min_border_gap = 45;
+        rules.kingdom_build_base = 81;
+        config.server.kingdom_rules = Some(rules);
+        let app = headless_app(config);
+        let world = &app.world().resource::<GameConfig>().world;
+        assert_eq!(world.kingdom_rules, rules);
+        assert_eq!(world.structures_revision, 8);
+        assert_eq!(world.structure_border_gap, 16);
+    }
 }

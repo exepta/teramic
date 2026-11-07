@@ -41,6 +41,17 @@ const VIEWS: [(&str, f64); 31] = [
     ("underwater-taa", 12.0),
     ("dawn-shadow-overlap", 5.9),
 ];
+const CONTACT_VIEWS: [(&str, f64); 2] = [
+    ("natural-water-contact-front", 12.0),
+    ("natural-water-contact-back", 12.0),
+];
+fn capture_view(stage: usize) -> (&'static str, f64) {
+    if stage < VIEWS.len() {
+        VIEWS[stage]
+    } else {
+        CONTACT_VIEWS[stage - VIEWS.len()]
+    }
+}
 #[derive(Resource)]
 struct Smoke {
     started: Instant,
@@ -52,6 +63,8 @@ struct Smoke {
     water: Vec3,
     torches: Vec<[i64; 3]>,
     lamp_entities: Vec<Entity>,
+    contact_smoke: bool,
+    water_contacts: Vec<[i64; 3]>,
 }
 pub(crate) fn install(app: &mut App) {
     if !std::env::args().any(|arg| arg == "--smoke-test-daylight") {
@@ -74,13 +87,16 @@ pub(crate) fn install(app: &mut App) {
             water: Vec3::ZERO,
             torches: Vec::new(),
             lamp_entities: Vec::new(),
+            contact_smoke: std::env::var("TERRA_WATER_CONTACT_SMOKE")
+                .is_ok_and(|value| value == "1"),
+            water_contacts: Vec::new(),
         })
         .add_systems(PostStartup, setup)
         .add_systems(PreUpdate, advance_fixture_clock)
         .add_systems(Last, run);
 }
 fn advance_fixture_clock(time: Res<Time<Real>>, mut clock: ResMut<WorldClock>, smoke: Res<Smoke>) {
-    if (19..25).contains(&smoke.stage) {
+    if (19..25).contains(&smoke.stage) || smoke.stage >= VIEWS.len() {
         clock.advance(time.delta_secs_f64());
     }
 }
@@ -102,20 +118,34 @@ fn setup(world: &mut World) {
         return;
     };
     world.resource_mut::<Smoke>().water = point;
+    if world.resource::<Smoke>().contact_smoke {
+        match place_natural_water_contacts(world, point) {
+            Ok(contacts) => world.resource_mut::<Smoke>().water_contacts = contacts,
+            Err(reason) => {
+                error!(%reason, "Natural-water contact fixture failed");
+                world.resource_mut::<Smoke>().failed = true;
+            }
+        }
+    }
     view(world, 0, point);
 }
 fn view(world: &mut World, stage: usize, water: Vec3) {
     let mut clock = world.resource_mut::<WorldClock>();
-    if stage <= 19 || stage >= 25 {
-        clock.phase = VIEWS[stage].1 / 24.0;
+    if stage <= 19 || stage >= 25 && stage != VIEWS.len() + 1 {
+        clock.phase = capture_view(stage).1 / 24.0;
     }
-    clock.paused = !(19..25).contains(&stage);
-    let eye = if matches!(stage, 5 | 6 | 28 | 29) {
+    clock.paused = !(19..25).contains(&stage) && stage < VIEWS.len();
+    let eye = if stage == VIEWS.len() {
+        water + Vec3::new(-8.0, 3.0, 5.0)
+    } else if stage == VIEWS.len() + 1 {
+        water + Vec3::new(8.0, 2.5, -10.0)
+    } else if matches!(stage, 5 | 6 | 28 | 29) {
         water - Vec3::Y * 0.65
     } else {
         water + Vec3::new(27.0, 18.0, 32.0)
     };
     let target = match stage {
+        stage if stage >= VIEWS.len() => water + Vec3::new(0.0, -0.35, -3.0),
         1 => eye + Vec3::new(30.0, 1.0, 0.0),
         2 => eye + Vec3::new(-30.0, 1.0, 0.0),
         4 | 7 | 8 => eye + Vec3::new(0.15, 0.9, 0.4358899) * 30.0,
@@ -144,6 +174,146 @@ fn view(world: &mut World, stage: usize, water: Vec3) {
         29 | 30 => CaveQuality::Ultra,
         _ => CaveQuality::Medium,
     };
+}
+
+fn place_natural_water_contacts(world: &mut World, water: Vec3) -> Result<Vec<[i64; 3]>, String> {
+    use terra_core::plumbing;
+    use terra_world::{
+        edits::{BlockObjectState, EditJournal},
+        streaming::{BlockEditRequest, ChunkStore, commit_block_edit, commit_object_state},
+    };
+    let terrain = world.resource::<WorldTerrain>().0.clone();
+    let generator = terra_world::SectionGenerator::new(terrain.clone());
+    let properties = world
+        .resource::<terra_core::block_properties::BlockPropertiesCatalog>()
+        .clone();
+    let mut parts = Vec::new();
+    for (index, material) in [
+        plumbing::WOOD_PIPE,
+        plumbing::STONE_PIPE,
+        plumbing::IRON_PIPE,
+        plumbing::GLASS_PIPE,
+        plumbing::VALVE,
+        plumbing::PUMP,
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        let x = water.x.floor() as i64 - 5 + index as i64 * 2;
+        let z = water.z.floor() as i64 - 3;
+        let column = terrain
+            .water_column(x as f64 + 0.5, z as f64 + 0.5)
+            .ok_or("Contact row left the natural oasis")?;
+        if column.depth < 1.5 || (column.level - f64::from(water.y)).abs() > 0.001 {
+            return Err(format!(
+                "Natural contact lacks a deep shared water surface at {x}/{z}: {column:?}"
+            ));
+        }
+        let position = [x, column.level.ceil() as i64 - 1, z];
+        let expected = generator.block_at(position).map_err(|e| e.to_string())?;
+        let source = terra_world::water::fluid_cell_at(
+            &terrain,
+            world.resource::<EditJournal>(),
+            position,
+            expected,
+        );
+        if !source.source || source.amount == 0 {
+            return Err(format!(
+                "Contact must preserve existing natural source at {position:?}"
+            ));
+        }
+        parts.push((
+            position,
+            material,
+            if material == plumbing::PUMP { 0 } else { 4 },
+            source,
+        ));
+    }
+    world.resource_scope(|world, mut chunks: Mut<ChunkStore>| -> Result<(), String> {
+        let mut journal = world.resource_mut::<EditJournal>();
+        for &(position, material, facing, source) in &parts {
+            if let Some(expected) = chunks.block_at(position) {
+                if !commit_block_edit(
+                    &mut chunks,
+                    &mut journal,
+                    &BlockEditRequest {
+                        position,
+                        expected_material: expected,
+                        material,
+                    },
+                    &properties,
+                )? {
+                    return Err(format!("Loaded natural contact rejected at {position:?}"));
+                }
+                commit_object_state(
+                    &mut chunks,
+                    &mut journal,
+                    position,
+                    Some(BlockObjectState {
+                        facing,
+                        ..Default::default()
+                    }),
+                )?;
+            } else {
+                journal
+                    .record(position, material)
+                    .map_err(|e| e.to_string())?;
+                journal.set_object_state(
+                    position,
+                    Some(BlockObjectState {
+                        facing,
+                        ..Default::default()
+                    }),
+                )?;
+            }
+            journal
+                .set_fluid(position, source)
+                .map_err(|e| e.to_string())?;
+        }
+        Ok(())
+    })?;
+    // Probe real generated CPU water geometry, including the edited halo. The
+    // water worker adds the exact profiles later; the native views show those.
+    let journal = world.resource::<EditJournal>();
+    let mut moving = 0;
+    let mut pinned = 0;
+    let owners: std::collections::BTreeSet<_> = parts
+        .iter()
+        .map(|(p, _, _, _)| terra_voxel::global_to_section(*p).0)
+        .collect();
+    for owner in owners {
+        let edits = journal.snapshot(owner).map_err(|e| e.to_string())?;
+        let generated = generator
+            .build(owner, 0, &edits, true)
+            .map_err(|e| e.to_string())?;
+        let Some(patch) = generated.water else {
+            continue;
+        };
+        let origin = owner.origin().map_err(|e| e.to_string())?;
+        for (point, &weight) in patch.positions.iter().zip(&patch.wave_weights) {
+            moving += usize::from(weight > 0.0);
+            let point: [f64; 3] =
+                std::array::from_fn(|axis| f64::from(point[axis]) + origin[axis] as f64);
+            pinned += usize::from(
+                weight == 0.0
+                    && parts.iter().any(|(p, _, _, _)| {
+                        (point[0] - p[0] as f64).abs() <= 1.001
+                            && (point[2] - p[2] as f64).abs() <= 1.001
+                            && (point[1] - f64::from(water.y)).abs() < 0.001
+                    }),
+            );
+        }
+    }
+    if moving == 0 || pinned == 0 {
+        return Err(format!(
+            "Natural water needs moving far waves and pinned contacts: moving={moving}, pinned={pinned}"
+        ));
+    }
+    info!(moving, pinned, parts = ?parts, "Natural oasis contact row retains source water and active remote waves");
+    Ok(parts
+        .into_iter()
+        .map(|(position, _, _, _)| position)
+        .collect())
 }
 
 fn place_fixture_torches(world: &mut World, water: Vec3) -> Option<Vec<[i64; 3]>> {
@@ -222,7 +392,13 @@ fn commit_fixture_torches(world: &mut World, torches: &[[i64; 3]]) -> Result<(),
 }
 fn run(world: &mut World) {
     world.resource_scope(|world, mut smoke: Mut<Smoke>| {
-        if smoke.stage >= VIEWS.len() {
+        let view_count = VIEWS.len()
+            + if smoke.contact_smoke {
+                CONTACT_VIEWS.len()
+            } else {
+                0
+            };
+        if smoke.stage >= view_count {
             return;
         }
         if smoke.failed
@@ -234,7 +410,7 @@ fn run(world: &mut World) {
         {
             error!("Daylight native smoke failed");
             world.write_message(AppExit::error());
-            smoke.stage = VIEWS.len();
+            smoke.stage = view_count;
             return;
         }
         if !world.resource::<terra_render::RenderStatus>().ready
@@ -243,10 +419,37 @@ fn run(world: &mut World) {
             smoke.since = Instant::now();
             return;
         }
-        if smoke.since.elapsed() < Duration::from_secs(3) {
+        if smoke.since.elapsed()
+            < Duration::from_secs(if smoke.stage >= VIEWS.len() { 1 } else { 3 })
+        {
             return;
         }
         if !smoke.requested {
+            if smoke.stage >= VIEWS.len() {
+                let chunks = world.resource::<terra_world::streaming::ChunkStore>();
+                let journal = world.resource::<terra_world::edits::EditJournal>();
+                if smoke.water_contacts.iter().any(|position| {
+                    chunks.block_at(*position) != journal.block(*position)
+                        || journal.object_state(*position).is_none()
+                }) {
+                    return;
+                }
+                if world
+                    .resource::<terra_core::GameConfig>()
+                    .client
+                    .water_wave_strength
+                    <= 0.0
+                    || smoke.water_contacts.iter().any(|position| {
+                        journal
+                            .fluid(*position)
+                            .is_none_or(|cell| !cell.source || cell.amount == 0)
+                    })
+                {
+                    error!("Natural contact views lost active waves or preserved exterior sources");
+                    smoke.failed = true;
+                    return;
+                }
+            }
             let directory = std::env::var_os("TERRA_CAPTURE_DIR")
                 .map(std::path::PathBuf::from)
                 .unwrap_or_else(|| std::env::temp_dir().join("terra-daylight"));
@@ -335,7 +538,7 @@ fn run(world: &mut World) {
             }
             lamps.sort_unstable();
             if lamps.len() > budget
-                || (smoke.stage >= 19 && lamps.is_empty())
+                || ((19..VIEWS.len()).contains(&smoke.stage) && lamps.is_empty())
                 || (matches!(smoke.stage, 25..=27) && shadows && local_shadow_casters == 0)
                 || (matches!(smoke.stage, 25..=27 | 30) && shadows && shadow_casters != 2)
             {
@@ -363,7 +566,7 @@ fn run(world: &mut World) {
                 .map(|(exposure, ambient)| (exposure.ev100, ambient.brightness))
                 .unzip();
             info!(
-                view = VIEWS[smoke.stage].0,
+                view = capture_view(smoke.stage).0,
                 ?exposure,
                 ?ambient,
                 submerged,
@@ -375,6 +578,7 @@ fn run(world: &mut World) {
                 temporal,
                 ?msaa,
                 fixture_torches = smoke.torches.len(),
+                natural_water_contacts = smoke.water_contacts.len(),
                 "Daylight capture state"
             );
             if submerged != matches!(smoke.stage, 5 | 6 | 28 | 29) {
@@ -384,7 +588,7 @@ fn run(world: &mut World) {
             world
                 .spawn(Screenshot::primary_window())
                 .observe(save_to_disk(
-                    directory.join(format!("{}.png", VIEWS[smoke.stage].0)),
+                    directory.join(format!("{}.png", capture_view(smoke.stage).0)),
                 ))
                 .observe(
                     |capture: On<ScreenshotCaptured>, mut smoke: ResMut<Smoke>| {
@@ -401,9 +605,9 @@ fn run(world: &mut World) {
             smoke.requested = true;
         } else if smoke.captures > smoke.stage {
             smoke.stage += 1;
-            if smoke.stage == VIEWS.len() {
+            if smoke.stage == view_count {
                 info!(
-                    captures = VIEWS.len(),
+                    captures = view_count,
                     "Daylight native smoke passed: celestial and underwater captures"
                 );
                 world.write_message(AppExit::Success);

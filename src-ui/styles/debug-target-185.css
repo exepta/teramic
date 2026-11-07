@@ -1,0 +1,68 @@
+/* F1 is unframed diagnostic text, with live world data split across both edges. */
+.debug-overlay { position: absolute !important; top: 10px !important; left: 12px !important; right: 12px !important; width: auto !important; max-width: 100% !important; max-height: 86% !important; display: flex !important; flex-direction: row !important; align-items: flex-start !important; justify-content: space-between !important; gap: 26px !important; padding: 0 !important; border: 0 !important; border-radius: 0 !important; background-color: transparent !important; background-image: none !important; box-shadow: none !important; pointer-events: none !important; overflow-y: hidden !important; }
+.debug-column { display: flex !important; flex-direction: column !important; width: 48% !important; min-width: 0 !important; gap: 2px !important; padding: 0 !important; border: 0 !important; background-color: transparent !important; }
+.debug-overlay p { margin: 0 !important; flex-shrink: 0 !important; font-family: monospace !important; font-size: 14px !important; color: #e8e8e8 !important; text-shadow: 2px 2px #000000 !important; text-wrap: wrap !important; }
+.debug-right { align-items: flex-end !important; }
+.debug-right > p { width: 100% !important; text-align: right !important; }
+.debug-overlay .debug-build, .debug-overlay .animal-heading { color: #ffffff !important; font-size: 15px !important; }
+.debug-space, .debug-overlay .debug-divider { width: 100% !important; height: 9px !important; min-height: 9px !important; margin: 0 !important; padding: 0 !important; border: 0 !important; background-color: transparent !important; }
+.debug-overlay .debug-hint { color: #cccccc !important; font-size: 13px !important; }
+.debug-animal-only { justify-content: flex-end !important; }
+.debug-overlay .creature-overlay { position: relative !important; top: auto !important; right: auto !important; width: 100% !important; max-width: 100% !important; padding: 0 !important; margin-top: 12px !important; gap: 2px !important; border: 0 !important; border-radius: 0 !important; background-color: transparent !important; background-image: none !important; box-shadow: none !important; }
+.debug-animal-only .creature-overlay { margin-top: 0 !important; }
+.debug-overlay .debug-row { width: 100% !important; min-height: 19px !important; gap: 8px !important; }
+.debug-overlay .debug-label { width: 64px !important; color: #d1d1d1 !important; }
+.debug-overlay .debug-value { text-align: right !important; }
+.debug-overlay .animal-heading, .debug-overlay .animal-behavior, .debug-overlay .animal-intention, .debug-overlay .animal-path { width: 100% !important; text-align: right !important; margin: 0 !important; }
+.debug-overlay .terrain-profile { margin-top: 9px !important; }
+.debug-overlay .terrain-map-row { margin: 6px 0 !important; }
+.debug-overlay .terrain-current { gap: 5px !important; }
+.debug-overlay .terrain-selected { background-color: transparent !important; }
+.debug-overlay .terrain-selected p { color: #fff0b8 !important; }
+.debug-overlay .terrain-row { min-height: 20px !important; }
+.debug-overlay .terrain-label { width: 150px !important; }
+.debug-overlay .terrain-extra { margin-top: 5px !important; }
+
+/* Compact block information uses the same warm copper palette as the inventory. */
+.target-card { padding: 10px 13px !important; gap: 4px !important; border: 2px solid #ab7746 !important; border-radius: 6px !important; background-color: #302118ef !important; background-image: linear-gradient(to bottom, #513726f2, #291c15f2) !important; box-shadow: 0 0 0 2px #21160ee6 !important; color: #f1ddba !important; }
+.target-card .target-title { margin: 0 !important; font-family: serif !important; font-size: 18px !important; color: #f8dfb0 !important; text-shadow: 1px 1px #21150e !important; }
+.target-card p { margin: 0 !important; font-size: 12px !important; color: #ead3b0 !important; }
+.target-card .target-origin { color: #c2a07a !important; font-size: 10px !important; text-wrap: wrap !important; }
+.target-tool { min-height: 24px !important; gap: 7px !important; }
+.target-tool-image { width: 24px !important; height: 24px !important; }
+.target-card .target-allowed { color: #b6d598 !important; }
+.target-card .target-denied { color: #eaa29a !important; }
+.target-stat-label { gap: 8px !important; }
+.target-stat-label p { font-size: 11px !important; }
+.target-card progress-bar { height: 7px !important; }
+.target-card progress-bar::track { border: 1px solid #805b3c !important; border-radius: 2px !important; background-color: #211811 !important; }
+.target-card progress-bar::fill { border-radius: 1px !important; background-color: #cda35c !important; }
+.target-card .target-health-bar, .target-health, .target-health-label { height: 18px !important; }
+.target-card .target-health-bar::fill { background-color: #b66051 !important; }
+.target-health-label p { font-size: 11px !important; color: #fff0ce !important; }
+.target-card .target-mining::fill { background-color: #edc369 !important; }
+@media (max-width: 900px) {
+  .debug-overlay { gap: 16px !important; left: 8px !important; right: 8px !important; }
+  .debug-overlay p { font-size: 13px !important; }
+  .debug-overlay .debug-build, .debug-overlay .animal-heading { font-size: 14px !important; }
+  .debug-overlay .debug-hint { font-size: 12px !important; }
+}
+@media (max-width: 600px) {
+  .debug-overlay { top: 6px !important; gap: 10px !important; max-height: 88% !important; }
+  .debug-column { gap: 1px !important; }
+  .debug-overlay p, .debug-overlay .debug-build, .debug-overlay .animal-heading { font-size: 12px !important; }
+  .debug-overlay .debug-hint { font-size: 11px !important; }
+  .debug-overlay .terrain-map, .debug-overlay .terrain-surface { width: 90px !important; height: 90px !important; }
+  .debug-overlay .terrain-cross { left: 39px !important; top: 39px !important; }
+  .debug-overlay .terrain-label { width: 96px !important; }
+  .debug-overlay .terrain-row { min-height: 17px !important; }
+  .target-card { padding: 8px 10px !important; }
+  .target-card .target-title { font-size: 16px !important; }
+}
+@media (max-height: 500px) {
+  .debug-overlay .debug-hint { font-size: 11px !important; }
+  .debug-overlay p, .debug-overlay .debug-build, .debug-overlay .animal-heading { font-size: 12px !important; }
+  .debug-column { gap: 0 !important; }
+  .debug-space, .debug-overlay .debug-divider { height: 5px !important; min-height: 5px !important; }
+  .debug-overlay .debug-row { min-height: 16px !important; }
+}

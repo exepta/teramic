@@ -50,7 +50,7 @@ fn impossible_land_spawn_exits_without_starting_listener_or_missing_resource_pan
 fn spawn_invalidated_after_connection_is_rejected_before_welcome() {
     let mut host = server();
     host.add_observer(
-        |_: On<Add, terra_physics::character::CharacterBody>,
+        |_: On<Add<terra_physics::character::CharacterBody>>,
          spawn: Res<WorldSpawn>,
          mut journal: ResMut<EditJournal>| {
             journal.record(spawn.ground, 0).unwrap();
@@ -92,6 +92,8 @@ fn ocean_origin_sends_same_supported_land_spawn_to_both_udp_clients() {
     );
     let world = terra_core::WorldConfig {
         seed: terra_core::WorldSeed(1),
+        landscape_revision: 3,
+        sea_level: 8.0,
         ..Default::default()
     };
     let terrain = terra_world::TerraGenerator::new(world.clone()).unwrap();

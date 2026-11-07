@@ -11,6 +11,10 @@ use terra_voxel::SectionPos;
 #[test]
 fn residents_really_explore_generated_houses_and_paths_without_walking_in_place() {
     let terrain = TerraGenerator::new(WorldConfig {
+        landscape_revision: 4,
+        sea_level: 22.0,
+        rivers: true,
+        biome_definitions: Some(terra_core::BiomeDefinitions::default()),
         trees: false,
         caves: false,
         ecology_revision: 0,
@@ -76,6 +80,11 @@ fn residents_really_explore_generated_houses_and_paths_without_walking_in_place(
     let mut nav = navigation::Navigation::default();
     let mut moved = BTreeMap::<u64, f64>::new();
     let mut last_motion = BTreeMap::<u64, f64>::new();
+    let starts: BTreeMap<_, _> = population
+        .animals
+        .iter()
+        .map(|(&id, resident)| (id, resident.position))
+        .collect();
     for _ in 0..400 {
         for a in population.animals.values_mut() {
             let before = a.position;
@@ -113,14 +122,14 @@ fn residents_really_explore_generated_houses_and_paths_without_walking_in_place(
             "resident={} moved={:.2} position={:?} behavior={:?} goal={:?}",
             a.id, moved[&a.id], a.position, a.behavior, a.needs.goal
         );
-        assert!(
-            a.age - last_motion.get(&a.id).copied().unwrap_or(0.0) < 12.0,
-            "resident {} stopped for {:.1}s at {:?}",
-            a.id,
-            a.age - last_motion.get(&a.id).copied().unwrap_or(0.0),
-            a.position
-        );
         if moved[&a.id] < 5.0 {
+            eprintln!(
+                "blocked resident start={:?} yaw={} timer={} site={:?}",
+                starts[&a.id],
+                a.yaw,
+                a.timer,
+                residents.sites.get(&a.id)
+            );
             let h = Habitat {
                 terrain: &terrain,
                 chunks: &chunks,
@@ -135,11 +144,18 @@ fn residents_really_explore_generated_houses_and_paths_without_walking_in_place(
                 ];
                 eprintln!(
                     "escape {n} => {:?} ground={:?}",
-                    h.walk_step(a.position, target, a.kind, angle),
+                    physical_step(&h, a.position, target, f64::from(a.yaw)),
                     h.ground(target, a.kind)
                 );
             }
         }
+        assert!(
+            a.age - last_motion.get(&a.id).copied().unwrap_or(0.0) < 12.0,
+            "resident {} stopped for {:.1}s at {:?}",
+            a.id,
+            a.age - last_motion.get(&a.id).copied().unwrap_or(0.0),
+            a.position
+        );
     }
     let exploring = moved.values().filter(|&&distance| distance > 5.0).count();
     assert_eq!(

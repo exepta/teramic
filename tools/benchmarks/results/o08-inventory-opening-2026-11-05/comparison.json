@@ -1,0 +1,20 @@
+{
+  "chest_repeat_open": {
+    "after_projection_gate_max_frame_ms": 39.957326,
+    "before_pending_gate_max_frame_ms": 107.337302,
+    "observed_max_frame_reduction_percent": 62.77405407488256,
+    "readiness": "two actually painted frames in both cases"
+  },
+  "player_first_open": {
+    "before_max_frame_ms": 116.459005,
+    "final_default_max_frame_ms": 25.192914000000002,
+    "observed_max_frame_reduction_percent": 78.36756891405692,
+    "readiness": "same legacy default readiness; individual short runs",
+    "slots_only_max_frame_ms": 38.506519000000004
+  },
+  "remaining_cold_chest": {
+    "first_open_max_frame_ms": 144.30020800000003,
+    "status": "New block-layout construction remains expensive; tracked separately as O09. No general UI frame-time ceiling is proved."
+  },
+  "scope_note": "ui.style is the scheduler interval bracketing the public TiltUiStyleRuntimeSet::Apply set. It includes scheduling/interleaved work and can overlap ui.reactivity; it is an upper bound around style application, not exclusive private-function CPU time."
+}

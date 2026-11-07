@@ -4,7 +4,35 @@ use terra_core::{WeatherPattern, WorldWeather};
 
 /// Furniture sheds precipitation; it remains a roof for the floor below it.
 pub fn retains_snow(material: u16) -> bool {
-    !matches!(material, 28 | 29 | 59 | 71..=73)
+    !matches!(material, 28 | 29 | 59 | 71..=73 | 99..=100 | 141..=172)
+}
+
+/// Weather, not manual placement: one full snowfall layer takes about three
+/// minutes at normal intensity, while stronger snow remains proportionally faster.
+pub const SNOW_ACCUMULATION_PER_SECOND: f32 = 0.00075;
+pub const NATURAL_SNOW_MAX_LAYERS: u8 = 2;
+/// A thin deposit coats joinery completely, without raising its collision hull.
+pub const SHAPED_SNOW_FULL_COVER: f32 = 0.08;
+
+/// Only complete voxel surfaces can support a separate horizontal snow cap.
+/// Sculpted joinery, paths and fences retain snow optically on their actual mesh.
+pub fn supports_snow_layers(material: u16) -> bool {
+    use terra_voxel::MaterialId;
+    retains_snow(material)
+        && MaterialId::from_raw(material).is_some_and(|id| {
+            !matches!(id, MaterialId::Snow | MaterialId::Farmland)
+                && (id.is_opaque()
+                    || matches!(
+                        id,
+                        MaterialId::Glass
+                            | MaterialId::Ice
+                            | MaterialId::Leaves
+                            | MaterialId::AutumnLeaves
+                            | MaterialId::SilverLeaves
+                            | MaterialId::CherryLeaves
+                            | MaterialId::WhiteCherryLeaves
+                    ))
+        })
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
@@ -216,7 +244,39 @@ pub(crate) use surface::tick;
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn only_complete_voxels_support_snow_caps_while_shaped_surfaces_keep_their_snow_texture() {
+        for material in [1, 2, 3, 4, 7, 15, 16, 48, 49, 103, 119, 134, 135] {
+            assert!(super::supports_snow_layers(material), "material {material}");
+        }
+        for material in (74..=98).chain([101, 102, 104, 105, 106, 131, 136, 137, 138]) {
+            assert!(
+                !super::supports_snow_layers(material),
+                "material {material}"
+            );
+            assert!(super::retains_snow(material), "material {material}");
+        }
+        for material in [0, 5, 28, 29, 40, 59, 71, 99, 147, 156, 157, 158] {
+            assert!(
+                !super::supports_snow_layers(material),
+                "material {material}"
+            );
+        }
+    }
+
     use super::*;
+    #[test]
+    fn both_gearbox_housings_shed_snow_like_the_rest_of_the_mechanical_network() {
+        for material in [
+            terra_core::kinetic::GEARBOX_HORIZONTAL,
+            terra_core::kinetic::GEARBOX_VERTICAL,
+            terra_core::logistics::FILTERED_FUNNEL,
+            terra_core::logistics::BELT_MERGER,
+        ] {
+            assert!(!retains_snow(material));
+        }
+        assert!(retains_snow(3));
+    }
     fn wet_weather() -> WorldWeather {
         let mut weather = WorldWeather::new(116);
         weather.from_intensity = 1.0;

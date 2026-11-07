@@ -1,0 +1,4 @@
+2026-11-05T15:26:08.981570Z  INFO terra_client::inventory_benchmark: Inventory benchmark surface/input validation; native OS capture is disabled by smoke mode surface=Player round=1 stage=Closed open=false blocked=false cursor_captured=false os_capture_exercised=false focus=Some(168v0) focus_id=None prewarming=false container=false container_slots=0 panel_painted=false container_grid_painted=false visible_tooltips=0 backdrop_display=Some(None)
+2026-11-05T15:26:08.981577Z ERROR terra_client::inventory_benchmark: Inventory benchmark failed stage=Closed reason="Closed inventory retained keyboard focus or a visible tooltip"
+Error: "Client exited with an error"
+{"command": ["target/o08-binaries/terra-client-after", "--smoke-test-benchmark"], "wall_seconds": 47.49, "peak_rss_kib": 2350656, "user_cpu_seconds": 136.505, "system_cpu_seconds": 16.086, "peak_drm_memory_vram_kib": 4154228, "peak_drm_memory_gtt_kib": 67588, "exit_code": 1}

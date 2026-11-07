@@ -99,6 +99,7 @@ pub fn wind_parameters(kind: PropKind, variant: u8, height: f32, scale: f32) -> 
         PropKind::Grass => (0.53, 1.0),
         PropKind::Bush if variant >= 128 => (0.65, 0.18),
         PropKind::Bush => (0.75, 0.65),
+        kind if kind.sapling().is_some() => (0.9, 0.22),
         PropKind::Flower => (0.60, 0.55),
         PropKind::Fern => (0.45, 0.7),
         PropKind::Wheat => (1.3, 0.5),
@@ -141,10 +142,16 @@ pub enum PropKind {
     Lettuce,
     Scarecrow,
     SpiderWeb,
+    OakSapling,
+    SpruceSapling,
+    BirchSapling,
+    CherrySapling,
+    AppleSapling,
+    AppleFruit,
 }
 
 impl PropKind {
-    pub const ALL: [Self; 19] = [
+    pub const ALL: [Self; 25] = [
         Self::Grass,
         Self::Flower,
         Self::Bush,
@@ -164,7 +171,16 @@ impl PropKind {
         Self::Lettuce,
         Self::Scarecrow,
         Self::SpiderWeb,
+        Self::OakSapling,
+        Self::SpruceSapling,
+        Self::BirchSapling,
+        Self::CherrySapling,
+        Self::AppleSapling,
+        Self::AppleFruit,
     ];
+    pub fn sapling(self) -> Option<terra_core::TreeSpecies> {
+        terra_core::TreeSpecies::from_sapling(self.into())
+    }
     pub fn crop(self) -> Option<terra_core::farming::CropKind> {
         use terra_core::farming::CropKind;
         match self {
@@ -190,12 +206,20 @@ impl PropKind {
 
 impl From<terra_core::ResourcePropKind> for PropKind {
     fn from(kind: terra_core::ResourcePropKind) -> Self {
-        Self::ALL[kind as usize]
+        if kind == terra_core::ResourcePropKind::AppleFruit {
+            Self::AppleFruit
+        } else {
+            Self::ALL[kind as usize]
+        }
     }
 }
 impl From<PropKind> for terra_core::ResourcePropKind {
     fn from(kind: PropKind) -> Self {
-        Self::ALL[kind as usize]
+        if kind == PropKind::AppleFruit {
+            Self::AppleFruit
+        } else {
+            Self::ALL[kind as usize]
+        }
     }
 }
 
@@ -263,9 +287,13 @@ impl WorldProp {
         match self.kind {
             kind if matches!(
                 kind,
-                PropKind::BeeNest | PropKind::Scarecrow | PropKind::SpiderWeb
+                PropKind::BeeNest
+                    | PropKind::Scarecrow
+                    | PropKind::SpiderWeb
+                    | PropKind::AppleFruit
             ) || kind.aquatic()
-                || kind.crop().is_some() =>
+                || kind.crop().is_some()
+                || kind.sapling().is_some() =>
             {
                 self.scale
             }

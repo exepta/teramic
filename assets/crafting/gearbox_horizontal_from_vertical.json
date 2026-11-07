@@ -1,0 +1,5 @@
+{
+  "id": "teramic::gearbox_horizontal_from_vertical", "name": "Gearbox Horizontal", "station": "hand",
+  "output": { "item": { "block": 154 }, "count": 1 },
+  "pattern": { "kind": "shapeless", "ingredients": [ { "item": { "block": 155 }, "count": 1 } ] }
+}

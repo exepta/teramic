@@ -1,0 +1,10 @@
+/* A small copper chevron follows the native dropdown's open state. */
+choice-box::indicator, .copper-setting-choice::indicator, .machine-choice::indicator {
+ width: 10px !important; min-width: 10px !important; height: 10px !important; min-height: 10px !important;
+ padding: 0 !important; margin-left: 14px !important; margin-right: 5px !important;
+ font-size: 0px !important; color: transparent !important; background-color: transparent !important;
+ border: 0 !important; border-right: 2px solid #d7ac70 !important; border-bottom: 2px solid #d7ac70 !important;
+ transform: translateY(-2px) rotate(45deg) !important; align-self: center !important; pointer-events: none !important;
+}
+choice-box:open::indicator, .copper-setting-choice:open::indicator, .machine-choice:open::indicator { transform: translateY(2px) rotate(225deg) !important; }
+choice-box:disabled::indicator { opacity: 0.45 !important; }

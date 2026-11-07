@@ -11,6 +11,15 @@ fn shipped_blocks_have_square_edges_without_changing_material_identity() {
     let definitions = library();
     let mut checked = 0;
     for block in &definitions.blocks {
+        if block.id == 1 {
+            assert_eq!(block.render_kind, BlockRenderKind::CustomMesh);
+            assert_eq!(
+                block.bevel_width, 0.02,
+                "authored join band, not a new cube bevel"
+            );
+            assert!(block.coarse_faces.is_some());
+            continue;
+        }
         assert_eq!(
             block.bevel_width, 0.0,
             "{} still has rounded edges",
@@ -125,7 +134,13 @@ fn definitions_reject_duplicate_air_and_unsafe_paths() {
         .insert("Bad".into(), "../outside.png".into());
     assert!(invalid.validate().is_err());
     invalid = valid;
-    invalid.blocks[0].details[0].probability = f32::NAN;
+    invalid
+        .blocks
+        .iter_mut()
+        .find(|block| !block.details.is_empty())
+        .unwrap()
+        .details[0]
+        .probability = f32::NAN;
     assert!(invalid.validate().is_err());
 }
 
@@ -137,18 +152,28 @@ fn shipped_ids_and_face_materials_stay_explicit_without_cube_models() {
         (1..=terra_voxel::MaterialId::LAST).collect::<Vec<_>>()
     );
     for block in &definitions.blocks {
-        if matches!(block.id, 28..=29 | 40 | 59..=73 | 99..=100 | 139..=140) {
+        if matches!(block.id, 1 | 28..=29 | 40 | 59..=73 | 99..=100 | 139..=172)
+            || terra_core::castle::is_castle(block.id)
+            || terra_core::lantern::is_part(block.id)
+        {
             assert_eq!(block.render_kind, BlockRenderKind::CustomMesh);
             assert!(!block.model.is_empty());
             block.validate().expect("static assembly definition");
             if block.id == terra_core::crusher::MATERIAL {
                 assert!(block.gameplay.struct_block);
                 assert_eq!(block.model, "models/crusher.gltf");
+                assert!(!block.collision_boxes.is_empty());
                 assert!(
-                    block
-                        .collision_boxes
-                        .iter()
-                        .any(|bounds| bounds.maximum[1] > 1.0)
+                    block.collision_boxes.iter().all(|bounds| {
+                        (0..3).all(|axis| {
+                            bounds.minimum[axis].is_finite()
+                                && bounds.maximum[axis].is_finite()
+                                && bounds.minimum[axis] >= 0.0
+                                && bounds.maximum[axis] <= 1.0
+                                && bounds.minimum[axis] < bounds.maximum[axis]
+                        })
+                    }),
+                    "the compact crusher collision must fit one complete cell"
                 );
             }
             continue;
@@ -174,12 +199,19 @@ fn shipped_ids_and_face_materials_stay_explicit_without_cube_models() {
         block.validate().expect("cube geometry requires no GLB");
     }
     let grass = &definitions.blocks[0];
-    let grass_faces = grass.face_materials.as_ref().expect("explicit faces");
-    assert_eq!(grass_faces[3], "Painted meadow turf");
-    assert_eq!(grass_faces[2], "Root-rich earth");
+    assert_eq!(grass.model, "models/fiverr_grass_faces.glb");
     assert_eq!(
-        grass.side_cap.as_ref().expect("green side rim").material,
-        grass_faces[3]
+        grass.faces,
+        ["West", "East", "Down", "Up", "North", "South"]
+    );
+    assert_eq!(
+        grass.coarse_faces.as_ref().unwrap(),
+        &[
+            "WestLod", "EastLod", "DownLod", "UpLod", "NorthLod", "SouthLod"
+        ]
+    );
+    assert!(
+        grass.face_materials.is_none() && grass.materials.is_empty() && grass.side_cap.is_none()
     );
     let snow_faces = definitions.blocks[4]
         .face_materials
@@ -267,12 +299,11 @@ fn textile_and_pot_definitions_keep_their_explicit_shapes_palette_and_standard_m
 }
 
 #[test]
-fn broader_grass_rim_reuses_the_same_closed_cube_vertex_budget() {
+fn legacy_cube_rim_width_reuses_the_same_closed_cube_vertex_budget() {
     use super::{SideCap, cube_faces};
-    let grass = library().blocks.remove(0);
     let build = |height| {
         cube_faces(
-            grass.bevel_width,
+            0.0,
             [0; 6],
             Some(SideCap {
                 material: 1,
@@ -281,7 +312,7 @@ fn broader_grass_rim_reuses_the_same_closed_cube_vertex_budget() {
         )
     };
     let old = build(0.1);
-    let updated = build(grass.side_cap.unwrap().height);
+    let updated = build(0.18);
     let count = |faces: &[Vec<super::PrimitiveTemplate>; 6]| {
         faces
             .iter()
@@ -307,7 +338,11 @@ fn original_schema_v1_models_remain_custom_meshes() {
     let mut missing_model = legacy;
     missing_model.model.clear();
     assert!(missing_model.validate().is_err());
-    let mut cube = library().blocks.remove(0);
+    let mut cube = library()
+        .blocks
+        .into_iter()
+        .find(|block| block.render_kind == BlockRenderKind::Cube)
+        .unwrap();
     cube.face_materials.as_mut().expect("cube faces")[3] = "Missing cap".into();
     assert!(cube.validate().is_err());
 }
@@ -408,9 +443,6 @@ fn shipped_cubes_have_shared_standalone_textures_and_no_glb_files() {
         BTreeSet::from(["textures/wood.png", "textures/stone-strata-hd.png"])
     );
     for (id, pattern) in [
-        (1, TexturePattern::Turf),
-        (1, TexturePattern::Earth),
-        (2, TexturePattern::Earth),
         (3, TexturePattern::Stone),
         (4, TexturePattern::Sand),
         (7, TexturePattern::Canopy),
@@ -438,6 +470,16 @@ fn shipped_cubes_have_shared_standalone_textures_and_no_glb_files() {
             "block {id} must not load stale PNGs"
         );
     }
+    let dirt = definitions
+        .blocks
+        .iter()
+        .find(|block| block.id == 2)
+        .unwrap();
+    assert!(dirt.model.is_empty() && dirt.textures.is_empty());
+    assert!(dirt.materials.values().all(|material| {
+        material.coarse_face == Some(super::definitions::CoarseFaceMaterial { block: 1, side: 2 })
+            && material.texture_pattern.is_none()
+    }));
     let stone = definitions
         .blocks
         .iter()

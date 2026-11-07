@@ -1,0 +1,48 @@
+{
+  "tests_passed": 455,
+  "build_passed": true,
+  "clippy_passed": true,
+  "native_captures": 28,
+  "native_resolutions": [
+    [
+      3840,
+      2160
+    ],
+    [
+      1025,
+      641
+    ]
+  ],
+  "picker_checks": [
+    "preview contained, square and vertically centered",
+    "native editable text contained, right of preview and vertically centered",
+    "opened palette contained within viewport",
+    "authoritative inventory unchanged"
+  ],
+  "sources": [
+    {
+      "path": "src-ui/styles/common-surfaces-185.css",
+      "sha256": "b58e41e1b595732944980229fbcd5a63af3fdc55190160a5fc98522ef85fef15"
+    },
+    {
+      "path": "src-ui/styles/inventory-188.css",
+      "sha256": "26e56c3ad86cc9887e9c19d6fd3cae7e9d761005734b2a651093ba5aadda4a46"
+    },
+    {
+      "path": "src-ui/components/inventory-panel.component.html",
+      "sha256": "34e2b3af765c20804ab2a59b2ecfa3a1bc946b2dead81d0cdf1c73883367dfed"
+    },
+    {
+      "path": "crates/terra-ui/src/frames.rs",
+      "sha256": "ee50fa6240cfd01e8e2af81d2f9f141d9b5784e3d86e5f5773c4a11a3850f99b"
+    },
+    {
+      "path": "apps/client/src/inventory_reference_smoke.rs",
+      "sha256": "66766cf85a31db147f9cde0312755b9d276a21cb9ea9f0e5862dd6ec76539f0d"
+    },
+    {
+      "path": "apps/client/src/inventory_reference_smoke/surfaces.rs",
+      "sha256": "c1bef7c0f7eb1c3187967be417dbb7b1b0f048b03e064f62f9912ea95a60b046"
+    }
+  ]
+}

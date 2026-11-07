@@ -28,9 +28,14 @@ impl DedicatedPersistence {
     pub fn install(
         app: &mut App,
         store: terra_storage::DedicatedStore,
-        journal: EditJournal,
+        mut journal: EditJournal,
         world: WorldId,
     ) {
+        if let Some(config) = app.world().get_resource::<terra_core::GameConfig>()
+            && config.server.kingdom_rules.is_some()
+        {
+            journal.world_rules = Some(terra_core::WorldRuleSettings::from_world(&config.world));
+        }
         app.insert_resource(journal)
             .insert_resource(Self {
                 path: store.edits_path.clone(),
@@ -137,6 +142,50 @@ fn save(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn explicit_startup_policy_overwrites_old_journal_rules_and_survives_real_final_save() {
+        let directory = std::env::temp_dir().join(format!(
+            "terra-startup-policy-{}",
+            terra_core::PlayerUuid::new_v4()
+        ));
+        let mut config = terra_core::GameConfig::default();
+        config.world.structures_revision = 8;
+        config.world.structure_border_gap = 16;
+        config.world.kingdom_rules.realm_min_border_gap = 6;
+        let (store, mut journal) =
+            terra_storage::DedicatedStore::open(&directory, &config.world).unwrap();
+        journal.world_rules = Some(terra_core::WorldRuleSettings::from_world(&config.world));
+        let mut rules = config.world.kingdom_rules;
+        rules.realm_min_border_gap = 42;
+        rules.kingdom_build_base = 73;
+        config.server.kingdom_rules = Some(rules);
+        config.world.kingdom_rules = rules;
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .insert_resource(config.clone());
+        DedicatedPersistence::install(&mut app, store, journal, config.world.id);
+        assert_eq!(
+            app.world()
+                .resource::<EditJournal>()
+                .world_rules
+                .unwrap()
+                .kingdom_rules,
+            rules
+        );
+        app.world_mut().write_message(AppExit::Success);
+        app.update();
+        drop(app);
+        let restored = terra_storage::DedicatedStore::resolve_world_config(
+            &directory,
+            &terra_core::WorldConfig::default(),
+        )
+        .unwrap();
+        assert_eq!(restored.kingdom_rules, rules);
+        assert_eq!(restored.structures_revision, 8);
+        assert_eq!(restored.structure_border_gap, 16);
+        std::fs::remove_dir_all(directory).unwrap();
+    }
 
     #[test]
     fn paused_clock_autosaves_player_location_without_terrain_invalidation() {

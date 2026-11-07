@@ -24,11 +24,21 @@ pub fn water_target(
     direction: [f64; 3],
 ) -> Option<[i64; 3]> {
     let wet = |position, material| {
-        journal
-            .fluid(position)
-            .map_or(material == MaterialId::FluidWater as u16, |cell| {
-                cell.amount > 0
-            })
+        if material == terra_core::plumbing::FAUCET {
+            return crate::plumbing::tap_available(chunks, journal, position, 1);
+        }
+        if !crate::water::can_hold_fluid(material) {
+            return false;
+        }
+        journal.fluid(position).map_or_else(
+            || {
+                material == MaterialId::FluidWater as u16
+                    || chunks
+                        .surface_column_at(position[0], position[2])
+                        .is_some_and(|column| column.water_columns().at(position[1]).is_some())
+            },
+            |cell| cell.source && cell.amount > 0,
+        )
     };
     let hit = terra_voxel::blocks::raycast_blocks(origin, direction, 8.0, |position| {
         let material = chunks.block_at(position)?;

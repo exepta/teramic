@@ -1,0 +1,208 @@
+{
+  "availability": "Local native captures remain at the listed temporary paths; PNGs are not copied into the repository.",
+  "capture_count": 25,
+  "captures": [
+    {
+      "bytes": 1228248,
+      "height": 936,
+      "local_path": "/tmp/teramic-o08-439o32is/reference2-captures/player-inventory-reference-wide.png",
+      "name": "player-inventory-reference-wide.png",
+      "sha256": "0974f0a8e19f818b830fceddb9c27dfd7b491efbd0ef675a849d8832add8d062",
+      "width": 1680
+    },
+    {
+      "bytes": 1405759,
+      "height": 936,
+      "local_path": "/tmp/teramic-o08-439o32is/reference2-captures/player-inventory-catalog-collapsed.png",
+      "name": "player-inventory-catalog-collapsed.png",
+      "sha256": "d1c252bc0d9bfa4053adb0e59a992c6e38f185504f73346bd1f74ed66d65f2f6",
+      "width": 1680
+    },
+    {
+      "bytes": 1218866,
+      "height": 936,
+      "local_path": "/tmp/teramic-o08-439o32is/reference2-captures/inventory-left-category-tabs.png",
+      "name": "inventory-left-category-tabs.png",
+      "sha256": "768c932925bd6116904eb73bae9349b35d7c4ac1defba27de1310875dfc8d845",
+      "width": 1680
+    },
+    {
+      "bytes": 1203809,
+      "height": 936,
+      "local_path": "/tmp/teramic-o08-439o32is/reference2-captures/catalog-page-two.png",
+      "name": "catalog-page-two.png",
+      "sha256": "14180a1fc3b44a980968f303eecdc818d985dabcbefd5186c40f56f34ce48454",
+      "width": 1680
+    },
+    {
+      "bytes": 1140535,
+      "height": 936,
+      "local_path": "/tmp/teramic-o08-439o32is/reference2-captures/catalog-search.png",
+      "name": "catalog-search.png",
+      "sha256": "9e58a785a92daa220446c3beac8ca483b7bf941de6dd946fcef95ab3e48e7214",
+      "width": 1680
+    },
+    {
+      "bytes": 841860,
+      "height": 936,
+      "local_path": "/tmp/teramic-o08-439o32is/reference2-captures/crafting-recipe-reference-wide.png",
+      "name": "crafting-recipe-reference-wide.png",
+      "sha256": "d25b13e1bed1226d43e5a62ff5f4696473636a8a834214e0628661cffc0f2a07",
+      "width": 1680
+    },
+    {
+      "bytes": 850033,
+      "height": 936,
+      "local_path": "/tmp/teramic-o08-439o32is/reference2-captures/chest-oak.png",
+      "name": "chest-oak.png",
+      "sha256": "399896a4bd53262401f262acfc4d02f31527d7a80ef2426127e795320001f098",
+      "width": 1680
+    },
+    {
+      "bytes": 849573,
+      "height": 936,
+      "local_path": "/tmp/teramic-o08-439o32is/reference2-captures/chest-spruce.png",
+      "name": "chest-spruce.png",
+      "sha256": "f99960e0603370e551eeceb658e845e369135bcc5fb61d8532d7345dc2aabbb6",
+      "width": 1680
+    },
+    {
+      "bytes": 853740,
+      "height": 936,
+      "local_path": "/tmp/teramic-o08-439o32is/reference2-captures/chest-birch.png",
+      "name": "chest-birch.png",
+      "sha256": "1cf59520ff103927ccaf6762e2d6ff3984572255843e54f8a7444f2b89d5d4c7",
+      "width": 1680
+    },
+    {
+      "bytes": 853419,
+      "height": 936,
+      "local_path": "/tmp/teramic-o08-439o32is/reference2-captures/chest-cherry.png",
+      "name": "chest-cherry.png",
+      "sha256": "36a58f51c1d0efc722494a030becbb97378c62008909fc823355d0f0da6c55c3",
+      "width": 1680
+    },
+    {
+      "bytes": 852662,
+      "height": 936,
+      "local_path": "/tmp/teramic-o08-439o32is/reference2-captures/chest-birch-alternative.png",
+      "name": "chest-birch-alternative.png",
+      "sha256": "3c24bdbda6b287db808b70bca1abb546ea2e50797b226a33b6857fb8a8f6edea",
+      "width": 1680
+    },
+    {
+      "bytes": 835064,
+      "height": 936,
+      "local_path": "/tmp/teramic-o08-439o32is/reference2-captures/furnace-recipe-reference-wide.png",
+      "name": "furnace-recipe-reference-wide.png",
+      "sha256": "b9e609c8b4271b38f5e7845613398c85a977cc8bd35fa110e043fc08e78180d7",
+      "width": 1680
+    },
+    {
+      "bytes": 861800,
+      "height": 936,
+      "local_path": "/tmp/teramic-o08-439o32is/reference2-captures/furnace-alternative-fuels.png",
+      "name": "furnace-alternative-fuels.png",
+      "sha256": "1a58dfb34101fd9efd9dedc3868e07b5c59115d3a33d788a0881bd4d42b6954b",
+      "width": 1680
+    },
+    {
+      "bytes": 862414,
+      "height": 936,
+      "local_path": "/tmp/teramic-o08-439o32is/reference2-captures/furnace-selected-fuel.png",
+      "name": "furnace-selected-fuel.png",
+      "sha256": "baf0ef5aa172ffb33684025f9af76d8354ca4e7801c8545cbbf4582ae2796a7f",
+      "width": 1680
+    },
+    {
+      "bytes": 835066,
+      "height": 936,
+      "local_path": "/tmp/teramic-o08-439o32is/reference2-captures/cauldron-recipe-wide.png",
+      "name": "cauldron-recipe-wide.png",
+      "sha256": "eaf8d038bbb9c142bee9d921dbacf36c5d8a31fae4c7c90e425fbbb548cb70c5",
+      "width": 1680
+    },
+    {
+      "bytes": 1809834,
+      "height": 936,
+      "local_path": "/tmp/teramic-o08-439o32is/reference2-captures/hotbar-wide.png",
+      "name": "hotbar-wide.png",
+      "sha256": "d4145d78b52f6a8fe74ac3dcc529bec4ec061ae21ea50fed01fff858ae3a60b3",
+      "width": 1680
+    },
+    {
+      "bytes": 1808317,
+      "height": 936,
+      "local_path": "/tmp/teramic-o08-439o32is/reference2-captures/hotbar-selected-wide.png",
+      "name": "hotbar-selected-wide.png",
+      "sha256": "85a7e7cb3e02c930988364cde3bb19500a3a239cd65c17bf8171de175beb2fd0",
+      "width": 1680
+    },
+    {
+      "bytes": 507622,
+      "height": 641,
+      "local_path": "/tmp/teramic-o08-439o32is/reference2-captures/player-inventory-reference-compact.png",
+      "name": "player-inventory-reference-compact.png",
+      "sha256": "22b1e07f7dedb7ebb92e908d0a8f4e4b66c067db56125432bbd3e6eba99b1ce1",
+      "width": 1025
+    },
+    {
+      "bytes": 226462,
+      "height": 641,
+      "local_path": "/tmp/teramic-o08-439o32is/reference2-captures/crafting-recipe-reference-compact.png",
+      "name": "crafting-recipe-reference-compact.png",
+      "sha256": "1d48a8452e4110aa38394d46a00a2534ae89a7a74f7f2738455080de003d1134",
+      "width": 1025
+    },
+    {
+      "bytes": 222888,
+      "height": 641,
+      "local_path": "/tmp/teramic-o08-439o32is/reference2-captures/furnace-recipe-reference-compact.png",
+      "name": "furnace-recipe-reference-compact.png",
+      "sha256": "9cdcda27ae6ffd6d2b5ea168374216573c730ded65b1fbe95dc311e359542be8",
+      "width": 1025
+    },
+    {
+      "bytes": 230683,
+      "height": 641,
+      "local_path": "/tmp/teramic-o08-439o32is/reference2-captures/cauldron-recipe-compact.png",
+      "name": "cauldron-recipe-compact.png",
+      "sha256": "e7c7dd8154339ca431832fa498c6e27b4d8916785e514890e09b4bf2876c8ece",
+      "width": 1025
+    },
+    {
+      "bytes": 805289,
+      "height": 641,
+      "local_path": "/tmp/teramic-o08-439o32is/reference2-captures/hotbar-compact.png",
+      "name": "hotbar-compact.png",
+      "sha256": "ce4bcc13cf74d6b4da12da96345f231a03835bf393429900d44c4b1b010a1fe7",
+      "width": 1025
+    },
+    {
+      "bytes": 673874,
+      "height": 641,
+      "local_path": "/tmp/teramic-o08-439o32is/reference2-captures/pause-menu-compact.png",
+      "name": "pause-menu-compact.png",
+      "sha256": "54f88aceda6bedc5932a17a2f207aa40a44990c62562080e2f1b5d1a09310140",
+      "width": 1025
+    },
+    {
+      "bytes": 1433220,
+      "height": 936,
+      "local_path": "/tmp/teramic-o08-439o32is/reference2-captures/pause-menu-wide.png",
+      "name": "pause-menu-wide.png",
+      "sha256": "75ed303c8f0600b5944debc5a4da09fd6c64230b57ba20d92fae5acf668ac8de",
+      "width": 1680
+    },
+    {
+      "bytes": 847449,
+      "height": 936,
+      "local_path": "/tmp/teramic-o08-439o32is/reference2-captures/settings-paused-wide.png",
+      "name": "settings-paused-wide.png",
+      "sha256": "1c750e7aee4327bf2f520800e0e21e6202693866f845cd7171fea1ba65b43b8b",
+      "width": 1680
+    }
+  ],
+  "copied_images": false,
+  "source": "reference.log"
+}

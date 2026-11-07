@@ -144,15 +144,125 @@ pub enum MaterialId {
     CherryFence = 138,
     CherryDoor = 139,
     CherryWindow = 140,
+    WoodenGear = 141,
+    StoneGear = 142,
+    IronGear = 143,
+    WoodenShaft = 144,
+    StoneShaft = 145,
+    IronShaft = 146,
+    WaterWheel = 147,
+    Conveyor = 148,
+    WoodenLargeGear = 149,
+    StoneLargeGear = 150,
+    IronLargeGear = 151,
+    ItemHopper = 152,
+    ItemImporter = 153,
+    GearboxHorizontal = 154,
+    GearboxVertical = 155,
+    Mixer = 156,
+    FilteredFunnel = 157,
+    BeltMerger = 158,
+    FilteredTunnel = 159,
+    BeltDistributor = 160,
+    Cauldron = 161,
+    Campfire = 162,
+    WoodPipe = 163,
+    StonePipe = 164,
+    IronPipe = 165,
+    Valve = 166,
+    Faucet = 167,
+    Pump = 168,
+    Basin = 169,
+    HoldBlock = 170,
+    FluidInfuser = 171,
+    GlassPipe = 172,
+    Bergfried = 173,
+    CastleStoneWall = 174,
+    BergfriedWall = 175,
+    CastleCrackedWall = 176,
+    CastleOvergrownWall = 177,
+    CastleMossWall = 178,
+    CastleIronWall = 179,
+    CastleBattlementStraight = 180,
+    CastleBattlementCorner = 181,
+    CastleBattlementPillar = 182,
+    CastleArchLeft = 183,
+    CastleArchRight = 184,
+    CastleArrowSlit = 185,
+    CastleWindow = 186,
+    CastleSandstoneWall = 187,
+    CastleDesertWall = 188,
+    CastleSnowWall = 189,
+    CastleBlackstoneWall = 190,
+    CastleRoyalWall = 191,
+    CastleTimberWall = 192,
+    Lantern = 193,
+    Chain = 194,
+    AppleLeaves = 195,
 }
 
 impl MaterialId {
-    pub const LAST: u16 = Self::CherryWindow as u16;
-    pub const FOLIAGE: [u16; 5] = [7, 8, 9, 132, 133];
+    pub const LAST: u16 = Self::AppleLeaves as u16;
+    pub const FOLIAGE: [u16; 6] = [7, 8, 9, 132, 133, 195];
     pub const BLOCK_COUNT: usize = Self::LAST as usize;
 
     pub const fn identifier(self) -> &'static str {
         match self {
+            Self::AppleLeaves => "teramic::apple_leaves",
+            Self::Lantern => "teramic::lantern",
+            Self::Chain => "teramic::chain",
+            Self::WoodPipe => "teramic::wood_pipe",
+            Self::StonePipe => "teramic::stone_pipe",
+            Self::IronPipe => "teramic::iron_pipe",
+            Self::Valve => "teramic::valve",
+            Self::Faucet => "teramic::faucet",
+            Self::Pump => "teramic::pump",
+            Self::Basin => "teramic::basin",
+            Self::HoldBlock => "teramic::hold_block",
+            Self::FluidInfuser => "teramic::fluid_infuser",
+            Self::GlassPipe => "teramic::glass_pipe",
+            Self::Bergfried => "teramic::bergfried",
+            Self::CastleStoneWall => "teramic::castle_stone_wall",
+            Self::BergfriedWall => "teramic::bergfried_wall",
+            Self::CastleCrackedWall => "teramic::castle_cracked_wall",
+            Self::CastleOvergrownWall => "teramic::castle_overgrown_wall",
+            Self::CastleMossWall => "teramic::castle_moss_wall",
+            Self::CastleIronWall => "teramic::castle_iron_wall",
+            Self::CastleBattlementStraight => "teramic::castle_battlement_straight",
+            Self::CastleBattlementCorner => "teramic::castle_battlement_corner",
+            Self::CastleBattlementPillar => "teramic::castle_battlement_pillar",
+            Self::CastleArchLeft => "teramic::castle_arch_left",
+            Self::CastleArchRight => "teramic::castle_arch_right",
+            Self::CastleArrowSlit => "teramic::castle_arrow_slit",
+            Self::CastleWindow => "teramic::castle_window",
+            Self::CastleSandstoneWall => "teramic::castle_sandstone_wall",
+            Self::CastleDesertWall => "teramic::castle_desert_wall",
+            Self::CastleSnowWall => "teramic::castle_snow_wall",
+            Self::CastleBlackstoneWall => "teramic::castle_blackstone_wall",
+            Self::CastleRoyalWall => "teramic::castle_royal_wall",
+            Self::CastleTimberWall => "teramic::castle_timber_wall",
+            Self::GearboxHorizontal => "teramic::gearbox_horizontal",
+            Self::GearboxVertical => "teramic::gearbox_vertical",
+            Self::Mixer => "teramic::mixer",
+            Self::FilteredFunnel => "teramic::filtered_funnel",
+            Self::BeltMerger => "teramic::belt_merger",
+            Self::FilteredTunnel => "teramic::filtered_tunnel",
+            Self::BeltDistributor => "teramic::belt_distributor",
+            Self::Cauldron => "teramic::cauldron",
+            Self::Campfire => "teramic::campfire",
+            Self::ItemHopper => "teramic::item_hopper",
+            Self::ItemImporter => "teramic::item_importer",
+            Self::WoodenGear => "teramic::wooden_gear",
+            Self::StoneGear => "teramic::stone_gear",
+            Self::IronGear => "teramic::iron_gear",
+            Self::WoodenShaft => "teramic::wooden_shaft",
+            Self::StoneShaft => "teramic::stone_shaft",
+            Self::IronShaft => "teramic::iron_shaft",
+            Self::WaterWheel => "teramic::water_wheel",
+            Self::Conveyor => "teramic::conveyor",
+            Self::WoodenLargeGear => "teramic::wooden_large_gear",
+            Self::StoneLargeGear => "teramic::stone_large_gear",
+            Self::IronLargeGear => "teramic::iron_large_gear",
             Self::CherryLog => "teramic::cherry_log",
             Self::CherryPlanks => "teramic::cherry_planks",
             Self::CherryStairs => "teramic::cherry_stairs",
@@ -440,6 +550,61 @@ impl MaterialId {
             138 => Self::CherryFence,
             139 => Self::CherryDoor,
             140 => Self::CherryWindow,
+            141 => Self::WoodenGear,
+            142 => Self::StoneGear,
+            143 => Self::IronGear,
+            144 => Self::WoodenShaft,
+            145 => Self::StoneShaft,
+            146 => Self::IronShaft,
+            147 => Self::WaterWheel,
+            148 => Self::Conveyor,
+            149 => Self::WoodenLargeGear,
+            150 => Self::StoneLargeGear,
+            151 => Self::IronLargeGear,
+            152 => Self::ItemHopper,
+            153 => Self::ItemImporter,
+            154 => Self::GearboxHorizontal,
+            155 => Self::GearboxVertical,
+            156 => Self::Mixer,
+            157 => Self::FilteredFunnel,
+            158 => Self::BeltMerger,
+            159 => Self::FilteredTunnel,
+            160 => Self::BeltDistributor,
+            161 => Self::Cauldron,
+            162 => Self::Campfire,
+            163 => Self::WoodPipe,
+            164 => Self::StonePipe,
+            165 => Self::IronPipe,
+            166 => Self::Valve,
+            167 => Self::Faucet,
+            168 => Self::Pump,
+            169 => Self::Basin,
+            170 => Self::HoldBlock,
+            171 => Self::FluidInfuser,
+            172 => Self::GlassPipe,
+            173 => Self::Bergfried,
+            174 => Self::CastleStoneWall,
+            175 => Self::BergfriedWall,
+            176 => Self::CastleCrackedWall,
+            177 => Self::CastleOvergrownWall,
+            178 => Self::CastleMossWall,
+            179 => Self::CastleIronWall,
+            180 => Self::CastleBattlementStraight,
+            181 => Self::CastleBattlementCorner,
+            182 => Self::CastleBattlementPillar,
+            183 => Self::CastleArchLeft,
+            184 => Self::CastleArchRight,
+            185 => Self::CastleArrowSlit,
+            186 => Self::CastleWindow,
+            187 => Self::CastleSandstoneWall,
+            188 => Self::CastleDesertWall,
+            189 => Self::CastleSnowWall,
+            190 => Self::CastleBlackstoneWall,
+            191 => Self::CastleRoyalWall,
+            192 => Self::CastleTimberWall,
+            195 => Self::AppleLeaves,
+            193 => Self::Lantern,
+            194 => Self::Chain,
             _ => return None,
         })
     }
@@ -451,6 +616,8 @@ impl MaterialId {
             Self::Air
                 | Self::FluidWater
                 | Self::Torch
+                | Self::Lantern
+                | Self::Chain
                 | Self::Seagrass
                 | Self::CaveVine
                 | Self::CaveRoot
@@ -459,6 +626,9 @@ impl MaterialId {
     }
 
     pub const fn is_opaque(self) -> bool {
+        if (self as u16) >= 141 && (self as u16) <= Self::LAST {
+            return false;
+        }
         if (self as u16) >= 74 && (self as u16) <= 98
             || matches!(self, Self::Path | Self::WoolStairs | Self::WoolSlab)
             || (self as u16) >= 106 && (self as u16) <= 118
@@ -502,6 +672,7 @@ impl MaterialId {
                 | Self::SilverLeaves
                 | Self::CherryLeaves
                 | Self::WhiteCherryLeaves
+                | Self::AppleLeaves
                 | Self::SolidWater
                 | Self::Glass
                 | Self::FluidWater
@@ -562,6 +733,7 @@ impl MaterialId {
                 | Self::SilverLeaves
                 | Self::CherryLeaves
                 | Self::WhiteCherryLeaves
+                | Self::AppleLeaves
                 | Self::OakPlanks
                 | Self::BirchPlanks
                 | Self::SprucePlanks

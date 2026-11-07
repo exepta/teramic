@@ -26,7 +26,12 @@ fn all_tools_are_detailed_bounded_three_dimensional_shared_solids() {
         );
         let mesh = &models[0];
         assert_eq!(mesh.material, 42);
-        assert!(mesh.positions.len() >= 1_000, "{item:?}");
+        let minimum = if profile(item).is_some_and(|(shape, _)| shape == Shape::Spoon) {
+            256
+        } else {
+            1_000
+        };
+        assert!(mesh.positions.len() >= minimum, "{item:?}");
         assert!(
             mesh.positions.len() <= 16_000,
             "{item:?}: {} vertices",
@@ -68,6 +73,27 @@ fn all_tools_are_detailed_bounded_three_dimensional_shared_solids() {
         total_vertices < 260_000,
         "Bounded shared tool cache, not per-microvoxel assets: {total_vertices}"
     );
+}
+
+#[test]
+fn all_spoons_share_a_real_concave_bowl_but_keep_their_material_palette() {
+    let mut colors = std::collections::HashSet::new();
+    for tool in [
+        ToolKind::WoodSpoon,
+        ToolKind::StoneSpoon,
+        ToolKind::GoldSpoon,
+    ] {
+        let item = ItemKind::Tool(tool);
+        let mesh = batches(item, 42).unwrap().remove(0);
+        let (minimum, maximum) = bounds(&mesh, |p| p);
+        assert!(minimum.y.abs() < 1e-6 && (maximum.y - 1.0).abs() < 1e-6);
+        assert!(mesh.positions.contains(&[0.5, 0.80, 0.405]));
+        assert!(mesh.positions.contains(&[0.5, 0.80, 0.38]));
+        assert!(mesh.positions.iter().any(|p| p[1] > 0.75 && p[2] >= 0.55));
+        assert!(colors.insert(mesh.colors[0].map(f32::to_bits)));
+        assert_eq!(world_length(item), Some(0.75));
+        assert!(grip(item).is_some());
+    }
 }
 
 #[test]
@@ -361,4 +387,44 @@ fn inventory_camera_fits_all_tool_geometry_without_special_case_assets() {
             assert!(local.z < 0.0);
         }
     }
+}
+
+#[test]
+fn wrench_is_a_meter_long_open_forging_with_a_wooden_grip() {
+    let item = ItemKind::Tool(ToolKind::Wrench);
+    let mesh = batches(item, 73).unwrap().remove(0);
+    assert_eq!(mesh.material, 73);
+    assert_eq!(world_length(item), Some(1.0));
+    let (min, max) = bounds(&mesh, |p| cache_vertex(item, p));
+    assert!((max.y - min.y - 1.0).abs() < 1e-5);
+    assert!((max.z - min.z - 0.184).abs() < 1e-5);
+    assert!(
+        grip(item)
+            .unwrap()
+            .abs_diff_eq(Vec3::new(0.0, -0.30, 0.0), 1e-6)
+    );
+    assert!(mesh.colors.iter().any(|c| c[0] > c[2] * 2.0));
+    assert!(mesh.colors.iter().any(|c| c[2] > c[0]));
+
+    let covers = |point: Vec2| {
+        mesh.indices.chunks_exact(3).any(|indices| {
+            let [a, b, c] = [indices[0], indices[1], indices[2]]
+                .map(|i| Vec3::from_array(mesh.positions[i as usize]).truncate());
+            let ab = b - a;
+            let ac = c - a;
+            let denominator = ab.perp_dot(ac);
+            if denominator.abs() < 1e-8 {
+                return false;
+            }
+            let ap = point - a;
+            let u = ap.perp_dot(ac) / denominator;
+            let v = ab.perp_dot(ap) / denominator;
+            u >= 0.0 && v >= 0.0 && u + v <= 1.0
+        })
+    };
+    for y in [0.91, 0.95, 0.99] {
+        assert!(!covers(Vec2::new(0.5, y)), "the jaw mouth must stay open");
+    }
+    assert!(covers(Vec2::new(0.65, 0.86)), "the right jaw must be solid");
+    assert!(covers(Vec2::new(0.35, 0.86)), "the left jaw must be solid");
 }

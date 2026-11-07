@@ -1,0 +1,9 @@
+{
+  "id": "teramic::filtered_tunnel", "name": "Tunnel (Filtered)", "station": "workbench",
+  "output": { "item": { "block": 159 }, "count": 1 },
+  "pattern": { "kind": "shapeless", "ingredients": [
+    { "item": { "block": 152 }, "count": 1 },
+    { "item": { "mineral": "iron_ingot" }, "count": 1 },
+    { "item": { "dust": "diamond" }, "count": 1 }
+  ] }
+}

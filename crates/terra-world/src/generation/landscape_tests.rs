@@ -4,6 +4,32 @@ use terra_core::WorldConfig;
 use terra_voxel::{MaterialId, SectionPos};
 
 #[test]
+fn revision_one_heights_match_the_pre_f40_executable_snapshot() {
+    let terrain = TerraGenerator::new(WorldConfig {
+        landscape_revision: 1,
+        rivers: false,
+        ..Default::default()
+    })
+    .unwrap();
+    // Captured from the unchanged terrain_regions executable before F40 on
+    // 2026-10-26. Its formatter prints nine decimal places; do not regenerate
+    // this contract from the new implementation.
+    for ([x, z], expected) in [
+        ([0.0, 0.0], 98.791733705),
+        ([160.0, -96.0], 109.377985624),
+        ([512.0, -512.0], 114.740061717),
+        ([-256.0, 256.0], 110.090154128),
+        ([1024.0, 768.0], 104.354917520),
+    ] {
+        let actual = terrain.surface_height(x, z);
+        assert!(
+            (actual - expected).abs() < 1e-9,
+            "legacy revision1 changed at {x},{z}: {actual:.12} != {expected:.12}"
+        );
+    }
+}
+
+#[test]
 fn terraces_have_shelves_and_cliffs_without_density_jumps() {
     for level in -12..=12 {
         let h = f64::from(level) * 4.0;
@@ -11,9 +37,16 @@ fn terraces_have_shelves_and_cliffs_without_density_jumps() {
         assert_eq!(terrace(h + 0.4, 4.0, 0.0), terrace(h + 1.2, 4.0, 0.0));
         assert!(terrace(h + 2.6, 4.0, 0.0) - terrace(h + 1.4, 4.0, 0.0) > 3.0);
     }
-    let a = TerraGenerator::new(WorldConfig::default()).unwrap();
+    // This fixture records revision one's deliberately frequent small terraces.
+    // Revision two also has intentionally smooth macro-regions (tested below).
+    let a = TerraGenerator::new(WorldConfig {
+        landscape_revision: 1,
+        ..Default::default()
+    })
+    .unwrap();
     let b = TerraGenerator::new(WorldConfig {
         terrace_strength: 0.0,
+        landscape_revision: 1,
         ..Default::default()
     })
     .unwrap();
@@ -30,10 +63,59 @@ fn terraces_have_shelves_and_cliffs_without_density_jumps() {
 }
 
 #[test]
+fn revision_two_terraces_shape_plateaus_but_leave_plains_relatively_smooth() {
+    let a = TerraGenerator::new(WorldConfig {
+        landscape_revision: 2,
+        water: false,
+        rivers: false,
+        biomes: false,
+        caves: false,
+        trees: false,
+        ..Default::default()
+    })
+    .unwrap();
+    let b = TerraGenerator::new(WorldConfig {
+        terrace_strength: 0.0,
+        ..a.config().clone()
+    })
+    .unwrap();
+    let mut plateaus = 0;
+    let mut changed = 0;
+    let mut plains = 0;
+    for z in (-2048..=2048).step_by(64) {
+        for x in (-2048..=2048).step_by(64) {
+            let [x, z] = [f64::from(x) + 0.5, f64::from(z) + 0.5];
+            let region = a.landscape_region(x, z);
+            let delta = (a.surface_height(x, z) - b.surface_height(x, z)).abs();
+            assert!(
+                delta <= 6.0,
+                "terracing must not create unbounded elevation changes"
+            );
+            if region.weights[2] > 0.99 {
+                plateaus += 1;
+                changed += usize::from(delta > 0.5);
+            }
+            if region.weights[0] > 0.99 {
+                plains += 1;
+                assert!(
+                    delta < 0.5,
+                    "plains should not inherit strong plateau terraces"
+                );
+            }
+        }
+    }
+    assert!(
+        plateaus > 20 && changed > 10 && plains > 20,
+        "plateaus={plateaus} changed={changed} plains={plains}"
+    );
+}
+
+#[test]
 fn surface_strata_keep_grass_and_dirt_on_steps_and_bury_stone_below_soil() {
-    for landscape_revision in [0, 1] {
+    for landscape_revision in [0, 1, 2, 3] {
         let terrain = TerraGenerator::new(WorldConfig {
             landscape_revision,
+            rivers: false,
             caves: false,
             trees: false,
             biomes: false,
@@ -150,6 +232,8 @@ fn landscape_sections_match_global_samples_at_positive_and_negative_edges() {
 fn uniform_surface_coverage_never_dithers_materials_per_block() {
     let terrain = TerraGenerator::new(WorldConfig {
         base_height: 9.5,
+        sea_level: 8.0,
+        landscape_revision: 3,
         hill_amplitude: 0.0,
         mountain_amplitude: 0.0,
         trees: false,

@@ -1,0 +1,16 @@
+{
+  "external_root": "/run/media/exepta/Data/Jetbrains/projects/rust/tilt-us/tilt-ui",
+  "backup_root": "/tmp/teramic-o09-llz5uuic",
+  "files": [
+    {
+      "path": "crates/tilt-ui-runtime/src/style/plugin.rs",
+      "sha256": "8a1c557963e05f9ab46244ddc71b4f6ed7708ac04fcf5de8cd2482c0f2a29c30",
+      "bytes": 104052
+    },
+    {
+      "path": "crates/tilt-ui-runtime/src/style/matcher.rs",
+      "sha256": "f417ea9e70bf782e969401c10710e82614529a0f23eac1ccbab00f8b71125087",
+      "bytes": 37854
+    }
+  ]
+}

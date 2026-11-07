@@ -1,0 +1,33 @@
+heartbeat = true
+view_bobbing = false
+mob_health_bars = "looking_at"
+mob_health_friendly_color = [
+    72,
+    190,
+    106,
+]
+mob_health_hostile_color = [
+    213,
+    58,
+    52,
+]
+mob_health_font_color = [
+    255,
+    255,
+    255,
+]
+
+[minimap]
+enabled = true
+size = 300
+zoom = 0
+fps = 60
+icon_scale = 1.0
+mode = "auto"
+rotate = false
+relief = true
+mobs = true
+players = true
+coordinates = true
+biome = true
+clock = true

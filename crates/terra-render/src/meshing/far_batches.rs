@@ -1,7 +1,7 @@
 //! Spatially merge stable far terrain. Source meshes remain bounded by loaded
 //! sections and allow immediate, upload-free restoration on edits or retirement.
 use super::TerrainSection;
-use crate::weather::surfaces::WetMaterial;
+use crate::weather::surfaces::{TerrainDepthMaterial, WetMaterial};
 use bevy::{
     asset::RenderAssetUsages,
     ecs::system::SystemParam,
@@ -53,6 +53,7 @@ impl FarCache {
 pub(crate) enum Material {
     Standard(Handle<StandardMaterial>),
     Wet(Handle<WetMaterial>),
+    Depth(Handle<TerrainDepthMaterial>),
 }
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 struct Key {
@@ -305,6 +306,9 @@ fn update(
                 entity.insert(MeshMaterial3d(m.clone()));
             }
             Material::Wet(m) => {
+                entity.insert(MeshMaterial3d(m.clone()));
+            }
+            Material::Depth(m) => {
                 entity.insert(MeshMaterial3d(m.clone()));
             }
         }

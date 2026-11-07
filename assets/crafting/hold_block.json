@@ -1,0 +1,1 @@
+{"id":"teramic::hold_block","name":"Hold Block","station":"workbench","output":{"item":{"block":170},"count":1},"pattern":{"kind":"shapeless","ingredients":[{"item":{"block":16},"wood":true,"count":3},{"item":{"mineral":"iron_ingot"},"count":3}]}}

@@ -7,14 +7,18 @@ use terra_core::{
 use terra_voxel::SectionPos;
 use terra_world::{edits::SectionDelta, props::PropId};
 
-// Version 75 adds cherry joinery and authoritative bucket transfers.
-pub const PROTOCOL_VERSION: u32 = 75;
+// Version 110 adds settlement hierarchy, configurable kingdom policy and planting reasons.
+pub const PROTOCOL_VERSION: u32 = 110;
 pub const PROTOCOL_ID: u64 = 0x5445525241000001;
 pub const MAX_INPUT_BACKLOG: usize = 128;
+pub const MAX_TREE_INTEREST: usize = 256;
+pub const MAX_TREE_PATCH_CELLS: usize = 32_768;
+pub const MAX_TREE_PATCH_BYTES: usize = 128 * 1024;
 
 pub struct ControlChannel;
 pub struct InputChannel;
 pub struct SnapshotChannel;
+pub struct CreatureSnapshotChannel;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum ClientControl {
@@ -65,6 +69,11 @@ pub enum ClientControl {
         id: PropId,
         look: [f32; 2],
     },
+    AttackPlayer {
+        player: PlayerId,
+        look: [f32; 2],
+    },
+    Kingdom(super::kingdom::KingdomCommand),
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -131,7 +140,8 @@ pub struct ConsumptionProgress {
 impl ConsumptionProgress {
     pub fn valid(self) -> bool {
         self.slot < 9
-            && terra_core::food(self.item).is_some()
+            && (terra_core::food(self.item).is_some()
+                || terra_core::brewing::drink_seconds(self.item).is_some())
             && self.progress.is_finite()
             && (0.0..=1.0).contains(&self.progress)
             && self.duration.is_finite()
@@ -197,10 +207,39 @@ pub enum EditAction {
         position: [i64; 3],
         expected: u16,
         facing: u8,
+        closing: bool,
     },
     Farm {
         position: [i64; 3],
         action: terra_core::farming::FarmingAction,
+    },
+    RotateObject {
+        position: [i64; 3],
+        expected: u16,
+        facing: u8,
+        reverse: bool,
+    },
+    ConnectConveyor {
+        start: [i64; 3],
+        end: [i64; 3],
+        start_revision: u64,
+        item: terra_core::ItemKind,
+    },
+    CollectConveyor {
+        id: u64,
+    },
+    DyeConveyor {
+        position: [i64; 3],
+        color: terra_core::beds::DyeColor,
+    },
+    DyeFabric {
+        position: [i64; 3],
+        color: terra_core::beds::DyeColor,
+    },
+    HarvestTree {
+        id: u64,
+        fruit_revision: u64,
+        slot: u8,
     },
 }
 #[derive(Clone, Copy, Debug, Serialize, Deserialize)]
@@ -224,6 +263,7 @@ pub enum EditOutcome {
     Occluded,
     Invalid,
     RateLimited,
+    Planting(terra_core::trees::SaplingPlacementError),
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -284,7 +324,10 @@ pub enum ServerControl {
         state: Box<PlayerState>,
     },
     Reject(String),
-    Container(Option<super::inventory::ContainerSnapshot>),
+    // Filters can hold full item metadata, including persistent cape heraldry.
+    // Allocate the infrequent open-container snapshot without enlarging every
+    // control message. Box remains transparent to both network serializers.
+    Container(Option<Box<super::inventory::ContainerSnapshot>>),
     Social {
         names: Option<Vec<(PlayerId, String)>>,
         cursors: Vec<super::social::SharedCursor>,
@@ -303,6 +346,93 @@ pub enum ServerControl {
     },
     ChestViewers(Vec<[i64; 3]>),
     TreeCollapse(terra_world::tree_felling::Collapse),
+    Kinetics(Vec<KineticVisual>),
+    Cauldrons(Vec<CauldronVisual>),
+    Campfires(Vec<CampfireVisual>),
+    Plumbing(Vec<PlumbingVisual>),
+    Infusion(Vec<terra_core::infusion::HoldVisual>),
+    Kingdoms(terra_core::kingdom::KingdomRegistry),
+    KingdomResult(super::kingdom::KingdomResult),
+    Trees(terra_core::TreeRegistry),
+    TreeUpdates(TreePatch),
+}
+
+/// Ordered interest updates: reset begins a new neighbourhood, subsequent
+/// patches retain records outside the current bounded packet.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct TreePatch {
+    pub revision: u64,
+    pub reset: bool,
+    pub removals: Vec<u64>,
+    pub records: Vec<TreeUpdate>,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct TreeUpdate {
+    /// Metadata is always current. Offset vectors are supplied only by Full;
+    /// other modes must reconstruct retained geometry before validation.
+    pub tree: terra_core::TreeRecord,
+    pub geometry: TreeGeometryUpdate,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub enum TreeGeometryUpdate {
+    Full,
+    Unchanged,
+    Removed {
+        wood: Vec<[i8; 3]>,
+        leaves: Vec<[i8; 3]>,
+    },
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
+pub struct PlumbingVisual {
+    pub position: [i64; 3],
+    pub amount: u16,
+    pub capacity: u16,
+    pub open: bool,
+    pub flowing: bool,
+    pub supplied: bool,
+    pub pump_rpm: f32,
+    pub basin: Option<terra_core::plumbing::BasinShape>,
+    pub intake: Option<terra_core::plumbing::IntakeActivity>,
+}
+impl PlumbingVisual {
+    pub fn valid(&self) -> bool {
+        self.position.iter().all(|v| v.unsigned_abs() <= 1_000_000)
+            && self.amount <= self.capacity
+            && self.pump_rpm.is_finite()
+            && self.pump_rpm.abs() <= f32::from(terra_core::kinetic::MAX_RPM)
+            && (!self.supplied || self.open && self.amount > 0)
+            && self
+                .intake
+                .is_none_or(|activity| activity.valid_for(self.position))
+            && self.basin.map_or(self.capacity == 8, |shape| {
+                shape.valid() && shape.contains(self.position) && self.capacity == shape.capacity()
+            })
+    }
+}
+
+#[derive(Default, Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
+pub struct KineticVisual {
+    pub position: [i64; 3],
+    pub rpm: f32,
+    pub overloaded: bool,
+    pub stress: f32,
+    pub capacity: f32,
+    pub available_capacity: f32,
+}
+impl KineticVisual {
+    pub fn valid(self) -> bool {
+        self.position.iter().all(|v| v.unsigned_abs() <= 1_000_000)
+            && self.rpm.is_finite()
+            && self.rpm.abs() <= f32::from(terra_core::kinetic::MAX_RPM)
+            && (!self.overloaded || self.rpm == 0.0)
+            && [self.stress, self.capacity, self.available_capacity]
+                .iter()
+                .all(|value| value.is_finite() && (0.0..=1.0e9).contains(value))
+            && self.available_capacity <= self.capacity
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
@@ -368,6 +498,40 @@ pub struct FurnaceVisual {
     pub outlet: [i64; 3],
     pub smoke_cells: Vec<[i64; 3]>,
 }
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct CauldronVisual {
+    pub position: [i64; 3],
+    pub water: u8,
+    pub brewing: bool,
+    pub heated: bool,
+    pub recipe: Option<u16>,
+    pub spoon: Option<terra_core::ToolKind>,
+}
+impl CauldronVisual {
+    pub fn valid(&self) -> bool {
+        self.position.iter().all(|v| v.unsigned_abs() <= 1_000_000)
+            && self.water <= terra_core::brewing::MAX_WATER
+            && self
+                .recipe
+                .is_none_or(|id| terra_core::brewing::recipe(id).is_some())
+            && self.spoon.is_none_or(|tool| {
+                terra_core::brewing::spoon_speed(terra_core::ItemKind::Tool(tool)).is_some()
+            })
+            && (!self.brewing
+                || self.heated && self.water > 0 && self.recipe.is_some() && self.spoon.is_some())
+    }
+}
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct CampfireVisual {
+    pub position: [i64; 3],
+    pub lit: bool,
+}
+impl CampfireVisual {
+    pub fn valid(&self) -> bool {
+        self.position.iter().all(|v| v.unsigned_abs() <= 1_000_000)
+    }
+}
 impl FurnaceVisual {
     pub fn valid(&self) -> bool {
         self.smoke_cells.len() <= terra_core::furnace::MAX_SMOKE_CELLS
@@ -381,6 +545,8 @@ impl FurnaceVisual {
 
 #[derive(Clone, Copy, Debug, Default, Serialize, Deserialize)]
 pub struct PlayerState {
+    #[serde(default)]
+    pub kingdom_heraldry: Option<terra_core::kingdom::KingdomHeraldry>,
     pub gender: terra_core::PlayerGender,
     pub generation: u32,
     pub player: PlayerId,
@@ -552,6 +718,13 @@ pub(crate) fn register(app: &mut App) {
         ..default()
     })
     .add_direction(NetworkDirection::ServerToClient);
+    // Sequenced channels retain only their newest message, not one per type.
+    // Independent full-state families must not supersede each other.
+    app.add_channel::<CreatureSnapshotChannel>(ChannelSettings {
+        mode: ChannelMode::SequencedUnreliable,
+        ..default()
+    })
+    .add_direction(NetworkDirection::ServerToClient);
     app.register_message::<ClientControl>()
         .add_direction(NetworkDirection::ClientToServer);
     app.register_message::<MovementInput>()
@@ -567,6 +740,118 @@ pub(crate) fn register(app: &mut App) {
 #[cfg(test)]
 mod layout_tests {
     use super::*;
+    #[test]
+    fn intake_activity_roundtrips_only_actual_adjacent_axis_mouths_and_units() {
+        let position = [-17, 7, 15];
+        let activity = terra_core::plumbing::IntakeActivity {
+            source: [-17, 6, 15],
+            direction: [0, -1, 0],
+            units: 8,
+        };
+        let visual = PlumbingVisual {
+            position,
+            amount: 0,
+            capacity: 8,
+            open: true,
+            flowing: true,
+            supplied: false,
+            pump_rpm: 0.,
+            basin: None,
+            intake: Some(activity),
+        };
+        assert!(visual.valid());
+        assert_eq!(
+            serde_json::from_slice::<PlumbingVisual>(&serde_json::to_vec(&visual).unwrap())
+                .unwrap(),
+            visual
+        );
+        for invalid in [
+            terra_core::plumbing::IntakeActivity {
+                units: 0,
+                ..activity
+            },
+            terra_core::plumbing::IntakeActivity {
+                units: 9,
+                ..activity
+            },
+            terra_core::plumbing::IntakeActivity {
+                direction: [1, -1, 0],
+                ..activity
+            },
+            terra_core::plumbing::IntakeActivity {
+                source: [-17, 5, 15],
+                ..activity
+            },
+        ] {
+            assert!(
+                !PlumbingVisual {
+                    intake: Some(invalid),
+                    ..visual
+                }
+                .valid()
+            );
+        }
+    }
+
+    #[test]
+    fn plumbing_snapshots_roundtrip_and_reject_impossible_amounts_and_shapes() {
+        let shape = terra_core::plumbing::BasinShape {
+            origin: [-17, 19, 15],
+            size: [5, 10, 5],
+        };
+        let visual = PlumbingVisual {
+            intake: None,
+            position: shape.origin,
+            amount: 1500,
+            capacity: 2000,
+            open: true,
+            flowing: true,
+            supplied: true,
+            pump_rpm: 20.0,
+            basin: Some(shape),
+        };
+        assert!(visual.valid());
+        let restored: PlumbingVisual =
+            serde_json::from_slice(&serde_json::to_vec(&visual).unwrap()).unwrap();
+        assert_eq!(restored, visual);
+        for invalid in [
+            PlumbingVisual {
+                amount: 2001,
+                ..visual
+            },
+            PlumbingVisual {
+                capacity: 1999,
+                ..visual
+            },
+            PlumbingVisual {
+                pump_rpm: f32::NAN,
+                ..visual
+            },
+            PlumbingVisual {
+                pump_rpm: 257.0,
+                ..visual
+            },
+            PlumbingVisual {
+                position: [0, 0, 0],
+                ..visual
+            },
+            PlumbingVisual {
+                basin: None,
+                ..visual
+            },
+        ] {
+            assert!(!invalid.valid());
+        }
+        assert!(
+            PlumbingVisual {
+                amount: 8,
+                capacity: 8,
+                basin: None,
+                ..visual
+            }
+            .valid()
+        );
+    }
     #[test]
     fn aquatic_species_and_defensive_ink_are_valid_snapshot_states() {
         use terra_core::creatures::*;
@@ -622,8 +907,122 @@ mod layout_tests {
                 .collect::<Vec<_>>()
         );
         assert_eq!(received.creatures.len(), 10);
-        assert_eq!(PROTOCOL_VERSION, 75);
+        assert_eq!(PROTOCOL_VERSION, 110);
     }
+    #[test]
+    fn kinetic_stress_capacity_roundtrip_and_reject_nonfinite_or_impossible_reserves() {
+        let visual = KineticVisual {
+            position: [-16, 3, 15],
+            rpm: -20.0,
+            stress: 22.0,
+            capacity: 128.0,
+            available_capacity: 106.0,
+            overloaded: false,
+        };
+        assert!(visual.valid());
+        let restored: KineticVisual =
+            serde_json::from_slice(&serde_json::to_vec(&visual).unwrap()).unwrap();
+        assert_eq!(restored, visual);
+        for invalid in [
+            KineticVisual {
+                capacity: f32::NAN,
+                ..visual
+            },
+            KineticVisual {
+                stress: -1.0,
+                ..visual
+            },
+            KineticVisual {
+                available_capacity: 129.0,
+                ..visual
+            },
+            KineticVisual {
+                available_capacity: f32::INFINITY,
+                ..visual
+            },
+        ] {
+            assert!(!invalid.valid());
+        }
+    }
+
+    #[test]
+    fn drinking_progress_accepts_catalogued_potions_and_water_but_not_unknown_payloads() {
+        let progress = ConsumptionProgress {
+            slot: 0,
+            item: terra_core::ItemKind::WaterBottle,
+            progress: 0.5,
+            duration: 1.4,
+        };
+        for item in [
+            terra_core::ItemKind::WaterBottle,
+            terra_core::ItemKind::Potion(1),
+            terra_core::ItemKind::Potion(6),
+        ] {
+            assert!(ConsumptionProgress { item, ..progress }.valid());
+        }
+        for item in [
+            terra_core::ItemKind::GlassBottle,
+            terra_core::ItemKind::Potion(0),
+            terra_core::ItemKind::Potion(u16::MAX),
+        ] {
+            assert!(!ConsumptionProgress { item, ..progress }.valid());
+        }
+    }
+    #[test]
+    fn conveyor_collection_and_dyes_roundtrip_without_reusing_old_action_tags() {
+        let actions = [
+            EditAction::CollectConveyor {
+                id: 18446744073709551610,
+            },
+            EditAction::DyeConveyor {
+                position: [-16, 6, 15],
+                color: terra_core::beds::DyeColor::LightBlue,
+            },
+        ];
+        for action in actions {
+            let payload = serde_json::to_vec(&action).unwrap();
+            let restored: EditAction = serde_json::from_slice(&payload).unwrap();
+            assert_eq!(serde_json::to_vec(&restored).unwrap(), payload);
+        }
+    }
+
+    #[test]
+    fn wrench_rotation_preserves_target_revision_and_direction_on_the_wire() {
+        let command = EditCommand {
+            request: 7,
+            revision: 19,
+            look: [0.1, -0.3],
+            action: EditAction::RotateObject {
+                position: [-16, 6, 15],
+                expected: 149,
+                facing: 4,
+                reverse: true,
+            },
+            source: Some(InventorySource {
+                slot: 2,
+                revision: 11,
+            }),
+        };
+        let payload = serde_json::to_vec(&command).unwrap();
+        let restored: EditCommand = serde_json::from_slice(&payload).unwrap();
+        assert!(matches!(
+            restored.action,
+            EditAction::RotateObject {
+                position: [-16, 6, 15],
+                expected: 149,
+                facing: 4,
+                reverse: true,
+            }
+        ));
+        assert_eq!(restored.source.unwrap().revision, 11);
+        assert_eq!(restored.revision, 19);
+        assert_eq!(
+            serde_json::to_string(&terra_core::ItemKind::Tool(terra_core::ToolKind::Wrench))
+                .unwrap(),
+            r#"{"tool":"wrench"}"#
+        );
+    }
+
     #[test]
     fn join_only_world_allocation_keeps_control_packets_compact_and_serde_transparent() {
         assert!(std::mem::size_of::<ServerControl>() <= 256);
@@ -703,6 +1102,127 @@ mod layout_tests {
             };
             assert_eq!(received.equipment, state.equipment);
             assert_eq!(received.survival, state.survival);
+        }
+    }
+
+    #[test]
+    fn item_metadata_in_container_filters_does_not_enlarge_control_packets_or_change_wire_shape() {
+        use super::super::inventory::{ContainerSnapshot, ContainerView};
+        use terra_core::{
+            CapeItem, ItemKind,
+            kingdom::KingdomHeraldry,
+            logistics::{DistributorConfig, FilterConfig},
+        };
+        assert!(std::mem::size_of::<ServerControl>() <= 256);
+        assert_eq!(
+            std::mem::size_of::<Option<Box<ContainerSnapshot>>>(),
+            std::mem::size_of::<usize>()
+        );
+        let cape = ItemKind::Cape(CapeItem::ALL_WHITE[0])
+            .with_default_heraldry(Some(KingdomHeraldry::default()));
+        let snapshot = ContainerSnapshot {
+            anchor: [-17, 4, 33],
+            view: ContainerView::Primary,
+            attached_campfire: false,
+            workbench: None,
+            furnace: None,
+            crusher: None,
+            mixer: None,
+            filter: None,
+            distributor: Some(DistributorConfig {
+                filters: [FilterConfig {
+                    item: Some(cape),
+                    allowed: true,
+                }; 3],
+            }),
+            tunnel_random: None,
+            cauldron: None,
+            campfire: None,
+            halves: Vec::new(),
+        };
+        assert!(snapshot.valid());
+        let unboxed = Some(snapshot.clone());
+        let boxed = Some(Box::new(snapshot.clone()));
+        assert_eq!(
+            postcard::to_stdvec(&unboxed).unwrap(),
+            postcard::to_stdvec(&boxed).unwrap()
+        );
+        let packet = ServerControl::Container(boxed);
+        assert_eq!(
+            serde_json::to_value(&packet).unwrap(),
+            serde_json::json!({"Container": snapshot})
+        );
+        let bytes = postcard::to_stdvec(&packet).unwrap();
+        let ServerControl::Container(Some(received)) =
+            postcard::from_bytes::<ServerControl>(&bytes).unwrap()
+        else {
+            panic!("container packet expected")
+        };
+        assert_eq!(*received, snapshot);
+        let closed = ServerControl::Container(None);
+        assert_eq!(
+            serde_json::to_value(&closed).unwrap(),
+            serde_json::json!({"Container": null})
+        );
+    }
+}
+
+#[cfg(test)]
+mod world_creation_wire_tests {
+    use super::*;
+    #[test]
+    fn welcome_roundtrip_preserves_none_and_selected_spawn_biomes_and_all_boolean_rules() {
+        for preferred_spawn_biome in [None, Some(terra_core::BiomeKind::CherryForest)] {
+            for (kingdoms, outposts) in [(false, false), (false, true), (true, false), (true, true)]
+            {
+                let world = WorldConfig {
+                    preferred_spawn_biome,
+                    structures: terra_core::StructureSettings {
+                        villages: false,
+                        ruins: false,
+                        mines: false,
+                        kingdoms,
+                        outposts,
+                    },
+                    game_rules: terra_core::GameRules {
+                        keep_inventory: false,
+                        daylight_cycle: false,
+                        weather_cycle: false,
+                        mob_griefing: false,
+                        fire_spread: false,
+                        pvp: true,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                };
+                let packet = ServerControl::Welcome {
+                    player: PlayerId(7),
+                    uuid: PlayerUuid::new_v4(),
+                    world: Box::new(world.clone()),
+                    tick_rate: 60,
+                    spawn: [8.5, 3.0, 24.5],
+                    location: None,
+                    allow_flight: false,
+                    allow_build: true,
+                    allow_environment: false,
+                    game_mode: GameMode::Spectator,
+                    clock: Default::default(),
+                    weather: Default::default(),
+                };
+                let bytes = postcard::to_allocvec(&packet).unwrap();
+                let ServerControl::Welcome {
+                    world: received,
+                    tick_rate,
+                    game_mode,
+                    ..
+                } = postcard::from_bytes::<ServerControl>(&bytes).unwrap()
+                else {
+                    panic!("welcome");
+                };
+                assert_eq!(*received, world);
+                assert_eq!(tick_rate, 60);
+                assert_eq!(game_mode, GameMode::Spectator);
+            }
         }
     }
 }

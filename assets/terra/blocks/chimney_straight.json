@@ -3,7 +3,7 @@
   "id": 60,
   "name": "Chimney Pipe",
   "description": "A hollow modular chimney. Placement aligns straight and elbow connections automatically.",
-  "creative_category": "decoration",
+  "creative_category": "technic",
   "render_kind": "custom_mesh",
   "struct_block": true,
   "model_layout": "scene",

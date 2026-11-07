@@ -1,0 +1,100 @@
+{
+  "prepared_at": "2026-11-06T19:13:36.558043+00:00",
+  "binary": "/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/target/debug/terra-client",
+  "arguments": [
+    "--smoke-test-lanterns"
+  ],
+  "source_files": {
+    "apps/client/src/lantern_smoke.rs": "1a656843f154c727d544062b5069732246ff68a27e210cd6ee1d2700d5507f2b",
+    "apps/client/src/bootstrap.rs": "05965bad95f365d127b5ee58ac58408c28d5da6cfd0f9e8300489016c53ec84f",
+    "crates/terra-core/src/lantern.rs": "c035c3c7dbb1e4746c6b7d5ce0ca5d3195e6602f9e5f84ce95451a13c3c4f3d1",
+    "crates/terra-world/src/lanterns.rs": "a8645eb5d8038c3ba7a7f5639fccf0b03763554c08677c7d1fb27b08924f922a",
+    "crates/terra-render/src/meshing/custom.rs": "0a2bbe5ff2a56d0a83e76ce0b6c233db00ebc8d3768fe8ade772f280f62beadb",
+    "crates/terra-render/src/scene/caves/lights.rs": "dbb24aa910c7a8011242bfd778161315012d9c1426662604ebddb7031540979f"
+  },
+  "environment": {
+    "TERRA_CONFIG_DIR": "/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/target/phase199-lanterns/configs",
+    "TERRA_MENU_CONFIG_DIR": "/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/target/phase199-lanterns/configs",
+    "TERRA_WORLD_DIR": "/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/target/phase199-lanterns/worlds",
+    "TERRA_ASSET_DIR": "/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/assets",
+    "TERRA_CAPTURE_DIR": "/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/tools/benchmarks/results/kingdom-rights-lanterns-2026-11-06/lanterns",
+    "TERRA_BENCH_GRAPHICS": "1",
+    "TERRA_COMPUTE_THREADS": "4",
+    "TMPDIR": "/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/target/tmp197",
+    "DISPLAY": ":1",
+    "WINIT_UNIX_BACKEND": "x11"
+  },
+  "binary_mtime_ns": 1793992387589863127,
+  "status": "passed",
+  "exit_code": 0,
+  "captures": {
+    "lantern-gallery-day": {
+      "exists": true,
+      "bytes": 2561363,
+      "resolution": [
+        1920,
+        1080
+      ],
+      "sha256": "682ee495d20ef3a178a5f3931200ef8a7def3abee398c4955010c1c2870c3990",
+      "mtime_ns": 1793992423665483421
+    },
+    "lantern-gallery-night": {
+      "exists": true,
+      "bytes": 1726784,
+      "resolution": [
+        1920,
+        1080
+      ],
+      "sha256": "6e1a0e06b7493de4113c94173ab0c2aa1cac8be667bf97d8f518332492721060",
+      "mtime_ns": 1793992426769536858
+    },
+    "lantern-wall-close": {
+      "exists": true,
+      "bytes": 2097134,
+      "resolution": [
+        1920,
+        1080
+      ],
+      "sha256": "41c54595ffdc951fe41bdfd69720db7b087f9776fdb444c7de1177df2a8bdf4e",
+      "mtime_ns": 1793992430466600519
+    },
+    "lantern-table-close": {
+      "exists": true,
+      "bytes": 2325315,
+      "resolution": [
+        1920,
+        1080
+      ],
+      "sha256": "65d4aeec0eadefa1d84b87382af5d1c95ea78bed15a31bd61503f264e2356212",
+      "mtime_ns": 1793992433882659353
+    },
+    "lantern-chain-close": {
+      "exists": true,
+      "bytes": 1745851,
+      "resolution": [
+        1920,
+        1080
+      ],
+      "sha256": "37ec7b0459779201b290766a544a88572c5e898225cb88f75c556328dee230e9",
+      "mtime_ns": 1793992437070714272
+    }
+  },
+  "binary_sha256": "f2470970ade86601681c98e13b545ef8ddd7e97231e794d5b0cf5dfcd7a215f7",
+  "real_point_light_counts": [
+    5,
+    5,
+    6,
+    6,
+    6
+  ],
+  "quality_reduced_due_to_oom": false,
+  "visual_review": {
+    "all_five_images_inspected": true,
+    "table_foot_and_top_handle": "Visible and seated on the real oak table.",
+    "wall_mount": "Wood bracket, plate, frame and warm panels are connected to the post.",
+    "hanging_mount": "Alternating chain links join the ceiling beam and lantern handle.",
+    "illumination": "Warm emission remains visible by day; actual point lights illuminate the floor at night.",
+    "result": "passed"
+  },
+  "private_state_directory": "target/phase199-lanterns"
+}

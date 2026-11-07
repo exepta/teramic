@@ -6,6 +6,13 @@ const HALF_WIDTH: f64 = 0.25;
 const SLOT_ORDER: [usize; CAPACITY] = [0, 3, 1, 2];
 
 pub fn support(prop: &WorldProp) -> [i64; 3] {
+    if prop.kind == PropKind::AppleFruit {
+        return [
+            prop.position[0].floor() as i64,
+            (prop.position[1] + 0.43).floor() as i64,
+            prop.position[2].floor() as i64,
+        ];
+    }
     if prop.kind == PropKind::SpiderWeb {
         return super::webs::support(prop);
     }
@@ -37,6 +44,9 @@ pub fn ground_support(material: u16) -> bool {
 /// Nonpersistent visibility/interaction validation against actual loaded cells.
 /// `None` means incomplete streaming, not a reason to tombstone a saved prop.
 pub fn supported(prop: &WorldProp, mut block: impl FnMut([i64; 3]) -> Option<u16>) -> Option<bool> {
+    if prop.kind == PropKind::AppleFruit {
+        return Some(true);
+    }
     if prop.kind == PropKind::SpiderWeb {
         let mut unknown = false;
         let fits = super::webs::fits(prop, |cell| {
@@ -47,7 +57,9 @@ pub fn supported(prop: &WorldProp, mut block: impl FnMut([i64; 3]) -> Option<u16
         return (!unknown).then_some(fits);
     }
     let material = block(support(prop))?;
-    let anchor = if prop.wall_attached() {
+    let anchor = if prop.kind.sapling().is_some() {
+        matches!(material, 1 | 2 | terra_core::farming::FARMLAND)
+    } else if prop.wall_attached() {
         matches!(material, 6 | 10 | 36 | 134)
     } else {
         ground_support(material)
@@ -61,7 +73,10 @@ pub fn supported(prop: &WorldProp, mut block: impl FnMut([i64; 3]) -> Option<u16
 }
 
 pub fn cost(kind: PropKind) -> usize {
-    if kind.crop().is_some() || matches!(kind, PropKind::Scarecrow | PropKind::SpiderWeb) {
+    if kind.sapling().is_some()
+        || kind.crop().is_some()
+        || matches!(kind, PropKind::Scarecrow | PropKind::SpiderWeb)
+    {
         CAPACITY
     } else if kind == PropKind::Grass {
         2
@@ -86,6 +101,7 @@ pub fn align(prop: &mut WorldProp, support: [i64; 3], slot: usize) {
         || prop.kind.aquatic()
         || prop.kind.crop().is_some()
         || prop.kind == PropKind::Scarecrow
+        || prop.kind.sapling().is_some()
     {
         return;
     }
@@ -112,10 +128,13 @@ pub fn generated_slot(rank: usize) -> usize {
 }
 
 pub(crate) fn compatible(prop: &WorldProp, cell: [i64; 3]) -> bool {
-    if prop.wall_attached() || prop.kind == PropKind::SpiderWeb {
+    if prop.wall_attached() || matches!(prop.kind, PropKind::SpiderWeb | PropKind::AppleFruit) {
         return false;
     }
-    if prop.kind.crop().is_some() || prop.kind == PropKind::Scarecrow {
+    if prop.kind.sapling().is_some()
+        || prop.kind.crop().is_some()
+        || prop.kind == PropKind::Scarecrow
+    {
         return [0, 2]
             .into_iter()
             .all(|axis| (prop.position[axis] - cell[axis] as f64 - 0.5).abs() <= 0.001);
@@ -142,6 +161,9 @@ fn footprint_radius(prop: &WorldProp) -> f64 {
 }
 
 pub fn next_slot(props: &[WorldProp], cell: [i64; 3], kind: PropKind) -> Option<usize> {
+    if kind == PropKind::AppleFruit {
+        return None;
+    }
     let mut used = 0;
     let mut count = 0;
     for prop in props

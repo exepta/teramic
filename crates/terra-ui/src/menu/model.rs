@@ -65,6 +65,23 @@ pub struct LoadingProgress {
     pub detail: String,
     pub reveal: f32,
 }
+#[derive(Resource, Default)]
+pub struct StartupProgress {
+    /// Assets are ready; the retained loading layer is now revealing the menu.
+    pub fading: bool,
+    pub reveal: f32,
+    pub label: String,
+    pub active: bool,
+    pub fraction: Option<f32>,
+    pub detail: String,
+    pub error: String,
+}
+impl StartupProgress {
+    pub fn blend(&self) -> f32 {
+        let t = self.reveal.clamp(0.0, 1.0);
+        t * t * (3.0 - 2.0 * t)
+    }
+}
 #[derive(Resource, Clone)]
 pub struct MenuPaths {
     pub configs: PathBuf,
@@ -80,12 +97,36 @@ impl Default for MenuPaths {
 }
 #[derive(Resource, Default)]
 pub struct WorldMenu {
+    pub create_tab: WorldCreateTab,
+    pub kingdom_rules: terra_core::kingdom::KingdomRules,
     pub natural_mob_limit: u16,
+    pub game_rules: terra_core::GameRules,
+    pub season_days: u32,
+    pub preferred_spawn_biome: Option<terra_core::BiomeKind>,
+    pub biome_picker_open: bool,
+    pub structures: terra_core::StructureSettings,
     pub entries: Vec<WorldEntry>,
     pub selected: Option<WorldId>,
     pub name: String,
     pub seed: String,
     pub mode: String,
+}
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub enum WorldCreateTab {
+    #[default]
+    General,
+    Biomes,
+    Kingdom,
+}
+impl WorldCreateTab {
+    pub const fn key(self) -> &'static str {
+        match self {
+            Self::General => "general",
+            Self::Biomes => "biomes",
+            Self::Kingdom => "kingdom",
+        }
+    }
 }
 #[derive(Resource, Default)]
 pub struct ServerMenu {

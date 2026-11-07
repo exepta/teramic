@@ -17,6 +17,14 @@ use terra_world::{
 const BUILD_RADIUS: i64 = 2;
 const RETAIN_RADIUS: i64 = 3;
 const MAX_JOBS: usize = 2;
+#[path = "terrain/belts.rs"]
+mod belt_profiles;
+
+#[derive(Default)]
+struct ModelGeometry {
+    boxes: Vec<terra_core::block_shapes::ShapeBox>,
+    triangles: Vec<[[f32; 3]; 3]>,
+}
 
 #[derive(Component, Debug)]
 pub struct TerrainCollider(pub SectionPos);
@@ -25,6 +33,118 @@ struct ReadySection {
     entity: Option<Entity>,
     epoch: u64,
     profile: Option<[u64; 4]>,
+    plain: Option<PlainCollision>,
+}
+
+struct PlainCollision {
+    revision: u64,
+    blocks: Vec<u16>,
+    properties: terra_core::block_properties::BlockPropertiesCatalog,
+}
+
+fn plain_current(
+    ready: &ReadySection,
+    position: SectionPos,
+    chunks: &ChunkStore,
+    journal: &EditJournal,
+) -> bool {
+    let Some(plain) = &ready.plain else {
+        return false;
+    };
+    if plain.revision != journal.revision(position)
+        || chunks.loaded.get(&position).is_none_or(|s| {
+            s.mesh_epoch > journal.mesh_epoch(position)
+                || s.data.blocks() != plain.blocks.as_slice()
+        })
+    {
+        return false;
+    }
+    if ready.epoch == journal.mesh_epoch(position) {
+        return true;
+    }
+    plain_halo_current(plain, position, chunks, journal)
+}
+
+fn plain_halo_current(
+    plain: &PlainCollision,
+    position: SectionPos,
+    chunks: &ChunkStore,
+    journal: &EditJournal,
+) -> bool {
+    let Ok(origin) = position.origin() else {
+        return false;
+    };
+    // Full cubes do not depend on neighbour faces. Reuse only while no
+    // authored shape can extend into this section, including pending replicas.
+    for x in -1..=16 {
+        for y in -1..=16 {
+            for z in -1..=16 {
+                if (0..16).contains(&x) && (0..16).contains(&y) && (0..16).contains(&z) {
+                    continue;
+                }
+                let p = [origin[0] + x, origin[1] + y, origin[2] + z];
+                if journal
+                    .block(p)
+                    .or_else(|| chunks.block_at(p))
+                    .is_some_and(|m| !plain.properties.shape(m).is_empty())
+                {
+                    return false;
+                }
+            }
+        }
+    }
+    true
+}
+
+// A remote cube edit must not pause movement throughout its entire 16³ section.
+// The old collider is safe within the swept body bounds while every changed
+// cell stays outside them. Authored models can extend beyond their cell, so
+// they always wait for the replacement collider, including halo changes.
+fn plain_region_current(
+    ready: &ReadySection,
+    position: SectionPos,
+    minimum: Vec3,
+    maximum: Vec3,
+    chunks: &ChunkStore,
+    journal: &EditJournal,
+) -> bool {
+    let _scope = terra_core::profiling::ScopeTimer::new("collision.readiness.region");
+    let Some(plain) = &ready.plain else {
+        return false;
+    };
+    if ready.profile.is_some() {
+        return false;
+    }
+    let Some(section) = chunks.loaded.get(&position) else {
+        return false;
+    };
+    let Ok(origin) = position.origin() else {
+        return false;
+    };
+    if section.mesh_epoch > journal.mesh_epoch(position) {
+        return false;
+    }
+    for (index, (&old, &loaded)) in plain.blocks.iter().zip(section.data.blocks()).enumerate() {
+        let cell = [
+            origin[0] + (index % 16) as i64,
+            origin[1] + (index / 16 % 16) as i64,
+            origin[2] + (index / 256) as i64,
+        ];
+        let current = journal.block(cell).unwrap_or(loaded);
+        if old == current {
+            continue;
+        }
+        if !plain.properties.shape(old).is_empty() || !plain.properties.shape(current).is_empty() {
+            return false;
+        }
+        if (0..3).all(|axis| {
+            maximum[axis] + 0.05 >= cell[axis] as f32
+                && minimum[axis] - 0.05 <= cell[axis] as f32 + 1.0
+        }) {
+            return false;
+        }
+    }
+    plain_halo_current(plain, position, chunks, journal)
 }
 
 fn profile_snapshot(position: SectionPos, chunks: &ChunkStore, journal: &EditJournal) -> [u64; 4] {
@@ -75,6 +195,14 @@ impl TerrainCollisionState {
                 for x in low.x..=high.x {
                     let position = SectionPos::new(x, y, z);
                     let epoch = journal.mesh_epoch(position);
+                    if self.sections.get(&position).is_some_and(|ready| {
+                        plain_current(ready, position, chunks, journal)
+                            || plain_region_current(
+                                ready, position, minimum, maximum, chunks, journal,
+                            )
+                    }) {
+                        continue;
+                    }
                     if self.sections.get(&position).is_none_or(|ready| {
                         ready.epoch != epoch
                             || !profile_current(ready.profile, position, chunks, journal)
@@ -93,6 +221,7 @@ impl TerrainCollisionState {
 }
 
 struct ColliderJob {
+    plain: Option<PlainCollision>,
     epoch: u64,
     profile: Option<[u64; 4]>,
     task: Task<Result<Option<Collider>, String>>,
@@ -176,6 +305,14 @@ fn dispatch(
         .filter_map(|position| {
             let section = chunks.loaded.get(&position)?;
             let epoch = journal.mesh_epoch(position);
+            if state
+                .sections
+                .get(&position)
+                .is_some_and(|ready| plain_current(ready, position, &chunks, &journal))
+            {
+                state.sections.get_mut(&position).unwrap().epoch = epoch;
+                return None;
+            }
             (section.mesh_epoch == epoch
                 && state.sections.get(&position).is_none_or(|ready| {
                     ready.epoch != epoch
@@ -207,7 +344,7 @@ fn dispatch(
         }
         let section = &chunks.loaded[&position];
         let data = section.data.clone();
-        let shapes = match model_shapes(&data, &chunks, &journal, &properties) {
+        let shapes = match model_geometry(&data, &chunks, &journal, &properties) {
             Ok(shapes) => shapes,
             Err(error) => {
                 state.error = Some(error);
@@ -219,37 +356,63 @@ fn dispatch(
             .keys()
             .copied()
             .chain([
-                28, 29, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 99, 100,
+                28, 29, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 99, 100, 141, 142, 143,
+                144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159,
+                160, 161, 162, 163, 164, 165, 166, 167, 168, 169,
             ])
             .collect();
         jobs.0.insert(
             position,
             ColliderJob {
+                plain: (shapes.boxes.is_empty()
+                    && shapes.triangles.is_empty()
+                    && data
+                        .blocks()
+                        .iter()
+                        .all(|&m| properties.shape(m).is_empty()))
+                .then(|| PlainCollision {
+                    revision: journal.revision(position),
+                    blocks: data.blocks().to_vec(),
+                    properties: properties.clone(),
+                }),
                 epoch: section.mesh_epoch,
                 profile: data
                     .blocks()
                     .iter()
                     .any(|m| terra_world::segments::is_crystal(*m))
                     .then(|| profile_snapshot(position, &chunks, &journal)),
-                task: AsyncComputeTaskPool::get()
-                    .spawn(async move { build_collider_with_models(&data, &shapes, &masked) }),
+                task: AsyncComputeTaskPool::get().spawn(async move {
+                    build_collider_with_geometry(&data, &shapes.boxes, &shapes.triangles, &masked)
+                }),
             },
         );
     }
     state.pending_jobs = jobs.0.len();
 }
 
+#[cfg(test)]
 fn model_shapes(
     data: &BlockSection,
     chunks: &ChunkStore,
     journal: &EditJournal,
     properties: &terra_core::block_properties::BlockPropertiesCatalog,
 ) -> Result<Vec<terra_core::block_shapes::ShapeBox>, String> {
+    model_geometry(data, chunks, journal, properties).map(|geometry| geometry.boxes)
+}
+
+fn model_geometry(
+    data: &BlockSection,
+    chunks: &ChunkStore,
+    journal: &EditJournal,
+    properties: &terra_core::block_properties::BlockPropertiesCatalog,
+) -> Result<ModelGeometry, String> {
     let origin = data
         .position()
         .origin()
         .map_err(|error| error.to_string())?;
     let mut shapes = Vec::new();
+    let mut triangles = Vec::new();
+    let mut profiles = HashSet::new();
     let mut owners = HashSet::new();
     let mut unique = HashSet::new();
     let mut append = |global, material| {
@@ -271,36 +434,68 @@ fn model_shapes(
         // Every physical section owns its clipped share, including a secondary
         // half whose primary collider has not arrived. A pair is visited once
         // within each section, never duplicated for its two occupied cells.
-        terra_world::interaction_shapes::visit_boxes(
-            chunks,
-            journal,
-            properties,
-            global,
-            |mut bounds| {
-                for (axis, value) in origin.iter().enumerate() {
-                    bounds.minimum[axis] = bounds.minimum[axis].max(*value as f64) - *value as f64;
-                    bounds.maximum[axis] =
-                        bounds.maximum[axis].min(*value as f64 + 16.0) - *value as f64;
-                }
-                if (0..3).all(|axis| bounds.minimum[axis] < bounds.maximum[axis]) {
-                    let key: [u64; 6] = std::array::from_fn(|axis| {
-                        if axis < 3 {
-                            bounds.minimum[axis].to_bits()
-                        } else {
-                            bounds.maximum[axis - 3].to_bits()
-                        }
-                    });
-                    if unique.insert(key) {
-                        shapes.push(bounds);
+        let profile = matches!(material, 144..=146 | 148)
+            .then(|| terra_world::conveyors::segment_at(journal, global))
+            .flatten()
+            .filter(|segment| segment.span.linked && segment.span.step[1] != 0);
+        if let Some(segment) = profile
+            && profiles.insert(segment.span.controller)
+        {
+            for triangle in terra_world::interaction_shapes::conveyor_triangles(segment.span) {
+                belt_profiles::append_clipped(&mut triangles, triangle, origin);
+            }
+        }
+        let mut visit = |mut bounds: terra_core::block_shapes::ShapeBox| {
+            for (axis, value) in origin.iter().enumerate() {
+                bounds.minimum[axis] = bounds.minimum[axis].max(*value as f64) - *value as f64;
+                bounds.maximum[axis] =
+                    bounds.maximum[axis].min(*value as f64 + 16.0) - *value as f64;
+            }
+            if (0..3).all(|axis| bounds.minimum[axis] < bounds.maximum[axis]) {
+                let key: [u64; 6] = std::array::from_fn(|axis| {
+                    if axis < 3 {
+                        bounds.minimum[axis].to_bits()
+                    } else {
+                        bounds.maximum[axis - 3].to_bits()
                     }
+                });
+                if unique.insert(key) {
+                    shapes.push(bounds);
                 }
-            },
-        );
+            }
+        };
+        if profile.is_some() {
+            terra_world::interaction_shapes::visit_belt_attachment_boxes(
+                chunks, journal, properties, global, &mut visit,
+            );
+        } else {
+            terra_world::interaction_shapes::visit_collision_boxes(
+                chunks, journal, properties, global, &mut visit,
+            );
+        }
     };
     for (index, &material) in data.blocks().iter().enumerate() {
         let cell = [index % 16, index / 16 % 16, index / 256];
         let global = std::array::from_fn(|axis| origin[axis] + cell[axis] as i64);
         append(global, material);
+    }
+    if journal.has_extended_kinetics() {
+        for dx in -1..=1 {
+            for dy in -1..=1 {
+                for dz in -1..=1 {
+                    if let Ok(section) = data.position().offset([dx, dy, dz]) {
+                        for owner in journal.extended_kinetics_in_section(section) {
+                            if (0..3)
+                                .all(|i| owner[i] >= origin[i] - 1 && owner[i] <= origin[i] + 16)
+                                && let Some(material) = chunks.block_at(owner)
+                            {
+                                append(owner, material);
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
     // Crusher hoppers extend 0.23 blocks beyond their two-cell footprint.
     // The section above owns the clipped lip just as the lower section owns its base.
@@ -330,7 +525,10 @@ fn model_shapes(
             }
         }
     }
-    Ok(shapes)
+    Ok(ModelGeometry {
+        boxes: shapes,
+        triangles,
+    })
 }
 
 fn receive(
@@ -370,6 +568,7 @@ fn receive(
         };
         let epoch = job.epoch;
         let profile = job.profile;
+        let plain = job.plain.take();
         jobs.0.remove(&position);
         if epoch != journal.mesh_epoch(position)
             || !profile_current(profile, position, &chunks, &journal)
@@ -414,6 +613,9 @@ fn receive(
                 entity,
                 epoch,
                 profile,
+                // Full voxel collision has no neighbour/mesh-light dependency.
+                // Authored models still use the complete halo invalidation path.
+                plain,
             },
         ) && let Some(entity) = old.entity
         {
@@ -452,12 +654,22 @@ fn build_collider(section: &BlockSection) -> Result<Option<Collider>, String> {
     build_collider_with_models(section, &[], &[])
 }
 
+#[cfg(test)]
 fn build_collider_with_models(
     section: &BlockSection,
     shapes: &[terra_core::block_shapes::ShapeBox],
     masked: &[u16],
 ) -> Result<Option<Collider>, String> {
-    if section.is_empty() && shapes.is_empty() {
+    build_collider_with_geometry(section, shapes, &[], masked)
+}
+
+fn build_collider_with_geometry(
+    section: &BlockSection,
+    shapes: &[terra_core::block_shapes::ShapeBox],
+    triangles: &[[[f32; 3]; 3]],
+    masked: &[u16],
+) -> Result<Option<Collider>, String> {
+    if section.is_empty() && shapes.is_empty() && triangles.is_empty() {
         return Ok(None);
     }
     let mut padded = vec![0; PADDED_VOLUME];
@@ -508,6 +720,11 @@ fn build_collider_with_models(
         ] {
             indices.push(triangle.map(|index| base + index));
         }
+    }
+    for triangle in triangles {
+        let base = u32::try_from(positions.len()).map_err(|_| "Belt collision index overflow")?;
+        positions.extend(triangle.map(Vec3::from_array));
+        indices.push([base, base + 1, base + 2]);
     }
     if indices.is_empty() {
         return Ok(None);

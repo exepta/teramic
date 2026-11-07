@@ -29,6 +29,9 @@ pub(super) fn extent(prop: &WorldProp) -> f32 {
 
 impl Pose {
     pub fn factor(self, time: f32) -> f32 {
+        if self.pending {
+            return self.ratio;
+        }
         let t = ((time - self.start) / SECONDS).clamp(0.0, 1.0);
         self.ratio + (1.0 - self.ratio) * t * t * (3.0 - 2.0 * t)
     }
@@ -126,6 +129,45 @@ mod tests {
     }
 
     #[test]
+    fn pending_hidden_growth_keeps_its_extent_until_visible_geometry_begins() {
+        let hidden = Pose {
+            scale: 0.25,
+            ratio: 0.0,
+            start: -1.0,
+            pending: true,
+            ..Default::default()
+        };
+        assert_eq!(hidden.factor(900.0), 0.0);
+        let mut visible = Pose {
+            scale: 0.5,
+            ratio: 0.0,
+            start: -1.0,
+            pending: true,
+            ..Default::default()
+        };
+        visible.begin(Some(hidden), 900.0);
+        assert_eq!(visible.start, 900.0);
+        assert_eq!(visible.factor(900.0), 0.0);
+        assert!(visible.factor(901.0) > 0.0 && visible.factor(901.0) < 1.0);
+        assert_eq!(visible.factor(903.0), 1.0);
+
+        let waiting = Pose {
+            ratio: 0.4,
+            ..hidden
+        };
+        let mut resized = Pose {
+            pending: true,
+            ..visible
+        };
+        resized.begin(Some(waiting), 1800.0);
+        assert_eq!(
+            resized.scale * resized.factor(1800.0),
+            waiting.scale * waiting.ratio,
+            "a pending resize retains its frozen partial extent"
+        );
+    }
+
+    #[test]
     fn seasonal_flowers_keep_root_anchors_without_starting_growth_or_replaying_on_reload() {
         let mut flower = sprout(0.65, 0);
         flower.kind = PropKind::Flower;
@@ -138,7 +180,7 @@ mod tests {
             assert_eq!(pose.previous_variant, None);
             assert_eq!(snapshot(&[flower], Some(&poses), 9000.0)[&flower.id], pose);
         }
-        let shader = include_str!("../../../../assets/shaders/terra_props.wgsl");
+        let shader = include_str!("../../../../assets/shaders/terra_props.wesl");
         assert!(shader.contains("(input.position - input.growth_anchor) * scale"));
         assert!(shader.contains("growth_factor(input, time) * flower_scale(input, seconds_ago)"));
         assert!(
@@ -154,7 +196,7 @@ mod tests {
         assert!(!restored.pending);
         let mut fresh = snapshot(&[prop], Some(&HashMap::new()), 4000.0)[&prop.id];
         assert!(fresh.pending);
-        fresh.start = 4000.0;
+        fresh.begin(None, 4000.0);
         assert_eq!(fresh.factor(4000.0), 0.0);
         assert!((fresh.factor(4001.2) - 0.5).abs() < 0.001);
         assert_eq!(
@@ -181,7 +223,7 @@ mod tests {
         assert_eq!(snapshot(&[first], Some(&previous), 21.0)[&first.id], old);
         let next = sprout(0.43, 66);
         let mut growing = snapshot(&[next], Some(&previous), 21.0)[&next.id];
-        growing.start = 21.0;
+        growing.begin(Some(old), 21.0);
         assert!((growing.scale * growing.factor(21.0) - old.scale * old.factor(21.0)).abs() < 1e-6);
         assert_eq!(first.template_variant(), next.template_variant());
         assert_eq!(next.template_variant(), 0);
@@ -223,7 +265,7 @@ mod tests {
 
     #[test]
     fn motion_vectors_use_previous_growth_for_both_position_and_wind() {
-        let shader = include_str!("../../../../assets/shaders/terra_props.wgsl");
+        let shader = include_str!("../../../../assets/shaders/terra_props.wesl");
         assert!(shader.contains("grown_local(input, previous_clock)"));
         assert!(shader.contains("previous_weights = input.uv;"));
         assert!(shader.contains("previous_weights.y *= growth_factor(input, previous_clock);"));
@@ -277,10 +319,10 @@ mod tests {
                 previous = settled;
             }
         }
-        let shader = include_str!("../../../../assets/shaders/terra_prop_fragment.wgsl");
+        let shader = include_str!("../../../../assets/shaders/terra_prop_fragment.wesl");
         assert!(shader.contains("crop_coverage(input);"));
         assert!(shader.contains("threshold < eased"));
         assert!(shader.contains("threshold >= eased"));
-        assert!(shader.contains("prepass_alpha_discard"));
+        assert!(shader.contains("prepass_sample_color_and_alpha_discard"));
     }
 }

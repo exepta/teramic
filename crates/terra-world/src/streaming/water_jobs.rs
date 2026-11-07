@@ -7,7 +7,10 @@ use bevy::{
     prelude::*,
     tasks::{AsyncComputeTaskPool, Task, futures_lite::future},
 };
-use std::{collections::HashMap, sync::Arc};
+use std::{
+    collections::{HashMap, HashSet},
+    sync::Arc,
+};
 use terra_core::{block_properties::BlockPropertiesCatalog, block_shapes::ShapeBox};
 use terra_voxel::SectionPos;
 
@@ -75,7 +78,9 @@ pub(super) fn dispatch_water_jobs(
         let Ok(overrides) = journal.snapshot(position) else {
             continue;
         };
+        let extended_cells = extended_water_cells(chunks, &journal, position);
         let mut padded = vec![u16::MAX; 18 * 18 * 18];
+        let mut precise_levels = HashMap::new();
         for z in 0..18 {
             for y in 0..18 {
                 for x in 0..18 {
@@ -90,16 +95,33 @@ pub(super) fn dispatch_water_jobs(
                         .or_else(|| chunks.block_at(global))
                     {
                         padded[x + 18 * (y + 18 * z)] = block;
-                        if crate::water::space::partial(block) && !fluids.contains_key(&global) {
-                            let fluid = chunks.fluid_cell_at(&terrain.0, &journal, global, block);
-                            if fluid.amount > 0 {
-                                fluids.insert(global, fluid);
-                            }
+                        if (crate::water::space::partial(block) || extended_cells.contains(&global))
+                            && let Some((cell, level)) = capture_construction_water(
+                                chunks,
+                                &journal,
+                                &terrain.0,
+                                column.water_columns()[x + 18 * z].water_columns(),
+                                global,
+                                block,
+                                y > 0,
+                                &mut fluids,
+                            )
+                        {
+                            precise_levels.insert(cell, level);
                         }
                     }
                 }
             }
         }
+        extend_construction_water(
+            chunks,
+            &journal,
+            &terrain.0,
+            origin,
+            column.water_columns(),
+            &mut fluids,
+            &mut precise_levels,
+        );
         let occluders = capture_occluders(chunks, &journal, &properties, origin, &fluids);
         let generator = crate::SectionGenerator::new(terrain.0.clone());
         let epoch = journal.water_mesh_epoch(position);
@@ -126,12 +148,182 @@ pub(super) fn dispatch_water_jobs(
                 WaterOutput {
                     epoch,
                     patch: build_patch(
-                        &generator, position, origin, column, &padded, &fluids, &occluders,
+                        &generator,
+                        position,
+                        origin,
+                        column,
+                        &padded,
+                        &fluids,
+                        &occluders,
+                        &precise_levels,
                     ),
                 }
             }),
         );
     }
+}
+
+/// Materialize only water touching construction; ordinary lakes keep the shared grid.
+#[allow(clippy::too_many_arguments)]
+fn capture_construction_water(
+    chunks: &ChunkStore,
+    journal: &EditJournal,
+    terrain: &crate::TerraGenerator,
+    water_columns: crate::water::WaterColumns,
+    position: [i64; 3],
+    material: u16,
+    below_in_halo: bool,
+    fluids: &mut FluidSnapshot,
+) -> Option<([i64; 3], f64)> {
+    let natural = |p: [i64; 3]| {
+        let column = water_columns.at(p[1])?;
+        let expected = crate::water::fluid::from_column(Some(column), p[1]);
+        if journal
+            .fluid(p)
+            .is_some_and(|cell| cell.amount != expected.amount)
+        {
+            return None;
+        }
+        Some((p, column.level.min(p[1] as f64 + 1.0)))
+    };
+    let fluid = chunks.fluid_cell_at(terrain, journal, position, material);
+    if fluid.amount > 0 {
+        fluids.entry(position).or_insert(fluid);
+        return natural(position);
+    } else if below_in_halo && crate::water::space::partial(material) {
+        // At integral levels the dry cell owns the natural plane, but its water
+        // volume lives below. This also repairs old empty overrides at that plane.
+        let below = [position[0], position[1] - 1, position[2]];
+        if water_columns
+            .at(below[1])
+            .is_some_and(|w| (w.level - position[1] as f64).abs() < 1e-8)
+            && let Some(block) = journal
+                .block(below)
+                .or_else(|| chunks.block_at(below))
+                .or_else(|| {
+                    crate::SectionGenerator::new(terrain.clone())
+                        .block_at(below)
+                        .ok()
+                })
+        {
+            let water = chunks.fluid_cell_at(terrain, journal, below, block);
+            if water.amount > 0 {
+                fluids.entry(below).or_insert(water);
+                return natural(below);
+            }
+        }
+    }
+    None
+}
+
+/// Transition to the exact clipped pipe surface over one natural-water cell.
+/// The outer fringe still meets the original channel's shared corner heights.
+fn extend_construction_water(
+    chunks: &ChunkStore,
+    journal: &EditJournal,
+    terrain: &crate::TerraGenerator,
+    origin: [i64; 3],
+    columns: &[crate::SurfaceColumn],
+    fluids: &mut FluidSnapshot,
+    levels: &mut HashMap<[i64; 3], f64>,
+) {
+    let seeds: Vec<_> = levels.keys().copied().collect();
+    let generator = crate::SectionGenerator::new(terrain.clone());
+    for p in seeds {
+        for dz in -1..=1 {
+            for dx in -1..=1 {
+                let q = [p[0] + dx, p[1], p[2] + dz];
+                let local: [i64; 3] = std::array::from_fn(|i| q[i] - origin[i] + 1);
+                if !local.iter().all(|v| (0..18).contains(v)) || levels.contains_key(&q) {
+                    continue;
+                }
+                let [x, _, z] = local.map(|v| v as usize);
+                let Some(water) = columns[x + 18 * z].water_columns().at(q[1]) else {
+                    continue;
+                };
+                let Some(material) = journal
+                    .block(q)
+                    .or_else(|| chunks.block_at(q))
+                    .or_else(|| generator.block_at(q).ok())
+                else {
+                    continue;
+                };
+                let cell = chunks.fluid_cell_at(terrain, journal, q, material);
+                let expected = crate::water::fluid::from_column(Some(water), q[1]);
+                if cell.amount > 0 && cell.amount == expected.amount {
+                    fluids.entry(q).or_insert(cell);
+                    levels.insert(q, water.level.min(q[1] as f64 + 1.0));
+                }
+            }
+        }
+    }
+}
+
+fn extended_water_cells(
+    chunks: &ChunkStore,
+    journal: &EditJournal,
+    section: SectionPos,
+) -> HashSet<[i64; 3]> {
+    let mut cells = HashSet::new();
+    if !journal.has_extended_kinetics() {
+        return cells;
+    }
+    let Ok(origin) = section.origin() else {
+        return cells;
+    };
+    // One bounded section halo, not an index search for every padded voxel.
+    for x in -1..=1 {
+        for y in -1..=1 {
+            for z in -1..=1 {
+                let Ok(neighbor) = section.offset([x, y, z]) else {
+                    continue;
+                };
+                for owner in journal.extended_kinetics_in_section(neighbor) {
+                    let Some(material) = chunks
+                        .block_at(owner)
+                        .map(|m| journal.block(owner).unwrap_or(m))
+                    else {
+                        continue;
+                    };
+                    let Some(radius) = terra_core::kinetic::radial_extent(material) else {
+                        continue;
+                    };
+                    let axis = terra_core::kinetic::axis(
+                        journal.object_state(owner).unwrap_or_default().facing,
+                    );
+                    let low: [i64; 3] = std::array::from_fn(|i| {
+                        (owner[i] as f64
+                            + if axis[i] == 0 {
+                                0.5 - f64::from(radius)
+                            } else {
+                                0.0
+                            })
+                        .floor() as i64
+                    });
+                    let high: [i64; 3] = std::array::from_fn(|i| {
+                        (owner[i] as f64
+                            + if axis[i] == 0 {
+                                0.5 + f64::from(radius)
+                            } else {
+                                1.0
+                            })
+                        .ceil() as i64
+                    });
+                    for px in low[0]..high[0] {
+                        for py in low[1]..high[1] {
+                            for pz in low[2]..high[2] {
+                                let p = [px, py, pz];
+                                if (0..3).all(|i| (origin[i] - 1..origin[i] + 17).contains(&p[i])) {
+                                    cells.insert(p);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    cells
 }
 
 fn capture_occluders(
@@ -142,9 +334,24 @@ fn capture_occluders(
     fluids: &FluidSnapshot,
 ) -> FluidOccluders {
     let mut occluders = FluidOccluders::new();
-    let block_at = |p| journal.block(p).or_else(|| chunks.block_at(p));
+    let block_at = |p| {
+        let edited = journal.block(p);
+        // Persisted construction still closes unloaded fluid borders; rotary
+        // overhangs belong only to their currently loaded assembly.
+        if edited.is_some_and(|material| !terra_core::kinetic::is_extended(material)) {
+            edited
+        } else {
+            chunks
+                .block_at(p)
+                .map(|material| edited.unwrap_or(material))
+        }
+    };
     for (&p, cell) in fluids {
-        if cell.amount == 0 || !(0..3).all(|i| (origin[i]..origin[i] + 16).contains(&p[i])) {
+        if cell.amount == 0
+            || !(origin[0]..origin[0] + 16).contains(&p[0])
+            || !(origin[2]..origin[2] + 16).contains(&p[2])
+            || !(origin[1] - 1..origin[1] + 16).contains(&p[1])
+        {
             continue;
         }
         // Shared top corners sample all four X/Z cells and their connection
@@ -154,6 +361,81 @@ fn capture_occluders(
                 (-1..=1).filter_map(move |x| crate::water::fluid::adjacent(p, [x, y, z]))
             })
         }) {
+            if !occluders.contains_key(&q)
+                && block_at(q).is_some_and(terra_core::construction::is_fence)
+            {
+                let space =
+                    crate::water::space::FluidSpace::wet_at(journal, q, block_at, |cell, _| {
+                        fluids
+                            .get(&cell)
+                            .copied()
+                            .or_else(|| journal.fluid(cell))
+                            .unwrap_or_else(|| {
+                                chunks.surface_column_at(cell[0], cell[2]).map_or_else(
+                                    Default::default,
+                                    |column| {
+                                        crate::water::fluid::from_columns(
+                                            column.water_columns(),
+                                            cell[1],
+                                        )
+                                    },
+                                )
+                            })
+                    });
+                let physical = crate::water::space::FluidSpace::at(journal, q, block_at)
+                    .solids
+                    .len();
+                let mut boxes: Vec<_> = space
+                    .solids
+                    .into_iter()
+                    .map(|b| ShapeBox {
+                        minimum: std::array::from_fn(|i| b.minimum[i] + q[i] as f64),
+                        maximum: std::array::from_fn(|i| b.maximum[i] + q[i] as f64),
+                        hinged: false,
+                    })
+                    .collect();
+                occluders.dry_regions.insert(q, boxes.split_off(physical));
+                occluders.insert(q, boxes);
+            }
+            if let Some(material) = block_at(q).filter(|m| terra_core::plumbing::is_pipe(*m)) {
+                occluders.pipes.entry(q).or_insert_with(|| {
+                    crate::plumbing::connection_mask(
+                        journal,
+                        q,
+                        material,
+                        journal.object_state(q).unwrap_or_default().facing,
+                        block_at,
+                    )
+                });
+            }
+            if let Some(material) = block_at(q)
+                .filter(|m| matches!(*m, terra_core::plumbing::VALVE..=terra_core::plumbing::PUMP))
+            {
+                occluders
+                    .fixtures
+                    .entry(q)
+                    .or_insert((material, journal.object_state(q).unwrap_or_default().facing));
+            }
+            if journal.has_extended_kinetics()
+                && !occluders.contains_key(&q)
+                && block_at(q).is_some_and(crate::water::can_hold_fluid)
+            {
+                let space = crate::water::space::FluidSpace::at(journal, q, block_at);
+                if !space.solids.is_empty() {
+                    occluders.insert(
+                        q,
+                        space
+                            .solids
+                            .into_iter()
+                            .map(|b| ShapeBox {
+                                minimum: std::array::from_fn(|i| b.minimum[i] + q[i] as f64),
+                                maximum: std::array::from_fn(|i| b.maximum[i] + q[i] as f64),
+                                hinged: false,
+                            })
+                            .collect(),
+                    );
+                }
+            }
             if block_at(q).is_none_or(|id| {
                 crate::water::can_hold_fluid(id) && !crate::water::space::partial(id)
             }) || occluders.contains_key(&q)
@@ -182,6 +464,7 @@ fn capture_occluders(
     occluders
 }
 
+#[allow(clippy::too_many_arguments)]
 fn build_patch(
     generator: &crate::SectionGenerator,
     position: SectionPos,
@@ -190,6 +473,7 @@ fn build_patch(
     padded: &[u16],
     fluids: &FluidSnapshot,
     occluders: &FluidOccluders,
+    precise_levels: &HashMap<[i64; 3], f64>,
 ) -> Option<WaterPatch> {
     let columns = column.water_columns();
     let config = generator.terrain().config();
@@ -197,10 +481,16 @@ fn build_patch(
     // Explicit liquid cells own their surface, including an empty source override.
     // Do not draw the implicit reservoir at the exact same depth as that cell.
     let mut natural = padded.to_vec();
-    for p in fluids.keys() {
+    for (p, cell) in fluids {
         let local = std::array::from_fn::<_, 3, _>(|i| p[i] - origin[i] + 1);
         if local.iter().all(|v| (0..18).contains(v)) {
             let [x, y, z] = local.map(|v| v as usize);
+            if cell.amount == 0 && columns[x + 18 * z].water_columns().at(p[1]).is_none() {
+                // An old dry air override at an integer reservoir's top has no
+                // natural volume to replace. Its source is in the cell below;
+                // hiding this geometric plane would leave a permanent lake hole.
+                continue;
+            }
             natural[x + 18 * (y + 18 * z)] = u16::MAX;
             // Integer-height reservoirs assign their top to the cell above,
             // while the simulated volume (and its top) belongs to the cell below.
@@ -230,7 +520,7 @@ fn build_patch(
         columns,
         padded,
         fluids,
-        (local_levels, occluders),
+        (local_levels, occluders, precise_levels),
     );
     patch
 }
@@ -285,6 +575,71 @@ mod tests {
     use terra_core::WorldConfig;
 
     #[test]
+    fn wheel_rim_owns_neighbor_water_masks_across_negative_section_edges_without_a_fluid_edit() {
+        let owner = [-1, 7, -1];
+        let wet = [-1, 7, 0];
+        let (section, local) = terra_voxel::global_to_section(owner);
+        let target = terra_voxel::global_to_section(wet).0;
+        let mut chunks = ChunkStore::default();
+        for coordinate in [section, target] {
+            chunks.loaded.insert(
+                coordinate,
+                LoadedSection {
+                    data: terra_voxel::BlockSection::empty(coordinate).unwrap(),
+                    mesh: None,
+                    mesh_epoch: 0,
+                    water_epoch: 0,
+                    water: None,
+                    props: Vec::new(),
+                },
+            );
+        }
+        chunks
+            .loaded
+            .get_mut(&section)
+            .unwrap()
+            .data
+            .set_block(local, 147)
+            .unwrap();
+        let mut journal = EditJournal::default();
+        journal.record(owner, 147).unwrap();
+        journal
+            .set_object_state(owner, Some(Default::default()))
+            .unwrap();
+        let covered = extended_water_cells(&chunks, &journal, target);
+        assert!(covered.contains(&wet));
+        assert!(covered.contains(&[-1, 6, 0]));
+        let fluids = FluidSnapshot::from([(
+            wet,
+            crate::water::FluidCell {
+                amount: 8,
+                source: true,
+                flow: [0; 2],
+            },
+        )]);
+        let masks = capture_occluders(
+            &chunks,
+            &journal,
+            &BlockPropertiesCatalog::default(),
+            target.origin().unwrap(),
+            &fluids,
+        );
+        assert!(!masks.get(&wet).unwrap().is_empty());
+        chunks.loaded.remove(&section);
+        assert!(extended_water_cells(&chunks, &journal, target).is_empty());
+        assert!(
+            capture_occluders(
+                &chunks,
+                &journal,
+                &BlockPropertiesCatalog::default(),
+                target.origin().unwrap(),
+                &fluids,
+            )
+            .is_empty()
+        );
+    }
+
+    #[test]
     fn explicit_cells_replace_reservoir_tops_instead_of_z_fighting_at_integral_levels() {
         let terrain = crate::TerraGenerator::new(WorldConfig {
             base_height: 3.,
@@ -302,8 +657,9 @@ mod tests {
         let position = SectionPos::default();
         let column = Arc::new(generator.prepare_column([0, 0], true).unwrap());
         let padded = vec![0; 18 * 18 * 18];
-        for (cell, expected) in [
+        for (p, cell, expected) in [
             (
+                [8, 7, 8],
                 crate::water::FluidCell {
                     amount: 8,
                     source: true,
@@ -311,9 +667,12 @@ mod tests {
                 },
                 512,
             ),
-            (crate::water::FluidCell::default(), 510),
+            ([8, 7, 8], crate::water::FluidCell::default(), 510),
+            // Prior versions wrote this empty air-cell tombstone after mining
+            // a block. The real natural source immediately below remains full.
+            ([8, 8, 8], crate::water::FluidCell::default(), 512),
         ] {
-            let fluids = FluidSnapshot::from([([8, 7, 8], cell)]);
+            let fluids = FluidSnapshot::from([(p, cell)]);
             let patch = build_patch(
                 &generator,
                 position,
@@ -322,6 +681,7 @@ mod tests {
                 &padded,
                 &fluids,
                 &FluidOccluders::new(),
+                &HashMap::new(),
             )
             .unwrap();
             let tops = patch
@@ -343,6 +703,55 @@ mod tests {
                 tops, expected,
                 "explicit source/dry surface must have exactly one owner"
             );
+        }
+    }
+
+    #[test]
+    fn dry_air_overrides_above_sources_do_not_cut_integral_surfaces_at_negative_section_edges() {
+        for level in [-16, 16] {
+            let terrain = crate::TerraGenerator::new(WorldConfig {
+                base_height: f64::from(level) - 3.0,
+                sea_level: f64::from(level),
+                hill_amplitude: 0.0,
+                mountain_amplitude: 0.0,
+                biomes: false,
+                caves: false,
+                trees: false,
+                rivers: false,
+                landscape_revision: 0,
+                structures_revision: 0,
+                ..Default::default()
+            })
+            .unwrap();
+            let generator = crate::SectionGenerator::new(terrain);
+            let position = SectionPos::new(-1, i64::from(level).div_euclid(16), -1);
+            let origin = position.origin().unwrap();
+            let column = Arc::new(generator.prepare_column([-1, -1], true).unwrap());
+            let padded = vec![0; 18 * 18 * 18];
+            for (y, expected) in [(i64::from(level), 512), (i64::from(level) - 1, 510)] {
+                let mut journal = EditJournal::default();
+                let p = [-1, y, -1];
+                journal.record(p, 0).unwrap();
+                journal.set_fluid(p, Default::default()).unwrap();
+                let mut reloaded = EditJournal::default();
+                for delta in journal.changed_sections().map(|s| journal.section_delta(s)) {
+                    reloaded.import_delta(delta).unwrap();
+                }
+                let fluids = reloaded.fluid_snapshot(position).unwrap();
+                let patch = build_patch(
+                    &generator,
+                    position,
+                    origin,
+                    column.clone(),
+                    &padded,
+                    &fluids,
+                    &FluidOccluders::new(),
+                    &HashMap::new(),
+                )
+                .unwrap();
+                assert_eq!(patch.indices.len() / 3, expected, "level{level} dry{p:?}");
+                assert!(patch.positions.iter().all(|p| p[1] == 0.0));
+            }
         }
     }
 
@@ -773,3 +1182,7 @@ mod tests {
         }
     }
 }
+
+#[cfg(test)]
+#[path = "water_jobs_pipe_tests.rs"]
+mod pipe_tests;

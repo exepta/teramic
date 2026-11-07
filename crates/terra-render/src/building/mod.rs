@@ -78,10 +78,11 @@ impl BuildingWorld<'_> {
             .and_then(|templates| match item {
                 ItemKind::Block(id)
                 | ItemKind::WoodenBlock { material: id, .. }
+                | ItemKind::TintedBlock { material: id, .. }
                 | ItemKind::DyedBed { material: id, .. } => {
                     templates.blocks.get(&id).map(|b| b.face_materials[3])
                 }
-                ItemKind::Tool(_) | ItemKind::Stick => {
+                ItemKind::Tool(_) | ItemKind::FilledWateringCan { .. } | ItemKind::Stick => {
                     templates.blocks.get(&6).map(|b| b.face_materials[3])
                 }
                 ItemKind::Mineral(kind) => {
@@ -93,11 +94,17 @@ impl BuildingWorld<'_> {
                         [usize::from(terra_core::crusher::flower_variant(color))],
                 ),
                 ItemKind::Bellows(_)
+                | ItemKind::GlassBottle
+                | ItemKind::WaterBottle
+                | ItemKind::Potion(_)
                 | ItemKind::Dye(_)
                 | ItemKind::Armor(_)
                 | ItemKind::Accessory(_)
                 | ItemKind::Cape(_)
+                | ItemKind::HeraldicCape { .. }
                 | ItemKind::Crop(_)
+                | ItemKind::Apple
+                | ItemKind::AppleCore
                 | ItemKind::Dust(_) => Some(templates.item_materials.opaque),
                 ItemKind::Prop(kind) => Some(match kind {
                     ResourcePropKind::Flower => templates.prop_materials.flowers[0],
@@ -115,7 +122,9 @@ impl BuildingWorld<'_> {
 pub struct PlacementOutline;
 
 fn orientation_preview(material: u16) -> bool {
-    terra_world::placement::furniture(material) || material == 40
+    terra_world::placement::furniture(material)
+        || material == 40
+        || terra_core::lantern::is_part(material)
 }
 
 fn outline_color(seconds: f32) -> Color {
@@ -125,6 +134,7 @@ fn outline_color(seconds: f32) -> Color {
 
 pub(crate) fn install(app: &mut App) {
     felling::install(app);
+    held::install(app);
     app.init_resource::<Assets<PlacementOutlineMaterial>>()
         .init_resource::<BuildingStatus>()
         .init_resource::<effects::Effects>()
@@ -155,6 +165,7 @@ pub(crate) fn install(app: &mut App) {
         Update,
         held::render
             .after(crate::players::animate)
+            .after(crate::creatures::CreatureAnimationSet)
             .after(drops::animate),
     );
 }

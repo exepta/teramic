@@ -15,6 +15,6 @@ pub use controller::{
 };
 pub(crate) use controller::{
     WalkIntent, block_overlaps_body, follow_player_camera, read_walk_input, sync_controller,
-    walk_step,
+    toggle_flight, walk_step,
 };
 pub(crate) use movement::move_camera;

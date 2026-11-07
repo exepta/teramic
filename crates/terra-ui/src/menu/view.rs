@@ -46,6 +46,10 @@ pub struct MenuView {
     pub options: bool,
     pub pause: bool,
     pub loading: bool,
+    pub startup: bool,
+    pub startup_fading: bool,
+    pub content_style: String,
+    pub startup_style: String,
     pub title: String,
     pub error: String,
     pub status: String,
@@ -56,6 +60,8 @@ pub struct MenuView {
 }
 #[derive(Clone, Serialize, PartialEq)]
 pub struct CardView {
+    pub version: String,
+    pub mode: String,
     pub id: String,
     pub title: String,
     pub subtitle: String,
@@ -102,6 +108,8 @@ pub struct Choice {
 }
 #[derive(Clone, Serialize, PartialEq)]
 pub struct SettingRow {
+    pub icon: String,
+    pub hint: String,
     pub id: String,
     pub title: String,
     pub kind: String,
@@ -130,11 +138,194 @@ pub struct OptionsView {
     pub prompt: String,
     pub buttons: Vec<MenuButton>,
 }
+#[derive(Clone, Serialize, PartialEq)]
+pub struct WorldToggle {
+    pub id: String,
+    pub title: String,
+    pub hint: String,
+    pub icon: String,
+    pub checked: bool,
+}
+#[derive(Clone, Serialize, PartialEq)]
+pub struct WorldRuleCard {
+    pub name: String,
+    pub id: String,
+    pub title: String,
+    pub hint: String,
+    pub icon: String,
+    pub kind: String,
+    pub checked: bool,
+    pub value: String,
+    pub min: String,
+    pub max: String,
+    pub step: String,
+}
+
+pub(super) fn world_rule_cards(form: &WorldMenu) -> Vec<WorldRuleCard> {
+    use terra_core::GameRule;
+    let mut cards: Vec<_> = GameRule::ALL
+        .into_iter()
+        .map(|rule| {
+            let (id, title, icon, kind, value, min, max, step) = match rule {
+                GameRule::SleepPercentage => (
+                    "world-sleep-percentage",
+                    "Sleep Percentage",
+                    "users-round",
+                    "number",
+                    form.game_rules.sleep_percentage,
+                    "0",
+                    "100",
+                    "1",
+                ),
+                GameRule::GameTimeSpeed => (
+                    "world-time-speed",
+                    "Game Time Speed",
+                    "clock",
+                    "number",
+                    form.game_rules.game_time_speed,
+                    "0",
+                    "1000",
+                    "0.0001",
+                ),
+                GameRule::SeasonSwapInterval => (
+                    "world-season-days",
+                    "Days per Season",
+                    "calendar",
+                    "number",
+                    f64::from(form.season_days),
+                    "1",
+                    "3650",
+                    "1",
+                ),
+                GameRule::KeepInventory => (
+                    "world-rule-keep-inventory",
+                    "Keep Inventory",
+                    "backpack",
+                    "switch",
+                    f64::from(u8::from(form.game_rules.keep_inventory)),
+                    "",
+                    "",
+                    "",
+                ),
+                GameRule::DaylightCycle => (
+                    "world-rule-daylight-cycle",
+                    "Daylight Cycle",
+                    "sun",
+                    "switch",
+                    f64::from(u8::from(form.game_rules.daylight_cycle)),
+                    "",
+                    "",
+                    "",
+                ),
+                GameRule::WeatherCycle => (
+                    "world-rule-weather-cycle",
+                    "Weather Cycle",
+                    "cloud-rain",
+                    "switch",
+                    f64::from(u8::from(form.game_rules.weather_cycle)),
+                    "",
+                    "",
+                    "",
+                ),
+                GameRule::MobGriefing => (
+                    "world-rule-mob-griefing",
+                    "Mob Griefing",
+                    "paw-print",
+                    "switch",
+                    f64::from(u8::from(form.game_rules.mob_griefing)),
+                    "",
+                    "",
+                    "",
+                ),
+                GameRule::FireSpread => (
+                    "world-rule-fire-spread",
+                    "Fire Spread",
+                    "flame",
+                    "switch",
+                    f64::from(u8::from(form.game_rules.fire_spread)),
+                    "",
+                    "",
+                    "",
+                ),
+                GameRule::Pvp => (
+                    "world-rule-pvp",
+                    "PvP",
+                    "swords",
+                    "switch",
+                    f64::from(u8::from(form.game_rules.pvp)),
+                    "",
+                    "",
+                    "",
+                ),
+            };
+            let hint = rule.description().replace(" (0 off, 1 on)", "");
+            WorldRuleCard {
+                name: rule.name().into(),
+                id: id.into(),
+                title: title.into(),
+                hint,
+                icon: icon.into(),
+                kind: kind.into(),
+                checked: value == 1.0,
+                value: value.to_string(),
+                min: min.into(),
+                max: max.into(),
+                step: step.into(),
+            }
+        })
+        .collect();
+    // Keep the common switches together while deriving every card from the registry.
+    cards.sort_by_key(|card| card.kind != "switch");
+    cards
+}
+
+#[derive(Clone, Default, Serialize, PartialEq)]
+pub struct WorldBiomeChoice {
+    pub command: String,
+    pub title: String,
+    pub icon: String,
+    pub image: String,
+    pub class_name: String,
+}
+
+pub(super) fn world_biome_choices(worlds: &WorldMenu) -> Vec<WorldBiomeChoice> {
+    super::create_world::BIOMES
+        .iter()
+        .map(|(kind, key, title, icon)| {
+            let image = match *key {
+                "random" | "plains" => "plains",
+                key => key,
+            };
+            WorldBiomeChoice {
+                command: format!("world-biome-{key}"),
+                title: (*title).into(),
+                icon: (*icon).into(),
+                image: format!("tilt-ui://assets/biome-choice-{image}.png"),
+                class_name: format!(
+                    "world-biome-tile biome-{key}{}",
+                    if worlds.preferred_spawn_biome == *kind {
+                        " selected"
+                    } else {
+                        ""
+                    }
+                ),
+            }
+        })
+        .collect()
+}
 #[html_shared]
 #[derive(Resource, Default, Serialize, PartialEq)]
 pub struct DialogView {
     pub visible: bool,
     pub create: bool,
+    pub create_tab: String,
+    pub kingdom_rules: Vec<WorldRuleCard>,
+    pub world_rules: Vec<WorldRuleCard>,
+    pub structure_choices: Vec<WorldToggle>,
+    pub biome_choices: Vec<WorldBiomeChoice>,
+    pub selected_biome: WorldBiomeChoice,
+    pub biome_picker_open: bool,
+    pub structures_enabled: bool,
     pub natural_mob_limit: u16,
     pub server: bool,
     pub minimap: bool,
@@ -161,6 +352,8 @@ fn slider(
     label: String,
 ) -> SettingRow {
     SettingRow {
+        icon: setting_decoration(id).0.into(),
+        hint: setting_decoration(id).1.into(),
         id: id.into(),
         title: title.into(),
         kind: "slider".into(),
@@ -179,6 +372,8 @@ fn slider(
 fn select(id: &str, title: &str, value: String, choices: Vec<Choice>) -> SettingRow {
     let custom = !choices.iter().any(|choice| choice.value == value);
     SettingRow {
+        icon: setting_decoration(id).0.into(),
+        hint: setting_decoration(id).1.into(),
         id: id.into(),
         title: title.into(),
         kind: "select".into(),
@@ -250,6 +445,82 @@ pub(super) fn resolution_choices(world: &mut World) -> Vec<Choice> {
             label: format!("{w} x {h}"),
         })
         .collect()
+}
+
+fn setting_decoration(id: &str) -> (&'static str, &'static str) {
+    match id {
+        "graphics-distance" => ("eye", "How far the world is visible."),
+        "graphics-shadow" => ("sun-dim", "Choose the detail of dynamic shadows."),
+        "graphics-water" => ("droplet", "Visual quality of water and waves."),
+        "graphics-window" => ("app-window", "Choose windowed or fullscreen mode."),
+        "graphics-resolution" => ("monitor", "Set the display resolution."),
+        "graphics-vsync" => ("refresh", "Synchronize frames with your display."),
+        "graphics-brightness" => ("sun", "Adjust the overall game brightness."),
+        "graphics-scale" => ("maximize", "Change the size of the game interface."),
+        "graphics-block-detail" => ("archive", "Choose the detail of block geometry."),
+        "graphics-leaf-detail" => ("leaf", "Choose the detail of leaf geometry."),
+        "graphics-fov" => ("scan", "Adjust the camera field of view."),
+        "graphics-reflections" => ("scan-line", "Reflect the surrounding world on water."),
+        "graphics-fps" => ("timer", "Limit world frames per second."),
+        "graphics-ui-fps" => ("clock", "Limit interface updates per second."),
+        "graphics-caves" => ("mountain", "Choose cave geometry detail."),
+        "graphics-chunk-animation" => ("move", "Choose how newly loaded terrain appears."),
+        "graphics-tree-fall" => ("trees", "Choose the falling-tree animation."),
+        "graphics-fog" => ("cloud-fog", "Choose the distance of atmospheric fog."),
+        "graphics-lod" => ("layers", "Choose where distant geometry becomes simpler."),
+        "graphics-material-detail" => ("brush", "Choose the detail of painted materials."),
+        "graphics-micro" => ("flower", "Show small plants and surface details."),
+        "graphics-micro-distance" => ("ruler", "Choose the visibility range of small details."),
+        "graphics-mist" => ("cloud-drizzle", "Show mist around waterfalls."),
+        "graphics-normal-detail" => ("grid", "Choose surface normal detail."),
+        "graphics-overlay" => ("chart-line", "Show world and performance diagnostics."),
+        "graphics-surface-variation" => ("palette", "Vary the appearance of natural surfaces."),
+        "graphics-waves" => ("waves-horizontal", "Adjust the strength of water waves."),
+        "weather-quality" => ("cloud-rain", "Choose rain, snow and weather effects."),
+        "hud-edit" => ("layout-template", "Move the heads-up display elements."),
+        "minimap-settings" => ("map", "Choose map display and marker options."),
+        "mob-health-settings" => ("heart-pulse", "Choose the display of creature health."),
+        "heartbeat" => ("heart", "Play heartbeat feedback at low health."),
+        "view-bobbing" => ("route", "Move the camera gently while walking."),
+        "multiplayer-names" => ("tag", "Show player names in the world."),
+        "multiplayer-name-distance" => ("ruler", "Choose how far player names remain visible."),
+        "multiplayer-cursors" => ("archive", "Show other players using the same chest."),
+        "multiplayer-random-color" => ("dices", "Assign a cursor color automatically."),
+        "multiplayer-color" => ("palette", "Choose your shared-container cursor color."),
+        "audio-master" => ("volume", "Adjust the overall sound volume."),
+        "audio-ambience" => ("music", "Adjust environmental background sounds."),
+        "audio-animals" => ("paw", "Adjust animal sounds."),
+        "audio-footsteps" => ("route", "Adjust footstep sounds."),
+        "audio-water" => ("droplets", "Adjust water and shore sounds."),
+        "audio-river" => ("route", "Adjust flowing river sounds."),
+        "audio-waterfall" => ("waves-ladder", "Adjust waterfall sounds."),
+        "audio-muted" => ("volume-x", "Mute all game audio."),
+        "minimap-size" => ("maximize", "Choose the map size."),
+        "minimap-zoom" => ("search", "Choose the map zoom."),
+        "minimap-fps" => ("timer", "Choose the map update frequency."),
+        "minimap-icon-scale" => ("flag", "Choose the marker size."),
+        "minimap-mode" => ("layers", "Choose the map layer."),
+        "minimap-enabled" => ("map", "Show the minimap."),
+        "minimap-rotate" => ("rotate-ccw", "Rotate the map with your facing direction."),
+        "minimap-relief" => ("mountain", "Show terrain height shading."),
+        "minimap-mobs" => ("paw", "Show creature markers."),
+        "minimap-players" => ("users-round", "Show player markers."),
+        "minimap-coordinates" => ("map-pin", "Show world coordinates."),
+        "minimap-biome" => ("trees", "Show the current biome."),
+        "minimap-clock" => ("clock", "Show the world time."),
+        "mob-health-bars" => ("heart-pulse", "Choose when creature health is visible."),
+        "mob-health-friendly-color" => {
+            ("heart-handshake", "Choose friendly creature health color.")
+        }
+        "mob-health-hostile-color" => ("swords", "Choose hostile creature health color."),
+        "mob-health-font-color" => ("book-text", "Choose health label text color."),
+        "surface-wet" => ("droplets", "Wet the targeted surface."),
+        "surface-snow" => ("snowflake", "Cover the targeted surface with snow."),
+        "surface-fire" => ("flame", "Ignite the targeted surface."),
+        "surface-clear" => ("eraser", "Clear the targeted surface state."),
+        _ if id.starts_with("bind-") => ("keyboard", "Click to choose a key or mouse button."),
+        _ => ("settings-adjust", ""),
+    }
 }
 
 fn graphics_rows(
@@ -513,9 +784,16 @@ fn graphics_rows(
     ));
     if g.window_mode == WindowModeSetting::Borderless {
         let resolution = &mut rows[0];
-        resolution.value = "Desktop".into();
-        resolution.custom = true;
-        resolution.enabled = false;
+        resolution.value = "desktop".into();
+        resolution.custom = false;
+        resolution.choices.insert(
+            0,
+            Choice {
+                value: "desktop".into(),
+                label: "Desktop (Borderless)".into(),
+            },
+        );
+        resolution.hint = "Choosing a resolution switches to Windowed.".into();
     }
     let mut vsync = slider("graphics-vsync", "VSync", 0.0, 0.0, 0.0, 1.0, String::new());
     vsync.kind = "switch".into();
@@ -909,12 +1187,20 @@ pub(super) fn update(world: &mut World) {
         .next()
         .map(Window::size);
     let menu = world.resource::<MenuState>();
-    let page = menu.page;
+    let startup = world
+        .get_resource::<StartupProgress>()
+        .filter(|progress| progress.active);
+    // The startup gate is a full loading page, not a badge over clickable menus.
+    let page = if startup.is_some_and(|progress| !progress.fading) {
+        MenuPage::Loading
+    } else {
+        menu.page
+    };
     let main = page == MenuPage::Main;
     let pause = page == MenuPage::Pause;
     let view = MenuView {
         visible: !matches!(page, MenuPage::Playing | MenuPage::HudLayout),
-        style: if page == MenuPage::Loading {
+        style: if page == MenuPage::Loading && startup.is_none() {
             format!(
                 "opacity: {:.4};",
                 1.0 - world.resource::<LoadingProgress>().reveal
@@ -927,7 +1213,18 @@ pub(super) fn update(world: &mut World) {
         servers: page == MenuPage::Servers,
         options: page == MenuPage::Options,
         pause,
-        loading: page == MenuPage::Loading,
+        loading: page == MenuPage::Loading || startup.is_some(),
+        startup: startup.is_some(),
+        startup_fading: startup.is_some_and(|progress| progress.fading),
+        content_style: startup.map_or_else(String::new, |progress| {
+            format!("opacity: {:.4}; pointer-events: none;", progress.blend())
+        }),
+        startup_style: startup.map_or_else(String::new, |progress| {
+            format!(
+                "opacity: {:.4}; pointer-events: none;",
+                1.0 - progress.blend()
+            )
+        }),
         title: match page {
             MenuPage::Main => "",
             MenuPage::Worlds => "Singleplayer",
@@ -938,23 +1235,40 @@ pub(super) fn update(world: &mut World) {
             MenuPage::Playing | MenuPage::HudLayout => "",
         }
         .into(),
-        error: menu.error.clone(),
-        status: menu.status.clone(),
-        version: format!("Early Access / {}", env!("CARGO_PKG_VERSION")),
-        cancel_connect: !menu.quitting,
+        error: startup
+            .filter(|startup| !startup.error.is_empty())
+            .map_or_else(
+                || menu.error.clone(),
+                |startup| {
+                    if menu.error.is_empty() {
+                        startup.error.clone()
+                    } else {
+                        format!("{}\n{}", menu.error, startup.error)
+                    }
+                },
+            ),
+        status: if startup.is_some_and(|startup| !startup.error.is_empty()) {
+            "Asset loading failed. Please restart the game.".into()
+        } else if startup.is_some() {
+            String::new()
+        } else {
+            menu.status.clone()
+        },
+        version: format!("v{} (Early Access)", env!("CARGO_PKG_VERSION")),
+        cancel_connect: !menu.quitting && startup.is_none(),
         in_game: menu.session_active && page != MenuPage::Loading,
         buttons: if main {
             vec![
-                button("singleplayer", "Singleplayer", "", "compass", true, true),
+                button("singleplayer", "Singleplayer", "", "leaf", true, true),
                 button("multiplayer", "Multiplayer", "", "users-round", true, false),
-                button("options", "Options", "", "settings", true, false),
-                button("quit", "Quit Game", "", "log-out", true, false),
+                button("options", "Settings", "", "settings", true, false),
+                button("quit", "Quit", "", "power", true, false),
             ]
         } else if pause {
             let info = world.resource::<SessionInfo>();
             vec![
                 button("resume", "Resume Game", "", "play", true, true),
-                button("options", "Options", "", "settings", true, false),
+                button("options", "Settings", "", "settings", true, false),
                 button(
                     "save-world",
                     if info.saving {
@@ -970,16 +1284,16 @@ pub(super) fn update(world: &mut World) {
                 button(
                     "leave",
                     if info.local {
-                        "Save & Main Menu"
+                        "Main Menu"
                     } else {
-                        "Disconnect & Main Menu"
+                        "Disconnect"
                     },
                     "",
                     "home",
                     true,
                     false,
                 ),
-                button("quit", "Quit Game", "", "log-out", true, false),
+                button("quit", "Quit", "", "power", true, false),
             ]
         } else {
             Vec::new()
@@ -997,6 +1311,8 @@ pub(super) fn update(world: &mut World) {
             .entries
             .iter()
             .map(|entry| CardView {
+                version: format!("v{} (Early Access)", entry.game_version),
+                mode: entry.mode.label().into(),
                 id: format!("world-{:016x}", entry.manifest.world.id.0),
                 title: entry.title.clone(),
                 subtitle: format!("v{}  /  {}", entry.game_version, entry.mode.label()),
@@ -1009,10 +1325,10 @@ pub(super) fn update(world: &mut World) {
                 }),
                 selected: Some(entry.manifest.world.id) == worlds.selected,
                 compatible: entry.compatible().is_ok(),
-                icon: if entry.mode == terra_storage::GameMode::Creative {
-                    "hammer"
-                } else {
-                    "mountain"
+                icon: match entry.mode {
+                    terra_storage::GameMode::Creative => "hammer",
+                    terra_storage::GameMode::Survival => "mountain",
+                    terra_storage::GameMode::Spectator => "eye",
                 }
                 .into(),
             })
@@ -1053,6 +1369,8 @@ pub(super) fn update(world: &mut World) {
             .servers
             .iter()
             .map(|server| CardView {
+                version: String::new(),
+                mode: String::new(),
                 id: format!("server-{}", server.id),
                 title: server.name.clone(),
                 subtitle: format!(
@@ -1142,6 +1460,8 @@ pub(super) fn update(world: &mut World) {
             continue;
         }
         server_view.cards.push(CardView {
+            version: String::new(),
+            mode: String::new(),
             id: format!("lan-{}", server.address),
             title: server.status.title.clone(),
             subtitle: format!("{} / {}", server.address, server.status.description),
@@ -1188,6 +1508,33 @@ pub(super) fn update(world: &mut World) {
             row.kind = "command".into();
             row.enabled = enabled;
             rows.push(row);
+        }
+    }
+    if draft.tab == OptionsTab::Graphics {
+        let order = [
+            "graphics-distance",
+            "graphics-shadow",
+            "graphics-water",
+            "graphics-window",
+            "graphics-vsync",
+            "graphics-brightness",
+            "graphics-leaf-detail",
+            "graphics-scale",
+        ];
+        rows.sort_by_key(|row| {
+            order
+                .iter()
+                .position(|id| *id == row.id)
+                .unwrap_or(order.len())
+        });
+    }
+    for row in &mut rows {
+        let (icon, hint) = setting_decoration(&row.id);
+        row.icon = icon.into();
+        if !(row.id == "graphics-resolution"
+            && draft.graphics.window_mode == WindowModeSetting::Borderless)
+        {
+            row.hint = hint.into();
         }
     }
     let options = OptionsView {
@@ -1328,9 +1675,53 @@ pub(super) fn update(world: &mut World) {
         ),
         MenuDialog::None => (String::new(), String::new(), Vec::new()),
     };
+    let biome_choices = if *dialog == MenuDialog::CreateWorld {
+        world_biome_choices(worlds)
+    } else {
+        Vec::new()
+    };
+    let selected_biome = biome_choices
+        .iter()
+        .find(|biome| biome.class_name.ends_with(" selected"))
+        .cloned()
+        .unwrap_or_default();
     let dialog_view = DialogView {
         visible: *dialog != MenuDialog::None,
         create: *dialog == MenuDialog::CreateWorld,
+        create_tab: worlds.create_tab.key().into(),
+        kingdom_rules: if *dialog == MenuDialog::CreateWorld {
+            super::kingdom_settings::cards(worlds.kingdom_rules)
+        } else {
+            Vec::new()
+        },
+        world_rules: if *dialog == MenuDialog::CreateWorld {
+            world_rule_cards(worlds)
+        } else {
+            Vec::new()
+        },
+        structure_choices: if *dialog == MenuDialog::CreateWorld {
+            [
+                ("villages", "Villages", "home", worlds.structures.villages),
+                ("kingdoms", "Kingdoms", "crown", worlds.structures.kingdoms),
+                ("outposts", "Outposts", "flag", worlds.structures.outposts),
+                ("ruins", "Ruins", "landmark", worlds.structures.ruins),
+                ("mines", "Mines", "tool", worlds.structures.mines),
+            ]
+            .map(|(id, title, icon, checked)| WorldToggle {
+                id: format!("world-structure-{id}"),
+                title: title.into(),
+                hint: String::new(),
+                icon: icon.into(),
+                checked,
+            })
+            .to_vec()
+        } else {
+            Vec::new()
+        },
+        biome_choices,
+        selected_biome,
+        biome_picker_open: *dialog == MenuDialog::CreateWorld && worlds.biome_picker_open,
+        structures_enabled: worlds.structures.any_enabled(),
         natural_mob_limit: worlds.natural_mob_limit,
         server: *dialog == MenuDialog::EditServer,
         minimap: *dialog == MenuDialog::Minimap,
@@ -1361,7 +1752,9 @@ pub(super) fn update(world: &mut World) {
     let profile = world.resource::<terra_core::PlayerProfile>();
     let minutes = info.started.map_or(0, |time| time.elapsed().as_secs() / 60);
     let session_view = SessionView {
-        title: if info.title.is_empty() {
+        title: if startup.is_some() {
+            "Laden".into()
+        } else if info.title.is_empty() {
             "TERAMIC".into()
         } else {
             info.title.clone()
@@ -1387,10 +1780,30 @@ pub(super) fn update(world: &mut World) {
             String::new()
         },
         elapsed: format!("{:02}:{:02}", minutes / 60, minutes % 60),
-        progress: progress.fraction.unwrap_or(0.0).clamp(0.0, 1.0) * 100.0,
-        show_progress: progress.fraction.is_some() && !menu.quitting && menu.error.is_empty(),
-        progress_label: progress.detail.clone(),
-        detail: progress.detail.clone(),
+        progress: startup
+            .map_or(progress.fraction, |startup| startup.fraction)
+            .unwrap_or(0.0)
+            .clamp(0.0, 1.0)
+            * 100.0,
+        show_progress: (startup.is_some()
+            || startup
+                .map_or(progress.fraction, |startup| startup.fraction)
+                .is_some())
+            && !menu.quitting
+            && menu.error.is_empty()
+            && startup.is_none_or(|startup| startup.error.is_empty()),
+        progress_label: startup.map_or_else(
+            || {
+                progress
+                    .fraction
+                    .map(|fraction| format!("{:.0}%", fraction.clamp(0.0, 1.0) * 100.0))
+                    .unwrap_or_default()
+            },
+            |startup| startup.label.clone(),
+        ),
+        detail: startup
+            .map_or(&progress.detail, |startup| &startup.detail)
+            .clone(),
     };
     set(world, session_view);
     set(world, view);
@@ -1402,5 +1815,70 @@ pub(super) fn update(world: &mut World) {
 fn set<T: Resource + PartialEq>(world: &mut World, value: T) {
     if *world.resource::<T>() != value {
         world.insert_resource(value);
+    }
+}
+
+#[cfg(test)]
+mod display_rows_tests {
+    use super::*;
+
+    #[test]
+    fn unlimited_fps_and_borderless_resolution_have_selectable_semantic_options() {
+        let mut graphics = GraphicsConfig {
+            fps_limit: 0,
+            ..Default::default()
+        };
+        let resolutions = vec![Choice {
+            value: "1600x900".into(),
+            label: "1600 x 900".into(),
+        }];
+        let rows = graphics_rows(&graphics, resolutions.clone(), None);
+        let fps = rows.iter().find(|row| row.id == "graphics-fps").unwrap();
+        assert!(!fps.custom);
+        assert_eq!(fps.value, "0");
+        assert_eq!(
+            fps.choices
+                .iter()
+                .filter(|choice| choice.value == "0")
+                .count(),
+            1
+        );
+        assert_eq!(
+            fps.choices
+                .iter()
+                .find(|choice| choice.value == "0")
+                .unwrap()
+                .label,
+            "Unlimited"
+        );
+
+        graphics.fps_limit = 75;
+        graphics.window_mode = WindowModeSetting::Borderless;
+        let rows = graphics_rows(&graphics, resolutions, None);
+        assert!(
+            rows.iter()
+                .find(|row| row.id == "graphics-fps")
+                .unwrap()
+                .custom
+        );
+        let resolution = rows
+            .iter()
+            .find(|row| row.id == "graphics-resolution")
+            .unwrap();
+        assert!(resolution.enabled);
+        assert!(!resolution.custom);
+        assert_eq!(resolution.value, "desktop");
+        assert!(
+            resolution
+                .choices
+                .iter()
+                .any(|choice| choice.value == "desktop")
+        );
+        assert!(
+            resolution
+                .choices
+                .iter()
+                .any(|choice| choice.value == "1600x900")
+        );
     }
 }

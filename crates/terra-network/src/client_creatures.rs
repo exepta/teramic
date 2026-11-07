@@ -5,6 +5,10 @@ use terra_core::creatures::Creature;
 mod playback;
 pub use playback::CreaturePlayback;
 
+#[cfg(test)]
+#[path = "client_creatures/tests.rs"]
+mod tests;
+
 #[derive(Clone)]
 pub struct CreatureTrack {
     pub playback: CreaturePlayback,
@@ -31,10 +35,114 @@ pub struct ReplicatedCreatures {
     pub bonds: BTreeMap<u64, terra_core::creatures::taming::CompanionView>,
     pub families: BTreeMap<u64, terra_core::creatures::breeding::FamilyView>,
     pub ecology: terra_core::creatures::ecology::Ecology,
+    pub rejected_snapshots: u64,
+    pub last_snapshot_error: Option<&'static str>,
+    pub last_rejected_tick: u64,
     tick: u64,
+    warning_at: Option<Instant>,
+}
+impl ReplicatedCreatures {
+    fn reject_snapshot(&mut self, tick: u64, reason: &'static str, now: Instant) {
+        self.rejected_snapshots = self.rejected_snapshots.saturating_add(1);
+        self.last_snapshot_error = Some(reason);
+        self.last_rejected_tick = tick;
+        if self
+            .warning_at
+            .is_none_or(|at| now.saturating_duration_since(at) >= Duration::from_secs(5))
+        {
+            tracing::warn!(
+                tick,
+                last_accepted_tick = self.tick,
+                rejected = self.rejected_snapshots,
+                reason,
+                "Creature snapshot rejected; retaining the last valid poses"
+            );
+            self.warning_at = Some(now);
+        }
+    }
+}
+
+fn snapshot_ids(packet: &CreatureStates) -> Result<std::collections::HashSet<u64>, &'static str> {
+    if packet.creatures.len() > terra_core::creatures::MAX_VISIBLE_CREATURES {
+        return Err("creature count exceeded limit");
+    }
+    if packet.creatures.iter().any(|animal| !animal.valid()) {
+        return Err("invalid creature state");
+    }
+    if !packet.ecology.valid() {
+        return Err("invalid ecology state");
+    }
+    if packet.stalker_grip.is_some_and(|grip| {
+        !grip.valid()
+            || !packet.creatures.iter().any(|animal| {
+                animal.id == grip.creature
+                    && animal.kind == terra_core::creatures::CreatureKind::Stalker
+                    && animal.health > 0.0
+            })
+    }) {
+        return Err("invalid stalker grip");
+    }
+    if packet.intentions.len() > 1
+        || packet.intentions.iter().any(|intent| {
+            !intent.valid() || !packet.creatures.iter().any(|animal| animal.id == intent.id)
+        })
+    {
+        return Err("invalid inspected creature intent");
+    }
+    if packet.bonds.len() > packet.creatures.len()
+        || packet.bonds.iter().any(|bond| {
+            !bond.valid() || !packet.creatures.iter().any(|animal| animal.id == bond.id)
+        })
+    {
+        return Err("invalid creature bond");
+    }
+    if packet.families.len() > packet.creatures.len()
+        || packet.families.iter().any(|family| {
+            !family.valid()
+                || !packet
+                    .creatures
+                    .iter()
+                    .any(|animal| animal.id == family.id && animal.growth() == family.growth)
+        })
+    {
+        return Err("invalid creature family");
+    }
+    if packet.creatures.iter().any(|animal| {
+        terra_core::creatures::breeding::is_birth_id(animal.id)
+            && (!packet
+                .families
+                .iter()
+                .any(|family| family.id == animal.id && family.parents.is_some())
+                || !(packet
+                    .bonds
+                    .iter()
+                    .any(|bond| bond.id == animal.id && bond.owner.is_some())
+                    || animal.kind == terra_core::creatures::CreatureKind::Bee
+                        && packet.ecology.bees.contains_key(&animal.id)))
+    }) {
+        return Err("offspring is missing its family, owner or wild bee ecology");
+    }
+    let ids: std::collections::HashSet<_> =
+        packet.creatures.iter().map(|animal| animal.id).collect();
+    if ids.len() != packet.creatures.len() {
+        return Err("duplicate creature identity");
+    }
+    let bond_ids: std::collections::HashSet<_> = packet.bonds.iter().map(|bond| bond.id).collect();
+    if bond_ids.len() != packet.bonds.len() {
+        return Err("duplicate creature bond");
+    }
+    let family_ids: std::collections::HashSet<_> =
+        packet.families.iter().map(|family| family.id).collect();
+    if family_ids.len() != packet.families.len() {
+        return Err("duplicate creature family");
+    }
+    Ok(ids)
 }
 #[derive(Resource, Default)]
 pub struct CreatureActions(pub VecDeque<(u64, bool)>);
+
+#[derive(Resource, Default)]
+pub struct PlayerAttacks(pub VecDeque<terra_core::PlayerId>);
 
 #[derive(Resource, Default)]
 pub struct PetCommands(pub VecDeque<(u64, terra_core::creatures::taming::CompanionMode)>);
@@ -48,6 +156,7 @@ pub struct CreatureInspection(pub Option<u64>);
 pub(super) fn install(app: &mut App) {
     app.init_resource::<ReplicatedCreatures>()
         .init_resource::<CreatureActions>()
+        .init_resource::<PlayerAttacks>()
         .init_resource::<PetCommands>()
         .init_resource::<BeeNestActions>()
         .init_resource::<CreatureInspection>()
@@ -78,62 +187,16 @@ fn receive(
                 || pending
                     .as_ref()
                     .is_some_and(|(previous, _)| packet.tick <= previous.tick)
-                || packet.creatures.len() > terra_core::creatures::MAX_VISIBLE_CREATURES
-                || packet.creatures.iter().any(|a| !a.valid())
-                || !packet.ecology.valid()
-                || packet.stalker_grip.is_some_and(|grip| {
-                    !grip.valid()
-                        || !packet.creatures.iter().any(|a| {
-                            a.id == grip.creature
-                                && a.kind == terra_core::creatures::CreatureKind::Stalker
-                                && a.health > 0.0
-                        })
-                })
-                || packet.intentions.len() > 1
-                || packet.intentions.iter().any(|intent| {
-                    !intent.valid() || !packet.creatures.iter().any(|a| a.id == intent.id)
-                })
-                || packet.bonds.len() > packet.creatures.len()
-                || packet.families.len() > packet.creatures.len()
-                || packet.families.iter().any(|family| {
-                    !family.valid()
-                        || !packet
-                            .creatures
-                            .iter()
-                            .any(|a| a.id == family.id && a.growth() == family.growth)
-                })
-                || packet.creatures.iter().any(|a| {
-                    terra_core::creatures::breeding::is_birth_id(a.id)
-                        && (!packet
-                            .families
-                            .iter()
-                            .any(|f| f.id == a.id && f.parents.is_some())
-                            || !packet
-                                .bonds
-                                .iter()
-                                .any(|b| b.id == a.id && b.owner.is_some()))
-                })
-                || packet
-                    .bonds
-                    .iter()
-                    .any(|bond| !bond.valid() || !packet.creatures.iter().any(|a| a.id == bond.id))
             {
                 continue;
             }
-            let ids: std::collections::HashSet<_> = packet.creatures.iter().map(|a| a.id).collect();
-            if ids.len() != packet.creatures.len() {
-                continue;
-            }
-            let bond_ids: std::collections::HashSet<_> =
-                packet.bonds.iter().map(|bond| bond.id).collect();
-            if bond_ids.len() != packet.bonds.len() {
-                continue;
-            }
-            let family_ids: std::collections::HashSet<_> =
-                packet.families.iter().map(|family| family.id).collect();
-            if family_ids.len() != packet.families.len() {
-                continue;
-            }
+            let ids = match snapshot_ids(&packet) {
+                Ok(ids) => ids,
+                Err(reason) => {
+                    creatures.reject_snapshot(packet.tick, reason, Instant::now());
+                    continue;
+                }
+            };
             pending = Some((packet, ids));
         }
         // Full snapshots supersede one another. Applying a whole delayed burst
@@ -195,6 +258,7 @@ fn receive(
 #[allow(clippy::too_many_arguments)]
 fn send(
     mut queue: ResMut<CreatureActions>,
+    mut player_attacks: ResMut<PlayerAttacks>,
     mut pets: ResMut<PetCommands>,
     mut nests: ResMut<BeeNestActions>,
     mut session: ResMut<ClientSession>,
@@ -220,6 +284,12 @@ fn send(
             *sent_inspection = Some(inspection.0);
             *inspection_due = time.elapsed_secs_f64() + 0.1;
         }
+        for player in player_attacks.0.drain(..).take(2) {
+            sender.send::<ControlChannel>(ClientControl::AttackPlayer {
+                player,
+                look: session.look,
+            });
+        }
         for (id, feed) in queue.0.drain(..).take(2) {
             sender.send::<ControlChannel>(ClientControl::Creature {
                 id,
@@ -239,6 +309,7 @@ fn send(
         }
     }
     queue.0.clear();
+    player_attacks.0.clear();
     pets.0.clear();
     nests.0.clear();
 }

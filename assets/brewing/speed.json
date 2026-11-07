@@ -1,0 +1,1 @@
+{"id":3,"key":"teramic::speed_potion","name":"Speed Potion","inputs":[{"item":{"crop":"wheat"},"count":2},{"item":{"animal":"honey"},"count":1}],"effects":[{"kind":"speed","level":1,"seconds":90.0}],"seconds":12.0,"color":[72,190,225]}

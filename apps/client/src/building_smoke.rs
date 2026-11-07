@@ -1688,6 +1688,7 @@ fn interact_with_bed(world: &mut World) -> Result<(), String> {
         position: hit.position,
         expected,
         facing,
+        closing: false,
     });
     Ok(())
 }

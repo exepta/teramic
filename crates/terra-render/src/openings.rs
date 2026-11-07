@@ -97,11 +97,12 @@ fn loaded_openings<'a>(
     journal: &'a EditJournal,
     chunks: &'a ChunkStore,
 ) -> impl Iterator<Item = ([i64; 3], u16, terra_world::edits::BlockObjectState)> + 'a {
+    let _scope = terra_core::profiling::ScopeTimer::new("openings.refresh_candidates");
     let mut seen = HashSet::new();
-    chunks
-        .loaded
-        .keys()
-        .flat_map(move |&section| journal.object_states_in_section(section))
+    let candidates: Vec<_> = journal
+        .object_sections()
+        .filter(|section| chunks.loaded.contains_key(section))
+        .flat_map(move |section| journal.object_states_in_section(section))
         .filter_map(move |(position, material, object)| {
             if !terra_world::objects::is_opening(material)
                 || chunks.block_at(position) != Some(material)
@@ -124,6 +125,8 @@ fn loaded_openings<'a>(
             (has_loaded_part(chunks, position, material, object) && seen.insert(position))
                 .then_some((position, material, object))
         })
+        .collect();
+    candidates.into_iter()
 }
 
 fn parts(
@@ -188,12 +191,24 @@ fn synchronize(
     let mut live = HashSet::new();
     let mut seen = HashSet::new();
     for (position, material, object) in loaded_openings(&journal, &chunks) {
-        let group = terra_world::objects::is_window(material).then(|| {
+        let window_group = terra_world::objects::is_window(material).then(|| {
             terra_world::objects::windows::group(position, material, object.facing, |p| {
                 let id = chunks.block_at(p).or_else(|| journal.block(p))?;
                 Some((id, journal.object_state(p)?.facing))
             })
         });
+        let door_group = terra_world::objects::is_door(material)
+            .then(|| {
+                terra_world::objects::doors::group(position, material, object, |p| {
+                    Some((
+                        chunks.block_at(p).or_else(|| journal.block(p))?,
+                        journal.object_state(p)?,
+                    ))
+                })
+            })
+            .flatten()
+            .filter(|group| group.width == 2);
+        let group = window_group.or_else(|| door_group.map(|group| group.geometry()));
         let position = group.map_or(position, |g| g.anchor);
         if !seen.insert(position) {
             continue;
@@ -207,9 +222,11 @@ fn synchronize(
                 && placed.facing % 4 == object.facing % 4
                 && placed.size == size
             {
-                for &entity in &placed.leaves {
+                for (index, &entity) in placed.leaves.iter().enumerate() {
                     if let Ok(mut leaf) = leaves.get_mut(entity) {
-                        leaf.target(object.facing >= 4);
+                        leaf.target(
+                            door_group.map_or(object.facing >= 4, |group| group.opened[index]),
+                        );
                     }
                 }
                 continue;
@@ -245,6 +262,7 @@ fn synchronize(
             .id();
         let mut leaf_entities = Vec::with_capacity(usize::from(size[0]));
         for index in 0..size[0] {
+            let open = door_group.map_or(open, |group| group.opened[usize::from(index)]);
             let hinge = group.map_or(HINGE, |g| {
                 Vec3::from_array(g.hinge(index).map(|v| v as f32))
             });
@@ -320,6 +338,88 @@ mod tests {
     use std::sync::Arc;
     use terra_voxel::{BlockSection, SectionPos};
     use terra_world::{edits::BlockObjectState, streaming::LoadedSection};
+
+    #[test]
+    fn generated_door_metadata_index_tracks_vertical_borders_opening_changes_and_removal() {
+        use terra_world::generation::structures::StructureObject;
+        let owner = [-1, 15, -16];
+        let peer = [-1, 16, -16];
+        let object = BlockObjectState {
+            peer: Some(peer),
+            ..default()
+        };
+        let secondary = BlockObjectState {
+            peer: Some(owner),
+            secondary: true,
+            ..default()
+        };
+        let mut journal = EditJournal::default();
+        for x in 0..128 {
+            journal.record([x * 16, 1, 128], 3).unwrap();
+        }
+        assert_eq!(journal.object_sections().len(), 0);
+        journal
+            .initialize_structures(&[
+                StructureObject {
+                    position: owner,
+                    material: 65,
+                    state: Some(object),
+                    loot: None,
+                    crop: None,
+                },
+                StructureObject {
+                    position: peer,
+                    material: 65,
+                    state: Some(secondary),
+                    loot: None,
+                    crop: None,
+                },
+            ])
+            .unwrap();
+        assert_eq!(journal.object_sections().len(), 2);
+        let (section, local) = terra_voxel::global_to_section(peer);
+        let mut data = BlockSection::empty(section).unwrap();
+        data.set_block(local, 65).unwrap();
+        let mut chunks = ChunkStore::default();
+        chunks.loaded.insert(
+            section,
+            LoadedSection {
+                data,
+                mesh: None,
+                mesh_epoch: 0,
+                water_epoch: 0,
+                water: None,
+                props: Vec::new(),
+            },
+        );
+        assert_eq!(
+            loaded_openings(&journal, &chunks).collect::<Vec<_>>(),
+            vec![(owner, 65, object)]
+        );
+        let opened = BlockObjectState {
+            facing: 4,
+            ..object
+        };
+        journal.set_object_state(owner, Some(opened)).unwrap();
+        journal
+            .set_object_state(
+                peer,
+                Some(BlockObjectState {
+                    facing: 4,
+                    ..secondary
+                }),
+            )
+            .unwrap();
+        assert_eq!(
+            loaded_openings(&journal, &chunks).collect::<Vec<_>>(),
+            vec![(owner, 65, opened)]
+        );
+        chunks.loaded.clear();
+        assert!(loaded_openings(&journal, &chunks).next().is_none());
+        journal.record(owner, 0).unwrap();
+        journal.record(peer, 0).unwrap();
+        assert_eq!(journal.object_sections().len(), 0);
+    }
 
     #[test]
     fn hinge_moves_smoothly_and_reverses_from_its_current_angle() {
@@ -486,6 +586,7 @@ mod tests {
             .set_object_state(position, Some(BlockObjectState::default()))
             .unwrap();
         let primitive = |material| PrimitiveTemplate {
+            tangents: Vec::new(),
             positions: vec![[0.2, 0.2, 0.5], [0.8, 0.2, 0.5], [0.2, 0.8, 0.5]],
             normals: vec![[0.0, 0.0, 1.0]; 3],
             uvs: vec![[0.0; 2]; 3],

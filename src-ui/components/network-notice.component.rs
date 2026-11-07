@@ -44,6 +44,7 @@ pub fn update_notice(
             EditOutcome::Occluded => Some("Ziel ist verdeckt."),
             EditOutcome::Invalid => Some("Diese Aktion ist nicht erlaubt."),
             EditOutcome::RateLimited => Some("Zu viele Aktionen. Bitte kurz warten."),
+            EditOutcome::Planting(reason) => Some(reason.message()),
         };
         if let Some(reason) = reason {
             if matches!(outcome, EditOutcome::Conflict | EditOutcome::RateLimited) {
@@ -70,24 +71,37 @@ pub fn update_notice(
 pub fn present_toasts(world: &mut World) {
     let pending = world.resource::<PendingNotices>();
     let (warning, error) = (pending.warning, pending.error);
-    if !warning && !error { return; }
-    let nodes = world.query::<(Entity, &ElementId, &tilt_ui::ToastState, &tilt_ui::CascadedStyle)>()
-        .iter(world).filter_map(|(entity, id, state, style)| {
+    if !warning && !error {
+        return;
+    }
+    let nodes = world
+        .query::<(
+            Entity,
+            &ElementId,
+            &tilt_ui::ToastState,
+            &tilt_ui::CascadedStyle,
+        )>()
+        .iter(world)
+        .filter_map(|(entity, id, state, style)| {
             let wanted = match id.0.as_str() {
                 "network-warning-toast" => warning,
                 "network-error-toast" => error,
                 _ => false,
             };
             (wanted && style.0.background_color.is_some()).then_some((entity, state.kind))
-        }).collect::<Vec<_>>();
+        })
+        .collect::<Vec<_>>();
     for (entity, kind) in nodes {
         // Authored widgets are styled before TiltUI portals them. Reuse them
         // instead of dynamically creating parts that are materialized twice.
         tilt_ui::close_toast(world, entity);
         if tilt_ui::show_toast(world, entity) {
             let mut pending = world.resource_mut::<PendingNotices>();
-            if kind == ToastKind::Warning { pending.warning = false; }
-            else { pending.error = false; }
+            if kind == ToastKind::Warning {
+                pending.warning = false;
+            } else {
+                pending.error = false;
+            }
         }
     }
 }
@@ -124,8 +138,10 @@ mod tests {
     #[test]
     fn rejected_edits_use_semantic_toasts_once_instead_of_the_center_notice() {
         let mut app = App::new();
-        app.init_resource::<ClientSession>().init_resource::<NetworkNotice>()
-            .init_resource::<PendingNotices>().add_systems(Update, update_notice);
+        app.init_resource::<ClientSession>()
+            .init_resource::<NetworkNotice>()
+            .init_resource::<PendingNotices>()
+            .add_systems(Update, update_notice);
         for (id, outcome, kind) in [
             (1, EditOutcome::Conflict, tilt_ui::ToastKind::Warning),
             (2, EditOutcome::Invalid, tilt_ui::ToastKind::Error),
@@ -140,6 +156,34 @@ mod tests {
             app.update();
             let pending = app.world().resource::<PendingNotices>();
             assert!(!pending.warning && !pending.error);
+        }
+    }
+
+    #[test]
+    fn sapling_rejections_show_the_actual_reason_instead_of_a_generic_permission_error() {
+        let mut app = App::new();
+        app.init_resource::<ClientSession>()
+            .init_resource::<NetworkNotice>()
+            .init_resource::<PendingNotices>()
+            .add_systems(Update, update_notice);
+        for (index, reason) in [
+            terra_core::trees::SaplingPlacementError::Soil,
+            terra_core::trees::SaplingPlacementError::Water,
+            terra_core::trees::SaplingPlacementError::Occupied,
+            terra_core::trees::SaplingPlacementError::Protected,
+            terra_core::trees::SaplingPlacementError::Unloaded,
+        ]
+        .into_iter()
+        .enumerate()
+        {
+            app.world_mut().resource_mut::<ClientSession>().last_edit =
+                Some((index as u64 + 1, EditOutcome::Planting(reason)));
+            app.update();
+            assert_eq!(
+                app.world().resource::<NetworkNotice>().error,
+                reason.message()
+            );
+            assert!(app.world().resource::<PendingNotices>().error);
         }
     }
 }

@@ -1,6 +1,8 @@
 use crate::{
-    foliage::LeafMaterial, props::wind::PropMaterial, water::material::WaterMaterial,
-    weather::surfaces::WetMaterial,
+    foliage::LeafMaterial,
+    props::wind::PropMaterial,
+    water::material::WaterMaterial,
+    weather::surfaces::{TerrainDepthMaterial, WetMaterial},
 };
 use bevy::{
     camera::visibility::{RenderLayers, VisibilityRange},
@@ -11,6 +13,8 @@ use terra_core::{ChunkAnimation, GameConfig};
 mod feedback;
 #[path = "transitions/fixture.rs"]
 mod fixture;
+#[path = "transitions/retirement.rs"]
+mod retirement;
 #[path = "transitions/wet_probe.rs"]
 mod wet_probe;
 pub(crate) use feedback::TransitionDraws;
@@ -32,6 +36,47 @@ struct QueueCandidates {
     entities: Vec<Entity>,
 }
 
+#[derive(Resource)]
+struct TransitionQueries {
+    fades: QueryState<(Entity, &'static ChunkFade)>,
+    queued: QueryState<(Entity, &'static QueuedChunk, Option<&'static Transform>)>,
+    cameras: QueryState<
+        (
+            &'static bevy::camera::primitives::Frustum,
+            &'static GlobalTransform,
+        ),
+        With<terra_player::TerraCamera>,
+    >,
+}
+
+impl FromWorld for TransitionQueries {
+    fn from_world(world: &mut World) -> Self {
+        Self {
+            fades: world.query(),
+            queued: world.query(),
+            cameras: world.query_filtered(),
+        }
+    }
+}
+
+fn with_queries<T>(
+    world: &mut World,
+    read: impl FnOnce(&mut World, &mut TransitionQueries) -> T,
+) -> T {
+    // World::query constructs a fresh state and visits every archetype. The
+    // exclusive animator reuses its queries as streamed geometry comes and goes.
+    world.init_resource::<TransitionQueries>();
+    world.resource_scope(|world, mut queries: Mut<TransitionQueries>| read(world, &mut queries))
+}
+
+fn fade_count(world: &mut World) -> usize {
+    with_queries(world, |world, queries| queries.fades.iter(world).count())
+}
+
+fn queued_count(world: &mut World) -> usize {
+    with_queries(world, |world, queries| queries.queued.iter(world).count())
+}
+
 #[derive(Resource, Default, Debug)]
 pub struct ChunkAnimationStatus {
     pub queued: usize,
@@ -43,6 +88,10 @@ pub struct ChunkAnimationStatus {
     pub started_after_draw: usize,
     pub completed: usize,
     pub peak_active: usize,
+    pub retiring_roots: usize,
+    pub retiring_meshes: usize,
+    pub retiring_materials: usize,
+    pub retirement_overflows: usize,
 }
 
 const MAX_FADING_ROOTS: usize = 96;
@@ -168,6 +217,14 @@ impl FadeMaterial for WetMaterial {
         &mut self.base
     }
 }
+impl FadeMaterial for TerrainDepthMaterial {
+    fn alpha(&self) -> f32 {
+        self.base.base_color.alpha()
+    }
+    fn base(&mut self) -> &mut StandardMaterial {
+        &mut self.base
+    }
+}
 impl FadeMaterial for PropMaterial {
     fn alpha(&self) -> f32 {
         self.base.base_color.alpha()
@@ -198,6 +255,11 @@ enum FadedHandle {
     Prop(Entity, Handle<PropMaterial>, Handle<PropMaterial>),
     Water(Entity, Handle<WaterMaterial>, Handle<WaterMaterial>),
     Wet(Entity, Handle<WetMaterial>, Handle<WetMaterial>),
+    Depth(
+        Entity,
+        Handle<TerrainDepthMaterial>,
+        Handle<TerrainDepthMaterial>,
+    ),
 }
 impl FadedHandle {
     fn entity(&self) -> Entity {
@@ -206,7 +268,8 @@ impl FadedHandle {
             | Self::Leaf(e, _, _)
             | Self::Prop(e, _, _)
             | Self::Water(e, _, _)
-            | Self::Wet(e, _, _) => *e,
+            | Self::Wet(e, _, _)
+            | Self::Depth(e, _, _) => *e,
         }
     }
 }
@@ -275,6 +338,26 @@ struct RestoreShadow;
 #[derive(Component)]
 struct RestoreBatching;
 
+fn legacy_fade_batching_control(smoke: bool, setting: Option<&str>) -> bool {
+    smoke && setting == Some("1")
+}
+
+fn legacy_fade_batching() -> bool {
+    static LEGACY: std::sync::LazyLock<bool> = std::sync::LazyLock::new(|| {
+        legacy_fade_batching_control(
+            std::env::args().any(|arg| arg.starts_with("--smoke-test")),
+            std::env::var("TERRA_LEGACY_FADE_BATCHING").ok().as_deref(),
+        )
+    });
+    *LEGACY
+}
+
+fn restore_batching(entity: &mut bevy::ecs::world::EntityWorldMut<'_>) {
+    if entity.take::<RestoreBatching>().is_some() {
+        entity.remove::<bevy::render::batching::NoAutomaticBatching>();
+    }
+}
+
 fn start(
     world: &mut World,
     root: Entity,
@@ -284,7 +367,7 @@ fn start(
 ) -> bool {
     if mode == ChunkAnimation::None
         || world.get_entity(root).is_err()
-        || world.query::<&ChunkFade>().iter(world).count() >= MAX_FADING_ROOTS
+        || fade_count(world) >= MAX_FADING_ROOTS
     {
         return false;
     }
@@ -304,23 +387,28 @@ fn start(
             continue;
         }
         let restore_shadow = world.get::<bevy::light::NotShadowCaster>(entity).is_none();
-        let material =
-            if let Some((a, b)) = clone_material::<StandardMaterial>(world, entity, outgoing) {
-                Some(FadedHandle::Standard(entity, a, b))
-            } else if let Some((a, b)) = clone_material::<LeafMaterial>(world, entity, outgoing) {
-                Some(FadedHandle::Leaf(entity, a, b))
-            } else if let Some((a, b)) = clone_material::<PropMaterial>(world, entity, outgoing) {
-                Some(FadedHandle::Prop(entity, a, b))
-            } else if let Some((a, b)) = clone_material::<WetMaterial>(world, entity, outgoing) {
-                Some(FadedHandle::Wet(entity, a, b))
-            } else {
-                clone_material::<WaterMaterial>(world, entity, outgoing)
-                    .map(|(a, b)| FadedHandle::Water(entity, a, b))
-            };
+        let material = if let Some((a, b)) =
+            clone_material::<StandardMaterial>(world, entity, outgoing)
+        {
+            Some(FadedHandle::Standard(entity, a, b))
+        } else if let Some((a, b)) = clone_material::<LeafMaterial>(world, entity, outgoing) {
+            Some(FadedHandle::Leaf(entity, a, b))
+        } else if let Some((a, b)) = clone_material::<PropMaterial>(world, entity, outgoing) {
+            Some(FadedHandle::Prop(entity, a, b))
+        } else if let Some((a, b)) = clone_material::<WetMaterial>(world, entity, outgoing) {
+            Some(FadedHandle::Wet(entity, a, b))
+        } else if let Some((a, b)) = clone_material::<TerrainDepthMaterial>(world, entity, outgoing)
+        {
+            Some(FadedHandle::Depth(entity, a, b))
+        } else {
+            clone_material::<WaterMaterial>(world, entity, outgoing)
+                .map(|(a, b)| FadedHandle::Water(entity, a, b))
+        };
         if let Some(material) = material {
-            if world
-                .get::<bevy::render::batching::NoAutomaticBatching>(entity)
-                .is_none()
+            if (!outgoing || legacy_fade_batching())
+                && world
+                    .get::<bevy::render::batching::NoAutomaticBatching>(entity)
+                    .is_none()
             {
                 // Readiness must refer to this mesh, not a representative from
                 // another root in the same indirect multi-draw batch.
@@ -377,6 +465,9 @@ pub(crate) fn enter(commands: &mut Commands, root: Entity, mode: ChunkAnimation)
     if mode != ChunkAnimation::None {
         commands.queue(move |world: &mut World| {
             let _scope = terra_core::profiling::ScopeTimer::new("transitions.enter_commit");
+            if retirement::contains(world, root) {
+                return;
+            }
             let Some(visibility) = world.get::<Visibility>(root).copied() else {
                 return;
             };
@@ -408,6 +499,10 @@ pub(crate) fn retire(
 ) {
     commands.queue(move |world: &mut World| {
         let _scope = terra_core::profiling::ScopeTimer::new("transitions.retire_commit");
+        if retirement::contains(world, root) {
+            retirement::enqueue(world, root, meshes);
+            return;
+        }
         if world.get_entity(root).is_err() {
             if let Some(mut assets) = world.get_resource_mut::<Assets<Mesh>>() {
                 for mesh in meshes {
@@ -417,6 +512,10 @@ pub(crate) fn retire(
             return;
         }
         if mode == ChunkAnimation::None || world.get::<QueuedChunk>(root).is_some() {
+            if retirement::enabled(world) {
+                retirement::enqueue(world, root, meshes);
+                return;
+            }
             if let Some(fade) = world.entity_mut(root).take::<ChunkFade>() {
                 finish(world, root, fade);
             }
@@ -429,6 +528,11 @@ pub(crate) fn retire(
             return;
         }
         if let Some(mut fade) = world.get_mut::<ChunkFade>(root) {
+            let release = if legacy_fade_batching() {
+                Vec::new()
+            } else {
+                fade.materials.iter().map(FadingMaterial::entity).collect()
+            };
             fade.start_progress = (fade.elapsed / fade.seconds).clamp(0.0, 1.0);
             let elapsed = fade.elapsed;
             let seconds = fade.seconds;
@@ -439,6 +543,14 @@ pub(crate) fn retire(
             fade.started = true;
             fade.outgoing = true;
             fade.retired_meshes = meshes;
+            for entity in release {
+                if let Ok(mut entity) = world.get_entity_mut(entity) {
+                    restore_batching(&mut entity);
+                }
+                if let Some(mut feedback) = world.get_resource_mut::<TransitionDraws>() {
+                    feedback.pending.remove(&entity);
+                }
+            }
         } else if let Some(visibility) = world.get::<Visibility>(root).copied() {
             world.entity_mut(root).insert(QueuedChunk {
                 mode,
@@ -483,9 +595,7 @@ fn restore<M: Material>(
 ) {
     if let Ok(mut entity) = world.get_entity_mut(entity) {
         entity.insert(MeshMaterial3d(original));
-        if entity.take::<RestoreBatching>().is_some() {
-            entity.remove::<bevy::render::batching::NoAutomaticBatching>();
-        }
+        restore_batching(&mut entity);
         if entity.take::<RestoreShadow>().is_some() {
             entity.remove::<bevy::light::NotShadowCaster>();
         }
@@ -513,6 +623,7 @@ fn cleanup(world: &mut World, root: Entity, fade: ChunkFade, completed: bool) {
             FadedHandle::Prop(e, a, b) => restore(world, e, a, b),
             FadedHandle::Water(e, a, b) => restore(world, e, a, b),
             FadedHandle::Wet(e, a, b) => restore(world, e, a, b),
+            FadedHandle::Depth(e, a, b) => restore(world, e, a, b),
         }
     }
     if let Ok(mut entity) = world.get_entity_mut(root) {
@@ -565,11 +676,14 @@ fn animate(world: &mut World) {
                 .retain(|entity| world.entities().contains(*entity));
         });
     }
-    let roots = world
-        .query_filtered::<Entity, With<ChunkFade>>()
-        .iter(world)
-        .collect::<Vec<_>>();
-    if roots.is_empty() && world.query::<&QueuedChunk>().iter(world).next().is_none() {
+    let roots = with_queries(world, |world, queries| {
+        queries
+            .fades
+            .iter(world)
+            .map(|(entity, _)| entity)
+            .collect::<Vec<_>>()
+    });
+    if roots.is_empty() && queued_count(world) == 0 {
         if let Some(mut cache) = world.get_resource_mut::<QueueCandidates>() {
             cache.entities.clear();
             cache.refreshed = None;
@@ -600,6 +714,13 @@ fn animate(world: &mut World) {
             for material in &mut fade.materials {
                 if material.drawn_at.is_none() && ready.contains(&material.entity()) {
                     material.drawn_at = Some(fade.elapsed);
+                    // Feedback is one-shot. Preserve other systems' opt-outs,
+                    // but allow this ready batch to merge during the remaining fade.
+                    if !legacy_fade_batching()
+                        && let Ok(mut entity) = world.get_entity_mut(material.entity())
+                    {
+                        restore_batching(&mut entity);
+                    }
                     if let Some(mut pending) = world.get_resource_mut::<TransitionDraws>() {
                         pending.pending.remove(&material.entity());
                     }
@@ -684,11 +805,12 @@ fn animate(world: &mut World) {
                 FadedHandle::Prop(_, a, b) => update_material(world, a, b, opacity),
                 FadedHandle::Water(_, a, b) => update_material(world, a, b, opacity),
                 FadedHandle::Wet(_, a, b) => update_material(world, a, b, opacity),
+                FadedHandle::Depth(_, a, b) => update_material(world, a, b, opacity),
             }
         }
         world.entity_mut(root).insert(fade);
     }
-    let active = world.query::<&ChunkFade>().iter(world).count();
+    let active = fade_count(world);
     let budget = MAX_FADING_ROOTS.saturating_sub(active).min(8);
     let now = world.resource::<Time>().elapsed_secs_f64();
     let mut candidates = world
@@ -701,26 +823,28 @@ fn animate(world: &mut World) {
         let frusta = camera_views(world);
         let mut expired = Vec::new();
         let mut background = Vec::new();
-        let mut queued = world
-            .query::<(Entity, &QueuedChunk, Option<&Transform>)>()
-            .iter(world)
-            .map(|(entity, queued, t)| {
-                (
-                    entity,
-                    queued.outgoing,
-                    t.map_or(0.0, |t| t.translation.distance_squared(focus)),
-                )
-            })
-            .filter(|(entity, outgoing, distance)| {
-                let visible = frusta.is_empty() || in_view(world, *entity, &frusta);
-                if !disabled && *outgoing && !visible {
-                    expired.push(*entity);
-                } else if !disabled && !visible && known_outside_view(world, *entity, &frusta) {
-                    background.push((*entity, *distance));
-                }
-                disabled || visible
-            })
-            .collect::<Vec<_>>();
+        let mut queued = with_queries(world, |world, queries| {
+            queries
+                .queued
+                .iter(world)
+                .map(|(entity, queued, t)| {
+                    (
+                        entity,
+                        queued.outgoing,
+                        t.map_or(0.0, |t| t.translation.distance_squared(focus)),
+                    )
+                })
+                .filter(|(entity, outgoing, distance)| {
+                    let visible = frusta.is_empty() || in_view(world, *entity, &frusta);
+                    if !disabled && *outgoing && !visible {
+                        expired.push(*entity);
+                    } else if !disabled && !visible && known_outside_view(world, *entity, &frusta) {
+                        background.push((*entity, *distance));
+                    }
+                    disabled || visible
+                })
+                .collect::<Vec<_>>()
+        });
         // Roots already outside the real view cannot show a fade-out. Do not
         // spend material/animation slots on them while incoming chunks wait.
         for root in expired {
@@ -834,14 +958,13 @@ fn transforms_current(world: &World, entity: Entity) -> bool {
 }
 
 fn camera_views(world: &mut World) -> Vec<(bevy::camera::primitives::Frustum, Vec3)> {
-    world
-        .query_filtered::<
-            (&bevy::camera::primitives::Frustum, &GlobalTransform),
-            With<terra_player::TerraCamera>,
-        >()
-        .iter(world)
-        .map(|(frustum, transform)| (*frustum, transform.translation()))
-        .collect()
+    with_queries(world, |world, queries| {
+        queries
+            .cameras
+            .iter(world)
+            .map(|(frustum, transform)| (*frustum, transform.translation()))
+            .collect()
+    })
 }
 
 fn mesh_in_view(
@@ -888,32 +1011,35 @@ fn in_view(
 }
 
 fn update_status(world: &mut World) {
-    let queued = world.query::<&QueuedChunk>().iter(world).count();
-    let active = world.query::<&ChunkFade>().iter(world).count();
+    let queued = queued_count(world);
     let mut waiting = 0;
     let mut waiting_materials = [0; 4];
-    for fade in world
-        .query::<&ChunkFade>()
-        .iter(world)
-        .filter(|fade| !fade.outgoing)
-    {
-        let mut has_waiting = false;
-        for material in fade
-            .materials
-            .iter()
-            .filter(|material| material.drawn_at.is_none())
-        {
-            has_waiting = true;
-            let kind = match &material.handle {
-                FadedHandle::Standard(..) | FadedHandle::Wet(..) => 0,
-                FadedHandle::Leaf(..) => 1,
-                FadedHandle::Prop(..) => 2,
-                FadedHandle::Water(..) => 3,
-            };
-            waiting_materials[kind] += 1;
+    let active = with_queries(world, |world, queries| {
+        let mut active = 0;
+        for (_, fade) in queries.fades.iter(world) {
+            active += 1;
+            if fade.outgoing {
+                continue;
+            }
+            let mut has_waiting = false;
+            for material in fade
+                .materials
+                .iter()
+                .filter(|material| material.drawn_at.is_none())
+            {
+                has_waiting = true;
+                let kind = match &material.handle {
+                    FadedHandle::Standard(..) | FadedHandle::Wet(..) | FadedHandle::Depth(..) => 0,
+                    FadedHandle::Leaf(..) => 1,
+                    FadedHandle::Prop(..) => 2,
+                    FadedHandle::Water(..) => 3,
+                };
+                waiting_materials[kind] += 1;
+            }
+            waiting += usize::from(has_waiting);
         }
-        waiting += usize::from(has_waiting);
-    }
+        active
+    });
     if let Some(mut status) = world.get_resource_mut::<ChunkAnimationStatus>() {
         status.queued = queued;
         if queued == 0 {
@@ -944,13 +1070,21 @@ pub struct LodSwapStatus {
 pub(crate) fn install(app: &mut App) {
     fixture::install(app);
     wet_probe::install(app);
+    retirement::install(app);
     app.init_resource::<LodSwapStatus>()
         .init_resource::<ChunkAnimationStatus>()
         .init_resource::<QueueCandidates>()
+        .init_resource::<TransitionQueries>()
         .init_resource::<TransitionDraws>()
         .add_plugins(bevy::render::extract_resource::ExtractResourcePlugin::<
             TransitionDraws,
         >::default())
+        .add_systems(
+            PostUpdate,
+            retirement::drain
+                .before(animate)
+                .before(TransformSystems::Propagate),
+        )
         .add_systems(PostUpdate, animate.before(TransformSystems::Propagate));
 }
 
@@ -969,6 +1103,70 @@ pub(crate) fn abrupt_prop_range(end: f32) -> VisibilityRange {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn retained_transition_queries_follow_new_archetypes_component_removal_and_despawning() {
+        #[derive(Component)]
+        struct Streamed;
+        let mut world = World::new();
+        world.init_resource::<ChunkAnimationStatus>();
+        assert_eq!(fade_count(&mut world), 0);
+        assert_eq!(queued_count(&mut world), 0);
+        assert!(camera_views(&mut world).is_empty());
+        let fade = world
+            .spawn((
+                Streamed,
+                ChunkFade {
+                    elapsed: 0.0,
+                    seconds: 1.0,
+                    outgoing: false,
+                    materials: Vec::new(),
+                    retired_meshes: Vec::new(),
+                    mode: ChunkAnimation::Fade,
+                    original: Transform::default(),
+                    visibility: Visibility::Inherited,
+                    started: false,
+                    age: 0.0,
+                    start_progress: 0.0,
+                },
+            ))
+            .id();
+        let queued = world
+            .spawn((
+                Streamed,
+                Transform::default(),
+                QueuedChunk {
+                    mode: ChunkAnimation::Fade,
+                    outgoing: false,
+                    meshes: Vec::new(),
+                    visibility: Visibility::Inherited,
+                },
+            ))
+            .id();
+        let camera = world
+            .spawn((
+                Streamed,
+                terra_player::TerraCamera,
+                bevy::camera::primitives::Frustum::default(),
+                GlobalTransform::from_translation(Vec3::new(1.0, 2.0, 3.0)),
+            ))
+            .id();
+        assert_eq!(fade_count(&mut world), 1);
+        assert_eq!(queued_count(&mut world), 1);
+        assert_eq!(camera_views(&mut world)[0].1, Vec3::new(1.0, 2.0, 3.0));
+        update_status(&mut world);
+        let status = world.resource::<ChunkAnimationStatus>();
+        assert_eq!((status.active, status.queued), (1, 1));
+        world.entity_mut(fade).remove::<ChunkFade>();
+        world.despawn(queued);
+        world.despawn(camera);
+        assert_eq!(fade_count(&mut world), 0);
+        assert_eq!(queued_count(&mut world), 0);
+        assert!(camera_views(&mut world).is_empty());
+        update_status(&mut world);
+        let status = world.resource::<ChunkAnimationStatus>();
+        assert_eq!((status.active, status.queued), (0, 0));
+    }
 
     #[test]
     fn proxy_release_keeps_outgoing_queued_color_visible_until_fade_admission() {
@@ -1153,6 +1351,7 @@ mod tests {
         repeated_material_fade_lifecycle(StandardMaterial::default());
         repeated_material_fade_lifecycle(PropMaterial::default());
         repeated_material_fade_lifecycle(WetMaterial::default());
+        repeated_material_fade_lifecycle(TerrainDepthMaterial::default());
         repeated_material_fade_lifecycle(WaterMaterial {
             base: StandardMaterial::default(),
             extension: crate::water::material::WaterExtension {
@@ -1161,10 +1360,7 @@ mod tests {
                 settings: Vec4::ZERO,
                 effects: Vec4::ZERO,
                 reflections: Vec4::ZERO,
-                weather: Vec4::ZERO,
-                environment: Vec4::ZERO,
-                wake_positions: Default::default(),
-                wake_motions: Default::default(),
+                dynamics: Default::default(),
             },
         });
     }
@@ -1259,6 +1455,140 @@ mod tests {
             .alpha()
     }
 
+    fn assert_batching(world: &World, entity: Entity, isolated: bool, owned: bool) {
+        assert_eq!(
+            world
+                .get::<bevy::render::batching::NoAutomaticBatching>(entity)
+                .is_some(),
+            isolated
+        );
+        assert_eq!(world.get::<RestoreBatching>(entity).is_some(), owned);
+    }
+
+    #[test]
+    fn legacy_fade_batching_is_an_explicit_smoke_only_control() {
+        for setting in [None, Some("0"), Some("1"), Some("true")] {
+            assert!(!legacy_fade_batching_control(false, setting));
+            assert_eq!(
+                legacy_fade_batching_control(true, setting),
+                setting == Some("1")
+            );
+        }
+    }
+
+    #[test]
+    fn first_draw_releases_only_the_ready_siblings_transition_batching_override() {
+        let (mut world, root, [first, late], _) = two_batch_fade();
+        for entity in [first, late] {
+            assert_batching(&world, entity, true, true);
+        }
+        world.resource::<TransitionDraws>().drawn(first);
+        animate(&mut world);
+        assert_batching(&world, first, false, false);
+        assert_batching(&world, late, true, true);
+        assert_eq!(
+            world.get::<ChunkFade>(root).unwrap().materials[0].drawn_at,
+            Some(0.0)
+        );
+        assert!(!world.resource::<TransitionDraws>().pending.contains(&first));
+        assert!(world.resource::<TransitionDraws>().pending.contains(&late));
+        for _ in 0..3 {
+            animate(&mut world);
+        }
+        assert!(alpha(&world, first) > 0.0);
+        assert_eq!(alpha(&world, late), 0.0);
+        assert_batching(&world, late, true, true);
+        world.resource::<TransitionDraws>().drawn(late);
+        animate(&mut world);
+        assert_batching(&world, late, false, false);
+        assert!(world.resource::<TransitionDraws>().pending.is_empty());
+    }
+
+    #[test]
+    fn original_batching_opt_out_survives_readiness_finish_and_forced_cleanup() {
+        for ready in [false, true] {
+            let (mut world, root, [external, owned], original) = two_batch_fade();
+            let initial = world.entity_mut(root).take::<ChunkFade>().unwrap();
+            finish(&mut world, root, initial);
+            world
+                .entity_mut(external)
+                .insert(bevy::render::batching::NoAutomaticBatching);
+            assert!(start(
+                &mut world,
+                root,
+                ChunkAnimation::Fade,
+                false,
+                Vec::new()
+            ));
+            assert_batching(&world, external, true, false);
+            assert_batching(&world, owned, true, true);
+            if ready {
+                for entity in [external, owned] {
+                    world.resource::<TransitionDraws>().drawn(entity);
+                }
+                animate(&mut world);
+                assert_batching(&world, external, true, false);
+                assert_batching(&world, owned, false, false);
+            }
+            let fade = world.entity_mut(root).take::<ChunkFade>().unwrap();
+            if ready {
+                finish(&mut world, root, fade);
+            } else {
+                cleanup(&mut world, root, fade, false);
+            }
+            assert_batching(&world, external, true, false);
+            assert_batching(&world, owned, false, false);
+            assert!(world.resource::<TransitionDraws>().pending.is_empty());
+            assert_eq!(world.resource::<Assets<StandardMaterial>>().len(), 1);
+            for entity in [external, owned] {
+                assert_eq!(
+                    world
+                        .get::<MeshMaterial3d<StandardMaterial>>(entity)
+                        .unwrap()
+                        .0,
+                    original
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn fresh_outgoing_fades_never_add_batching_isolation_or_draw_readiness_requests() {
+        let (mut world, root, [external, ordinary], _) = two_batch_fade();
+        let initial = world.entity_mut(root).take::<ChunkFade>().unwrap();
+        finish(&mut world, root, initial);
+        world
+            .entity_mut(external)
+            .insert(bevy::render::batching::NoAutomaticBatching);
+        assert!(start(
+            &mut world,
+            root,
+            ChunkAnimation::Fade,
+            true,
+            Vec::new()
+        ));
+        assert_batching(&world, external, true, false);
+        assert_batching(&world, ordinary, false, false);
+        let fade = world.get::<ChunkFade>(root).unwrap();
+        assert!(
+            fade.started
+                && fade
+                    .materials
+                    .iter()
+                    .all(|material| material.drawn_at == Some(0.0))
+        );
+        assert!(world.resource::<TransitionDraws>().pending.is_empty());
+        animate(&mut world);
+        assert!(alpha(&world, ordinary) < 1.0 && alpha(&world, ordinary) > 0.0);
+        assert_batching(&world, external, true, false);
+        assert_batching(&world, ordinary, false, false);
+        let fade = world.entity_mut(root).take::<ChunkFade>().unwrap();
+        finish(&mut world, root, fade);
+        assert!(world.get_entity(root).is_err());
+        assert_eq!(world.resource::<Assets<StandardMaterial>>().len(), 1);
+        assert!(world.resource::<TransitionDraws>().pending.is_empty());
+    }
+
     #[test]
     fn fresh_batches_fade_from_their_own_draw_without_delaying_ready_siblings() {
         let (mut world, root, [first, late], original) = two_batch_fade();
@@ -1347,6 +1677,10 @@ mod tests {
             ChunkAnimation::Fade,
         );
         world.flush();
+        for entity in [first, late] {
+            assert_batching(&world, entity, false, false);
+        }
+        assert!(world.resource::<TransitionDraws>().pending.is_empty());
         animate(&mut world);
         assert!(alpha(&world, first) <= before);
         assert_eq!(alpha(&world, late), 0.0);

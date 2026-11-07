@@ -2,6 +2,100 @@ use super::{Config, ConfigError, ensure};
 use crate::{GENERATOR_VERSION, WorldId, WorldSeed};
 use serde::{Deserialize, Serialize};
 
+fn legacy_sea_level() -> f64 {
+    8.0
+}
+fn default_structure_border_gap() -> u16 {
+    16
+}
+
+/// Immutable generation switches for the authored structure kinds.
+/// Legacy royal kinds shared `villages`; missing new flags inherit that setting.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+pub struct StructureSettings {
+    pub villages: bool,
+    pub ruins: bool,
+    pub mines: bool,
+    pub kingdoms: bool,
+    pub outposts: bool,
+}
+impl Default for StructureSettings {
+    fn default() -> Self {
+        Self {
+            villages: true,
+            ruins: true,
+            mines: true,
+            kingdoms: true,
+            outposts: true,
+        }
+    }
+}
+impl<'de> Deserialize<'de> for StructureSettings {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        if deserializer.is_human_readable() {
+            #[derive(Deserialize)]
+            #[serde(default, deny_unknown_fields)]
+            struct Saved {
+                villages: bool,
+                ruins: bool,
+                mines: bool,
+                kingdoms: Option<bool>,
+                outposts: Option<bool>,
+            }
+            impl Default for Saved {
+                fn default() -> Self {
+                    Self {
+                        villages: true,
+                        ruins: true,
+                        mines: true,
+                        kingdoms: None,
+                        outposts: None,
+                    }
+                }
+            }
+            let saved = Saved::deserialize(deserializer)?;
+            Ok(Self {
+                villages: saved.villages,
+                ruins: saved.ruins,
+                mines: saved.mines,
+                kingdoms: saved.kingdoms.unwrap_or(saved.villages),
+                outposts: saved.outposts.unwrap_or(saved.villages),
+            })
+        } else {
+            // Protocol peers use the five concrete booleans written by Serialize,
+            // without Option discriminants. Old wire layouts are version-rejected.
+            #[derive(Deserialize)]
+            struct Wire {
+                villages: bool,
+                ruins: bool,
+                mines: bool,
+                kingdoms: bool,
+                outposts: bool,
+            }
+            let wire = Wire::deserialize(deserializer)?;
+            Ok(Self {
+                villages: wire.villages,
+                ruins: wire.ruins,
+                mines: wire.mines,
+                kingdoms: wire.kingdoms,
+                outposts: wire.outposts,
+            })
+        }
+    }
+}
+impl StructureSettings {
+    pub fn set_all(&mut self, enabled: bool) {
+        self.villages = enabled;
+        self.ruins = enabled;
+        self.mines = enabled;
+        self.kingdoms = enabled;
+        self.outposts = enabled;
+    }
+    pub fn any_enabled(self) -> bool {
+        self.villages || self.ruins || self.mines || self.kingdoms || self.outposts
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct WorldConfig {
@@ -16,27 +110,38 @@ pub struct WorldConfig {
     /// Absent in saved worlds retains their original narrow ravines.
     #[serde(default)]
     pub ravine_revision: u8,
-    /// Saved river-bank erosion contract; missing in existing worlds preserves their terrain.
+    /// Saved hydrology: 1 eroded banks, 2 connected rivers with distinct outlets,
+    /// 3 tributaries and broader temperate brook habitats on the main terrain.
+    /// 4 adds more compact temperate brook catchments without changing regional rivers.
+    /// Missing in existing worlds preserves their terrain.
     #[serde(default)]
     pub river_terrain_revision: u8,
     pub time: crate::WorldTimeConfig,
     pub seasons: crate::SeasonConfig,
     pub game_rules: crate::GameRules,
+    #[serde(default)]
+    pub kingdom_rules: crate::kingdom::KingdomRules,
     pub id: WorldId,
     pub seed: WorldSeed,
     pub generator_version: u32,
     pub base_height: f64,
     pub hill_amplitude: f64,
     pub mountain_amplitude: f64,
+    #[serde(default = "legacy_sea_level")]
     pub sea_level: f64,
     pub snow_height: f64,
     pub caves: bool,
     /// Saved landscape feature; missing in older saves preserves their cave field.
     #[serde(default)]
     pub geology_revision: u8,
-    /// Saved terrain contract. Missing in existing worlds preserves the legacy heightfield.
+    /// Saved terrain: 0 legacy, 1 drainage, 2 varied relief, 3 connected hydrology,
+    /// 4 JSON biome bands, 5 landscape profiles and erosion.
+    /// Missing in existing worlds preserves the legacy heightfield.
     #[serde(default)]
     pub landscape_revision: u8,
+    /// Immutable JSON profile snapshot. Missing in old saves deliberately stays absent.
+    #[serde(default)]
+    pub biome_definitions: Option<super::BiomeDefinitions>,
     /// Missing in saved worlds preserves their seabed and unfrozen water.
     #[serde(default)]
     pub ocean_revision: u8,
@@ -46,10 +151,20 @@ pub struct WorldConfig {
     /// Saved settlement/ruin/mine contract. Fresh worlds opt in; missing saved fields disable retrogen.
     #[serde(default)]
     pub structures_revision: u8,
+    /// Immutable minimum royal-site border gap for generation revision 9+.
+    #[serde(default = "default_structure_border_gap")]
+    pub structure_border_gap: u16,
+    /// Saved generation choices; default preserves all authored sites.
+    pub structures: StructureSettings,
+    /// Initial safe spawn preference only; never changes the generated biome field.
+    /// Ocean selects a safe shore near marine water rather than an underwater spawn.
+    #[serde(default)]
+    pub preferred_spawn_biome: Option<super::BiomeKind>,
     pub cave_biomes: super::CaveBiomesConfig,
     pub trees: bool,
     pub water: bool,
-    /// Opt-in saved feature: absent in existing version-5 worlds means unchanged terrain.
+    /// Opt-in saved feature; absent in existing worlds means unchanged terrain.
+    #[serde(default)]
     pub rivers: bool,
     /// Relative tree density; 0.8 retains 80% of otherwise eligible candidates.
     pub tree_density: f64,
@@ -72,6 +187,7 @@ impl WorldConfig {
             time: _,
             seasons: _,
             game_rules: _,
+            kingdom_rules: _,
             id,
             seed,
             generator_version,
@@ -86,9 +202,13 @@ impl WorldConfig {
             caves,
             geology_revision,
             landscape_revision,
+            biome_definitions,
             ocean_revision,
             cave_structure_revision,
             structures_revision,
+            structure_border_gap,
+            structures,
+            preferred_spawn_biome: _,
             cave_biomes,
             trees,
             water,
@@ -116,9 +236,12 @@ impl WorldConfig {
             && caves == &other.caves
             && geology_revision == &other.geology_revision
             && landscape_revision == &other.landscape_revision
+            && biome_definitions == &other.biome_definitions
             && ocean_revision == &other.ocean_revision
             && cave_structure_revision == &other.cave_structure_revision
             && structures_revision == &other.structures_revision
+            && structure_border_gap == &other.structure_border_gap
+            && structures == &other.structures
             && cave_biomes == &other.cave_biomes
             && trees == &other.trees
             && water == &other.water
@@ -135,14 +258,15 @@ impl WorldConfig {
 impl Default for WorldConfig {
     fn default() -> Self {
         Self {
-            ecology_revision: 2,
+            ecology_revision: 4,
             natural_mob_limit: 256,
             bounded_world: true,
             ravine_revision: 1,
-            river_terrain_revision: 1,
+            river_terrain_revision: 4,
             time: crate::WorldTimeConfig::default(),
             seasons: crate::SeasonConfig::default(),
             game_rules: crate::GameRules::default(),
+            kingdom_rules: crate::kingdom::KingdomRules::default(),
             id: WorldId(1),
             seed: WorldSeed(42042),
             generator_version: GENERATOR_VERSION,
@@ -154,9 +278,13 @@ impl Default for WorldConfig {
             caves: true,
             geology_revision: 4,
             landscape_revision: 1,
+            biome_definitions: None,
             ocean_revision: 1,
             cave_structure_revision: 8,
-            structures_revision: 5,
+            structures_revision: 9,
+            structure_border_gap: default_structure_border_gap(),
+            structures: StructureSettings::default(),
+            preferred_spawn_biome: None,
             cave_biomes: Default::default(),
             trees: true,
             water: true,
@@ -174,14 +302,19 @@ impl Default for WorldConfig {
 impl Config for WorldConfig {
     fn validate(&self) -> Result<(), ConfigError> {
         ensure(
-            self.ecology_revision <= 2,
+            self.ecology_revision <= 4,
             "Unsupported world.ecology_revision",
         )?;
         ensure(
-            self.structures_revision <= 5,
+            self.structures_revision <= 9,
             "Unsupported world.structures_revision",
         )?;
         ensure(self.game_rules.valid(), "Invalid world.game_rules")?;
+        ensure(self.kingdom_rules.valid(), "Invalid world.kingdom_rules")?;
+        ensure(
+            self.structure_border_gap <= 4096,
+            "Invalid world.structure_border_gap",
+        )?;
         ensure(
             self.cave_structure_revision <= 8,
             "Unsupported world.cave_structure_revision",
@@ -193,7 +326,7 @@ impl Config for WorldConfig {
             "Unsupported world.ravine_revision",
         )?;
         ensure(
-            self.river_terrain_revision <= 1,
+            self.river_terrain_revision <= 4,
             "Unsupported world.river_terrain_revision",
         )?;
         ensure(
@@ -201,9 +334,12 @@ impl Config for WorldConfig {
             "world.natural_mob_limit must be 0..=4096",
         )?;
         ensure(
-            self.landscape_revision <= 1,
+            self.landscape_revision <= 5,
             "Unsupported world.landscape_revision",
         )?;
+        if let Some(definitions) = &self.biome_definitions {
+            definitions.validate()?;
+        }
         ensure(
             self.geology_revision <= 4,
             "Unsupported world.geology_revision",

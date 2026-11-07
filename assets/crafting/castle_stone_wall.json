@@ -1,0 +1,42 @@
+{
+  "id": "teramic::castle_stone_wall",
+  "name": "Steinmauer",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "block": 174
+    },
+    "count": 1
+  },
+  "pattern": {
+    "kind": "shaped",
+    "width": 2,
+    "height": 2,
+    "cells": [
+      {
+        "item": {
+          "block": 3
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "block": 3
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "block": 3
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "block": 3
+        },
+        "count": 1
+      }
+    ]
+  }
+}

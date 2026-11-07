@@ -460,17 +460,27 @@ fn setup_villagers(
 fn villagers_run(world: &mut World) {
     let stage = world.resource::<Inspection>().captured;
     let stride_time = world.resource::<Time>().elapsed_secs_f64() * 1.15;
-    if stage >= 4 {
-        info!(
-            "Villager gallery passed: ten role models, distinct clothing/tools, idle, closeup, walking and actual bed-aligned sleep; rendering fixture, not an authoritative AI test"
-        );
-        world.write_message(AppExit::Success);
-        return;
-    }
     let state = world.resource::<Inspection>();
     if state.failed || state.start.elapsed() > Duration::from_secs(90) {
         error!("Villager gallery failed or timed out");
         world.write_message(AppExit::error());
+        return;
+    }
+    if stage >= 5 {
+        // Offscreen item/portrait cameras also own screenshot readback channels.
+        if state.last.elapsed() < Duration::from_millis(250)
+            || world
+                .resource::<terra_render::RenderBlockPreviews>()
+                .pending
+                != 0
+            || !world.resource::<terra_render::PlayerPreviewImage>().ready
+        {
+            return;
+        }
+        info!(
+            "Villager gallery passed: ten role models, shared player-held tools on nine right hands, idle, closeup, walking, bed-aligned sleep without held tools and action poses; rendering fixture, not an authoritative AI test"
+        );
+        world.write_message(AppExit::Success);
         return;
     }
     for track in world
@@ -482,6 +492,7 @@ fn villagers_run(world: &mut World) {
         track.current.behavior = match stage {
             2 => CreatureBehavior::Wander,
             3 => CreatureBehavior::Sleep,
+            4 => CreatureBehavior::Attack,
             _ => CreatureBehavior::Rest,
         };
         track.current.velocity = if stage == 2 {
@@ -519,7 +530,9 @@ fn villagers_run(world: &mut World) {
         track.previous = track.current.clone();
     }
     let eye = match stage {
-        1 => Transform::from_xyz(10.2, 34.0, 29.1).looking_at(Vec3::new(8.5, 33.0, 26.5), Vec3::Y),
+        1 | 4 => {
+            Transform::from_xyz(10.2, 34.0, 29.1).looking_at(Vec3::new(8.5, 33.0, 26.5), Vec3::Y)
+        }
         3 => Transform::from_xyz(8.5, 36.9, 24.4).looking_at(Vec3::new(8.5, 32.7, 16.6), Vec3::Y),
         _ => Transform::from_xyz(8.5, 36.2, 34.8).looking_at(Vec3::new(8.5, 33.0, 24.8), Vec3::Y),
     };
@@ -545,9 +558,28 @@ fn villagers_run(world: &mut World) {
         .query::<&terra_render::creatures::CreatureAvatar>()
         .iter(world)
         .count();
+    let held: Vec<_> = world
+        .query::<(&terra_render::creatures::VillagerHeldItem, &ChildOf)>()
+        .iter(world)
+        .map(|(held, parent)| (held.arm, parent.parent()))
+        .collect();
+    let expected_held = if stage == 3 {
+        0
+    } else {
+        usize::from(villagers::ROLE_COUNT - 1)
+    };
+    let held_ready = held.len() == expected_held
+        && held.iter().all(|(arm, parent)| arm == parent)
+        && held
+            .iter()
+            .map(|(arm, _)| arm)
+            .collect::<std::collections::HashSet<_>>()
+            .len()
+            == expected_held;
     let state = world.resource::<Inspection>();
     if !ready
         || count != usize::from(villagers::ROLE_COUNT)
+        || !held_ready
         || state.start.elapsed() < Duration::from_secs(8)
         || state.requested != state.captured
         || state.last.elapsed() < Duration::from_secs(2)

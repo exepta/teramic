@@ -12,8 +12,8 @@ use std::{
 use terra_core::{ItemKind, ItemStack, PlayerUuid, block_properties::BlockPropertiesCatalog};
 use terra_voxel::{SectionPos, global_to_section};
 
-pub const MAX_WOOD: usize = 4096;
-pub const MAX_LEAVES: usize = 16384;
+pub const MAX_WOOD: usize = terra_core::trees::MAX_TREE_WOOD;
+pub const MAX_LEAVES: usize = terra_core::trees::MAX_TREE_LEAVES;
 pub const MAX_JOBS: usize = 8;
 pub const WOOD_BUDGET: usize = 32;
 pub const LEAF_BUDGET: usize = 64;
@@ -31,8 +31,30 @@ pub(crate) struct Shape {
     pub leaves: Vec<[i64; 3]>,
 }
 
-/// Every unedited wood cell attributed to a generated tree opts into felling.
+/// Saved exact offsets avoid rebuilding procedural geometry in mining previews.
+/// Wide generated trunks expose several cells in their lowest three levels;
+/// legacy compact trees retain their original root-only interaction.
+fn planted_tree(journal: &EditJournal, foot: [i64; 3]) -> Option<&terra_core::TreeRecord> {
+    journal.gameplay().trees.trees.values().find(|tree| {
+        tree.planted_by.is_some()
+            && tree.stage.is_mature()
+            && if tree.stage.is_generated() {
+                tree.offset(foot).is_some_and(|offset| {
+                    (0..=2).contains(&offset[1])
+                        && tree.could_own(foot)
+                        && tree.wood.contains(&offset)
+                })
+            } else {
+                tree.root == foot && tree.wood.contains(&[0; 3])
+            }
+    })
+}
+
+/// Natural wood and attributed lower planted trunks opt into whole-tree felling.
 pub fn eligible(chunks: &ChunkStore, journal: &EditJournal, foot: [i64; 3]) -> bool {
+    if let Some(t) = planted_tree(journal, foot) {
+        return chunks.block_at(foot) == Some(t.species.wood());
+    }
     journal.block(foot).is_none()
         && chunks
             .block_at(foot)
@@ -46,6 +68,16 @@ pub fn eligible(chunks: &ChunkStore, journal: &EditJournal, foot: [i64; 3]) -> b
 /// base interaction requests only this prepared shape through normal streaming.
 pub fn request_missing(chunks: &mut ChunkStore, journal: &EditJournal, foot: [i64; 3]) {
     if !eligible(chunks, journal, foot) {
+        return;
+    }
+    if let Some(t) = planted_tree(journal, foot) {
+        let sections: std::collections::BTreeSet<_> = t
+            .wood
+            .iter()
+            .chain(&t.leaves)
+            .map(|p| global_to_section(t.global(*p)).0)
+            .collect();
+        chunks.request_sections(sections);
         return;
     }
     let Some(column) = chunks.prepared_column([foot[0].div_euclid(16), foot[2].div_euclid(16)])
@@ -76,6 +108,8 @@ pub fn request_missing(chunks: &mut ChunkStore, journal: &EditJournal, foot: [i6
 
 #[derive(Clone, Debug)]
 pub struct Plan {
+    planted: Option<u64>,
+    species: Option<terra_core::TreeSpecies>,
     origin: [i64; 3],
     foot: [i64; 3],
     material: u16,
@@ -83,6 +117,8 @@ pub struct Plan {
     wood: Vec<[i64; 3]>,
     leaves: Vec<[i64; 3]>,
     revisions: Vec<(SectionPos, u64)>,
+    /// Immutable affiliation survives eviction; permissions remain live registry state.
+    domains: Vec<terra_core::kingdom::SettlementDomain>,
 }
 
 impl Plan {
@@ -91,12 +127,18 @@ impl Plan {
         if !eligible(chunks, journal, foot) {
             return None;
         }
+        if let Some(tree) = planted_tree(journal, foot) {
+            return Self::planted(chunks, journal, tree, foot);
+        }
         let coordinate = [foot[0].div_euclid(16), foot[2].div_euclid(16)];
         let first = chunks.prepared_column(coordinate)?;
         let shape = first.felling_shape(foot)?;
         if first.felling_owner(foot, shape.wood_material) != Some(shape.origin) {
             return None;
         }
+        let tree_species = first
+            .felling_species(shape.origin)
+            .or_else(|| species(shape.wood_material, shape.leaves_material));
         let mut columns: HashMap<[i64; 2], Arc<PreparedColumn>> =
             HashMap::from([(coordinate, first)]);
         let mut owner = |cell: [i64; 3], material: u16| -> Option<Option<[i64; 3]>> {
@@ -140,7 +182,35 @@ impl Plan {
             .into_iter()
             .map(|p| (p, journal.revision(p)))
             .collect();
+        let low: [i64; 2] = [0, 2].map(|axis| {
+            wood.iter()
+                .chain(&leaves)
+                .map(|p| p[axis])
+                .min()
+                .unwrap()
+                .saturating_sub(1)
+        });
+        let high: [i64; 2] = [0, 2].map(|axis| {
+            wood.iter()
+                .chain(&leaves)
+                .map(|p| p[axis])
+                .max()
+                .unwrap()
+                .saturating_add(1)
+        });
+        let mut domains = std::collections::BTreeMap::new();
+        for site in chunks.village_settlements() {
+            let domain = site.domain();
+            if [0, 2].into_iter().enumerate().all(|(i, axis)| {
+                domain.bounds[0][axis] <= high[i] && domain.bounds[1][axis] >= low[i]
+            }) {
+                domains.entry(domain.id).or_insert(domain);
+            }
+        }
         Some(Self {
+            planted: None,
+            species: tree_species,
+            domains: domains.into_values().collect(),
             origin: shape.origin,
             foot,
             material: shape.wood_material,
@@ -148,6 +218,64 @@ impl Plan {
             wood,
             leaves,
             revisions,
+        })
+    }
+
+    fn planted(
+        chunks: &ChunkStore,
+        journal: &EditJournal,
+        tree: &terra_core::TreeRecord,
+        foot: [i64; 3],
+    ) -> Option<Self> {
+        let mut wood = Vec::new();
+        for offset in &tree.wood {
+            let p = tree.global(*offset);
+            if chunks.block_at(p)? == tree.species.wood() {
+                wood.push(p);
+            }
+        }
+        if !wood.contains(&foot) {
+            return None;
+        }
+        wood.sort_unstable_by_key(|p| (std::cmp::Reverse(p[1]), p[2], p[0]));
+        let leaves: Vec<_> = tree
+            .leaves
+            .iter()
+            .map(|p| tree.global(*p))
+            .filter(|p| journal.block(*p) == Some(tree.species.leaves()))
+            .collect();
+        let sections: std::collections::BTreeSet<_> =
+            wood.iter().map(|p| global_to_section(*p).0).collect();
+        let revisions = sections
+            .into_iter()
+            .map(|p| (p, journal.revision(p)))
+            .collect();
+        let domains = chunks
+            .village_settlements()
+            .filter_map(|site| {
+                let d = site.domain();
+                wood.iter()
+                    .chain(&leaves)
+                    .any(|p| {
+                        [0, 2].into_iter().all(|axis| {
+                            p[axis] >= d.bounds[0][axis].saturating_sub(1)
+                                && p[axis] <= d.bounds[1][axis].saturating_add(1)
+                        })
+                    })
+                    .then_some(d)
+            })
+            .collect();
+        Some(Self {
+            planted: Some(tree.id),
+            species: Some(tree.species),
+            origin: tree.root,
+            foot,
+            material: tree.species.wood(),
+            leaves_material: tree.species.leaves(),
+            wood,
+            leaves,
+            revisions,
+            domains,
         })
     }
 
@@ -161,6 +289,17 @@ impl Plan {
 
     pub fn wood_positions(&self) -> impl Iterator<Item = [i64; 3]> + '_ {
         self.wood.iter().copied()
+    }
+    pub fn allowed_for(
+        &self,
+        player: PlayerUuid,
+        chunks: &ChunkStore,
+        journal: &EditJournal,
+    ) -> bool {
+        self.wood
+            .iter()
+            .chain(&self.leaves)
+            .all(|&p| break_allowed(chunks, journal, player, p, &self.domains))
     }
 
     pub fn duration(&self) -> f32 {
@@ -214,6 +353,8 @@ pub fn is_axe(tool: Option<ItemKind>) -> bool {
 }
 
 struct Job {
+    planted: Option<u64>,
+    sapling: Option<ItemKind>,
     origin: [i64; 3],
     drop_position: [f64; 3],
     material: u16,
@@ -223,6 +364,7 @@ struct Job {
     owner: PlayerUuid,
     leaves_at: Option<f64>,
     drops: bool,
+    domains: Vec<terra_core::kingdom::SettlementDomain>,
 }
 
 #[derive(Default, Resource)]
@@ -256,6 +398,8 @@ impl Queue {
             return false;
         }
         self.0.push_back(Job {
+            planted: plan.planted,
+            sapling: plan.species.map(|s| ItemKind::Prop(s.sapling())),
             origin: plan.origin,
             drop_position: plan.foot.map(|v| v as f64 + 0.5),
             material: plan.material,
@@ -265,6 +409,7 @@ impl Queue {
             owner,
             leaves_at: None,
             drops,
+            domains: plan.domains,
         });
         true
     }
@@ -287,15 +432,18 @@ impl Queue {
                 break;
             };
             let result: Result<(), String> = (|| {
-                if !job.wood.is_empty() && wood_left > 0 && batch.drops < 4 {
+                if !job.wood.is_empty()
+                    && wood_left > 0
+                    && batch.drops + 1 + usize::from(job.sapling.is_some() && job.drops) <= 4
+                {
                     // Existing block commits may also detach up to six torches.
                     // Stop before edits if the resource journal cannot retain drops.
                     let count = job.wood.len().min(wood_left);
-                    if journal.gameplay().drops.len() + 1 + count * 6 > terra_core::MAX_WORLD_DROPS
+                    if journal.gameplay().drops.len() + 2 + count * 6 > terra_core::MAX_WORLD_DROPS
                         || journal
                             .gameplay()
                             .next_drop
-                            .checked_add((1 + count * 6) as u64)
+                            .checked_add((2 + count * 6) as u64)
                             .is_none()
                     {
                         return Ok(());
@@ -303,7 +451,16 @@ impl Queue {
                     let mut removed = 0;
                     for _ in 0..count {
                         let cell = *job.wood.front().expect("bounded nonempty wood batch");
-                        if remove_natural(chunks, journal, properties, cell, job.material)? {
+                        if break_allowed(chunks, journal, job.owner, cell, &job.domains)
+                            && remove_owned(
+                                chunks,
+                                journal,
+                                properties,
+                                cell,
+                                job.material,
+                                job.planted,
+                            )?
+                        {
                             removed += 1;
                         }
                         job.wood.pop_front();
@@ -324,6 +481,14 @@ impl Queue {
                         {
                             return Err("Natural wood drop capacity changed during felling".into());
                         }
+                        if job.drops
+                            && let Some(item) = job.sapling.take()
+                        {
+                            if !state.drop_one(job.drop_position, item) {
+                                return Err("Tree sapling drop capacity changed".into());
+                            }
+                            batch.drops += 1;
+                        }
                         let stats = state.player_stats.entry(job.owner).or_default();
                         stats.blocks_broken = stats.blocks_broken.saturating_add(removed as u64);
                         batch.wood += removed;
@@ -335,13 +500,16 @@ impl Queue {
                     if now >= ready {
                         for _ in 0..job.leaves.len().min(leaves_left) {
                             let cell = *job.leaves.front().expect("bounded nonempty leaf batch");
-                            if remove_natural(
-                                chunks,
-                                journal,
-                                properties,
-                                cell,
-                                job.leaves_material,
-                            )? {
+                            if break_allowed(chunks, journal, job.owner, cell, &job.domains)
+                                && remove_owned(
+                                    chunks,
+                                    journal,
+                                    properties,
+                                    cell,
+                                    job.leaves_material,
+                                    job.planted,
+                                )?
+                            {
                                 batch.leaves += 1;
                             }
                             job.leaves.pop_front();
@@ -390,6 +558,109 @@ impl Queue {
         }
         Err("Tree felling exceeded its bounded final-save drain".into())
     }
+}
+
+/// Breaking a natural support can detach decoration in a neighboring claim.
+/// Initial attribution and every later batch use the same live footprint check.
+fn break_allowed(
+    chunks: &ChunkStore,
+    journal: &EditJournal,
+    actor: PlayerUuid,
+    cell: [i64; 3],
+    domains: &[terra_core::kingdom::SettlementDomain],
+) -> bool {
+    let allowed = |p| {
+        let registry = &journal.gameplay().kingdoms;
+        if let Some(domain) = domains.iter().find(|domain| domain.contains(p)) {
+            return registry.can_in_domain(
+                actor,
+                terra_core::kingdom::KingdomPermission::Break,
+                p,
+                domain,
+            );
+        }
+        crate::kingdom_access::can_use(
+            &journal.gameplay().kingdoms,
+            chunks,
+            actor,
+            terra_core::kingdom::KingdomPermission::Break,
+            p,
+        )
+    };
+    allowed(cell)
+        && crate::lanterns::dependents(chunks, journal, cell)
+            .into_iter()
+            .all(allowed)
+        && [
+            [-1, 0, 0],
+            [1, 0, 0],
+            [0, -1, 0],
+            [0, 1, 0],
+            [0, 0, -1],
+            [0, 0, 1],
+        ]
+        .into_iter()
+        .all(|offset| {
+            let neighbor = std::array::from_fn(|axis| cell[axis].saturating_add(offset[axis]));
+            chunks
+                .block_at(neighbor)
+                .or_else(|| journal.block(neighbor))
+                != Some(40)
+                || journal.object_state(neighbor).is_none_or(|state| {
+                    crate::torches::support(neighbor, state.facing) != Some(cell)
+                        || allowed(neighbor)
+                })
+        })
+}
+
+fn species(wood: u16, leaves: u16) -> Option<terra_core::TreeSpecies> {
+    use terra_core::TreeSpecies;
+    Some(match (wood, leaves) {
+        (6, 195) => TreeSpecies::Apple,
+        (6, 7 | 8) => TreeSpecies::Oak,
+        (10, 9) => TreeSpecies::Birch,
+        (36, 7) => TreeSpecies::Spruce,
+        (134, 132 | 133) => TreeSpecies::Cherry,
+        _ => return None,
+    })
+}
+fn remove_owned(
+    chunks: &mut ChunkStore,
+    journal: &mut EditJournal,
+    properties: &BlockPropertiesCatalog,
+    cell: [i64; 3],
+    material: u16,
+    planted: Option<u64>,
+) -> Result<bool, String> {
+    let Some(id) = planted else {
+        return remove_natural(chunks, journal, properties, cell, material);
+    };
+    if !journal
+        .gameplay()
+        .trees
+        .get(id)
+        .is_some_and(|tree| tree.owns(cell, material))
+        || journal.block(cell) != Some(material)
+    {
+        return Ok(false);
+    }
+    if let Some(current) = chunks.block_at(cell) {
+        if current != material {
+            return Ok(false);
+        }
+        return commit_block_edit(
+            chunks,
+            journal,
+            &BlockEditRequest {
+                position: cell,
+                expected_material: material,
+                material: 0,
+            },
+            properties,
+        );
+    }
+    chunks.invalidate_sections(journal.record(cell, 0).map_err(|e| e.to_string())?);
+    Ok(true)
 }
 
 fn remove_natural(

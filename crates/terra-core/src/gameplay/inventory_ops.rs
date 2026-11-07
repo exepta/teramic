@@ -525,6 +525,109 @@ mod tests {
     use crate::ItemKind;
     use crate::STACK_LIMIT;
 
+    #[test]
+    fn player_capacity_is_27_and_legacy_rows_recover_without_losing_items() {
+        let player = crate::PlayerUuid::from_u128(1);
+        let stack = ItemStack {
+            item: ItemKind::Block(3),
+            count: STACK_LIMIT,
+        };
+        let old = Inventory {
+            slots: vec![stack; 45],
+            ..Default::default()
+        };
+        assert!(!old.valid());
+        assert!(old.valid_saved_player());
+        let mut state = crate::GameplayState::default();
+        state.inventories.insert(player, old);
+        assert!(state.recover_player_inventory(player, [12.0, 30.0, -8.0]));
+        let bag = &state.inventories[&player];
+        assert!(bag.valid());
+        assert_eq!(bag.slots.len(), 27);
+        assert_eq!(state.drops.len(), 18);
+        assert!(
+            state
+                .drops
+                .iter()
+                .all(|drop| drop.position == [12.0, 30.0, -8.0])
+        );
+        assert_eq!(
+            bag.count(stack.item) + state.drops.iter().map(|drop| drop.stack.count).sum::<u16>(),
+            45 * STACK_LIMIT
+        );
+        assert!(
+            !state
+                .inventories
+                .get_mut(&player)
+                .unwrap()
+                .creative_set(27, stack)
+        );
+        let before = state.clone();
+        assert!(state.recover_player_inventory(player, [12.0, 30.0, -8.0]));
+        assert_eq!(state, before);
+    }
+
+    #[test]
+    fn recovery_merges_legacy_items_and_rejects_unrecoverable_rows_atomically() {
+        let player = crate::PlayerUuid::from_u128(2);
+        let item = ItemKind::Block(3);
+        let mut old = Inventory {
+            slots: vec![ItemStack::EMPTY; 45],
+            ..Default::default()
+        };
+        old.slots[0] = ItemStack {
+            item,
+            count: STACK_LIMIT - 1,
+        };
+        old.slots[44] = ItemStack { item, count: 2 };
+        let mut state = crate::GameplayState::default();
+        state.inventories.insert(player, old);
+        assert!(state.recover_player_inventory(player, [0.0; 3]));
+        assert_eq!(
+            state.inventories[&player].slot(0).unwrap().count,
+            STACK_LIMIT
+        );
+        assert_eq!(state.inventories[&player].slot(1).unwrap().count, 1);
+        assert!(state.drops.is_empty());
+        state.inventories.get_mut(&player).unwrap().slots = vec![
+            ItemStack {
+                item,
+                count: STACK_LIMIT
+            };
+            45
+        ];
+        for _ in 0..crate::MAX_WORLD_DROPS {
+            assert!(state.drop_one([0.0; 3], item));
+        }
+        let before = state.clone();
+        assert!(!state.recover_player_inventory(player, [0.0; 3]));
+        assert_eq!(state, before);
+    }
+
+    #[test]
+    fn saved_inventories_keep_their_items_and_the_last_row_supports_real_gestures() {
+        let mut old = Inventory::default();
+        for slot in 0..26 {
+            assert!(old.creative_set(
+                slot,
+                ItemStack {
+                    item: ItemKind::Block(3),
+                    count: 1
+                }
+            ));
+        }
+        let encoded = serde_json::to_vec(&old).unwrap();
+        let mut restored: Inventory = serde_json::from_slice(&encoded).unwrap();
+        assert_eq!(restored, old);
+        assert!(restored.valid());
+        assert!(restored.click(0, false));
+        assert!(restored.click(26, false));
+        assert_eq!(restored.slot(26).unwrap().count, 1);
+        assert!(restored.quick_move(26, 1));
+        assert!(restored.slot(26).is_none());
+        assert_eq!(resources(&restored, ItemKind::Block(3)), 26);
+    }
+
     fn resources(bag: &Inventory, item: ItemKind) -> u16 {
         bag.count(item) + bag.cursor.filter(|s| s.item == item).map_or(0, |s| s.count)
     }

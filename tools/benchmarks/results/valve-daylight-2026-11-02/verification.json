@@ -1,0 +1,517 @@
+{
+  "status": "passed",
+  "sun_lux_before": 100000,
+  "sun_lux_after": 65000,
+  "source_sha256": {
+    "apps/client/src/hydraulics_smoke.rs": "e4f0a3c8a83247ff80a28fe2d7505498bee86cd2c239a3053a73fb2709a5265a",
+    "assets/shaders/terra_water.wesl": "6b17be25177432cb2fc64966201ec24e7bfdd4b818e51d707976ebf073054cc1",
+    "crates/terra-network/src/server_validation.rs": "fee4a33c9b45ee3689d10c62d657629cee4c409e15a68d99a603c6e863f7c043",
+    "crates/terra-network/src/server_valve_placement_tests.rs": "43847bc31a0d3ca063a8fd65909c78bf56ff33e33640821e732fa8cb2b19adc7",
+    "crates/terra-render/src/blocks/hydraulics_tests.rs": "d74cc8dff314b0a49d37d1e786c72d561374095cc9dff069cb02a6cadf96a042",
+    "crates/terra-render/src/meshing/custom.rs": "36e68cba88784d5f280c85e30e7f305e987bfb32daa872f428576bdba3dafb62",
+    "crates/terra-render/src/plumbing.rs": "a540cd62e559014a529d0d50cdccda751174b367137bc61c423dd0b76c53db15",
+    "crates/terra-render/src/plumbing/glass.rs": "07a2c474e2d20991ccd1b1df9da55322425b4db75f07b976595308e0be31e47b",
+    "crates/terra-render/src/plumbing/level.rs": "40038a2f4be7dc8b470faeed858ae8b274b115f57cb37c7b7446c2e11c05d7df",
+    "crates/terra-render/src/scene.rs": "9b284c17f61ea0132763994ce1d9a1a309d5e6288a428fdbbcd91c10ad4d94de",
+    "crates/terra-render/src/scene/daylight.rs": "7d16ee8d16bc0fa642007f2a8663e34f4b527c9392bc4bed6f6c951bc3b68301",
+    "crates/terra-world/src/placement.rs": "2cd0acd857b04a6462860fcd6b77852e3ad6f9fe4f42615e2145d79cbcf4fa06",
+    "crates/terra-world/src/plumbing.rs": "37d00281c82956ad1461325cbb074e509d52742758195eb2eb17179edefae27f",
+    "crates/terra-world/src/plumbing/network.rs": "4a69213fb7e30878bd29110c41f1c66ff7312504be63dd6faaf5ba962b7c5da5",
+    "crates/terra-world/src/plumbing/tests/valve.rs": "235614a5a1b06f0d49c44516ff00d970f7c79acedd64be435cc321b5ac49ba4c",
+    "crates/terra-world/src/targeting.rs": "aa737250123248a5f5314ec3b6428a95b27ab3386afccd5049a0c5f3a3849d36"
+  },
+  "tests": {
+    "command": "RUST_TEST_THREADS=4 cargo test --workspace --lib --bins --no-fail-fast -j1",
+    "targets": 12,
+    "passed": 3660,
+    "failed": 0,
+    "ignored": 8
+  },
+  "checks": {
+    "clippy": true,
+    "fmt": true,
+    "diff_check": true,
+    "workspace_build": true
+  },
+  "native": {
+    "daylight_before": {
+      "passed": true,
+      "captures": 31
+    },
+    "daylight_after": {
+      "passed": true,
+      "captures": 31
+    },
+    "hydraulics": {
+      "passed": true,
+      "seconds": 62.98419952392578,
+      "required_captures": 24,
+      "valve_placements": [
+        true,
+        true
+      ],
+      "finite_runout_units": 32,
+      "partial_glass_runout": true,
+      "warnings": 0,
+      "errors": 0
+    }
+  },
+  "captures": {
+    "before": [
+      {
+        "path": "before/dawn-shadow-after.png",
+        "width": 1920,
+        "height": 1200
+      },
+      {
+        "path": "before/dawn-shadow-before.png",
+        "width": 1920,
+        "height": 1200
+      },
+      {
+        "path": "before/dawn-shadow-overlap.png",
+        "width": 1920,
+        "height": 1200
+      },
+      {
+        "path": "before/dawn.png",
+        "width": 1920,
+        "height": 1200
+      },
+      {
+        "path": "before/day.png",
+        "width": 1920,
+        "height": 1200
+      },
+      {
+        "path": "before/dusk-shadow-after.png",
+        "width": 1920,
+        "height": 1200
+      },
+      {
+        "path": "before/dusk-shadow-before.png",
+        "width": 1920,
+        "height": 1200
+      },
+      {
+        "path": "before/dusk.png",
+        "width": 1920,
+        "height": 1200
+      },
+      {
+        "path": "before/evening-1900.png",
+        "width": 1920,
+        "height": 1200
+      },
+      {
+        "path": "before/evening-2030.png",
+        "width": 1920,
+        "height": 1200
+      },
+      {
+        "path": "before/evening-2200.png",
+        "width": 1920,
+        "height": 1200
+      },
+      {
+        "path": "before/late-day-1700.png",
+        "width": 1920,
+        "height": 1200
+      },
+      {
+        "path": "before/late-day-1730.png",
+        "width": 1920,
+        "height": 1200
+      },
+      {
+        "path": "before/moon-stars.png",
+        "width": 1920,
+        "height": 1200
+      },
+      {
+        "path": "before/moving-shadow-0.png",
+        "width": 1920,
+        "height": 1200
+      },
+      {
+        "path": "before/moving-shadow-1.png",
+        "width": 1920,
+        "height": 1200
+      },
+      {
+        "path": "before/moving-shadow-2.png",
+        "width": 1920,
+        "height": 1200
+      },
+      {
+        "path": "before/moving-shadow-3.png",
+        "width": 1920,
+        "height": 1200
+      },
+      {
+        "path": "before/moving-shadow-4.png",
+        "width": 1920,
+        "height": 1200
+      },
+      {
+        "path": "before/moving-shadow-5.png",
+        "width": 1920,
+        "height": 1200
+      },
+      {
+        "path": "before/night.png",
+        "width": 1920,
+        "height": 1200
+      },
+      {
+        "path": "before/shadow-high-taa.png",
+        "width": 1920,
+        "height": 1200
+      },
+      {
+        "path": "before/shadow-low-msaa.png",
+        "width": 1920,
+        "height": 1200
+      },
+      {
+        "path": "before/shadow-off.png",
+        "width": 1920,
+        "height": 1200
+      },
+      {
+        "path": "before/sky-no-fog.png",
+        "width": 1920,
+        "height": 1200
+      },
+      {
+        "path": "before/sunset-1800.png",
+        "width": 1920,
+        "height": 1200
+      },
+      {
+        "path": "before/underwater-day.png",
+        "width": 1920,
+        "height": 1200
+      },
+      {
+        "path": "before/underwater-msaa.png",
+        "width": 1920,
+        "height": 1200
+      },
+      {
+        "path": "before/underwater-night.png",
+        "width": 1920,
+        "height": 1200
+      },
+      {
+        "path": "before/underwater-taa.png",
+        "width": 1920,
+        "height": 1200
+      },
+      {
+        "path": "before/voxel-sun.png",
+        "width": 1920,
+        "height": 1200
+      }
+    ],
+    "after": [
+      {
+        "path": "after/dawn-shadow-after.png",
+        "width": 1920,
+        "height": 1200
+      },
+      {
+        "path": "after/dawn-shadow-before.png",
+        "width": 1920,
+        "height": 1200
+      },
+      {
+        "path": "after/dawn-shadow-overlap.png",
+        "width": 1920,
+        "height": 1200
+      },
+      {
+        "path": "after/dawn.png",
+        "width": 1920,
+        "height": 1200
+      },
+      {
+        "path": "after/day.png",
+        "width": 1920,
+        "height": 1200
+      },
+      {
+        "path": "after/dusk-shadow-after.png",
+        "width": 1920,
+        "height": 1200
+      },
+      {
+        "path": "after/dusk-shadow-before.png",
+        "width": 1920,
+        "height": 1200
+      },
+      {
+        "path": "after/dusk.png",
+        "width": 1920,
+        "height": 1200
+      },
+      {
+        "path": "after/evening-1900.png",
+        "width": 1920,
+        "height": 1200
+      },
+      {
+        "path": "after/evening-2030.png",
+        "width": 1920,
+        "height": 1200
+      },
+      {
+        "path": "after/evening-2200.png",
+        "width": 1920,
+        "height": 1200
+      },
+      {
+        "path": "after/late-day-1700.png",
+        "width": 1920,
+        "height": 1200
+      },
+      {
+        "path": "after/late-day-1730.png",
+        "width": 1920,
+        "height": 1200
+      },
+      {
+        "path": "after/moon-stars.png",
+        "width": 1920,
+        "height": 1200
+      },
+      {
+        "path": "after/moving-shadow-0.png",
+        "width": 1920,
+        "height": 1200
+      },
+      {
+        "path": "after/moving-shadow-1.png",
+        "width": 1920,
+        "height": 1200
+      },
+      {
+        "path": "after/moving-shadow-2.png",
+        "width": 1920,
+        "height": 1200
+      },
+      {
+        "path": "after/moving-shadow-3.png",
+        "width": 1920,
+        "height": 1200
+      },
+      {
+        "path": "after/moving-shadow-4.png",
+        "width": 1920,
+        "height": 1200
+      },
+      {
+        "path": "after/moving-shadow-5.png",
+        "width": 1920,
+        "height": 1200
+      },
+      {
+        "path": "after/night.png",
+        "width": 1920,
+        "height": 1200
+      },
+      {
+        "path": "after/shadow-high-taa.png",
+        "width": 1920,
+        "height": 1200
+      },
+      {
+        "path": "after/shadow-low-msaa.png",
+        "width": 1920,
+        "height": 1200
+      },
+      {
+        "path": "after/shadow-off.png",
+        "width": 1920,
+        "height": 1200
+      },
+      {
+        "path": "after/sky-no-fog.png",
+        "width": 1920,
+        "height": 1200
+      },
+      {
+        "path": "after/sunset-1800.png",
+        "width": 1920,
+        "height": 1200
+      },
+      {
+        "path": "after/underwater-day.png",
+        "width": 1920,
+        "height": 1200
+      },
+      {
+        "path": "after/underwater-msaa.png",
+        "width": 1920,
+        "height": 1200
+      },
+      {
+        "path": "after/underwater-night.png",
+        "width": 1920,
+        "height": 1200
+      },
+      {
+        "path": "after/underwater-taa.png",
+        "width": 1920,
+        "height": 1200
+      },
+      {
+        "path": "after/voxel-sun.png",
+        "width": 1920,
+        "height": 1200
+      }
+    ],
+    "hydraulics": [
+      {
+        "path": "hydraulics/basin-swimming.png",
+        "width": 1920,
+        "height": 1200
+      },
+      {
+        "path": "hydraulics/bottle-filled.png",
+        "width": 1920,
+        "height": 1200
+      },
+      {
+        "path": "hydraulics/bottle-filling.png",
+        "width": 1920,
+        "height": 1200
+      },
+      {
+        "path": "hydraulics/bucket-filled.png",
+        "width": 1920,
+        "height": 1200
+      },
+      {
+        "path": "hydraulics/bucket-filling.png",
+        "width": 1920,
+        "height": 1200
+      },
+      {
+        "path": "hydraulics/diagnostic-stage-31.png",
+        "width": 1920,
+        "height": 1200
+      },
+      {
+        "path": "hydraulics/diagnostic-stage-33.png",
+        "width": 1920,
+        "height": 1200
+      },
+      {
+        "path": "hydraulics/diagnostic-stage-34.png",
+        "width": 1920,
+        "height": 1200
+      },
+      {
+        "path": "hydraulics/diagnostic-stage-51.png",
+        "width": 1920,
+        "height": 1200
+      },
+      {
+        "path": "hydraulics/glass-valves-empty-after-shutoff.png",
+        "width": 1920,
+        "height": 1200
+      },
+      {
+        "path": "hydraulics/glass-valves-running-out.png",
+        "width": 1920,
+        "height": 1200
+      },
+      {
+        "path": "hydraulics/glass-valves-stored-water.png",
+        "width": 1920,
+        "height": 1200
+      },
+      {
+        "path": "hydraulics/hydraulics-network.png",
+        "width": 1920,
+        "height": 1200
+      },
+      {
+        "path": "hydraulics/infuser-filled.png",
+        "width": 1920,
+        "height": 1200
+      },
+      {
+        "path": "hydraulics/infuser-filling.png",
+        "width": 1920,
+        "height": 1200
+      },
+      {
+        "path": "hydraulics/infuser-ready.png",
+        "width": 1920,
+        "height": 1200
+      },
+      {
+        "path": "hydraulics/pump-intake-stopped.png",
+        "width": 1920,
+        "height": 1200
+      },
+      {
+        "path": "hydraulics/pump-natural-intake-bubbles.png",
+        "width": 1920,
+        "height": 1200
+      },
+      {
+        "path": "hydraulics/source-bucket-filled.png",
+        "width": 1920,
+        "height": 1200
+      },
+      {
+        "path": "hydraulics/source-watering-can-filled.png",
+        "width": 1920,
+        "height": 1200
+      },
+      {
+        "path": "hydraulics/underwater-bed-mined.png",
+        "width": 1920,
+        "height": 1200
+      },
+      {
+        "path": "hydraulics/underwater-glass-source-preserved.png",
+        "width": 1920,
+        "height": 1200
+      },
+      {
+        "path": "hydraulics/valve-closed-finite-buffer.png",
+        "width": 1920,
+        "height": 1200
+      },
+      {
+        "path": "hydraulics/valve-horizontal-authoritative.png",
+        "width": 1920,
+        "height": 1200
+      },
+      {
+        "path": "hydraulics/valve-vertical-authoritative.png",
+        "width": 1920,
+        "height": 1200
+      },
+      {
+        "path": "hydraulics/watering-can-filled.png",
+        "width": 1920,
+        "height": 1200
+      },
+      {
+        "path": "hydraulics/watering-can-filling.png",
+        "width": 1920,
+        "height": 1200
+      },
+      {
+        "path": "hydraulics/watering-can-pouring.png",
+        "width": 1920,
+        "height": 1200
+      }
+    ]
+  }
+}

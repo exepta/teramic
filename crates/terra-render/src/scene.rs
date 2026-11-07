@@ -2,9 +2,7 @@ use bevy::camera::{Exposure, Hdr};
 use bevy::prelude::*;
 use bevy::render::occlusion_culling::OcclusionCulling;
 use bevy::{
-    light::{
-        Atmosphere, AtmosphereEnvironmentMapLight, atmosphere::ScatteringMedium, light_consts::lux,
-    },
+    light::{Atmosphere, AtmosphereEnvironmentMapLight, atmosphere::ScatteringMedium},
     pbr::AtmosphereSettings,
 };
 use terra_core::GameConfig;
@@ -17,6 +15,10 @@ pub(crate) mod horizon;
 pub(crate) const SURFACE_FOG: Vec3 = Vec3::new(0.58, 0.73, 0.87);
 pub(crate) const SURFACE_AMBIENT: f32 = 760.0;
 pub(crate) const SURFACE_EXPOSURE: f32 = 13.7;
+// Keep sunlit turf below the washed-out ACES shoulder without reducing the
+// camera's night/cave exposure or the indirect fill in terrain shadows.
+// Startup and the live celestial cycle must use the same key-light energy.
+pub(crate) const SURFACE_SUN_ILLUMINANCE: f32 = 65_000.0;
 pub(crate) const SURFACE_TEMPERATURE: f32 = 0.006;
 pub(crate) const SURFACE_SATURATION: f32 = 1.035;
 
@@ -129,7 +131,7 @@ pub(crate) fn setup_scene(
         bevy::light::SunDisk::OFF,
         DirectionalLight {
             color: Color::srgb(1.0, 0.95, 0.84),
-            illuminance: lux::RAW_SUNLIGHT,
+            illuminance: SURFACE_SUN_ILLUMINANCE,
             shadow_maps_enabled: true,
             ..default()
         },

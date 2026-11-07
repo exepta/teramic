@@ -46,6 +46,14 @@ pub(super) fn harvest(
     if hit.distance > 4.5 {
         return;
     }
+    if !super::kingdoms::permission_allowed(
+        peer.uuid,
+        terra_core::kingdom::KingdomPermission::Inventories,
+        hit.prop.position.map(|v| v.floor() as i64),
+        world,
+    ) {
+        return;
+    }
     if hit.prop.section != section
         || hit.prop.id != id
         || hit.prop.kind != terra_world::props::PropKind::BeeNest

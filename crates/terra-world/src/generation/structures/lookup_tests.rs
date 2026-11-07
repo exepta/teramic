@@ -14,6 +14,10 @@ fn point_queries_match_column_plans_including_negative_region_edges() {
     for revision in [1, 2] {
         let terrain = TerraGenerator::new(WorldConfig {
             structures_revision: revision,
+            landscape_revision: 4,
+            sea_level: 22.0,
+            rivers: true,
+            biome_definitions: Some(terra_core::BiomeDefinitions::default()),
             ..Default::default()
         })
         .unwrap();
@@ -58,6 +62,10 @@ fn point_queries_match_column_plans_including_negative_region_edges() {
 fn benchmark_point_lookup_without_region_vector_allocation() {
     let terrain = TerraGenerator::new(WorldConfig {
         structures_revision: 1,
+        landscape_revision: 4,
+        sea_level: 22.0,
+        rivers: true,
+        biome_definitions: Some(terra_core::BiomeDefinitions::default()),
         ..Default::default()
     })
     .unwrap();

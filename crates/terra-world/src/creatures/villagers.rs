@@ -2,7 +2,9 @@
 use super::{Behavior, Creature, Habitat, Kind, distance, navigation, support};
 use crate::generation::structures::ResidentSite;
 use std::collections::BTreeMap;
-use terra_core::creatures::{CreatureNeeds, CreaturePopulation, NeedGoal, NeedKind, villagers};
+use terra_core::creatures::{
+    CreatureNeeds, CreaturePopulation, NeedGoal, NeedKind, soldiers::SoldierLoadout, villagers,
+};
 
 #[derive(Default)]
 pub struct Residents {
@@ -68,17 +70,30 @@ impl Residents {
                 [2.5, 1.5],
                 [-2.5, -1.5],
             ];
-            let Some(position) = candidates.into_iter().find_map(|[x, z]| {
-                let p = [
-                    site.door[0] as f64 + 0.5 + x,
-                    site.door[1] as f64,
-                    site.door[2] as f64 + 0.5 + z,
-                ];
-                h.ground(p, Kind::Villager).filter(|p| {
-                    !population
-                        .animals
-                        .values()
-                        .any(|a| a.health > 0.0 && distance(a.position, *p) < 0.6_f64.powi(2))
+            let occupied = |p: [f64; 3]| {
+                population
+                    .animals
+                    .values()
+                    .any(|a| a.health > 0.0 && distance(a.position, p) < 0.6_f64.powi(2))
+            };
+            // Large barracks have many beds sharing a door. Prefer each resident's
+            // own verified bedside so the initial garrison is not serialized
+            // through six occupied doorway positions.
+            let bedside =
+                exit_bed_where(site, h, site.bed.map(|v| v as f64 + 0.5), |p| !occupied(p));
+            let Some(position) = bedside.or_else(|| {
+                candidates.into_iter().find_map(|[x, z]| {
+                    let p = [
+                        site.door[0] as f64 + 0.5 + x,
+                        site.door[1] as f64,
+                        site.door[2] as f64 + 0.5 + z,
+                    ];
+                    h.ground(p, Kind::Villager).filter(|p| {
+                        !population
+                            .animals
+                            .values()
+                            .any(|a| a.health > 0.0 && distance(a.position, *p) < 0.6_f64.powi(2))
+                    })
                 })
             }) else {
                 continue;
@@ -106,78 +121,91 @@ impl Residents {
     /// Returns a nearby closed home door to open through the existing object-state path.
     pub fn step(
         &self,
-        a: &mut Creature,
-        h: &Habitat,
+        resident: &mut Creature,
+        habitat: &Habitat,
         phase: f64,
         dt: f32,
         search: bool,
-        nav: &mut navigation::Navigation,
+        navigation: &mut navigation::Navigation,
     ) -> Option<[i64; 3]> {
-        if a.health <= 0.0
+        if resident.health <= 0.0
             || !dt.is_finite()
             || !(0.001..=0.25).contains(&dt)
-            || h.block(a.position.map(|v| v.floor() as i64)).is_none()
+            || habitat
+                .block(resident.position.map(|v| v.floor() as i64))
+                .is_none()
         {
             return None;
         }
-        a.age += f64::from(dt);
-        a.needs.search_in = (a.needs.search_in - dt).max(0.0);
-        a.timer = (a.timer - dt).max(0.0);
-        a.needs.food = (a.needs.food - dt * 0.003).max(0.0);
-        a.needs.water = (a.needs.water - dt * 0.004).max(0.0);
-        let Some(site) = self.sites.get(&a.id) else {
-            a.velocity[0] = 0.0;
-            a.velocity[2] = 0.0;
-            a.behavior = Behavior::Rest;
-            support::settle(a, h, dt);
+        resident.age += f64::from(dt);
+        resident.needs.search_in = (resident.needs.search_in - dt).max(0.0);
+        resident.timer = (resident.timer - dt).max(0.0);
+        resident.needs.food = (resident.needs.food - dt * 0.003).max(0.0);
+        resident.needs.water = (resident.needs.water - dt * 0.004).max(0.0);
+        let Some(site) = self.sites.get(&resident.id) else {
+            resident.velocity[0] = 0.0;
+            resident.velocity[2] = 0.0;
+            resident.behavior = Behavior::Rest;
+            support::settle(resident, habitat, dt);
             return None;
         };
-        let sleep = villagers::sleeping(a.id, phase);
-        let bed_exists = assigned_bed(site, h);
-        if a.behavior == Behavior::Sleep && (!sleep || !bed_exists) {
+        let military = SoldierLoadout::of(resident);
+        let sleep = military.map_or_else(
+            || villagers::sleeping(resident.id, phase),
+            |loadout| loadout.sleeping(resident.id, phase),
+        );
+        let bed_exists = assigned_bed(site, habitat);
+        if resident.behavior == Behavior::Sleep && (!sleep || !bed_exists) {
             // Leave the bed only onto a verified adjacent floor, not by snapping through walls.
-            if let Some(p) = exit_bed(site, h, a.position) {
-                a.position = p;
-                a.behavior = Behavior::Rest;
-                a.needs.goal = None;
-                a.timer = 1.0;
-                nav.forget(a.id);
-            } else {
-                return None;
-            }
+            resident.position = exit_bed(site, habitat, resident.position)?;
+            resident.behavior = Behavior::Rest;
+            resident.needs.goal = None;
+            resident.timer = 1.0;
+            navigation.forget(resident.id);
         }
-        if sleep && bed_exists && a.behavior == Behavior::Sleep {
-            a.needs.food = (a.needs.food + dt * 0.025).min(a.kind.food());
-            a.needs.water = (a.needs.water + dt * 0.025).min(a.kind.water());
-            a.health = (a.health + dt * 0.01).min(a.kind.health());
-            a.velocity = [0.0; 3];
+        if sleep && bed_exists && resident.behavior == Behavior::Sleep {
+            resident.needs.food = (resident.needs.food + dt * 0.025).min(resident.kind.food());
+            resident.needs.water = (resident.needs.water + dt * 0.025).min(resident.kind.water());
+            resident.health = (resident.health + dt * 0.01).min(resident.kind.health());
+            resident.velocity = [0.0; 3];
             return None;
         }
         let mut door = None;
-        if distance(a.position, site.door.map(|v| v as f64 + 0.5)) < 2.5_f64.powi(2)
-            && h.block(site.door).is_some_and(crate::objects::is_door)
+        if distance(resident.position, site.door.map(|v| v as f64 + 0.5)) < 2.5_f64.powi(2)
+            && habitat
+                .block(site.door)
+                .is_some_and(crate::objects::is_door)
             && !crate::objects::is_open(
-                h.block(site.door).unwrap_or(0),
-                h.journal.object_state(site.door),
+                habitat.block(site.door).unwrap_or(0),
+                habitat.journal.object_state(site.door),
             )
         {
             door = Some(site.door);
         }
-        let hungry = a.needs.food < a.kind.food() * 0.45 || a.needs.water < a.kind.water() * 0.45;
+        let hungry = resident.needs.food < resident.kind.food() * 0.45
+            || resident.needs.water < resident.kind.water() * 0.45;
         let going_home = (sleep || hungry) && bed_exists;
-        let bedside = going_home.then(|| exit_bed(site, h, a.position)).flatten();
+        let bedside = going_home
+            .then(|| exit_bed(site, habitat, resident.position))
+            .flatten();
         if going_home {
             let point = site.bed.map(|v| v as f64 + 0.5);
-            if inside_home(site, a.position)
+            if inside_home(site, resident.position)
                 && bedside.is_some_and(|entry| {
-                    distance(a.position, entry) < 0.65_f64.powi(2)
-                        && h.walk_step(a.position, entry, a.kind, f64::from(a.yaw))
+                    distance(resident.position, entry) < 0.65_f64.powi(2)
+                        && habitat
+                            .walk_step(
+                                resident.position,
+                                entry,
+                                resident.kind,
+                                f64::from(resident.yaw),
+                            )
                             .is_some()
                 })
             {
-                a.velocity = [0.0; 3];
-                a.needs.goal = None;
-                nav.forget(a.id);
+                resident.velocity = [0.0; 3];
+                resident.needs.goal = None;
+                navigation.forget(resident.id);
                 if sleep {
                     let d = [
                         [0.0, 0.0, 1.0],
@@ -185,64 +213,84 @@ impl Residents {
                         [0.0, 0.0, -1.0],
                         [-1.0, 0.0, 0.0],
                     ][usize::from(site.bed_facing % 4)];
-                    a.position = [
+                    resident.position = [
                         point[0] - d[0] * 0.4,
                         site.bed[1] as f64 + 0.79,
                         point[2] - d[2] * 0.4,
                     ];
-                    a.yaw = f32::from(site.bed_facing % 4) * std::f32::consts::FRAC_PI_2;
-                    a.behavior = Behavior::Sleep;
+                    resident.yaw = f32::from(site.bed_facing % 4) * std::f32::consts::FRAC_PI_2;
+                    resident.behavior = Behavior::Sleep;
                 } else {
-                    a.behavior = Behavior::Graze;
-                    a.needs.food = (a.needs.food + dt * 2.5).min(a.kind.food());
-                    a.needs.water = (a.needs.water + dt * 2.5).min(a.kind.water());
+                    resident.behavior = Behavior::Graze;
+                    resident.needs.food =
+                        (resident.needs.food + dt * 2.5).min(resident.kind.food());
+                    resident.needs.water =
+                        (resident.needs.water + dt * 2.5).min(resident.kind.water());
                 }
                 return door;
             }
-            let (outside, inside) = door_points(site, h);
+            let (outside, inside) = door_points(site, habitat);
             let inside_cell = inside.map(|v| v.floor() as i64);
             // Keep the gate phase stable while a local detour crosses the
             // threshold. Re-selecting the outer portal here causes ping-pong.
-            let entering = a.needs.goal.is_some_and(|g| g.position == inside_cell)
-                || in_doorway(site, h, a.position);
-            let position = if inside_home(site, a.position) {
+            let entering = resident
+                .needs
+                .goal
+                .is_some_and(|g| g.position == inside_cell)
+                || in_doorway(site, habitat, resident.position);
+            let position = if inside_home(site, resident.position) {
                 site.bed
             } else if entering {
                 inside_cell
             } else {
                 outside.map(|v| v.floor() as i64)
             };
-            if a.needs.goal.is_some_and(|old| old.position != position) {
-                nav.forget(a.id);
+            if resident
+                .needs
+                .goal
+                .is_some_and(|old| old.position != position)
+            {
+                navigation.forget(resident.id);
             }
-            a.needs.goal = Some(NeedGoal {
+            resident.needs.goal = Some(NeedGoal {
                 kind: NeedKind::Food,
                 position,
             });
-        } else if a.timer > 0.0 {
-            a.velocity[0] = 0.0;
-            a.velocity[2] = 0.0;
-            a.behavior = Behavior::Rest;
-            support::settle(a, h, dt);
+        } else if resident.timer > 0.0 {
+            resident.velocity[0] = 0.0;
+            resident.velocity[2] = 0.0;
+            resident.behavior = Behavior::Rest;
+            support::settle(resident, habitat, dt);
             return door;
-        } else if a.needs.goal.is_none() && search {
+        } else if resident.needs.goal.is_none() && search {
             // Short, reproducible walks keep residents in their settlement and respect slopes.
-            if inside_home(site, a.position) {
-                let (_, inside) = door_points(site, h);
-                a.needs.goal = Some(NeedGoal {
+            if inside_home(site, resident.position) {
+                let (_, inside) = door_points(site, habitat);
+                resident.needs.goal = Some(NeedGoal {
                     kind: NeedKind::Food,
                     position: inside.map(|v| v.floor() as i64),
                 });
             } else {
-                let hash = super::random(a.id, (a.age / 7.0) as u64);
+                if military.is_some()
+                    && let Some(position) = military_patrol_goal(site, resident, habitat)
+                {
+                    resident.needs.goal = Some(NeedGoal {
+                        kind: NeedKind::Food,
+                        position,
+                    });
+                }
+                let hash = super::random(resident.id, (resident.age / 7.0) as u64);
                 for n in 0..6 {
+                    if resident.needs.goal.is_some() {
+                        break;
+                    }
                     let angle = ((hash.rotate_left(n * 7) & 65535) as f64 / 65535.0)
                         * std::f64::consts::TAU;
                     let radius = 3.0 + ((hash >> (n * 5)) & 7) as f64;
                     let p = [
-                        a.position[0] + angle.sin() * radius,
-                        a.position[1],
-                        a.position[2] + angle.cos() * radius,
+                        resident.position[0] + angle.sin() * radius,
+                        resident.position[1],
+                        resident.position[2] + angle.cos() * radius,
                     ];
                     if p[0] < site.village_bounds[0][0] as f64 + 2.0
                         || p[0] > site.village_bounds[1][0] as f64 - 2.0
@@ -252,37 +300,52 @@ impl Residents {
                     {
                         continue;
                     }
-                    if let Some(p) = h.ground(p, Kind::Villager) {
-                        a.needs.goal = Some(NeedGoal {
+                    if let Some(p) = habitat.ground(p, Kind::Villager) {
+                        resident.needs.goal = Some(NeedGoal {
                             kind: NeedKind::Food,
                             position: p.map(|v| v.floor() as i64),
                         });
                         break;
                     }
                 }
+                // A narrow ledge can support the body while every strict path
+                // probe fails. Without a goal the stalled-route branch never runs.
+                if resident.needs.goal.is_none()
+                    && habitat
+                        .ground_rotated(resident.position, resident.kind, f64::from(resident.yaw))
+                        .is_none()
+                    && let Some(exit) = local_exit(resident, habitat, dt)
+                {
+                    navigation.escape_via(resident.id, exit, resident.age);
+                    resident.needs.goal = Some(NeedGoal {
+                        kind: NeedKind::Food,
+                        position: exit.map(|v| v.floor() as i64),
+                    });
+                }
             }
-            a.needs.search_in = 2.0;
+            resident.needs.search_in = 2.0;
         }
-        if let Some(mut goal) = a.needs.goal {
-            let (outside, inside) = door_points(site, h);
+        if let Some(mut goal) = resident.needs.goal {
+            let (outside, inside) = door_points(site, habitat);
             let target = if going_home {
-                if inside_home(site, a.position) {
+                if inside_home(site, resident.position) {
                     bedside.unwrap_or(inside)
                 } else if goal.position == inside.map(|v| v.floor() as i64) {
                     inside
                 } else {
                     outside
                 }
-            } else if inside_home(site, a.position) {
+            } else if inside_home(site, resident.position) {
                 if goal.position == outside.map(|v| v.floor() as i64)
-                    || (a.position[0] - inside[0]).hypot(a.position[2] - inside[2]) < 0.05
+                    || (resident.position[0] - inside[0]).hypot(resident.position[2] - inside[2])
+                        < 0.05
                 {
                     let position = outside.map(|v| v.floor() as i64);
                     if goal.position != position {
-                        nav.forget(a.id);
+                        navigation.forget(resident.id);
                     }
                     goal.position = position;
-                    a.needs.goal = Some(goal);
+                    resident.needs.goal = Some(goal);
                     outside
                 } else {
                     inside
@@ -290,57 +353,44 @@ impl Residents {
             } else {
                 goal.position.map(|v| v as f64 + 0.5)
             };
-            let escape = nav.escape(a);
+            let escape = navigation.escape(resident);
             let target = escape.unwrap_or(target);
             if escape.is_none()
                 && !going_home
-                && !inside_home(site, a.position)
-                && (target[0] - a.position[0]).hypot(target[2] - a.position[2]) < 0.5
+                && !inside_home(site, resident.position)
+                && (target[0] - resident.position[0]).hypot(target[2] - resident.position[2]) < 0.5
             {
-                a.needs.goal = None;
-                a.timer = 1.5 + (a.id % 35) as f32 * 0.1;
-                a.behavior = Behavior::Rest;
-                a.velocity[0] = 0.0;
-                a.velocity[2] = 0.0;
+                resident.needs.goal = None;
+                resident.timer = 1.5 + (resident.id % 35) as f32 * 0.1;
+                resident.behavior = Behavior::Rest;
+                resident.velocity[0] = 0.0;
+                resident.velocity[2] = 0.0;
             } else {
-                walk(a, h, target, dt, search, escape.is_some(), nav);
-                if nav.stalled(a.id, a.age) {
+                walk(
+                    resident,
+                    habitat,
+                    target,
+                    dt,
+                    search,
+                    escape.is_some(),
+                    navigation,
+                );
+                if navigation.stalled(resident.id, resident.age) {
                     // An unreachable destination must not keep winning the
                     // same A* retry. Take a verified local exit before exploring.
-                    let escape = [1.0, 0.65, 1.4].into_iter().find_map(|radius| {
-                        (0..8).find_map(|n| {
-                            let angle = f64::from(n) * std::f64::consts::FRAC_PI_4;
-                            let p = [
-                                a.position[0] + angle.sin() * radius,
-                                a.position[1],
-                                a.position[2] + angle.cos() * radius,
-                            ];
-                            // Back out without rotating the body through furniture
-                            // or a narrow doorframe. Turn again once there is room.
-                            let yaw = f64::from(a.yaw);
-                            let first = [
-                                a.position[0] + angle.sin() * a.kind.speed() * f64::from(dt),
-                                a.position[1],
-                                a.position[2] + angle.cos() * a.kind.speed() * f64::from(dt),
-                            ];
-                            physical_step(h, a.position, first, yaw)?;
-                            physical_step(h, a.position, p, yaw).filter(|end| {
-                                (end[0] - a.position[0]).hypot(end[2] - a.position[2]) > 0.5
-                            })
-                        })
-                    });
+                    let escape = local_exit(resident, habitat, dt);
                     if !going_home {
-                        a.needs.goal = None;
+                        resident.needs.goal = None;
                     }
-                    a.needs.search_in = 0.3;
-                    a.timer = 0.5 + (a.id % 7) as f32 * 0.1;
-                    nav.forget(a.id);
+                    resident.needs.search_in = 0.3;
+                    resident.timer = 0.5 + (resident.id % 7) as f32 * 0.1;
+                    navigation.forget(resident.id);
                     if let Some(p) = escape {
-                        nav.escape_via(a.id, p, a.age);
+                        navigation.escape_via(resident.id, p, resident.age);
                         // Keep a route owner while the exact sub-voxel exit is
                         // active; household doorway goals must not override it.
-                        if a.needs.goal.is_none() {
-                            a.needs.goal = Some(NeedGoal {
+                        if resident.needs.goal.is_none() {
+                            resident.needs.goal = Some(NeedGoal {
                                 kind: NeedKind::Food,
                                 position: p.map(|v| v.floor() as i64),
                             });
@@ -349,11 +399,11 @@ impl Residents {
                 }
             }
         } else {
-            a.behavior = Behavior::Rest;
-            a.velocity[0] = 0.0;
-            a.velocity[2] = 0.0;
+            resident.behavior = Behavior::Rest;
+            resident.velocity[0] = 0.0;
+            resident.velocity[2] = 0.0;
         }
-        support::settle(a, h, dt);
+        support::settle(resident, habitat, dt);
         door
     }
 }
@@ -379,6 +429,43 @@ fn assigned_bed(site: &ResidentSite, h: &Habitat) -> bool {
                 && state.facing == foot.facing
                 && state.valid_for(head, material)
         })
+}
+
+/// Ordered sentry posts around the inhabited bounds. Intermediate goals stay
+/// within the existing bounded navigation radius and never jump across walls.
+fn military_patrol_goal(site: &ResidentSite, a: &Creature, h: &Habitat) -> Option<[i64; 3]> {
+    let [min, max] = site.village_bounds;
+    let inset = 5.0;
+    let x0 = min[0] as f64 + inset;
+    let x1 = max[0] as f64 - inset;
+    let z0 = min[2] as f64 + inset;
+    let z1 = max[2] as f64 - inset;
+    if x0 >= x1 || z0 >= z1 {
+        return None;
+    }
+    let posts = [[x0, z0], [x1, z0], [x1, z1], [x0, z1]];
+    let first = ((a.age / 35.0) as usize + a.id as usize) % 4;
+    for n in 0..4 {
+        let [x, z] = posts[(first + n) % 4];
+        let dx = x - a.position[0];
+        let dz = z - a.position[2];
+        let length = dx.hypot(dz);
+        if length < 1.0 {
+            continue;
+        }
+        let step = 12.0_f64.min(length) / length;
+        let point = [
+            a.position[0] + dx * step,
+            a.position[1],
+            a.position[2] + dz * step,
+        ];
+        if !inside_home(site, point)
+            && let Some(point) = h.ground(point, Kind::Villager)
+        {
+            return Some(point.map(|v| v.floor() as i64));
+        }
+    }
+    None
 }
 
 fn inside_home(site: &ResidentSite, p: [f64; 3]) -> bool {
@@ -419,6 +506,15 @@ fn in_doorway(site: &ResidentSite, h: &Habitat, p: [f64; 3]) -> bool {
 }
 
 fn exit_bed(site: &ResidentSite, h: &Habitat, from: [f64; 3]) -> Option<[f64; 3]> {
+    exit_bed_where(site, h, from, |_| true)
+}
+
+fn exit_bed_where(
+    site: &ResidentSite,
+    h: &Habitat,
+    from: [f64; 3],
+    allowed: impl Fn([f64; 3]) -> bool,
+) -> Option<[f64; 3]> {
     let d = [[0, 1], [1, 0], [0, -1], [-1, 0]][usize::from(site.bed_facing % 4)];
     [[d[1], -d[0]], [-d[1], d[0]], [-d[0], -d[1]]]
         .into_iter()
@@ -432,7 +528,7 @@ fn exit_bed(site: &ResidentSite, h: &Habitat, from: [f64; 3]) -> Option<[f64; 3]
                 Kind::Villager,
             )
             .filter(|p| inside_home(site, *p) && (p[1] - site.bed[1] as f64).abs() < 0.3)
-            .filter(|p| p[1] <= site.bed[1] as f64 + 0.2)
+            .filter(|p| p[1] <= site.bed[1] as f64 + 0.2 && allowed(*p))
         })
         .min_by(|a, b| distance(*a, from).total_cmp(&distance(*b, from)))
 }
@@ -464,6 +560,30 @@ fn physical_step(h: &Habitat, start: [f64; 3], target: [f64; 3], yaw: f64) -> Op
                 })
                 .then_some([target[0], start[1].max(floor[1]), target[2]])
         })
+}
+
+fn local_exit(a: &Creature, h: &Habitat, dt: f32) -> Option<[f64; 3]> {
+    [1.0, 0.65, 1.4].into_iter().find_map(|radius| {
+        (0..8).find_map(|n| {
+            let angle = f64::from(n) * std::f64::consts::FRAC_PI_4;
+            let p = [
+                a.position[0] + angle.sin() * radius,
+                a.position[1],
+                a.position[2] + angle.cos() * radius,
+            ];
+            // Back out without rotating the body through furniture or a narrow
+            // doorframe. Both the first step and the whole exit must be swept.
+            let yaw = f64::from(a.yaw);
+            let first = [
+                a.position[0] + angle.sin() * a.kind.speed() * f64::from(dt),
+                a.position[1],
+                a.position[2] + angle.cos() * a.kind.speed() * f64::from(dt),
+            ];
+            physical_step(h, a.position, first, yaw)?;
+            physical_step(h, a.position, p, yaw)
+                .filter(|end| (end[0] - a.position[0]).hypot(end[2] - a.position[2]) > 0.5)
+        })
+    })
 }
 
 fn walk(
@@ -587,6 +707,7 @@ mod tests {
         let home = [0, 0];
         let id = villagers::id(home, 0).unwrap();
         let site = ResidentSite {
+            layout: crate::generation::structures::SettlementLayout::Village,
             slot: 0,
             role: 7,
             bed: [8, 3, 8],
@@ -632,6 +753,126 @@ mod tests {
     }
 
     #[test]
+    fn maximum_initial_kingdom_population_materializes_all_144_beds_without_doorway_overlap() {
+        let (terrain, _, _, _, _) = fixture();
+        let mut journal = EditJournal::default();
+        let mut chunks = ChunkStore::default();
+        for z in 0..3 {
+            for x in 0..2 {
+                let owner = SectionPos::new(x, 0, z);
+                let mut data = BlockSection::empty(owner).unwrap();
+                for dx in 0..16 {
+                    for dz in 0..16 {
+                        data.set_block([dx, 2, dz], 3).unwrap();
+                    }
+                }
+                chunks.loaded.insert(
+                    owner,
+                    LoadedSection {
+                        data,
+                        mesh: None,
+                        water: None,
+                        mesh_epoch: 0,
+                        water_epoch: 0,
+                        props: vec![],
+                    },
+                );
+            }
+        }
+        let mut residents = Residents::default();
+        for index in 0_u16..144 {
+            let bed = [
+                4 + i64::from(index % 12) * 2,
+                3,
+                4 + i64::from(index / 12) * 3,
+            ];
+            let head = [bed[0], 3, bed[2] + 1];
+            for (cell, peer, secondary) in [(bed, head, false), (head, bed, true)] {
+                journal.record(cell, 71).unwrap();
+                journal
+                    .set_object_state(
+                        cell,
+                        Some(crate::edits::BlockObjectState {
+                            peer: Some(peer),
+                            secondary,
+                            ..Default::default()
+                        }),
+                    )
+                    .unwrap();
+            }
+            let site = ResidentSite {
+                layout: crate::generation::structures::SettlementLayout::KingdomTemperate,
+                slot: index,
+                role: if index < 80 {
+                    0
+                } else {
+                    10 + ((index - 80) % 3) as u8
+                },
+                bed,
+                bed_facing: 0,
+                door: [16, 3, 0],
+                home_bounds: [[-2, 2, -2], [33, 8, 49]],
+                village_id: 197,
+                village_center: [16, 3, 24],
+                village_bounds: [[-2, 2, -2], [34, 12, 50]],
+            };
+            residents.sites.insert(resident_id(&site).unwrap(), site);
+        }
+        let h = Habitat {
+            terrain: &terrain,
+            chunks: &chunks,
+            journal: &journal,
+        };
+        let mut population = CreaturePopulation::default();
+        residents.discover(&mut population, &h, &[[16.0, 3.0, 24.0]]);
+        assert_eq!(
+            population.animals.len(),
+            144,
+            "Initial counts must not silently truncate at128 or a shared barracks doorway"
+        );
+        assert_eq!(
+            population
+                .animals
+                .values()
+                .filter(|a| SoldierLoadout::of(a).is_some())
+                .count(),
+            64
+        );
+        assert!(population.valid());
+        let actors = population.animals.values().collect::<Vec<_>>();
+        for (i, a) in actors.iter().enumerate() {
+            for b in &actors[i + 1..] {
+                assert!(distance(a.position, b.position) >= 0.6_f64.powi(2));
+            }
+        }
+    }
+
+    #[test]
+    fn military_patrol_uses_loaded_ground_and_dead_residents_are_never_respawned() {
+        let (terrain, chunks, journal, mut residents, mut a) = fixture();
+        a.variant = 11;
+        let site = residents.sites.get_mut(&a.id).unwrap();
+        site.role = 11;
+        site.home_bounds = [[7, 2, 7], [11, 12, 11]];
+        a.position = [4.5, 3.0, 4.5];
+        let h = Habitat {
+            terrain: &terrain,
+            chunks: &chunks,
+            journal: &journal,
+        };
+        let goal = military_patrol_goal(site, &a, &h).expect("loaded ground sentry waypoint");
+        assert!((goal[0] as f64 - a.position[0]).hypot(goal[2] as f64 - a.position[2]) <= 13.0);
+        assert!((0..=15).contains(&goal[0]) && (0..=15).contains(&goal[2]));
+        a.health = 0.0;
+        a.behavior = Behavior::Dead;
+        let mut population = CreaturePopulation::default();
+        population.animals.insert(a.id, a.clone());
+        residents.discover(&mut population, &h, &[[8.0, 3.0, 8.0]]);
+        assert_eq!(population.animals.get(&a.id), Some(&a));
+        assert!(population.valid());
+    }
+
+    #[test]
     fn residents_sleep_on_their_bed_wake_on_valid_floor_and_keep_valid_needs() {
         let (terrain, chunks, journal, residents, mut a) = fixture();
         let h = Habitat {
@@ -656,6 +897,47 @@ mod tests {
         assert_ne!(a.behavior, Behavior::Sleep);
         assert_eq!(a.position[1], 3.0);
         assert!(h.clear(a.position, a.size(), false));
+    }
+
+    #[test]
+    fn a_goal_less_resident_can_leave_a_narrow_supported_ledge_without_teleporting() {
+        let (terrain, mut chunks, journal, mut residents, mut a) = fixture();
+        let data = &mut chunks.loaded.get_mut(&SectionPos::default()).unwrap().data;
+        for y in 3..=4 {
+            data.set_block([4, y, 4], 3).unwrap();
+        }
+        residents.sites.get_mut(&a.id).unwrap().home_bounds = [[8, 2, 8], [15, 12, 15]];
+        a.position = [4.99, 5.0, 4.5];
+        a.needs.goal = None;
+        let start = a.position;
+        let h = Habitat {
+            terrain: &terrain,
+            chunks: &chunks,
+            journal: &journal,
+        };
+        assert!(h.ground_rotated(start, a.kind, f64::from(a.yaw)).is_none());
+        assert!(
+            h.supported_sized(start, a.size(), f64::from(a.yaw))
+                .is_some()
+        );
+        assert!(local_exit(&a, &h, 0.1).is_some());
+        let mut nav = navigation::Navigation::default();
+        let mut moved = 0.0;
+        for _ in 0..40 {
+            let before = a.position;
+            residents.step(&mut a, &h, 0.5, 0.1, true, &mut nav);
+            let step = (a.position[0] - before[0]).hypot(a.position[2] - before[2]);
+            assert!(step <= 0.25);
+            moved += step;
+            assert!(h.clear_swimmer_rotated(a.position, a.size(), f64::from(a.yaw)));
+            assert!(a.valid());
+        }
+        assert!(
+            moved > 0.5,
+            "resident did not leave the ledge: {:?}",
+            a.position
+        );
+        assert!(a.position[1] < 4.0, "must descend onto the real floor");
     }
 
     #[test]

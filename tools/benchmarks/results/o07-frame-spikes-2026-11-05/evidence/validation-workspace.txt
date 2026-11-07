@@ -1,0 +1,25 @@
+    Finished `test` profile [optimized + debuginfo] target(s) in 2m 32s
+     Running unittests src/main.rs (target/debug/deps/terra_client-db8f96014cf3aa55)
+test result: FAILED. 193 passed; 2 failed; 1 ignored; 0 measured; 0 filtered out; finished in 3.02s
+     Running unittests src/lib.rs (target/debug/deps/terra_core-10e34521e769403b)
+test result: ok. 339 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+     Running unittests src/lib.rs (target/debug/deps/terra_network-2940d512510130df)
+test result: ok. 444 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 16.09s
+     Running unittests src/lib.rs (target/debug/deps/terra_physics-f8f5115e2c92de31)
+test result: ok. 45 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.20s
+     Running unittests src/lib.rs (target/debug/deps/terra_player-a1d8d7ea64c196bc)
+test result: ok. 93 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.38s
+     Running unittests src/lib.rs (target/debug/deps/terra_render-694fb9c1ace320b5)
+test result: ok. 998 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 1.99s
+     Running unittests src/lib.rs (target/debug/deps/terra_server-ac7f7ed01455124a)
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.06s
+     Running unittests src/main.rs (target/debug/deps/terra_server-b7dd38649b789426)
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+     Running unittests src/lib.rs (target/debug/deps/terra_storage-9b8263960066aca4)
+test result: ok. 134 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.10s
+     Running unittests src/lib.rs (target/debug/deps/terra_ui-72f839c594a7adff)
+test result: ok. 464 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.64s
+     Running unittests src/lib.rs (target/debug/deps/terra_voxel-9ebdcff654b5745e)
+test result: ok. 24 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+     Running unittests src/lib.rs (target/debug/deps/terra_world-11a37364cb1ab433)
+test result: ok. 1054 passed; 0 failed; 5 ignored; 0 measured; 0 filtered out; finished in 18.53s

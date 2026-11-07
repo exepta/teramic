@@ -1,5 +1,9 @@
 # Project Terra
 
+Aktueller UI-/Wetterabgleich: gemeinsame Inventar-/Katalogslots, ueberarbeitete
+Rahmen und Karten, begrenzte Wegpunktanzeige und sichere Wasserabfragen bei
+Wetter-Edits. [Phase 187: Pruefbericht](tools/benchmarks/results/inventory-frame-weather-2026-11-03/README.md).
+
 Rust-/Bevy-Sandbox mit abbaubarem Block-Voxel-Terrain und einzeln entfernbaren
 Pflanzen. Stilziel sind terrassierte Landschaften, kleinteilige Vegetation,
 gemalte Materialien und atmosphaerisches Licht. Das nachgereichte Referenzbild
@@ -13,16 +17,26 @@ Anvil-Dateiformat.
 
 ## Technologien
 
-Rust Edition 2024 / mindestens Rust 1.95, Bevy 0.19.1, Avian3D 0.7.0,
-Lightyear 0.30.1, TiltUI 0.1.0, Serde 1.x, TOML 0.9.x, serde_json 1.x und Tracing 0.1.x.
+Rust Edition 2024 / mindestens Rust 1.97.1, Bevy 0.20.0, Avian3D 0.8.0,
+Lightyear 0.31.0, TiltUI aus dem separaten lokalen Repository
+`../../tilt-us/tilt-ui` auf `preview-020`,
+Serde 1.x, TOML 0.9.x, serde_json 1.x und Tracing 0.1.x.
 Noise: noise 0.9.0. Block-Meshing:
 [block-mesh 0.2.0](https://docs.rs/block-mesh/0.2.0/block_mesh/).
 Voxel-Raycasts:
 [voxel-traversal 0.4.0](https://docs.rs/voxel-traversal/0.4.0/voxel_traversal/).
 
-Alle vorgegebenen Engine-Versionslinien bleiben erhalten. Cargo.lock fixiert
-Patchversionen. Bevy/Avian/Lightyear haben gezielte Features; externe Crates
-werden im Dev-Profil optimiert. Release verwendet Thin LTO.
+Die historische 0.20-Migration samt nativen Kurztests und gemessener
+Dorf-Performance-Regression ist im damaligen
+[Migrationsbericht](tools/benchmarks/results/bevy-020-2026-10-26/README.md) dokumentiert.
+Seit Phase 134 gibt es kein `vendor/` und keine lokalen Bevy-Quellpatches mehr:
+Bevy kommt unveraendert aus der Registry. TiltUI-Korrekturen erfolgen direkt
+im separaten TiltUI-Repository; Teramic verwendet voruebergehend lokale
+Pfadabhaengigkeiten statt eines Git-Pins, bis der Push freigegeben ist.
+Cargo.lock fixiert die Registry-Versionen, nicht den lokalen TiltUI-Quellstand.
+Bevy/Avian/Lightyear haben gezielte Features; externe Crates werden im Dev-Profil
+optimiert. Release verwendet Thin LTO. Aktueller Arbeits-/Validierungsstand:
+[Phase 134](tools/benchmarks/results/cave-fps-no-vendor-2026-10-26/README.md).
 
 ## Aufbau
 
@@ -59,7 +73,10 @@ Test-/Messberichte kompakt in [PATCH.md](PATCH.md).
 
 ## Installation und Start
 
-Rust 1.95+, rustfmt, Clippy und ein nativer Linker werden benoetigt.
+Rust 1.97.1+, rustfmt, Clippy und ein nativer Linker werden benoetigt.
+`rust-toolchain.toml` waehlt die passende Toolchain automatisch.
+Fuer den aktuellen lokalen Entwicklungsstand muss auch das TiltUI-Repository
+unter `../../tilt-us/tilt-ui` vorhanden sein; die Runtime wird nicht nach Teramic kopiert.
 Der Linux-Client braucht X11/Wayland, xkbcommon, Fontconfig und einen Vulkan-Treiber.
 Der Server braucht keine Display-Session und keine Grafikbibliotheken.
 
@@ -1489,7 +1506,7 @@ wird verhindert. Abgebauter Untergrund wird nach Collider-Aktualisierung frei.
 Die logische Blockbelegung bestimmt die Kollisionsform, auch bei dekorativ
 abgerundeten Cubes oder kleineren Custom-Meshes. Props und Wasser erhalten
 keine neuen Kollisionskoerper.
-Lightyear 0.30.1 verwendet jetzt echten UDP-Transport und verschluesselte
+Lightyear 0.31.0 verwendet echten UDP-Transport und verschluesselte
 Netcode-Verbindungen. Vor Beginn der Client-Generierung werden Protokoll- und
 Generatorversion geprueft und die vollstaendige Server-Weltkonfiguration
 uebertragen. Seed, Generatorversion und Block-IDs bleiben unveraendert.
@@ -5106,7 +5123,10 @@ Die Inventarregression wurde im nativen 4K-/20er-Blick reproduziert:
 serialisiert unveraenderte Shared-Stores nicht erneut und cached die
 Flow-Sortiertiefe. Teramics Vorschau-Bildbruecke bindet neue/geaenderte Nodes
 ueber einen begrenzten Katalogindex statt linearer Suche je Bild und Frame.
-Quellstand, Lizenzen und Testbefehl: [Runtime-Patch](vendor/tilt-ui-runtime/PATCHNOTES.md).
+Seit Phase 134 liegen diese Runtime-Korrekturen im echten
+[TiltUI-Repository](../../tilt-us/tilt-ui/crates/tilt-ui-runtime/README.md),
+nicht mehr in einer Teramic-`vendor/`-Kopie. Die folgenden Messwerte beschreiben
+weiterhin den damaligen Stand aus Phase 103.
 
 Unveraenderte Szene/Qualitaet: offenes Inventar 32,79 -> 68,38 FPS bei 4K/20,
 43,22 -> 90,99 FPS bei 2880x1620/12; kurzer Geh-/Rueckweg 101,43 -> 116,08 FPS.
@@ -5725,3 +5745,446 @@ weiterhin offenem Rauchquerschnitt und erhaltener Materialmischung.
 
 Native Aufnahmen, Tests, Grenzen und umsetzbare weitere FPS-Vorschlaege:
 [Phase-128-Bericht](tools/benchmarks/results/cherry-ai-light-2026-10-25/README.md).
+
+### Phase 134: Hoehlenausblick, FPS-Messung Und Dependencies
+
+Min-/Max-FPS beginnen erst mit vollstaendig nach den ersten zehn realen
+Sekunden des Weltbeitritts liegenden Frames. Auch ein langer Frame ueber die
+Warmup-Grenze wird ausgeschlossen; Weltwechsel setzen die Werte zurueck.
+Entladene Sections bereinigen die Mesh-Warteschlange einmal je Batch statt
+einmal je Section. Binding-/Shadow-Marker nutzen SparseSet-Speicherung;
+Schatten-Roots bleiben erhalten, damit ihre Query-Reihenfolge nicht durch
+wiederholte Tabellenwechsel schwankt.
+
+Hoehlen dunkeln die globale Sonne und den durch Eingaenge sichtbaren Himmel
+nicht mehr ab. Nebel und lokale Hoehlenaufhellung lassen den sonnenbeleuchteten
+Aussenraum erkennbar, ohne geschlossene Hoehlen pauschal taghell zu machen.
+Bevy bleibt unveraenderte Registry-Abhaengigkeit; TiltUI-Fixes liegen im
+separaten Quellrepository. 2534 Workspace- und 322 TiltUI-Runtime-Tests,
+Formatierung, Check, striktes Clippy und Workspace-Build bestanden. Die native
+Portalpruefung zeigt sichtbares Tageslicht von innen bei weiterhin dunklen
+geschlossenen Hoehlen. Regenfluege bei Sichtweite 12/20 zeigen keinen
+belastbaren allgemeinen FPS-Gewinn; keine Langzeitabnahme, A05 bleibt offen.
+[Umsetzung und Nachweise](tools/benchmarks/results/cave-fps-no-vendor-2026-10-26/README.md).
+
+### Phase 139: Verbundene Seen, Lange Fluesse Und Relief
+
+Neue Welten verwenden `landscape_revision = 3` und aktivierte Hauptfluesse.
+Gespeicherte Landschaftsrevisionen 0/1/2 und deren Flussoption bleiben erhalten;
+keine stille Regeneration vorhandener Welten. Eine explizite Fluss-Deaktivierung
+in einem neuen Revision-3-Template wird respektiert. Seen und die kleinen
+Oekologie-Baeche sind weiterhin eigenstaendig von dieser Hauptflussoption.
+
+Die bestehende Hydrologie erzeugt groessere, unregelmaessige Seen und lange
+regionale Flusskurse mit gemeinsamen Pegeln, Seeanschluessen und geprueften
+Meeresmuendungen. Kleine Baeche bleiben erhalten, sofern ihr gesamter Kurs
+nicht mit einem regionalen Gewaesser kollidiert. Wasserzellen, Stroemung,
+Wasserfall-Auslaesse, Section-Meshing und Fluessigkeits-Scheduler werden
+weiterverwendet; keine zweite Wasser-Engine.
+
+Ebenen und Plateaus bewahren mehr lokales Relief. Senken werden weich statt
+auf eine konstante Hoehe begrenzt. Hoehleneingaenge pruefen tragende Decken;
+explizite Durchgaenge bleiben auch beim Kreuzen von Kammerformationen offen.
+
+Streaming-Interest, Chunk-Animationsabfragen und Wasser-Uploads vermeiden
+wiederholte Mengenbildung, Query-Erzeugung und unnoetige Vollscans. Ruhige
+Meeresflaechen teilen ihre Gitterecken auch bei aktivierten Fluessen. Der
+Channel-Mesher berechnet keine Oberflaechenecken fuer die falsche Hoehen-Section.
+Budgetierte wiederverwendbare Cloudgruppen ersetzen Vollhimmel-Reuploads;
+shader-sichere Bounds vermeiden Offscreen-Arbeit. Grosse stabile Prop-Batches
+werden im Worker aufgeteilt. Dynamische Wasserdaten laufen ueber einen
+gemeinsamen GPU-Puffer statt Material-Aenderungen fuer alle Wassertiles.
+
+Native kurze Regen-/Wasser-/Schnee-Laeufe zeigen bessere AVG/p99-Werte gegen
+zeitnahe Kontrollen, aber keine durchgaengige 32-FPS-Untergrenze: Ein
+Regen-Wiederholungslauf enthaelt weiterhin einen einzelnen 73-ms-Ausreisser;
+die neue Schnee-Szene erreicht mindestens 27,25 FPS. Alle Messungen,
+Wiederholungen und Einschraenkungen sind dokumentiert, keine Langzeitabnahme.
+
+[Implementierung, Messungen und Validierung](tools/benchmarks/results/hydrology-relief-performance-2026-10-26/README.md).
+
+### Phase 166: Start-Icons Und Wassertechnik
+
+Normale grafische Starts laden den endlichen Itemkatalog, TiltUI-Symbole,
+UI-Bilder und Schriften vor dem Weltbeitritt. Der Fortschritt steht im
+vorhandenen Menue; ein frueher Start-/Joinwunsch wartet auf die fertigen Caches.
+Danach werden diese Bild-Handles wiederverwendet. Frei gemischte RGB-Varianten
+bleiben auf den vorhandenen begrenzten Bedarfscache beschraenkt. Ein fehlendes
+Asset wird als Startfehler gemeldet, nicht durch endloses Laden versteckt.
+
+F27/F28 verwenden die bestehenden Wasserzellen, den Fluessigkeits-Scheduler und
+die Kinetik: Holz-/Stein-/Eisenrohre, absperrbare Ventile, Wasserhahn, kinetische
+Pumpe und modularer Speicher. Rohre verbinden sich raeumlich wie Kaminsegmente;
+die Darstellung entfernt unbenoetigte Arme und Beckeninnenwaende. Rechteckige
+Becken reichen von 1x1 bis 5x5 Grundflaeche und bis zehn Bloecke Hoehe, auch 1x2.
+Ein Modul speichert acht echte Fluessigkeitseinheiten. Hoehendifferenz liefert
+Schwerkraftdruck; zum Hochpumpen ist ein laufender mechanischer Antrieb noetig.
+Ventile sperren den Nachschub, fehlende Chunks pausieren die betroffene Leitung.
+Ein offener versorgter Hahn gibt begrenzt echtes Wasser an Becken oder den
+vorhandenen Zellsolver ab. Es gibt keine zweite Terrain-Wassersimulation.
+
+Rechtsklick ohne Gefaess schaltet Ventil/Hahn. Rohre oder andere Anschluesse in
+der Hand haben Platzierungsvorrang; mit Schleichen bleibt Nachbarplatzierung
+moeglich. Einen leeren Eimer, eine Glasflasche oder Giessekanne auf eine
+sichtbare Quelle oder einen versorgten Hahn richten und Benutzen gedrueckt
+halten. Der Wasserstand steigt sichtbar; Loslassen, Slotwechsel, Wegsehen oder
+eine offene UI unterbrechen. Erst der Server uebertraegt das echte Wasser und
+prueft dabei Inventar, Sichtlinie und Versorgung erneut. Am Hahn stammen die
+Einheiten aus dem endlichen Speicher; eine grosse Kanne kann mehrere gepruefte
+Teilfuellungen benoetigen. Ein voller Eimer bleibt ueber die vorhandene Aktion
+platzierbar. Die gehaltene Giessekanne kippt mit sichtbarem Wasserstrahl beim
+Giesen bepflanzter Beete. Die bisherige Kannenreserve bleibt sitzungslokal,
+nicht als zusaetzliche Metadaten je einzelner Kanne gespeichert.
+
+Neue Block-IDs 163..169 werden angehaengt, bestehende IDs bleiben gleich.
+RG12 speichert Leitungsinhalte und Speicherformen um die unveraenderte
+RG11-Huelle; alte Formate bleiben lesbar. Client und Server benoetigen gemeinsam
+Protokoll 93. Rezepte und Inventaricons laufen durch die vorhandenen Registries.
+Detailbedienung und Asset-Vertraege stehen im
+[Blockhandbuch](assets/terra/blocks/README.md#water-pipes-faucets-and-reservoirs).
+
+`TODO.md` enthaelt nur offene Aufgaben. Abgeschlossene Beschreibungen und
+historische Messungen wurden nach `PATCH.md` verschoben, ohne die Nachweise
+als neue Tests auszugeben. Die neuen Inventar-, Rezept-, Chemie-, Taschen-,
+KI-, Befehls- und Debugwuensche stehen dort als F44 bis F52 offen.
+
+Zwei getrennte kurze native Pruefmodi stehen bereit, ohne Langzeitlauf:
+`TERRA_PREVIEW_WARMUP=1 TERRA_STARTUP_ONLY=1 target/debug/terra-client --smoke-test-menu`
+prueft den vollstaendigen Cache vor Welt-/Serverstart;
+`target/debug/terra-client --smoke-test-hydraulics` prueft die integrierte
+Versorgung, echte Gefaessfuellung, Ventilsperre und Bewaesserung. Fuer den
+Menue-Test setzt `TERRA_MENU_SCREENSHOTS`, fuer Wassertechnik `TERRA_CAPTURE_DIR`
+das Screenshotverzeichnis. Teststaende und Rohlogs
+liegen unter `tools/benchmarks/results/water-tech-startup-2026-10-31/`.
+
+Die finale Pruefung besteht mit 3511 Workspace-Tests, null Fehlern und acht
+explizit ignorierten Spezialtests sowie Format, Check, strengem Clippy und
+Workspace-Build. Der native Wassertechnik-Test bestaetigt neun nichtleere
+Aufnahmen und echte Rechtsklick-Transaktionen in 19.51 Sekunden. Vor dem
+Weltstart sind 454 Inventar-Icons und 1611 UI-Symbole fertig; der separate
+Headless-Test generiert 45 Sections. Keine neuen FPS-Messungen oder
+Langzeitabnahme. Details, Aufnahmen und Einschraenkungen:
+[Phase-166-Pruefbericht](tools/benchmarks/results/water-tech-startup-2026-10-31/README.md).
+
+
+### Phase 168: Aktuelle Wasserbedienung Und Asset-Ladescreen
+
+Vor dem Hauptmenue wartet ein separater Ladescreen auf Modelle, Texturen,
+Inventar-/UI-Icons, Schriften und die vorhandenen Audio-Caches. Fehler werden
+angezeigt; das Hauptmenue ist bis zum abgeschlossenen Preload nicht bedienbar.
+
+An Wasserquellen fuellen sich Eimer und Kanne per kurzem Rechtsklick. Laufende
+Wasser-Meshupdates verursachen dabei keinen falschen Revisionskonflikt. Boden
+unter Wasser bleibt mit dem normalen Abbaubefehl erreichbar. Uferwellen bleiben
+an Kontaktkanten verankert, und Beckenraender haben keine doppelten Flaechen.
+
+Haehne zeigen zu/1/2/3: LMB eine Stufe zu, RMB eine Stufe auf, Shift+LMB abbauen.
+Gefaesse behalten am Hahn ihre Halte-Fuellaktion. Der Ausfluss kann ein separates
+Becken durch eine freie Luftstrecke erreichen. Regen fuellt offene Becken langsam;
+Daecher sperren die Sammlung. Client und Server verwenden gemeinsam Protokoll 94.
+
+## Beckenwasser, Quellenbildung Und Befuellstation (Phase 172)
+
+Endliches Beckenwasser verwendet denselben Shader und Materialhandle wie
+Fluesse und Seen. Gespeicherte Mengen bestimmen Oberflaeche, Schwimmen,
+Unterwasseransicht und Atempruefung. Alle vier Holzarten bleiben beim Bauen,
+Abbauen und Speichern erhalten; das normale TMI-Becken verwendet Fichte.
+
+Beim Ansaugen bleibt zusammenhaengendes Wasser ab 27 nassen Zellen unveraendert.
+Auch eine offene Grenze zu ungeladenem Gebiet wird nicht als abgeschlossenes
+kleines Becken behandelt. Nur ein nachweislich isolierter Wasserkoerper mit
+weniger als 27 nassen Zellen wird geleert. Gespeicherte Becken- und Rohrinhalte
+bleiben endlich. Wasser um eingetauchte Rohre behaelt den umgebenden Pegel;
+Blasen erscheinen am tatsaechlich arbeitenden Ansaugmund, bleiben unter Wasser
+und ausserhalb des Flanschs. Eine zweite flache Ripple-Flaeche ist entfernt.
+
+F29: Zwei volle diagonale Quellen erzeugen in einem vollstaendig gestuetzten,
+geschlossenen 2x2-Becken die beiden uebrigen Quellen. Geschlossene flache
+Terrainbecken bis 64 Innenzellen nivellieren auch endliches Wasser konservativ
+und kommen mit null Stroemung ohne dauernde Wasser-Mesh-Aenderungen zur Ruhe.
+Ein gemeinsames Pruefbudget begrenzt die Arbeit; unvollstaendig bekannte Becken
+warten. Nach dem endlichen Abpumpen bilden entquellte Becken keine neuen Quellen.
+
+Der Hold Block (170) steht auf Bandhoehe zwischen zwei Foerderbaendern und
+uebernimmt ihre passende Achse und Laufrichtung. Darueber bleibt ein Luftblock
+frei; erst zwei Zellen ueber dem Hold sitzt der ganze blockgrosse Fluid Infuser
+(171). Seitliche oder obere Rohre versorgen ihn ohne eigenen Kinetikantrieb.
+Ungeeignete und volle Items fahren mit dem normalen engen Bandabstand gemeinsam
+weiter. Erst ein fuellbares Gefaess fordert einen Einzelplatz an: Vorgaenger
+raeumen das Deck, Sperren heben sich, das Gefaess haelt zum Fuellen und faehrt
+danach physisch weiter. Ein blockierter Luftspalt unterbricht die Befuellung
+ohne Wasserverbrauch. Rueckstau behaelt den Gegenstand; es gibt keinen Teleport.
+Der Infuser folgt der [Blockvorlage](docs/references/fluid-infuser-block.png)
+mit Holzgehaeuse, Eisenrahmen, Messingbeschlaegen, Rohrflansch und Metallduese.
+
+Leere Flaschen, Eimer und teilgefuellte Giesskannen werden automatisch befuellt.
+Der Inhalt einer Kanne gehoert zum einzelnen gespeicherten Item und bleibt beim
+Transport und Aufheben erhalten. Das Rohrsystem fuehrt Wasser; weitere
+Fluessigkeitstypen koennen den expliziten Konvertierungsvertrag erweitern.
+
+Der rahmenlose Start-Ladescreen zeigt `Laden` ueber dem Balken, den Zaehler
+mittig darin und den aktuell geladenen, bei Bedarf gekuerzten Assetpfad darunter.
+Nach dem Preload blendet er in 650 ms zum Hauptmenue ueber; die Menueeingabe
+bleibt waehrend des Uebergangs gesperrt. Pumpen und Haehne verwenden den
+vorhandenen raeumlichen Geraetemix. Neue Clients und Server verwenden gemeinsam
+Protokoll 97. Details stehen im
+[Blockhandbuch](assets/terra/blocks/README.md#water-pipes-faucets-and-reservoirs)
+und in [PATCH.md](PATCH.md#phase-172-dichter-banddurchlauf-infuser-abstand-und-ruhende-quellen).
+
+
+## Rezeptbuch, Glasrohre Und Unterwasserbau (Phase 173)
+
+Die Rezeptansicht verwendet einen JEI-aehnlichen Aufbau im vorhandenen gruenen
+Teramic-Stil: echte Stations-Tabs, eine zentrale Zutaten-/Ergebniskarte,
+Prozesspfeil, lesbare Mengen und direkt anwaehlbare Alternativen mit Seitenwahl.
+Der Materialbedarf bleibt sichtbar; kleine Fenster verkleinern die Slots und
+scrollen den Inhalt. R oeffnet auch aus einem Rezept heraus das Rezept einer
+Zutat oder des Ergebnisses. Suchfelder, absolute Item-Tooltips und bestehende
+autoritative Stations-/Plus-Aktionen bleiben erhalten. Das Blaettern und
+Kategoriewechseln erzeugt keine Items und veraendert keine reservierten Zutaten.
+RGB-Rezepte behalten ihre exakte Farbe.
+Die Seitenwahl zaehlt Alternativen innerhalb der gewaehlten Station;
+beispielsweise sind Ofen und Lagerfeuer getrennte Tabs.
+
+Normale Tunnel haben ausschliesslich ihren Random-Transportschalter. Filter
+gehoeren zu den ausdruecklich gefilterten Tunnel-/Funnel-Varianten. Veraltete
+Filterdaten normaler Ports werden beim Laden entfernt. Der Bauray schaut unter
+Wasser durch die Quellzelle am Auge bis zur tatsaechlich anvisierten Oberflaeche;
+Gefaessfuellung und Unterwasserabbau bleiben eigene Interaktionen.
+
+Glasrohr (172) ist transparent, herstellbar, im TMI und mit allen vorhandenen
+Rohrarten verbunden. Bestaetigter Leitungsinhalt ist in Geraden, Boegen und
+Verzweigungen sichtbar. Ruhende leere Rohre zeigen kein Wasser; bestaetigter
+Durchfluss bleibt als dezente Innenbewegung sichtbar, auch wenn der Inhalt im
+selben Tick weiterfliesst. Gespeicherte Mengen werden dadurch nicht erhoeht.
+Verbundene Rohrmuendungen haben keine doppelten Stirnringe. Rohre behalten beim Einsetzen
+und Materialwechsel die vorhandene aeussere Wassermenge einschliesslich einer
+Quellmarkierung. Ihr Abbau zu Luft gibt dieses Wasser wieder frei. Ein bloss
+platziertes, unbenutztes Rohr entzieht dem Gewaesser kein Wasser. Die natuerliche
+Aufnahme braucht eine laufende Pumpensaugroute oder einen erreichbaren Abnehmer
+mit ausreichender Foerderhoehe. Endlicher Durchfluss bleibt endlich, und echte
+Pumpentnahme leert kleine isolierte
+Gewaesser weiterhin ohne Regeneration. Die sichtbare Wasseroberflaeche wird an
+den runden Rohrprofilen und den tatsaechlichen Facetten der Verzweigungen
+beschnitten. Eckige Kollisionsboxen erzeugen keine quadratischen Wasserausschnitte.
+Client und Server verwenden gemeinsam Protokoll 98.
+
+## Absperrhahn Und Sonnenlicht (Phase 174)
+
+Absperrhaehne lassen sich an Boden, Decke und Seitenflaechen entlang aller drei
+Rohrachsen setzen. Vorschau, Serverplatzierung, Anschluesse und Modell verwenden
+dieselbe Ausrichtung. Der Absperrhahn bleibt ein Auf-/Zu-Ventil. Nach dem
+Schliessen kann der endliche Leitungsinhalt auf der Abnehmerseite weiterhin
+zum offenen Abnehmer ablaufen; gesperrte Wege und fehlende Foerderhoehe bleiben
+wirksam. Geschlossene Leitungen verlieren dadurch kein Wasser ins Nichts.
+
+Glasrohre zeigen kleinere gespeicherte Mengen durch einen sinkenden,
+schwerkraftgerechten Fuellstand. Rohr-, Pumpen- und Auslaufwasser verwenden
+dasselbe biomeabhaengige Wassermaterial wie Seen und Becken. Eingeschlossenes
+Wasser bleibt innerhalb der Rohrgeometrie und bekommt keinen Uferschaum.
+Bestaetigter Durchfluss ohne gespeicherte Menge erscheint als duenne Stroemung.
+
+Die direkte Sonnenenergie ist von 100000 auf 65000 Lux abgestimmt, damit helle
+Grasflaechen ihre Zeichnung behalten. Kamerabelichtung, Tonemapping, Grastexturen,
+Nachtlicht und die vorhandene Hoehlen-/Fackelabstimmung bleiben erhalten.
+
+## Gleichmaessiger Durchfluss Durch Offene Ventile (Phase 175)
+
+Ein offener Absperrhahn hat in horizontalen und vertikalen Leitungen denselben
+Durchsatz und dieselbe Fuellfolge wie das entsprechende gerade Rohr. Verfuegbare
+Quellversorgung wird nicht mehr von einem hoeher gelegenen Restwasserspeicher
+verdraengt. Gespeichertes Wasser in einer aktiven Saugleitung folgt dem Weg
+zur Pumpe, statt zwischen oberen und unteren Rohren hin und her zu wechseln.
+
+Die Durchflussanzeige beruecksichtigt auch echte senkrechte Transfers und
+Wasser, das im selben Schritt bereits weitergegeben oder verbraucht wurde.
+Sie veraendert keine Mengen. Reiner Transit wird als schmaler, durchgehender
+Wasserstrom entlang des Rohrverlaufs gezeichnet; gespeicherte Mengen behalten
+ihren tatsaechlichen Fuellstand. Nach dem Stoppen verschwindet nur die
+Transitdarstellung, vorhandenes Wasser und der endliche Auslauf bleiben erhalten.
+
+## Wandfackeln Und Rohr-Oberflaechen (Phase 176)
+
+Normale Fackeln koennen wieder an allen vier Wandseiten platziert werden.
+Vorschau und Server benutzen denselben Montagekontakt und dieselben
+Supportregeln. Eine ungueltige Stuetze entfernt die Fackel mit genau einem Drop.
+Bodenmontage bleibt erhalten.
+
+Rohrtexturen folgen dem geraden beziehungsweise gebogenen Rohrverlauf. Passende
+Tangenten erhalten die Normalmaps auf Aussen- und Innenwaenden; kleine
+Messingringe liegen vollstaendig auf den geraden Anschlussarmen.
+
+Wasser wird an Ventilen und Pumpen entlang ihrer sichtbaren Koerper statt
+entlang grober Kollisionsrechtecke ausgeschnitten. Die Wasserprofile passen
+auch zu den versetzten Rohr-Stuetzringen. Gemeinsame Wasserecken an
+Chunkgrenzen erhalten identische Wellengewichte und Stroemungsdaten.
+Rohrkontakte bleiben verankert, weiter entfernte Wellen bleiben aktiv.
+
+Der Hydraulik-Smoke prueft vier echte Wandplatzierungen, die Boegen aller vier
+Rohrmaterialien sowie eingetauchte Rohre, Ventil und Pumpe. Der optionale
+`TERRA_WATER_CONTACT_SMOKE=1` erweitert `--smoke-test-daylight` um zwei
+Nahansichten im natuerlichen Oasengewaesser. Build, Clippy und 3686 Tests sowie
+beide nativen Laeufe mit insgesamt 68 Pflichtaufnahmen bestanden.
+[Pruefbericht und Aufnahmen](tools/benchmarks/results/torch-pipe-surfaces-2026-11-02/README.md).
+
+## Rohrdurchfuehrungen Und Wasser In Teilbloecken (Phase 177)
+
+Holz-, Stein-, Eisen- und Glasrohre nutzen bei einer tatsaechlichen Wand- oder
+Dachumfassung denselben Capture-/Compose-Weg wie Ofenrohre. Das umgebende
+Blockmaterial schliesst entlang des runden Rohrprofils; freie Rohrnetze erhalten
+keine erfundenen Waende. Boegen, Abzweigungen und Sectiongrenzen bleiben erhalten.
+
+Wasser belegt den freien Aussenraum der vorhandenen Teilblockformen, darunter
+Zaunpfosten und verbundene Querstreben. Quellverbundene Treppen-/Zaunluecken
+uebernehmen den angrenzenden Wasserstand. Gedeckte nasse Taschen senken den
+freien Aussenspiegel nicht mehr ab. Slabs halten Wasser bis zur festen Kante;
+oberhalb dieser Kante bleibt echtes Ueberlaufen moeglich. Eigene Behaelter bleiben
+vom aeusseren Wasser getrennt.
+
+Der Fluid Infuser zeichnet einen durchgehenden runden Strahl vom Auslass zum
+gehaltenen Gefaess. Er verwendet das vorhandene Wasser mit eigener Strahldicke
+und bewegten Glanzlichtern. Der bestaetigte Fuellvorgang beruecksichtigt Wasser
+im gesamten angeschlossenen Netz; ein leerer lokaler Puffer blendet den Strahl
+nicht mehr faelschlich aus.
+
+Die optionale Umgebung `TERRA_PARTIAL_WATER_SMOKE=1` erweitert
+`--smoke-test-waterfalls` um eine eigene kurze Szene fuer Slabbecken,
+Treppen-/Zaunluecken, untergetauchte Teilmodelle und Rohrdurchfuehrungen.
+Build, Clippy, 3712 Tests sowie drei native Laeufe mit 42 Pflichtaufnahmen
+bestanden. [Pruefbericht und Bilder](tools/benchmarks/results/partial-water-pipe-surrounds-2026-11-02/README.md).
+
+## Geschlossene Wasserraender (Phase 178)
+
+Slabs, Treppen und Zaeune begrenzen Becken seitlich; Wasser fuellt den Innenraum
+und passende Randluecken. Geschlossene Slabraender begrenzen den Pegel auf ihre
+feste Oberkante. Beim Rohrsetzen bleibt vorhandenes Naturwasser erhalten und
+wird an den Client uebertragen. Wassergefuellete Rohre werden nicht durch eine
+abgeleitete Terrainumfassung zu scheinbaren Vollbloecken.
+
+Build, Clippy und 3716 Tests bestehen. Zwei native Spielpruefungen mit
+41 Pflichtaufnahmen bestaetigen die geschlossenen Raender und den Wassererhalt.
+[Pruefbericht und Bilder](tools/benchmarks/results/closed-banks-waterlogged-pipes-2026-11-02/README.md).
+
+## Innere Zaunseite Und Ueberflutete Fackeln (Phase 179)
+
+Wasser endet innerhalb einer Zaunzelle an der nassen Seite und fuellt die
+inneren Ecken. Bereits untergetauchte Teilbloecke behalten ihr Wasser; Rohre
+auf der Wasseroberflaeche verdecken diese nicht mit einer Terrainumfassung.
+Fackeln lassen sich nicht in Wasser setzen und werden bei spaeterem
+Wasserkontakt mit genau einem Drop entfernt. Der Wasserzustand bleibt erhalten.
+[Pruefbericht und Bilder](tools/benchmarks/results/fence-inner-water-partial-blocks-torches-2026-11-02/README.md).
+
+3721 Tests, Build, Clippy und die beiden nativen Laeufe mit 43 Pflichtaufnahmen
+bestanden. Die Zaun-Draufsicht und die Ansicht direkt an der Beckenwand sind
+im Pruefbericht verlinkt.
+
+## Kupferinventar Und Rohrwasser (Phase 180)
+
+Player Inventory und Crafting Recipe verwenden den gemeinsamen Kupferrahmen,
+braune eingelassene Slots, goldene Auswahlen und die Anordnung der gelieferten
+Vorlagen. Das Spielerinventar hat vier echte Rucksackreihen und neun Hotbarplaetze
+(45 insgesamt); alle zehn vorhandenen Ausruestungsplaetze bleiben bedienbar.
+Rezeptbuch, Itemsuche, Kategorien, Blaettern und alternative Rezepte arbeiten mit
+den bestehenden Rezept- und Itemdaten. Zutaten und Ausgaben der Alternativen
+fordern ebenfalls ihre echten Vorschau-Icons an. Reines Blaettern im Rezeptbuch
+erzeugt auch in Creative keine Gegenstaende.
+
+Der Terrainrenderer darf die im Voxelmesher ausgelassenen Flaechen von
+`Fluid Water Block` neben einem Teilmodell nicht als Wasserwuerfel rekonstruieren.
+Diese doppelten Flaechen verursachten den sichtbaren Luftkasten und verdeckten das
+Glasrohr. Die Korrektur ist an einer isolierten Kopie der gespeicherten Testwelt
+mit gleicher Unterwasserkamera vor und nach der Aenderung geprueft. Dekoratives
+`Solid Water` behaelt beim Ersetzen durch ein Rohr ebenfalls seine Wassermenge;
+seine internen Kontaktflaechen werden an vollstaendig nassen Modellen ausgeblendet.
+
+Vorhandene Inventardateien bleiben lesbar. Netzwerkprotokoll **99** transportiert
+die erweiterten Inventar-, Reservierungs- und Container-Drag-Daten; Client und
+Server muessen aus demselben Stand gebaut werden.
+[Pruefbericht, Referenzen und native Aufnahmen](tools/benchmarks/results/copper-inventory-underwater-pipes-2026-11-02/README.md).
+
+## Kompaktes Inventar Und Rezept-Popups (Phase 181)
+
+Das Buch am Inventar-Crafting klappt den Itembrowser ein und aus. Seine
+Kategorie-Tabs stehen links. R ueber einem Katalogitem oeffnet dessen Rezept. Rezepte erscheinen als Popup ueber dem weiterhin
+sichtbaren, abgedunkelten Inventar. E und ESC schliessen zuerst das Popup und
+anschliessend das Inventar; X-Schaltflaechen entfallen. Die Ofenansicht zeigt
+Material, Brennstoff, Ofenmodell und Ergebnis sowie registrierte Schmelzzeiten
+und Brennstoffalternativen. Die Brennstoffauswahl ist eine Vorschau. Holzrezepte
+benennen ihre beliebigen Holzplanken ausdruecklich.
+[Aufnahmen und Pruefbericht](tools/benchmarks/results/inventory-modal-furnace-2026-11-02/README.md).
+
+## Quadratische Slots Und Referenz-UIs (Phase 182)
+
+Inventar-Slots sind quadratisch; Pagination ist rechtsbuendig und an den
+Seitenenden begrenzt. Rezept-Popups zeigen keinen JEI-Itembrowser. Bei Rezepten
+mit beliebigen Holzplanken sind Oak, Spruce, Birch und Cherry einzeln als
+Vorschau waehlbar. Kesselrezepte zeigen echte Zutaten, Wasser, Ruehrwerkzeug,
+Kesselmodell und Ergebnis. Ihr Fortschrittsbalken folgt der autoritativen
+Kesselarbeit. Neue Hotbar und Startmenue verwenden den Kupfer-/Blatt-/Kristallstil
+der Referenz; Grafikassets werden vor dem Menue vorgeladen.
+[Pruefbericht und Grafik-Prompts](tools/benchmarks/results/interface-pagination-square-slots-2026-11-02/README.md).
+
+## Inventar Und Menues (Phase 183)
+
+18 Rucksackplaetze plus neun Hotbarplaetze, eine groessere Character-/Crafting-
+Ansicht und gleich grosse quadratische Itembrowser-Slots. Korrigierter Hotbar-
+Ausschnitt ohne dunkle Hintergrundplatte. Pause im Hauptmenue-Stil; Settings
+mit linken Kategorien und die Singleplayer-Weltliste im Kupferdesign der Vorlagen.
+Client und Server verwenden Protokoll 100. Alte zusaetzliche Inventarreihen
+werden beim Beitritt ohne Itemverlust uebernommen.
+[Vorlagen, native Aufnahmen und Pruefbericht](tools/benchmarks/results/interface-menus-27-slots-2026-11-02/README.md).
+
+## Slotdetails Und Kesselreferenz (Phase 184)
+
+Crafting-Zellen entsprechen den Inventarzellen, JEI-Zellen sind 25 Prozent
+kleiner und die Tonne steht unter den groesseren Kategorien links neben JEI.
+Holzrezepte zeigen vier eigene Alternativkarten. Kesselrezepte verwenden die
+neue Referenzillustration mit echten Rezeptdaten. Ladebildschirme und Welt-
+Popups folgen dem Kupferstil; Menuebuttons besitzen mehr Rahmenabstand.
+[Native Aufnahmen, Grafik-Prompt und Pruefung](tools/benchmarks/results/copper-ui-details-cauldron-2026-11-03/README.md).
+
+## Geraete Und Diagnose (Phase 185)
+
+Geraete, Container, Werkbank und Logistikfilter verwenden den Kupferstil mit
+quadratischen Slots und gestapelten Arbeitsbereichen bei schmalen Fenstern.
+Crafting- und Ofenrezepte folgen den aktuellen Vorlagen; die Rezeptansicht
+bleibt als Popup ohne Itembrowser. F1 zeigt rahmenlose Diagnose-Textspalten
+mit echten Spiel-, Welt- und Leistungsdaten. Blockkarte, verbleibende
+Bedienelemente und Multiplayer sind ebenfalls farblich angepasst.
+[Native Aufnahmen, Ofengrafik-Prompt und Pruefung](tools/benchmarks/results/all-surfaces-recipes-debug-2026-11-03/README.md).
+
+## Feste Inventar-Layouts (Phase 188)
+
+Spieler, Container, Geraete, Werkbank und Itembrowser verwenden 28 x 28 grosse
+Slots, Ergebnisse 32 x 32 (logische Pixel). Passende Rahmen und Arbeitsbereiche
+ohne Inhalts-Scrollbar; angeschlossene Truhen stehen links. Die Tonne sitzt
+links unten am Itembrowser, der HUD-Rahmen passt zu den Hotbarslots.
+FPS 0 heisst Unlimited. Auch bei Borderless bleibt die Aufloesung auswaehlbar;
+Dropdowns verwenden einen kupferfarbenen Pfeil.
+[Native Aufnahmen und Pruefbericht](tools/benchmarks/results/fixed-inventory-layout-2026-11-03/README.md).
+
+## Inventargroesse Nach Aufloesung (Phase 189)
+
+Inventare und Hotbar skalieren gemeinsam mit ihren Rahmen und Beschriftungen
+passend zur Aufloesung. In Full HD sind normale Slots bei 100 Prozent
+UI-Massstab etwa 56 Pixel gross, in 1440p etwa 74 Pixel. Angeschlossene Truhen
+und der Abstand zur Hotbar werden beim Einpassen beruecksichtigt.
+[Native Aufnahmen und Pruefbericht](tools/benchmarks/results/responsive-inventory-2026-11-03/README.md).
+
+Inventarbeschriftungen und Bedienicons sind in Phase 190 kompakter. Die
+grossen Slots bleiben erhalten; die Hotbarreihe im Inventar zeigt keine
+redundanten Tastenzahlen mehr.
+[Aktuelle Aufnahmen](tools/benchmarks/results/inventory-typography-2026-11-03/README.md).
+
+Phase 191 verkleinert die HUD-Hotbar um 30 Prozent, vergroessert
+Inventarzellen um 20 Prozent und senkt die Player-/Crafting-Hoehe um
+20 Prozent. Text-/Icondichte ist fuer grosse Aufloesungen gedrosselt.
+[4K-Aufnahmen und Kollisionspruefung](tools/benchmarks/results/inventory-density-collision-2026-11-04/README.md).
+## Claims Und Diplomatie (Phase 195)
+
+Kingdoms besitzen persistente Spieler-/Bot-Claims mit verbundenen Gebieten,
+Reichweite und getrennten Kontingenten fuer geschuetztes und offenes Land.
+Die grosse Karte zeigt ueber **Diplomatie** die Gebiete, Grenzen, Legende,
+Gruender und den ausfuehrenden Akteur; Auswahl und Claim-Aktionen werden
+live aktualisiert. F55/F56 sind abgeschlossen.
+[Bedienung, native Aufnahmen und Bildkorrekturen](tools/benchmarks/results/claims-diplomacy-castle-2026-11-06/README.md).

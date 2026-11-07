@@ -1,0 +1,315 @@
+{
+  "phase": 188,
+  "date": "2026-11-03",
+  "tests": {
+    "passed": 3549,
+    "failed": 0,
+    "ignored": 7
+  },
+  "native": {
+    "captures": 26,
+    "success": true,
+    "os_input": false,
+    "logical_slot_size": 28,
+    "logical_result_size": 32,
+    "authoritative_inventory_unchanged": true,
+    "desktop_borderless_switch_tested": false
+  },
+  "checks": {
+    "workspace_build": "passed",
+    "workspace_clippy_all_targets": "passed",
+    "format": "passed",
+    "diff": "passed",
+    "tilt_css_parser": [
+      "inventory-188.css",
+      "settings-188.css",
+      "hotbar-188.css"
+    ]
+  },
+  "sources": [
+    {
+      "path": "crates/terra-ui/src/frames.rs",
+      "sha256": "205e1ef3092c2415d1ee94992e8e56215d38c2a8900f28b5365c7144daa27d96"
+    },
+    {
+      "path": "crates/terra-ui/src/inventory_tests.rs",
+      "sha256": "2fa2f0773d63141f16b8dd5a7a7656f04a4be4771a9e57eb39d1816678fad5fd"
+    },
+    {
+      "path": "crates/terra-ui/src/menu/view.rs",
+      "sha256": "2b65a9d9c74fbc08363c21f6b44f4468602751c8039e6aca46d8701dbc457edb"
+    },
+    {
+      "path": "crates/terra-ui/src/menu/options.rs",
+      "sha256": "fab829c231424b90ca8117b433763894e8e67c33ee13261d46912b2f1c6da89e"
+    },
+    {
+      "path": "crates/terra-ui/src/menu/tests.rs",
+      "sha256": "679b5ad40e88502c79e7a98f943676dc80c51e352405202338ccd07eff824286"
+    },
+    {
+      "path": "apps/client/src/inventory_reference_smoke.rs",
+      "sha256": "bf2026fb4f0d1bed14a51a9434dfbca690bb91e11dddbab25ce9dd02825de6b9"
+    },
+    {
+      "path": "apps/client/src/inventory_reference_smoke/surfaces.rs",
+      "sha256": "200cd233c45631025d47678e2c97c36b130e0c1088cf901fcfff1f075ba5d94b"
+    },
+    {
+      "path": "src-ui/components/inventory-panel.component.html",
+      "sha256": "414524f69e13740b36ca19a56fc33564f4a6eb58b65bd7a593db9002f96281cf"
+    },
+    {
+      "path": "src-ui/components/item-browser.component.html",
+      "sha256": "2030fd44bbf5adc3cadeed1c399e7d21a265d7538a47481cbbf045485d18eef3"
+    },
+    {
+      "path": "src-ui/components/settings-row.component.html",
+      "sha256": "b8108a97219cc7b84bbfb39ee3586d5fe8ba019f5502996f3979affbce8ea845"
+    },
+    {
+      "path": "src-ui/index.html",
+      "sha256": "2383295421a5afd40809725a70ec6ce3b187bf03d19ce51f52a09898f83b7a73"
+    },
+    {
+      "path": "src-ui/styles/inventory-188.css",
+      "sha256": "8bade879cbfbd7eda33b579e3a79c32cb071668c9797722830e7d447e4beefb7"
+    },
+    {
+      "path": "src-ui/styles/settings-188.css",
+      "sha256": "1c23e05bf19bab452d1e262a5cabeb1ce0448f51518c4d90b013b627738fbe0a"
+    },
+    {
+      "path": "src-ui/styles/hotbar-188.css",
+      "sha256": "49137efd33b957bb6bccc99458b25cb66a8bd769c854226f57d68ce82352a3d3"
+    }
+  ],
+  "screenshots": [
+    {
+      "path": "tools/benchmarks/results/fixed-inventory-layout-2026-11-03/native/fixed-player-compact.png",
+      "sha256": "5cf085b6caced174bdb423d3767847e3cef5243b0f74b8eb943238e63232fc9b",
+      "size": [
+        1025,
+        641
+      ]
+    },
+    {
+      "path": "tools/benchmarks/results/fixed-inventory-layout-2026-11-03/native/fixed-player-wide.png",
+      "sha256": "f9d20a39f80fb21b85d543e52815e5fe6dc73ac3df24ba13ab942a9f8da38e51",
+      "size": [
+        1680,
+        936
+      ]
+    },
+    {
+      "path": "tools/benchmarks/results/fixed-inventory-layout-2026-11-03/native/surface-campfire-compact.png",
+      "sha256": "f5a5b6eed894f11d3fff9b0c21fd921fbc250331a5ac00ba9fb40265c389b1a2",
+      "size": [
+        1025,
+        641
+      ]
+    },
+    {
+      "path": "tools/benchmarks/results/fixed-inventory-layout-2026-11-03/native/surface-campfire-wide.png",
+      "sha256": "2f6ebf0536c8791ef1dd6d501368cf931f5811b74a33a8ced9b031ba6fb94652",
+      "size": [
+        1680,
+        936
+      ]
+    },
+    {
+      "path": "tools/benchmarks/results/fixed-inventory-layout-2026-11-03/native/surface-cauldron-compact.png",
+      "sha256": "d8154a7910bf846d433e9d30591f588009fd69f0e2658c47bbdc68fdb0c54ada",
+      "size": [
+        1025,
+        641
+      ]
+    },
+    {
+      "path": "tools/benchmarks/results/fixed-inventory-layout-2026-11-03/native/surface-cauldron-wide.png",
+      "sha256": "d356cdd5cbf8cc5220559e5c3b683f46eeeddb4bfbd28b2d31c382fb25591c95",
+      "size": [
+        1680,
+        936
+      ]
+    },
+    {
+      "path": "tools/benchmarks/results/fixed-inventory-layout-2026-11-03/native/surface-chest-compact.png",
+      "sha256": "264f4f439db95b25ecaaf97fef3c830d122281bfc92962ff9db9a68c9641a17e",
+      "size": [
+        1025,
+        641
+      ]
+    },
+    {
+      "path": "tools/benchmarks/results/fixed-inventory-layout-2026-11-03/native/surface-chest-wide.png",
+      "sha256": "14674e620dd33787ad09b6bcaf95b5ae839490cb48f0d9fd1f5c30b133ebb2c6",
+      "size": [
+        1680,
+        936
+      ]
+    },
+    {
+      "path": "tools/benchmarks/results/fixed-inventory-layout-2026-11-03/native/surface-crusher-compact.png",
+      "sha256": "aa9d8889c65c9e15fda5a16de329bd2a79af68ffd0d9481c7bcb752a68de9a03",
+      "size": [
+        1025,
+        641
+      ]
+    },
+    {
+      "path": "tools/benchmarks/results/fixed-inventory-layout-2026-11-03/native/surface-crusher-wide.png",
+      "sha256": "94fc819bc709b14a86237df1a255752da82f3badb149bffc6063c56ef6d26649",
+      "size": [
+        1680,
+        936
+      ]
+    },
+    {
+      "path": "tools/benchmarks/results/fixed-inventory-layout-2026-11-03/native/surface-distributor-compact.png",
+      "sha256": "d3198beba247c7f66fefe6d44d47c15f67f6da5d44e18684a704554b192ec5e9",
+      "size": [
+        1025,
+        641
+      ]
+    },
+    {
+      "path": "tools/benchmarks/results/fixed-inventory-layout-2026-11-03/native/surface-distributor-wide.png",
+      "sha256": "07705817eb91751bef4af370fc942e099028519a5f352bb8504c91ad43164561",
+      "size": [
+        1680,
+        936
+      ]
+    },
+    {
+      "path": "tools/benchmarks/results/fixed-inventory-layout-2026-11-03/native/surface-double-chest-compact.png",
+      "sha256": "44f3851c3e1fecd651a12d9578b6eece7c8e73f78a9a5d277c834f6012c45e50",
+      "size": [
+        1025,
+        641
+      ]
+    },
+    {
+      "path": "tools/benchmarks/results/fixed-inventory-layout-2026-11-03/native/surface-double-chest-wide.png",
+      "sha256": "87cd0a0e99a87e43d196921c7ef6846f30e7cd9b4ad065fd65747994cfb88825",
+      "size": [
+        1680,
+        936
+      ]
+    },
+    {
+      "path": "tools/benchmarks/results/fixed-inventory-layout-2026-11-03/native/surface-filtered-funnel-compact.png",
+      "sha256": "da5930408c19b22c4a5cfe3e28ef7b18068ed202042aa90c6617797e60b6a11c",
+      "size": [
+        1025,
+        641
+      ]
+    },
+    {
+      "path": "tools/benchmarks/results/fixed-inventory-layout-2026-11-03/native/surface-filtered-funnel-wide.png",
+      "sha256": "61541f239e9718d3195832dc168428061e8db4a6ef5888631bc8cb560f3f91a5",
+      "size": [
+        1680,
+        936
+      ]
+    },
+    {
+      "path": "tools/benchmarks/results/fixed-inventory-layout-2026-11-03/native/surface-filtered-tunnel-compact.png",
+      "sha256": "40b95e316b7911239a16ff4916ed90c0e6bd0212d6dee7c9f6a85b319e575474",
+      "size": [
+        1025,
+        641
+      ]
+    },
+    {
+      "path": "tools/benchmarks/results/fixed-inventory-layout-2026-11-03/native/surface-filtered-tunnel-wide.png",
+      "sha256": "d8690a9b93c7fd47c27e61e0015e113a5f8370dc361a3d03360547603cb2768c",
+      "size": [
+        1680,
+        936
+      ]
+    },
+    {
+      "path": "tools/benchmarks/results/fixed-inventory-layout-2026-11-03/native/surface-furnace-compact.png",
+      "sha256": "f8a76f24736a6be9d3c3fc55562f8aee38342466727b33d167293fe5adba867f",
+      "size": [
+        1025,
+        641
+      ]
+    },
+    {
+      "path": "tools/benchmarks/results/fixed-inventory-layout-2026-11-03/native/surface-furnace-wide.png",
+      "sha256": "55afd60fed10d9240e4753a03a401805caf0e6fefeb3b056d371b7734212b8cc",
+      "size": [
+        1680,
+        936
+      ]
+    },
+    {
+      "path": "tools/benchmarks/results/fixed-inventory-layout-2026-11-03/native/surface-mixer-compact.png",
+      "sha256": "0c952da58a58754535a702010caba5e669960a0236ec34f2f3504a360dd1a786",
+      "size": [
+        1025,
+        641
+      ]
+    },
+    {
+      "path": "tools/benchmarks/results/fixed-inventory-layout-2026-11-03/native/surface-mixer-wide.png",
+      "sha256": "141c1fa23ed08666b1c3c0bb01bc629b449eb751ee0b8257aecfca301ffae5e2",
+      "size": [
+        1680,
+        936
+      ]
+    },
+    {
+      "path": "tools/benchmarks/results/fixed-inventory-layout-2026-11-03/native/surface-tunnel-compact.png",
+      "sha256": "c65dbbf1c854221dfa2529531522f95e2a53b749d165199098c5cddae358fa18",
+      "size": [
+        1025,
+        641
+      ]
+    },
+    {
+      "path": "tools/benchmarks/results/fixed-inventory-layout-2026-11-03/native/surface-tunnel-wide.png",
+      "sha256": "ea3e03e561995438dc2c94c8abf73b034b0d87f1bcde7fec3ebe9aa9cecdf740",
+      "size": [
+        1680,
+        936
+      ]
+    },
+    {
+      "path": "tools/benchmarks/results/fixed-inventory-layout-2026-11-03/native/surface-workbench-linked-compact.png",
+      "sha256": "5de9a5f5bf76743d1e97347bcbaf832d3f72d5b65d50d2473580ed2e815de7ea",
+      "size": [
+        1025,
+        641
+      ]
+    },
+    {
+      "path": "tools/benchmarks/results/fixed-inventory-layout-2026-11-03/native/surface-workbench-linked-wide.png",
+      "sha256": "1101b27df905e167f6079649154006dce31dd1e96ce6a41322cc56699f94280d",
+      "size": [
+        1680,
+        936
+      ]
+    }
+  ],
+  "references": [
+    {
+      "path": "tools/benchmarks/results/fixed-inventory-layout-2026-11-03/references/layouts.png",
+      "sha256": "c053f57b5fc9f265108e9067e8a4c0379bd89f6818d6b092f69e51c101b2496f",
+      "size": [
+        2916,
+        2014
+      ]
+    },
+    {
+      "path": "tools/benchmarks/results/fixed-inventory-layout-2026-11-03/references/player-inventar.png",
+      "sha256": "e8edfab86401c1492fcb418686442f0de107e62fd38bb9efefe6b4c97c2d2743",
+      "size": [
+        2916,
+        2014
+      ]
+    }
+  ]
+}

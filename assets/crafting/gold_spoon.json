@@ -1,0 +1,1 @@
+{"id":"teramic::gold_spoon","name":"Gold Spoon","station":"hand","output":{"item":{"tool":"gold_spoon"},"count":1},"pattern":{"kind":"shaped","width":1,"height":2,"cells":[{"item":{"mineral":"gold_ingot"},"count":1},{"item":"stick","count":1}]}}

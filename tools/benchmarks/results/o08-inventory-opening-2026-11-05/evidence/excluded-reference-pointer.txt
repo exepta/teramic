@@ -1,0 +1,5 @@
+    raise RuntimeError(f"Pointer did not reach target: {probe['cursor']} versus {(x, y)}")
+RuntimeError: Pointer did not reach target: {'x': 2617, 'y': 789} versus (3807.8693613257474, 663.1105346679688)
+2026-11-05T16:39:28.268028Z ERROR terra_client::inventory_smoke::reference: Native reference UI failed error=Native pointer command failed
+Error: "Client exited with an error"
+{"command": ["target/o08-binaries/terra-client-final-projection", "--smoke-test-inventory"], "wall_seconds": 26.264, "peak_rss_kib": 2015476, "user_cpu_seconds": 68.226, "system_cpu_seconds": 9.213, "peak_drm_memory_vram_kib": null, "peak_drm_memory_gtt_kib": null, "exit_code": 1}

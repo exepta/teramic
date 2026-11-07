@@ -105,7 +105,12 @@ pub(super) fn parts(
         height: size[1],
     };
     let mut geometry: BTreeMap<(Option<u8>, u8), Geometry> = BTreeMap::new();
-    for piece in terra_world::objects::windows::pieces(size[0], size[1]) {
+    let pieces = if terra_world::objects::is_door(id) {
+        terra_world::objects::doors::pieces()
+    } else {
+        terra_world::objects::windows::pieces(size[0], size[1])
+    };
+    for piece in pieces {
         let origin = piece.leaf.map_or(CENTER, |leaf| {
             Vec3::from_array(group.hinge(leaf).map(|v| v as f32))
         });

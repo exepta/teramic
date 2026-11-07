@@ -7,6 +7,8 @@ fn fixture() -> (ChunkStore, EditJournal, Shape) {
     let generator = SectionGenerator::new(
         TerraGenerator::new(WorldConfig {
             seed: WorldSeed(42042),
+            landscape_revision: 3,
+            sea_level: 8.0,
             base_height: 12.0,
             hill_amplitude: 0.0,
             mountain_amplitude: 0.0,
@@ -354,6 +356,7 @@ fn final_save_drains_confirmed_felling_after_streaming_eviction_without_regrowin
             .gameplay()
             .drops
             .iter()
+            .filter(|d| d.stack.item == ItemKind::Block(shape.wood_material))
             .map(|d| usize::from(d.stack.count))
             .sum::<usize>(),
         expected
@@ -389,4 +392,209 @@ fn full_drop_budget_keeps_pending_tree_blocks_and_items_intact() {
         .finish(&mut chunks, &mut journal, &Default::default())
         .unwrap();
     assert_eq!(journal.block(shape.origin), Some(0));
+}
+
+#[test]
+fn deferred_canopy_retains_settlement_domain_after_column_eviction_and_rechecks_kicks_and_capture()
+{
+    use crate::generation::structures::{
+        SettlementLayout, VillageSettlement, VillageSize, VillageStyle,
+    };
+    use terra_core::kingdom::{KingdomPermission, KingdomRole};
+    for change in ["authorized", "kick", "capture"] {
+        let (mut chunks, mut journal, shape) = fixture();
+        let actor = PlayerUuid::from_u128(1);
+        let founder = PlayerUuid::from_u128(2);
+        let all: Vec<_> = shape.wood.iter().chain(&shape.leaves).copied().collect();
+        let low: [i64; 3] =
+            std::array::from_fn(|axis| all.iter().map(|p| p[axis]).min().unwrap() - 1);
+        let mut high: [i64; 3] =
+            std::array::from_fn(|axis| all.iter().map(|p| p[axis]).max().unwrap() + 1);
+        // The only explicit claim is the distant settlement center; every tree
+        // cell is protected by the captured immutable footprint, not its chunk.
+        let center = [high[0].div_euclid(16) * 16 + 32, shape.origin[1], low[2]];
+        high[0] = center[0] + 1;
+        let settlement = Arc::new(VillageSettlement {
+            id: 0x199,
+            size: VillageSize::Small,
+            layout: SettlementLayout::Village,
+            style: VillageStyle::Temperate,
+            center,
+            bounds: [low, high],
+            homes: Vec::new(),
+            services: Vec::new(),
+            residents: Vec::new(),
+        });
+        let coordinate = [
+            shape.origin[0].div_euclid(16),
+            shape.origin[2].div_euclid(16),
+        ];
+        let column = chunks.prepared_column(coordinate).unwrap();
+        chunks.set_prepared_column_for_test(coordinate, None);
+        let column = Arc::try_unwrap(column)
+            .ok()
+            .expect("fixture owns the prepared column");
+        chunks.set_prepared_column_for_test(
+            coordinate,
+            Some(Arc::new(
+                column.with_settlement_for_test(settlement.clone()),
+            )),
+        );
+        let realm = journal
+            .gameplay_mut()
+            .kingdoms
+            .found(founder, center, "Captured woodland")
+            .unwrap();
+        journal.gameplay_mut().kingdoms.join(actor, realm).unwrap();
+        journal
+            .gameplay_mut()
+            .kingdoms
+            .set_role(founder, realm, actor, KingdomRole::Member)
+            .unwrap();
+        let plan = Plan::prepare(&chunks, &journal, shape.origin).unwrap();
+        assert_eq!(plan.domains, vec![settlement.domain()]);
+        assert!(plan.allowed_for(actor, &chunks, &journal));
+        let leaves = plan.leaves.clone();
+        assert!(!leaves.is_empty());
+        assert!(leaves.iter().all(|p| {
+            journal
+                .gameplay()
+                .kingdoms
+                .claim_at(terra_core::kingdom::claim_chunk(*p))
+                .is_none()
+        }));
+        let mut queue = Queue::default();
+        assert!(queue.enqueue(plan, actor));
+        let mut now = 0.0;
+        while !queue.0.front().unwrap().wood.is_empty() {
+            queue
+                .advance(&mut chunks, &mut journal, &Default::default(), now)
+                .unwrap();
+            now += 0.1;
+        }
+        assert!(leaves.iter().all(|p| journal.block(*p).is_none()));
+        // Evict the real prepared columns and every canopy section before the
+        // delayed leaf commit, as a moving player's streaming window does.
+        let columns: std::collections::HashSet<_> = all
+            .iter()
+            .map(|p| [p[0].div_euclid(16), p[2].div_euclid(16)])
+            .collect();
+        for column in columns {
+            chunks.set_prepared_column_for_test(column, None);
+        }
+        chunks.loaded.clear();
+        assert_eq!(chunks.village_settlements().count(), 0);
+        match change {
+            "kick" => journal
+                .gameplay_mut()
+                .kingdoms
+                .kick(founder, realm, actor)
+                .unwrap(),
+            "capture" => {
+                journal
+                    .gameplay_mut()
+                    .kingdoms
+                    .dissolve(founder, realm)
+                    .unwrap();
+                journal
+                    .gameplay_mut()
+                    .kingdoms
+                    .found(PlayerUuid::from_u128(3), center, "New captor")
+                    .unwrap();
+            }
+            _ => {}
+        }
+        assert!(
+            crate::kingdom_access::can_use(
+                &journal.gameplay().kingdoms,
+                &chunks,
+                actor,
+                KingdomPermission::Break,
+                leaves[0]
+            ),
+            "evicted live metadata alone looks like wilderness"
+        );
+        queue
+            .finish(&mut chunks, &mut journal, &Default::default())
+            .unwrap();
+        if change == "authorized" {
+            assert!(
+                leaves.iter().all(|p| journal.block(*p) == Some(0)),
+                "authorized unloaded canopy must still finish completely"
+            );
+        } else {
+            assert!(
+                leaves.iter().all(|p| journal.block(*p).is_none()),
+                "revoked or captured domain must deny every deferred write"
+            );
+        }
+    }
+}
+
+#[test]
+fn shared_natural_green_leaves_return_the_trunks_species_sapling_in_real_felling_drops() {
+    for (wood_material, expected) in [
+        (6, terra_core::TreeSpecies::Oak),
+        (36, terra_core::TreeSpecies::Spruce),
+    ] {
+        let root = [0, 16, 0];
+        let crown = [1, 18, 0];
+        let section = global_to_section(root).0;
+        let mut data = BlockSection::empty(section).unwrap();
+        data.set_block(global_to_section(root).1, wood_material)
+            .unwrap();
+        data.set_block(global_to_section(crown).1, 7).unwrap();
+        let mut chunks = ChunkStore::default();
+        chunks.loaded.insert(
+            section,
+            LoadedSection {
+                data,
+                mesh: None,
+                mesh_epoch: 0,
+                water_epoch: 0,
+                water: None,
+                props: vec![],
+            },
+        );
+        let mut journal = EditJournal::default();
+        let plan = Plan {
+            planted: None,
+            species: species(wood_material, 7),
+            origin: root,
+            foot: root,
+            material: wood_material,
+            leaves_material: 7,
+            wood: vec![root],
+            leaves: vec![crown],
+            revisions: vec![(section, 0)],
+            domains: vec![],
+        };
+        let mut queue = Queue::default();
+        assert!(queue.enqueue(plan, PlayerUuid::from_u128(1)));
+        queue
+            .finish(&mut chunks, &mut journal, &Default::default())
+            .unwrap();
+        assert_eq!(
+            journal
+                .gameplay()
+                .drops
+                .iter()
+                .filter(|d| d.stack.item == ItemKind::Prop(expected.sapling()))
+                .map(|d| d.stack.count)
+                .sum::<u16>(),
+            1
+        );
+        let other = if expected == terra_core::TreeSpecies::Oak {
+            terra_core::TreeSpecies::Spruce
+        } else {
+            terra_core::TreeSpecies::Oak
+        };
+        assert!(
+            !journal
+                .gameplay()
+                .drops
+                .iter()
+                .any(|d| d.stack.item == ItemKind::Prop(other.sapling()))
+        );
+    }
 }

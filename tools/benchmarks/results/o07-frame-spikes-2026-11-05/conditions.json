@@ -1,0 +1,50 @@
+{
+  "copied_binaries": false,
+  "copied_native_saves": false,
+  "copied_technical_configurations": [
+    "audio.toml",
+    "client.toml",
+    "controls.toml",
+    "gameplay.toml",
+    "graphics.toml",
+    "multiplayer.toml",
+    "server.toml",
+    "world.toml"
+  ],
+  "game_modes": {
+    "clear": "survival",
+    "flight": "survival with authoritative flight permission",
+    "inventory": "survival",
+    "placement": "explicit Creative fixture override",
+    "rain": "survival",
+    "village": "survival"
+  },
+  "gpu_memory_kind": "Linux DRM allocation samples/peaks, not GPU frame execution time",
+  "gpu_timestamps_enabled": false,
+  "graphics_config": "configs/graphics.toml",
+  "omission_note": "Original manifests retain the hashes. User identity fixtures/saved server lists are not copied; benchmark profiles and world saves are not retained.",
+  "omitted_user_state_configurations": [
+    "profiles/tester-a.toml",
+    "profiles/tester-b.toml",
+    "servers.toml"
+  ],
+  "physical_resolution": [
+    2562,
+    1440
+  ],
+  "queue_scope": "Worst-frame contexts are correlations; cumulative upload deferrals and allocator capacities include startup. Nested/parallel CPU scopes are not additive.",
+  "resolution_note": "Paired runs use2562x1440 because the1.5x desktop scale rounded the original2560 request to2561 and failed the native physical-resolution contract; width increased by2pixels without reducing visual quality.",
+  "resource_scope": "Process RSS/DRM/CPU totals include startup. Timeline CPU percent uses100percent per logical core; native cpu_capacity_percent is a separately normalized measure.",
+  "warm_camera": [
+    -585.5,
+    33.65,
+    976.5
+  ],
+  "warm_look_at": [
+    -583.5,
+    36.6,
+    981.5
+  ],
+  "world_config": "configs/world.toml",
+  "world_seed": 42042
+}

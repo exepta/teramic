@@ -5,6 +5,7 @@ use terra_voxel::VoxelSample;
 
 #[derive(Clone)]
 pub struct TerraGenerator {
+    pub(super) advanced: std::sync::Arc<super::advanced::AdvancedSampler>,
     pub(super) rivers: std::sync::Arc<super::rivers::RiverCache>,
     pub(super) cave_portals: std::sync::Arc<super::caves::CaveCache>,
     pub(super) cave_biomes: std::sync::Arc<super::cave_biomes::CaveBiomeCache>,
@@ -12,6 +13,7 @@ pub struct TerraGenerator {
     pub(super) oases: std::sync::Arc<super::oases::OasisCache>,
     pub(super) lakes: std::sync::Arc<super::lakes::LakeCache>,
     pub(super) landscape: super::landscape::LandscapeSampler,
+    pub(super) planted_appearances: std::sync::Arc<super::vegetation::PlantedAppearanceSource>,
     pub(super) tree_appearances: std::sync::Arc<super::vegetation::TreeAppearanceCache>,
     pub(super) structures: std::sync::Arc<super::structures::StructureCache>,
     config: WorldConfig,
@@ -28,6 +30,7 @@ impl TerraGenerator {
         let seed = config.seed.0;
         let climate = ClimateSampler::new(seed, config.biome_scale, config.ocean_scale);
         Ok(Self {
+            advanced: std::sync::Arc::new(super::advanced::AdvancedSampler::new(&config)),
             rivers: Default::default(),
             cave_portals: Default::default(),
             cave_biomes: Default::default(),
@@ -36,6 +39,7 @@ impl TerraGenerator {
             lakes: Default::default(),
             landscape: super::landscape::LandscapeSampler::new(seed),
             tree_appearances: Default::default(),
+            planted_appearances: Default::default(),
             structures: Default::default(),
             config,
             hills: Perlin::new(layer_seed(seed, 1)),
@@ -71,19 +75,26 @@ impl TerraGenerator {
         let depth = height - y;
         let (mut density, formation) = self.cave_density_with_column(position, column);
         let mut material = self.column_material(column, depth, density);
-        if self.config.cave_structure_revision >= 3 && self.config.caves && depth > 5.0 {
-            if let Some(decoration) = self.cave_ecology_material(position, column, density) {
-                material = decoration;
-                density = density.min(-0.5);
+        let reserved_air = self.connected_hydrology()
+            && column
+                .river_cavity
+                .or(column.cave_cavity)
+                .is_some_and(|[floor, ceiling]| y > floor && y < ceiling);
+        if !reserved_air {
+            if self.config.cave_structure_revision >= 3 && self.config.caves && depth > 5.0 {
+                if let Some(decoration) = self.cave_ecology_material(position, column, density) {
+                    material = decoration;
+                    density = density.min(-0.5);
+                }
+            } else {
+                self.legacy_cave_material(
+                    position,
+                    column,
+                    depth,
+                    formation,
+                    (&mut density, &mut material),
+                );
             }
-        } else {
-            self.legacy_cave_material(
-                position,
-                column,
-                depth,
-                formation,
-                (&mut density, &mut material),
-            );
         }
         let ground = (column.height - 0.5).floor();
         if density > 0.0
@@ -106,6 +117,9 @@ impl TerraGenerator {
         let depth = height - y;
         // Implicit signed density field, not an exact Euclidean distance after CSG/noise.
         let mut density = y - height;
+        if self.config.landscape_revision >= 5 {
+            density = self.advanced.density([x, y, z], column, density);
+        }
         if let Some([floor, ceiling]) = column.river_cavity {
             density = density.max((y - floor).min(ceiling - y));
         }
@@ -151,6 +165,27 @@ impl TerraGenerator {
             };
         let formation = density > 0.0 && formation_density <= 0.0;
         density = density.min(formation_density);
+        if self.connected_hydrology()
+            && let Some([floor, ceiling]) = column.river_cavity.or(column.cave_cavity)
+        {
+            // Chambers and mineral formations run after connector carving.
+            // Reserve its air and support bands after that CSG so a chamber
+            // wall cannot close a passage or remove its two-metre solid floor.
+            let roof_band = (ceiling - y).max(y - ceiling - 3.0);
+            let clipped = density.min(roof_band).min((y - floor).max(floor - 2.0 - y));
+            let corridor = (y - floor).min(ceiling - y);
+            density = (y - height).max(clipped).max(corridor);
+        }
+        if self.config.landscape_revision >= 4
+            && column.biome.weights.ocean > 0.45
+            && column.water_level.is_some_and(|level| {
+                (level - self.config.sea_level).abs() < 0.01 && level - height > 3.0
+            })
+        {
+            // Apply after every chamber/connector CSG, otherwise a later carve can
+            // reopen the seabed. Deeper caves remain intact below this solid roof.
+            density = (y - height).max(density.min(depth - 6.0));
+        }
         if self.config.bounded_world && y < -120.0 {
             density = density.min(-0.5);
         }

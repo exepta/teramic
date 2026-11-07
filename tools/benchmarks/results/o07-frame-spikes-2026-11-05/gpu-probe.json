@@ -1,0 +1,285 @@
+{
+  "adapters": [
+    {
+      "backend": "Vulkan",
+      "device": 29605,
+      "device_pci_bus_id": "0000:0c:00.0",
+      "device_type": "DiscreteGpu",
+      "driver": "radv",
+      "driver_info": "Mesa 26.2.5-arch3.1",
+      "name": "AMD Radeon RX 6950 XT (RADV NAVI21)",
+      "vendor": 4098
+    }
+  ],
+  "classification": "Separate initial clear 18-second timestamp diagnostic; not part of the six paired native cases.",
+  "evidence": "evidence/gpu-diagnostic-probe.txt",
+  "gpu_pass_series": [
+    {
+      "diagnostic": "render/atmosphere_environment/elapsed_gpu",
+      "mean": 0.004984385593220339,
+      "p95": 0.00516,
+      "p99": 0.00528,
+      "samples": 1888,
+      "unit": "ms"
+    },
+    {
+      "diagnostic": "render/atmosphere_luts/elapsed_gpu",
+      "mean": 0.27089205508474506,
+      "p95": 0.27736,
+      "p99": 0.30512,
+      "samples": 1888,
+      "unit": "ms"
+    },
+    {
+      "diagnostic": "render/auxiliary_views/elapsed_gpu",
+      "mean": 0.0030148728813559327,
+      "p95": 0.0032,
+      "p99": 0.00344,
+      "samples": 1888,
+      "unit": "ms"
+    },
+    {
+      "diagnostic": "render/bin_unpacking/elapsed_gpu",
+      "mean": 0.13444542372881357,
+      "p95": 0.13772,
+      "p99": 0.14748,
+      "samples": 1888,
+      "unit": "ms"
+    },
+    {
+      "diagnostic": "render/clustering/elapsed_gpu",
+      "mean": 0.03479203389830499,
+      "p95": 0.0352,
+      "p99": 0.03568,
+      "samples": 1888,
+      "unit": "ms"
+    },
+    {
+      "diagnostic": "render/early prepass/elapsed_gpu",
+      "mean": 1.2935841313559313,
+      "p95": 1.42448,
+      "p99": 1.66984,
+      "samples": 1888,
+      "unit": "ms"
+    },
+    {
+      "diagnostic": "render/early_mesh_preprocessing/elapsed_gpu",
+      "mean": 0.030606249999999977,
+      "p95": 0.03152,
+      "p99": 0.032,
+      "samples": 1888,
+      "unit": "ms"
+    },
+    {
+      "diagnostic": "render/late prepass/elapsed_gpu",
+      "mean": 0.0755012076271187,
+      "p95": 0.22324,
+      "p99": 0.26144,
+      "samples": 1888,
+      "unit": "ms"
+    },
+    {
+      "diagnostic": "render/late_mesh_preprocessing/elapsed_gpu",
+      "mean": 0.026043707627118596,
+      "p95": 0.02812,
+      "p99": 0.02868,
+      "samples": 1888,
+      "unit": "ms"
+    },
+    {
+      "diagnostic": "render/lightprobe_copy/elapsed_gpu",
+      "mean": 0.008328622881355904,
+      "p95": 0.0088,
+      "p99": 0.00952,
+      "samples": 1888,
+      "unit": "ms"
+    },
+    {
+      "diagnostic": "render/lightprobe_downsampling_first_pass/elapsed_gpu",
+      "mean": 0.004216271186440671,
+      "p95": 0.00452,
+      "p99": 0.00464,
+      "samples": 1888,
+      "unit": "ms"
+    },
+    {
+      "diagnostic": "render/lightprobe_downsampling_second_pass/elapsed_gpu",
+      "mean": 0.002412161016949159,
+      "p95": 0.00256,
+      "p99": 0.00264,
+      "samples": 1888,
+      "unit": "ms"
+    },
+    {
+      "diagnostic": "render/lightprobe_irradiance_map/elapsed_gpu",
+      "mean": 0.3762612923728817,
+      "p95": 0.37796,
+      "p99": 0.55008,
+      "samples": 1888,
+      "unit": "ms"
+    },
+    {
+      "diagnostic": "render/lightprobe_radiance_map/elapsed_gpu",
+      "mean": 0.20104629237288127,
+      "p95": 0.21508,
+      "p99": 0.227,
+      "samples": 1888,
+      "unit": "ms"
+    },
+    {
+      "diagnostic": "render/main_opaque_pass_3d/elapsed_gpu",
+      "mean": 2.2813062711864416,
+      "p95": 2.45084,
+      "p99": 2.67416,
+      "samples": 1888,
+      "unit": "ms"
+    },
+    {
+      "diagnostic": "render/main_transmissive_pass_3d/elapsed_gpu",
+      "mean": 0.003563771186440678,
+      "p95": 0.00396,
+      "p99": 0.00408,
+      "samples": 1888,
+      "unit": "ms"
+    },
+    {
+      "diagnostic": "render/main_transparent_pass_3d/elapsed_gpu",
+      "mean": 0.18560262711864406,
+      "p95": 0.18724,
+      "p99": 0.18992,
+      "samples": 1888,
+      "unit": "ms"
+    },
+    {
+      "diagnostic": "render/mip_generation::early_downsample_depth/elapsed_gpu",
+      "mean": 0.03212915254237291,
+      "p95": 0.03296,
+      "p99": 0.03348,
+      "samples": 1888,
+      "unit": "ms"
+    },
+    {
+      "diagnostic": "render/per_view_shadow_pass/elapsed_gpu",
+      "mean": 0.016965084745762703,
+      "p95": 0.0174,
+      "p99": 0.01756,
+      "samples": 1888,
+      "unit": "ms"
+    },
+    {
+      "diagnostic": "render/render_sky/elapsed_gpu",
+      "mean": 0.0865594067796611,
+      "p95": 0.08724,
+      "p99": 0.0894,
+      "samples": 1888,
+      "unit": "ms"
+    },
+    {
+      "diagnostic": "render/sparse buffer updates/elapsed_gpu",
+      "mean": 0.002832605932203396,
+      "p95": 0.00308,
+      "p99": 0.0032,
+      "samples": 1888,
+      "unit": "ms"
+    },
+    {
+      "diagnostic": "render/taa/elapsed_gpu",
+      "mean": 0.18654349576271198,
+      "p95": 0.18944,
+      "p99": 0.198,
+      "samples": 1888,
+      "unit": "ms"
+    },
+    {
+      "diagnostic": "render/tonemapping/elapsed_gpu",
+      "mean": 0.07515724576271213,
+      "p95": 0.07584,
+      "p99": 0.07632,
+      "samples": 1888,
+      "unit": "ms"
+    },
+    {
+      "diagnostic": "render/ui/elapsed_gpu",
+      "mean": 0.05534436440677958,
+      "p95": 0.05708,
+      "p99": 0.05824,
+      "samples": 1888,
+      "unit": "ms"
+    },
+    {
+      "diagnostic": "render/uniform_allocation/elapsed_gpu",
+      "mean": 0.2085934957627115,
+      "p95": 0.2172,
+      "p99": 0.2348,
+      "samples": 1888,
+      "unit": "ms"
+    },
+    {
+      "diagnostic": "render/upscaling/elapsed_gpu",
+      "mean": 0.030903072033898235,
+      "p95": 0.03152,
+      "p99": 0.03204,
+      "samples": 1888,
+      "unit": "ms"
+    }
+  ],
+  "limitations": [
+    "Timestamped pass series may overlap/nest and must not be added to obtain total GPU frame time.",
+    "No GPU-time before/after improvement is established.",
+    "DRM VRAM/GTT resource values and mesh-buffer capacity are separate memory accounting."
+  ],
+  "native_wall_summary": {
+    "average_fps": 108.10936160133656,
+    "benchmark_mode": "integrated",
+    "camera": "(Vec3(8.5, 114.630005, 24.5",
+    "chunk_animations": "ChunkAnimationStatus { queued: 0, queued_in_view: 0, active: 0, waiting_for_draw: 0, waiting_materials: [0, 0, 0, 0], started_after_draw: 2634, completed: 2634, peak_active: 96, retiring_roots: 0, retiring_meshes: 0, retiring_materials: 0, retirement_overflows: 0 }",
+    "controller_calls": 4679,
+    "controller_max_ms": 0.48724,
+    "controller_mean_ms": 0.0372440252190639,
+    "deferred_upload_batches": 882,
+    "far_cache_bytes": 0,
+    "far_groups": 0,
+    "far_source_batches": 0,
+    "frames_below_32_fps": 0,
+    "initial_load_seconds": 28.985453673,
+    "loaded_active_props": 100404,
+    "loaded_sections": 11792,
+    "maximum_fps": 145.89679844065503,
+    "mesh_assets": 20269,
+    "mesh_draw_submissions": null,
+    "minimum_fps": 64.30195374413236,
+    "occluded_sections": 0,
+    "p95_frame_ms": 11.439114,
+    "p99_frame_ms": 12.844702,
+    "peak_admitted_upload_bytes": 10556040,
+    "peak_admitted_upload_vertices": 223310,
+    "physical_resolution": [
+      2562,
+      1440
+    ],
+    "point_lights": 0,
+    "prop_batches": 1586,
+    "prop_composition_jobs": 1451,
+    "prop_composition_worker_seconds": 0.9642220440000021,
+    "rendered_sections": 7015,
+    "represented_props": 100340,
+    "requested_physical_resolution": [
+      2562,
+      1440
+    ],
+    "resident_memory_kib": 2230588,
+    "sample_frames": 1946,
+    "sample_window_seconds": 18.0,
+    "shadowed_point_lights": 0,
+    "terrain_composition_jobs": 7031,
+    "terrain_composition_max_ms": 41.640679999999996,
+    "terrain_composition_worker_seconds": 4.558760744000006,
+    "visible_mesh_entities": 13449,
+    "water_tiles": 75,
+    "worst_frame_ms": 15.551627
+  },
+  "original_log_sha256": "3bf027d7a5a848f81685a327f4f2f3c21aefdc8ec340810ae18e244c52ce5dfb",
+  "paired_after_probe_available": false,
+  "series_count": 26,
+  "source": "/tmp/teramic-o07-i3w2xd60/runs/before-probe.log"
+}

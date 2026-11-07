@@ -1,0 +1,1 @@
+{"id":"teramic::wood_pipe","name":"Wood Pipe","station":"workbench","output":{"item":{"block":163},"count":4},"pattern":{"kind":"shapeless","ingredients":[{"item":{"block":16},"wood":true,"count":3},{"item":"stick","count":1}]}}

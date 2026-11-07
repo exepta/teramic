@@ -1,0 +1,19 @@
+{
+  "apps/client/src/inventory_reference_smoke.rs": "b25ecf649767be4244f5699949253c97ab6fb01eeabcece001e00cd912f5f760",
+  "apps/client/src/preview_demand.rs": "a2a033c1a1d59066b5d503669130ecb570cb25e15fd6920e5d5ebd6edd217095",
+  "crates/terra-core/src/furnace.rs": "e3b31e391303c14566b5ef27e8d50f492900cfd4895a672828e94916618cf1bd",
+  "crates/terra-ui/src/crafting.rs": "1ff9e0c3677d1ce22db938bce669c7759f7a1d78adddcbf16329cb8955a061dd",
+  "crates/terra-ui/src/crafting_browser_tests.rs": "db18f52777e7bbcf9aed1e65f026e22a61d2a65059ee8daa38ae25297058d7f5",
+  "crates/terra-ui/src/inventory.rs": "6711916842ea4a92f2a7683ea9cd9d4cb8138bf147a4f1a41e67e9db292d9fe1",
+  "crates/terra-ui/src/inventory_tests.rs": "391e8e374e04047345761fd0db31aa796ab8c84cd06955805eb7d5c0fe444ba7",
+  "crates/terra-ui/src/inventory_view.rs": "22f6b5a111e17c7c4a4479934be396a6c1764e28489afdf6a7a41c52fd6ac196",
+  "src-ui/components/crafting-panel.component.rs": "3056b73357b0c5b8171083cdda074aff240217192c3dceecda13618b3426b8c6",
+  "src-ui/components/inventory-category.component.html": "4785ab274dfa1b2b53faf002e5492963386ecf8be35f867e60ab9237e5a7eda4",
+  "src-ui/components/inventory-panel.component.html": "5166bfeac692768c9db66e7c1bab5783eed6fd8a4aa274896fa5a33fd7fa5286",
+  "src-ui/components/inventory-panel.component.rs": "3d4f74741c6a1c0f11a533677b3837bcb344a53e8007d43bc072ef23af23726b",
+  "src-ui/components/item-browser.component.html": "5ca541406a257a0a18deffad7a5b3eddb5cc18b9f9f225f97cb51018e69bd7bf",
+  "src-ui/components/recipe-category.component.html": "2d92fa7c9d833730c8383bf2cbc6151afc99dc721c0bbc15533598d7d329160b",
+  "src-ui/components/recipe-inspector.component.html": "84a0320f886a065e3076c3ae4bc7a3bbbdf8e5860dfb894aca064072d652dc59",
+  "src-ui/components/recipe-inspector.component.rs": "241745c68e2ff5a3f725cb9f7d65c74e9ab5be7f4b1535f5c48ed5f8958090db",
+  "src-ui/styles/inventory-reference.css": "ba4db97d646cf87816aa06872b2d3e68edff6eeb16b5e431aef5d0c9e9c2c322"
+}

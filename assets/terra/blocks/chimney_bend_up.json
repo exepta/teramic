@@ -3,7 +3,7 @@
   "id": 63,
   "name": "Rising Chimney Bend",
   "description": "A forty-five-degree rising bend connecting the bottom to the facing side.",
-  "creative_category": "decoration",
+  "creative_category": "technic",
   "render_kind": "custom_mesh",
   "struct_block": true,
   "model_layout": "scene",

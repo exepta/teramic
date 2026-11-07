@@ -1,12 +1,5 @@
-<div class="game-menu-panel">
-  <ornate-frame></ornate-frame>
-  <div class="pause-heading"><icon name="leaf" size="32" /><h1>TERAMIC</h1><p>Game Menu</p></div>
-  <div class="pause-layout">
-    <div class="pause-actions">@for (button of menuView.buttons; track button.id) { <menu-button></menu-button> }</div>
-    <div class="session-details">
-      <p class="session-eyebrow">Current World</p><div class="world-symbol"><icon name="mountain" size="68" /></div>
-      <h2>{{ sessionView.title }}</h2><p>{{ sessionView.mode }}</p><p>Seed: {{ sessionView.seed }}</p><p>Session: {{ sessionView.elapsed }}</p>
-      <div class="session-rule"></div><p>{{ sessionView.player }}</p><p class="session-uuid">{{ sessionView.uuid }}</p><p class="identity-label">Local Profile</p>
-    </div>
-  </div>
+<div id="pause-menu" class="main-menu painted-main-menu painted-pause-menu">
+  <img class="painted-main-logo" src="tilt-ui://assets/menu-logo-182.png" alt="Teramic" />
+  <div id="pause-menu-actions" class="main-actions painted-main-actions">@for (button of menuView.buttons; track button.id) { <menu-button></menu-button> }</div>
+  <div class="painted-pause-world"><p>{{ sessionView.title }} · {{ sessionView.mode }}</p></div>
 </div>

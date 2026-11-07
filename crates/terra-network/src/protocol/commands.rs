@@ -49,7 +49,7 @@ pub const CATALOGUE: &[CommandDescription] = &[
         description: "Find a biome and a safe teleport destination.",
     },
     CommandDescription {
-        usage: "/locate struct <teramic::village|teramic::ruin|teramic::mine>",
+        usage: "/locate struct <teramic::village|teramic::ruin|teramic::mine|teramic::kingdom|teramic::outpost>",
         description: "Find a generated structure; Creative also supports air and water landings.",
     },
     CommandDescription {
@@ -95,6 +95,14 @@ mod locate_tests {
         assert_eq!(
             suggestions("/locate struct teramic::v", &[]),
             ["/locate struct teramic::village"]
+        );
+        assert_eq!(
+            suggestions("/locate struct teramic::k", &[]),
+            ["/locate struct teramic::kingdom"]
+        );
+        assert_eq!(
+            console_suggestions("locate struct teramic::o", &[]),
+            ["locate struct teramic::outpost"]
         );
         assert_eq!(
             console_suggestions("locate struct teramic::m", &[]),
@@ -143,12 +151,13 @@ mod rule_tests {
             "/gamerule game_time_speed inf",
             "/gamerule nope 1",
             "/gamerule list 0",
-            "/gamerule list 2",
+            "/gamerule list 3",
         ] {
             assert!(parse(command).is_err(), "{command}");
         }
         assert_eq!(parse("/gamerule list"), Ok(Some(Command::GameRuleList(1))));
-        assert_eq!(rule_page(1).len(), 3);
+        assert_eq!(rule_page(1).len(), 8);
+        assert_eq!(rule_page(2), &[terra_core::GameRule::Pvp]);
         assert!(rule_page(1).len() <= 8);
         assert_eq!(
             console_suggestions("gamerule game_time_speed 0.", &[]),
@@ -570,6 +579,12 @@ pub fn suggestions(prefix: &str, players: &[String]) -> Vec<String> {
                 terra_core::GameRule::SleepPercentage => &["0", "25", "50", "100"],
                 terra_core::GameRule::SeasonSwapInterval => &["1", "7", "14", "28"],
                 terra_core::GameRule::GameTimeSpeed => &["0", "0.5", "1", "2"],
+                terra_core::GameRule::KeepInventory
+                | terra_core::GameRule::DaylightCycle
+                | terra_core::GameRule::WeatherCycle
+                | terra_core::GameRule::MobGriefing
+                | terra_core::GameRule::FireSpread
+                | terra_core::GameRule::Pvp => &["0", "1"],
             };
             values
                 .iter()
@@ -665,10 +680,16 @@ pub fn suggestions(prefix: &str, players: &[String]) -> Vec<String> {
         .map(|v| format!("/locate biome {v}"))
         .collect()
     } else if prefix.starts_with("/locate struct ") {
-        ["teramic::village", "teramic::ruin", "teramic::mine"]
-            .iter()
-            .map(|v| format!("/locate struct {v}"))
-            .collect()
+        [
+            "teramic::village",
+            "teramic::ruin",
+            "teramic::mine",
+            "teramic::kingdom",
+            "teramic::outpost",
+        ]
+        .iter()
+        .map(|v| format!("/locate struct {v}"))
+        .collect()
     } else if prefix.starts_with("/locate ") {
         vec!["/locate biome ".into(), "/locate struct ".into()]
     } else {

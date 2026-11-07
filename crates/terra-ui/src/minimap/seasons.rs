@@ -10,7 +10,7 @@ struct CalendarMaterial {
 }
 impl UiMaterial for CalendarMaterial {
     fn fragment_shader() -> ShaderRef {
-        "shaders/terra_calendar_ui.wgsl".into()
+        "shaders/terra_calendar_ui.wesl".into()
     }
 }
 
@@ -130,6 +130,121 @@ fn bind(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn native_calendar_motion_preserves_shared_html_state_and_live_text_still_updates() {
+        use super::super::MiniMapView;
+        use tilt_ui::{TiltText, TiltUiCodePlugin, TiltUiComponentRuntimeSet, UiSharedValues};
+
+        let mut app = App::new();
+        app.add_plugins(TiltUiCodePlugin)
+            .init_resource::<Calendar>()
+            .init_resource::<Assets<CalendarMaterial>>()
+            .insert_resource(MiniMapView {
+                visible: true,
+                expanded: true,
+                seasons: true,
+                clock: "10:00 Spring".into(),
+                ..default()
+            })
+            .add_systems(Update, bind.after(TiltUiComponentRuntimeSet::Reactivity));
+        let ring = app
+            .world_mut()
+            .spawn((
+                tilt_ui::ElementId("map-season-ring".into()),
+                ImageNode::default(),
+            ))
+            .id();
+        let label = app
+            .world_mut()
+            .spawn((
+                Text::new(""),
+                TiltText {
+                    value: "{{ miniMapView.clock }}".into(),
+                },
+            ))
+            .id();
+        app.update();
+        let shared_tick = app
+            .world()
+            .get_resource_ref::<UiSharedValues>()
+            .unwrap()
+            .last_changed();
+        let snapshot = app
+            .world()
+            .resource::<UiSharedValues>()
+            .get("miniMapView")
+            .unwrap()
+            .clone();
+        assert!(snapshot.get("season_cycle").is_none());
+        assert!(snapshot.get("frame_rotation").is_none());
+        assert_eq!(app.world().get::<Text>(label).unwrap().0, "10:00 Spring");
+        let material = app
+            .world()
+            .get::<MaterialNode<CalendarMaterial>>(ring)
+            .unwrap()
+            .0
+            .clone();
+
+        for frame in 1..=120 {
+            let phase = frame as f32 / 123.0;
+            let rotation = frame as f32 * -0.013;
+            {
+                let mut view = app.world_mut().resource_mut::<MiniMapView>();
+                view.season_cycle = phase;
+                view.frame_rotation = rotation;
+            }
+            app.update();
+            // This is the actual TiltUI shared resource: native uniforms must
+            // not advance its change tick or replace its serialized state.
+            assert_eq!(
+                app.world()
+                    .get_resource_ref::<UiSharedValues>()
+                    .unwrap()
+                    .last_changed(),
+                shared_tick
+            );
+            assert_eq!(
+                app.world().resource::<UiSharedValues>().get("miniMapView"),
+                Some(&snapshot)
+            );
+            assert_eq!(app.world().get::<Text>(label).unwrap().0, "10:00 Spring");
+            assert_eq!(
+                app.world()
+                    .get::<MaterialNode<CalendarMaterial>>(ring)
+                    .unwrap()
+                    .0,
+                material
+            );
+            assert_eq!(
+                app.world()
+                    .resource::<Assets<CalendarMaterial>>()
+                    .get(&material)
+                    .unwrap()
+                    .calendar,
+                Vec4::new(phase, rotation, 0.0, 0.0)
+            );
+        }
+        app.world_mut().resource_mut::<MiniMapView>().clock = "10:01 Spring".into();
+        app.update();
+        assert_ne!(
+            app.world()
+                .get_resource_ref::<UiSharedValues>()
+                .unwrap()
+                .last_changed(),
+            shared_tick
+        );
+        assert_eq!(app.world().get::<Text>(label).unwrap().0, "10:01 Spring");
+        assert_eq!(
+            app.world()
+                .resource::<UiSharedValues>()
+                .get("miniMapView")
+                .unwrap()["clock"],
+            "10:01 Spring"
+        );
+        assert_eq!(app.world().resource::<Assets<CalendarMaterial>>().len(), 1);
+    }
+
     #[test]
     fn calendar_uses_one_asset_across_seasons_and_recreated_tilt_nodes() {
         let mut app = App::new();

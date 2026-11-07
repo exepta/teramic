@@ -1,6 +1,7 @@
 //! A bounded pool of real PBR lights, discovered only when section geometry changes.
 mod soft_core;
 mod sunlight;
+mod updates;
 use crate::blocks::{BlockAssets, definitions::BlockLight};
 use bevy::prelude::*;
 pub use soft_core::TorchLightingStatus;
@@ -33,11 +34,17 @@ struct Lamps {
     focus: Option<[i64; 3]>,
     dirty: bool,
     next: f32,
+    updates: updates::State,
 }
 type LampEntities<'w, 's> = Query<
     'w,
     's,
-    (Entity, &'static mut VoxelLamp, &'static mut Transform),
+    (
+        Entity,
+        &'static mut VoxelLamp,
+        &'static mut Transform,
+        &'static mut PointLight,
+    ),
     Without<terra_player::TerraCamera>,
 >;
 
@@ -98,28 +105,41 @@ fn select(
     cameras: Query<&Transform, With<terra_player::TerraCamera>>,
     mut lamps: LampEntities,
     mut cache: ResMut<Lamps>,
-    soft_core: Res<TorchLightingStatus>,
+    (soft_core, messages): (Res<TorchLightingStatus>, updates::Messages),
 ) {
     let _scope = terra_core::profiling::ScopeTimer::new("lights.select");
-    cache.dirty |= chunks.is_changed()
-        || journal.is_changed()
-        || assets.is_changed()
-        || graphics.as_ref().is_some_and(|g| g.is_changed());
-    if time.elapsed_secs() < cache.next && !journal.is_changed() {
+    let incremental = matches!(*access, WorldAccess::Replica { .. }) && messages.available();
+    if cache.updates.enabled != incremental || incremental && access.is_changed() {
+        updates::clear(&mut cache);
+        cache.updates = updates::State::default();
+        cache.updates.enabled = incremental;
+        cache.dirty = true;
+    }
+    // Cursors must advance every frame, even between the selection ticks.
+    let urgent = incremental && updates::collect(&mut cache, &chunks, &messages);
+    if !incremental {
+        cache.dirty |= chunks.is_changed()
+            || journal.is_changed()
+            || assets.is_changed()
+            || graphics.as_ref().is_some_and(|g| g.is_changed());
+    }
+    let Some(camera) = cameras.iter().next().filter(|_| access.ready()) else {
+        for (entity, _, _, _) in &mut lamps {
+            commands.entity(entity).despawn();
+        }
+        updates::clear(&mut cache);
+        return;
+    };
+    if time.elapsed_secs() < cache.next && !(urgent || !incremental && journal.is_changed()) {
         return;
     }
     cache.next = time.elapsed_secs() + 0.1;
-    let Some(camera) = cameras.iter().next().filter(|_| access.ready()) else {
-        for (entity, _, _) in &mut lamps {
-            commands.entity(entity).despawn();
-        }
-        cache.sections.clear();
-        cache.emitters.clear();
-        cache.focus = None;
-        return;
-    };
     let definitions: BTreeMap<_, _> = assets.lights().collect();
     if definitions.is_empty() {
+        for (entity, _, _, _) in &mut lamps {
+            commands.entity(entity).despawn();
+        }
+        updates::clear(&mut cache);
         return;
     }
     let focus = camera.translation;
@@ -128,7 +148,9 @@ fn select(
         .map_or(192.0, |g| f32::from(g.render_distance) * 16.0)
         + 28.0;
     let focus_cell = (focus / 16.0).floor().as_i64vec3().to_array();
-    if cache.dirty || cache.focus != Some(focus_cell) {
+    if incremental {
+        updates::refresh(&mut cache, &chunks, &journal, &definitions, focus, reach);
+    } else if cache.dirty || cache.focus != Some(focus_cell) {
         cache.focus = Some(focus_cell);
         discover(&mut cache, &chunks, &journal, &definitions, focus, reach);
     }
@@ -141,15 +163,36 @@ fn select(
         CaveQuality::High => 12,
         CaveQuality::Ultra => 16,
     };
-    let mut selected = select_emitters(&cache.emitters, &chunks, &journal, focus, budget);
-    for (entity, mut lamp, mut transform) in &mut lamps {
+    let selected = select_emitters(&cache.emitters, &chunks, &journal, focus, budget);
+    sync_lamps(
+        &mut commands,
+        &mut lamps,
+        selected,
+        &chunks,
+        &journal,
+        &soft_core,
+        graphics.as_deref(),
+    );
+}
+
+fn sync_lamps(
+    commands: &mut Commands,
+    lamps: &mut LampEntities,
+    mut selected: BTreeMap<[i64; 3], BlockLight>,
+    chunks: &ChunkStore,
+    journal: &EditJournal,
+    soft_core: &TorchLightingStatus,
+    graphics: Option<&GraphicsConfig>,
+) {
+    let mut reusable = Vec::new();
+    for (entity, mut lamp, mut transform, _) in lamps.iter_mut() {
         if !retain_definition(&mut lamp, &mut selected) {
-            commands.entity(entity).despawn();
+            reusable.push(entity);
             continue;
         }
         {
             let position = emitter_location(
-                &journal,
+                journal,
                 lamp.0,
                 lamp.1,
                 location(
@@ -165,46 +208,48 @@ fn select(
         }
     }
     for (p, light) in selected {
+        let position = emitter_location(
+            journal,
+            p,
+            light,
+            location(
+                p,
+                journal.block(p).or_else(|| chunks.block_at(p)) == Some(40),
+                |p| chunks.block_at(p).map(|m| journal.block(p).unwrap_or(m)),
+            ),
+        );
+        let point_light = PointLight {
+            color: Color::srgb(light.color[0], light.color[1], light.color[2]),
+            intensity: light.intensity,
+            range: light.range,
+            radius: soft_core.radius(light),
+            shadow_maps_enabled: source_shadows(light, true, graphics),
+            shadow_depth_bias: 0.035,
+            shadow_normal_bias: 0.16,
+            ..default()
+        };
+        // Keep the main entity and its six Bevy shadow views when a different
+        // emitter enters the bounded pool. Only a smaller pool retires slots.
+        if let Some(entity) = reusable.pop()
+            && let Ok((_, mut lamp, mut transform, mut existing_light)) = lamps.get_mut(entity)
+        {
+            *lamp = VoxelLamp(p, light, position);
+            transform.translation = position;
+            *existing_light = point_light;
+            continue;
+        }
         commands.spawn((
             Name::new("Voxel local light"),
-            VoxelLamp(
-                p,
-                light,
-                emitter_location(
-                    &journal,
-                    p,
-                    light,
-                    location(
-                        p,
-                        journal.block(p).or_else(|| chunks.block_at(p)) == Some(40),
-                        |p| chunks.block_at(p).map(|m| journal.block(p).unwrap_or(m)),
-                    ),
-                ),
-            ),
+            VoxelLamp(p, light, position),
             bevy::camera::visibility::RenderLayers::default()
                 .with(crate::meshing::shadows::LAYER)
                 .with(crate::transitions::QUEUE_SHADOW_LAYER),
-            PointLight {
-                color: Color::srgb(light.color[0], light.color[1], light.color[2]),
-                intensity: light.intensity,
-                range: light.range,
-                radius: soft_core.radius(light),
-                shadow_maps_enabled: source_shadows(light, true, graphics.as_deref()),
-                shadow_depth_bias: 0.035,
-                shadow_normal_bias: 0.16,
-                ..default()
-            },
-            Transform::from_translation(emitter_location(
-                &journal,
-                p,
-                light,
-                location(
-                    p,
-                    journal.block(p).or_else(|| chunks.block_at(p)) == Some(40),
-                    |p| chunks.block_at(p).map(|m| journal.block(p).unwrap_or(m)),
-                ),
-            )),
+            point_light,
+            Transform::from_translation(position),
         ));
+    }
+    for entity in reusable {
+        commands.entity(entity).despawn();
     }
 }
 
@@ -278,6 +323,7 @@ fn discover(
     focus: Vec3,
     reach: f32,
 ) {
+    let _scope = terra_core::profiling::ScopeTimer::new("lights.discover");
     cache.sections.retain(|p, _| chunks.loaded.contains_key(p));
     cache.dirty = false;
     let mut immediate = Vec::new();
@@ -304,10 +350,8 @@ fn discover(
                 continue;
             }
             let neighbors = neighbor_mask(section, chunks);
-            if old.neighbors != neighbors {
-                old.lamps = exposed_sources(&old.sources, chunks, journal);
-                old.neighbors = neighbors;
-            }
+            old.lamps = exposed_sources(&old.sources, chunks, journal);
+            old.neighbors = neighbors;
             continue;
         }
         if cache.sections.contains_key(&section) || journal.revision(section) > 0 {
@@ -327,30 +371,9 @@ fn discover(
         discoveries.truncate(128);
     }
     for (section, epoch, _) in immediate.into_iter().chain(discoveries) {
-        let data = &chunks.loaded[&section].data;
-        let Ok(mut sources) = discover_sources(data, journal, definitions) else {
-            cache.sections.remove(&section);
+        if !refresh_section(cache, chunks, journal, definitions, section, epoch) {
             cache.dirty = true;
-            continue;
-        };
-        let mut props = chunks.loaded[&section].props.clone();
-        journal.apply_prop_removals(section, &mut props);
-        sources.extend(props.iter().filter_map(scarecrow_source));
-        let neighbors = if sources.is_empty() {
-            0
-        } else {
-            neighbor_mask(section, chunks)
-        };
-        let found = exposed_sources(&sources, chunks, journal);
-        cache.sections.insert(
-            section,
-            Cached {
-                epoch,
-                neighbors,
-                sources,
-                lamps: found,
-            },
-        );
+        }
     }
     // Rendering and first-person torch audio need actual emitters, not a scan
     // through every empty streamed section on every frame.
@@ -361,6 +384,40 @@ fn discover(
             .values()
             .flat_map(|c| c.lamps.iter().copied()),
     );
+}
+
+fn refresh_section(
+    cache: &mut Lamps,
+    chunks: &ChunkStore,
+    journal: &EditJournal,
+    definitions: &BTreeMap<u16, BlockLight>,
+    section: SectionPos,
+    epoch: u64,
+) -> bool {
+    let data = &chunks.loaded[&section];
+    let Ok(mut sources) = discover_sources(&data.data, journal, definitions) else {
+        cache.sections.remove(&section);
+        return false;
+    };
+    let mut props = data.props.clone();
+    journal.apply_prop_removals(section, &mut props);
+    sources.extend(props.iter().filter_map(scarecrow_source));
+    let neighbors = if sources.is_empty() {
+        0
+    } else {
+        neighbor_mask(section, chunks)
+    };
+    let lamps = exposed_sources(&sources, chunks, journal);
+    cache.sections.insert(
+        section,
+        Cached {
+            epoch,
+            neighbors,
+            sources,
+            lamps,
+        },
+    );
+    true
 }
 
 fn retain_definition(lamp: &mut VoxelLamp, selected: &mut BTreeMap<[i64; 3], BlockLight>) -> bool {
@@ -409,6 +466,12 @@ fn emitter_location(journal: &EditJournal, p: [i64; 3], light: BlockLight, ordin
 }
 
 fn mounted_location(journal: &EditJournal, p: [i64; 3], ordinary: Vec3) -> Vec3 {
+    if journal.block(p) == Some(terra_core::lantern::LANTERN) {
+        return Vec3::from_array(
+            terra_core::lantern::emission(journal.object_state(p).unwrap_or_default().facing)
+                .map(|v| v as f32),
+        ) + Vec3::from_array(p.map(|v| v as f32));
+    }
     if journal.block(p) != Some(40) {
         return ordinary;
     }
@@ -454,6 +517,11 @@ fn discover_sources(
 ) -> Result<Vec<([i64; 3], u16, BlockLight)>, terra_voxel::blocks::BlockError> {
     let origin = data.position().origin()?;
     let cells = effective_cells(data, journal)?;
+    // Most newly streamed sections contain no emitters. Slice membership keeps
+    // those scans contiguous instead of doing a tree lookup for every voxel.
+    if !definitions.keys().any(|material| cells.contains(material)) {
+        return Ok(Vec::new());
+    }
     let mut sources = Vec::new();
     for (index, &material) in cells.iter().enumerate() {
         let Some(&light) = definitions.get(&material) else {
@@ -479,7 +547,7 @@ fn exposed_sources(
     sources
         .iter()
         .filter_map(|&(p, material, light)| {
-            (material == 40
+            (matches!(material, 40 | terra_core::lantern::LANTERN)
                 || NEIGHBORS.into_iter().any(|d| {
                     let q = std::array::from_fn(|i| p[i] + d[i]);
                     chunks.block_at(q).map(|m| journal.block(q).unwrap_or(m)) == Some(0)
@@ -568,24 +636,41 @@ fn flicker(
     for (lamp, mut light, mut transform) in &mut lamps {
         let phase = (lamp.0[0] as f32 * 0.71 + lamp.0[2] as f32 * 0.39) % 10.0;
         let t = time.elapsed_secs();
-        light.intensity = lamp.1.intensity
+        let intensity = lamp.1.intensity
             * soft_core.flux(lamp.1)
             * gain
             * cave_gain(lamp.1, cave.blend)
             * (1.0
                 + lamp.1.flicker
                     * ((t * 4.1 + phase).sin() * 0.65 + (t * 7.3 + phase).sin() * 0.35));
-        light.color = Color::srgb_from_array(lamp.1.color);
-        light.range = lamp.1.range;
-        light.radius = soft_core.radius(lamp.1);
-        light.shadow_maps_enabled = source_shadows(lamp.1, true, graphics.as_deref())
+        let color = Color::srgb_from_array(lamp.1.color);
+        let radius = soft_core.radius(lamp.1);
+        let shadow_maps_enabled = source_shadows(lamp.1, true, graphics.as_deref())
             && sunlight.as_ref().is_none_or(|state| state.shadows(lamp.0));
-        transform.translation = lamp.2
+        if light.intensity != intensity {
+            light.intensity = intensity;
+        }
+        if light.color != color {
+            light.color = color;
+        }
+        if light.range != lamp.1.range {
+            light.range = lamp.1.range;
+        }
+        if light.radius != radius {
+            light.radius = radius;
+        }
+        if light.shadow_maps_enabled != shadow_maps_enabled {
+            light.shadow_maps_enabled = shadow_maps_enabled;
+        }
+        let translation = lamp.2
             + Vec3::new(
                 (t * 2.7 + phase).sin() * 0.045,
                 (t * 5.1 + phase).sin() * 0.018,
                 (t * 3.3 + phase).cos() * 0.045,
             ) * if lamp.1.flicker > 0.0 { 1.0 } else { 0.0 };
+        if transform.translation != translation {
+            transform.translation = translation;
+        }
     }
 }
 
@@ -628,6 +713,16 @@ fn held(
                         Vec3::from_array(furnace.position.map(|v| v as f32))
                             + Vec3::new(0.5, 0.55, 0.5)
                     })
+                    .chain(
+                        session
+                            .campfires
+                            .iter()
+                            .filter(|fire| fire.lit)
+                            .map(|fire| {
+                                Vec3::from_array(fire.position.map(|v| v as f32))
+                                    + Vec3::new(0.5, 0.4, 0.5)
+                            }),
+                    )
                     .filter(|position| {
                         bodies.iter().next().is_some_and(|body| {
                             position.distance_squared(body.translation) < 14.0_f32.powi(2)
@@ -658,7 +753,12 @@ fn held(
             && selected
                 .0
                 .and_then(|slot| session.inventory.slot(usize::from(slot)))
-                .is_some_and(|s| s.item == terra_core::ItemKind::Block(40))
+                .is_some_and(|s| {
+                    matches!(
+                        s.item,
+                        terra_core::ItemKind::Block(40 | terra_core::lantern::LANTERN)
+                    )
+                })
         {
             desired.push((None, body.translation + Vec3::new(0.3, 0.45, -0.25)));
         }
@@ -735,6 +835,149 @@ fn held(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn mounted_lantern_lights_follow_the_authored_glass_for_every_mount() {
+        let mut journal = EditJournal::default();
+        let p = [-16, 19, -1];
+        journal.record(p, terra_core::lantern::LANTERN).unwrap();
+        let definition = light_definitions()[&terra_core::lantern::LANTERN];
+        for facing in [0, 4, 5, 6, 7, 8] {
+            journal
+                .set_object_state(
+                    p,
+                    Some(terra_world::edits::BlockObjectState {
+                        facing,
+                        ..Default::default()
+                    }),
+                )
+                .unwrap();
+            let point = emitter_location(&journal, p, definition, Vec3::ZERO);
+            let expected = Vec3::from_array(p.map(|v| v as f32))
+                + Vec3::from_array(terra_core::lantern::emission(facing).map(|v| v as f32));
+            assert!(point.distance(expected) < 1e-5);
+            assert!(!definition.shadows);
+        }
+    }
+
+    #[derive(Resource, Default)]
+    struct SelectedLamps(BTreeMap<[i64; 3], BlockLight>);
+
+    fn apply_selected_lamps(
+        mut commands: Commands,
+        mut lamps: LampEntities,
+        selected: Res<SelectedLamps>,
+        chunks: Res<ChunkStore>,
+        journal: Res<EditJournal>,
+        soft_core: Res<TorchLightingStatus>,
+    ) {
+        sync_lamps(
+            &mut commands,
+            &mut lamps,
+            selected.0.clone(),
+            &chunks,
+            &journal,
+            &soft_core,
+            None,
+        );
+    }
+
+    #[test]
+    fn eight_light_pool_slots_survive_source_changes_and_only_shrink_when_needed() {
+        fn slots(world: &mut World) -> BTreeMap<[i64; 3], Entity> {
+            world
+                .query::<(Entity, &VoxelLamp)>()
+                .iter(world)
+                .map(|(entity, lamp)| (lamp.0, entity))
+                .collect()
+        }
+        let definition = light_definitions()[&40];
+        assert!(definition.shadows);
+        let initial: BTreeMap<_, _> = (0..8).map(|x| ([x, 2, 3], definition)).collect();
+        let mut journal = EditJournal::default();
+        for x in (0..8).chain(32..40).chain(80..84) {
+            journal.record([x, 2, 3], 40).unwrap();
+        }
+        let mut app = App::new();
+        app.init_resource::<ChunkStore>()
+            .insert_resource(journal)
+            .init_resource::<TorchLightingStatus>()
+            .insert_resource(SelectedLamps(initial))
+            .add_systems(Update, apply_selected_lamps);
+        app.update();
+        let original = slots(app.world_mut());
+        let original_ids: std::collections::HashSet<_> = original.values().copied().collect();
+        assert_eq!(original_ids.len(), 8);
+
+        let replacement = BlockLight {
+            range: definition.range + 2.0,
+            intensity: definition.intensity * 0.8,
+            color: [0.9, 0.6, 0.3],
+            ..definition
+        };
+        let selected: BTreeMap<_, _> = (0..8).map(|x| ([x + 32, 2, 3], replacement)).collect();
+        app.world_mut().resource_mut::<SelectedLamps>().0 = selected.clone();
+        app.update();
+        let reassigned = slots(app.world_mut());
+        assert_eq!(
+            reassigned.keys().collect::<Vec<_>>(),
+            selected.keys().collect::<Vec<_>>()
+        );
+        assert_eq!(
+            reassigned
+                .values()
+                .copied()
+                .collect::<std::collections::HashSet<_>>(),
+            original_ids,
+            "new emitter positions must reuse the same eight shadow-view owners"
+        );
+        for (&position, &entity) in &reassigned {
+            let light = app.world().get::<PointLight>(entity).unwrap();
+            assert!(light.shadow_maps_enabled);
+            assert_eq!(light.range, replacement.range);
+            assert_eq!(light.intensity, replacement.intensity);
+            assert_eq!(light.color, Color::srgb_from_array(replacement.color));
+            assert_eq!(
+                app.world().get::<Transform>(entity).unwrap().translation,
+                Vec3::from_array(position.map(|v| v as f32)) + Vec3::new(0.5, 0.98, 0.5)
+            );
+        }
+
+        let retained: BTreeMap<_, _> = reassigned.iter().take(2).map(|(&p, &e)| (p, e)).collect();
+        let smaller: BTreeMap<_, _> = retained
+            .keys()
+            .copied()
+            .chain([[80, 2, 3], [81, 2, 3]])
+            .map(|p| (p, replacement))
+            .collect();
+        app.world_mut().resource_mut::<SelectedLamps>().0 = smaller;
+        app.update();
+        let shrunk = slots(app.world_mut());
+        assert_eq!(shrunk.len(), 4);
+        assert!(shrunk.values().all(|entity| original_ids.contains(entity)));
+        assert!(
+            retained
+                .iter()
+                .all(|(position, entity)| shrunk.get(position) == Some(entity))
+        );
+
+        app.world_mut()
+            .resource_mut::<SelectedLamps>()
+            .0
+            .extend([([82, 2, 3], replacement), ([83, 2, 3], replacement)]);
+        app.update();
+        let grown = slots(app.world_mut());
+        assert_eq!(grown.len(), 6);
+        assert!(
+            shrunk
+                .iter()
+                .all(|(position, entity)| grown.get(position) == Some(entity))
+        );
+        app.world_mut().resource_mut::<SelectedLamps>().0.clear();
+        app.update();
+        assert!(slots(app.world_mut()).is_empty());
+    }
+
     fn light_definitions() -> BTreeMap<u16, BlockLight> {
         crate::blocks::definitions::BlockLibrary::load(
             &terra_core::asset_directory().join("terra/blocks"),
@@ -952,6 +1195,77 @@ mod tests {
     }
 
     #[test]
+    fn static_lamps_keep_change_detection_clean_but_respond_to_exposure_changes() {
+        #[derive(Resource, Default)]
+        struct Changes {
+            lights: usize,
+            transforms: usize,
+        }
+        fn observe(
+            lights: Query<(), (With<VoxelLamp>, Changed<PointLight>)>,
+            transforms: Query<(), (With<VoxelLamp>, Changed<Transform>)>,
+            mut changes: ResMut<Changes>,
+        ) {
+            changes.lights = lights.iter().count();
+            changes.transforms = transforms.iter().count();
+        }
+        let mut definition = light_definitions()[&40];
+        definition.flicker = 0.0;
+        let mut app = App::new();
+        app.init_resource::<Time>()
+            .init_resource::<TorchLightingStatus>()
+            .init_resource::<super::super::CaveState>()
+            .init_resource::<Changes>()
+            .add_systems(Update, (flicker, observe.after(flicker)));
+        let camera = app
+            .world_mut()
+            .spawn((
+                terra_player::TerraCamera,
+                bevy::camera::Exposure { ev100: 6.0 },
+            ))
+            .id();
+        let position = Vec3::new(2.0, 3.0, 4.0);
+        let lamp = app
+            .world_mut()
+            .spawn((
+                VoxelLamp([2, 3, 4], definition, position),
+                PointLight::default(),
+                Transform::default(),
+            ))
+            .id();
+        app.update();
+        assert_eq!(
+            app.world().get::<PointLight>(lamp).unwrap().intensity,
+            definition.intensity
+        );
+        assert_eq!(
+            app.world().get::<Transform>(lamp).unwrap().translation,
+            position
+        );
+        assert_eq!(app.world().resource::<Changes>().lights, 1);
+        assert_eq!(app.world().resource::<Changes>().transforms, 1);
+        for _ in 0..2 {
+            app.world_mut()
+                .resource_mut::<Time>()
+                .advance_by(std::time::Duration::from_millis(100));
+            app.update();
+            assert_eq!(app.world().resource::<Changes>().lights, 0);
+            assert_eq!(app.world().resource::<Changes>().transforms, 0);
+        }
+        app.world_mut()
+            .get_mut::<bevy::camera::Exposure>(camera)
+            .unwrap()
+            .ev100 = 7.0;
+        app.update();
+        assert_eq!(
+            app.world().get::<PointLight>(lamp).unwrap().intensity,
+            definition.intensity * 2.0
+        );
+        assert_eq!(app.world().resource::<Changes>().lights, 1);
+        assert_eq!(app.world().resource::<Changes>().transforms, 0);
+    }
+
+    #[test]
     fn shadow_quality_switches_existing_lamps_without_removing_or_dimming_them() {
         let mut definition = light_definitions()[&40];
         definition.flicker = 0.0;
@@ -1126,6 +1440,43 @@ mod tests {
         let placed = discover_sources(&data, &journal, &definitions).unwrap();
         assert_eq!(placed.len(), 1);
         assert_eq!(placed[0].0, [-13, 3, 4]);
+    }
+
+    #[test]
+    fn emitter_prefilter_preserves_sparse_imports_and_pending_edits() {
+        let definitions = light_definitions();
+        let section = SectionPos::new(-3, -1, 2);
+        let mut blocks = vec![3; 4096];
+        let mut expected = Vec::new();
+        for (index, &material) in definitions.keys().enumerate() {
+            let cell = [index % 16, index / 16 % 16, index / 256];
+            blocks[cell[0] + cell[1] * 16 + cell[2] * 256] = material;
+            expected.push((section.global_block(cell).unwrap(), material));
+        }
+        let data = terra_voxel::BlockSection::from_blocks(section, 0, blocks).unwrap();
+        let mut journal = EditJournal::default();
+        let found = discover_sources(&data, &journal, &definitions).unwrap();
+        assert_eq!(found.len(), expected.len());
+        for (position, material) in &expected {
+            assert!(
+                found
+                    .iter()
+                    .any(|&(p, m, _)| p == *position && m == *material)
+            );
+        }
+        for (position, _) in expected {
+            journal.record(position, 0).unwrap();
+        }
+        assert!(
+            discover_sources(&data, &journal, &definitions)
+                .unwrap()
+                .is_empty()
+        );
+        let position = section.global_block([15, 0, 0]).unwrap();
+        journal.record(position, 40).unwrap();
+        let found = discover_sources(&data, &journal, &definitions).unwrap();
+        assert_eq!(found.len(), 1);
+        assert_eq!((found[0].0, found[0].1), (position, 40));
     }
 
     #[test]

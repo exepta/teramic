@@ -159,6 +159,8 @@ impl LocateTarget {
             Self::Structure(StructureKind::Village) => "Village",
             Self::Structure(StructureKind::Ruin) => "Ruin",
             Self::Structure(StructureKind::Mine) => "Mine",
+            Self::Structure(StructureKind::Kingdom) => "Kingdom",
+            Self::Structure(StructureKind::Outpost) => "Outpost",
         }
     }
 }
@@ -262,8 +264,8 @@ impl ChatWorld<'_, '_> {
     fn set_weather(&mut self, pattern: terra_core::WeatherPattern, snow_level: u8) {
         self.weather.set_pattern(pattern);
         self.weather.snow_level = snow_level.clamp(1, 5);
-        if self.clock.paused {
-            // An explicit admin edit still takes effect when automatic world time is frozen.
+        if self.clock.paused || !self.config.world.game_rules.weather_cycle {
+            // An explicit admin edit still takes effect when automatic time or weather is frozen.
             let transition = self.weather.transition_seconds;
             self.weather.advance(transition, self.config.world.seed.0);
         }
@@ -636,6 +638,11 @@ fn finish_teleport(
     sender.send::<ControlChannel>(ServerControl::Teleport {
         tick: world.server.tick,
         state: Box::new(PlayerState {
+            kingdom_heraldry: world
+                .journal
+                .gameplay()
+                .kingdoms
+                .heraldry_for_member(peer.uuid),
             gender: peer.gender,
             generation,
             player: peer.id,
@@ -1105,6 +1112,11 @@ fn change_mode(
             allow_flight: peer.can_fly(&world.config),
             tick: world.server.tick,
             state: Box::new(PlayerState {
+                kingdom_heraldry: world
+                    .journal
+                    .gameplay()
+                    .kingdoms
+                    .heraldry_for_member(peer.uuid),
                 gender: peer.gender,
                 generation,
                 player: peer.id,
@@ -1143,21 +1155,31 @@ fn parse_command(text: &str) -> Result<Option<LocateTarget>, &'static str> {
         return Ok(None);
     }
     if parts.len() < 3 || parts[0] != "/locate" {
-        return Err("Usage: /locate biome <name> | /locate struct <teramic::village|ruin|mine>.");
+        return Err(
+            "Usage: /locate biome <name> | /locate struct <teramic::village|ruin|mine|kingdom|outpost>.",
+        );
     }
     if parts[1] == "struct" {
         if parts.len() != 3 {
-            return Err("Usage: /locate struct <teramic::village|teramic::ruin|teramic::mine>.");
+            return Err(
+                "Usage: /locate struct <teramic::village|teramic::ruin|teramic::mine|teramic::kingdom|teramic::outpost>.",
+            );
         }
         return match parts[2].to_ascii_lowercase().as_str() {
             "teramic::village" => Ok(Some(LocateTarget::Structure(StructureKind::Village))),
             "teramic::ruin" => Ok(Some(LocateTarget::Structure(StructureKind::Ruin))),
             "teramic::mine" => Ok(Some(LocateTarget::Structure(StructureKind::Mine))),
-            _ => Err("Unknown structure. Use teramic::village, teramic::ruin or teramic::mine."),
+            "teramic::kingdom" => Ok(Some(LocateTarget::Structure(StructureKind::Kingdom))),
+            "teramic::outpost" => Ok(Some(LocateTarget::Structure(StructureKind::Outpost))),
+            _ => Err(
+                "Unknown structure. Use teramic::village, teramic::ruin, teramic::mine, teramic::kingdom or teramic::outpost.",
+            ),
         };
     }
     if parts[1] != "biome" {
-        return Err("Usage: /locate biome <name> | /locate struct <teramic::village|ruin|mine>.");
+        return Err(
+            "Usage: /locate biome <name> | /locate struct <teramic::village|ruin|mine|kingdom|outpost>.",
+        );
     }
     let biome = match parts[2..].join("_").to_ascii_lowercase().as_str() {
         "ocean" => BiomeKind::Ocean,
@@ -1279,7 +1301,13 @@ fn locate_structure(
                 if Instant::now() >= deadline {
                     break 'search;
                 }
-                let Some(site) = terrain.structure_site([region[0] + dx, region[1] + dz]) else {
+                let candidate = [region[0] + dx, region[1] + dz];
+                if matches!(kind, StructureKind::Kingdom | StructureKind::Outpost)
+                    && terrain.royal_site_candidate(candidate) != Some(kind)
+                {
+                    continue;
+                }
+                let Some(site) = terrain.structure_site(candidate) else {
                     continue;
                 };
                 if site.kind != kind
@@ -1427,6 +1455,8 @@ mod tests {
             ("teramic::village", StructureKind::Village),
             ("teramic::ruin", StructureKind::Ruin),
             ("teramic::mine", StructureKind::Mine),
+            ("teramic::kingdom", StructureKind::Kingdom),
+            ("teramic::outpost", StructureKind::Outpost),
         ] {
             assert_eq!(
                 parse_command(&format!("/locate struct {id}")),
@@ -1454,6 +1484,7 @@ mod tests {
     fn structure_results_use_real_plans_and_are_stable_at_negative_coordinates() {
         let terrain = TerraGenerator::new(terra_core::WorldConfig {
             seed: terra_core::WorldSeed(42042),
+            landscape_revision: 1,
             caves: false,
             trees: false,
             structures_revision: 2,

@@ -1,11 +1,11 @@
 use super::*;
 
 pub(super) fn build(role: u8) -> Sculpt {
-    let mut b = Sculpt::default();
-    b.block([0.0, 0.0, 0.0], [0.475, 0.425, 0.40], SKIN);
-    b.block([0.0, -0.025, -0.05], [0.425, 0.375, 0.35], LIGHT);
-    b.block([0.0, -0.1875, -0.04], [0.375, 0.05, 0.325], LIGHT);
-    b.block([0.0, -0.055, -0.235], [0.05, 0.05, 0.05], tint(SKIN, 1.04));
+    let mut sculpture = Sculpt::default();
+    sculpture.block([0.0, 0.0, 0.0], [0.475, 0.425, 0.40], SKIN);
+    sculpture.block([0.0, -0.025, -0.05], [0.425, 0.375, 0.35], LIGHT);
+    sculpture.block([0.0, -0.1875, -0.04], [0.375, 0.05, 0.325], LIGHT);
+    sculpture.block([0.0, -0.055, -0.235], [0.05, 0.05, 0.05], tint(SKIN, 1.04));
     let hair = match role {
         3 => [0.73, 0.29, 0.065],
         7 | 9 => [0.50, 0.19, 0.075],
@@ -13,40 +13,40 @@ pub(super) fn build(role: u8) -> Sculpt {
         _ => HAIR,
     };
     for side in [-1.0, 1.0] {
-        b.block([side * 0.255, -0.04, -0.025], [0.075, 0.125, 0.10], SKIN);
-        b.block([side * 0.265, -0.025, -0.075], [0.05, 0.075, 0.05], LIGHT);
-        b.block(
+        sculpture.block([side * 0.255, -0.04, -0.025], [0.075, 0.125, 0.10], SKIN);
+        sculpture.block([side * 0.265, -0.025, -0.075], [0.05, 0.075, 0.05], LIGHT);
+        sculpture.block(
             [side * 0.125, 0.0, -0.225],
             [0.075, 0.10, 0.025],
             [0.99, 0.96, 0.87],
         );
-        b.block(
+        sculpture.block(
             [side * 0.125, -0.0125, -0.25],
             [0.05, 0.075, 0.025],
             [0.14, 0.095, 0.055],
         );
-        b.block([side * 0.10, 0.025, -0.26], [0.025; 3], [0.99, 0.96, 0.90]);
-        b.block([side * 0.12, 0.09, -0.2375], [0.10, 0.025, 0.025], hair);
-        b.block(
+        sculpture.block([side * 0.10, 0.025, -0.26], [0.025; 3], [0.99, 0.96, 0.90]);
+        sculpture.block([side * 0.12, 0.09, -0.2375], [0.10, 0.025, 0.025], hair);
+        sculpture.block(
             [side * 0.175, -0.10, -0.2125],
             [0.075, 0.025, 0.025],
             [0.94, 0.66, 0.49],
         );
     }
-    b.block(
+    sculpture.block(
         [0.0, -0.1375, -0.225],
         [0.075, 0.025, 0.025],
         [0.68, 0.34, 0.23],
     );
-    b.block([0.0375, -0.125, -0.23], [0.025; 3], [0.68, 0.34, 0.23]);
+    sculpture.block([0.0375, -0.125, -0.23], [0.025; 3], [0.68, 0.34, 0.23]);
 
     // Authored tufts overlap in the sculpture, not in the final mesh. Stepped
     // strands silhouette the hair from every direction, including the back.
-    b.block([0.0, 0.18, 0.025], [0.50, 0.125, 0.425], tint(hair, 0.80));
+    sculpture.block([0.0, 0.18, 0.025], [0.50, 0.125, 0.425], tint(hair, 0.80));
     for x in -2_i32..=2 {
         for z in -2_i32..=2 {
             let h = (x * 17 + z * 11 + i32::from(role) * 3).unsigned_abs();
-            b.block(
+            sculpture.block(
                 [
                     x as f32 * 0.095,
                     0.23 + (h % 3) as f32 * 0.025,
@@ -57,7 +57,7 @@ pub(super) fn build(role: u8) -> Sculpt {
             );
         }
         let length = 0.075 + ((x + 4) % 3) as f32 * 0.05;
-        b.block(
+        sculpture.block(
             [x as f32 * 0.09, 0.15 - length * 0.25, -0.23],
             [0.10, length, 0.075],
             tint(hair, 0.94 + ((x + 5) % 3) as f32 * 0.09),
@@ -65,7 +65,7 @@ pub(super) fn build(role: u8) -> Sculpt {
     }
     for side in [-1.0, 1.0] {
         for i in 0..4 {
-            b.block(
+            sculpture.block(
                 [
                     side * 0.24,
                     0.08 - (i % 2) as f32 * 0.05,
@@ -77,7 +77,7 @@ pub(super) fn build(role: u8) -> Sculpt {
         }
         if matches!(role, 3 | 7) {
             for i in 0..4 {
-                b.block(
+                sculpture.block(
                     [
                         side * (0.23 + (i % 2) as f32 * 0.025),
                         -0.03 - i as f32 * 0.065,
@@ -90,16 +90,16 @@ pub(super) fn build(role: u8) -> Sculpt {
         }
     }
     for i in -2_i32..=2 {
-        b.block(
+        sculpture.block(
             [i as f32 * 0.10, 0.015, 0.21],
             [0.125, 0.325 - (i.abs() % 2) as f32 * 0.05, 0.075],
             tint(hair, 0.90 + (i.abs() % 3) as f32 * 0.06),
         );
     }
     if matches!(role, 3 | 7) {
-        b.block([0.0, 0.29, 0.11], [0.25, 0.10, 0.25], GREEN);
+        sculpture.block([0.0, 0.29, 0.11], [0.25, 0.10, 0.25], GREEN);
         for i in 0..5 {
-            b.block(
+            sculpture.block(
                 [
                     -0.10 + i as f32 * 0.05,
                     0.365 + (i % 2) as f32 * 0.025,
@@ -112,14 +112,14 @@ pub(super) fn build(role: u8) -> Sculpt {
     }
     if matches!(role, 4 | 8 | 9) {
         for x in -2_i32..=2 {
-            b.block(
+            sculpture.block(
                 [x as f32 * 0.075, -0.18 + x.abs() as f32 * 0.025, -0.225],
                 [0.10, 0.10, 0.075],
                 tint(hair, 0.88 + (x.abs() % 3) as f32 * 0.12),
             );
         }
         for side in [-1.0, 1.0] {
-            b.block(
+            sculpture.block(
                 [side * 0.065, -0.09, -0.25],
                 [0.10, 0.05, 0.05],
                 tint(hair, 1.12),
@@ -127,16 +127,16 @@ pub(super) fn build(role: u8) -> Sculpt {
         }
     }
     match role {
-        1 => hat(&mut b),
-        2 | 4 => helmet(&mut b, role),
-        5 => hood(&mut b),
+        1 => hat(&mut sculpture),
+        2 | 4 => helmet(&mut sculpture, role),
+        5 => hood(&mut sculpture),
         7 => {
             for i in 0..10 {
                 let a = i as f32 * std::f32::consts::TAU / 10.0;
                 let at = [a.cos() * 0.27, 0.245, a.sin() * 0.225];
-                b.block(at, [0.10, 0.05, 0.10], GREEN);
+                sculpture.block(at, [0.10, 0.05, 0.10], GREEN);
                 gear::flower(
-                    &mut b,
+                    &mut sculpture,
                     Vec3::from_array(at) + Vec3::Y * 0.0375,
                     if i % 3 == 0 {
                         [0.87, 0.41, 0.46]
@@ -148,7 +148,7 @@ pub(super) fn build(role: u8) -> Sculpt {
         }
         _ => {}
     }
-    b
+    sculpture
 }
 
 fn hat(b: &mut Sculpt) {

@@ -6,12 +6,62 @@ use terra_voxel::SectionPos;
 
 mod occlusion;
 mod partial;
+mod pipes;
 
-pub(crate) type FluidOccluders = HashMap<[i64; 3], Vec<ShapeBox>>;
+#[cfg(test)]
+mod construction_tests;
+
+/// Collision boxes stay authoritative for construction. Pipes additionally
+/// retain their round profile so water never inherits a square collision cutout.
+#[derive(Debug, Default, PartialEq)]
+pub(crate) struct FluidOccluders {
+    boxes: HashMap<[i64; 3], Vec<ShapeBox>>,
+    pub dry_regions: HashMap<[i64; 3], Vec<ShapeBox>>,
+    pub pipes: HashMap<[i64; 3], u8>,
+    pub fixtures: HashMap<[i64; 3], (u16, u8)>,
+}
+impl FluidOccluders {
+    pub fn new() -> Self {
+        Self::default()
+    }
+    pub fn profiled(&self, p: &[i64; 3]) -> bool {
+        self.pipes.contains_key(p) || self.fixtures.contains_key(p)
+    }
+    fn space(&self, p: [i64; 3]) -> super::space::FluidSpace {
+        let mut space =
+            super::space::FluidSpace::from_global(self.get(&p).map_or(&[], Vec::as_slice), p);
+        if let Some(regions) = self.dry_regions.get(&p) {
+            space
+                .solids
+                .extend(super::space::FluidSpace::from_global(regions, p).solids);
+        }
+        space
+    }
+}
+impl std::ops::Deref for FluidOccluders {
+    type Target = HashMap<[i64; 3], Vec<ShapeBox>>;
+    fn deref(&self) -> &Self::Target {
+        &self.boxes
+    }
+}
+impl std::ops::DerefMut for FluidOccluders {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.boxes
+    }
+}
+impl<const N: usize> From<[([i64; 3], Vec<ShapeBox>); N]> for FluidOccluders {
+    fn from(boxes: [([i64; 3], Vec<ShapeBox>); N]) -> Self {
+        Self {
+            boxes: HashMap::from(boxes),
+            ..Self::default()
+        }
+    }
+}
 
 pub(crate) struct FluidMeshOptions<'a> {
     river_surface: bool,
     occluders: Option<&'a FluidOccluders>,
+    precise_levels: Option<&'a HashMap<[i64; 3], f64>>,
 }
 
 impl From<bool> for FluidMeshOptions<'_> {
@@ -19,6 +69,7 @@ impl From<bool> for FluidMeshOptions<'_> {
         Self {
             river_surface,
             occluders: None,
+            precise_levels: None,
         }
     }
 }
@@ -28,8 +79,43 @@ impl<'a> From<(bool, &'a FluidOccluders)> for FluidMeshOptions<'a> {
         Self {
             river_surface,
             occluders: Some(occluders),
+            precise_levels: None,
         }
     }
+}
+
+impl<'a> From<(bool, &'a FluidOccluders, &'a HashMap<[i64; 3], f64>)> for FluidMeshOptions<'a> {
+    fn from(
+        (river_surface, occluders, precise_levels): (
+            bool,
+            &'a FluidOccluders,
+            &'a HashMap<[i64; 3], f64>,
+        ),
+    ) -> Self {
+        Self {
+            river_surface,
+            occluders: Some(occluders),
+            precise_levels: Some(precise_levels),
+        }
+    }
+}
+
+fn filled_covered_pocket(space: &super::space::FluidSpace, height: f64) -> bool {
+    if height >= 1. - 1e-8 || space.solids.is_empty() {
+        return false;
+    }
+    let volume = |height| {
+        space
+            .wet_boxes(height)
+            .iter()
+            .map(|b| {
+                (0..3)
+                    .map(|axis| b.maximum[axis] - b.minimum[axis])
+                    .product::<f64>()
+            })
+            .sum::<f64>()
+    };
+    (volume(1.) - volume(height)).abs() < 1e-8
 }
 
 pub(crate) fn append_fluid_patch<'a>(
@@ -48,7 +134,7 @@ pub(crate) fn append_fluid_patch<'a>(
     let Ok(origin) = position.origin() else {
         return;
     };
-    let sample = |p: [i64; 3]| -> Option<f64> {
+    let volume_at = |p: [i64; 3]| -> Option<(super::FluidCell, f64, super::space::FluidSpace)> {
         let local = std::array::from_fn::<_, 3, _>(|i| p[i] - origin[i] + 1);
         if !local.iter().all(|v| (0..18).contains(v)) {
             return None;
@@ -59,7 +145,13 @@ pub(crate) fn append_fluid_patch<'a>(
             return None;
         }
         let (cell, level) = if let Some(cell) = fluids.get(&p) {
-            (*cell, p[1] as f64 + cell.height())
+            (
+                *cell,
+                options
+                    .precise_levels
+                    .and_then(|levels| levels.get(&p).copied())
+                    .unwrap_or(p[1] as f64 + cell.height()),
+            )
         } else {
             let water = columns[x + 18 * z].water_columns().at(p[1])?;
             (
@@ -67,54 +159,129 @@ pub(crate) fn append_fluid_patch<'a>(
                 water.level.min(p[1] as f64 + 1.0),
             )
         };
-        let cell = if super::space::partial(material) {
-            let bounds = options.occluders?.get(&p)?;
-            super::space::FluidSpace::from_global(bounds, p).clamp(cell)
+        if cell.amount == 0 {
+            return None;
+        }
+        let space = if super::space::partial(material)
+            || options
+                .occluders
+                .is_some_and(|boxes| boxes.contains_key(&p))
+        {
+            options.occluders?.get(&p)?;
+            // A ceiling can cover the water without lowering the surrounding
+            // reservoir's head. Keep the worker's precise natural level; the
+            // visible complement below the ceiling is clipped separately.
+            let space = options.occluders?.space(p);
+            if space.wet_boxes(level - p[1] as f64).is_empty() {
+                return None;
+            }
+            space
         } else {
-            cell
+            super::space::FluidSpace { solids: vec![] }
         };
-        (cell.amount > 0).then_some(level.min(p[1] as f64 + cell.height()))
+        Some((cell, level.min(p[1] as f64 + 1.), space))
+    };
+    let sample = |p: [i64; 3]| -> Option<f64> {
+        let (cell, mut level, space) = volume_at(p)?;
+        let height = level - p[1] as f64;
+        if filled_covered_pocket(&space, height) {
+            // A completely wetted pocket under a solid ceiling has no local
+            // free surface. Its clamped storage height must not pull down a
+            // connected reservoir. Raising only this sampling head adds zero
+            // wet volume: any still-dry upper pocket fails the volume check.
+            for direction in super::fluid::NEIGHBORS {
+                let Some(q) = super::fluid::adjacent(p, direction) else {
+                    continue;
+                };
+                if let Some((neighbor, head, other)) = volume_at(q)
+                    && head > level
+                    && space.connected(cell, &other, neighbor, direction)
+                {
+                    level = head.min(p[1] as f64 + 1.);
+                }
+            }
+        }
+        Some(level)
     };
     let connected_above = |p: [i64; 3]| {
         let q = [p[0], p[1] + 1, p[2]];
         let Some(level) = sample(q) else { return false };
-        let Some(bounds) = options.occluders.and_then(|o| o.get(&q)) else {
+        let Some(occluders) = options.occluders.filter(|o| o.contains_key(&q)) else {
             return true;
         };
-        super::space::FluidSpace::from_global(bounds, q)
+        occluders
+            .space(q)
             .wet_boxes(level - q[1] as f64)
             .iter()
             .any(|b| b.minimum[1] < 1e-8)
     };
+    let canonical_level = |p: [i64; 3], cell: super::FluidCell| -> Option<f64> {
+        // The complete worker snapshot also keeps explicit full sources at the
+        // natural plane in its original (upper) section, avoiding a two-tile
+        // ownership migration while independent mesh jobs finish.
+        let levels = options.precise_levels?;
+        if let Some(&level) = levels.get(&p) {
+            return Some(level);
+        }
+        let x = usize::try_from(p[0] - origin[0] + 1).ok()?;
+        let z = usize::try_from(p[2] - origin[2] + 1).ok()?;
+        if x >= 18 || z >= 18 {
+            return None;
+        }
+        let natural = columns[x + 18 * z].water_columns().at(p[1])?;
+        let level = p[1] as f64 + cell.height();
+        ((natural.level - level).abs() < 1e-8).then_some(level)
+    };
     let mut cells: Vec<_> = fluids
         .iter()
         .filter(|(p, cell)| {
-            cell.amount > 0 && (0..3).all(|i| p[i] >= origin[i] && p[i] < origin[i] + 16)
+            let own_column = [0, 2]
+                .into_iter()
+                .all(|i| p[i] >= origin[i] && p[i] < origin[i] + 16);
+            let own_volume = p[1] >= origin[1] && p[1] < origin[1] + 16;
+            let own_natural_top = p[1] == origin[1] - 1
+                && canonical_level(**p, **cell)
+                    .is_some_and(|level| (level - origin[1] as f64).abs() < 1e-8);
+            cell.amount > 0 && own_column && (own_volume || own_natural_top)
         })
         .collect();
     cells.sort_unstable_by_key(|(p, _)| **p);
     for (&p, &cell) in cells {
         let Some(height) = sample(p) else { continue };
-        let local: [usize; 3] = std::array::from_fn(|i| (p[i] - origin[i] + 1) as usize);
-        if options
-            .occluders
-            .is_some_and(|boxes| boxes.contains_key(&p))
-            && super::space::partial(padded[local[0] + 18 * (local[1] + 18 * local[2])])
-        {
+        let natural_surface = canonical_level(p, cell).is_some();
+        if p[1] < origin[1] {
+            // The natural grid assigns integral boundary planes to the upper
+            // section. Its source volume can live in an unloaded section below;
+            // emit only the clipped top here, without sampling a second halo.
+            if let Some(occluders) = options.occluders {
+                partial::append(
+                    patch,
+                    p,
+                    cell,
+                    origin,
+                    occluders,
+                    [0.0; 4],
+                    natural_surface,
+                    sample,
+                );
+            }
+            continue;
+        }
+        if options.occluders.is_some_and(|boxes| {
+            boxes.contains_key(&p)
+                || boxes.contains_key(&[p[0], p[1] + 1, p[2]])
+                || super::fluid::NEIGHBORS.into_iter().any(|direction| {
+                    super::fluid::adjacent(p, direction).is_some_and(|q| boxes.profiled(&q))
+                })
+        }) {
             let below = [p[0], p[1] - 1, p[2]];
             let local: [usize; 3] = std::array::from_fn(|i| (below[i] - origin[i] + 1) as usize);
             let open_below =
                 super::can_hold_fluid(padded[local[0] + 18 * (local[1] + 18 * local[2])]);
             let open_below = open_below && {
                 let shapes = options.occluders.unwrap();
-                let current = super::space::FluidSpace::from_global(
-                    shapes.get(&p).map_or(&[], Vec::as_slice),
-                    p,
-                );
-                let floor = super::space::FluidSpace::from_global(
-                    shapes.get(&below).map_or(&[], Vec::as_slice),
-                    below,
-                );
+                let current = shapes.space(p);
+                let floor = shapes.space(below);
                 current.connected(
                     cell,
                     &floor,
@@ -153,6 +320,7 @@ pub(crate) fn append_fluid_patch<'a>(
                 origin,
                 options.occluders.unwrap(),
                 effects,
+                natural_surface,
                 sample,
             );
             continue;
@@ -178,11 +346,25 @@ pub(crate) fn append_fluid_patch<'a>(
                 for dx in -1..=0 {
                     let neighbor = [p[0] + corner[0] + dx, p[1], p[2] + corner[1] + dz];
                     if let Some(level) = sample(neighbor) {
+                        // A sealed lower pocket is not an exposed water level
+                        // and cannot pull down an unrelated surface outside it.
+                        if options
+                            .occluders
+                            .is_some_and(|shapes| shapes.contains_key(&neighbor))
+                            && volume_at(neighbor).is_some_and(|(_, _, space)| {
+                                filled_covered_pocket(&space, level - neighbor[1] as f64)
+                            })
+                        {
+                            continue;
+                        }
                         let covered = connected_above(neighbor);
                         falling |= covered;
                         let local: [usize; 3] =
                             std::array::from_fn(|i| (neighbor[i] - origin[i] + 1) as usize);
                         if super::space::partial(padded[local[0] + 18 * (local[1] + 18 * local[2])])
+                            || options
+                                .occluders
+                                .is_some_and(|boxes| boxes.contains_key(&neighbor))
                         {
                             let level = if covered {
                                 neighbor[1] as f64 + 1.0
@@ -238,7 +420,8 @@ pub(crate) fn append_fluid_patch<'a>(
             [x + 1.0, tops[3], z],
         ];
         let flow = cell.flow.map(f32::from);
-        if !covered {
+        let upper_owns_top = natural_surface && (height - (origin[1] + 16) as f64).abs() < 1e-8;
+        if !covered && !upper_owns_top {
             quad(
                 water,
                 points,
@@ -353,7 +536,24 @@ pub(crate) fn append_fluid_patch<'a>(
     if patch.as_ref().is_some_and(|water| water.indices.is_empty()) {
         *patch = None;
     } else if let Some(water) = patch {
-        super::geometry::assign_wave_weights(water, origin, columns, Some(fluids));
+        // These cells materialize the unchanged natural surface so construction
+        // can clip it. A neighboring worker may not see the construction two
+        // cells beyond its halo, and must still displace their shared edge in
+        // exactly the same way. Actual changed fluid levels remain pinned.
+        let wave_edits: Option<FluidSnapshot> = options.precise_levels.map(|natural| {
+            fluids
+                .iter()
+                .filter(|(p, _)| !natural.contains_key(*p))
+                .map(|(&p, &cell)| (p, cell))
+                .collect()
+        });
+        super::geometry::assign_wave_weights(
+            water,
+            origin,
+            columns,
+            Some(wave_edits.as_ref().unwrap_or(fluids)),
+            padded,
+        );
     }
 }
 
@@ -955,3 +1155,7 @@ mod tests {
         assert_eq!(side_area(half.as_ref().unwrap(), [1.0, 0.0, 0.0]), 0.0);
     }
 }
+
+#[cfg(test)]
+#[path = "fluid_mesh/shore_transition_tests.rs"]
+mod shore_transition_tests;

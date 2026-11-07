@@ -67,15 +67,15 @@ fn gamerules_use_the_chat_pager_with_eight_rows_per_page_and_real_values() {
     app.update();
     let view = app.world().resource::<ChatView>();
     assert_eq!(view.help_title, "World Gamerules");
-    assert_eq!(view.help_page, "1 / 1");
-    assert_eq!(view.help_entries.len(), 3);
+    assert_eq!(view.help_page, "1 / 2");
+    assert_eq!(view.help_entries.len(), 8);
     assert!(view.help_entries.len() <= 8);
     assert!(
         view.help_entries
             .iter()
             .any(|e| e.usage == "sleep_percentage = 50")
     );
-    assert!(!view.has_help_next && !view.has_help_previous);
+    assert!(view.has_help_next && !view.has_help_previous);
     app.world_mut()
         .resource_mut::<terra_core::GameConfig>()
         .world
@@ -88,6 +88,23 @@ fn gamerules_use_the_chat_pager_with_eight_rows_per_page_and_real_values() {
             .help_entries
             .iter()
             .any(|entry| entry.usage == "sleep_percentage = 75")
+    );
+    app.world_mut().write_message(ChatAction::HelpPage(2));
+    app.update();
+    let view = app.world().resource::<ChatView>();
+    assert_eq!(view.help_page, "2 / 2");
+    assert_eq!(view.help_entries.len(), 1);
+    assert_eq!(view.help_entries[0].usage, "pvp = 0");
+    assert!(!view.has_help_next && view.has_help_previous);
+    app.world_mut()
+        .resource_mut::<terra_core::GameConfig>()
+        .world
+        .game_rules
+        .pvp = true;
+    app.update();
+    assert_eq!(
+        app.world().resource::<ChatView>().help_entries[0].usage,
+        "pvp = 1"
     );
 }
 
@@ -291,6 +308,124 @@ fn app() -> App {
         .add_systems(Update, update);
     app.world_mut().resource_mut::<ClientSession>().ready = true;
     app
+}
+
+#[test]
+fn asynchronous_teleport_owns_its_completion_even_when_chat_was_never_open() {
+    let mut app = app();
+    app.world_mut().resource_mut::<ClientSession>().teleporting = true;
+    app.update();
+    assert!(app.world().resource::<ChatState>().teleport_resume_pending);
+    assert!(app.world().resource::<ChatState>().blocks_input());
+    assert!(app.world().resource::<PlayerInputBlock>().0);
+    app.world_mut()
+        .resource_mut::<Messages<CaptureRequest>>()
+        .clear();
+    app.world_mut().resource_mut::<ClientSession>().teleporting = false;
+    app.world_mut()
+        .resource_mut::<ButtonInput<KeyCode>>()
+        .press(KeyCode::KeyW);
+    app.world_mut()
+        .resource_mut::<ButtonInput<MouseButton>>()
+        .press(MouseButton::Left);
+    for _ in 0..3 {
+        app.update();
+    }
+    assert!(app.world().resource::<ChatState>().teleport_resume_pending);
+    assert!(app.world().resource::<PlayerInputBlock>().0);
+    assert!(
+        app.world_mut()
+            .resource_mut::<Messages<CaptureRequest>>()
+            .drain()
+            .next()
+            .is_none()
+    );
+    app.world_mut()
+        .resource_mut::<ButtonInput<KeyCode>>()
+        .reset_all();
+    app.world_mut()
+        .resource_mut::<ButtonInput<MouseButton>>()
+        .reset_all();
+    app.update();
+    assert!(!app.world().resource::<ChatState>().blocks_input());
+    assert!(!app.world().resource::<PlayerInputBlock>().0);
+    assert_eq!(
+        app.world_mut()
+            .resource_mut::<Messages<CaptureRequest>>()
+            .drain()
+            .filter(|request| request.0)
+            .count(),
+        1
+    );
+    app.update();
+    assert!(
+        app.world_mut()
+            .resource_mut::<Messages<CaptureRequest>>()
+            .drain()
+            .next()
+            .is_none()
+    );
+}
+
+#[test]
+fn teleport_ack_transfers_input_to_open_modals_without_clearing_their_block() {
+    for owner in ["inventory", "settings", "map", "chat"] {
+        let mut app = app();
+        app.world_mut().resource_mut::<ClientSession>().teleporting = true;
+        app.update();
+        assert!(app.world().resource::<ChatState>().teleport_resume_pending);
+        match owner {
+            "inventory" => {
+                app.init_resource::<InventoryState>();
+                app.world_mut().resource_mut::<InventoryState>().open = true;
+            }
+            "settings" => app.world_mut().resource_mut::<crate::SettingsView>().open = true,
+            "map" => {
+                app.init_resource::<crate::minimap::fullmap::FullMapState>();
+                app.world_mut()
+                    .resource_mut::<crate::minimap::fullmap::FullMapState>()
+                    .open = true;
+            }
+            "chat" => app.world_mut().resource_mut::<ChatState>().open = true,
+            _ => unreachable!(),
+        }
+        app.world_mut()
+            .resource_mut::<Messages<CaptureRequest>>()
+            .clear();
+        app.world_mut().resource_mut::<ClientSession>().teleporting = false;
+        app.update();
+        assert!(
+            !app.world().resource::<ChatState>().teleport_resume_pending,
+            "{owner}"
+        );
+        assert!(app.world().resource::<PlayerInputBlock>().0, "{owner}");
+        assert!(
+            app.world_mut()
+                .resource_mut::<Messages<CaptureRequest>>()
+                .drain()
+                .all(|request| !request.0),
+            "{owner}"
+        );
+    }
+}
+
+#[test]
+fn teleport_handoff_is_discarded_on_session_exit_without_recapturing() {
+    let mut app = app();
+    app.world_mut().resource_mut::<ClientSession>().teleporting = true;
+    app.update();
+    app.world_mut().resource_mut::<ClientSession>().ready = false;
+    app.world_mut()
+        .resource_mut::<Messages<CaptureRequest>>()
+        .clear();
+    app.update();
+    assert!(!app.world().resource::<ChatState>().teleport_resume_pending);
+    assert!(
+        app.world_mut()
+            .resource_mut::<Messages<CaptureRequest>>()
+            .drain()
+            .all(|request| !request.0)
+    );
 }
 
 fn key(app: &mut App, key: KeyCode) {

@@ -82,11 +82,17 @@ impl TerraGenerator {
         // Eroded regions retain biome elevation, but have smoother local relief.
         let reference = config.base_height + biome.profile().elevation;
         let flattened = raw + (reference - raw) * erosion * 0.18;
-        raw + land
-            * (flattened - raw
-                + ridge * (1.0 - erosion * 0.65)
-                + n.continentalness * config.hill_amplitude * 0.25
-                + jagged)
+        let legacy = raw
+            + land
+                * (flattened - raw
+                    + ridge * (1.0 - erosion * 0.65)
+                    + n.continentalness * config.hill_amplitude * 0.25
+                    + jagged);
+        if config.landscape_revision < 2 {
+            legacy
+        } else {
+            self.regional_landscape_relief(x, z, biome, legacy)
+        }
     }
 }
 
@@ -95,10 +101,13 @@ mod tests {
     use super::*;
     use terra_core::{Config, WorldConfig};
     #[test]
-    fn saved_contract_defaults_old_files_to_legacy_and_new_worlds_to_one() {
+    fn saved_contract_defaults_old_files_to_legacy_and_new_worlds_to_main() {
         assert_eq!(WorldConfig::from_toml("").unwrap().landscape_revision, 0);
         assert_eq!(WorldConfig::default().landscape_revision, 1);
-        assert!(WorldConfig::from_toml("landscape_revision = 2").is_err());
+        for revision in 0..=5 {
+            assert!(WorldConfig::from_toml(&format!("landscape_revision = {revision}")).is_ok());
+        }
+        assert!(WorldConfig::from_toml("landscape_revision = 6").is_err());
     }
     #[test]
     fn fields_are_repeatable_continuous_and_change_only_opted_in_worlds() {

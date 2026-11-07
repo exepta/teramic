@@ -1,0 +1,1 @@
+{"id":"teramic::stone_pipe","name":"Stone Pipe","station":"workbench","output":{"item":{"block":164},"count":4},"pattern":{"kind":"shapeless","ingredients":[{"item":{"block":3},"count":3},{"item":{"block":163},"count":1}]}}

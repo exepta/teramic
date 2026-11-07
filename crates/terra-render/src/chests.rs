@@ -132,8 +132,12 @@ fn loaded_chests(
     chunks: &ChunkStore,
     journal: &EditJournal,
 ) -> BTreeMap<[i64; 3], BlockObjectState> {
+    let _scope = terra_core::profiling::ScopeTimer::new("chests.refresh_candidates");
     let mut owners = BTreeMap::new();
-    for &section in chunks.loaded.keys() {
+    for section in journal
+        .object_sections()
+        .filter(|section| chunks.loaded.contains_key(section))
+    {
         for (position, material, selected) in journal.object_states_in_section(section) {
             if material != 29 {
                 continue;
@@ -288,6 +292,80 @@ pub(crate) fn animate(time: Res<Time>, mut lids: Query<(&mut Lid, &mut Transform
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn generated_chests_remain_sparse_and_follow_loaded_peer_and_object_revisions() {
+        use terra_voxel::{BlockSection, global_to_section};
+        use terra_world::{generation::structures::StructureObject, streaming::LoadedSection};
+        let owner = [-1, 2, -17];
+        let peer = [0, 2, -17];
+        let object = BlockObjectState {
+            peer: Some(peer),
+            ..default()
+        };
+        let mut journal = EditJournal::default();
+        for x in 0..128 {
+            journal.record([x * 16, 1, 128], 3).unwrap();
+        }
+        assert_eq!(journal.object_sections().len(), 0);
+        journal
+            .initialize_structures(&[
+                StructureObject {
+                    position: owner,
+                    material: 29,
+                    state: Some(object),
+                    loot: None,
+                    crop: None,
+                },
+                StructureObject {
+                    position: peer,
+                    material: 29,
+                    state: Some(BlockObjectState {
+                        peer: Some(owner),
+                        secondary: true,
+                        ..default()
+                    }),
+                    loot: None,
+                    crop: None,
+                },
+            ])
+            .unwrap();
+        assert_eq!(journal.object_sections().len(), 2);
+        let (section, local) = global_to_section(peer);
+        let mut data = BlockSection::empty(section).unwrap();
+        data.set_block(local, 29).unwrap();
+        let mut chunks = ChunkStore::default();
+        chunks.loaded.insert(
+            section,
+            LoadedSection {
+                data,
+                mesh: None,
+                mesh_epoch: 0,
+                water_epoch: 0,
+                water: None,
+                props: Vec::new(),
+            },
+        );
+        assert_eq!(
+            loaded_chests(&chunks, &journal),
+            BTreeMap::from([(owner, object)])
+        );
+        let changed = BlockObjectState {
+            facing: 3,
+            wood: terra_core::WoodSpecies::Cherry,
+            ..object
+        };
+        journal.set_object_state(owner, Some(changed)).unwrap();
+        assert_eq!(
+            loaded_chests(&chunks, &journal),
+            BTreeMap::from([(owner, changed)])
+        );
+        journal.record(owner, 0).unwrap();
+        journal.record(peer, 0).unwrap();
+        assert_eq!(journal.object_sections().len(), 0);
+        assert!(loaded_chests(&chunks, &journal).is_empty());
+    }
+
     #[test]
     fn loaded_chest_index_keeps_cross_section_primary_without_scanning_unloaded_world_history() {
         let owner = [-1, 2, -17];

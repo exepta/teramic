@@ -1,0 +1,143 @@
+{
+  "artifacts": {
+    "after/clear": {
+      "binary_sha256": "bbef2d6b27a4402896b14325857edbf2e3956ec8592f280bfcabe9c016c4b12b",
+      "manifest": "runs/after/clear.manifest.json",
+      "original_native_log_sha256": "121d0324cdf6a448bcd44d224973bf5049406665a66416b1cec4dc2aa4637f53",
+      "raw_evidence": "evidence/after-clear.txt",
+      "resources_and_queues": "runs/after/clear.resources-and-queues.json",
+      "source": "/tmp/teramic-o07-i3w2xd60/after/clear",
+      "summary": "runs/after/clear.summary.json"
+    },
+    "after/flight": {
+      "binary_sha256": "bbef2d6b27a4402896b14325857edbf2e3956ec8592f280bfcabe9c016c4b12b",
+      "manifest": "runs/after/flight.manifest.json",
+      "original_native_log_sha256": "414800cf33ad97e9934615cf44fe127968995b4d2f35fde6cddc4cc4b89c583f",
+      "raw_evidence": "evidence/after-flight.txt",
+      "resources_and_queues": "runs/after/flight.resources-and-queues.json",
+      "source": "/tmp/teramic-o07-i3w2xd60/after/flight",
+      "summary": "runs/after/flight.summary.json"
+    },
+    "after/inventory": {
+      "binary_sha256": "bbef2d6b27a4402896b14325857edbf2e3956ec8592f280bfcabe9c016c4b12b",
+      "manifest": "runs/after/inventory.manifest.json",
+      "original_native_log_sha256": "8658dba594a98b226afa20ab6ea2c353b0db5e15bcaba83953717aabe0c520eb",
+      "raw_evidence": "evidence/after-inventory.txt",
+      "resources_and_queues": "runs/after/inventory.resources-and-queues.json",
+      "source": "/tmp/teramic-o07-i3w2xd60/after/inventory",
+      "summary": "runs/after/inventory.summary.json"
+    },
+    "after/placement": {
+      "binary_sha256": "bbef2d6b27a4402896b14325857edbf2e3956ec8592f280bfcabe9c016c4b12b",
+      "manifest": "runs/after/placement.manifest.json",
+      "original_native_log_sha256": "5be2999d93e19b7880783af971aaf06b97f4838552ae9a0972fff3798a773585",
+      "raw_evidence": "evidence/after-placement.txt",
+      "resources_and_queues": "runs/after/placement.resources-and-queues.json",
+      "source": "/tmp/teramic-o07-i3w2xd60/after/placement",
+      "summary": "runs/after/placement.summary.json"
+    },
+    "after/rain": {
+      "binary_sha256": "bbef2d6b27a4402896b14325857edbf2e3956ec8592f280bfcabe9c016c4b12b",
+      "manifest": "runs/after/rain.manifest.json",
+      "original_native_log_sha256": "8eaba6a5cfaf02845f115f83ac4b03145437a34ac7d079beaf598722237d1bdd",
+      "raw_evidence": "evidence/after-rain.txt",
+      "resources_and_queues": "runs/after/rain.resources-and-queues.json",
+      "source": "/tmp/teramic-o07-i3w2xd60/after/rain",
+      "summary": "runs/after/rain.summary.json"
+    },
+    "after/village": {
+      "binary_sha256": "bbef2d6b27a4402896b14325857edbf2e3956ec8592f280bfcabe9c016c4b12b",
+      "manifest": "runs/after/village.manifest.json",
+      "original_native_log_sha256": "ec0205378e8a8a1911fae681da520d1996f27b4946921819fa859978b76185eb",
+      "raw_evidence": "evidence/after-village.txt",
+      "resources_and_queues": "runs/after/village.resources-and-queues.json",
+      "source": "/tmp/teramic-o07-i3w2xd60/after/village",
+      "summary": "runs/after/village.summary.json"
+    },
+    "before/clear": {
+      "binary_sha256": "b248277db6c9f46c1cb5f03ae821907cabd45972235aa243628b8cc6bad04ed4",
+      "manifest": "runs/before/clear.manifest.json",
+      "original_native_log_sha256": "6986fa30936c2d3fc1f1bfb821c82c89d550d340b4c3b1d220ba423c275a1545",
+      "raw_evidence": "evidence/before-clear.txt",
+      "resources_and_queues": "runs/before/clear.resources-and-queues.json",
+      "source": "/tmp/teramic-o07-i3w2xd60/before/clear",
+      "summary": "runs/before/clear.summary.json"
+    },
+    "before/flight": {
+      "binary_sha256": "b248277db6c9f46c1cb5f03ae821907cabd45972235aa243628b8cc6bad04ed4",
+      "manifest": "runs/before/flight.manifest.json",
+      "original_native_log_sha256": "4ffa2bf6c3d767300f0c20de39d9e56632e2ad74c109fa9616b8de272fbffa11",
+      "raw_evidence": "evidence/before-flight.txt",
+      "resources_and_queues": "runs/before/flight.resources-and-queues.json",
+      "source": "/tmp/teramic-o07-i3w2xd60/before/flight",
+      "summary": "runs/before/flight.summary.json"
+    },
+    "before/inventory": {
+      "binary_sha256": "b248277db6c9f46c1cb5f03ae821907cabd45972235aa243628b8cc6bad04ed4",
+      "manifest": "runs/before/inventory.manifest.json",
+      "original_native_log_sha256": "8056090667a84421eb5bd4c163afa96e3deff53294e248ceefd7fcbb785db625",
+      "raw_evidence": "evidence/before-inventory.txt",
+      "resources_and_queues": "runs/before/inventory.resources-and-queues.json",
+      "source": "/tmp/teramic-o07-i3w2xd60/before/inventory",
+      "summary": "runs/before/inventory.summary.json"
+    },
+    "before/placement": {
+      "binary_sha256": "4ec46df6acaf02251f3a2482fe00857e4a8929e9cb3143f710371eba408b81e4",
+      "manifest": "runs/before/placement.manifest.json",
+      "original_native_log_sha256": "7afe75d4931d5fb87f6e1d9cc91980839bf5798db393c6b1ab0742b115157e37",
+      "raw_evidence": "evidence/before-placement.txt",
+      "resources_and_queues": "runs/before/placement.resources-and-queues.json",
+      "source": "/tmp/teramic-o07-i3w2xd60/before-placement/placement",
+      "summary": "runs/before/placement.summary.json"
+    },
+    "before/rain": {
+      "binary_sha256": "b248277db6c9f46c1cb5f03ae821907cabd45972235aa243628b8cc6bad04ed4",
+      "manifest": "runs/before/rain.manifest.json",
+      "original_native_log_sha256": "40d8390f9493bcd3accf20fb7baffdbdffeb3663b7f32d03f8e18abae1b86486",
+      "raw_evidence": "evidence/before-rain.txt",
+      "resources_and_queues": "runs/before/rain.resources-and-queues.json",
+      "source": "/tmp/teramic-o07-i3w2xd60/before-warm-margin/rain",
+      "summary": "runs/before/rain.summary.json"
+    },
+    "before/village": {
+      "binary_sha256": "b248277db6c9f46c1cb5f03ae821907cabd45972235aa243628b8cc6bad04ed4",
+      "manifest": "runs/before/village.manifest.json",
+      "original_native_log_sha256": "d78dd77f02ab6efd3e064b54bb8238555cc7d581a6e5aee7cbe056f2ca4cc86e",
+      "raw_evidence": "evidence/before-village.txt",
+      "resources_and_queues": "runs/before/village.resources-and-queues.json",
+      "source": "/tmp/teramic-o07-i3w2xd60/before-warm-margin/village",
+      "summary": "runs/before/village.summary.json"
+    }
+  },
+  "known_journal_source_snapshots": {
+    "journal-before-optimization.rs": "57ecb81a7b528cb878a40ef3c512e81cfcc5b32e831794d09aa4a76fe98338ed",
+    "journal-final-with-optimization.rs": "9f36807885611e959447170b4bc74f936141a5abb5d54c1c8a0ad9dd63a5b50f"
+  },
+  "note": "Paths identify original temporary execution inputs; durable summaries/manifests/evidence/configuration are relative to this artifact directory.",
+  "safe_config_sha256": {
+    "configs/audio.toml": "d0bb2fa81ba57c34c52f0282b4f88a35ae11fb2f217b3658b5ff365fee5000b4",
+    "configs/client.toml": "97d09f278a771bbecb570b0210219a450e033c802d2c9ff10aa6b881409c2211",
+    "configs/controls.toml": "af057e943a52520848c93f3a0e4354863e7d44d3b751f6e6010fbddf48e4b2ca",
+    "configs/gameplay.toml": "c7ff511ad6b06010ca0b287fe35cda01e9705611b833d10a067a1eee1b309016",
+    "configs/graphics.toml": "e9e71e744e0259353a8e55616ef6cb07e1599def026f08d8ef3abb2f9ba94b2a",
+    "configs/multiplayer.toml": "e187160ce08807e85d8cdce8a1bc2c33a017915c106ed2b251a1daf7b52f06f9",
+    "configs/placement/server.toml": "d817f4e47a47d202f2ba8aaf557a939e5027811d643a3c6e50ad37c5120a7a9a",
+    "configs/server.toml": "d4c6084a2ea8365fa19dbce6740fb238d1c3854e3d618b18e43b715dd0c15a0a",
+    "configs/world.toml": "21d4e6e3f592af3310e25846034457ca65b4198d01718386e810ec7fee9b789e"
+  },
+  "supplementary_sources": {
+    "server-audit-data.json": {
+      "sha256": "e07818a2179267534a610bd11e195bc48355453bccc82d9b92b8869fdebbf995",
+      "source": "/tmp/teramic-o07-i3w2xd60/server-audit-data.json"
+    },
+    "server-final-audit-notes.json": {
+      "sha256": "2114c50eeb53bdca4b8cd762e53464a9040cbf9c36ca94d430a816ac29cc3738",
+      "source": "/tmp/teramic-o07-i3w2xd60/server-final-audit-notes.json"
+    }
+  },
+  "tool_sources": {
+    "apps/client/src/performance_edits.rs": "1aa0d598b7d1ba9d7cdb50c29acda6edb8f0e1c98f60456c24cdec029a78652f",
+    "crates/terra-world/examples/performance_scene.rs": "cf7da5b8e82c7e3fcc136a1f457b13e25c5f923bf2e259b5d2194b6f8a990742",
+    "tools/benchmarks/run-frame-spikes.py": "6995a37e95be71fb26f3df9adca95d02cb5740be7e3ac77b93b0b0009903201e"
+  }
+}

@@ -80,10 +80,10 @@ struct PrecipitationExtension {
 }
 impl MaterialExtension for PrecipitationExtension {
     fn vertex_shader() -> ShaderRef {
-        "shaders/terra_precipitation.wgsl".into()
+        "shaders/terra_precipitation.wesl".into()
     }
     fn fragment_shader() -> ShaderRef {
-        "shaders/terra_precipitation.wgsl".into()
+        "shaders/terra_precipitation.wesl".into()
     }
     fn enable_prepass() -> bool {
         false

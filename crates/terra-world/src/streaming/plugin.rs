@@ -27,6 +27,7 @@ impl Plugin for TerraWorldPlugin {
             .init_resource::<PendingSections>()
             .init_resource::<PendingWaterJobs>()
             .init_resource::<EditJournal>()
+            .init_resource::<crate::fruit::FruitProps>()
             .init_resource::<crate::water::FluidDiagnostics>()
             .add_message::<BlockEditRequest>()
             .add_message::<PropRemoveRequest>()
@@ -93,6 +94,8 @@ impl Plugin for TerraWorldPlugin {
                     crate::weather::tick,
                     crate::fire::tick,
                     crate::growth::tick,
+                    crate::saplings::tick,
+                    crate::fruit::tick,
                     crate::farming::tick,
                     crate::water::tick_fluids,
                 )

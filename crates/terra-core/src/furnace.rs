@@ -36,7 +36,7 @@ impl SmeltingRecipe {
             && (0.5..=600.0).contains(&self.seconds)
     }
 }
-const RECIPES: [(&str, &str); 8] = [
+const RECIPES: [(&str, &str); 9] = [
     ("beef", include_str!("../../../assets/smelting/beef.json")),
     ("pork", include_str!("../../../assets/smelting/pork.json")),
     (
@@ -54,6 +54,7 @@ const RECIPES: [(&str, &str); 8] = [
         "smooth_stone",
         include_str!("../../../assets/smelting/smooth_stone.json"),
     ),
+    ("glass", include_str!("../../../assets/smelting/glass.json")),
 ];
 fn load<T: serde::de::DeserializeOwned>(folder: &str, name: &str, fallback: &str) -> Option<T> {
     let path = crate::asset_directory()
@@ -107,7 +108,7 @@ pub struct FuelDefinition {
     pub item: ItemKind,
     pub seconds: f32,
 }
-pub fn fuel_seconds(item: ItemKind) -> Option<f32> {
+pub fn fuels() -> &'static [FuelDefinition] {
     static FUELS: OnceLock<Vec<FuelDefinition>> = OnceLock::new();
     FUELS
         .get_or_init(|| {
@@ -164,9 +165,13 @@ pub fn fuel_seconds(item: ItemKind) -> Option<f32> {
                 })
                 .collect()
         })
+        .as_slice()
+}
+pub fn fuel_seconds(item: ItemKind) -> Option<f32> {
+    fuels()
         .iter()
-        .find(|f| f.item == item)
-        .map(|f| f.seconds)
+        .find(|fuel| fuel.item == item)
+        .map(|fuel| fuel.seconds)
 }
 pub fn slot_capacity(slot: usize, item: ItemKind) -> u16 {
     let capacity = match slot {

@@ -66,27 +66,27 @@ fn pouch(b: &mut Sculpt, x: f32, y: f32, z: f32, color: [f32; 3]) {
 }
 
 fn body(role: u8) -> Sculpt {
-    let mut b = Sculpt::default();
+    let mut sculpture = Sculpt::default();
     let armored = matches!(role, 2 | 4);
     let robe = matches!(role, 5 | 7);
     let fabric = cloth(role);
-    b.block(
+    sculpture.block(
         [0.0, 0.95, 0.0],
         [0.425, 0.45, 0.30],
         if armored { LEATHER } else { CREAM },
     );
-    b.block([0.0, 1.21, 0.0], [0.175, 0.10, 0.175], SKIN);
+    sculpture.block([0.0, 1.21, 0.0], [0.175, 0.10, 0.175], SKIN);
     for i in 0..7 {
         let x = (i as f32 - 3.0) * 0.06;
-        b.block(
+        sculpture.block(
             [x, 0.725 + (i % 2) as f32 * 0.0125, -0.005],
             [0.065, 0.15, 0.325],
             tint(CREAM, 0.93 + (i % 3) as f32 * 0.035),
         );
     }
     for y in [0.88, 0.99, 1.10] {
-        b.block([0.0, y, -0.1625], [0.025, 0.025, 0.025], tint(CREAM, 0.72));
-        b.block(
+        sculpture.block([0.0, y, -0.1625], [0.025, 0.025, 0.025], tint(CREAM, 0.72));
+        sculpture.block(
             [-0.0375, y + 0.025, -0.163],
             [0.05, 0.05, 0.025],
             tint(CREAM, 1.04),
@@ -94,31 +94,31 @@ fn body(role: u8) -> Sculpt {
     }
     if matches!(role, 0 | 3 | 7) {
         for side in [-1.0, 1.0] {
-            b.block([side * 0.15, 0.98, -0.025], [0.15, 0.425, 0.35], fabric);
-            b.block(
+            sculpture.block([side * 0.15, 0.98, -0.025], [0.15, 0.425, 0.35], fabric);
+            sculpture.block(
                 [side * 0.0875, 1.06, -0.20],
                 [0.025, 0.30, 0.05],
                 tint(fabric, 1.23),
             );
             for y in [0.88, 0.99, 1.10] {
-                b.block([side * 0.12, y, -0.205], [0.025, 0.025, 0.025], GOLD);
+                sculpture.block([side * 0.12, y, -0.205], [0.025, 0.025, 0.025], GOLD);
             }
         }
     }
     if matches!(role, 1 | 6 | 8) {
-        b.block([0.0, 0.96, -0.175], [0.30, 0.325, 0.05], fabric);
+        sculpture.block([0.0, 0.96, -0.175], [0.30, 0.325, 0.05], fabric);
         for side in [-1.0, 1.0] {
-            b.block(
+            sculpture.block(
                 [side * 0.1375, 1.10, -0.06],
                 [0.075, 0.225, 0.325],
                 tint(LEATHER, 1.13),
             );
-            b.block([side * 0.1375, 1.05, -0.24], [0.05, 0.05, 0.025], GOLD);
-            b.block([side * 0.1375, 1.05, -0.255], [0.025, 0.025, 0.025], METAL);
+            sculpture.block([side * 0.1375, 1.05, -0.24], [0.05, 0.05, 0.025], GOLD);
+            sculpture.block([side * 0.1375, 1.05, -0.255], [0.025, 0.025, 0.025], METAL);
         }
-        b.block([0.0, 0.985, -0.225], [0.15, 0.10, 0.05], tint(fabric, 1.14));
+        sculpture.block([0.0, 0.985, -0.225], [0.15, 0.10, 0.05], tint(fabric, 1.14));
         for i in -3_i32..=3 {
-            b.block(
+            sculpture.block(
                 [i as f32 * 0.06, 0.62 + (i.abs() % 2) as f32 * 0.015, -0.045],
                 [0.065, if role == 6 { 0.40 } else { 0.18 }, 0.325],
                 tint(fabric, 0.94 + (i.abs() % 3) as f32 * 0.07),
@@ -129,16 +129,16 @@ fn body(role: u8) -> Sculpt {
         for row in 0..5 {
             let width = 0.575 - row as f32 * 0.03;
             let y = 0.225 + row as f32 * 0.10;
-            b.block([0.0, y, 0.0], [width, 0.125, 0.35], CREAM);
+            sculpture.block([0.0, y, 0.0], [width, 0.125, 0.35], CREAM);
             for i in -3_i32..=3 {
-                b.block(
+                sculpture.block(
                     [i as f32 * width / 8.0, y, -0.185],
                     [0.05, 0.125, 0.05],
                     tint(CREAM, if i % 2 == 0 { 1.03 } else { 0.91 }),
                 );
             }
             for side in [-1.0, 1.0] {
-                b.block(
+                sculpture.block(
                     [
                         side * if role == 5 { 0.10 } else { width * 0.4 },
                         y + 0.015,
@@ -148,28 +148,28 @@ fn body(role: u8) -> Sculpt {
                     fabric,
                 );
                 if role == 5 {
-                    b.block([side * 0.15, y, -0.2375], [0.025, 0.125, 0.025], GOLD);
+                    sculpture.block([side * 0.15, y, -0.2375], [0.025, 0.125, 0.025], GOLD);
                 }
             }
         }
         if role == 5 {
-            b.block([0.0, 0.175, -0.01], [0.60, 0.05, 0.375], GOLD);
-            b.block([0.0, 1.01, -0.20], [0.30, 0.35, 0.05], fabric);
+            sculpture.block([0.0, 0.175, -0.01], [0.60, 0.05, 0.375], GOLD);
+            sculpture.block([0.0, 1.01, -0.20], [0.30, 0.35, 0.05], fabric);
             for side in [-1.0, 1.0] {
-                b.rotated(
+                sculpture.rotated(
                     [side * 0.07, 1.135, -0.235],
                     [0.05, 0.20, 0.05],
                     GOLD,
                     Quat::from_rotation_z(side * 0.7),
                 );
             }
-            gear::gem(&mut b, [0.0, 1.025, -0.25], 0.075);
+            gear::gem(&mut sculpture, [0.0, 1.025, -0.25], 0.075);
         }
     }
     if armored {
         for row in 0..4 {
             for col in -2_i32..=2 {
-                b.block(
+                sculpture.block(
                     [
                         col as f32 * 0.075,
                         0.88 + row as f32 * 0.075,
@@ -182,7 +182,7 @@ fn body(role: u8) -> Sculpt {
         }
         for side in [-1.0, 1.0] {
             for i in 0..3 {
-                b.block(
+                sculpture.block(
                     [
                         side * (0.125 + i as f32 * 0.035),
                         0.69 - i as f32 * 0.05,
@@ -194,7 +194,7 @@ fn body(role: u8) -> Sculpt {
             }
         }
         for i in -3_i32..=3 {
-            b.block(
+            sculpture.block(
                 [
                     i as f32 * 0.06,
                     0.86 + (i.abs() % 2) as f32 * 0.025,
@@ -206,11 +206,11 @@ fn body(role: u8) -> Sculpt {
         }
     }
     if role == 9 {
-        b.block([0.0, 0.98, 0.0], [0.45, 0.425, 0.325], fabric);
+        sculpture.block([0.0, 0.98, 0.0], [0.45, 0.425, 0.325], fabric);
         for y in 0..5 {
             for x in -3_i32..=3 {
                 for z in [-0.175, 0.175] {
-                    b.block(
+                    sculpture.block(
                         [x as f32 * 0.065, 0.83 + y as f32 * 0.075, z],
                         [0.06, 0.075, 0.025],
                         tint(fabric, if (x + y) % 2 == 0 { 0.46 } else { 0.85 }),
@@ -222,7 +222,7 @@ fn body(role: u8) -> Sculpt {
     if matches!(role, 2..=5 | 7) {
         for i in 0..8 {
             let angle = i as f32 * std::f32::consts::TAU / 8.0;
-            b.block(
+            sculpture.block(
                 [
                     angle.cos() * 0.18,
                     1.17 + (i % 2) as f32 * 0.025,
@@ -233,15 +233,16 @@ fn body(role: u8) -> Sculpt {
             );
         }
     }
-    b.block([0.0, 0.785, 0.0], [0.475, 0.075, 0.375], tint(LEATHER, 0.8));
-    b.block([0.0, 0.79, -0.2125], [0.10, 0.10, 0.05], GOLD);
-    b.block([0.0, 0.79, -0.24], [0.05, 0.05, 0.025], LEATHER);
+    sculpture.block([0.0, 0.785, 0.0], [0.475, 0.075, 0.375], tint(LEATHER, 0.8));
+    sculpture.block([0.0, 0.79, -0.2125], [0.10, 0.10, 0.05], GOLD);
+    sculpture.block([0.0, 0.79, -0.24], [0.05, 0.05, 0.025], LEATHER);
     for side in [-1.0, 1.0] {
-        pouch(&mut b, side * 0.2375, 0.76, -0.06, LEATHER);
-        b.block([side * 0.15, 0.785, -0.20], [0.025, 0.075, 0.025], GOLD);
+        pouch(&mut sculpture, side * 0.2375, 0.76, -0.06, LEATHER);
+        sculpture.block([side * 0.15, 0.785, -0.20], [0.025, 0.075, 0.025], GOLD);
     }
-    gear::backpack(&mut b, role);
-    b
+    gear::backpack(&mut sculpture, role);
+    gear::back_tools(&mut sculpture, role);
+    sculpture
 }
 
 fn leg(role: u8) -> Sculpt {
@@ -344,7 +345,9 @@ fn arm(role: u8, side: f32) -> Sculpt {
         );
     }
     b.block([-side * 0.10, -0.39, -0.075], [0.05, 0.10, 0.10], SKIN);
-    gear::hand(&mut b, role, side);
+    if side < 0.0 && role == 4 {
+        gear::shield(&mut b);
+    }
     b
 }
 
@@ -356,7 +359,7 @@ mod tests {
     #[test]
     fn ten_roles_have_distinct_bounded_shared_indexed_models_and_grounded_boots() {
         let mut roles = std::collections::BTreeSet::new();
-        for role in 0..terra_core::creatures::villagers::ROLE_COUNT {
+        for role in 0..terra_core::creatures::villagers::CIVILIAN_ROLE_COUNT {
             let parts = parts(role).unwrap();
             assert_eq!(parts.len(), 6, "six shared rigid parts per resident");
             let vertices = parts
@@ -373,6 +376,16 @@ mod tests {
                 };
                 assert!(!positions.is_empty());
                 assert!(positions.iter().flatten().all(|value| value.is_finite()));
+                if matches!(part, Part::VillagerArm(side) if side > 0.0) {
+                    assert!(
+                        positions.iter().all(|p| {
+                            (-0.55..=0.15).contains(&p[1])
+                                && p[0].abs() <= 0.20
+                                && p[2].abs() <= 0.20
+                        }),
+                        "right arm must not contain a second baked held tool: role {role}"
+                    );
+                }
                 assert!(
                     mesh.indices()
                         .unwrap()

@@ -1,0 +1,1 @@
+{"id":"teramic::conveyor_dye","name":"Dyed conveyor","station":"hand","output":{"item":{"block":148},"count":1},"pattern":{"kind":"shapeless","ingredients":[{"item":{"block":148},"count":1},{"item":{"dye":"white"},"count":1}]}}

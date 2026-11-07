@@ -1,0 +1,154 @@
+{
+  "phase": 186,
+  "workspace_build": 0,
+  "clippy_all_targets_deny_warnings": 0,
+  "format": 0,
+  "diff_check": 0,
+  "actual_css_parser": 0,
+  "native_map_hotbar_exit": 0,
+  "native_menu_exit": 0,
+  "native_captures": {
+    "hotbar-compact.png": {
+      "size": [
+        1025,
+        641
+      ],
+      "sha256": "c14248f3c3d880309d746509bc74f3cb02de11b098c6b630f08de9dfbb5aa7ca"
+    },
+    "hotbar-wide.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "1b292ea817a6e949eaf7756f048eeab35deaba90e775544ead25390fcdcbc8f2"
+    },
+    "map-compact.png": {
+      "size": [
+        1025,
+        641
+      ],
+      "sha256": "e9c0208732eeffda5ed2bd251b0a190ea31fdb232d5d7525f86bd4ba76b05f28"
+    },
+    "map-wide.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "23536c1c7ccc1a75018947cc3d1c9645deb6cdbdc1eac5f3cc8844f0297c9a7c"
+    },
+    "multiplayer-add-dialog.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "35a96291ce10838cc29a324b921ebe856af282dcc179f9d5fefff7be0493044b"
+    },
+    "multiplayer-compact.png": {
+      "size": [
+        1025,
+        641
+      ],
+      "sha256": "3e5df05b4095fd3a25265d3af1190fc3cf5629f2fbcf6d5b03664c265d231e3e"
+    },
+    "multiplayer-wide.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "6f5383f3077fe61aefa8b94d0768de8cd2f6c9007e8d66e3f821c1819331b1f7"
+    },
+    "settings-compact.png": {
+      "size": [
+        1025,
+        641
+      ],
+      "sha256": "d1b5fd94c1178ef584657750efd6da37ebafb6ca5ecff93003a25d37df113f0d"
+    },
+    "settings-controls-wide.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "8e62fa8433c1f5ee46dd3365e525eb67ebad4f3f00f13d49bb1e1da0258d6f19"
+    },
+    "settings-wide.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "fa2b57528045d38aa5e5c88174caae04d6fa302bda5f059b72ddced40d08dd0f"
+    },
+    "singleplayer-button-hover.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "4a987d0d87cd9b95630788c5c443854b1e912556f81d62d787b9d045fb9fc94e"
+    },
+    "singleplayer-compact.png": {
+      "size": [
+        1025,
+        641
+      ],
+      "sha256": "dceba2b447d92741236eb79a6506ce3efa594c5d1824fc46d0cef7fa28263351"
+    },
+    "singleplayer-create-dialog.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "6c23bc4d4724c02ff0655a31cb75ba63a5ee6665c73844ec9b3a202c70287958"
+    },
+    "singleplayer-delete-dialog.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "208bce64942e98ccde959267da1051ac1f520065baea8711464e04c52a460229"
+    },
+    "singleplayer-wide.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "90cf517bba502a6194e708f11a2dc1eb51fca3088bd9b9bc94fbe737ecede222"
+    },
+    "start-menu-compact.png": {
+      "size": [
+        1025,
+        641
+      ],
+      "sha256": "8803666fd96ad3aca42a3d3e9407d462c392cc18d2af0ae9b522408df64a18b9"
+    },
+    "start-menu-wide.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "a49ffdb7626e9674d67418ca0c853699cb08b64fb467102c7cc5bf46535053a6"
+    },
+    "world-loading-compact.png": {
+      "size": [
+        1025,
+        641
+      ],
+      "sha256": "d376ccb5fec914311950c5857f3d9ee3ebf68036ce7fb8dfaf513fe4eae483d9"
+    },
+    "world-loading-wide.png": {
+      "size": [
+        1680,
+        936
+      ],
+      "sha256": "54ac95c43b4a30591b424b9762b2c472a690830ff5b6011da385029c9e726d65"
+    }
+  },
+  "unit_tests": "Optional isolated-feature rebuild stopped before running tests; native geometry and CSS-parser verification completed.",
+  "sources": {
+    "src-ui/styles/polish-186.css": "afe3a3da405731acfe1bdbd587d646229710b5721624a547ed221d194bd13b12",
+    "src-ui/index.html": "ed93eb8ea26e277eff65dee517181257b250483167b5f1328f4cfb328d03ebda",
+    "crates/terra-ui/src/frames.rs": "ffb047b40c51f10d6118e77e3bdecd37c57c63637687971b886dfe6886b1ec42",
+    "crates/terra-ui/src/minimap/fullmap.rs": "52914b6c5de64712e291dd55e252dce03cf337caa665086fbd08d0e86e4dc142",
+    "apps/client/src/inventory_reference_smoke.rs": "ae729c5ac482cf564d875d5c027acd0dc0b4ad0c9cb09d237fdd5676cd17a482",
+    "apps/client/src/inventory_reference_smoke/polish.rs": "d14938fa02eb3af8444158a00f4237547d3f3ea76d03cd95720512c325398797"
+  }
+}

@@ -207,6 +207,8 @@ fn salt_deposits_are_concentrated_in_salt_cave_regions_with_rare_ordinary_cave_o
 #[test]
 fn actual_salt_cave_wall_coverage_is_recognizable_and_ordinary_caves_remain_sparse() {
     let world = WorldConfig {
+        landscape_revision: 3,
+        sea_level: 8.0,
         cave_structure_revision: 3,
         trees: false,
         geology_revision: 0,

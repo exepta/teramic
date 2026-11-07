@@ -112,6 +112,7 @@ fn gesture(client: &App, action: ContainerGesture) -> ContainerCommand {
     let session = client.world().resource::<client::ClientSession>();
     let snapshot = session.container.as_ref().unwrap();
     ContainerCommand {
+        view: snapshot.view,
         inventory_revision: session.inventory.revision,
         anchor: snapshot.anchor,
         reserved: [0; terra_core::INVENTORY_SLOTS],
@@ -149,6 +150,125 @@ fn transfer(host: &mut App, client: &mut App, command: ContainerCommand) -> Inve
 fn act(host: &mut App, client: &mut App, action: ContainerGesture) {
     let command = gesture(client, action);
     assert_eq!(transfer(host, client, command), InventoryOutcome::Applied);
+}
+
+#[test]
+fn mixer_rgb_target_uses_private_authoritative_container_and_real_network_gestures() {
+    use terra_core::{beds::DyeColor, mixer};
+    let (mut host, mut a, mut b) = pair();
+    let [anchor, _] = fixture(&mut host, &a, false);
+    put(&mut host, anchor, mixer::MATERIAL);
+    {
+        let mut journal = host.world_mut().resource_mut::<EditJournal>();
+        journal
+            .set_object_state(anchor, Some(BlockObjectState::default()))
+            .unwrap();
+        journal.set_mixer(anchor, Default::default()).unwrap();
+    }
+    assert_eq!(
+        inventory(
+            &mut host,
+            &mut a,
+            InventoryAction::OpenContainer { position: anchor }
+        ),
+        InventoryOutcome::Applied
+    );
+    let target = [19, 114, 222];
+    assert_eq!(
+        inventory(
+            &mut host,
+            &mut a,
+            InventoryAction::SetMixerColor {
+                station: anchor,
+                target
+            }
+        ),
+        InventoryOutcome::Applied
+    );
+    let snapshot = a
+        .world()
+        .resource::<client::ClientSession>()
+        .container
+        .as_ref()
+        .unwrap();
+    assert!(snapshot.valid());
+    assert_eq!(snapshot.mixer.as_ref().unwrap().target, target);
+    assert!(snapshot.crusher.is_none());
+    assert!(
+        b.world()
+            .resource::<client::ClientSession>()
+            .container
+            .is_none()
+    );
+    assert_eq!(
+        inventory(
+            &mut host,
+            &mut b,
+            InventoryAction::SetMixerColor {
+                station: anchor,
+                target: [255, 0, 0]
+            }
+        ),
+        InventoryOutcome::ContainerUnavailable
+    );
+    assert_eq!(
+        host.world()
+            .resource::<EditJournal>()
+            .mixer_at(anchor)
+            .unwrap()
+            .target,
+        target
+    );
+    let input = ItemKind::Dye(DyeColor::Blue);
+    assert_eq!(
+        inventory(
+            &mut host,
+            &mut a,
+            InventoryAction::CreativeSet {
+                slot: 0,
+                item: input,
+                count: 9
+            }
+        ),
+        InventoryOutcome::Applied
+    );
+    act(&mut host, &mut a, ContainerGesture::QuickMove { slot: 0 });
+    let machine = host
+        .world()
+        .resource::<EditJournal>()
+        .container_at(anchor)
+        .unwrap();
+    assert_eq!(
+        machine.slot(0),
+        Some(ItemStack {
+            item: input,
+            count: 9
+        })
+    );
+    let command = gesture(
+        &a,
+        ContainerGesture::Click {
+            slot: (terra_core::INVENTORY_SLOTS + mixer::OUTPUT) as u8,
+            secondary: false,
+        },
+    );
+    let outcome = transfer(&mut host, &mut a, command);
+    assert_eq!(outcome, InventoryOutcome::Invalid);
+    assert_eq!(
+        inventory(&mut host, &mut a, InventoryAction::CloseContainer),
+        InventoryOutcome::Applied
+    );
+    assert_eq!(
+        inventory(
+            &mut host,
+            &mut a,
+            InventoryAction::SetMixerColor {
+                station: anchor,
+                target: [0; 3]
+            }
+        ),
+        InventoryOutcome::ContainerUnavailable
+    );
 }
 
 #[test]
@@ -459,6 +579,7 @@ fn every_bed_dye_pose_accepts_authoritative_sleep_interaction_over_udp() {
                 position: anchor,
                 expected: 71,
                 facing,
+                closing: false,
             });
         wait(&mut host, &mut [&mut a, &mut b], |_, clients| {
             clients[0]
@@ -492,6 +613,169 @@ fn every_bed_dye_pose_accepts_authoritative_sleep_interaction_over_udp() {
                 .is_none()
         });
     }
+}
+
+#[test]
+fn one_cell_crusher_opens_loads_and_transfers_private_input_and_output_over_udp_without_a_peer() {
+    let (mut host, mut a, mut b) = pair();
+    let [anchor, other] = fixture(&mut host, &a, false);
+    put(&mut host, anchor, 99);
+    let recipe = &terra_core::crusher::recipes()[0];
+    let item = recipe.input;
+    let before_input = a
+        .world()
+        .resource::<client::ClientSession>()
+        .inventory
+        .count(item);
+    let before_output = a
+        .world()
+        .resource::<client::ClientSession>()
+        .inventory
+        .count(recipe.output.item);
+    {
+        let mut journal = host.world_mut().resource_mut::<EditJournal>();
+        journal
+            .set_object_state(anchor, Some(BlockObjectState::default()))
+            .unwrap();
+        journal.set_crusher(anchor, default()).unwrap();
+        journal
+            .set_container(
+                anchor,
+                Inventory {
+                    slots: vec![ItemStack { item, count: 3 }, recipe.output],
+                    ..default()
+                },
+            )
+            .unwrap();
+        assert_eq!(journal.object_state(anchor).unwrap().peer, None);
+    }
+    assert_ne!(
+        host.world().resource::<ChunkStore>().block_at(other),
+        Some(99)
+    );
+    assert_eq!(
+        inventory(
+            &mut host,
+            &mut a,
+            InventoryAction::OpenContainer { position: anchor }
+        ),
+        InventoryOutcome::Applied
+    );
+    let snapshot = a
+        .world()
+        .resource::<client::ClientSession>()
+        .container
+        .as_ref()
+        .unwrap();
+    assert!(snapshot.valid() && snapshot.crusher.is_some() && snapshot.furnace.is_none());
+    assert_eq!(snapshot.anchor, anchor);
+    assert_eq!(snapshot.halves.len(), 1);
+    assert_eq!(
+        snapshot.halves[0].inventory.slot(0),
+        Some(ItemStack { item, count: 3 })
+    );
+    assert!(
+        b.world()
+            .resource::<client::ClientSession>()
+            .container
+            .is_none()
+    );
+    assert_eq!(
+        inventory(
+            &mut host,
+            &mut b,
+            InventoryAction::OpenContainer { position: anchor }
+        ),
+        InventoryOutcome::Applied
+    );
+    act(
+        &mut host,
+        &mut a,
+        ContainerGesture::QuickMove {
+            slot: terra_core::INVENTORY_SLOTS as u8,
+        },
+    );
+    act(
+        &mut host,
+        &mut a,
+        ContainerGesture::QuickMove {
+            slot: (terra_core::INVENTORY_SLOTS + terra_core::crusher::OUTPUT) as u8,
+        },
+    );
+    assert_eq!(
+        a.world()
+            .resource::<client::ClientSession>()
+            .inventory
+            .count(item),
+        before_input + 3
+    );
+    assert_eq!(
+        a.world()
+            .resource::<client::ClientSession>()
+            .inventory
+            .count(recipe.output.item),
+        before_output + recipe.output.count
+    );
+    assert_eq!(
+        inventory(
+            &mut host,
+            &mut a,
+            InventoryAction::LoadCrushingRecipe {
+                recipe: recipe.id,
+                station: anchor
+            }
+        ),
+        InventoryOutcome::Applied
+    );
+    assert_eq!(
+        a.world()
+            .resource::<client::ClientSession>()
+            .container
+            .as_ref()
+            .unwrap()
+            .halves[0]
+            .inventory
+            .slot(0),
+        Some(ItemStack { item, count: 1 })
+    );
+    assert_eq!(
+        a.world()
+            .resource::<client::ClientSession>()
+            .inventory
+            .count(item),
+        before_input + 2
+    );
+    act(
+        &mut host,
+        &mut a,
+        ContainerGesture::QuickMove {
+            slot: terra_core::INVENTORY_SLOTS as u8,
+        },
+    );
+    assert_eq!(
+        a.world()
+            .resource::<client::ClientSession>()
+            .inventory
+            .count(item),
+        before_input + 3
+    );
+    assert_eq!(
+        inventory(&mut host, &mut a, InventoryAction::CloseContainer),
+        InventoryOutcome::Applied
+    );
+    assert_eq!(
+        inventory(&mut host, &mut b, InventoryAction::CloseContainer),
+        InventoryOutcome::Applied
+    );
+    assert_eq!(
+        host.world()
+            .resource::<EditJournal>()
+            .container_at(anchor)
+            .unwrap()
+            .occupied_slots(),
+        0
+    );
+    assert!(host.world().resource::<EditJournal>().gameplay().valid());
 }
 
 #[test]
@@ -1840,19 +2124,11 @@ fn break_chest(
 }
 
 #[test]
-fn nonempty_physical_half_blocks_removal_and_topology_change_closes_other_viewer() {
+fn filled_physical_half_drops_remaining_contents_and_closes_both_viewers_without_losing_cursor() {
     let (mut host, mut a, mut b) = pair();
     let [anchor, other] = fixture(&mut host, &a, true);
     seed(&mut host, anchor, 12);
     seed(&mut host, other, 9);
-    assert_ne!(
-        break_chest(&mut host, &mut a, anchor),
-        protocol::session::EditOutcome::Applied
-    );
-    assert_eq!(
-        host.world().resource::<ChunkStore>().block_at(anchor),
-        Some(29)
-    );
     assert_eq!(
         inventory(
             &mut host,
@@ -1874,24 +2150,51 @@ fn nonempty_physical_half_blocks_removal_and_topology_change_closes_other_viewer
         &mut a,
         ContainerGesture::Click {
             slot: terra_core::INVENTORY_SLOTS as u8,
-            secondary: false,
+            secondary: true,
         },
     );
+    let cursor = a
+        .world()
+        .resource::<client::ClientSession>()
+        .inventory
+        .cursor;
     assert_eq!(
-        inventory(&mut host, &mut a, InventoryAction::CloseContainer),
-        InventoryOutcome::Applied
+        cursor,
+        Some(ItemStack {
+            item: ItemKind::Block(3),
+            count: 6
+        })
+    );
+    let stale = gesture(
+        &a,
+        ContainerGesture::QuickMove {
+            slot: terra_core::INVENTORY_SLOTS as u8,
+        },
     );
     assert_eq!(
         break_chest(&mut host, &mut a, anchor),
         protocol::session::EditOutcome::Applied
     );
     wait(&mut host, &mut [&mut a, &mut b], |_, clients| {
-        clients[1]
-            .world()
-            .resource::<client::ClientSession>()
-            .container
-            .is_none()
+        clients.iter().all(|client| {
+            client
+                .world()
+                .resource::<client::ClientSession>()
+                .container
+                .is_none()
+        })
     });
+    assert_eq!(
+        a.world()
+            .resource::<client::ClientSession>()
+            .inventory
+            .cursor,
+        cursor
+    );
+    assert_eq!(
+        transfer(&mut host, &mut a, stale),
+        InventoryOutcome::ContainerUnavailable
+    );
     let journal = host.world().resource::<EditJournal>();
     assert_eq!(
         journal
@@ -1901,6 +2204,16 @@ fn nonempty_physical_half_blocks_removal_and_topology_change_closes_other_viewer
         9
     );
     assert!(journal.container_at(anchor).is_none());
+    assert_eq!(
+        journal
+            .gameplay()
+            .drops
+            .iter()
+            .filter(|drop| drop.stack.item == ItemKind::Block(3))
+            .map(|drop| u32::from(drop.stack.count))
+            .sum::<u32>(),
+        6
+    );
     let state = journal.object_state(other).unwrap();
     assert!(!state.secondary && state.peer.is_none());
     assert_eq!(

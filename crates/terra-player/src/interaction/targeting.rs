@@ -42,11 +42,11 @@ pub(crate) fn target_creature(
     target.0 = creatures
         .creatures
         .values()
-        .filter_map(|t| {
-            let mut a = t.current.clone();
-            a.position = t.position().to_array().map(f64::from);
-            terra_world::creatures::ray_distance(&a, origin, direction, reach)
-                .map(|distance| (distance, a.id))
+        .filter_map(|track| {
+            let mut creature = track.current.clone();
+            creature.position = track.position().to_array().map(f64::from);
+            terra_world::creatures::ray_distance(&creature, origin, direction, reach)
+                .map(|distance| (distance, creature.id))
         })
         .min_by(|a, b| a.0.total_cmp(&b.0))
         .map(|(_, id)| id);
@@ -86,14 +86,26 @@ pub(crate) fn target_block(
     } else {
         camera.translation
     };
-    let picker = if !input.pressed(terra_core::GameAction::Break)
-        && active.as_ref().is_some_and(|item| {
-            item.0.is_some_and(|item| match item {
-                terra_core::ItemKind::Prop(_) | terra_core::ItemKind::Flower(_) => true,
-                terra_core::ItemKind::Crop(seed) => seed.crop_kind().is_some(),
-                _ => false,
-            })
-        }) {
+    let picker = if input.pressed(terra_core::GameAction::Break) {
+        terra_world::targeting::pick_world_for_mining
+    } else if active
+        .as_ref()
+        .and_then(|item| item.0)
+        .and_then(terra_core::ItemKind::block_material)
+        .is_some()
+    {
+        terra_world::targeting::pick_world_for_placement
+    } else if active.as_ref().is_some_and(|item| {
+        matches!(item.0, Some(terra_core::ItemKind::Prop(kind)) if terra_core::TreeSpecies::from_sapling(kind).is_some())
+    }) {
+        terra_world::targeting::pick_world_for_saplings
+    } else if active.as_ref().is_some_and(|item| {
+        item.0.is_some_and(|item| match item {
+            terra_core::ItemKind::Prop(_) | terra_core::ItemKind::Flower(_) => true,
+            terra_core::ItemKind::Crop(seed) => seed.crop_kind().is_some(),
+            _ => false,
+        })
+    }) {
         terra_world::targeting::pick_world_for_planting
     } else {
         terra_world::targeting::pick_world_with_context
@@ -258,5 +270,115 @@ mod tests {
             .release(MouseButton::Left);
         app.update();
         assert!(app.world().resource::<TargetWorld>().0.is_none());
+    }
+}
+
+#[cfg(test)]
+mod water_break_tests {
+    use super::*;
+    use terra_voxel::BlockSection;
+    use terra_world::streaming::LoadedSection;
+
+    #[test]
+    fn pressing_break_switches_from_source_surface_to_underwater_ground() {
+        let owner = SectionPos::default();
+        let mut data = BlockSection::empty(owner).unwrap();
+        data.set_block([4, 3, 4], 3).unwrap();
+        data.set_block([4, 4, 4], 27).unwrap();
+        let mut chunks = ChunkStore::default();
+        chunks.loaded.insert(
+            owner,
+            LoadedSection {
+                data,
+                mesh: None,
+                mesh_epoch: 0,
+                water_epoch: 0,
+                water: None,
+                props: vec![],
+            },
+        );
+        let mut app = App::new();
+        app.insert_resource(chunks)
+            .init_resource::<terra_world::edits::EditJournal>()
+            .init_resource::<terra_core::block_properties::BlockPropertiesCatalog>()
+            .init_resource::<ButtonInput<KeyCode>>()
+            .init_resource::<ButtonInput<MouseButton>>()
+            .init_resource::<TargetBlock>()
+            .init_resource::<TargetWorld>()
+            .add_systems(Update, target_block);
+        let transform = Transform::from_xyz(4.5, 7.5, 4.5).looking_to(Vec3::NEG_Y, Vec3::Z);
+        let mut look = crate::CameraLook::default();
+        look.aim(transform.rotation);
+        app.world_mut().spawn((TerraCamera, transform, look));
+        app.update();
+        assert_eq!(
+            app.world().resource::<TargetBlock>().0.unwrap().position,
+            [4, 4, 4]
+        );
+        app.world_mut()
+            .resource_mut::<ButtonInput<MouseButton>>()
+            .press(MouseButton::Left);
+        app.update();
+        assert_eq!(
+            app.world().resource::<TargetBlock>().0.unwrap().position,
+            [4, 3, 4]
+        );
+    }
+    #[test]
+    fn construction_in_hand_looks_through_the_submerged_eye_cell_and_vessels_keep_water_targeting()
+    {
+        let owner = SectionPos::default();
+        let mut data = BlockSection::empty(owner).unwrap();
+        data.set_block([4, 3, 4], 3).unwrap();
+        for y in 4..=6 {
+            data.set_block([4, y, 4], 27).unwrap();
+        }
+        let mut chunks = ChunkStore::default();
+        chunks.loaded.insert(
+            owner,
+            LoadedSection {
+                data,
+                mesh: None,
+                mesh_epoch: 0,
+                water_epoch: 0,
+                water: None,
+                props: vec![],
+            },
+        );
+        let mut app = App::new();
+        app.insert_resource(chunks)
+            .init_resource::<terra_world::edits::EditJournal>()
+            .init_resource::<terra_core::block_properties::BlockPropertiesCatalog>()
+            .init_resource::<ButtonInput<KeyCode>>()
+            .init_resource::<ButtonInput<MouseButton>>()
+            .init_resource::<TargetBlock>()
+            .init_resource::<TargetWorld>()
+            .insert_resource(super::super::ActiveItem(Some(terra_core::ItemKind::Block(
+                3,
+            ))))
+            .add_systems(Update, target_block);
+        let transform = Transform::from_xyz(4.5, 6.5, 4.5).looking_to(Vec3::NEG_Y, Vec3::Z);
+        let mut look = crate::CameraLook::default();
+        look.aim(transform.rotation);
+        app.world_mut().spawn((TerraCamera, transform, look));
+        app.update();
+        let hit = app.world().resource::<TargetBlock>().0.unwrap();
+        assert_eq!(hit.position, [4, 3, 4]);
+        assert_eq!(
+            terra_world::targeting::block_placement(app.world().resource::<ChunkStore>(), hit),
+            Some(([4, 4, 4], 27))
+        );
+        for tool in [
+            terra_core::ToolKind::Bucket,
+            terra_core::ToolKind::IronWateringCan,
+        ] {
+            app.world_mut().resource_mut::<super::super::ActiveItem>().0 =
+                Some(terra_core::ItemKind::Tool(tool));
+            app.update();
+            assert_eq!(
+                app.world().resource::<TargetBlock>().0.unwrap().position,
+                [4, 6, 4]
+            );
+        }
     }
 }

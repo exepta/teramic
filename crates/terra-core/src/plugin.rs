@@ -31,6 +31,7 @@ impl bevy::prelude::Plugin for TerraCorePlugin {
             .add_message::<crate::footsteps::WaterMotion>()
             .add_message::<crate::footsteps::UiSound>()
             .insert_resource(self.0.clone())
-            .init_resource::<crate::DebugSettings>();
+            .init_resource::<crate::DebugSettings>()
+            .init_resource::<crate::HudVisibility>();
     }
 }

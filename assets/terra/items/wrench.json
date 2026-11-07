@@ -1,0 +1,5 @@
+{
+  "item": { "tool": "wrench" },
+  "name": "Wrench",
+  "description": "Reorients directional blocks without removing their contents."
+}

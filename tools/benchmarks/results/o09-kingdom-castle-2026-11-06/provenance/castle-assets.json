@@ -1,0 +1,330 @@
+{
+  "assets/crafting/bergfried.json": {
+    "bytes": 1054,
+    "sha256": "f6be6a6921af697e61b3c915655f6d1c36593a4bcf23a78ffdc625acbcf20b5f"
+  },
+  "assets/crafting/bergfried_wall.json": {
+    "bytes": 614,
+    "sha256": "59ae6c7e46e683f82e3902d652bb565775f879391ce248ab16fefa0eb2b4ee7d"
+  },
+  "assets/crafting/castle_arch_left.json": {
+    "bytes": 415,
+    "sha256": "f3cbbe2bea9daf7f599474985b74c7fe4d61ae8cd959a2c78402a158145d8b89"
+  },
+  "assets/crafting/castle_arch_left_from_right.json": {
+    "bytes": 340,
+    "sha256": "0cd49b3b8f722c3f028e6b752ff5735fd89f2310cce698969d4bcc3d9d92a5fe"
+  },
+  "assets/crafting/castle_arch_right.json": {
+    "bytes": 331,
+    "sha256": "7b4ab236fd46bbe2bb63918ef5520dfaf42e3935ca8452b0e53d000aa2565497"
+  },
+  "assets/crafting/castle_arrow_slit.json": {
+    "bytes": 399,
+    "sha256": "21c9628979cd3d931c835c16080d725aa995c50b0baffa6cce97dceb2a5e8f37"
+  },
+  "assets/crafting/castle_battlement_corner.json": {
+    "bytes": 420,
+    "sha256": "390036d89455de1dfc8ab08475e0734d51a0fc320dd2efd8512f52b1c11763a3"
+  },
+  "assets/crafting/castle_battlement_pillar.json": {
+    "bytes": 334,
+    "sha256": "3454f4af2ac101e709bef4e386f8e4a37817e4c8cb5e972452ef321985d6c40b"
+  },
+  "assets/crafting/castle_battlement_straight.json": {
+    "bytes": 422,
+    "sha256": "e49f9a48206d115239a7fa06ebfc322768d8b4c0b6a4a9e964e135908004cf8f"
+  },
+  "assets/crafting/castle_blackstone_wall.json": {
+    "bytes": 427,
+    "sha256": "3b11a53638df7c819f4f9609bb95792ee585745dcb0d17bbdb77103ad605ca1a"
+  },
+  "assets/crafting/castle_cracked_wall.json": {
+    "bytes": 329,
+    "sha256": "48431d2b3b04576fc116fa0966913da3d496665234030f299ffec200f8a3b9ba"
+  },
+  "assets/crafting/castle_desert_wall.json": {
+    "bytes": 525,
+    "sha256": "aeb675f4639e76b48774981afc0f6090f2011ae2b6c6ee332858c9b9174c0dba"
+  },
+  "assets/crafting/castle_iron_wall.json": {
+    "bytes": 429,
+    "sha256": "0d862dae2ae2d0f2355b2f8e4b3cb9964adb28a1b1452b42e9c99bfce657610d"
+  },
+  "assets/crafting/castle_moss_wall.json": {
+    "bytes": 410,
+    "sha256": "8718547e07e23e1a6f2523108dbd389922d5c017b059a3d2d03b5c748357ca60"
+  },
+  "assets/crafting/castle_overgrown_wall.json": {
+    "bytes": 420,
+    "sha256": "6502f019fe89e021f638be3a73fb3e7c086afc27bad6d0080758fec4773a3b30"
+  },
+  "assets/crafting/castle_royal_wall.json": {
+    "bytes": 524,
+    "sha256": "940dc61cd8bff9efc86abc6af89b3d3aef94cec500a8140feb401d2105e306b2"
+  },
+  "assets/crafting/castle_sandstone_wall.json": {
+    "bytes": 617,
+    "sha256": "509292b2849a17d54f20a29c983621f5818bc971acf386c75feee3ec09eeb5b7"
+  },
+  "assets/crafting/castle_snow_wall.json": {
+    "bytes": 410,
+    "sha256": "2f00ddf673c9fc757d95a31039e313254e1c3f3c1378cdd38851bac0318a35df"
+  },
+  "assets/crafting/castle_stone_wall.json": {
+    "bytes": 604,
+    "sha256": "103ea5c3297328b046f258f98cb21ecd49bf9714acdaf0be5e7b0ec09a60463c"
+  },
+  "assets/crafting/castle_timber_wall.json": {
+    "bytes": 522,
+    "sha256": "4a84c82cc01a84e10df6aaa128c022fa93f13428a1ba454e3e4e87543989663b"
+  },
+  "assets/crafting/castle_window.json": {
+    "bytes": 414,
+    "sha256": "66e412cc1e8cc53e1912cb8a02cb11a7d249fc845cd7c53f483ddc57b2e83d60"
+  },
+  "assets/terra/blocks/bergfried.json": {
+    "bytes": 1506,
+    "sha256": "059d8ec92f2e3d8535fbfe714d873221974850e6f8b601800226c807a396cb20"
+  },
+  "assets/terra/blocks/bergfried_wall.json": {
+    "bytes": 1518,
+    "sha256": "14f92b1701cb5fb0f7302b3e0f8671191b1fffcf722c0e66dbb1746fd8d6bb54"
+  },
+  "assets/terra/blocks/castle_arch_left.json": {
+    "bytes": 2790,
+    "sha256": "8e1195c065a151e959d67e5974387637d7561b7aa27caa2dff36f678d764f42a"
+  },
+  "assets/terra/blocks/castle_arch_right.json": {
+    "bytes": 2797,
+    "sha256": "381bd3f38a8cafed4910a51b8654278495696e5d3b43fef8cc770e3ac9b59d27"
+  },
+  "assets/terra/blocks/castle_arrow_slit.json": {
+    "bytes": 1315,
+    "sha256": "f6f54b060821b7fab6bf4f1988c2448ac21e07e554312d13940be28b703ef44b"
+  },
+  "assets/terra/blocks/castle_battlement_corner.json": {
+    "bytes": 1428,
+    "sha256": "4aa19fe3fa1bd8233a0e853ba8ab9f24afe74bd352f0d852aa11df273c9ab3e2"
+  },
+  "assets/terra/blocks/castle_battlement_pillar.json": {
+    "bytes": 1605,
+    "sha256": "79d1ef6858424d28fb7cc1ff4ab95db7bcc5b1c998162482e603fc67778e0ff4"
+  },
+  "assets/terra/blocks/castle_battlement_straight.json": {
+    "bytes": 1168,
+    "sha256": "e3b6d1368627830215217038f9b535e67a26141e518530240ab05819824ea3c6"
+  },
+  "assets/terra/blocks/castle_blackstone_wall.json": {
+    "bytes": 888,
+    "sha256": "7232d99c8df1762413c0a28537fe4b8444aa7105d4d00448ffc3df6dcb59b3b1"
+  },
+  "assets/terra/blocks/castle_cracked_wall.json": {
+    "bytes": 880,
+    "sha256": "e7a6e9b767f665a2b77b8948729789692bf9f666931a09016fe3c9e528e8661b"
+  },
+  "assets/terra/blocks/castle_desert_wall.json": {
+    "bytes": 888,
+    "sha256": "7122f9d91e3f60433b68fe1a79b65cc916966268b7850455ff0025f4fd1c3a4f"
+  },
+  "assets/terra/blocks/castle_iron_wall.json": {
+    "bytes": 969,
+    "sha256": "f24aff9328c5f4dce004294d4bd450ce39187b763de3a3d491b4d4e8f618b416"
+  },
+  "assets/terra/blocks/castle_moss_wall.json": {
+    "bytes": 974,
+    "sha256": "8893fef5f5a49f756be2f38a9e3fc52bdb1e26b4787322533dc6efeac12b2619"
+  },
+  "assets/terra/blocks/castle_overgrown_wall.json": {
+    "bytes": 990,
+    "sha256": "eb91e5246980b9a40e85b2f52edb2fd0aa62ffb94c2d0e5d7a4875f2df931a2f"
+  },
+  "assets/terra/blocks/castle_royal_wall.json": {
+    "bytes": 886,
+    "sha256": "4569229edb4d050f71926b68d3094116c5b51e9ca52110572b32b6cae29b3809"
+  },
+  "assets/terra/blocks/castle_sandstone_wall.json": {
+    "bytes": 886,
+    "sha256": "9594693234dfe86643e541555faa0fdbb2d52cd245dcf1e1f0e3c11f7edd32df"
+  },
+  "assets/terra/blocks/castle_snow_wall.json": {
+    "bytes": 872,
+    "sha256": "ee2d64ada60bcc817ad6107db84b33bc11e080498b3ebdb253b48ecfe2419c01"
+  },
+  "assets/terra/blocks/castle_stone_wall.json": {
+    "bytes": 873,
+    "sha256": "cfca8b0d7804b24cdba6bdd1841dac20a51bc7f6754a75447ff8498bac1ea568"
+  },
+  "assets/terra/blocks/castle_timber_wall.json": {
+    "bytes": 977,
+    "sha256": "e2b7e3ea41c800cc7bb382784b8dfb52484e6c99962d6b3662a344275d9b0010"
+  },
+  "assets/terra/blocks/castle_window.json": {
+    "bytes": 2119,
+    "sha256": "b15f76c67057e34d37253db856acb5ddb38f3feda749a30d75f17cdb8cd82883"
+  },
+  "assets/terra/blocks/models/bergfried.bin": {
+    "bytes": 191904,
+    "sha256": "8e1a4fe876215a7f001bc6f7810948de6ef4386bf933b7f541a4658b45b959ee"
+  },
+  "assets/terra/blocks/models/bergfried.gltf": {
+    "bytes": 7300,
+    "sha256": "f1064c54f41f8aff59e4e7fefae8a0dab415c19c487c6821e4dc6a066baf956c"
+  },
+  "assets/terra/blocks/models/bergfried_wall.bin": {
+    "bytes": 148944,
+    "sha256": "9c0c548e2c4cc54b8ec0e8537abbed5ed9d4ee5c314f7fe605d296df03fe29f4"
+  },
+  "assets/terra/blocks/models/bergfried_wall.gltf": {
+    "bytes": 5457,
+    "sha256": "b3a1f43c2f87e116051037f336b03158ad128d7800a814a014b6713a435f2c50"
+  },
+  "assets/terra/blocks/models/castle_arch_left.bin": {
+    "bytes": 61632,
+    "sha256": "6db25f9fbc8aa84296175bffaecabbe6b3abcdb4753a33bfde37d0a1bbf0d55e"
+  },
+  "assets/terra/blocks/models/castle_arch_left.gltf": {
+    "bytes": 4309,
+    "sha256": "d25746bee6f6b948c0cb785764918bc5322680fae3f6c9a1fbf6e49ebf08f58c"
+  },
+  "assets/terra/blocks/models/castle_arch_right.bin": {
+    "bytes": 61632,
+    "sha256": "b4d43668c335d6ef5b4192b88258f472e7041c74387fc9a9005cadf38aa7948f"
+  },
+  "assets/terra/blocks/models/castle_arch_right.gltf": {
+    "bytes": 4295,
+    "sha256": "fd2d1884cd66ebc024aed07d8e4b2fd5a403a026664ed79b916fdf07054e57ce"
+  },
+  "assets/terra/blocks/models/castle_arrow_slit.bin": {
+    "bytes": 451968,
+    "sha256": "1af7393aa6e4440d29647c05c0edf6d798155aaa5fef4a531a82386fe0a7893a"
+  },
+  "assets/terra/blocks/models/castle_arrow_slit.gltf": {
+    "bytes": 5445,
+    "sha256": "160e600e0e5b6fa803117a89aa336e17a5cd8c4d30ad69ce0b2a2cc7c272b409"
+  },
+  "assets/terra/blocks/models/castle_battlement_corner.bin": {
+    "bytes": 272208,
+    "sha256": "d2381e775a2fb131135ddc7952742ae233206aea522751ef20ea531c0bd284c9"
+  },
+  "assets/terra/blocks/models/castle_battlement_corner.gltf": {
+    "bytes": 5501,
+    "sha256": "26a1981222239c4b7255079876819a8bc60f910def88f0329801ea8fb7472cac"
+  },
+  "assets/terra/blocks/models/castle_battlement_pillar.bin": {
+    "bytes": 154080,
+    "sha256": "550bd2317b26993bee2341de8178df1e87df5b489473936f409a1e4e533f82b9"
+  },
+  "assets/terra/blocks/models/castle_battlement_pillar.gltf": {
+    "bytes": 5396,
+    "sha256": "4db7beb9277f067cdb503c7c62204bd7073f6d4827ac33aaede868df8392ce42"
+  },
+  "assets/terra/blocks/models/castle_battlement_straight.bin": {
+    "bytes": 138672,
+    "sha256": "5346d9c9ad8ecbc0c01b7356eed8a054bab6cff1fc7a86c6822c6b75fdb84465"
+  },
+  "assets/terra/blocks/models/castle_battlement_straight.gltf": {
+    "bytes": 5401,
+    "sha256": "2e42b6bc758df5cfe32fd7cb99e93be214de93d7868d8862a44f4540e7eacd83"
+  },
+  "assets/terra/blocks/models/castle_blackstone_wall.bin": {
+    "bytes": 169488,
+    "sha256": "cbea44bd12974721cea619a8db552f6a8e4e3f9839b3cb631936d5eeeb114686"
+  },
+  "assets/terra/blocks/models/castle_blackstone_wall.gltf": {
+    "bytes": 5485,
+    "sha256": "d953580d9147453305e27fedd08aebf2704253b1aa7ed156c2aaf31ced211bee"
+  },
+  "assets/terra/blocks/models/castle_cracked_wall.bin": {
+    "bytes": 172080,
+    "sha256": "1070216d2fb9ff25499a286f5ce6f02d5feefb91c6bb8f7721b6297ee353d969"
+  },
+  "assets/terra/blocks/models/castle_cracked_wall.gltf": {
+    "bytes": 5447,
+    "sha256": "fe963aee29b536bf4eb1bc7289a110a45225476b671f9ca69e9036b3dfee931c"
+  },
+  "assets/terra/blocks/models/castle_desert_wall.bin": {
+    "bytes": 176400,
+    "sha256": "4a7953a26b881e08bc78a8b8964b760e954cb73f3a4202135c1d3fbe3ab2952a"
+  },
+  "assets/terra/blocks/models/castle_desert_wall.gltf": {
+    "bytes": 7273,
+    "sha256": "92c71c4fb57e3254759847cf2c59061fab9f64c9f3bcc1a5a1993e57b46290d9"
+  },
+  "assets/terra/blocks/models/castle_iron_wall.bin": {
+    "bytes": 251664,
+    "sha256": "da54676ec92b0769643cbc9c25615c1f9a611c4b52cde18e5dca02d5cdf2454f"
+  },
+  "assets/terra/blocks/models/castle_iron_wall.gltf": {
+    "bytes": 7536,
+    "sha256": "a741f75b6e351cf0c9997a5de5bdf106abec50378606fba4d442d0e401894f1a"
+  },
+  "assets/terra/blocks/models/castle_moss_wall.bin": {
+    "bytes": 254256,
+    "sha256": "903efbe931fe4b6b57336ba539962e76d62d77c9e5588aa2fbd65c99730d79be"
+  },
+  "assets/terra/blocks/models/castle_moss_wall.gltf": {
+    "bytes": 8535,
+    "sha256": "5c7ee3210b32d3b6de448851a49af80e1981622ed74fcf1213bcca347c654dce"
+  },
+  "assets/terra/blocks/models/castle_overgrown_wall.bin": {
+    "bytes": 414384,
+    "sha256": "c0adfa0cfebaf1e2cda66fbc6f61996511acb6dd4f1a1be9a610cc83aa999a49"
+  },
+  "assets/terra/blocks/models/castle_overgrown_wall.gltf": {
+    "bytes": 8559,
+    "sha256": "681f2664ca8f4122428e5214cfced1312104ba9404e4aa3bb95cca41564a5c4f"
+  },
+  "assets/terra/blocks/models/castle_royal_wall.bin": {
+    "bytes": 207312,
+    "sha256": "4a61eec55435035b79f49f83cb0c7b39ff31a1e7d23716908ad01664b7c6196c"
+  },
+  "assets/terra/blocks/models/castle_royal_wall.gltf": {
+    "bytes": 7312,
+    "sha256": "4cb07ddef5e777038f434505c4acb5f3db86113f10d02fc6e72e1e5ec06bc4b3"
+  },
+  "assets/terra/blocks/models/castle_sandstone_wall.bin": {
+    "bytes": 169488,
+    "sha256": "cbea44bd12974721cea619a8db552f6a8e4e3f9839b3cb631936d5eeeb114686"
+  },
+  "assets/terra/blocks/models/castle_sandstone_wall.gltf": {
+    "bytes": 5499,
+    "sha256": "bcb71c44a95ed0a089f5e88bcbd4560e4362ad2f4b9e367cd5ee684457699db6"
+  },
+  "assets/terra/blocks/models/castle_snow_wall.bin": {
+    "bytes": 195168,
+    "sha256": "496172609c151eaa5b43a2f2d64da3177e1b4018b39799ac16fe6da565c33e7a"
+  },
+  "assets/terra/blocks/models/castle_snow_wall.gltf": {
+    "bytes": 6409,
+    "sha256": "e841976a191bd39aef3592a740b443ff5c6471b3f5cf0bc5c3bdae4245c13db0"
+  },
+  "assets/terra/blocks/models/castle_stone_wall.bin": {
+    "bytes": 169488,
+    "sha256": "cbea44bd12974721cea619a8db552f6a8e4e3f9839b3cb631936d5eeeb114686"
+  },
+  "assets/terra/blocks/models/castle_stone_wall.gltf": {
+    "bytes": 5468,
+    "sha256": "15bc2dd2cc2c7893d306120a542d70d6230881739b2dadfb2164518d810354c8"
+  },
+  "assets/terra/blocks/models/castle_timber_wall.bin": {
+    "bytes": 272208,
+    "sha256": "4abf1e4eb564bbc028f8b2b2546a18b0353feadac27b5fa499f501fd2bb4db4f"
+  },
+  "assets/terra/blocks/models/castle_timber_wall.gltf": {
+    "bytes": 7540,
+    "sha256": "5bf5d5b8364986af3e6f68ebdff46eb94c64535ce26916bb8e25181ef8dce162"
+  },
+  "assets/terra/blocks/models/castle_window.bin": {
+    "bytes": 412176,
+    "sha256": "5174d45c43b67be4bb8bd68e3ede890ec99bc0f0d042d2d03f57587986eff349"
+  },
+  "assets/terra/blocks/models/castle_window.gltf": {
+    "bytes": 7389,
+    "sha256": "14cff8fe5ea1e1aab3f3327376d5e3f1f7a9b424aaddc4950ac9c07a87e8b60f"
+  },
+  "tools/assets/build_castle.py": {
+    "bytes": 19426,
+    "sha256": "68aa34a6c370e0bee89c9ccb2b38c2a5cd2985f97777596361d806e76a1d15fa"
+  }
+}

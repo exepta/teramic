@@ -9,6 +9,8 @@ use terra_world::{
 
 #[path = "bee_tests.rs"]
 mod bee_tests;
+#[path = "kingdom_tests.rs"]
+mod kingdom_tests;
 #[path = "location_tests.rs"]
 mod location_tests;
 #[path = "pet_command_tests.rs"]
@@ -23,6 +25,8 @@ fn base(mode: WorldMode, role: connection::NetworkRole) -> App {
     config.server.game_mode = terra_core::GameMode::Creative;
     config.client.view_distance = 1;
     config.client.vertical_view_distance = 1;
+    config.world.landscape_revision = 3;
+    config.world.sea_level = 8.0;
     config.world.biomes = false;
     config.world.hill_amplitude = 0.0;
     config.world.mountain_amplitude = 0.0;
@@ -483,6 +487,74 @@ fn wait(server: &mut App, clients: &mut [&mut App], condition: impl Fn(&App, &[&
         }
         assert!(Instant::now() < deadline, "network condition timed out");
         std::thread::sleep(Duration::from_millis(1));
+    }
+}
+
+#[test]
+fn udp_welcome_preserves_custom_biome_snapshots_and_absent_legacy_snapshots() {
+    for landscape_revision in [3, 4] {
+        let mut host = server();
+        let mut expected = host.world().resource::<GameConfig>().world.clone();
+        expected.landscape_revision = landscape_revision;
+        if landscape_revision == 3 {
+            expected.sea_level = 8.0;
+            expected.biome_definitions = None;
+        } else {
+            expected.sea_level = 22.0;
+            expected.biome_definitions = Some(terra_core::BiomeDefinitions::default());
+            let definitions = expected.biome_definitions.as_mut().unwrap();
+            definitions.entries[terra_core::BiomeKind::Plains as usize]
+                .terrain
+                .max_height = 58.0;
+            definitions.entries[terra_core::BiomeKind::Forest as usize]
+                .terrain
+                .tree_density = 0.44;
+            definitions.entries[terra_core::BiomeKind::Ocean as usize]
+                .ocean
+                .as_mut()
+                .unwrap()
+                .warm
+                .coral_density = 0.61;
+        }
+        host.world_mut().resource_mut::<GameConfig>().world = expected.clone();
+        host.world_mut()
+            .resource_mut::<terra_world::streaming::WorldTerrain>()
+            .0 = terra_world::TerraGenerator::new(expected.clone()).unwrap();
+        let token = host
+            .world()
+            .resource::<server::ServerRuntime>()
+            .issue_token(301)
+            .unwrap();
+        let mut a = client(token);
+        wait(&mut host, &mut [&mut a], |_, clients| {
+            clients[0].world().resource::<client::ClientSession>().ready
+        });
+        let token = host
+            .world()
+            .resource::<server::ServerRuntime>()
+            .issue_token(302)
+            .unwrap();
+        let mut b = client(token);
+        wait(&mut host, &mut [&mut a, &mut b], |_, clients| {
+            clients
+                .iter()
+                .all(|client| client.world().resource::<client::ClientSession>().ready)
+        });
+        for replica in [&a, &b] {
+            let received = &replica.world().resource::<GameConfig>().world;
+            assert_eq!(received, &expected);
+            assert!(received.same_terrain(&expected));
+            assert_eq!(received.biome_definitions, expected.biome_definitions);
+            assert_eq!(received.sea_level, expected.sea_level);
+            assert_eq!(
+                replica
+                    .world()
+                    .resource::<terra_world::streaming::WorldTerrain>()
+                    .0
+                    .config(),
+                &expected
+            );
+        }
     }
 }
 
@@ -1543,3 +1615,6 @@ fn sustained_two_profile_udp_session_keeps_identity_and_replication() {
         started.elapsed()
     );
 }
+
+#[path = "sapling_tests.rs"]
+mod sapling_tests;

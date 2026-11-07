@@ -16,7 +16,7 @@ fn bag(bellows: Option<BellowsKind>) -> Inventory {
 }
 #[test]
 fn smelting_assets_are_valid_unique_and_fuels_are_wood_not_snow_or_clay() {
-    assert_eq!(recipes().len(), 8);
+    assert_eq!(recipes().len(), 9);
     for recipe in recipes() {
         assert!(recipe.valid());
     }
@@ -26,6 +26,64 @@ fn smelting_assets_are_valid_unique_and_fuels_are_wood_not_snow_or_clay() {
     for id in [3, 5, 9, 19, 39] {
         assert!(fuel_seconds(ItemKind::Block(id)).is_none());
     }
+}
+
+#[test]
+fn survival_sand_smelts_to_glass_and_the_real_hand_recipe_makes_three_bottles() {
+    use crate::crafting::{CraftDestination, CraftStation, RecipeBook, recipe_key};
+
+    let sand = ItemKind::Block(4);
+    let glass = ItemKind::Block(15);
+    let recipe = recipe_for(sand).unwrap();
+    assert_eq!(recipe.id, 9);
+    assert_eq!(recipe.key, "teramic::smelt_glass");
+    assert_eq!(recipe.output, stack(glass, 1));
+    assert_eq!(recipe.seconds, 10.0);
+    let coal = ItemKind::Mineral(MineralItem::Coal);
+    let mut inventory = Inventory {
+        slots: vec![stack(sand, 3), stack(coal, 1), ItemStack::EMPTY],
+        ..Default::default()
+    };
+    let mut state = FurnaceState::default();
+    for _ in 0..30 {
+        assert!(advance(&mut state, &mut inventory, 1.0, 164));
+    }
+    assert_eq!(state.completed, 3);
+    assert_eq!(inventory.slot(INPUT), None);
+    assert_eq!(inventory.slot(FUEL), None);
+    assert_eq!(inventory.slot(OUTPUT), Some(stack(glass, 3)));
+    assert!((state.burn_remaining - (fuel_seconds(coal).unwrap() - 30.0)).abs() < 0.001);
+
+    let mut player = Inventory::default();
+    assert_eq!(
+        player.insert(glass, inventory.slot(OUTPUT).unwrap().count),
+        0
+    );
+    RecipeBook::builtins()
+        .craft(
+            &mut player,
+            recipe_key("teramic::glass_bottle"),
+            1,
+            CraftStation::Hand,
+            CraftDestination::Inventory,
+        )
+        .unwrap();
+    assert_eq!(player.count(glass), 0);
+    assert_eq!(player.count(ItemKind::GlassBottle), 3);
+    assert!(player.valid());
+
+    let mut blocked = Inventory {
+        slots: vec![stack(sand, 1), stack(coal, 1), stack(glass, STACK_LIMIT)],
+        ..Default::default()
+    };
+    let original = blocked.slots.clone();
+    let mut state = FurnaceState::default();
+    for _ in 0..12 {
+        advance(&mut state, &mut blocked, 1.0, 164);
+    }
+    assert_eq!(blocked.slots[..3], original);
+    assert_eq!(state.completed, 0);
+    assert_eq!(state.burn_remaining, 0.0);
 }
 #[test]
 fn cooks_exactly_one_and_preserves_fuel_and_progress_across_serialization() {
@@ -81,7 +139,7 @@ fn all_mouse_gestures_reject_output_insertion_and_enforce_bellows_capacity() {
         &mut player,
         &mut contents,
         ContainerGesture::Click {
-            slot: 30,
+            slot: (crate::INVENTORY_SLOTS + BELLOWS) as u8,
             secondary: false
         }
     ));

@@ -159,7 +159,7 @@ pub fn snow_buried(
         Some(5) => true,
         Some(98) => journal
             .object_state(cap)
-            .is_some_and(|state| state.facing >= 3),
+            .is_some_and(|state| terra_core::construction::snow_layers(state.facing) >= 3),
         _ => false,
     }
 }

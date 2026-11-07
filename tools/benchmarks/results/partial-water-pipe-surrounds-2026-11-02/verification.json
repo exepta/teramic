@@ -1,0 +1,46 @@
+{
+  "status": "passed",
+  "date": "2026-11-02",
+  "build": "passed",
+  "clippy": "passed",
+  "format": "passed",
+  "diff_check": "passed",
+  "tests": {
+    "passed": 3712,
+    "failed": 0,
+    "ignored": 8,
+    "programs": 12,
+    "world": 1031,
+    "render": 994
+  },
+  "native": {
+    "hydraulics": {
+      "status": "passed",
+      "captures": 35,
+      "warnings": 1,
+      "errors": 0,
+      "seconds": 76.03540802001953,
+      "jet_vertices": 794
+    },
+    "partial_water": {
+      "status": "passed",
+      "captures": 5,
+      "warnings": 0,
+      "errors": 0,
+      "seconds": 11.664658611,
+      "finite_slab_units": 16
+    },
+    "waterfall": {
+      "status": "passed",
+      "captures": 2,
+      "warnings": 0,
+      "errors": 0
+    }
+  },
+  "source_files_hashed": 84,
+  "slab_semantics": "Solid half retains water up to its crest; a higher full source can overflow.",
+  "notes": [
+    "The closed-pocket drain fixture now has a real outlet; a separate ledger/reload test preserves genuinely trapped residual water.",
+    "A pre-existing Bevy RenderLayers command for an already despawned entity was logged during the hydraulic scene teleport. All assertions and captures passed."
+  ]
+}

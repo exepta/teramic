@@ -63,6 +63,9 @@ pub(super) fn update(
         .filter(|edit| edit.outcome == EditOutcome::Applied)
         .take(12)
     {
+        if matches!(edit.action, EditAction::HarvestTree { .. }) {
+            emit(listener, 7, 0.22, 1.12, Category::Environment);
+        }
         if let EditAction::Block {
             position,
             material,

@@ -1,0 +1,9 @@
+{
+  "id":"teramic::iron_large_gear","name":"Iron Large Gear","station":"workbench",
+  "output":{"item":{"block":151},"count":1},
+  "pattern":{"kind":"shaped","width":3,"height":3,"cells":[
+    {"item":{"mineral":"iron_ingot"},"count":1},{"item":{"mineral":"iron_ingot"},"count":1},{"item":{"mineral":"iron_ingot"},"count":1},
+    {"item":{"mineral":"iron_ingot"},"count":1},{"item":{"block":143},"count":1},{"item":{"mineral":"iron_ingot"},"count":1},
+    {"item":{"mineral":"iron_ingot"},"count":1},{"item":{"mineral":"iron_ingot"},"count":1},{"item":{"mineral":"iron_ingot"},"count":1}
+  ]}
+}

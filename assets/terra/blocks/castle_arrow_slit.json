@@ -1,0 +1,112 @@
+{
+  "schema_version": 1,
+  "id": 185,
+  "name": "Mauer mit Schiessscharte",
+  "description": "Castle masonry: slit, stone finish. Authored joints, relief and shared physical openings. Place against any face to orient; arch halves form a two-block span.",
+  "creative_category": "building",
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/castle_arrow_slit.gltf",
+  "struct_block": true,
+  "hardness": 2.8,
+  "resistance": 12,
+  "required_tool": "pickaxe",
+  "mining_level": 1,
+  "textures": {},
+  "collision_boxes": [
+    {
+      "minimum": [
+        0,
+        0,
+        0.25
+      ],
+      "maximum": [
+        0.44,
+        1,
+        0.75
+      ]
+    },
+    {
+      "minimum": [
+        0.56,
+        0,
+        0.25
+      ],
+      "maximum": [
+        1,
+        1,
+        0.75
+      ]
+    },
+    {
+      "minimum": [
+        0.44,
+        0,
+        0.25
+      ],
+      "maximum": [
+        0.56,
+        0.22,
+        0.75
+      ]
+    },
+    {
+      "minimum": [
+        0.44,
+        0.82,
+        0.25
+      ],
+      "maximum": [
+        0.56,
+        1,
+        0.75
+      ]
+    }
+  ],
+  "materials": {
+    "stone_0": {
+      "texture_pattern": "stone",
+      "base_color": [
+        0.93,
+        0.93,
+        0.93,
+        1
+      ],
+      "roughness": 0.99,
+      "reflectance": 0.08
+    },
+    "stone_1": {
+      "texture_pattern": "stone",
+      "base_color": [
+        0.97,
+        0.97,
+        0.97,
+        1
+      ],
+      "roughness": 0.99,
+      "reflectance": 0.08
+    },
+    "stone_2": {
+      "texture_pattern": "stone",
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.99,
+      "reflectance": 0.08
+    },
+    "stone_3": {
+      "texture_pattern": "stone",
+      "base_color": [
+        0.985,
+        0.985,
+        0.985,
+        1
+      ],
+      "roughness": 0.99,
+      "reflectance": 0.08
+    }
+  }
+}

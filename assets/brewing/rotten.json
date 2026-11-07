@@ -1,0 +1,1 @@
+{"id":11,"key":"teramic::rotten_potion","name":"Rotten Potion","inputs":[{"item":{"animal":"fish"},"count":1},{"item":{"prop":"mushroom"},"count":1}],"effects":[{"kind":"rotten","level":1,"seconds":45.0}],"seconds":18.0,"color":[122,116,46]}

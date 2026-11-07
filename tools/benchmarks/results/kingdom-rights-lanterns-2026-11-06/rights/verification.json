@@ -1,0 +1,180 @@
+{
+  "status": "passed",
+  "exit_code": 0,
+  "window_rounding_tolerance_pixels": 1,
+  "private_run_directory": "/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/target/phase199-rights/run.mMf89j",
+  "success_marker": "Native Kingdom UI gallery passed",
+  "gallery_images": [
+    {
+      "path": "kingdom-ui-qhd.png",
+      "width": 2561,
+      "height": 1440,
+      "bytes": 2266409,
+      "requested_size": [
+        2560,
+        1440
+      ]
+    },
+    {
+      "path": "kingdom-ui-icons-qhd.png",
+      "width": 2561,
+      "height": 1440,
+      "bytes": 2429399,
+      "requested_size": [
+        2560,
+        1440
+      ]
+    },
+    {
+      "path": "kingdom-ui-icons-search.png",
+      "width": 2561,
+      "height": 1440,
+      "bytes": 2257816,
+      "requested_size": [
+        2560,
+        1440
+      ]
+    },
+    {
+      "path": "kingdom-ui-colorpicker.png",
+      "width": 2561,
+      "height": 1440,
+      "bytes": 2315517,
+      "requested_size": [
+        2560,
+        1440
+      ]
+    },
+    {
+      "path": "kingdom-ui-compact.png",
+      "width": 1025,
+      "height": 768,
+      "bytes": 318497,
+      "requested_size": [
+        1024,
+        768
+      ]
+    },
+    {
+      "path": "kingdom-ui-icons-compact.png",
+      "width": 1025,
+      "height": 768,
+      "bytes": 405920,
+      "requested_size": [
+        1024,
+        768
+      ]
+    },
+    {
+      "path": "kingdom-ui-4k.png",
+      "width": 3840,
+      "height": 2160,
+      "bytes": 5900075,
+      "requested_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "path": "kingdom-ui-icons-4k.png",
+      "width": 3840,
+      "height": 2160,
+      "bytes": 6043360,
+      "requested_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "path": "kingdom-rights-visitor.png",
+      "width": 3840,
+      "height": 2160,
+      "bytes": 5445250,
+      "requested_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "path": "kingdom-role-choices.png",
+      "width": 3840,
+      "height": 2160,
+      "bytes": 5439598,
+      "requested_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "path": "kingdom-rights-worker.png",
+      "width": 3840,
+      "height": 2160,
+      "bytes": 5433012,
+      "requested_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "path": "kingdom-diplomacy-neutral.png",
+      "width": 3840,
+      "height": 2160,
+      "bytes": 5464340,
+      "requested_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "path": "kingdom-diplomacy-allied.png",
+      "width": 3840,
+      "height": 2160,
+      "bytes": 5469653,
+      "requested_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "path": "kingdom-diplomacy-pending.png",
+      "width": 3840,
+      "height": 2160,
+      "bytes": 5463639,
+      "requested_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "path": "kingdom-rights-revoked.png",
+      "width": 3840,
+      "height": 2160,
+      "bytes": 5437890,
+      "requested_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "path": "kingdom-member-readonly.png",
+      "width": 3840,
+      "height": 2160,
+      "bytes": 5767164,
+      "requested_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "path": "kingdom-diplomacy-readonly.png",
+      "width": 3840,
+      "height": 2160,
+      "bytes": 5811966,
+      "requested_size": [
+        3840,
+        2160
+      ]
+    }
+  ],
+  "setup_image": "kingdom-unbound.png"
+}

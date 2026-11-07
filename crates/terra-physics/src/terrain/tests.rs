@@ -152,6 +152,7 @@ fn eviction_removes_colliders_and_old_jobs_cannot_resurrect_edited_data() {
     app.world_mut().resource_mut::<ColliderJobs>().0.insert(
         owner,
         ColliderJob {
+            plain: None,
             profile: None,
             epoch: 0,
             task: AsyncComputeTaskPool::get().spawn(async move { build_collider(&data) }),
@@ -223,4 +224,97 @@ fn glass_and_fixed_water_stop_falling_bodies_like_opaque_building_blocks() {
         let height = app.world().get::<Position>(body).unwrap().y;
         assert!((height - 1.25).abs() < 0.06, "{material:?}: {height}");
     }
+}
+
+#[test]
+fn cube_collision_survives_neighbour_edits_but_not_local_or_model_changes() {
+    let mut app = app();
+    settle_colliders(&mut app, 0);
+    let owner = SectionPos::default();
+    app.world_mut()
+        .resource_mut::<EditJournal>()
+        .record([-1, 2, 2], 3)
+        .unwrap();
+    {
+        let world = app.world();
+        assert!(world.resource::<TerrainCollisionState>().ready_for_aabb(
+            Vec3::ONE,
+            Vec3::splat(3.0),
+            world.resource::<ChunkStore>(),
+            world.resource::<EditJournal>()
+        ));
+    }
+    app.update();
+    assert_eq!(
+        app.world()
+            .resource::<TerrainCollisionState>()
+            .completed_jobs,
+        1
+    );
+    app.world_mut()
+        .resource_mut::<EditJournal>()
+        .record([-1, 2, 2], terra_core::crusher::MATERIAL)
+        .unwrap();
+    let world = app.world();
+    assert!(!plain_current(
+        &world.resource::<TerrainCollisionState>().sections[&owner],
+        owner,
+        world.resource::<ChunkStore>(),
+        world.resource::<EditJournal>()
+    ));
+    app.world_mut()
+        .resource_mut::<EditJournal>()
+        .record([2, 0, 2], 0)
+        .unwrap();
+    let world = app.world();
+    assert!(!world.resource::<TerrainCollisionState>().ready_for_aabb(
+        Vec3::ONE,
+        Vec3::splat(3.0),
+        world.resource::<ChunkStore>(),
+        world.resource::<EditJournal>()
+    ));
+}
+
+#[test]
+fn rapid_remote_cube_placements_keep_local_movement_ready_until_rebuild() {
+    let mut app = app();
+    settle_colliders(&mut app, 0);
+    // Stay in the same section and deliberately do not run the collider jobs.
+    for x in 6..14 {
+        app.world_mut()
+            .resource_mut::<EditJournal>()
+            .record([x, 2, 2], 3)
+            .unwrap();
+        app.world_mut()
+            .resource_mut::<ChunkStore>()
+            .loaded
+            .get_mut(&SectionPos::default())
+            .unwrap()
+            .data
+            .set_block([x as usize, 2, 2], 3)
+            .unwrap();
+        let world = app.world();
+        let state = world.resource::<TerrainCollisionState>();
+        let chunks = world.resource::<ChunkStore>();
+        let journal = world.resource::<EditJournal>();
+        assert!(state.ready_for_aabb(Vec3::ONE, Vec3::splat(3.0), chunks, journal));
+        assert!(!state.ready_for_aabb(
+            Vec3::new(x as f32 - 0.5, 1.0, 1.0),
+            Vec3::new(x as f32 + 1.5, 3.0, 3.0),
+            chunks,
+            journal
+        ));
+    }
+    // A confirmed model outside the body still invalidates this conservative path.
+    app.world_mut()
+        .resource_mut::<EditJournal>()
+        .record([12, 2, 2], terra_core::crusher::MATERIAL)
+        .unwrap();
+    let world = app.world();
+    assert!(!world.resource::<TerrainCollisionState>().ready_for_aabb(
+        Vec3::ONE,
+        Vec3::splat(3.0),
+        world.resource::<ChunkStore>(),
+        world.resource::<EditJournal>()
+    ));
 }

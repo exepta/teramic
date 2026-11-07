@@ -5,11 +5,38 @@ use bevy_math::{Quat, Vec3};
 use std::collections::BTreeMap;
 
 type Batches = BTreeMap<usize, PropMesh>;
-const GREEN: [f32; 3] = [0.27, 0.60, 0.085];
-const LIGHT: [f32; 3] = [0.48, 0.76, 0.13];
-const DARK: [f32; 3] = [0.15, 0.39, 0.045];
+const GREEN: [f32; 3] = [0.56, 0.70, 0.30];
+const LIGHT: [f32; 3] = [0.62, 0.75, 0.34];
+const DARK: [f32; 3] = [0.47, 0.61, 0.24];
 const GOLD: [f32; 3] = [0.99, 0.68, 0.12];
 const STRAW: [f32; 3] = [0.82, 0.55, 0.15];
+
+#[cfg(test)]
+mod palette_tests {
+    use super::*;
+
+    #[test]
+    fn living_crop_greens_share_the_light_meadow_family_without_recoloring_ripe_straw() {
+        let colors = [DARK, GREEN, LIGHT].map(linear_color);
+        let luminance = |c: [f32; 4]| c[0] * 0.2126 + c[1] * 0.7152 + c[2] * 0.0722;
+        assert!(
+            colors
+                .windows(2)
+                .all(|pair| luminance(pair[0]) < luminance(pair[1]))
+        );
+        for color in colors {
+            assert!(color[1] > color[0] * 1.3 && color[1] > color[2] * 4.0);
+            assert!((0.25..0.47).contains(&luminance(color)));
+        }
+        let middle = linear_color(GREEN);
+        for (actual, expected) in middle[..3].iter().zip([0.28, 0.46, 0.08]) {
+            assert!((actual - expected).abs() < 0.03);
+        }
+        assert_eq!(GOLD, [0.99, 0.68, 0.12]);
+        assert_eq!(STRAW, [0.82, 0.55, 0.15]);
+        assert!(linear_color(STRAW)[0] > linear_color(STRAW)[1]);
+    }
+}
 
 fn linear_color(color: [f32; 3]) -> [f32; 4] {
     let color = color.map(|value| {
@@ -538,6 +565,8 @@ mod tests {
 
     #[test]
     fn wheat_only_looks_fully_golden_when_the_harvest_is_mature() {
+        let green = |color: &[f32; 4]| color[1] > color[0] * 1.3 && color[1] > color[2] * 4.0;
+        let golden = |color: &[f32; 4]| color[0] > color[1] * 1.4;
         for detail in [PropDetail::Near, PropDetail::Middle, PropDetail::Far] {
             let colors = |stage| {
                 template(PropKind::Wheat, stage, detail, &PropPalette::default())
@@ -546,11 +575,15 @@ mod tests {
                     .flat_map(|mesh| mesh.colors)
                     .collect::<Vec<_>>()
             };
+            assert!(colors(5).iter().all(green));
             let ripening = colors(6);
-            assert!(ripening.iter().any(|color| color[1] > color[0] * 2.0));
-            assert!(ripening.iter().any(|color| color[0] > color[1] * 1.4));
+            assert!(ripening.contains(&linear_color(GREEN)));
+            assert!(ripening.iter().any(green));
+            assert!(ripening.iter().any(golden));
+            assert!(ripening.iter().all(|color| green(color) || golden(color)));
             let mature = colors(7);
-            assert!(mature.iter().all(|color| color[0] > color[1] * 1.4));
+            assert!(mature.iter().all(golden));
+            assert!(!mature.iter().any(green));
         }
     }
 

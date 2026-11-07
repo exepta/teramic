@@ -51,6 +51,42 @@ fn prune(
     p: [i64; 3],
     properties: &BlockPropertiesCatalog,
 ) -> Result<(), String> {
+    if let Some(material) = chunks
+        .block_at(p)
+        .filter(|m| terra_core::lantern::is_part(*m))
+    {
+        let facing = journal.object_state(p).unwrap_or_default().facing;
+        if crate::lanterns::support_status(chunks, properties, p, material, facing) != Some(false) {
+            return Ok(());
+        }
+        let required =
+            crate::lanterns::released_dependents(chunks, journal, p, 0, properties).len() + 1;
+        if journal.gameplay().drops.len().saturating_add(required) > terra_core::MAX_WORLD_DROPS
+            || journal
+                .gameplay()
+                .next_drop
+                .checked_add(required as u64)
+                .is_none()
+        {
+            chunks.support_queue.push_back(p);
+            return Ok(());
+        }
+        if super::commit_block_edit(
+            chunks,
+            journal,
+            &BlockEditRequest {
+                position: p,
+                expected_material: material,
+                material: 0,
+            },
+            properties,
+        )? {
+            journal
+                .gameplay_mut()
+                .drop_one(p.map(|v| v as f64 + 0.5), ItemKind::Block(material));
+        }
+        return Ok(());
+    }
     if chunks.block_at(p) == Some(98) {
         let below = [p[0], p[1] - 1, p[2]];
         if chunks
@@ -119,7 +155,7 @@ pub(super) fn loaded(
         && let Ok(origin) = position.origin()
     {
         for (index, &material) in section.data.blocks().iter().enumerate() {
-            if !matches!(material, 54 | 55) {
+            if !matches!(material, 54 | 55) && !terra_core::lantern::is_part(material) {
                 continue;
             }
             let p = [
@@ -127,6 +163,10 @@ pub(super) fn loaded(
                 origin[1] + (index / 16 % 16) as i64,
                 origin[2] + (index / 256) as i64,
             ];
+            if terra_core::lantern::is_part(material) {
+                work.push(p);
+                continue;
+            }
             if !chunks
                 .block_at([p[0], p[1] + 1, p[2]])
                 .is_some_and(|m| matches!(m, 54 | 55))
@@ -144,6 +184,28 @@ pub(super) fn loaded(
                 {
                     work.push(p);
                 }
+            }
+        }
+    }
+    // A wall/ceiling support can stream after its already loaded fixture.
+    // Inspect only sparse objects at the six newly published borders.
+    for offset in [
+        [1, 0, 0],
+        [-1, 0, 0],
+        [0, 1, 0],
+        [0, -1, 0],
+        [0, 0, 1],
+        [0, 0, -1],
+    ] {
+        let Ok(neighbor) = position.offset(offset) else {
+            continue;
+        };
+        for (p, material, state) in journal.object_states_in_section(neighbor) {
+            if terra_core::lantern::is_part(material)
+                && terra_core::lantern::support(p, material, state.facing)
+                    .is_some_and(|anchor| terra_voxel::global_to_section(anchor).0 == position)
+            {
+                work.push(p);
             }
         }
     }

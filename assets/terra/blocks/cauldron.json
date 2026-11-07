@@ -1,0 +1,132 @@
+{
+  "schema_version": 1,
+  "id": 161,
+  "name": "Alchemy Cauldron",
+  "description": "An open iron and copper brewing bowl on a reinforced wooden burner stand.",
+  "creative_category": "technic",
+  "render_kind": "custom_mesh",
+  "struct_block": true,
+  "model_layout": "scene",
+  "model": "models/cauldron.gltf",
+  "hardness": 2.5,
+  "resistance": 8,
+  "mining_level": 0,
+  "required_tool": "pickaxe",
+  "textures": {
+    "cauldron_iron": "textures/machinery-iron-hd.png",
+    "copper_bands": "textures/machinery-iron-hd.png",
+    "oak_stand": "textures/machinery-oak-hd.png",
+    "charred_logs": "textures/machinery-oak-hd.png",
+    "iron_rivets": "textures/machinery-iron-hd.png"
+  },
+  "collision_boxes": [
+    {
+      "minimum": [
+        0.035,
+        0,
+        0.035
+      ],
+      "maximum": [
+        0.185,
+        0.66,
+        0.185
+      ]
+    },
+    {
+      "minimum": [
+        0.035,
+        0,
+        0.8150000000000001
+      ],
+      "maximum": [
+        0.185,
+        0.66,
+        0.965
+      ]
+    },
+    {
+      "minimum": [
+        0.8150000000000001,
+        0,
+        0.035
+      ],
+      "maximum": [
+        0.965,
+        0.66,
+        0.185
+      ]
+    },
+    {
+      "minimum": [
+        0.8150000000000001,
+        0,
+        0.8150000000000001
+      ],
+      "maximum": [
+        0.965,
+        0.66,
+        0.965
+      ]
+    },
+    {
+      "minimum": [
+        0.3,
+        0.34,
+        0.3
+      ],
+      "maximum": [
+        0.7,
+        0.39,
+        0.7
+      ]
+    },
+    {
+      "minimum": [
+        0.12,
+        0.39,
+        0.24
+      ],
+      "maximum": [
+        0.24,
+        0.95,
+        0.76
+      ]
+    },
+    {
+      "minimum": [
+        0.76,
+        0.39,
+        0.24
+      ],
+      "maximum": [
+        0.88,
+        0.95,
+        0.76
+      ]
+    },
+    {
+      "minimum": [
+        0.24,
+        0.39,
+        0.12
+      ],
+      "maximum": [
+        0.76,
+        0.95,
+        0.24
+      ]
+    },
+    {
+      "minimum": [
+        0.24,
+        0.39,
+        0.76
+      ],
+      "maximum": [
+        0.76,
+        0.95,
+        0.88
+      ]
+    }
+  ]
+}

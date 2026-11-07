@@ -154,6 +154,8 @@ pub(super) fn update(animal: &mut Creature, habitat: &Habitat, dt: f32, search: 
         animal.health = (animal.health - dt * 0.025).max(0.0);
     }
     if animal.health <= 0.0 {
+        animal.behavior = Behavior::Dead;
+        animal.velocity = [0.0; 3];
         animal.needs.goal = None;
         return Forage::None;
     }
@@ -268,7 +270,11 @@ pub fn apply_forage(
     animal: &mut Creature,
     chunks: &mut ChunkStore,
     journal: &mut EditJournal,
+    rules: terra_core::GameRules,
 ) -> Result<bool, String> {
+    if !rules.mob_griefing {
+        return Ok(false);
+    }
     if let Forage::Pollinate { section, id } = effect {
         if animal.kind != Kind::Bee {
             return Ok(false);

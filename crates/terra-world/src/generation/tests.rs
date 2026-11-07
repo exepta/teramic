@@ -72,6 +72,8 @@ fn generation_order_has_no_effect() {
 #[test]
 fn materials_and_density_convention() {
     let g = TerraGenerator::new(WorldConfig {
+        sea_level: 8.0,
+        landscape_revision: 3,
         caves: false,
         biomes: false,
         trees: false,
@@ -108,12 +110,16 @@ fn materials_and_density_convention() {
 fn caves_carve_solid_terrain_without_opening_the_roof() {
     let caves = TerraGenerator::new(WorldConfig {
         seed: WorldSeed(42),
+        landscape_revision: 3,
+        sea_level: 8.0,
         cave_structure_revision: 1,
         ..Default::default()
     })
     .unwrap();
     let solid = TerraGenerator::new(WorldConfig {
         seed: WorldSeed(42),
+        landscape_revision: 3,
+        sea_level: 8.0,
         caves: false,
         ..WorldConfig::default()
     })
@@ -154,6 +160,8 @@ fn generation_checks_extreme_positions() {
 fn cave_density_is_continuous_at_the_roof_and_culling_threshold() {
     let g = TerraGenerator::new(WorldConfig {
         seed: WorldSeed(42),
+        landscape_revision: 3,
+        sea_level: 8.0,
         cave_structure_revision: 1,
         ..Default::default()
     })

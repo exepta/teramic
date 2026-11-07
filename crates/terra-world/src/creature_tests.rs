@@ -10,6 +10,8 @@ use terra_voxel::{BlockSection, SectionPos};
 
 fn fixture() -> (TerraGenerator, ChunkStore, EditJournal) {
     let terrain = TerraGenerator::new(WorldConfig {
+        landscape_revision: 3,
+        sea_level: 8.0,
         base_height: 3.0,
         hill_amplitude: 0.0,
         mountain_amplitude: 0.0,
@@ -830,6 +832,108 @@ fn walking_mammals_enter_real_water_and_buoyancy_immerses_them() {
         assert!(habitat.wet(a.position), "{kind:?}: {:?}", a.position);
         assert!(a.position[1] < 2.8, "{kind:?}: {:?}", a.position);
         assert_eq!(a.behavior, CreatureBehavior::Swim);
+    }
+}
+
+#[test]
+fn starvation_keeps_wild_and_companion_mammals_valid_and_dead_on_land_and_in_loaded_water() {
+    let (terrain, chunks, dry_journal) = fixture();
+    let terrain = TerraGenerator::new(WorldConfig {
+        water: true,
+        sea_level: -30.0,
+        ..terrain.config().clone()
+    })
+    .unwrap();
+    let mut wet_journal = dry_journal.clone();
+    for x in 5..=11 {
+        for z in 5..=11 {
+            for y in 3..=5 {
+                wet_journal
+                    .set_fluid(
+                        [x, y, z],
+                        crate::water::FluidCell {
+                            amount: 8,
+                            flow: [0, 0],
+                            source: true,
+                        },
+                    )
+                    .unwrap();
+            }
+        }
+    }
+    for kind in [
+        CreatureKind::Cow,
+        CreatureKind::Sheep,
+        CreatureKind::Pig,
+        CreatureKind::Horse,
+        CreatureKind::Bear,
+    ] {
+        for wet in [false, true] {
+            let habitat = Habitat {
+                terrain: &terrain,
+                chunks: &chunks,
+                journal: if wet { &wet_journal } else { &dry_journal },
+            };
+            for companion in [false, true] {
+                let mut a = animal(kind);
+                if wet {
+                    a.position[1] += 0.2;
+                    a.behavior = CreatureBehavior::Swim;
+                }
+                a.health = 0.001;
+                a.needs.food = 0.0;
+                a.needs.goal = Some(NeedGoal {
+                    kind: NeedKind::Food,
+                    position: [8, 2, 8],
+                });
+                a.velocity = [1.0, 0.25, -0.75];
+                assert!(a.valid());
+                assert_eq!(habitat.wet(a.position), wet);
+                let before = a.position;
+                let update = |a: &mut Creature| {
+                    if companion {
+                        companions::step(
+                            a,
+                            &habitat,
+                            Some([12.0, 3.0, 8.0]),
+                            taming::CompanionMode::Wait,
+                            0.1,
+                            false,
+                            None,
+                        );
+                    } else {
+                        step_budgeted(a, &habitat, &[], 0.1, false);
+                    }
+                };
+                update(&mut a);
+                assert_eq!(a.health, 0.0, "{kind:?}, wet={wet}, companion={companion}");
+                assert_eq!(a.behavior, CreatureBehavior::Dead);
+                assert_eq!(a.velocity, [0.0; 3]);
+                assert!(a.needs.goal.is_none());
+                assert_eq!(
+                    a.position, before,
+                    "a lethal need update must not resume movement"
+                );
+                let dead = a.clone();
+                for _ in 0..20 {
+                    update(&mut a);
+                    assert_eq!(a, dead);
+                }
+                let mut gameplay = terra_core::GameplayState::default();
+                gameplay.creatures.explored.insert(a.home);
+                if companion {
+                    gameplay
+                        .creatures
+                        .owners
+                        .insert(a.id, terra_core::PlayerUuid::from_u128(1));
+                }
+                gameplay.creatures.animals.insert(a.id, a);
+                assert!(
+                    gameplay.valid(),
+                    "{kind:?}, wet={wet}, companion={companion}"
+                );
+            }
+        }
     }
 }
 
@@ -1908,6 +2012,24 @@ fn grazing_commits_one_prop_without_removing_neighbors_and_pigs_prefer_plants() 
     chunks.loaded.get_mut(&owner).unwrap().props = vec![grass, mushroom];
     let mut cow = animal(CreatureKind::Cow);
     cow.needs.food = 10.0;
+    let denied = apply_forage(
+        Forage::Prop {
+            section: owner,
+            id: grass.id,
+        },
+        &mut cow,
+        &mut chunks,
+        &mut journal,
+        terra_core::GameRules {
+            mob_griefing: false,
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    assert!(!denied);
+    assert!(!journal.prop_removed(owner, grass.id));
+    assert_eq!(cow.needs.food, 10.0);
+    assert_eq!(journal.forage_regrowth().count(), 0);
     for _ in 0..40 {
         let effect = step(
             &mut cow,
@@ -1919,7 +2041,14 @@ fn grazing_commits_one_prop_without_removing_neighbors_and_pigs_prefer_plants() 
             &[],
             0.1,
         );
-        apply_forage(effect, &mut cow, &mut chunks, &mut journal).unwrap();
+        apply_forage(
+            effect,
+            &mut cow,
+            &mut chunks,
+            &mut journal,
+            Default::default(),
+        )
+        .unwrap();
     }
     assert!(cow.needs.food > 15.0);
     assert!(journal.prop_removed(owner, grass.id));
@@ -1942,7 +2071,14 @@ fn grazing_commits_one_prop_without_removing_neighbors_and_pigs_prefer_plants() 
             &[],
             0.1,
         );
-        apply_forage(effect, &mut pig, &mut chunks, &mut journal).unwrap();
+        apply_forage(
+            effect,
+            &mut pig,
+            &mut chunks,
+            &mut journal,
+            Default::default(),
+        )
+        .unwrap();
     }
     assert!(pig.needs.food > 5.0 && journal.prop_removed(owner, mushroom.id));
 }
@@ -1996,7 +2132,14 @@ fn actual_hungry_animals_find_ripe_crops_and_graze_without_drops_or_duplicate_pl
                 &[],
                 0.1,
             );
-            apply_forage(effect, &mut animal, &mut chunks, &mut journal).unwrap();
+            apply_forage(
+                effect,
+                &mut animal,
+                &mut chunks,
+                &mut journal,
+                Default::default(),
+            )
+            .unwrap();
         }
         assert!(animal.needs.food > 5.0, "{eater:?} must eat ripe {kind:?}");
         assert_eq!(journal.crop_at(support).unwrap().progress_seconds, 0.0);

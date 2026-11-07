@@ -36,6 +36,20 @@ struct Gallery {
 }
 
 fn groups() -> impl Iterator<Item = Group> {
+    if door_gallery() {
+        return [65, 66, 67, 139]
+            .into_iter()
+            .enumerate()
+            .map(|(index, material)| Group {
+                anchor: [-1 + index as i64 * 6, 2, 8],
+                material,
+                facing: 0,
+                width: 2,
+                height: 2,
+            })
+            .collect::<Vec<_>>()
+            .into_iter();
+    }
     [(1, 2, 10), (2, 1, 6), (2, 2, 2)]
         .into_iter()
         .flat_map(|(width, height, y)| {
@@ -47,6 +61,12 @@ fn groups() -> impl Iterator<Item = Group> {
                 height,
             })
         })
+        .collect::<Vec<_>>()
+        .into_iter()
+}
+
+fn door_gallery() -> bool {
+    std::env::var("TERRA_DOOR_GALLERY").is_ok_and(|value| value == "1")
 }
 
 pub(crate) fn install(app: &mut App) {
@@ -122,9 +142,20 @@ fn setup(world: &mut World) {
                 .unwrap();
             let mut journal = world.resource_mut::<EditJournal>();
             journal.record(p, group.material).unwrap();
-            journal
-                .set_object_state(p, Some(BlockObjectState::default()))
-                .unwrap();
+            let object = if door_gallery() {
+                BlockObjectState {
+                    peer: Some([
+                        p[0],
+                        p[1] + if p[1] == group.anchor[1] { 1 } else { -1 },
+                        p[2],
+                    ]),
+                    secondary: p[1] != group.anchor[1],
+                    ..default()
+                }
+            } else {
+                default()
+            };
+            journal.set_object_state(p, Some(object)).unwrap();
         }
     }
     let cube = world
@@ -138,8 +169,8 @@ fn setup(world: &mut World) {
             ..default()
         });
     for (center, scale) in [
-        ([6.0, 6.5, 11.0], [21.0, 15.0, 0.5]),
-        ([6.0, 0.0, 7.0], [21.0, 0.5, 10.0]),
+        ([9.0, 6.5, 11.0], [29.0, 15.0, 0.5]),
+        ([9.0, 0.0, 7.0], [29.0, 0.5, 10.0]),
     ] {
         world.spawn((
             Mesh3d(cube.clone()),
@@ -148,7 +179,7 @@ fn setup(world: &mut World) {
                 .with_scale(Vec3::from_array(scale)),
         ));
     }
-    for x in [0.0, 6.0, 12.0] {
+    for x in [0.0, 6.0, 12.0, 18.0] {
         world.spawn((
             PointLight {
                 intensity: 65_000.0,
@@ -178,6 +209,7 @@ fn setup(world: &mut World) {
 fn pin(world: &mut World) {
     let captures = world.resource::<Gallery>().captures;
     let (target, eye) = match captures {
+        0 | 1 if door_gallery() => (Vec3::new(9.0, 3.0, 8.5), Vec3::new(9.0, 3.5, -15.0)),
         0 | 1 => (Vec3::new(6.0, 6.8, 8.5), Vec3::new(6.0, 6.8, -9.5)),
         2 => (Vec3::new(0.0, 3.0, 8.5), Vec3::new(-2.5, 4.0, 3.0)),
         _ => (Vec3::new(6.0, 3.0, 8.5), Vec3::new(3.5, 4.0, 3.0)),
@@ -221,7 +253,7 @@ fn advance(world: &mut World, state: &mut Gallery) -> Result<(), String> {
         state.finish_frames += 1;
         if state.finish_frames >= 3 {
             info!(
-                "Native connected-window gallery passed: 3 woods × 3 joined sizes, closed/open opposing hinges, cross-section owner, actual group splitting, projected material pixels"
+                "Native connected-opening gallery passed: authored woods, closed/open opposing hinges, cross-section owner, actual group splitting, projected material pixels"
             );
             world.write_message(AppExit::Success);
         }
@@ -234,13 +266,14 @@ fn advance(world: &mut World, state: &mut Gallery) -> Result<(), String> {
         world.resource_scope(|world, mut chunks: Mut<ChunkStore>| {
             let mut journal = world.resource_mut::<EditJournal>();
             for p in groups().flat_map(Group::cells) {
+                let object = journal.object_state(p).unwrap_or_default();
                 commit_object_state(
                     &mut chunks,
                     &mut journal,
                     p,
                     Some(BlockObjectState {
                         facing: 4,
-                        ..default()
+                        ..object
                     }),
                 )
                 .unwrap();
@@ -255,16 +288,23 @@ fn advance(world: &mut World, state: &mut Gallery) -> Result<(), String> {
             .resource::<terra_core::block_properties::BlockPropertiesCatalog>()
             .clone();
         world.resource_scope(|world, mut chunks: Mut<ChunkStore>| {
-            commit_block_edit(
-                &mut chunks,
-                &mut world.resource_mut::<EditJournal>(),
-                &BlockEditRequest {
-                    position: [6, 3, 8],
-                    expected_material: 69,
-                    material: 0,
-                },
-                &properties,
-            )
+            for position in if door_gallery() {
+                vec![[6, 2, 8], [6, 3, 8]]
+            } else {
+                vec![[6, 3, 8]]
+            } {
+                commit_block_edit(
+                    &mut chunks,
+                    &mut world.resource_mut::<EditJournal>(),
+                    &BlockEditRequest {
+                        position,
+                        expected_material: if door_gallery() { 66 } else { 69 },
+                        material: 0,
+                    },
+                    &properties,
+                )?;
+            }
+            Ok::<_, String>(true)
         })?;
         state.removed = true;
         state.changed = Instant::now();
@@ -283,7 +323,13 @@ fn advance(world: &mut World, state: &mut Gallery) -> Result<(), String> {
         .filter(|n| n.as_str() == "Framed opening")
         .count();
     let leaves = names.iter().filter(|n| n.as_str() == "Hinged leaf").count();
-    let expected = if state.removed { (10, 16) } else { (9, 15) };
+    let expected = if door_gallery() {
+        if state.removed { (4, 7) } else { (4, 8) }
+    } else if state.removed {
+        (10, 16)
+    } else {
+        (9, 15)
+    };
     if (roots, leaves) != expected {
         return Ok(());
     }
@@ -316,7 +362,14 @@ fn advance(world: &mut World, state: &mut Gallery) -> Result<(), String> {
             .filter(|g| {
                 g.width == 2
                     && g.height == 2
-                    && g.material == if state.captures == 2 { 68 } else { 69 }
+                    && g.material
+                        == if door_gallery() {
+                            if state.captures == 2 { 65 } else { 66 }
+                        } else if state.captures == 2 {
+                            68
+                        } else {
+                            69
+                        }
             })
             .collect()
     };
@@ -355,12 +408,21 @@ fn advance(world: &mut World, state: &mut Gallery) -> Result<(), String> {
         .map(PathBuf::from)
         .unwrap_or_else(|| std::env::temp_dir().join("teramic-window-gallery"));
     std::fs::create_dir_all(&directory).map_err(|e| e.to_string())?;
-    let label = [
-        "windows-closed",
-        "windows-open",
-        "oak-2x2-open",
-        "birch-group-split",
-    ][state.captures];
+    let label = if door_gallery() {
+        [
+            "doors-closed",
+            "doors-open",
+            "oak-double-door-open",
+            "birch-door-separated",
+        ]
+    } else {
+        [
+            "windows-closed",
+            "windows-open",
+            "oak-2x2-open",
+            "birch-group-split",
+        ]
+    }[state.captures];
     state.pending = true;
     world.spawn(Screenshot::primary_window()).observe(save_to_disk(directory.join(format!("{label}.png")))).observe(|event:On<ScreenshotCaptured>,mut state:ResMut<Gallery>| {
         if let Some(bytes)=&event.image.data {

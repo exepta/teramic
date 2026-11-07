@@ -101,7 +101,7 @@ fn probe(
                 0.0
             },
             haze,
-            state.blend.powi(4) * (1.0 - underwater.blend),
+            0.0,
             0.0,
         );
         if settings.view_from_clip != matrix || settings.parameters != parameters {
@@ -159,12 +159,10 @@ fn exposure(
         let cloud_attenuation = weather.as_ref().map_or(1.0, |weather| {
             1.0 - ((weather.clouds - 0.30) / 0.70).clamp(0.0, 1.0) * 0.62
         });
-        // Cascaded outdoor shadows cover a finite range; they cannot be the
-        // enclosure test for a deep room or its underwater surfaces.
-        let illuminance = day.illuminance(sun)
-            * solar_compensation
-            * cloud_attenuation
-            * sky_visibility(cave.blend);
+        // Enclosure controls local fill, not the sun itself. Disabling a global
+        // light from the camera position also extinguishes the outdoor terrain
+        // visible through an entrance. Actual roof geometry casts the shadow.
+        let illuminance = day.illuminance(sun) * solar_compensation * cloud_attenuation;
         if light.illuminance != illuminance {
             light.illuminance = illuminance;
         }
@@ -215,7 +213,7 @@ fn exposure(
 pub(crate) fn apply(
     blend: f32,
     water: f32,
-    fog: &mut DistanceFog,
+    _fog: &mut DistanceFog,
     grading: &mut ColorGrading,
     ambient: &mut AmbientLight,
 ) {
@@ -228,20 +226,9 @@ pub(crate) fn apply(
     if blend <= 0.0 {
         return;
     }
-    let c = fog.color.to_srgba();
-    fog.color = Color::srgb(
-        c.red + (0.008 - c.red) * blend,
-        c.green + (0.009 - c.green) * blend,
-        c.blue + (0.010 - c.blue) * blend,
-    );
-    if let FogFalloff::Linear { start, end } = &mut fog.falloff {
-        // Never reveal unloaded cave walls at short view distances, or invert
-        // the interval when the player has chosen very dense atmospheric fog.
-        let cave_end = end.min(128.0);
-        let cave_start = start.min(48.0).min(cave_end * 0.5);
-        *start += (cave_start - *start) * blend;
-        *end += (cave_end - *end) * blend;
-    }
+    // DistanceFog affects every surface in the view, including sunlit terrain
+    // outside. Keep the existing outdoor/water medium; the depth-aware cave
+    // pass adds only subtle haze on actual geometry, never on the sky.
     grading.global.post_saturation += (0.98 - grading.global.post_saturation) * blend;
 }
 
@@ -351,7 +338,6 @@ mod tests {
                     .resource::<super::super::daylight::Daylight>()
                     .illuminance(true)
                     * 2.0_f32.powf(cave_exposure - day)
-                    * sky_visibility(blend)
             );
             assert_eq!(
                 app.world()
@@ -377,7 +363,7 @@ mod tests {
         }
     }
     #[test]
-    fn cave_fog_never_extends_short_views_or_inverts_dense_fog_ranges() {
+    fn cave_fog_preserves_visible_outdoor_geometry_and_surface_ranges() {
         for end in [2.976, 29.76, 88.0, 180.0] {
             let mut fog = DistanceFog {
                 falloff: FogFalloff::Linear {
@@ -388,11 +374,16 @@ mod tests {
             };
             let mut grading = super::super::surface_grading();
             let mut ambient = AmbientLight::default();
+            let original_color = fog.color;
+            let original_start = end * 0.7;
             apply(1.0, 0.0, &mut fog, &mut grading, &mut ambient);
             let FogFalloff::Linear { start, end: actual } = fog.falloff else {
                 panic!()
             };
             assert!(start >= 0.0 && start < actual && actual <= end);
+            assert_eq!(fog.color, original_color);
+            assert_eq!(start, original_start);
+            assert_eq!(actual, end);
         }
     }
     #[test]
@@ -416,14 +407,14 @@ mod tests {
         assert!(matches!(
             fog.falloff,
             FogFalloff::Linear {
-                start: 48.0,
-                end: 128.0
+                start: 100.0,
+                end: 180.0
             }
         ));
     }
 
     #[test]
-    fn cave_darkening_preserves_local_lights_and_closes_both_celestial_sources() {
+    fn cave_darkening_keeps_sunlit_entrances_and_local_lights() {
         assert!((2.0_f32.powf(6.621_488 - CAVE_EXPOSURE) - 1.125).abs() < 0.00001);
         assert_eq!(sky_visibility(0.0), 1.0);
         assert_eq!(sky_visibility(1.0), 0.0);
@@ -450,14 +441,15 @@ mod tests {
             })
             .id();
         app.update();
-        for entity in [sun, moon] {
-            assert_eq!(
-                app.world()
-                    .get::<DirectionalLight>(entity)
-                    .unwrap()
-                    .illuminance,
-                0.0
-            );
+        let day = app.world().resource::<super::super::daylight::Daylight>();
+        for (entity, sunlight) in [(sun, true), (moon, false)] {
+            let light = app.world().get::<DirectionalLight>(entity).unwrap();
+            // Eye adaptation must not make a sunlit surface darker or brighter
+            // just because the camera is standing underneath a cave roof.
+            let exposed = light.illuminance * 2.0_f32.powf(-CAVE_EXPOSURE);
+            let outdoor = day.illuminance(sunlight) * 2.0_f32.powf(-day.exposure);
+            assert!((exposed - outdoor).abs() < 0.000_01);
+            assert_eq!(light.shadow_maps_enabled, light.illuminance > 0.0);
         }
         assert_eq!(
             app.world().get::<PointLight>(lamp).unwrap().intensity,

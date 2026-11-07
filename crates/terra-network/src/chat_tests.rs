@@ -7,6 +7,13 @@ fn gamerules_replicate_to_two_clients_and_console_works_without_a_player_actor()
         ("season_swap_interval", 1.0, true),
         ("sleep_percentage", 50.0, false),
         ("game_time_speed", 2.0, true),
+        ("keep_inventory", 0.0, false),
+        ("daylight_cycle", 0.0, true),
+        ("weather_cycle", 0.0, true),
+        ("mob_griefing", 0.0, true),
+        ("fire_spread", 0.0, true),
+        ("pvp", 1.0, true),
+        ("daylight_cycle", 1.0, true),
     ] {
         if console {
             assert!(
@@ -35,6 +42,21 @@ fn gamerules_replicate_to_two_clients_and_console_works_without_a_player_actor()
         );
         assert!(a.world().resource::<terra_core::WorldClock>().valid());
     }
+    // Disabling automatic weather must still allow an explicit host command,
+    // and both clients must snap to the frozen authoritative front.
+    assert!(
+        host.world_mut()
+            .resource_mut::<server::ServerConsole>()
+            .submit("weather set rain".into())
+    );
+    wait(&mut host, &mut [&mut a, &mut b], |host, clients| {
+        let weather = host.world().resource::<terra_core::WorldWeather>();
+        weather.pattern == terra_core::WeatherPattern::Rain
+            && weather.intensity() > 0.75
+            && clients
+                .iter()
+                .all(|client| *client.world().resource::<terra_core::WorldWeather>() == *weather)
+    });
     // A survival peer cannot elevate its rules through ordinary chat.
     host.world_mut()
         .resource_mut::<GameConfig>()

@@ -2,6 +2,9 @@
 use super::builder::MeshBatch;
 use crate::blocks::TemplateSet;
 
+#[path = "lighting_greedy.rs"]
+mod greedy;
+
 fn occupied(bits: &[u64], p: [i32; 3]) -> f32 {
     if p.iter().any(|v| !(-1..=16).contains(v)) {
         return 0.0;
@@ -79,12 +82,13 @@ pub(super) fn apply(batches: &mut [MeshBatch], bits: &[u64], templates: &Templat
     for batch in batches {
         if batch.shadow_only
             || templates.blocks.iter().any(|(&id, block)| {
-                matches!(id, 7..=9 | 132 | 133 | 14 | 15 | 27..=29 | 40)
+                matches!(id, 7..=9 | 132 | 133 | 195 | 14 | 15 | 27..=29 | 40)
                     && block.face_materials.contains(&batch.material)
             })
         {
             continue;
         }
+        greedy::refine(batch, bits, &mut cache);
         batch.colors.resize(batch.positions.len(), [1.0; 4]);
         for ((&p, &n), color) in batch
             .positions

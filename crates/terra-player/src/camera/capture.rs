@@ -16,6 +16,13 @@ pub struct CameraInputState {
     pub(crate) initial_capture_pending: bool,
     pub(crate) suppress_motion: bool,
 }
+impl CameraInputState {
+    /// World actions may start once capture has settled past its enabling frame.
+    pub fn capture_ready(&self) -> bool {
+        self.captured && !self.just_captured
+    }
+}
+
 impl Default for CameraInputState {
     fn default() -> Self {
         Self {
@@ -50,6 +57,7 @@ pub(crate) fn update_capture(
     mut state: ResMut<CameraInputState>,
     mut focused: MessageReader<WindowFocused>,
     mut requests: MessageReader<CaptureRequest>,
+    mut pending_capture: Local<bool>,
     (blocked, session): (
         Res<PlayerInputBlock>,
         Option<Res<terra_network::client::ClientSession>>,
@@ -59,9 +67,21 @@ pub(crate) fn update_capture(
     if !state.accept_input {
         focused.clear();
         requests.clear();
+        *pending_capture = false;
         return;
     }
     let requested = requests.read().last().map(|request| request.0);
+    if let Some(capture) = requested {
+        // Loading finishes in PostUpdate, before the next UI update clears
+        // PlayerInputBlock. Keep that intent until gameplay can accept it.
+        *pending_capture = capture;
+    }
+    let failed = session
+        .as_ref()
+        .is_some_and(|session| session.error.is_some());
+    if failed || (keys.just_pressed(Action::Pause) && requested != Some(true)) {
+        *pending_capture = false;
+    }
     let mut newly_focused = None;
     for event in focused.read() {
         if event.focused {
@@ -71,13 +91,17 @@ pub(crate) fn update_capture(
     for (entity, window, mut cursor) in &mut windows {
         let next = if !window.focused
             || blocked.0
-            || session.as_ref().is_some_and(|s| s.error.is_some())
+            || requested == Some(false)
+            || session
+                .as_ref()
+                .is_some_and(|s| !s.ready || s.error.is_some())
         {
             state.initial_capture_pending = false;
             false
-        } else if let Some(capture) = requested {
+        } else if *pending_capture {
+            *pending_capture = false;
             state.initial_capture_pending = false;
-            capture
+            true
         } else if keys.just_pressed(Action::Pause) {
             state.initial_capture_pending = false;
             false

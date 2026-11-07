@@ -1,0 +1,1 @@
+{"id":1,"key":"teramic::regeneration_potion","name":"Regeneration Potion","inputs":[{"item":{"flower":"red"},"count":1},{"item":{"animal":"honey"},"count":1}],"effects":[{"kind":"regeneration","level":1,"seconds":45.0}],"seconds":12.0,"color":[180,72,202]}

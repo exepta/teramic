@@ -9,6 +9,7 @@ use terra_core::Inventory;
 use terra_voxel::{SectionPos, global_to_section};
 
 mod build;
+mod distribution;
 #[cfg(test)]
 mod lookup_tests;
 mod loot;
@@ -19,9 +20,10 @@ pub use settlement::{ResidentSite, VillageBed, VillageResidence, VillageSettleme
 mod tests;
 
 pub const REGION_SIZE: i64 = 384;
+pub use distribution::{KINGDOM_START_CLEARANCE, OUTPOST_START_CLEARANCE};
 const CACHE_LIMIT: usize = 64;
-pub const MAX_SITE_SECTIONS: usize = 256;
-pub const MAX_SITE_CELLS: usize = 300_000;
+pub const MAX_SITE_SECTIONS: usize = 768;
+pub const MAX_SITE_CELLS: usize = 1_200_000;
 const BUILDING_TREE_CLEARANCE: i64 = 8;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -29,6 +31,19 @@ pub enum StructureKind {
     Village,
     Ruin,
     Mine,
+    Kingdom,
+    Outpost,
+}
+impl StructureKind {
+    fn enabled(self, settings: terra_core::StructureSettings) -> bool {
+        match self {
+            Self::Village => settings.villages,
+            Self::Kingdom => settings.kingdoms,
+            Self::Outpost => settings.outposts,
+            Self::Ruin => settings.ruins,
+            Self::Mine => settings.mines,
+        }
+    }
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum VillageStyle {
@@ -48,6 +63,11 @@ pub enum BuildingRole {
     Ruin,
     Mine,
     Police,
+    Keep,
+    Gate,
+    Barracks,
+    Market,
+    Stable,
 }
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BuildingSummary {
@@ -64,6 +84,52 @@ pub struct SiteSummary {
     pub bounds: [[i64; 3]; 2],
     pub buildings: Vec<BuildingSummary>,
     pub containers: Vec<[i64; 3]>,
+}
+
+/// Authored layouts share ordinary block/object streaming and resident simulation.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SettlementLayout {
+    Village,
+    KingdomTemperate,
+    KingdomWinter,
+    Outpost,
+}
+
+impl SiteSummary {
+    pub fn layout(&self) -> Option<SettlementLayout> {
+        match self.kind {
+            StructureKind::Village => Some(SettlementLayout::Village),
+            StructureKind::Kingdom if self.style == VillageStyle::Highland => {
+                Some(SettlementLayout::KingdomWinter)
+            }
+            StructureKind::Kingdom => Some(SettlementLayout::KingdomTemperate),
+            StructureKind::Outpost => Some(SettlementLayout::Outpost),
+            _ => None,
+        }
+    }
+    pub fn bot_kingdom(&self) -> Option<terra_core::kingdom::BotKingdom> {
+        self.layout().and_then(|layout| {
+            terra_core::kingdom::BotKingdom::for_settlement(
+                self.id,
+                layout != SettlementLayout::Village,
+            )
+        })
+    }
+    pub fn domain(&self) -> Option<terra_core::kingdom::SettlementDomain> {
+        use terra_core::kingdom::{DomainKind, SettlementDomain};
+        let kind = match self.layout()? {
+            SettlementLayout::Village => DomainKind::Village,
+            SettlementLayout::Outpost => DomainKind::Outpost,
+            _ => DomainKind::Kingdom,
+        };
+        Some(SettlementDomain {
+            id: self.id,
+            center: self.center,
+            bounds: self.bounds,
+            kind,
+            native: self.bot_kingdom(),
+        })
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -145,7 +211,9 @@ struct Entries {
 pub(super) struct StructureCache(Mutex<Entries>);
 impl TerraGenerator {
     fn planned_site(&self, region: [i64; 2]) -> Option<Arc<Site>> {
-        if self.config().structures_revision == 0 || region.iter().any(|v| v.unsigned_abs() > 2500)
+        if self.config().structures_revision == 0
+            || !self.config().structures.any_enabled()
+            || region.iter().any(|v| v.unsigned_abs() > 2500)
         {
             return None;
         }
@@ -169,12 +237,7 @@ impl TerraGenerator {
         };
         slot.get_or_init(|| {
             let _scope = terra_core::profiling::ScopeTimer::new("structures.plan");
-            let seed = layer_seed(
-                self.config().seed.0
-                    ^ (region[0] as u64).wrapping_mul(0x9e3779b97f4a7c15)
-                    ^ (region[1] as u64).wrapping_mul(0xbf58476d1ce4e5b9),
-                0x573731,
-            );
+            let seed = regional_seed(self.config().seed.0, region);
             build::plan(self, region, seed).map(Arc::new)
         })
         .clone()
@@ -197,7 +260,7 @@ impl TerraGenerator {
         coordinate: [i64; 2],
         padding: usize,
     ) -> Vec<Arc<Site>> {
-        if self.config().structures_revision == 0 {
+        if self.config().structures_revision == 0 || !self.config().structures.any_enabled() {
             return Vec::new();
         }
         let low = coordinate.map(|v| v * 16 - padding as i64);
@@ -228,7 +291,7 @@ impl TerraGenerator {
         sites
     }
     pub(crate) fn structure_block(&self, global: [i64; 3]) -> Option<u16> {
-        if self.config().structures_revision == 0 {
+        if self.config().structures_revision == 0 || !self.config().structures.any_enabled() {
             return None;
         }
         // A point can belong to only one interior site envelope. Unlike column
@@ -251,4 +314,12 @@ impl TerraGenerator {
         .iter()
         .any(|site| site.clears_tree(root))
     }
+}
+
+fn regional_seed(seed: u64, region: [i64; 2]) -> u32 {
+    layer_seed(
+        seed ^ (region[0] as u64).wrapping_mul(0x9e3779b97f4a7c15)
+            ^ (region[1] as u64).wrapping_mul(0xbf58476d1ce4e5b9),
+        0x573731,
+    )
 }

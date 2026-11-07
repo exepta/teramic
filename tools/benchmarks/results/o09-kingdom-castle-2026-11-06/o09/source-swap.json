@@ -1,0 +1,11 @@
+{
+  "before": {
+    "crates/tilt-ui-runtime/src/style/plugin.rs": "8a1c557963e05f9ab46244ddc71b4f6ed7708ac04fcf5de8cd2482c0f2a29c30",
+    "crates/tilt-ui-runtime/src/style/matcher.rs": "f417ea9e70bf782e969401c10710e82614529a0f23eac1ccbab00f8b71125087"
+  },
+  "after": {
+    "crates/tilt-ui-runtime/src/style/plugin.rs": "a7bdb663537107b8aac2f8a29b9f02ea8e0f6b950dc4fb03e804df391f1645e5",
+    "crates/tilt-ui-runtime/src/style/matcher.rs": "40cea1c85434212c9597b39d4738c346feb3b8644c1dc161f9b157569b6fd69f"
+  },
+  "external_root": "/run/media/exepta/Data/Jetbrains/projects/rust/tilt-us/tilt-ui"
+}

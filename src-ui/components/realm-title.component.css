@@ -1,0 +1,5 @@
+.realm-entry-title { position: absolute; left: 15%; top: 36%; width: 70%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 18px 24px; pointer-events: none; z-index: 210; }
+.realm-entry-title h1 { width: 100%; margin: 0; color: #f4e9c6; text-align: center; text-wrap: wrap; font-size: 48px; text-shadow: 2px 3px #000000; }
+.realm-title-subtitle { margin: 0; color: #ddd0a5; font-size: 16px; text-align: center; text-shadow: 1px 2px #000000; }
+.realm-title-rule { width: 65%; height: 1px; background-color: #d6bf8499; box-shadow: 0px 1px 2px #000000; }
+@media (max-width: 850px) { .realm-entry-title { left: 8%; width: 84%; padding: 12px; } .realm-entry-title h1 { font-size: 32px; } .realm-title-subtitle { font-size: 13px; } }

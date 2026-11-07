@@ -1,0 +1,162 @@
+{
+  "aggregate_note": "Non-client suites from the full workspace run plus the later successful client rerun; the initial client failures are explicitly superseded. The scene example test is reported separately.",
+  "logs": {
+    "client_final": {
+      "evidence": "evidence/validation-client_final.txt",
+      "sha256": "9cc2fe2b2921461eed77f66b436589f110fdde32e000b2c014cb40579587c4ac",
+      "source": "/tmp/teramic-o07-client-tests-latest.log"
+    },
+    "clippy_final": {
+      "evidence": "evidence/validation-clippy_final.txt",
+      "finished_successfully": true,
+      "sha256": "acd541c05c365b43e8eedc6ebadd1043d7c88216bd77e67b0c0298cde59243c5",
+      "source": "/tmp/teramic-o07-clippy-latest.log"
+    },
+    "opening_trace_build": {
+      "evidence": "evidence/validation-opening_trace_build.txt",
+      "finished_successfully": true,
+      "sha256": "e135baa211282f2e9c9e95cd100f0940b7a87bbb07b1a0637339e66ebd27a9cc",
+      "source": "/tmp/teramic-o07-opening-trace-build.log"
+    },
+    "python_final": {
+      "evidence": "evidence/validation-python_final.txt",
+      "sha256": "133449d6f429f0588126e0403937f271f33f90517460d5c4b39d69c2eeda0f25",
+      "source": "/tmp/teramic-o07-python-tests-final.log"
+    },
+    "scene_example": {
+      "evidence": "evidence/validation-scene_example.txt",
+      "sha256": "51c30f13441bc0cc039217bc3887023b380cbd2a5a53c9597114337ffe55b46b",
+      "source": "/tmp/teramic-o07-scene-tests.log"
+    },
+    "workspace": {
+      "evidence": "evidence/validation-workspace.txt",
+      "sha256": "3a3ba82390ade2b0a4091ed9a1974cbb8ed43142308e7f9a846360898490413d",
+      "source": "/tmp/teramic-o07-tests.log"
+    }
+  },
+  "python_unittest": {
+    "failed": 0,
+    "log": "python_final",
+    "passed": 8
+  },
+  "rust_aggregate": {
+    "failed": 0,
+    "ignored": 9,
+    "passed": 3804
+  },
+  "rust_suites": [
+    {
+      "failed": 0,
+      "ignored": 0,
+      "log": "workspace",
+      "passed": 339,
+      "status": "ok",
+      "target": "terra_core"
+    },
+    {
+      "failed": 0,
+      "ignored": 1,
+      "log": "workspace",
+      "passed": 444,
+      "status": "ok",
+      "target": "terra_network"
+    },
+    {
+      "failed": 0,
+      "ignored": 0,
+      "log": "workspace",
+      "passed": 45,
+      "status": "ok",
+      "target": "terra_physics"
+    },
+    {
+      "failed": 0,
+      "ignored": 0,
+      "log": "workspace",
+      "passed": 93,
+      "status": "ok",
+      "target": "terra_player"
+    },
+    {
+      "failed": 0,
+      "ignored": 2,
+      "log": "workspace",
+      "passed": 998,
+      "status": "ok",
+      "target": "terra_render"
+    },
+    {
+      "failed": 0,
+      "ignored": 0,
+      "log": "workspace",
+      "passed": 5,
+      "status": "ok",
+      "target": "terra_server"
+    },
+    {
+      "failed": 0,
+      "ignored": 0,
+      "log": "workspace",
+      "passed": 7,
+      "status": "ok",
+      "target": "terra_server"
+    },
+    {
+      "failed": 0,
+      "ignored": 0,
+      "log": "workspace",
+      "passed": 134,
+      "status": "ok",
+      "target": "terra_storage"
+    },
+    {
+      "failed": 0,
+      "ignored": 0,
+      "log": "workspace",
+      "passed": 464,
+      "status": "ok",
+      "target": "terra_ui"
+    },
+    {
+      "failed": 0,
+      "ignored": 0,
+      "log": "workspace",
+      "passed": 24,
+      "status": "ok",
+      "target": "terra_voxel"
+    },
+    {
+      "failed": 0,
+      "ignored": 5,
+      "log": "workspace",
+      "passed": 1054,
+      "status": "ok",
+      "target": "terra_world"
+    },
+    {
+      "failed": 0,
+      "ignored": 1,
+      "log": "client_final",
+      "passed": 197,
+      "status": "ok",
+      "target": "terra_client"
+    }
+  ],
+  "scene_example": {
+    "failed": 0,
+    "ignored": 0,
+    "log": "scene_example",
+    "passed": 1,
+    "status": "ok",
+    "target": "performance_scene_example"
+  },
+  "scope": "Existing final check logs; no compilers or native benchmarks rerun while collecting evidence.",
+  "superseded_client_result": {
+    "failed": 2,
+    "ignored": 1,
+    "log": "workspace",
+    "passed": 193,
+    "status": "FAILED",
+    "target": "terra_client"
+  }
+}

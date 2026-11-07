@@ -3,7 +3,7 @@
   "id": 64,
   "name": "Falling Chimney Bend",
   "description": "A forty-five-degree falling bend connecting the top to the facing side.",
-  "creative_category": "decoration",
+  "creative_category": "technic",
   "render_kind": "custom_mesh",
   "struct_block": true,
   "model_layout": "scene",

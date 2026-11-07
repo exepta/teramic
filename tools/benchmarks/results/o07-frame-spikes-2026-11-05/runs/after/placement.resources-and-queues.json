@@ -1,0 +1,275 @@
+{
+  "inventory_phase_cpu_scopes": {},
+  "mesh_allocator_capacity": {
+    "event_count": 76,
+    "largest_reported_copy_bytes": 459187728,
+    "measurement_kind": "Allocator buffer capacity/copy accounting; neither used VRAM nor GPU execution time",
+    "peak_reserved_bytes": 2181667184
+  },
+  "queue_samples": [
+    {
+      "event": "Performance soak terrain ownership; near/middle/far live mesh handles, not draw calls",
+      "fields": {
+        "elapsed_seconds": 30.003140786,
+        "meshes": [
+          3295,
+          5111,
+          9287
+        ],
+        "sections": [
+          1104,
+          1992,
+          3919
+        ]
+      }
+    },
+    {
+      "event": "Performance soak generation",
+      "fields": {
+        "elapsed_seconds": 30.003140786,
+        "pending_jobs": 0,
+        "prepared_columns": 1681,
+        "sections": 11792,
+        "status": "Ready",
+        "wanted_sections": 11792
+      }
+    },
+    {
+      "event": "Performance soak terrain",
+      "fields": {
+        "completed_jobs": 8066,
+        "composition_seconds": 16.068955417999998,
+        "elapsed_seconds": 30.003140786,
+        "jobs": 0,
+        "max_composition_seconds": 0.041001679,
+        "pending_columns": 0,
+        "ready": true
+      }
+    },
+    {
+      "event": "Performance soak props",
+      "fields": {
+        "batches": 1586,
+        "completed_jobs": 1719,
+        "composition_seconds": 1.2782643910000009,
+        "elapsed_seconds": 30.003140786,
+        "jobs": 0,
+        "props": 100340
+      }
+    },
+    {
+      "event": "Performance soak water rendering",
+      "fields": {
+        "elapsed_seconds": 30.003140786,
+        "mist": 0,
+        "spray": 0,
+        "tiles": 75,
+        "triangles": 4502
+      }
+    },
+    {
+      "event": "Performance soak upload budgets",
+      "fields": {
+        "deferred_batches": 1346,
+        "elapsed_seconds": 30.003140786,
+        "peak_frame_vertices": 223286
+      }
+    },
+    {
+      "event": "Performance soak latest fluid step",
+      "fields": {
+        "elapsed_ms": 0.0,
+        "elapsed_seconds": 30.003140786,
+        "visited": 0
+      }
+    }
+  ],
+  "soak_intervals": [
+    {
+      "allocated_entity_indices": 32768,
+      "cpu_capacity_percent": 14.772342574519234,
+      "cpu_mesh_vertices": 635930,
+      "dropped_samples": 0,
+      "elapsed_seconds": 30.003140786,
+      "entities": 31042,
+      "fps": 96.92318616712703,
+      "frames": 2908,
+      "gpu_only_mesh_entities": 0,
+      "image_assets": 142,
+      "interval_seconds": 30.003140786,
+      "max_ms": 24.960331999999998,
+      "median_ms": 10.05234,
+      "mesh_assets": 20271,
+      "mesh_entities": 20090,
+      "p95_ms": 13.504143,
+      "p99_ms": 14.793149999999999,
+      "physical_resolution": [
+        2562,
+        1440
+      ],
+      "rss_bytes": 2384343040,
+      "standard_material_assets": 448,
+      "upload_frames": 1001,
+      "upload_vertices": 90272884,
+      "visible_mesh_entities": 10194
+    }
+  ],
+  "worst_frame_context": [
+    {
+      "active_animations": 0,
+      "frame_ms": 17.441515000000003,
+      "generation_jobs": 0,
+      "present_mode": "Mailbox",
+      "prop_jobs": 0,
+      "queued_animations": 0,
+      "sample_time": 9.832599834,
+      "terrain_jobs": 0,
+      "upload_vertices": 0,
+      "window_focused": true,
+      "window_visible": true
+    },
+    {
+      "active_animations": 0,
+      "frame_ms": 17.101358,
+      "generation_jobs": 0,
+      "present_mode": "Mailbox",
+      "prop_jobs": 1,
+      "queued_animations": 0,
+      "sample_time": 2.02169899,
+      "terrain_jobs": 4,
+      "upload_vertices": 0,
+      "window_focused": true,
+      "window_visible": true
+    },
+    {
+      "active_animations": 0,
+      "frame_ms": 17.093548,
+      "generation_jobs": 0,
+      "present_mode": "Mailbox",
+      "prop_jobs": 0,
+      "queued_animations": 0,
+      "sample_time": 12.421444595,
+      "terrain_jobs": 2,
+      "upload_vertices": 92188,
+      "window_focused": true,
+      "window_visible": true
+    },
+    {
+      "active_animations": 0,
+      "frame_ms": 16.871373,
+      "generation_jobs": 0,
+      "present_mode": "Mailbox",
+      "prop_jobs": 1,
+      "queued_animations": 0,
+      "sample_time": 6.251299112,
+      "terrain_jobs": 4,
+      "upload_vertices": 0,
+      "window_focused": true,
+      "window_visible": true
+    },
+    {
+      "active_animations": 0,
+      "frame_ms": 16.755901,
+      "generation_jobs": 0,
+      "present_mode": "Mailbox",
+      "prop_jobs": 0,
+      "queued_animations": 0,
+      "sample_time": 1.3888669,
+      "terrain_jobs": 2,
+      "upload_vertices": 92188,
+      "window_focused": true,
+      "window_visible": true
+    },
+    {
+      "active_animations": 0,
+      "frame_ms": 16.607428,
+      "generation_jobs": 0,
+      "present_mode": "Mailbox",
+      "prop_jobs": 0,
+      "queued_animations": 0,
+      "sample_time": 5.097082098,
+      "terrain_jobs": 0,
+      "upload_vertices": 0,
+      "window_focused": true,
+      "window_visible": true
+    },
+    {
+      "active_animations": 0,
+      "frame_ms": 16.560216999999998,
+      "generation_jobs": 0,
+      "present_mode": "Mailbox",
+      "prop_jobs": 0,
+      "queued_animations": 0,
+      "sample_time": 2.392247028,
+      "terrain_jobs": 1,
+      "upload_vertices": 71272,
+      "window_focused": true,
+      "window_visible": true
+    },
+    {
+      "active_animations": 0,
+      "frame_ms": 16.453284,
+      "generation_jobs": 0,
+      "present_mode": "Mailbox",
+      "prop_jobs": 0,
+      "queued_animations": 0,
+      "sample_time": 1.775853422,
+      "terrain_jobs": 0,
+      "upload_vertices": 0,
+      "window_focused": true,
+      "window_visible": true
+    },
+    {
+      "active_animations": 0,
+      "frame_ms": 16.393263,
+      "generation_jobs": 0,
+      "present_mode": "Mailbox",
+      "prop_jobs": 1,
+      "queued_animations": 0,
+      "sample_time": 2.684961737,
+      "terrain_jobs": 4,
+      "upload_vertices": 0,
+      "window_focused": true,
+      "window_visible": true
+    },
+    {
+      "active_animations": 0,
+      "frame_ms": 16.304980999999998,
+      "generation_jobs": 0,
+      "present_mode": "Mailbox",
+      "prop_jobs": 0,
+      "queued_animations": 0,
+      "sample_time": 1.242920904,
+      "terrain_jobs": 0,
+      "upload_vertices": 0,
+      "window_focused": true,
+      "window_visible": true
+    },
+    {
+      "active_animations": 0,
+      "frame_ms": 16.187349,
+      "generation_jobs": 0,
+      "present_mode": "Mailbox",
+      "prop_jobs": 0,
+      "queued_animations": 0,
+      "sample_time": 6.32334139,
+      "terrain_jobs": 0,
+      "upload_vertices": 0,
+      "window_focused": true,
+      "window_visible": true
+    },
+    {
+      "active_animations": 0,
+      "frame_ms": 16.148837999999998,
+      "generation_jobs": 0,
+      "present_mode": "Mailbox",
+      "prop_jobs": 0,
+      "queued_animations": 0,
+      "sample_time": 2.159981915,
+      "terrain_jobs": 2,
+      "upload_vertices": 92518,
+      "window_focused": true,
+      "window_visible": true
+    }
+  ]
+}

@@ -13,6 +13,8 @@ use terra_voxel::global_to_section;
 
 const TICK_SECONDS: f64 = 0.1;
 const CELL_BUDGET: usize = 256;
+mod pools;
+mod river;
 mod supply;
 
 #[derive(Resource, Debug, Default)]
@@ -45,6 +47,7 @@ pub struct FluidStep {
     pub drained: u64,
     pub changed: bool,
     pub removed_props: usize,
+    pub flooded_torches: Vec<[i64; 3]>,
     prop_sections: Vec<terra_voxel::SectionPos>,
     wetted: Vec<[i64; 3]>,
 }
@@ -54,6 +57,8 @@ struct Sampler<'a> {
     chunks: &'a ChunkStore,
     columns: HashMap<[i64; 2], WaterColumns>,
     spaces: HashMap<[i64; 3], super::space::FluidSpace>,
+    river_columns: HashMap<[i64; 2], crate::SurfaceColumn>,
+    river_origins: HashMap<[i64; 3], river::Origin>,
 }
 impl Sampler<'_> {
     fn cell(&mut self, journal: &EditJournal, p: [i64; 3]) -> Option<FluidCell> {
@@ -61,18 +66,27 @@ impl Sampler<'_> {
         if !super::can_hold_fluid(block) {
             return Some(FluidCell::default());
         }
-        let cell = journal.fluid(p).unwrap_or_else(|| {
-            let column = *self.columns.entry([p[0], p[2]]).or_insert_with(|| {
-                self.terrain
-                    .water_columns(p[0] as f64 + 0.5, p[2] as f64 + 0.5)
-            });
-            from_columns(column, p[1])
-        });
+        let cell = journal.fluid(p).unwrap_or_else(|| self.natural(p));
         Some(self.space(journal, p).clamp(cell))
+    }
+    fn natural(&mut self, p: [i64; 3]) -> FluidCell {
+        let column = *self.columns.entry([p[0], p[2]]).or_insert_with(|| {
+            self.terrain
+                .water_columns(p[0] as f64 + 0.5, p[2] as f64 + 0.5)
+        });
+        from_columns(column, p[1])
     }
     fn space(&mut self, journal: &EditJournal, p: [i64; 3]) -> &super::space::FluidSpace {
         self.spaces.entry(p).or_insert_with(|| {
-            super::space::FluidSpace::at(journal, p, |q| self.chunks.block_at(q))
+            super::space::FluidSpace::wet_at(
+                journal,
+                p,
+                |q| self.chunks.block_at(q),
+                |q, material| {
+                    self.chunks
+                        .raw_fluid_cell_at(self.terrain, journal, q, material)
+                },
+            )
         })
     }
     fn connected(
@@ -83,6 +97,20 @@ impl Sampler<'_> {
         q: [i64; 3],
         b: FluidCell,
     ) -> bool {
+        // Waterlogging fills a bank from the wet side; it is not an outlet
+        // through that bank into a previously dry neighbouring cell.
+        if p[1] == q[1]
+            && self
+                .chunks
+                .block_at(p)
+                .is_some_and(terra_core::construction::is_shape)
+            && !self
+                .chunks
+                .block_at(q)
+                .is_some_and(terra_core::construction::is_shape)
+        {
+            return false;
+        }
         let left = self.space(journal, p).clone();
         left.connected(
             a,
@@ -115,24 +143,50 @@ pub fn simulate_fluid_step(
     journal: &mut EditJournal,
     budget: usize,
 ) -> Result<FluidStep, FluidError> {
+    simulate_sampled_step(
+        Sampler {
+            terrain,
+            chunks,
+            columns: HashMap::new(),
+            spaces: HashMap::new(),
+            river_columns: HashMap::new(),
+            river_origins: HashMap::new(),
+        },
+        journal,
+        budget,
+    )
+}
+
+fn simulate_sampled_step(
+    mut sampler: Sampler<'_>,
+    journal: &mut EditJournal,
+    budget: usize,
+) -> Result<FluidStep, FluidError> {
+    let terrain = sampler.terrain;
+    let chunks = sampler.chunks;
     let mut result = FluidStep::default();
     if !terrain.config().water {
         return Ok(result);
     }
     let work = journal.take_fluid_work(budget.min(4096));
-    let mut sampler = Sampler {
-        terrain,
-        chunks,
-        columns: HashMap::new(),
-        spaces: HashMap::new(),
-    };
+    let mut resting = pools::Resting::default();
     for p in work {
         result.visited += 1;
+        if resting.handled(p) {
+            continue;
+        }
         let Some(cell) = sampler.cell(journal, p) else {
             journal.sleep_fluid(p, global_to_section(p).0);
             continue;
         };
         if !chunks.block_at(p).is_some_and(super::can_hold_fluid) {
+            continue;
+        }
+        // Empty members must join the same atomic pool step before ordinary
+        // finite lateral supply can copy a neighbour's level into them.
+        if !river::bank_overflow(&mut sampler, journal, p)
+            && resting.settle(&mut sampler, journal, p, &mut result)?
+        {
             continue;
         }
         if cell.amount > 0 {
@@ -148,7 +202,11 @@ pub fn simulate_fluid_step(
             journal.sleep_fluid(p, global_to_section(down).0);
             continue;
         };
-        let (wanted, waiting, from_source) = supply::incoming(&mut sampler, journal, p);
+        let (mut wanted, waiting, mut from_source) = supply::incoming(&mut sampler, journal, p);
+        if let Some(ambient) = supply::ambient_construction(&mut sampler, journal, p) {
+            wanted = ambient;
+            from_source = true;
+        }
         if let Some(section) = waiting {
             journal.sleep_fluid(p, section);
             continue;
@@ -156,7 +214,11 @@ pub fn simulate_fluid_step(
         if below.source && wanted.amount == 0 && sampler.can_drain(journal, p, cell, down) {
             result.absorbed += u64::from(cell.amount);
             result.transferred += u64::from(cell.amount);
-            result.changed |= journal.set_fluid(p, FluidCell::default())?;
+            let changed = journal.set_simulated_fluid(p, FluidCell::default())?;
+            if changed {
+                sampler.river_origins.remove(&p);
+            }
+            result.changed |= changed;
             continue;
         }
         let amount = if wanted.amount < cell.amount {
@@ -176,7 +238,11 @@ pub fn simulate_fluid_step(
         }
         result.drained += u64::from(cell.amount.saturating_sub(amount));
         result.transferred += added;
-        result.changed |= journal.set_fluid(p, next)?;
+        let changed = journal.set_simulated_fluid(p, next)?;
+        if changed {
+            sampler.river_origins.remove(&p);
+        }
+        result.changed |= changed;
         if amount > 0 {
             result.wetted.push(p);
         }
@@ -184,6 +250,23 @@ pub fn simulate_fluid_step(
             journal.wake_fluid(p);
         }
     }
+    let mut torches = std::collections::BTreeSet::new();
+    for &p in &result.wetted {
+        for x in -1..=1 {
+            for y in -1..=1 {
+                for z in -1..=1 {
+                    let q = [p[0] + x, p[1] + y, p[2] + z];
+                    if matches!(chunks.block_at(q), Some(40 | terra_core::lantern::LANTERN)) {
+                        torches.insert(q);
+                    }
+                }
+            }
+        }
+    }
+    result.flooded_torches = torches
+        .into_iter()
+        .filter(|&p| crate::torches::flooded(terrain, chunks, journal, p))
+        .collect();
     retire_flooded_props(terrain, chunks, journal, &mut result)?;
     Ok(result)
 }
@@ -191,9 +274,13 @@ pub fn simulate_fluid_step(
 #[cfg(test)]
 mod cascade_tests;
 #[cfg(test)]
+mod construction_tests;
+#[cfg(test)]
 mod partial_tests;
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod waterlogged_pipe_tests;
 
 pub(crate) fn tick(
     time: Res<Time>,
@@ -216,6 +303,12 @@ pub(crate) fn tick(
         CELL_BUDGET,
     ) {
         Ok(step) => {
+            if !step.flooded_torches.is_empty()
+                && let Err(error) =
+                    crate::torches::wash_away(&mut chunks, &mut journal, &step.flooded_torches)
+            {
+                tracing::error!(%error, "Flooded torch removal rejected");
+            }
             if let Some(mut diagnostics) = diagnostics {
                 diagnostics.visited = step.visited;
                 diagnostics.elapsed_ms = started.elapsed().as_secs_f64() * 1000.0;
@@ -285,7 +378,12 @@ fn retire_flooded_props(
         for prop in section
             .props
             .iter()
-            .filter(|p| !p.removed && !p.water_tolerant() && !journal.prop_removed(owner, p.id))
+            .filter(|p| {
+                p.kind != crate::props::PropKind::AppleFruit
+                    && !p.removed
+                    && !p.water_tolerant()
+                    && !journal.prop_removed(owner, p.id)
+            })
             .copied()
             .collect::<Vec<_>>()
         {

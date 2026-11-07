@@ -105,6 +105,7 @@ fn update(
                 commands.entity(entity).insert(ScreenSpaceAmbientOcclusion {
                     quality_level,
                     constant_object_thickness: 0.35,
+                    ..default()
                 });
             } else {
                 commands.entity(entity).remove::<(

@@ -1,0 +1,28 @@
+{
+  "id": "teramic::castle_iron_wall",
+  "name": "Verstaerkte Mauer",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "block": 179
+    },
+    "count": 1
+  },
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "block": 174
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "mineral": "iron_ingot"
+        },
+        "count": 2
+      }
+    ]
+  }
+}

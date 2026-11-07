@@ -157,7 +157,10 @@ pub(crate) fn install(app: &mut App) {
         .insert_resource(WorldAccess::Server)
         .init_resource::<ServerRuntime>()
         .init_resource::<ConnectedProfiles>()
+        .init_resource::<kingdoms::KingdomRuntime>()
+        .init_resource::<trees::TreeRuntime>()
         .init_resource::<creatures::InspectionTargets>()
+        .init_resource::<pvp::Attacks>()
         .init_resource::<stalkers::Grips>()
         .init_resource::<riding::Mounts>()
         .init_resource::<beds::SleepRuntime>()
@@ -184,13 +187,16 @@ pub(crate) fn install(app: &mut App) {
                 crate::world_time::advance_server,
                 crate::weather::advance_server,
                 receive_controls,
+                pvp::tick,
                 locations::restore,
                 beds::tick,
                 receive_inputs,
                 chat::tick,
                 survival::begin_respawns,
                 furnaces::tick,
+                hearths::tick,
                 crushers::tick,
+                plumbing::tick,
                 gameplay::tick,
                 creatures::tick,
                 lightning::tick,
@@ -215,6 +221,8 @@ pub(crate) fn install(app: &mut App) {
                 locations::capture,
                 send_clock,
                 social::broadcast,
+                kingdoms::broadcast,
+                trees::broadcast,
                 farm_tools::send_progress,
             )
                 .chain()
@@ -303,11 +311,7 @@ fn start_listener(world: &mut World) {
         netcode.server_addr_check = false;
     }
     let entity = world
-        .spawn((
-            NetcodeServer::new(netcode),
-            ServerUdpIo::default(),
-            LocalAddr(bind),
-        ))
+        .spawn((NetcodeServer::new(netcode), ServerUdpIo, LocalAddr(bind)))
         .id();
     drop(udp);
     world.trigger(Start { entity });
@@ -335,13 +339,13 @@ fn start_listener(world: &mut World) {
     tracing::info!(address=?runtime.address,"Authoritative Terra server listening");
 }
 
-fn new_link(event: On<Add, LinkOf>, mut commands: Commands) {
+fn new_link(event: On<Add<LinkOf>>, mut commands: Commands) {
     commands
         .entity(event.entity)
         .insert(MessageManager::default());
 }
 fn connected(
-    event: On<Add, Connected>,
+    event: On<Add<Connected>>,
     links: Query<&RemoteId, With<ClientOf>>,
     mut commands: Commands,
     mut runtime: ResMut<ServerRuntime>,
@@ -447,6 +451,7 @@ fn cleanup(
 struct ControlWorld<'w, 's> {
     chat: Option<ResMut<'w, chat::ChatRuntime>>,
     mounts: ResMut<'w, riding::Mounts>,
+    attacks: Option<ResMut<'w, pvp::Attacks>>,
     inspections: Option<ResMut<'w, creatures::InspectionTargets>>,
     sleep: Option<ResMut<'w, beds::SleepRuntime>>,
     block_properties: Res<'w, terra_core::block_properties::BlockPropertiesCatalog>,
@@ -473,7 +478,11 @@ type ControlPeers<'w, 's> = Query<
     With<Connected>,
 >;
 
-fn receive_controls(mut peers: ControlPeers, mut world: ControlWorld) {
+fn receive_controls(
+    mut peers: ControlPeers,
+    mut world: ControlWorld,
+    mut kingdoms: ResMut<kingdoms::KingdomRuntime>,
+) {
     if world.gateway.is_none() {
         return;
     }
@@ -486,6 +495,20 @@ fn receive_controls(mut peers: ControlPeers, mut world: ControlWorld) {
                 break;
             }
             match message {
+                ClientControl::Kingdom(command) if peer.synced => {
+                    kingdoms::control(command, &peer, &mut sender, &mut world, &mut kingdoms);
+                }
+                ClientControl::AttackPlayer { player, look } if peer.synced => {
+                    if let Some(attacks) = world.attacks.as_deref_mut()
+                        && attacks.0.len() < 128
+                    {
+                        attacks.0.push_back(pvp::Attack {
+                            attacker: peer.id,
+                            target: player,
+                            look,
+                        });
+                    }
+                }
                 ClientControl::Dismount if peer.synced => {
                     if let Some(mount) = world.mounts.active.get_mut(&peer.uuid) {
                         mount.leave = true;
@@ -657,6 +680,17 @@ fn receive_controls(mut peers: ControlPeers, mut world: ControlWorld) {
                         peer.restore_location = Some(location);
                         peer.restored_spawn = true;
                         peer.last_movement.flight_speed = location.flying.then_some(0.0);
+                    }
+                    if !world
+                        .journal
+                        .gameplay_mut()
+                        .recover_player_inventory(profile.uuid, spawn.map(f64::from))
+                    {
+                        peer.accepted = false;
+                        sender.send::<ControlChannel>(ServerControl::Reject(
+                            "Inventory recovery needs room for loose items. Please reconnect after clearing nearby drops.".into(),
+                        ));
+                        continue;
                     }
                     sender.send::<ControlChannel>(ServerControl::Welcome {
                         player: peer.id,
@@ -1070,6 +1104,7 @@ fn send_deltas(
     bodies: Query<&Transform, With<ServerCharacter>>,
     journal: Res<EditJournal>,
 ) {
+    let _scope = terra_core::profiling::ScopeTimer::new("server.send_deltas");
     for (mut peer, mut sender) in &mut peers {
         if !peer.accepted {
             continue;
@@ -1151,6 +1186,7 @@ fn send_players(
         }
         if let Ok((transform, velocity, grounded)) = bodies.get(peer.body) {
             players.push(PlayerState {
+                kingdom_heraldry: journal.gameplay().kingdoms.heraldry_for_member(peer.uuid),
                 mounted: mounts.snapshot(peer.uuid),
                 gender: peer.gender,
                 generation: peer.generation,
@@ -1186,7 +1222,12 @@ fn send_players(
                             .get(&peer.uuid)?
                             .slot(usize::from(slot))
                     })
-                    .is_some_and(|stack| stack.item == terra_core::ItemKind::Block(40)),
+                    .is_some_and(|stack| {
+                        matches!(
+                            stack.item,
+                            terra_core::ItemKind::Block(40 | terra_core::lantern::LANTERN)
+                        )
+                    }),
             });
         }
     }
@@ -1272,10 +1313,23 @@ mod furnaces;
 mod furniture;
 #[path = "server_gameplay.rs"]
 mod gameplay;
+#[path = "server_hearths.rs"]
+mod hearths;
+#[path = "server_kinetics.rs"]
+mod kinetics;
+#[path = "server_kingdoms.rs"]
+mod kingdoms;
 #[path = "server_lightning.rs"]
 mod lightning;
 #[path = "server_locations.rs"]
 mod locations;
+#[path = "server_logistics.rs"]
+mod logistics;
+#[path = "server_plumbing.rs"]
+mod plumbing;
+#[cfg(test)]
+#[path = "server_plumbing_tests.rs"]
+mod plumbing_tests;
 #[path = "server_riding.rs"]
 mod riding;
 #[path = "server_social.rs"]
@@ -1288,3 +1342,35 @@ mod stalkers;
 mod survival;
 #[path = "server_validation.rs"]
 mod validation;
+
+#[cfg(test)]
+#[path = "server_rgb_filter_tests.rs"]
+mod rgb_filter_tests;
+
+#[cfg(test)]
+#[path = "server_lantern_tests.rs"]
+mod lantern_tests;
+#[cfg(test)]
+#[path = "server_torch_placement_tests.rs"]
+mod torch_placement_tests;
+
+#[cfg(test)]
+#[path = "server_fabric_dye_tests.rs"]
+mod fabric_dye_tests;
+
+#[cfg(test)]
+#[path = "server_rgb_slab_tests.rs"]
+mod rgb_slab_tests;
+
+#[cfg(test)]
+#[path = "server_snow_tests.rs"]
+mod snow_tests;
+
+#[path = "server_pvp.rs"]
+mod pvp;
+
+#[path = "server_trees.rs"]
+mod trees;
+
+#[path = "server_fruit.rs"]
+mod fruit;

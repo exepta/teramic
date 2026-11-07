@@ -63,9 +63,18 @@ pub(super) struct MixControls {
     gains: [[AtomicU32; 2]; 2],
     rms: AtomicU32,
     voices: AtomicU32,
+    rate: AtomicU32,
 }
 
 impl MixControls {
+    pub(super) fn update_rate(&self, rate: f32) {
+        let rate = if rate.is_finite() {
+            rate.clamp(0.25, 4.0)
+        } else {
+            1.0
+        };
+        self.rate.store(rate.to_bits(), Ordering::Relaxed);
+    }
     pub(super) fn update(&self, gains: [[f32; 2]; 2]) {
         for (voice, values) in self.gains.iter().zip(gains) {
             for (channel, gain) in voice.iter().zip(values) {
@@ -107,6 +116,7 @@ impl Decodable for MachineSource {
             right: false,
             frame: 0,
             energy: 0.0,
+            clock_rate: 1.0,
             #[cfg(test)]
             events: [0; 3],
         }
@@ -143,6 +153,7 @@ pub(super) struct MachineStream {
     right: bool,
     frame: u32,
     energy: f32,
+    clock_rate: f32,
     #[cfg(test)]
     events: [usize; 3],
 }
@@ -172,7 +183,7 @@ impl MachineStream {
             0.0
         };
         let pitch = 0.76 + self.random() * 0.40;
-        let step = 0.5 * pitch;
+        let step = 0.5 * pitch * self.clock_rate.sqrt().clamp(0.6, 2.0);
         let length = ((count as f32 - position) / step).min(RATE * seconds) as u32;
         let gain = level * (0.78 + self.random() * 0.38);
         let Some(index) = self.voices.iter().position(Option::is_none) else {
@@ -224,6 +235,12 @@ impl MachineStream {
 
     fn frame(&mut self) {
         if self.frame.is_multiple_of(256) {
+            let rate = f32::from_bits(self.controls.rate.load(Ordering::Relaxed));
+            self.clock_rate = if rate.is_finite() && rate > 0.0 {
+                rate.clamp(0.25, 4.0)
+            } else {
+                1.0
+            };
             for (target, voice) in self.targets.iter_mut().zip(&self.controls.gains) {
                 for (gain, control) in target.iter_mut().zip(voice) {
                     *gain = f32::from_bits(control.load(Ordering::Relaxed));
@@ -263,7 +280,8 @@ impl MachineStream {
                     2 => (0.038, 0.071),
                     _ => (0.12, 0.10),
                 };
-                self.next_event[family] = (RATE * (minimum + self.random() * spread)) as u32;
+                self.next_event[family] =
+                    (RATE * (minimum + self.random() * spread) / self.clock_rate) as u32;
                 if family < 3 {
                     self.spawn(family);
                 } else {
@@ -280,7 +298,8 @@ impl MachineStream {
                 self.metal[mode] = 0.0;
                 continue;
             }
-            self.phase[mode] = (self.phase[mode] + self.frequency[mode] / RATE).fract();
+            self.phase[mode] =
+                (self.phase[mode] + self.frequency[mode] * self.clock_rate / RATE).fract();
             voices[0] += (self.phase[mode] * std::f32::consts::TAU).sin()
                 * self.metal[mode]
                 * if mode == 0 { 0.025 } else { 0.009 };
@@ -337,6 +356,26 @@ impl Source for MachineStream {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn faster_gears_increase_contact_cadence_without_unbounded_voices_or_nonfinite_samples() {
+        let bank = load_foley().unwrap();
+        let events = |rate| {
+            let controls = Arc::new(MixControls::default());
+            controls.update([[0.35; 2], [0.0; 2]]);
+            controls.update_rate(rate);
+            let mut stream = MachineSource {
+                controls,
+                bank: bank.clone(),
+            }
+            .decoder();
+            for sample in stream.by_ref().take(192_000) {
+                assert!(sample.is_finite() && sample.abs() <= 0.5);
+            }
+            assert!(stream.voices.iter().flatten().count() <= MAX_VOICES);
+            stream.events[0]
+        };
+        assert!(events(2.0) > events(0.5));
+    }
     #[test]
     fn shipped_material_foley_is_real_bounded_and_covers_wood_stone_and_grit() {
         let bank = load_foley().unwrap();

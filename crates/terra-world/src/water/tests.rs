@@ -209,12 +209,14 @@ fn wave_weights_match_across_negative_chunk_boundaries_and_pin_live_fluid_edges(
         a_position.origin().unwrap(),
         &columns,
         Some(&fluids),
+        &vec![0; 18 * 18 * 18],
     );
     super::geometry::assign_wave_weights(
         &mut b,
         b_position.origin().unwrap(),
         &b_columns,
         Some(&fluids),
+        &vec![0; 18 * 18 * 18],
     );
     assert_eq!(edge(&a, 16.0), edge(&b, 0.0));
     for (point, weight) in a.positions.iter().zip(&a.wave_weights) {
@@ -447,4 +449,34 @@ fn bank_edits_rebuild_shared_water_corners_and_survive_reload() {
             .water
             .unwrap()
     );
+}
+
+#[test]
+fn shoreline_waves_are_pinned_and_live_solid_tops_do_not_get_a_coplanar_water_sheet() {
+    let g = generator(4.0, 8.0, false);
+    for section in [SectionPos::default(), SectionPos::new(-1, 0, -1)] {
+        let origin = section.origin().unwrap();
+        let mut columns = vec![g.terrain().surface_column(0.5, 0.5); 18 * 18];
+        for c in &mut columns {
+            c.height = 4.0;
+            c.water_level = Some(8.0);
+        }
+        let mut padded = vec![0; 18 * 18 * 18];
+        // A player-placed grass block reaches the water plane. It must not
+        // acquire an overlapping transparent lake quad or a moving contact edge.
+        padded[9 + 18 * (8 + 18 * 9)] = 1;
+        let patch = super::build_water_patch(section, origin, 8.0, &columns, &padded).unwrap();
+        assert_eq!(patch.indices.len() / 3, 510);
+        for (p, weight) in patch.positions.iter().zip(&patch.wave_weights) {
+            if (p[0] == 8.0 || p[0] == 9.0) && (p[2] == 8.0 || p[2] == 9.0) {
+                assert_eq!(*weight, 0.0);
+            }
+        }
+        assert!(
+            patch.wave_weights.iter().any(|w| *w > 0.9),
+            "open water retains its waves"
+        );
+        columns[9 + 18 * 9].water_level = None;
+        assert_eq!(super::channels::shared_wave_weight(&columns, 8, 8), 0.0);
+    }
 }

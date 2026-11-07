@@ -84,7 +84,7 @@ impl SmokeField {
     }
 }
 
-fn loaded(anchor: Cell, chunks: &ChunkStore, journal: &EditJournal) -> bool {
+pub(super) fn loaded(anchor: Cell, chunks: &ChunkStore, journal: &EditJournal) -> bool {
     let upper = [anchor[0], anchor[1] + 1, anchor[2]];
     chunks.block_at(anchor) == Some(59)
         && chunks.block_at(upper) == Some(59)

@@ -21,7 +21,7 @@ pub(in crate::building) struct FallExtension {
 
 impl MaterialExtension for FallExtension {
     fn vertex_shader() -> ShaderRef {
-        "shaders/terra_tree_fall.wgsl".into()
+        "shaders/terra_tree_fall.wesl".into()
     }
     fn prepass_vertex_shader() -> ShaderRef {
         Self::vertex_shader()
@@ -98,7 +98,7 @@ fn ground_below(
         // Never look through an unknown section and mistake deeper loaded
         // terrain for the missing hillside. Unknown uses the base fallback.
         let material = chunks.block_at([column[0], y, column[1]])?;
-        if !matches!(material, 0 | 7..=9 | 132 | 133 | 14 | 27 | 40 | 50..=56) {
+        if !matches!(material, 0 | 7..=9 | 132 | 133 | 195 | 14 | 27 | 40 | 50..=56) {
             return Some(y as f32 + 1.0);
         }
     }
@@ -126,6 +126,7 @@ pub(super) fn prepare(
                 detail_level: crate::meshing::DetailLevel::Middle,
                 terrain: None,
                 exposure: None,
+                tints: Default::default(),
                 conditions: Default::default(),
             });
         for (index, wood) in section.cells() {
