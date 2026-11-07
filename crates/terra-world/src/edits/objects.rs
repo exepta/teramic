@@ -63,6 +63,9 @@ impl BlockObjectState {
             })
     }
     pub fn valid_for(self, position: [i64; 3], material: u16) -> bool {
+        if terra_core::rails::is_rail(material) {
+            return crate::rails::valid_state(position, material, self);
+        }
         if material == terra_core::kinetic::CONVEYOR {
             return self.facing < terra_core::kinetic::BELT_FACING_COUNT
                 && (self.facing < 56 || self.peer.is_some())
@@ -199,6 +202,20 @@ impl BlockObjectState {
     }
 }
 impl EditJournal {
+    /// Rail-bearing sparse sections include unloaded, persisted modules.
+    pub fn rail_sections(&self) -> impl Iterator<Item = terra_voxel::SectionPos> + '_ {
+        self.rail_sections.iter().copied()
+    }
+    pub fn rail_module_count(&self) -> usize {
+        self.rail_anchor_counts.values().sum()
+    }
+    /// Runtime-only geometry stamp; ordinary terrain edits do not change it.
+    pub fn rail_epoch(&self) -> u64 {
+        self.rail_epoch
+    }
+    pub(crate) fn rail_cache_identity(&self) -> std::sync::Arc<()> {
+        self.rail_identity.clone()
+    }
     /// Sparse runtime index, including generated metadata and unloaded objects.
     /// Ordinary terrain edits do not make a section an object-render candidate.
     pub fn object_sections(&self) -> impl ExactSizeIterator<Item = terra_voxel::SectionPos> + '_ {
@@ -206,6 +223,25 @@ impl EditJournal {
     }
 
     pub(super) fn refresh_object_section(&mut self, section: terra_voxel::SectionPos) {
+        let has_rail = self
+            .object_states_in_section(section)
+            .any(|(_, material, _)| terra_core::rails::is_rail(material));
+        if has_rail {
+            self.rail_sections.insert(section);
+        } else {
+            self.rail_sections.remove(&section);
+        }
+        let anchors = self
+            .object_states_in_section(section)
+            .filter(|(_, material, state)| {
+                terra_core::rails::is_rail(*material) && !state.secondary
+            })
+            .count();
+        if anchors == 0 {
+            self.rail_anchor_counts.remove(&section);
+        } else {
+            self.rail_anchor_counts.insert(section, anchors);
+        }
         let holds: std::collections::BTreeSet<_> = self
             .object_states_in_section(section)
             .filter_map(|(p, material, state)| {

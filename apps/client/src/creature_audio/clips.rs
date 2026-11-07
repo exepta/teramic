@@ -148,6 +148,7 @@ impl Surface {
                 | WhiteMushroomCap | Conveyor,
             ) => Self::Dirt,
             Some(Snow | SnowLayer | CastleSnowWall) => Self::Snow,
+            Some(material) if terra_core::rails::is_rail(material as u16) => Self::Wood,
             Some(
                 Wood | WeatheredWood | OakPlanks | BirchPlanks | SprucePlanks | Workbench | Chest
                 | SpruceLog | Torch | OakDoor | BirchDoor | SpruceDoor | OakWindow | BirchWindow
@@ -420,6 +421,7 @@ mod tests {
         expected.push(Wood); // Timber reinforcement is the same contact family as strapped wooden machinery.
         expected.extend([Stone; 2]); // Iron lantern feet/frame and chain links use the hard metal family.
         expected.push(Leaves); // The apple canopy keeps the same leaf contact sounds.
+        expected.extend([Wood; 10]); // Railway modules retain timber sleeper contact sounds.
         assert_eq!(
             expected.len(),
             usize::from(terra_voxel::MaterialId::LAST) + 1

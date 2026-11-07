@@ -155,6 +155,7 @@ fn shipped_ids_and_face_materials_stay_explicit_without_cube_models() {
         if matches!(block.id, 1 | 28..=29 | 40 | 59..=73 | 99..=100 | 139..=172)
             || terra_core::castle::is_castle(block.id)
             || terra_core::lantern::is_part(block.id)
+            || terra_core::rails::is_rail(block.id)
         {
             assert_eq!(block.render_kind, BlockRenderKind::CustomMesh);
             assert!(!block.model.is_empty());

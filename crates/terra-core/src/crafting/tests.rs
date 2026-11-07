@@ -1,6 +1,53 @@
 use super::*;
 
 #[test]
+fn railway_modules_craft_atomically_at_a_workbench_with_every_plank_species() {
+    let book = RecipeBook::builtins();
+    for kind in crate::rails::Kind::ALL {
+        let recipe = book
+            .get(recipe_key(&format!("teramic::{}", kind.key())))
+            .unwrap();
+        assert_eq!(recipe.station, CraftStation::Workbench);
+        assert_eq!(recipe.output.item, ItemKind::Block(kind.material()));
+        assert_eq!(recipe.output.count, 1);
+        for plank in [16, 17, 18, 135] {
+            let mut inventory = Inventory::default();
+            for ingredient in recipe.ingredients() {
+                let item = if ingredient.wood {
+                    ItemKind::Block(plank)
+                } else {
+                    ingredient.item
+                };
+                assert_eq!(inventory.insert(item, ingredient.count), 0);
+            }
+            let before = inventory.clone();
+            assert!(
+                book.craft(
+                    &mut inventory,
+                    recipe.key(),
+                    1,
+                    CraftStation::Hand,
+                    CraftDestination::Cursor,
+                )
+                .is_err()
+            );
+            assert_eq!(inventory, before);
+            book.craft(
+                &mut inventory,
+                recipe.key(),
+                1,
+                CraftStation::Workbench,
+                CraftDestination::Cursor,
+            )
+            .unwrap();
+            assert_eq!(inventory.cursor, Some(recipe.output));
+            assert_eq!(inventory.occupied_slots(), 0);
+            assert!(inventory.valid());
+        }
+    }
+}
+
+#[test]
 fn all_hydraulic_parts_have_real_atomic_workbench_recipes() {
     let book = RecipeBook::builtins();
     for (slug, material) in [
@@ -1085,6 +1132,7 @@ fn builtin_recipes_are_valid_and_catalog_roundtrip_preserves_keys() {
             + 2 // Hold platform and pipe-fed fluid infuser.
             + 2 // Iron lantern and hanging chain.
             + 2 // Apple saplings from whole fruit or two cores.
+            + 10 // Modular three-block-wide railway pieces.
     );
     for id in [
         "lantern",

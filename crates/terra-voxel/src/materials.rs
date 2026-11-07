@@ -199,16 +199,36 @@ pub enum MaterialId {
     Lantern = 193,
     Chain = 194,
     AppleLeaves = 195,
+    RailStraight = 196,
+    RailCurveSmall = 197,
+    RailCurveLarge = 198,
+    RailSlope = 199,
+    RailSlopeEntry = 200,
+    RailSlopeExit = 201,
+    RailSwitchLeft = 202,
+    RailSwitchRight = 203,
+    RailCrossing = 204,
+    RailBuffer = 205,
 }
 
 impl MaterialId {
-    pub const LAST: u16 = Self::AppleLeaves as u16;
+    pub const LAST: u16 = Self::RailBuffer as u16;
     pub const FOLIAGE: [u16; 6] = [7, 8, 9, 132, 133, 195];
     pub const BLOCK_COUNT: usize = Self::LAST as usize;
 
     pub const fn identifier(self) -> &'static str {
         match self {
             Self::AppleLeaves => "teramic::apple_leaves",
+            Self::RailStraight => "teramic::rail_straight",
+            Self::RailCurveSmall => "teramic::rail_curve_small",
+            Self::RailCurveLarge => "teramic::rail_curve_large",
+            Self::RailSlope => "teramic::rail_slope",
+            Self::RailSlopeEntry => "teramic::rail_slope_entry",
+            Self::RailSlopeExit => "teramic::rail_slope_exit",
+            Self::RailSwitchLeft => "teramic::rail_switch_left",
+            Self::RailSwitchRight => "teramic::rail_switch_right",
+            Self::RailCrossing => "teramic::rail_crossing",
+            Self::RailBuffer => "teramic::rail_buffer",
             Self::Lantern => "teramic::lantern",
             Self::Chain => "teramic::chain",
             Self::WoodPipe => "teramic::wood_pipe",
@@ -603,6 +623,16 @@ impl MaterialId {
             191 => Self::CastleRoyalWall,
             192 => Self::CastleTimberWall,
             195 => Self::AppleLeaves,
+            196 => Self::RailStraight,
+            197 => Self::RailCurveSmall,
+            198 => Self::RailCurveLarge,
+            199 => Self::RailSlope,
+            200 => Self::RailSlopeEntry,
+            201 => Self::RailSlopeExit,
+            202 => Self::RailSwitchLeft,
+            203 => Self::RailSwitchRight,
+            204 => Self::RailCrossing,
+            205 => Self::RailBuffer,
             193 => Self::Lantern,
             194 => Self::Chain,
             _ => return None,

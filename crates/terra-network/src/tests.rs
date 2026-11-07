@@ -1616,5 +1616,7 @@ fn sustained_two_profile_udp_session_keeps_identity_and_replication() {
     );
 }
 
+#[path = "railway_tests.rs"]
+mod railway_tests;
 #[path = "sapling_tests.rs"]
 mod sapling_tests;

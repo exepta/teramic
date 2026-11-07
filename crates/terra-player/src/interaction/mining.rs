@@ -859,6 +859,12 @@ pub(crate) fn edit_target_block(
         && target.world.0.is_some_and(|target| match target {
             WorldTarget::Block(hit) => chunks.block_at(hit.position).is_some_and(|m| {
                 terra_world::objects::is_opening(m)
+                    || terra_core::rails::Kind::from_material(m)
+                        .is_some_and(terra_core::rails::Kind::is_switch)
+                        && !selected.is_some_and(|item| {
+                            item.block_material()
+                                .is_some_and(terra_core::rails::is_rail)
+                        })
                     || terra_core::beds::is_bed(m)
                     || m == terra_core::flower_pot::MATERIAL
                     || matches!(m, 166..=167)
@@ -896,6 +902,132 @@ pub(crate) fn edit_target_block(
         terra_core::food(item).is_some() || terra_core::brewing::drink_seconds(item).is_some()
     }) && keys.consume_pressed()
     {
+        return;
+    }
+    if let Some(material) = selected
+        .and_then(ItemKind::block_material)
+        .filter(|material| terra_core::rails::is_rail(*material))
+    {
+        let Some(WorldTarget::Block(hit)) = target.world.0 else {
+            return;
+        };
+        let Some(journal) = target.journal.as_deref() else {
+            return;
+        };
+        let Some((camera, look)) = target.camera.iter().next() else {
+            return;
+        };
+        let origin = if target
+            .perspective
+            .as_deref()
+            .is_some_and(|mode| mode.is_third_person())
+        {
+            target
+                .bodies
+                .iter()
+                .next()
+                .map_or(camera.translation, |body| {
+                    body.translation + Vec3::Y * terra_physics::character::PLAYER_EYE_OFFSET
+                })
+        } else {
+            camera.translation
+        };
+        let rotation = look.rotation();
+        let (yaw, pitch, _) = rotation.to_euler(EulerRot::YXZ);
+        let ray = (
+            origin.to_array().map(f64::from),
+            (rotation * Vec3::NEG_Z).to_array().map(f64::from),
+        );
+        let plan =
+            terra_world::rails::placement(&chunks, journal, hit, material, ray, [yaw, pitch]);
+        let environment_valid = plan.is_ok();
+        let plan = plan
+            .or_else(|_| {
+                terra_world::rails::proposal(&chunks, journal, hit, material, ray, [yaw, pitch])
+            })
+            .ok();
+        let anchor = plan.as_ref().and_then(|plan| {
+            plan.states.iter().find_map(|(cell, state)| {
+                state
+                    .is_some_and(|state| !state.secondary && state.peer == Some(*cell))
+                    .then_some(*cell)
+            })
+        });
+        let Some(position) = anchor else {
+            presentation.preview.position = Some(hit.adjacent());
+            presentation.preview.material = material;
+            return;
+        };
+        let plan = plan.expect("a rail anchor belongs to its placement plan");
+        let has_item = creative
+            || target
+                .session
+                .as_ref()
+                .is_some_and(|session| session.inventory.count(ItemKind::Block(material)) > 0);
+        let permitted = target.session.as_ref().is_none_or(|session| {
+            session.uuid.is_some_and(|actor| {
+                plan.edits.iter().all(|edit| {
+                    terra_world::kingdom_access::can_use(
+                        &session.kingdoms,
+                        &chunks,
+                        actor,
+                        terra_core::kingdom::KingdomPermission::Build,
+                        edit.position,
+                    )
+                })
+            })
+        });
+        let properties = target.properties.as_deref();
+        let boxes = properties
+            .map(|properties| terra_world::placement::boxes(&plan, &chunks, journal, properties));
+        let half = Vec3::new(
+            terra_physics::character::PLAYER_RADIUS,
+            terra_physics::character::PLAYER_HALF_HEIGHT,
+            terra_physics::character::PLAYER_RADIUS,
+        );
+        let overlaps = |center: Vec3| {
+            boxes.as_ref().is_some_and(|boxes| {
+                boxes.iter().any(|shape| {
+                    shape.intersects(
+                        (center - half).to_array().map(f64::from),
+                        (center + half).to_array().map(f64::from),
+                    )
+                })
+            })
+        };
+        let blocked = target.bodies.iter().any(|body| overlaps(body.translation))
+            || target.remote.as_ref().is_some_and(|players| {
+                players
+                    .players
+                    .values()
+                    .any(|track| overlaps(track.position()))
+            });
+        let within_height = target.config.as_ref().is_none_or(|config| {
+            !config.world.bounded_world
+                || plan
+                    .edits
+                    .iter()
+                    .all(|edit| (-128..=356).contains(&edit.position[1]))
+        });
+        let valid = environment_valid
+            && within_height
+            && hit.distance <= 4.5
+            && has_item
+            && permitted
+            && !blocked;
+        presentation.preview.position = Some(position);
+        presentation.preview.material = material;
+        presentation.preview.valid = valid;
+        presentation.preview.plan = Some(plan);
+        if valid && keys.just_pressed(Action::Place) {
+            presentation.motion.placing = true;
+            presentation.motion.impulse = presentation.motion.impulse.wrapping_add(1);
+            requests.blocks.write(BlockEditRequest {
+                position,
+                expected_material: chunks.block_at(position).unwrap_or(0),
+                material,
+            });
+        }
         return;
     }
     if selected == Some(ItemKind::Block(98)) {
@@ -1232,6 +1364,234 @@ mod tests {
             },
         );
         app
+    }
+
+    #[test]
+    fn railway_preview_checks_every_owned_cell_without_speculative_world_edits() {
+        use terra_core::{PlayerUuid, rails};
+        for foreign_claim in [false, true] {
+            let mut app = app();
+            session(&mut app, GameMode::Creative, false);
+            let piece = rails::Piece::new([15, 1, 8], rails::STRAIGHT, 2).unwrap();
+            {
+                let mut chunks = app.world_mut().resource_mut::<ChunkStore>();
+                let supports = piece.supports().iter().map(|point| {
+                    (
+                        std::array::from_fn(|axis| {
+                            piece.anchor[axis] + i64::from(point.support[axis])
+                        }),
+                        3,
+                    )
+                });
+                for (cell, material) in terra_world::rails::cells(piece)
+                    .into_iter()
+                    .map(|cell| (cell, 0))
+                    .chain(supports)
+                    .chain([([15, 0, 8], 3)])
+                {
+                    let (owner, local) = terra_voxel::global_to_section(cell);
+                    chunks
+                        .loaded
+                        .entry(owner)
+                        .or_insert_with(|| LoadedSection {
+                            data: BlockSection::empty(owner).unwrap(),
+                            mesh: None,
+                            mesh_epoch: 0,
+                            water_epoch: 0,
+                            water: None,
+                            props: Vec::new(),
+                        })
+                        .data
+                        .set_block(local, material)
+                        .unwrap();
+                }
+            }
+            {
+                let mut session = app
+                    .world_mut()
+                    .resource_mut::<terra_network::client::ClientSession>();
+                session.uuid = Some(PlayerUuid::from_u128(1));
+                if foreign_claim {
+                    session
+                        .kingdoms
+                        .found(PlayerUuid::from_u128(2), [16, 0, 0], "Other")
+                        .unwrap();
+                }
+            }
+            let hit = BlockHit {
+                position: [15, 0, 8],
+                normal: [0, 1, 0],
+                distance: 2.0,
+            };
+            app.insert_resource(TargetBlock(Some(hit)))
+                .insert_resource(TargetWorld(Some(WorldTarget::Block(hit))))
+                .insert_resource(terra_world::edits::EditJournal::default())
+                .insert_resource(terra_core::block_properties::BlockPropertiesCatalog::default())
+                .insert_resource(super::super::ActiveItem(Some(ItemKind::Block(
+                    rails::STRAIGHT,
+                ))));
+            app.world_mut().spawn((
+                crate::TerraCamera,
+                Transform::from_xyz(14.5, 3., 10.5),
+                crate::CameraLook::default(),
+            ));
+            app.world_mut()
+                .resource_mut::<ButtonInput<KeyCode>>()
+                .press(KeyCode::KeyB);
+            app.update();
+            let preview = app.world().resource::<PlacementPreview>();
+            assert_eq!(preview.position, Some(piece.anchor));
+            assert_eq!(preview.valid, !foreign_claim);
+            assert_eq!(
+                preview.plan.as_ref().unwrap().edits.len(),
+                piece.footprint().len()
+            );
+            let requests: Vec<_> = app
+                .world_mut()
+                .resource_mut::<Messages<BlockEditRequest>>()
+                .drain()
+                .collect();
+            assert_eq!(requests.len(), usize::from(!foreign_claim));
+            if let Some(request) = requests.first() {
+                assert_eq!(request.position, piece.anchor);
+                assert_eq!(request.material, rails::STRAIGHT);
+            }
+            assert_eq!(
+                app.world().resource::<ChunkStore>().block_at(piece.anchor),
+                Some(0)
+            );
+            assert_eq!(
+                app.world()
+                    .resource::<terra_world::edits::EditJournal>()
+                    .edited_blocks(),
+                0
+            );
+        }
+    }
+
+    #[test]
+    fn railway_invalid_space_keeps_a_silhouette_but_foreground_props_prevent_placement() {
+        #[derive(Clone, Copy, Debug)]
+        enum Obstruction {
+            MissingSupport,
+            OccupiedCell,
+            ForegroundProp,
+        }
+        for obstruction in [
+            Obstruction::MissingSupport,
+            Obstruction::OccupiedCell,
+            Obstruction::ForegroundProp,
+        ] {
+            let mut app = app();
+            session(&mut app, GameMode::Creative, false);
+            let piece =
+                terra_core::rails::Piece::new([1, 1, 5], terra_core::rails::STRAIGHT, 2).unwrap();
+            {
+                let mut chunks = app.world_mut().resource_mut::<ChunkStore>();
+                let supports = piece.supports().iter().map(|point| {
+                    (
+                        std::array::from_fn(|axis| {
+                            piece.anchor[axis] + i64::from(point.support[axis])
+                        }),
+                        3,
+                    )
+                });
+                for (cell, material) in terra_world::rails::cells(piece)
+                    .into_iter()
+                    .map(|cell| (cell, 0))
+                    .chain(supports)
+                {
+                    let (owner, local) = terra_voxel::global_to_section(cell);
+                    chunks
+                        .loaded
+                        .entry(owner)
+                        .or_insert_with(|| LoadedSection {
+                            data: BlockSection::empty(owner).unwrap(),
+                            mesh: None,
+                            mesh_epoch: 0,
+                            water_epoch: 0,
+                            water: None,
+                            props: Vec::new(),
+                        })
+                        .data
+                        .set_block(local, material)
+                        .unwrap();
+                }
+                let changed = match obstruction {
+                    Obstruction::MissingSupport => {
+                        let offset = piece.supports().first().unwrap().support;
+                        Some((
+                            std::array::from_fn(|axis| {
+                                piece.anchor[axis] + i64::from(offset[axis])
+                            }),
+                            0,
+                        ))
+                    }
+                    Obstruction::OccupiedCell => {
+                        Some((*terra_world::rails::cells(piece).last().unwrap(), 3))
+                    }
+                    Obstruction::ForegroundProp => None,
+                };
+                if let Some((cell, material)) = changed {
+                    let (owner, local) = terra_voxel::global_to_section(cell);
+                    chunks
+                        .loaded
+                        .get_mut(&owner)
+                        .unwrap()
+                        .data
+                        .set_block(local, material)
+                        .unwrap();
+                }
+            }
+            let hit = BlockHit {
+                position: [1, 0, 5],
+                normal: [0, 1, 0],
+                distance: 2.0,
+            };
+            app.insert_resource(TargetBlock(Some(hit)))
+                .insert_resource(terra_world::edits::EditJournal::default())
+                .insert_resource(terra_core::block_properties::BlockPropertiesCatalog::default())
+                .insert_resource(super::super::ActiveItem(Some(ItemKind::Block(
+                    piece.material,
+                ))));
+            if !matches!(obstruction, Obstruction::ForegroundProp) {
+                app.insert_resource(TargetWorld(Some(WorldTarget::Block(hit))));
+            }
+            app.world_mut().spawn((
+                crate::TerraCamera,
+                Transform::from_xyz(1.5, 3.0, 7.5),
+                crate::CameraLook::default(),
+            ));
+            app.world_mut()
+                .resource_mut::<ButtonInput<KeyCode>>()
+                .press(KeyCode::KeyB);
+            app.update();
+            let preview = app.world().resource::<PlacementPreview>();
+            assert!(!preview.valid, "{obstruction:?}");
+            if matches!(obstruction, Obstruction::ForegroundProp) {
+                assert!(preview.position.is_none());
+                assert!(preview.plan.is_none());
+            } else {
+                assert_eq!(preview.position, Some(piece.anchor));
+                assert_eq!(
+                    preview.plan.as_ref().unwrap().edits.len(),
+                    piece.footprint().len()
+                );
+            }
+            assert!(
+                app.world_mut()
+                    .resource_mut::<Messages<BlockEditRequest>>()
+                    .drain()
+                    .next()
+                    .is_none()
+            );
+            assert_eq!(
+                app.world()
+                    .resource::<terra_world::edits::EditJournal>()
+                    .edited_blocks(),
+                0
+            );
+        }
     }
 
     #[test]

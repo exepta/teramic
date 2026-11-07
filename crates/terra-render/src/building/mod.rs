@@ -132,6 +132,15 @@ fn outline_color(seconds: f32) -> Color {
     Color::srgba(1.0, 0.68, 0.2, 0.4 + 0.55 * pulse)
 }
 
+fn placement_outline_color(material: u16, valid: bool, seconds: f32) -> Color {
+    let ordinary = outline_color(seconds);
+    if terra_core::rails::is_rail(material) && !valid {
+        Color::srgba(1.0, 0.12, 0.06, ordinary.to_srgba().alpha)
+    } else {
+        ordinary
+    }
+}
+
 pub(crate) fn install(app: &mut App) {
     felling::install(app);
     held::install(app);
@@ -255,7 +264,12 @@ fn surfaces(
                 .with_scale(Vec3::splat(1.004));
         let material = world.assets.outline.clone();
         if let Some(mut surface) = materials.get_mut(&material) {
-            surface.color = outline_color(world.time.elapsed_secs_wrapped()).to_linear();
+            surface.color = placement_outline_color(
+                preview.material,
+                preview.valid,
+                world.time.elapsed_secs_wrapped(),
+            )
+            .to_linear();
         }
         if let Ok((_, mut t, mut m, mut current_mesh)) = outline.single_mut() {
             *t = transform;

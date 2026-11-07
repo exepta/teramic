@@ -7,6 +7,8 @@ mod belts;
 #[path = "castle_geometry_tests.rs"]
 mod castle_geometry_tests;
 mod hearths;
+#[cfg(all(test, feature = "bevy"))]
+mod rail_tests;
 pub use belts::{
     conveyor_boxes, conveyor_casing_boxes, conveyor_casing_supported, conveyor_triangles,
 };
@@ -186,6 +188,19 @@ fn visit_boxes_with_state(
     }
     let selected =
         override_state.unwrap_or_else(|| journal.object_state(position).unwrap_or_default());
+    if terra_core::rails::is_rail(material) {
+        for mut bounds in crate::rails::cell_boxes(position, material, selected)
+            .iter()
+            .copied()
+        {
+            for (axis, coordinate) in position.into_iter().enumerate() {
+                bounds.minimum[axis] += coordinate as f64;
+                bounds.maximum[axis] += coordinate as f64;
+            }
+            visit(bounds);
+        }
+        return true;
+    }
     if terra_core::lantern::is_part(material) {
         for mut bounds in terra_core::lantern::boxes(material, selected.facing) {
             for (axis, coordinate) in position.into_iter().enumerate() {
@@ -711,7 +726,11 @@ fn cast(
                         .peer
                         .filter(|peer| squared(*peer) < squared(owner))
                         .unwrap_or(owner);
-                    if crate::objects::is_window(material) {
+                    if terra_core::rails::is_rail(material) {
+                        // Rail ownership is resolved by its transaction, while
+                        // picking must retain the actually visible voxel slice.
+                        position = cell_hit.position;
+                    } else if crate::objects::is_window(material) {
                         position =
                             window_hit_cell(chunks, journal, cell_hit.position, material, point);
                     } else if crate::objects::is_door(material) {

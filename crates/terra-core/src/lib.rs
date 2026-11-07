@@ -24,6 +24,7 @@ pub mod lantern;
 pub mod logistics;
 pub mod mixer;
 pub mod plumbing;
+pub mod rails;
 pub use crusher::DustKind;
 pub use effects::{
     ActiveEffect, EffectDefinition, EffectKind, EffectStacking, StatusEffects,

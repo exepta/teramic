@@ -11,6 +11,8 @@ mod heraldry;
 mod pipe_surround;
 #[path = "custom_plumbing.rs"]
 pub(crate) mod plumbing;
+#[path = "custom_rails.rs"]
+mod rails;
 #[path = "custom_water_contacts.rs"]
 mod water_contacts;
 use std::{
@@ -681,7 +683,18 @@ pub(crate) fn compose(
     let mut castle_profiles = castle::Profiles::default();
     let mut plumbing_profiles = plumbing::Profiles::default();
     let mut pot_profiles = super::pots::Profiles::default();
+    let mut rail_profiles = rails::Profiles::default();
     for model in &snapshot.models {
+        if terra_core::rails::is_rail(model.material) {
+            rail_profiles.append(
+                &mut batches,
+                model,
+                templates,
+                section.origin().map_err(|error| error.to_string())?,
+                snapshot.standalone,
+            )?;
+            continue;
+        }
         if model.material == 59 && model.state.secondary {
             append_chimney_infill(
                 &mut batches,

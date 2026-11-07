@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "id": 205,
+  "name": "Rail: Buffer Stop",
+  "description": "Three-block-wide track with wooden sleepers, steel rail heads and bolted feet. The complete module follows its shared collision and routing profile.",
+  "creative_category": "building",
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/rail_buffer.gltf",
+  "struct_block": true,
+  "hardness": 1.5,
+  "resistance": 8.0,
+  "required_tool": "pickaxe",
+  "mining_level": 0,
+  "collision_boxes": [
+    {
+      "minimum": [
+        0.0,
+        0.0,
+        0.33999999999999997
+      ],
+      "maximum": [
+        1.0,
+        0.125,
+        0.66
+      ]
+    }
+  ]
+}

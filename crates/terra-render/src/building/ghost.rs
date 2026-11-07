@@ -328,6 +328,125 @@ mod tests {
     use terra_core::block_properties::BlockPropertiesCatalog;
 
     #[test]
+    fn wide_rail_ghost_emits_one_complete_rotated_assembly_at_its_real_anchor() {
+        use terra_core::rails;
+        for (material, facing) in [
+            (rails::CURVE_LARGE, 3),
+            (rails::SWITCH_LEFT, 5),
+            (rails::SLOPE_ENTRY, 1),
+        ] {
+            let anchor = [-17, 15, -17];
+            let origin = [-14, 15, -15];
+            let piece = rails::Piece::from_facing(anchor, material, facing).unwrap();
+            let mut plan = terra_world::placement::Layout {
+                edits: Vec::new(),
+                states: Vec::new(),
+                belts: Vec::new(),
+            };
+            for &offset in piece.footprint() {
+                let position = std::array::from_fn(|axis| anchor[axis] + i64::from(offset[axis]));
+                plan.edits.push(terra_world::streaming::BlockEditRequest {
+                    position,
+                    expected_material: 0,
+                    material,
+                });
+                plan.states.push((
+                    position,
+                    Some(BlockObjectState {
+                        facing,
+                        peer: Some(anchor),
+                        secondary: position != anchor,
+                        ..default()
+                    }),
+                ));
+            }
+            let mut templates = TemplateSet::default();
+            templates.blocks.insert(
+                material,
+                BlockTemplate {
+                    surface: None,
+                    render_kind: BlockRenderKind::CustomMesh,
+                    bevel_width: 0.0,
+                    faces: std::array::from_fn(|_| Vec::new()),
+                    face_materials: [0; 6],
+                    side_cap: None,
+                    details: Vec::new(),
+                    model: crate::blocks::cube::box_model(
+                        &[terra_core::block_shapes::ShapeBox {
+                            minimum: [0.0; 3],
+                            maximum: [1.0; 3],
+                            hinged: false,
+                        }],
+                        0.0,
+                        [0; 6],
+                    ),
+                },
+            );
+            let selected = cells(
+                &plan,
+                origin,
+                &ChunkStore::default(),
+                &EditJournal::default(),
+            );
+            assert_eq!(
+                selected.len(),
+                1,
+                "secondary rail cells must not duplicate the module ghost"
+            );
+            assert_eq!(selected[0].relative, [-3, 0, -2]);
+            let mesh = geometry(&selected, &templates).unwrap();
+            assert!(
+                mesh.positions.len()
+                    <= piece
+                        .local_surfaces()
+                        .iter()
+                        .map(|surface| surface.points.len().saturating_sub(2) * 3)
+                        .sum::<usize>()
+            );
+            let source_area = piece
+                .local_surfaces()
+                .iter()
+                .map(|surface| surface.area())
+                .sum::<f64>();
+            let rendered_area = mesh
+                .indices
+                .chunks_exact(3)
+                .map(|triangle| {
+                    let [a, b, c] = [triangle[0], triangle[1], triangle[2]]
+                        .map(|index| Vec3::from_array(mesh.positions[index as usize]));
+                    f64::from((b - a).cross(c - a).length()) * 0.5
+                })
+                .sum::<f64>();
+            assert!(
+                (source_area - rendered_area).abs() < source_area * 0.00002 + 0.00001,
+                "the ghost must retain the whole disjoint surface, without duplicate modules"
+            );
+            let mut low = Vec3::splat(f32::INFINITY);
+            let mut high = Vec3::splat(f32::NEG_INFINITY);
+            for position in &mesh.positions {
+                let position = Vec3::from_array(*position);
+                low = low.min(position);
+                high = high.max(position);
+            }
+            assert!((high - low).max_element() > 4.0);
+            let expected = piece
+                .local_geometry()
+                .iter()
+                .flat_map(|beam| beam.corners())
+                .map(|point| {
+                    Vec3::from_array(std::array::from_fn(|axis| {
+                        point[axis] as f32 + (anchor[axis] - origin[axis]) as f32 - 0.5
+                    }))
+                })
+                .fold(
+                    (Vec3::splat(f32::INFINITY), Vec3::splat(f32::NEG_INFINITY)),
+                    |(low, high), point| (low.min(point), high.max(point)),
+                );
+            assert!(low.distance(expected.0) < 0.00001 && high.distance(expected.1) < 0.00001);
+        }
+    }
+
+    #[test]
     fn outline_has_only_boundary_edges_and_never_coplanar_triangle_diagonals() {
         let batch = MeshBatch {
             positions: vec![

@@ -6376,3 +6376,49 @@ Binärasset-Attribute schützen exakte Modell-/Textur-/Audiodaten im Git-Commit;
 historische Patch-/Profilingdaten behalten ihre ursprünglichen Leerzeichen.
 Der gesamte nicht ignorierte Projektstand wird auf GitHub `main` veröffentlicht.
 Es wurden keine Grafiktests oder Spielclients gestartet.
+
+## 204. F62 — Schienenmodule Und Gespeichertes Streckennetz
+
+Die neue Schienenfamilie folgt der Drei-Block-Referenz mit Holzschwellen,
+profilierten Stahlrails, Befestigungen und rotem Weichenhebel. Die angehängten
+Block-IDs 196–205 umfassen Gerade, zwei Viertelkurven mit Radien 4,5/8,5,
+1:4-Steigung, sanfte Ein-/Ausfahrt, linke/rechte Weiche, Kreuzung und Prellbock.
+Gemeinsame Core-Profile liefern Anschlüsse, Fußabdruck, Stützpunkte,
+Kollisionsformen und sichtbare Flächen für native Assets und Terrain-Slices.
+Coplanare Überdeckungen an den Weichen werden geometrisch entfernt.
+
+Die vollständige Bauvorschau dockt an erreichbare freie Anschlüsse an; Höhe und
+Neigung müssen exakt passen. Ungültige Entwürfe bleiben rot sichtbar.
+Baurechte, Unterbau, Props und Spieler werden über sämtliche belegten Zellen
+geprüft. Ein Survival-Item baut ein vollständiges Modul; Abbau an jeder
+Sekundärzelle entfernt alles und gibt genau ein Modul zurück. Rechtsklick mit
+leerer Hand schaltet die Weiche samt Stahlzungen und Hebel um. Gehaltene
+Schienenitems verlängern stattdessen die Strecke. Alle zehn Werkbankrezepte
+akzeptieren sämtliche vorhandenen Holzarten. Vorhandenes Wasser bleibt erhalten.
+
+Persistente Objektmetadaten speichern Anker, Besitzerzellen, Ausrichtung und
+Weichenstellung über bestehende Journal-/Sectionpfade. Vollständige gespeicherte
+Module bilden auch ohne geladene Chunks einen deterministischen Streckengraphen.
+Exakte Sechzehntelblock-Anschlüsse berücksichtigen Gegenrichtung und Neigung;
+Kreuzungen verbinden ihre unabhängigen Achsen nicht. Nur der aktive Weichenweg
+ist befahrbar. Rekonstruktion und Routensuche haben feste Arbeitsgrenzen;
+sachfremde Terrainänderungen lassen den Graphcache bestehen.
+
+Die autoritative Mehrzellentransaktion prüft Revisionen, gehaltenen Slot,
+Inventar-/Drop-/Statistikkapazität und sämtliche Rechte vor jeder Veröffentlichung.
+Weltänderungen kopieren nur betroffene Sparse-Sections und deren Mesh-Halo.
+Unterbaublöcke bleiben geschützt, bis das unterstützte Modul entfernt ist.
+Protokoll 111 ergänzt den Inhaltsvertrag; bestehende Saveformate und alte IDs
+bleiben erhalten. Zugmontage und Fahrbetrieb bleiben unter F63/F64/F53 offen.
+
+[Prüfbericht, Bedienung und Referenz](tools/benchmarks/results/railway-system-2026-11-07/README.md).
+Keine Grafiktests oder Spielclients werden gestartet.
+
+Abnahme 204: 4.154 Workspace-Library-/Bin-Tests bestanden, keiner fehlgeschlagen,
+neun bestehende Tests ignoriert. Clippy aller Targets mit `-D warnings` ist sauber.
+Echte Grid-Autofills für sämtliche Module/Holzarten, Save/Reload und deterministische
+Rekonstruktion, sekundäre Raytreffer ohne geladenen Anker sowie tatsächliche
+UDP-Clients samt Late Join, Weichenschaltung und Survival-Abbau sind abgesichert.
+Der abschließende Workspace-Build erstellt aktuelle Client-/Serverdateien;
+Formatierung und Diff sind sauber. Es wurden keine Grafiktests oder Spielclients
+gestartet.

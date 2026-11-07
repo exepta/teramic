@@ -29,6 +29,7 @@ pub mod ore_shapes;
 pub mod placement;
 pub mod plumbing;
 pub mod props;
+pub mod rails;
 pub mod segments;
 #[cfg(feature = "bevy")]
 pub mod slabs;

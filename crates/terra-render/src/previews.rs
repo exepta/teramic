@@ -950,7 +950,9 @@ pub(crate) fn block_batches(
                 ..default()
             })
             .collect()
-    } else if material == 29 && templates.animated_chests || terra_core::kinetic::is_part(material)
+    } else if material == 29 && templates.animated_chests
+        || terra_core::kinetic::is_part(material)
+        || terra_core::rails::is_rail(material)
     {
         crate::meshing::custom::model_geometry(
             material,
@@ -1022,6 +1024,7 @@ pub(crate) fn block_batches(
         || terra_core::logistics::is_port(material)
         || terra_core::OreKind::from_material(material).is_some()
         || terra_core::kinetic::is_part(material)
+        || terra_core::rails::is_rail(material)
     {
         fit_unit(&mut batches)?;
     }

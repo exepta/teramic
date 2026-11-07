@@ -13,6 +13,8 @@ use terra_world::{
 mod conveyor_interaction_tests;
 #[path = "server_validation_pot_tests.rs"]
 mod pot_tests;
+#[path = "server_rail_tests.rs"]
+mod rail_tests;
 #[path = "server_sapling_placement_tests.rs"]
 mod sapling_placement_tests;
 #[path = "server_wrench_tests.rs"]

@@ -7,8 +7,8 @@ use terra_core::{
 use terra_voxel::SectionPos;
 use terra_world::{edits::SectionDelta, props::PropId};
 
-// Version 110 adds settlement hierarchy, configurable kingdom policy and planting reasons.
-pub const PROTOCOL_VERSION: u32 = 110;
+// Version 111 adds authoritative modular railway placement, switching and ownership.
+pub const PROTOCOL_VERSION: u32 = 111;
 pub const PROTOCOL_ID: u64 = 0x5445525241000001;
 pub const MAX_INPUT_BACKLOG: usize = 128;
 pub const MAX_TREE_INTEREST: usize = 256;
@@ -907,7 +907,7 @@ mod layout_tests {
                 .collect::<Vec<_>>()
         );
         assert_eq!(received.creatures.len(), 10);
-        assert_eq!(PROTOCOL_VERSION, 110);
+        assert_eq!(PROTOCOL_VERSION, 111);
     }
     #[test]
     fn kinetic_stress_capacity_roundtrip_and_reject_nonfinite_or_impossible_reserves() {

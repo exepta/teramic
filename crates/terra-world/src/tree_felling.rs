@@ -569,6 +569,9 @@ fn break_allowed(
     cell: [i64; 3],
     domains: &[terra_core::kingdom::SettlementDomain],
 ) -> bool {
+    if !crate::rails::support_edit_allowed(chunks, journal, cell, 0) {
+        return false;
+    }
     let allowed = |p| {
         let registry = &journal.gameplay().kingdoms;
         if let Some(domain) = domains.iter().find(|domain| domain.contains(p)) {

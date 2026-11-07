@@ -15,6 +15,9 @@ use terra_voxel::{SectionPos, global_to_section};
 #[path = "import_performance_tests.rs"]
 mod import_performance_tests;
 #[cfg(feature = "bevy")]
+#[path = "rails.rs"]
+mod rails;
+#[cfg(feature = "bevy")]
 #[path = "rotation.rs"]
 mod rotation;
 
@@ -151,6 +154,10 @@ pub struct EditJournal {
     pub(super) next_furniture_order: u64,
     pub(super) sections: HashMap<SectionPos, SectionEdits>,
     pub(super) object_sections: HashSet<SectionPos>,
+    pub(super) rail_sections: HashSet<SectionPos>,
+    pub(super) rail_anchor_counts: HashMap<SectionPos, usize>,
+    pub(super) rail_epoch: u64,
+    pub(super) rail_identity: std::sync::Arc<()>,
     mesh_epochs: HashMap<SectionPos, u64>,
     pub(super) water_mesh_epochs: HashMap<SectionPos, u64>,
     pub(super) fluid_active: std::collections::VecDeque<[i64; 3]>,
@@ -1051,6 +1058,17 @@ impl EditJournal {
         };
         let new_furniture =
             track_furniture && matches!(material, 28..=29) && self.block(global) != Some(material);
+        let rail_epoch = if terra_core::rails::is_rail(material)
+            || self.block(global).is_some_and(terra_core::rails::is_rail)
+        {
+            Some(
+                self.rail_epoch
+                    .checked_add(1)
+                    .ok_or(BlockError::RevisionOverflow)?,
+            )
+        } else {
+            None
+        };
         let furniture_order = if new_furniture {
             Some(
                 self.next_furniture_order
@@ -1067,6 +1085,10 @@ impl EditJournal {
         }
         let edits = self.sections.entry(owner).or_default();
         let previous = edits.blocks.insert(local, material);
+        if let Some(epoch) = rail_epoch {
+            self.rail_epoch = epoch;
+            std::sync::Arc::make_mut(&mut self.rail_identity);
+        }
         if !matches!(material, 144..=146 | 148) || previous.is_some_and(|old| old != material) {
             edits.belts.remove(&local);
         }
@@ -1081,6 +1103,7 @@ impl EditJournal {
             || crate::objects::is_opening(material)
             || terra_core::construction::is_shape(material)
             || terra_core::castle::is_castle(material)
+            || terra_core::rails::is_rail(material)
             || terra_core::lantern::is_part(material))
             || previous.is_some_and(|old| old != material)
         {

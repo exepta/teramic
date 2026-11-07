@@ -15,6 +15,8 @@ mod conveyors;
 mod fabric_dyes;
 #[path = "server_pots.rs"]
 mod pots;
+#[path = "server_rails.rs"]
+mod rails;
 #[path = "server_snow.rs"]
 mod snow;
 #[path = "server_wrench.rs"]
@@ -63,6 +65,21 @@ pub(super) fn mined_slab(
 }
 
 pub(super) fn check(command: EditCommand, peer: &Peer, world: &ControlWorld) -> EditOutcome {
+    if rails::handles(command.action) {
+        return rails::check(command, peer, world);
+    }
+    if let EditAction::Block {
+        position, material, ..
+    } = command.action
+        && !terra_world::rails::support_edit_allowed(
+            &world.chunks,
+            &world.journal,
+            position,
+            material,
+        )
+    {
+        return EditOutcome::Invalid;
+    }
     if matches!(command.action, EditAction::HarvestTree { .. }) {
         return super::fruit::check(command, peer, world);
     }
@@ -710,6 +727,9 @@ pub(super) fn apply(
     world: &mut ControlWorld,
     timed: bool,
 ) -> EditOutcome {
+    if rails::handles(command.action) {
+        return rails::apply(command, peer, world, timed);
+    }
     if matches!(command.action, EditAction::HarvestTree { .. }) {
         return super::fruit::harvest(command, peer, world);
     }

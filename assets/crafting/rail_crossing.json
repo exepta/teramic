@@ -1,0 +1,53 @@
+{
+  "id": "teramic::rail_crossing",
+  "name": "Rail Crossing",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "block": 204
+    },
+    "count": 1
+  },
+  "pattern": {
+    "kind": "shaped",
+    "width": 3,
+    "height": 3,
+    "cells": [
+      null,
+      {
+        "item": {
+          "mineral": "iron_ingot"
+        },
+        "count": 3
+      },
+      null,
+      {
+        "item": {
+          "mineral": "iron_ingot"
+        },
+        "count": 3
+      },
+      {
+        "item": {
+          "block": 18
+        },
+        "count": 10,
+        "wood": true
+      },
+      {
+        "item": {
+          "mineral": "iron_ingot"
+        },
+        "count": 3
+      },
+      null,
+      {
+        "item": {
+          "mineral": "iron_ingot"
+        },
+        "count": 3
+      },
+      null
+    ]
+  }
+}

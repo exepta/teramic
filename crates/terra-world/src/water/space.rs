@@ -11,7 +11,8 @@ pub(crate) fn partial(material: u16) -> bool {
     !matches!(
         material,
         terra_core::plumbing::BASIN | terra_core::brewing::MATERIAL
-    ) && (construction::is_shape(material)
+    ) && (terra_core::rails::is_rail(material)
+        || construction::is_shape(material)
         || !terra_core::block_shapes::builtin_boxes(material).is_empty())
 }
 
@@ -79,6 +80,16 @@ impl FluidSpace {
         mut block_at: impl FnMut([i64; 3]) -> Option<u16>,
     ) -> Self {
         let material = block_at(p).unwrap_or(u16::MAX);
+        if terra_core::rails::is_rail(material) {
+            return Self {
+                solids: crate::rails::cell_boxes(
+                    p,
+                    material,
+                    journal.object_state(p).unwrap_or_default(),
+                )
+                .to_vec(),
+            };
+        }
         if terra_core::lantern::is_part(material) {
             return Self {
                 solids: terra_core::lantern::boxes(

@@ -77,7 +77,9 @@ fn requested(world: &BuildingWorld, scene: &Scene) -> Option<Key> {
     };
     // Hinged furniture is rendered outside terrain batches. Isolating its
     // section would hide unrelated terrain without removing the animated leaf.
-    if terra_world::objects::is_opening(expected) {
+    if terra_world::objects::is_opening(expected) || terra_core::rails::is_rail(expected) {
+        // Rail surfaces belong to several section slices. A one-cell isolation
+        // would leave those slices behind and duplicate the complete module.
         return None;
     }
     let journal = scene.journal.as_ref()?;

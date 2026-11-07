@@ -1314,12 +1314,26 @@ fn bake_transform(
         return Err("Static model contains a singular or non-finite node transform".into());
     }
     let normals = transform.matrix3.inverse().transpose();
+    let rail_bounds = terra_core::rails::Piece::from_facing([0; 3], id, 0).map(|piece| {
+        piece.local_geometry().iter().fold(
+            ([f64::INFINITY; 3], [f64::NEG_INFINITY; 3]),
+            |(low, high), beam| {
+                let bounds = beam.bounds();
+                (
+                    std::array::from_fn(|axis| low[axis].min(bounds.minimum[axis])),
+                    std::array::from_fn(|axis| high[axis].max(bounds.maximum[axis])),
+                )
+            },
+        )
+    });
     for position in &mut primitive.positions {
         *position = transform
             .transform_point3(Vec3::from_array(*position))
             .to_array();
         if position.iter().enumerate().any(|(axis, value)| {
-            let (minimum, maximum) = if axis != 0
+            let (minimum, maximum) = if let Some((low, high)) = rail_bounds {
+                (low[axis] as f32, high[axis] as f32)
+            } else if axis != 0
                 && let Some(radius) = terra_core::kinetic::radial_extent(id)
             {
                 (0.5 - radius, 0.5 + radius)

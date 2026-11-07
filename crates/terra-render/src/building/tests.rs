@@ -324,6 +324,26 @@ fn oriented_outline_reuses_one_entity_mesh_and_orange_material_for_both_validiti
 }
 
 #[test]
+fn invalid_rail_preview_is_red_and_other_placement_outlines_keep_their_existing_color() {
+    for seconds in [0.0, 0.4, 1.2] {
+        let ordinary = outline_color(seconds).to_srgba();
+        for material in terra_core::rails::MATERIALS {
+            let invalid = placement_outline_color(material, false, seconds).to_srgba();
+            assert!(invalid.red > 0.9 && invalid.green < 0.2 && invalid.blue < 0.1);
+            assert_eq!(invalid.alpha, ordinary.alpha);
+            assert_eq!(
+                placement_outline_color(material, true, seconds).to_srgba(),
+                ordinary
+            );
+        }
+        assert_eq!(
+            placement_outline_color(82, false, seconds).to_srgba(),
+            ordinary
+        );
+    }
+}
+
+#[test]
 fn oriented_outline_is_available_without_debug_and_never_adds_a_filled_or_debug_cube() {
     let mut app = app();
     app.world_mut().resource_mut::<CameraInputState>().captured = true;

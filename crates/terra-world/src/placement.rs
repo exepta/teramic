@@ -18,6 +18,7 @@ pub fn furniture(material: u16) -> bool {
         || terra_core::construction::is_shape(material)
         || terra_core::castle::is_castle(material)
         || terra_core::textiles::is_carpet(material)
+        || terra_core::rails::is_rail(material)
 }
 
 /// Creative copying retains authoritative appearance metadata, not only the raw block ID.
@@ -234,6 +235,15 @@ pub fn layout(
 ) -> Result<Layout, String> {
     if position.iter().any(|p| p.unsigned_abs() > 990_000) || look.iter().any(|v| !v.is_finite()) {
         return Err("Invalid placement coordinates".into());
+    }
+    if terra_core::rails::is_rail(material) {
+        return crate::rails::plan(
+            chunks,
+            journal,
+            position,
+            material,
+            BlockObjectState::from_yaw(look[0]).facing,
+        );
     }
     let mut result = Layout {
         edits: vec![BlockEditRequest {
@@ -509,6 +519,21 @@ pub fn environment(
     journal: &EditJournal,
     bounded: bool,
 ) -> Result<(), String> {
+    if plan
+        .edits
+        .iter()
+        .any(|edit| terra_core::rails::is_rail(edit.material))
+    {
+        if bounded
+            && plan
+                .edits
+                .iter()
+                .any(|edit| !(-128..=356).contains(&edit.position[1]))
+        {
+            return Err("Rail module exceeds bounded world height".into());
+        }
+        return crate::rails::environment(plan, chunks, journal);
+    }
     let belt = crate::conveyors::proposed_span(plan).filter(|span| span.linked);
     if let Some(span) = belt {
         crate::conveyors::clearance(span, chunks, journal)?;
@@ -521,6 +546,19 @@ pub fn environment(
         }
     }
     for edit in &plan.edits {
+        let state = plan
+            .states
+            .iter()
+            .find(|(cell, _)| *cell == edit.position)
+            .map_or_else(|| journal.object_state(edit.position), |(_, state)| *state);
+        if !crate::rails::placement::support_state_allowed(
+            journal,
+            edit.position,
+            edit.material,
+            state,
+        ) {
+            return Err("Remove the supported rail module before changing its floor".into());
+        }
         if bounded && !(-128..=356).contains(&edit.position[1]) {
             return Err("Object exceeds world height bounds".into());
         }
@@ -685,7 +723,7 @@ pub fn environment(
     Ok(())
 }
 
-fn kinetic_clearance(
+pub(crate) fn kinetic_clearance(
     plan: &Layout,
     chunks: &ChunkStore,
     journal: &EditJournal,
@@ -922,7 +960,7 @@ pub fn boxes(
             .find(|(p, _)| *p == position)
             .and_then(|(_, s)| *s)
             .unwrap_or_default();
-        if state.secondary {
+        if state.secondary && !terra_core::rails::is_rail(material) {
             continue;
         }
         if crate::objects::is_door(material)
@@ -979,6 +1017,9 @@ pub fn propose(
     look: [f32; 2],
 ) -> Result<Layout, String> {
     let material = item.block_material().ok_or("Item cannot be placed")?;
+    if terra_core::rails::is_rail(material) {
+        return crate::rails::placement(chunks, journal, hit, material, ray, look);
+    }
     let (position, expected) =
         crate::targeting::item_placement_with_state(chunks, journal, hit, material)
             .ok_or("No placement cell")?;

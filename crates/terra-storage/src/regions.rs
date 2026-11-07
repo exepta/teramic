@@ -19,6 +19,9 @@ use kingdom_legacy::{KingdomIndex10, KingdomRecord9, TreeIndex11};
 #[cfg(test)]
 #[path = "regions/hierarchy_tests.rs"]
 mod hierarchy_tests;
+#[cfg(test)]
+#[path = "regions/rail_tests.rs"]
+mod rail_tests;
 
 #[derive(Serialize, Deserialize)]
 struct Index {

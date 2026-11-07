@@ -724,7 +724,18 @@ fn station_target(
     matches!(
         context.chunks.as_ref()?.block_at(hit.position),
         Some(
-            28 | 29 | 59 | 65..=73 | 99 | 131 | 139..=140 | 152 | 156..=157 | 159..=162 | 166..=167,
+            28
+            | 29
+            | 59
+            | 65..=73
+            | 99
+            | 131
+            | 139..=140
+            | 152
+            | 156..=157
+            | 159..=162
+            | 166..=167
+            | 202..=203,
         )
     )
     .then_some(hit.position)
@@ -819,10 +830,14 @@ fn held_action_priority(context: &InventoryContext, active: Option<&ActiveItem>)
                 .as_ref()
                 .and_then(|chunks| chunks.block_at(hit.position))
                 .is_some_and(|target| {
-                    (terra_core::plumbing::is_part(target)
+                    (terra_core::rails::is_rail(target)
                         && item
                             .block_material()
-                            .is_some_and(terra_core::plumbing::is_part))
+                            .is_some_and(terra_core::rails::is_rail))
+                        || (terra_core::plumbing::is_part(target)
+                            && item
+                                .block_material()
+                                .is_some_and(terra_core::plumbing::is_part))
                         || target == 167
                             && (item == ItemKind::GlassBottle
                                 || item.tool_kind().is_some_and(|tool| {
@@ -1072,7 +1087,7 @@ fn keyboard(
             .flatten();
         if let Some(position) = workbench {
             match context.chunks.as_ref().and_then(|c| c.block_at(position)) {
-                Some(material @ (65..=73 | 131 | 139..=140 | 166..=167)) => {
+                Some(material @ (65..=73 | 131 | 139..=140 | 166..=167 | 202..=203)) => {
                     objects.write(terra_network::client::ObjectInteractionRequest {
                         position,
                         expected: material,

@@ -20,6 +20,8 @@ pub enum CraftStation {
 #[cfg(test)]
 mod heraldry_tests;
 #[cfg(test)]
+mod rail_grid_tests;
+#[cfg(test)]
 mod rgb_tests;
 #[cfg(test)]
 mod shape_rgb_tests;

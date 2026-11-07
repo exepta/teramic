@@ -1,0 +1,60 @@
+{
+  "id": "teramic::rail_slope",
+  "name": "Rail Slope",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "block": 199
+    },
+    "count": 1
+  },
+  "pattern": {
+    "kind": "shaped",
+    "width": 3,
+    "height": 3,
+    "cells": [
+      null,
+      null,
+      {
+        "item": {
+          "mineral": "iron_ingot"
+        },
+        "count": 2
+      },
+      null,
+      {
+        "item": {
+          "mineral": "iron_ingot"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "block": 18
+        },
+        "count": 2,
+        "wood": true
+      },
+      {
+        "item": {
+          "mineral": "iron_ingot"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "block": 18
+        },
+        "count": 1,
+        "wood": true
+      },
+      {
+        "item": {
+          "block": 18
+        },
+        "count": 1,
+        "wood": true
+      }
+    ]
+  }
+}
