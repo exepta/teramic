@@ -93,6 +93,10 @@ pub struct Vehicle {
     /// Frozen world-owned machine state; never included in public snapshots.
     #[serde(default)]
     pub payloads: BTreeMap<u16, Vec<u8>>,
+    #[serde(default)]
+    pub motion: crate::train_motion::TrainMotion,
+    #[serde(default)]
+    pub burn_seconds: f64,
     pub couplings: [Option<Coupling>; 2],
     pub revision: u64,
 }
@@ -108,6 +112,8 @@ pub struct VehicleView {
     pub couplings: [Option<Coupling>; 2],
     pub revision: u64,
     pub mass_kg: u32,
+    #[serde(default)]
+    pub motion: crate::train_motion::TrainMotion,
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SeatBinding {
@@ -176,21 +182,6 @@ fn bounds(anchor: Cell, parts: &[TrainPart]) -> [Cell; 2] {
     }
     [low, high]
 }
-fn seat_pose(anchor: Cell, parts: &[TrainPart], index: usize) -> Option<([f64; 3], f32)> {
-    let part = parts.get(index)?;
-    if !matches!(part.material, train_parts::SEAT | train_parts::CAB) {
-        return None;
-    }
-    let cell = part_cell(anchor, parts, index)?;
-    Some((
-        [
-            cell[0] as f64 + 0.5,
-            cell[1] as f64 + 0.485 + MODEL_Y_OFFSET,
-            cell[2] as f64 + 0.5,
-        ],
-        f32::from(part.facing) * std::f32::consts::FRAC_PI_2,
-    ))
-}
 fn valid_parts(anchor: Cell, parts: &[TrainPart], kind: VehicleKind) -> bool {
     if parts.is_empty()
         || parts.len() > MAX_PARTS
@@ -204,7 +195,12 @@ fn valid_parts(anchor: Cell, parts: &[TrainPart], kind: VehicleKind) -> bool {
             || part.material == terra_voxel::MaterialId::FluidWater as u16
             || part.material == train_parts::STATION
             || crate::rails::is_rail(part.material)
-            || train_parts::is_part(part.material) && part.facing > 3
+            || train_parts::is_part(part.material)
+                && if crate::locomotive_parts::is_part(part.material) {
+                    !crate::locomotive_parts::valid_facing(part.material, part.facing)
+                } else {
+                    part.facing > 3
+                }
             || !offsets.insert(part.offset)
             || part.offset[0].unsigned_abs() > 64
             || part.offset[1].unsigned_abs() > 12
@@ -306,6 +302,82 @@ fn valid_blocks(parts: &[TrainPart], blocks: &BTreeMap<u16, TrainBlockView>) -> 
             train_parts::is_part(part.material) || blocks.contains_key(&(index as u16))
         })
 }
+/// Precompute the rigid matrix once for a complete bounds/shape operation.
+struct RigidTransform {
+    origin: [f64; 3],
+    quaternion: [f64; 4],
+    rows: [[f64; 3]; 3],
+}
+impl RigidTransform {
+    fn new(anchor: Cell, motion: crate::train_motion::TrainMotion, build_yaw: f64) -> Self {
+        let quaternion = motion.quaternion(build_yaw);
+        let [x, y, z, w] = quaternion;
+        let rows = [
+            [
+                1.0 - 2.0 * (y * y + z * z),
+                2.0 * (x * y - z * w),
+                2.0 * (x * z + y * w),
+            ],
+            [
+                2.0 * (x * y + z * w),
+                1.0 - 2.0 * (x * x + z * z),
+                2.0 * (y * z - x * w),
+            ],
+            [
+                2.0 * (x * z - y * w),
+                2.0 * (y * z + x * w),
+                1.0 - 2.0 * (x * x + y * y),
+            ],
+        ];
+        let pivot: [f64; 3] =
+            std::array::from_fn(|axis| (0..3).map(|i| rows[axis][i] * motion.pivot[i]).sum());
+        let origin = std::array::from_fn(|axis| {
+            anchor[axis] as f64
+                + if axis == 1 { MODEL_Y_OFFSET } else { 0.0 }
+                + motion.translation[axis]
+                + motion.pivot[axis]
+                - pivot[axis]
+        });
+        Self {
+            origin,
+            quaternion,
+            rows,
+        }
+    }
+    fn vector(&self, v: [f64; 3]) -> [f64; 3] {
+        std::array::from_fn(|axis| (0..3).map(|i| self.rows[axis][i] * v[i]).sum())
+    }
+    fn point(&self, p: [f64; 3]) -> [f64; 3] {
+        let v = self.vector(p);
+        std::array::from_fn(|axis| self.origin[axis] + v[axis])
+    }
+    fn local_point(&self, p: [f64; 3]) -> [f64; 3] {
+        std::array::from_fn(|axis| {
+            (0..3)
+                .map(|i| self.rows[i][axis] * (p[i] - self.origin[i]))
+                .sum()
+        })
+    }
+    fn bounds(
+        &self,
+        part: &TrainPart,
+        shape: crate::block_shapes::ShapeBox,
+    ) -> crate::block_shapes::ShapeBox {
+        let center = self.point(std::array::from_fn(|axis| {
+            f64::from(part.offset[axis]) + (shape.minimum[axis] + shape.maximum[axis]) * 0.5
+        }));
+        let half: [f64; 3] = std::array::from_fn(|axis| {
+            (0..3)
+                .map(|i| self.rows[axis][i].abs() * (shape.maximum[i] - shape.minimum[i]) * 0.5)
+                .sum()
+        });
+        crate::block_shapes::ShapeBox {
+            minimum: std::array::from_fn(|i| center[i] - half[i]),
+            maximum: std::array::from_fn(|i| center[i] + half[i]),
+            hinged: false,
+        }
+    }
+}
 macro_rules! geometry_methods {
     () => {
         pub fn part_shapes(&self, index: usize) -> Vec<crate::block_shapes::ShapeBox> {
@@ -323,44 +395,143 @@ macro_rules! geometry_methods {
         pub fn bounds(&self) -> [Cell; 2] {
             bounds(self.anchor, &self.parts)
         }
+        pub fn build_yaw(&self) -> f64 {
+            f64::from(
+                self.parts
+                    .iter()
+                    .find(|p| p.material == train_parts::CHASSIS)
+                    .map_or(0, |p| p.facing),
+            ) * std::f64::consts::FRAC_PI_2
+        }
+        pub fn driver_direction(&self, index: usize) -> i8 {
+            let facing = self.parts.get(index).map_or(0, |part| part.facing % 4);
+            let look = f64::from(facing) * std::f64::consts::FRAC_PI_2 + std::f64::consts::PI;
+            if (look - self.build_yaw()).cos() < -0.5 {
+                -1
+            } else {
+                1
+            }
+        }
+        pub fn world_vector(&self, v: [f64; 3]) -> [f64; 3] {
+            self.motion.rotate(v, self.build_yaw())
+        }
+        pub fn local_vector(&self, v: [f64; 3]) -> [f64; 3] {
+            self.motion.inverse(v, self.build_yaw())
+        }
         pub fn model_origin(&self) -> [f64; 3] {
-            [
-                self.anchor[0] as f64,
-                self.anchor[1] as f64 + MODEL_Y_OFFSET,
-                self.anchor[2] as f64,
-            ]
+            RigidTransform::new(self.anchor, self.motion, self.build_yaw()).origin
+        }
+        pub fn model_transform(&self) -> ([f64; 3], [f64; 4]) {
+            let transform = RigidTransform::new(self.anchor, self.motion, self.build_yaw());
+            (transform.origin, transform.quaternion)
+        }
+        pub fn world_point(&self, local: [f64; 3]) -> [f64; 3] {
+            RigidTransform::new(self.anchor, self.motion, self.build_yaw()).point(local)
+        }
+        pub fn local_point(&self, world: [f64; 3]) -> [f64; 3] {
+            RigidTransform::new(self.anchor, self.motion, self.build_yaw()).local_point(world)
+        }
+        pub fn world_cell(&self, index: usize) -> Option<Cell> {
+            let p = self.parts.get(index)?;
+            Some(
+                self.world_point(p.offset.map(|v| f64::from(v) + 0.5))
+                    .map(|v| v.floor() as i64),
+            )
+        }
+        pub fn world_shape(
+            &self,
+            index: usize,
+            shape: crate::block_shapes::ShapeBox,
+        ) -> crate::block_shapes::ShapeBox {
+            let Some(part) = self.parts.get(index) else {
+                return shape;
+            };
+            RigidTransform::new(self.anchor, self.motion, self.build_yaw()).bounds(part, shape)
+        }
+        pub fn transformed_shapes(&self, index: usize) -> Vec<crate::block_shapes::ShapeBox> {
+            let Some(part) = self.parts.get(index) else {
+                return Vec::new();
+            };
+            let transform = RigidTransform::new(self.anchor, self.motion, self.build_yaw());
+            self.part_shapes(index)
+                .into_iter()
+                .map(|shape| transform.bounds(part, shape))
+                .collect()
         }
         pub fn model_bounds(&self) -> [[f64; 3]; 2] {
-            let origin = self.model_origin();
             let mut low = [f64::INFINITY; 3];
             let mut high = [f64::NEG_INFINITY; 3];
-            for (index, part) in self.parts.iter().enumerate() {
-                for shape in self.part_shapes(index) {
-                    for axis in 0..3 {
-                        low[axis] = low[axis]
-                            .min(origin[axis] + f64::from(part.offset[axis]) + shape.minimum[axis]);
-                        high[axis] = high[axis]
-                            .max(origin[axis] + f64::from(part.offset[axis]) + shape.maximum[axis]);
+            let transform = RigidTransform::new(self.anchor, self.motion, self.build_yaw());
+            for index in 0..self.parts.len() {
+                for shape in self
+                    .part_shapes(index)
+                    .into_iter()
+                    .map(|shape| transform.bounds(&self.parts[index], shape))
+                {
+                    for i in 0..3 {
+                        low[i] = low[i].min(shape.minimum[i]);
+                        high[i] = high[i].max(shape.maximum[i]);
                     }
                 }
             }
             if self.parts.is_empty() {
-                [origin, origin]
+                [self.model_origin(); 2]
             } else {
                 [low, high]
             }
         }
         pub fn seat_pose(&self, index: usize) -> Option<([f64; 3], f32)> {
-            seat_pose(self.anchor, &self.parts, index)
+            let part = self.parts.get(index)?;
+            if !matches!(part.material, train_parts::CAB | train_parts::SEAT) {
+                return None;
+            }
+            Some((
+                self.world_point([
+                    f64::from(part.offset[0]) + 0.5,
+                    f64::from(part.offset[1]) + 0.485,
+                    f64::from(part.offset[2]) + 0.5,
+                ]),
+                (f64::from(part.facing) * std::f64::consts::FRAC_PI_2 + self.motion.yaw) as f32,
+            ))
+        }
+        /// Grid-aligned stopped poses can return exactly to editable world cells.
+        pub fn disassembly_turns(&self) -> Option<u8> {
+            if !self.motion.stopped() || self.motion.pitch.abs() > 1e-5 {
+                return None;
+            }
+            let turns = self.motion.yaw / std::f64::consts::FRAC_PI_2;
+            ((turns - turns.round()).abs() < 1e-5)
+                .then_some((turns.round() as i32).rem_euclid(4) as u8)
+        }
+        pub fn disassembly_cells(&self) -> Option<Vec<Cell>> {
+            if !self.motion.stopped() || self.motion.pitch.abs() > 1e-5 {
+                return None;
+            }
+            let quarter = self.motion.yaw / std::f64::consts::FRAC_PI_2;
+            if (quarter - quarter.round()).abs() > 1e-5 {
+                return None;
+            }
+            let mut cells = Vec::new();
+            for part in &self.parts {
+                // Remove only the authored wheel-to-rail vertical adjustment.
+                let mut point = self.world_point(part.offset.map(|v| f64::from(v) + 0.5));
+                point[1] -= MODEL_Y_OFFSET;
+                let point = point.map(|v| v - 0.5);
+                if point.iter().any(|v| (v - v.round()).abs() > 0.500001) {
+                    return None;
+                }
+                cells.push(point.map(|v| v.round() as i64));
+            }
+            Some(cells)
         }
         pub fn cargo_indices(&self) -> impl Iterator<Item = u16> + '_ {
             self.parts
                 .iter()
                 .enumerate()
-                .filter(|(_, part)| matches!(part.material, 29 | train_parts::CARGO))
+                .filter(|(_, part)| matches!(part.material, 29 | train_parts::CARGO | 218))
                 .map(|(index, _)| index as u16)
         }
-        pub fn coupler_cell(&self, end: CouplerEnd) -> Option<Cell> {
+        pub fn coupler_point(&self, end: CouplerEnd) -> Option<[f64; 3]> {
             let facing = self
                 .parts
                 .iter()
@@ -397,7 +568,10 @@ macro_rules! geometry_methods {
                 CouplerEnd::Front => couplers.last()?.0,
                 CouplerEnd::Rear => couplers.first()?.0,
             };
-            self.part_cell(index)
+            Some(self.world_point(self.parts.get(index)?.offset.map(|v| f64::from(v) + 0.5)))
+        }
+        pub fn coupler_cell(&self, end: CouplerEnd) -> Option<Cell> {
+            Some(self.coupler_point(end)?.map(|v| v.floor() as i64))
         }
         pub fn coupler_tangent(&self, end: CouplerEnd) -> Option<Cell> {
             self.coupler_cell(end)?;
@@ -407,12 +581,15 @@ macro_rules! geometry_methods {
                 .find(|part| part.material == train_parts::CHASSIS)?
                 .facing;
             let direction = [[0, 0, 1], [1, 0, 0], [0, 0, -1], [-1, 0, 0]][usize::from(facing)];
-            Some(direction.map(|value| {
-                if end == CouplerEnd::Front {
+            self.disassembly_turns()?;
+            let vector = self.world_vector(direction.map(|value| value as f64));
+            Some(vector.map(|value| {
+                (if end == CouplerEnd::Front {
                     value
                 } else {
                     -value
-                }
+                })
+                .round() as i64
             }))
         }
     };
@@ -422,8 +599,11 @@ impl Vehicle {
     pub fn valid(&self) -> bool {
         self.id > 0
             && !self.owner.is_nil()
+            && self.motion.valid()
             && valid_parts(self.anchor, &self.parts, self.kind)
             && valid_blocks(&self.parts, &self.blocks)
+            && self.burn_seconds.is_finite()
+            && (0.0..=3600.0).contains(&self.burn_seconds)
             && self.payloads.len() <= self.parts.len()
             && self.payloads.values().map(Vec::len).sum::<usize>() <= MAX_VEHICLE_PAYLOAD_BYTES
             && self.payloads.iter().all(|(index, payload)| {
@@ -433,8 +613,12 @@ impl Vehicle {
             && self.cargo.iter().all(|(index, inventory)| {
                 self.parts
                     .get(usize::from(*index))
-                    .is_some_and(|part| matches!(part.material, 29 | train_parts::CARGO))
+                    .is_some_and(|part| matches!(part.material, 29 | train_parts::CARGO | 218))
                     && containers::valid_chest(inventory)
+                    && (self.parts[usize::from(*index)].material != 218
+                        || inventory.slots.iter().all(|stack| {
+                            stack.count == 0 || crate::furnace::fuel_seconds(stack.item).is_some()
+                        }))
             })
     }
     pub fn mass_kg(&self) -> u32 {
@@ -460,6 +644,7 @@ impl Vehicle {
             couplings: self.couplings,
             revision: self.revision,
             mass_kg: self.mass_kg(),
+            motion: self.motion,
         }
     }
 }
@@ -468,6 +653,7 @@ impl VehicleView {
     pub fn valid(&self) -> bool {
         self.id > 0
             && !self.owner.is_nil()
+            && self.motion.valid()
             && valid_parts(self.anchor, &self.parts, self.kind)
             && valid_blocks(&self.parts, &self.blocks)
             && self.mass_kg
@@ -510,7 +696,9 @@ impl TrainRegistry {
         }
         let mut cells = BTreeSet::new();
         if self.vehicles.values().any(|vehicle| {
-            (0..vehicle.parts.len()).any(|index| !cells.insert(vehicle.part_cell(index).unwrap()))
+            vehicle
+                .disassembly_cells()
+                .is_some_and(|positions| positions.into_iter().any(|cell| !cells.insert(cell)))
         }) {
             return false;
         }
@@ -597,11 +785,20 @@ impl TrainRegistry {
         let occupied: BTreeSet<_> = self
             .vehicles
             .values()
-            .flat_map(|old| (0..old.parts.len()).filter_map(|index| old.part_cell(index)))
+            .flat_map(|old| {
+                old.disassembly_cells().unwrap_or_else(|| {
+                    (0..old.parts.len())
+                        .filter_map(|index| old.world_cell(index))
+                        .collect()
+                })
+            })
             .collect();
-        if (0..vehicle.parts.len())
-            .any(|index| occupied.contains(&vehicle.part_cell(index).unwrap()))
-        {
+        let cells = vehicle.disassembly_cells().unwrap_or_else(|| {
+            (0..vehicle.parts.len())
+                .filter_map(|index| vehicle.world_cell(index))
+                .collect()
+        });
+        if cells.iter().any(|cell| occupied.contains(cell)) {
             return Err(TrainError::Occupied);
         }
         self.vehicles.insert(id, vehicle);

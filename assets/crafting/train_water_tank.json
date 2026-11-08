@@ -1,0 +1,52 @@
+{
+  "id": "teramic::train_water_tank",
+  "name": "Tender-Wassertank",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "block": 254
+    },
+    "count": 1
+  },
+  "pattern": {
+    "kind": "shaped",
+    "width": 3,
+    "height": 3,
+    "cells": [
+      {
+        "item": {
+          "mineral": "iron_ingot"
+        },
+        "count": 1
+      },
+      null,
+      null,
+      {
+        "item": {
+          "mineral": "iron_ingot"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "block": 169
+        },
+        "count": 1
+      },
+      null,
+      null,
+      {
+        "item": {
+          "mineral": "iron_ingot"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "mineral": "iron_ingot"
+        },
+        "count": 1
+      }
+    ]
+  }
+}

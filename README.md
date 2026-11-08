@@ -6212,7 +6212,24 @@ gruene Bauvorlage direkt am Gleis. Nach dem Schliessen bleibt sie als Bauhilfe
 sichtbar. Auch schwebende Bloecke koennen an vorhandene Blockseiten gesetzt werden.
 F64 erlaubt einen freien Aufbau aus registrierten Bloecken mit Formen, Farben,
 Verbindungen und gespeicherten Inventar-/Maschinenzustaenden. Montierte Maschinen
-pausieren ohne Weltanschluesse; der Fahrbetrieb folgt mit F53. Kollisions- und
+pausieren ohne Weltanschluesse. Kollisions- und
 Fahrzeuggeometrie wird in begrenzten Hintergrundjobs berechnet.
 Protokoll 117; der neue Zugindex ID14 uebernimmt alte ID13-Spielstaende.
 [Aktuelle Bauanleitung und Bedienung](docs/train-building.md).
+
+
+Phase 213 macht die Zuege mit Brennstoffmotor, Fuehrerstand, Fahrhebel und
+Geschwindigkeitsanzeige fahrbar. Ganze Fahrgestell-/Rahmenbloecke und groessere
+Raeder erleichtern den freien Aufbau; die Vorlage erlaubt 3 bis 15 Meter
+Drehgestellabstand. Ladung darf vor oder hinter dem Fahrer sitzen. Die Montage
+stellt den angehaltenen Zug an seiner aktuellen Position wieder als editierbare
+Bloecke her, einschliesslich Ladung, Ausrichtungen und uebriger Brenndauer.
+
+F54 ergaenzt den vollstaendigen BR52-Baukasten mit 76 neuen Teilen und Rezepten,
+Metall-/Gitterformen, oeffnenden Fuehrerhausfenstern/-tueren und synchronisierten
+Raedern, Gestaengen und Hebeln. Echte Dampfwasserversorgung und Kesseldruck bleiben
+unter F53 offen; die entsprechenden Aufbauteile sind gekennzeichnet.
+Kompakte Bewegungspakete verschieben vorhandene Fahrzeugmeshes und Collider,
+ohne sie bei jedem Fahrschritt neu zu bauen. Protokoll 118 und Zugindex ID15
+uebernehmen die gespeicherte Fahrt und lesen ID13-/ID14-Zuege weiterhin.
+[Bauanleitung und Steuerung](docs/train-building.md).

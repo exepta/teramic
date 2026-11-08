@@ -8,6 +8,7 @@ use bevy::{
 };
 use std::collections::{HashMap, HashSet};
 use terra_world::{edits::EditJournal, streaming::ChunkStore};
+pub(crate) mod palette;
 mod windows;
 
 const HINGE: Vec3 = Vec3::new(0.15, 0.0, 0.5);

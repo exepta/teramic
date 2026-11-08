@@ -1,0 +1,125 @@
+{
+  "schema_version": 1,
+  "id": 260,
+  "name": "Handlauf-St\u00fctze",
+  "description": "Decorative BR52 locomotive component. Attach to the connected vehicle body before assembly.",
+  "creative_category": "building",
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/train_handrail_post.gltf",
+  "struct_block": true,
+  "hardness": 1.8,
+  "resistance": 12,
+  "required_tool": "pickaxe",
+  "mining_level": 0,
+  "collision_boxes": [
+    {
+      "minimum": [
+        0.4634640543058463,
+        0,
+        0.475
+      ],
+      "maximum": [
+        0.49653594569415366,
+        0.95,
+        0.48125
+      ]
+    },
+    {
+      "minimum": [
+        0.458349364905389,
+        0,
+        0.48125
+      ],
+      "maximum": [
+        0.5016506350946109,
+        0.95,
+        0.4875
+      ]
+    },
+    {
+      "minimum": [
+        0.45579385408620365,
+        0,
+        0.4875
+      ],
+      "maximum": [
+        0.5042061459137963,
+        0.95,
+        0.49375
+      ]
+    },
+    {
+      "minimum": [
+        0.45499999999999996,
+        0,
+        0.49375
+      ],
+      "maximum": [
+        0.505,
+        0.95,
+        0.5
+      ]
+    },
+    {
+      "minimum": [
+        0.45499999999999996,
+        0,
+        0.5
+      ],
+      "maximum": [
+        0.505,
+        0.95,
+        0.50625
+      ]
+    },
+    {
+      "minimum": [
+        0.45579385408620365,
+        0,
+        0.50625
+      ],
+      "maximum": [
+        0.5042061459137963,
+        0.95,
+        0.5125
+      ]
+    },
+    {
+      "minimum": [
+        0.458349364905389,
+        0,
+        0.5125
+      ],
+      "maximum": [
+        0.5016506350946109,
+        0.95,
+        0.51875
+      ]
+    },
+    {
+      "minimum": [
+        0.4634640543058463,
+        0,
+        0.51875
+      ],
+      "maximum": [
+        0.49653594569415366,
+        0.95,
+        0.525
+      ]
+    },
+    {
+      "minimum": [
+        0.425,
+        0,
+        0.45
+      ],
+      "maximum": [
+        0.535,
+        0.09,
+        0.55
+      ]
+    }
+  ]
+}

@@ -1,6 +1,9 @@
 use super::*;
 use crate::CraftingView;
 
+#[path = "inventory_locomotive_tests.rs"]
+mod locomotive_tests;
+
 #[test]
 fn creative_catalog_has_four_track_and_switch_woods_without_legacy_curve_items() {
     let mut palette = BlockPalette::default();

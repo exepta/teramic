@@ -337,6 +337,16 @@ fn visit_boxes_with_state(
         visit(bounds);
         return true;
     }
+    if let Some(boxes) = terra_core::locomotive_parts::grate_boxes(material, state.facing) {
+        for mut bounds in boxes {
+            for (axis, value) in position.iter().enumerate() {
+                bounds.minimum[axis] += *value as f64;
+                bounds.maximum[axis] += *value as f64;
+            }
+            visit(bounds);
+        }
+        return true;
+    }
     if terra_core::construction::is_slab(material) || terra_core::construction::is_stair(material) {
         let neighbors = std::array::from_fn(|side| {
             let mut p = position;

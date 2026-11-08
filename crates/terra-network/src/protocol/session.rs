@@ -8,7 +8,7 @@ use terra_voxel::SectionPos;
 use terra_world::{edits::SectionDelta, props::PropId};
 
 // Version 116 adds signed long-reach rail plans and replicated modular vehicles.
-pub const PROTOCOL_VERSION: u32 = 117;
+pub const PROTOCOL_VERSION: u32 = 118;
 pub const PROTOCOL_ID: u64 = 0x5445525241000001;
 pub const MAX_INPUT_BACKLOG: usize = 128;
 pub const MAX_TREE_INTEREST: usize = 256;
@@ -382,6 +382,8 @@ pub enum ServerControl {
     TreeUpdates(TreePatch),
     Trains(Box<terra_core::trains::TrainSnapshot>),
     TrainResult(super::trains::TrainResult),
+    TrainMotions(Vec<terra_core::train_motion::TrainMotionFrame>),
+    TrainEngineFuel(super::trains::TrainCargoSnapshot),
 }
 
 /// Ordered interest updates: reset begins a new neighbourhood, subsequent
@@ -936,7 +938,7 @@ mod layout_tests {
                 .collect::<Vec<_>>()
         );
         assert_eq!(received.creatures.len(), 10);
-        assert_eq!(PROTOCOL_VERSION, 117);
+        assert_eq!(PROTOCOL_VERSION, 118);
     }
     #[test]
     fn kinetic_stress_capacity_roundtrip_and_reject_nonfinite_or_impossible_reserves() {

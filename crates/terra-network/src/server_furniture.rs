@@ -264,7 +264,8 @@ fn plan_with_crank(
             if other.peer != Some(position) || world.chunks.block_at(peer) != Some(expected) {
                 return Err("Invalid object peer".into());
             }
-            if matches!(expected, 28 | 59 | 65..=67 | 71..=73 | 99 | 139) {
+            if matches!(expected, 28 | 59 | 71..=73 | 99) || terra_world::objects::is_door(expected)
+            {
                 plan.edits.push(BlockEditRequest {
                     position: peer,
                     expected_material: expected,

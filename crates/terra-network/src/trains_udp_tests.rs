@@ -122,8 +122,9 @@ fn udp_real_vehicle_assembly_private_cargo_seating_late_join_and_atomic_dismantl
     let cargo_cell = at(0, 3, 4);
     let chest_cell = at(-1, 2, 2);
     let slab_cell = at(-1, 2, 3);
+    let engine_cell = at(1, 2, 3);
     let tint = [31, 92, 211];
-    let volume: Vec<_> = (-2..=6)
+    let volume: Vec<_> = (-3..=6)
         .flat_map(|x| (0..=6).flat_map(move |y| (-2..=9).map(move |z| at(x, y, z))))
         .collect();
     wait_phase(
@@ -144,7 +145,7 @@ fn udp_real_vehicle_assembly_private_cargo_seating_late_join_and_atomic_dismantl
     }
     floor(
         &mut host,
-        (-2..=6).flat_map(|x| (-2..=9).map(move |z| at(x, -1, z))),
+        (-3..=6).flat_map(|x| (-2..=9).map(move |z| at(x, -1, z))),
     );
     host.world_mut()
         .resource_scope(|world, mut journal: Mut<EditJournal>| {
@@ -177,6 +178,7 @@ fn udp_real_vehicle_assembly_private_cargo_seating_late_join_and_atomic_dismantl
         (cargo_cell, train_parts::CARGO),
         (chest_cell, 29),
         (slab_cell, 105),
+        (engine_cell, terra_core::locomotive_parts::ENGINE),
     ]);
     for (cell, material) in &parts {
         put(&mut host, *cell, *material);
@@ -204,6 +206,18 @@ fn udp_real_vehicle_assembly_private_cargo_seating_late_join_and_atomic_dismantl
             )
             .unwrap();
         journal.set_tint(slab_cell, Some(tint)).unwrap();
+        journal
+            .set_container(
+                engine_cell,
+                Inventory {
+                    slots: vec![ItemStack {
+                        item: ItemKind::Block(16),
+                        count: 2,
+                    }],
+                    ..Default::default()
+                },
+            )
+            .unwrap();
         journal
             .set_container(
                 chest_cell,
@@ -417,11 +431,15 @@ fn udp_real_vehicle_assembly_private_cargo_seating_late_join_and_atomic_dismantl
         base[2] as f32 + 4.5,
     ];
     teleport(
-        "train cargo stance",
+        "train chest accessible side stance",
         &mut host,
         &mut owner,
         &mut watcher,
-        cargo_feet,
+        [
+            base[0] as f32 - 1.7,
+            (ground + 1) as f32,
+            base[2] as f32 + 2.5,
+        ],
     );
     let open_chest = send(
         &mut owner,
@@ -430,12 +448,18 @@ fn udp_real_vehicle_assembly_private_cargo_seating_late_join_and_atomic_dismantl
             part: chest,
         },
     );
-    let TrainOutcome::Cargo(chest_snapshot) =
-        response(&mut host, &mut owner, &mut watcher, open_chest)
-    else {
-        panic!("ordinary mounted chest must open for its owner");
+    let chest_outcome = response(&mut host, &mut owner, &mut watcher, open_chest);
+    let TrainOutcome::Cargo(chest_snapshot) = chest_outcome else {
+        panic!("ordinary mounted chest must open from its accessible side: {chest_outcome:?}");
     };
     assert_eq!(chest_snapshot.inventory.count(ItemKind::Block(13)), 17);
+    teleport(
+        "train cargo stance",
+        &mut host,
+        &mut owner,
+        &mut watcher,
+        cargo_feet,
+    );
     let open = send(
         &mut owner,
         TrainAction::OpenCargo {
@@ -494,6 +518,17 @@ fn udp_real_vehicle_assembly_private_cargo_seating_late_join_and_atomic_dismantl
             .train_cargo
             .is_none()
     );
+    teleport(
+        "train cab accessible side stance",
+        &mut host,
+        &mut owner,
+        &mut watcher,
+        [
+            base[0] as f32 - 2.5,
+            (ground + 1) as f32,
+            base[2] as f32 + 3.5,
+        ],
+    );
     let board = send(
         &mut owner,
         TrainAction::Seat {
@@ -501,8 +536,10 @@ fn udp_real_vehicle_assembly_private_cargo_seating_late_join_and_atomic_dismantl
             part: seat,
         },
     );
+    let board_outcome = response(&mut host, &mut owner, &mut watcher, board);
     assert!(
-        matches!(response(&mut host,&mut owner,&mut watcher,board),TrainOutcome::Seated(Some(binding)) if binding.vehicle==vehicle_id && binding.part==seat)
+        matches!(board_outcome,TrainOutcome::Seated(Some(binding)) if binding.vehicle==vehicle_id && binding.part==seat),
+        "CAB boarding from its accessible side must succeed: {board_outcome:?}"
     );
     wait_phase(
         "train seat authoritative snapshot",
@@ -519,6 +556,138 @@ fn udp_real_vehicle_assembly_private_cargo_seating_late_join_and_atomic_dismantl
                         .is_some_and(|binding| binding.vehicle == vehicle_id)
                 })
         },
+    );
+    let foreign_drive = send(
+        &mut watcher,
+        TrainAction::Drive {
+            vehicle: vehicle_id,
+            throttle: 1,
+            brake: false,
+        },
+    );
+    wait_phase(
+        "foreign train driving rejected",
+        &mut host,
+        &mut [&mut owner, &mut watcher],
+        |_, clients| {
+            clients[1]
+                .world()
+                .resource::<client::ClientSession>()
+                .last_train_result
+                .as_ref()
+                .is_some_and(|result| result.request == foreign_drive)
+        },
+    );
+    assert!(matches!(
+        watcher
+            .world()
+            .resource::<client::ClientSession>()
+            .last_train_result
+            .as_ref()
+            .unwrap()
+            .outcome,
+        TrainOutcome::Rejected(TrainError::NotOwner)
+    ));
+    let drive = send(
+        &mut owner,
+        TrainAction::Drive {
+            vehicle: vehicle_id,
+            throttle: 1,
+            brake: false,
+        },
+    );
+    assert!(
+        matches!(response(&mut host, &mut owner, &mut watcher, drive),
+        TrainOutcome::Changed { vehicle: Some(id) } if id == vehicle_id)
+    );
+    wait_phase(
+        "actual rail motion reaches owner and observer",
+        &mut host,
+        &mut [&mut owner, &mut watcher],
+        |_, clients| {
+            clients.iter().all(|client| {
+                client
+                    .world()
+                    .resource::<client::ClientSession>()
+                    .trains
+                    .vehicles
+                    .iter()
+                    .find(|view| view.id == vehicle_id)
+                    .is_some_and(|view| {
+                        view.motion.speed_mps > 0.1 && view.motion.wheel_distance_m > 0.01
+                    })
+            })
+        },
+    );
+    let brake = send(
+        &mut owner,
+        TrainAction::Drive {
+            vehicle: vehicle_id,
+            throttle: 0,
+            brake: true,
+        },
+    );
+    assert!(
+        matches!(response(&mut host, &mut owner, &mut watcher, brake),
+        TrainOutcome::Changed { vehicle: Some(id) } if id == vehicle_id)
+    );
+    wait_phase(
+        "rail brake stops the actual moving model",
+        &mut host,
+        &mut [&mut owner, &mut watcher],
+        |host, clients| {
+            host.world()
+                .resource::<EditJournal>()
+                .gameplay()
+                .trains
+                .vehicles[&vehicle_id]
+                .motion
+                .speed_mps
+                .abs()
+                < 0.001
+                && clients.iter().all(|client| {
+                    client
+                        .world()
+                        .resource::<client::ClientSession>()
+                        .trains
+                        .vehicles
+                        .iter()
+                        .find(|view| view.id == vehicle_id)
+                        .is_some_and(|view| {
+                            view.motion.speed_mps.abs() < 0.001 && view.motion.brake
+                        })
+                })
+        },
+    );
+    let driven = &host
+        .world()
+        .resource::<EditJournal>()
+        .gameplay()
+        .trains
+        .vehicles[&vehicle_id];
+    assert!(driven.motion.wheel_distance_m > 0.01);
+    assert!(driven.burn_seconds > 0.0);
+    let engine = driven
+        .parts
+        .iter()
+        .position(|part| part.material == 218)
+        .unwrap() as u16;
+    assert_eq!(driven.cargo[&engine].count(ItemKind::Block(16)), 1);
+    let restored = driven.disassembly_cells().unwrap();
+    let cargo_cell = restored[usize::from(cargo)];
+    let chest_cell = restored[usize::from(chest)];
+    let slab_cell = restored[usize::from(slab)];
+    let engine_cell = restored[usize::from(engine)];
+    let parts = restored
+        .into_iter()
+        .zip(driven.parts.iter().map(|part| part.material))
+        .collect::<Vec<_>>();
+    assert!(
+        watcher
+            .world()
+            .resource::<client::ClientSession>()
+            .train_cargo
+            .is_none()
     );
     let leave = send(&mut owner, TrainAction::Leave);
     assert!(matches!(
@@ -598,6 +767,10 @@ fn udp_real_vehicle_assembly_private_cargo_seating_late_join_and_atomic_dismantl
         .world()
         .resource::<client::ClientSession>()
         .trains
+        .vehicles
+        .iter()
+        .find(|car| car.id == vehicle_id)
+        .unwrap()
         .revision;
     let dismantle = send(
         &mut owner,
@@ -649,6 +822,20 @@ fn udp_real_vehicle_assembly_private_cargo_seating_late_join_and_atomic_dismantl
             .resource::<EditJournal>()
             .container_at(cargo_cell),
         Some(&updated.inventory)
+    );
+    assert_eq!(
+        host.world()
+            .resource::<EditJournal>()
+            .container_at(engine_cell)
+            .unwrap()
+            .count(ItemKind::Block(16)),
+        1
+    );
+    assert!(
+        host.world()
+            .resource::<EditJournal>()
+            .furnace_at(engine_cell)
+            .is_some_and(|furnace| furnace.burn_remaining > 0.0)
     );
     assert_eq!(
         host.world()
@@ -721,6 +908,8 @@ fn bounded_full_train_registry_public_packet_stays_below_two_mebibytes() {
             couplings: [None; 2],
             revision: u64::MAX,
             mass_kg: 999_999_999,
+
+            motion: Default::default(),
         })
         .collect();
     let seats = (0..1024)

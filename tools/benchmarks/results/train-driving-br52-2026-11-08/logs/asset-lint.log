@@ -1,0 +1,5 @@
+PASS: CPU-only native train asset lint; no regeneration, window or GPU.
+Train IDs210..293: 84 complete JSON/model/recipe entries with matching names.
+Collision: 907 finite bounded boxes; every part stays within the 128-box budget.
+GLTF: 5064912 binary bytes, 44788 triangles; buffers, accessors, indices, bounds and textures valid.
+Embedded recipes: 415 unique IDs/keys; JSON payload 142304 bytes within 1MiB.

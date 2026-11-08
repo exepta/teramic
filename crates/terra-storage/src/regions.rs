@@ -60,7 +60,7 @@ struct TreeIndex {
     trees: terra_core::TreeRegistry,
 }
 
-// ID14 carries arbitrary block appearance/state; ID13 has a frozen decoder.
+// ID15 adds rigid motion and fuel; ID13/ID14 use frozen decoders.
 #[derive(Serialize, Deserialize)]
 struct TrainIndex {
     prior: TreeIndex,
@@ -230,17 +230,19 @@ struct Index2 {
 fn read_train_index(bytes: &[u8]) -> Result<TrainIndex, String> {
     if bytes.get(12..16) == Some(b"ID13") {
         decode::<train_legacy::TrainIndex13>(b"ID13", bytes).map(Into::into)
+    } else if bytes.get(12..16) == Some(b"ID14") {
+        decode::<train_legacy::TrainIndex14>(b"ID14", bytes).map(Into::into)
     } else {
-        decode(b"ID14", bytes)
+        decode(b"ID15", bytes)
     }
 }
 fn read_index(root: &Path) -> Result<KingdomIndex, String> {
     let bytes = read(&root.join(INDEX))?;
     if matches!(
         bytes.get(12..16),
-        Some(b"ID11" | b"ID12" | b"ID13" | b"ID14")
+        Some(b"ID11" | b"ID12" | b"ID13" | b"ID14" | b"ID15")
     ) {
-        let data: TreeIndex = if matches!(bytes.get(12..16), Some(b"ID13" | b"ID14")) {
+        let data: TreeIndex = if matches!(bytes.get(12..16), Some(b"ID13" | b"ID14" | b"ID15")) {
             let data = read_train_index(&bytes)?;
             if !data.trains.valid() {
                 return Err("Invalid persistent vehicle registry".into());
@@ -2092,7 +2094,7 @@ fn commit(root: &Path, world: WorldId, journal: &EditJournal) -> Result<(), Stri
         };
         if gameplay.trains != Default::default() {
             encode(
-                b"ID14",
+                b"ID15",
                 &TrainIndex {
                     prior,
                     trains: gameplay.trains.clone(),
@@ -2146,7 +2148,7 @@ fn load(root: &Path, world: WorldId) -> Result<EditJournal, String> {
     let index = timed.index;
     let (trees, trains) = {
         let bytes = read(&root.join(INDEX))?;
-        if matches!(bytes.get(12..16), Some(b"ID13" | b"ID14")) {
+        if matches!(bytes.get(12..16), Some(b"ID13" | b"ID14" | b"ID15")) {
             let data = read_train_index(&bytes)?;
             (data.prior.trees, data.trains)
         } else if bytes.get(12..16) == Some(b"ID12") {

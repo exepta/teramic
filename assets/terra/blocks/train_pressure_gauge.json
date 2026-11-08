@@ -1,0 +1,125 @@
+{
+  "schema_version": 1,
+  "id": 230,
+  "name": "Lok-Druckanzeige",
+  "description": "Decorative pressure instrument casing. Live steam pressure follows the steam engine system; fuel driving uses the cab display.",
+  "creative_category": "building",
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/train_pressure_gauge.gltf",
+  "struct_block": true,
+  "hardness": 1.8,
+  "resistance": 12,
+  "required_tool": "pickaxe",
+  "mining_level": 0,
+  "collision_boxes": [
+    {
+      "minimum": [
+        0.16,
+        0,
+        0.24
+      ],
+      "maximum": [
+        0.84,
+        0.34,
+        0.77
+      ]
+    },
+    {
+      "minimum": [
+        0.22999999999999998,
+        0.44141178650314017,
+        0.11
+      ],
+      "maximum": [
+        0.2975,
+        0.7985882134968598,
+        0.3
+      ]
+    },
+    {
+      "minimum": [
+        0.2975,
+        0.38617314097820155,
+        0.11
+      ],
+      "maximum": [
+        0.365,
+        0.8538268590217984,
+        0.3
+      ]
+    },
+    {
+      "minimum": [
+        0.365,
+        0.35857362413099936,
+        0.11
+      ],
+      "maximum": [
+        0.4325,
+        0.8814263758690006,
+        0.3
+      ]
+    },
+    {
+      "minimum": [
+        0.4325,
+        0.35,
+        0.11
+      ],
+      "maximum": [
+        0.5,
+        0.89,
+        0.3
+      ]
+    },
+    {
+      "minimum": [
+        0.5,
+        0.35,
+        0.11
+      ],
+      "maximum": [
+        0.5675,
+        0.89,
+        0.3
+      ]
+    },
+    {
+      "minimum": [
+        0.5675,
+        0.35857362413099936,
+        0.11
+      ],
+      "maximum": [
+        0.635,
+        0.8814263758690006,
+        0.3
+      ]
+    },
+    {
+      "minimum": [
+        0.635,
+        0.38617314097820155,
+        0.11
+      ],
+      "maximum": [
+        0.7025,
+        0.8538268590217984,
+        0.3
+      ]
+    },
+    {
+      "minimum": [
+        0.7025,
+        0.44141178650314017,
+        0.11
+      ],
+      "maximum": [
+        0.77,
+        0.7985882134968598,
+        0.3
+      ]
+    }
+  ]
+}

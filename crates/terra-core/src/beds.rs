@@ -112,6 +112,9 @@ pub const fn is_bed(material: u16) -> bool {
     matches!(material, 71..=73)
 }
 pub fn supports_bed_floor(material: u16) -> bool {
+    if matches!(material, 210 | 212 | 270 | 276 | 282 | 288) {
+        return true;
+    }
     if !terra_voxel::MaterialId::from_raw(material).is_some_and(|id| {
         id.is_solid()
             && (id.is_opaque()

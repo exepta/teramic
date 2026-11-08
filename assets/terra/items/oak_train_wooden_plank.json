@@ -1,0 +1,10 @@
+{
+  "item": {
+    "wooden_block": {
+      "material": 268,
+      "wood": "oak"
+    }
+  },
+  "name": "Lok-Holzplanken (oak)",
+  "description": "Decorative BR52 locomotive component. Attach to the connected vehicle body before assembly. Oak wood variant."
+}

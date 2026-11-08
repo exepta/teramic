@@ -119,13 +119,27 @@ fn construction_profile(
             template.face_materials,
         )
     } else if terra_core::construction::is_slab(model.material) {
-        terra_core::construction::slab_parts(model.material, model.state.facing)
+        let halves = if model.state.facing == terra_core::construction::DOUBLE_SLAB
+            && model.material != 289
+        {
+            vec![(model.material, model.state.facing)]
+        } else {
+            terra_core::construction::slab_halves(model.material, model.state.facing)
+                .map_or_else(|| vec![(model.material, model.state.facing)], Vec::from)
+        };
+        halves
             .into_iter()
-            .flat_map(|(id, bounds)| {
+            .flat_map(|(id, facing)| {
                 let part = templates.blocks.get(&id).unwrap_or(template);
-                crate::blocks::cube::box_model(&[bounds], part.bevel_width, part.face_materials)
+                let boxes = terra_core::locomotive_parts::grate_boxes(id, facing)
+                    .unwrap_or_else(|| vec![terra_core::construction::slab_bounds(facing)]);
+                crate::blocks::cube::box_model(&boxes, part.bevel_width, part.face_materials)
             })
             .collect()
+    } else if let Some(boxes) =
+        terra_core::locomotive_parts::grate_boxes(model.material, model.state.facing)
+    {
+        crate::blocks::cube::box_model(&boxes, template.bevel_width, template.face_materials)
     } else {
         let neighbors = std::array::from_fn(|side| {
             model.neighbors[side].map(|id| (id, model.neighbor_facing[side]))

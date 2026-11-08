@@ -1,0 +1,113 @@
+{
+  "schema_version": 1,
+  "id": 249,
+  "name": "Lokdach gebogen",
+  "description": "Decorative BR52 locomotive component. Attach to the connected vehicle body before assembly.",
+  "creative_category": "building",
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/train_roof_curved.gltf",
+  "struct_block": true,
+  "hardness": 1.8,
+  "resistance": 12,
+  "required_tool": "pickaxe",
+  "mining_level": 0,
+  "collision_boxes": [
+    {
+      "minimum": [
+        0.0,
+        0,
+        0
+      ],
+      "maximum": [
+        0.125,
+        0.1,
+        1
+      ]
+    },
+    {
+      "minimum": [
+        0.125,
+        0.09545442260586279,
+        0
+      ],
+      "maximum": [
+        0.25,
+        0.1954544226058628,
+        1
+      ]
+    },
+    {
+      "minimum": [
+        0.25,
+        0.17200292614296656,
+        0
+      ],
+      "maximum": [
+        0.375,
+        0.27200292614296656,
+        1
+      ]
+    },
+    {
+      "minimum": [
+        0.375,
+        0.21448414068000118,
+        0
+      ],
+      "maximum": [
+        0.5,
+        0.3144841406800012,
+        1
+      ]
+    },
+    {
+      "minimum": [
+        0.5,
+        0.21448414068000118,
+        0
+      ],
+      "maximum": [
+        0.625,
+        0.3144841406800012,
+        1
+      ]
+    },
+    {
+      "minimum": [
+        0.625,
+        0.1720029261429666,
+        0
+      ],
+      "maximum": [
+        0.75,
+        0.2720029261429666,
+        1
+      ]
+    },
+    {
+      "minimum": [
+        0.75,
+        0.09545442260586282,
+        0
+      ],
+      "maximum": [
+        0.875,
+        0.19545442260586282,
+        1
+      ]
+    },
+    {
+      "minimum": [
+        0.875,
+        2.7755575615628914e-17,
+        0
+      ],
+      "maximum": [
+        1.0,
+        0.10000000000000003,
+        1
+      ]
+    }
+  ]
+}

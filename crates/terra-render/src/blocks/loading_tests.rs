@@ -1409,7 +1409,7 @@ fn only_two_cell_furniture_scene_geometry_can_extend_into_a_second_vertical_cell
         indices: vec![0, 1, 2],
         material: 0,
     };
-    for id in [59, 65, 66, 67] {
+    for id in [59, 65, 66, 67, 248] {
         assert!(bake_transform(id, &mut tall.clone(), bevy::math::Affine3A::IDENTITY).is_ok());
     }
     for id in [
@@ -1685,6 +1685,39 @@ fn scene_model_definition_is_opt_in_and_does_not_change_shipped_ids() {
             .len(),
         terra_voxel::MaterialId::BLOCK_COUNT
     );
+}
+
+#[test]
+fn br52_metadata_and_the_complete_recipe_catalog_fit_the_transport_budgets() {
+    use terra_core::locomotive_parts::{self, Kind};
+    let library = BlockLibrary::load(&terra_core::asset_directory().join("terra/blocks"))
+        .expect("complete block definitions");
+    for part in locomotive_parts::DEFINITIONS {
+        let definition = library
+            .blocks
+            .iter()
+            .find(|definition| definition.id == part.id)
+            .unwrap_or_else(|| panic!("missing {}", part.slug));
+        assert_eq!(definition.name, part.name);
+        assert_eq!(definition.render_kind, BlockRenderKind::CustomMesh);
+        assert_eq!(definition.model_layout, ModelLayout::Scene);
+        assert_eq!(definition.model, format!("models/{}.gltf", part.slug));
+        assert!(definition.gameplay.struct_block);
+        assert!(!definition.description.is_empty());
+        assert_eq!(definition.creative_category.as_deref(), Some("building"));
+        assert_eq!(
+            definition.collision_boxes.as_slice(),
+            locomotive_parts::base_boxes(part.id)
+        );
+        if matches!(part.kind, Kind::Valve | Kind::Gauge | Kind::Tank) {
+            assert!(definition.description.starts_with("Decorative "));
+        }
+    }
+    let recipes = terra_core::crafting::RecipeBook::builtins();
+    // The complete preexisting catalog plus the 76 BR52 additions must remain
+    // available while leaving room inside the network's catalog limits.
+    assert!((415..=512).contains(&recipes.iter().count()));
+    assert!(recipes.to_json().expect("bounded recipe payload").len() <= 1024 * 1024);
 }
 
 #[test]

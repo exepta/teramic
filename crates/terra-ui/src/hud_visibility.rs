@@ -79,6 +79,8 @@ fn passive_root(id: Option<&ElementId>, classes: Option<&ElementClasses>, chat_o
             | "debug-overlay"
             | "target-card"
             | "rail-build-hint"
+            | "train-driver-hud"
+            | "train-blueprint-hint"
             | "mini-map"
             | "survival-hud"
             | "survival-hit"
@@ -300,6 +302,36 @@ mod tests {
             app.world().get::<Visibility>(target),
             Some(&Visibility::Inherited)
         );
+    }
+
+    #[test]
+    fn f2_hides_train_telemetry_and_build_hints_but_keeps_the_workshop_interactive() {
+        let mut app = app();
+        let passive = ["train-driver-hud", "train-blueprint-hint"]
+            .map(|id| node(app.world_mut(), id, Visibility::Inherited));
+        let workshop = node(
+            app.world_mut(),
+            "train-workshop-panel",
+            Visibility::Inherited,
+        );
+        f2(&mut app);
+        for entity in passive {
+            assert_eq!(
+                app.world().get::<Visibility>(entity),
+                Some(&Visibility::Hidden)
+            );
+        }
+        assert_eq!(
+            app.world().get::<Visibility>(workshop),
+            Some(&Visibility::Inherited)
+        );
+        f2(&mut app);
+        for entity in passive {
+            assert_eq!(
+                app.world().get::<Visibility>(entity),
+                Some(&Visibility::Inherited)
+            );
+        }
     }
 
     #[test]

@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "id": 267,
+  "name": "Lok-Werkzeugkasten",
+  "description": "Decorative BR52 locomotive component. Attach to the connected vehicle body before assembly.",
+  "creative_category": "building",
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/train_toolbox.gltf",
+  "struct_block": true,
+  "hardness": 1.8,
+  "resistance": 12,
+  "required_tool": "pickaxe",
+  "mining_level": 0,
+  "collision_boxes": [
+    {
+      "minimum": [
+        0.05,
+        0,
+        0.1
+      ],
+      "maximum": [
+        0.95,
+        0.64,
+        0.9
+      ]
+    },
+    {
+      "minimum": [
+        0.03,
+        0.64,
+        0.08
+      ],
+      "maximum": [
+        0.97,
+        0.77,
+        0.92
+      ]
+    }
+  ]
+}

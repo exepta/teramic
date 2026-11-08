@@ -14,10 +14,10 @@ pub const DIRECTIONS: [Direction; 6] = [
 ];
 
 pub fn is_door(material: u16) -> bool {
-    matches!(material, 65..=67 | 139)
+    matches!(material, 65..=67 | 139 | 248)
 }
 pub fn is_window(material: u16) -> bool {
-    matches!(material, 68..=70 | 140)
+    matches!(material, 68..=70 | 140 | 247)
 }
 pub fn is_opening(material: u16) -> bool {
     is_door(material) || is_window(material)

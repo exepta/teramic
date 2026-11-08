@@ -82,7 +82,7 @@ impl ShapeBox {
                         1.56
                     } else if crate::kinetic::is_gear(material) {
                         1.06
-                    } else if matches!(material, 59 | 65..=67 | 139) && axis == 1
+                    } else if matches!(material, 59 | 65..=67 | 139 | 248) && axis == 1
                         || matches!(material, 71..=73) && axis == 2
                     {
                         2.01
@@ -208,7 +208,7 @@ pub fn builtin_boxes(material: u16) -> &'static [ShapeBox] {
     static GEARBOXES: [OnceLock<Vec<ShapeBox>>; 2] = [const { OnceLock::new() }; 2];
     static KINETICS: [OnceLock<Vec<ShapeBox>>; 11] = [const { OnceLock::new() }; 11];
     match material {
-        210..=217 => crate::train_parts::base_boxes(material),
+        210..=293 => crate::train_parts::base_boxes(material),
         209 => SWITCH_STAND.get_or_init(|| {
             read(
                 include_str!("../../../assets/terra/blocks/rail_switch_stand.json"),

@@ -1,0 +1,60 @@
+{
+  "id": "teramic::train_wooden_plank",
+  "name": "Lok-Holzplanken",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "block": 268
+    },
+    "count": 1
+  },
+  "pattern": {
+    "kind": "shaped",
+    "width": 3,
+    "height": 3,
+    "cells": [
+      {
+        "item": {
+          "block": 18
+        },
+        "count": 1,
+        "wood": true
+      },
+      null,
+      {
+        "item": {
+          "mineral": "iron_ingot"
+        },
+        "count": 1
+      },
+      null,
+      {
+        "item": {
+          "block": 18
+        },
+        "count": 1,
+        "wood": true
+      },
+      null,
+      {
+        "item": {
+          "mineral": "iron_ingot"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "mineral": "iron_ingot"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "block": 18
+        },
+        "count": 1,
+        "wood": true
+      }
+    ]
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "item": {
+    "wooden_block": {
+      "material": 214,
+      "wood": "cherry"
+    }
+  },
+  "name": "F\u00fchrerstand (cherry)",
+  "description": "Modular railway vehicle part. Connect parts beside an assembly station, then assemble the vehicle. Cherry wood variant."
+}

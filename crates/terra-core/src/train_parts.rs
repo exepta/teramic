@@ -11,16 +11,17 @@ pub const CAB: u16 = 214;
 pub const SEAT: u16 = 215;
 pub const CARGO: u16 = 216;
 pub const STATION: u16 = 217;
+pub use crate::locomotive_parts::ENGINE;
 /// The gauge-spanning wheelset may cross horizontal owner-cell boundaries.
 pub const BOGIE_MIN_HORIZONTAL: f64 = -0.61;
 pub const BOGIE_MAX_HORIZONTAL: f64 = 1.61;
 
 pub const fn is_part(material: u16) -> bool {
-    material >= CHASSIS && material <= CARGO
+    material >= CHASSIS && material <= CARGO || crate::locomotive_parts::is_part(material)
 }
 
 pub const fn is_train(material: u16) -> bool {
-    material >= CHASSIS && material <= STATION
+    material >= CHASSIS && material <= STATION || crate::locomotive_parts::is_part(material)
 }
 
 pub const fn mass_kg(material: u16) -> Option<u32> {
@@ -32,11 +33,24 @@ pub const fn mass_kg(material: u16) -> Option<u32> {
         CAB => Some(300),
         SEAT => Some(20),
         CARGO => Some(80),
-        _ => None,
+        _ => match crate::locomotive_parts::definition(material) {
+            Some(part) => Some(match part.kind {
+                crate::locomotive_parts::Kind::Engine => 1000,
+                crate::locomotive_parts::Kind::Tank => 400,
+                crate::locomotive_parts::Kind::Structure => 200,
+                crate::locomotive_parts::Kind::Wheel | crate::locomotive_parts::Kind::Axle => 150,
+                crate::locomotive_parts::Kind::Body => 80,
+                _ => 25,
+            }),
+            None => None,
+        },
     }
 }
 
 pub fn base_boxes(material: u16) -> &'static [ShapeBox] {
+    if crate::locomotive_parts::is_part(material) {
+        return crate::locomotive_parts::base_boxes(material);
+    }
     static PROFILES: [OnceLock<Vec<ShapeBox>>; 8] = [const { OnceLock::new() }; 8];
     const SOURCES: [&str; 8] = [
         include_str!("../../../assets/terra/blocks/train_chassis.json"),
@@ -64,6 +78,9 @@ pub fn base_boxes(material: u16) -> &'static [ShapeBox] {
 }
 
 pub fn boxes(material: u16, facing: u8) -> Vec<ShapeBox> {
+    if crate::locomotive_parts::is_slab(material) || crate::locomotive_parts::is_stair(material) {
+        return crate::construction::placed_boxes(material, facing, [None; 6]);
+    }
     if facing >= 4 {
         return Vec::new();
     }
@@ -94,6 +111,23 @@ mod tests {
                 })));
             }
             assert_eq!(mass_kg(material).is_some(), is_part(material));
+        }
+    }
+
+    #[test]
+    fn frame_mounted_couplers_and_furniture_reach_their_attachment_faces() {
+        let coupling = base_boxes(COUPLER);
+        for edge in [0.0, 1.0] {
+            assert!(coupling.iter().any(|bounds| {
+                (bounds.minimum[2] - edge).abs() < 1e-8 || (bounds.maximum[2] - edge).abs() < 1e-8
+            }));
+        }
+        for material in [SEAT, CARGO, CAB, ENGINE] {
+            assert!(
+                base_boxes(material)
+                    .iter()
+                    .any(|bounds| bounds.minimum[1] == 0.0)
+            );
         }
     }
 

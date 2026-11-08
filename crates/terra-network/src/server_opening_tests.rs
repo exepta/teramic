@@ -419,7 +419,7 @@ fn remote_extended_opening_fixture(app: &mut App, material: u16) {
 #[test]
 fn remote_extended_parts_do_not_reject_doors_or_connected_windows_at_negative_borders() {
     for extended in [147, 149, 152] {
-        for material in (65..=70).chain([139, 140]) {
+        for material in (65..=70).chain([139, 140, 247, 248]) {
             for facing in 0_u8..4 {
                 let mut app = app();
                 remote_extended_opening_fixture(&mut app, extended);
@@ -479,7 +479,7 @@ fn remote_extended_parts_do_not_reject_doors_or_connected_windows_at_negative_bo
 
 #[test]
 fn remote_extended_parts_preserve_wall_window_and_snow_floor_door_placement() {
-    for material in (65..=70).chain([139, 140]) {
+    for material in (65..=70).chain([139, 140, 247, 248]) {
         for floor in [1, 2, 3, 5, 98] {
             let mut app = app();
             remote_extended_opening_fixture(&mut app, 147);
@@ -528,7 +528,7 @@ fn connected_window_ownership_does_not_ignore_a_foreign_overhanging_gear() {
 
 #[test]
 fn authoritative_creative_commands_place_doors_and_connected_windows_with_remote_machinery() {
-    for material in (65..=70).chain([139, 140]) {
+    for material in (65..=70).chain([139, 140, 247, 248]) {
         let mut app = app();
         remote_extended_opening_fixture(&mut app, 147);
         let position = [2, 1, 8];
@@ -751,12 +751,12 @@ fn connected_window_never_rotates_either_leaf_into_a_player() {
 
 #[test]
 fn opening_species_place_face_toggle_and_break_across_negative_section_boundaries() {
-    for material in 65..=70 {
+    for material in (65..=70).chain([247, 248]) {
         for facing in 0..4 {
             let mut app = app();
             let position = [-16, 15, -16];
             let upper = [-16, 16, -16];
-            let door = material <= 67;
+            let door = terra_world::objects::is_door(material);
             opening_floor(&mut app, position);
             let yaw = f32::from(facing) * std::f32::consts::FRAC_PI_2;
             assert!(edit(&mut app, position, 0, material, yaw).unwrap());

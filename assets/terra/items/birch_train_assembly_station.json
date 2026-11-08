@@ -1,0 +1,10 @@
+{
+  "item": {
+    "wooden_block": {
+      "material": 217,
+      "wood": "birch"
+    }
+  },
+  "name": "Zug-Montagestelle (birch)",
+  "description": "Assemble or dismantle connected modular railway vehicles. Right-click to manage the workshop. Birch wood variant."
+}

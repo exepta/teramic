@@ -1,0 +1,10 @@
+{
+  "item": {
+    "wooden_block": {
+      "material": 215,
+      "wood": "oak"
+    }
+  },
+  "name": "Zugsitz (oak)",
+  "description": "Modular railway vehicle part. Connect parts beside an assembly station, then assemble the vehicle. Oak wood variant."
+}

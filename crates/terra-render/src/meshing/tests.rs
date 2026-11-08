@@ -130,6 +130,7 @@ fn templates() -> TemplateSet {
         animated_chests: false,
         cube_lods: Default::default(),
         crusher_moving_materials: Default::default(),
+        train_moving_materials: Default::default(),
         conveyor_ribbon_materials: Default::default(),
         logistics_arrow_materials: Default::default(),
         logistics_support_materials: Default::default(),

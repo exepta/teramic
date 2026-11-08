@@ -28,7 +28,8 @@ impl EditJournal {
         } else {
             crate::trains::plan_dismantle(chunks, self, plan.actor, plan.station, plan.vehicle.id)?
         };
-        if fresh.vehicle != plan.vehicle
+        if fresh.source_motion != plan.source_motion
+            || fresh.vehicle != plan.vehicle
             || fresh.parts.len() != plan.parts.len()
             || fresh.parts.iter().zip(&plan.parts).any(|(a, b)| {
                 a.cell != b.cell
@@ -218,7 +219,7 @@ impl EditJournal {
             pose: self.object_state(cell),
             tint: self.tint_at(cell),
             condition: self.surface_condition(cell),
-            inventory: (!matches!(self.block(cell), Some(29 | train_parts::CARGO)))
+            inventory: (!matches!(self.block(cell), Some(29 | train_parts::CARGO | 218)))
                 .then(|| self.containers.get(&cell).cloned())
                 .flatten(),
             furnace: self.furnaces.get(&cell).cloned(),
@@ -245,6 +246,63 @@ impl EditJournal {
         payload: &[u8],
     ) -> Result<Option<crate::edits::BlockObjectState>, TrainError> {
         Ok(FrozenCell::decode(payload)?.pose)
+    }
+    pub(crate) fn rebase_train_payload(
+        payload: &[u8],
+        material: u16,
+        new_facing: u8,
+        source: [i64; 3],
+        target: [i64; 3],
+        turns: u8,
+        engine_burn: Option<f64>,
+    ) -> Result<Vec<u8>, TrainError> {
+        let mut frozen = FrozenCell::decode(payload)?;
+        let coordinate = |p| crate::train_disassembly::coordinate(source, target, p, turns);
+        let flow = |mut water: crate::water::FluidCell| {
+            let vector = crate::train_disassembly::turn(
+                [i64::from(water.flow[0]), 0, i64::from(water.flow[1])],
+                turns,
+            );
+            water.flow = [vector[0] as i8, vector[2] as i8];
+            water
+        };
+        if let Some(pose) = &mut frozen.pose {
+            pose.facing = new_facing;
+            pose.peer = pose.peer.map(coordinate);
+        }
+        if let Some(belt) = &mut frozen.belt {
+            belt.start = coordinate(belt.start);
+            belt.end = coordinate(belt.end);
+        }
+        if let Some(state) = &mut frozen.furnace {
+            state.outlet = coordinate(state.outlet);
+            for cell in &mut state.smoke_cells {
+                *cell = coordinate(*cell);
+            }
+        }
+        if let Some(state) = &mut frozen.plumbing {
+            state.water = flow(state.water);
+            if let Some(basin) = &mut state.basin {
+                let far = std::array::from_fn(|i| basin.origin[i] + i64::from(basin.size[i]) - 1);
+                let a = coordinate(basin.origin);
+                let b = coordinate(far);
+                basin.origin = std::array::from_fn(|i| a[i].min(b[i]));
+                if turns % 2 == 1 {
+                    basin.size.swap(0, 2);
+                }
+            }
+        }
+        frozen.fluid = frozen.fluid.map(flow);
+        if material == 218
+            && let Some(seconds) =
+                engine_burn.filter(|seconds| *seconds > 0.0 || frozen.furnace.is_some())
+        {
+            let state = frozen.furnace.get_or_insert_with(Default::default);
+            state.burn_remaining = seconds as f32;
+            state.burn_total = state.burn_total.max(seconds as f32);
+            state.outlet = target;
+        }
+        serde_json::to_vec(&frozen).map_err(|_| TrainError::Invalid)
     }
     fn restore_train_payload(&mut self, cell: [i64; 3], payload: &[u8]) -> Result<(), TrainError> {
         let frozen = FrozenCell::decode(payload)?;

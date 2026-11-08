@@ -1,0 +1,125 @@
+{
+  "schema_version": 1,
+  "id": 218,
+  "name": "Brennstoffmotor",
+  "description": "Functional fuel-powered train engine. Open its fuel inventory and drive from a connected cab.",
+  "creative_category": "building",
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/train_fuel_engine.gltf",
+  "struct_block": true,
+  "hardness": 1.8,
+  "resistance": 12,
+  "required_tool": "pickaxe",
+  "mining_level": 0,
+  "collision_boxes": [
+    {
+      "minimum": [
+        0.04,
+        0,
+        0.02
+      ],
+      "maximum": [
+        0.96,
+        0.91,
+        0.98
+      ]
+    },
+    {
+      "minimum": [
+        0.4140130823904008,
+        0.92,
+        0.37
+      ],
+      "maximum": [
+        0.5859869176095992,
+        1,
+        0.40249999999999997
+      ]
+    },
+    {
+      "minimum": [
+        0.387416697508023,
+        0.92,
+        0.40249999999999997
+      ],
+      "maximum": [
+        0.612583302491977,
+        1,
+        0.435
+      ]
+    },
+    {
+      "minimum": [
+        0.37412804124825894,
+        0.92,
+        0.435
+      ],
+      "maximum": [
+        0.6258719587517411,
+        1,
+        0.4675
+      ]
+    },
+    {
+      "minimum": [
+        0.37,
+        0.92,
+        0.4675
+      ],
+      "maximum": [
+        0.63,
+        1,
+        0.5
+      ]
+    },
+    {
+      "minimum": [
+        0.37,
+        0.92,
+        0.5
+      ],
+      "maximum": [
+        0.63,
+        1,
+        0.5325
+      ]
+    },
+    {
+      "minimum": [
+        0.37412804124825894,
+        0.92,
+        0.5325
+      ],
+      "maximum": [
+        0.6258719587517411,
+        1,
+        0.565
+      ]
+    },
+    {
+      "minimum": [
+        0.387416697508023,
+        0.92,
+        0.565
+      ],
+      "maximum": [
+        0.612583302491977,
+        1,
+        0.5975
+      ]
+    },
+    {
+      "minimum": [
+        0.4140130823904008,
+        0.92,
+        0.5975
+      ],
+      "maximum": [
+        0.5859869176095992,
+        1,
+        0.63
+      ]
+    }
+  ]
+}

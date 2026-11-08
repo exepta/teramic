@@ -114,6 +114,8 @@ pub(crate) struct TemplateSet {
     pub hinge_materials: std::collections::HashSet<usize>,
     /// Rigid crusher parts: left roller, right roller and side drive cog.
     pub crusher_moving_materials: HashMap<usize, u8>,
+    /// Per-authored-material roles keep wheel pivots and rigid rods separate.
+    pub train_moving_materials: HashMap<usize, TrainAnimationRole>,
     pub conveyor_ribbon_materials: std::collections::HashSet<usize>,
     pub logistics_arrow_materials: std::collections::HashSet<usize>,
     pub logistics_support_materials: std::collections::HashSet<usize>,
@@ -124,6 +126,38 @@ pub(crate) struct TemplateSet {
     pub castle_icon_materials: HashMap<usize, terra_core::kingdom::KingdomIcon>,
     pub castle_arch_join_materials: std::collections::HashSet<usize>,
     pub castle_decor_materials: std::collections::HashSet<usize>,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub(crate) enum TrainAnimationRole {
+    BogieWheel(u8),
+    Wheel,
+    ConnectingRod,
+    RodJoint,
+    Piston,
+    Crosshead,
+    Throttle,
+}
+impl TrainAnimationRole {
+    pub(crate) fn from_material(name: &str) -> Option<Self> {
+        if let Some(index) = name
+            .strip_prefix("train_bogie_wheel_")
+            .and_then(|suffix| suffix.split('_').next())
+            .and_then(|index| index.parse::<u8>().ok())
+            .filter(|index| *index < 4)
+        {
+            return Some(Self::BogieWheel(index));
+        }
+        match name {
+            "train_wheel_tire" | "train_wheel_spokes" => Some(Self::Wheel),
+            "train_rod_main" => Some(Self::ConnectingRod),
+            "train_rod_joint" => Some(Self::RodJoint),
+            "train_rod_piston" => Some(Self::Piston),
+            "train_rod_crosshead" => Some(Self::Crosshead),
+            name if name.starts_with("train_throttle_lever_") => Some(Self::Throttle),
+            _ => None,
+        }
+    }
 }
 
 impl TemplateSet {

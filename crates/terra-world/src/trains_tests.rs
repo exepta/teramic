@@ -642,3 +642,101 @@ fn recorded_world_water_is_not_collected_with_the_vehicle_body() {
     assert_eq!(chunks.block_at(water), Some(material));
     assert_eq!(journal.fluid(water), fluid);
 }
+
+#[test]
+fn moving_vehicle_picking_and_reservations_use_the_current_rigid_pose() {
+    let (mut chunks, mut journal, station, start) = fixture(VehicleKind::Locomotive);
+    let owner = PlayerUuid::from_u128(77);
+    let plan = plan_assembly(
+        &chunks,
+        &journal,
+        owner,
+        station,
+        start,
+        VehicleKind::Locomotive,
+    )
+    .unwrap();
+    let id = commit(&mut chunks, &mut journal, &plan).unwrap();
+    let car = journal.gameplay_mut().trains.vehicles.get_mut(&id).unwrap();
+    car.motion.translation = [80.0, 0.0, 32.0];
+    car.motion.yaw = 0.73;
+    let index = car
+        .parts
+        .iter()
+        .position(|part| part.material == train_parts::CHASSIS)
+        .unwrap();
+    let part = car.parts[index];
+    let target = car.world_point(part.offset.map(|v| f64::from(v) + 0.5));
+    let offset = car.world_vector([-4.0, 0.0, 0.0]);
+    let origin = std::array::from_fn(|axis| target[axis] + offset[axis]);
+    let direction = car.world_vector([1.0, 0.0, 0.0]);
+    let view = car.view();
+    let hit = raycast(&journal, origin, direction, 8.0).unwrap();
+    assert_eq!((hit.vehicle, hit.part), (id, index as u16));
+    assert!((hit.distance - 3.5).abs() < 0.01);
+    assert_eq!(
+        raycast_views(&[view], origin, direction, 8.0).unwrap().part,
+        hit.part
+    );
+    assert!(reserved(&journal, target.map(|v| v.floor() as i64)));
+    assert!(
+        !reserved(&journal, [0, 2, 2]),
+        "the old construction pad is free after travel"
+    );
+}
+
+#[test]
+fn new_assemblies_require_three_to_fifteen_meter_axle_spacing() {
+    for spacing in [2, 3, 4, 15, 16] {
+        let (mut chunks, mut journal, station, start) = fixture(VehicleKind::Locomotive);
+        for x in -3..=4 {
+            for y in -2..=6 {
+                for z in 11..=22 {
+                    block(&mut chunks, [x, y, z], 0);
+                }
+            }
+        }
+        for z in [8, 12, 16, 20] {
+            let piece =
+                terra_core::rails::Piece::new([0, 0, z], terra_core::rails::STRAIGHT, 0).unwrap();
+            for point in piece.supports().iter() {
+                block(
+                    &mut chunks,
+                    std::array::from_fn(|axis| piece.anchor[axis] + i64::from(point.support[axis])),
+                    3,
+                );
+            }
+            let rail = rails::plan(&chunks, &journal, piece.anchor, piece.material, 0).unwrap();
+            rails::commit(&mut chunks, &mut journal, &rail).unwrap();
+        }
+        block(&mut chunks, [0, 1, 5], 0);
+        journal.record([0, 1, 5], 0).unwrap();
+        let rear = [0, 1, 1 + spacing];
+        block(&mut chunks, rear, train_parts::BOGIE);
+        journal.record(rear, train_parts::BOGIE).unwrap();
+        journal
+            .set_object_state(rear, Some(BlockObjectState::default()))
+            .unwrap();
+        for z in 7..=spacing + 2 {
+            let cell = [0, 2, z];
+            block(&mut chunks, cell, train_parts::FRAME);
+            journal.record(cell, train_parts::FRAME).unwrap();
+            journal
+                .set_object_state(cell, Some(BlockObjectState::default()))
+                .unwrap();
+        }
+        let plan = plan_assembly(
+            &chunks,
+            &journal,
+            PlayerUuid::from_u128(1),
+            station,
+            start,
+            VehicleKind::Locomotive,
+        );
+        if (3..=15).contains(&spacing) {
+            assert!(plan.is_ok(), "spacing={spacing}: {plan:?}");
+        } else {
+            assert_eq!(plan.unwrap_err(), TrainError::Unsupported);
+        }
+    }
+}

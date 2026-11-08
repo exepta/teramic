@@ -238,6 +238,12 @@ pub(crate) fn install(app: &mut App) {
             FixedUpdate,
             simulate.after(avian3d::prelude::PhysicsSystems::Writeback),
         )
+        .add_systems(
+            FixedUpdate,
+            trains::drive
+                .before(simulate)
+                .before(terra_physics::TrainPoseSet),
+        )
         .add_systems(FixedUpdate, gameplay::simulate_drops.after(simulate))
         .add_systems(FixedUpdate, riding::publish.after(simulate))
         .add_systems(

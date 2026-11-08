@@ -17,6 +17,7 @@ use terra_world::{
     edits::EditJournal,
     streaming::{ChunkStore, WorldAccess},
 };
+mod animation;
 mod openings;
 
 type BlockViews = BTreeMap<u16, TrainBlockView>;
@@ -34,7 +35,7 @@ impl GeometryKey {
 }
 struct Building {
     key: GeometryKey,
-    task: Task<Result<Vec<MeshBatch>, String>>,
+    task: Task<Result<PreparedGeometry, String>>,
 }
 struct Placed {
     root: Entity,
@@ -47,17 +48,28 @@ struct Trains {
     templates: Option<Arc<TemplateSet>>,
     failed: BTreeMap<u64, GeometryKey>,
     building: BTreeMap<u64, Building>,
-    discarded: Vec<Task<Result<Vec<MeshBatch>, String>>>,
+    discarded: Vec<Task<Result<PreparedGeometry, String>>>,
     palettes: Arc<openings::Palettes>,
 }
 
+#[derive(Default)]
+struct PreparedGeometry {
+    batches: Vec<MeshBatch>,
+    animated: Vec<AnimatedBatch>,
+}
+struct AnimatedBatch {
+    batch: MeshBatch,
+    animation: animation::Animation,
+}
 pub(crate) fn install(app: &mut App) {
     app.init_resource::<Trains>()
-        .add_systems(Update, synchronize.after(crate::meshing::upload_sections));
+        .add_systems(Update, synchronize.after(crate::meshing::upload_sections))
+        .add_systems(Update, animation::animate.after(synchronize));
 }
 
 /// Local offsets and already-authored poses are baked once. Vehicle cargo,
 /// couplings and gameplay revisions never participate in this geometry key.
+#[cfg(test)]
 fn geometry(
     parts: &[TrainPart],
     blocks: &BlockViews,
@@ -65,10 +77,21 @@ fn geometry(
     anchor: [i64; 3],
     palettes: &openings::Palettes,
 ) -> Result<Vec<MeshBatch>, String> {
+    Ok(compose_geometry(parts, blocks, templates, anchor, palettes, false)?.batches)
+}
+fn compose_geometry(
+    parts: &[TrainPart],
+    blocks: &BlockViews,
+    templates: &TemplateSet,
+    anchor: [i64; 3],
+    palettes: &openings::Palettes,
+    animated: bool,
+) -> Result<PreparedGeometry, String> {
     if parts.len() > terra_core::trains::MAX_PARTS {
         return Err("Train render part budget exceeded".into());
     }
     let mut merged = BTreeMap::<usize, MeshBatch>::new();
+    let mut moving = Vec::new();
     let by_cell: BTreeMap<_, _> = parts.iter().map(|part| (part.offset, part)).collect();
     let mut frozen_openings = openings::frozen_openings(parts, blocks, templates, palettes)?;
     for (index, part) in parts.iter().enumerate() {
@@ -119,7 +142,19 @@ fn geometry(
                 std::array::from_fn(|axis| anchor[axis] + i64::from(part.offset[axis])),
             )?
         };
-        for batch in batches {
+        for mut batch in batches {
+            if animated && let Some(&role) = templates.train_moving_materials.get(&batch.material) {
+                for point in &mut batch.positions {
+                    for (axis, offset) in part.offset.into_iter().enumerate() {
+                        point[axis] += f32::from(offset);
+                    }
+                }
+                moving.push(AnimatedBatch {
+                    batch,
+                    animation: animation::descriptor(part, role),
+                });
+                continue;
+            }
             let target = merged.entry(batch.material).or_insert_with(|| MeshBatch {
                 material: batch.material,
                 ..default()
@@ -159,7 +194,10 @@ fn geometry(
             }
         }
     }
-    Ok(merged.into_values().collect())
+    Ok(PreparedGeometry {
+        batches: merged.into_values().collect(),
+        animated: moving,
+    })
 }
 
 fn release_meshes(meshes: &mut Assets<Mesh>, handles: impl IntoIterator<Item = Handle<Mesh>>) {
@@ -172,7 +210,14 @@ fn retire(placed: Placed, commands: &mut Commands, meshes: &mut Assets<Mesh>) {
     release_meshes(meshes, placed.meshes);
 }
 
-type VehicleSource<'a> = (u64, [i64; 3], &'a [TrainPart], &'a BlockViews);
+type VehicleSource<'a> = (
+    u64,
+    [i64; 3],
+    &'a [TrainPart],
+    &'a BlockViews,
+    ([f64; 3], [f64; 4]),
+    [[f64; 3]; 2],
+);
 fn sources<'a>(
     session: Option<&'a terra_network::client::ClientSession>,
     access: Option<&WorldAccess>,
@@ -191,6 +236,8 @@ fn sources<'a>(
                     vehicle.anchor,
                     vehicle.parts.as_slice(),
                     &vehicle.blocks,
+                    vehicle.model_transform(),
+                    vehicle.model_bounds(),
                 )
             })
             .collect();
@@ -207,6 +254,8 @@ fn sources<'a>(
                     vehicle.anchor,
                     vehicle.parts.as_slice(),
                     &vehicle.blocks,
+                    vehicle.model_transform(),
+                    vehicle.model_bounds(),
                 )
             })
             .collect();
@@ -214,6 +263,7 @@ fn sources<'a>(
     Vec::new()
 }
 
+#[cfg(test)]
 fn model_translation(anchor: [i64; 3]) -> Vec3 {
     Vec3::new(
         anchor[0] as f32,
@@ -222,14 +272,21 @@ fn model_translation(anchor: [i64; 3]) -> Vec3 {
     )
 }
 
-fn visible(anchor: [i64; 3], parts: &[TrainPart], chunks: &ChunkStore) -> bool {
-    parts.iter().any(|part| {
-        chunks.loaded.contains_key(
-            &terra_voxel::global_to_section(std::array::from_fn(|axis| {
-                anchor[axis] + i64::from(part.offset[axis])
-            }))
-            .0,
-        )
+fn pose_transform(pose: ([f64; 3], [f64; 4])) -> Transform {
+    Transform::from_translation(Vec3::from_array(pose.0.map(|value| value as f32)))
+        .with_rotation(Quat::from_array(pose.1.map(|value| value as f32)))
+}
+fn visible(bounds: [[f64; 3]; 2], chunks: &ChunkStore) -> bool {
+    let low = terra_voxel::global_to_section(bounds[0].map(|v| v.floor() as i64)).0;
+    let high = terra_voxel::global_to_section(bounds[1].map(|v| v.floor() as i64)).0;
+    (low.x..=high.x).any(|x| {
+        (low.y..=high.y).any(|y| {
+            (low.z..=high.z).any(|z| {
+                chunks
+                    .loaded
+                    .contains_key(&terra_voxel::SectionPos::new(x, y, z))
+            })
+        })
     })
 }
 
@@ -308,7 +365,7 @@ fn synchronize(
         &scene.journal,
     )
     .into_iter()
-    .filter(|(_, anchor, parts, _)| visible(*anchor, parts, &scene.chunks))
+    .filter(|(_, _, _, _, _, bounds)| visible(*bounds, &scene.chunks))
     .collect::<Vec<_>>();
     let live: BTreeSet<_> = desired.iter().map(|(id, ..)| *id).collect();
     let removed = state
@@ -327,9 +384,11 @@ fn synchronize(
         .building
         .iter()
         .filter(|(id, job)| {
-            !desired.iter().any(|(current, anchor, parts, blocks)| {
-                *id == current && job.key.matches(*anchor, parts, blocks)
-            })
+            !desired
+                .iter()
+                .any(|(current, anchor, parts, blocks, _, _)| {
+                    *id == current && job.key.matches(*anchor, parts, blocks)
+                })
         })
         .map(|(&id, _)| id)
         .collect::<Vec<_>>();
@@ -340,7 +399,10 @@ fn synchronize(
     if scene.blocks.templates.is_none() {
         return;
     }
-    for (id, anchor, parts, blocks) in desired {
+    for (id, anchor, parts, blocks, pose, _) in desired {
+        if let Some(placed) = state.placed.get(&id) {
+            commands.entity(placed.root).insert(pose_transform(pose));
+        }
         if state
             .placed
             .get(&id)
@@ -377,12 +439,13 @@ fn synchronize(
             let templates = scene.blocks.templates.as_ref().unwrap().clone();
             let palettes = state.palettes.clone();
             let task = AsyncComputeTaskPool::get().spawn(async move {
-                geometry(
+                compose_geometry(
                     &input.parts,
                     &input.blocks,
                     &templates,
                     input.anchor,
                     &palettes,
+                    true,
                 )
             });
             state.building.insert(id, Building { key, task });
@@ -395,7 +458,7 @@ fn synchronize(
             continue;
         };
         let key = state.building.remove(&id).unwrap().key;
-        let batches = match result {
+        let prepared = match result {
             Ok(batches) => batches,
             Err(error) => {
                 tracing::error!(vehicle=id,%error,"Cannot compose assembled train");
@@ -403,8 +466,10 @@ fn synchronize(
                 continue;
             }
         };
-        if batches
+        if prepared
+            .batches
             .iter()
+            .chain(prepared.animated.iter().map(|part| &part.batch))
             .any(|batch| scene.blocks.materials.get(batch.material).is_none())
         {
             continue;
@@ -412,12 +477,12 @@ fn synchronize(
         let root = commands
             .spawn((
                 Name::new("Assembled train"),
-                Transform::from_translation(model_translation(anchor)),
+                pose_transform(pose),
                 Visibility::Inherited,
             ))
             .id();
-        let mut handles = Vec::with_capacity(batches.len());
-        for batch in batches {
+        let mut handles = Vec::with_capacity(prepared.batches.len() + prepared.animated.len());
+        for batch in prepared.batches {
             let mesh = meshes.add(crate::previews::batch_mesh(&batch));
             handles.push(mesh.clone());
             let mut entity = commands.spawn((
@@ -435,6 +500,22 @@ fn synchronize(
             {
                 entity.insert(bevy::light::NotShadowCaster);
             }
+        }
+        for part in prepared.animated {
+            let mesh = meshes.add(crate::previews::batch_mesh(&part.batch));
+            handles.push(mesh.clone());
+            commands.spawn((
+                Name::new("Animated train running gear"),
+                Mesh3d(mesh),
+                MeshMaterial3d(scene.blocks.materials[part.batch.material].clone()),
+                Transform::default(),
+                Visibility::Inherited,
+                ChildOf(root),
+                animation::AnimatedPart {
+                    vehicle: id,
+                    animation: part.animation,
+                },
+            ));
         }
         state.failed.remove(&id);
         state.placed.insert(

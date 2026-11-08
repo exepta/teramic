@@ -1,0 +1,125 @@
+{
+  "schema_version": 1,
+  "id": 233,
+  "name": "Lokrad mittel",
+  "description": "Functional running gear. Wheel rotation follows the actual travelled distance of an assembled train.",
+  "creative_category": "building",
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/train_wheel_medium.gltf",
+  "struct_block": true,
+  "hardness": 1.8,
+  "resistance": 12,
+  "required_tool": "pickaxe",
+  "mining_level": 0,
+  "collision_boxes": [
+    {
+      "minimum": [
+        0.4,
+        0.12,
+        0.12
+      ],
+      "maximum": [
+        0.6,
+        0.88,
+        0.88
+      ]
+    },
+    {
+      "minimum": [
+        0,
+        0.425,
+        0.4503921629175389
+      ],
+      "maximum": [
+        0.5,
+        0.44375,
+        0.5496078370824611
+      ]
+    },
+    {
+      "minimum": [
+        0,
+        0.44375,
+        0.4350480947161671
+      ],
+      "maximum": [
+        0.5,
+        0.4625,
+        0.5649519052838329
+      ]
+    },
+    {
+      "minimum": [
+        0,
+        0.4625,
+        0.4273815622586109
+      ],
+      "maximum": [
+        0.5,
+        0.48125,
+        0.5726184377413891
+      ]
+    },
+    {
+      "minimum": [
+        0,
+        0.48125,
+        0.425
+      ],
+      "maximum": [
+        0.5,
+        0.5,
+        0.575
+      ]
+    },
+    {
+      "minimum": [
+        0,
+        0.5,
+        0.425
+      ],
+      "maximum": [
+        0.5,
+        0.51875,
+        0.575
+      ]
+    },
+    {
+      "minimum": [
+        0,
+        0.51875,
+        0.4273815622586109
+      ],
+      "maximum": [
+        0.5,
+        0.5375,
+        0.5726184377413891
+      ]
+    },
+    {
+      "minimum": [
+        0,
+        0.5375,
+        0.4350480947161671
+      ],
+      "maximum": [
+        0.5,
+        0.55625,
+        0.5649519052838329
+      ]
+    },
+    {
+      "minimum": [
+        0,
+        0.55625,
+        0.4503921629175389
+      ],
+      "maximum": [
+        0.5,
+        0.575,
+        0.5496078370824611
+      ]
+    }
+  ]
+}

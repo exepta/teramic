@@ -1,4 +1,4 @@
-//! Parked vehicle collision uses the same authored part volumes as picking.
+//! Moving vehicle collision uses the same authored part volumes as picking.
 use avian3d::prelude::*;
 use bevy::{
     prelude::*,
@@ -19,9 +19,43 @@ pub struct TrainCollisionViews {
     identity: Arc<()>,
     epoch: u64,
     vehicles: Vec<VehicleView>,
-    retirements: BTreeMap<u64, Vec<(terra_voxel::SectionPos, u64)>>,
+    retirements: BTreeMap<u64, Retirement>,
+}
+struct Retirement {
+    required: Vec<(terra_voxel::SectionPos, u64)>,
+    cells: Vec<[i64; 3]>,
+    turns: u8,
+    pose: ([f64; 3], [f64; 4]),
+    bounds: [[f64; 3]; 2],
 }
 impl TrainCollisionViews {
+    /// Compact motion packets update rigid poses without invalidating mesh cooks.
+    pub fn set_motions(
+        &mut self,
+        frames: &[terra_core::train_motion::TrainMotionFrame],
+    ) -> Result<bool, String> {
+        if frames.len() > terra_core::trains::MAX_VEHICLES
+            || frames
+                .iter()
+                .any(|frame| frame.id == 0 || !frame.motion.valid())
+        {
+            return Err("Invalid train motion packet".into());
+        }
+        let mut changed = false;
+        for frame in frames {
+            if let Some(vehicle) = self
+                .vehicles
+                .iter_mut()
+                .find(|vehicle| vehicle.id == frame.id)
+                && frame.revision >= vehicle.revision
+            {
+                changed |= vehicle.motion != frame.motion;
+                vehicle.motion = frame.motion;
+                vehicle.revision = frame.revision;
+            }
+        }
+        Ok(changed)
+    }
     /// Called while consuming the ordered train packet, before its following
     /// section snapshots. A newer complete section proves restoration or any
     /// later coalesced edit, without requiring an intermediate material value.
@@ -45,8 +79,22 @@ impl TrainCollisionViews {
         let mut removed = Vec::new();
         for previous in &self.vehicles {
             if !vehicles.iter().any(|vehicle| vehicle.id == previous.id) {
-                let checkpoints = checkpoints(previous.anchor, &previous.parts, journal, true)?;
-                removed.push((previous.id, checkpoints));
+                let cells = previous.disassembly_cells().unwrap_or_else(|| {
+                    (0..previous.parts.len())
+                        .filter_map(|index| previous.world_cell(index))
+                        .collect()
+                });
+                let required = checkpoints(&cells, journal, true)?;
+                removed.push((
+                    previous.id,
+                    Retirement {
+                        required,
+                        cells,
+                        turns: previous.disassembly_turns().unwrap_or(0),
+                        pose: previous.model_transform(),
+                        bounds: previous.model_bounds(),
+                    },
+                ));
             }
         }
         // The client drains at most eight reliable controls per update. The
@@ -63,7 +111,7 @@ impl TrainCollisionViews {
     }
     /// Cargo, ownership, coupling and presentation revisions do not rebuild collision.
     fn set_views(&mut self, vehicles: &[VehicleView]) -> bool {
-        if self.vehicles.len() == vehicles.len()
+        let unchanged = self.vehicles.len() == vehicles.len()
             && self.vehicles.iter().zip(vehicles).all(|(old, new)| {
                 old.id == new.id
                     && same_geometry(
@@ -74,13 +122,12 @@ impl TrainCollisionViews {
                         &new.parts,
                         &new.blocks,
                     )
-            })
-        {
-            return false;
-        }
+            });
         self.vehicles = vehicles.to_vec();
-        self.epoch = self.epoch.wrapping_add(1);
-        true
+        if !unchanged {
+            self.epoch = self.epoch.wrapping_add(1);
+        }
+        !unchanged
     }
 }
 
@@ -109,10 +156,16 @@ fn same_geometry(
 #[derive(Component)]
 pub struct TrainCollider(pub u64);
 
+#[derive(SystemSet, Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct TrainPoseSet;
+
 struct Entry {
     anchor: [i64; 3],
     parts: Vec<TrainPart>,
     blocks: BlockViews,
+    pose: ([f64; 3], [f64; 4]),
+    restore_cells: Vec<[i64; 3]>,
+    restore_turns: u8,
     bounds: [[f64; 3]; 2],
     entity: Option<Entity>,
     active: bool,
@@ -128,19 +181,13 @@ struct ColliderJob {
 }
 
 fn checkpoints(
-    anchor: [i64; 3],
-    parts: &[TrainPart],
+    cells: &[[i64; 3]],
     journal: &EditJournal,
     after: bool,
 ) -> Result<Vec<(terra_voxel::SectionPos, u64)>, String> {
-    let sections: BTreeSet<_> = parts
+    let sections: BTreeSet<_> = cells
         .iter()
-        .map(|part| {
-            terra_voxel::global_to_section(std::array::from_fn(|axis| {
-                anchor[axis] + i64::from(part.offset[axis])
-            }))
-            .0
-        })
+        .map(|cell| terra_voxel::global_to_section(*cell).0)
         .collect();
     if sections.len() > 64 {
         return Err("Train retirement exceeds section budget".into());
@@ -220,6 +267,56 @@ pub(crate) fn install(app: &mut App) {
             sync.after(terra_world::streaming::StreamingSet::Receive),
         )
         .add_systems(FixedUpdate, activate.after(PhysicsSystems::Writeback));
+    app.add_systems(
+        FixedUpdate,
+        update_poses
+            .in_set(TrainPoseSet)
+            .before(PhysicsSystems::First),
+    );
+}
+
+fn update_poses(
+    journal: Res<EditJournal>,
+    views: Res<TrainCollisionViews>,
+    access: Option<Res<WorldAccess>>,
+    mut state: ResMut<TrainCollisionState>,
+    mut bodies: Query<(&mut Position, &mut Rotation, &mut Transform), With<TrainCollider>>,
+) {
+    macro_rules! update {
+        ($vehicles:expr) => {
+            for vehicle in $vehicles {
+                let Some(entry) = state.entries.get_mut(&vehicle.id) else {
+                    continue;
+                };
+                let pose = vehicle.model_transform();
+                if entry.pose != pose {
+                    entry.pose = pose;
+                    entry.bounds = vehicle.model_bounds();
+                    if let Some(cells) = vehicle.disassembly_cells() {
+                        entry.restore_cells = cells;
+                        entry.restore_turns = vehicle.disassembly_turns().unwrap_or(0);
+                    }
+                }
+                if let Some(entity) = entry.entity
+                    && let Ok((mut position, mut rotation, mut transform)) = bodies.get_mut(entity)
+                {
+                    let translation = Vec3::from_array(pose.0.map(|value| value as f32));
+                    let orientation = Quat::from_array(pose.1.map(|value| value as f32));
+                    if position.0 != translation || rotation.0 != orientation {
+                        position.0 = translation;
+                        rotation.0 = orientation;
+                        transform.translation = translation;
+                        transform.rotation = orientation;
+                    }
+                }
+            }
+        };
+    }
+    if matches!(access.as_deref(), Some(WorldAccess::Replica { .. })) {
+        update!(&views.vehicles);
+    } else {
+        update!(journal.gameplay().trains.vehicles.values());
+    }
 }
 
 fn sync(
@@ -255,6 +352,13 @@ fn sync(
                         vehicle.anchor,
                         vehicle.parts.as_slice(),
                         &vehicle.blocks,
+                        vehicle.model_transform(),
+                        vehicle.disassembly_cells().unwrap_or_else(|| {
+                            (0..vehicle.parts.len())
+                                .filter_map(|index| vehicle.world_cell(index))
+                                .collect()
+                        }),
+                        vehicle.disassembly_turns().unwrap_or(0),
                         vehicle.model_bounds(),
                     )
                 })
@@ -271,6 +375,13 @@ fn sync(
                         vehicle.anchor,
                         vehicle.parts.as_slice(),
                         &vehicle.blocks,
+                        vehicle.model_transform(),
+                        vehicle.disassembly_cells().unwrap_or_else(|| {
+                            (0..vehicle.parts.len())
+                                .filter_map(|index| vehicle.world_cell(index))
+                                .collect()
+                        }),
+                        vehicle.disassembly_turns().unwrap_or(0),
                         vehicle.model_bounds(),
                     )
                 })
@@ -286,14 +397,31 @@ fn sync(
             let entry = state.entries.get_mut(&id).unwrap();
             if !entry.retiring {
                 entry.retiring = true;
+                if let Some(retirement) = retirement_marks.get(&id) {
+                    entry.restore_cells.clone_from(&retirement.cells);
+                    entry.restore_turns = retirement.turns;
+                    entry.pose = retirement.pose;
+                    entry.bounds = retirement.bounds;
+                    if let Some(entity) = entry.entity {
+                        let position = Vec3::from_array(entry.pose.0.map(|value| value as f32));
+                        let rotation = Quat::from_array(entry.pose.1.map(|value| value as f32));
+                        commands.entity(entity).insert((
+                            Position(position),
+                            Rotation(rotation),
+                            Transform::from_translation(position).with_rotation(rotation),
+                        ));
+                    }
+                }
                 entry.checkpoints = if replica {
-                    retirement_marks.get(&id).cloned()
+                    retirement_marks
+                        .get(&id)
+                        .map(|retirement| retirement.required.clone())
                 } else {
-                    checkpoints(entry.anchor, &entry.parts, &journal, false).ok()
+                    checkpoints(&entry.restore_cells, &journal, false).ok()
                 };
             }
         }
-        for (id, anchor, parts, blocks, bounds) in vehicles {
+        for (id, anchor, parts, blocks, pose, restore_cells, restore_turns, bounds) in vehicles {
             if state.entries.get(&id).is_some_and(|old| {
                 same_geometry(old.anchor, &old.parts, &old.blocks, anchor, parts, blocks)
             }) {
@@ -332,6 +460,9 @@ fn sync(
                     anchor,
                     parts: parts.to_vec(),
                     blocks: blocks.clone(),
+                    pose,
+                    restore_cells,
+                    restore_turns,
                     bounds,
                     entity: None,
                     active: false,
@@ -398,25 +529,19 @@ fn sync(
             bevy::log::error!(vehicle = id, "Train collision geometry could not be built");
             continue;
         };
-        let translation = Vec3::from_array(std::array::from_fn(|axis| {
-            (entry.anchor[axis] as f64
-                + if axis == 1 {
-                    terra_core::trains::MODEL_Y_OFFSET
-                } else {
-                    0.0
-                }) as f32
-        }));
+        let translation = Vec3::from_array(entry.pose.0.map(|value| value as f32));
+        let orientation = Quat::from_array(entry.pose.1.map(|value| value as f32));
         entry.entity = Some(
             commands
                 .spawn((
                     TrainCollider(id),
-                    RigidBody::Static,
+                    RigidBody::Kinematic,
                     collider,
-                    Friction::new(0.0),
+                    Friction::new(0.8),
                     Restitution::new(0.0),
                     Position(translation),
-                    Rotation::IDENTITY,
-                    Transform::from_translation(translation),
+                    Rotation(orientation),
+                    Transform::from_translation(translation).with_rotation(orientation),
                 ))
                 .id(),
         );
@@ -464,7 +589,9 @@ fn restored(
 ) -> bool {
     let mut sections = BTreeSet::new();
     for (index, part) in entry.parts.iter().enumerate() {
-        let cell = std::array::from_fn(|axis| entry.anchor[axis] + i64::from(part.offset[axis]));
+        let cell = entry.restore_cells.get(index).copied().unwrap_or_else(|| {
+            std::array::from_fn(|axis| entry.anchor[axis] + i64::from(part.offset[axis]))
+        });
         let owner = terra_voxel::global_to_section(cell).0;
         if !chunks.loaded.contains_key(&owner) {
             continue;
@@ -483,6 +610,7 @@ fn restored(
         }
         sections.insert(owner);
         for bounds in terra_core::trains::part_shapes(part, entry.blocks.get(&(index as u16))) {
+            let bounds = bounds.rotated_y(entry.restore_turns);
             let low = terra_voxel::global_to_section(std::array::from_fn(|axis| {
                 (cell[axis] as f64 + bounds.minimum[axis]).floor() as i64
             }))

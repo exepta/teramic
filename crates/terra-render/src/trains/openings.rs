@@ -1,6 +1,6 @@
 //! Frozen vehicle openings use the same authored leaves and derived joinery as world openings.
 use crate::{
-    blocks::{BlockAssets, PrimitiveTemplate, TemplateSet},
+    blocks::{BlockAssets, TemplateSet},
     meshing::builder::MeshBatch,
 };
 use bevy::prelude::*;
@@ -18,54 +18,13 @@ pub(super) fn palettes(assets: &BlockAssets, materials: &Assets<StandardMaterial
     };
     templates
         .blocks
-        .iter()
-        .filter_map(|(&id, block)| {
+        .keys()
+        .filter_map(|&id| {
             if !objects::is_opening(id) {
                 return None;
             }
-            let material = |primitive: &PrimitiveTemplate| {
-                assets
-                    .materials
-                    .get(primitive.material)
-                    .and_then(|handle| materials.get(handle))
-            };
-            let wood = block
-                .model
-                .iter()
-                .filter(|primitive| {
-                    !templates.hinge_materials.contains(&primitive.material)
-                        && material(primitive).is_some_and(|material| {
-                            material.alpha_mode != AlphaMode::Blend && material.metallic < 0.25
-                        })
-                })
-                .map(|primitive| primitive.material)
-                .collect::<Vec<_>>();
-            let base = *wood.first()?;
-            let metal = block
-                .model
-                .iter()
-                .find(|primitive| {
-                    material(primitive).is_some_and(|material| material.metallic >= 0.25)
-                })
-                .map_or(base, |primitive| primitive.material);
-            let glass = block
-                .model
-                .iter()
-                .find(|primitive| {
-                    material(primitive)
-                        .is_some_and(|material| material.alpha_mode == AlphaMode::Blend)
-                })
-                .map_or(base, |primitive| primitive.material);
-            Some((
-                id,
-                [
-                    base,
-                    *wood.get(1).unwrap_or(&base),
-                    *wood.get(2).unwrap_or(&base),
-                    metal,
-                    glass,
-                ],
-            ))
+            crate::openings::palette::material_palette(id, assets, materials)
+                .map(|palette| (id, palette))
         })
         .collect()
 }
@@ -373,7 +332,7 @@ fn grouped_geometry(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::blocks::{BlockTemplate, definitions::BlockRenderKind};
+    use crate::blocks::{BlockTemplate, PrimitiveTemplate, definitions::BlockRenderKind};
     use std::sync::Arc;
     use terra_core::{WoodSpecies, block_shapes::ShapeBox};
 

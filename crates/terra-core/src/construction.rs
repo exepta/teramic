@@ -23,15 +23,20 @@ fn shared_steps(first: usize, second: usize) -> usize {
 pub fn is_shape(material: u16) -> bool {
     (FIRST..=LAST).contains(&material)
         || matches!(material, 104..=105 | 136..=138 | BALLAST_STAIRS | BALLAST_SLAB)
+        || crate::locomotive_parts::is_metal_shape(material)
 }
 pub fn is_fence(material: u16) -> bool {
     (90..=97).contains(&material) || material == 138
 }
 pub fn is_slab(material: u16) -> bool {
-    (82..=89).contains(&material) || matches!(material, 105 | 137 | BALLAST_SLAB)
+    (82..=89).contains(&material)
+        || matches!(material, 105 | 137 | BALLAST_SLAB)
+        || crate::locomotive_parts::is_slab(material)
 }
 pub fn is_stair(material: u16) -> bool {
-    (74..=81).contains(&material) || matches!(material, 104 | 136 | BALLAST_STAIRS)
+    (74..=81).contains(&material)
+        || matches!(material, 104 | 136 | BALLAST_STAIRS)
+        || crate::locomotive_parts::is_stair(material)
 }
 /// Saved sand fences keep their ID and shape, but cannot be obtained anymore.
 pub fn obtainable(material: u16) -> bool {
@@ -40,8 +45,24 @@ pub fn obtainable(material: u16) -> bool {
 
 pub const DOUBLE_SLAB: u8 = 9;
 const HALF_FACINGS: [u8; 6] = [0, 4, 5, 6, 7, 8];
-pub const SLAB_MATERIALS: [u16; 11] = [82, 83, 84, 85, 86, 87, 88, 89, 105, 137, BALLAST_SLAB];
-pub const LAST_MIXED_SLAB: u8 = 75;
+pub const SLAB_MATERIALS: [u16; 15] = [
+    82,
+    83,
+    84,
+    85,
+    86,
+    87,
+    88,
+    89,
+    105,
+    137,
+    BALLAST_SLAB,
+    271,
+    277,
+    283,
+    289,
+];
+pub const LAST_MIXED_SLAB: u8 = 99;
 
 /// Weather retains legacy 1..=7 poses. New player layers use a disjoint range,
 /// so later weather reconciliation never mistakes their height for ownership.
@@ -294,10 +315,19 @@ fn rotate_box(shape: ShapeBox, basis: [[i8; 3]; 3]) -> ShapeBox {
 /// Shared bounded profile for rendering, ray casting and physics. Neighbor order:
 /// -X,+X,-Y,+Y,-Z,+Z. Corners are evaluated in the stair's support plane.
 pub fn placed_boxes(material: u16, facing: u8, neighbors: [Option<(u16, u8)>; 6]) -> Vec<ShapeBox> {
+    if let Some(grate) = crate::locomotive_parts::grate_boxes(material, facing) {
+        return grate;
+    }
     if is_slab(material) {
         return vec![slab_bounds(facing)];
     }
     if !is_stair(material) {
+        if crate::locomotive_parts::is_metal_shape(material) {
+            return boxes(material)
+                .iter()
+                .map(|bounds| bounds.rotated_y(facing))
+                .collect();
+        }
         return boxes(material).to_vec();
     }
     let basis = stair_basis(facing);
@@ -459,6 +489,9 @@ pub fn base_material(material: u16) -> Option<u16> {
     }
 }
 pub fn boxes(material: u16) -> &'static [ShapeBox] {
+    if crate::locomotive_parts::is_metal_shape(material) {
+        return crate::locomotive_parts::base_boxes(material);
+    }
     #[derive(Deserialize)]
     struct Definition {
         id: u16,

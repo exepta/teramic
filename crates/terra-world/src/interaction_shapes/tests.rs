@@ -1,6 +1,86 @@
 use super::*;
 
 #[test]
+fn train_grates_preserve_real_collision_holes_when_rotated_and_combined_with_solid_slabs() {
+    let position = [-17, 15, 31];
+    let properties = BlockPropertiesCatalog::default();
+    let mut cases = Vec::new();
+    for material in 288..=293 {
+        let poses = if material == 290 {
+            24
+        } else if material == 289 {
+            10
+        } else {
+            4
+        };
+        cases.extend((0..poses).map(|facing| (material, facing)));
+    }
+    for (first, second) in [(82, 289), (289, 82)] {
+        for facing in [0, 4, 5, 6, 7, 8] {
+            cases.push((
+                first,
+                terra_core::construction::merged_slab(first, facing, second).unwrap(),
+            ));
+        }
+    }
+    for (material, facing) in cases {
+        let mut journal = EditJournal::default();
+        journal.record(position, material).unwrap();
+        journal
+            .set_object_state(
+                position,
+                Some(BlockObjectState {
+                    facing,
+                    ..Default::default()
+                }),
+            )
+            .unwrap();
+        let mut picking = Vec::new();
+        let mut collision = Vec::new();
+        let block_at = |p| Some(if p == position { material } else { 0 });
+        assert!(visit_boxes_with(
+            &journal,
+            &properties,
+            position,
+            block_at,
+            |bounds| picking.push(bounds)
+        ));
+        assert!(visit_collision_boxes_with(
+            &journal,
+            &properties,
+            position,
+            block_at,
+            |bounds| collision.push(bounds)
+        ));
+        assert_eq!(picking, collision);
+        let expected = terra_core::locomotive_parts::grate_boxes(material, facing).unwrap();
+        assert_eq!(picking.len(), expected.len());
+        for (actual, expected) in picking.iter().zip(expected) {
+            for (axis, coordinate) in position.iter().enumerate() {
+                assert!(
+                    (actual.minimum[axis] - *coordinate as f64 - expected.minimum[axis]).abs()
+                        < 1e-9
+                );
+                assert!(
+                    (actual.maximum[axis] - *coordinate as f64 - expected.maximum[axis]).abs()
+                        < 1e-9
+                );
+            }
+        }
+        if matches!(material, 288 | 289) && facing == 0 {
+            let air =
+                std::array::from_fn(|axis| position[axis] as f64 + [0.125, 0.25, 0.125][axis]);
+            assert!(
+                picking
+                    .iter()
+                    .all(|bounds| !bounds.intersects(air, air.map(|v| v + 0.01))),
+                "a ray/body must be able to pass through a real grate opening"
+            );
+        }
+    }
+}
+
+#[test]
 fn funnel_legs_exist_only_above_a_loaded_full_floor_without_removing_its_neck() {
     let position = [8, 3, 8];
     let properties = BlockPropertiesCatalog::default();

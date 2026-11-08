@@ -371,7 +371,7 @@ pub fn layout(
     if terra_core::beds::is_bed(material) {
         state.facing = (state.facing + 2) % 4;
     }
-    if matches!(material,28|59|65..=67|71..=73|139) {
+    if matches!(material, 28 | 59 | 71..=73) || crate::objects::is_door(material) {
         let direction = if terra_core::beds::is_bed(material) {
             [[0, 0, 1], [1, 0, 0], [0, 0, -1], [-1, 0, 0]][usize::from(state.facing % 4)]
         } else if material == 28 {
@@ -1785,7 +1785,9 @@ mod tests {
     }
     #[test]
     fn construction_and_train_parts_attach_to_every_face_without_a_floor() {
-        for material in [3, 29, 70, 210, 211, 212, 213, 214, 215, 216, 217] {
+        for material in [
+            3, 29, 70, 210, 211, 212, 213, 214, 215, 216, 217, 218, 219, 247, 268, 270, 288,
+        ] {
             for normal in crate::objects::DIRECTIONS {
                 let (mut chunks, mut journal) = fixture();
                 let clicked = [7, 7, 7];
@@ -1828,10 +1830,43 @@ mod tests {
             }
         }
     }
+
+    #[test]
+    fn full_train_frames_support_carpet_and_potted_plants_without_hidden_air_gaps() {
+        for frame in [210, 212, 270, 276, 282, 288] {
+            for decoration in [
+                terra_core::textiles::WHITE_CARPET,
+                terra_core::flower_pot::MATERIAL,
+            ] {
+                let (mut chunks, mut journal) = fixture();
+                let floor = [7, 5, 7];
+                let position = [7, 6, 7];
+                place_kinetic(&mut chunks, &mut journal, floor, frame, 0);
+                let hit = terra_voxel::blocks::BlockHit {
+                    position: floor,
+                    normal: [0, 1, 0],
+                    distance: 2.0,
+                };
+                let plan = resolve(
+                    &chunks,
+                    &journal,
+                    hit,
+                    terra_core::ItemKind::Block(decoration),
+                    ([7.5, 8.5, 7.5], [0.0, -1.0, 0.0]),
+                    [0.0; 2],
+                    true,
+                )
+                .unwrap_or_else(|error| panic!("{decoration} on frame {frame}: {error}"));
+                assert_eq!(plan.edits[0].position, position);
+                assert_eq!(plan.edits[0].material, decoration);
+                environment(&plan, &chunks, &journal, true).unwrap();
+            }
+        }
+    }
     #[test]
     fn shared_furniture_layout_keeps_all_four_facings_and_real_multicell_axes() {
         let (chunks, journal) = fixture();
-        for material in [28, 29, 59, 65, 66, 67, 68, 69, 70, 71, 72, 73, 99] {
+        for material in [28, 29, 59, 65, 66, 67, 68, 69, 70, 71, 72, 73, 99, 247, 248] {
             for facing in 0..4 {
                 let yaw = facing as f32 * std::f32::consts::FRAC_PI_2;
                 let plan =
@@ -1856,7 +1891,7 @@ mod tests {
                     assert_eq!(plan.edits.len(), 2);
                     assert_eq!(
                         peer[1],
-                        if matches!(material, 59 | 65..=67 | 139) {
+                        if matches!(material, 59 | 65..=67 | 139 | 248) {
                             3
                         } else {
                             2

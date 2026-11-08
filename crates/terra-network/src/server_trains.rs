@@ -1,4 +1,4 @@
-//! Parked-vehicle authority. Every command rechecks ownership, reach and terrain rights.
+//! Authoritative train actions, rail motion and compact private/public replication.
 use super::*;
 use crate::protocol::trains::{
     TrainAction, TrainCargoSnapshot, TrainCommand, TrainOutcome, TrainResult,
@@ -81,8 +81,9 @@ fn overlaps_vehicle(car: &Vehicle, low: [f64; 3], high: [f64; 3]) -> bool {
     if !(0..3).all(|axis| bounds[0][axis] < high[axis] && bounds[1][axis] > low[axis]) {
         return false;
     }
-    car.parts.iter().enumerate().any(|(index, part)| {
-        terra_world::trains::part_boxes_with(car.model_origin(), part, car.part_shapes(index))
+    car.parts.iter().enumerate().any(|(index, _part)| {
+        car.transformed_shapes(index)
+            .into_iter()
             .any(|shape| shape.intersects(low, high))
     })
 }
@@ -187,12 +188,18 @@ fn safe_exit(
 #[derive(Resource, Default)]
 pub(super) struct TrainRuntime {
     peers: HashMap<terra_core::PlayerId, TrainPeer>,
+    rail_cache: terra_world::rails::NetworkCache,
+    ticks: u64,
+    retired_motions: Vec<terra_core::train_motion::TrainMotionFrame>,
+    fuel_updates: Vec<(PlayerUuid, TrainCargoSnapshot)>,
 }
 struct TrainPeer {
     request: u64,
     tokens: f64,
     updated: Instant,
     sent: Option<u64>,
+    motion_tick: u64,
+    motions: BTreeMap<u64, terra_core::train_motion::TrainMotionFrame>,
 }
 impl Default for TrainPeer {
     fn default() -> Self {
@@ -201,6 +208,8 @@ impl Default for TrainPeer {
             tokens: 12.0,
             updated: Instant::now(),
             sent: None,
+            motion_tick: 0,
+            motions: BTreeMap::new(),
         }
     }
 }
@@ -241,8 +250,21 @@ fn touch(world: &mut ControlWorld) -> Result<(), TrainError> {
     game.trains.revision = train_revision;
     Ok(())
 }
-fn reach(peer: &Peer, world: &ControlWorld, cell: [i64; 3]) -> Result<(), TrainError> {
-    if cell.iter().any(|value| value.unsigned_abs() > 990_000) {
+#[derive(Clone, Copy)]
+enum ReachTarget {
+    Cell([i64; 3]),
+    Part { vehicle: u64, index: u16 },
+}
+fn reach_point(
+    peer: &Peer,
+    world: &ControlWorld,
+    point: [f64; 3],
+    target: ReachTarget,
+) -> Result<(), TrainError> {
+    if point
+        .iter()
+        .any(|value| !value.is_finite() || value.abs() > 990_000.5)
+    {
         return Err(TrainError::Invalid);
     }
     let body = world
@@ -252,7 +274,6 @@ fn reach(peer: &Peer, world: &ControlWorld, cell: [i64; 3]) -> Result<(), TrainE
     let eye = (body.translation + Vec3::Y * PLAYER_EYE_OFFSET)
         .to_array()
         .map(f64::from);
-    let point = cell.map(|value| value as f64 + 0.5);
     let delta = std::array::from_fn::<_, 3, _>(|axis| point[axis] - eye[axis]);
     let distance = delta.iter().map(|value| value * value).sum::<f64>().sqrt();
     if distance > 6.0 {
@@ -266,14 +287,19 @@ fn reach(peer: &Peer, world: &ControlWorld, cell: [i64; 3]) -> Result<(), TrainE
             distance.min(8.0),
         )
         && hit.distance + 0.05 < distance
-        && world
-            .journal
-            .gameplay()
-            .trains
-            .vehicles
-            .get(&hit.vehicle)
-            .and_then(|car| car.part_cell(usize::from(hit.part)))
-            != Some(cell)
+        && match target {
+            ReachTarget::Part { vehicle, index } => hit.vehicle != vehicle || hit.part != index,
+            ReachTarget::Cell(cell) => {
+                world
+                    .journal
+                    .gameplay()
+                    .trains
+                    .vehicles
+                    .get(&hit.vehicle)
+                    .and_then(|car| car.world_cell(usize::from(hit.part)))
+                    != Some(cell)
+            }
+        }
     {
         return Err(TrainError::OutOfReach);
     }
@@ -286,12 +312,49 @@ fn reach(peer: &Peer, world: &ControlWorld, cell: [i64; 3]) -> Result<(), TrainE
             delta.map(|value| value / distance),
             distance + 0.05,
         )
-        && hit.position != cell
+        && !matches!(target, ReachTarget::Cell(cell) if hit.position == cell)
         && hit.distance + 0.05 < distance
     {
         return Err(TrainError::OutOfReach);
     }
     Ok(())
+}
+fn reach(peer: &Peer, world: &ControlWorld, cell: [i64; 3]) -> Result<(), TrainError> {
+    if cell.iter().any(|value| value.unsigned_abs() > 990_000) {
+        return Err(TrainError::Invalid);
+    }
+    reach_point(
+        peer,
+        world,
+        cell.map(|value| value as f64 + 0.5),
+        ReachTarget::Cell(cell),
+    )
+}
+/// Mounted profiles retain fractional height and arbitrary rigid rotation.
+/// An exposed authored shape is reachable even if its quantized cell center is hidden.
+fn reach_part(
+    peer: &Peer,
+    world: &ControlWorld,
+    car: &Vehicle,
+    index: u16,
+) -> Result<(), TrainError> {
+    let part = car
+        .parts
+        .get(usize::from(index))
+        .ok_or(TrainError::Missing)?;
+    let target = ReachTarget::Part {
+        vehicle: car.id,
+        index,
+    };
+    for shape in car.part_shapes(usize::from(index)) {
+        let point = car.world_point(std::array::from_fn(|axis| {
+            f64::from(part.offset[axis]) + (shape.minimum[axis] + shape.maximum[axis]) * 0.5
+        }));
+        if reach_point(peer, world, point, target).is_ok() {
+            return Ok(());
+        }
+    }
+    Err(TrainError::OutOfReach)
 }
 fn station(peer: &Peer, world: &ControlWorld, cell: [i64; 3]) -> Result<(), TrainError> {
     if world.chunks.block_at(cell) != Some(terra_core::train_parts::STATION) {
@@ -315,7 +378,7 @@ fn vehicle(peer: &Peer, world: &ControlWorld, id: u64) -> Result<Vehicle, TrainE
         return Err(TrainError::NotOwner);
     }
     if (0..vehicle.parts.len()).any(|index| {
-        let cell = vehicle.part_cell(index).unwrap();
+        let cell = vehicle.world_cell(index).unwrap();
         world.chunks.block_at(cell).is_none()
             || !permitted(peer, world, cell, KingdomPermission::Inventories)
     }) {
@@ -339,6 +402,21 @@ pub(super) fn control(
     runtime: &mut TrainRuntime,
     seated: &mut SeatedPlayers,
 ) {
+    let retiring = if let TrainAction::Dismantle { vehicle, .. } = &command.action {
+        world
+            .journal
+            .gameplay()
+            .trains
+            .vehicles
+            .get(vehicle)
+            .map(|car| terra_core::train_motion::TrainMotionFrame {
+                id: car.id,
+                revision: car.revision,
+                motion: car.motion,
+            })
+    } else {
+        None
+    };
     let result = runtime
         .peers
         .entry(peer.id)
@@ -346,6 +424,11 @@ pub(super) fn control(
         .accept(command.request)
         .and_then(|()| apply(command.action, peer, world, seated));
     let outcome = result.unwrap_or_else(TrainOutcome::Rejected);
+    if let Some(frame) = retiring
+        && matches!(outcome, TrainOutcome::Changed { .. })
+    {
+        runtime.retired_motions.push(frame);
+    }
     if matches!(outcome, TrainOutcome::Cargo(_))
         && let Some(inventory) = world.journal.gameplay().inventories.get(&peer.uuid)
     {
@@ -426,6 +509,44 @@ pub(super) fn apply(
         return Err(TrainError::Protected);
     }
     match action {
+        TrainAction::Drive {
+            vehicle: id,
+            throttle,
+            brake,
+        } => {
+            if !(-3..=3).contains(&throttle) {
+                return Err(TrainError::Invalid);
+            }
+            let binding = seated
+                .binding(peer.uuid)
+                .filter(|seat| seat.vehicle == id)
+                .ok_or(TrainError::NotOwner)?;
+            let car = vehicle(peer, world, id)?;
+            if car
+                .parts
+                .get(usize::from(binding.part))
+                .is_none_or(|part| part.material != terra_core::train_parts::CAB)
+            {
+                return Err(TrainError::NotOwner);
+            }
+            if !car.parts.iter().any(|part| part.material == 218) {
+                return Err(TrainError::Incomplete);
+            }
+            let next_revision = car.revision.checked_add(1).ok_or(TrainError::Overflow)?;
+            touch(world)?;
+            let car = world
+                .journal
+                .gameplay_mut()
+                .trains
+                .vehicles
+                .get_mut(&id)
+                .unwrap();
+            car.motion.throttle = throttle;
+            car.motion.brake = brake;
+            car.motion.fuel_available = terra_world::train_motion::fuel_available(car);
+            car.revision = next_revision;
+            Ok(TrainOutcome::Changed { vehicle: Some(id) })
+        }
         TrainAction::Inspect { station: cell } => {
             station(peer, world, cell)?;
             Ok(TrainOutcome::Inspected)
@@ -478,8 +599,10 @@ pub(super) fn apply(
             revision,
         } => {
             station(peer, world, cell)?;
-            check_revision(world, revision)?;
-            vehicle(peer, world, id)?;
+            let selected = vehicle(peer, world, id)?;
+            if selected.revision != revision {
+                return Err(TrainError::Stale);
+            }
             if seated.bindings.values().any(|seat| seat.vehicle == id) {
                 return Err(TrainError::Busy);
             }
@@ -530,14 +653,19 @@ pub(super) fn apply(
             check_revision(world, revision)?;
             for id in [first, second] {
                 let car = vehicle(peer, world, id)?;
-                if (0..3).any(|axis| car.anchor[axis].abs_diff(cell[axis]) > 64) {
+                if !car.motion.stopped() {
+                    return Err(TrainError::Busy);
+                }
+                if car.world_cell(0).is_none_or(|position| {
+                    (0..3).any(|axis| position[axis].abs_diff(cell[axis]) > 64)
+                }) {
                     return Err(TrainError::OutOfReach);
                 }
                 if (0..car.parts.len()).any(|index| {
                     !permitted(
                         peer,
                         world,
-                        car.part_cell(index).unwrap(),
+                        car.world_cell(index).unwrap(),
                         KingdomPermission::Build,
                     )
                 }) {
@@ -572,14 +700,19 @@ pub(super) fn apply(
             let link = car.couplings[end.index()].ok_or(TrainError::Missing)?;
             let other = vehicle(peer, world, link.vehicle)?;
             for car in [car, other] {
-                if (0..3).any(|axis| car.anchor[axis].abs_diff(cell[axis]) > 64) {
+                if !car.motion.stopped() {
+                    return Err(TrainError::Busy);
+                }
+                if car.world_cell(0).is_none_or(|position| {
+                    (0..3).any(|axis| position[axis].abs_diff(cell[axis]) > 64)
+                }) {
                     return Err(TrainError::OutOfReach);
                 }
                 if (0..car.parts.len()).any(|index| {
                     !permitted(
                         peer,
                         world,
-                        car.part_cell(index).unwrap(),
+                        car.world_cell(index).unwrap(),
                         KingdomPermission::Build,
                     )
                 }) {
@@ -602,10 +735,12 @@ pub(super) fn apply(
         }
         TrainAction::OpenCargo { vehicle: id, part } => {
             let car = vehicle(peer, world, id)?;
-            let cell = car
-                .part_cell(usize::from(part))
-                .ok_or(TrainError::Missing)?;
-            reach(peer, world, cell)?;
+            if seated
+                .binding(peer.uuid)
+                .is_none_or(|seat| seat.vehicle != id)
+            {
+                reach_part(peer, world, &car, part)?;
+            }
             let inventory = car.cargo.get(&part).ok_or(TrainError::Missing)?.clone();
             Ok(TrainOutcome::Cargo(TrainCargoSnapshot {
                 vehicle: id,
@@ -626,12 +761,12 @@ pub(super) fn apply(
             if car.revision != revision {
                 return Err(TrainError::Stale);
             }
-            reach(
-                peer,
-                world,
-                car.part_cell(usize::from(part))
-                    .ok_or(TrainError::Missing)?,
-            )?;
+            if seated
+                .binding(peer.uuid)
+                .is_none_or(|seat| seat.vehicle != id)
+            {
+                reach_part(peer, world, &car, part)?;
+            }
             let game = world.journal.gameplay();
             let mut bag = game
                 .inventories
@@ -650,6 +785,16 @@ pub(super) fn apply(
             ) {
                 return Err(TrainError::Invalid);
             }
+            if car
+                .parts
+                .get(usize::from(part))
+                .is_some_and(|part| part.material == 218)
+                && inventories[0].slots.iter().any(|stack| {
+                    stack.count > 0 && terra_core::furnace::fuel_seconds(stack.item).is_none()
+                })
+            {
+                return Err(TrainError::Invalid);
+            }
             let next = game.revision.checked_add(1).ok_or(TrainError::Overflow)?;
             let train_revision = game
                 .trains
@@ -661,6 +806,7 @@ pub(super) fn apply(
             let game = world.journal.gameplay_mut();
             let car = game.trains.vehicles.get_mut(&id).unwrap();
             car.cargo.insert(part, inventory.clone());
+            car.motion.fuel_available = terra_world::train_motion::fuel_available(car);
             car.revision = vehicle_revision;
             game.inventories.insert(peer.uuid, bag);
             game.trains.revision = train_revision;
@@ -677,12 +823,12 @@ pub(super) fn apply(
                 return Err(TrainError::Busy);
             }
             let car = vehicle(peer, world, id)?;
-            reach(
-                peer,
-                world,
-                car.part_cell(usize::from(part))
-                    .ok_or(TrainError::Missing)?,
-            )?;
+            if seated
+                .binding(peer.uuid)
+                .is_none_or(|seat| seat.vehicle != id)
+            {
+                reach_part(peer, world, &car, part)?;
+            }
             let (position, yaw) = car
                 .seat_pose(usize::from(part))
                 .ok_or(TrainError::Invalid)?;
@@ -760,7 +906,7 @@ pub(super) fn broadcast(
                     car.owner == *player
                         && car.seat_pose(usize::from(seat.part)).is_some()
                         && (0..car.parts.len()).all(|index| {
-                            car.part_cell(index).is_some_and(|cell| {
+                            car.world_cell(index).is_some_and(|cell| {
                                 chunks.block_at(cell).is_some()
                                     && terra_world::kingdom_access::can_use(
                                         &journal.gameplay().kingdoms,
@@ -815,15 +961,53 @@ pub(super) fn broadcast(
         .collect();
     seated.poses = poses;
     let registry = &journal.gameplay().trains;
+    let tick = runtime.ticks;
+    let motion_interval = u64::from(config.server.tick_rate.div_ceil(60));
+    let frames = registry
+        .vehicles
+        .values()
+        .map(|car| terra_core::train_motion::TrainMotionFrame {
+            id: car.id,
+            revision: car.revision,
+            motion: car.motion,
+        })
+        .collect::<Vec<_>>();
+    let retired = std::mem::take(&mut runtime.retired_motions);
+    let fuel_updates = std::mem::take(&mut runtime.fuel_updates);
     for (peer, mut sender) in &mut peers {
         if !peer.synced {
             continue;
         }
         let state = runtime.peers.entry(peer.id).or_default();
+        let already_joined = state.sent.is_some();
         if state.sent != Some(registry.revision) {
+            if already_joined && !retired.is_empty() {
+                sender.send::<ControlChannel>(ServerControl::TrainMotions(retired.clone()));
+            }
             let snapshot = registry.snapshot(seated.bindings.values().copied().collect());
             sender.send::<ControlChannel>(ServerControl::Trains(Box::new(snapshot)));
             state.sent = Some(registry.revision);
+            state.motion_tick = tick;
+            state.motions = frames.iter().map(|frame| (frame.id, *frame)).collect();
+        }
+        if already_joined && tick.saturating_sub(state.motion_tick) >= motion_interval {
+            let changed = frames
+                .iter()
+                .filter(|frame| state.motions.get(&frame.id) != Some(*frame))
+                .copied()
+                .collect::<Vec<_>>();
+            if !changed.is_empty() {
+                sender.send::<ControlChannel>(ServerControl::TrainMotions(changed));
+                state.motions = frames.iter().map(|frame| (frame.id, *frame)).collect();
+            }
+            state.motion_tick = tick;
+        }
+        if already_joined {
+            for (owner, cargo) in &fuel_updates {
+                if *owner == peer.uuid && registry.vehicles.contains_key(&cargo.vehicle) {
+                    sender.send::<ControlChannel>(ServerControl::TrainEngineFuel(cargo.clone()));
+                }
+            }
         }
     }
     let ids: HashSet<_> = peers.iter().map(|(peer, _)| peer.id).collect();
@@ -848,6 +1032,350 @@ fn seats_changed(journal: &mut EditJournal, runtime: &mut TrainRuntime) {
         }
     }
 }
+/// Fixed-step authority advances rail cursors and atomically publishes whole consists.
+/// Compact pose packets are independent of structural snapshots and geometry epochs.
+#[allow(clippy::too_many_arguments)] // Independent Bevy system resources/queries.
+pub(super) fn drive(
+    time: Res<Time<Fixed>>,
+    chunks: Res<ChunkStore>,
+    mut journal: ResMut<EditJournal>,
+    properties: Res<terra_core::block_properties::BlockPropertiesCatalog>,
+    mut runtime: ResMut<TrainRuntime>,
+    mut seated: ResMut<SeatedPlayers>,
+    peers: Query<&Peer, With<Connected>>,
+    bodies: Query<&Transform, With<ServerCharacter>>,
+) {
+    use terra_core::train_motion::StopReason;
+    runtime.ticks = runtime.ticks.wrapping_add(1);
+    let dt = time.delta_secs_f64().min(0.1);
+    if runtime.rail_cache.refresh(&journal).is_err() {
+        return;
+    }
+    let mut handled = HashSet::new();
+    let mut plans = Vec::new();
+    let mut planned_sweeps: Vec<(u64, [[f64; 3]; 2])> = Vec::new();
+    let mut fuel_updates = Vec::new();
+    let registry = &journal.gameplay().trains;
+    let mut ids = seated
+        .bindings
+        .values()
+        .filter_map(|seat| {
+            let car = registry.vehicles.get(&seat.vehicle)?;
+            car.parts
+                .get(usize::from(seat.part))
+                .is_some_and(|part| part.material == terra_core::train_parts::CAB)
+                .then_some(car.id)
+        })
+        .collect::<Vec<_>>();
+    ids.extend(
+        registry
+            .vehicles
+            .values()
+            .filter(|car| car.kind == terra_core::trains::VehicleKind::Locomotive)
+            .map(|car| car.id),
+    );
+    ids.extend(registry.vehicles.keys().copied());
+    for id in ids {
+        if handled.contains(&id) {
+            continue;
+        }
+        let Some(original) = registry.vehicles.get(&id) else {
+            continue;
+        };
+        let Ok(group) = registry.consist(id) else {
+            continue;
+        };
+        handled.extend(group.iter().copied());
+        let active = group.iter().any(|member| {
+            registry.vehicles[member].motion.speed_mps.abs() > 0.001
+                || (registry.vehicles[member].motion.throttle != 0
+                    && !registry.vehicles[member].motion.brake)
+        });
+        if !active {
+            continue;
+        }
+        let driver = seated
+            .bindings
+            .iter()
+            .find(|(_, seat)| {
+                seat.vehicle == id
+                    && original
+                        .parts
+                        .get(usize::from(seat.part))
+                        .is_some_and(|part| part.material == terra_core::train_parts::CAB)
+            })
+            .map(|(player, _)| *player);
+        let connected = driver.is_some_and(|uuid| {
+            peers.iter().any(|peer| {
+                peer.uuid == uuid
+                    && peer.synced
+                    && !peer.vitals.dead()
+                    && peer.chat.teleport.is_none()
+            })
+        });
+        let mut source = original.clone();
+        if !connected {
+            source.motion.throttle = 0;
+            source.motion.brake = true;
+        }
+        let mut candidates = Vec::new();
+        let result = terra_world::train_motion::advance(
+            &chunks,
+            &journal,
+            runtime.rail_cache.graph(),
+            &source,
+            dt,
+        );
+        let mut failure = None;
+        match result {
+            Ok(leader) => {
+                let meters = leader.motion.wheel_distance_m - original.motion.wheel_distance_m;
+                let speed = leader.motion.speed_mps;
+                candidates.push(leader);
+                let mut orientations = BTreeMap::from([(id, 1.0_f64)]);
+                let mut queue = vec![id];
+                while let Some(current) = queue.pop() {
+                    let car = &registry.vehicles[&current];
+                    for (end, link) in car.couplings.iter().enumerate() {
+                        if let Some(link) = link
+                            && !orientations.contains_key(&link.vehicle)
+                        {
+                            let orientation = orientations[&current]
+                                * if end == link.end.index() { -1.0 } else { 1.0 };
+                            orientations.insert(link.vehicle, orientation);
+                            queue.push(link.vehicle);
+                        }
+                    }
+                }
+                for member in group.iter().copied().filter(|member| *member != id) {
+                    let orientation = orientations.get(&member).copied().unwrap_or(1.0);
+                    match terra_world::train_motion::follow(
+                        &chunks,
+                        &journal,
+                        runtime.rail_cache.graph(),
+                        &registry.vehicles[&member],
+                        meters * orientation,
+                        speed * orientation,
+                    ) {
+                        Ok(car) => candidates.push(car),
+                        Err(reason) => {
+                            failure = Some(reason);
+                            break;
+                        }
+                    }
+                }
+            }
+            Err(reason) => failure = Some(reason),
+        }
+        // Very tight curves can stretch the chord between two rigid car bodies.
+        // Keep both rail contacts and reject that step before a joint separates.
+        if failure.is_none() {
+            for car in &candidates {
+                for (end, link) in car.couplings.iter().enumerate() {
+                    let Some(link) = link.filter(|link| car.id < link.vehicle) else {
+                        continue;
+                    };
+                    let Some(other) = candidates.iter().find(|other| other.id == link.vehicle)
+                    else {
+                        failure = Some(StopReason::InvalidTrack);
+                        break;
+                    };
+                    let end = if end == 0 {
+                        terra_core::trains::CouplerEnd::Front
+                    } else {
+                        terra_core::trains::CouplerEnd::Rear
+                    };
+                    let Some((a, b)) = car.coupler_point(end).zip(other.coupler_point(link.end))
+                    else {
+                        failure = Some(StopReason::InvalidTrack);
+                        break;
+                    };
+                    let Some((previous_a, previous_b)) = registry.vehicles[&car.id]
+                        .coupler_point(end)
+                        .zip(registry.vehicles[&other.id].coupler_point(link.end))
+                    else {
+                        failure = Some(StopReason::InvalidTrack);
+                        break;
+                    };
+                    let rest = (0..3)
+                        .map(|axis| (previous_a[axis] - previous_b[axis]).powi(2))
+                        .sum::<f64>()
+                        .sqrt();
+                    let actual = (0..3)
+                        .map(|axis| (a[axis] - b[axis]).powi(2))
+                        .sum::<f64>()
+                        .sqrt();
+                    if actual > rest + 0.5 || !(0.25..=2.5).contains(&actual) {
+                        failure = Some(StopReason::InvalidTrack);
+                        break;
+                    }
+                }
+                if failure.is_some() {
+                    break;
+                }
+            }
+        }
+        if failure.is_none()
+            && let Err(reason) = terra_world::train_motion::consist_clear(&candidates)
+        {
+            failure = Some(reason);
+        }
+        if failure.is_none() {
+            for car in &candidates {
+                let swept = match terra_world::train_motion::clear_swept(
+                    &chunks,
+                    &journal,
+                    &properties,
+                    &registry.vehicles[&car.id],
+                    car,
+                ) {
+                    Ok(shapes) => shapes,
+                    Err(reason) => {
+                        failure = Some(reason);
+                        break;
+                    }
+                };
+                if (0..car.parts.len()).any(|index| {
+                    car.world_cell(index).is_none_or(|cell| {
+                        !terra_world::kingdom_access::can_use(
+                            &journal.gameplay().kingdoms,
+                            &chunks,
+                            car.owner,
+                            KingdomPermission::Build,
+                            cell,
+                        )
+                    })
+                }) {
+                    failure = Some(StopReason::Obstructed);
+                    break;
+                }
+                let previous_bounds = registry.vehicles[&car.id].model_bounds();
+                let current_bounds = car.model_bounds();
+                let bounds: [[f64; 3]; 2] = [
+                    std::array::from_fn(|axis| {
+                        previous_bounds[0][axis].min(current_bounds[0][axis])
+                    }),
+                    std::array::from_fn(|axis| {
+                        previous_bounds[1][axis].max(current_bounds[1][axis])
+                    }),
+                ];
+                let overlaps = |other: [[f64; 3]; 2]| {
+                    (0..3).all(|axis| {
+                        bounds[0][axis] < other[1][axis] && bounds[1][axis] > other[0][axis]
+                    })
+                };
+                if registry
+                    .vehicles
+                    .values()
+                    .any(|other| !group.contains(&other.id) && overlaps(other.model_bounds()))
+                    || planned_sweeps
+                        .iter()
+                        .any(|(id, bounds)| !group.contains(id) && overlaps(*bounds))
+                {
+                    failure = Some(StopReason::Obstructed);
+                    break;
+                }
+                if peers.iter().any(|peer| {
+                    if seated
+                        .bindings
+                        .get(&peer.uuid)
+                        .is_some_and(|seat| group.contains(&seat.vehicle))
+                    {
+                        return false;
+                    }
+                    let Ok(body) = bodies.get(peer.body) else {
+                        return false;
+                    };
+                    let center = body.translation.to_array().map(f64::from);
+                    let half = [
+                        f64::from(terra_physics::character::PLAYER_RADIUS),
+                        f64::from(terra_physics::character::PLAYER_HALF_HEIGHT),
+                        f64::from(terra_physics::character::PLAYER_RADIUS),
+                    ];
+                    let low = std::array::from_fn(|i| center[i] - half[i]);
+                    let high = std::array::from_fn(|i| center[i] + half[i]);
+                    overlaps([low, high]) && swept.iter().any(|shape| shape.intersects(low, high))
+                }) {
+                    failure = Some(StopReason::Obstructed);
+                    break;
+                }
+            }
+        }
+        if let Some(reason) = failure {
+            candidates = group
+                .iter()
+                .map(|member| {
+                    let mut car = registry.vehicles[member].clone();
+                    car.motion.speed_mps = 0.0;
+                    car.motion.brake = true;
+                    car.motion.throttle = 0;
+                    car.motion.stop_reason = reason;
+                    car
+                })
+                .collect();
+        }
+        for mut car in candidates {
+            let old = &registry.vehicles[&car.id];
+            let before = old.model_bounds();
+            let after = car.model_bounds();
+            planned_sweeps.push((
+                car.id,
+                [
+                    std::array::from_fn(|i| before[0][i].min(after[0][i])),
+                    std::array::from_fn(|i| before[1][i].max(after[1][i])),
+                ],
+            ));
+            if car.cargo != old.cargo {
+                car.revision = car.revision.saturating_add(1);
+                for (part, inventory) in &car.cargo {
+                    if car.parts[usize::from(*part)].material == 218
+                        && old.cargo.get(part) != Some(inventory)
+                    {
+                        fuel_updates.push((
+                            car.owner,
+                            TrainCargoSnapshot {
+                                vehicle: car.id,
+                                part: *part,
+                                revision: car.revision,
+                                inventory: inventory.clone(),
+                            },
+                        ));
+                    }
+                }
+            }
+            if car != *old {
+                plans.push(car);
+            }
+        }
+    }
+    if !plans.is_empty() {
+        let game = journal.gameplay_mut();
+        for car in plans {
+            game.trains.vehicles.insert(car.id, car);
+        }
+        game.revision = game.revision.saturating_add(1);
+    }
+    runtime.fuel_updates.extend(fuel_updates);
+    for (player, seat) in &seated.bindings.clone() {
+        if let Some((position, yaw)) = journal
+            .gameplay()
+            .trains
+            .vehicles
+            .get(&seat.vehicle)
+            .and_then(|car| car.seat_pose(usize::from(seat.part)))
+        {
+            seated.poses.insert(
+                *player,
+                (
+                    Vec3::from_array(position.map(|v| v as f32))
+                        + Vec3::Y * terra_physics::character::PLAYER_HALF_HEIGHT,
+                    yaw,
+                ),
+            );
+        }
+    }
+}
+
 #[cfg(test)]
 mod cleanup_tests {
     use super::*;
@@ -924,6 +1452,9 @@ mod cleanup_tests {
             payloads: Default::default(),
             couplings: [None; 2],
             revision: 1,
+
+            motion: Default::default(),
+            burn_seconds: 0.0,
         };
         assert!(vehicle.valid());
         let (feet, yaw) = vehicle.seat_pose(4).unwrap();

@@ -1,0 +1,10 @@
+{
+  "item": {
+    "wooden_block": {
+      "material": 267,
+      "wood": "oak"
+    }
+  },
+  "name": "Lok-Werkzeugkasten (oak)",
+  "description": "Decorative BR52 locomotive component. Attach to the connected vehicle body before assembly. Oak wood variant."
+}

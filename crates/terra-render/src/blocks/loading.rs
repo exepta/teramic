@@ -873,6 +873,11 @@ fn collect_templates(
                     if terra_core::castle::is_castle(definition.id) {
                         templates.register_castle_material(name, *slot);
                     }
+                    if terra_core::train_parts::is_part(definition.id)
+                        && let Some(role) = super::TrainAnimationRole::from_material(name)
+                    {
+                        templates.train_moving_materials.insert(*slot, role);
+                    }
                     if definition.id == terra_core::lantern::LANTERN
                         && let Some(variant) = name
                             .strip_prefix("lantern_")
@@ -1344,7 +1349,7 @@ fn bake_transform(
                 (0.5 - radius, 0.5 + radius)
             } else if terra_core::logistics::is_port(id) && axis == 1 {
                 (-0.385, 1.0)
-            } else if (matches!(id, 59 | 65..=67 | 139) && axis == 1)
+            } else if (matches!(id, 59 | 65..=67 | 139 | 248) && axis == 1)
                 || (terra_core::beds::is_bed(id) && axis == 2)
             {
                 (0.0, 2.0)

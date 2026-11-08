@@ -8,7 +8,7 @@ use terra_network::{
     protocol::trains::{TrainCargoSnapshot, TrainResult},
 };
 
-fn app() -> App {
+pub(super) fn app() -> App {
     let mut app = App::new();
     let mut session = ClientSession::default();
     session.ready = true;
@@ -26,7 +26,7 @@ fn app() -> App {
     install(&mut app);
     app
 }
-fn car(id: u64) -> VehicleView {
+pub(super) fn car(id: u64) -> VehicleView {
     VehicleView {
         id,
         owner: PlayerUuid::from_u128(1),
@@ -42,19 +42,20 @@ fn car(id: u64) -> VehicleView {
         couplings: [None, None],
         revision: 7,
         mass_kg: 2000,
+        motion: Default::default(),
     }
 }
-fn open(app: &mut App) {
+pub(super) fn open(app: &mut App) {
     let mut state = app.world_mut().resource_mut::<TrainUiState>();
     state.open = true;
     state.station = Some([0, 0, 0]);
 }
-fn actions(app: &mut App, command: &str) {
+pub(super) fn actions(app: &mut App, command: &str) {
     app.world_mut()
         .write_message(TrainUiAction::Command(command.into()));
     app.update();
 }
-fn requests(app: &mut App) -> Vec<TrainRequest> {
+pub(super) fn requests(app: &mut App) -> Vec<TrainRequest> {
     app.world_mut()
         .resource_mut::<Messages<TrainRequest>>()
         .drain()
@@ -284,7 +285,7 @@ fn leaving_a_train_seat_uses_the_configured_action_and_one_confirmed_request() {
     );
 }
 
-fn track_fixture(app: &mut App, facing: u8) {
+pub(super) fn track_fixture(app: &mut App, facing: u8) {
     use terra_voxel::{BlockSection, global_to_section};
     use terra_world::{
         edits::EditJournal,

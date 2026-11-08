@@ -463,6 +463,7 @@ fn dispatch(
                 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 210, 211, 212, 213, 214, 215,
                 216, 217,
             ])
+            .chain(terra_core::locomotive_parts::FIRST..=terra_core::locomotive_parts::LAST)
             .collect();
         let worker_properties = (*properties).clone();
         jobs.0.insert(

@@ -1,0 +1,10 @@
+{
+  "item": {
+    "wooden_block": {
+      "material": 216,
+      "wood": "birch"
+    }
+  },
+  "name": "Wagen-Laderaum (birch)",
+  "description": "Modular railway vehicle part. Connect parts beside an assembly station, then assemble the vehicle. Birch wood variant."
+}

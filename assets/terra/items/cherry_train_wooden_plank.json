@@ -1,0 +1,10 @@
+{
+  "item": {
+    "wooden_block": {
+      "material": 268,
+      "wood": "cherry"
+    }
+  },
+  "name": "Lok-Holzplanken (cherry)",
+  "description": "Decorative BR52 locomotive component. Attach to the connected vehicle body before assembly. Cherry wood variant."
+}

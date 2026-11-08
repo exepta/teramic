@@ -3,7 +3,10 @@ use crate::blocks::{BlockTemplate, PrimitiveTemplate, definitions::BlockRenderKi
 
 fn templates() -> TemplateSet {
     let mut templates = TemplateSet::default();
-    for id in (74..=89).chain([98, 104, 105, 206, 207, 208]) {
+    for id in (74..=89)
+        .chain([98, 104, 105, 206, 207, 208])
+        .chain(270..=293)
+    {
         templates.blocks.insert(
             id,
             BlockTemplate {
@@ -19,6 +22,51 @@ fn templates() -> TemplateSet {
         );
     }
     templates
+}
+
+#[test]
+fn grate_construction_profiles_keep_visible_holes_in_all_poses_and_mixed_slab_materials() {
+    use terra_core::{construction, locomotive_parts};
+    let templates = templates();
+    for material in 288..=293 {
+        let poses = if material == 290 {
+            24
+        } else if material == 289 {
+            10
+        } else {
+            4
+        };
+        for facing in 0..poses {
+            let profile = construction_profile(&cell(material, facing), &templates).unwrap();
+            let boxes = locomotive_parts::grate_boxes(material, facing).unwrap();
+            assert!(
+                boxes.len() >= 10,
+                "grate must preserve the individual lattice bars"
+            );
+            assert_identical(
+                &profile,
+                &crate::blocks::cube::box_model(&boxes, 0.0, [usize::from(material); 6]),
+            );
+        }
+    }
+    for (first, second) in [(82, 289), (289, 82)] {
+        for facing in [0, 4, 5, 6, 7, 8] {
+            let merged = construction::merged_slab(first, facing, second).unwrap();
+            let profile = construction_profile(&cell(first, merged), &templates).unwrap();
+            let halves = construction::slab_halves(first, merged).unwrap();
+            let expected = halves
+                .into_iter()
+                .flat_map(|(id, pose)| {
+                    let bounds = locomotive_parts::grate_boxes(id, pose)
+                        .unwrap_or_else(|| vec![construction::slab_bounds(pose)]);
+                    crate::blocks::cube::box_model(&bounds, 0.0, [usize::from(id); 6])
+                })
+                .collect::<Vec<_>>();
+            assert_identical(&profile, &expected);
+            assert!(profile.iter().any(|part| part.material == 82));
+            assert!(profile.iter().any(|part| part.material == 289));
+        }
+    }
 }
 
 fn cell(material: u16, facing: u8) -> ModelCell {

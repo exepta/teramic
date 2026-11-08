@@ -34,6 +34,9 @@ fn vehicle() -> Vehicle {
         payloads: Default::default(),
         couplings: [None; 2],
         revision: 1,
+
+        motion: Default::default(),
+        burn_seconds: 0.0,
     };
     assert!(vehicle.valid());
     vehicle
@@ -435,6 +438,67 @@ fn receive_views(app: &mut App, vehicles: &[VehicleView]) {
                 .unwrap();
         });
 }
+
+#[test]
+fn moved_dismantling_waits_for_current_cells_even_when_final_pose_and_removal_arrive_together() {
+    let original = vehicle().view();
+    let mut app = app(original.clone());
+    loaded_cells(&mut app, &original, false);
+    wait_active(&mut app, original.id);
+    let mut moved = original.clone();
+    moved.motion.translation = [48.0, 0.0, 16.0];
+    moved.motion.pivot = [0.5, 0.0, 0.5];
+    moved.motion.yaw = std::f64::consts::FRAC_PI_2;
+    let cells = moved.disassembly_cells().unwrap();
+    let mut restored = moved.clone();
+    restored.anchor = cells[0];
+    restored.motion = Default::default();
+    for (part, cell) in restored.parts.iter_mut().zip(&cells) {
+        part.offset = std::array::from_fn(|axis| (cell[axis] - restored.anchor[axis]) as i16);
+        part.facing = (part.facing + 1) % 4;
+    }
+    loaded_cells(&mut app, &restored, false);
+    app.world_mut()
+        .resource_mut::<TrainCollisionViews>()
+        .set_motions(&[terra_core::train_motion::TrainMotionFrame {
+            id: moved.id,
+            revision: moved.revision,
+            motion: moved.motion,
+        }])
+        .unwrap();
+    receive_views(&mut app, &[]);
+    app.update();
+    let entry = &app.world().resource::<TrainCollisionState>().entries[&original.id];
+    assert!(entry.retiring);
+    assert_eq!(entry.restore_cells, cells);
+    assert_eq!(entry.restore_turns, 1);
+    assert_eq!(entry.pose, moved.model_transform());
+    assert!(
+        app.world()
+            .get::<Position>(entry.entity.unwrap())
+            .unwrap()
+            .0
+            .distance(Vec3::from_array(entry.pose.0.map(|value| value as f32)))
+            < 1e-4
+    );
+    let mut source = EditJournal::default();
+    let mut sections = BTreeSet::new();
+    for (cell, part) in cells.iter().zip(&restored.parts) {
+        source.record(*cell, part.material).unwrap();
+        sections.insert(terra_voxel::global_to_section(*cell).0);
+    }
+    for section in sections {
+        publish_current(&mut app, &source, section);
+    }
+    wait_retired(&mut app, original.id);
+    assert!(original.parts.iter().enumerate().all(|(index, _)| {
+        app.world()
+            .resource::<ChunkStore>()
+            .block_at(original.part_cell(index).unwrap())
+            == Some(0)
+    }));
+}
+
 fn publish_current(app: &mut App, source: &EditJournal, section: terra_voxel::SectionPos) {
     app.world_mut()
         .resource_scope(|world, mut journal: Mut<EditJournal>| {
@@ -756,5 +820,49 @@ fn dismantling_a_pending_worker_cannot_resurrect_a_removed_vehicle() {
             .iter(app.world())
             .count(),
         0
+    );
+}
+
+#[test]
+fn compact_train_motion_moves_the_existing_backend_body_without_recooking() {
+    let car = vehicle();
+    let view = car.view();
+    let mut app = app(view.clone());
+    wait_active(&mut app, view.id);
+    let entity = app.world().resource::<TrainCollisionState>().entries[&view.id]
+        .entity
+        .unwrap();
+    let epoch = app.world().resource::<TrainCollisionViews>().epoch;
+    let motion = terra_core::train_motion::TrainMotion {
+        translation: [16.0, 2.0, -8.0],
+        yaw: std::f64::consts::FRAC_PI_2,
+        ..Default::default()
+    };
+    app.world_mut()
+        .resource_mut::<TrainCollisionViews>()
+        .set_motions(&[terra_core::train_motion::TrainMotionFrame {
+            id: view.id,
+            revision: view.revision,
+            motion,
+        }])
+        .unwrap();
+    let mut moved = view;
+    moved.motion = motion;
+    for _ in 0..3 {
+        app.update();
+    }
+    let state = app.world().resource::<TrainCollisionState>();
+    assert_eq!(state.entries[&moved.id].entity, Some(entity));
+    assert_eq!(app.world().resource::<TrainCollisionViews>().epoch, epoch);
+    assert!(state.jobs.is_empty());
+    let expected = moved.model_transform();
+    let position = app.world().get::<Position>(entity).unwrap().0;
+    let rotation = app.world().get::<Rotation>(entity).unwrap().0;
+    assert!((position - Vec3::from_array(expected.0.map(|v| v as f32))).length() < 0.001);
+    assert!(
+        rotation
+            .dot(Quat::from_array(expected.1.map(|v| v as f32)))
+            .abs()
+            > 0.9999
     );
 }

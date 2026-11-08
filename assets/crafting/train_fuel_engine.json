@@ -1,0 +1,42 @@
+{
+  "id": "teramic::train_fuel_engine",
+  "name": "Brennstoffmotor",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "block": 218
+    },
+    "count": 1
+  },
+  "pattern": {
+    "kind": "shaped",
+    "width": 3,
+    "height": 3,
+    "cells": [
+      {
+        "item": {
+          "mineral": "iron_ingot"
+        },
+        "count": 1
+      },
+      null,
+      null,
+      null,
+      {
+        "item": {
+          "block": 59
+        },
+        "count": 1
+      },
+      null,
+      null,
+      null,
+      {
+        "item": {
+          "mineral": "iron_ingot"
+        },
+        "count": 1
+      }
+    ]
+  }
+}

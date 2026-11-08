@@ -1,0 +1,10 @@
+{
+  "item": {
+    "wooden_block": {
+      "material": 268,
+      "wood": "birch"
+    }
+  },
+  "name": "Lok-Holzplanken (birch)",
+  "description": "Decorative BR52 locomotive component. Attach to the connected vehicle body before assembly. Birch wood variant."
+}

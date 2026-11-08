@@ -580,6 +580,7 @@ impl ItemKind {
             }
             Self::Block(10 | 17) => Some(WoodSpecies::Birch),
             Self::Block(18 | 36 | 169) => Some(WoodSpecies::Spruce),
+            Self::Block(214..=217 | 267 | 268) => Some(WoodSpecies::Spruce),
             Self::Block(134 | 135) => Some(WoodSpecies::Cherry),
             Self::WoodenBlock { wood, .. }
             | Self::TintedBlock {
@@ -593,7 +594,7 @@ impl ItemKind {
     pub const fn supports_wood(material: u16) -> bool {
         matches!(
             material,
-            28 | 29 | 141 | 144 | 148 | 149 | 169 | 196 | 202 | 203
+            28 | 29 | 141 | 144 | 148 | 149 | 169 | 196 | 202 | 203 | 214..=217 | 267 | 268
         )
     }
     pub fn for_wood(material: u16, wood: WoodSpecies) -> Self {
@@ -605,7 +606,7 @@ impl ItemKind {
             Self::WoodenBlock { material, wood }
         }
     }
-    pub const EXTRA: [Self; 175] = [
+    pub const EXTRA: [Self; 193] = [
         Self::GlassBottle,
         Self::WaterBottle,
         Self::Potion(1),
@@ -941,6 +942,78 @@ impl ItemKind {
         },
         Self::WoodenBlock {
             material: 203,
+            wood: WoodSpecies::Cherry,
+        },
+        Self::WoodenBlock {
+            material: 214,
+            wood: WoodSpecies::Oak,
+        },
+        Self::WoodenBlock {
+            material: 214,
+            wood: WoodSpecies::Birch,
+        },
+        Self::WoodenBlock {
+            material: 214,
+            wood: WoodSpecies::Cherry,
+        },
+        Self::WoodenBlock {
+            material: 215,
+            wood: WoodSpecies::Oak,
+        },
+        Self::WoodenBlock {
+            material: 215,
+            wood: WoodSpecies::Birch,
+        },
+        Self::WoodenBlock {
+            material: 215,
+            wood: WoodSpecies::Cherry,
+        },
+        Self::WoodenBlock {
+            material: 216,
+            wood: WoodSpecies::Oak,
+        },
+        Self::WoodenBlock {
+            material: 216,
+            wood: WoodSpecies::Birch,
+        },
+        Self::WoodenBlock {
+            material: 216,
+            wood: WoodSpecies::Cherry,
+        },
+        Self::WoodenBlock {
+            material: 217,
+            wood: WoodSpecies::Oak,
+        },
+        Self::WoodenBlock {
+            material: 217,
+            wood: WoodSpecies::Birch,
+        },
+        Self::WoodenBlock {
+            material: 217,
+            wood: WoodSpecies::Cherry,
+        },
+        Self::WoodenBlock {
+            material: 267,
+            wood: WoodSpecies::Oak,
+        },
+        Self::WoodenBlock {
+            material: 267,
+            wood: WoodSpecies::Birch,
+        },
+        Self::WoodenBlock {
+            material: 267,
+            wood: WoodSpecies::Cherry,
+        },
+        Self::WoodenBlock {
+            material: 268,
+            wood: WoodSpecies::Oak,
+        },
+        Self::WoodenBlock {
+            material: 268,
+            wood: WoodSpecies::Birch,
+        },
+        Self::WoodenBlock {
+            material: 268,
             wood: WoodSpecies::Cherry,
         },
     ];

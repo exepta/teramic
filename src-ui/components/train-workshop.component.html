@@ -6,11 +6,13 @@
     <div class="train-workshop-content">
       <div class="train-workshop-heading"><icon name="train-front" size="24" /><h2>{{ trainView.title }}</h2></div>
       @if (trainView.cargo) {
-        <p>Ein Klick verschiebt den ganzen Stapel.</p>
-        <h3>Laderaum</h3>
+        @if (trainView.fuel_mode) {
+          <p>Holz, Kohle oder anderen Brennstoff aus dem Inventar einlegen. Ein Klick verschiebt den Stapel.</p>
+          <h3>Brennstoffvorrat</h3>
+        } @else { <p>Ein Klick verschiebt den ganzen Stapel.</p><h3>Laderaum</h3> }
         <div class="train-slots">
           @for (slot of trainView.cargo_slots; track slot.index) {
-            <button class="train-slot" [id]="slot.command" [disabled]="trainView.pending" [title]="slot.name" onclick="train_workshop_action">
+            <button class="train-slot" [id]="slot.command" [disabled]="trainView.pending || !slot.enabled" [title]="slot.name" onclick="train_workshop_action">
               @if (!slot.empty) { <img [alt]="slot.preview" /><p>{{ slot.count }}</p> }
             </button>
           }
@@ -18,15 +20,37 @@
         <h3>Inventar</h3>
         <div class="train-slots">
           @for (slot of trainView.player_slots; track slot.index) {
-            <button class="train-slot" [id]="slot.command" [disabled]="trainView.pending" [title]="slot.name" onclick="train_workshop_action">
+            <button class="train-slot" [id]="slot.command" [disabled]="trainView.pending || !slot.enabled" [title]="slot.name" onclick="train_workshop_action">
               @if (!slot.empty) { <img [alt]="slot.preview" /><p>{{ slot.count }}</p> }
             </button>
           }
         </div>
+        <button id="workshop" onclick="train_workshop_action">Zur Fahrzeugsteuerung</button>
       } @else {
         <p>{{ trainView.requirements }}</p>
+        @if (trainView.selected) {
+          <div class="train-drive-panel">
+            <div class="train-drive-heading"><h3>Fahrhebel</h3><p class="train-drive-speed">{{ trainView.drive_speed }}</p><p>{{ trainView.drive_direction }}</p></div>
+            <div class="train-drive-heading"><p>{{ trainView.drive_throttle }}</p><p>{{ trainView.drive_status }}</p><p>{{ trainView.drive_fuel }}</p></div>
+            <slider id="drive-throttle" class="train-drive-slider" min="-3" max="3" step="1" [value]="trainView.drive_value" [disabled]="!trainView.drive_controls" onchange="train_workshop_action" />
+            <div class="train-throttle-notches">
+              @for (step of trainView.drive_levels; track step.command) {
+                <button [id]="step.command" [class]="step.selected ? 'selected' : ''" [disabled]="!trainView.drive_controls" onclick="train_workshop_action">{{ step.label }}</button>
+              }
+            </div>
+            <div class="train-drive-actions">
+              <button id="drive-stop" [disabled]="!trainView.drive_controls" onclick="train_workshop_action">Halt</button>
+              <button id="drive-brake" [disabled]="!trainView.drive_controls" onclick="train_workshop_action">@if (trainView.brake) { Bremse lösen } @else { Bremsen }</button>
+              <button id="engine" [disabled]="trainView.pending || !trainView.engine" onclick="train_workshop_action">Motor befeuern</button>
+              <button id="edit" [disabled]="trainView.pending || !trainView.can_edit" onclick="train_workshop_action">Montage / Bearbeiten</button>
+            </div>
+            @if (trainView.drive_controls) { <p>{{ trainView.drive_hint }}</p> } @else { <p>Zum Steuern in den eigenen Führerstand einsteigen.</p> }
+            <p>1 Block = 1 Meter · Für die Montage neben einer Montagestelle anhalten.</p>
+          </div>
+        }
         <div class="train-workshop-columns">
           <div class="train-workshop-controls">
+            @if (!trainView.selected) {
             <h3>Aufbau: {{ trainView.kind }}</h3>
             <div class="train-kind-buttons">
               <button id="kind:locomotive" [class]="trainView.kind == 'Lokomotive' ? 'selected' : ''" onclick="train_workshop_action">Lokomotive</button>
@@ -34,6 +58,8 @@
               <button id="kind:passenger" [class]="trainView.kind == 'Personenwagen' ? 'selected' : ''" onclick="train_workshop_action">Personenwagen</button>
               <button id="kind:freight" [class]="trainView.kind == 'Güterwagen' ? 'selected' : ''" onclick="train_workshop_action">Güterwagen</button>
             </div>
+            <p>Drehgestell-Abstand (3–15 m)</p>
+            <div class="train-wheelbase"><button id="wheelbase-dec" onclick="train_workshop_action"><icon name="minus" size="16" /></button><p>{{ trainView.wheelbase }}</p><button id="wheelbase-inc" onclick="train_workshop_action"><icon name="plus" size="16" /></button></div>
             <p>{{ trainView.blueprint_progress }}</p>
             <div class="train-blueprint-actions">
               <button id="blueprint" onclick="train_workshop_action">Vorlage anzeigen</button>
@@ -41,11 +67,15 @@
               @if (trainView.blueprint) { <button id="blueprint-clear" onclick="train_workshop_action">Vorlage ausblenden</button> }
             </div>
             <button id="assemble" class="train-primary" [disabled]="trainView.pending" onclick="train_workshop_action">Zusammensetzen</button>
-            <p>Lok: Führerstand · Personenwagen: Sitz · Tender/Güterwagen: Laderaum</p>
+            <p>Lok: Motor und Führerstand · Personenwagen: Sitz · Laderaum frei platzierbar</p>
+            } @else {
+              <h3>Fahrzeug montiert</h3>
+              <p>Zur Montage wechseln, um Rahmen, Verkleidung und Einrichtung mit beliebigen Blöcken weiterzubauen.</p>
+            }
             <div class="train-secondary-actions">
-              <button id="dismantle" [disabled]="trainView.pending || !trainView.selected" onclick="train_workshop_action">Auswahl zerlegen</button>
+              <button id="dismantle" [disabled]="trainView.pending || !trainView.can_edit" onclick="train_workshop_action">Zur Montage</button>
               <button id="seat" [disabled]="trainView.pending || !trainView.selected" onclick="train_workshop_action">Einsteigen</button>
-              <button id="cargo" [disabled]="trainView.pending || !trainView.selected" onclick="train_workshop_action">Laderaum öffnen</button>
+              <button id="cargo" [disabled]="trainView.pending || !trainView.has_cargo" onclick="train_workshop_action">Laderaum öffnen</button>
             </div>
           </div>
           <div class="train-workshop-vehicles">
@@ -67,8 +97,20 @@
   </div>
 </div>
 }
+@if (trainView.riding && !trainView.open && !inventoryView.open && !settingsView.open && !chatView.open && !kingdomView.visible) {
+  <div id="train-driver-hud" class="train-driver-hud">
+    <p class="train-driver-speed">{{ trainView.drive_speed }}</p>
+    <p>{{ trainView.drive_direction }} · {{ trainView.drive_status }}</p>
+    @if (trainView.driver) {
+      <div class="train-hud-notches">@for (step of trainView.drive_levels; track step.command) { <p [class]="step.selected ? 'selected' : ''">{{ step.label }}</p> }</div>
+      <p>{{ trainView.drive_throttle }} · {{ trainView.drive_fuel }}</p>
+    }
+    <p>{{ trainView.drive_hint }}</p>
+    <p>1 Block = 1 Meter</p>
+  </div>
+}
 @if (trainView.blueprint && !trainView.open && !inventoryView.open && !settingsView.open && !chatView.open && !kingdomView.visible) {
-  <div class="train-blueprint-hint">
+  <div id="train-blueprint-hint" class="train-blueprint-hint">
     <p>{{ trainView.blueprint_progress }}</p>
     <p>{{ trainView.blueprint_target }}</p>
     <p>Montagestelle öffnen: zusammensetzen oder Vorlage ausblenden</p>

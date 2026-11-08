@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "id": 268,
+  "name": "Lok-Holzplanken",
+  "description": "Decorative BR52 locomotive component. Attach to the connected vehicle body before assembly.",
+  "creative_category": "building",
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/train_wooden_plank.gltf",
+  "struct_block": true,
+  "hardness": 1.8,
+  "resistance": 12,
+  "required_tool": "pickaxe",
+  "mining_level": 0,
+  "collision_boxes": [
+    {
+      "minimum": [
+        0,
+        0,
+        0.004
+      ],
+      "maximum": [
+        1,
+        0.26,
+        0.246
+      ]
+    },
+    {
+      "minimum": [
+        0,
+        0,
+        0.254
+      ],
+      "maximum": [
+        1,
+        0.26,
+        0.496
+      ]
+    },
+    {
+      "minimum": [
+        0,
+        0,
+        0.504
+      ],
+      "maximum": [
+        1,
+        0.26,
+        0.746
+      ]
+    },
+    {
+      "minimum": [
+        0,
+        0,
+        0.754
+      ],
+      "maximum": [
+        1,
+        0.26,
+        0.996
+      ]
+    }
+  ]
+}

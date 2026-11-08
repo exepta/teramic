@@ -10,4 +10,4 @@ mod trains;
 pub use plugin::TerraPhysicsPlugin;
 pub use profile::CharacterProfile;
 pub use terrain::{TerrainCollider, TerrainCollisionState};
-pub use trains::{TrainCollider, TrainCollisionViews};
+pub use trains::{TrainCollider, TrainCollisionViews, TrainPoseSet};

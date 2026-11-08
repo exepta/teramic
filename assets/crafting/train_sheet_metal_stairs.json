@@ -1,0 +1,47 @@
+{
+  "id": "teramic::train_sheet_metal_stairs",
+  "name": "Lok-Blech Treppe",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "block": 284
+    },
+    "count": 4
+  },
+  "pattern": {
+    "kind": "shaped",
+    "width": 3,
+    "height": 3,
+    "cells": [
+      {
+        "item": {
+          "mineral": "iron_ingot"
+        },
+        "count": 1
+      },
+      null,
+      {
+        "item": {
+          "mineral": "iron_ingot"
+        },
+        "count": 1
+      },
+      null,
+      {
+        "item": {
+          "block": 282
+        },
+        "count": 1
+      },
+      null,
+      null,
+      null,
+      {
+        "item": {
+          "mineral": "iron_ingot"
+        },
+        "count": 1
+      }
+    ]
+  }
+}

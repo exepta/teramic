@@ -66,6 +66,9 @@ fn train_fixture() -> (App, Peer, u64, u16, u16) {
         payloads: Default::default(),
         couplings: [None, None],
         revision: 0,
+
+        motion: Default::default(),
+        burn_seconds: 0.0,
     };
     let id = app
         .world_mut()
@@ -259,6 +262,267 @@ fn cargo_gesture_is_owner_checked_and_stale_retry_cannot_duplicate_the_owned_sta
     assert_eq!(
         run(&mut app, &peer, action, &mut seats),
         Err(TrainError::Stale)
+    );
+    assert_eq!(app.world().resource::<EditJournal>().gameplay(), &before);
+}
+
+#[test]
+fn a_bound_owner_can_fuel_and_use_distant_car_storage_but_foreign_and_unseated_packets_cannot() {
+    let (mut app, mut peer, id, seat, cargo) = train_fixture();
+    let owner = peer.uuid;
+    let section = terra_voxel::global_to_section([4, 5, 21]).0;
+    app.world_mut().resource_mut::<ChunkStore>().loaded.insert(
+        section,
+        LoadedSection {
+            data: terra_voxel::BlockSection::empty(section).unwrap(),
+            mesh: None,
+            mesh_epoch: 0,
+            water_epoch: 0,
+            water: None,
+            props: Vec::new(),
+        },
+    );
+    let (engine, chest) = {
+        let mut journal = app.world_mut().resource_mut::<EditJournal>();
+        let car = journal.gameplay_mut().trains.vehicles.get_mut(&id).unwrap();
+        for part in &mut car.parts {
+            if part.material == train_parts::COUPLER && part.offset[2] == 7 {
+                part.offset[2] = 19;
+            } else if part.material == train_parts::BOGIE && part.offset[2] == 5 {
+                part.offset[2] = 16;
+            } else if part.material == train_parts::CARGO {
+                part.offset[2] = 18;
+            }
+        }
+        for z in 7..=18 {
+            car.parts.push(TrainPart {
+                offset: [0, 1, z],
+                material: train_parts::FRAME,
+                facing: 0,
+                wood: WoodSpecies::Birch,
+            });
+        }
+        let engine = car.parts.len() as u16;
+        car.parts.push(TrainPart {
+            offset: [0, 2, 16],
+            material: 218,
+            facing: 0,
+            wood: WoodSpecies::Birch,
+        });
+        let chest = car.parts.len() as u16;
+        car.parts.push(TrainPart {
+            offset: [0, 2, 17],
+            material: 29,
+            facing: 0,
+            wood: WoodSpecies::Birch,
+        });
+        car.blocks.insert(
+            chest,
+            terra_core::trains::TrainBlockView {
+                boxes: vec![terra_core::block_shapes::ShapeBox {
+                    minimum: [0.0; 3],
+                    maximum: [1.0; 3],
+                    hinged: false,
+                }],
+                ..Default::default()
+            },
+        );
+        for (part, item) in [(engine, ItemKind::Block(16)), (chest, ItemKind::Block(13))] {
+            car.cargo.insert(
+                part,
+                Inventory {
+                    slots: vec![ItemStack { item, count: 3 }],
+                    ..Default::default()
+                },
+            );
+        }
+        assert!(car.valid());
+        (engine, chest)
+    };
+    let mut seats = crate::server::trains::SeatedPlayers::default();
+    for part in [engine, chest, cargo] {
+        assert_eq!(
+            run(
+                &mut app,
+                &peer,
+                TrainAction::OpenCargo { vehicle: id, part },
+                &mut seats
+            ),
+            Err(TrainError::OutOfReach)
+        );
+    }
+    assert!(matches!(
+        run(
+            &mut app,
+            &peer,
+            TrainAction::Seat {
+                vehicle: id,
+                part: seat
+            },
+            &mut seats
+        ),
+        Ok(TrainOutcome::Seated(Some(_)))
+    ));
+    for part in [engine, chest, cargo] {
+        let TrainOutcome::Cargo(snapshot) = run(
+            &mut app,
+            &peer,
+            TrainAction::OpenCargo { vehicle: id, part },
+            &mut seats,
+        )
+        .unwrap() else {
+            panic!("the bound owner must open every storage part in this car");
+        };
+        let player_revision =
+            app.world().resource::<EditJournal>().gameplay().inventories[&owner].revision;
+        let action = TrainAction::Cargo {
+            vehicle: id,
+            part,
+            revision: snapshot.revision,
+            player_revision,
+            gesture: terra_core::containers::ContainerGesture::Wheel {
+                slot: terra_core::INVENTORY_SLOTS as u8,
+                to_cursor: false,
+            },
+            reserved: [0; terra_core::INVENTORY_SLOTS],
+        };
+        peer.uuid = PlayerUuid::from_u128(99);
+        let before = app.world().resource::<EditJournal>().gameplay().clone();
+        assert_eq!(
+            run(
+                &mut app,
+                &peer,
+                TrainAction::OpenCargo { vehicle: id, part },
+                &mut seats
+            ),
+            Err(TrainError::NotOwner)
+        );
+        assert_eq!(
+            run(&mut app, &peer, action.clone(), &mut seats),
+            Err(TrainError::NotOwner)
+        );
+        assert_eq!(app.world().resource::<EditJournal>().gameplay(), &before);
+        peer.uuid = owner;
+        let result = run(&mut app, &peer, action, &mut seats).unwrap();
+        let TrainOutcome::Cargo(updated) = result else {
+            panic!("remote owner cargo gesture must work");
+        };
+        assert_eq!(
+            updated.inventory.slots[0].count,
+            snapshot.inventory.slots[0].count - 1
+        );
+        if part == engine {
+            let player_revision =
+                app.world().resource::<EditJournal>().gameplay().inventories[&owner].revision;
+            let refill = TrainAction::Cargo {
+                vehicle: id,
+                part,
+                revision: updated.revision,
+                player_revision,
+                gesture: terra_core::containers::ContainerGesture::Wheel {
+                    slot: terra_core::INVENTORY_SLOTS as u8,
+                    to_cursor: true,
+                },
+                reserved: [0; terra_core::INVENTORY_SLOTS],
+            };
+            let TrainOutcome::Cargo(refilled) = run(&mut app, &peer, refill, &mut seats).unwrap()
+            else {
+                panic!("the bound owner must be able to fuel the distant engine");
+            };
+            assert_eq!(
+                refilled.inventory.slots[0].count,
+                snapshot.inventory.slots[0].count
+            );
+        }
+    }
+}
+
+#[test]
+fn an_exposed_cab_profile_is_reachable_above_its_side_panel_but_never_through_a_world_wall() {
+    let (mut app, peer, id, seat, _) = train_fixture();
+    let slab = {
+        let mut journal = app.world_mut().resource_mut::<EditJournal>();
+        let car = journal.gameplay_mut().trains.vehicles.get_mut(&id).unwrap();
+        let index = car.parts.len() as u16;
+        car.parts.push(TrainPart {
+            offset: [-1, 1, 3],
+            material: 105,
+            facing: 5,
+            wood: WoodSpecies::Birch,
+        });
+        car.blocks.insert(
+            index,
+            terra_core::trains::TrainBlockView {
+                boxes: vec![terra_core::construction::slab_bounds(5)],
+                ..Default::default()
+            },
+        );
+        assert!(car.valid());
+        index
+    };
+    app.world_mut()
+        .get_mut::<Transform>(peer.body)
+        .unwrap()
+        .translation = Vec3::new(1.5, 4.9, 6.5);
+    let eye = [1.5_f64, 5.62, 6.5];
+    {
+        let journal = app.world().resource::<EditJournal>();
+        let car = &journal.gameplay().trains.vehicles[&id];
+        let old_target = car
+            .world_cell(usize::from(seat))
+            .unwrap()
+            .map(|v| v as f64 + 0.5);
+        let delta: [f64; 3] = std::array::from_fn(|i| old_target[i] - eye[i]);
+        let distance = delta.iter().map(|v| v * v).sum::<f64>().sqrt();
+        let hit = terra_world::trains::raycast(journal, eye, delta.map(|v| v / distance), distance)
+            .unwrap();
+        assert_eq!(
+            hit.part, slab,
+            "the former quantized owner center is hidden by the side panel"
+        );
+    }
+    let mut seats = crate::server::trains::SeatedPlayers::default();
+    assert!(matches!(
+        run(
+            &mut app,
+            &peer,
+            TrainAction::Seat {
+                vehicle: id,
+                part: seat
+            },
+            &mut seats
+        ),
+        Ok(TrainOutcome::Seated(Some(_)))
+    ));
+    for y in 5..=8 {
+        for z in 5..=7 {
+            app.world_mut()
+                .resource_mut::<ChunkStore>()
+                .loaded
+                .get_mut(&terra_voxel::global_to_section([2, y, z]).0)
+                .unwrap()
+                .data
+                .set_block([2, y as usize, z as usize], 3)
+                .unwrap();
+            app.world_mut()
+                .resource_mut::<EditJournal>()
+                .record([2, y, z], 3)
+                .unwrap();
+        }
+    }
+    let before = app.world().resource::<EditJournal>().gameplay().clone();
+    let mut outside = crate::server::trains::SeatedPlayers::default();
+    assert_eq!(
+        run(
+            &mut app,
+            &peer,
+            TrainAction::Seat {
+                vehicle: id,
+                part: seat
+            },
+            &mut outside
+        ),
+        Err(TrainError::OutOfReach)
     );
     assert_eq!(app.world().resource::<EditJournal>().gameplay(), &before);
 }

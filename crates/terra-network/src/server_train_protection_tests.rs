@@ -31,6 +31,9 @@ fn vehicle(owner: PlayerUuid) -> Vehicle {
         payloads: Default::default(),
         couplings: [None; 2],
         revision: 1,
+
+        motion: Default::default(),
+        burn_seconds: 0.0,
     };
     assert!(vehicle.valid());
     vehicle

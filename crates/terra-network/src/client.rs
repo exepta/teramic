@@ -1567,6 +1567,66 @@ fn receive_controls(
                     Ok(())
                 }
             }
+            ServerControl::TrainMotions(frames) => {
+                if session.player.is_none()
+                    || frames.len() > terra_core::trains::MAX_VEHICLES
+                    || frames
+                        .iter()
+                        .any(|frame| frame.id == 0 || !frame.motion.valid())
+                {
+                    Err("Invalid train motion snapshot".into())
+                } else {
+                    for frame in &frames {
+                        if let Some(vehicle) = session
+                            .trains
+                            .vehicles
+                            .iter_mut()
+                            .find(|vehicle| vehicle.id == frame.id)
+                            && frame.revision >= vehicle.revision
+                        {
+                            vehicle.motion = frame.motion;
+                            vehicle.revision = frame.revision;
+                        }
+                    }
+                    if let Some(views) = &mut world.train_collision_views {
+                        views
+                            .bypass_change_detection()
+                            .set_motions(&frames)
+                            .map(|changed| {
+                                if changed {
+                                    views.set_changed();
+                                }
+                            })
+                    } else {
+                        Ok(())
+                    }
+                }
+            }
+            ServerControl::TrainEngineFuel(cargo) => {
+                if !cargo.valid()
+                    || session
+                        .trains
+                        .vehicles
+                        .iter()
+                        .find(|car| car.id == cargo.vehicle)
+                        .is_none_or(|car| {
+                            Some(car.owner) != session.uuid
+                                || car
+                                    .parts
+                                    .get(usize::from(cargo.part))
+                                    .is_none_or(|part| part.material != 218)
+                        })
+                {
+                    Err("Invalid private engine state".into())
+                } else {
+                    if session.train_cargo.as_ref().is_some_and(|open| {
+                        open.vehicle == cargo.vehicle && open.part == cargo.part
+                    }) {
+                        session.train_cargo = Some(cargo);
+                    }
+                    Ok(())
+                }
+            }
             ServerControl::TrainResult(result) => {
                 use crate::protocol::trains::TrainOutcome;
                 if result.request == 0

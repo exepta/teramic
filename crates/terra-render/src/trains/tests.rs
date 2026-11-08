@@ -28,6 +28,11 @@ fn templates() -> TemplateSet {
             if name == "oak" {
                 templates.wood_materials.insert(primitive.material);
             }
+            if let Some(role) = crate::blocks::TrainAnimationRole::from_material(name) {
+                templates
+                    .train_moving_materials
+                    .insert(primitive.material, role);
+            }
         }
         templates.blocks.insert(
             material,
@@ -45,10 +50,94 @@ fn templates() -> TemplateSet {
     }
     assert!(!templates.wood_materials.is_empty());
     assert!(
-        slots.len() <= 7,
+        slots.len() <= 32,
         "authored train palette unexpectedly expanded"
     );
     templates
+}
+
+#[test]
+fn moving_parts_keep_separate_pivots_without_losing_authored_geometry() {
+    let templates = templates();
+    let parts = [
+        (211, [0, 0, 0], 0),
+        (211, [0, 0, 5], 0),
+        (214, [0, 2, 1], 2),
+        (212, [0, 1, 2], 0),
+    ]
+    .map(|(material, offset, facing)| TrainPart {
+        material,
+        offset,
+        facing,
+        wood: Default::default(),
+    });
+    let plain = geometry(
+        &parts,
+        &Default::default(),
+        &templates,
+        [0; 3],
+        &Default::default(),
+    )
+    .unwrap();
+    let composed = compose_geometry(
+        &parts,
+        &Default::default(),
+        &templates,
+        [0; 3],
+        &Default::default(),
+        true,
+    )
+    .unwrap();
+    let vertices = |batches: Vec<&MeshBatch>| {
+        let mut points: Vec<_> = batches
+            .into_iter()
+            .flat_map(|batch| {
+                batch
+                    .positions
+                    .iter()
+                    .map(|point| (batch.material, point.map(f32::to_bits)))
+            })
+            .collect();
+        points.sort_unstable();
+        points
+    };
+    let split: Vec<_> = composed
+        .batches
+        .iter()
+        .chain(composed.animated.iter().map(|part| &part.batch))
+        .collect();
+    assert_eq!(vertices(plain.iter().collect()), vertices(split.clone()));
+    assert_eq!(
+        plain.iter().map(|batch| batch.indices.len()).sum::<usize>(),
+        split.iter().map(|batch| batch.indices.len()).sum::<usize>()
+    );
+    assert!(composed.batches.iter().all(|batch| {
+        !templates
+            .train_moving_materials
+            .contains_key(&batch.material)
+    }));
+    for wheel in 0..4 {
+        let pivots: BTreeSet<_> = composed
+            .animated
+            .iter()
+            .filter(|part| {
+                part.animation.role == crate::blocks::TrainAnimationRole::BogieWheel(wheel)
+            })
+            .map(|part| part.animation.pivot.to_array().map(f32::to_bits))
+            .collect();
+        assert_eq!(pivots.len(), 2, "each bogie needs its own wheel pivot");
+    }
+    assert!(
+        composed
+            .animated
+            .iter()
+            .any(|part| { part.animation.role == crate::blocks::TrainAnimationRole::Throttle })
+    );
+    for part in &composed.animated {
+        let rest = animation::pose(part.animation, 0.0, 0);
+        assert!(rest.translation.length() < 1e-6);
+        assert!(rest.rotation.angle_between(Quat::IDENTITY).abs() < 1e-6);
+    }
 }
 
 #[test]
@@ -76,7 +165,7 @@ fn assembled_geometry_matches_actual_placed_models_in_every_pose_and_wood() {
         &Default::default(),
     )
     .unwrap();
-    assert!(!merged.is_empty() && merged.len() <= 7);
+    assert!(!merged.is_empty() && merged.len() <= 32);
     type AuthoredBatch = (Vec<[f32; 3]>, Vec<[f32; 3]>, Vec<[f32; 2]>, Vec<u32>);
     let mut expected = BTreeMap::<usize, AuthoredBatch>::new();
     let mut wood_colors = BTreeSet::new();
@@ -195,6 +284,8 @@ fn assembled_root_uses_the_same_fractional_origin_as_authoritative_models() {
         revision: 1,
         mass_kg: 0,
         blocks: Default::default(),
+
+        motion: Default::default(),
     };
     assert_eq!(
         model_translation(vehicle.anchor).to_array(),

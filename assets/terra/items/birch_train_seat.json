@@ -1,0 +1,10 @@
+{
+  "item": {
+    "wooden_block": {
+      "material": 215,
+      "wood": "birch"
+    }
+  },
+  "name": "Zugsitz (birch)",
+  "description": "Modular railway vehicle part. Connect parts beside an assembly station, then assemble the vehicle. Birch wood variant."
+}

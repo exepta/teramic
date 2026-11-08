@@ -547,6 +547,9 @@ fn a_signed_stretch_uses_the_real_long_ray_and_one_target_support_without_spendi
         payloads: Default::default(),
         couplings: [None; 2],
         revision: 1,
+
+        motion: Default::default(),
+        burn_seconds: 0.0,
     };
     blocking_car.cargo.insert(
         4,

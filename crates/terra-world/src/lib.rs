@@ -43,6 +43,10 @@ pub mod targeting;
 #[cfg(feature = "bevy")]
 pub mod torches;
 #[cfg(feature = "bevy")]
+pub mod train_disassembly;
+#[cfg(feature = "bevy")]
+pub mod train_motion;
+#[cfg(feature = "bevy")]
 pub mod trains;
 #[cfg(feature = "bevy")]
 pub mod tree_felling;

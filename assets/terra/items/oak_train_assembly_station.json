@@ -1,0 +1,10 @@
+{
+  "item": {
+    "wooden_block": {
+      "material": 217,
+      "wood": "oak"
+    }
+  },
+  "name": "Zug-Montagestelle (oak)",
+  "description": "Assemble or dismantle connected modular railway vehicles. Right-click to manage the workshop. Oak wood variant."
+}

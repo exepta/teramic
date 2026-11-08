@@ -1,0 +1,47 @@
+{
+  "id": "teramic::train_grate_stairs",
+  "name": "Lok-Gitter Treppe",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "block": 290
+    },
+    "count": 4
+  },
+  "pattern": {
+    "kind": "shaped",
+    "width": 3,
+    "height": 3,
+    "cells": [
+      {
+        "item": {
+          "mineral": "iron_ingot"
+        },
+        "count": 1
+      },
+      null,
+      null,
+      null,
+      {
+        "item": {
+          "block": 288
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "mineral": "iron_ingot"
+        },
+        "count": 1
+      },
+      null,
+      null,
+      {
+        "item": {
+          "mineral": "iron_ingot"
+        },
+        "count": 1
+      }
+    ]
+  }
+}

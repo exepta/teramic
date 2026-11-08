@@ -1,0 +1,47 @@
+{
+  "id": "teramic::train_boiler_curved",
+  "name": "Lok-Kessel gebogen",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "block": 220
+    },
+    "count": 1
+  },
+  "pattern": {
+    "kind": "shaped",
+    "width": 3,
+    "height": 3,
+    "cells": [
+      {
+        "item": {
+          "mineral": "iron_ingot"
+        },
+        "count": 1
+      },
+      null,
+      {
+        "item": {
+          "mineral": "iron_ingot"
+        },
+        "count": 1
+      },
+      null,
+      {
+        "item": {
+          "block": 219
+        },
+        "count": 1
+      },
+      null,
+      null,
+      null,
+      {
+        "item": {
+          "mineral": "iron_ingot"
+        },
+        "count": 1
+      }
+    ]
+  }
+}

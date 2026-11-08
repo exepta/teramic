@@ -1,0 +1,10 @@
+{
+  "item": {
+    "wooden_block": {
+      "material": 217,
+      "wood": "cherry"
+    }
+  },
+  "name": "Zug-Montagestelle (cherry)",
+  "description": "Assemble or dismantle connected modular railway vehicles. Right-click to manage the workshop. Cherry wood variant."
+}

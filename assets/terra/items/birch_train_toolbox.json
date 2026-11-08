@@ -1,0 +1,10 @@
+{
+  "item": {
+    "wooden_block": {
+      "material": 267,
+      "wood": "birch"
+    }
+  },
+  "name": "Lok-Werkzeugkasten (birch)",
+  "description": "Decorative BR52 locomotive component. Attach to the connected vehicle body before assembly. Birch wood variant."
+}

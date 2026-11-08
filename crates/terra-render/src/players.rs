@@ -1299,6 +1299,8 @@ mod tests {
                     revision: 1,
                     mass_kg: 20,
                     blocks: Default::default(),
+
+                    motion: Default::default(),
                 });
             let yaw = train_seat_yaw(Some(&session), Some(binding)).unwrap();
             assert_eq!(yaw, 3.0 * std::f32::consts::FRAC_PI_2);

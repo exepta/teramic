@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "id": 246,
+  "name": "F\u00fchrerhaus-Frontwand",
+  "description": "Decorative BR52 locomotive component. Attach to the connected vehicle body before assembly.",
+  "creative_category": "building",
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/train_cab_wall_front.gltf",
+  "struct_block": true,
+  "hardness": 1.8,
+  "resistance": 12,
+  "required_tool": "pickaxe",
+  "mining_level": 0,
+  "collision_boxes": [
+    {
+      "minimum": [
+        0,
+        0,
+        0
+      ],
+      "maximum": [
+        0.14,
+        1,
+        0.16
+      ]
+    },
+    {
+      "minimum": [
+        0.86,
+        0,
+        0
+      ],
+      "maximum": [
+        1,
+        1,
+        0.16
+      ]
+    },
+    {
+      "minimum": [
+        0.14,
+        0.88,
+        0
+      ],
+      "maximum": [
+        0.86,
+        1,
+        0.16
+      ]
+    },
+    {
+      "minimum": [
+        0.14,
+        0,
+        0
+      ],
+      "maximum": [
+        0.86,
+        0.32,
+        0.16
+      ]
+    }
+  ]
+}

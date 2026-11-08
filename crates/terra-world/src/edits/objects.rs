@@ -125,6 +125,15 @@ impl BlockObjectState {
                 158 | 160 => self.facing < 4 && self.peer.is_none() && !self.secondary,
                 154..=156 => self.facing < 4 && self.peer.is_none() && !self.secondary,
                 161 => self.facing < 8 && self.peer.is_none() && !self.secondary,
+                id if terra_core::construction::is_shape(id) => {
+                    terra_core::construction::valid_facing(id, self.facing)
+                        && self.peer.is_none()
+                        && !self.secondary
+                }
+                247 => self.facing < 8 && self.peer.is_none() && !self.secondary,
+                id if terra_core::locomotive_parts::is_part(id) && id != 248 => {
+                    self.facing < 4 && self.peer.is_none() && !self.secondary
+                }
                 209..=217 => self.facing < 4 && self.peer.is_none() && !self.secondary,
                 162 | 170 | 171 => self.facing < 4 && self.peer.is_none() && !self.secondary,
                 163..=169 | 172 => {
@@ -174,7 +183,7 @@ impl BlockObjectState {
                             })
                         })
                 }
-                59 | 65..=67 | 139 => {
+                59 | 65..=67 | 139 | 248 => {
                     self.facing < if material == 59 { 4 } else { 8 }
                         && self.peer.is_some_and(|peer| {
                             peer == [

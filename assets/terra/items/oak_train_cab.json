@@ -1,0 +1,10 @@
+{
+  "item": {
+    "wooden_block": {
+      "material": 214,
+      "wood": "oak"
+    }
+  },
+  "name": "F\u00fchrerstand (oak)",
+  "description": "Modular railway vehicle part. Connect parts beside an assembly station, then assemble the vehicle. Oak wood variant."
+}

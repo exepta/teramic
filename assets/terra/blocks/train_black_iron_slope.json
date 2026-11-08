@@ -1,0 +1,161 @@
+{
+  "schema_version": 1,
+  "id": 275,
+  "name": "Schwarzes Eisen Schr\u00e4ge",
+  "description": "Structural locomotive construction shape. Build the connected vehicle body with matching metal parts.",
+  "creative_category": "building",
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/train_black_iron_slope.gltf",
+  "struct_block": true,
+  "hardness": 1.8,
+  "resistance": 12,
+  "required_tool": "pickaxe",
+  "mining_level": 0,
+  "collision_boxes": [
+    {
+      "minimum": [
+        0,
+        0,
+        0.0
+      ],
+      "maximum": [
+        1,
+        0.08333333333333333,
+        0.08333333333333333
+      ]
+    },
+    {
+      "minimum": [
+        0,
+        0,
+        0.08333333333333333
+      ],
+      "maximum": [
+        1,
+        0.16666666666666666,
+        0.16666666666666666
+      ]
+    },
+    {
+      "minimum": [
+        0,
+        0,
+        0.16666666666666666
+      ],
+      "maximum": [
+        1,
+        0.25,
+        0.25
+      ]
+    },
+    {
+      "minimum": [
+        0,
+        0,
+        0.25
+      ],
+      "maximum": [
+        1,
+        0.3333333333333333,
+        0.3333333333333333
+      ]
+    },
+    {
+      "minimum": [
+        0,
+        0,
+        0.3333333333333333
+      ],
+      "maximum": [
+        1,
+        0.4166666666666667,
+        0.4166666666666667
+      ]
+    },
+    {
+      "minimum": [
+        0,
+        0,
+        0.4166666666666667
+      ],
+      "maximum": [
+        1,
+        0.5,
+        0.5
+      ]
+    },
+    {
+      "minimum": [
+        0,
+        0,
+        0.5
+      ],
+      "maximum": [
+        1,
+        0.5833333333333334,
+        0.5833333333333334
+      ]
+    },
+    {
+      "minimum": [
+        0,
+        0,
+        0.5833333333333334
+      ],
+      "maximum": [
+        1,
+        0.6666666666666666,
+        0.6666666666666666
+      ]
+    },
+    {
+      "minimum": [
+        0,
+        0,
+        0.6666666666666666
+      ],
+      "maximum": [
+        1,
+        0.75,
+        0.75
+      ]
+    },
+    {
+      "minimum": [
+        0,
+        0,
+        0.75
+      ],
+      "maximum": [
+        1,
+        0.8333333333333334,
+        0.8333333333333334
+      ]
+    },
+    {
+      "minimum": [
+        0,
+        0,
+        0.8333333333333334
+      ],
+      "maximum": [
+        1,
+        0.9166666666666666,
+        0.9166666666666666
+      ]
+    },
+    {
+      "minimum": [
+        0,
+        0,
+        0.9166666666666666
+      ],
+      "maximum": [
+        1,
+        1.0,
+        1.0
+      ]
+    }
+  ]
+}

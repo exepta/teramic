@@ -1,0 +1,125 @@
+{
+  "schema_version": 1,
+  "id": 254,
+  "name": "Tender-Wassertank",
+  "description": "Decorative tender water tank casing. Fuel-powered driving needs no water; steam and water ports follow the steam engine system.",
+  "creative_category": "building",
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/train_water_tank.gltf",
+  "struct_block": true,
+  "hardness": 1.8,
+  "resistance": 12,
+  "required_tool": "pickaxe",
+  "mining_level": 0,
+  "collision_boxes": [
+    {
+      "minimum": [
+        0,
+        0,
+        0
+      ],
+      "maximum": [
+        1,
+        0.93,
+        1
+      ]
+    },
+    {
+      "minimum": [
+        0.3875555692797549,
+        0.92,
+        0.32999999999999996
+      ],
+      "maximum": [
+        0.6124444307202451,
+        1,
+        0.3725
+      ]
+    },
+    {
+      "minimum": [
+        0.3527756813566454,
+        0.92,
+        0.3725
+      ],
+      "maximum": [
+        0.6472243186433546,
+        1,
+        0.415
+      ]
+    },
+    {
+      "minimum": [
+        0.3353982077861848,
+        0.92,
+        0.415
+      ],
+      "maximum": [
+        0.6646017922138152,
+        1,
+        0.4575
+      ]
+    },
+    {
+      "minimum": [
+        0.32999999999999996,
+        0.92,
+        0.4575
+      ],
+      "maximum": [
+        0.67,
+        1,
+        0.5
+      ]
+    },
+    {
+      "minimum": [
+        0.32999999999999996,
+        0.92,
+        0.5
+      ],
+      "maximum": [
+        0.67,
+        1,
+        0.5425
+      ]
+    },
+    {
+      "minimum": [
+        0.3353982077861848,
+        0.92,
+        0.5425
+      ],
+      "maximum": [
+        0.6646017922138152,
+        1,
+        0.585
+      ]
+    },
+    {
+      "minimum": [
+        0.3527756813566454,
+        0.92,
+        0.585
+      ],
+      "maximum": [
+        0.6472243186433546,
+        1,
+        0.6275000000000001
+      ]
+    },
+    {
+      "minimum": [
+        0.3875555692797549,
+        0.92,
+        0.6275000000000001
+      ],
+      "maximum": [
+        0.6124444307202451,
+        1,
+        0.67
+      ]
+    }
+  ]
+}

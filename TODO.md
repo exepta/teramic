@@ -6,8 +6,8 @@ Erledigte Aufgaben werden entfernt; die Umsetzungshistorie steht in
 `F` = Feature, `O` = Optimierung/Fehlerkorrektur, `A` = Abnahme.
 
 Die weiteren Schwerpunkte bauen auf den vorhandenen Kingdom-Rechten, Baeumen
-und Setzlingen auf: produktive NPC-Arbeit sowie Fahrzeugbasis
-vor Zugbetrieb. Vorhandene Registries, Navigation, Inventare,
+und Setzlingen auf: produktive NPC-Arbeit sowie Dampfantrieb und
+Fahrzeugautomatisierung. Vorhandene Registries, Navigation, Inventare,
 Wassertechnik sowie Speicher- und Netzwerkpfade werden erweitert.
 Neue Systeme brauchen passende Save/Reload-, Mehrspieler- und Besitzpruefungen;
 Wachstum, NPC-Arbeit und bewegte Fahrzeuge muessen begrenzt simuliert werden.
@@ -22,18 +22,9 @@ Wachstum, NPC-Arbeit und bewegte Fahrzeuge muessen begrenzt simuliert werden.
 
 ## 2. Zuege, Strassen Und Pferdekutschen
 
-### Gleise Und Zugbau
-
-- [ ] **F54 Modularer Dampflok-Baukasten (BR 52):** Die [Bildreferenz](docs/references/br52-train-system.png) als gestalterische und modulare Vorlage fuer passende Zugbloecke verwenden:
-  - Gerade/gebogene Kessel, Abschluesse, Rauchkammer, nummerierte Rauchkammertuer, Schornstein, Dampfdom, gerade/gebogene Messingrohre, Ventile und Druckanzeige/-einheit.
-  - Grosse/mittlere/kleine Raeder, Achsen, lange/kurze Kuppelstangen, Treibstangen, Gelenke und Kreuzkopf; Hauptrahmen, roter Rahmen, Pufferbohle, Puffer und Kupplungen.
-  - Fuehrerhauswaende, Fenster, Tueren, flache/gebogene Daecher und Dachluefter; Tenderwaende/-front, Wassertank und Kohleladung.
-  - Leitern, Gelaender, Handlaeufe/-stuetzen, Nietenplatten, Schrauben, Luken, Scheinwerfer samt Halterung, Nummernschilder, Werkzeugkasten, Holzplanken und Kohlestuecke.
-  - Schwarzes Eisen, dunkler Stahl, Blech und Gitter mit Block-, Slab-, Treppen-, Innen-/Aussenecken- und Schraegenformen. Raeder/Gestaenge mit der Fahrt synchronisieren; funktionale Teile an F53/F63 anbinden und Dekoration kennzeichnen.
-
 ### Fahrbetrieb Und Automatisierung
 
-- [ ] **F53 Fahrbarer Zug Und Dampfantrieb:** Anfahren, Bremsen, Rueckwaertsfahrt, Kupplungen und Mitfahren umsetzen. Dampfloks mit echtem Wasser-/Brennstoffverbrauch und Kesseldruck an vorhandene Wassertechnik, Inventare und Kinetik anbinden. Das vorhandene Live-Gleisbettlimit `terra_world::rails::ballast::speed_limit` verwenden: vollstaendig tragender Kies/Schotter erlaubt 50 Prozent mehr Tempo, ein Bonus wird einmal angewandt. Bremswege, Hindernisse, Kollisionen und Entgleisungsregeln definieren; Fahrt ueber Chunk-Grenzen, Fahrzeug-Unload und Wiederaufnahme nach Laden pruefen.
+- [ ] **F53 Dampfantrieb Und Verbleibende Fahrregeln:** Brennstofffahrt, Fahrhebel, Bremsen, Rueckwaertsfahrt, Kupplungen und Mitfahren sind vorhanden. Dampfloks mit echtem Wasserverbrauch und Kesseldruck an vorhandene Wassertechnik, Inventare und Kinetik anbinden. Das vorhandene Live-Gleisbettlimit `terra_world::rails::ballast::speed_limit` weiterverwenden: vollstaendig tragender Kies/Schotter erlaubt einmalig 50 Prozent mehr Tempo. Verbleibende Entgleisungsregeln definieren und Fahrzeug-Unload sowie Wiederaufnahme ueber ungeladene Strecken und Spielstandwechsel weiter pruefen.
 
 - [ ] **F65 NPC-Lokfuehrer:** Einen zuweisbaren Zugfuehrer-Beruf ergaenzen. Fuehrerstand erreichen, zugewiesenen Zug fahren, Weichen/Signale und Haltepunkte beachten sowie bei Hindernissen sicher bremsen. Wasser-/Brennstoffmangel, blockierte Strecke und fehlende Berechtigung anzeigen; Dienstzeit, Spieleruebernahme und Wiederaufnahme nach Laden regeln.
 

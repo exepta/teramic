@@ -2,6 +2,7 @@
 """Author modular train parts with shared model, collision and recipe data."""
 import json
 from build_castle import Mesh, BLOCKS, RECIPES
+from build_locomotive_parts import palette, wheel, cylinder
 
 PARTS = [
     (210, 'train_chassis', 'Zug-Fahrgestell'),
@@ -22,39 +23,41 @@ def frame(mesh, height=.18):
         mesh.box([.08, .08, z], [.92, height, z + .12], 'iron', solid=True)
 
 
-def main():
+def main(materials=None):
+    generated = 0
     for material, slug, name in PARTS:
+        if materials is not None and material not in materials:
+            continue
+        generated += 1
         mesh = Mesh(slug)
         mesh.materials['red'] = ([.48, .055, .055], None, .05, .88)
         mesh.materials['dark'] = ([.12, .14, .18], 'machinery-iron-hd.png', .7, .6)
         mesh.materials['oak'] = ([.44, .23, .10], 'machinery-oak-hd.png', 0, .85)
+        palette(mesh)
         if material in [210, 212]:
-            frame(mesh, .28 if material == 210 else .18)
-            mesh.box([.32, 0, .33], [.68, .12, .67], 'iron', solid=True)
-            if material == 210:
-                mesh.box([.12, .28, .12], [.88, .38, .88], 'dark', solid=True)
-                for x in [.17, .77]:
-                    for z in [.16, .76]:
-                        mesh.box([x, .38, z], [x + .06, .42, z + .06], 'rivet', solid=True)
+            # Structural cells expose a complete attachable face on all six sides.
+            mesh.box([0, 0, 0], [1, 1, 1], 'train_black_iron', solid=True)
+            for x in [.02, .90]:
+                mesh.box([x, .03, .01], [x + .08, .97, .04], 'train_red' if material == 210 else 'train_dark_steel')
+            for x in [.15, .75]:
+                for y in [.15, .75]:
+                    mesh.box([x, y, .005], [x + .06, y + .06, .05], 'rivet')
         elif material == 211:
-            for z in [.25, .75]:
-                mesh.box([-.50, .23, z - .045], [1.50, .31, z + .045], 'rivet', solid=True)
-                # Wheel centres follow the shared two-metre track gauge.
-                for x in [-.56, 1.44]:
-                    for low_y, high_y, half_z in [(.12, .40, .23), (.05, .12, .15), (.40, .47, .15)]:
-                        mesh.box([x, low_y, z - half_z], [x + .12, high_y, z + half_z], 'dark', solid=True)
-                    mesh.box([x - .01 if x > .1 else x, .21, z - .065],
-                             [x + .13, .33, z + .065], 'rivet', solid=True)
-            mesh.box([-.40, .40, .08], [1.40, .55, .92], 'iron', solid=True)
-            mesh.box([.32, .55, .33], [.68, 1.0, .67], 'dark', solid=True)
+            for z in [0.0, 1.0]:
+                cylinder(mesh, [.5, .5, z], .07, -.5, 1.5, 0, 'train_axle')
+            for index, (x, z) in enumerate([(-.5, 0), (-.5, 1), (1.5, 0), (1.5, 1)]):
+                wheel(mesh, .45, [x, .5, z], x - .065, x + .065, 'train_bogie_wheel_' + str(index))
+            mesh.box([-.40, .82, .0], [1.40, 1, 1], 'train_black_iron', solid=True)
+            for x in [-.3, 1.1]:
+                mesh.box([x, .60, .10], [x + .2, .85, .90], 'train_red', solid=True)
         elif material == 213:
-            mesh.box([.29, .24, .05], [.71, .58, .30], 'dark', solid=True)
-            mesh.box([.40, .32, .27], [.60, .46, .77], 'iron', solid=True)
+            mesh.box([.29, .24, 0], [.71, .58, .30], 'dark', solid=True)
+            mesh.box([.40, .32, .27], [.60, .46, 1], 'iron', solid=True)
             for x in [.26, .61]:
                 mesh.box([x, .26, .69], [x + .13, .52, .96], 'iron', solid=True)
             mesh.box([.26, .26, .83], [.74, .52, .96], 'rivet', solid=True)
         elif material == 214:
-            mesh.box([.05, .02, .05], [.95, .16, .95], 'iron', solid=True)
+            mesh.box([0, 0, 0], [1, .16, 1], 'iron', solid=True)
             for x in [.06, .84]:
                 for z in [.08, .84]:
                     mesh.box([x, .16, z], [x + .10, .91, z + .08], 'oak', solid=True)
@@ -65,25 +68,29 @@ def main():
             mesh.box([.18, .47, .12], [.82, .57, .40], 'dark', solid=True)
             for x in [.25, .49, .69]:
                 mesh.box([x, .57, .18], [x + .055, .65, .27], 'gold', solid=True)
+            mesh.materials['train_throttle_lever_shaft'] = ([.89, .57, .16], None, .82, .33)
+            mesh.materials['train_throttle_lever_grip'] = ([.08, .09, .10], None, .12, .85)
+            mesh.box([.69, .57, .22], [.75, .87, .28], 'train_throttle_lever_shaft')
+            mesh.box([.64, .85, .20], [.80, .92, .30], 'train_throttle_lever_grip')
             mesh.box([.20, .16, .50], [.80, .34, .78], 'iron', solid=True)
             mesh.box([.17, .34, .44], [.83, .50, .80], 'red', solid=True)
             mesh.box([.17, .49, .78], [.83, .86, .88], 'red', solid=True)
         elif material == 215:
             for x in [.18, .74]:
                 for z in [.19, .69]:
-                    mesh.box([x, .02, z], [x + .08, .35, z + .08], 'iron', solid=True)
+                    mesh.box([x, 0, z], [x + .08, .35, z + .08], 'iron', solid=True)
             mesh.box([.12, .33, .12], [.88, .50, .82], 'red', solid=True)
             mesh.box([.12, .49, .72], [.88, .96, .88], 'red', solid=True)
             for x in [.05, .87]:
                 mesh.box([x, .51, .24], [x + .08, .65, .81], 'oak', solid=True)
         elif material == 216:
-            mesh.box([.08, .02, .08], [.92, .87, .92], 'oak', solid=True)
+            mesh.box([.08, 0, .08], [.92, .87, .92], 'oak', solid=True)
             mesh.box([.05, .87, .05], [.95, .96, .95], 'oak', solid=True)
             for x in [.13, .78]:
                 mesh.box([x, .05, .055], [x + .09, .88, .945], 'iron', solid=True)
             mesh.box([.43, .58, .025], [.57, .76, .09], 'rivet', solid=True)
         else:
-            mesh.box([.04, .02, .04], [.96, .14, .96], 'iron', solid=True)
+            mesh.box([.04, 0, .04], [.96, .14, .96], 'iron', solid=True)
             mesh.box([.31, .14, .31], [.69, .72, .69], 'dark', solid=True)
             mesh.box([.10, .69, .10], [.90, .83, .90], 'oak', solid=True)
             mesh.box([.14, .83, .16], [.86, .89, .50], 'iron', solid=True)
@@ -124,7 +131,7 @@ def main():
                   'output': {'item': {'block': material}, 'count': 1},
                   'pattern': {'kind': 'shaped', 'width': 3, 'height': 3, 'cells': cells}}
         (RECIPES / f'{slug}.json').write_text(json.dumps(recipe, indent=2) + '\n')
-    print('Generated eight modular train part models, shared collision profiles and recipes.')
+    print(f'Generated {generated} modular train part models, shared collision profiles and recipes.')
 
 
 if __name__ == '__main__':

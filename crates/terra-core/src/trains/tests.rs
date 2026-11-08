@@ -49,6 +49,9 @@ fn car(anchor: Cell, kind: VehicleKind) -> Vehicle {
         payloads: Default::default(),
         couplings: [None, None],
         revision: 0,
+
+        motion: Default::default(),
+        burn_seconds: 0.0,
     }
 }
 #[test]
@@ -169,6 +172,88 @@ fn disconnected_parts_duplicate_cells_and_sideways_couplers_cannot_be_imported()
     let mut duplicate = car([0, 0, 0], VehicleKind::Freight);
     duplicate.parts.push(duplicate.parts[0]);
     assert!(!duplicate.valid());
+}
+
+#[test]
+fn moving_the_rigid_model_releases_its_old_build_pad_but_keeps_its_current_cells_reserved() {
+    let mut registry = TrainRegistry::default();
+    let first = registry
+        .insert(car([0, 4, 0], VehicleKind::Locomotive))
+        .unwrap();
+    registry
+        .vehicles
+        .get_mut(&first)
+        .unwrap()
+        .motion
+        .translation = [20.0, 0.0, 0.0];
+    let second = registry
+        .insert(car([0, 4, 0], VehicleKind::Freight))
+        .unwrap();
+    assert_ne!(first, second);
+    assert_eq!(registry.vehicles[&first].anchor, [0, 4, 0]);
+    assert_eq!(
+        registry.insert(car([20, 4, 0], VehicleKind::Freight)),
+        Err(TrainError::Occupied)
+    );
+    assert!(registry.valid());
+}
+
+#[test]
+fn analytic_rigid_bounds_match_independently_rotated_corners_at_every_build_axis() {
+    for facing in 0..4 {
+        let mut vehicle = car([9, 12, -7], VehicleKind::Locomotive);
+        vehicle
+            .parts
+            .iter_mut()
+            .find(|part| part.material == train_parts::CHASSIS)
+            .unwrap()
+            .facing = facing;
+        vehicle.motion.yaw = 0.63;
+        vehicle.motion.pitch = -0.27;
+        vehicle.motion.pivot = [0.5, 0.875, 5.5];
+        vehicle.motion.translation = [3.2, -0.4, 8.6];
+        let index = 2;
+        let shape = crate::block_shapes::ShapeBox {
+            minimum: [-0.3, 0.1, 0.2],
+            maximum: [1.2, 0.8, 0.9],
+            hinged: false,
+        };
+        let transformed = vehicle.world_shape(index, shape);
+        let rotated_pivot = vehicle
+            .motion
+            .rotate(vehicle.motion.pivot, vehicle.build_yaw());
+        let origin: [f64; 3] = std::array::from_fn(|i| {
+            vehicle.anchor[i] as f64
+                + if i == 1 { MODEL_Y_OFFSET } else { 0.0 }
+                + vehicle.motion.translation[i]
+                + vehicle.motion.pivot[i]
+                - rotated_pivot[i]
+        });
+        let mut low = [f64::INFINITY; 3];
+        let mut high = [f64::NEG_INFINITY; 3];
+        for corner in 0..8 {
+            let local = std::array::from_fn(|i| {
+                f64::from(vehicle.parts[index].offset[i])
+                    + if corner & (1 << i) == 0 {
+                        shape.minimum[i]
+                    } else {
+                        shape.maximum[i]
+                    }
+            });
+            let rotated = vehicle.motion.rotate(local, vehicle.build_yaw());
+            let point = std::array::from_fn::<_, 3, _>(|i| origin[i] + rotated[i]);
+            let restored = vehicle.local_point(point);
+            for i in 0..3 {
+                low[i] = low[i].min(point[i]);
+                high[i] = high[i].max(point[i]);
+                assert!((restored[i] - local[i]).abs() < 1e-9);
+            }
+        }
+        for i in 0..3 {
+            assert!((transformed.minimum[i] - low[i]).abs() < 1e-9);
+            assert!((transformed.maximum[i] - high[i]).abs() < 1e-9);
+        }
+    }
 }
 
 #[test]

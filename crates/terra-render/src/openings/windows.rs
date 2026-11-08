@@ -61,42 +61,7 @@ pub(super) fn parts(
     meshes: &mut Assets<Mesh>,
     materials: &Assets<StandardMaterial>,
 ) -> Option<Vec<Part>> {
-    let templates = assets.templates.as_ref()?;
-    let block = templates.blocks.get(&id)?;
-    let material = |p: &crate::blocks::PrimitiveTemplate| {
-        assets
-            .materials
-            .get(p.material)
-            .and_then(|handle| materials.get(handle))
-    };
-    let wood: Vec<_> = block
-        .model
-        .iter()
-        .filter(|p| {
-            !templates.hinge_materials.contains(&p.material)
-                && material(p)
-                    .is_some_and(|m| m.alpha_mode != AlphaMode::Blend && m.metallic < 0.25)
-        })
-        .map(|p| p.material)
-        .collect();
-    let base = *wood.first()?;
-    let metal = block
-        .model
-        .iter()
-        .find(|p| material(p).is_some_and(|m| m.metallic >= 0.25))
-        .map_or(base, |p| p.material);
-    let glass = block
-        .model
-        .iter()
-        .find(|p| material(p).is_some_and(|m| m.alpha_mode == AlphaMode::Blend))
-        .map_or(base, |p| p.material);
-    let palette = [
-        base,
-        *wood.get(1).unwrap_or(&base),
-        *wood.get(2).unwrap_or(&base),
-        metal,
-        glass,
-    ];
+    let palette = super::palette::material_palette(id, assets, materials)?;
     let group = Group {
         anchor: [0; 3],
         material: id,

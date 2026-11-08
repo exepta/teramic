@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "id": 252,
+  "name": "Tenderwand",
+  "description": "Decorative BR52 locomotive component. Attach to the connected vehicle body before assembly.",
+  "creative_category": "building",
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/train_tender_wall.gltf",
+  "struct_block": true,
+  "hardness": 1.8,
+  "resistance": 12,
+  "required_tool": "pickaxe",
+  "mining_level": 0,
+  "collision_boxes": [
+    {
+      "minimum": [
+        0,
+        0,
+        0
+      ],
+      "maximum": [
+        1,
+        1,
+        0.16
+      ]
+    },
+    {
+      "minimum": [
+        0,
+        0.88,
+        0.08
+      ],
+      "maximum": [
+        1,
+        1,
+        0.35
+      ]
+    }
+  ]
+}

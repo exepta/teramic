@@ -51,6 +51,11 @@ pub enum TrainAction {
         vehicle: u64,
         part: u16,
     },
+    Drive {
+        vehicle: u64,
+        throttle: i8,
+        brake: bool,
+    },
     Leave,
 }
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]

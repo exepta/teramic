@@ -19,7 +19,12 @@ fn volume(boxes: &[ShapeBox]) -> f64 {
 #[test]
 fn appended_ballast_slabs_preserve_every_historical_mixed_facing() {
     let historical = [82, 83, 84, 85, 86, 87, 88, 89, 105, 137];
-    for first in historical.into_iter().chain([BALLAST_SLAB]) {
+    let locomotive_slabs = [271, 277, 283, 289];
+    for first in historical
+        .into_iter()
+        .chain([BALLAST_SLAB])
+        .chain(locomotive_slabs)
+    {
         for (index, second) in historical.into_iter().enumerate() {
             for (half, facing) in HALF_FACINGS.into_iter().enumerate() {
                 let saved = merged_slab(first, facing, second).unwrap();
@@ -44,9 +49,22 @@ fn appended_ballast_slabs_preserve_every_historical_mixed_facing() {
                     < 1e-10
             );
         }
+        for (index, second) in locomotive_slabs.into_iter().enumerate() {
+            for (half, facing) in HALF_FACINGS.into_iter().enumerate() {
+                let saved = merged_slab(first, facing, second).unwrap();
+                assert_eq!(saved, 76 + index as u8 * 6 + half as u8);
+                let decoded = slab_halves(first, saved).unwrap();
+                assert_eq!(decoded[0], (first, facing));
+                assert_eq!(decoded[1].0, second);
+                assert!(valid_facing(first, saved));
+            }
+        }
     }
-    assert_eq!(LAST_MIXED_SLAB, 75);
-    assert!(!valid_facing(BALLAST_SLAB, 76));
+    assert_eq!(merged_slab(BALLAST_SLAB, 8, BALLAST_SLAB), Some(75));
+    assert_eq!(LAST_MIXED_SLAB, 99);
+    assert!(valid_facing(BALLAST_SLAB, 76));
+    assert!(valid_facing(BALLAST_SLAB, 99));
+    assert!(!valid_facing(BALLAST_SLAB, 100));
     assert_eq!(base_material(BALLAST_STAIRS), Some(BALLAST));
     assert_eq!(base_material(BALLAST_SLAB), Some(BALLAST));
     for material in [42, BALLAST, BALLAST_STAIRS, BALLAST_SLAB] {

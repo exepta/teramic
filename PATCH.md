@@ -6823,3 +6823,78 @@ Keine Grafiktests, Spielclients, Screenshots oder GPU-Abnahmen gestartet.
 [Pruefbericht](tools/benchmarks/results/free-train-building-2026-11-08/README.md).
 Der aktuelle vollstaendige Workspace-Build, Clippy aller Targets mit
 `-D warnings`, Format und Diff-Pruefung sind sauber.
+
+
+## 213. Brennstoffbetrieb, Fahrhebel Und Vollstaendiger BR52-Baukasten
+
+Fahrgestell und Rahmen sind volle Bloecke. Groessere Raeder liegen auf den
+Schienen auf; Kupplungen, Sitze, Laderaeume, Kessel und Daecher schliessen an
+ihre Montageflaechen an. Die Bauvorlage erlaubt 3 bis 15 Meter Mittenabstand
+zwischen den beiden Drehgestellen. Normale Bloecke, Formen und Holzvarianten
+bleiben als freier Fahrzeugaufbau verwendbar; der Laderaum hat keine feste
+Position relativ zum Fahrer.
+
+Der neue Brennstoffmotor nutzt ein echtes privates Inventar und die vorhandenen
+Ofenbrennstoffe. Der Besitzer steuert im Fuehrerstand einen siebenstufigen
+Fahrhebel, Bremse und Rueckwaertsfahrt. Konfigurierte Tastaturbelegung, native
+HTML-Buttons und Slider sind angebunden; die Anzeige verwendet echte
+Geschwindigkeit in Bloecken/s beziehungsweise Metern/s. Motor und Ladung sind
+vom eigenen Fuehrerstand aus erreichbar, auch bei Einbau hinter dem Fahrer.
+Raeder und Gestaenge laufen passend zu den gefahrenen Metern; der sichtbare
+Fuehrerstandhebel folgt der gewaehlten Stufe.
+
+Fahrzeuge folgen aktiven Gleiswegen, Kurven und Rampen. Gekuppelte Wagen werden
+zusammen geprueft und veroeffentlicht. Das bestehende Live-Gleisbettlimit gibt
+seinen einmaligen Schotterbonus. Unbekannte Bereiche, unpassende Gleise,
+Hindernisse, Personen, fremde Fahrzeuge und fehlende Rechte stoppen die Fahrt.
+Geschwenkte Weichen unter einem Zug duerfen seine Radkontakte nicht versetzen.
+Begrenzte Bewegungshuellraeume erfassen auch duenne Hindernisse zwischen zwei
+Posen; gleichzeitig geplante Gruppen reservieren ihren Weg gegeneinander.
+
+Montage setzt angehaltene, entkuppelte Fahrzeuge am aktuellen Ort in die Welt
+zurueck. Der Fahrer steigt zuerst aus; verbleibende Mitfahrer verhindern den
+Rueckbau. Ganze Formen, Tueren-/Fensterpartner, Rohrachsen, Inventare,
+Maschinenmetadaten und angefangener Motorbrennstoff werden passend mitgedreht.
+Die Versionspruefung verwendet die Fahrzeugrevision, und die UI erkennt die
+wirkliche Serverbestaetigung. Einsteigen und externe Inventarzugriffe verwenden
+die tatsaechlich transformierten Teile statt gerundeter Zellmitten; ein
+verdeckter Fuehrerstand bleibt hinter festen Waenden unzugaenglich. Rueckbau bleibt auf geladenem, freiem, geradem und
+ebenem Gleis neben einer Montagestelle begrenzt.
+
+F54 enthaelt alle 76 neuen BR52-Komponenten mit eigenen Modellen, Rezepten,
+Namen und Metadaten: Kessel/Rauchkammer, Rahmen/Puffer, Raeder/Gestaenge,
+Fuehrerhaus/Daecher, Tender und Anbauteile. Fenster und Tueren haben echte
+Fluegel. Schwarzes Eisen, dunkler Stahl, Blech und offenes Gitter bieten je
+Block-, Slab-, Treppen-, Eck- und Schraegenformen. Gemischte Slabs und alle
+Bauausrichtungen verwenden passende Formen und Gitteroeffnungen. Die fehlenden
+18 Holzvarianten im TMI-/Vorschauregister sind ergaenzt. Dampfventile,
+Druckinstrumente und Tender-Wassertank sind als Aufbauteile gekennzeichnet;
+echte Wasserversorgung und Kesseldruck bleiben unter F53 offen.
+
+Protokoll 118 trennt kompakte Fahrtposen von Blockgeometrie; unveraenderte ruhende
+Posen werden nicht wiederholt gesendet. Vorhandene native Kinematikkoerper und
+Renderwurzeln bewegen sich ohne erneutes Collider-Cooking oder Meshing. Jeder
+animierte Teil behaelt seinen eigenen Drehpunkt. Vorbereitete starre Matrizen
+vermeiden Trigonometrie pro Formecke. Die letzte Fahrtpose bestimmt auch dann
+die korrekte Collider-Uebergabe, wenn Demontage im selben Nachrichtenlauf folgt.
+
+Zugindex ID15 speichert Fahrt, Streckencursor und Brenndauer. ID13-/ID14-Decoder
+bleiben eingefroren und lesbar. Historische eingebaute Platten-/Radprofile
+werden auf die neuen Grundkoerper aktualisiert; freie Formen und private
+Nutzlasten bleiben erhalten.
+
+[Bauanleitung und Steuerung](docs/train-building.md).
+[CPU-Pruefbericht](tools/benchmarks/results/train-driving-br52-2026-11-08/README.md).
+
+
+Abnahme 213: 4.206 Workspace-Library-Tests bestanden, keiner fehlgeschlagen;
+neun bestehende Tests ignoriert. Der gezielte Zuglauf besteht mit 125 Tests.
+Enthalten sind native Physikkontakte, Kollisionen ohne erneutes Cooking bei
+Fahrt, Sichtschutz am Fuehrerstand, aktive Gleiswege, Kurven/Rampen, private
+Ladung und Brennstoff sowie Montage nach Fahrt ueber echtes UDP. Die Asset-
+Pruefung besteht fuer 84 Zugmodelle und 415 eindeutige Rezepte. Keine Grafiktests,
+Spielclients, Spielfenster, Screenshots oder GPU-Abnahmen gestartet.
+
+Der aktuelle vollstaendige Workspace-Build von Client und Server besteht
+(8 min 55 s), ebenso Clippy aller Targets mit `-D warnings`, Format und Diff.
+Die Programme wurden zur Abnahme nicht gestartet.

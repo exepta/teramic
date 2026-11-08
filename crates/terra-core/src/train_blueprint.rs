@@ -1,6 +1,10 @@
 //! Optional build guides share the authoritative train-part identities and cell grid.
 use crate::{train_parts, trains::VehicleKind};
 
+pub const MIN_WHEELBASE: u8 = 3;
+pub const MAX_WHEELBASE: u8 = 15;
+pub const DEFAULT_WHEELBASE: u8 = 4;
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct BlueprintCell {
     pub cell: [i64; 3],
@@ -17,12 +21,23 @@ pub struct TrainBlueprint {
     pub cells: Vec<BlueprintCell>,
 }
 
-/// Build a seven-cell vehicle around its chassis, rotating every cell together.
+/// Build the default connected vehicle around its chassis.
 pub fn template(chassis: [i64; 3], facing: u8, kind: VehicleKind) -> Vec<BlueprintCell> {
-    if facing >= 4 {
+    template_with_wheelbase(chassis, facing, kind, DEFAULT_WHEELBASE)
+}
+
+/// Wheelbase is the center-to-center distance between the two rail wheelsets.
+pub fn template_with_wheelbase(
+    chassis: [i64; 3],
+    facing: u8,
+    kind: VehicleKind,
+    wheelbase: u8,
+) -> Vec<BlueprintCell> {
+    if facing >= 4 || !(MIN_WHEELBASE..=MAX_WHEELBASE).contains(&wheelbase) {
         return Vec::new();
     }
-    let mut local = (-2..=4)
+    let length = i64::from(wheelbase);
+    let mut local = (-2..=length)
         .map(|z| {
             (
                 [0, 0, z],
@@ -36,9 +51,9 @@ pub fn template(chassis: [i64; 3], facing: u8, kind: VehicleKind) -> Vec<Bluepri
         .collect::<Vec<_>>();
     local.extend([
         ([0, -1, -1], train_parts::BOGIE),
-        ([0, -1, 3], train_parts::BOGIE),
+        ([0, -1, length - 1], train_parts::BOGIE),
         ([0, 0, -3], train_parts::COUPLER),
-        ([0, 0, 5], train_parts::COUPLER),
+        ([0, 0, length + 1], train_parts::COUPLER),
         (
             [0, 1, 1],
             match kind {
@@ -49,7 +64,7 @@ pub fn template(chassis: [i64; 3], facing: u8, kind: VehicleKind) -> Vec<Bluepri
         ),
     ]);
     if kind == VehicleKind::Locomotive {
-        local.push(([0, 1, 2], train_parts::CARGO));
+        local.push(([0, 1, 2], train_parts::ENGINE));
     }
     local
         .into_iter()
@@ -63,7 +78,11 @@ pub fn template(chassis: [i64; 3], facing: u8, kind: VehicleKind) -> Vec<Bluepri
             BlueprintCell {
                 cell: [chassis[0] + x, chassis[1] + y, chassis[2] + z],
                 material,
-                facing,
+                facing: if material == train_parts::CAB {
+                    (facing + 2) % 4
+                } else {
+                    facing
+                },
             }
         })
         .collect()
@@ -170,7 +189,12 @@ mod tests {
                         .len(),
                     parts.len()
                 );
-                assert!(parts.iter().all(|part| part.facing == facing));
+                assert!(parts.iter().all(|part| part.facing
+                    == if part.material == train_parts::CAB {
+                        (facing + 2) % 4
+                    } else {
+                        facing
+                    }));
                 let chassis = parts
                     .iter()
                     .find(|part| part.material == train_parts::CHASSIS)
@@ -199,5 +223,56 @@ mod tests {
         assert_eq!(hit.material, train_parts::CHASSIS);
         assert!(target(&parts, [-3.0, 2.5, 0.5], [1.0, 0.0, 0.0], 2.0).is_none());
         assert!(target(&parts, [f64::NAN; 3], [1.0, 0.0, 0.0], 5.0).is_none());
+    }
+
+    #[test]
+    fn powered_guides_keep_the_frame_connected_at_every_supported_wheelbase_without_fixed_cargo() {
+        for wheelbase in MIN_WHEELBASE..=MAX_WHEELBASE {
+            for facing in 0..4 {
+                let cells =
+                    template_with_wheelbase([0, 2, 0], facing, VehicleKind::Locomotive, wheelbase);
+                assert_eq!(cells.len(), usize::from(wheelbase) + 9);
+                assert!(
+                    cells
+                        .iter()
+                        .any(|part| part.material == train_parts::ENGINE)
+                );
+                assert!(!cells.iter().any(|part| part.material == train_parts::CARGO));
+                let bogies = cells
+                    .iter()
+                    .filter(|part| part.material == train_parts::BOGIE)
+                    .collect::<Vec<_>>();
+                assert_eq!(bogies.len(), 2);
+                assert_eq!(
+                    (0..3)
+                        .map(|axis| bogies[0].cell[axis].abs_diff(bogies[1].cell[axis]))
+                        .sum::<u64>(),
+                    u64::from(wheelbase),
+                );
+                let occupied: BTreeSet<_> = cells.iter().map(|part| part.cell).collect();
+                let mut connected = BTreeSet::new();
+                let mut pending = vec![cells[0].cell];
+                while let Some(cell) = pending.pop() {
+                    if !connected.insert(cell) {
+                        continue;
+                    }
+                    for axis in 0..3 {
+                        for step in [-1, 1] {
+                            let mut neighbor = cell;
+                            neighbor[axis] += step;
+                            if occupied.contains(&neighbor) && !connected.contains(&neighbor) {
+                                pending.push(neighbor);
+                            }
+                        }
+                    }
+                }
+                assert_eq!(connected, occupied, "every guide part touches its body");
+            }
+        }
+        for wheelbase in [0, 2, 16, 255] {
+            assert!(
+                template_with_wheelbase([0; 3], 0, VehicleKind::Locomotive, wheelbase).is_empty()
+            );
+        }
     }
 }
