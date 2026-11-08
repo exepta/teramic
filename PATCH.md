@@ -6570,3 +6570,47 @@ bestehen ihre CPU-Prüfungen. Normaler Unterbauabbau erhält Gleise und entfernt
 den fehlenden Schotterbonus. Clippy aller Targets mit `-D warnings`, Format,
 Diff, kopfloser Assetexport und aktueller Client-/Server-Build sind sauber.
 Keine Grafiktests, Spielclients oder Screenshots wurden gestartet.
+
+## 208. Geländerampen, Kurven Mit R Und Direkte Kollisionsdaten
+
+Die Rampenerkennung am freien unteren Gleisende berücksichtigt tatsächliche
+Geländestufen ohne vorausgesetztes oberes Gleis. Eine begrenzte Suche ermittelt
+die erste passende Plattformkante. Das vorhandene Endstück und kurze Lücken
+bis zur Stufe bilden eine gemeinsame sanfte Rampe; der hintere Anschluss bleibt
+erhalten. Vorschau und Authority verwenden dieselbe kanonische Geometrie und
+prüfen weiterhin Landehöhe, Unterbau, Freiraum, Holzart, Besitz und Rechte.
+
+R wechselt Auto, Kurve und Prellbock vor der aktuellen Kontextplanung. Reale
+Kurven lassen sich am passenden Anschluss direkt wählen; der manuelle
+Start-/Zielpfad bleibt verfügbar. Neue Kreuzungen werden auch serverseitig
+abgelehnt, einschließlich altem Kreuzungsbestand. Gespeicherte Kreuzungen
+bleiben lesbar und abbaubar. Die vorhandenen IDs und Saveformate bleiben gleich.
+
+Der Gleishinweis zeigt eine kurze Form, separaten Materialbedarf, kompakte
+Tasten und einen kurzen Status. Konfigurierte Belegungen bleiben korrekt;
+ein schwarzer Zwei-Pixel-Schatten verbessert die Lesbarkeit auf hellem Terrain.
+
+Der Kollisionsaufbau wird von der sichtbaren Terrain-Neuvermaschung entkoppelt.
+Bestätigte Blockdaten können die Kollision direkt versorgen. Entfernte
+Generator-Overrides mit unbekanntem Grundwert bleiben bis zur echten
+Neupublikation gesperrt, überholte Workergebnisse werden weiter verworfen.
+Damit entfällt das bisherige Warten auf den Terrain-Mesh vor dem
+Kollisionsjob. Ein erforderlicher aktueller Kollisionsjob bleibt abgesichert.
+Gleise liefern ihre geclippten Kollisionsflächen für jede belegte Zelle,
+einschließlich sekundärer Rampenabschnitte über Sectiongrenzen.
+
+[Prüfbericht und Bedienung](tools/benchmarks/results/track-ramps-input-collision-2026-11-08/README.md).
+Keine Grafiktests oder Spielclients werden gestartet.
+
+Abnahme 208: 4.251 Workspace-Library-/Bin-Tests bestanden, keiner fehlgeschlagen,
+neun bestehende Tests ignoriert. 60 echte Blickstrahlfälle ohne oberes Gleis,
+vier Ausrichtungen, kurze Abstände, frisches Player-Targeting mit signierter
+Bauanfrage und autoritativer Rampenbau mit realem Spielerkörper sind geprüft.
+R-/Mausradpriorität, freie Kurven und neue/veraltete Kreuzungsbestände sind
+abgesichert. Kollisionen entstehen bei ausdrücklich ausstehendem Render-Mesh;
+alte Worker, unbekannte Nachbarwerte und fehlerhafte Deltas bleiben gesperrt.
+Sämtliche Gleiszellen liefern auch über negative Sectiongrenzen und bei
+entladenem Anker ihre erwarteten Kollisionsflächen. Clippy aller Targets mit
+`-D warnings`, Format, Diff, kopfloser Assetexport und der aktuelle vollständige
+Client-/Server-Build sind sauber. Keine Grafiktests, Spielclients oder
+Screenshots wurden gestartet.

@@ -107,7 +107,8 @@ pub struct WaterPublished {
 }
 /// A confirmed replica delta changed section metadata, edits or loaded props.
 /// No generated block payload was published; consumers refresh this column's
-/// metadata without invalidating every loaded section.
+/// metadata without invalidating every loaded section. Confirmed sparse voxel
+/// overrides are already visible to readers while the render mesh is pending.
 #[derive(Message, Debug, Clone, Copy)]
 pub struct SectionEditApplied {
     pub position: SectionPos,
@@ -134,6 +135,8 @@ pub struct ChunkStore {
     pub(super) surface_ranges: HashMap<[i64; 2], [i64; 2]>,
     pub(super) columns: HashMap<[i64; 2], Arc<crate::PreparedColumn>>,
     pub(super) cave_views: Vec<(SectionPos, i64)>,
+    /// Forgotten overrides need their generated base before collision is known.
+    pub(super) unknown_voxel_bases: HashMap<SectionPos, HashSet<[usize; 3]>>,
 }
 impl ChunkStore {
     pub(crate) fn invalidate_sections(&mut self, positions: impl IntoIterator<Item = SectionPos>) {
@@ -253,7 +256,48 @@ impl ChunkStore {
     ) -> Result<(), String> {
         let owner = delta.position;
         let previous_prop_epoch = journal.prop_epoch(owner);
+        let accepted = delta.revision >= journal.revision(owner)
+            && delta.prop_epoch >= previous_prop_epoch
+            && delta.appearance_epoch >= journal.appearance_epoch(owner)
+            && delta.fluid_epoch >= journal.fluid_epoch(owner);
+        let previous_cells: Vec<_> = if accepted && self.loaded.contains_key(&owner) {
+            journal
+                .blocks_in_section(owner)
+                .map(|(cell, _)| cell)
+                .collect()
+        } else {
+            Vec::new()
+        };
         let affected = journal.import_replica_delta(delta)?;
+        // Publication of the visible mesh can lag behind a confirmed edit.
+        // Material/collision consumers need the accepted voxel values now.
+        if accepted && let Some(section) = self.loaded.get_mut(&owner) {
+            let known: HashSet<_> = journal
+                .blocks_in_section(owner)
+                .map(|(cell, _)| cell)
+                .collect();
+            let unresolved = self.unknown_voxel_bases.entry(owner).or_default();
+            unresolved.extend(
+                previous_cells
+                    .into_iter()
+                    .filter(|cell| !known.contains(cell)),
+            );
+            unresolved.retain(|cell| !known.contains(cell));
+            if unresolved.is_empty() {
+                self.unknown_voxel_bases.remove(&owner);
+            }
+            let mut blocks: Option<Vec<u16>> = None;
+            for (cell, material) in journal.blocks_in_section(owner) {
+                let index = cell[0] + 16 * (cell[1] + 16 * cell[2]);
+                if section.data.blocks()[index] != material {
+                    blocks.get_or_insert_with(|| section.data.blocks().to_vec())[index] = material;
+                }
+            }
+            if let Some(blocks) = blocks {
+                section.data = BlockSection::from_blocks(owner, journal.revision(owner), blocks)
+                    .map_err(|error| error.to_string())?;
+            }
+        }
         for position in affected {
             if self.is_wanted(position) {
                 self.dirty.insert(position);
@@ -283,7 +327,46 @@ impl ChunkStore {
     }
     pub fn block_at(&self, global: [i64; 3]) -> Option<u16> {
         let (p, local) = global_to_section(global);
+        if self
+            .unknown_voxel_bases
+            .get(&p)
+            .is_some_and(|cells| cells.contains(&local))
+        {
+            return None;
+        }
         self.loaded.get(&p)?.data.block(local).ok()
+    }
+    /// A render remesh may be pending while confirmed voxel/collision data is ready.
+    /// Removing an override instead makes its generated base explicitly unknown.
+    pub fn voxel_data_known(&self, position: SectionPos) -> bool {
+        self.loaded.contains_key(&position) && !self.voxel_base_pending(position)
+    }
+    /// A forgotten override cannot supply a known halo shape until regenerated.
+    pub fn voxel_base_pending(&self, position: SectionPos) -> bool {
+        self.unknown_voxel_bases
+            .get(&position)
+            .is_some_and(|cells| !cells.is_empty())
+    }
+    /// Copies confirmed voxels independently of the visible render mesh.
+    /// Forgotten generated bases remain unavailable until section publication.
+    pub fn confirmed_voxels(
+        &self,
+        position: SectionPos,
+        journal: &crate::edits::EditJournal,
+    ) -> Result<BlockSection, String> {
+        if !self.voxel_data_known(position) {
+            return Err("Confirmed voxel base is not known".into());
+        }
+        let section = self.loaded.get(&position).ok_or("Section is not loaded")?;
+        if section.mesh_epoch > journal.mesh_epoch(position) {
+            return Err("Section is newer than its confirmed edits".into());
+        }
+        let mut blocks = section.data.blocks().to_vec();
+        for (cell, material) in journal.blocks_in_section(position) {
+            blocks[cell[0] + 16 * (cell[1] + 16 * cell[2])] = material;
+        }
+        BlockSection::from_blocks(position, journal.revision(position), blocks)
+            .map_err(|error| error.to_string())
     }
     pub fn is_wanted(&self, p: SectionPos) -> bool {
         self.wanted.contains(&p)

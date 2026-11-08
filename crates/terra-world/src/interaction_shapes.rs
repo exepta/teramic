@@ -53,15 +53,18 @@ pub fn visit_belt_attachment_boxes(
     position: [i64; 3],
     visit: impl FnMut(ShapeBox),
 ) -> bool {
-    visit_boxes_with_state(
-        journal,
-        properties,
-        position,
-        |p| chunks.block_at(p),
-        None,
-        true,
-        visit,
-    )
+    visit_belt_attachment_boxes_with(journal, properties, position, |p| chunks.block_at(p), visit)
+}
+
+/// The same attachment volumes using confirmed voxel overlays in collider snapshots.
+pub fn visit_belt_attachment_boxes_with(
+    journal: &EditJournal,
+    properties: &BlockPropertiesCatalog,
+    position: [i64; 3],
+    block_at: impl FnMut([i64; 3]) -> Option<u16>,
+    visit: impl FnMut(ShapeBox),
+) -> bool {
+    visit_boxes_with_state(journal, properties, position, block_at, None, true, visit)
 }
 
 /// Physical contact volumes, independent of the full picking and water-contact model.

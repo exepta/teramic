@@ -19,10 +19,13 @@
 .target-health-label { position: absolute; top: 0; left: 0; width: 100%; height: 22px; display: flex; align-items: center; justify-content: center; }
 .target-health-label p { color: #fff4df; font-size: 13px; }
 .target-mining::fill { background-color: #e7c376; }
-.rail-build-hint { position: absolute; bottom: 18%; left: 50%; transform: translateX(-50%); width: 640px; max-width: 90%; display: flex; flex-direction: column; align-items: center; gap: 3px; pointer-events: none; background-color: transparent; border: 0; padding: 0; }
-.rail-build-hint p { margin: 0; width: 100%; font-size: 12px; color: #e9e8d7; text-align: center; text-wrap: wrap; text-shadow: 1px 1px #111814; }
-.rail-build-hint .rail-build-title { font-size: 13px; color: #f3e2b9; }
-.rail-build-invalid p { color: #efb09a; }
+.rail-build-hint { position: absolute; bottom: 18%; left: 50%; transform: translateX(-50%); width: 480px; max-width: 90%; display: flex; flex-direction: column; align-items: center; gap: 4px; pointer-events: none; background-color: transparent; border: 0; padding: 4px 8px; box-sizing: border-box; }
+.rail-build-hint p { margin: 0; max-width: 100%; font-size: 13px; line-height: 18px; color: #f3efe2; text-align: center; text-wrap: wrap; text-shadow: 2px 2px #000000; }
+.rail-build-heading { width: 100%; display: flex; justify-content: center; align-items: center; gap: 12px; }
+.rail-build-hint .rail-build-title { font-size: 14px; font-weight: bold; color: #f3e2b9; }
+.rail-build-hint .rail-build-cost { font-size: 12px; color: #e2cfaa; }
+.rail-build-hint .rail-build-detail { font-size: 12px; color: #e2e0d6; }
+.rail-build-invalid .rail-build-detail { color: #ffc5b2; }
 @media (max-width: 760px) {
   .target-card { left: auto; right: 12px; width: 240px; transform: translate(0px, 0px); }
 }

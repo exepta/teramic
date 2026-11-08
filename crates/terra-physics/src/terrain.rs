@@ -5,6 +5,7 @@ use bevy::{
     tasks::{AsyncComputeTaskPool, Task, futures_lite::future},
 };
 use std::collections::{HashMap, HashSet};
+use std::sync::Arc;
 use terra_voxel::{
     BlockSection, SectionPos, global_to_section,
     meshing::{PADDED_VOLUME, mesh_section},
@@ -195,6 +196,9 @@ impl TerrainCollisionState {
                 for x in low.x..=high.x {
                     let position = SectionPos::new(x, y, z);
                     let epoch = journal.mesh_epoch(position);
+                    if !collision_inputs_known(position, chunks) {
+                        return false;
+                    }
                     if self.sections.get(&position).is_some_and(|ready| {
                         plain_current(ready, position, chunks, journal)
                             || plain_region_current(
@@ -209,7 +213,7 @@ impl TerrainCollisionState {
                     }) || chunks
                         .loaded
                         .get(&position)
-                        .is_none_or(|section| section.mesh_epoch != epoch)
+                        .is_none_or(|section| section.mesh_epoch > epoch)
                     {
                         return false;
                     }
@@ -221,10 +225,43 @@ impl TerrainCollisionState {
 }
 
 struct ColliderJob {
+    data: Arc<BlockSection>,
     plain: Option<PlainCollision>,
     epoch: u64,
     profile: Option<[u64; 4]>,
     task: Task<Result<Option<Collider>, String>>,
+}
+
+// Connected shapes read the one-section halo; mineral profiles also consult
+// two vertical neighbors. Unknown generated bases must never become empty space.
+fn collision_inputs_known(position: SectionPos, chunks: &ChunkStore) -> bool {
+    if !chunks.voxel_data_known(position) {
+        return false;
+    }
+    for x in -1..=1 {
+        for y in -2..=2 {
+            for z in -1..=1 {
+                if position
+                    .offset([x, y, z])
+                    .is_ok_and(|neighbor| chunks.voxel_base_pending(neighbor))
+                {
+                    return false;
+                }
+            }
+        }
+    }
+    true
+}
+
+fn collision_snapshot(
+    position: SectionPos,
+    chunks: &ChunkStore,
+    journal: &EditJournal,
+) -> Result<Arc<BlockSection>, String> {
+    if !collision_inputs_known(position, chunks) {
+        return Err("Collision voxel base is not known".into());
+    }
+    chunks.confirmed_voxels(position, journal).map(Arc::new)
 }
 #[derive(Resource, Default)]
 struct ColliderJobs(HashMap<SectionPos, ColliderJob>);
@@ -305,6 +342,9 @@ fn dispatch(
         .filter_map(|position| {
             let section = chunks.loaded.get(&position)?;
             let epoch = journal.mesh_epoch(position);
+            if !collision_inputs_known(position, &chunks) || section.mesh_epoch > epoch {
+                return None;
+            }
             if state
                 .sections
                 .get(&position)
@@ -313,12 +353,9 @@ fn dispatch(
                 state.sections.get_mut(&position).unwrap().epoch = epoch;
                 return None;
             }
-            (section.mesh_epoch == epoch
-                && state.sections.get(&position).is_none_or(|ready| {
-                    ready.epoch != epoch
-                        || !profile_current(ready.profile, position, &chunks, &journal)
-                })
-                && !jobs.0.contains_key(&position))
+            (state.sections.get(&position).is_none_or(|ready| {
+                ready.epoch != epoch || !profile_current(ready.profile, position, &chunks, &journal)
+            }) && !jobs.0.contains_key(&position))
             .then_some(position)
         })
         .collect();
@@ -342,8 +379,13 @@ fn dispatch(
         if jobs.0.len() >= MAX_JOBS {
             break;
         }
-        let section = &chunks.loaded[&position];
-        let data = section.data.clone();
+        let data = match collision_snapshot(position, &chunks, &journal) {
+            Ok(data) => data,
+            Err(error) => {
+                state.error = Some(error);
+                continue;
+            }
+        };
         let shapes = match model_geometry(&data, &chunks, &journal, &properties) {
             Ok(shapes) => shapes,
             Err(error) => {
@@ -364,6 +406,7 @@ fn dispatch(
         jobs.0.insert(
             position,
             ColliderJob {
+                data: data.clone(),
                 plain: (shapes.boxes.is_empty()
                     && shapes.triangles.is_empty()
                     && data
@@ -375,7 +418,7 @@ fn dispatch(
                     blocks: data.blocks().to_vec(),
                     properties: properties.clone(),
                 }),
-                epoch: section.mesh_epoch,
+                epoch: journal.mesh_epoch(position),
                 profile: data
                     .blocks()
                     .iter()
@@ -406,6 +449,11 @@ fn model_geometry(
     journal: &EditJournal,
     properties: &terra_core::block_properties::BlockPropertiesCatalog,
 ) -> Result<ModelGeometry, String> {
+    let block_at = |position| {
+        journal
+            .block(position)
+            .or_else(|| chunks.block_at(position))
+    };
     let origin = data
         .position()
         .origin()
@@ -423,7 +471,9 @@ fn model_geometry(
             return;
         }
         let selected = journal.object_state(global).unwrap_or_default();
-        let owner = if selected.secondary {
+        // Rail geometry is already clipped per occupied cell; deduplicating by
+        // its module anchor would discard every following physical slice.
+        let owner = if selected.secondary && !terra_core::rails::is_rail(material) {
             selected.peer.unwrap_or(global)
         } else {
             global
@@ -465,12 +515,12 @@ fn model_geometry(
             }
         };
         if profile.is_some() {
-            terra_world::interaction_shapes::visit_belt_attachment_boxes(
-                chunks, journal, properties, global, &mut visit,
+            terra_world::interaction_shapes::visit_belt_attachment_boxes_with(
+                journal, properties, global, block_at, &mut visit,
             );
         } else {
-            terra_world::interaction_shapes::visit_collision_boxes(
-                chunks, journal, properties, global, &mut visit,
+            terra_world::interaction_shapes::visit_collision_boxes_with(
+                journal, properties, global, block_at, &mut visit,
             );
         }
     };
@@ -487,7 +537,7 @@ fn model_geometry(
                         for owner in journal.extended_kinetics_in_section(section) {
                             if (0..3)
                                 .all(|i| owner[i] >= origin[i] - 1 && owner[i] <= origin[i] + 16)
-                                && let Some(material) = chunks.block_at(owner)
+                                && let Some(material) = block_at(owner)
                             {
                                 append(owner, material);
                             }
@@ -502,7 +552,7 @@ fn model_geometry(
     for x in 0..16 {
         for z in 0..16 {
             let below = [origin[0] + x, origin[1] - 1, origin[2] + z];
-            if chunks.block_at(below) == Some(terra_core::crusher::MATERIAL) {
+            if block_at(below) == Some(terra_core::crusher::MATERIAL) {
                 append(below, terra_core::crusher::MATERIAL);
             }
         }
@@ -516,7 +566,7 @@ fn model_geometry(
                     p[axis] += boundary;
                     p[1] += y;
                     p[2 - axis] += tangent;
-                    if let Some(material) = chunks.block_at(p)
+                    if let Some(material) = block_at(p)
                         && terra_world::objects::is_opening(material)
                     {
                         append(p, material);
@@ -567,15 +617,14 @@ fn receive(
             continue;
         };
         let epoch = job.epoch;
+        let expected_blocks = job.data.clone();
         let profile = job.profile;
         let plain = job.plain.take();
         jobs.0.remove(&position);
         if epoch != journal.mesh_epoch(position)
             || !profile_current(profile, position, &chunks, &journal)
-            || chunks
-                .loaded
-                .get(&position)
-                .is_none_or(|section| section.mesh_epoch != epoch)
+            || !collision_snapshot(position, &chunks, &journal)
+                .is_ok_and(|current| current.blocks() == expected_blocks.blocks())
             || !centers
                 .iter()
                 .any(|&center| nearby(position, center, RETAIN_RADIUS))
@@ -734,6 +783,8 @@ fn build_collider_with_geometry(
         .map_err(|error| format!("Terrain collider {:?}: {error:?}", section.position()))
 }
 
+#[cfg(test)]
+mod confirmed_rail_tests;
 #[cfg(test)]
 mod model_tests;
 #[cfg(test)]

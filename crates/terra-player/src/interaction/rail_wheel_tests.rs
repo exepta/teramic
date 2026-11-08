@@ -74,7 +74,12 @@ fn fixture() -> (App, BlockHit) {
         .insert_resource(chunks)
         .insert_resource(journal)
         .add_message::<MouseWheel>()
-        .add_systems(Update, update.in_set(crate::PlayerSet::RailWheel));
+        .add_systems(
+            Update,
+            (prepare_intent, update)
+                .chain()
+                .in_set(crate::PlayerSet::RailWheel),
+        );
     app.world_mut().spawn((crate::TerraCamera, camera, look));
     (app, hit)
 }
@@ -174,7 +179,7 @@ fn fresh_wood_item_ignores_previous_items_mode_or_explicit_start_in_the_same_fra
                     port: 1,
                 });
             } else {
-                preview.rail_mode = 1;
+                preview.rail_mode = 2;
             }
         }
         app.update();
@@ -185,7 +190,20 @@ fn fresh_wood_item_ignores_previous_items_mode_or_explicit_start_in_the_same_fra
         );
         assert_eq!(context.item, Some(fresh));
         assert_eq!(context.selected, BuildChoice::Automatic);
-        app.world_mut().resource_mut::<PlacementPreview>().rail_item = Some(fresh);
+        {
+            let mut preview = app.world_mut().resource_mut::<PlacementPreview>();
+            assert_eq!(preview.rail_item, Some(fresh));
+            assert_eq!(preview.rail_mode, 0);
+            assert!(preview.rail_start.is_none());
+            if explicit_start {
+                preview.rail_start = Some(rails::Endpoint {
+                    anchor: [0, 1, 0],
+                    port: 1,
+                });
+            } else {
+                preview.rail_mode = 2;
+            }
+        }
         app.update();
         assert!(
             !app.world().resource::<RailBuildContext>().active,
@@ -240,4 +258,99 @@ fn a_fresh_same_frame_target_runs_before_context_routing_and_navigation_retarget
     app.update();
     assert!(app.world().resource::<Observed>().0);
     assert!(!app.world().resource::<RailBuildContext>().active);
+}
+
+#[test]
+fn r_selects_a_real_curve_before_wheel_routing_and_preserves_it_until_intent_changes() {
+    let (mut app, _) = fixture();
+    app.world_mut()
+        .resource_mut::<ButtonInput<KeyCode>>()
+        .press(KeyCode::KeyR);
+    wheel(&mut app);
+    app.update();
+    let preview = app.world().resource::<PlacementPreview>();
+    assert_eq!(preview.rail_mode, 1);
+    let context = app.world().resource::<RailBuildContext>();
+    assert!(context.active && context.captures_wheel);
+    assert_eq!(
+        context.selected,
+        BuildChoice::Curve,
+        "R wins simultaneous scrolling"
+    );
+    assert!(
+        context
+            .choices
+            .iter()
+            .any(|choice| choice.choice == BuildChoice::Curve && choice.layout.is_some())
+    );
+    app.world_mut()
+        .resource_mut::<ButtonInput<KeyCode>>()
+        .reset_all();
+    app.update();
+    assert_eq!(
+        app.world().resource::<RailBuildContext>().selected,
+        BuildChoice::Curve
+    );
+    // Wheel can still return to the actual Straight proposal; the visible form
+    // and subsequent R cycle follow that choice rather than stale curve intent.
+    wheel(&mut app);
+    app.update();
+    assert_eq!(
+        app.world().resource::<RailBuildContext>().selected,
+        BuildChoice::Straight
+    );
+    assert_eq!(app.world().resource::<PlacementPreview>().rail_mode, 0);
+    app.world_mut()
+        .resource_mut::<ButtonInput<KeyCode>>()
+        .press(KeyCode::KeyR);
+    app.update();
+    assert_eq!(
+        app.world().resource::<RailBuildContext>().selected,
+        BuildChoice::Curve
+    );
+}
+
+#[test]
+fn r_cycles_without_a_target_but_blocked_input_and_new_items_do_not_retain_a_dock() {
+    let (mut app, _) = fixture();
+    app.world_mut().resource_mut::<TargetWorld>().0 = None;
+    for mode in [1, 2, 0] {
+        app.world_mut()
+            .resource_mut::<ButtonInput<KeyCode>>()
+            .reset_all();
+        app.world_mut()
+            .resource_mut::<ButtonInput<KeyCode>>()
+            .press(KeyCode::KeyR);
+        app.update();
+        assert_eq!(app.world().resource::<PlacementPreview>().rail_mode, mode);
+        assert!(!app.world().resource::<RailBuildContext>().active);
+    }
+    app.world_mut().resource_mut::<crate::PlayerInputBlock>().0 = true;
+    app.world_mut()
+        .resource_mut::<ButtonInput<KeyCode>>()
+        .reset_all();
+    app.world_mut()
+        .resource_mut::<ButtonInput<KeyCode>>()
+        .press(KeyCode::KeyR);
+    app.update();
+    assert_eq!(app.world().resource::<PlacementPreview>().rail_mode, 0);
+    assert!(!app.world().resource::<RailBuildContext>().active);
+    app.world_mut().resource_mut::<crate::PlayerInputBlock>().0 = false;
+    app.world_mut()
+        .resource_mut::<ButtonInput<KeyCode>>()
+        .reset_all();
+    app.world_mut().resource_mut::<ActiveItem>().0 = Some(ItemKind::Block(3));
+    app.update();
+    assert!(
+        app.world()
+            .resource::<PlacementPreview>()
+            .rail_item
+            .is_none()
+    );
+    assert!(
+        app.world()
+            .resource::<RailBuildContext>()
+            .choices
+            .is_empty()
+    );
 }

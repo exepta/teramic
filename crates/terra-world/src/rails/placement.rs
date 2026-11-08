@@ -676,7 +676,8 @@ fn environment_for(
 }
 
 /// Replace only a complete, plain four-block straight with its own smooth
-/// one-block height transition. The opposite physical port stays unchanged.
+/// one-block height transition, optionally continuing at most four blocks
+/// forward to its actual raised floor. The opposite physical port stays unchanged.
 pub(super) fn ramp_replacement(
     chunks: &ChunkStore,
     journal: &EditJournal,
@@ -702,13 +703,22 @@ pub(super) fn ramp_replacement(
     let ports = old.ports();
     let near_port = ports[usize::from(near)];
     let far_port = ports[usize::from(1 - near)];
+    let displacement: [i64; 3] =
+        std::array::from_fn(|axis| end.position.0[axis] - near_port.position.0[axis]);
+    let forward = near_port.tangent.map(i64::from);
+    let advance = displacement[0] * forward[0] + displacement[2] * forward[2];
     if port_connected(journal, old, near_port)
-        || end.position.0[0] != near_port.position.0[0]
-        || end.position.0[2] != near_port.position.0[2]
-        || end.position.0[1].abs_diff(near_port.position.0[1]) != 16
+        || !(0..=4 * 16).contains(&advance)
+        || advance % 16 != 0
+        || displacement[0] != advance * forward[0]
+        || displacement[2] != advance * forward[2]
+        || displacement[1].unsigned_abs() != 16
         || end.tangent != near_port.tangent.map(|value| -value)
     {
-        return Err("A terrain ramp must join the raised end of this straight".into());
+        return Err(
+            "A terrain ramp must reach a raised floor within four blocks ahead of this straight"
+                .into(),
+        );
     }
     let start = Port {
         tangent: far_port.tangent.map(|value| -value),
@@ -756,9 +766,7 @@ pub(super) fn replacement_environment(
     let old_ports = old.ports();
     let near = old_ports
         .iter()
-        .find(|port| {
-            port.position.0[0] == end.position.0[0] && port.position.0[2] == end.position.0[2]
-        })
+        .find(|port| port.tangent == end.tangent.map(|value| -value))
         .ok_or("Terrain ramp changed its original endpoints")?
         .index;
     let wood = plan

@@ -532,3 +532,339 @@ fn cancel_item_changes_and_shared_item_modes_never_place_an_unconfirmed_connecti
             .is_empty()
     );
 }
+
+#[test]
+fn r_at_a_dock_immediately_previews_and_requests_the_actual_curve_without_building_on_use() {
+    use super::super::rail_wheel;
+    let mut app = app();
+    session(&mut app, GameMode::Creative, false);
+    app.world_mut()
+        .resource_mut::<terra_network::client::ClientSession>()
+        .uuid = Some(PlayerUuid::from_u128(1));
+    let mut journal = EditJournal::default();
+    {
+        let mut chunks = app.world_mut().resource_mut::<ChunkStore>();
+        for x in -4..=12 {
+            for z in -4..=14 {
+                block(&mut chunks, [x, 0, z], 3);
+            }
+        }
+        for piece in [
+            Piece::new([0, 1, 0], rails::STRAIGHT, 0).unwrap(),
+            Piece::new([4, 1, 8], rails::STRAIGHT, 1).unwrap(),
+        ] {
+            let plan = terra_world::rails::plan(
+                &chunks,
+                &journal,
+                piece.anchor,
+                piece.material,
+                piece.encoded_facing(),
+            )
+            .unwrap();
+            assert!(terra_world::rails::commit(&mut chunks, &mut journal, &plan).unwrap());
+        }
+    }
+    let item = ItemKind::for_wood(rails::STRAIGHT, WoodSpecies::Birch);
+    app.insert_resource(journal)
+        .insert_resource(terra_core::block_properties::BlockPropertiesCatalog::default())
+        .insert_resource(super::super::ActiveItem(Some(item)))
+        .init_resource::<super::super::RailBuildContext>()
+        .add_message::<bevy::input::mouse::MouseWheel>()
+        .add_systems(
+            Update,
+            rail_wheel::update
+                .after(rail_wheel::prepare_intent)
+                .before(edit_target_block),
+        );
+    let eye = Vec3::new(2.25, 2.6, 6.25);
+    let point = Vec3::new(1.5, 1.28, 3.875);
+    let camera = Transform::from_translation(eye).looking_at(point, Vec3::Y);
+    let mut look = crate::CameraLook::default();
+    look.sync_external(camera.rotation);
+    app.world_mut().spawn((crate::TerraCamera, camera, look));
+    let hit = terra_voxel::blocks::BlockHit {
+        position: [1, 1, 3],
+        normal: [0, 1, 0],
+        distance: f64::from(eye.distance(point)),
+    };
+    app.insert_resource(TargetBlock(Some(hit)))
+        .insert_resource(TargetWorld(Some(WorldTarget::Block(hit))));
+    app.world_mut()
+        .resource_mut::<ButtonInput<KeyCode>>()
+        .press(KeyCode::KeyR);
+    // Even simultaneous Place must not turn a form change into a build.
+    app.world_mut()
+        .resource_mut::<ButtonInput<KeyCode>>()
+        .press(KeyCode::KeyB);
+    app.update();
+    let preview = app.world().resource::<PlacementPreview>();
+    assert_eq!(preview.rail_mode, 1);
+    assert_eq!(preview.rail_choice, Some(rails::BuildChoice::Curve));
+    assert!(preview.valid, "{:?}", preview.rail_error);
+    assert!(preview.rail_start.is_none());
+    let plan = preview.plan.as_ref().unwrap();
+    assert!(
+        plan.edits
+            .iter()
+            .all(|edit| edit.material == rails::STRAIGHT)
+    );
+    assert!(plan.states.iter().all(|(_, state)| {
+        state.is_some_and(|state| state.rail_curve.is_some() && state.wood == WoodSpecies::Birch)
+    }));
+    assert!(
+        app.world()
+            .resource::<Messages<terra_network::client::RailBuildRequest>>()
+            .is_empty()
+    );
+    assert!(
+        app.world()
+            .resource::<Messages<BlockEditRequest>>()
+            .is_empty()
+    );
+    app.world_mut()
+        .resource_mut::<ButtonInput<KeyCode>>()
+        .reset_all();
+    app.world_mut()
+        .resource_mut::<ButtonInput<KeyCode>>()
+        .press(KeyCode::KeyB);
+    app.update();
+    let requests = app
+        .world_mut()
+        .resource_mut::<Messages<terra_network::client::RailBuildRequest>>()
+        .drain()
+        .collect::<Vec<_>>();
+    assert_eq!(requests.len(), 1);
+    assert_eq!(requests[0].choice, rails::BuildChoice::Curve);
+    assert_eq!(requests[0].position, hit.position);
+    assert_eq!(app.world().resource::<EditJournal>().rail_module_count(), 2);
+}
+
+#[test]
+fn r_curve_mode_keeps_the_manual_two_click_workflow_when_no_dock_proposal_exists() {
+    let (mut app, camera, start, _) = connection_fixture();
+    app.world_mut()
+        .resource_mut::<ButtonInput<KeyCode>>()
+        .press(KeyCode::KeyR);
+    app.update();
+    assert_eq!(app.world().resource::<PlacementPreview>().rail_mode, 1);
+    assert!(app.world().resource::<PlacementPreview>().plan.is_none());
+    app.world_mut()
+        .resource_mut::<ButtonInput<KeyCode>>()
+        .reset_all();
+    app.world_mut()
+        .resource_mut::<ButtonInput<KeyCode>>()
+        .press(KeyCode::KeyB);
+    app.update();
+    assert_eq!(
+        app.world().resource::<PlacementPreview>().rail_start,
+        Some(start)
+    );
+    app.world_mut()
+        .resource_mut::<ButtonInput<KeyCode>>()
+        .reset_all();
+    let hit = terra_voxel::blocks::BlockHit {
+        position: [4, 0, 15],
+        normal: [0, 1, 0],
+        distance: 3.,
+    };
+    app.insert_resource(TargetBlock(Some(hit)))
+        .insert_resource(TargetWorld(Some(WorldTarget::Block(hit))));
+    app.world_mut()
+        .get_mut::<Transform>(camera)
+        .unwrap()
+        .translation = Vec3::new(4.5, 2.5, 12.5);
+    app.world_mut()
+        .get_mut::<crate::CameraLook>(camera)
+        .unwrap()
+        .sync_external(Quat::from_rotation_y(std::f32::consts::PI));
+    app.update();
+    let preview = app.world().resource::<PlacementPreview>();
+    assert!(preview.valid, "{:?}", preview.rail_error);
+    assert_eq!(preview.rail_choice, Some(rails::BuildChoice::Curve));
+    assert_eq!(preview.material, rails::STRAIGHT);
+    app.world_mut()
+        .resource_mut::<ButtonInput<KeyCode>>()
+        .press(KeyCode::KeyB);
+    app.update();
+    let requests = app
+        .world_mut()
+        .resource_mut::<Messages<terra_network::client::RailConnectRequest>>()
+        .drain()
+        .collect::<Vec<_>>();
+    assert_eq!(requests.len(), 1);
+    assert_eq!(requests[0].start, start);
+    assert!(
+        app.world()
+            .resource::<Messages<BlockEditRequest>>()
+            .is_empty()
+    );
+}
+
+#[test]
+fn a_legacy_crossing_item_never_offers_or_sends_new_crossing_construction() {
+    let (mut app, _, _, _) = connection_fixture();
+    app.insert_resource(super::super::ActiveItem(Some(ItemKind::Block(
+        rails::CROSSING,
+    ))));
+    app.world_mut()
+        .resource_mut::<ButtonInput<KeyCode>>()
+        .press(KeyCode::KeyB);
+    app.update();
+    let preview = app.world().resource::<PlacementPreview>();
+    assert!(!preview.valid && preview.plan.is_none());
+    assert!(
+        preview
+            .rail_error
+            .as_ref()
+            .is_some_and(|error| error.contains("Kreuzungen"))
+    );
+    assert!(
+        app.world()
+            .resource::<Messages<BlockEditRequest>>()
+            .is_empty()
+    );
+    assert!(
+        app.world()
+            .resource::<Messages<terra_network::client::RailBuildRequest>>()
+            .is_empty()
+    );
+    assert!(
+        app.world()
+            .resource::<Messages<terra_network::client::RailConnectRequest>>()
+            .is_empty()
+    );
+}
+
+#[test]
+fn aiming_at_the_lower_rail_builds_a_fresh_signed_ramp_to_bare_raised_ground() {
+    use super::super::rail_wheel;
+    // Both an immediate terrain edge and a short approach must work without
+    // placing an upper rail or remembering a manual connection first.
+    for gap in [0, 2] {
+        let mut app = app();
+        session(&mut app, GameMode::Creative, false);
+        app.world_mut()
+            .resource_mut::<terra_network::client::ClientSession>()
+            .uuid = Some(PlayerUuid::from_u128(1));
+        let old = Piece::new([4, 1, 4], rails::STRAIGHT, 0).unwrap();
+        let behind = Piece::new([4, 1, 0], rails::STRAIGHT, 0).unwrap();
+        let mut journal = EditJournal::default();
+        {
+            let mut chunks = app.world_mut().resource_mut::<ChunkStore>();
+            for x in 1..=7 {
+                for z in -2..=18 {
+                    block(&mut chunks, [x, 0, z], 3);
+                    if z >= 8 + gap {
+                        block(&mut chunks, [x, 1, z], 3);
+                    }
+                }
+            }
+            for piece in [behind, old] {
+                support(&mut chunks, piece);
+                let plan =
+                    terra_world::rails::plan(&chunks, &journal, piece.anchor, piece.material, 0)
+                        .unwrap();
+                assert!(terra_world::rails::commit(&mut chunks, &mut journal, &plan).unwrap());
+            }
+        }
+        let original_states = journal.object_states().collect::<Vec<_>>();
+        let item = ItemKind::Block(rails::STRAIGHT);
+        app.insert_resource(journal)
+            .insert_resource(terra_core::block_properties::BlockPropertiesCatalog::default())
+            .insert_resource(super::super::ActiveItem(Some(item)))
+            .init_resource::<super::super::RailBuildContext>()
+            .add_message::<bevy::input::mouse::MouseWheel>()
+            .add_systems(
+                Update,
+                super::super::target_block.before(rail_wheel::prepare_intent),
+            )
+            .add_systems(
+                Update,
+                rail_wheel::update
+                    .after(rail_wheel::prepare_intent)
+                    .before(edit_target_block),
+            );
+        let port = old.ports()[1].position.position().map(|value| value as f32);
+        let eye = Vec3::from_array(port) + Vec3::new(2.3, 1.8, gap as f32 * 0.5 - 0.25);
+        let point = Vec3::from_array(port) + Vec3::new(1.0, 0.18, -0.2);
+        let camera = Transform::from_translation(eye).looking_at(point, Vec3::Y);
+        let mut look = crate::CameraLook::default();
+        look.sync_external(camera.rotation);
+        app.world_mut().spawn((crate::TerraCamera, camera, look));
+        app.update();
+        let hit = app.world().resource::<TargetBlock>().0.unwrap();
+        assert_eq!(
+            app.world().resource::<TargetWorld>().0,
+            Some(WorldTarget::Block(hit)),
+            "the real placement picker must hit the visible lower rail"
+        );
+        let journal = app.world().resource::<EditJournal>();
+        assert_eq!(
+            terra_world::rails::owner_at(journal, hit.position),
+            Some(old)
+        );
+        let context = app.world().resource::<super::super::RailBuildContext>();
+        assert!(context.active);
+        let choice = context
+            .choices
+            .iter()
+            .find(|choice| choice.choice == rails::BuildChoice::Straight)
+            .unwrap();
+        assert!(choice.valid, "gap {gap}: {:?}", choice.error);
+        assert_eq!(choice.replaced, Some(old));
+        let signature = terra_world::rails::context_signature(choice);
+        let preview = app.world().resource::<PlacementPreview>();
+        assert!(preview.valid, "gap {gap}: {:?}", preview.rail_error);
+        assert!(preview.rail_ramp && preview.rail_replacing);
+        assert_eq!(preview.position, Some(old.anchor));
+        assert_eq!(preview.rail_choice, Some(rails::BuildChoice::Straight));
+        assert!(preview.rail_start.is_none());
+        let plan = preview.plan.as_ref().unwrap();
+        assert!(plan.states.iter().any(|(_, state)| {
+            state
+                .and_then(|state| state.rail_curve)
+                .is_some_and(|curve| curve.points[0][1] + 16 == curve.points[3][1])
+        }));
+        assert!(
+            app.world()
+                .resource::<Messages<terra_network::client::RailBuildRequest>>()
+                .is_empty()
+        );
+        app.world_mut()
+            .resource_mut::<ButtonInput<KeyCode>>()
+            .press(KeyCode::KeyB);
+        app.update();
+        let requests = app
+            .world_mut()
+            .resource_mut::<Messages<terra_network::client::RailBuildRequest>>()
+            .drain()
+            .collect::<Vec<_>>();
+        assert_eq!(requests.len(), 1);
+        assert_eq!(requests[0].position, hit.position);
+        assert_eq!(requests[0].choice, rails::BuildChoice::Straight);
+        assert_eq!(requests[0].signature, signature);
+        assert!(
+            app.world()
+                .resource::<Messages<BlockEditRequest>>()
+                .is_empty()
+        );
+        assert!(
+            app.world()
+                .resource::<Messages<terra_network::client::RailConnectRequest>>()
+                .is_empty()
+        );
+        let preview = app.world().resource::<PlacementPreview>();
+        assert!(preview.valid && preview.rail_ramp && preview.rail_start.is_none());
+        let journal = app.world().resource::<EditJournal>();
+        assert_eq!(journal.object_states().collect::<Vec<_>>(), original_states);
+        assert_eq!(journal.rail_module_count(), 2);
+        assert!(terra_world::rails::complete(journal, behind));
+        assert!(terra_world::rails::complete(journal, old));
+        let chunks = app.world().resource::<ChunkStore>();
+        for (cell, material, _) in original_states {
+            assert_eq!(chunks.block_at(cell), Some(material));
+        }
+        assert_eq!(chunks.block_at([4, 1, 8 + gap]), Some(3));
+        assert_eq!(chunks.block_at([4, 2, 8 + gap]), Some(0));
+    }
+}

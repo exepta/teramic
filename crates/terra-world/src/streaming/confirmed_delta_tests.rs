@@ -7,6 +7,141 @@ use crate::{
 
 const OWNER: SectionPos = SectionPos::new(-1, 0, -1);
 
+fn voxel_fixture() -> (ChunkStore, EditJournal, EditJournal) {
+    let mut chunks = ChunkStore::default();
+    chunks.wanted.insert(OWNER);
+    chunks.loaded.insert(
+        OWNER,
+        LoadedSection {
+            data: BlockSection::empty(OWNER).unwrap(),
+            mesh: Some(Default::default()),
+            mesh_epoch: 0,
+            water_epoch: 0,
+            water: None,
+            props: Vec::new(),
+        },
+    );
+    (chunks, EditJournal::default(), EditJournal::default())
+}
+
+#[test]
+fn confirmed_sparse_voxels_are_visible_before_the_render_mesh_is_published() {
+    let (mut chunks, mut replica, mut source) = voxel_fixture();
+    let position = OWNER.global_block([15, 2, 15]).unwrap();
+    let mesh = chunks.loaded[&OWNER].mesh.as_ref().unwrap() as *const _;
+    source.record(position, 3).unwrap();
+    chunks
+        .apply_confirmed_delta(&mut replica, source.section_delta(OWNER))
+        .unwrap();
+    assert_eq!(chunks.block_at(position), Some(3));
+    assert_eq!(chunks.loaded[&OWNER].data.block([15, 2, 15]), Ok(3));
+    assert_eq!(chunks.loaded[&OWNER].mesh_epoch, 0);
+    assert_eq!(
+        chunks.loaded[&OWNER].mesh.as_ref().unwrap() as *const _,
+        mesh
+    );
+    assert_eq!(replica.mesh_epoch(OWNER), 1);
+    assert!(chunks.dirty.contains(&OWNER));
+    assert!(chunks.voxel_data_known(OWNER));
+    let confirmed = chunks.confirmed_voxels(OWNER, &replica).unwrap();
+    assert_eq!(confirmed.block([15, 2, 15]), Ok(3));
+    assert_eq!(confirmed.revision(), replica.revision(OWNER));
+    // Local authoritative edits use the same snapshot before streaming can
+    // replace its published payload, even without a replica delta.
+    replica.record(position, 2).unwrap();
+    assert_eq!(chunks.loaded[&OWNER].data.block([15, 2, 15]), Ok(3));
+    assert_eq!(
+        chunks
+            .confirmed_voxels(OWNER, &replica)
+            .unwrap()
+            .block([15, 2, 15]),
+        Ok(2)
+    );
+}
+
+#[test]
+fn forgotten_overrides_stay_unknown_until_restored_without_leaking_the_old_voxel() {
+    let (mut chunks, mut replica, mut source) = voxel_fixture();
+    let position = OWNER.global_block([15, 2, 15]).unwrap();
+    let other = OWNER.global_block([14, 2, 15]).unwrap();
+    source.record(position, 3).unwrap();
+    source.record(other, 2).unwrap();
+    let stale = source.section_delta(OWNER);
+    chunks
+        .apply_confirmed_delta(&mut replica, stale.clone())
+        .unwrap();
+    let mut forgotten = stale.clone();
+    forgotten.revision += 1;
+    forgotten.blocks.retain(|(cell, _)| *cell != [15, 2, 15]);
+    chunks
+        .apply_confirmed_delta(&mut replica, forgotten.clone())
+        .unwrap();
+    assert_eq!(replica.block(position), None);
+    assert_eq!(chunks.loaded[&OWNER].data.block([15, 2, 15]), Ok(3));
+    assert_eq!(chunks.block_at(position), None);
+    assert_eq!(chunks.block_at(other), Some(2));
+    assert!(chunks.voxel_base_pending(OWNER));
+    assert!(!chunks.voxel_data_known(OWNER));
+    assert!(chunks.confirmed_voxels(OWNER, &replica).is_err());
+    // Neither an older snapshot nor an invalid newer one may clear the guard
+    // or partially overwrite the remaining confirmed values.
+    let before = chunks.loaded[&OWNER].data.clone();
+    chunks.apply_confirmed_delta(&mut replica, stale).unwrap();
+    let mut invalid = forgotten;
+    invalid.revision += 1;
+    invalid.blocks = vec![([14, 2, 15], 7), ([16, 0, 0], 3)];
+    assert!(chunks.apply_confirmed_delta(&mut replica, invalid).is_err());
+    assert_eq!(chunks.loaded[&OWNER].data, before);
+    assert_eq!(chunks.block_at(position), None);
+    assert_eq!(chunks.block_at(other), Some(2));
+    assert!(chunks.voxel_base_pending(OWNER));
+    // An explicit confirmed override supplies a known value immediately.
+    let mut restored = replica.section_delta(OWNER);
+    restored.revision += 1;
+    restored.blocks.push(([15, 2, 15], 0));
+    chunks
+        .apply_confirmed_delta(&mut replica, restored)
+        .unwrap();
+    assert_eq!(chunks.block_at(position), Some(0));
+    assert!(chunks.voxel_data_known(OWNER));
+}
+
+#[test]
+fn confirmed_object_only_updates_keep_voxel_storage_and_render_payload_untouched() {
+    use crate::edits::BlockObjectState;
+    let (mut chunks, mut replica, mut source) = voxel_fixture();
+    let position = OWNER.global_block([8, 2, 8]).unwrap();
+    source.record(position, 28).unwrap();
+    source
+        .set_object_state(position, Some(BlockObjectState::default()))
+        .unwrap();
+    chunks
+        .apply_confirmed_delta(&mut replica, source.section_delta(OWNER))
+        .unwrap();
+    let pointer = chunks.loaded[&OWNER].data.blocks().as_ptr();
+    let mesh = chunks.loaded[&OWNER].mesh.as_ref().unwrap() as *const _;
+    source
+        .set_object_state(
+            position,
+            Some(BlockObjectState {
+                facing: 1,
+                ..Default::default()
+            }),
+        )
+        .unwrap();
+    chunks
+        .apply_confirmed_delta(&mut replica, source.section_delta(OWNER))
+        .unwrap();
+    assert_eq!(replica.object_state(position).unwrap().facing, 1);
+    assert_eq!(chunks.loaded[&OWNER].data.blocks().as_ptr(), pointer);
+    assert_eq!(
+        chunks.loaded[&OWNER].mesh.as_ref().unwrap() as *const _,
+        mesh
+    );
+    assert_eq!(chunks.loaded[&OWNER].mesh_epoch, 0);
+    assert!(chunks.voxel_data_known(OWNER));
+}
+
 #[test]
 fn confirmed_tree_cells_preserve_authoritative_ownership_while_local_edits_relinquish() {
     use terra_core::{FruitState, PlayerUuid, TreeRecord, TreeSpecies, TreeStage};

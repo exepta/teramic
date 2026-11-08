@@ -13,6 +13,7 @@ pub struct RailBuildView {
     pub title: String,
     pub instruction: String,
     pub detail: String,
+    pub cost: String,
 }
 
 pub(crate) fn install(app: &mut App) {
@@ -31,7 +32,7 @@ fn presentation(
 ) -> RailBuildView {
     let material = item.block_material().unwrap_or_default();
     let switch = matches!(material, rails::SWITCH_LEFT | rails::SWITCH_RIGHT);
-    let binding = |action| controls.binding(action).label();
+    let binding = |action| short_binding(controls.binding(action));
     let title = if preview.rail_ramp {
         "Sanfte Rampe"
     } else if preview.rail_choice == Some(rails::BuildChoice::Curve) {
@@ -42,84 +43,129 @@ fn presentation(
         match material {
             rails::SWITCH_LEFT => "Weiche links",
             rails::SWITCH_RIGHT => "Weiche rechts",
-            rails::CROSSING => "Kreuzung",
+            rails::CROSSING => "Altes Gleis",
             rails::BUFFER => "Prellbock",
             _ => match preview.rail_mode {
-                1 => "Kreuzung",
+                1 => "Kurve",
                 2 => "Prellbock",
                 _ => "Gleis",
             },
         }
     };
     let instruction = if switch {
-        format!(
-            "{}: Weiche setzen · Freie Enden mit Gleisen verlängern",
-            binding(GameAction::Place)
-        )
-    } else if preview.rail_options {
-        format!(
-            "{}: Vorschau bauen · Mausrad: Geradeaus / Kurve · {}+{}: Start merken",
-            binding(GameAction::Place),
-            binding(GameAction::FlyDown),
-            binding(GameAction::Place)
-        )
-    } else if preview.rail_replacing {
-        format!(
-            "{}: Vorhandenes Endstück zur Rampe anpassen",
-            binding(GameAction::Place)
-        )
-    } else if preview.rail_choice.is_some() {
-        format!(
-            "{}: Am Gleisende anbauen · {}+{} am Gleisende: Start merken",
-            binding(GameAction::Place),
-            binding(GameAction::FlyDown),
-            binding(GameAction::Place)
-        )
-    } else if preview.rail_start.is_some() {
-        format!(
-            "{}: Ziel bestätigen · {}+{}: Abbrechen",
-            binding(GameAction::Place),
-            binding(GameAction::FlyDown),
-            binding(GameAction::Place)
-        )
+        format!("{}: Setzen", binding(GameAction::Place))
     } else {
         format!(
-            "{}: Gleisende wählen / Bauen · {}: Bauform",
+            "{}{}: Form · {}: {}",
+            binding(GameAction::Use),
+            if preview.rail_options {
+                " / Mausrad"
+            } else {
+                ""
+            },
             binding(GameAction::Place),
-            binding(GameAction::Use)
+            if preview.rail_start.is_some() {
+                "Ziel"
+            } else if preview.rail_mode == 1 && preview.rail_choice.is_none() {
+                "Start"
+            } else {
+                "Bauen"
+            }
         )
     };
-    let mut detail = preview.rail_error.clone().unwrap_or_else(|| {
-        if preview.rail_replacing {
-            "Der vorhandene Anschluss bleibt erhalten".into()
-        } else if preview.rail_start.is_some() && preview.plan.is_none() {
-            "Zum Ziel gehen und auf Boden oder ein freies Gleisende zeigen".into()
-        } else if switch {
-            "Zum Schalten einen Weichensteller daneben setzen".into()
-        } else {
-            "Kurven verbinden freie Enden · Für Abzweigungen eine Weiche setzen".into()
-        }
-    });
-    if (1..u16::MAX).contains(&preview.rail_cost) {
-        detail = format!(
-            "{detail} · {}: {}",
-            if preview.rail_replacing {
-                "Zusätzlich"
+    let detail = if let Some(error) = &preview.rail_error {
+        short_error(error)
+    } else if preview.rail_start.is_some() {
+        format!(
+            "{}+{}: Abbrechen",
+            binding(GameAction::FlyDown),
+            binding(GameAction::Place)
+        )
+    } else if preview.rail_mode == 1 && preview.rail_choice.is_none() {
+        "Freies Gleisende wählen".into()
+    } else if preview.rail_replacing {
+        "Endstück wird zur Rampe".into()
+    } else if switch {
+        "Weichensteller zum Umschalten".into()
+    } else {
+        format!(
+            "{}+{}: Start merken",
+            binding(GameAction::FlyDown),
+            binding(GameAction::Place)
+        )
+    };
+    let cost = if (1..u16::MAX).contains(&preview.rail_cost) {
+        format!(
+            "{}{} {}",
+            if preview.rail_replacing { "+" } else { "" },
+            preview.rail_cost,
+            if preview.rail_cost == 1 {
+                "Gleis"
             } else {
-                "Bedarf"
-            },
-            preview.rail_cost
-        );
+                "Gleise"
+            }
+        )
     } else if preview.rail_replacing && preview.rail_cost == 0 {
-        detail = format!("{detail} · Keine zusätzlichen Schienen");
-    }
+        "Kein Mehrbedarf".into()
+    } else {
+        String::new()
+    };
     RailBuildView {
         visible: true,
         invalid: preview.rail_error.is_some(),
         title: title.into(),
         instruction,
         detail,
+        cost,
     }
+}
+
+fn short_binding(binding: terra_core::InputBinding) -> String {
+    use terra_core::InputBinding;
+    match binding {
+        InputBinding::Mouse(MouseButton::Left) => "LMB".into(),
+        InputBinding::Mouse(MouseButton::Right) => "RMB".into(),
+        InputBinding::Mouse(MouseButton::Middle) => "MMB".into(),
+        InputBinding::Key(KeyCode::ShiftLeft | KeyCode::ShiftRight) => "Shift".into(),
+        InputBinding::Key(KeyCode::ControlLeft | KeyCode::ControlRight) => "Strg".into(),
+        InputBinding::Key(KeyCode::AltLeft | KeyCode::AltRight) => "Alt".into(),
+        InputBinding::Chord { modifier, key } => format!(
+            "{}+{}",
+            short_binding(InputBinding::Key(modifier)),
+            short_binding(InputBinding::Key(key))
+        ),
+        other => other.label(),
+    }
+}
+
+/// Keep construction failures readable without exposing long planner diagnostics.
+fn short_error(error: &str) -> String {
+    let lower = error.to_lowercase();
+    let message = if lower.contains("supporting floor") {
+        "Tragfähiger Untergrund fehlt"
+    } else if lower.contains("too close") || lower.contains("turning radius") {
+        "Mehr Platz für die Kurve nötig"
+    } else if lower.contains("farther than") || lower.contains("zu weit") {
+        "Gleisende außer Reichweite"
+    } else if lower.contains("same wood") {
+        "Gleiche Holzart verwenden"
+    } else if lower.contains("face away") || lower.contains("no free end") {
+        "Freies Gleisende in Fahrtrichtung wählen"
+    } else if lower.contains("overlaps an existing") {
+        "Gleise überlappen · Freies Ende wählen"
+    } else if lower.contains("occupied") || lower.contains("blockiert") {
+        "Gleisbereich blockiert"
+    } else if lower.contains("incomplete") || lower.contains("vollständig geladen") {
+        "Gleisanschluss noch nicht vollständig geladen"
+    } else {
+        error
+    };
+    if message.chars().count() <= 80 {
+        return message.into();
+    }
+    let prefix: String = message.chars().take(77).collect();
+    let end = prefix.rfind(char::is_whitespace).unwrap_or(prefix.len());
+    format!("{}…", prefix[..end].trim_end())
 }
 
 #[derive(bevy::ecs::system::SystemParam)]
@@ -186,7 +232,7 @@ mod tests {
         let view = presentation(&preview, ItemKind::Block(rails::STRAIGHT), &controls);
         assert_eq!(view.title, "Sanfte Rampe");
         assert!(!view.instruction.contains("Mausrad"));
-        assert!(view.detail.contains("Zusätzlich: 1"));
+        assert_eq!(view.cost, "+1 Gleis");
         let ordinary = presentation(
             &PlacementPreview::default(),
             ItemKind::Block(rails::STRAIGHT),
@@ -214,7 +260,8 @@ mod tests {
         let view = presentation(&preview, ItemKind::Block(rails::STRAIGHT), &controls);
         assert!(view.visible && view.invalid);
         assert!(view.instruction.contains('B'));
-        assert!(view.detail.contains("mehr Abstand") && view.detail.ends_with("Bedarf: 3"));
+        assert!(view.detail.contains("mehr Abstand"));
+        assert_eq!(view.cost, "3 Gleise");
         let switch = presentation(
             &PlacementPreview::default(),
             ItemKind::Block(rails::SWITCH_LEFT),
@@ -222,5 +269,11 @@ mod tests {
         );
         assert_eq!(switch.title, "Weiche links");
         assert!(switch.detail.contains("Weichensteller"));
+        let long = short_error(&"ö".repeat(180));
+        assert!(long.chars().count() <= 80);
+        assert_eq!(
+            short_error("Every rail sleeper needs a loaded, full-height supporting floor"),
+            "Tragfähiger Untergrund fehlt"
+        );
     }
 }

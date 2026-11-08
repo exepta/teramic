@@ -160,10 +160,19 @@ pub(crate) fn edit_target_block(
     });
     if presentation.preview.rail_item.is_some() && !blocked {
         if keys.just_pressed(Action::Use) {
-            if selected.and_then(ItemKind::block_material) == Some(terra_core::rails::STRAIGHT) {
-                presentation.preview.rail_mode = (presentation.preview.rail_mode + 1) % 3;
+            // The rail intent stage already changed mode before fresh planning.
+            // Refresh its preview now, while owning Use before generic prop actions.
+            if let Some(item) = selected {
+                rail_placement::update(
+                    &keys,
+                    &target,
+                    &chunks,
+                    &mut requests,
+                    &mut presentation,
+                    item,
+                    creative,
+                );
             }
-            presentation.preview.rail_start = None;
             return;
         }
         if keys.just_pressed(Action::Break) {
@@ -1244,6 +1253,10 @@ mod tests {
             .init_resource::<super::super::BlockPalette>()
             .init_resource::<MiningVisual>()
             .init_resource::<PlacementPreview>()
+            .add_systems(
+                Update,
+                super::super::rail_wheel::prepare_intent.before(edit_target_block),
+            )
             .init_resource::<InteractionMotion>()
             .init_resource::<super::super::VesselMotion>()
             .insert_resource(crate::CameraInputState {

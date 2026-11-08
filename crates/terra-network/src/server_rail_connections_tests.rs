@@ -581,12 +581,7 @@ fn a_foreign_source_at_a_claim_boundary_cannot_be_connected_from_unclaimed_land(
 
 #[test]
 fn snapping_separate_switches_and_common_specials_cannot_occupy_a_foreign_modules_free_port() {
-    for material in [
-        rails::SWITCH_LEFT,
-        rails::SWITCH_RIGHT,
-        rails::CROSSING,
-        rails::BUFFER,
-    ] {
+    for material in [rails::SWITCH_LEFT, rails::SWITCH_RIGHT, rails::BUFFER] {
         let (mut app, peer, old, initial) = rail_fixture(rails::STRAIGHT, [8, 4, 3]);
         assert_eq!(run(&mut app, &peer, initial, false), EditOutcome::Applied);
         let special = Piece::new([8, 4, -1], material, 2).unwrap();

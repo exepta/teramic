@@ -91,7 +91,12 @@ impl Plugin for TerraPlayerPlugin {
             )
             .add_systems(
                 Update,
-                crate::interaction::rail_wheel::update.in_set(PlayerSet::RailWheel),
+                (
+                    crate::interaction::rail_wheel::prepare_intent,
+                    crate::interaction::rail_wheel::update,
+                )
+                    .chain()
+                    .in_set(PlayerSet::RailWheel),
             )
             .add_systems(Update, select_block.in_set(PlayerSet::WheelSelection))
             .add_systems(

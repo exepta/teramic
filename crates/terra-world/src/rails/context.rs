@@ -149,39 +149,96 @@ fn push_best(choices: &mut Vec<ContextChoice>, next: ContextChoice) {
     }
 }
 
-fn raised_floor_port(start: Port, hit: BlockHit) -> Option<Port> {
-    let cell = if hit.normal == [0, 1, 0] {
-        hit.adjacent()
-    } else if matches!(hit.normal, [1, 0, 0] | [-1, 0, 0] | [0, 0, 1] | [0, 0, -1]) {
-        [hit.position[0], hit.position[1] + 1, hit.position[2]]
-    } else {
-        return None;
-    };
-    if start.tangent[1] != 0 {
+/// Find the first real raised floor in front of a flat endpoint. A clicked
+/// floor constrains the probe to that platform; a clicked rail may discover
+/// its immediately approaching step without requiring an upper rail first.
+fn terrain_step_port(
+    chunks: &ChunkStore,
+    journal: &EditJournal,
+    start: Port,
+    hit: Option<BlockHit>,
+) -> Option<Port> {
+    let direction = start.tangent;
+    if direction[1] != 0 || i32::from(direction[0]).abs() + i32::from(direction[2]).abs() != 1 {
         return None;
     }
-    let direction = start.tangent;
-    let end = Port {
-        index: 0,
-        connectable: true,
-        tangent: direction.map(|value| -value),
-        position: FixedPoint(std::array::from_fn(|axis| {
-            cell[axis] * 16
+    let position = start.position.position();
+    let mut last = 4;
+    if let Some(hit) = hit {
+        let cell = if hit.normal == [0, 1, 0] {
+            hit.adjacent()
+        } else if matches!(hit.normal, [1, 0, 0] | [-1, 0, 0] | [0, 0, 1] | [0, 0, -1]) {
+            [hit.position[0], hit.position[1] + 1, hit.position[2]]
+        } else {
+            return None;
+        };
+        if cell[1] * 16 + 2 != start.position.0[1] + 16 {
+            return None;
+        }
+        let forward_axis = if direction[0] != 0 { 0 } else { 2 };
+        let side_axis = 2 - forward_axis;
+        if (cell[side_axis] as f64 + 0.5 - position[side_axis]).abs()
+            > terra_core::rails::TRACK_WIDTH * 0.5 + 1e-8
+        {
+            return None;
+        }
+        let boundary = (cell[forward_axis] + i64::from(direction[forward_axis] < 0)) * 16;
+        let advance =
+            (boundary - start.position.0[forward_axis]) * i64::from(direction[forward_axis]);
+        if !(0..=8 * 16).contains(&advance) || advance % 16 != 0 {
+            return None;
+        }
+        last = (advance / 16).min(4) as i32;
+    }
+    for advance in 0..=last {
+        let cell = std::array::from_fn(|axis| {
+            (position[axis]
                 + if axis == 1 {
-                    2
-                } else if direction[axis] > 0 {
-                    0
-                } else if direction[axis] < 0 {
-                    16
+                    0.0
                 } else {
-                    8
-                }
-        })),
-    };
-    (end.position.0[0] == start.position.0[0]
-        && end.position.0[2] == start.position.0[2]
-        && end.position.0[1].abs_diff(start.position.0[1]) == 16)
-        .then_some(end)
+                    f64::from(direction[axis]) * (f64::from(advance) + 1e-6)
+                })
+            .floor() as i64
+        });
+        let material = chunks.block_at(cell)?;
+        if placement::supports_floor(journal, cell, material) {
+            let end = Port {
+                index: 0,
+                connectable: true,
+                tangent: direction.map(|value| -value),
+                position: FixedPoint(std::array::from_fn(|axis| {
+                    if axis == 1 {
+                        start.position.0[axis] + 16
+                    } else {
+                        start.position.0[axis]
+                            + i64::from(direction[axis]) * i64::from(advance) * 16
+                    }
+                })),
+            };
+            let landing = [cell[0], cell[1] + 1, cell[2]];
+            let headroom = chunks.block_at(landing)?;
+            if matches!(headroom, 0 | 14 | 27) {
+                return Some(end);
+            }
+            if terra_core::rails::is_rail(headroom)
+                && let Some(target) = owner_at(journal, landing)
+                && complete(journal, target)
+                && target.ports().into_iter().any(|port| {
+                    port.connectable
+                        && port.position == end.position
+                        && port.tangent == end.tangent
+                        && !placement::port_connected(journal, target, port)
+                })
+            {
+                return Some(end);
+            }
+            return None;
+        }
+        if !matches!(material, 0 | 14 | 27) {
+            return None;
+        }
+    }
+    None
 }
 
 /// Actual straight and curved docking alternatives, preferred first. No nearby
@@ -257,6 +314,26 @@ pub fn context_choices(
                 ray.0,
             ),
         );
+        if source.material == terra_core::rails::STRAIGHT
+            && source.curve.is_none()
+            && let Some(end) = terrain_step_port(chunks, journal, start, None)
+        {
+            let layout =
+                placement::ramp_replacement(chunks, journal, source, start.index, end, wood);
+            let ramp = candidate(
+                BuildChoice::Straight,
+                endpoint,
+                Some(source),
+                layout,
+                chunks,
+                journal,
+                ray.0,
+            );
+            if ramp.valid || choices.iter().all(|choice| !choice.valid) {
+                choices.retain(|choice| choice.choice != BuildChoice::Straight);
+                choices.push(ramp);
+            }
+        }
         for &(other, end) in ports.iter().filter(|(piece, _)| *piece != source).take(4) {
             let replacement = if start.position.0[0] == end.position.0[0]
                 && start.position.0[2] == end.position.0[2]
@@ -333,7 +410,7 @@ pub fn context_choices(
                 anchor: source.anchor,
                 port: start.index,
             };
-            if let Some(end) = raised_floor_port(start, hit) {
+            if let Some(end) = terrain_step_port(chunks, journal, start, Some(hit)) {
                 let layout =
                     placement::ramp_replacement(chunks, journal, source, start.index, end, wood);
                 push_best(

@@ -14,7 +14,8 @@ pub(super) fn update(
     if keys.pressed(Action::Break) {
         return;
     }
-    let remember_start = keys.pressed(Action::FlyDown) && keys.just_pressed(Action::Place);
+    let placing = keys.just_pressed(Action::Place) && !keys.just_pressed(Action::Use);
+    let remember_start = keys.pressed(Action::FlyDown) && placing;
     if remember_start && presentation.preview.rail_start.is_some() {
         presentation.preview.rail_start = None;
         return;
@@ -54,14 +55,18 @@ pub(super) fn update(
     );
     let wood = item.wood_species().unwrap_or_default();
     let held_material = item.block_material().unwrap_or(rails::STRAIGHT);
+    if held_material == rails::CROSSING {
+        presentation.preview.rail_error = Some("Kreuzungen können nicht neu gebaut werden".into());
+        return;
+    }
     let fixed_piece = matches!(
         held_material,
-        rails::SWITCH_LEFT | rails::SWITCH_RIGHT | rails::CROSSING | rails::BUFFER
+        rails::SWITCH_LEFT | rails::SWITCH_RIGHT | rails::BUFFER
     );
     let start = presentation.preview.rail_start;
     if remember_start
         && !fixed_piece
-        && presentation.preview.rail_mode == 0
+        && presentation.preview.rail_mode < 2
         && hit.distance <= 4.5
         && chunks.block_at(hit.position).is_some_and(rails::is_rail)
     {
@@ -71,7 +76,8 @@ pub(super) fn update(
         }
         return;
     }
-    let context = if start.is_none() && !fixed_piece && presentation.preview.rail_mode == 0 {
+    let curve_mode = !fixed_piece && presentation.preview.rail_mode == 1;
+    let context = if start.is_none() && !fixed_piece && presentation.preview.rail_mode < 2 {
         target
             .rail_context
             .as_ref()
@@ -79,12 +85,22 @@ pub(super) fn update(
                 context.active && context.item == Some(item) && context.hit == Some(hit)
             })
             .and_then(|context| {
-                context
-                    .choices
-                    .iter()
-                    .find(|choice| choice.choice == context.selected)
-                    .or_else(|| context.choices.first())
-                    .cloned()
+                if curve_mode {
+                    context
+                        .choices
+                        .iter()
+                        .find(|choice| {
+                            choice.choice == rails::BuildChoice::Curve && choice.layout.is_some()
+                        })
+                        .cloned()
+                } else {
+                    context
+                        .choices
+                        .iter()
+                        .find(|choice| choice.choice == context.selected)
+                        .or_else(|| context.choices.first())
+                        .cloned()
+                }
             })
     } else {
         None
@@ -100,10 +116,10 @@ pub(super) fn update(
     if start.is_none()
         && context.is_none()
         && !fixed_piece
-        && presentation.preview.rail_mode == 0
+        && presentation.preview.rail_mode < 2
         && chunks.block_at(hit.position).is_some_and(rails::is_rail)
     {
-        if keys.just_pressed(Action::Place) && hit.distance <= 4.5 {
+        if placing && hit.distance <= 4.5 {
             presentation.preview.rail_start =
                 terra_world::rails::select_endpoint(journal, hit, ray);
             if presentation.preview.rail_start.is_none() {
@@ -113,11 +129,15 @@ pub(super) fn update(
         }
         return;
     }
+    if curve_mode && start.is_none() && context.is_none() {
+        presentation.preview.rail_error =
+            Some("Für eine freie Kurve zuerst ein freies Gleisende anklicken".into());
+        return;
+    }
     let material = if fixed_piece {
         held_material
     } else {
         match presentation.preview.rail_mode {
-            1 => rails::CROSSING,
             2 => rails::BUFFER,
             _ => rails::STRAIGHT,
         }
@@ -170,6 +190,9 @@ pub(super) fn update(
     }) else {
         return;
     };
+    if curve_mode && start.is_some() {
+        presentation.preview.rail_choice = Some(rails::BuildChoice::Curve);
+    }
     presentation.preview.rail_ramp = plan
         .states
         .iter()
@@ -331,7 +354,7 @@ pub(super) fn update(
     presentation.preview.valid = valid;
     presentation.preview.rail_cost = cost;
     presentation.preview.plan = Some(plan);
-    if valid && keys.just_pressed(Action::Place) {
+    if valid && placing {
         presentation.motion.placing = true;
         presentation.motion.impulse = presentation.motion.impulse.wrapping_add(1);
         if let Some(context) = &context {

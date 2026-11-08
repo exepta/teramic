@@ -333,3 +333,173 @@ fn an_unconnected_floor_does_not_capture_context_and_a_middle_rail_hit_does_not_
     assert_eq!(owner_at(&journal, hit.position), Some(source));
     assert!(context_choices(&chunks, &journal, hit, ray, look, WoodSpecies::Oak).is_empty());
 }
+
+fn fixture_bare_step(
+    origin: Cell,
+    facing: u8,
+    gap: i64,
+) -> (ChunkStore, EditJournal, Piece, Piece) {
+    let old = Piece::new(origin, rails::STRAIGHT, facing).unwrap();
+    let behind = Piece::new(offset(origin, [0, 0, -4], facing), rails::STRAIGHT, facing).unwrap();
+    let mut chunks = ChunkStore::default();
+    let mut journal = EditJournal::default();
+    for x in -3..=3 {
+        for z in -6..=14 {
+            block(&mut chunks, offset(origin, [x, -1, z], facing), 3);
+            if z >= 4 + gap {
+                block(&mut chunks, offset(origin, [x, 0, z], facing), 3);
+            }
+        }
+    }
+    for piece in [behind, old] {
+        prepare(&mut chunks, piece);
+        install(&mut chunks, &mut journal, piece);
+    }
+    (chunks, journal, behind, old)
+}
+
+#[test]
+fn aiming_the_lower_rail_wall_or_platform_builds_the_same_real_ramp_without_an_upper_track() {
+    for facing in 0..4 {
+        for gap in 0..=4 {
+            let mut first_signature = None;
+            for aim in ["rail end", "step wall", "platform top"] {
+                let (mut chunks, mut journal, behind, old) =
+                    fixture_bare_step([-33, 16, -49], facing, gap);
+                let start = old.ports()[1];
+                let position = start.position.position();
+                let forward = start.tangent.map(f64::from);
+                let right = [forward[2], 0.0, -forward[0]];
+                let eye = std::array::from_fn(|axis| {
+                    position[axis]
+                        + forward[axis] * (gap as f64 * 0.5 - 0.25)
+                        + right[axis] * 2.3
+                        + if axis == 1 { 1.8 } else { 0.0 }
+                });
+                let point = match aim {
+                    "rail end" => std::array::from_fn(|axis| {
+                        position[axis] - forward[axis] * 0.2
+                            + right[axis]
+                            + if axis == 1 { 0.18 } else { 0.0 }
+                    }),
+                    "step wall" => std::array::from_fn(|axis| {
+                        position[axis]
+                            + forward[axis] * gap as f64
+                            + if axis == 1 { 0.625 } else { 0.0 }
+                    }),
+                    _ => std::array::from_fn(|axis| {
+                        position[axis]
+                            + forward[axis] * (gap as f64 + 1.5)
+                            + if axis == 1 { 0.875 } else { 0.0 }
+                    }),
+                };
+                let (hit, ray, look) = ray_to(&chunks, &journal, eye, point);
+                if aim == "rail end" {
+                    assert_eq!(owner_at(&journal, hit.position), Some(old));
+                } else if aim == "step wall" {
+                    assert_eq!(hit.normal, start.tangent.map(|value| -i32::from(value)));
+                } else {
+                    assert_eq!(hit.normal, [0, 1, 0]);
+                }
+                let choice = context_choice(
+                    &chunks,
+                    &journal,
+                    hit,
+                    ray,
+                    look,
+                    WoodSpecies::Oak,
+                    BuildChoice::Automatic,
+                );
+                assert!(
+                    choice.valid,
+                    "facing {facing}, gap {gap}, aim {aim}: {:?}",
+                    choice.error
+                );
+                assert_eq!(choice.choice, BuildChoice::Straight);
+                assert_eq!(choice.replaced, Some(old));
+                let signature = context_signature(&choice);
+                if let Some(first) = first_signature {
+                    assert_eq!(
+                        signature, first,
+                        "all genuine targets describe the same first platform edge"
+                    );
+                } else {
+                    first_signature = Some(signature);
+                }
+                let sites = context_sites(&journal, &choice).unwrap();
+                assert!(sites.iter().all(|cell| chunks.block_at(*cell).is_some()));
+                let layout = choice.layout.unwrap();
+                let ramp = placement::proposed_piece(&layout).unwrap();
+                let end = ramp.ports()[1];
+                assert_eq!(
+                    end.position.0,
+                    std::array::from_fn(|axis| start.position.0[axis]
+                        + if axis == 1 {
+                            16
+                        } else {
+                            i64::from(start.tangent[axis]) * gap * 16
+                        })
+                );
+                assert!(behind.ports()[1].connects(ramp.ports()[0]));
+                let landing = offset(old.anchor, [0, 0, 4 + gap], facing);
+                assert_eq!(chunks.block_at(landing), Some(3));
+                assert!(commit(&mut chunks, &mut journal, &layout).unwrap());
+                assert_eq!(
+                    chunks.block_at(landing),
+                    Some(3),
+                    "the actual raised floor is preserved"
+                );
+                assert!(complete(&journal, behind));
+                assert!(complete(&journal, ramp));
+                assert_eq!(journal.rail_module_count(), 2);
+                assert_eq!(
+                    network(&journal)
+                        .unwrap()
+                        .route(
+                            Endpoint {
+                                anchor: behind.anchor,
+                                port: 0
+                            },
+                            Endpoint {
+                                anchor: ramp.anchor,
+                                port: 1
+                            },
+                            16
+                        )
+                        .unwrap()
+                        .legs
+                        .len(),
+                    2
+                );
+            }
+        }
+    }
+}
+
+#[test]
+fn an_aimed_rail_cannot_turn_a_tall_wall_or_missing_gap_section_into_a_valid_ramp() {
+    for obstructed in [false, true] {
+        let (mut chunks, journal, _, old) = fixture_bare_step([15, 16, 12], 0, 2);
+        if obstructed {
+            for x in -1..=1 {
+                block(&mut chunks, offset(old.anchor, [x, 1, 6], 0), 3);
+            }
+        } else {
+            chunks
+                .loaded
+                .remove(&global_to_section(offset(old.anchor, [0, 0, 4], 0)).0);
+        }
+        let start = old.ports()[1].position.position();
+        let eye = [start[0] + 2.3, start[1] + 1.8, start[2] - 0.25];
+        let point = [start[0] + 1.0, start[1] + 0.18, start[2] - 0.2];
+        let (hit, ray, look) = ray_to(&chunks, &journal, eye, point);
+        assert_eq!(owner_at(&journal, hit.position), Some(old));
+        let choices = context_choices(&chunks, &journal, hit, ray, look, WoodSpecies::Oak);
+        assert!(!choices.is_empty());
+        assert!(choices.iter().all(|choice| !choice.valid));
+        assert!(
+            choices.iter().all(|choice| choice.replaced.is_none()),
+            "a landing must be real, loaded, and have headroom"
+        );
+    }
+}

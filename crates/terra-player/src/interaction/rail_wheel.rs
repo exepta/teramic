@@ -114,12 +114,56 @@ fn same_geometry(
         && first.states == second.states
 }
 
+/// Resolve the current item's mode before context planning and wheel routing.
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn prepare_intent(
+    input: GameplayInput,
+    mut preview: ResMut<PlacementPreview>,
+    active: Option<Res<ActiveItem>>,
+    palette: Res<BlockPalette>,
+    capture: Res<crate::CameraInputState>,
+    blocked: Res<crate::PlayerInputBlock>,
+    session: Option<Res<terra_network::client::ClientSession>>,
+) {
+    let item = active.as_ref().and_then(|active| active.0).or_else(|| {
+        session
+            .is_none()
+            .then(|| palette.selected())
+            .flatten()
+            .map(|choice| ItemKind::Block(choice.id))
+    });
+    let blocked = !capture.capture_ready()
+        || blocked.0
+        || session.as_ref().is_some_and(|session| {
+            !session.ready
+                || !session.allow_build
+                || session.error.is_some()
+                || session.game_mode == terra_core::GameMode::Spectator
+        });
+    if blocked || preview.rail_item != item {
+        preview.rail_start = None;
+        if preview.rail_item != item {
+            preview.rail_mode = 0;
+        }
+    }
+    preview.rail_item = item.filter(|item| {
+        item.block_material()
+            .is_some_and(terra_core::rails::is_rail)
+    });
+    if !blocked && preview.rail_item.is_some() && input.just_pressed(GameAction::Use) {
+        if item.and_then(ItemKind::block_material) == Some(STRAIGHT) {
+            preview.rail_mode = (preview.rail_mode + 1) % 3;
+        }
+        preview.rail_start = None;
+    }
+}
+
 #[derive(SystemParam)]
 pub(crate) struct Scene<'w, 's> {
     target: Res<'w, TargetWorld>,
     capture: Res<'w, crate::CameraInputState>,
     blocked: Res<'w, crate::PlayerInputBlock>,
-    preview: Res<'w, PlacementPreview>,
+    preview: ResMut<'w, PlacementPreview>,
     active: Res<'w, ActiveItem>,
     palette: Res<'w, BlockPalette>,
     session: Option<Res<'w, terra_network::client::ClientSession>>,
@@ -136,7 +180,7 @@ pub(crate) fn update(
     mut context: ResMut<RailBuildContext>,
     mut wheel: MessageReader<MouseWheel>,
     input: GameplayInput,
-    scene: Scene,
+    mut scene: Scene,
 ) {
     let movement: f32 = wheel.read().map(|event| event.y).sum();
     context.hotbar_changed = false;
@@ -151,10 +195,15 @@ pub(crate) fn update(
     // Interaction clears the previous item's intent later in this frame. A
     // numeric hotbar change must not let that stale intent suppress fresh aim.
     let same_item = scene.preview.rail_item == item;
+    let mode = if same_item {
+        scene.preview.rail_mode
+    } else {
+        0
+    };
     let eligible = scene.capture.capture_ready()
         && !scene.blocked.0
         && !input.pressed(GameAction::Break)
-        && (!same_item || (scene.preview.rail_mode == 0 && scene.preview.rail_start.is_none()))
+        && (!same_item || (mode < 2 && scene.preview.rail_start.is_none()))
         && item.and_then(ItemKind::block_material) == Some(STRAIGHT)
         && scene.session.as_ref().is_none_or(|session| {
             session.ready
@@ -207,7 +256,27 @@ pub(crate) fn update(
         .chunks
         .block_at(hit.position)
         .is_some_and(terra_core::rails::is_rail);
-    context.set_choices(hit, item, choices, movement, aimed_at_rail);
+    let use_pressed = input.just_pressed(GameAction::Use);
+    if use_pressed {
+        context.selected = BuildChoice::Automatic;
+    }
+    context.set_choices(
+        hit,
+        item,
+        choices,
+        if use_pressed { 0.0 } else { movement },
+        aimed_at_rail,
+    );
+    if mode == 1 && (use_pressed || context.selected == BuildChoice::Automatic) {
+        context.selected = BuildChoice::Curve;
+    }
+    if !use_pressed
+        && context.captures_wheel
+        && movement.is_finite()
+        && movement.abs() > f32::EPSILON
+    {
+        scene.preview.rail_mode = u8::from(context.selected == BuildChoice::Curve);
+    }
 }
 
 pub(crate) fn retarget_needed(context: Res<RailBuildContext>) -> bool {

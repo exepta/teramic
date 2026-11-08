@@ -377,6 +377,7 @@ pub(super) fn receive_jobs(
                             props: section.props,
                         },
                     );
+                    chunks.unknown_voxel_bases.remove(&position);
                     if authoritative {
                         super::support::loaded(&mut chunks, &journal, position);
                     }
@@ -1176,6 +1177,9 @@ mod tests {
         {
             let mut chunks = app.world_mut().resource_mut::<ChunkStore>();
             chunks.wanted.extend([fresh, replacement, stale, failed]);
+            for position in positions {
+                chunks.unknown_voxel_bases.insert(position, [[0; 3]].into());
+            }
             chunks.loaded.insert(
                 replacement,
                 LoadedSection {
@@ -1239,6 +1243,14 @@ mod tests {
         }
         assert_eq!(chunks.loaded.len(), 2);
         assert!(chunks.dirty.contains(&stale));
+        assert!(!chunks.voxel_base_pending(fresh));
+        assert!(!chunks.voxel_base_pending(replacement));
+        for position in [stale, unwanted, failed] {
+            assert!(
+                chunks.voxel_base_pending(position),
+                "unpublished base {position:?}"
+            );
+        }
         let mut cursor = bevy::ecs::message::MessageCursor::<PreparedColumnChanged>::default();
         assert_eq!(
             cursor

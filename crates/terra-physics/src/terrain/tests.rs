@@ -102,6 +102,206 @@ fn settle_colliders(app: &mut App, expected_epoch: u64) {
 }
 
 #[test]
+fn confirmed_edits_refresh_physical_collision_while_render_remesh_stays_pending() {
+    let mut app = app();
+    let owner = SectionPos::default();
+    settle_colliders(&mut app, 0);
+    let mut source = EditJournal::default();
+    source.record([2, 1, 2], 3).unwrap();
+    app.world_mut()
+        .resource_scope(|world, mut journal: Mut<EditJournal>| {
+            world
+                .resource_mut::<ChunkStore>()
+                .apply_confirmed_delta(&mut journal, source.section_delta(owner))
+                .unwrap();
+        });
+    {
+        let world = app.world();
+        assert_eq!(world.resource::<ChunkStore>().loaded[&owner].mesh_epoch, 0);
+        assert!(
+            !world.resource::<TerrainCollisionState>().ready_for_aabb(
+                Vec3::new(2.1, 1.1, 2.1),
+                Vec3::new(2.9, 1.9, 2.9),
+                world.resource::<ChunkStore>(),
+                world.resource::<EditJournal>(),
+            ),
+            "the previous collider cannot approve movement through the new block"
+        );
+    }
+    settle_colliders(&mut app, 1);
+    assert_eq!(
+        app.world().resource::<ChunkStore>().loaded[&owner].mesh_epoch,
+        0
+    );
+    let body = app
+        .world_mut()
+        .spawn((
+            RigidBody::Dynamic,
+            Collider::sphere(0.25),
+            Transform::from_xyz(2.5, 4.0, 2.5),
+        ))
+        .id();
+    for _ in 0..120 {
+        app.update();
+    }
+    let height = app.world().get::<Position>(body).unwrap().y;
+    assert!(
+        (height - 2.25).abs() < 0.06,
+        "confirmed upper block height={height}"
+    );
+    source.record([2, 1, 2], 0).unwrap();
+    app.world_mut()
+        .resource_scope(|world, mut journal: Mut<EditJournal>| {
+            world
+                .resource_mut::<ChunkStore>()
+                .apply_confirmed_delta(&mut journal, source.section_delta(owner))
+                .unwrap();
+        });
+    settle_colliders(&mut app, 2);
+    for _ in 0..120 {
+        app.update();
+    }
+    let height = app.world().get::<Position>(body).unwrap().y;
+    assert!(
+        (height - 1.25).abs() < 0.06,
+        "confirmed removal height={height}"
+    );
+    assert_eq!(
+        app.world().resource::<ChunkStore>().loaded[&owner].mesh_epoch,
+        0
+    );
+}
+
+#[test]
+fn local_journal_edits_supply_collision_without_waiting_for_a_loaded_payload_replacement() {
+    let mut app = app();
+    settle_colliders(&mut app, 0);
+    app.world_mut()
+        .resource_mut::<EditJournal>()
+        .record([2, 1, 2], 3)
+        .unwrap();
+    assert_eq!(
+        app.world().resource::<ChunkStore>().block_at([2, 1, 2]),
+        Some(0)
+    );
+    let snapshot = collision_snapshot(
+        SectionPos::default(),
+        app.world().resource::<ChunkStore>(),
+        app.world().resource::<EditJournal>(),
+    )
+    .unwrap();
+    assert_eq!(snapshot.block([2, 1, 2]), Ok(3));
+    settle_colliders(&mut app, 1);
+    let world = app.world();
+    assert!(world.resource::<TerrainCollisionState>().ready_for_aabb(
+        Vec3::new(2.1, 1.1, 2.1),
+        Vec3::new(2.9, 1.9, 2.9),
+        world.resource::<ChunkStore>(),
+        world.resource::<EditJournal>(),
+    ));
+    assert_eq!(
+        world.resource::<ChunkStore>().loaded[&SectionPos::default()].mesh_epoch,
+        0
+    );
+}
+
+#[test]
+fn forgotten_neighbor_and_vertical_profile_bases_block_collision_publication() {
+    let owner = SectionPos::default();
+    for offset in [[-1, 0, 0], [0, 2, 0], [1, -2, 1]] {
+        let neighbor = owner.offset(offset).unwrap();
+        let mut chunks = ChunkStore::default();
+        for position in [owner, neighbor] {
+            chunks.loaded.insert(
+                position,
+                LoadedSection {
+                    data: BlockSection::empty(position).unwrap(),
+                    mesh: None,
+                    mesh_epoch: 0,
+                    water_epoch: 0,
+                    water: None,
+                    props: Vec::new(),
+                },
+            );
+        }
+        let mut source = EditJournal::default();
+        let mut replica = EditJournal::default();
+        let position = neighbor.global_block([15, 1, 2]).unwrap();
+        source.record(position, 3).unwrap();
+        chunks
+            .apply_confirmed_delta(&mut replica, source.section_delta(neighbor))
+            .unwrap();
+        assert!(collision_inputs_known(owner, &chunks));
+        let mut forgotten = source.section_delta(neighbor);
+        forgotten.revision += 1;
+        forgotten.blocks.clear();
+        chunks
+            .apply_confirmed_delta(&mut replica, forgotten)
+            .unwrap();
+        assert!(chunks.voxel_data_known(owner));
+        assert!(chunks.voxel_base_pending(neighbor));
+        assert!(
+            !collision_inputs_known(owner, &chunks),
+            "unknown halo {offset:?}"
+        );
+        assert!(collision_snapshot(owner, &chunks, &replica).is_err());
+        let mut restored = replica.section_delta(neighbor);
+        restored.revision += 1;
+        restored.blocks.push(([15, 1, 2], 0));
+        chunks
+            .apply_confirmed_delta(&mut replica, restored)
+            .unwrap();
+        assert!(collision_inputs_known(owner, &chunks));
+        assert!(collision_snapshot(owner, &chunks, &replica).is_ok());
+    }
+}
+
+#[test]
+fn collider_worker_discards_a_replaced_voxel_payload_even_at_the_same_mesh_epoch() {
+    let mut app = app();
+    let owner = SectionPos::default();
+    let previous = Arc::new(
+        app.world().resource::<ChunkStore>().loaded[&owner]
+            .data
+            .clone(),
+    );
+    let worker_data = previous.clone();
+    app.world_mut().resource_mut::<ColliderJobs>().0.insert(
+        owner,
+        ColliderJob {
+            data: previous,
+            plain: None,
+            profile: None,
+            epoch: 0,
+            task: AsyncComputeTaskPool::get().spawn(async move { build_collider(&worker_data) }),
+        },
+    );
+    app.world_mut()
+        .resource_mut::<ChunkStore>()
+        .loaded
+        .get_mut(&owner)
+        .unwrap()
+        .data = BlockSection::empty(owner).unwrap();
+    let deadline = Instant::now() + Duration::from_secs(10);
+    loop {
+        app.update();
+        let state = app.world().resource::<TerrainCollisionState>();
+        if state.completed_jobs > 0 && state.pending_jobs == 0 {
+            break;
+        }
+        assert!(Instant::now() < deadline, "replacement collider timed out");
+        std::thread::sleep(Duration::from_millis(1));
+    }
+    let state = app.world().resource::<TerrainCollisionState>();
+    assert_eq!(
+        state.completed_jobs, 1,
+        "the old payload was discarded, not activated"
+    );
+    assert_eq!(state.active_colliders, 0);
+    assert!(state.sections[&owner].entity.is_none());
+}
+
+#[test]
 fn logical_voxel_colliders_stop_falls_and_refresh_after_mining_without_renderer() {
     let mut app = app();
     settle_colliders(&mut app, 0);
@@ -152,6 +352,7 @@ fn eviction_removes_colliders_and_old_jobs_cannot_resurrect_edited_data() {
     app.world_mut().resource_mut::<ColliderJobs>().0.insert(
         owner,
         ColliderJob {
+            data: Arc::new(data.clone()),
             plain: None,
             profile: None,
             epoch: 0,

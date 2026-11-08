@@ -16,7 +16,7 @@ struct Prepared {
     operation: Operation,
 }
 
-/// Historic shapes remain usable without turning separate switches into track stock.
+/// Keep historic curve stock usable while retiring new crossing construction.
 fn placement_source_allowed(action: EditAction, source: u16) -> bool {
     if matches!(action, EditAction::BuildRail { .. }) {
         return source == terra_core::rails::STRAIGHT;
@@ -27,9 +27,9 @@ fn placement_source_allowed(action: EditAction, source: u16) -> bool {
         _ => return false,
     };
     match source {
-        196 => terra_core::rails::is_rail(target) && !matches!(target, 202 | 203),
+        196 => terra_core::rails::is_rail(target) && !matches!(target, 202..=204),
         197..=201 => target == source || target == terra_core::rails::STRAIGHT,
-        202..=205 => target == source,
+        202 | 203 | 205 => target == source,
         _ => false,
     }
 }

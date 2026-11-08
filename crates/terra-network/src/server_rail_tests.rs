@@ -791,8 +791,37 @@ fn stands_check_every_switch_claim_and_direct_switch_clicks_are_rejected() {
 }
 
 #[test]
+fn saved_crossings_remain_complete_and_mineable_but_cannot_be_built_again() {
+    let (mut app, peer, piece, command) = rail_fixture(rails::CROSSING, [8, 4, 10]);
+    let before = snapshot(&app, piece);
+    assert_eq!(run(&mut app, &peer, command, false), EditOutcome::Invalid);
+    assert_eq!(snapshot(&app, piece), before);
+    app.world_mut()
+        .resource_scope(|world, mut chunks: Mut<ChunkStore>| {
+            let mut journal = world.resource_mut::<EditJournal>();
+            let plan = terra_world::rails::plan(
+                &chunks,
+                &journal,
+                piece.anchor,
+                piece.material,
+                piece.encoded_facing(),
+            )
+            .unwrap();
+            assert!(terra_world::rails::commit(&mut chunks, &mut journal, &plan).unwrap());
+            assert!(terra_world::rails::complete(&journal, piece));
+        });
+    let remove = removal(&app, &peer, piece, piece.anchor);
+    assert_eq!(run(&mut app, &peer, remove, true), EditOutcome::Applied);
+    assert!(!terra_world::rails::complete(
+        app.world().resource::<EditJournal>(),
+        piece
+    ));
+    assert_eq!(app.world().resource::<EditJournal>().rail_module_count(), 0);
+}
+
+#[test]
 fn legacy_shape_stock_still_builds_its_original_form_and_old_curves_support_auto_track() {
-    for source_material in [197, 198, 199, 200, 201, 204, 205] {
+    for source_material in [197, 198, 199, 200, 201, 205] {
         let targets = if source_material <= 201 {
             vec![source_material, rails::STRAIGHT]
         } else {
@@ -834,8 +863,10 @@ fn legacy_shape_stock_still_builds_its_original_form_and_old_curves_support_auto
 }
 
 #[test]
-fn legacy_sources_cannot_substitute_another_shape_or_cross_the_separate_switch_boundary() {
+fn legacy_sources_respect_retired_crossings_and_separate_switch_stock() {
     for (source_material, target_material) in [
+        (196, 204),
+        (204, 204),
         (204, 196),
         (205, 196),
         (197, 204),

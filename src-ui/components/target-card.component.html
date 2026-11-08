@@ -15,8 +15,8 @@
 }
 @if (railBuildView.visible) {
 <div id="rail-build-hint" [class]="railBuildView.invalid ? 'rail-build-hint rail-build-invalid' : 'rail-build-hint'">
-  <p class="rail-build-title">{{ railBuildView.title }}</p>
-  <p>{{ railBuildView.instruction }}</p>
-  <p>{{ railBuildView.detail }}</p>
+  <div class="rail-build-heading"><p class="rail-build-title">{{ railBuildView.title }}</p>@if (railBuildView.cost) { <p class="rail-build-cost">{{ railBuildView.cost }}</p> }</div>
+  <p class="rail-build-controls">{{ railBuildView.instruction }}</p>
+  <p class="rail-build-detail">{{ railBuildView.detail }}</p>
 </div>
 }
