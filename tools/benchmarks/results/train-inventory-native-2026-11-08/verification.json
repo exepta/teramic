@@ -1,0 +1,33 @@
+{
+  "native_ui": {
+    "backend": "Vulkan",
+    "resolution": [
+      1280,
+      900
+    ],
+    "clicks": 4,
+    "coal_round_trip": 128,
+    "storage_round_trip": 7,
+    "exit_code": 0,
+    "controlled_inventory_acknowledgements": true
+  },
+  "train_tests_passed": 145,
+  "client_build": "passed",
+  "clippy_all_targets": "passed",
+  "files": {
+    "crates/terra-ui/src/frames.rs": "356477fb82807e3cd688f9c5ae37bc02c7fc018f0926772eb9422e26ff8764b0",
+    "crates/terra-ui/src/trains.rs": "edc517d1832f1c9d615155d4c5e8941e824415a1d64a54b2ca8d7798a59aaebf",
+    "crates/terra-ui/src/trains_live.rs": "7edd05498c26cc21fbb7af89f81b952cf80f721a2644d44344f4990e32e27634",
+    "crates/terra-ui/src/trains_driving_tests.rs": "0ea82cc2dde5ccd480ea63b6996acd640b43791392a88bf452e5a1a90c4e9082",
+    "src-ui/components/train-workshop.component.html": "4cdc9c2196a38c0b0636b221d0620aba6a72b27b93deb9d93cb521aa2ae7e33f",
+    "src-ui/components/train-workshop.component.rs": "262838620301f1a9b0b1dc69fa83472b7a3c2d2fe1473f09688089e067f80cb2",
+    "src-ui/components/train-workshop.component.css": "40f95562f0ee78d4fc06809f40068c97144aa69164911ffca88a89ed7e4f0c4e",
+    "tools/benchmarks/results/train-inventory-native-2026-11-08/engine-filled.png": "18f99da957d137d35efdc1f8d98394875bc93c1dc69077b0f5aa186dcf06a113",
+    "tools/benchmarks/results/train-inventory-native-2026-11-08/storage-filled.png": "6054b74fb2e4769bfcd6618f47438d7b9b4d56ba43e4896686963998f093ce21",
+    "tools/benchmarks/results/train-inventory-native-2026-11-08/README.md": "91fd3dbc2fc0c93da61eb24e802ce6806734c764662b1f2fd04781cd76bfb4c1",
+    "tools/benchmarks/results/train-inventory-native-2026-11-08/native.log": "e4a88fc846e8e123eb816f965aa236bb0dfcfa7af1eb1f5c81fed516aade00ab",
+    "tools/benchmarks/results/train-inventory-native-2026-11-08/build.log": "a7aaf4d0dd6bf870f3a856d7e06b19ce14f57a11c3d6fbdf079c7d101818a1c2",
+    "tools/benchmarks/results/train-inventory-native-2026-11-08/clippy.log": "574de6e0a2f294712a8a389286debb2462c1e4c12e1b2131c0a80be5018ea189",
+    "tools/benchmarks/results/train-inventory-native-2026-11-08/tests.log": "85e14cc22b902b78a7ebdef7e99fcb9a64a45a2516f74d9de53bacbfbff32c71"
+  }
+}

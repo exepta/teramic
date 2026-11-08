@@ -72,7 +72,7 @@ fn responsive_inventory_scale(
     }
 }
 
-fn inventory_zoom(viewport: Vec2, requested: f32, global: f32, linked: bool) -> f32 {
+pub(crate) fn inventory_zoom(viewport: Vec2, requested: f32, global: f32, linked: bool) -> f32 {
     let width = if linked { 1044.0 } else { 682.0 };
     // The extra 18 pixels include the title above the 400px machine frame.
     let desired =

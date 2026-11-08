@@ -1,9 +1,16 @@
 use bevy::prelude::*;
-use tilt_ui::{ElementId, HtmlEvent, html_fn};
+use tilt_ui::{ElementId, HtmlEvent, UiBindingStore, UiStore, html_fn};
+
+#[derive(Default, serde::Serialize, serde::Deserialize, UiStore)]
+#[ui_store(mutable)]
+pub struct TrainIntent {
+    pub command: String,
+}
 
 #[html_fn("train_workshop_action")]
 fn train_workshop_action(
     In(event): In<HtmlEvent>,
+    store: Option<Res<UiBindingStore>>,
     ids: Query<&ElementId>,
     parents: Query<&ChildOf>,
     mut actions: MessageWriter<crate::TrainUiAction>,
@@ -12,7 +19,20 @@ fn train_workshop_action(
     for _ in 0..16 {
         let Some(entity) = target else { break };
         if let Ok(id) = ids.get(entity) {
-            if id.0 == "drive-throttle" {
+            if matches!(
+                id.0.as_str(),
+                "train-slot" | "train-notch" | "train-vehicle"
+            ) {
+                if let Some(command) = store
+                    .as_ref()
+                    .and_then(|store| store.get_store::<TrainIntent>())
+                    .map(|intent| &intent.command)
+                    .filter(|command| train_command(command))
+                {
+                    actions.write(crate::TrainUiAction::Command(command.clone()));
+                }
+                break;
+            } else if id.0 == "drive-throttle" {
                 if let Some(value) = event
                     .value
                     .as_ref()

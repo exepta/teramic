@@ -17,6 +17,8 @@ use tilt_ui::html_shared;
 mod cargo;
 #[path = "trains_driving.rs"]
 mod driving;
+#[path = "trains_live.rs"]
+mod live;
 
 #[cfg(test)]
 #[path = "trains_driving_tests.rs"]
@@ -139,6 +141,7 @@ pub struct TrainView {
 }
 
 pub(crate) fn install(app: &mut App) {
+    live::install(app);
     app.init_resource::<TrainUiState>()
         .init_resource::<TrainView>()
         .init_resource::<TrainBlueprint>()
@@ -158,6 +161,7 @@ fn fit_panel(
     windows: Query<&Window>,
     scale: Option<Res<UiScale>>,
     view: Res<TrainView>,
+    graphics: Option<Res<terra_core::GraphicsConfig>>,
     mut panels: Query<(&tilt_ui::ElementId, &ComputedNode, &mut UiTransform)>,
 ) {
     if !view.open {
@@ -172,7 +176,20 @@ fn fit_panel(
             continue;
         }
         let size = node.size() * node.inverse_scale_factor();
-        let fit = panel_scale(window.size() / scale, size);
+        let fit = if view.cargo {
+            crate::frames::inventory_zoom(
+                window.size(),
+                graphics.as_ref().map_or(1.0, |graphics| graphics.ui_scale),
+                scale,
+                false,
+            )
+            .min(
+                (window.width() * 0.94 / scale / size.x)
+                    .min(window.height() * 0.92 / scale / size.y),
+            )
+        } else {
+            panel_scale(window.size() / scale, size)
+        };
         if transform.scale != Vec2::splat(fit) {
             transform.scale = Vec2::splat(fit)
         }

@@ -7001,3 +7001,30 @@ Ladungserhalt beim Rueckbau ueber echtes UDP.
 Der vollstaendige Workspace-Build besteht einschliesslich Client-/Server-Linking
 (4 min 09 s), ebenso Clippy aller Targets mit `-D warnings`, Format und Diff.
 Keine Grafiktests, Spielfenster oder GPU-Abnahmen gestartet.
+
+
+## 217. Gerenderte Zug-Inventare Bedienen Und Einheitlich Skalieren
+
+Dynamische `[id]`-Bindings erzeugen in der verwendeten TiltUI-Version keine
+ElementId. Die bisherigen Callbacktests erzeugten diese IDs von Hand und
+umgingen dadurch den Fehler. Slots, Fahrzeugzeilen und Fahrhebelstufen verwenden
+jetzt statische Aktions-IDs und den vorhandenen typisierten `$set`-Mechanismus.
+Die Slot-Regressionen pruefen diesen Store-/Handlerweg.
+
+Motor und Laderaum verwenden die 33,6-px-Zellen und dieselbe responsive
+Inventarvergroesserung wie das Spielerinventar. Ein festes Raster haelt neun
+Spalten auch bei Rundung und DPI-Skalierung zusammen. Rahmen, Innenabstand und
+Zellhintergrund passen zum normalen Inventar.
+
+Die explizite Live-Fixture startet die echte gerenderte Zugoberflaeche und
+klickt durch Bevy-Picking auf materialisierte Controls. Sie prueft Einlegen
+und Zurueckholen von 128 Kohle sowie sieben normalen Lagerbloecken. Antworten
+werden fuer diese isolierte UI-Fixture mit der echten Inventartransaktion
+gebildet; die bestehenden Zugtests pruefen zusaetzlich echte UDP-Autoritaet.
+Spielstaende werden fuer die UI-Fixture nicht geladen.
+
+Abnahme 217: Vier native UI-Klicks und Mengenpruefung erfolgreich, 145 gezielte
+Zugtests bestanden. Client-Build mit Linking und Clippy aller Workspace-Targets
+mit `-D warnings` bestehen. Der Live-Client beendet sich nach erfolgreicher
+Pruefung; Aufnahmen und Logs stehen im
+[Pruefbericht](tools/benchmarks/results/train-inventory-native-2026-11-08/README.md).

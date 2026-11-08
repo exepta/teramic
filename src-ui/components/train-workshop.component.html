@@ -1,6 +1,6 @@
 @if (trainView.open) {
 <div class="train-workshop-overlay">
-  <div id="train-workshop-panel" class="train-workshop-panel">
+  <div id="train-workshop-panel" [class]="trainView.cargo ? 'train-workshop-panel train-cargo-panel' : 'train-workshop-panel'">
     <div class="train-panel-fill"></div>
     <ornate-frame></ornate-frame>
     <div class="train-workshop-content">
@@ -13,7 +13,7 @@
         @if (trainView.held) { <div class="train-held-item"><img [alt]="trainView.held_preview" /><p>Gehalten: {{ trainView.held_name }} × {{ trainView.held_count }} · Platz zum Ablegen anklicken</p></div> }
         <div class="train-slots">
           @for (slot of trainView.cargo_slots; track slot.index) {
-            <button class="train-slot" [id]="slot.command" [disabled]="trainView.pending || !slot.enabled" [title]="slot.name" onclick="train_workshop_action">
+            <button class="train-slot" id="train-slot" [disabled]="trainView.pending || !slot.enabled" [title]="slot.name" onclick="$set(trainIntent.command, slot.command); train_workshop_action">
               @if (!slot.empty) { <img [alt]="slot.preview" /><p>{{ slot.count }}</p> }
             </button>
           }
@@ -21,7 +21,7 @@
         <h3>Inventar</h3>
         <div class="train-slots">
           @for (slot of trainView.player_slots; track slot.index) {
-            <button class="train-slot" [id]="slot.command" [disabled]="trainView.pending || !slot.enabled" [title]="slot.name" onclick="train_workshop_action">
+            <button class="train-slot" id="train-slot" [disabled]="trainView.pending || !slot.enabled" [title]="slot.name" onclick="$set(trainIntent.command, slot.command); train_workshop_action">
               @if (!slot.empty) { <img [alt]="slot.preview" /><p>{{ slot.count }}</p> }
             </button>
           }
@@ -36,7 +36,7 @@
             <slider id="drive-throttle" class="train-drive-slider" min="-3" max="3" step="1" [value]="trainView.drive_value" [disabled]="!trainView.drive_controls" onchange="train_workshop_action" />
             <div class="train-throttle-notches">
               @for (step of trainView.drive_levels; track step.command) {
-                <button [id]="step.command" [class]="step.selected ? 'selected' : ''" [disabled]="!trainView.drive_controls" onclick="train_workshop_action">{{ step.label }}</button>
+                <button id="train-notch" [class]="step.selected ? 'selected' : ''" [disabled]="!trainView.drive_controls" onclick="$set(trainIntent.command, step.command); train_workshop_action">{{ step.label }}</button>
               }
             </div>
             <div class="train-drive-actions">
@@ -83,7 +83,7 @@
           <div class="train-workshop-vehicles">
             <div class="train-vehicle-heading"><h3>Fahrzeuge</h3><button id="clear" onclick="train_workshop_action">Auswahl lösen</button></div>
             @for (vehicle of trainView.rows; track vehicle.id) {
-              <button [id]="vehicle.command" [class]="vehicle.selected ? 'train-vehicle selected' : (vehicle.second ? 'train-vehicle second' : 'train-vehicle')" [disabled]="trainView.pending" onclick="train_workshop_action">
+              <button id="train-vehicle" [class]="vehicle.selected ? 'train-vehicle selected' : (vehicle.second ? 'train-vehicle second' : 'train-vehicle')" [disabled]="trainView.pending" onclick="$set(trainIntent.command, vehicle.command); train_workshop_action">
                 <p>{{ vehicle.label }}</p><p>{{ vehicle.detail }}</p>
                 @if (vehicle.foreign) { <p>Anderer Besitzer</p> }
               </button>

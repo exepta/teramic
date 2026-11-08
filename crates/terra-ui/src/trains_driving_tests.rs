@@ -63,10 +63,19 @@ fn html_change(app: &mut App, id: &str, value: &str) {
 }
 
 fn html_click(app: &mut App, command: &str, child: u8) {
-    let button = app
-        .world_mut()
-        .spawn(tilt_ui::ElementId(command.into()))
-        .id();
+    let id = if command.starts_with("slot:") {
+        let mut store = tilt_ui::UiBindingStore::default();
+        store.set_store(
+            crate::__tilt_ui_generated_components::train_workshop_component::TrainIntent {
+                command: command.into(),
+            },
+        );
+        app.insert_resource(store);
+        "train-slot"
+    } else {
+        command
+    };
+    let button = app.world_mut().spawn(tilt_ui::ElementId(id.into())).id();
     let target = match child {
         1 => app
             .world_mut()
