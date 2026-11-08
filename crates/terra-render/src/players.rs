@@ -256,8 +256,32 @@ fn train_seat_yaw(
         .iter()
         .find(|vehicle| vehicle.id == binding.vehicle)?;
     vehicle
-        .seat_pose(usize::from(binding.part))
+        .seat_pose_at(
+            usize::from(binding.part),
+            session.displayed_train_motion(vehicle),
+        )
         .map(|(_, yaw)| yaw)
+}
+
+fn train_seat_position(
+    session: Option<&terra_network::client::ClientSession>,
+    binding: Option<terra_core::trains::SeatBinding>,
+) -> Option<Vec3> {
+    let session = session.filter(|session| session.ready)?;
+    let binding = binding?;
+    let vehicle = session
+        .trains
+        .vehicles
+        .iter()
+        .find(|vehicle| vehicle.id == binding.vehicle)?;
+    let (feet, _) = vehicle.seat_pose_at(
+        usize::from(binding.part),
+        session.displayed_train_motion(vehicle),
+    )?;
+    Some(
+        Vec3::from_array(feet.map(|value| value as f32))
+            + Vec3::Y * terra_player::PLAYER_HALF_HEIGHT,
+    )
 }
 
 pub(crate) fn render(
@@ -296,7 +320,8 @@ pub(crate) fn render(
         if *equipment != desired {
             *equipment = desired;
         }
-        transform.translation = track.position();
+        transform.translation = train_seat_position(session.as_deref(), track.current.train_seat)
+            .unwrap_or_else(|| track.position());
         transform.rotation = Quat::from_rotation_y(track.current.look[0]);
         let train_yaw = train_seat_yaw(session.as_deref(), track.current.train_seat);
         motion.mounted = train_yaw.is_some() || track.current.mounted.is_some();
@@ -350,8 +375,10 @@ pub(crate) fn render(
             .and_then(|session| session.sleepers.iter().find(|sleep| sleep.player == id))
             .copied();
         let train_yaw = train_seat_yaw(session.as_deref(), track.current.train_seat);
-        let position = if train_yaw.is_some() {
-            track.position()
+        let position = if let Some(position) =
+            train_seat_position(session.as_deref(), track.current.train_seat)
+        {
+            position
         } else {
             mounts
                 .as_ref()

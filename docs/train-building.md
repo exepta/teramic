@@ -75,6 +75,11 @@ uebriger Motorbrenndauer. Dort kann normal weitergebaut und erneut montiert werd
 Die Zielstellen muessen geladen und frei sein; Fahrten oder unpassende Gleislagen
 verhindern den Rueckbau mit einem Hinweis.
 
+Neue gezeichnete Gleisboegen benoetigen mindestens 16 Meter horizontalen
+Kurvenradius. Die Endpunkte entsprechend weiter auseinander setzen; gerade
+Steigungsuebergaenge behalten ihre bisherige Steigungsregel. Bestehende
+Gleisformen bleiben im Spielstand lesbar.
+
 Die Strecke muss geladen und frei sein. Fehlende Gleise, geschlossene Weichenwege,
 unbekannte Bereiche, Hindernisse, andere Fahrzeuge und ungeschuetzte Personen im
 Fahrweg stoppen die Fahrt. Der Zug folgt Kurven und Hoehenwechseln; Drehgestelle
@@ -93,6 +98,6 @@ nach dem Rueckbau wieder aktiv. Separat simulierte Pflanzen/Weltobjekte vor der
 Montage entfernen; voxelbasierte Laternen, Ketten und Banner sind mitmontierbar.
 
 Ein Fahrzeug darf bis zu 256 Blockteile enthalten. Die Vorlage ist eine Bauhilfe;
-Materialien werden beim normalen Platzieren verbraucht. Netzwerkprotokoll 119 und
+Materialien werden beim normalen Platzieren verbraucht. Netzwerkprotokoll 120 und
 Zugindex ID15 speichern die Fahrt; alte ID13-/ID14-Zuege bleiben lesbar.
 Client und Server gemeinsam neu bauen und neu starten.

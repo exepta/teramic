@@ -1,0 +1,15 @@
+workspace library tests: 4235 passed, 0 failed, 9 ignored
+cargo build --locked --workspace: exit 0
+cargo clippy --locked --workspace --all-targets -- -D warnings: exit 0
+cargo fmt --all -- --check: exit 0
+native building fixture: exit 0
+native train ride in existing world: not performed
+
+24514bcdffc294fe836012a6562101a6957f7acbcc4e31b3c01b61b4ed3a1ccc  README.md
+ac0c4cf62b130ac47b7ab118d21c86fc158058f2d4200bc5ab8550cb3723f94e  bounds-cost.log
+78189765d1c75c2926714ea0d7ab91458482de47be4ec6beae2dc54c6678d4fe  build.log
+5b1da582cd8a3e6d044c47c7ebdad7df40cd5f7ef58cff5b2a57347ce505875c  building-restored.png
+edcf201935972c1b5cef3530b883a4f956e34b8b55de8e22c89885ee39dcb049  clippy.log
+941c9ce3783a86c09924ee70ac2c245004562b2b8c692a404a0ab9f056bce96e  native-building.log
+9c76c5b5de5ee589e70161e5ae8b97b312fbac4bd587975f4da9a28fa6a9acac  placement-metrics.json
+2da642696b52a413f8e2571a9f1479106ab099ccc8aefdcf3141bc07bb06cb03  tests.log

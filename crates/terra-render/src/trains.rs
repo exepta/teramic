@@ -236,7 +236,7 @@ fn sources<'a>(
                     vehicle.anchor,
                     vehicle.parts.as_slice(),
                     &vehicle.blocks,
-                    vehicle.model_transform(),
+                    vehicle.model_transform_at(session.displayed_train_motion(vehicle)),
                     vehicle.model_bounds(),
                 )
             })

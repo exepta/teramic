@@ -1150,3 +1150,66 @@ fn network_prediction_backpressure_keeps_the_queued_jump_and_body_until_acknowle
     // flow/UDP regressions. This Player-level test verifies intent ownership at
     // the real consumed_input=false boundary without forging a network ACK.
 }
+
+#[test]
+fn train_camera_uses_the_seat_without_physics_lerp_walk_bob_or_stair_smoothing() {
+    use terra_core::{
+        PlayerUuid,
+        trains::{SeatBinding, TrainPart, VehicleKind, VehicleView},
+    };
+    let (mut app, body, camera) = presented_walk_app();
+    let owner = PlayerUuid::from_u128(712);
+    let mut session = ClientSession::default();
+    session.ready = true;
+    session.uuid = Some(owner);
+    session.train_seat = Some(SeatBinding {
+        player: owner,
+        vehicle: 1,
+        part: 0,
+    });
+    session.trains.vehicles.push(VehicleView {
+        id: 1,
+        owner,
+        kind: VehicleKind::Locomotive,
+        anchor: [0, 2, 0],
+        parts: vec![TrainPart {
+            offset: [0; 3],
+            material: 214,
+            facing: 0,
+            wood: Default::default(),
+        }],
+        blocks: Default::default(),
+        couplings: [None; 2],
+        revision: 1,
+        mass_kg: 2000,
+        motion: Default::default(),
+    });
+    app.insert_resource(session);
+    app.world_mut()
+        .entity_mut(body)
+        .insert(terra_physics::character::CharacterPresentation {
+            previous: Vec3::splat(-100.0),
+            correction: Vec3::splat(0.3),
+        });
+    for frame in 0..60 {
+        app.world_mut()
+            .resource_mut::<ClientSession>()
+            .trains
+            .vehicles[0]
+            .motion
+            .translation = [f64::from(frame) * 0.1, f64::from(frame) * 0.01, 0.0];
+        let expected = app
+            .world()
+            .resource::<ClientSession>()
+            .seated_state()
+            .unwrap()
+            .position
+            + Vec3::Y * PLAYER_EYE_OFFSET;
+        app.update();
+        let position = app.world().get::<Transform>(camera).unwrap().translation;
+        assert!(
+            position.distance(expected) < 1e-5,
+            "seat camera drifted at frame {frame}: {position:?} / {expected:?}"
+        );
+    }
+}

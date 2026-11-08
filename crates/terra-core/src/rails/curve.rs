@@ -9,6 +9,8 @@ use std::{
 pub const MAX_CURVE_LENGTH: f64 = 32.0;
 pub const MAX_CURVE_GRADE: f64 = 0.5;
 pub const MIN_CURVE_RADIUS: f64 = 2.5;
+/// New horizontal bends need room for a full railway vehicle; old records remain readable.
+pub const MIN_BUILD_RADIUS: f64 = 16.0;
 pub const MAX_CURVE_SAMPLES: usize = 257;
 pub const DYNAMIC_CACHE_LIMIT: usize = 64;
 
@@ -179,6 +181,17 @@ impl CurveSpec {
     /// The historical equal-handle curve is tried first, preserving successful
     /// connections; asymmetric turns can then use the available approach length.
     pub fn between_checked(start: Port, end: Port, anchor: [i64; 3]) -> Result<Self, CurveError> {
+        Self::between_fitted(start, end, anchor, 0.0)
+    }
+    pub fn between_for_build(start: Port, end: Port, anchor: [i64; 3]) -> Result<Self, CurveError> {
+        Self::between_fitted(start, end, anchor, MIN_BUILD_RADIUS)
+    }
+    fn between_fitted(
+        start: Port,
+        end: Port,
+        anchor: [i64; 3],
+        radius: f64,
+    ) -> Result<Self, CurveError> {
         if !start.connectable || !end.connectable || start.position == end.position {
             return Err(CurveError::Degenerate);
         }
@@ -267,6 +280,18 @@ impl CurveSpec {
                 let curve = Self {
                     points: [first, second, third, last],
                 };
+                // Reject tight candidates before the quadratic self-intersection analysis.
+                if radius > 0.0
+                    && !(0..MAX_CURVE_SAMPLES).all(|step| {
+                        let (_, tangent, second) =
+                            curve.evaluate(step as f64 / (MAX_CURVE_SAMPLES - 1) as f64);
+                        let turn = (tangent[0] * second[2] - tangent[2] * second[0]).abs();
+                        turn < 1e-10 || tangent[0].hypot(tangent[2]).powi(3) / turn >= radius
+                    })
+                {
+                    first_error.get_or_insert(CurveError::TooTight);
+                    continue;
+                }
                 match curve.validate() {
                     Ok(_) => return Ok(curve),
                     Err(error) => {

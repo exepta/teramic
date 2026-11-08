@@ -1,4 +1,6 @@
 //! Network replica, confirmed world deltas and shared-controller prediction.
+#[path = "client_train_motion.rs"]
+mod train_motion_display;
 use crate::{connection::ConnectionStatus, protocol::session::*};
 use bevy::{ecs::system::SystemParam, prelude::*};
 use lightyear::prelude::{client::*, *};
@@ -281,6 +283,7 @@ pub fn disconnect_session(world: &mut World) {
     session.trains = Default::default();
     session.train_cargo = None;
     session.train_seat = None;
+    session.train_motion_tracks.clear();
     session.last_train_result = None;
     session.train_response = 0;
     session.train_request = 0;
@@ -297,6 +300,8 @@ pub struct ClientSession {
     pub trees: terra_core::TreeRegistry,
     pub trains: terra_core::trains::TrainSnapshot,
     pub train_cargo: Option<crate::protocol::trains::TrainCargoSnapshot>,
+    train_motion_tracks: std::collections::BTreeMap<u64, train_motion_display::Track>,
+    train_display_time: Instant,
     pub train_seat: Option<terra_core::trains::SeatBinding>,
     pub last_train_result: Option<crate::protocol::trains::TrainResult>,
     pub train_response: u64,
@@ -371,6 +376,8 @@ impl Default for ClientSession {
         Self {
             trains: Default::default(),
             train_cargo: None,
+            train_motion_tracks: Default::default(),
+            train_display_time: Instant::now(),
             train_seat: None,
             last_train_result: None,
             train_response: 0,
@@ -534,6 +541,15 @@ impl ClientSession {
     pub fn confirmed_state(&self) -> Option<PlayerState> {
         self.latest.map(|(_, state)| state)
     }
+    /// Vehicle, running gear and riders sample the same presentation time each frame.
+    pub fn displayed_train_motion(
+        &self,
+        vehicle: &terra_core::trains::VehicleView,
+    ) -> terra_core::train_motion::TrainMotion {
+        self.train_motion_tracks
+            .get(&vehicle.id)
+            .map_or(vehicle.motion, |track| track.at(self.train_display_time))
+    }
     /// Shared seat coordinates are feet; movement uses the capsule center.
     pub fn seated_state(&self) -> Option<CharacterState> {
         let binding = self
@@ -544,7 +560,10 @@ impl ClientSession {
             .vehicles
             .iter()
             .find(|vehicle| vehicle.id == binding.vehicle)?;
-        let (feet, _) = vehicle.seat_pose(usize::from(binding.part))?;
+        let (feet, _) = vehicle.seat_pose_at(
+            usize::from(binding.part),
+            self.displayed_train_motion(vehicle),
+        )?;
         Some(CharacterState {
             position: Vec3::from_array(feet.map(|value| value as f32))
                 + Vec3::Y * terra_physics::character::PLAYER_HALF_HEIGHT,
@@ -659,6 +678,7 @@ impl ClientSession {
         self.trains = Default::default();
         self.train_cargo = None;
         self.train_seat = None;
+        self.train_motion_tracks.clear();
         self.last_train_result = None;
         self.train_response = 0;
         self.train_request = 0;
@@ -1576,6 +1596,19 @@ fn receive_controls(
                         // Retain private contents/token until a private update or explicit refresh;
                         // the authority still rejects gestures using a stale token.
                         clear_invalid_train_cargo(&mut session, &snapshot.vehicles);
+                        session.train_motion_tracks.retain(|id, _| {
+                            snapshot.vehicles.iter().any(|vehicle| vehicle.id == *id)
+                        });
+                        for vehicle in &snapshot.vehicles {
+                            let now = Instant::now();
+                            session
+                                .train_motion_tracks
+                                .entry(vehicle.id)
+                                .or_insert_with(|| {
+                                    train_motion_display::Track::new(vehicle.motion, now)
+                                })
+                                .push(vehicle.motion, now);
+                        }
                         session.trains = *snapshot;
                     })
                 } else {
@@ -1601,6 +1634,14 @@ fn receive_controls(
                         {
                             vehicle.motion = frame.motion;
                             vehicle.revision = frame.revision;
+                            let now = Instant::now();
+                            session
+                                .train_motion_tracks
+                                .entry(frame.id)
+                                .or_insert_with(|| {
+                                    train_motion_display::Track::new(frame.motion, now)
+                                })
+                                .push(frame.motion, now);
                         }
                     }
                     if let Some(views) = &mut world.train_collision_views {
@@ -1701,6 +1742,7 @@ fn receive_controls(
             break;
         }
     }
+    session.train_display_time = Instant::now();
 }
 
 fn validate_crop_progress(

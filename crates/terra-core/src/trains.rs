@@ -466,27 +466,46 @@ macro_rules! geometry_methods {
                 .map(|shape| transform.bounds(part, shape))
                 .collect()
         }
+        /// Conservative world bounds reuse immutable local geometry across motion and edits.
         pub fn model_bounds(&self) -> [[f64; 3]; 2] {
-            let mut low = [f64::INFINITY; 3];
-            let mut high = [f64::NEG_INFINITY; 3];
+            let local = local_bounds(&self.parts, &self.blocks);
             let transform = RigidTransform::new(self.anchor, self.motion, self.build_yaw());
-            for index in 0..self.parts.len() {
-                for shape in self
-                    .part_shapes(index)
-                    .into_iter()
-                    .map(|shape| transform.bounds(&self.parts[index], shape))
-                {
-                    for i in 0..3 {
-                        low[i] = low[i].min(shape.minimum[i]);
-                        high[i] = high[i].max(shape.maximum[i]);
-                    }
+            let mut result = [[f64::INFINITY; 3], [f64::NEG_INFINITY; 3]];
+            for corner in 0..8 {
+                let point = transform.point(std::array::from_fn(|axis| {
+                    local[usize::from(corner & (1 << axis) != 0)][axis]
+                }));
+                for axis in 0..3 {
+                    result[0][axis] = result[0][axis].min(point[axis]);
+                    result[1][axis] = result[1][axis].max(point[axis]);
                 }
             }
-            if self.parts.is_empty() {
-                [self.model_origin(); 2]
-            } else {
-                [low, high]
+            result
+        }
+        pub fn model_transform_at(
+            &self,
+            motion: crate::train_motion::TrainMotion,
+        ) -> ([f64; 3], [f64; 4]) {
+            let transform = RigidTransform::new(self.anchor, motion, self.build_yaw());
+            (transform.origin, transform.quaternion)
+        }
+        pub fn seat_pose_at(
+            &self,
+            index: usize,
+            motion: crate::train_motion::TrainMotion,
+        ) -> Option<([f64; 3], f32)> {
+            let part = self.parts.get(index)?;
+            if !matches!(part.material, train_parts::CAB | train_parts::SEAT) {
+                return None;
             }
+            Some((
+                RigidTransform::new(self.anchor, motion, self.build_yaw()).point([
+                    f64::from(part.offset[0]) + 0.5,
+                    f64::from(part.offset[1]) + 0.485,
+                    f64::from(part.offset[2]) + 0.5,
+                ]),
+                (f64::from(part.facing) * std::f64::consts::FRAC_PI_2 + motion.yaw) as f32,
+            ))
         }
         pub fn seat_pose(&self, index: usize) -> Option<([f64; 3], f32)> {
             let part = self.parts.get(index)?;
@@ -992,3 +1011,45 @@ impl TrainSnapshot {
 
 #[cfg(test)]
 mod tests;
+
+struct BoundsEntry {
+    parts: Vec<TrainPart>,
+    blocks: BTreeMap<u16, TrainBlockView>,
+    bounds: [[f64; 3]; 2],
+}
+fn local_bounds(parts: &[TrainPart], blocks: &BTreeMap<u16, TrainBlockView>) -> [[f64; 3]; 2] {
+    static CACHE: std::sync::OnceLock<std::sync::Mutex<std::collections::VecDeque<BoundsEntry>>> =
+        std::sync::OnceLock::new();
+    let cache = CACHE.get_or_init(Default::default);
+    {
+        let entries = cache.lock().unwrap_or_else(|error| error.into_inner());
+        if let Some(entry) = entries
+            .iter()
+            .find(|entry| entry.parts == parts && entry.blocks == *blocks)
+        {
+            return entry.bounds;
+        }
+    }
+    let mut bounds = [[f64::INFINITY; 3], [f64::NEG_INFINITY; 3]];
+    for (index, part) in parts.iter().enumerate() {
+        for shape in part_shapes(part, blocks.get(&(index as u16))) {
+            for (axis, offset) in part.offset.iter().enumerate() {
+                bounds[0][axis] = bounds[0][axis].min(f64::from(*offset) + shape.minimum[axis]);
+                bounds[1][axis] = bounds[1][axis].max(f64::from(*offset) + shape.maximum[axis]);
+            }
+        }
+    }
+    if parts.is_empty() {
+        bounds = [[0.0; 3]; 2];
+    }
+    let mut entries = cache.lock().unwrap_or_else(|error| error.into_inner());
+    if entries.len() >= MAX_VEHICLES {
+        entries.pop_front();
+    }
+    entries.push_back(BoundsEntry {
+        parts: parts.to_vec(),
+        blocks: blocks.clone(),
+        bounds,
+    });
+    bounds
+}

@@ -30,14 +30,14 @@ fn connection_fixture_at(wood: WoodSpecies, z_offset: i64) -> ConnectionFixture 
     };
     let end = Port {
         index: 0,
-        position: FixedPoint([4 * 16 + 8, 4 * 16 + 2, (-6 + z_offset) * 16]),
+        position: FixedPoint([4 * 16 + 8, 4 * 16 + 2, (-14 + z_offset) * 16]),
         tangent: [0, 0, 1],
         connectable: true,
     };
     let anchor = [8, 4, 6 + z_offset];
     let curve = Piece::new_curve(
         anchor,
-        CurveSpec::between(old.ports()[1], end, anchor).unwrap(),
+        CurveSpec::between_for_build(old.ports()[1], end, anchor).unwrap(),
     )
     .unwrap();
     for cell in terra_world::rails::cells(curve) {
@@ -50,14 +50,14 @@ fn connection_fixture_at(wood: WoodSpecies, z_offset: i64) -> ConnectionFixture 
             3,
         );
     }
-    let clicked = [4, 3, -6 + z_offset];
+    let clicked = [4, 3, -14 + z_offset];
     set_block(&mut app, clicked, 3);
-    let eye = Vec3::new(4.5, 6.0, -2.5 + z_offset as f32);
+    let eye = Vec3::new(4.5, 6.0, -10.5 + z_offset as f32);
     app.world_mut()
         .get_mut::<Transform>(peer.body)
         .unwrap()
         .translation = eye - Vec3::Y * PLAYER_EYE_OFFSET;
-    let look = aim(&app, &peer, [4.5, 4.0, -5.5 + z_offset as f64]);
+    let look = aim(&app, &peer, [4.5, 4.0, -13.5 + z_offset as f64]);
     let item = ItemKind::for_wood(rails::STRAIGHT, wood);
     let source = {
         let mut journal = app.world_mut().resource_mut::<EditJournal>();
@@ -755,7 +755,7 @@ fn snapping_separate_switches_and_common_specials_cannot_occupy_a_foreign_module
 
 #[test]
 fn a_foreign_destination_cannot_be_connected_when_every_new_curve_cell_is_unclaimed() {
-    let mut fixture = connection_fixture_at(WoodSpecies::Cherry, 22);
+    let mut fixture = connection_fixture_at(WoodSpecies::Cherry, 30);
     let target = Piece::new([4, 4, 15], rails::STRAIGHT, 2).unwrap();
     commit_existing_module(&mut fixture, target);
     aim_existing_destination(&mut fixture, target, [4.5, 6.0, 19.5], [4, 4, 15]);
@@ -807,7 +807,7 @@ fn a_foreign_destination_cannot_be_connected_when_every_new_curve_cell_is_unclai
 
 #[test]
 fn clicking_a_long_destination_middle_does_not_reach_its_distant_free_port() {
-    let mut fixture = connection_fixture_at(WoodSpecies::Oak, 22);
+    let mut fixture = connection_fixture_at(WoodSpecies::Oak, 30);
     let target = Piece::new_curve(
         [4, 4, 15],
         CurveSpec::new([[8, 2, 16], [8, 2, -160], [8, 2, -320], [8, 2, -496]]).unwrap(),

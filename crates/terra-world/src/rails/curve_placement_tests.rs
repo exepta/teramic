@@ -26,13 +26,19 @@ fn rotate([x, y, z]: Cell, facing: u8) -> Cell {
 fn ahead_floor(port: rails::Port) -> BlockHit {
     let position = port.position.position();
     let forward = port.tangent.map(f64::from);
+    let length = forward
+        .iter()
+        .map(|value| value * value)
+        .sum::<f64>()
+        .sqrt();
+    let forward = forward.map(|value| value / length);
     let right = [forward[2], 0.0, -forward[0]];
     BlockHit {
         position: std::array::from_fn(|axis| {
             if axis == 1 {
                 position[axis].floor() as i64 - 1
             } else {
-                (position[axis] + forward[axis] * 12.0 + right[axis] * 4.0).floor() as i64
+                (position[axis] + forward[axis] * 24.0 + right[axis] * 4.0).floor() as i64
             }
         }),
         normal: [0, 1, 0],
@@ -112,7 +118,7 @@ fn perpendicular_free_ends_join_exactly_and_occupied_turns_keep_a_red_candidate(
             .unwrap()
             .ports()[0];
         let end: Cell = std::array::from_fn(|axis| {
-            start_port.position.0[axis] + (right[axis] + forward[axis]) * 136
+            start_port.position.0[axis] + (right[axis] + forward[axis]) * 296
         });
         let translation: Cell = std::array::from_fn(|axis| end[axis] - local_port.position.0[axis]);
         assert!(

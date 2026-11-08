@@ -418,3 +418,65 @@ fn aggregate_collision_and_private_payload_limits_are_atomic_for_registry_and_sn
     assert_eq!(registry.insert(packed), Err(TrainError::Limit));
     assert_eq!(registry, before);
 }
+
+#[test]
+fn cached_local_envelope_contains_all_rotated_shapes_and_observes_geometry_edits() {
+    let mut vehicle = car([10, 20, -30], VehicleKind::Freight);
+    for angle in [0.0, 0.35, 1.7, 3.0] {
+        vehicle.motion.yaw = angle;
+        vehicle.motion.pitch = 0.2;
+        let bounds = vehicle.model_bounds();
+        for index in 0..vehicle.parts.len() {
+            for shape in vehicle.transformed_shapes(index) {
+                for (axis, _) in shape.minimum.iter().enumerate() {
+                    assert!(shape.minimum[axis] >= bounds[0][axis] - 1e-8);
+                    assert!(shape.maximum[axis] <= bounds[1][axis] + 1e-8);
+                }
+            }
+        }
+        assert_eq!(bounds, vehicle.model_bounds());
+    }
+    vehicle.motion = Default::default();
+    let before = vehicle.model_bounds();
+    vehicle.parts[0].offset[0] += 20;
+    assert!(vehicle.model_bounds()[1][0] > before[1][0] + 10.0);
+}
+
+#[test]
+fn train_bounds_repeated_query_cost_is_measured_against_the_previous_shape_walk() {
+    let mut vehicle = car([8123, 10, -64], VehicleKind::Locomotive);
+    for index in 0..70 {
+        vehicle.parts.push(TrainPart {
+            offset: [index % 3, 3, index / 3],
+            material: 219 + index as u16,
+            facing: 0,
+            wood: WoodSpecies::Oak,
+        });
+    }
+    let _ = vehicle.model_bounds();
+    let started = std::time::Instant::now();
+    for _ in 0..1000 {
+        std::hint::black_box(vehicle.model_bounds());
+    }
+    let cached = started.elapsed();
+    let started = std::time::Instant::now();
+    for _ in 0..1000 {
+        let transform = RigidTransform::new(vehicle.anchor, vehicle.motion, vehicle.build_yaw());
+        let mut bounds = [[f64::INFINITY; 3], [f64::NEG_INFINITY; 3]];
+        for (index, part) in vehicle.parts.iter().enumerate() {
+            for shape in vehicle.part_shapes(index) {
+                let shape = transform.bounds(part, shape);
+                for (axis, _) in shape.minimum.iter().enumerate() {
+                    bounds[0][axis] = bounds[0][axis].min(shape.minimum[axis]);
+                    bounds[1][axis] = bounds[1][axis].max(shape.maximum[axis]);
+                }
+            }
+        }
+        std::hint::black_box(bounds);
+    }
+    eprintln!(
+        "TRAIN_BOUNDS_1000_QUERIES cached_us={} previous_shape_walk_us={}",
+        cached.as_micros(),
+        started.elapsed().as_micros()
+    );
+}

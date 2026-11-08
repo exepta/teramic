@@ -428,7 +428,13 @@ fn dispatch(
         (distance, position.y, position.z, position.x)
     });
     candidates.dedup();
-    for position in candidates {
+    // Snapshot preparation also runs on the main thread. Spread edit bursts
+    // over frames while still allowing the first collider to make progress.
+    let preparation_started = std::time::Instant::now();
+    for (prepared, position) in candidates.into_iter().enumerate() {
+        if prepared != 0 && preparation_started.elapsed() >= std::time::Duration::from_millis(2) {
+            break;
+        }
         if jobs.0.len() >= MAX_JOBS {
             break;
         }

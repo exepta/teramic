@@ -383,3 +383,39 @@ fn new_starters_are_exactly_one_by_three_in_every_heading_while_saved_native_str
     }
     assert!(Piece::seed(anchor, 4).is_none());
 }
+
+#[test]
+fn new_horizontal_track_requires_room_but_legacy_curves_remain_readable() {
+    let small = CurveSpec::new([[0, 2, 0], [0, 2, 53], [43, 2, 96], [96, 2, 96]]).unwrap();
+    let piece = Piece::new_curve([0; 3], small).unwrap();
+    let ports = piece.ports();
+    let start = Port {
+        tangent: ports[0].tangent.map(|v| -v),
+        ..ports[0]
+    };
+    let end = Port {
+        tangent: ports[1].tangent.map(|v| -v),
+        ..ports[1]
+    };
+    assert!(CurveSpec::between_checked(start, end, [0; 3]).is_ok());
+    assert_eq!(
+        CurveSpec::between_for_build(start, end, [0; 3]),
+        Err(CurveError::TooTight)
+    );
+    let broad = CurveSpec::new([[0, 2, 0], [0, 2, 159], [129, 2, 288], [288, 2, 288]]).unwrap();
+    let ports = Piece::new_curve([0; 3], broad).unwrap().ports();
+    assert!(
+        CurveSpec::between_for_build(
+            Port {
+                tangent: ports[0].tangent.map(|v| -v),
+                ..ports[0]
+            },
+            Port {
+                tangent: ports[1].tangent.map(|v| -v),
+                ..ports[1]
+            },
+            [0; 3]
+        )
+        .is_ok()
+    );
+}

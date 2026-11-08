@@ -118,7 +118,7 @@ fn starter_placement_has_three_tiles_one_item_and_exact_receipt_geometry_for_all
 #[test]
 fn a_one_metre_starter_stretches_to_real_straight_curved_or_higher_targets_without_rewriting_it() {
     for facing in 0..4 {
-        for target in [[0, -1, 7], [4, -1, 9], [0, 0, 5]] {
+        for target in [[0, -1, 7], [4, -1, 25], [0, 0, 5]] {
             let piece = Piece::seed([-17, 16, -17], facing).unwrap();
             let mut chunks = ChunkStore::default();
             let mut journal = EditJournal::default();

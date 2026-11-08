@@ -5,7 +5,6 @@ use terra_core::rails::BuildChoice;
 enum Scenario {
     Straight,
     Ramp,
-    Curve,
 }
 
 struct Fixture {
@@ -40,7 +39,6 @@ fn fixture_context(scenario: Scenario) -> Fixture {
             set_block(&mut app, [8, 4, -1], 3);
             (Vec3::new(8.5, 7.0, -1.5), BuildChoice::Straight)
         }
-        Scenario::Curve => (Vec3::new(7.5, 6.0, -3.0), BuildChoice::Curve),
     };
     app.world_mut()
         .get_mut::<Transform>(peer.body)
@@ -49,7 +47,6 @@ fn fixture_context(scenario: Scenario) -> Fixture {
     let look = match scenario {
         Scenario::Straight => target_look(&app, &peer, [8, 4, 0], old.material),
         Scenario::Ramp => aim(&app, &peer, [8.5, 5.0, -0.5]),
-        Scenario::Curve => aim(&app, &peer, [6.5, 4.0, -5.5]),
     };
     let direction = Quat::from_euler(EulerRot::YXZ, look[0], look[1], 0.0) * Vec3::NEG_Z;
     let (_, target) = terra_world::targeting::pick_world_for_placement(
@@ -151,8 +148,8 @@ fn fixture_context(scenario: Scenario) -> Fixture {
 }
 
 #[test]
-fn actual_context_extensions_curves_and_same_wood_ramp_rewrites_charge_only_net_material() {
-    for scenario in [Scenario::Straight, Scenario::Curve, Scenario::Ramp] {
+fn actual_context_extensions_and_same_wood_ramp_rewrites_charge_only_net_material() {
+    for scenario in [Scenario::Straight, Scenario::Ramp] {
         let mut fixture = fixture_context(scenario);
         let replaced = fixture.selected.replaced;
         assert_eq!(
@@ -192,11 +189,7 @@ fn actual_context_extensions_curves_and_same_wood_ramp_rewrites_charge_only_net_
 #[test]
 fn stale_context_signature_revision_protected_source_and_short_stock_roll_back_every_cell() {
     for failure in ["signature", "revision", "claim", "inventory", "choice"] {
-        let mut fixture = fixture_context(if failure == "inventory" {
-            Scenario::Curve
-        } else {
-            Scenario::Straight
-        });
+        let mut fixture = fixture_context(Scenario::Straight);
         match failure {
             "signature" => {
                 if let EditAction::BuildRail { signature, .. } = &mut fixture.command.action {
@@ -234,20 +227,15 @@ fn stale_context_signature_revision_protected_source_and_short_stock_roll_back_e
                 );
             }
             "inventory" => {
-                assert!(terra_world::rails::piece_cost(fixture.next) > 1);
+                assert!(terra_world::rails::piece_cost(fixture.next) > 0);
                 let mut journal = fixture.app.world_mut().resource_mut::<EditJournal>();
                 let bag = journal
                     .gameplay_mut()
                     .inventories
                     .get_mut(&fixture.peer.uuid)
                     .unwrap();
-                assert!(bag.creative_set(
-                    0,
-                    ItemStack {
-                        item: ItemKind::Block(rails::STRAIGHT),
-                        count: 1
-                    }
-                ));
+                bag.slots.clear();
+                bag.revision += 1;
                 fixture.command.source.as_mut().unwrap().revision = bag.revision;
             }
             "choice" => {

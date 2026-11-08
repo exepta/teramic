@@ -20,7 +20,7 @@ fn fixture_with_actor_inside(shape: Shape) -> (App, Peer, Piece, EditCommand) {
         );
     }
     for x in 4..=18 {
-        for z in -12..=8 {
+        for z in -28..=8 {
             set_block(&mut app, [x, 3, z], 3);
             for y in 4..=7 {
                 let cell = [x, y, z];
@@ -32,7 +32,7 @@ fn fixture_with_actor_inside(shape: Shape) -> (App, Peer, Piece, EditCommand) {
     }
     let floor = match shape {
         Shape::Seed => [8, 3, 0],
-        Shape::Curve => [14, 3, -8],
+        Shape::Curve => [12, 3, -24],
         Shape::Straight => [8, 3, -8],
         Shape::Ramp => [8, 4, -8],
     };

@@ -6251,3 +6251,12 @@ Klick verschieben; bereits gehaltene Stapel sind sichtbar und koennen in leere
 Motor-/Lagerplaetze oder ins Spielerinventar gelegt werden. Private Inhalte
 bleiben bei Fahrt und Brennstoffverbrauch offen. Veraltete Inventarstaende
 werden vor einer einmaligen sicheren Wiederholung des Klicks neu angefordert.
+
+
+Phase 218 glaettet bestaetigte Zugbewegung fuer Wagen, Laufwerk und Sitze mit
+identischem Darstellungszeitpunkt je Frame. Die Fahrerkamera vermeidet eine
+zweite Physikinterpolation. Wiederverwendete Geometriehuellen und begrenzte
+Kollisionsvorbereitung reduzieren Arbeit beim Bauen. Neue gezeichnete Kurven
+benoetigen mindestens 16 Meter horizontalen Radius; alte Gleisdaten bleiben
+lesbar. Client und Server verwenden Protokoll 120.
+[Pruefbericht mit nativer Baumessung](tools/benchmarks/results/train-motion-build-curves-2026-11-08/README.md).

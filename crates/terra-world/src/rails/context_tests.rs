@@ -176,7 +176,7 @@ fn zero_gap_step_replaces_only_the_last_straight_and_keeps_both_real_connections
 }
 
 #[test]
-fn a_real_rail_end_hit_offers_a_straight_and_a_curved_join_with_stable_distinct_intents() {
+fn a_real_rail_end_keeps_straight_building_but_rejects_a_compact_perpendicular_join() {
     for facing in 0..4 {
         let source = Piece::new([-33, 16, -49], rails::STRAIGHT, facing).unwrap();
         let start = source.ports()[1];
@@ -225,34 +225,17 @@ fn a_real_rail_end_hit_offers_a_straight_and_a_curved_join_with_stable_distinct_
             .iter()
             .find(|choice| choice.choice == BuildChoice::Straight)
             .unwrap();
-        assert!(curved.valid, "facing {facing}: {:?}", curved.error);
-        assert!(straight.valid, "facing {facing}: {:?}", straight.error);
-        assert_eq!(choices[0].choice, BuildChoice::Curve);
-        assert_ne!(context_signature(curved), context_signature(straight));
-        let layout = curved.layout.as_ref().unwrap();
-        let next = placement::proposed_piece(layout).unwrap();
-        assert!(next.ports()[0].connects(start));
-        assert!(next.ports()[1].connects(target.ports()[0]));
-        assert!(commit(&mut chunks, &mut journal, layout).unwrap());
-        assert_eq!(
-            network(&journal)
-                .unwrap()
-                .route(
-                    Endpoint {
-                        anchor: source.anchor,
-                        port: 0
-                    },
-                    Endpoint {
-                        anchor: target.anchor,
-                        port: 1
-                    },
-                    16
-                )
-                .unwrap()
-                .legs
-                .len(),
-            3
+        assert!(!curved.valid);
+        assert!(
+            curved
+                .error
+                .as_ref()
+                .is_some_and(|error| error.contains("16 m"))
         );
+        assert!(straight.valid, "facing {facing}: {:?}", straight.error);
+        assert_ne!(context_signature(curved), context_signature(straight));
+        assert!(curved.layout.is_none());
+        assert_eq!(journal.rail_module_count(), 2);
     }
 }
 

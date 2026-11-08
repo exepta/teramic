@@ -404,6 +404,14 @@ pub(crate) fn follow_player_camera(
     } else {
         body.translation
     };
+    // A train and its rider use one presentation clock, without a second fixed-step lerp.
+    if let Some(seated) = control
+        .session
+        .as_ref()
+        .and_then(|session| session.seated_state())
+    {
+        visual = seated.position;
+    }
     if control
         .session
         .as_ref()
@@ -412,7 +420,10 @@ pub(crate) fn follow_player_camera(
         visual.y -= 0.60;
     }
     let enabled = *control.mode == ControllerMode::Walk
-        && control.session.as_ref().is_none_or(|s| s.mounted.is_none())
+        && control
+            .session
+            .as_ref()
+            .is_none_or(|s| s.mounted.is_none() && s.train_seat.is_none())
         && control
             .session
             .as_ref()
@@ -433,7 +444,7 @@ pub(crate) fn follow_player_camera(
         let step_offset = if control
             .session
             .as_ref()
-            .is_some_and(|s| s.mounted.is_some())
+            .is_some_and(|s| s.mounted.is_some() || s.train_seat.is_some())
         {
             motion.reset_step(entity, visual);
             0.0

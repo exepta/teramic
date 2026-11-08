@@ -704,7 +704,7 @@ fn item_or_input_changes_cancel_pending_before_a_late_receipt_can_select_an_endp
 fn continuous_preview_uses_real_curved_and_rising_geometry_from_the_confirmed_seed() {
     use terra_network::protocol::session::EditOutcome;
     for (destination, expected_curve, expected_ramp) in
-        [([8, 0, 13], true, false), ([4, 1, 9], false, true)]
+        [([8, 0, 29], true, false), ([4, 1, 9], false, true)]
     {
         let (mut app, camera, item) = floor_fixture(WoodSpecies::Birch);
         press(&mut app, KeyCode::KeyB);
@@ -860,7 +860,7 @@ fn real_rail_preview_accepts_its_builder_inside_seed_curve_and_ramp_but_keeps_re
             port: 1,
         };
         let floor = match kind {
-            "curve" => [10, 0, 12],
+            "curve" => [8, 0, 28],
             "ramp" => [4, 1, 12],
             _ => [4, 0, 4],
         };

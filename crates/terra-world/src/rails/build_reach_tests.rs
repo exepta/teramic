@@ -45,13 +45,13 @@ fn aim(
 }
 
 #[test]
-fn compact_old_straight_turns_follow_the_real_corner_aim_and_one_support_holds_over_void() {
+fn broad_turns_follow_the_real_corner_aim_and_one_support_holds_over_void() {
     for facing in 0..4 {
         let original = Piece::new([-17, 16, -17], rails::STRAIGHT, facing).unwrap();
         let mut chunks = ChunkStore::default();
         let mut journal = EditJournal::default();
-        for x in -3..=8 {
-            for z in -3..=13 {
+        for x in -24..=24 {
+            for z in -24..=28 {
                 let shift = rotate([x, -1, z], facing);
                 block(
                     &mut chunks,
@@ -82,7 +82,7 @@ fn compact_old_straight_turns_follow_the_real_corner_aim_and_one_support_holds_o
         let mut previous = None;
         for epsilon in [-0.0001, 0.0001] {
             let point = std::array::from_fn(|axis| {
-                position[axis] + right[axis] * 4.4 + forward[axis] * (4.0 + epsilon)
+                position[axis] + right[axis] * 18.4 + forward[axis] * (18.0 + epsilon)
                     - if axis == 1 { 0.125 } else { 0.0 }
             });
             let (hit, ray, look) = aim(&chunks, &journal, eye, point);
@@ -117,7 +117,7 @@ fn compact_old_straight_turns_follow_the_real_corner_aim_and_one_support_holds_o
             }
         }
         let point = std::array::from_fn(|axis| {
-            position[axis] + right[axis] * 4.4 + forward[axis] * 3.9999
+            position[axis] + right[axis] * 18.4 + forward[axis] * 17.9999
                 - if axis == 1 { 0.125 } else { 0.0 }
         });
         let (hit, ray, look) = aim(&chunks, &journal, eye, point);

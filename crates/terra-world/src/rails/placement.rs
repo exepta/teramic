@@ -504,9 +504,9 @@ fn connection_candidates_with_ray(
     let mut candidates = Vec::new();
     let mut first_error = None;
     for end_port in end_ports {
-        let result = CurveSpec::between_checked(start_port, end_port, anchor).map_err(|error| match error {
+        let result = CurveSpec::between_for_build(start_port, end_port, anchor).map_err(|error| match error {
             CurveError::Reverses => "The selected ends face away from this route; choose a free end facing the route or use a switch for a side branch".to_string(),
-            CurveError::TooTight => "Rail ends are too close for the 2.5 m turning radius; move the destination farther away".to_string(),
+            CurveError::TooTight => "Rail ends are too close for the 16 m turning radius; move the destination farther away".to_string(),
             other => other.to_string(),
         }).and_then(|curve| Piece::new_curve(anchor, curve).ok_or_else(|| "Invalid rail curve".into()))
             .and_then(|curve| candidate_piece(chunks, curve, wood));
@@ -970,7 +970,8 @@ pub(super) fn ramp_replacement(
             })
         .floor() as i64
     });
-    let spec = CurveSpec::between_checked(start, end, anchor).map_err(|error| error.to_string())?;
+    let spec =
+        CurveSpec::between_for_build(start, end, anchor).map_err(|error| error.to_string())?;
     let next = Piece::new_curve(anchor, spec).ok_or("Invalid terrain ramp")?;
     let mut layout = candidate_piece(chunks, next, wood)?;
     let next_cells: BTreeSet<_> = cells(next).into_iter().collect();

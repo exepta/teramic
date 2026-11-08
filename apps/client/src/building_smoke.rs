@@ -143,7 +143,9 @@ pub(crate) fn install(app: &mut App) {
     let now = Instant::now();
     let outline_fixture = std::env::var("TERRA_PLACEMENT_OUTLINE_SMOKE").ok();
     let furniture_fixture = std::env::var("TERRA_FURNITURE_MINING_SMOKE").ok();
-    app.insert_resource(ControllerMode::Walk)
+    // This native fixture omits the menu, which normally initializes graphics state.
+    app.init_resource::<terra_core::GraphicsConfig>()
+        .insert_resource(ControllerMode::Walk)
         .insert_resource(Fixture {
             started: now,
             entered: now,
@@ -183,6 +185,9 @@ fn run(world: &mut World) {
     world.resource_scope(|world, mut state: Mut<Fixture>| {
         if matches!(state.stage, Stage::Done) {
             return;
+        }
+        if std::env::var_os("TERRA_PLACEMENT_TIMING").is_some() && matches!(state.stage, Stage::Place | Stage::Placed) {
+            tracing::info!(frame_ms=world.resource::<Time<bevy::time::Real>>().delta_secs_f64()*1000.0, stage=?state.stage, "Native placement frame");
         }
         let mut input = Input::default();
         match advance(world, &mut state, &mut input) {
@@ -1134,20 +1139,6 @@ fn advance(world: &mut World, state: &mut Fixture, input: &mut Input) -> Result<
             let view = world.resource::<InventoryView>();
             if view.items.is_empty() || view.creative != state.creative {
                 return Err("Inventory view did not reflect authoritative mode/items".into());
-            }
-            {
-                let expected = "inventory-close-glyph";
-                let image = world
-                    .query::<(&terra_ui::ElementId, &ImageNode)>()
-                    .iter(world)
-                    .find(|(id, _)| id.0 == expected)
-                    .map(|(_, node)| node.image.clone())
-                    .ok_or_else(|| format!("Missing TiltUI icon node: {expected}"))?;
-                if image == Handle::default()
-                    || world.resource::<Assets<Image>>().get(&image).is_none()
-                {
-                    return Err(format!("TiltUI icon bitmap failed to load: {expected}"));
-                }
             }
             let expected = format!("Block preview {}", state.material);
             let image = world

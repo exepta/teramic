@@ -7028,3 +7028,36 @@ Zugtests bestanden. Client-Build mit Linking und Clippy aller Workspace-Targets
 mit `-D warnings` bestehen. Der Live-Client beendet sich nach erfolgreicher
 Pruefung; Aufnahmen und Logs stehen im
 [Pruefbericht](tools/benchmarks/results/train-inventory-native-2026-11-08/README.md).
+
+
+## 218. Zugbewegung Glaetten Und Baupruefungen Begrenzen
+
+Zugkoerper, Laufwerk und lokaler Fahrer verwenden eine gemeinsame geglaettete
+Darstellung der bestaetigten Netzwerkbewegung mit identischem Zeitpunkt je Frame. Neue Pakete setzen am aktuellen
+Darstellungsstand an; Winkel folgen dem kurzen Weg ueber die Nullgrenze.
+Teleports, grosse Spruenge und laengere Empfangspausen setzen die Darstellung
+zurueck. Die Fahrerkamera verwendet die Sitzposition direkt und fuegt keine
+zweite Interpolation aus dem Physiktakt hinzu.
+
+Die konservative Zughuelle wird aus unveraenderter lokaler Geometrie
+wiederverwendet. Fahrt, Inventarrevisionen und entfernte Blocksetzungen erzeugen
+keine erneute komplette Formberechnung. Die genauen Formen bleiben fuer die
+anschliessende Kontaktpruefung erhalten. Geometrieaenderungen besitzen einen
+anderen Cache-Schluessel; der Cache bleibt auf 64 Eintraege begrenzt.
+Kollisions-Snapshotvorbereitung erhaelt zusaetzlich ein Framebudget von zwei
+Millisekunden zwischen Abschnitten, damit Bauereignisse verteilt werden.
+
+Neue gezeichnete Gleisboegen verlangen 16 Meter horizontalen Kurvenradius;
+gerade Rampen behalten ihre bisherige Regel. Die Validierung alter gespeicherter
+Gleiskurven bleibt unveraendert. Protokoll 120 verhindert eine Verbindung mit
+Clients/Servern, die noch andere Bauvorschlaege berechnen. Zugindex ID15 bleibt
+unveraendert.
+
+
+Abnahme 218: Alle 4.235 Workspace-Library-Tests bestehen, neun bestehende Tests
+bleiben ignoriert. Client-/Server-Build mit Linking, Formatpruefung und Clippy
+aller Targets mit `-D warnings` bestehen. Der native Bautest misst 114
+Platzierungsframes mit maximal 12,60 ms und 66,61 ms asynchroner Zeit bis zum
+bestaetigten sichtbaren Block. Der isolierte Lauf enthaelt keinen fahrenden Zug;
+Fahrt, Kamera und UDP-Verhalten werden automatisiert geprueft.
+[Pruefbericht und Aufnahme](tools/benchmarks/results/train-motion-build-curves-2026-11-08/README.md).

@@ -1,0 +1,7 @@
+
+running 1 test
+test trains::tests::train_bounds_repeated_query_cost_is_measured_against_the_previous_shape_walk ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 455 filtered out; finished in 0.02s
+
+TRAIN_BOUNDS_1000_QUERIES cached_us=237 previous_shape_walk_us=22414

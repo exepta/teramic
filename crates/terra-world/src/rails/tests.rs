@@ -524,7 +524,7 @@ fn free_curve_preserves_both_ports_wood_cost_and_unloaded_slice_ownership() {
         port: 1,
     };
     let hit = terra_voxel::blocks::BlockHit {
-        position: [-10, 15, 2],
+        position: [-13, 15, 10],
         normal: [0, 1, 0],
         distance: 2.0,
     };

@@ -96,7 +96,7 @@ pub(super) fn animate(
                 .find(|vehicle| vehicle.id == part.vehicle)
                 .map(|vehicle| {
                     (
-                        vehicle.motion,
+                        session.displayed_train_motion(vehicle),
                         vehicle.build_yaw(),
                         driving_radius(&vehicle.parts),
                     )

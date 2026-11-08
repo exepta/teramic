@@ -292,7 +292,7 @@ fn udp_free_connection_uses_a_selected_real_port_costs_wood_units_and_replicates
         anchor: original.anchor,
         port: 1,
     };
-    let end_floor = [original.anchor[0] + 4, ground, original.anchor[2] + 17];
+    let end_floor = [original.anchor[0] + 4, ground, original.anchor[2] + 25];
     let source_feet = [
         original.anchor[0] as f32 - 2.5,
         ground as f32 + 1.0,
