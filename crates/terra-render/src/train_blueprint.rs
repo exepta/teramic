@@ -178,4 +178,96 @@ mod tests {
             "placed matching parts disappear"
         );
     }
+
+    #[test]
+    fn completed_functional_skeleton_keeps_a_visible_green_optional_locomotive_body() {
+        let skeleton =
+            train_blueprint::template([0, 2, 0], 0, terra_core::trains::VehicleKind::Locomotive);
+        let cells = train_blueprint::building_template(
+            [0, 2, 0],
+            0,
+            terra_core::trains::VehicleKind::Locomotive,
+            4,
+        );
+        let mut chunks = ChunkStore::default();
+        let mut journal = EditJournal::default();
+        for part in &cells {
+            let (section, _) = global_to_section(part.cell);
+            chunks
+                .loaded
+                .entry(section)
+                .or_insert_with(|| LoadedSection {
+                    data: BlockSection::empty(section).unwrap(),
+                    mesh: None,
+                    mesh_epoch: 0,
+                    water_epoch: 0,
+                    water: None,
+                    props: Vec::new(),
+                });
+        }
+        for part in &skeleton {
+            let (section, local) = global_to_section(part.cell);
+            chunks
+                .loaded
+                .get_mut(&section)
+                .unwrap()
+                .data
+                .set_block(local, part.material)
+                .unwrap();
+            journal.record(part.cell, part.material).unwrap();
+            journal
+                .set_object_state(
+                    part.cell,
+                    Some(terra_world::edits::BlockObjectState {
+                        facing: part.facing,
+                        ..default()
+                    }),
+                )
+                .unwrap();
+        }
+        let mut app = App::new();
+        app.insert_resource(chunks)
+            .insert_resource(journal)
+            .insert_resource(TrainBlueprint { cells, ..default() })
+            .init_resource::<Assets<Mesh>>()
+            .init_resource::<Assets<StandardMaterial>>();
+        install(&mut app);
+        app.update();
+        let ghosts = app.world().resource::<Ghosts>();
+        assert_eq!(ghosts.cells.len(), 26);
+        assert!(
+            ghosts
+                .cells
+                .values()
+                .all(|(_, state)| *state == GhostState::Missing)
+        );
+        let green = app
+            .world()
+            .resource::<Assets<StandardMaterial>>()
+            .get(&ghosts.missing)
+            .unwrap();
+        let color = green.base_color.to_srgba();
+        assert!(
+            color.green > color.red
+                && color.green > color.blue
+                && color.alpha > 0.0
+                && color.alpha < 1.0
+        );
+        assert_eq!(green.alpha_mode, AlphaMode::Blend);
+        for (entity, _) in ghosts.cells.values() {
+            assert_eq!(
+                app.world()
+                    .get::<MeshMaterial3d<StandardMaterial>>(*entity)
+                    .unwrap()
+                    .0,
+                ghosts.missing
+            );
+        }
+        app.world_mut()
+            .resource_mut::<TrainBlueprint>()
+            .cells
+            .clear();
+        app.update();
+        assert!(app.world().resource::<Ghosts>().cells.is_empty());
+    }
 }

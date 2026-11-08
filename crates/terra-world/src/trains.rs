@@ -93,23 +93,92 @@ pub fn candidate_start(chunks: &ChunkStore, station: Cell) -> Option<Cell> {
     candidates.first().map(|(_, cell)| *cell)
 }
 pub fn bogie_supported(chunks: &ChunkStore, journal: &EditJournal, cell: Cell) -> bool {
-    let below = [cell[0], cell[1] - 1, cell[2]];
-    let Some(piece) = rails::owner_at(journal, below) else {
-        return false;
-    };
-    if !rails::complete(journal, piece) || chunks.block_at(below) != Some(piece.material) {
+    [0, 1]
+        .into_iter()
+        .any(|facing| bogie_supported_with_facing(chunks, journal, cell, facing))
+}
+/// Both native wheel axles lie at local Z=0/1, not at the owner-cell center.
+/// Rail ownership may live in a neighboring gauge slice rather than below its air gap.
+pub fn bogie_supported_with_facing(
+    chunks: &ChunkStore,
+    journal: &EditJournal,
+    cell: Cell,
+    facing: u8,
+) -> bool {
+    if facing >= 4 {
         return false;
     }
-    piece.active_paths().iter().any(|path| {
-        (0..=128).any(|step| {
-            let position = path.sample(f64::from(step) / 128.0).position;
-            let dx = position[0] - (cell[0] as f64 + 0.5);
-            let dz = position[2] - (cell[2] as f64 + 0.5);
-            dx * dx + dz * dz <= 0.55 * 0.55
-                && (position[1] - (cell[1] as f64 - 1.0 + terra_core::rails::DECK_HEIGHT)).abs()
-                    < 0.55
+    let along = if facing.is_multiple_of(2) { 2 } else { 0 };
+    let contacts: [[f64; 3]; 2] = [0.0, 1.0].map(|offset| {
+        std::array::from_fn(|axis| {
+            cell[axis] as f64
+                + if axis == 1 {
+                    -1.0 + terra_core::rails::DECK_HEIGHT
+                } else if axis == along {
+                    offset
+                } else {
+                    0.5
+                }
         })
-    })
+    });
+    let mut candidates = BTreeMap::new();
+    for contact in contacts {
+        let base = contact.map(|value| value.floor() as i64);
+        for x in -1..=1 {
+            for z in -1..=1 {
+                if let Some(piece) = rails::owner_at(journal, [base[0] + x, base[1], base[2] + z]) {
+                    candidates.insert(piece.anchor, piece);
+                }
+            }
+        }
+    }
+    let mut supported = [false; 2];
+    for piece in candidates.into_values() {
+        if !rails::complete(journal, piece)
+            || rails::cells(piece)
+                .into_iter()
+                .any(|cell| chunks.block_at(cell) != Some(piece.material))
+        {
+            continue;
+        }
+        for path in piece.active_paths() {
+            let length = path.length();
+            let mut previous = path.sample_distance(0.0).position;
+            for step in 1..=128 {
+                let position = path
+                    .sample_distance(length * f64::from(step) / 128.0)
+                    .position;
+                let delta: [f64; 3] = std::array::from_fn(|i| position[i] - previous[i]);
+                let squared = delta.iter().map(|v| v * v).sum::<f64>();
+                let segment_length = squared.sqrt();
+                if segment_length < 1e-10
+                    || delta[along].abs() / segment_length < 0.995
+                    || delta[1].abs() / segment_length > 0.02
+                {
+                    previous = position;
+                    continue;
+                }
+                for (index, contact) in contacts.iter().enumerate() {
+                    let t = ((0..3)
+                        .map(|i| (contact[i] - previous[i]) * delta[i])
+                        .sum::<f64>()
+                        / squared)
+                        .clamp(0.0, 1.0);
+                    let nearest: [f64; 3] = std::array::from_fn(|i| previous[i] + delta[i] * t);
+                    let error =
+                        (nearest[0] - contact[0]).powi(2) + (nearest[2] - contact[2]).powi(2);
+                    if error <= 0.18_f64.powi(2) && (nearest[1] - contact[1]).abs() <= 0.08 {
+                        supported[index] = true;
+                    }
+                }
+                if supported == [true; 2] {
+                    return true;
+                }
+                previous = position;
+            }
+        }
+    }
+    false
 }
 pub fn plan_assembly(
     chunks: &ChunkStore,
@@ -218,11 +287,15 @@ pub fn plan_assembly_with_properties(
         .map(|(cell, _)| *cell)
         .collect();
     if bogies.len() >= 2 {
-        let axis = cells
-            .iter()
-            .find(|(_, material)| **material == train_parts::CHASSIS)
-            .and_then(|(cell, _)| journal.object_state(*cell))
-            .map_or(2, |pose| if pose.facing % 2 == 0 { 2 } else { 0 });
+        let same_x = bogies.iter().all(|cell| cell[0] == bogies[0][0]);
+        let same_z = bogies.iter().all(|cell| cell[2] == bogies[0][2]);
+        let axis = if same_x && !same_z {
+            2
+        } else if same_z && !same_x {
+            0
+        } else {
+            return Err(TrainError::BogieAlignment);
+        };
         let across = 2 - axis;
         let first = bogies[0];
         let mut along: Vec<_> = bogies.iter().map(|cell| cell[axis]).collect();
@@ -230,10 +303,21 @@ pub fn plan_assembly_with_properties(
         if bogies
             .iter()
             .any(|cell| cell[1] != first[1] || cell[across] != first[across])
-            || along.windows(2).any(|pair| pair[1] - pair[0] < 3)
+        {
+            return Err(TrainError::BogieAlignment);
+        }
+        if along.windows(2).any(|pair| pair[1] - pair[0] < 3)
             || along.last().unwrap() - along[0] > 15
         {
-            return Err(TrainError::Unsupported);
+            return Err(TrainError::Wheelbase);
+        }
+        if bogies.iter().any(|cell| {
+            journal.object_state(*cell).unwrap_or_default().facing % 2 != u8::from(axis == 0)
+        }) || cells.iter().any(|(cell, material)| {
+            *material == train_parts::COUPLER
+                && journal.object_state(*cell).unwrap_or_default().facing % 2 != u8::from(axis == 0)
+        }) {
+            return Err(TrainError::BogieAlignment);
         }
     }
     if cells.keys().any(|cell| journal.crop_at(*cell).is_some()) {
@@ -284,7 +368,14 @@ pub fn plan_assembly_with_properties(
                 return Err(TrainError::Protected);
             }
         }
-        if material == train_parts::BOGIE && !bogie_supported(chunks, journal, cell) {
+        if material == train_parts::BOGIE
+            && !bogie_supported_with_facing(
+                chunks,
+                journal,
+                cell,
+                journal.object_state(cell).unwrap_or_default().facing,
+            )
+        {
             return Err(TrainError::Unsupported);
         }
         let state = journal.object_state(cell);

@@ -156,6 +156,8 @@ pub enum TrainError {
     Busy,
     RateLimited,
     Overflow,
+    BogieAlignment,
+    Wheelbase,
 }
 impl std::fmt::Display for TrainError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -237,14 +239,12 @@ fn valid_parts(anchor: Cell, parts: &[TrainPart], kind: VehicleKind) -> bool {
     }
     let axis = parts
         .iter()
-        .find(|part| part.material == train_parts::CHASSIS)
+        .find(|part| part.material == train_parts::BOGIE)
         .map(|part| part.facing % 2);
     if axis.is_some_and(|axis| {
         parts.iter().any(|part| {
-            matches!(
-                part.material,
-                train_parts::CHASSIS | train_parts::BOGIE | train_parts::COUPLER
-            ) && part.facing % 2 != axis
+            matches!(part.material, train_parts::BOGIE | train_parts::COUPLER)
+                && part.facing % 2 != axis
         })
     }) {
         return false;
@@ -301,6 +301,19 @@ fn valid_blocks(parts: &[TrainPart], blocks: &BTreeMap<u16, TrainBlockView>) -> 
         && parts.iter().enumerate().all(|(index, part)| {
             train_parts::is_part(part.material) || blocks.contains_key(&(index as u16))
         })
+}
+/// Keep the historical signed build basis when compatible with the wheel axis.
+/// Cubic chassis decoration may face sideways without changing the rail axis.
+fn build_facing(parts: &[TrainPart]) -> u8 {
+    let bogie = parts
+        .iter()
+        .find(|part| part.material == train_parts::BOGIE)
+        .map_or(0, |part| part.facing);
+    parts
+        .iter()
+        .find(|part| part.material == train_parts::CHASSIS)
+        .filter(|part| part.facing % 2 == bogie % 2)
+        .map_or(bogie, |part| part.facing)
 }
 /// Precompute the rigid matrix once for a complete bounds/shape operation.
 struct RigidTransform {
@@ -396,12 +409,7 @@ macro_rules! geometry_methods {
             bounds(self.anchor, &self.parts)
         }
         pub fn build_yaw(&self) -> f64 {
-            f64::from(
-                self.parts
-                    .iter()
-                    .find(|p| p.material == train_parts::CHASSIS)
-                    .map_or(0, |p| p.facing),
-            ) * std::f64::consts::FRAC_PI_2
+            f64::from(build_facing(&self.parts)) * std::f64::consts::FRAC_PI_2
         }
         pub fn driver_direction(&self, index: usize) -> i8 {
             let facing = self.parts.get(index).map_or(0, |part| part.facing % 4);
@@ -532,11 +540,7 @@ macro_rules! geometry_methods {
                 .map(|(index, _)| index as u16)
         }
         pub fn coupler_point(&self, end: CouplerEnd) -> Option<[f64; 3]> {
-            let facing = self
-                .parts
-                .iter()
-                .find(|part| part.material == train_parts::CHASSIS)?
-                .facing;
+            let facing = build_facing(&self.parts);
             let score = |part: &TrainPart| match facing {
                 0 => i32::from(part.offset[2]),
                 1 => i32::from(part.offset[0]),
@@ -575,11 +579,7 @@ macro_rules! geometry_methods {
         }
         pub fn coupler_tangent(&self, end: CouplerEnd) -> Option<Cell> {
             self.coupler_cell(end)?;
-            let facing = self
-                .parts
-                .iter()
-                .find(|part| part.material == train_parts::CHASSIS)?
-                .facing;
+            let facing = build_facing(&self.parts);
             let direction = [[0, 0, 1], [1, 0, 0], [0, 0, -1], [-1, 0, 0]][usize::from(facing)];
             self.disassembly_turns()?;
             let vector = self.world_vector(direction.map(|value| value as f64));

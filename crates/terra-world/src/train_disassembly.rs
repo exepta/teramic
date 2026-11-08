@@ -187,7 +187,7 @@ pub fn prepare(
             return Err(TrainError::Protected);
         }
         if part.material == terra_core::train_parts::BOGIE
-            && !crate::trains::bogie_supported(chunks, journal, cell)
+            && !crate::trains::bogie_supported_with_facing(chunks, journal, cell, part.facing)
         {
             return Err(TrainError::Unsupported);
         }

@@ -6928,3 +6928,46 @@ erweiterte Asset-Pruefung sind sauber.
 
 Der vollstaendige Workspace-Build besteht einschliesslich Linking (2 min 30 s).
 Keine Grafiktests, Spielfenster, echten Screenshots oder GPU-Abnahmen gestartet.
+
+
+## 215. Zugachse Aus Drehgestellen Und Gruene Lok-Aufbauvorlage
+
+Die Montage verwendet die durch Drehgestelle vorgegebene Achslinie. Ein anders
+rotierter Fahrgestellwuerfel darf die Montage nicht mit einer falschen
+Gleismeldung verhindern. Ein kopierter Spielstand zeigte genau diesen Fall:
+zwei passende Drehgestelle mit vier Metern Abstand ueber einem durchgehenden
+gezeichneten Gleis, dazu ein um 90 Grad anders gedrehter Fahrgestellblock.
+Die Achse wird jetzt aus Drehgestellpositionen und -ausrichtung bestimmt;
+Aussehen, Blockposen und private Nutzlasten bleiben bei Montage erhalten.
+Historische vorzeichenbehaftete Fahrbasen und gespeicherte Neigung bleiben
+kompatibel, wenn die bisherigen Achsen bereits zusammenpassten.
+
+Die Gleispruefung verwendet beide realen Achskontakte und bezieht benachbarte
+Gleiseigentuemer ein. Projektion auf begrenzte Streckenabschnitte vermeidet
+Abtastluecken auf langen oder ungleichmaessig parametrisierten Geraden.
+Fehlendes Gleis, falsche Achslinie und ein Abstand ausserhalb von 3–15 Metern
+werden getrennt gemeldet. Neue Fehlercodes werden mit Protokoll 119 uebertragen.
+
+Die normale Lokauswahl zeigt neben dem unveraenderten funktionalen Grundgeruest
+auch Kessel, Schornstein, Fuehrerhausseiten und Dach als optionalen Aufbau.
+Beim Standardabstand umfasst die Vorlage 39 Zellen; nach 13 fertigen Grundteilen
+bleiben 26 gruene Aufbauplaetze sichtbar. Nach Neustart oder Ausblenden wird ein
+vorhandenes Fahrgestell gegenueber einem naeheren leeren Gleis bevorzugt.
+Vorlagen bleiben bei Ablehnung und nicht zugehoerigen Fahrzeugaktionen erhalten.
+Auch bei vorzeitig geschlossenem Fenster wird der Montageabschluss noch
+verarbeitet und entfernt dann die Platzhalter.
+
+Der Vorschlag laesst Fahrerplatz, Einstieg und Kopfraum frei. Die Sohlbank des
+passenden Fuehrerhausfensters wird auf 0,08 m gesenkt, damit die vorhandene
+Sitzhoehe freie Sicht durch den vorgeschlagenen Aufbau ermoeglicht.
+
+Abnahme 215: Alle 4.218 Workspace-Library-Tests und 135 gezielte Zugtests
+bestehen, keiner fehlgeschlagen; neun bestehende Tests ignoriert. Der konkrete
+Aufbau, vier Richtungen, gezeichnete und native Gleise, unveraenderte
+Blockzustaende beim Rueckbau, UI-Klickhandler und 26 echte gruene Platzhalter
+sind als CPU-Faelle abgedeckt.
+[Pruefbericht](tools/benchmarks/results/train-axis-body-guide-2026-11-08/README.md).
+
+Der vollstaendige Workspace-Build besteht einschliesslich Linking (7 min 37 s),
+ebenso Clippy aller Targets mit `-D warnings`, Format und Diff. Keine
+Grafiktests, Spielfenster, echten Screenshots oder GPU-Abnahmen gestartet.

@@ -62,6 +62,231 @@ pub(super) fn requests(app: &mut App) -> Vec<TrainRequest> {
         .collect()
 }
 
+fn click_workshop(app: &mut App, command: &str) {
+    let button = app
+        .world_mut()
+        .spawn(tilt_ui::ElementId(command.into()))
+        .id();
+    let label = app.world_mut().spawn(ChildOf(button)).id();
+    let handler = tilt_ui::inventory::iter::<tilt_ui::HtmlHandlerRegistration>
+        .into_iter()
+        .find(|registration| registration.name == "train_workshop_action")
+        .unwrap();
+    let system = (handler.register)(app.world_mut());
+    app.world_mut()
+        .run_system_with(
+            system,
+            tilt_ui::HtmlEvent {
+                target: label,
+                kind: "click",
+                value: None,
+                submitter: None,
+                data: default(),
+                form_data: None,
+                handler: handler.name.into(),
+            },
+        )
+        .unwrap();
+    app.update();
+}
+
+#[test]
+fn native_locomotive_choice_adds_the_body_after_the_functional_skeleton_is_complete() {
+    let mut app = app();
+    open(&mut app);
+    track_fixture(&mut app, 0);
+    click_workshop(&mut app, "kind:locomotive");
+    let initial = app.world().resource::<TrainBlueprint>().clone();
+    let mut chassis = *initial
+        .cells
+        .iter()
+        .find(|part| part.material == 210)
+        .unwrap();
+    chassis.cell[2] += 2;
+    let expected = TrainBlueprint {
+        station: initial.station,
+        kind: initial.kind,
+        cells: train_blueprint::building_template(chassis.cell, chassis.facing, initial.kind, 4),
+    };
+    let skeleton = train_blueprint::template(chassis.cell, chassis.facing, VehicleKind::Locomotive);
+    for part in &skeleton {
+        let (section, local) = terra_voxel::global_to_section(part.cell);
+        app.world_mut()
+            .resource_mut::<terra_world::streaming::ChunkStore>()
+            .loaded
+            .get_mut(&section)
+            .unwrap()
+            .data
+            .set_block(local, part.material)
+            .unwrap();
+        let mut journal = app
+            .world_mut()
+            .resource_mut::<terra_world::edits::EditJournal>();
+        journal.record(part.cell, part.material).unwrap();
+        journal
+            .set_object_state(
+                part.cell,
+                Some(terra_world::edits::BlockObjectState {
+                    // A full cube's hidden orientation must not shift or reject
+                    // a valid skeleton whose bogies define its physical axle.
+                    facing: if part.material == 210 {
+                        (part.facing + 1) % 4
+                    } else if part.material == 218 {
+                        (part.facing + 3) % 4
+                    } else {
+                        part.facing
+                    },
+                    ..default()
+                }),
+            )
+            .unwrap();
+    }
+    *app.world_mut().resource_mut::<TrainBlueprint>() = TrainBlueprint::default();
+    click_workshop(&mut app, "blueprint");
+    assert_eq!(app.world().resource::<TrainBlueprint>(), &expected);
+    let view = app.world().resource::<TrainView>();
+    assert!(
+        view.blueprint_progress.contains("13 / 39") && view.blueprint_progress.contains("optional")
+    );
+    click_workshop(&mut app, "blueprint-build");
+    assert!(!app.world().resource::<TrainView>().open);
+    assert_eq!(app.world().resource::<TrainBlueprint>(), &expected);
+    assert!(
+        requests(&mut app).is_empty(),
+        "the full body guide is a suggestion, never free construction"
+    );
+}
+
+#[test]
+fn only_a_successful_assembly_acknowledgement_hides_the_current_build_guide() {
+    let mut app = app();
+    open(&mut app);
+    track_fixture(&mut app, 0);
+    click_workshop(&mut app, "kind:locomotive");
+    let guide = app.world().resource::<TrainBlueprint>().clone();
+    let chassis = *guide
+        .cells
+        .iter()
+        .find(|part| part.material == 210)
+        .unwrap();
+    let (section, local) = terra_voxel::global_to_section(chassis.cell);
+    app.world_mut()
+        .resource_mut::<terra_world::streaming::ChunkStore>()
+        .loaded
+        .get_mut(&section)
+        .unwrap()
+        .data
+        .set_block(local, 210)
+        .unwrap();
+    let mut car = car(1);
+    car.parts[0].material = 215;
+    {
+        let mut session = app.world_mut().resource_mut::<ClientSession>();
+        session.trains.vehicles.push(car);
+        session.last_train_result = Some(TrainResult {
+            request: 44,
+            outcome: TrainOutcome::Changed { vehicle: Some(1) },
+        });
+    }
+    app.world_mut().resource_mut::<TrainUiState>().pending = Some(44);
+    app.update();
+    assert_eq!(
+        app.world().resource::<TrainBlueprint>(),
+        &guide,
+        "unrelated Changed notifications do not remove a build guide"
+    );
+    click_workshop(&mut app, "clear");
+    for error in [
+        TrainError::BogieAlignment,
+        TrainError::Wheelbase,
+        TrainError::Unsupported,
+    ] {
+        click_workshop(&mut app, "assemble");
+        let sent = requests(&mut app);
+        assert_eq!(sent.len(), 1);
+        assert!(matches!(sent[0].0.action, TrainAction::Assemble { .. }));
+        app.world_mut()
+            .resource_mut::<ClientSession>()
+            .last_train_result = Some(TrainResult {
+            request: sent[0].0.request,
+            outcome: TrainOutcome::Rejected(error),
+        });
+        app.update();
+        assert_eq!(app.world().resource::<TrainBlueprint>(), &guide);
+        let status = &app.world().resource::<TrainView>().status;
+        assert!(status.contains(match error {
+            TrainError::BogieAlignment => "Achslinie",
+            TrainError::Wheelbase => "3 bis 15",
+            _ => "Gleisabschnitt",
+        }));
+    }
+    click_workshop(&mut app, "assemble");
+    let sent = requests(&mut app);
+    app.world_mut()
+        .resource_mut::<ClientSession>()
+        .last_train_result = Some(TrainResult {
+        request: sent[0].0.request,
+        outcome: TrainOutcome::Changed { vehicle: Some(1) },
+    });
+    app.update();
+    assert!(app.world().resource::<TrainBlueprint>().cells.is_empty());
+}
+
+#[test]
+fn closing_the_native_workshop_keeps_assembly_ack_tracking_and_clears_completed_ghosts() {
+    let mut app = app();
+    open(&mut app);
+    track_fixture(&mut app, 0);
+    click_workshop(&mut app, "kind:locomotive");
+    let chassis = *app
+        .world()
+        .resource::<TrainBlueprint>()
+        .cells
+        .iter()
+        .find(|part| part.material == 210)
+        .unwrap();
+    let (section, local) = terra_voxel::global_to_section(chassis.cell);
+    app.world_mut()
+        .resource_mut::<terra_world::streaming::ChunkStore>()
+        .loaded
+        .get_mut(&section)
+        .unwrap()
+        .data
+        .set_block(local, 210)
+        .unwrap();
+    click_workshop(&mut app, "assemble");
+    let sent = requests(&mut app);
+    assert_eq!(sent.len(), 1);
+    assert!(matches!(sent[0].0.action, TrainAction::Assemble { .. }));
+    click_workshop(&mut app, "close");
+    assert!(!app.world().resource::<TrainView>().open);
+    assert_eq!(
+        app.world().resource::<TrainUiState>().pending,
+        Some(sent[0].0.request)
+    );
+    assert!(!app.world().resource::<TrainBlueprint>().cells.is_empty());
+    assert!(requests(&mut app).is_empty());
+    app.world_mut()
+        .resource_mut::<terra_world::streaming::ChunkStore>()
+        .loaded
+        .get_mut(&section)
+        .unwrap()
+        .data
+        .set_block(local, 0)
+        .unwrap();
+    app.world_mut()
+        .resource_mut::<ClientSession>()
+        .last_train_result = Some(TrainResult {
+        request: sent[0].0.request,
+        outcome: TrainOutcome::Changed { vehicle: Some(1) },
+    });
+    app.update();
+    assert!(!app.world().resource::<TrainView>().open);
+    assert!(app.world().resource::<TrainBlueprint>().cells.is_empty());
+    assert_eq!(app.world().resource::<TrainUiState>().pending, None);
+    assert!(!app.world().resource::<TrainUiState>().pending_assembly);
+}
+
 #[test]
 fn responsive_vehicle_pages_are_sorted_and_clamped_without_scrollbars() {
     let mut app = app();
@@ -424,14 +649,21 @@ fn all_vehicle_guides_snap_both_bogies_to_complete_rails_and_persist_after_closi
             let guide = app.world().resource::<TrainBlueprint>();
             assert_eq!(
                 guide.cells.len(),
-                if kind == "locomotive" { 13 } else { 12 }
+                if kind == "locomotive" { 39 } else { 12 }
             );
-            assert!(guide.cells.iter().all(|part| part.facing % 2 == facing % 2));
+            assert!(
+                guide
+                    .cells
+                    .iter()
+                    .filter(|part| matches!(part.material, 210 | 211 | 213))
+                    .all(|part| part.facing % 2 == facing % 2)
+            );
             for part in guide.cells.iter().filter(|part| part.material == 211) {
-                assert!(terra_world::trains::bogie_supported(
+                assert!(terra_world::trains::bogie_supported_with_facing(
                     app.world().resource::<terra_world::streaming::ChunkStore>(),
                     app.world().resource::<terra_world::edits::EditJournal>(),
                     part.cell,
+                    part.facing,
                 ));
             }
         }

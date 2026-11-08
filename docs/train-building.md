@@ -11,13 +11,16 @@ wenn entsprechend belegt).
    voreingestellt sind 4 Bloecke. Gemeint ist der Abstand der Drehgestellmitten.
 2. Die Montagestelle mit leerer Hand oeffnen. Lokomotive, Tender, Personenwagen
    oder Gueterwagen und den Achsabstand auswaehlen. Die Auswahl zeigt eine am
-   Gleis ausgerichtete Vorlage und die benoetigten Bauteile.
+   Gleis ausgerichtete Vorlage und die benoetigten Bauteile. Bei der Lokomotive
+   gehoeren Kessel und Fuehrerhausverkleidung als optionale Aufbauhilfe dazu; sie
+   bleiben nach dem fertigen Grundgeruest gruen sichtbar.
 3. Mit **Mit Vorlage bauen**, **E** oder **ESC** in die Welt zurueckkehren.
    Gruene, durchsichtige Kaestchen markieren fehlende Teile; rote Kaestchen
    zeigen belegte Stellen oder eine falsche Ausrichtung. Beim Anvisieren wird
    das benoetigte Teil angezeigt. Fertige Stellen verschwinden aus der Vorlage.
-4. Drehgestelle mittig ueber das Gleis setzen und Fahrgestell, Drehgestelle und
-   Kupplungen entlang derselben Gleisachse ausrichten. Fahrgestell und Rahmen
+4. Drehgestelle mittig ueber das Gleis setzen und Drehgestelle sowie Kupplungen
+   entlang derselben Gleisachse ausrichten. Die Drehung des wuerfelfoermigen
+   Fahrgestellblocks ist fuer die Zugachse unerheblich. Fahrgestell und Rahmen
    sind ganze Bloecke; daran lassen sich normale Bloecke an allen Seiten anbauen,
    auch ohne Boden darunter. Die groesseren Raeder liegen auf den Schienen auf.
 5. Den Aufbau mit normalen Bloecken und dem BR52-Lokbaukasten erweitern. Holzarten,
@@ -85,6 +88,6 @@ nach dem Rueckbau wieder aktiv. Separat simulierte Pflanzen/Weltobjekte vor der
 Montage entfernen; voxelbasierte Laternen, Ketten und Banner sind mitmontierbar.
 
 Ein Fahrzeug darf bis zu 256 Blockteile enthalten. Die Vorlage ist eine Bauhilfe;
-Materialien werden beim normalen Platzieren verbraucht. Netzwerkprotokoll 118 und
+Materialien werden beim normalen Platzieren verbraucht. Netzwerkprotokoll 119 und
 Zugindex ID15 speichern die Fahrt; alte ID13-/ID14-Zuege bleiben lesbar.
 Client und Server gemeinsam neu bauen und neu starten.

@@ -202,12 +202,14 @@ fn moving_the_rigid_model_releases_its_old_build_pad_but_keeps_its_current_cells
 fn analytic_rigid_bounds_match_independently_rotated_corners_at_every_build_axis() {
     for facing in 0..4 {
         let mut vehicle = car([9, 12, -7], VehicleKind::Locomotive);
-        vehicle
-            .parts
-            .iter_mut()
-            .find(|part| part.material == train_parts::CHASSIS)
-            .unwrap()
-            .facing = facing;
+        for part in &mut vehicle.parts {
+            if matches!(
+                part.material,
+                train_parts::CHASSIS | train_parts::BOGIE | train_parts::COUPLER
+            ) {
+                part.facing = facing;
+            }
+        }
         vehicle.motion.yaw = 0.63;
         vehicle.motion.pitch = -0.27;
         vehicle.motion.pivot = [0.5, 0.875, 5.5];
@@ -254,6 +256,38 @@ fn analytic_rigid_bounds_match_independently_rotated_corners_at_every_build_axis
             assert!((transformed.maximum[i] - high[i]).abs() < 1e-9);
         }
     }
+}
+
+#[test]
+fn opposite_bogie_yaw_keeps_the_historical_chassis_basis_for_saved_pitch() {
+    let mut vehicle = car([8, 12, -7], VehicleKind::Locomotive);
+    for part in &mut vehicle.parts {
+        if matches!(part.material, train_parts::BOGIE | train_parts::COUPLER) {
+            part.facing = 2;
+        }
+    }
+    assert!(vehicle.valid());
+    vehicle.motion.yaw = 0.35;
+    vehicle.motion.pitch = -0.2;
+    vehicle.motion.pivot = [0.5, 1.0, 5.5];
+    vehicle.motion.translation = [1.25, 0.3, -2.0];
+    assert_eq!(vehicle.build_yaw(), 0.0);
+    let local = [0.8, 2.0, 3.5];
+    let rotated = vehicle.motion.rotate(local, 0.0);
+    let pivot = vehicle.motion.rotate(vehicle.motion.pivot, 0.0);
+    let expected: [f64; 3] = std::array::from_fn(|i| {
+        vehicle.anchor[i] as f64
+            + if i == 1 { MODEL_Y_OFFSET } else { 0.0 }
+            + vehicle.motion.translation[i]
+            + vehicle.motion.pivot[i]
+            - pivot[i]
+            + rotated[i]
+    });
+    let actual = vehicle.world_point(local);
+    for i in 0..3 {
+        assert!((actual[i] - expected[i]).abs() < 1e-9);
+    }
+    assert_eq!(vehicle.view().build_yaw(), 0.0);
 }
 
 #[test]

@@ -36,6 +36,7 @@ pub(crate) struct TrainUiState {
     cargo: bool,
     page: usize,
     pending: Option<u64>,
+    pending_assembly: bool,
     status: String,
     identity: Option<(Option<Entity>, Option<terra_core::PlayerUuid>)>,
     wheelbase: u8,
@@ -195,7 +196,15 @@ fn rejection(error: TrainError) -> &'static str {
         TrainError::NotOwner | TrainError::Protected => "Dafür fehlen dir die Rechte.",
         TrainError::Stale => "Der Aufbau hat sich geändert. Bitte erneut versuchen.",
         TrainError::Incomplete => "Bauteile fehlen oder sind nicht miteinander verbunden.",
-        TrainError::Unsupported => "Beide Drehgestelle müssen über einem Gleis stehen.",
+        TrainError::Unsupported => {
+            "Unter beiden Drehgestellen wird ein vollständiger, durchgehender Gleisabschnitt benötigt."
+        }
+        TrainError::BogieAlignment => {
+            "Drehgestelle auf gleicher Höhe in einer geraden Achslinie setzen und längs zum Gleis ausrichten; Kupplungen gleich ausrichten."
+        }
+        TrainError::Wheelbase => {
+            "Der Abstand zwischen den Drehgestell-Mitten muss 3 bis 15 Blöcke betragen."
+        }
         TrainError::Occupied => "Der Platz ist belegt oder ein Spieler steht im Aufbau.",
         TrainError::OutOfReach => "Montagestelle oder Fahrzeug ist zu weit entfernt.",
         TrainError::Coupled => "Vor der Demontage alle Kupplungen lösen.",
@@ -218,6 +227,7 @@ fn request(world: &mut World, state: &mut TrainUiState, action: TrainAction) {
         .get_resource_mut::<ClientSession>()
         .and_then(|mut session| session.train_request(action))
     {
+        state.pending_assembly = matches!(request.0.action, TrainAction::Assemble { .. });
         state.pending = Some(request.0.request);
         state.status = "Wird ausgeführt…".into();
         world.write_message(request);
@@ -225,9 +235,9 @@ fn request(world: &mut World, state: &mut TrainUiState, action: TrainAction) {
 }
 fn close(world: &mut World, state: &mut TrainUiState) {
     state.open = false;
-    // Closing the panel must not abandon a driver's in-flight acknowledgement:
-    // the last dragged notch still needs to reach the server before its preview clears.
-    if state.drive_desired.is_none() {
+    // Driving intent and a successful assembly still need their acknowledgements
+    // after closing: the final notch must apply and assembled build ghosts must clear.
+    if state.drive_desired.is_none() && !state.pending_assembly {
         state.pending = None;
     }
     state.cargo = false;
@@ -294,15 +304,22 @@ fn blueprint(
     let previous = world.get_resource::<TrainBlueprint>();
     if let Some(previous) = previous.filter(|guide| guide.station == Some(station))
         && let Some(chassis) = previous.cells.iter().find(|part| part.material == 210)
-        && train_blueprint::template_with_wheelbase(chassis.cell, chassis.facing, kind, wheelbase)
+        && train_blueprint::building_template(chassis.cell, chassis.facing, kind, wheelbase)
             .iter()
             .filter(|part| part.material == 211)
-            .all(|part| terra_world::trains::bogie_supported(chunks, journal, part.cell))
+            .all(|part| {
+                terra_world::trains::bogie_supported_with_facing(
+                    chunks,
+                    journal,
+                    part.cell,
+                    part.facing,
+                )
+            })
     {
         return Some(TrainBlueprint {
             station: Some(station),
             kind,
-            cells: train_blueprint::template_with_wheelbase(
+            cells: train_blueprint::building_template(
                 chassis.cell,
                 chassis.facing,
                 kind,
@@ -311,11 +328,54 @@ fn blueprint(
         });
     }
     let mut candidates = Vec::new();
+    let mut candidate = |chassis, facing, distance| {
+        let skeleton = train_blueprint::template_with_wheelbase(chassis, facing, kind, wheelbase);
+        if skeleton.is_empty() {
+            return;
+        }
+        if skeleton
+            .iter()
+            .filter(|part| part.material == 211)
+            .all(|part| {
+                terra_world::trains::bogie_supported_with_facing(
+                    chunks,
+                    journal,
+                    part.cell,
+                    part.facing,
+                )
+            })
+        {
+            let matched = skeleton
+                .iter()
+                .filter(|part| {
+                    train_blueprint::matches(
+                        **part,
+                        chunks.block_at(part.cell),
+                        journal
+                            .object_state(part.cell)
+                            .map_or(0, |state| state.facing),
+                    )
+                })
+                .count();
+            candidates.push((
+                chunks.block_at(chassis) != Some(210),
+                std::cmp::Reverse(matched),
+                distance,
+                facing,
+                train_blueprint::building_template(chassis, facing, kind, wheelbase),
+            ));
+        }
+    };
     let mut complete = std::collections::BTreeMap::new();
     for x in -8_i64..=8 {
         for y in -4_i64..=4 {
             for z in -8_i64..=8 {
                 let cell = [station[0] + x, station[1] + y, station[2] + z];
+                if chunks.block_at(cell) == Some(210) {
+                    for facing in 0..4 {
+                        candidate(cell, facing, x * x + y * y + z * z);
+                    }
+                }
                 if !chunks
                     .block_at(cell)
                     .is_some_and(terra_core::rails::is_rail)
@@ -356,31 +416,23 @@ fn blueprint(
                         3
                     };
                     for facing in [facing, (facing + 2) % 4] {
-                        let cells = train_blueprint::template_with_wheelbase(
+                        candidate(
                             [cell[0], cell[1] + 2, cell[2]],
                             facing,
-                            kind,
-                            wheelbase,
+                            x * x + y * y + z * z,
                         );
-                        if cells
-                            .iter()
-                            .filter(|part| part.material == 211)
-                            .all(|part| {
-                                terra_world::trains::bogie_supported(chunks, journal, part.cell)
-                            })
-                        {
-                            candidates.push((x * x + y * y + z * z, facing, cells));
-                        }
                     }
                 }
             }
         }
     }
-    candidates.sort_by_key(|(distance, facing, cells)| (*distance, *facing, cells[0].cell));
+    candidates.sort_by_key(|(empty, matched, distance, facing, cells)| {
+        (*empty, *matched, *distance, *facing, cells[0].cell)
+    });
     candidates
         .into_iter()
         .next()
-        .map(|(_, _, cells)| TrainBlueprint {
+        .map(|(_, _, _, _, cells)| TrainBlueprint {
             station: Some(station),
             kind,
             cells,
@@ -732,16 +784,22 @@ fn guide_view(world: &mut World) -> (bool, String, String) {
                 215 => "Zugsitz",
                 216 => "Wagen-Laderaum",
                 218 => "Brennstoffmotor",
-                _ => "Zugbauteil",
+                material => terra_core::locomotive_parts::definition(material)
+                    .map_or("Zugbauteil", |definition| definition.name),
             };
-            format!("Hier: {name} · längs zum Gleis ausrichten")
+            format!("Hier: {name} · passende Ausrichtung wählen")
         },
     );
     (
         true,
         format!(
-            "Vorlage: {placed} / {} Bauteile · Grün fehlt · Rot belegt",
-            guide.cells.len()
+            "Vorlage: {placed} / {} Bauteile · Grün fehlt · Rot belegt{}",
+            guide.cells.len(),
+            if guide.kind == VehicleKind::Locomotive {
+                " · Verkleidung optional"
+            } else {
+                ""
+            }
         ),
         label,
     )
@@ -882,6 +940,7 @@ fn update(
             state.second = None;
             state.identity = identity;
             state.pending = None;
+            state.pending_assembly = false;
             state.drive_queue = None;
             state.drive_desired = None;
             *world.resource_mut::<TrainBlueprint>() = TrainBlueprint::default();
@@ -902,6 +961,7 @@ fn update(
             && result.request == id
         {
             state.pending = None;
+            let assembled = std::mem::take(&mut state.pending_assembly);
             driving::acknowledged(&mut state);
             match result.outcome {
                 TrainOutcome::Rejected(error) => {
@@ -945,7 +1005,7 @@ fn update(
                         state.selected = vehicle.or(state.selected);
                         state.status = "Fertig.".into();
                     }
-                    if vehicle.is_some() {
+                    if assembled && vehicle.is_some() {
                         *world.resource_mut::<TrainBlueprint>() = TrainBlueprint::default();
                     }
                 }

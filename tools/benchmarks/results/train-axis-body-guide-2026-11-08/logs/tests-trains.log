@@ -1,0 +1,205 @@
+   Compiling terra-core v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-core)
+   Compiling terra-world v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-world)
+   Compiling terra-physics v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-physics)
+   Compiling terra-network v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-network)
+   Compiling terra-player v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-player)
+   Compiling terra-storage v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-storage)
+   Compiling terra-ui v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-ui)
+   Compiling terra-server v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/apps/server)
+   Compiling terra-render v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-render)
+    Finished `test` profile [optimized + debuginfo] target(s) in 19m 40s
+     Running unittests src/lib.rs (target/debug/deps/terra_core-10e34521e769403b)
+
+running 20 tests
+test train_blueprint::tests::aim_reports_the_nearest_part_within_the_visible_reach ... ok
+test train_blueprint::tests::all_four_guides_rotate_the_complete_connected_fixture_without_duplicate_cells ... ok
+test train_blueprint::tests::matching_directional_body_parts_requires_the_guides_actual_orientation ... ok
+test train_motion::tests::braking_fuel_loss_and_reversal_do_not_add_energy ... ok
+test train_blueprint::tests::optional_cab_shell_keeps_native_driver_headroom_and_side_window_eye_rays_clear ... ok
+test train_motion::tests::rigid_roundtrip_for_every_build_axis_and_grade ... ok
+test train_parts::tests::authored_train_parts_have_bounded_shared_volumes_and_real_mass ... ok
+test train_parts::tests::frame_mounted_couplers_and_furniture_reach_their_attachment_faces ... ok
+test train_parts::tests::only_bogies_accept_the_bounded_horizontal_gauge_overhang ... ok
+test trains::tests::analytic_rigid_bounds_match_independently_rotated_corners_at_every_build_axis ... ok
+test train_blueprint::tests::powered_guides_keep_the_frame_connected_at_every_supported_wheelbase_without_fixed_cargo ... ok
+test trains::tests::coupling_is_symmetric_aligned_owner_checked_and_atomic_on_revision_overflow ... ok
+test trains::tests::arbitrary_block_views_preserve_full_facing_and_reject_invalid_collision_or_unbounded_payloads ... ok
+test trains::tests::disconnected_parts_duplicate_cells_and_sideways_couplers_cannot_be_imported ... ok
+test trains::tests::moving_the_rigid_model_releases_its_old_build_pad_but_keeps_its_current_cells_reserved ... ok
+test trains::tests::opposite_bogie_yaw_keeps_the_historical_chassis_basis_for_saved_pitch ... ok
+test trains::tests::every_vehicle_kind_has_real_parts_mass_seats_and_private_owned_cargo ... ok
+test trains::tests::parked_model_origin_and_seat_feet_share_exact_authored_wheel_and_cushion_offsets ... ok
+test train_blueprint::tests::optional_locomotive_shell_preserves_the_skeleton_and_driver_headroom_in_every_pose ... ok
+test trains::tests::aggregate_collision_and_private_payload_limits_are_atomic_for_registry_and_snapshot ... ok
+
+test result: ok. 20 passed; 0 failed; 0 ignored; 0 measured; 433 filtered out; finished in 0.01s
+
+     Running unittests src/lib.rs (target/debug/deps/terra_network-c5d9f026ccc9655e)
+
+running 11 tests
+test server::trains::cleanup_tests::mandatory_seat_cleanup_forces_a_fresh_snapshot_when_persisted_epochs_are_exhausted ... ok
+test server::trains::cleanup_tests::safe_exit_requires_loaded_clear_terrain_and_revalidates_before_consuming_the_intent ... ok
+test server::validation::aquatic_tests::train_authority_tests::cargo_gesture_is_owner_checked_and_stale_retry_cannot_duplicate_the_owned_stack ... ok
+test server::validation::aquatic_tests::train_authority_tests::horse_and_train_seat_transitions_are_exclusive_without_mutating_either_owner ... ok
+test server::validation::aquatic_tests::train_authority_tests::a_bound_owner_can_fuel_and_use_distant_car_storage_but_foreign_and_unseated_packets_cannot ... ok
+test server::validation::aquatic_tests::train_authority_tests::leave_overflow_keeps_both_owned_seat_binding_and_pose_unchanged ... ok
+test server::validation::aquatic_tests::train_protection_tests::generic_block_placement_cannot_fill_saved_assembled_vehicle_air_cells_or_spend_items ... ok
+test server::validation::aquatic_tests::train_authority_tests::an_exposed_cab_profile_is_reachable_above_its_side_panel_but_never_through_a_world_wall ... ok
+test server::validation::aquatic_tests::train_protection_tests::shared_furniture_environment_checks_reserved_secondary_cells_before_any_mutation ... ok
+test tests::railway_connection_tests::trains::bounded_full_train_registry_public_packet_stays_below_two_mebibytes ... ok
+test tests::railway_connection_tests::trains::udp_real_vehicle_assembly_private_cargo_seating_late_join_and_atomic_dismantling ... ok
+
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 526 filtered out; finished in 0.59s
+
+     Running unittests src/lib.rs (target/debug/deps/terra_physics-39fc91b7ff7b2366)
+
+running 19 tests
+test trains::tests::assembled_bogie_wheels_contact_actual_steel_height_and_both_gauge_centers ... ok
+test trains::tests::authoritative_spawn_clearance_rejects_intersection_with_saved_assembled_parts ... ok
+test trains::tests::captured_shape_changes_rebuild_collision_while_block_colors_do_not ... ok
+test terrain::train_profile_tests::native_wide_bogie_overhang_keeps_exact_collision_across_negative_section_seams ... ok
+test trains::tests::asynchronous_cooks_remain_bounded_and_obsolete_generations_never_publish ... ok
+test trains::tests::coalesced_restoration_followed_by_mining_or_replacement_retires_without_old_materials ... ok
+test trains::tests::compact_train_motion_moves_the_existing_backend_body_without_recooking ... ok
+test trains::tests::coalesced_remontage_with_different_parts_hands_off_only_after_new_geometry_is_active ... ok
+test trains::tests::dismantling_a_pending_worker_cannot_resurrect_a_removed_vehicle ... ok
+test trains::tests::dismantled_collision_waits_for_restored_parts_and_ready_terrain_before_retiring ... ok
+test trains::tests::assembled_parts_stop_real_falling_bodies_at_their_authored_surface ... ok
+test trains::tests::geometry_cache_ignores_cargo_revision_owner_and_wood_but_guards_new_positions_until_physics ... ok
+test trains::tests::long_vehicle_retirement_uses_actual_physics_interest_without_waiting_for_distant_colliders ... ok
+test trains::tests::moved_dismantling_waits_for_current_cells_even_when_final_pose_and_removal_arrive_together ... ok
+test trains::tests::new_replica_identity_cannot_reuse_an_old_collider_with_the_same_revision_and_vehicle_id ... ok
+test trains::tests::receipt_checkpoint_buffer_has_a_hard_budget_and_rejects_without_partial_geometry_mutation ... ok
+test trains::tests::rapid_identical_remontage_adopts_the_already_active_collider_under_the_new_vehicle_id ... ok
+test trains::tests::removed_vehicle_collision_does_not_leak_when_all_former_sections_are_unloaded ... ok
+test trains::tests::mounted_top_slab_supports_real_bodies_at_its_captured_surface ... ok
+
+test result: ok. 19 passed; 0 failed; 0 ignored; 0 measured; 57 filtered out; finished in 0.13s
+
+     Running unittests src/lib.rs (target/debug/deps/terra_player-0d7802a0f29507e2)
+
+running 2 tests
+test interaction::targeting::train_tests::long_track_targets_stop_at_real_train_geometry_without_extending_cargo_interaction ... ok
+test interaction::targeting::train_tests::assembled_vehicle_targets_occlude_blocks_but_respect_nearer_walls_and_unknown_terrain ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 116 filtered out; finished in 0.01s
+
+     Running unittests src/lib.rs (target/debug/deps/terra_render-98842a997e349445)
+
+running 20 tests
+test trains::animation::tests::each_named_wheel_instance_keeps_its_own_pivot_role ... ok
+test trains::animation::tests::forward_and_reverse_roll_in_opposite_directions_and_stopped_wheels_do_not_drift ... ok
+test train_blueprint::tests::missing_conflicting_and_aligned_parts_have_distinct_visual_states ... ok
+test trains::animation::tests::lever_notches_rotate_about_the_physical_hinge_and_rods_share_the_wheel_phase ... ok
+test trains::animation::tests::one_real_wheel_circumference_returns_every_authored_pivot_to_its_start ... ok
+test trains::openings::tests::different_window_poses_remain_separate_and_missing_door_halves_are_rejected ... ok
+test trains::openings::tests::opening_color_metadata_does_not_tint_glass_or_iron ... ok
+test train_blueprint::tests::completed_functional_skeleton_keeps_a_visible_green_optional_locomotive_body ... ok
+test players::tests::train_seat_uses_confirmed_body_position_and_authored_yaw_without_horse_pitch ... ok
+test trains::openings::tests::single_authored_leaves_keep_open_pose_while_the_stationary_frame_stays_put ... ok
+test trains::tests::assembled_root_uses_the_same_fractional_origin_as_authoritative_models ... ok
+test trains::openings::tests::grouped_windows_and_paired_doors_match_world_joinery_in_every_yaw_and_leaf_state ... ok
+test trains::tests::moving_parts_keep_separate_pivots_without_losing_authored_geometry ... ok
+test trains::tests::retired_train_mesh_assets_are_released_without_a_render_app ... ok
+test trains::tests::double_chest_retains_both_wood_colors_and_emits_its_shared_body_once ... ok
+test trains::tests::vehicle_geometry_key_ignores_cargo_revisions_and_tracks_authored_pose ... ok
+test trains::tests::water_refilling_a_removed_source_cell_does_not_hide_the_mounted_model ... ok
+test trains::tests::arbitrary_cubes_keep_their_surface_and_dye_instead_of_becoming_invisible ... ok
+test trains::tests::assembled_geometry_matches_actual_placed_models_in_every_pose_and_wood ... ok
+test trains::tests::side_and_top_slabs_keep_their_non_yaw_poses_and_future_custom_models_are_accepted ... ok
+
+test result: ok. 20 passed; 0 failed; 0 ignored; 0 measured; 1047 filtered out; finished in 0.27s
+
+     Running unittests src/lib.rs (target/debug/deps/terra_server-7709e3a0803ace85)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 8 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/deps/terra_storage-92253726775aa49c)
+
+running 6 tests
+test regions::train_tests::frozen_id14_keeps_machine_payloads_and_defaults_only_the_new_drive_state ... ok
+test regions::train_tests::frozen_id13_vehicle_registry_loads_without_reinterpreting_new_fields ... ok
+test regions::train_tests::id14_preserves_the_parked_consist_exact_parts_owner_mass_and_private_cargo_across_real_save_reload ... ok
+test regions::train_tests::a_frozen_id12_index_loads_with_no_invented_train_and_empty_id14_keeps_retired_ids ... ok
+test regions::train_tests::id14_roundtrip_preserves_arbitrary_block_appearance_and_private_machine_payloads ... ok
+test regions::train_tests::id15_preserves_current_pose_rail_cursor_and_partial_fuel_without_moving_the_build_anchor ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 160 filtered out; finished in 0.07s
+
+     Running unittests src/lib.rs (target/debug/deps/terra_ui-fe4f225496ef9414)
+
+running 28 tests
+test hud_visibility::tests::f2_hides_train_telemetry_and_build_hints_but_keeps_the_workshop_interactive ... ok
+test trains::driving_tests::cargo_button_finds_storage_behind_the_cab_and_skips_the_engine_fuel_inventory ... ok
+test trains::driving_tests::closing_driver_panel_preserves_the_acknowledgement_and_latest_queued_notch ... ok
+test trains::driving_tests::driving_hud_uses_authoritative_meter_speed_and_configured_controls_then_clears_on_exit ... ok
+test trains::driving_tests::actual_slider_callback_queues_only_the_latest_notch_without_changing_server_motion ... ok
+test trains::driving_tests::driving_keyboard_and_hud_follow_rebound_gameplay_actions ... ok
+test trains::driving_tests::engine_panel_accepts_only_real_fuels_and_keeps_player_stacks_until_acknowledged ... ok
+test trains::driving_tests::montage_rejects_a_moving_vehicle_before_requesting_world_edits ... ok
+test trains::driving_tests::montage_availability_uses_the_drivers_current_station_after_travel ... ok
+test trains::driving_tests::montage_waits_for_safe_exit_ack_before_requesting_dismantle ... ok
+test trains::driving_tests::passengers_nonowners_and_unseated_players_cannot_send_driver_commands ... ok
+test trains::tests::build_guide_never_labels_a_ghost_behind_a_nearer_wall ... ok
+test trains::tests::closing_consumes_escape_and_disconnect_never_recaptures_the_cursor ... ok
+test trains::tests::a_new_connection_or_replaced_world_cannot_replay_old_build_ghosts ... ok
+test trains::tests::coupling_uses_two_explicit_end_choices_and_registry_revision ... ok
+test trains::tests::leaving_a_train_seat_uses_the_configured_action_and_one_confirmed_request ... ok
+test trains::tests::closing_the_native_workshop_keeps_assembly_ack_tracking_and_clears_completed_ghosts ... ok
+test trains::tests::missing_or_incomplete_rails_give_actionable_feedback_and_world_changes_clear_the_guide ... ok
+test trains::tests::native_locomotive_choice_adds_the_body_after_the_functional_skeleton_is_complete ... ok
+test trains::tests::ordinary_chest_on_an_assembled_vehicle_opens_the_same_private_cargo_flow ... ok
+test trains::tests::private_cargo_uses_shared_previews_and_acknowledged_revisions_without_local_moves ... ok
+test trains::tests::only_a_successful_assembly_acknowledgement_hides_the_current_build_guide ... ok
+test trains::tests::registered_html_handler_accepts_label_and_icon_children_and_local_choices_while_inspection_waits ... ok
+test trains::tests::workshop_panel_fits_hd_through_4k_without_enlarging_text_independently ... ok
+test trains::tests::workshop_restores_pointer_events_under_the_noninteractive_game_overlay ... ok
+test trains::tests::responsive_vehicle_pages_are_sorted_and_clamped_without_scrollbars ... ok
+test trains::tests::all_vehicle_guides_snap_both_bogies_to_complete_rails_and_persist_after_closing ... ok
+test trains::driving_tests::train_interaction_respects_debug_chords_and_wheelbase_controls_are_local_and_bounded ... ok
+
+test result: ok. 28 passed; 0 failed; 0 ignored; 0 measured; 529 filtered out; finished in 0.03s
+
+     Running unittests src/lib.rs (target/debug/deps/terra_voxel-9ebdcff654b5745e)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 25 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/deps/terra_world-757ccf46c33dd22b)
+
+running 29 tests
+test placement::tests::full_train_frames_support_carpet_and_potted_plants_without_hidden_air_gaps ... ok
+test train_disassembly::tests::a_stopped_rotated_train_bakes_shapes_inventory_and_partial_fuel_for_editing ... ok
+test train_disassembly::tests::every_stair_orientation_and_mixed_slab_rotates_instead_of_losing_material_state ... ok
+test train_disassembly::tests::moving_or_sloped_trains_cannot_enter_edit_mode ... ok
+test placement::tests::construction_and_train_parts_attach_to_every_face_without_a_floor ... ok
+test interaction_shapes::tests::train_grates_preserve_real_collision_holes_when_rotated_and_combined_with_solid_slabs ... ok
+test train_motion::tests::a_stale_rear_route_or_saved_cursor_cannot_teleport_existing_rail_contacts ... ok
+test train_motion::tests::both_bogies_follow_a_real_free_curve_and_ramp_without_changing_the_rigid_wheelbase ... ok
+test train_motion::tests::cursor_crosses_real_module_endpoints_and_reverse_returns_to_the_start ... ok
+test generation::cave_biomes::tests::mineral_wall_cover_is_clustered_restrained_and_not_resource_ore ... ok
+test train_motion::tests::empty_engine_and_missing_loaded_track_cannot_create_motion_or_consume_inventory ... ok
+test train_motion::tests::rotation_padding_uses_the_bogie_pivot_and_is_independent_of_the_model_origin ... ok
+test train_motion::tests::inactive_switch_branch_cannot_be_used_as_an_independent_route ... ok
+test train_motion::tests::coupled_bodies_can_follow_forward_and_reverse_but_cannot_fold_through_each_other ... ok
+test train_motion::tests::swept_clearance_catches_a_thin_fence_between_otherwise_clear_endpoints ... ok
+test trains::tests::an_elevated_train_part_can_start_the_same_complete_assembly ... ok
+test trains::tests::arbitrary_train_assembly_rejects_external_multiblock_links_and_stale_machine_changes ... ok
+test train_motion::tests::fueled_train_consumes_one_real_item_moves_and_brakes_on_the_same_rails ... ok
+test trains::tests::live_crops_and_attached_world_props_are_rejected_without_orphaning_their_state ... ok
+test trains::tests::arbitrary_blocks_keep_full_shapes_colors_chests_and_paused_machine_state_atomically ... ok
+test trains::tests::moving_vehicle_picking_and_reservations_use_the_current_rigid_pose ... ok
+test trains::tests::assembly_and_dismantling_move_every_part_pose_and_private_cargo_exactly_once ... ok
+test trains::tests::recorded_world_water_is_not_collected_with_the_vehicle_body ... ok
+test trains::tests::saved_mixed_yaw_train_on_a_long_drawn_rail_assembles_without_reorienting_any_source_pose ... ok
+test trains::tests::new_assemblies_require_three_to_fifteen_meter_axle_spacing ... ok
+test trains::tests::stale_cargo_or_occupied_restore_never_publishes_partial_parts_or_inventory_ownership ... ok
+test trains::tests::wrong_owner_and_missing_real_rail_support_are_rejected_before_assembly ... ok
+test trains::tests::real_guides_assemble_on_drawn_and_native_rails_despite_a_cube_chassis_hidden_yaw ... ok
+test trains::tests::mounted_plumbing_cannot_overfill_world_capacity_when_dismantled ... ok
+
+test result: ok. 29 passed; 0 failed; 0 ignored; 0 measured; 1191 filtered out; finished in 0.10s
+

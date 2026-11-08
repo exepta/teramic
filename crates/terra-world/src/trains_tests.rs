@@ -736,7 +736,298 @@ fn new_assemblies_require_three_to_fifteen_meter_axle_spacing() {
         if (3..=15).contains(&spacing) {
             assert!(plan.is_ok(), "spacing={spacing}: {plan:?}");
         } else {
-            assert_eq!(plan.unwrap_err(), TrainError::Unsupported);
+            assert_eq!(plan.unwrap_err(), TrainError::Wheelbase);
         }
     }
+}
+
+#[test]
+fn real_guides_assemble_on_drawn_and_native_rails_despite_a_cube_chassis_hidden_yaw() {
+    use terra_core::{rails::CurveSpec, train_blueprint};
+    for facing in 0..4 {
+        for drawn in [false, true] {
+            let mut chunks = ChunkStore::default();
+            let mut journal = EditJournal::default();
+            let origin = [-17, 16, -17];
+            let forward = [[0, 0, 1], [1, 0, 0], [0, 0, -1], [-1, 0, 0]][usize::from(facing)];
+            for x in -12..=12 {
+                for y in -2..=6 {
+                    for z in -12..=12 {
+                        block(
+                            &mut chunks,
+                            [origin[0] + x, origin[1] + y, origin[2] + z],
+                            0,
+                        );
+                    }
+                }
+            }
+            let pieces = if drawn {
+                let points =
+                    [[8, 2, 0], [8, 2, 64], [8, 2, 128], [8, 2, 192]].map(
+                        |[x, y, z]| match facing {
+                            0 => [x, y, z],
+                            1 => [z, y, 16 - x],
+                            2 => [16 - x, y, 16 - z],
+                            _ => [16 - z, y, x],
+                        },
+                    );
+                vec![Piece::new_curve(origin, CurveSpec::new(points).unwrap()).unwrap()]
+            } else {
+                (0..3)
+                    .map(|step| {
+                        Piece::new(
+                            std::array::from_fn(|i| origin[i] + forward[i] * step * 4),
+                            terra_core::rails::STRAIGHT,
+                            facing,
+                        )
+                        .unwrap()
+                    })
+                    .collect()
+            };
+            for piece in pieces {
+                for cell in rails::cells(piece) {
+                    block(&mut chunks, cell, piece.material);
+                    journal.record(cell, piece.material).unwrap();
+                    journal
+                        .set_object_state(cell, Some(rails::object_state(piece, cell)))
+                        .unwrap();
+                }
+                for support in piece.supports().iter() {
+                    block(
+                        &mut chunks,
+                        std::array::from_fn(|i| piece.anchor[i] + i64::from(support.support[i])),
+                        3,
+                    );
+                }
+            }
+            let start = [
+                origin[0] + forward[0] * 2,
+                origin[1] + 2,
+                origin[2] + forward[2] * 2,
+            ];
+            let station = [
+                start[0] + forward[2] * 3,
+                start[1],
+                start[2] - forward[0] * 3,
+            ];
+            block(&mut chunks, station, train_parts::STATION);
+            journal.record(station, train_parts::STATION).unwrap();
+            let guide = train_blueprint::template(start, facing, VehicleKind::Locomotive);
+            for part in &guide {
+                block(&mut chunks, part.cell, part.material);
+                journal.record(part.cell, part.material).unwrap();
+                let pose = BlockObjectState {
+                    facing: if part.material == train_parts::CHASSIS {
+                        (facing + 1) % 4
+                    } else {
+                        part.facing
+                    },
+                    ..Default::default()
+                };
+                journal.set_object_state(part.cell, Some(pose)).unwrap();
+                if part.material == 218 {
+                    journal
+                        .set_container(
+                            part.cell,
+                            Inventory {
+                                slots: vec![ItemStack {
+                                    item: ItemKind::Block(16),
+                                    count: 1,
+                                }],
+                                ..Default::default()
+                            },
+                        )
+                        .unwrap();
+                }
+                if part.material == train_parts::BOGIE {
+                    assert!(
+                        bogie_supported_with_facing(&chunks, &journal, part.cell, part.facing),
+                        "facing={facing}, drawn={drawn}, bogie={part:?}"
+                    );
+                    assert!(!bogie_supported_with_facing(
+                        &chunks,
+                        &journal,
+                        part.cell,
+                        (part.facing + 1) % 4
+                    ));
+                }
+            }
+            let actor = PlayerUuid::from_u128(119);
+            let plan = plan_assembly(
+                &chunks,
+                &journal,
+                actor,
+                station,
+                start,
+                VehicleKind::Locomotive,
+            )
+            .unwrap_or_else(|error| panic!("facing={facing}, drawn={drawn}: {error:?}"));
+            let chassis = plan
+                .vehicle
+                .parts
+                .iter()
+                .position(|part| part.material == train_parts::CHASSIS)
+                .unwrap();
+            assert_eq!(plan.vehicle.parts[chassis].facing, (facing + 1) % 4);
+            assert!(
+                (plan.vehicle.build_yaw() - f64::from(facing) * std::f64::consts::FRAC_PI_2).abs()
+                    < 1e-10
+            );
+            assert_eq!(
+                plan.parts[chassis].state.unwrap().facing,
+                (facing + 1) % 4,
+                "removal still compares the original placed pose"
+            );
+            let id = commit(&mut chunks, &mut journal, &plan).unwrap();
+            let car = &journal.gameplay().trains.vehicles[&id];
+            let mut powered = car.clone();
+            powered.motion.throttle = 1;
+            powered.motion.brake = false;
+            let moving = crate::train_motion::advance(
+                &chunks,
+                &journal,
+                &rails::network(&journal).unwrap(),
+                &powered,
+                1.0 / 60.0,
+            )
+            .unwrap();
+            assert!(moving.motion.speed_mps > 0.0);
+            assert!(
+                crate::train_motion::clear_swept(
+                    &chunks,
+                    &journal,
+                    &Default::default(),
+                    car,
+                    &moving
+                )
+                .is_ok()
+            );
+            let edit = plan_dismantle(&chunks, &journal, actor, station, id).unwrap();
+            commit(&mut chunks, &mut journal, &edit).unwrap();
+            assert_eq!(
+                journal.object_state(start).unwrap().facing,
+                (facing + 1) % 4
+            );
+        }
+    }
+}
+
+#[test]
+fn saved_mixed_yaw_train_on_a_long_drawn_rail_assembles_without_reorienting_any_source_pose() {
+    let mut chunks = ChunkStore::default();
+    let mut journal = EditJournal::default();
+    for x in 65..=74 {
+        for y in 22..=30 {
+            for z in -9..=24 {
+                block(&mut chunks, [x, y, z], 0);
+            }
+        }
+    }
+    let curve =
+        terra_core::rails::CurveSpec::new([[8, 2, 16], [8, 2, -163], [8, 2, -253], [8, 2, -432]])
+            .unwrap();
+    let piece = Piece::new_curve([69, 24, 20], curve).unwrap();
+    for cell in rails::cells(piece) {
+        block(&mut chunks, cell, piece.material);
+        journal.record(cell, piece.material).unwrap();
+        journal
+            .set_object_state(cell, Some(rails::object_state(piece, cell)))
+            .unwrap();
+    }
+    for support in piece.supports().iter() {
+        block(
+            &mut chunks,
+            std::array::from_fn(|i| piece.anchor[i] + i64::from(support.support[i])),
+            3,
+        );
+    }
+    let station = [66, 24, 8];
+    block(&mut chunks, station, 217);
+    journal.record(station, 217).unwrap();
+    let placed = [
+        ([69, 25, 7], 211, 0),
+        ([69, 25, 11], 211, 0),
+        ([69, 26, 5], 213, 2),
+        ([69, 26, 6], 212, 2),
+        ([69, 26, 7], 212, 3),
+        ([69, 26, 8], 210, 3),
+        ([69, 26, 9], 212, 2),
+        ([69, 26, 10], 212, 3),
+        ([69, 26, 11], 212, 3),
+        ([69, 26, 12], 212, 3),
+        ([69, 26, 13], 213, 0),
+        ([69, 27, 9], 214, 2),
+        ([69, 27, 10], 218, 3),
+    ];
+    for (cell, material, facing) in placed {
+        block(&mut chunks, cell, material);
+        journal.record(cell, material).unwrap();
+        journal
+            .set_object_state(
+                cell,
+                Some(BlockObjectState {
+                    facing,
+                    ..Default::default()
+                }),
+            )
+            .unwrap();
+        if material == 218 {
+            journal
+                .set_container(
+                    cell,
+                    Inventory {
+                        slots: vec![ItemStack {
+                            item: ItemKind::Block(16),
+                            count: 1,
+                        }],
+                        ..Default::default()
+                    },
+                )
+                .unwrap();
+        }
+    }
+    for cell in [[69, 25, 7], [69, 25, 11]] {
+        assert!(bogie_supported_with_facing(&chunks, &journal, cell, 0));
+    }
+    let payloads = placed
+        .iter()
+        .map(|(cell, _, _)| (*cell, journal.train_payload(*cell).unwrap()))
+        .collect::<Vec<_>>();
+    let actor = PlayerUuid::from_u128(119_028);
+    let plan = plan_assembly(
+        &chunks,
+        &journal,
+        actor,
+        station,
+        [69, 26, 8],
+        VehicleKind::Locomotive,
+    )
+    .unwrap();
+    assert_eq!(
+        plan.vehicle
+            .parts
+            .iter()
+            .find(|part| part.material == 210)
+            .unwrap()
+            .facing,
+        3
+    );
+    assert_eq!(plan.vehicle.build_yaw(), 0.0);
+    let id = commit(&mut chunks, &mut journal, &plan).unwrap();
+    let restore = plan_dismantle(&chunks, &journal, actor, station, id).unwrap();
+    commit(&mut chunks, &mut journal, &restore).unwrap();
+    for (cell, material, facing) in placed {
+        assert_eq!(chunks.block_at(cell), Some(material));
+        assert_eq!(journal.object_state(cell).unwrap().facing, facing);
+    }
+    for (cell, payload) in payloads {
+        assert_eq!(journal.train_payload(cell).unwrap(), payload);
+    }
+    assert_eq!(
+        journal
+            .container_at([69, 27, 10])
+            .unwrap()
+            .count(ItemKind::Block(16)),
+        1
+    );
 }

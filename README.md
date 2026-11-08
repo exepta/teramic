@@ -6233,3 +6233,14 @@ Kompakte Bewegungspakete verschieben vorhandene Fahrzeugmeshes und Collider,
 ohne sie bei jedem Fahrschritt neu zu bauen. Protokoll 118 und Zugindex ID15
 uebernehmen die gespeicherte Fahrt und lesen ID13-/ID14-Zuege weiterhin.
 [Bauanleitung und Steuerung](docs/train-building.md).
+
+
+Phase 215 leitet die Zugachse aus den Drehgestellen ab. Die verborgene Drehung
+von Fahrgestellwuerfeln verhindert die Montage nicht mehr; gespeicherte Formen
+und Blockzustaende bleiben erhalten. Beide realen Achskontakte pruefen einen
+passenden geladenen Gleisweg. Ausrichtungs-, Abstands- und echte Gleisfehler
+haben getrennte Meldungen. Protokoll 119 uebertraegt die neuen Fehlergruende.
+Die normale Lokvorlage ergaenzt einen optionalen Kessel-/Fuehrerhausaufbau und
+richtet sich nach vorhandenen Teilen. Beim Standardabstand bleiben nach dem
+Grundgeruest 26 gruene Aufbauplaetze sichtbar. Die Vorlage bleibt bis zur
+bestaetigten Montage erhalten, auch wenn das Fenster vorher geschlossen wird.

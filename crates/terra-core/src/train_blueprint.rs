@@ -88,14 +88,66 @@ pub fn template_with_wheelbase(
         .collect()
 }
 
+/// The workshop suggests a locomotive shell without making decoration mandatory.
+/// Existing cab, engine and frame coordinates stay identical to the functional guide.
+pub fn building_template(
+    chassis: [i64; 3],
+    facing: u8,
+    kind: VehicleKind,
+    wheelbase: u8,
+) -> Vec<BlueprintCell> {
+    let mut cells = template_with_wheelbase(chassis, facing, kind, wheelbase);
+    if cells.is_empty() || kind != VehicleKind::Locomotive {
+        return cells;
+    }
+    let length = i64::from(wheelbase);
+    let mut body = Vec::new();
+    for z in 3..length {
+        body.push(([0, 1, z], 219, 0));
+    }
+    body.extend([
+        ([0, 1, length], 223, 2),
+        ([0, 2, length], 224, 0),
+        ([0, 2, if length == 3 { 2 } else { 3 }], 225, 0),
+    ]);
+    // Walls sit against the outer sides of the existing cab. Two open center
+    // columns keep its driver, head space and rear entry free of suggested blocks.
+    for z in 0..=1 {
+        for x in [-1, 1] {
+            let side = if x < 0 { 3 } else { 1 };
+            body.push(([x, 0, z], train_parts::FRAME, 0));
+            for y in 1..=3 {
+                body.push(([x, y, z], if y == 3 { 246 } else { 245 }, side));
+            }
+        }
+        for x in -1..=1 {
+            body.push(([x, 4, z], 250, 0));
+        }
+    }
+    cells.extend(body.into_iter().map(|([x, y, z], material, relative)| {
+        let [x, z] = match facing {
+            0 => [x, z],
+            1 => [z, -x],
+            2 => [-x, -z],
+            _ => [-z, x],
+        };
+        BlueprintCell {
+            cell: [chassis[0] + x, chassis[1] + y, chassis[2] + z],
+            material,
+            facing: (facing + relative) % 4,
+        }
+    }));
+    cells
+}
+
 /// Green ghosts disappear only when the correct part and required axis are present.
 pub fn matches(cell: BlueprintCell, material: Option<u16>, facing: u8) -> bool {
     material == Some(cell.material)
         && match cell.material {
-            train_parts::BOGIE | train_parts::CHASSIS | train_parts::COUPLER => {
-                facing % 2 == cell.facing % 2
-            }
+            train_parts::BOGIE | train_parts::COUPLER => facing % 2 == cell.facing % 2,
             train_parts::CAB | train_parts::SEAT => facing == cell.facing,
+            train_parts::ENGINE => true,
+            material if crate::locomotive_parts::is_part(material) => facing == cell.facing,
             _ => true,
         }
 }
@@ -273,6 +325,149 @@ mod tests {
             assert!(
                 template_with_wheelbase([0; 3], 0, VehicleKind::Locomotive, wheelbase).is_empty()
             );
+        }
+    }
+
+    #[test]
+    fn optional_locomotive_shell_preserves_the_skeleton_and_driver_headroom_in_every_pose() {
+        for wheelbase in MIN_WHEELBASE..=MAX_WHEELBASE {
+            for facing in 0..4 {
+                let skeleton =
+                    template_with_wheelbase([0; 3], facing, VehicleKind::Locomotive, wheelbase);
+                let guide = building_template([0; 3], facing, VehicleKind::Locomotive, wheelbase);
+                assert!(guide.starts_with(&skeleton));
+                assert_eq!(guide.len(), usize::from(wheelbase) * 2 + 31);
+                assert!(guide.len() < crate::trains::MAX_PARTS);
+                let cells: BTreeSet<_> = guide.iter().map(|part| part.cell).collect();
+                assert_eq!(cells.len(), guide.len());
+                let turn = |[x, y, z]: [i64; 3]| match facing {
+                    0 => [x, y, z],
+                    1 => [z, y, -x],
+                    2 => [-x, y, -z],
+                    _ => [-z, y, x],
+                };
+                for z in 0..=1 {
+                    for y in 2..=3 {
+                        assert!(
+                            !cells.contains(&turn([0, y, z])),
+                            "cab head and rear entry stay clear"
+                        );
+                    }
+                    for x in -1..=1 {
+                        assert!(
+                            guide
+                                .iter()
+                                .any(|part| part.cell == turn([x, 4, z]) && part.material == 250)
+                        );
+                    }
+                }
+                assert!(
+                    guide
+                        .iter()
+                        .any(|part| part.material == 223 && part.facing == (facing + 2) % 4)
+                );
+                assert!(guide.iter().any(|part| part.material == 224));
+                let mut connected = BTreeSet::new();
+                let mut pending = vec![guide[0].cell];
+                while let Some(cell) = pending.pop() {
+                    if !connected.insert(cell) {
+                        continue;
+                    }
+                    for axis in 0..3 {
+                        for step in [-1, 1] {
+                            let mut neighbor = cell;
+                            neighbor[axis] += step;
+                            if cells.contains(&neighbor) && !connected.contains(&neighbor) {
+                                pending.push(neighbor);
+                            }
+                        }
+                    }
+                }
+                assert_eq!(
+                    connected, cells,
+                    "the optional shell has no disconnected cells"
+                );
+            }
+        }
+        assert!(building_template([0; 3], 4, VehicleKind::Locomotive, 4).is_empty());
+        assert_eq!(
+            building_template([0; 3], 0, VehicleKind::Freight, 4),
+            template([0; 3], 0, VehicleKind::Freight)
+        );
+    }
+
+    #[test]
+    fn matching_directional_body_parts_requires_the_guides_actual_orientation() {
+        let wall = BlueprintCell {
+            cell: [0; 3],
+            material: 245,
+            facing: 3,
+        };
+        assert!(matches(wall, Some(245), 3));
+        for facing in 0..3 {
+            assert!(!matches(wall, Some(245), facing));
+        }
+        assert!(!matches(wall, Some(246), 3));
+        for facing in 0..4 {
+            for material in [train_parts::CHASSIS, train_parts::ENGINE] {
+                assert!(matches(
+                    BlueprintCell {
+                        material,
+                        facing: 0,
+                        ..wall
+                    },
+                    Some(material),
+                    facing
+                ));
+            }
+        }
+    }
+
+    #[test]
+    fn optional_cab_shell_keeps_native_driver_headroom_and_side_window_eye_rays_clear() {
+        use crate::block_shapes::ShapeBox;
+        for wheelbase in [3, 4, 15] {
+            for facing in 0..4 {
+                let skeleton =
+                    template_with_wheelbase([0; 3], facing, VehicleKind::Locomotive, wheelbase);
+                let guide = building_template([0; 3], facing, VehicleKind::Locomotive, wheelbase);
+                let head = ShapeBox {
+                    minimum: [0.16, 1.485, 1.15],
+                    maximum: [0.84, 3.285, 1.85],
+                    hinged: false,
+                }
+                .rotated_y(facing);
+                // Offset from the window's central decorative mullion. The
+                // actual cab eye is 1+.485+.9+.72=3.105 above the chassis cell.
+                let rays = [(-0.2, 0.5), (0.5, 1.2)].map(|(left, right)| {
+                    ShapeBox {
+                        minimum: [left, 3.10, 1.345],
+                        maximum: [right, 3.11, 1.355],
+                        hinged: false,
+                    }
+                    .rotated_y(facing)
+                });
+                for part in guide.iter().skip(skeleton.len()) {
+                    for mut bounds in train_parts::boxes(part.material, part.facing) {
+                        for axis in 0..3 {
+                            bounds.minimum[axis] += part.cell[axis] as f64;
+                            bounds.maximum[axis] += part.cell[axis] as f64;
+                        }
+                        assert!(
+                            !bounds.intersects(head.minimum, head.maximum),
+                            "optional part {} clips driver head space",
+                            part.material
+                        );
+                        for ray in rays {
+                            assert!(
+                                !bounds.intersects(ray.minimum, ray.maximum),
+                                "optional part {} blocks the driver's actual window eye ray",
+                                part.material
+                            );
+                        }
+                    }
+                }
+            }
         }
     }
 }

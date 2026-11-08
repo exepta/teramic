@@ -245,7 +245,7 @@ def curved_boiler(mesh):
             mesh.box(p, [c + .03 for c in p], 'rivet', bevel=.006)
 
 
-def wall(mesh, window=False, door=False):
+def wall(mesh, window=False, door=False, sill=.32):
     if not window and not door:
         mesh.box([0, 0, 0], [1, 1, .16], 'train_black_iron', solid=True)
     else:
@@ -253,10 +253,10 @@ def wall(mesh, window=False, door=False):
                      ([.14, .88, 0], [.86, 1, .16])]:
             mesh.box(p, q, 'train_black_iron', solid=True)
         if window:
-            mesh.box([.14, 0, 0], [.86, .32, .16], 'train_black_iron', solid=True)
-            mesh.box([.14, .32, .067], [.86, .88, .09], 'glass', bevel=0)
+            mesh.box([.14, 0, 0], [.86, sill, .16], 'train_black_iron', solid=True)
+            mesh.box([.14, sill, .067], [.86, .88, .09], 'glass', bevel=0)
             for x in [.14, .48, .82]:
-                mesh.box([x, .32, .025], [x + .035, .88, .125], 'train_brass')
+                mesh.box([x, sill, .025], [x + .035, .88, .125], 'train_brass')
         if door:
             mesh.box([.18, .02, .035], [.82, .9, .095], 'train_dark_steel', solid=True)
             mesh.box([.25, .46, .02], [.75, .80, .035], 'glass', bevel=0)
@@ -395,7 +395,8 @@ def make(material, slug):
         cylinder(mesh, [.5, .5, .5], .32, .76, .96, 2, 'train_black_iron')
         mesh.box([.20, .2, 0], [.80, .8, .1], 'train_red', solid=True)
     elif material in [245, 246, 247, 248, 252, 253]:
-        wall(mesh, window=material in [246, 247], door=material == 248)
+        wall(mesh, window=material in [246, 247], door=material == 248,
+             sill=.08 if material == 246 else .32)
         if material in [252, 253]:
             mesh.box([0, .88, .08], [1, 1, .35], 'train_dark_steel', solid=True)
     elif material in [249, 250, 251]:
