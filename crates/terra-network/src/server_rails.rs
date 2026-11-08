@@ -548,13 +548,16 @@ fn prepare(
             &world.block_properties,
         );
         let half = Vec3::new(PLAYER_RADIUS, PLAYER_HALF_HEIGHT, PLAYER_RADIUS);
-        if world.bodies.iter().any(|body| {
-            boxes.iter().any(|shape| {
-                shape.intersects(
-                    (body.translation - half).to_array().map(f64::from),
-                    (body.translation + half).to_array().map(f64::from),
-                )
-            })
+        if world.body_entities.iter().any(|entity| {
+            entity != peer.body
+                && world.bodies.get(entity).is_ok_and(|body| {
+                    boxes.iter().any(|shape| {
+                        shape.intersects(
+                            (body.translation - half).to_array().map(f64::from),
+                            (body.translation + half).to_array().map(f64::from),
+                        )
+                    })
+                })
         }) {
             return Err(EditOutcome::Invalid);
         }

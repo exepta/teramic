@@ -3,6 +3,8 @@ use std::collections::BTreeSet;
 use terra_core::rails::{self, Piece};
 use terra_voxel::{BlockSection, SectionPos, global_to_section};
 
+#[path = "server_rail_actor_tests.rs"]
+mod actor;
 #[path = "server_rail_connections_tests.rs"]
 mod connections;
 #[path = "server_rail_context_tests.rs"]

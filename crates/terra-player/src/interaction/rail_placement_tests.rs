@@ -843,3 +843,182 @@ fn a_confirmed_seed_previews_and_signs_a_real_target_beyond_ordinary_block_reach
         "the signed request never speculatively publishes the extension"
     );
 }
+
+#[test]
+fn real_rail_preview_accepts_its_builder_inside_seed_curve_and_ramp_but_keeps_remote_bodies_protected()
+ {
+    use terra_network::{
+        client::{RemoteTrack, ReplicatedPlayers},
+        protocol::session::PlayerState,
+    };
+    for kind in ["seed", "curve", "ramp"] {
+        let (mut app, camera, _) = floor_fixture(WoodSpecies::Birch);
+        app.update();
+        let source = Piece::new([4, 1, 1], rails::STRAIGHT, 0).unwrap();
+        let start = rails::Endpoint {
+            anchor: source.anchor,
+            port: 1,
+        };
+        let floor = match kind {
+            "curve" => [10, 0, 12],
+            "ramp" => [4, 1, 12],
+            _ => [4, 0, 4],
+        };
+        if kind != "seed" {
+            app.world_mut()
+                .resource_scope(|world, mut journal: Mut<EditJournal>| {
+                    let mut chunks = world.resource_mut::<ChunkStore>();
+                    let plan = terra_world::rails::plan(
+                        &chunks,
+                        &journal,
+                        source.anchor,
+                        source.material,
+                        source.encoded_facing(),
+                    )
+                    .unwrap();
+                    terra_world::rails::commit(&mut chunks, &mut journal, &plan).unwrap();
+                });
+            app.world_mut()
+                .resource_mut::<PlacementPreview>()
+                .rail_start = Some(start);
+        }
+        block(&mut app.world_mut().resource_mut::<ChunkStore>(), floor, 3);
+        let point = Vec3::new(
+            floor[0] as f32 + 0.5,
+            (floor[1] + 1) as f32,
+            floor[2] as f32 + if kind == "seed" { 0.9 } else { 0.5 },
+        );
+        let center = if kind == "seed" {
+            Vec3::new(4.5, 1.0 + terra_physics::character::PLAYER_HALF_HEIGHT, 4.5)
+        } else {
+            let candidate = terra_world::rails::proposal_connection(
+                app.world().resource::<ChunkStore>(),
+                app.world().resource::<EditJournal>(),
+                start,
+                terra_voxel::blocks::BlockHit {
+                    position: floor,
+                    normal: [0, 1, 0],
+                    distance: 1.0,
+                },
+                [0.0; 2],
+                WoodSpecies::Birch,
+            )
+            .unwrap();
+            let endpoint = terra_world::rails::next_endpoint(&candidate).unwrap();
+            let state = candidate
+                .states
+                .iter()
+                .find(|(cell, _)| *cell == endpoint.anchor)
+                .unwrap()
+                .1
+                .unwrap();
+            let piece =
+                terra_world::rails::piece_from_state(endpoint.anchor, rails::STRAIGHT, state)
+                    .unwrap();
+            let mid = piece.paths()[0].sample(0.5).position;
+            Vec3::new(
+                mid[0] as f32,
+                1.0 + terra_physics::character::PLAYER_HALF_HEIGHT,
+                mid[2] as f32,
+            )
+        };
+        app.world_mut()
+            .spawn((crate::PlayerBody, Transform::from_translation(center)));
+        aim(
+            &mut app,
+            camera,
+            center + Vec3::Y * terra_physics::character::PLAYER_EYE_OFFSET,
+            point,
+        );
+        let local = terra_core::PlayerId(1);
+        app.world_mut()
+            .resource_mut::<terra_network::client::ClientSession>()
+            .player = Some(local);
+        let track = |player| {
+            let state = PlayerState {
+                player,
+                position: center.to_array(),
+                ..default()
+            };
+            RemoteTrack {
+                previous: state,
+                current: state,
+                received: std::time::Instant::now(),
+                interval: 0.05,
+            }
+        };
+        let mut remote = ReplicatedPlayers::default();
+        remote.players.insert(local, track(local));
+        app.insert_resource(remote);
+        app.update();
+        let preview = app.world().resource::<PlacementPreview>();
+        assert!(preview.valid, "{kind}: {:?}", preview.rail_error);
+        let half = Vec3::new(
+            terra_physics::character::PLAYER_RADIUS,
+            terra_physics::character::PLAYER_HALF_HEIGHT,
+            terra_physics::character::PLAYER_RADIUS,
+        );
+        assert!(
+            terra_world::placement::boxes(
+                preview.plan.as_ref().unwrap(),
+                app.world().resource::<ChunkStore>(),
+                app.world().resource::<EditJournal>(),
+                app.world()
+                    .resource::<terra_core::block_properties::BlockPropertiesCatalog>()
+            )
+            .iter()
+            .any(|shape| shape.intersects(
+                (center - half).to_array().map(f64::from),
+                (center + half).to_array().map(f64::from)
+            )),
+            "{kind}: actual actor/rail overlap is required"
+        );
+        let other = terra_core::PlayerId(9);
+        app.world_mut()
+            .resource_mut::<ReplicatedPlayers>()
+            .players
+            .insert(other, track(other));
+        app.update();
+        assert!(
+            !app.world().resource::<PlacementPreview>().valid,
+            "{kind}: another player at the same position still blocks"
+        );
+        assert_eq!(
+            app.world()
+                .resource::<PlacementPreview>()
+                .rail_error
+                .as_deref(),
+            Some("Ein Spieler steht im Gleisbereich")
+        );
+        assert!(
+            app.world()
+                .resource::<Messages<terra_network::client::RailPlacementRequest>>()
+                .is_empty()
+        );
+        app.world_mut()
+            .resource_mut::<ReplicatedPlayers>()
+            .players
+            .remove(&other);
+        press(&mut app, KeyCode::KeyB);
+        app.update();
+        let placement = take_placement(&mut app);
+        assert!(matches!(
+            (kind, placement.action),
+            (
+                "seed",
+                terra_network::client::RailPlacementAction::Seed { .. }
+            ) | (
+                "curve" | "ramp",
+                terra_network::client::RailPlacementAction::Stretch { .. }
+            )
+        ));
+        assert!(app.world().resource::<PlacementPreview>().rail_waiting);
+        assert!(
+            app.world()
+                .resource::<EditJournal>()
+                .block([floor[0], floor[1] + 1, floor[2]])
+                .is_none(),
+            "preview must never publish speculative rail cells"
+        );
+    }
+}

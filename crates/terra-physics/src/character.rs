@@ -3,6 +3,8 @@ use crate::TerrainCollisionState;
 use avian3d::prelude::*;
 use bevy::{ecs::system::SystemParam, prelude::*};
 use terra_world::{edits::EditJournal, streaming::ChunkStore};
+#[path = "character/rail_recovery.rs"]
+mod rail_recovery;
 
 pub const PLAYER_RADIUS: f32 = 0.32;
 pub const PLAYER_HALF_HEIGHT: f32 = 0.90;
@@ -167,6 +169,8 @@ pub struct CharacterSimulation<'w, 's> {
     collision: Res<'w, TerrainCollisionState>,
     train_collision: Res<'w, crate::trains::TrainCollisionState>,
     train_views: Res<'w, crate::TrainCollisionViews>,
+    train_colliders: Query<'w, 's, (), With<crate::TrainCollider>>,
+    properties: Res<'w, terra_core::block_properties::BlockPropertiesCatalog>,
     access: Option<Res<'w, terra_world::streaming::WorldAccess>>,
     time: Res<'w, Time<Fixed>>,
     gravity: Res<'w, Gravity>,
@@ -367,6 +371,7 @@ impl CharacterSimulation<'_, '_> {
         let _scope = terra_core::profiling::ScopeTimer::new("character.step");
         let _sample = self.profile.measure();
         let previous = *state;
+        self.recover_rail_support(entity, collider, state, input);
         if let Some(speed) = input.flight_speed {
             return self.flight_step(entity, collider, state, input.direction, speed);
         }

@@ -277,6 +277,15 @@ pub(super) fn install(app: &mut App) {
         .init_resource::<EditJournal>()
         .init_resource::<terra_core::block_properties::BlockPropertiesCatalog>()
         .add_systems(
+            RunFixedMainLoop,
+            // A slow frame can contain several fixed steps. Activate completed,
+            // validated jobs before that loop, rather than blocking every step
+            // on a collider that would otherwise arrive in the later Update.
+            (receive, ApplyDeferred)
+                .chain()
+                .in_set(bevy::app::RunFixedMainLoopSystems::BeforeFixedMainLoop),
+        )
+        .add_systems(
             Update,
             (receive, dispatch).chain().after(StreamingSet::Receive),
         );
@@ -664,6 +673,8 @@ fn receive(
                     collider,
                     Friction::new(0.0),
                     Restitution::new(0.0),
+                    Position(Vec3::from_array(origin.map(|v| v as f32))),
+                    Rotation::IDENTITY,
                     Transform::from_translation(Vec3::from_array(origin.map(|v| v as f32))),
                 ));
             });
@@ -798,6 +809,8 @@ fn build_collider_with_geometry(
 
 #[cfg(test)]
 mod confirmed_rail_tests;
+#[cfg(test)]
+mod fixed_receive_tests;
 #[cfg(test)]
 mod model_tests;
 #[cfg(test)]

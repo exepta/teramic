@@ -1100,3 +1100,53 @@ fn walk_crosses_negative_section_boundaries_without_catching_or_falling() {
     );
     assert!(app.world().get::<PlayerGrounded>(body).unwrap().0);
 }
+
+#[test]
+fn network_prediction_backpressure_keeps_the_queued_jump_and_body_until_acknowledgment() {
+    let mut app = app();
+    let entity = body(&mut app);
+    for _ in 0..120 {
+        app.update();
+    }
+    assert!(app.world().get::<PlayerGrounded>(entity).unwrap().0);
+    let mut session = ClientSession::default();
+    session.ready = true;
+    session.game_mode = terra_core::GameMode::Creative;
+    app.insert_resource(session);
+    let mut blocked_at = None;
+    for _ in 0..=terra_network::client::MAX_PREDICTION_LEAD {
+        let before = app.world().resource::<ClientSession>().pending_inputs;
+        app.update();
+        let pending = app.world().resource::<ClientSession>().pending_inputs;
+        if pending == before && pending > 0 {
+            blocked_at = Some(pending);
+            break;
+        }
+    }
+    let lead = blocked_at.expect("the real prediction window must apply bounded backpressure");
+    assert!(lead <= terra_network::client::MAX_PREDICTION_LEAD);
+    let position = app.world().get::<Transform>(entity).unwrap().translation;
+    let velocity = app.world().get::<LinearVelocity>(entity).unwrap().0;
+    app.world_mut().resource_mut::<WalkIntent>().jump = true;
+    for _ in 0..6 {
+        app.update();
+        assert!(
+            app.world().resource::<WalkIntent>().jump,
+            "predict(false) cannot consume a jump that the authority has not received"
+        );
+        assert_eq!(
+            app.world().get::<Transform>(entity).unwrap().translation,
+            position
+        );
+        assert_eq!(
+            app.world().get::<LinearVelocity>(entity).unwrap().0,
+            velocity
+        );
+        let session = app.world().resource::<ClientSession>();
+        assert!(session.ready && session.error.is_none());
+        assert_eq!(session.pending_inputs, lead);
+    }
+    // ACK reopening and the eventual single jump are exercised by the network
+    // flow/UDP regressions. This Player-level test verifies intent ownership at
+    // the real consumed_input=false boundary without forging a network ACK.
+}

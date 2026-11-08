@@ -76,6 +76,33 @@ pub(crate) fn inject_stalker_grip_for_test(
 }
 
 #[cfg(test)]
+pub(crate) fn movement_diagnostics_for_test(world: &mut World) -> Vec<String> {
+    world
+        .query::<(
+            &Peer,
+            Option<&Connected>,
+            Option<&Disconnecting>,
+            Option<&lightyear::connection::client::Disconnected>,
+        )>()
+        .iter(world)
+        .map(|(peer, connected, disconnecting, disconnected)| {
+            format!(
+                "received={} ack={} queued={} accepted={} synced={} connected={} disconnecting={} reason={:?} front={:?}",
+                peer.received,
+                peer.ack,
+                peer.inputs.len(),
+                peer.accepted,
+                peer.synced,
+                connected.is_some(),
+                disconnecting.is_some(),
+                disconnected.map(|d| &d.reason),
+                peer.inputs.front(),
+            )
+        })
+        .collect()
+}
+
+#[cfg(test)]
 pub(crate) fn elapse_tree_mining_timer_for_test(world: &mut World) -> bool {
     let mut peers = world.query::<&mut Peer>();
     peers.iter_mut(world).any(|mut peer| {
@@ -466,6 +493,7 @@ struct ControlWorld<'w, 's> {
     chunks: ResMut<'w, ChunkStore>,
     journal: ResMut<'w, EditJournal>,
     bodies: Query<'w, 's, &'static Transform, With<ServerCharacter>>,
+    body_entities: Query<'w, 's, Entity, With<ServerCharacter>>,
     identities: ResMut<'w, ConnectedProfiles>,
     gateway: Option<Res<'w, crate::gateway::Gateway>>,
 }

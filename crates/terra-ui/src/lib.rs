@@ -24,6 +24,9 @@ mod realm_title;
 mod settings;
 pub mod settlement_map;
 mod sleep;
+#[cfg(test)]
+#[path = "../../../tools/ui/check_styles.rs"]
+mod stylesheet_tests;
 mod survival;
 mod target_hud;
 mod trains;

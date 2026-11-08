@@ -254,13 +254,13 @@ pub(super) fn update(
                 && terra_world::trains::reserved_in(&session.trains.vehicles, edit.position)
         })
     });
-    let blocked = target.bodies.iter().any(|body| overlaps(body.translation))
-        || target.remote.as_ref().is_some_and(|players| {
-            players
-                .players
-                .values()
-                .any(|track| overlaps(track.position()))
-        });
+    let local_player = target.session.as_ref().and_then(|session| session.player);
+    let blocked = target.remote.as_ref().is_some_and(|players| {
+        players
+            .players
+            .iter()
+            .any(|(player, track)| Some(*player) != local_player && overlaps(track.position()))
+    });
     let within_height = target.config.as_ref().is_none_or(|config| {
         !config.world.bounded_world
             || plan

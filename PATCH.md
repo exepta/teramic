@@ -6715,3 +6715,49 @@ Spurweite und alte Speicherindizes sind ebenfalls geprüft. Keine Grafiktests,
 Spielclients oder Screenshots wurden gestartet.
 Clippy aller Targets mit `-D warnings`, Format, Diff, kopfloser Assetexport und
 der aktuelle vollständige Workspace-Build sind sauber.
+
+## 211. Stylesheet-Laden, Eingaberückstand Und Gleisbau Um Die Eigene Figur
+
+Die nicht unterstützte CSS-Kurzform inset im Zug-Stylesheet ist durch vier
+explizite Seitenabstände ersetzt. Alle 61 ausgelieferten Stylesheets werden nun
+im CPU-Test mit dem echten TiltUI-Assetparser geprüft. Die Zugvorlage gehört
+auch zur bestehenden kopflosen Template-Abnahme.
+
+Kurze nur serverseitige Simulationspausen konnten einen dauerhaften
+Eingaberückstand erzeugen: Ein neuer Input pro Client-Tick und höchstens ein
+verbrauchter Input pro Server-Tick lassen danach keinen Aufholspielraum. Der
+Client begrenzt seinen Vorlauf nun auf ungefähr 300 ms, abhängig vom festen Takt
+und begrenzt auf 8 bis 64 Eingaben. Er wartet bei voller Vorhersage auf echte
+Bestätigungen. Bereits simulierte Eingaben werden nicht verworfen; der Server
+behält seine tatsächliche Ein-Schritt-Abrechnung und Missbrauchsgrenze 128.
+
+Bestätigte Schritte verlassen die Warteschlange auch bei noch ausstehendem
+Kollisions-Replay. Der getrennte 30-Sekunden-Watchdog wird nach empfangenen
+Snapshots ausgewertet, damit gepufferter Fortschritt zuerst zählt. Wartende
+Sprungimpulse bleiben bei begrenzter Vorhersage erhalten. Fertige, weiterhin
+gültige Terrainkollisionen werden vor der festen Aufholschleife mit expliziter
+Physikpose aktiviert; tatsächliche SpatialQuery und alte Workerstände sind
+geprüft. Die globale Avian-Schedule wird nicht verändert.
+
+Gleisvorschau und Authority lassen den anfragenden Spieler selbst im neuen
+Gleis stehen. Nur seine echte Entity beziehungsweise sein lokales Replikat
+werden ausgenommen. Andere Spieler bleiben auch bei identischer Position
+geschützt; Rechte, Materialbedarf, Signaturen und normale Blockregeln bleiben
+erhalten. Tiefe Schienenüberschneidungen einer ruhenden Figur können über den
+gemeinsamen Motor um höchstens 1,02 m angehoben werden. Echte Physiküberschneidung,
+Halt oder erlaubter Schwebeflug, geladener Bewegungsraum und freier Kopfraum sind
+erforderlich. Normale Bloecke lösen das nicht aus; es gibt keinen seitlichen
+Versatz und keinen Teleportauftrag.
+
+Abnahme 211: 1.251 Tests in Network, Physics, Player und UI bestanden, keiner
+fehlgeschlagen; ein bestehender Test ignoriert. Ein realer UDP-Lauf mit 3600
+unabhängig getakteten Frames erreicht 60 simulierte Sekunden, 275 blockierte
+Server-Ticks, 90 Blockänderungen und maximal 18 offene Eingaben ohne Disconnect.
+Maximale beobachtete Positionsabweichung: 0,000079 m. Starts, Geraden, Kurven,
+Rampen, gleich positionierte andere Figuren, Decken, Schwebeflug, normale
+Festkörper und Quelldatenwechsel sind geprüft. Keine Grafiktests, Spielclients,
+Screenshots oder GPU-Abnahmen wurden gestartet.
+
+[Prüfbericht](tools/benchmarks/results/rail-input-recovery-2026-11-08/README.md).
+Clippy aller Workspace-Targets mit `-D warnings`, Format, Diff und der aktuelle
+vollständige Workspace-Build sind sauber.

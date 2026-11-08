@@ -1,4 +1,6 @@
 use super::*;
+#[path = "rail_placement_tests.rs"]
+mod rail_placement;
 use bevy::time::TimeUpdateStrategy;
 use std::time::{Duration, Instant};
 use terra_core::{GameConfig, TerraCorePlugin, block_shapes::ShapeBox};

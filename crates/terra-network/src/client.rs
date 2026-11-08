@@ -19,6 +19,17 @@ use terra_world::{
     },
 };
 
+/// Hard bound on predicted, unacknowledged simulation steps.
+pub const MAX_PREDICTION_LEAD: usize = 64;
+const PREDICTION_LEAD_SECONDS: f32 = 0.3;
+const INPUT_ACK_TIMEOUT: Duration = Duration::from_secs(30);
+
+fn prediction_lead(delta_seconds: f32) -> usize {
+    (PREDICTION_LEAD_SECONDS / delta_seconds)
+        .ceil()
+        .clamp(8.0, MAX_PREDICTION_LEAD as f32) as usize
+}
+
 #[path = "client_trees.rs"]
 mod trees;
 
@@ -350,6 +361,8 @@ pub struct ClientSession {
     ever_connected: bool,
     latest: Option<(u64, PlayerState)>,
     reconciled: u64,
+    acknowledged: u64,
+    acknowledged_at: Instant,
     last_view: u8,
     last_density: f32,
 }
@@ -422,12 +435,55 @@ impl Default for ClientSession {
             ever_connected: false,
             latest: None,
             reconciled: 0,
+            acknowledged: 0,
+            acknowledged_at: Instant::now(),
             last_view: 0,
             last_density: 1.0,
         }
     }
 }
 impl ClientSession {
+    fn observe_acknowledgment(&mut self, acknowledged: u64) {
+        if acknowledged > self.acknowledged && acknowledged <= self.sequence {
+            self.acknowledged = acknowledged;
+            self.acknowledged_at = Instant::now();
+        }
+    }
+
+    fn prediction_capacity(&mut self, delta_seconds: f32) -> bool {
+        let acknowledged = self.confirmed_state().map_or(0, |state| state.ack);
+        if acknowledged > self.sequence {
+            self.fail("Invalid input acknowledgement");
+            return false;
+        }
+        self.observe_acknowledgment(acknowledged);
+        // Acknowledged commands can no longer participate in any replay from
+        // this authoritative snapshot, even when its collider is still pending.
+        while self
+            .pending
+            .front()
+            .is_some_and(|input| input.sequence <= acknowledged)
+        {
+            self.pending.pop_front();
+        }
+        self.pending_inputs = self.pending.len();
+        self.pending.len() < prediction_lead(delta_seconds)
+    }
+
+    fn check_acknowledgment_liveness(&mut self) {
+        // Evaluate after receive_snapshots, so a resumed application processes
+        // buffered ACK progress before declaring its server unresponsive.
+        if self.ready
+            && self.error.is_none()
+            && self
+                .pending
+                .back()
+                .is_some_and(|input| input.sequence > self.acknowledged)
+            && self.acknowledged_at.elapsed() >= INPUT_ACK_TIMEOUT
+        {
+            self.fail("Server input acknowledgement timed out");
+        }
+    }
     pub fn active_stalker_grip(&self) -> Option<StalkerGrip> {
         (self.ready
             && !self.dead()
@@ -531,9 +587,7 @@ impl ClientSession {
         if !self.ready || self.teleporting || self.error.is_some() {
             return false;
         }
-        if self.pending.len() >= MAX_INPUT_BACKLOG {
-            tracing::warn!(sequence=self.sequence,ack=?self.confirmed_state().map(|s|s.ack),"Input acknowledgement backlog exceeded limit");
-            self.fail("Server input acknowledgement timed out");
+        if !self.prediction_capacity(simulation.delta_seconds()) {
             return false;
         }
         if self.dead() || self.predicted_vitals.dead() {
@@ -592,6 +646,9 @@ impl ClientSession {
             auto_climb: input.auto_climb,
             flight_speed: input.flight_speed,
         };
+        if self.pending.is_empty() {
+            self.acknowledged_at = Instant::now();
+        }
         self.pending.push_back(packet);
         self.outbox.push(packet);
         self.pending_inputs = self.pending.len();
@@ -1747,6 +1804,7 @@ fn receive_snapshots(
                     if state.generation != session.generation {
                         continue;
                     }
+                    session.observe_acknowledgment(state.ack);
                     session.latest = Some((packet.tick, state));
                     continue;
                 }
@@ -1908,6 +1966,7 @@ fn check_link(
         session.error = Some("Server connection lost".into());
         *status = ConnectionStatus::Disconnected;
     }
+    session.check_acknowledgment_liveness();
     if !session.ready
         && session.started.elapsed() > Duration::from_secs(30)
         && session.error.is_none()

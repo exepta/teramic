@@ -53,6 +53,12 @@ fn ordinary_edit_burst(host: &mut App, current: Vec3, count: usize) -> usize {
 
 fn ready_walker(id: u64) -> (App, App) {
     let mut host = server();
+    // Creative mode alone does not grant flight to an unprivileged remote
+    // profile. These high-speed fixtures explicitly request authorized flight.
+    host.world_mut()
+        .resource_mut::<GameConfig>()
+        .server
+        .allow_flight = true;
     let token = host
         .world()
         .resource::<server::ServerRuntime>()
@@ -66,6 +72,12 @@ fn ready_walker(id: u64) -> (App, App) {
             .confirmed_state()
             .is_some_and(|state| state.grounded)
     });
+    assert!(
+        client
+            .world()
+            .resource::<client::ClientSession>()
+            .allow_flight
+    );
     for _ in 0..18 {
         host.update();
         client.update();
@@ -122,7 +134,9 @@ fn real_udp_high_speed_prediction_keeps_its_distance_through_packet_and_ordinary
                     .world()
                     .resource::<client::ClientSession>()
                     .error
-                    .is_none()
+                    .is_none(),
+                "server={:?}",
+                server::movement_diagnostics_for_test(host.world_mut())
             );
         }
         let near = body_position(&mut client);
@@ -262,4 +276,223 @@ fn sparse_input_packets_cannot_repeatedly_renew_airborne_wait_and_suspend_gravit
         "packet pulses cannot buy a fresh gravity suspension: {after:?}"
     );
     assert!(after.ack >= 2);
+}
+
+// The renderer cannot publish a future epoch. This exercises the same actual
+// collision-readiness barrier as an unfinished section replacement, only on
+// the authoritative app; no movement acknowledgment or body is fabricated.
+fn hold_server_collision(
+    host: &mut App,
+    near: Vec3,
+    held: &mut std::collections::BTreeMap<terra_voxel::SectionPos, u64>,
+) {
+    let center = terra_voxel::global_to_section(near.to_array().map(|v| v.floor() as i64)).0;
+    for (&position, section) in &mut host.world_mut().resource_mut::<ChunkStore>().loaded {
+        if (position.x - center.x).abs() <= 1
+            && (position.y - center.y).abs() <= 1
+            && (position.z - center.z).abs() <= 1
+        {
+            if section.mesh_epoch != u64::MAX {
+                held.insert(position, section.mesh_epoch);
+            }
+            section.mesh_epoch = u64::MAX;
+        }
+    }
+}
+
+fn release_server_collision(
+    host: &mut App,
+    held: &mut std::collections::BTreeMap<terra_voxel::SectionPos, u64>,
+) {
+    let mut chunks = host.world_mut().resource_mut::<ChunkStore>();
+    for (position, epoch) in std::mem::take(held) {
+        if let Some(section) = chunks.loaded.get_mut(&position)
+            && section.mesh_epoch == u64::MAX
+        {
+            section.mesh_epoch = epoch;
+        }
+    }
+}
+
+#[test]
+fn real_udp_long_running_asymmetric_clocks_and_collision_stalls_bound_prediction_without_lost_steps()
+ {
+    use bevy::time::TimeUpdateStrategy;
+    let (mut host, mut client) = ready_walker(211_801);
+    let initial = body_position(&mut client);
+    let initial_sequence = client
+        .world()
+        .resource::<client::ClientSession>()
+        .prediction_sequence_for_test();
+    let mut reference_position = f64::from(initial.x);
+    let mut reference_velocity = 0.0_f64;
+    let mut direction = 1.0_f32;
+    let mut held = std::collections::BTreeMap::new();
+    let mut maximum_error = 0.0_f32;
+    let mut maximum_pending = 0;
+    let mut blocked_fixed_steps = 0;
+    let mut throttled_frames = 0;
+    let mut edits = 0;
+    let server_started = host.world().resource::<Time<Fixed>>().elapsed();
+    let client_started = client
+        .world()
+        .resource::<Time<bevy::time::Virtual>>()
+        .elapsed();
+    let deadline = Instant::now() + Duration::from_secs(120);
+    // These independent frame phases deliberately lose authoritative fixed
+    // steps while the client keeps running. Balanced one-update-each fixtures
+    // cannot reproduce the integrated server's permanent queue debt.
+    for frame in 0..3600 {
+        assert!(
+            Instant::now() < deadline,
+            "long-running movement test timed out"
+        );
+        if reference_position > f64::from(initial.x) + 8.0 {
+            direction = -1.0;
+        } else if reference_position < f64::from(initial.x) - 8.0 {
+            direction = 1.0;
+        }
+        client.world_mut().resource_mut::<Desired>().0 = CharacterInput {
+            direction: Vec3::X * direction,
+            flight_speed: Some(40.0),
+            ..Default::default()
+        };
+        client.insert_resource(TimeUpdateStrategy::ManualDuration(Duration::from_millis(
+            [10, 23, 17][frame % 3],
+        )));
+        let previous = client
+            .world()
+            .resource::<client::ClientSession>()
+            .prediction_sequence_for_test();
+        client.update();
+        let session = client.world().resource::<client::ClientSession>();
+        assert!(
+            session.ready && session.error.is_none(),
+            "frame={frame}: {:?}; sequence={} pending={} server={:?}",
+            session.error,
+            session.prediction_sequence_for_test(),
+            session.pending_inputs,
+            server::movement_diagnostics_for_test(host.world_mut())
+        );
+        let sequence = session.prediction_sequence_for_test();
+        maximum_pending = maximum_pending.max(session.pending_inputs);
+        assert!(session.pending_inputs <= client::MAX_PREDICTION_LEAD);
+        if sequence == previous && session.pending_inputs >= 18 {
+            throttled_frames += 1;
+        }
+        for _ in previous..sequence {
+            reference_velocity += (f64::from(direction) * 40.0 - reference_velocity)
+                * (1.0 - (-10.0_f64 / 60.0).exp());
+            reference_position += reference_velocity / 60.0;
+        }
+        let error = (body_position(&mut client).x - reference_position as f32).abs();
+        maximum_error = maximum_error.max(error);
+        assert!(
+            error < 0.12,
+            "frame={frame} max_error={maximum_error} actual={} expected={reference_position}",
+            body_position(&mut client).x
+        );
+
+        let stalled = frame % 60 < 4;
+        if stalled {
+            let near = Vec3::from_array(
+                client
+                    .world()
+                    .resource::<client::ClientSession>()
+                    .confirmed_state()
+                    .unwrap()
+                    .position,
+            );
+            hold_server_collision(&mut host, near, &mut held);
+        } else {
+            release_server_collision(&mut host, &mut held);
+        }
+        if frame % 120 == 30 {
+            let near = body_position(&mut client);
+            edits += ordinary_edit_burst(&mut host, near, 3);
+        }
+        host.insert_resource(TimeUpdateStrategy::ManualDuration(Duration::from_millis(
+            [25, 10, 14][frame % 3],
+        )));
+        let before = host.world().resource::<Time<Fixed>>().elapsed();
+        host.update();
+        if stalled {
+            let elapsed = host.world().resource::<Time<Fixed>>().elapsed() - before;
+            blocked_fixed_steps += (elapsed.as_secs_f64() * 60.0).round() as usize;
+        }
+        // Real UDP transport/task workers get CPU time, while simulated
+        // independent clocks cover more than the reported 54-second failure.
+        std::thread::sleep(Duration::from_millis(1));
+    }
+    release_server_collision(&mut host, &mut held);
+    assert!(
+        host.world().resource::<Time<Fixed>>().elapsed() - server_started > Duration::from_secs(54)
+    );
+    assert!(
+        client
+            .world()
+            .resource::<Time<bevy::time::Virtual>>()
+            .elapsed()
+            - client_started
+            > Duration::from_secs(54)
+    );
+    assert!(
+        blocked_fixed_steps > 128,
+        "blocked fixed steps={blocked_fixed_steps}"
+    );
+    assert!(
+        throttled_frames > 0,
+        "the prediction horizon was never exercised"
+    );
+    assert!(edits >= 60, "ordinary authoritative edits={edits}");
+    assert!(
+        client
+            .world()
+            .resource::<client::ClientSession>()
+            .prediction_sequence_for_test()
+            - initial_sequence
+            > 2500
+    );
+
+    // Stop producing new fixed inputs while still receiving real snapshots.
+    // Every previously simulated step must be ACKed and replay to the same
+    // position; none may be silently discarded to escape the queue limit.
+    client.insert_resource(TimeUpdateStrategy::ManualDuration(Duration::ZERO));
+    host.insert_resource(TimeUpdateStrategy::ManualDuration(Duration::from_secs_f64(
+        1.0 / 60.0,
+    )));
+    wait(&mut host, &mut [&mut client], |_, clients| {
+        clients[0]
+            .world()
+            .resource::<client::ClientSession>()
+            .pending_inputs
+            == 0
+    });
+    let session = client.world().resource::<client::ClientSession>();
+    assert!(session.ready && session.error.is_none());
+    let acknowledged_position = session.confirmed_state().unwrap().position[0];
+    assert!((acknowledged_position - reference_position as f32).abs() < 0.12);
+    assert!((body_position(&mut client).x - reference_position as f32).abs() < 0.12);
+    let drained_sequence = client
+        .world()
+        .resource::<client::ClientSession>()
+        .prediction_sequence_for_test();
+    client.insert_resource(TimeUpdateStrategy::ManualDuration(Duration::from_secs_f64(
+        1.0 / 60.0,
+    )));
+    for _ in 0..24 {
+        host.update();
+        client.update();
+        std::thread::sleep(Duration::from_millis(1));
+    }
+    assert!(
+        client
+            .world()
+            .resource::<client::ClientSession>()
+            .prediction_sequence_for_test()
+            >= drained_sequence + 20
+    );
+    eprintln!(
+        "movement_long_run simulated_client_seconds=60 speed=40 blocked_fixed_steps={blocked_fixed_steps} ordinary_edits={edits} maximum_pending={maximum_pending} throttled_frames={throttled_frames} maximum_position_error={maximum_error:.6}"
+    );
 }

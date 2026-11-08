@@ -6201,3 +6201,8 @@ Laderaum und Montagestelle. Rechtsklick auf die Montagestelle oeffnet Montage,
 Demontage und Verbundverwaltung. Ladung und Sitzplaetze bleiben mit dem
 gespeicherten Fahrzeug verbunden. Protokoll 116; ID13 liest weiterhin alte Welten.
 [Bauanleitung, Grenzen und CPU-Pruefbericht](tools/benchmarks/results/train-assembly-movement-2026-11-08/README.md).
+
+Phase 211 korrigiert den Ladefehler im Zug-Stylesheet und den wachsenden
+Eingaberueckstand bei nur serverseitigen Simulationspausen. Gleise lassen sich
+durch die eigene Figur platzieren; andere Spieler bleiben geschuetzt.
+[Korrekturen und CPU-Abnahme](tools/benchmarks/results/rail-input-recovery-2026-11-08/README.md).

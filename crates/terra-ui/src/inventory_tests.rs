@@ -2142,6 +2142,7 @@ fn inventory_templates_load_with_only_builtin_or_registered_tilt_ui_elements() {
         "crafting-panel",
         "item-browser",
         "recipe-inspector",
+        "train-workshop",
     ]
     .map(|name| {
         let handle = app

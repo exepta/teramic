@@ -177,6 +177,8 @@ pub(super) fn reset_prediction(
     session.predicted_vitals = state.survival;
     session.respawn_error = None;
     session.sequence = 0;
+    session.acknowledged = 0;
+    session.acknowledged_at = Instant::now();
     session.pending.clear();
     session.outbox.clear();
     session.pending_inputs = 0;
