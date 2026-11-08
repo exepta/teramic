@@ -1438,6 +1438,40 @@ fn only_two_cell_furniture_scene_geometry_can_extend_into_a_second_vertical_cell
 }
 
 #[test]
+fn bogie_gauge_bounds_are_shared_and_never_expand_other_models_or_vertical_limits() {
+    let primitive = PrimitiveTemplate {
+        positions: vec![[-0.61, 0.0, 0.0], [1.61, 1.0, 0.0], [1.61, 1.0, 1.0]],
+        normals: vec![[0.0, 0.0, 1.0]; 3],
+        tangents: Vec::new(),
+        uvs: vec![[0.0; 2]; 3],
+        indices: vec![0, 1, 2],
+        material: 0,
+    };
+    assert!(bake_transform(211, &mut primitive.clone(), bevy::math::Affine3A::IDENTITY).is_ok());
+    for id in [210, 212, 213, 214, 215, 216, 217, 65000] {
+        assert!(
+            bake_transform(id, &mut primitive.clone(), bevy::math::Affine3A::IDENTITY).is_err()
+        );
+    }
+    for translation in [
+        Vec3::X * 0.001,
+        -Vec3::X * 0.001,
+        Vec3::Y * 0.001,
+        -Vec3::Y * 0.001,
+    ] {
+        assert!(
+            bake_transform(
+                211,
+                &mut primitive.clone(),
+                bevy::math::Affine3A::from_translation(translation)
+            )
+            .is_err()
+        );
+    }
+    assert!(!test_static_scene("terra/blocks/models/train_bogie.gltf", 211).is_empty());
+}
+
+#[test]
 fn only_beds_extend_into_the_paired_horizontal_cell() {
     let long = PrimitiveTemplate {
         tangents: Vec::new(),

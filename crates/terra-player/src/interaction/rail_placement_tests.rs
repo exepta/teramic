@@ -533,10 +533,11 @@ fn confirmed_seed_stretches_continuously_then_advances_only_after_accepted_repli
     let request = take_placement(&mut app);
     assert_eq!(
         request.action,
-        RailPlacementAction::Connect {
+        RailPlacementAction::Stretch {
             start,
             position: hit.position,
-            expected: 3
+            expected: 3,
+            signature: terra_world::rails::connection_signature(&plan, start)
         }
     );
     assert_eq!(app.world().resource::<EditJournal>().rail_module_count(), 1);
@@ -784,9 +785,61 @@ fn continuous_preview_uses_real_curved_and_rising_geometry_from_the_confirmed_se
         app.update();
         let extension = take_placement(&mut app);
         assert!(
-            matches!(extension.action, terra_network::client::RailPlacementAction::Connect {start: actual, ..} if actual == start)
+            matches!(extension.action, terra_network::client::RailPlacementAction::Stretch {start: actual, ..} if actual == start)
         );
         assert_eq!(app.world().resource::<EditJournal>().rail_module_count(), 1);
         assert_no_legacy_requests(&app);
     }
+}
+
+#[test]
+fn a_confirmed_seed_previews_and_signs_a_real_target_beyond_ordinary_block_reach() {
+    use terra_network::{client::RailPlacementAction, protocol::session::EditOutcome};
+    let (mut app, camera, _) = floor_fixture(WoodSpecies::Spruce);
+    press(&mut app, KeyCode::KeyB);
+    app.update();
+    let request = take_placement(&mut app);
+    let seed = app
+        .world()
+        .resource::<PlacementPreview>()
+        .plan
+        .clone()
+        .unwrap();
+    release(&mut app);
+    commit_replica(&mut app, &seed);
+    acknowledge(&mut app, request, 2101, EditOutcome::Applied);
+    app.update();
+    let start = app
+        .world()
+        .resource::<PlacementPreview>()
+        .rail_start
+        .unwrap();
+    aim(
+        &mut app,
+        camera,
+        Vec3::new(4.5, 3.0, 8.5),
+        Vec3::new(4.5, 1.0, 24.5),
+    );
+    app.update();
+    let hit = app
+        .world()
+        .resource::<TargetBlock>()
+        .0
+        .expect("the rail-specific picker reaches the actual distant floor");
+    assert!(hit.distance > 8.0 && hit.distance <= rails::RAIL_BUILD_REACH);
+    let preview = app.world().resource::<PlacementPreview>();
+    assert!(preview.valid, "{:?}", preview.rail_error);
+    let plan = preview.plan.clone().unwrap();
+    let signature = terra_world::rails::connection_signature(&plan, start);
+    press(&mut app, KeyCode::KeyB);
+    app.update();
+    let request = take_placement(&mut app);
+    assert!(
+        matches!(request.action,RailPlacementAction::Stretch{start:actual,position,signature:actual_signature,..} if actual==start && position==hit.position && actual_signature==signature)
+    );
+    assert_eq!(
+        app.world().resource::<EditJournal>().rail_module_count(),
+        1,
+        "the signed request never speculatively publishes the extension"
+    );
 }

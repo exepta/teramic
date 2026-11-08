@@ -30,6 +30,7 @@ impl Plugin for TerraPlayerPlugin {
             .init_resource::<crate::CameraInputState>()
             .init_resource::<TargetBlock>()
             .init_resource::<TargetWorld>()
+            .init_resource::<crate::TargetTrain>()
             .init_resource::<crate::interaction::TargetCreature>()
             .init_resource::<BlockPalette>()
             .init_resource::<crate::interaction::ActiveItem>()

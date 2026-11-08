@@ -212,7 +212,7 @@ fn color_label(color: terra_core::beds::DyeColor) -> String {
     }
 }
 
-fn item_metadata(item: ItemKind, palette: &BlockPalette) -> (String, String, String) {
+pub(super) fn item_metadata(item: ItemKind, palette: &BlockPalette) -> (String, String, String) {
     if let ItemKind::HeraldicCape { cape, heraldry } = item {
         let (name, _, description) = item_metadata(ItemKind::Cape(cape), palette);
         return (

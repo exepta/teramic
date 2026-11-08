@@ -111,6 +111,7 @@ pub(super) fn check(command: EditCommand, peer: &Peer, world: &ControlWorld) -> 
         | EditAction::ConnectRail { .. }
         | EditAction::BuildRail { .. }
         | EditAction::SeedRail { .. }
+        | EditAction::StretchRail { .. }
         | EditAction::CollectConveyor { .. }
         | EditAction::DyeConveyor { .. }
         | EditAction::DyeFabric { .. }
@@ -174,6 +175,7 @@ pub(super) fn check(command: EditCommand, peer: &Peer, world: &ControlWorld) -> 
         | EditAction::ConnectRail { position, .. }
         | EditAction::BuildRail { position, .. }
         | EditAction::SeedRail { position, .. }
+        | EditAction::StretchRail { position, .. }
         | EditAction::Farm { position, .. }
         | EditAction::RotateObject { position, .. }
         | EditAction::Surface { position, .. }
@@ -244,11 +246,26 @@ pub(super) fn check(command: EditCommand, peer: &Peer, world: &ControlWorld) -> 
                 .season(world.config.world.seasons),
         ),
     );
+    let visible_reach = selected.map_or(4.5, |target| match target {
+        WorldTarget::Block(hit) => hit.distance.min(4.5),
+        WorldTarget::Prop(hit) => hit.distance.min(4.5),
+    });
+    if terra_world::trains::raycast(
+        &world.journal,
+        eye.to_array().map(f64::from),
+        direction.to_array().map(f64::from),
+        visible_reach,
+    )
+    .is_some()
+    {
+        return EditOutcome::Occluded;
+    }
     match command.action {
         EditAction::HarvestTree { .. }
         | EditAction::ConnectRail { .. }
         | EditAction::BuildRail { .. }
         | EditAction::SeedRail { .. }
+        | EditAction::StretchRail { .. }
         | EditAction::ConnectConveyor { .. }
         | EditAction::CollectConveyor { .. }
         | EditAction::DyeConveyor { .. }
@@ -298,6 +315,32 @@ pub(super) fn check(command: EditCommand, peer: &Peer, world: &ControlWorld) -> 
             expected,
             material,
         } => {
+            if material != 0
+                && (terra_world::trains::reserved(&world.journal, position)
+                    || block
+                        .and_then(|hit| {
+                            terra_world::placement::propose(
+                                &world.chunks,
+                                &world.journal,
+                                hit,
+                                terra_core::ItemKind::Block(material),
+                                (
+                                    eye.to_array().map(f64::from),
+                                    direction.to_array().map(f64::from),
+                                ),
+                                command.look,
+                            )
+                            .ok()
+                        })
+                        .is_some_and(|plan| {
+                            plan.edits.iter().any(|edit| {
+                                edit.material != 0
+                                    && terra_world::trains::reserved(&world.journal, edit.position)
+                            })
+                        }))
+            {
+                return EditOutcome::Invalid;
+            }
             let harvest_material = if material == 0 {
                 mined_slab(command, peer, world).map_or(expected, |part| part.removed)
             } else {
@@ -1162,6 +1205,7 @@ pub(super) fn apply(
         | EditAction::ConnectRail { .. }
         | EditAction::BuildRail { .. }
         | EditAction::SeedRail { .. }
+        | EditAction::StretchRail { .. }
         | EditAction::ConnectConveyor { .. }
         | EditAction::CollectConveyor { .. }
         | EditAction::DyeConveyor { .. }

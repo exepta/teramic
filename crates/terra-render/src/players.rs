@@ -244,6 +244,22 @@ pub(crate) fn assets(
     });
 }
 
+fn train_seat_yaw(
+    session: Option<&terra_network::client::ClientSession>,
+    binding: Option<terra_core::trains::SeatBinding>,
+) -> Option<f32> {
+    let session = session.filter(|session| session.ready)?;
+    let binding = binding?;
+    let vehicle = session
+        .trains
+        .vehicles
+        .iter()
+        .find(|vehicle| vehicle.id == binding.vehicle)?;
+    vehicle
+        .seat_pose(usize::from(binding.part))
+        .map(|(_, yaw)| yaw)
+}
+
 pub(crate) fn render(
     mut commands: Commands,
     players: Option<Res<ReplicatedPlayers>>,
@@ -282,23 +298,32 @@ pub(crate) fn render(
         }
         transform.translation = track.position();
         transform.rotation = Quat::from_rotation_y(track.current.look[0]);
-        motion.mounted = track.current.mounted.is_some();
-        motion.riding_pitch = mounts
-            .as_ref()
-            .and_then(|m| m.remote(avatar.0))
-            .map_or(0.0, |p| p.jump.pitch * 0.65);
-        let mounted_yaw = mounts
-            .as_ref()
-            .and_then(|m| m.remote(avatar.0))
-            .map(|p| p.horse.yaw)
-            .or_else(|| track.current.mounted.map(|m| m.yaw));
+        let train_yaw = train_seat_yaw(session.as_deref(), track.current.train_seat);
+        motion.mounted = train_yaw.is_some() || track.current.mounted.is_some();
+        motion.riding_pitch = if train_yaw.is_some() {
+            0.0
+        } else {
+            mounts
+                .as_ref()
+                .and_then(|m| m.remote(avatar.0))
+                .map_or(0.0, |p| p.jump.pitch * 0.65)
+        };
+        let mounted_yaw = train_yaw.or_else(|| {
+            mounts
+                .as_ref()
+                .and_then(|m| m.remote(avatar.0))
+                .map(|p| p.horse.yaw)
+                .or_else(|| track.current.mounted.map(|m| m.yaw))
+        });
         motion.head_yaw =
             mounted_yaw.map_or(0.0, |yaw| riding::relative_yaw(track.current.look[0], yaw));
         if let Some(yaw) = mounted_yaw {
-            transform.translation = mounts
-                .as_ref()
-                .and_then(|m| m.remote(avatar.0))
-                .map_or(transform.translation, |p| p.center);
+            if train_yaw.is_none() {
+                transform.translation = mounts
+                    .as_ref()
+                    .and_then(|m| m.remote(avatar.0))
+                    .map_or(transform.translation, |p| p.center);
+            }
             transform.rotation = Quat::from_rotation_y(yaw);
         }
         motion.pitch = track.current.look[1];
@@ -324,23 +349,34 @@ pub(crate) fn render(
             .as_ref()
             .and_then(|session| session.sleepers.iter().find(|sleep| sleep.player == id))
             .copied();
-        let position = mounts
-            .as_ref()
-            .and_then(|m| m.remote(id))
-            .map_or_else(|| track.position(), |p| p.center);
+        let train_yaw = train_seat_yaw(session.as_deref(), track.current.train_seat);
+        let position = if train_yaw.is_some() {
+            track.position()
+        } else {
+            mounts
+                .as_ref()
+                .and_then(|m| m.remote(id))
+                .map_or_else(|| track.position(), |p| p.center)
+        };
         let mut motion = AvatarMotion::new(position);
         motion.sleeping = sleep.is_some();
-        motion.mounted = track.current.mounted.is_some();
-        motion.riding_pitch = mounts
-            .as_ref()
-            .and_then(|m| m.remote(id))
-            .map_or(0.0, |p| p.jump.pitch * 0.65);
+        motion.mounted = train_yaw.is_some() || track.current.mounted.is_some();
+        motion.riding_pitch = if train_yaw.is_some() {
+            0.0
+        } else {
+            mounts
+                .as_ref()
+                .and_then(|m| m.remote(id))
+                .map_or(0.0, |p| p.jump.pitch * 0.65)
+        };
         motion.seat = if motion.mounted { 1.0 } else { 0.0 };
-        let mounted_yaw = mounts
-            .as_ref()
-            .and_then(|m| m.remote(id))
-            .map(|p| p.horse.yaw)
-            .or_else(|| track.current.mounted.map(|m| m.yaw));
+        let mounted_yaw = train_yaw.or_else(|| {
+            mounts
+                .as_ref()
+                .and_then(|m| m.remote(id))
+                .map(|p| p.horse.yaw)
+                .or_else(|| track.current.mounted.map(|m| m.yaw))
+        });
         motion.head_yaw =
             mounted_yaw.map_or(0.0, |yaw| riding::relative_yaw(track.current.look[0], yaw));
         let root = commands
@@ -502,7 +538,20 @@ pub(crate) fn local_avatar(
     let (yaw, pitch, _) = cameras.iter().next().map_or((0.0, 0.0, 0.0), |camera| {
         camera.rotation().to_euler(EulerRot::YXZ)
     });
-    let position = mounts.as_ref().and_then(|m| m.local()).map_or_else(
+    let train_yaw = train_seat_yaw(
+        session.as_deref(),
+        session.as_ref().and_then(|session| {
+            session
+                .train_seat
+                .filter(|binding| Some(binding.player) == session.uuid)
+        }),
+    );
+    let horse = if train_yaw.is_some() {
+        None
+    } else {
+        mounts.as_ref().and_then(|mounts| mounts.local())
+    };
+    let position = horse.map_or_else(
         || {
             presentation.map_or(body.translation, |presentation| {
                 presentation.visual_position(body.translation, fixed.overstep_fraction())
@@ -510,10 +559,8 @@ pub(crate) fn local_avatar(
         },
         |p| p.center,
     );
-    let mounted_yaw = mounts
-        .as_ref()
-        .and_then(|m| m.local())
-        .map(|p| p.horse.yaw)
+    let mounted_yaw = train_yaw
+        .or_else(|| horse.map(|pose| pose.horse.yaw))
         .or_else(|| session.as_ref().and_then(|s| s.mounted).map(|m| m.yaw));
     let transform = sleep.map_or_else(
         || {
@@ -531,10 +578,7 @@ pub(crate) fn local_avatar(
         let mut motion = AvatarMotion::new(position);
         motion.sleeping = sleep.is_some();
         motion.mounted = mounted_yaw.is_some();
-        motion.riding_pitch = mounts
-            .as_ref()
-            .and_then(|m| m.local())
-            .map_or(0.0, |p| p.jump.pitch * 0.65);
+        motion.riding_pitch = horse.map_or(0.0, |pose| pose.jump.pitch * 0.65);
         motion.seat = if motion.mounted { 1.0 } else { 0.0 };
         motion.head_yaw = mounted_yaw.map_or(0.0, |horse| riding::relative_yaw(yaw, horse));
         let root = commands
@@ -583,10 +627,7 @@ pub(crate) fn local_avatar(
             motion.pitch = pitch;
             motion.sleeping = sleep.is_some();
             motion.mounted = mounted_yaw.is_some();
-            motion.riding_pitch = mounts
-                .as_ref()
-                .and_then(|m| m.local())
-                .map_or(0.0, |p| p.jump.pitch * 0.65);
+            motion.riding_pitch = horse.map_or(0.0, |pose| pose.jump.pitch * 0.65);
             motion.head_yaw = mounted_yaw.map_or(0.0, |horse| riding::relative_yaw(yaw, horse));
             for (part, mut current_layers) in &mut parts {
                 if part.0 == root && *current_layers != layers {
@@ -1221,5 +1262,98 @@ mod tests {
         assert!(!expected.abs_diff_eq(current, 0.001));
         assert!(avatar.translation.abs_diff_eq(expected, 0.0001));
         assert!(avatar.rotation.abs_diff_eq(Quat::IDENTITY, 0.0001));
+    }
+
+    #[test]
+    fn train_seat_uses_confirmed_body_position_and_authored_yaw_without_horse_pitch() {
+        let player = terra_core::PlayerUuid::from_u128(44);
+        let binding = terra_core::trains::SeatBinding {
+            player,
+            vehicle: 7,
+            part: 0,
+        };
+        let mut app = App::new();
+        app.init_resource::<terra_network::client::ClientSession>();
+        let yaw = {
+            let mut session = app
+                .world_mut()
+                .resource_mut::<terra_network::client::ClientSession>();
+            session.ready = true;
+            session.uuid = Some(player);
+            session.train_seat = Some(binding);
+            session
+                .trains
+                .vehicles
+                .push(terra_core::trains::VehicleView {
+                    id: 7,
+                    owner: player,
+                    kind: terra_core::trains::VehicleKind::Passenger,
+                    anchor: [-16, 9, 31],
+                    parts: vec![terra_core::trains::TrainPart {
+                        offset: [0, 1, 0],
+                        material: terra_core::train_parts::SEAT,
+                        facing: 3,
+                        wood: terra_core::WoodSpecies::Cherry,
+                    }],
+                    couplings: [None; 2],
+                    revision: 1,
+                    mass_kg: 20,
+                });
+            let yaw = train_seat_yaw(Some(&session), Some(binding)).unwrap();
+            assert_eq!(yaw, 3.0 * std::f32::consts::FRAC_PI_2);
+            assert!(
+                train_seat_yaw(
+                    Some(&session),
+                    Some(terra_core::trains::SeatBinding {
+                        vehicle: 99,
+                        ..binding
+                    })
+                )
+                .is_none()
+            );
+            assert!(
+                train_seat_yaw(
+                    Some(&session),
+                    Some(terra_core::trains::SeatBinding { part: 1, ..binding })
+                )
+                .is_none()
+            );
+            yaw
+        };
+        app.insert_resource(Time::<Fixed>::from_seconds(0.02))
+            .insert_resource(terra_player::CameraPerspective::ThirdPersonFront)
+            .insert_resource(AvatarAssets {
+                parts: [Vec::new(), Vec::new()],
+                eyelids: None,
+                material: Handle::default(),
+            })
+            .add_systems(Update, local_avatar);
+        let center = app
+            .world()
+            .resource::<terra_network::client::ClientSession>()
+            .seated_state()
+            .unwrap()
+            .position;
+        app.world_mut().spawn((
+            terra_player::PlayerBody,
+            Transform::from_translation(center),
+        ));
+        app.update();
+        let world = app.world_mut();
+        let (pose, motion) = world
+            .query_filtered::<(&Transform, &AvatarMotion), With<LocalAvatar>>()
+            .single(world)
+            .unwrap();
+        assert!(
+            pose.translation.abs_diff_eq(center, 0.0001),
+            "server body center must not receive another feet offset"
+        );
+        assert!(
+            pose.rotation
+                .abs_diff_eq(Quat::from_rotation_y(yaw), 0.0001)
+        );
+        assert!(motion.mounted);
+        assert_eq!(motion.seat, 1.0);
+        assert_eq!(motion.riding_pitch, 0.0);
     }
 }

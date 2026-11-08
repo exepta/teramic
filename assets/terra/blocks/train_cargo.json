@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "id": 216,
+  "name": "Wagen-Laderaum",
+  "description": "Modular railway vehicle part. Connect parts beside an assembly station, then assemble the vehicle.",
+  "creative_category": "building",
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/train_cargo.gltf",
+  "struct_block": true,
+  "hardness": 1.8,
+  "resistance": 9,
+  "required_tool": "pickaxe",
+  "mining_level": 0,
+  "collision_boxes": [
+    {
+      "minimum": [
+        0.08,
+        0.02,
+        0.08
+      ],
+      "maximum": [
+        0.92,
+        0.87,
+        0.92
+      ]
+    },
+    {
+      "minimum": [
+        0.05,
+        0.87,
+        0.05
+      ],
+      "maximum": [
+        0.95,
+        0.96,
+        0.95
+      ]
+    },
+    {
+      "minimum": [
+        0.13,
+        0.05,
+        0.055
+      ],
+      "maximum": [
+        0.22,
+        0.88,
+        0.945
+      ]
+    },
+    {
+      "minimum": [
+        0.78,
+        0.05,
+        0.055
+      ],
+      "maximum": [
+        0.87,
+        0.88,
+        0.945
+      ]
+    },
+    {
+      "minimum": [
+        0.43,
+        0.58,
+        0.025
+      ],
+      "maximum": [
+        0.57,
+        0.76,
+        0.09
+      ]
+    }
+  ]
+}

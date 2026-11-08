@@ -82,7 +82,8 @@ pub(super) fn update(
         }
         if let EditAction::ConnectRail { position, .. }
         | EditAction::BuildRail { position, .. }
-        | EditAction::SeedRail { position, .. } = edit.action
+        | EditAction::SeedRail { position, .. }
+        | EditAction::StretchRail { position, .. } = edit.action
         {
             emit(
                 Vec3::from_array(position.map(|value| value as f32 + 0.5)),

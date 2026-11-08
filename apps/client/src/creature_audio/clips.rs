@@ -145,7 +145,7 @@ impl Surface {
             Some(
                 Dirt | Farmland | Path | Clay | Mud | MushroomStem | PurpleMushroomCap
                 | RedMushroomCap | YellowMushroomCap | GreenMushroomCap | BlueMushroomCap
-                | WhiteMushroomCap | Conveyor,
+                | WhiteMushroomCap | Conveyor | TrainSeat,
             ) => Self::Dirt,
             Some(Snow | SnowLayer | CastleSnowWall) => Self::Snow,
             Some(material) if terra_core::rails::is_rail(material as u16) => Self::Wood,
@@ -156,7 +156,8 @@ impl Surface {
                 | CherryPlanks | CherryDoor | CherryWindow | WoodenGear | WoodenShaft | WaterWheel
                 | WoodenLargeGear | ItemHopper | ItemImporter | GearboxHorizontal | GearboxVertical
                 | Mixer | FilteredFunnel | BeltMerger | FilteredTunnel | BeltDistributor | Campfire
-                | WoodPipe | Basin | HoldBlock | CastleTimberWall,
+                | WoodPipe | Basin | HoldBlock | CastleTimberWall | TrainCargo
+                | TrainAssemblyStation,
             ) => Self::Wood,
             Some(Gravel | Ballast | BallastStairs | BallastSlab) => Self::Gravel,
             Some(Glass | GlassPipe | Ice | SaltCrystal | IceCrystal) => Self::Glass,
@@ -425,6 +426,8 @@ mod tests {
         expected.extend([Wood; 10]); // Railway modules retain timber sleeper contact sounds.
         expected.extend([Gravel; 3]); // Railway ballast and its shaped embankment blocks.
         expected.push(Stone); // The separate switch stand has an iron base.
+        expected.extend([Stone; 5]); // Chassis, wheelsets, frame, coupler and cab floor are metal.
+        expected.extend([Dirt, Wood, Wood]); // Upholstered seat, timber cargo and workshop tabletop.
         assert_eq!(
             expected.len(),
             usize::from(terra_voxel::MaterialId::LAST) + 1

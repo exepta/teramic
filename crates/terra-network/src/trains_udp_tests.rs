@@ -1,0 +1,565 @@
+//! Real reliable-channel assembly, private cargo, seating and late-join replication.
+use super::*;
+use crate::protocol::trains::{TrainAction, TrainOutcome};
+use terra_core::{
+    Inventory, train_parts,
+    trains::{TrainError, VehicleKind},
+};
+
+fn put(host: &mut App, position: [i64; 3], material: u16) {
+    host.world_mut()
+        .resource_scope(|world, mut journal: Mut<EditJournal>| {
+            let mut chunks = world.resource_mut::<ChunkStore>();
+            let expected = chunks.block_at(position).unwrap();
+            if expected != material {
+                assert!(
+                    commit_block_edit(
+                        &mut chunks,
+                        &mut journal,
+                        &BlockEditRequest {
+                            position,
+                            expected_material: expected,
+                            material
+                        },
+                        &Default::default()
+                    )
+                    .unwrap()
+                );
+            }
+        });
+}
+fn send(app: &mut App, action: TrainAction) -> u64 {
+    let request = app
+        .world_mut()
+        .resource_mut::<client::ClientSession>()
+        .train_request(action)
+        .unwrap();
+    let id = request.0.request;
+    app.world_mut().write_message(request);
+    id
+}
+fn response(host: &mut App, owner: &mut App, watcher: &mut App, id: u64) -> TrainOutcome {
+    wait_phase(
+        "train command response",
+        host,
+        &mut [owner, watcher],
+        |_, clients| {
+            clients[0]
+                .world()
+                .resource::<client::ClientSession>()
+                .last_train_result
+                .as_ref()
+                .is_some_and(|result| result.request == id)
+        },
+    );
+    owner
+        .world()
+        .resource::<client::ClientSession>()
+        .last_train_result
+        .as_ref()
+        .unwrap()
+        .outcome
+        .clone()
+}
+
+#[test]
+fn udp_real_vehicle_assembly_private_cargo_seating_late_join_and_atomic_dismantling() {
+    let mut host = server();
+    let address = host
+        .world()
+        .resource::<server::ServerRuntime>()
+        .address
+        .unwrap();
+    let mut owner = profile_client(
+        address,
+        PlayerProfile {
+            name: "RailBuilder".into(),
+            ..Default::default()
+        },
+    );
+    let mut watcher = profile_client(
+        address,
+        PlayerProfile {
+            name: "TrainObserver".into(),
+            ..Default::default()
+        },
+    );
+    wait_phase(
+        "train clients ready",
+        &mut host,
+        &mut [&mut owner, &mut watcher],
+        |_, clients| {
+            clients.iter().all(|app| {
+                app.world().resource::<client::ClientSession>().ready
+                    && app
+                        .world()
+                        .resource::<client::ClientSession>()
+                        .confirmed_state()
+                        .is_some_and(|state| state.grounded)
+            })
+        },
+    );
+    let state = owner
+        .world()
+        .resource::<client::ClientSession>()
+        .confirmed_state()
+        .unwrap();
+    owner
+        .world_mut()
+        .spawn(terra_physics::character::body_bundle(Vec3::from_array(
+            state.position,
+        )));
+    let ground =
+        (state.position[1] - terra_physics::character::PLAYER_HALF_HEIGHT).floor() as i64 - 1;
+    let base = [
+        state.position[0].floor() as i64,
+        ground + 1,
+        state.position[2].floor() as i64 + 3,
+    ];
+    let at = |x, y, z| [base[0] + x, base[1] + y, base[2] + z];
+    let station = at(3, 2, 2);
+    let start = at(0, 2, 2);
+    let cargo_cell = at(0, 3, 4);
+    let volume: Vec<_> = (-2..=6)
+        .flat_map(|x| (0..=6).flat_map(move |y| (-2..=9).map(move |z| at(x, y, z))))
+        .collect();
+    wait_phase(
+        "train real assembly area streamed",
+        &mut host,
+        &mut [&mut owner, &mut watcher],
+        |host, _| {
+            volume.iter().all(|cell| {
+                host.world()
+                    .resource::<ChunkStore>()
+                    .block_at(*cell)
+                    .is_some()
+            })
+        },
+    );
+    for cell in &volume {
+        put(&mut host, *cell, 0);
+    }
+    floor(
+        &mut host,
+        (-2..=6).flat_map(|x| (-2..=9).map(move |z| at(x, -1, z))),
+    );
+    host.world_mut()
+        .resource_scope(|world, mut journal: Mut<EditJournal>| {
+            let mut chunks = world.resource_mut::<ChunkStore>();
+            for piece in [
+                Piece::new(base, terra_core::rails::STRAIGHT, 0).unwrap(),
+                Piece::new(at(0, 0, 4), terra_core::rails::STRAIGHT, 0).unwrap(),
+            ] {
+                let plan = rails::plan(&chunks, &journal, piece.anchor, piece.material, 0).unwrap();
+                assert!(rails::commit(&mut chunks, &mut journal, &plan).unwrap());
+            }
+        });
+    let mut parts = Vec::new();
+    for z in 0..=6 {
+        parts.push((
+            at(0, 2, z),
+            if z == 2 {
+                train_parts::CHASSIS
+            } else {
+                train_parts::FRAME
+            },
+        ));
+    }
+    parts.extend([
+        (at(0, 1, 1), train_parts::BOGIE),
+        (at(0, 1, 5), train_parts::BOGIE),
+        (at(0, 2, -1), train_parts::COUPLER),
+        (at(0, 2, 7), train_parts::COUPLER),
+        (at(0, 3, 3), train_parts::CAB),
+        (cargo_cell, train_parts::CARGO),
+    ]);
+    for (cell, material) in &parts {
+        put(&mut host, *cell, *material);
+        host.world_mut()
+            .resource_mut::<EditJournal>()
+            .set_object_state(
+                *cell,
+                Some(terra_world::edits::BlockObjectState {
+                    wood: WoodSpecies::Birch,
+                    ..Default::default()
+                }),
+            )
+            .unwrap();
+    }
+    for y in -1..=1 {
+        put(&mut host, at(3, y, 2), 3);
+    }
+    put(&mut host, station, train_parts::STATION);
+    let uuid = owner
+        .world()
+        .resource::<client::ClientSession>()
+        .uuid
+        .unwrap();
+    {
+        let mut journal = host.world_mut().resource_mut::<EditJournal>();
+        journal
+            .set_container(
+                cargo_cell,
+                Inventory {
+                    slots: vec![ItemStack {
+                        item: ItemKind::Block(3),
+                        count: 42,
+                    }],
+                    ..Default::default()
+                },
+            )
+            .unwrap();
+        assert!(
+            journal
+                .gameplay_mut()
+                .inventories
+                .entry(uuid)
+                .or_default()
+                .creative_set(
+                    0,
+                    ItemStack {
+                        item: ItemKind::Block(3),
+                        count: 5
+                    }
+                )
+        );
+        journal.gameplay_mut().revision += 1;
+    }
+    wait_phase(
+        "train assembly parts and player stock replicated",
+        &mut host,
+        &mut [&mut owner, &mut watcher],
+        |_, clients| {
+            clients.iter().all(|app| {
+                app.world().resource::<ChunkStore>().block_at(station) == Some(train_parts::STATION)
+            }) && clients[0]
+                .world()
+                .resource::<client::ClientSession>()
+                .inventory
+                .count(ItemKind::Block(3))
+                == 5
+        },
+    );
+    let feet = [
+        base[0] as f32 + 5.5,
+        (ground + 1) as f32,
+        base[2] as f32 + 2.5,
+    ];
+    teleport(
+        "train station stance",
+        &mut host,
+        &mut owner,
+        &mut watcher,
+        feet,
+    );
+    let revision = owner
+        .world()
+        .resource::<client::ClientSession>()
+        .trains
+        .revision;
+    let id = send(
+        &mut owner,
+        TrainAction::Assemble {
+            station,
+            start,
+            kind: VehicleKind::Locomotive,
+            revision,
+        },
+    );
+    let TrainOutcome::Changed {
+        vehicle: Some(vehicle_id),
+    } = response(&mut host, &mut owner, &mut watcher, id)
+    else {
+        panic!("assembly must be accepted");
+    };
+    wait_phase(
+        "train assembled on both peers",
+        &mut host,
+        &mut [&mut owner, &mut watcher],
+        |host, clients| {
+            host.world()
+                .resource::<EditJournal>()
+                .gameplay()
+                .trains
+                .vehicles
+                .contains_key(&vehicle_id)
+                && clients.iter().all(|app| {
+                    app.world()
+                        .resource::<client::ClientSession>()
+                        .trains
+                        .vehicles
+                        .iter()
+                        .any(|car| car.id == vehicle_id)
+                        && parts.iter().all(|(cell, _)| {
+                            app.world().resource::<ChunkStore>().block_at(*cell) == Some(0)
+                        })
+                })
+        },
+    );
+    assert!(
+        watcher
+            .world()
+            .resource::<client::ClientSession>()
+            .train_cargo
+            .is_none()
+    );
+    let car = host
+        .world()
+        .resource::<EditJournal>()
+        .gameplay()
+        .trains
+        .vehicles[&vehicle_id]
+        .clone();
+    assert_eq!(car.owner, uuid);
+    assert_eq!(car.parts.len(), parts.len());
+    let cargo = car.cargo_indices().next().unwrap();
+    let seat = car
+        .parts
+        .iter()
+        .position(|part| part.material == train_parts::CAB)
+        .unwrap() as u16;
+    let forbidden = send(
+        &mut watcher,
+        TrainAction::OpenCargo {
+            vehicle: vehicle_id,
+            part: cargo,
+        },
+    );
+    wait_phase(
+        "foreign train cargo rejected",
+        &mut host,
+        &mut [&mut owner, &mut watcher],
+        |_, clients| {
+            clients[1]
+                .world()
+                .resource::<client::ClientSession>()
+                .last_train_result
+                .as_ref()
+                .is_some_and(|result| result.request == forbidden)
+        },
+    );
+    assert!(matches!(
+        watcher
+            .world()
+            .resource::<client::ClientSession>()
+            .last_train_result
+            .as_ref()
+            .unwrap()
+            .outcome,
+        TrainOutcome::Rejected(TrainError::NotOwner)
+    ));
+    let cargo_feet = [
+        base[0] as f32 + 2.5,
+        (ground + 1) as f32,
+        base[2] as f32 + 4.5,
+    ];
+    teleport(
+        "train cargo stance",
+        &mut host,
+        &mut owner,
+        &mut watcher,
+        cargo_feet,
+    );
+    let open = send(
+        &mut owner,
+        TrainAction::OpenCargo {
+            vehicle: vehicle_id,
+            part: cargo,
+        },
+    );
+    let TrainOutcome::Cargo(snapshot) = response(&mut host, &mut owner, &mut watcher, open) else {
+        panic!("owner must open real cargo");
+    };
+    assert_eq!(snapshot.inventory.count(ItemKind::Block(3)), 42);
+    let player_revision = owner
+        .world()
+        .resource::<client::ClientSession>()
+        .inventory
+        .revision;
+    let transfer = send(
+        &mut owner,
+        TrainAction::Cargo {
+            vehicle: vehicle_id,
+            part: cargo,
+            revision: snapshot.revision,
+            player_revision,
+            gesture: terra_core::containers::ContainerGesture::Wheel {
+                slot: terra_core::INVENTORY_SLOTS as u8,
+                to_cursor: false,
+            },
+            reserved: [0; terra_core::INVENTORY_SLOTS],
+        },
+    );
+    let TrainOutcome::Cargo(updated) = response(&mut host, &mut owner, &mut watcher, transfer)
+    else {
+        panic!("cargo gesture must be atomic");
+    };
+    assert_eq!(updated.inventory.count(ItemKind::Block(3)), 41);
+    assert_eq!(
+        owner
+            .world()
+            .resource::<client::ClientSession>()
+            .inventory
+            .count(ItemKind::Block(3)),
+        6
+    );
+    assert!(
+        owner
+            .world()
+            .resource::<client::ClientSession>()
+            .inventory
+            .cursor
+            .is_none()
+    );
+    assert!(
+        watcher
+            .world()
+            .resource::<client::ClientSession>()
+            .train_cargo
+            .is_none()
+    );
+    let board = send(
+        &mut owner,
+        TrainAction::Seat {
+            vehicle: vehicle_id,
+            part: seat,
+        },
+    );
+    assert!(
+        matches!(response(&mut host,&mut owner,&mut watcher,board),TrainOutcome::Seated(Some(binding)) if binding.vehicle==vehicle_id && binding.part==seat)
+    );
+    wait_phase(
+        "train seat authoritative snapshot",
+        &mut host,
+        &mut [&mut owner, &mut watcher],
+        |_, clients| {
+            clients[0]
+                .world()
+                .resource::<client::ClientSession>()
+                .confirmed_state()
+                .is_some_and(|state| {
+                    state
+                        .train_seat
+                        .is_some_and(|binding| binding.vehicle == vehicle_id)
+                })
+        },
+    );
+    let leave = send(&mut owner, TrainAction::Leave);
+    assert!(matches!(
+        response(&mut host, &mut owner, &mut watcher, leave),
+        TrainOutcome::Seated(None)
+    ));
+    wait_phase(
+        "train leave confirmed",
+        &mut host,
+        &mut [&mut owner, &mut watcher],
+        |host, clients| {
+            clients[0]
+                .world()
+                .resource::<client::ClientSession>()
+                .train_seat
+                .is_none()
+                && clients[0]
+                    .world()
+                    .resource::<client::ClientSession>()
+                    .trains
+                    .revision
+                    == host
+                        .world()
+                        .resource::<EditJournal>()
+                        .gameplay()
+                        .trains
+                        .revision
+        },
+    );
+    let mut late = profile_client(
+        address,
+        PlayerProfile {
+            name: "TrainLateJoin".into(),
+            ..Default::default()
+        },
+    );
+    wait_phase(
+        "late train public geometry",
+        &mut host,
+        &mut [&mut owner, &mut watcher, &mut late],
+        |_, clients| {
+            clients[2].world().resource::<client::ClientSession>().ready
+                && clients[2]
+                    .world()
+                    .resource::<client::ClientSession>()
+                    .trains
+                    .vehicles
+                    .iter()
+                    .any(|car| car.id == vehicle_id)
+        },
+    );
+    assert!(
+        late.world()
+            .resource::<client::ClientSession>()
+            .train_cargo
+            .is_none()
+    );
+    teleport(
+        "train dismantling stance",
+        &mut host,
+        &mut owner,
+        &mut watcher,
+        feet,
+    );
+    let revision = owner
+        .world()
+        .resource::<client::ClientSession>()
+        .trains
+        .revision;
+    let dismantle = send(
+        &mut owner,
+        TrainAction::Dismantle {
+            station,
+            vehicle: vehicle_id,
+            revision,
+        },
+    );
+    assert!(
+        matches!(response(&mut host,&mut owner,&mut watcher,dismantle),TrainOutcome::Changed{vehicle:Some(id)} if id==vehicle_id)
+    );
+    wait_phase(
+        "train restored on owner observer and late join",
+        &mut host,
+        &mut [&mut owner, &mut watcher, &mut late],
+        |_, clients| {
+            clients.iter().all(|app| {
+                app.world()
+                    .resource::<client::ClientSession>()
+                    .trains
+                    .vehicles
+                    .is_empty()
+                    && parts.iter().all(|(cell, material)| {
+                        app.world().resource::<ChunkStore>().block_at(*cell) == Some(*material)
+                    })
+            })
+        },
+    );
+    assert_eq!(
+        host.world()
+            .resource::<EditJournal>()
+            .container_at(cargo_cell),
+        Some(&updated.inventory)
+    );
+    assert_eq!(
+        host.world()
+            .resource::<EditJournal>()
+            .gameplay()
+            .inventories[&uuid]
+            .count(ItemKind::Block(3)),
+        6
+    );
+    assert!(
+        host.world()
+            .resource::<EditJournal>()
+            .gameplay()
+            .inventories[&uuid]
+            .cursor
+            .is_none()
+    );
+}

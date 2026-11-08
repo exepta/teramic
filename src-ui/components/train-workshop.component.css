@@ -1,0 +1,45 @@
+.train-workshop-overlay { position: absolute; inset: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background-color: #09060488; }
+.train-workshop-panel { position: relative; width: 880px; max-width: 94%; max-height: 94%; }
+.train-panel-fill { position: absolute; left: 14px; right: 14px; top: 14px; bottom: 14px; background-color: #241a14f2; }
+.train-workshop-content { position: relative; display: flex; flex-direction: column; gap: 10px; padding: 32px; }
+.train-workshop-content p { margin: 0; color: #dfcba5; font-size: 12px; line-height: 16px; text-wrap: wrap; }
+.train-workshop-content h2 { margin: 0; color: #f5dfb0; font-family: serif; font-size: 23px; }
+.train-workshop-content h3 { margin: 0; color: #efdab2; font-size: 14px; }
+.train-workshop-heading, .train-vehicle-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.train-workshop-heading { justify-content: center; }
+.train-workshop-columns { display: flex; gap: 20px; }
+.train-workshop-controls { display: flex; flex-direction: column; gap: 8px; width: 240px; flex-shrink: 0; }
+.train-workshop-vehicles { display: flex; flex-direction: column; gap: 6px; flex-grow: 1; min-width: 0; }
+.train-workshop-content button { min-height: 30px; padding: 5px 10px; border: 1px solid #89603f; border-radius: 3px; background-color: #38271c; color: #f0dcb7; font-size: 12px; text-align: center; }
+.train-workshop-content button:hover { border-color: #b68752; background-color: #4b3423; }
+.train-workshop-content button:disabled { opacity: .45; }
+.train-workshop-content .train-primary { background-color: #644325; }
+.train-kind-buttons { display: flex; flex-wrap: wrap; gap: 5px; }
+.train-kind-buttons button { width: 47%; }
+.train-workshop-content .train-vehicle { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-height: 46px; padding: 7px 12px; }
+.train-workshop-content .train-vehicle.selected { border-color: #d3ac64; background-color: #573a24; }
+.train-workshop-content .train-vehicle.second { border-color: #9aa481; background-color: #354030; }
+.train-pagination, .train-coupling { display: flex; align-items: center; justify-content: flex-end; gap: 6px; }
+.train-coupling button { flex-grow: 1; }
+.train-workshop-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-top: 8px; }
+.train-workshop-footer p { flex-grow: 1; }
+.train-slots { display: flex; flex-wrap: wrap; gap: 4px; width: 334.4px; max-width: 100%; align-self: center; }
+.train-workshop-content .train-slot { position: relative; width: 33.6px; height: 33.6px; min-width: 33.6px; min-height: 33.6px; padding: 3px; border: 1px solid #73573e; background-color: #1b1510; }
+.train-slot img { width: 25.6px; height: 25.6px; }
+.train-slot p { position: absolute; bottom: 1px; right: 3px; color: #fff3d5; font-size: 11px; text-shadow: 1px 2px #000000; }
+@media (max-width: 900px) {
+  .train-workshop-panel { width: 700px; }
+  .train-workshop-content { padding: 25px; gap: 7px; }
+  .train-workshop-controls { width: 200px; gap: 5px; }
+  .train-workshop-columns { gap: 12px; }
+  .train-workshop-content .train-vehicle { min-height: 39px; padding: 4px 8px; }
+}
+@media (max-height: 680px) {
+  .train-workshop-content { padding: 23px; gap: 5px; }
+  .train-workshop-content h2 { font-size: 20px; }
+  .train-slots { width: 302px; }
+  .train-workshop-content .train-slot { width: 30px; height: 30px; min-width: 30px; min-height: 30px; }
+  .train-slot img { width: 22px; height: 22px; }
+  .train-workshop-content .train-vehicle { min-height: 32px; padding: 3px 8px; }
+  .train-workshop-content button { min-height: 25px; padding: 3px 7px; }
+}

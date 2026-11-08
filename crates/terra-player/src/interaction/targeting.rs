@@ -14,12 +14,19 @@ pub struct TargetBlock(pub Option<BlockHit>);
 pub struct TargetWorld(pub Option<WorldTarget>);
 #[derive(Resource, Default, Debug)]
 pub struct TargetCreature(pub Option<u64>);
+#[derive(Resource, Default, Debug)]
+pub struct TargetTrain(pub Option<terra_world::trains::TrainHit>);
+
+#[cfg(test)]
+#[path = "train_target_tests.rs"]
+mod train_tests;
 
 pub(crate) fn target_creature(
     camera: Query<(&Transform, &crate::CameraLook), With<TerraCamera>>,
     bodies: Query<&Transform, With<crate::PlayerBody>>,
     creatures: Option<Res<terra_network::client::ReplicatedCreatures>>,
     block: Res<TargetBlock>,
+    train: Option<Res<TargetTrain>>,
     mut target: ResMut<TargetCreature>,
 ) {
     target.0 = None;
@@ -38,7 +45,12 @@ pub(crate) fn target_creature(
         .to_array()
         .map(f64::from);
     let direction = (look.rotation() * Vec3::NEG_Z).to_array().map(f64::from);
-    let reach = block.0.map_or(4.5, |b| b.distance.min(4.5));
+    let reach = block.0.map_or(4.5, |b| b.distance.min(4.5)).min(
+        train
+            .as_ref()
+            .and_then(|target| target.0)
+            .map_or(4.5, |hit| hit.distance),
+    );
     target.0 = creatures
         .creatures
         .values()
@@ -70,7 +82,12 @@ pub(crate) fn target_block(
         Option<Res<terra_core::GameConfig>>,
         Option<Res<terra_core::WorldClock>>,
     ),
+    mut train: Option<ResMut<TargetTrain>>,
+    session: Option<Res<terra_network::client::ClientSession>>,
 ) {
+    if let Some(train) = &mut train {
+        train.0 = None;
+    }
     let Some((camera, look)) = camera.iter().next() else {
         target.0 = None;
         world_target.0 = None;
@@ -86,8 +103,16 @@ pub(crate) fn target_block(
     } else {
         camera.translation
     };
+    let rail_placement = !input.pressed(terra_core::GameAction::Break)
+        && active
+            .as_ref()
+            .and_then(|item| item.0)
+            .and_then(terra_core::ItemKind::block_material)
+            .is_some_and(terra_core::rails::is_rail);
     let picker = if input.pressed(terra_core::GameAction::Break) {
         terra_world::targeting::pick_world_for_mining
+    } else if rail_placement {
+        terra_world::targeting::pick_world_for_rails
     } else if active
         .as_ref()
         .and_then(|item| item.0)
@@ -133,6 +158,48 @@ pub(crate) fn target_block(
             ),
         ),
     );
+    if let Some(train) = &mut train {
+        let origin = origin.to_array().map(f64::from);
+        let direction = (look.rotation() * Vec3::NEG_Z).to_array().map(f64::from);
+        let limit = if rail_placement {
+            terra_core::rails::RAIL_BUILD_REACH
+        } else {
+            4.5
+        };
+        let reach = world_target.0.map_or(limit, |target| match target {
+            WorldTarget::Block(hit) => hit.distance.min(limit),
+            WorldTarget::Prop(hit) => hit.distance.min(limit),
+        });
+        let hit = session.as_ref().map_or_else(
+            || terra_world::trains::raycast(&journal, origin, direction, reach),
+            |session| {
+                terra_world::trains::raycast_views(
+                    &session.trains.vehicles,
+                    origin,
+                    direction,
+                    reach,
+                )
+            },
+        );
+        if let Some(hit) = hit {
+            // A replicated vehicle never lets a ray see through unknown terrain.
+            let loaded = (0..=(hit.distance * 16.0).ceil() as usize).all(|step| {
+                let distance = (step as f64 / 16.0).min(hit.distance);
+                chunks
+                    .block_at(std::array::from_fn(|axis| {
+                        (origin[axis] + direction[axis] * distance).floor() as i64
+                    }))
+                    .is_some()
+            });
+            if loaded {
+                // Extended construction rays still cannot interact with a
+                // distant cab or cargo slot through the normal-use controls.
+                train.0 = (hit.distance <= 4.5).then_some(hit);
+                target.0 = None;
+                world_target.0 = None;
+            }
+        }
+    }
 }
 
 #[cfg(test)]

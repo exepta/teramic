@@ -14,6 +14,7 @@ pub fn supported(material: u16) -> bool {
         || construction::is_stair(material)
         || construction::is_slab(material)
         || terra_core::castle::is_castle(material)
+        || terra_core::train_parts::is_train(material)
 }
 
 fn cycle(value: u8, count: u8, reverse: bool) -> u8 {

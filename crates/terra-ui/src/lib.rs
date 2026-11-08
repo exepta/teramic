@@ -26,6 +26,8 @@ pub mod settlement_map;
 mod sleep;
 mod survival;
 mod target_hud;
+mod trains;
+pub use trains::{TrainUiAction, TrainView};
 mod text_editing;
 pub use mob_health::MobHealthHud;
 pub use pets::{PetMenuAction, PetMenuView, PetPortrait};

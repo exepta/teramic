@@ -17,6 +17,10 @@ mod pot_tests;
 mod rail_tests;
 #[path = "server_sapling_placement_tests.rs"]
 mod sapling_placement_tests;
+#[path = "server_train_authority_tests.rs"]
+mod train_authority_tests;
+#[path = "server_train_protection_tests.rs"]
+mod train_protection_tests;
 #[path = "server_wrench_tests.rs"]
 mod wrench_tests;
 

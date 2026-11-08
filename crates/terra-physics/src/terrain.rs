@@ -171,6 +171,7 @@ fn profile_current(
 #[derive(Resource, Default)]
 pub struct TerrainCollisionState {
     sections: HashMap<SectionPos, ReadySection>,
+    interest: HashSet<SectionPos>,
     pub active_colliders: usize,
     pub pending_jobs: usize,
     pub completed_jobs: usize,
@@ -178,6 +179,9 @@ pub struct TerrainCollisionState {
 }
 
 impl TerrainCollisionState {
+    pub(crate) fn in_dispatch_interest(&self, section: SectionPos) -> bool {
+        self.interest.contains(&section)
+    }
     /// Empty sections count as ready too. Never walk into ungenerated or stale collision data.
     pub fn ready_for_aabb(
         &self,
@@ -321,6 +325,7 @@ fn dispatch(
 ) {
     let _scope = terra_core::profiling::ScopeTimer::new("collision.dispatch");
     let Some(centers) = focus.centers() else {
+        state.interest.clear();
         return;
     };
     jobs.0.retain(|position, _| {
@@ -329,7 +334,7 @@ fn dispatch(
                 .iter()
                 .any(|&center| nearby(*position, center, RETAIN_RADIUS))
     });
-    let mut candidates: Vec<_> = centers
+    let positions: Vec<_> = centers
         .iter()
         .flat_map(|&center| {
             (-BUILD_RADIUS..=BUILD_RADIUS).flat_map(move |z| {
@@ -339,6 +344,11 @@ fn dispatch(
                 })
             })
         })
+        .collect();
+    state.interest.clear();
+    state.interest.extend(positions.iter().copied());
+    let mut candidates: Vec<_> = positions
+        .into_iter()
         .filter_map(|position| {
             let section = chunks.loaded.get(&position)?;
             let epoch = journal.mesh_epoch(position);
@@ -400,7 +410,8 @@ fn dispatch(
             .chain([
                 28, 29, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 99, 100, 141, 142, 143,
                 144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159,
-                160, 161, 162, 163, 164, 165, 166, 167, 168, 169,
+                160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 210, 211, 212, 213, 214, 215,
+                216, 217,
             ])
             .collect();
         jobs.0.insert(
@@ -557,7 +568,8 @@ fn model_geometry(
             }
         }
     }
-    // A neighboring hinge may swing into this section without occupying a voxel here.
+    // Hinges and wide bogie wheels can enter a neighboring section without
+    // owning a voxel there. Each section keeps its clipped physical share.
     for axis in [0, 2] {
         for boundary in [-1, 16] {
             for y in 0..16 {
@@ -567,7 +579,8 @@ fn model_geometry(
                     p[1] += y;
                     p[2 - axis] += tangent;
                     if let Some(material) = block_at(p)
-                        && terra_world::objects::is_opening(material)
+                        && (terra_world::objects::is_opening(material)
+                            || material == terra_core::train_parts::BOGIE)
                     {
                         append(p, material);
                     }
@@ -789,3 +802,5 @@ mod confirmed_rail_tests;
 mod model_tests;
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod train_profile_tests;

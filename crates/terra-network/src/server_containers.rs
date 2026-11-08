@@ -165,7 +165,7 @@ fn snapshot(world: &ControlWorld, position: [i64; 3]) -> Option<ContainerSnapsho
         return value.valid().then_some(value);
     }
     if position.iter().any(|p| p.unsigned_abs() > 990_000)
-        || world.chunks.block_at(position) != Some(29)
+        || !matches!(world.chunks.block_at(position), Some(29 | 216))
     {
         return None;
     }
@@ -176,13 +176,15 @@ fn snapshot(world: &ControlWorld, position: [i64; 3]) -> Option<ContainerSnapsho
         position
     };
     let primary = world.journal.object_state(anchor).unwrap_or_default();
-    if world.chunks.block_at(anchor) != Some(29) || primary.secondary {
+    let material = world.chunks.block_at(position)?;
+    if world.chunks.block_at(anchor) != Some(material) || primary.secondary {
         return None;
     }
     let mut positions = vec![anchor];
     if let Some(peer) = primary.peer {
         let other = world.journal.object_state(peer)?;
-        if world.chunks.block_at(peer) != Some(29)
+        if material != 29
+            || world.chunks.block_at(peer) != Some(29)
             || !other.secondary
             || other.peer != Some(anchor)
             || other.facing != primary.facing
@@ -221,7 +223,7 @@ fn snapshot(world: &ControlWorld, position: [i64; 3]) -> Option<ContainerSnapsho
         && value
             .halves
             .iter()
-            .all(|half| world.journal.block(half.position) == Some(29)))
+            .all(|half| world.journal.block(half.position) == Some(material)))
     .then_some(value)
 }
 

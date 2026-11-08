@@ -6657,3 +6657,61 @@ einen späteren Beitritt mit identischem Streckennetz. Clippy aller Targets mit
 `-D warnings`, Format, Diff, kopfloser Assetexport und aktueller vollständiger
 Client-/Server-Build sind sauber. Keine Grafiktests, Spielclients oder
 Screenshots wurden gestartet.
+
+## 210. Präziser Gleisbau, Bewegungsbestätigung Und Fahrzeugmontage
+
+Gleise verwenden einen eigenen 32-Meter-Baustrahl. Ein tatsächlich tragender
+Block unter dem Modul reicht aus. Die genaue Zielplanung folgt dem Strahltreffer
+mit halben seitlichen Rasterabständen; Blockgrenzen lösen keine sprunghaften
+unterschiedlichen Kurven mehr aus. Vorschau und signierter StretchRail-Auftrag
+verwenden dieselbe Geometrie, Quelle und Holzart. Normale Blockaktionen behalten
+4,5 Meter Reichweite; Zielports außerhalb des Baubereichs und verdeckte Ziele
+bleiben gesperrt, einschließlich echter Geometrie montierter Fahrzeuge.
+
+Eine Bewegungsbestätigung entspricht genau einem tatsächlich simulierten festen
+Schritt. Wartende gültige Eingaben werden einzeln verarbeitet und verfallen
+nicht nach 250 ms. Kurze Paketlücken wiederholen keine alte horizontale Bewegung;
+am Boden wird der Halt geprüft, in der Luft bleibt die Wartezeit begrenzt und
+erneuert sich nicht durch sporadische Pakete. Damit verliert die Clientvorhersage
+bei Baubursts und schneller Bewegung keine bereits bestätigten Schritte.
+
+F63 ergänzt die Materialien 210–217 mit Fahrgestell, Drehgestell, Rahmen,
+Kupplung, Führerstand, Sitz, Laderaum und Montagestelle samt nativen Modellen,
+gemeinsamen Kollisionsprofilen, Katalogeinträgen und Werkbankrezepten. Verbundene
+Aufbauten werden als Lokomotive, Tender, Personen- oder Güterwagen montiert und
+wieder zerlegt. Teile, Ausrichtungen, Besitzer, Masse und private Ladung gehen
+gemeinsam zwischen Welt und Fahrzeug über. Veraltete Revisionen, fremde Besitzer,
+geschützte Zellen, belegter Raum und benutzte Sitze verhindern Teiländerungen.
+
+Die Montagestelle öffnet per Rechtsklick eine responsive Fahrzeugverwaltung.
+Kupplungen sind beidseitig, prüfen passende Enden und schließen Kreise aus.
+Laderäume besitzen 18 echte Slots; der Server prüft Ladungs- und Spielerrevision
+sowie Craftingreservierungen. Sitze erhalten bestätigte lokale und entfernte
+Spielerposen. Die konfigurierte Fly-Down-Aktion verlässt den Sitz über einen
+erneut geprüften freien Ausstieg; Pferd und Zugsitz schließen sich gegenseitig aus.
+
+Darstellung, Treffer und zusammengesetzte Physikkollisionen verwenden dieselben
+Bauteile. Die Räder entsprechen zwei Metern Spurweite; ein gemeinsamer
+Modellversatz bringt sie auf den Schienenkopf. Auf- und Abbau übergeben die
+Kollision erst mit bereitstehendem Ersatz. Kausale Abschnittsversionen sichern
+auch zusammengefasste Änderungen beim schnellen Zerlegen, Weiterbearbeiten und
+erneuten Montieren ab. Identische Ersatzgeometrie übernimmt den vorhandenen
+Kollisionskörper; entfernte Physikbereiche halten keine alten Körper dauerhaft fest.
+
+Protokoll 116 repliziert öffentliche Fahrzeugansichten und Sitzbindungen, aber
+keine privaten Ladungsinhalte an Zuschauer. ID13 erweitert den eingefrorenen
+ID12-Index um die Zugregistry; RG13 und PLY7 bleiben erhalten. Frühere Welten
+laden mit leerer Zugregistry, verbrauchte Fahrzeug-IDs werden nicht wiederverwendet.
+F53, F54 und F64 bleiben als Fahrbetrieb, Detailbaukasten und freier Zugbau offen.
+
+[Bauanleitung und CPU-Prüfbericht](tools/benchmarks/results/train-assembly-movement-2026-11-08/README.md).
+
+Abnahme 210: 4.310 Workspace-Library-/Bin-Tests bestanden, keiner fehlgeschlagen;
+neun bestehende Tests ignoriert. Die vollständigen UDP-Abläufe prüfen Montage,
+private Ladungsübertragung, Sitzbindung, Ausstieg, Zuschauer, späteren Beitritt
+und Demontage. Schnelle Bewegung mit Baubursts, Sprünge und Paketlücken bestehen
+ihre Regressionsprüfungen. Kausale Kollisionsübergänge, schnelle Wiederaufbauten,
+Spurweite und alte Speicherindizes sind ebenfalls geprüft. Keine Grafiktests,
+Spielclients oder Screenshots wurden gestartet.
+Clippy aller Targets mit `-D warnings`, Format, Diff, kopfloser Assetexport und
+der aktuelle vollständige Workspace-Build sind sauber.

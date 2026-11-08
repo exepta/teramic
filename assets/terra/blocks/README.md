@@ -947,3 +947,20 @@ Texture provenance is recorded in `textures/prompt.txt`,
 image_gen textures and exact prompts). Performance measurements and remaining visual
 limitations belong in the project overhaul report; material deduplication alone
 is not evidence of an FPS improvement.
+
+## Modular Parked Trains
+
+Materials 210–216 are chassis, bogie, frame, coupler, cab, seat and private cargo;
+217 is their assembly station. `tools/assets/build_train_parts.py` authors the
+native scenes, collision profiles and workbench recipes together. These custom
+objects share the existing machinery textures and wood material classification.
+Bogies span the shared two-metre rail gauge; their authored boxes intentionally
+extend into the neighboring cells. Other modules fit their owner cell.
+
+An assembled vehicle uses the same part geometry with the common Core model
+origin offset of -0.7375 m, bringing wheel bottoms onto the 0.3125 m rail head.
+Ownership/restoration cells stay on the integer block grid. Renderer, physical
+compound shapes, ray hits, clearance and seats use the shared physical origin.
+Vehicles batch by authored material and retain their geometry through cargo or
+coupling changes. F63 covers parked assembly; driving and arbitrary block payloads
+remain separate features. Acceptance uses CPU scene/geometry checks only.

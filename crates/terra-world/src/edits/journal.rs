@@ -20,6 +20,9 @@ mod rails;
 #[cfg(feature = "bevy")]
 #[path = "rotation.rs"]
 mod rotation;
+#[cfg(feature = "bevy")]
+#[path = "trains.rs"]
+mod trains;
 
 /// Valid network deltas normally contain unique cells. Keep historical
 /// duplicate-block validation (any matching value, last stored value) intact.

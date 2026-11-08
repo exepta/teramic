@@ -407,3 +407,197 @@ fn aiming_a_lower_free_rail_builds_a_supported_ramp_to_bare_higher_ground_with_r
         );
     }
 }
+
+#[test]
+fn a_signed_stretch_uses_the_real_long_ray_and_one_target_support_without_spending_on_stale_intent()
+{
+    let (mut app, peer, old, place) = rail_fixture(rails::STRAIGHT, [8, 4, 3]);
+    assert_eq!(run(&mut app, &peer, place, false), EditOutcome::Applied);
+    for x in 6..=10 {
+        for z in -22..=7 {
+            if app
+                .world()
+                .resource::<EditJournal>()
+                .block([x, 4, z])
+                .is_none()
+            {
+                set_block(&mut app, [x, 4, z], 0);
+            }
+        }
+    }
+    let target = [8, 3, -20];
+    set_block(&mut app, target, 3);
+    let eye =
+        app.world().get::<Transform>(peer.body).unwrap().translation + Vec3::Y * PLAYER_EYE_OFFSET;
+    let look = aim(&app, &peer, [8.5, 4.0, -19.5]);
+    let direction = Quat::from_euler(EulerRot::YXZ, look[0], look[1], 0.0) * Vec3::NEG_Z;
+    let (_, hit) = terra_world::targeting::pick_world_for_rails(
+        app.world().resource::<ChunkStore>(),
+        app.world().resource::<EditJournal>(),
+        app.world()
+            .resource::<terra_core::block_properties::BlockPropertiesCatalog>(),
+        eye.to_array().map(f64::from),
+        direction.to_array().map(f64::from),
+        PropPose::Rest,
+    );
+    let Some(WorldTarget::Block(hit)) = hit else {
+        panic!("the actual distant support must be visible")
+    };
+    assert_eq!(hit.position, target);
+    assert!(hit.distance > 4.5 && hit.distance <= rails::RAIL_BUILD_REACH);
+    let start = rails::Endpoint {
+        anchor: old.anchor,
+        port: 1,
+    };
+    let plan = terra_world::rails::connection_aim(
+        app.world().resource::<ChunkStore>(),
+        app.world().resource::<EditJournal>(),
+        start,
+        hit,
+        (
+            eye.to_array().map(f64::from),
+            direction.to_array().map(f64::from),
+        ),
+        look,
+        terra_core::WoodSpecies::Oak,
+    )
+    .unwrap();
+    let endpoint = terra_world::rails::next_endpoint(&plan).unwrap();
+    let state = plan
+        .states
+        .iter()
+        .find(|(cell, _)| *cell == endpoint.anchor)
+        .unwrap()
+        .1
+        .unwrap();
+    let next =
+        terra_world::rails::piece_from_state(endpoint.anchor, rails::STRAIGHT, state).unwrap();
+    assert_eq!(
+        next.supports()
+            .iter()
+            .filter(|point| app
+                .world()
+                .resource::<ChunkStore>()
+                .block_at(std::array::from_fn(
+                    |axis| next.anchor[axis] + i64::from(point.support[axis])
+                ))
+                == Some(3))
+            .count(),
+        1
+    );
+    let cost = terra_world::rails::cost(&plan).unwrap();
+    let source = {
+        let mut journal = app.world_mut().resource_mut::<EditJournal>();
+        let bag = journal
+            .gameplay_mut()
+            .inventories
+            .get_mut(&peer.uuid)
+            .unwrap();
+        assert!(bag.creative_set(
+            0,
+            ItemStack {
+                item: ItemKind::Block(rails::STRAIGHT),
+                count: cost + 1
+            }
+        ));
+        InventorySource {
+            slot: 0,
+            revision: bag.revision,
+        }
+    };
+    let signature = terra_world::rails::connection_signature(&plan, start);
+    let command = EditCommand {
+        request: 3,
+        revision: app
+            .world()
+            .resource::<EditJournal>()
+            .revision(global_to_section(hit.position).0),
+        look,
+        source: Some(source),
+        action: EditAction::StretchRail {
+            start,
+            position: hit.position,
+            expected: 3,
+            signature,
+        },
+    };
+    let mut blocking_car = terra_core::trains::Vehicle {
+        id: 1,
+        owner: peer.uuid,
+        kind: terra_core::trains::VehicleKind::Freight,
+        anchor: [8, 4, -6],
+        parts: [
+            ([0, 0, 0], 210),
+            ([0, -1, 0], 211),
+            ([0, -1, 1], 211),
+            ([0, 0, 1], 212),
+            ([0, 1, 0], 216),
+            ([0, 0, -1], 213),
+        ]
+        .into_iter()
+        .map(|(offset, material)| terra_core::trains::TrainPart {
+            offset,
+            material,
+            facing: 0,
+            wood: terra_core::WoodSpecies::Oak,
+        })
+        .collect(),
+        cargo: Default::default(),
+        couplings: [None; 2],
+        revision: 1,
+    };
+    blocking_car.cargo.insert(
+        4,
+        Inventory {
+            slots: Vec::new(),
+            ..Default::default()
+        },
+    );
+    assert!(blocking_car.valid());
+    let obstruction = {
+        let mut journal = app.world_mut().resource_mut::<EditJournal>();
+        let id = journal.gameplay_mut().trains.insert(blocking_car).unwrap();
+        let obstruction = terra_world::trains::raycast(
+            &journal,
+            eye.to_array().map(f64::from),
+            direction.to_array().map(f64::from),
+            hit.distance,
+        )
+        .unwrap();
+        assert!(obstruction.distance > 4.5 && obstruction.distance < hit.distance);
+        id
+    };
+    let blocked_before = snapshot(&app, next);
+    assert_eq!(run(&mut app, &peer, command, false), EditOutcome::Occluded);
+    assert_eq!(
+        snapshot(&app, next),
+        blocked_before,
+        "occlusion cannot consume stock or publish rail metadata"
+    );
+    app.world_mut()
+        .resource_mut::<EditJournal>()
+        .gameplay_mut()
+        .trains
+        .vehicles
+        .remove(&obstruction);
+    let before = snapshot(&app, next);
+    let mut stale = command;
+    stale.request = 2;
+    if let EditAction::StretchRail { signature, .. } = &mut stale.action {
+        *signature ^= 1;
+    }
+    assert_eq!(run(&mut app, &peer, stale, false), EditOutcome::Conflict);
+    assert_eq!(snapshot(&app, next), before);
+    assert_eq!(run(&mut app, &peer, command, false), EditOutcome::Applied);
+    let journal = app.world().resource::<EditJournal>();
+    assert!(terra_world::rails::complete(journal, old));
+    assert!(terra_world::rails::complete(journal, next));
+    assert_eq!(
+        journal.gameplay().inventories[&peer.uuid].count(ItemKind::Block(rails::STRAIGHT)),
+        1
+    );
+    assert_eq!(
+        app.world().resource::<ChunkStore>().block_at(target),
+        Some(3)
+    );
+}

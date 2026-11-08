@@ -5,7 +5,7 @@ use crate::{
     streaming::{BlockEditRequest, ChunkStore},
 };
 use std::collections::BTreeSet;
-use terra_core::rails::Piece;
+use terra_core::rails::{Piece, RAIL_BUILD_REACH};
 use terra_voxel::global_to_section;
 
 const MAX_MODULE_CELLS: usize = 512;
@@ -54,7 +54,7 @@ pub fn proposal_seed(
         .any(|value| !value.is_finite())
         || look.iter().any(|value| !value.is_finite())
         || !hit.distance.is_finite()
-        || !(0.0..=4.5).contains(&hit.distance)
+        || !(0.0..=RAIL_BUILD_REACH).contains(&hit.distance)
         || hit
             .position
             .iter()
@@ -243,8 +243,10 @@ fn nearest_free_port(
         .into_iter()
         .filter(|port| {
             port.connectable
-                && eye
-                    .is_none_or(|eye| distance_squared(port.position.position(), eye) <= 4.5 * 4.5)
+                && eye.is_none_or(|eye| {
+                    distance_squared(port.position.position(), eye)
+                        <= RAIL_BUILD_REACH * RAIL_BUILD_REACH
+                })
                 && !port_connected(journal, piece, *port)
         })
         .min_by(|first, second| {
@@ -290,6 +292,61 @@ pub fn proposal_connection(
         .ok_or_else(|| "No rail curve candidate".into())
 }
 
+/// Continuous construction follows the actual ray hit. Lateral endpoints
+/// snap to half blocks; the forward plane still belongs to the real hit cell.
+pub fn connection_aim(
+    chunks: &ChunkStore,
+    journal: &EditJournal,
+    start: terra_core::rails::Endpoint,
+    hit: terra_voxel::blocks::BlockHit,
+    ray: ([f64; 3], [f64; 3]),
+    look: [f32; 2],
+    wood: terra_core::WoodSpecies,
+) -> Result<Layout, String> {
+    let mut first_error = None;
+    for plan in connection_candidates_with_ray(chunks, journal, start, hit, look, wood, Some(ray))?
+    {
+        match environment(&plan, chunks, journal) {
+            Ok(()) => return Ok(plan),
+            Err(error) => {
+                first_error.get_or_insert(error);
+            }
+        }
+    }
+    Err(first_error.unwrap_or_else(|| "No free rail connection fits these ends".into()))
+}
+
+/// Keep only genuine ray-snapped geometry when support or occupancy is invalid.
+pub fn proposal_connection_aim(
+    chunks: &ChunkStore,
+    journal: &EditJournal,
+    start: terra_core::rails::Endpoint,
+    hit: terra_voxel::blocks::BlockHit,
+    ray: ([f64; 3], [f64; 3]),
+    look: [f32; 2],
+    wood: terra_core::WoodSpecies,
+) -> Result<Layout, String> {
+    connection_candidates_with_ray(chunks, journal, start, hit, look, wood, Some(ray))?
+        .into_iter()
+        .next()
+        .ok_or_else(|| "No rail curve candidate".into())
+}
+
+/// A signed continuation binds the original free endpoint and exact new geometry.
+pub fn connection_signature(plan: &Layout, start: terra_core::rails::Endpoint) -> u64 {
+    let mut hash = seed_signature(plan);
+    for value in std::iter::once(0x73747265746368_u64)
+        .chain(start.anchor.map(|coordinate| coordinate as u64))
+        .chain(std::iter::once(u64::from(start.port)))
+    {
+        for byte in value.to_le_bytes() {
+            hash ^= u64::from(byte);
+            hash = hash.wrapping_mul(0x100000001b3);
+        }
+    }
+    hash
+}
+
 pub(super) fn connection_candidates(
     chunks: &ChunkStore,
     journal: &EditJournal,
@@ -297,6 +354,18 @@ pub(super) fn connection_candidates(
     hit: terra_voxel::blocks::BlockHit,
     look: [f32; 2],
     wood: terra_core::WoodSpecies,
+) -> Result<Vec<Layout>, String> {
+    connection_candidates_with_ray(chunks, journal, start, hit, look, wood, None)
+}
+
+fn connection_candidates_with_ray(
+    chunks: &ChunkStore,
+    journal: &EditJournal,
+    start: terra_core::rails::Endpoint,
+    hit: terra_voxel::blocks::BlockHit,
+    look: [f32; 2],
+    wood: terra_core::WoodSpecies,
+    ray: Option<([f64; 3], [f64; 3])>,
 ) -> Result<Vec<Layout>, String> {
     use terra_core::rails::{CurveError, CurveSpec, FixedPoint, Port};
     if look.iter().any(|value| !value.is_finite())
@@ -320,11 +389,30 @@ pub(super) fn connection_candidates(
         .filter(|port| !port_connected(journal, piece, *port))
         .ok_or("Rail start is already connected")?;
     let position = start_port.position.position();
+    let aimed = if let Some(ray) = ray {
+        if ray
+            .0
+            .iter()
+            .chain(ray.1.iter())
+            .any(|value| !value.is_finite())
+            || hit.distance > RAIL_BUILD_REACH
+            || distance_squared(position, ray.0) > RAIL_BUILD_REACH * RAIL_BUILD_REACH + 1e-8
+        {
+            return Err(
+                "The rail source or destination is beyond the 32-block construction reach".into(),
+            );
+        }
+        Some(std::array::from_fn(|axis| {
+            ray.0[axis] + ray.1[axis] * hit.distance
+        }))
+    } else {
+        None
+    };
     let end_ports = if let Some(target) = owner_at(journal, hit.position) {
         if !complete(journal, target) {
             return Err("Rail destination is incomplete".into());
         }
-        let point = hit.position.map(|coordinate| coordinate as f64 + 0.5);
+        let point = aimed.unwrap_or_else(|| hit.position.map(|coordinate| coordinate as f64 + 0.5));
         let mut ports: Vec<_> = target
             .ports()
             .into_iter()
@@ -352,7 +440,9 @@ pub(super) fn connection_candidates(
             return Err("A free rail destination needs a floor top or a terrain-step side".into());
         };
         let elevated = cell[1] as f64 + terra_core::rails::DECK_HEIGHT > position[1] + 1e-8;
-        let delta: [f64; 3] = std::array::from_fn(|axis| cell[axis] as f64 + 0.5 - position[axis]);
+        let delta: [f64; 3] = std::array::from_fn(|axis| {
+            aimed.map_or(cell[axis] as f64 + 0.5, |point| point[axis]) - position[axis]
+        });
         let mut headings = [[0_i64, 0, 1], [1, 0, 0], [0, 0, -1], [-1, 0, 0]];
         let score = |heading: [i64; 3]| delta[0] * heading[0] as f64 + delta[2] * heading[2] as f64;
         let continuation = |heading: [i64; 3]| {
@@ -388,7 +478,16 @@ pub(super) fn connection_candidates(
                 Port {
                     index: 0,
                     connectable: true,
-                    position: FixedPoint(std::array::from_fn(|axis| cell[axis] * 16 + local[axis])),
+                    position: FixedPoint(std::array::from_fn(|axis| {
+                        if axis != 1
+                            && forward[axis] == 0
+                            && let Some(point) = aimed
+                        {
+                            (point[axis] * 2.0).round() as i64 * 8
+                        } else {
+                            cell[axis] * 16 + local[axis]
+                        }
+                    })),
                     tangent: forward.map(|value| -value as i16),
                 }
             })
@@ -492,7 +591,7 @@ fn placement_candidate(
     let mut ports = existing.ports();
     ports.retain(|port| {
         port.connectable
-            && distance(port.position.position(), ray.0) <= 4.5 * 4.5
+            && distance(port.position.position(), ray.0) <= RAIL_BUILD_REACH * RAIL_BUILD_REACH
             && !port_connected(journal, existing, *port)
     });
     ports.sort_by(|first, second| {
@@ -720,7 +819,7 @@ fn supports_floor_with_state(material: u16, state: Option<crate::edits::BlockObj
 }
 
 fn supported(piece: Piece, chunks: &ChunkStore, journal: &EditJournal) -> bool {
-    piece.supports().iter().all(|point| {
+    piece.supports().iter().any(|point| {
         let support =
             std::array::from_fn(|axis| piece.anchor[axis] + i64::from(point.support[axis]));
         chunks
@@ -749,7 +848,9 @@ fn environment_for(
     }
     let piece = proposed_piece(plan).ok_or("Missing canonical rail placement state")?;
     if !supported(piece, chunks, journal) {
-        return Err("Every rail sleeper needs a loaded, full-height supporting floor".into());
+        return Err(
+            "At least one rail sleeper needs a loaded, full-height supporting block".into(),
+        );
     }
     let positions: BTreeSet<_> = plan.edits.iter().map(|edit| edit.position).collect();
     let mut expected: BTreeSet<_> = cells(piece).into_iter().collect();
@@ -771,6 +872,9 @@ fn environment_for(
         .ok_or("Missing rail wood state")?
         .wood;
     for edit in &plan.edits {
+        if edit.material != 0 && crate::trains::reserved(journal, edit.position) {
+            return Err("An assembled vehicle occupies the rail footprint".into());
+        }
         if journal.has_extended_kinetics() {
             crate::placement::kinetic_clearance(
                 plan,

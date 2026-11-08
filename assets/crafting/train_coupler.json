@@ -1,0 +1,52 @@
+{
+  "id": "teramic::train_coupler",
+  "name": "Zugkupplung",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "block": 213
+    },
+    "count": 1
+  },
+  "pattern": {
+    "kind": "shaped",
+    "width": 3,
+    "height": 3,
+    "cells": [
+      {
+        "item": {
+          "mineral": "iron_ingot"
+        },
+        "count": 1
+      },
+      null,
+      {
+        "item": {
+          "mineral": "iron_ingot"
+        },
+        "count": 1
+      },
+      null,
+      {
+        "item": {
+          "mineral": "iron_ingot"
+        },
+        "count": 1
+      },
+      null,
+      {
+        "item": {
+          "mineral": "iron_ingot"
+        },
+        "count": 1
+      },
+      null,
+      {
+        "item": {
+          "mineral": "iron_ingot"
+        },
+        "count": 1
+      }
+    ]
+  }
+}

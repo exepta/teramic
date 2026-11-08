@@ -927,10 +927,9 @@ pub fn space_intersects(
         else {
             continue;
         };
-        if chunks
-            .block_at(neighbor)
-            .is_some_and(crate::objects::is_opening)
-        {
+        if chunks.block_at(neighbor).is_some_and(|material| {
+            crate::objects::is_opening(material) || material == terra_core::train_parts::BOGIE
+        }) {
             visit_collision_boxes(chunks, journal, properties, neighbor, |bounds| {
                 hit |= bounds.intersects(minimum, maximum)
             });

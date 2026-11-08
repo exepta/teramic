@@ -1,0 +1,89 @@
+{
+  "schema_version": 1,
+  "id": 217,
+  "name": "Zug-Montagestelle",
+  "description": "Assemble or dismantle connected modular railway vehicles. Right-click to manage the workshop.",
+  "creative_category": "building",
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/train_assembly_station.gltf",
+  "struct_block": true,
+  "hardness": 1.8,
+  "resistance": 9,
+  "required_tool": "pickaxe",
+  "mining_level": 0,
+  "collision_boxes": [
+    {
+      "minimum": [
+        0.04,
+        0.02,
+        0.04
+      ],
+      "maximum": [
+        0.96,
+        0.14,
+        0.96
+      ]
+    },
+    {
+      "minimum": [
+        0.31,
+        0.14,
+        0.31
+      ],
+      "maximum": [
+        0.69,
+        0.72,
+        0.69
+      ]
+    },
+    {
+      "minimum": [
+        0.1,
+        0.69,
+        0.1
+      ],
+      "maximum": [
+        0.9,
+        0.83,
+        0.9
+      ]
+    },
+    {
+      "minimum": [
+        0.14,
+        0.83,
+        0.16
+      ],
+      "maximum": [
+        0.86,
+        0.89,
+        0.5
+      ]
+    },
+    {
+      "minimum": [
+        0.22,
+        0.89,
+        0.22
+      ],
+      "maximum": [
+        0.34,
+        0.96,
+        0.36
+      ]
+    },
+    {
+      "minimum": [
+        0.62,
+        0.89,
+        0.22
+      ],
+      "maximum": [
+        0.74,
+        0.96,
+        0.36
+      ]
+    }
+  ]
+}

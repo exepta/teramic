@@ -305,6 +305,16 @@ fn aim_existing_destination(
     eye: [f32; 3],
     preferred_cell: [i64; 3],
 ) {
+    aim_existing_destination_with_reach(fixture, target, eye, preferred_cell, 4.5);
+}
+
+fn aim_existing_destination_with_reach(
+    fixture: &mut ConnectionFixture,
+    target: Piece,
+    eye: [f32; 3],
+    preferred_cell: [i64; 3],
+    reach: f64,
+) -> terra_voxel::blocks::BlockHit {
     fixture
         .app
         .world_mut()
@@ -334,7 +344,12 @@ fn aim_existing_destination(
                 continue;
             }
             let direction = Quat::from_euler(EulerRot::YXZ, look[0], look[1], 0.0) * Vec3::NEG_Z;
-            let (_, selected) = terra_world::targeting::pick_world_for_placement(
+            let picker = if reach > 8.0 {
+                terra_world::targeting::pick_world_for_rails
+            } else {
+                terra_world::targeting::pick_world_for_placement
+            };
+            let (_, selected) = picker(
                 fixture.app.world().resource::<ChunkStore>(),
                 journal,
                 fixture
@@ -348,7 +363,7 @@ fn aim_existing_destination(
             let Some(WorldTarget::Block(hit)) = selected else {
                 continue;
             };
-            if hit.distance > 4.5
+            if hit.distance > reach
                 || terra_world::rails::owner_at(journal, hit.position) != Some(target)
             {
                 continue;
@@ -381,7 +396,7 @@ fn aim_existing_destination(
                     position: hit.position,
                     expected: target.material,
                 };
-                return;
+                return hit;
             }
         }
     }
@@ -799,9 +814,49 @@ fn clicking_a_long_destination_middle_does_not_reach_its_distant_free_port() {
     )
     .unwrap();
     commit_existing_module(&mut fixture, target);
-    let eye = [6.5, 6.0, 0.5];
-    aim_existing_destination(&mut fixture, target, eye, [4, 4, 0]);
-    let plan = connection_plan(&fixture);
+    // The clicked middle is visible within rail reach, while the selected
+    // compatible end is over 32 m away on the other side of this saved module.
+    let eye = [6.5, 6.0, -18.0];
+    for x in 3..=7 {
+        for y in 4..=6 {
+            for z in -20..=1 {
+                let cell = [x, y, z];
+                if fixture
+                    .app
+                    .world()
+                    .resource::<EditJournal>()
+                    .block(cell)
+                    .is_none()
+                {
+                    set_block(&mut fixture.app, cell, 0);
+                }
+            }
+        }
+    }
+    let hit = aim_existing_destination_with_reach(
+        &mut fixture,
+        target,
+        eye,
+        [4, 4, 0],
+        rails::RAIL_BUILD_REACH,
+    );
+    assert!(hit.distance > 4.5 && hit.distance <= rails::RAIL_BUILD_REACH);
+    assert!(
+        hit.position[2].abs() <= 2,
+        "the real ray must hit the module's middle"
+    );
+    let EditAction::ConnectRail { start, .. } = fixture.command.action else {
+        unreachable!()
+    };
+    let plan = terra_world::rails::connection(
+        fixture.app.world().resource::<ChunkStore>(),
+        fixture.app.world().resource::<EditJournal>(),
+        start,
+        hit,
+        fixture.command.look,
+        WoodSpecies::Oak,
+    )
+    .unwrap();
     let destination = terra_world::rails::connection_target(&plan)
         .unwrap()
         .position
@@ -810,7 +865,7 @@ fn clicking_a_long_destination_middle_does_not_reach_its_distant_free_port() {
         (0..3)
             .map(|axis| (destination[axis] - f64::from(eye[axis])).powi(2))
             .sum::<f64>()
-            > 4.5 * 4.5
+            > rails::RAIL_BUILD_REACH * rails::RAIL_BUILD_REACH
     );
     let before = rpc_snapshot(&fixture);
     assert_eq!(

@@ -6188,3 +6188,16 @@ Die grosse Karte zeigt ueber **Diplomatie** die Gebiete, Grenzen, Legende,
 Gruender und den ausfuehrenden Akteur; Auswahl und Claim-Aktionen werden
 live aktualisiert. F55/F56 sind abgeschlossen.
 [Bedienung, native Aufnahmen und Bildkorrekturen](tools/benchmarks/results/claims-diplomacy-castle-2026-11-06/README.md).
+
+## Gleisbau Und Zugmontage (Phase 210)
+
+Gleise lassen sich aus einem Startstueck bis zum anvisierten Ziel strecken.
+Der Baubereich reicht 32 Meter; ein tragender Block unter dem Modul reicht aus.
+Bewegungsbestaetigungen entsprechen den wirklich simulierten Schritten, damit
+Baubursts und schnelle Bewegung keine Schritte der Clientvorhersage verlieren.
+
+F63 ergaenzt Fahrgestell, Drehgestell, Rahmen, Kupplung, Fuehrerstand, Sitz,
+Laderaum und Montagestelle. Rechtsklick auf die Montagestelle oeffnet Montage,
+Demontage und Verbundverwaltung. Ladung und Sitzplaetze bleiben mit dem
+gespeicherten Fahrzeug verbunden. Protokoll 116; ID13 liest weiterhin alte Welten.
+[Bauanleitung, Grenzen und CPU-Pruefbericht](tools/benchmarks/results/train-assembly-movement-2026-11-08/README.md).

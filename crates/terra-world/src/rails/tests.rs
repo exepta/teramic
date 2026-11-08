@@ -124,7 +124,13 @@ fn missing_support_obstructions_and_changed_cells_never_publish_a_partial_module
     prepare(&mut chunks, piece);
     let support = piece.supports().last().unwrap().support;
     let support = std::array::from_fn(|axis| piece.anchor[axis] + i64::from(support[axis]));
-    block(&mut chunks, support, 0);
+    for point in piece.supports().iter() {
+        block(
+            &mut chunks,
+            std::array::from_fn(|axis| piece.anchor[axis] + i64::from(point.support[axis])),
+            0,
+        );
+    }
     assert!(plan(&chunks, &journal, piece.anchor, piece.material, 0).is_err());
     block(&mut chunks, support, 3);
     let layout = plan(&chunks, &journal, piece.anchor, piece.material, 0).unwrap();
@@ -153,6 +159,15 @@ fn unsupported_or_obstructed_silhouette_candidates_never_authorize_placement() {
             let support = piece.supports().last().unwrap().support;
             std::array::from_fn(|axis| piece.anchor[axis] + i64::from(support[axis]))
         };
+        if !occupied {
+            for point in piece.supports().iter() {
+                block(
+                    &mut chunks,
+                    std::array::from_fn(|axis| piece.anchor[axis] + i64::from(point.support[axis])),
+                    0,
+                );
+            }
+        }
         block(&mut chunks, obstruction, if occupied { 3 } else { 0 });
         let hit = terra_voxel::blocks::BlockHit {
             position: [0, 15, 0],
@@ -785,3 +800,6 @@ mod context_tests;
 
 #[path = "seed_tests.rs"]
 mod seed_tests;
+
+#[path = "build_reach_tests.rs"]
+mod build_reach_tests;

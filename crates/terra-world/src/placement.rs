@@ -20,6 +20,7 @@ pub fn furniture(material: u16) -> bool {
         || terra_core::textiles::is_carpet(material)
         || terra_core::rails::is_rail(material)
         || material == terra_core::rails::SWITCH_STAND
+        || terra_core::train_parts::is_train(material)
 }
 
 /// Creative copying retains authoritative appearance metadata, not only the raw block ID.
@@ -533,6 +534,13 @@ pub fn environment(
     journal: &EditJournal,
     bounded: bool,
 ) -> Result<(), String> {
+    if plan
+        .edits
+        .iter()
+        .any(|edit| edit.material != 0 && crate::trains::reserved(journal, edit.position))
+    {
+        return Err("An assembled vehicle occupies this cell".into());
+    }
     if plan
         .edits
         .iter()

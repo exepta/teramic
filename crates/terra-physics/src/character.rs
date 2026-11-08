@@ -126,6 +126,15 @@ pub fn space_clear_with_shapes(
     position: Vec3,
 ) -> bool {
     let half = Vec3::new(PLAYER_RADIUS, PLAYER_HALF_HEIGHT, PLAYER_RADIUS);
+    if !terra_world::trains::boxes_in(
+        journal,
+        (position - half).to_array().map(f64::from),
+        (position + half).to_array().map(f64::from),
+    )
+    .is_empty()
+    {
+        return false;
+    }
     let low = (position - half).floor().as_i64vec3();
     let high = (position + half - Vec3::splat(0.001)).floor().as_i64vec3();
     for z in low.z..=high.z {
@@ -156,6 +165,9 @@ pub struct CharacterSimulation<'w, 's> {
     chunks: Res<'w, ChunkStore>,
     journal: Res<'w, EditJournal>,
     collision: Res<'w, TerrainCollisionState>,
+    train_collision: Res<'w, crate::trains::TrainCollisionState>,
+    train_views: Res<'w, crate::TrainCollisionViews>,
+    access: Option<Res<'w, terra_world::streaming::WorldAccess>>,
     time: Res<'w, Time<Fixed>>,
     gravity: Res<'w, Gravity>,
     config: Res<'w, terra_core::GameConfig>,
@@ -163,6 +175,17 @@ pub struct CharacterSimulation<'w, 's> {
 }
 
 impl CharacterSimulation<'_, '_> {
+    fn collision_ready(&self, low: Vec3, high: Vec3) -> bool {
+        self.collision
+            .ready_for_aabb(low, high, &self.chunks, &self.journal)
+            && self.train_collision.ready(
+                low,
+                high,
+                &self.journal,
+                &self.train_views,
+                self.access.as_deref().copied(),
+            )
+    }
     pub fn riding_position(&self, horse: &terra_core::creatures::Creature) -> Vec3 {
         Vec3::from_array(terra_world::creatures::riding::seat_feet(horse).map(|v| v as f32))
             + Vec3::Y * PLAYER_HALF_HEIGHT
@@ -308,11 +331,9 @@ impl CharacterSimulation<'_, '_> {
             PLAYER_HALF_HEIGHT + 0.15,
             PLAYER_RADIUS + 0.1,
         );
-        if !self.collision.ready_for_aabb(
+        if !self.collision_ready(
             state.position.min(next) - half,
             state.position.max(next) + half,
-            &self.chunks,
-            &self.journal,
         ) {
             return false;
         }
@@ -492,11 +513,9 @@ impl CharacterSimulation<'_, '_> {
             PLAYER_HALF_HEIGHT + 0.15,
             PLAYER_RADIUS + 0.1,
         );
-        if !self.collision.ready_for_aabb(
+        if !self.collision_ready(
             state.position.min(next) - half,
             state.position.max(next) + half,
-            &self.chunks,
-            &self.journal,
         ) {
             // A collider rebuild pauses this tick; it must not cancel a jump
             // or leave authority/prediction with a partially simulated state.
@@ -548,12 +567,7 @@ impl CharacterSimulation<'_, '_> {
                     PLAYER_HALF_HEIGHT + height + 0.08,
                     PLAYER_RADIUS + 0.1,
                 );
-                if self.collision.ready_for_aabb(
-                    before - half,
-                    before + half + attempted,
-                    &self.chunks,
-                    &self.journal,
-                ) {
+                if self.collision_ready(before - half, before + half + attempted) {
                     let upward = self.spatial.cast_shape(
                         collider,
                         before,

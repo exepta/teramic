@@ -24,6 +24,9 @@ mod hierarchy_tests;
 #[cfg(test)]
 #[path = "regions/rail_tests.rs"]
 mod rail_tests;
+#[cfg(test)]
+#[path = "regions/train_tests.rs"]
+mod train_tests;
 
 #[derive(Serialize, Deserialize)]
 struct Index {
@@ -53,6 +56,13 @@ struct KingdomIndex {
 struct TreeIndex {
     prior: KingdomIndex,
     trees: terra_core::TreeRegistry,
+}
+
+// ID13 appends parked vehicles; the ID12 TreeIndex binary layout stays frozen.
+#[derive(Serialize, Deserialize)]
+struct TrainIndex {
+    prior: TreeIndex,
+    trains: terra_core::trains::TrainRegistry,
 }
 
 // Frozen IDX9/F56 registry: capabilities were introduced in ID10.
@@ -217,8 +227,14 @@ struct Index2 {
 }
 fn read_index(root: &Path) -> Result<KingdomIndex, String> {
     let bytes = read(&root.join(INDEX))?;
-    if matches!(bytes.get(12..16), Some(b"ID11" | b"ID12")) {
-        let data: TreeIndex = if bytes.get(12..16) == Some(b"ID12") {
+    if matches!(bytes.get(12..16), Some(b"ID11" | b"ID12" | b"ID13")) {
+        let data: TreeIndex = if bytes.get(12..16) == Some(b"ID13") {
+            let data: TrainIndex = decode(b"ID13", &bytes)?;
+            if !data.trains.valid() {
+                return Err("Invalid persistent vehicle registry".into());
+            }
+            data.prior
+        } else if bytes.get(12..16) == Some(b"ID12") {
             decode(b"ID12", &bytes)?
         } else {
             let old: TreeIndex11 = decode(b"ID11", &bytes)?;
@@ -2045,23 +2061,34 @@ fn commit(root: &Path, world: WorldId, journal: &EditJournal) -> Result<(), Stri
         };
         stage(format!("players/{player}.data"), bytes)?;
     }
-    let bytes = if gameplay.trees != Default::default() || gameplay.kingdoms != Default::default() {
-        encode(
-            b"ID12",
-            &TreeIndex {
-                prior: KingdomIndex {
-                    prior: TimedIndex {
-                        index,
-                        clock: journal.clock,
-                        ecology_seconds: ecology.seconds,
-                        weather: journal.weather,
-                        next_animal_birth: gameplay.next_animal_birth,
-                    },
-                    kingdoms: gameplay.kingdoms.clone(),
+    let bytes = if gameplay.trains != Default::default()
+        || gameplay.trees != Default::default()
+        || gameplay.kingdoms != Default::default()
+    {
+        let prior = TreeIndex {
+            prior: KingdomIndex {
+                prior: TimedIndex {
+                    index,
+                    clock: journal.clock,
+                    ecology_seconds: ecology.seconds,
+                    weather: journal.weather,
+                    next_animal_birth: gameplay.next_animal_birth,
                 },
-                trees: gameplay.trees.clone(),
+                kingdoms: gameplay.kingdoms.clone(),
             },
-        )?
+            trees: gameplay.trees.clone(),
+        };
+        if gameplay.trains != Default::default() {
+            encode(
+                b"ID13",
+                &TrainIndex {
+                    prior,
+                    trains: gameplay.trains.clone(),
+                },
+            )?
+        } else {
+            encode(b"ID12", &prior)?
+        }
     } else if gameplay.next_animal_birth == 0 {
         encode(
             b"IDX6",
@@ -2105,14 +2132,23 @@ fn load(root: &Path, world: WorldId) -> Result<EditJournal, String> {
         kingdoms,
     } = read_index(root)?;
     let index = timed.index;
-    let trees = {
+    let (trees, trains) = {
         let bytes = read(&root.join(INDEX))?;
-        if bytes.get(12..16) == Some(b"ID12") {
-            decode::<TreeIndex>(b"ID12", &bytes)?.trees
+        if bytes.get(12..16) == Some(b"ID13") {
+            let data: TrainIndex = decode(b"ID13", &bytes)?;
+            (data.prior.trees, data.trains)
+        } else if bytes.get(12..16) == Some(b"ID12") {
+            (
+                decode::<TreeIndex>(b"ID12", &bytes)?.trees,
+                Default::default(),
+            )
         } else if bytes.get(12..16) == Some(b"ID11") {
-            decode::<TreeIndex11>(b"ID11", &bytes)?.trees
+            (
+                decode::<TreeIndex11>(b"ID11", &bytes)?.trees,
+                Default::default(),
+            )
         } else {
-            Default::default()
+            (Default::default(), Default::default())
         }
     };
     if index.world != world || index.regions.len() > 100_000 || index.players.len() > 8192 {
@@ -2122,6 +2158,7 @@ fn load(root: &Path, world: WorldId) -> Result<EditJournal, String> {
     journal.clock = timed.clock;
     journal.weather = timed.weather;
     let mut gameplay = GameplayState {
+        trains,
         trees,
         kingdoms,
         next_drop: index.next_drop,

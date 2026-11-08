@@ -96,7 +96,7 @@ impl EditJournal {
 
     pub fn valid_container(&self, position: [i64; 3], inventory: &Inventory) -> bool {
         match self.block(position) {
-            Some(29) => valid_chest(inventory),
+            Some(29 | terra_core::train_parts::CARGO) => valid_chest(inventory),
             Some(59) => {
                 self.object_state(position).is_some_and(|s| !s.secondary)
                     && terra_core::furnace::valid_inventory(inventory)

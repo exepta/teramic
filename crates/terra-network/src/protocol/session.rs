@@ -7,8 +7,8 @@ use terra_core::{
 use terra_voxel::SectionPos;
 use terra_world::{edits::SectionDelta, props::PropId};
 
-// Version 115 adds confirmed one-metre seeds for endpoint-driven track building.
-pub const PROTOCOL_VERSION: u32 = 115;
+// Version 116 adds signed long-reach rail plans and replicated modular vehicles.
+pub const PROTOCOL_VERSION: u32 = 116;
 pub const PROTOCOL_ID: u64 = 0x5445525241000001;
 pub const MAX_INPUT_BACKLOG: usize = 128;
 pub const MAX_TREE_INTEREST: usize = 256;
@@ -74,6 +74,7 @@ pub enum ClientControl {
         look: [f32; 2],
     },
     Kingdom(super::kingdom::KingdomCommand),
+    Train(super::trains::TrainCommand),
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -258,6 +259,13 @@ pub enum EditAction {
         expected: u16,
         signature: u64,
     },
+    /// A ray-snapped continuation with its exact preview intent preserved.
+    StretchRail {
+        start: terra_core::rails::Endpoint,
+        position: [i64; 3],
+        expected: u16,
+        signature: u64,
+    },
 }
 #[derive(Clone, Copy, Debug, Serialize, Deserialize)]
 pub struct InventorySource {
@@ -372,6 +380,8 @@ pub enum ServerControl {
     KingdomResult(super::kingdom::KingdomResult),
     Trees(terra_core::TreeRegistry),
     TreeUpdates(TreePatch),
+    Trains(Box<terra_core::trains::TrainSnapshot>),
+    TrainResult(super::trains::TrainResult),
 }
 
 /// Ordered interest updates: reset begins a new neighbourhood, subsequent
@@ -579,6 +589,8 @@ pub struct PlayerState {
     pub mining: bool,
     pub consumption: Option<ConsumptionProgress>,
     pub mounted: Option<MountedState>,
+    #[serde(default)]
+    pub train_seat: Option<terra_core::trains::SeatBinding>,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
@@ -924,7 +936,7 @@ mod layout_tests {
                 .collect::<Vec<_>>()
         );
         assert_eq!(received.creatures.len(), 10);
-        assert_eq!(PROTOCOL_VERSION, 115);
+        assert_eq!(PROTOCOL_VERSION, 116);
     }
     #[test]
     fn kinetic_stress_capacity_roundtrip_and_reject_nonfinite_or_impossible_reserves() {

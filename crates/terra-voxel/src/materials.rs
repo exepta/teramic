@@ -213,10 +213,18 @@ pub enum MaterialId {
     BallastStairs = 207,
     BallastSlab = 208,
     RailSwitchStand = 209,
+    TrainChassis = 210,
+    TrainBogie = 211,
+    TrainFrame = 212,
+    TrainCoupler = 213,
+    TrainCab = 214,
+    TrainSeat = 215,
+    TrainCargo = 216,
+    TrainAssemblyStation = 217,
 }
 
 impl MaterialId {
-    pub const LAST: u16 = Self::RailSwitchStand as u16;
+    pub const LAST: u16 = Self::TrainAssemblyStation as u16;
     pub const FOLIAGE: [u16; 6] = [7, 8, 9, 132, 133, 195];
     pub const BLOCK_COUNT: usize = Self::LAST as usize;
 
@@ -237,6 +245,14 @@ impl MaterialId {
             Self::BallastStairs => "teramic::ballast_stairs",
             Self::BallastSlab => "teramic::ballast_slab",
             Self::RailSwitchStand => "teramic::rail_switch_stand",
+            Self::TrainChassis => "teramic::train_chassis",
+            Self::TrainBogie => "teramic::train_bogie",
+            Self::TrainFrame => "teramic::train_frame",
+            Self::TrainCoupler => "teramic::train_coupler",
+            Self::TrainCab => "teramic::train_cab",
+            Self::TrainSeat => "teramic::train_seat",
+            Self::TrainCargo => "teramic::train_cargo",
+            Self::TrainAssemblyStation => "teramic::train_assembly_station",
             Self::Lantern => "teramic::lantern",
             Self::Chain => "teramic::chain",
             Self::WoodPipe => "teramic::wood_pipe",
@@ -645,6 +661,14 @@ impl MaterialId {
             207 => Self::BallastStairs,
             208 => Self::BallastSlab,
             209 => Self::RailSwitchStand,
+            210 => Self::TrainChassis,
+            211 => Self::TrainBogie,
+            212 => Self::TrainFrame,
+            213 => Self::TrainCoupler,
+            214 => Self::TrainCab,
+            215 => Self::TrainSeat,
+            216 => Self::TrainCargo,
+            217 => Self::TrainAssemblyStation,
             193 => Self::Lantern,
             194 => Self::Chain,
             _ => return None,
@@ -822,7 +846,7 @@ mod tests {
             assert_eq!(material.is_opaque(), opaque);
             assert!(!material.flammable());
         }
-        assert_eq!(MaterialId::LAST, 209);
+        assert_eq!(MaterialId::LAST, 217);
     }
 
     #[test]

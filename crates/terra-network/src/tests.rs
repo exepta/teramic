@@ -13,6 +13,8 @@ mod bee_tests;
 mod kingdom_tests;
 #[path = "location_tests.rs"]
 mod location_tests;
+#[path = "movement_prediction_tests.rs"]
+mod movement_prediction_tests;
 #[path = "pet_command_tests.rs"]
 mod pet_command_tests;
 #[path = "riding_tests.rs"]
@@ -1127,7 +1129,7 @@ fn one_prop_removal_reaches_both_clients_and_late_join_without_removing_neighbor
 }
 
 #[test]
-fn delayed_input_burst_is_acknowledged_without_extra_simulation_ticks() {
+fn delayed_input_burst_is_simulated_once_per_fixed_tick_before_each_acknowledgment() {
     use lightyear::prelude::MessageSender;
     use protocol::session::*;
     let (mut host, mut a, mut b) = pair();
@@ -1166,8 +1168,8 @@ fn delayed_input_burst_is_acknowledged_without_extra_simulation_ticks() {
         .unwrap();
     let ticks = host.world().resource::<server::ServerRuntime>().tick - tick;
     assert!(
-        ticks < 30,
-        "delayed states must not take 100 ticks to acknowledge: {ticks}"
+        ticks >= 100,
+        "acknowledging 100 inputs requires 100 actual steps: {ticks}"
     );
     assert!(
         after.position[0] - before.position[0]

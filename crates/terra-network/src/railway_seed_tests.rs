@@ -352,11 +352,12 @@ fn udp_seed_receipt_waits_for_the_real_three_tile_starter_before_stretching_and_
     let hit = picked(&host, origin, look).expect("stretch destination uses the actual floor ray");
     assert_eq!(hit.position, end_floor);
     assert_eq!(hit.normal, [0, 1, 0]);
-    let extension = rails::connection(
+    let extension = rails::connection_aim(
         host.world().resource::<ChunkStore>(),
         host.world().resource::<EditJournal>(),
         start,
         hit,
+        ray(origin, look),
         look,
         wood,
     )
@@ -379,10 +380,11 @@ fn udp_seed_receipt_waits_for_the_real_three_tile_starter_before_stretching_and_
         .world_mut()
         .resource_mut::<client::ClientSession>()
         .look = look;
-    let connect_action = RailPlacementAction::Connect {
+    let connect_action = RailPlacementAction::Stretch {
         start,
         position: hit.position,
         expected: 3,
+        signature: rails::connection_signature(&extension, start),
     };
     first.world_mut().write_message(RailPlacementRequest {
         token: 209_002,

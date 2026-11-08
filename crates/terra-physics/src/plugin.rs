@@ -12,6 +12,7 @@ impl Plugin for TerraPhysicsPlugin {
             .insert_resource(Gravity(Vec3::NEG_Y * 9.81))
             .add_plugins(PhysicsPlugins::default().with_length_unit(VOXEL_SCALE_METERS));
         crate::terrain::install(app);
+        crate::trains::install(app);
         crate::current::install(app);
     }
 }

@@ -1153,6 +1153,7 @@ fn builtin_recipes_are_valid_and_catalog_roundtrip_preserves_keys() {
             + 1 // One wood-preserving track item for all railway geometry.
             + 3 // Ballast block, four-tread stairs and half slab.
             + 3 // Dedicated left/right switches and their control stand.
+            + 8 // Modular railway vehicle parts and assembly station.
     );
     for id in [
         "lantern",

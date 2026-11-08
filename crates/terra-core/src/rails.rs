@@ -28,6 +28,9 @@ pub const SWITCH_STAND: u16 = 209;
 pub const MATERIALS: [u16; 10] = [196, 197, 198, 199, 200, 201, 202, 203, 204, 205];
 pub const FIXED_SCALE: i64 = 16;
 pub const TRACK_WIDTH: f64 = 3.0;
+/// Construction-only ray and endpoint reach. Ordinary block actions retain
+/// their independent interaction range.
+pub const RAIL_BUILD_REACH: f64 = 32.0;
 pub const GAUGE: f64 = 2.0;
 /// The connection plane is the rail foot, above the wooden sleeper.
 pub const DECK_HEIGHT: f64 = 0.125;

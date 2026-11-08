@@ -10,6 +10,7 @@ pub(super) struct GameplayPanels<'w> {
     fullmap: Option<Res<'w, crate::minimap::fullmap::FullMapState>>,
     pets: Option<Res<'w, crate::pets::PetMenuState>>,
     kingdom: Option<Res<'w, crate::kingdom::KingdomMenuState>>,
+    trains: Option<Res<'w, crate::trains::TrainUiState>>,
 }
 
 pub(super) fn keyboard_navigation(
@@ -25,6 +26,13 @@ pub(super) fn keyboard_navigation(
         return;
     }
     if draft.rebinding.is_some() || draft.consumed_escape {
+        return;
+    }
+    if panels
+        .trains
+        .as_ref()
+        .is_some_and(|trains| trains.blocks_input())
+    {
         return;
     }
     if panels
@@ -100,6 +108,9 @@ pub(super) fn actions(world: &mut World) {
         }
     }
     let playing = !startup
+        && !world
+            .get_resource::<crate::trains::TrainUiState>()
+            .is_some_and(|trains| trains.blocks_input())
         && !world
             .get_resource::<crate::kingdom::KingdomMenuState>()
             .is_some_and(|k| k.blocks_input())

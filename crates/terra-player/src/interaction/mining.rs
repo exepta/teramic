@@ -1232,6 +1232,20 @@ pub(crate) fn edit_target_block(
             });
         let valid = has_item
             && environment_valid
+            && target.session.as_ref().is_none_or(|session| {
+                plan.as_ref().map_or_else(
+                    || !terra_world::trains::reserved_in(&session.trains.vehicles, position),
+                    |plan| {
+                        plan.edits.iter().all(|edit| {
+                            edit.material == 0
+                                || !terra_world::trains::reserved_in(
+                                    &session.trains.vehicles,
+                                    edit.position,
+                                )
+                        })
+                    },
+                )
+            })
             && mount_valid
             && (selected != expected || terra_core::construction::is_slab(selected))
             && (!MaterialId::from_raw(selected).is_some_and(MaterialId::is_solid)

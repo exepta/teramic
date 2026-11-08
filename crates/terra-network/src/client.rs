@@ -67,6 +67,9 @@ pub struct ContainerRequest(pub crate::protocol::inventory::ContainerCommand);
 #[derive(Message, Clone, Debug)]
 pub struct KingdomRequest(pub crate::protocol::kingdom::KingdomCommand);
 
+#[derive(Message, Clone, Debug)]
+pub struct TrainRequest(pub crate::protocol::trains::TrainCommand);
+
 #[derive(Resource, Default)]
 pub struct CursorShare(pub Option<crate::protocol::social::ChestCursorInput>);
 #[derive(Resource, Default)]
@@ -135,6 +138,12 @@ pub enum RailPlacementAction {
         position: [i64; 3],
         expected: u16,
     },
+    Stretch {
+        start: terra_core::rails::Endpoint,
+        position: [i64; 3],
+        expected: u16,
+        signature: u64,
+    },
 }
 impl RailPlacementAction {
     pub fn edit_action(self) -> EditAction {
@@ -156,6 +165,17 @@ impl RailPlacementAction {
                 start,
                 position,
                 expected,
+            },
+            Self::Stretch {
+                start,
+                position,
+                expected,
+                signature,
+            } => EditAction::StretchRail {
+                start,
+                position,
+                expected,
+                signature,
             },
         }
     }
@@ -214,6 +234,7 @@ pub fn connect_session(world: &mut World, token: Vec<u8>) {
     }
     terra_world::streaming::reset_replica(world);
     world.insert_resource(ClientSession::default());
+    world.insert_resource(terra_physics::TrainCollisionViews::default());
     world.insert_resource(crate::world_time::ClockReplica::default());
     world.insert_resource(crate::weather::WeatherReplica::default());
     world.insert_resource(ReplicatedPlayers::default());
@@ -246,6 +267,12 @@ pub fn disconnect_session(world: &mut World) {
     session.watering_reserve = (0, 0);
     session.infusion.clear();
     session.kingdoms = Default::default();
+    session.trains = Default::default();
+    session.train_cargo = None;
+    session.train_seat = None;
+    session.last_train_result = None;
+    session.train_response = 0;
+    session.train_request = 0;
     session.trees = Default::default();
     session.tree_patch_signature = None;
     session.last_kingdom_result = None;
@@ -257,6 +284,12 @@ pub fn disconnect_session(world: &mut World) {
 #[derive(Resource)]
 pub struct ClientSession {
     pub trees: terra_core::TreeRegistry,
+    pub trains: terra_core::trains::TrainSnapshot,
+    pub train_cargo: Option<crate::protocol::trains::TrainCargoSnapshot>,
+    pub train_seat: Option<terra_core::trains::SeatBinding>,
+    pub last_train_result: Option<crate::protocol::trains::TrainResult>,
+    pub train_response: u64,
+    train_request: u64,
     tree_patch_signature: Option<u64>,
     pub kingdoms: terra_core::kingdom::KingdomRegistry,
     pub last_kingdom_result: Option<crate::protocol::kingdom::KingdomResult>,
@@ -323,6 +356,12 @@ pub struct ClientSession {
 impl Default for ClientSession {
     fn default() -> Self {
         Self {
+            trains: Default::default(),
+            train_cargo: None,
+            train_seat: None,
+            last_train_result: None,
+            train_response: 0,
+            train_request: 0,
             kingdoms: Default::default(),
             trees: Default::default(),
             tree_patch_signature: None,
@@ -414,7 +453,17 @@ impl ClientSession {
         self.last_edit.map_or(0, |(id, _)| id) < self.request
     }
     /// Reserve the response identity before a UI starts waiting, including when
-    /// another Bergfried request is still queued or arrives after that UI closes.
+    /// another vehicle request is still queued or arrives after that UI closes.
+    pub fn train_request(
+        &mut self,
+        action: crate::protocol::trains::TrainAction,
+    ) -> Option<TrainRequest> {
+        self.train_request = self.train_request.checked_add(1)?;
+        Some(TrainRequest(crate::protocol::trains::TrainCommand {
+            request: self.train_request,
+            action,
+        }))
+    }
     pub fn kingdom_request(
         &mut self,
         action: crate::protocol::kingdom::KingdomAction,
@@ -428,6 +477,28 @@ impl ClientSession {
     }
     pub fn confirmed_state(&self) -> Option<PlayerState> {
         self.latest.map(|(_, state)| state)
+    }
+    /// Shared seat coordinates are feet; movement uses the capsule center.
+    pub fn seated_state(&self) -> Option<CharacterState> {
+        let binding = self
+            .train_seat
+            .filter(|binding| Some(binding.player) == self.uuid)?;
+        let vehicle = self
+            .trains
+            .vehicles
+            .iter()
+            .find(|vehicle| vehicle.id == binding.vehicle)?;
+        let (feet, _) = vehicle.seat_pose(usize::from(binding.part))?;
+        Some(CharacterState {
+            position: Vec3::from_array(feet.map(|value| value as f32))
+                + Vec3::Y * terra_physics::character::PLAYER_HALF_HEIGHT,
+            velocity: Vec3::ZERO,
+            grounded: true,
+        })
+    }
+    #[cfg(test)]
+    pub(crate) fn prediction_sequence_for_test(&self) -> u64 {
+        self.sequence
     }
     /// Advance only the presentation briefly between authoritative progress updates.
     pub fn display_consumption(&self) -> Option<ConsumptionProgress> {
@@ -469,6 +540,12 @@ impl ClientSession {
             state.velocity = Vec3::ZERO;
             return true;
         }
+        let seated = self.seated_state();
+        let input = if seated.is_some() {
+            CharacterInput::default()
+        } else {
+            input
+        };
         let predicted_input = self.active_stalker_grip().map_or(input, |grip| {
             grip.movement(
                 state.position,
@@ -478,7 +555,10 @@ impl ClientSession {
                     .movement_multiplier(simulation.swimming_at(state.position)),
             )
         });
-        let moved = if let Some(mount) = self.mounted.as_mut() {
+        let moved = if let Some(seated) = seated {
+            *state = seated;
+            true
+        } else if let Some(mount) = self.mounted.as_mut() {
             predict_riding(mount, state, input, simulation);
             true
         } else {
@@ -519,6 +599,12 @@ impl ClientSession {
     }
     fn fail(&mut self, error: impl Into<String>) {
         self.kingdoms = Default::default();
+        self.trains = Default::default();
+        self.train_cargo = None;
+        self.train_seat = None;
+        self.last_train_result = None;
+        self.train_response = 0;
+        self.train_request = 0;
         self.trees = Default::default();
         self.tree_patch_signature = None;
         self.last_kingdom_result = None;
@@ -675,6 +761,7 @@ pub(crate) fn install(app: &mut App) {
         .add_message::<InventoryRequest>()
         .add_message::<ContainerRequest>()
         .add_message::<KingdomRequest>()
+        .add_message::<TrainRequest>()
         .init_resource::<SocialState>()
         .init_resource::<CursorShare>()
         .add_message::<RespawnRequest>()
@@ -710,6 +797,7 @@ pub(crate) fn install(app: &mut App) {
         .add_systems(Update, send_consumption.after(send_mining))
         .add_systems(Update, send_inventory.after(StreamingSet::Edits))
         .add_systems(Update, send_kingdoms.after(StreamingSet::Edits))
+        .add_systems(Update, send_trains.after(StreamingSet::Edits))
         .add_systems(Update, send_cursor.after(StreamingSet::Edits))
         .add_systems(Update, send_respawn.after(StreamingSet::Edits))
         .add_systems(PostUpdate, send_inputs.before(MessageSystems::Send));
@@ -879,6 +967,7 @@ struct ReplicaWorld<'w> {
     confirmed: MessageWriter<'w, ConfirmedEdit>,
     tree_collapse: MessageWriter<'w, TreeCollapseEvent>,
     section_edits: MessageWriter<'w, SectionEditApplied>,
+    train_collision_views: Option<ResMut<'w, terra_physics::TrainCollisionViews>>,
 }
 
 fn apply_section_delta(
@@ -1385,6 +1474,66 @@ fn receive_controls(
                     }
                 }
             }),
+            ServerControl::Trains(snapshot) => {
+                if session.player.is_none() || !snapshot.valid() {
+                    Err("Invalid train snapshot".into())
+                } else if snapshot.revision >= session.trains.revision {
+                    let collision_result = if let Some(views) = &mut world.train_collision_views {
+                        let result = views
+                            .bypass_change_detection()
+                            .set_confirmed_views(&snapshot.vehicles, &world.journal);
+                        if matches!(result, Ok(true)) {
+                            views.set_changed();
+                        }
+                        result
+                    } else {
+                        Ok(false)
+                    };
+                    collision_result.map(|_| {
+                        session.train_seat = snapshot
+                            .seats
+                            .iter()
+                            .find(|seat| Some(seat.player) == session.uuid)
+                            .copied();
+                        if session.train_cargo.as_ref().is_some_and(|cargo| {
+                            snapshot
+                                .vehicles
+                                .iter()
+                                .find(|vehicle| vehicle.id == cargo.vehicle)
+                                .is_none_or(|vehicle| vehicle.revision != cargo.revision)
+                        }) {
+                            session.train_cargo = None;
+                        }
+                        session.trains = *snapshot;
+                    })
+                } else {
+                    Ok(())
+                }
+            }
+            ServerControl::TrainResult(result) => {
+                use crate::protocol::trains::TrainOutcome;
+                if result.request == 0
+                    || result.request > session.train_request
+                    || matches!(&result.outcome,TrainOutcome::Cargo(cargo) if !cargo.valid())
+                {
+                    Err("Invalid train result".into())
+                } else if result.request > session.train_response {
+                    if let TrainOutcome::Cargo(cargo) = &result.outcome {
+                        session.train_cargo = Some(cargo.clone());
+                    }
+                    if let TrainOutcome::Seated(seat) = &result.outcome {
+                        session.train_seat = *seat;
+                    }
+                    if matches!(result.outcome, TrainOutcome::Changed { .. }) {
+                        session.train_cargo = None;
+                    }
+                    session.train_response = result.request;
+                    session.last_train_result = Some(result);
+                    Ok(())
+                } else {
+                    Ok(())
+                }
+            }
             ServerControl::Kingdoms(kingdoms) => {
                 if session.player.is_none() || !kingdoms.valid() {
                     Err("Invalid kingdom snapshot".into())
@@ -1655,11 +1804,18 @@ fn reconcile(
     };
     let mut vitals = confirmed.survival;
     let mut mounted = confirmed.mounted;
+    let seated = session.seated_state();
+    if let Some(seated) = seated {
+        state = seated;
+    }
     for input in session
         .pending
         .iter()
         .filter(|input| input.sequence > confirmed.ack)
     {
+        if seated.is_some() {
+            continue;
+        }
         if let Some(mount) = mounted.as_mut() {
             predict_riding(mount, &mut state, input.character(), &simulation);
             vitals.effects.advance(simulation.delta_seconds());
@@ -1967,6 +2123,7 @@ fn send_edits(
             }
             EditAction::Block { position, .. }
             | EditAction::ConnectRail { position, .. }
+            | EditAction::StretchRail { position, .. }
             | EditAction::BuildRail { position, .. }
             | EditAction::SeedRail { position, .. }
             | EditAction::ToggleObject { position, .. }
@@ -1994,6 +2151,7 @@ fn send_edits(
                 | EditAction::RotateObject { .. }
                 | EditAction::ConnectConveyor { .. }
                 | EditAction::ConnectRail { .. }
+                | EditAction::StretchRail { .. }
                 | EditAction::BuildRail { .. }
                 | EditAction::SeedRail { .. }
                 | EditAction::DyeConveyor { .. }
@@ -2130,6 +2288,21 @@ mod crop_progress_tests {
             },
         ] {
             assert!(validate_crop_progress(vec![invalid]).is_err());
+        }
+    }
+}
+
+fn send_trains(
+    mut requests: MessageReader<TrainRequest>,
+    session: Res<ClientSession>,
+    mut senders: Query<&mut MessageSender<ClientControl>, With<Client>>,
+) {
+    for request in requests.read().take(16) {
+        if session.ready
+            && session.error.is_none()
+            && let Some(mut sender) = senders.iter_mut().next()
+        {
+            sender.send::<ControlChannel>(ClientControl::Train(request.0.clone()));
         }
     }
 }

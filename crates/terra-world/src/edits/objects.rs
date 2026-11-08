@@ -125,7 +125,7 @@ impl BlockObjectState {
                 158 | 160 => self.facing < 4 && self.peer.is_none() && !self.secondary,
                 154..=156 => self.facing < 4 && self.peer.is_none() && !self.secondary,
                 161 => self.facing < 8 && self.peer.is_none() && !self.secondary,
-                209 => self.facing < 4 && self.peer.is_none() && !self.secondary,
+                209..=217 => self.facing < 4 && self.peer.is_none() && !self.secondary,
                 162 | 170 | 171 => self.facing < 4 && self.peer.is_none() && !self.secondary,
                 163..=169 | 172 => {
                     terra_core::plumbing::valid_facing(material, self.facing)

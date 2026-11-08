@@ -9,3 +9,5 @@ pub mod session;
 pub mod social;
 pub mod terraform_commands;
 pub mod world_sync;
+
+pub mod trains;

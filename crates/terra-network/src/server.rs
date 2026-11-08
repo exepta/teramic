@@ -158,6 +158,8 @@ pub(crate) fn install(app: &mut App) {
         .init_resource::<ServerRuntime>()
         .init_resource::<ConnectedProfiles>()
         .init_resource::<kingdoms::KingdomRuntime>()
+        .init_resource::<trains::TrainRuntime>()
+        .init_resource::<trains::SeatedPlayers>()
         .init_resource::<trees::TreeRuntime>()
         .init_resource::<creatures::InspectionTargets>()
         .init_resource::<pvp::Attacks>()
@@ -214,6 +216,7 @@ pub(crate) fn install(app: &mut App) {
         .add_systems(
             PostUpdate,
             (
+                trains::broadcast,
                 send_deltas,
                 send_players,
                 gameplay::send_gameplay,
@@ -482,6 +485,8 @@ fn receive_controls(
     mut peers: ControlPeers,
     mut world: ControlWorld,
     mut kingdoms: ResMut<kingdoms::KingdomRuntime>,
+    mut trains_runtime: ResMut<trains::TrainRuntime>,
+    mut train_seats: ResMut<trains::SeatedPlayers>,
 ) {
     if world.gateway.is_none() {
         return;
@@ -495,6 +500,16 @@ fn receive_controls(
                 break;
             }
             match message {
+                ClientControl::Train(command) if peer.synced => {
+                    trains::control(
+                        command,
+                        &peer,
+                        &mut sender,
+                        &mut world,
+                        &mut trains_runtime,
+                        &mut train_seats,
+                    );
+                }
                 ClientControl::Kingdom(command) if peer.synced => {
                     kingdoms::control(command, &peer, &mut sender, &mut world, &mut kingdoms);
                 }
@@ -536,6 +551,9 @@ fn receive_controls(
                 ClientControl::Creature { id, feed, look }
                     if peer.synced && peer.chat.teleport.is_none() =>
                 {
+                    if trains::horse_mount_blocked(&peer, &world, &train_seats, id, feed) {
+                        continue;
+                    }
                     consumption::cancel(&mut peer, &mut sender);
                     creatures::interact(id, feed, look, &mut peer, &mut sender, &mut world);
                 }
@@ -867,8 +885,11 @@ fn simulate(
     mut sleep: Option<ResMut<beds::SleepRuntime>>,
     mut grips: ResMut<stalkers::Grips>,
     mut mounts: ResMut<riding::Mounts>,
+    mut input_wait: Local<HashMap<Entity, u8>>,
+    mut seated: Option<ResMut<trains::SeatedPlayers>>,
 ) {
     runtime.tick = runtime.tick.saturating_add(1);
+    input_wait.retain(|body, _| bodies.contains(*body));
     for (entity, character, mut transform, mut velocity, collider, mut grounded) in &mut bodies {
         let Ok(mut peer) = peers.get_mut(character.link) else {
             continue;
@@ -912,23 +933,59 @@ fn simulate(
             velocity: velocity.0,
             grounded: grounded.0,
         };
-        // Samples describe input state, not permission to run additional ticks.
-        // Coalesce delayed packets so a background-window pause cannot leave a permanent backlog.
-        let mut jump = false;
-        let mut latest = None;
-        for input in &peer.inputs {
-            jump |= input.jump;
-            latest = Some(*input);
+        if peer.received == 0 {
+            input_wait.insert(entity, 0);
         }
-        if let Some(input) = latest {
+        // One predicted input represents one fixed simulation step. Consuming
+        // a whole burst here would acknowledge movement never simulated by the
+        // authority, so client replay would discard those steps and snap back.
+        // The fixed schedule, never the number of received packets, limits speed.
+        let next_input = peer.inputs.front().copied();
+        let jump = next_input.is_some_and(|input| input.jump);
+        if let Some(input) = next_input {
             peer.look = input.look;
             peer.last_movement = input.character();
+        }
+        if let Some(seats) = seated.as_deref_mut()
+            && seats.has_exit(peer.uuid)
+            && peer.chat.teleport.is_none()
+            && !peer.vitals.dead()
+            && peer.game_mode(&spawn.config) != terra_core::GameMode::Spectator
+        {
+            if let Some(position) = seats.take_exit(
+                peer.uuid,
+                &spawn.chunks,
+                &spawn.journal,
+                &spawn.terrain.0,
+                &spawn.properties,
+            ) {
+                transform.translation = position;
+                grounded.0 = true;
+                acknowledge_movement(&mut peer);
+                input_wait.insert(entity, 0);
+            }
+            velocity.0 = Vec3::ZERO;
+            let mode = peer.game_mode(&spawn.config);
+            let current = CharacterState {
+                position: transform.translation,
+                velocity: Vec3::ZERO,
+                grounded: grounded.0,
+            };
+            survival::advance_rest(
+                &mut peer,
+                current,
+                simulation.head_underwater(current.position),
+                simulation.swimming_at(current.position),
+                mode,
+                simulation.delta_seconds(),
+            );
+            continue;
         }
         if sleep
             .as_mut()
             .is_some_and(|sleep| sleep.blocks_movement(peer.id, peer.last_movement, jump))
         {
-            acknowledge_movement(&mut peer);
+            discard_movement(&mut peer);
             mounts.release(peer.uuid);
             velocity.0 = Vec3::ZERO;
             peer.mining = None;
@@ -945,20 +1002,44 @@ fn simulate(
             continue;
         }
         if peer.chat.teleport.is_some() {
-            acknowledge_movement(&mut peer);
+            input_wait.insert(entity, 0);
+            discard_movement(&mut peer);
             mounts.release(peer.uuid);
             grips.release(peer.uuid);
             velocity.0 = Vec3::ZERO;
             continue;
         }
-        let mut input = if peer.last_input.elapsed() < Duration::from_millis(250) {
-            peer.last_movement
-        } else {
-            CharacterInput {
-                flight_speed: peer.last_movement.flight_speed.map(|_| 0.0),
-                ..Default::default()
-            }
-        };
+        if let Some((position, yaw)) = seated.as_deref().and_then(|seats| seats.pose(peer.uuid)) {
+            acknowledge_movement(&mut peer);
+            transform.translation = position;
+            transform.rotation = Quat::from_rotation_y(yaw);
+            velocity.0 = Vec3::ZERO;
+            grounded.0 = true;
+            input_wait.insert(entity, 0);
+            let mode = peer.game_mode(&spawn.config);
+            survival::advance_rest(
+                &mut peer,
+                CharacterState {
+                    position,
+                    velocity: Vec3::ZERO,
+                    grounded: true,
+                },
+                simulation.head_underwater(position),
+                simulation.swimming_at(position),
+                mode,
+                simulation.delta_seconds(),
+            );
+            continue;
+        }
+        let mut input =
+            if next_input.is_some() || peer.last_input.elapsed() < Duration::from_millis(250) {
+                peer.last_movement
+            } else {
+                CharacterInput {
+                    flight_speed: peer.last_movement.flight_speed.map(|_| 0.0),
+                    ..Default::default()
+                }
+            };
         input.jump = jump || (input.jump && simulation.swimming_at(state.position));
         let mode = peer.game_mode(&spawn.config);
         if peer.vitals.dead() || mode == terra_core::GameMode::Spectator {
@@ -1017,14 +1098,57 @@ fn simulate(
         let equipment = peer.equipment;
         peer.vitals.apply_equipment(equipment);
         if peer.vitals.dead() {
-            acknowledge_movement(&mut peer);
+            discard_movement(&mut peer);
             velocity.0 = Vec3::ZERO;
             peer.mining = None;
             continue;
         }
+        if next_input.is_none() && peer.received != 0 && grips.get(peer.uuid).is_none() {
+            let waiting = input_wait.entry(entity).or_default();
+            let flying = peer.last_movement.flight_speed.is_some() && peer.can_fly(&spawn.config);
+            if state.grounded && !flying {
+                // Revalidate actual support without replaying the previous
+                // horizontal input. A removed floor cannot keep a stale
+                // grounded flag (and a fresh airborne grace) forever.
+                let mut support = state;
+                support.velocity.x = 0.0;
+                support.velocity.z = 0.0;
+                if simulation.step(entity, collider, &mut support, CharacterInput::default()) {
+                    state.position.y = support.position.y;
+                    state.velocity.y = support.velocity.y;
+                    state.grounded = support.grounded;
+                    if state.grounded {
+                        *waiting = 0;
+                    }
+                }
+            }
+            if flying || state.grounded || *waiting < MAX_AIRBORNE_INPUT_WAIT {
+                if !flying && !state.grounded {
+                    *waiting += 1;
+                }
+                survival::advance_rest(
+                    &mut peer,
+                    state,
+                    simulation.head_underwater(state.position),
+                    simulation.swimming_at(state.position),
+                    mode,
+                    simulation.delta_seconds(),
+                );
+                transform.translation = state.position;
+                velocity.0 = state.velocity;
+                grounded.0 = state.grounded;
+                continue;
+            }
+            // Long input silence does not suspend an airborne survival player.
+            // The allowance belongs to the airborne episode, not each packet.
+            input = CharacterInput::default();
+        }
         let before = state;
         if simulation.survival_step(entity, collider, &mut state, input, mode, &mut peer.vitals) {
             acknowledge_movement(&mut peer);
+            if state.grounded {
+                input_wait.insert(entity, 0);
+            }
             let submerged = simulation.head_underwater(state.position);
             let swimming = simulation.swimming_at(state.position);
             survival::advance(
@@ -1043,7 +1167,16 @@ fn simulate(
     }
 }
 
+const MAX_AIRBORNE_INPUT_WAIT: u8 = 8;
+
 fn acknowledge_movement(peer: &mut Peer) {
+    if let Some(input) = peer.inputs.pop_front() {
+        peer.ack = input.sequence;
+    }
+}
+
+/// Explicit non-moving states consume queued intentions without replaying them.
+fn discard_movement(peer: &mut Peer) {
     if let Some(input) = peer.inputs.back() {
         peer.ack = input.sequence;
     }
@@ -1156,7 +1289,11 @@ fn send_deltas(
 fn send_players(
     runtime: Res<ServerRuntime>,
     config: Res<GameConfig>,
-    (journal, mounts): (Res<EditJournal>, Res<riding::Mounts>),
+    (journal, mounts, train_seats): (
+        Res<EditJournal>,
+        Res<riding::Mounts>,
+        Option<Res<trains::SeatedPlayers>>,
+    ),
     peers: Query<&Peer, With<Connected>>,
     bodies: Query<
         (
@@ -1188,6 +1325,9 @@ fn send_players(
             players.push(PlayerState {
                 kingdom_heraldry: journal.gameplay().kingdoms.heraldry_for_member(peer.uuid),
                 mounted: mounts.snapshot(peer.uuid),
+                train_seat: train_seats
+                    .as_ref()
+                    .and_then(|seats| seats.binding(peer.uuid)),
                 gender: peer.gender,
                 generation: peer.generation,
                 player: peer.id,
@@ -1340,6 +1480,8 @@ mod spawn;
 mod stalkers;
 #[path = "server_survival.rs"]
 mod survival;
+#[path = "server_trains.rs"]
+mod trains;
 #[path = "server_validation.rs"]
 mod validation;
 

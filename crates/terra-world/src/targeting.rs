@@ -490,6 +490,27 @@ pub fn pick_world_for_placement(
     )
 }
 
+/// Rail construction uses the same actual solids, water and prop occlusion as
+/// ordinary placement, with its own bounded construction-only reach.
+pub fn pick_world_for_rails(
+    chunks: &ChunkStore,
+    journal: &crate::edits::EditJournal,
+    properties: &terra_core::block_properties::BlockPropertiesCatalog,
+    origin: [f64; 3],
+    direction: [f64; 3],
+    pose: PropPose,
+) -> (Option<BlockHit>, Option<WorldTarget>) {
+    pick_context(
+        chunks,
+        journal,
+        properties,
+        origin,
+        direction,
+        pose,
+        PickPurpose::RailPlacement,
+    )
+}
+
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum PickPurpose {
     Interaction,
@@ -497,6 +518,7 @@ enum PickPurpose {
     Sapling,
     Mining,
     Placement,
+    RailPlacement,
 }
 
 fn pick_context(
@@ -508,6 +530,11 @@ fn pick_context(
     pose: PropPose,
     purpose: PickPurpose,
 ) -> (Option<BlockHit>, Option<WorldTarget>) {
+    let build_reach = if purpose == PickPurpose::RailPlacement {
+        terra_core::rails::RAIL_BUILD_REACH
+    } else {
+        8.0
+    };
     let planting = matches!(purpose, PickPurpose::Planting | PickPurpose::Sapling);
     if origin
         .iter()
@@ -518,18 +545,38 @@ fn pick_context(
     }
     let solid = || {
         crate::interaction_shapes::raycast_solid(
-            chunks, journal, properties, origin, direction, 8.0,
+            chunks,
+            journal,
+            properties,
+            origin,
+            direction,
+            build_reach,
         )
     };
-    let obstruction = if matches!(purpose, PickPurpose::Mining | PickPurpose::Placement) {
+    let obstruction = if matches!(
+        purpose,
+        PickPurpose::Mining | PickPurpose::Placement | PickPurpose::RailPlacement
+    ) {
         crate::interaction_shapes::raycast_through_water(
-            chunks, journal, properties, origin, direction, 8.0, pose,
+            chunks,
+            journal,
+            properties,
+            origin,
+            direction,
+            build_reach,
+            pose,
         )
     } else if planting {
         solid()
     } else {
         crate::interaction_shapes::raycast_with_pose(
-            chunks, journal, properties, origin, direction, 8.0, pose,
+            chunks,
+            journal,
+            properties,
+            origin,
+            direction,
+            build_reach,
+            pose,
         )
     };
     let block = obstruction.filter(|hit| chunks.block_at(hit.position).is_some());
@@ -538,7 +585,7 @@ fn pick_context(
     } else {
         obstruction
     };
-    let reach = prop_obstruction.map_or(8.0, |hit| hit.distance);
+    let reach = prop_obstruction.map_or(build_reach, |hit| hit.distance);
     let end: [f64; 3] = std::array::from_fn(|i| origin[i] + direction[i] * reach);
     // Maximum accepted prop scale is 2.0 (visually 2.6); its owner is the
     // supporting block, up to 3.6 metres below a tall reed's visible top.

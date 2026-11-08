@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "id": 213,
+  "name": "Zugkupplung",
+  "description": "Modular railway vehicle part. Connect parts beside an assembly station, then assemble the vehicle.",
+  "creative_category": "building",
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/train_coupler.gltf",
+  "struct_block": true,
+  "hardness": 1.8,
+  "resistance": 9,
+  "required_tool": "pickaxe",
+  "mining_level": 0,
+  "collision_boxes": [
+    {
+      "minimum": [
+        0.29,
+        0.24,
+        0.05
+      ],
+      "maximum": [
+        0.71,
+        0.58,
+        0.3
+      ]
+    },
+    {
+      "minimum": [
+        0.4,
+        0.32,
+        0.27
+      ],
+      "maximum": [
+        0.6,
+        0.46,
+        0.77
+      ]
+    },
+    {
+      "minimum": [
+        0.26,
+        0.26,
+        0.69
+      ],
+      "maximum": [
+        0.39,
+        0.52,
+        0.96
+      ]
+    },
+    {
+      "minimum": [
+        0.61,
+        0.26,
+        0.69
+      ],
+      "maximum": [
+        0.74,
+        0.52,
+        0.96
+      ]
+    },
+    {
+      "minimum": [
+        0.26,
+        0.26,
+        0.83
+      ],
+      "maximum": [
+        0.74,
+        0.52,
+        0.96
+      ]
+    }
+  ]
+}

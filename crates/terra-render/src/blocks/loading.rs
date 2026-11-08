@@ -1333,6 +1333,11 @@ fn bake_transform(
         if position.iter().enumerate().any(|(axis, value)| {
             let (minimum, maximum) = if let Some((low, high)) = rail_bounds {
                 (low[axis] as f32, high[axis] as f32)
+            } else if id == terra_core::train_parts::BOGIE && axis != 1 {
+                (
+                    terra_core::train_parts::BOGIE_MIN_HORIZONTAL as f32,
+                    terra_core::train_parts::BOGIE_MAX_HORIZONTAL as f32,
+                )
             } else if axis != 0
                 && let Some(radius) = terra_core::kinetic::radial_extent(id)
             {

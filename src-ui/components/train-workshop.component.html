@@ -1,0 +1,61 @@
+@if (trainView.open) {
+<div class="train-workshop-overlay">
+  <div class="train-workshop-panel">
+    <div class="train-panel-fill"></div>
+    <ornate-frame></ornate-frame>
+    <div class="train-workshop-content">
+      <div class="train-workshop-heading"><icon name="train-front" size="24" /><h2>{{ trainView.title }}</h2></div>
+      @if (trainView.cargo) {
+        <p>Ein Klick verschiebt den ganzen Stapel.</p>
+        <h3>Laderaum</h3>
+        <div class="train-slots">
+          @for (slot of trainView.cargo_slots; track slot.index) {
+            <button class="train-slot" [id]="slot.command" [disabled]="trainView.pending" [title]="slot.name" onclick="train_workshop_action">
+              @if (!slot.empty) { <img [alt]="slot.preview" /><p>{{ slot.count }}</p> }
+            </button>
+          }
+        </div>
+        <h3>Inventar</h3>
+        <div class="train-slots">
+          @for (slot of trainView.player_slots; track slot.index) {
+            <button class="train-slot" [id]="slot.command" [disabled]="trainView.pending" [title]="slot.name" onclick="train_workshop_action">
+              @if (!slot.empty) { <img [alt]="slot.preview" /><p>{{ slot.count }}</p> }
+            </button>
+          }
+        </div>
+      } @else {
+        <p>{{ trainView.requirements }}</p>
+        <div class="train-workshop-columns">
+          <div class="train-workshop-controls">
+            <h3>Aufbau: {{ trainView.kind }}</h3>
+            <div class="train-kind-buttons">
+              <button id="kind:locomotive" onclick="train_workshop_action">Lokomotive</button>
+              <button id="kind:tender" onclick="train_workshop_action">Tender</button>
+              <button id="kind:passenger" onclick="train_workshop_action">Personenwagen</button>
+              <button id="kind:freight" onclick="train_workshop_action">Güterwagen</button>
+            </div>
+            <button id="assemble" class="train-primary" [disabled]="trainView.pending" onclick="train_workshop_action">Zusammensetzen</button>
+            <p>Lok: Führerstand · Personenwagen: Sitz · Tender/Güterwagen: Laderaum</p>
+            <button id="dismantle" [disabled]="trainView.pending || !trainView.selected" onclick="train_workshop_action">Auswahl zerlegen</button>
+            <button id="seat" [disabled]="trainView.pending || !trainView.selected" onclick="train_workshop_action">Einsteigen</button>
+            <button id="cargo" [disabled]="trainView.pending || !trainView.selected" onclick="train_workshop_action">Laderaum öffnen</button>
+          </div>
+          <div class="train-workshop-vehicles">
+            <div class="train-vehicle-heading"><h3>Fahrzeuge</h3><button id="clear" onclick="train_workshop_action">Auswahl lösen</button></div>
+            @for (vehicle of trainView.rows; track vehicle.id) {
+              <button [id]="vehicle.command" [class]="vehicle.selected ? 'train-vehicle selected' : (vehicle.second ? 'train-vehicle second' : 'train-vehicle')" [disabled]="trainView.pending" onclick="train_workshop_action">
+                <p>{{ vehicle.label }}</p><p>{{ vehicle.detail }}</p>
+                @if (vehicle.foreign) { <p>Anderer Besitzer</p> }
+              </button>
+            }
+            <div class="train-pagination"><button id="previous" onclick="train_workshop_action"><icon name="chevron-left" size="16" /></button><p>{{ trainView.page }}</p><button id="next" onclick="train_workshop_action"><icon name="chevron-right" size="16" /></button></div>
+            <div class="train-coupling"><button id="front" onclick="train_workshop_action">Erstes Ende: {{ trainView.front }}</button><button id="second-front" onclick="train_workshop_action">Zweites Ende: {{ trainView.second_front }}</button></div>
+            <div class="train-coupling"><button id="couple" [disabled]="trainView.pending || !trainView.pair" onclick="train_workshop_action">Zwei Auswahlen koppeln</button><button id="uncouple" [disabled]="trainView.pending || !trainView.selected" onclick="train_workshop_action">Kupplung lösen</button></div>
+          </div>
+        </div>
+      }
+      <div class="train-workshop-footer"><p>{{ trainView.status }}</p><button id="close" onclick="train_workshop_action">Schließen · E / ESC</button></div>
+    </div>
+  </div>
+</div>
+}

@@ -1,4 +1,12 @@
 [
+    include_str!("../../../../assets/crafting/train_chassis.json"),
+    include_str!("../../../../assets/crafting/train_bogie.json"),
+    include_str!("../../../../assets/crafting/train_frame.json"),
+    include_str!("../../../../assets/crafting/train_coupler.json"),
+    include_str!("../../../../assets/crafting/train_cab.json"),
+    include_str!("../../../../assets/crafting/train_seat.json"),
+    include_str!("../../../../assets/crafting/train_cargo.json"),
+    include_str!("../../../../assets/crafting/train_assembly_station.json"),
     include_str!("../../../../assets/crafting/ballast.json"),
     include_str!("../../../../assets/crafting/ballast_stairs.json"),
     include_str!("../../../../assets/crafting/ballast_slab.json"),

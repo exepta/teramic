@@ -154,6 +154,7 @@ struct InventoryContext<'w, 's> {
     fullmap: Option<Res<'w, crate::minimap::fullmap::FullMapState>>,
     pets: Option<Res<'w, crate::pets::PetMenuState>>,
     kingdom: Option<Res<'w, crate::kingdom::KingdomMenuState>>,
+    trains: Option<Res<'w, crate::trains::TrainUiState>>,
     view: Query<
         'w,
         's,
@@ -166,6 +167,10 @@ struct InventoryContext<'w, 's> {
 impl InventoryContext<'_, '_> {
     fn available(&self) -> bool {
         !self.settings.open
+            && !self
+                .trains
+                .as_ref()
+                .is_some_and(|trains| trains.blocks_input())
             && !self.kingdom.as_ref().is_some_and(|k| k.blocks_input())
             && !self.pets.as_ref().is_some_and(|p| p.blocks_input())
             && !self.fullmap.as_ref().is_some_and(|map| map.blocks_input())
@@ -256,6 +261,12 @@ pub(crate) fn install(app: &mut App) {
                 .after(bevy::ui::UiSystems::PostLayout)
                 .before(bevy::ui::UiSystems::Stack),
         );
+}
+
+pub(crate) fn reserved_for_transport(world: &World) -> [u16; terra_core::INVENTORY_SLOTS] {
+    world
+        .get_resource::<crafting::CraftingState>()
+        .map_or([0; terra_core::INVENTORY_SLOTS], crafting::reserved_counts)
 }
 
 fn browser_layout(
@@ -416,6 +427,10 @@ fn reveal_layout(
             view.prewarming = false;
         }
     }
+}
+
+pub(crate) fn item_label(item: ItemKind, palette: &BlockPalette) -> String {
+    view::item_metadata(item, palette).0
 }
 
 pub(crate) fn preview_key(item: ItemKind) -> String {
@@ -674,7 +689,7 @@ fn block_opening_frame(
             )
             .and_then(|p| context.chunks.as_ref()?.block_at(p))
             .is_some_and(
-                |material| matches!(material, 28 | 29 | 59 | 99 | 152 | 156..=157 | 159..=162),
+                |material| matches!(material, 28 | 29 | 59 | 99 | 152 | 156..=157 | 159..=162 | 216),
             ))
     {
         blocked.0 = true;
@@ -744,7 +759,8 @@ fn station_target(
             | 156..=157
             | 159..=162
             | 166..=167
-            | 209,
+            | 209
+            | 216,
         )
     )
     .then_some(hit.position)
@@ -1111,7 +1127,7 @@ fn keyboard(
                         closing: false,
                     });
                 }
-                Some(29 | 59 | 99 | 152 | 156..=157 | 159..=162) => {
+                Some(29 | 59 | 99 | 152 | 156..=157 | 159..=162 | 216) => {
                     actions.write(InventoryAction::OpenChest(position));
                 }
                 _ => {

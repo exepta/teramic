@@ -20,7 +20,7 @@ struct Prepared {
 fn placement_source_allowed(action: EditAction, source: u16) -> bool {
     if matches!(
         action,
-        EditAction::BuildRail { .. } | EditAction::SeedRail { .. }
+        EditAction::BuildRail { .. } | EditAction::SeedRail { .. } | EditAction::StretchRail { .. }
     ) {
         return source == terra_core::rails::STRAIGHT;
     }
@@ -74,7 +74,8 @@ pub(super) fn handles(action: EditAction) -> bool {
         }
         EditAction::ConnectRail { .. }
         | EditAction::BuildRail { .. }
-        | EditAction::SeedRail { .. } => true,
+        | EditAction::SeedRail { .. }
+        | EditAction::StretchRail { .. } => true,
         _ => false,
     }
 }
@@ -108,6 +109,9 @@ fn prepare(
             position, expected, ..
         }
         | EditAction::SeedRail {
+            position, expected, ..
+        }
+        | EditAction::StretchRail {
             position, expected, ..
         } => (position, expected, Operation::Place),
         EditAction::Block {
@@ -191,7 +195,7 @@ fn prepare(
         .to_array()
         .map(f64::from);
     let picker = match operation {
-        Operation::Place => terra_world::targeting::pick_world_for_placement,
+        Operation::Place => terra_world::targeting::pick_world_for_rails,
         Operation::Remove => terra_world::targeting::pick_world_for_mining,
         Operation::Switch => terra_world::targeting::pick_world_with_context,
     };
@@ -219,8 +223,19 @@ fn prepare(
         }
         _ => return Err(EditOutcome::Occluded),
     };
-    if hit.distance > 4.5 {
+    let build_reach = terra_core::rails::RAIL_BUILD_REACH;
+    let reach = if matches!(operation, Operation::Place) {
+        build_reach
+    } else {
+        4.5
+    };
+    if hit.distance > reach {
         return Err(EditOutcome::OutOfReach);
+    }
+    if terra_world::trains::raycast(&world.journal, eye, direction, hit.distance.min(reach))
+        .is_some_and(|obstruction| obstruction.distance + 1e-6 < hit.distance)
+    {
+        return Err(EditOutcome::Occluded);
     }
     let mut context: Option<rails::ContextChoice> = None;
     let mut layout = match operation {
@@ -281,7 +296,7 @@ fn prepare(
                         if (0..3)
                             .map(|axis| (port.position.position()[axis] - eye[axis]).powi(2))
                             .sum::<f64>()
-                            > 4.5 * 4.5
+                            > build_reach * build_reach
                         {
                             return Err(EditOutcome::OutOfReach);
                         }
@@ -290,12 +305,44 @@ fn prepare(
                         && (0..3)
                             .map(|axis| (destination.position.position()[axis] - eye[axis]).powi(2))
                             .sum::<f64>()
-                            > 4.5 * 4.5
+                            > build_reach * build_reach
                     {
                         return Err(EditOutcome::OutOfReach);
                     }
                 }
                 context = Some(selected);
+                layout
+            } else if let EditAction::StretchRail {
+                start, signature, ..
+            } = command.action
+            {
+                if hit.position != position {
+                    return Err(EditOutcome::Occluded);
+                }
+                let layout = rails::connection_aim(
+                    &world.chunks,
+                    &world.journal,
+                    start,
+                    hit,
+                    (eye, direction),
+                    command.look,
+                    wood,
+                )
+                .map_err(|_| EditOutcome::Invalid)?;
+                if rails::connection_signature(&layout, start) != signature {
+                    return Err(EditOutcome::Conflict);
+                }
+                let destination = rails::connection_target(&layout)
+                    .ok_or(EditOutcome::Invalid)?
+                    .position
+                    .position();
+                if (0..3)
+                    .map(|axis| (destination[axis] - eye[axis]).powi(2))
+                    .sum::<f64>()
+                    > build_reach * build_reach
+                {
+                    return Err(EditOutcome::OutOfReach);
+                }
                 layout
             } else if let EditAction::ConnectRail { start, .. } = command.action {
                 if hit.position != position {
@@ -317,7 +364,7 @@ fn prepare(
                 if (0..3)
                     .map(|axis| (destination[axis] - eye[axis]).powi(2))
                     .sum::<f64>()
-                    > 4.5 * 4.5
+                    > build_reach * build_reach
                 {
                     return Err(EditOutcome::OutOfReach);
                 }
@@ -411,7 +458,7 @@ fn prepare(
             rails::context_sites(&world.journal, context)
         } else {
             match command.action {
-                EditAction::ConnectRail { start, .. } => {
+                EditAction::ConnectRail { start, .. } | EditAction::StretchRail { start, .. } => {
                     rails::connection_sites(&world.journal, start, hit)
                 }
                 _ => rails::placement_sites(&world.journal, hit),

@@ -72,7 +72,7 @@ pub(super) fn update(
         && presentation.preview.rail_mode < 2
         && chunks.block_at(hit.position).is_some_and(rails::is_rail)
     {
-        if placing && hit.distance <= 4.5 {
+        if placing && hit.distance <= rails::RAIL_BUILD_REACH {
             presentation.preview.rail_start =
                 terra_world::rails::select_endpoint(journal, hit, ray);
             presentation.preview.rail_origin =
@@ -100,7 +100,7 @@ pub(super) fn update(
         }
     };
     let valid_plan = if let Some(start) = start {
-        terra_world::rails::connection(chunks, journal, start, hit, [yaw, pitch], wood)
+        terra_world::rails::connection_aim(chunks, journal, start, hit, ray, [yaw, pitch], wood)
     } else if starter {
         terra_world::rails::seed(chunks, journal, hit, ray, [yaw, pitch], wood)
     } else {
@@ -110,7 +110,15 @@ pub(super) fn update(
     let environment_error = valid_plan.as_ref().err().cloned();
     let plan = valid_plan.or_else(|_| {
         if let Some(start) = start {
-            terra_world::rails::proposal_connection(chunks, journal, start, hit, [yaw, pitch], wood)
+            terra_world::rails::proposal_connection_aim(
+                chunks,
+                journal,
+                start,
+                hit,
+                ray,
+                [yaw, pitch],
+                wood,
+            )
         } else if starter {
             terra_world::rails::proposal_seed(chunks, journal, hit, ray, [yaw, pitch], wood)
         } else {
@@ -176,7 +184,7 @@ pub(super) fn update(
             (0..3)
                 .map(|axis| (endpoint[axis] - ray.0[axis]).powi(2))
                 .sum::<f64>()
-                <= 4.5 * 4.5
+                <= rails::RAIL_BUILD_REACH * rails::RAIL_BUILD_REACH
         });
     let has_item = creative
         || target
@@ -240,6 +248,12 @@ pub(super) fn update(
             })
         })
     };
+    let vehicle_blocked = target.session.as_ref().is_some_and(|session| {
+        plan.edits.iter().any(|edit| {
+            edit.material != 0
+                && terra_world::trains::reserved_in(&session.trains.vehicles, edit.position)
+        })
+    });
     let blocked = target.bodies.iter().any(|body| overlaps(body.translation))
         || target.remote.as_ref().is_some_and(|players| {
             players
@@ -259,14 +273,15 @@ pub(super) fn update(
         && endpoint_reachable
         && foreground_clear
         && within_height
-        && hit.distance <= 4.5
+        && hit.distance <= rails::RAIL_BUILD_REACH
         && has_item
         && permitted
-        && !blocked;
+        && !blocked
+        && !vehicle_blocked;
     if !valid {
         presentation.preview.rail_error = Some(if let Some(error) = environment_error {
             error
-        } else if !endpoint_reachable || hit.distance > 4.5 {
+        } else if !endpoint_reachable || hit.distance > rails::RAIL_BUILD_REACH {
             "Das Ziel-Gleisende ist zu weit entfernt".into()
         } else if !has_item {
             format!("Zu wenig Material: {cost} benötigt")
@@ -274,6 +289,8 @@ pub(super) fn update(
             "Keine Baurechte am Gleis oder im Baubereich".into()
         } else if !existing_sites_loaded {
             "Der vorhandene Gleisanschluss ist noch nicht vollständig geladen".into()
+        } else if vehicle_blocked {
+            "Ein Fahrzeug belegt den Gleisbereich".into()
         } else if blocked {
             "Ein Spieler steht im Gleisbereich".into()
         } else if !within_height {
@@ -293,10 +310,11 @@ pub(super) fn update(
         presentation.motion.impulse = presentation.motion.impulse.wrapping_add(1);
         if starter || start.is_some() {
             let action = if let Some(start) = start {
-                terra_network::client::RailPlacementAction::Connect {
+                terra_network::client::RailPlacementAction::Stretch {
                     start,
                     position: hit.position,
                     expected: chunks.block_at(hit.position).unwrap_or(0),
+                    signature: terra_world::rails::connection_signature(&plan, start),
                 }
             } else {
                 terra_network::client::RailPlacementAction::Seed {

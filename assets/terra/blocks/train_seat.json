@@ -1,0 +1,113 @@
+{
+  "schema_version": 1,
+  "id": 215,
+  "name": "Zugsitz",
+  "description": "Modular railway vehicle part. Connect parts beside an assembly station, then assemble the vehicle.",
+  "creative_category": "building",
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/train_seat.gltf",
+  "struct_block": true,
+  "hardness": 1.8,
+  "resistance": 9,
+  "required_tool": "pickaxe",
+  "mining_level": 0,
+  "collision_boxes": [
+    {
+      "minimum": [
+        0.18,
+        0.02,
+        0.19
+      ],
+      "maximum": [
+        0.26,
+        0.35,
+        0.27
+      ]
+    },
+    {
+      "minimum": [
+        0.18,
+        0.02,
+        0.69
+      ],
+      "maximum": [
+        0.26,
+        0.35,
+        0.7699999999999999
+      ]
+    },
+    {
+      "minimum": [
+        0.74,
+        0.02,
+        0.19
+      ],
+      "maximum": [
+        0.82,
+        0.35,
+        0.27
+      ]
+    },
+    {
+      "minimum": [
+        0.74,
+        0.02,
+        0.69
+      ],
+      "maximum": [
+        0.82,
+        0.35,
+        0.7699999999999999
+      ]
+    },
+    {
+      "minimum": [
+        0.12,
+        0.33,
+        0.12
+      ],
+      "maximum": [
+        0.88,
+        0.5,
+        0.82
+      ]
+    },
+    {
+      "minimum": [
+        0.12,
+        0.49,
+        0.72
+      ],
+      "maximum": [
+        0.88,
+        0.96,
+        0.88
+      ]
+    },
+    {
+      "minimum": [
+        0.05,
+        0.51,
+        0.24
+      ],
+      "maximum": [
+        0.13,
+        0.65,
+        0.81
+      ]
+    },
+    {
+      "minimum": [
+        0.87,
+        0.51,
+        0.24
+      ],
+      "maximum": [
+        0.95,
+        0.65,
+        0.81
+      ]
+    }
+  ]
+}

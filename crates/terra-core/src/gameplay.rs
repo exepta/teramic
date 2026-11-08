@@ -1344,6 +1344,7 @@ pub struct PlayerStats {
 #[derive(Debug, Default, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct GameplayState {
+    pub trains: crate::trains::TrainRegistry,
     pub trees: crate::trees::TreeRegistry,
     pub kingdoms: crate::kingdom::KingdomRegistry,
     pub creatures: crate::creatures::CreaturePopulation,
@@ -1361,7 +1362,8 @@ pub struct GameplayState {
 impl GameplayState {
     pub fn valid(&self) -> bool {
         let mut ids = HashSet::new();
-        self.trees.valid()
+        self.trains.valid()
+            && self.trees.valid()
             && self.kingdoms.valid()
             && self.creatures.valid()
             && self.pet_orders.len() <= crate::creatures::MAX_CREATURES
