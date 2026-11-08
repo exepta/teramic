@@ -17,8 +17,7 @@ mod rail_placement_tests;
 
 #[derive(SystemParam)]
 pub(crate) struct EditRequests<'w> {
-    rails: MessageWriter<'w, terra_network::client::RailConnectRequest>,
-    rail_builds: MessageWriter<'w, terra_network::client::RailBuildRequest>,
+    rail_placements: MessageWriter<'w, terra_network::client::RailPlacementRequest>,
     creatures: Option<ResMut<'w, terra_network::client::CreatureActions>>,
     player_attacks: Option<ResMut<'w, terra_network::client::PlayerAttacks>>,
     nests: Option<ResMut<'w, terra_network::client::BeeNestActions>>,
@@ -67,6 +66,26 @@ pub struct PlacementPreview {
     pub rail_options: bool,
     pub rail_replacing: bool,
     pub rail_ramp: bool,
+    pub rail_waiting: bool,
+    #[doc(hidden)]
+    pub rail_pending: Option<super::RailPending>,
+    #[doc(hidden)]
+    pub rail_sequence: u64,
+    #[doc(hidden)]
+    pub rail_origin: Option<(terra_core::rails::Piece, terra_core::WoodSpecies)>,
+}
+
+impl PlacementPreview {
+    pub(crate) fn cancel_rail_chain(&mut self) {
+        self.rail_start = None;
+        self.rail_origin = None;
+        self.cancel_rail_pending();
+    }
+
+    pub(crate) fn cancel_rail_pending(&mut self) {
+        self.rail_pending = None;
+        self.rail_waiting = false;
+    }
 }
 
 #[derive(Resource, Default, Debug)]
@@ -87,7 +106,6 @@ pub(crate) struct EditPresentation<'w> {
 
 #[derive(SystemParam)]
 pub(crate) struct EditTarget<'w, 's> {
-    rail_context: Option<Res<'w, super::RailBuildContext>>,
     creature: Option<Res<'w, super::TargetCreature>>,
     world: Res<'w, TargetWorld>,
     block: Res<'w, TargetBlock>,
@@ -149,7 +167,7 @@ pub(crate) fn edit_target_block(
     presentation.preview.rail_replacing = false;
     presentation.preview.rail_ramp = false;
     if blocked || selected != presentation.preview.rail_item {
-        presentation.preview.rail_start = None;
+        presentation.preview.cancel_rail_chain();
         if selected != presentation.preview.rail_item {
             presentation.preview.rail_mode = 0;
         }
@@ -176,7 +194,7 @@ pub(crate) fn edit_target_block(
             return;
         }
         if keys.just_pressed(Action::Break) {
-            presentation.preview.rail_start = None;
+            presentation.preview.cancel_rail_chain();
         }
     }
     presentation.vessel.begin_frame(
@@ -1255,7 +1273,12 @@ mod tests {
             .init_resource::<PlacementPreview>()
             .add_systems(
                 Update,
-                super::super::rail_wheel::prepare_intent.before(edit_target_block),
+                (
+                    super::super::rail_wheel::prepare_intent,
+                    super::super::rail_sequence::confirm,
+                )
+                    .chain()
+                    .before(edit_target_block),
             )
             .init_resource::<InteractionMotion>()
             .init_resource::<super::super::VesselMotion>()
@@ -1274,6 +1297,9 @@ mod tests {
             .add_message::<terra_network::client::ConveyorConnectRequest>()
             .add_message::<terra_network::client::RailConnectRequest>()
             .add_message::<terra_network::client::RailBuildRequest>()
+            .add_message::<terra_network::client::RailPlacementRequest>()
+            .add_message::<terra_network::client::RailPlacementSent>()
+            .add_message::<terra_network::client::ConfirmedEdit>()
             .add_message::<terra_network::client::ConveyorInteractionRequest>()
             .insert_resource(TargetBlock(Some(BlockHit {
                 position: [1, 0, 1],
@@ -1317,7 +1343,7 @@ mod tests {
         for foreign_claim in [false, true] {
             let mut app = app();
             session(&mut app, GameMode::Creative, false);
-            let piece = rails::Piece::new([15, 1, 8], rails::STRAIGHT, 2).unwrap();
+            let piece = rails::Piece::seed([15, 1, 8], 2).unwrap();
             {
                 let mut chunks = app.world_mut().resource_mut::<ChunkStore>();
                 let support_points = piece.supports();
@@ -1394,14 +1420,22 @@ mod tests {
             );
             let requests: Vec<_> = app
                 .world_mut()
-                .resource_mut::<Messages<BlockEditRequest>>()
+                .resource_mut::<Messages<terra_network::client::RailPlacementRequest>>()
                 .drain()
                 .collect();
             assert_eq!(requests.len(), usize::from(!foreign_claim));
             if let Some(request) = requests.first() {
-                assert_eq!(request.position, piece.anchor);
-                assert_eq!(request.material, rails::STRAIGHT);
+                assert!(matches!(
+                    request.action,
+                    terra_network::client::RailPlacementAction::Seed { position, expected: 3, signature }
+                        if position == hit.position && signature != 0
+                ));
             }
+            assert!(
+                app.world()
+                    .resource::<Messages<BlockEditRequest>>()
+                    .is_empty()
+            );
             assert_eq!(
                 app.world().resource::<ChunkStore>().block_at(piece.anchor),
                 Some(0)
@@ -1430,8 +1464,7 @@ mod tests {
         ] {
             let mut app = app();
             session(&mut app, GameMode::Creative, false);
-            let piece =
-                terra_core::rails::Piece::new([1, 1, 5], terra_core::rails::STRAIGHT, 2).unwrap();
+            let piece = terra_core::rails::Piece::seed([1, 1, 5], 2).unwrap();
             {
                 let mut chunks = app.world_mut().resource_mut::<ChunkStore>();
                 let support_points = piece.supports();
@@ -1526,6 +1559,11 @@ mod tests {
                     .drain()
                     .next()
                     .is_none()
+            );
+            assert!(
+                app.world()
+                    .resource::<Messages<terra_network::client::RailPlacementRequest>>()
+                    .is_empty()
             );
             assert_eq!(
                 app.world()

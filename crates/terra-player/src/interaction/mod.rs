@@ -1,5 +1,6 @@
 mod mining;
 mod palette;
+pub(crate) mod rail_sequence;
 pub(crate) mod rail_wheel;
 mod targeting;
 mod vessels;
@@ -11,3 +12,6 @@ pub use rail_wheel::RailBuildContext;
 pub use targeting::{TargetBlock, TargetCreature, TargetWorld, WorldTarget};
 pub(crate) use targeting::{target_block, target_creature};
 pub use vessels::VesselMotion;
+
+#[doc(hidden)]
+pub use rail_sequence::Pending as RailPending;

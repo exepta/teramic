@@ -123,6 +123,21 @@ impl Piece {
         };
         piece.valid().then_some(piece)
     }
+    /// A new one-block-long starter, three blocks wide. Legacy native straight
+    /// records keep their original four-block geometry through `Piece::new`.
+    pub fn seed(anchor: [i64; 3], facing: u8) -> Option<Self> {
+        if facing >= 4 {
+            return None;
+        }
+        let points = [[8, 2, 0], [8, 2, 4], [8, 2, 12], [8, 2, 16]].map(|[x, y, z]| match facing {
+            0 => [x, y, z],
+            1 => [z, y, 16 - x],
+            2 => [16 - x, y, 16 - z],
+            _ => [16 - z, y, x],
+        });
+        Self::new_curve(anchor, CurveSpec::new(points)?)
+    }
+
     pub fn kind(self) -> Option<Kind> {
         Kind::from_material(self.material)
     }

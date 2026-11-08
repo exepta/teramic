@@ -6614,3 +6614,46 @@ entladenem Anker ihre erwarteten Kollisionsflächen. Clippy aller Targets mit
 `-D warnings`, Format, Diff, kopfloser Assetexport und der aktuelle vollständige
 Client-/Server-Build sind sauber. Keine Grafiktests, Spielclients oder
 Screenshots wurden gestartet.
+
+## 209. Kurzes Startgleis Und Zielabhängiges Strecken
+
+Der Track-Bau beginnt mit einem genau einen Meter langen und drei Blöcke breiten
+Startgleis. Danach folgt die vollständige Vorschau dem anvisierten Ziel:
+Gerade, Kurve oder sanfte Steigung. Die nächste Platzierung baut diese
+zusammenhängende Verbindung. Ein Klick auf ein vorhandenes freies Ende wählt
+es als Start, ohne ein automatisches Viermeterstück anzubauen.
+
+Nach der bestätigten Platzierung wird das tatsächliche neue freie Ende zum
+Weiterbauen ausgewählt. Eindeutige lokale Tokens werden konkreten gesendeten
+Anfragen zugeordnet. Erst die passende Annahme und vollständig replizierte
+Geometrie einschließlich Holzart erlauben den Übergang. Abbruch, Item-/Sitzungs-
+wechsel, gesperrte Eingabe, veränderte Quellen und verspätete Antworten können
+keine alte Bauabsicht reaktivieren. Ablehnung erhält einen weiterhin gültigen
+Start für den nächsten Versuch; ausstehende Antworten haben eine feste Grenze.
+
+Protokoll 115 ergänzt SeedRail mit tatsächlichem Zieltreffer und einem stabilen
+Fingerabdruck. Die Authority plant das Startgleis selbst und prüft Sichtlinie,
+Reichweite, ausgewählten Bestand, Holz, sämtliche drei Zellen, Unterbau, Props,
+Rechte und Spielerfreiheit vor der bestehenden atomaren Transaktion. Vorschau,
+Materialbedarf, Abbau und Streckenanschlüsse verwenden gemeinsame Profile.
+
+Neue Startstücke benutzen vorhandene dynamische Kontrollpunkte und Material 196.
+Alte gespeicherte Viermeterstücke und native Profile behalten ihre Geometrie.
+RG13/ID12/PLY7, Material-IDs, Holzdefinitionen, Rezeptzahl und die Mengenregel
+für gestreckte Verbindungen bleiben erhalten. Die Hilfen zeigen Start, Ziel,
+Materialbedarf und ausstehende Bestätigung kompakt mit echten Tastenbelegungen.
+
+[Prüfbericht und Bedienung](tools/benchmarks/results/seed-stretch-track-building-2026-11-08/README.md).
+Keine Grafiktests oder Spielclients werden gestartet.
+
+Abnahme 209: 4.258 Workspace-Library-/Bin-Tests bestanden, keiner fehlgeschlagen,
+neun bestehende Tests ignoriert. Exakte 1×3-Startstücke in vier Ausrichtungen und
+allen Holzarten, kontinuierliche Gerade-/Kurven-/Rampenplanung sowie eindeutige
+Bestätigungen mit beiden Replikationsreihenfolgen sind geprüft. Doppelklicks,
+Abbruch, Itemwechsel, alte/abgelehnte Antworten und Zeitüberschreitung können
+keine fremde Baukette aktivieren. Der echte UDP-Lauf baut mit zwei Clients ein
+Fichten-Startgleis und seine Fortsetzung, prüft Verbrauch und Metadaten sowie
+einen späteren Beitritt mit identischem Streckennetz. Clippy aller Targets mit
+`-D warnings`, Format, Diff, kopfloser Assetexport und aktueller vollständiger
+Client-/Server-Build sind sauber. Keine Grafiktests, Spielclients oder
+Screenshots wurden gestartet.

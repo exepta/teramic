@@ -108,7 +108,7 @@ def main():
         model_path.write_text(json.dumps(gltf, separators=(',', ':'))+'\n')
         definition = {
             'schema_version': 1, 'id': material, 'name': NAMES[material-196],
-            'description': ('Three-block-wide wooden track. Plan its start and end to build a continuous railway with matching gauge and grade.'
+            'description': ('One-metre starter track, three blocks wide. Place a start, aim at the next endpoint and stretch a continuous straight, curve or ramp.'
                             if material == 196 else
                             'Three-block-wide track with wooden sleepers, steel rail heads and bolted feet. '
                             'The complete module follows its shared collision and routing profile.'),

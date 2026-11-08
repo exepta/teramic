@@ -342,3 +342,44 @@ fn compact_one_block_rises_have_flat_exact_ports_and_bounded_smooth_curvature() 
         std::f64::consts::FRAC_PI_2 * 4.5
     );
 }
+
+#[test]
+fn new_starters_are_exactly_one_by_three_in_every_heading_while_saved_native_straights_stay_four_long()
+ {
+    let anchor = [-17, 16, -17];
+    for facing in 0..4 {
+        let seed = Piece::seed(anchor, facing).unwrap();
+        assert_eq!(seed.material, STRAIGHT);
+        assert!(seed.curve.is_some());
+        assert_eq!(seed.paths()[0].length(), 1.0);
+        let actual: BTreeSet<_> = seed.footprint().iter().copied().collect();
+        let expected: BTreeSet<_> = if facing % 2 == 0 {
+            [[-1, 0, 0], [0, 0, 0], [1, 0, 0]].into_iter().collect()
+        } else {
+            [[0, 0, -1], [0, 0, 0], [0, 0, 1]].into_iter().collect()
+        };
+        assert_eq!(actual, expected, "heading {facing}");
+        assert_eq!(seed.supports().len(), 3);
+        for support in seed.supports().iter() {
+            assert_eq!(support.support[1], -1);
+        }
+        let ports = seed.ports();
+        assert_eq!(
+            ports[1]
+                .position
+                .0
+                .iter()
+                .zip(ports[0].position.0)
+                .map(|(end, start)| end.abs_diff(start))
+                .sum::<u64>(),
+            16
+        );
+        assert_eq!(ports[0].tangent, ports[1].tangent.map(|value| -value));
+        let saved = serde_json::to_string(&seed).unwrap();
+        assert_eq!(serde_json::from_str::<Piece>(&saved).unwrap(), seed);
+        let legacy = Piece::new(anchor, STRAIGHT, facing).unwrap();
+        assert_eq!(legacy.curve, None);
+        assert_eq!(legacy.paths()[0].length(), 4.0);
+    }
+    assert!(Piece::seed(anchor, 4).is_none());
+}

@@ -32,8 +32,14 @@ fn presentation(
 ) -> RailBuildView {
     let material = item.block_material().unwrap_or_default();
     let switch = matches!(material, rails::SWITCH_LEFT | rails::SWITCH_RIGHT);
+    let starter =
+        material == rails::STRAIGHT && preview.rail_start.is_none() && preview.rail_mode < 2;
     let binding = |action| short_binding(controls.binding(action));
-    let title = if preview.rail_ramp {
+    let title = if preview.rail_waiting {
+        "Wird gebaut…"
+    } else if starter {
+        "Startgleis · 1×3"
+    } else if preview.rail_ramp {
         "Sanfte Rampe"
     } else if preview.rail_choice == Some(rails::BuildChoice::Curve) {
         "Kurve"
@@ -52,7 +58,9 @@ fn presentation(
             },
         }
     };
-    let instruction = if switch {
+    let instruction = if preview.rail_waiting {
+        "Bestätigung abwarten".into()
+    } else if switch {
         format!("{}: Setzen", binding(GameAction::Place))
     } else {
         format!(
@@ -65,9 +73,9 @@ fn presentation(
             },
             binding(GameAction::Place),
             if preview.rail_start.is_some() {
-                "Ziel"
-            } else if preview.rail_mode == 1 && preview.rail_choice.is_none() {
-                "Start"
+                "Ziel setzen"
+            } else if starter {
+                "Start setzen"
             } else {
                 "Bauen"
             }
@@ -75,14 +83,20 @@ fn presentation(
     };
     let detail = if let Some(error) = &preview.rail_error {
         short_error(error)
+    } else if preview.rail_waiting {
+        format!(
+            "{}+{}: Auswahl lösen",
+            binding(GameAction::FlyDown),
+            binding(GameAction::Place)
+        )
     } else if preview.rail_start.is_some() {
         format!(
             "{}+{}: Abbrechen",
             binding(GameAction::FlyDown),
             binding(GameAction::Place)
         )
-    } else if preview.rail_mode == 1 && preview.rail_choice.is_none() {
-        "Freies Gleisende wählen".into()
+    } else if starter {
+        "Danach Ziel anvisieren".into()
     } else if preview.rail_replacing {
         "Endstück wird zur Rampe".into()
     } else if switch {
@@ -145,6 +159,8 @@ fn short_error(error: &str) -> String {
         "Tragfähiger Untergrund fehlt"
     } else if lower.contains("too close") || lower.contains("turning radius") {
         "Mehr Platz für die Kurve nötig"
+    } else if lower.contains("grade") || lower.contains("too steep") {
+        "Mehr Abstand für die Rampe nötig"
     } else if lower.contains("farther than") || lower.contains("zu weit") {
         "Gleisende außer Reichweite"
     } else if lower.contains("same wood") {
@@ -217,6 +233,10 @@ mod tests {
     fn wheel_instruction_is_limited_to_docking_choices_and_ramps_show_only_extra_cost() {
         let controls = ControlsConfig::default();
         let mut preview = PlacementPreview {
+            rail_start: Some(rails::Endpoint {
+                anchor: [0; 3],
+                port: 1,
+            }),
             rail_choice: Some(rails::BuildChoice::Curve),
             rail_options: true,
             ..Default::default()
@@ -239,6 +259,12 @@ mod tests {
             &controls,
         );
         assert!(!ordinary.instruction.contains("Mausrad"));
+        assert_eq!(ordinary.title, "Startgleis · 1×3");
+        assert!(ordinary.instruction.contains("Start setzen"));
+        preview.rail_waiting = true;
+        let waiting = presentation(&preview, ItemKind::Block(rails::STRAIGHT), &controls);
+        assert_eq!(waiting.title, "Wird gebaut…");
+        assert_eq!(waiting.instruction, "Bestätigung abwarten");
     }
 
     #[test]

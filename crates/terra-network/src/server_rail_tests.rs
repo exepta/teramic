@@ -7,6 +7,8 @@ use terra_voxel::{BlockSection, SectionPos, global_to_section};
 mod connections;
 #[path = "server_rail_context_tests.rs"]
 mod context;
+#[path = "server_rail_seed_tests.rs"]
+mod seeds;
 
 fn set_block(app: &mut App, cell: [i64; 3], material: u16) {
     let (owner, local) = global_to_section(cell);

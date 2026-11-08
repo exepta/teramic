@@ -22,6 +22,138 @@ pub fn cost(plan: &Layout) -> Option<u16> {
     proposed_piece(plan).map(super::piece_cost)
 }
 
+/// Place a new one-metre starter on the actually hit face. Existing modules
+/// are selected as connection sources instead of receiving implicit extensions.
+pub fn seed(
+    chunks: &ChunkStore,
+    journal: &EditJournal,
+    hit: terra_voxel::blocks::BlockHit,
+    ray: ([f64; 3], [f64; 3]),
+    look: [f32; 2],
+    wood: terra_core::WoodSpecies,
+) -> Result<Layout, String> {
+    let plan = proposal_seed(chunks, journal, hit, ray, look, wood)?;
+    environment(&plan, chunks, journal)?;
+    Ok(plan)
+}
+
+/// Keep a real one-by-three starter silhouette visible when its support or
+/// occupied cells are invalid; only `seed` and `commit` authorize publication.
+pub fn proposal_seed(
+    chunks: &ChunkStore,
+    journal: &EditJournal,
+    hit: terra_voxel::blocks::BlockHit,
+    ray: ([f64; 3], [f64; 3]),
+    look: [f32; 2],
+    wood: terra_core::WoodSpecies,
+) -> Result<Layout, String> {
+    if ray
+        .0
+        .iter()
+        .chain(ray.1.iter())
+        .any(|value| !value.is_finite())
+        || look.iter().any(|value| !value.is_finite())
+        || !hit.distance.is_finite()
+        || !(0.0..=4.5).contains(&hit.distance)
+        || hit
+            .position
+            .iter()
+            .any(|value| value.unsigned_abs() > 990_000)
+        || !matches!(
+            hit.normal,
+            [1, 0, 0] | [-1, 0, 0] | [0, 1, 0] | [0, -1, 0] | [0, 0, 1] | [0, 0, -1]
+        )
+    {
+        return Err("Invalid track starter placement ray".into());
+    }
+    if chunks
+        .block_at(hit.position)
+        .or_else(|| journal.block(hit.position))
+        .is_some_and(terra_core::rails::is_rail)
+    {
+        return Err("Select the free rail end, then choose its destination".into());
+    }
+    let facing = crate::edits::BlockObjectState::from_yaw(look[0] + std::f32::consts::PI).facing;
+    let piece = Piece::seed(hit.adjacent(), facing).ok_or("Invalid track starter pose")?;
+    candidate_piece(chunks, piece, wood)
+}
+
+/// Stable starter intent without copying its layout or trusting client points.
+pub fn seed_signature(plan: &Layout) -> u64 {
+    fn add(hash: &mut u64, value: u64) {
+        for byte in value.to_le_bytes() {
+            *hash ^= u64::from(byte);
+            *hash = hash.wrapping_mul(0x100000001b3);
+        }
+    }
+    let mut hash = 0xcbf29ce484222325;
+    add(&mut hash, 0x73656564);
+    if let Some(piece) = proposed_piece(plan) {
+        add(&mut hash, 1);
+        for coordinate in piece.anchor {
+            add(&mut hash, coordinate as u64);
+        }
+        add(&mut hash, u64::from(piece.material));
+        add(&mut hash, u64::from(piece.encoded_facing()));
+        if let Some(spec) = piece.curve {
+            add(&mut hash, 1);
+            for coordinate in spec.points.into_iter().flatten() {
+                add(&mut hash, coordinate as u64);
+            }
+        } else {
+            add(&mut hash, 0);
+        }
+        if let Some(state) = plan
+            .states
+            .iter()
+            .find(|(cell, _)| *cell == piece.anchor)
+            .and_then(|(_, state)| *state)
+        {
+            add(&mut hash, state.wood as u64);
+        }
+    } else {
+        add(&mut hash, 0);
+    }
+    hash
+}
+
+/// The canonical outward destination of a starter or a newly built connection.
+pub fn next_endpoint(plan: &Layout) -> Option<terra_core::rails::Endpoint> {
+    let piece = proposed_piece(plan)?;
+    piece
+        .ports()
+        .into_iter()
+        .find(|port| port.index == 1 && port.connectable)
+        .map(|port| terra_core::rails::Endpoint {
+            anchor: piece.anchor,
+            port: port.index,
+        })
+}
+
+/// Validate an applied receipt against complete replicated geometry and a free
+/// exact endpoint. A joined existing route intentionally has no continuation.
+pub fn continuation_endpoint(
+    journal: &EditJournal,
+    piece: Piece,
+    destination: terra_core::rails::FixedPoint,
+) -> Option<terra_core::rails::Endpoint> {
+    if owner_at(journal, piece.anchor) != Some(piece) || !complete(journal, piece) {
+        return None;
+    }
+    piece
+        .ports()
+        .into_iter()
+        .find(|port| {
+            port.connectable
+                && port.position == destination
+                && !port_connected(journal, piece, *port)
+        })
+        .map(|port| terra_core::rails::Endpoint {
+            anchor: piece.anchor,
+            port: port.index,
+        })
+}
+
 /// Snapping consumes an existing module's free port, even when the new piece
 /// occupies only unclaimed cells. Callers must authorize its complete footprint.
 pub fn placement_sites(

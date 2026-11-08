@@ -121,6 +121,60 @@ pub struct RailConnectRequest {
     pub expected: u16,
 }
 
+/// Local construction intent. Its token survives cancellation without reusing
+/// a previous server request or guessing which edit acknowledgment belongs to it.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum RailPlacementAction {
+    Seed {
+        position: [i64; 3],
+        expected: u16,
+        signature: u64,
+    },
+    Connect {
+        start: terra_core::rails::Endpoint,
+        position: [i64; 3],
+        expected: u16,
+    },
+}
+impl RailPlacementAction {
+    pub fn edit_action(self) -> EditAction {
+        match self {
+            Self::Seed {
+                position,
+                expected,
+                signature,
+            } => EditAction::SeedRail {
+                position,
+                expected,
+                signature,
+            },
+            Self::Connect {
+                start,
+                position,
+                expected,
+            } => EditAction::ConnectRail {
+                start,
+                position,
+                expected,
+            },
+        }
+    }
+}
+
+#[derive(Message, Clone, Copy, Debug)]
+pub struct RailPlacementRequest {
+    pub token: u64,
+    pub action: RailPlacementAction,
+}
+
+/// Emitted only after an intent has been assigned and sent its wire request.
+#[derive(Message, Clone, Copy, Debug)]
+pub struct RailPlacementSent {
+    pub token: u64,
+    pub request: u64,
+    pub action: EditAction,
+}
+
 #[derive(Message, Clone, Copy, Debug)]
 pub enum ConveyorInteractionRequest {
     Collect {
@@ -616,6 +670,8 @@ pub(crate) fn install(app: &mut App) {
         .add_message::<ObjectInteractionRequest>()
         .add_message::<RailConnectRequest>()
         .add_message::<RailBuildRequest>()
+        .add_message::<RailPlacementRequest>()
+        .add_message::<RailPlacementSent>()
         .add_message::<InventoryRequest>()
         .add_message::<ContainerRequest>()
         .add_message::<KingdomRequest>()
@@ -1755,6 +1811,7 @@ fn send_inputs(
 struct EditRequests<'w, 's> {
     rails: MessageReader<'w, 's, RailConnectRequest>,
     rail_builds: MessageReader<'w, 's, RailBuildRequest>,
+    rail_placements: MessageReader<'w, 's, RailPlacementRequest>,
     belt_interactions: MessageReader<'w, 's, ConveyorInteractionRequest>,
     conveyors: MessageReader<'w, 's, ConveyorConnectRequest>,
     objects: MessageReader<'w, 's, ObjectInteractionRequest>,
@@ -1791,6 +1848,7 @@ fn send_edits(
     mut session: ResMut<ClientSession>,
     journal: Res<EditJournal>,
     selected: Res<SelectedInventorySlot>,
+    mut rail_sent: MessageWriter<RailPlacementSent>,
     mut senders: Query<&mut MessageSender<ClientControl>, With<Client>>,
 ) {
     let mut actions = Vec::new();
@@ -1882,13 +1940,22 @@ fn send_edits(
             action: edit.action,
         });
     }
+    let rail_actions: Vec<_> = requests
+        .rail_placements
+        .read()
+        .map(|request| (request.action.edit_action(), Some(request.token)))
+        .collect();
+    let actions = actions
+        .into_iter()
+        .map(|action| (action, None))
+        .chain(rail_actions);
     if !session.ready {
         return;
     }
     let Some(mut sender) = senders.iter_mut().next() else {
         return;
     };
-    for action in actions.into_iter().take(20) {
+    for (action, token) in actions.take(20) {
         let revision = match action {
             EditAction::HarvestTree { fruit_revision, .. } => fruit_revision,
             EditAction::CollectConveyor { .. } => 0,
@@ -1901,6 +1968,7 @@ fn send_edits(
             EditAction::Block { position, .. }
             | EditAction::ConnectRail { position, .. }
             | EditAction::BuildRail { position, .. }
+            | EditAction::SeedRail { position, .. }
             | EditAction::ToggleObject { position, .. }
             | EditAction::RotateObject { position, .. } => {
                 journal.revision(terra_voxel::global_to_section(position).0)
@@ -1927,6 +1995,7 @@ fn send_edits(
                 | EditAction::ConnectConveyor { .. }
                 | EditAction::ConnectRail { .. }
                 | EditAction::BuildRail { .. }
+                | EditAction::SeedRail { .. }
                 | EditAction::DyeConveyor { .. }
                 | EditAction::DyeFabric { .. }
                 | EditAction::ToggleObject {
@@ -1940,6 +2009,13 @@ fn send_edits(
             });
         }
         sender.send::<ControlChannel>(ClientControl::Edit(command));
+        if let Some(token) = token {
+            rail_sent.write(RailPlacementSent {
+                token,
+                request: command.request,
+                action,
+            });
+        }
     }
 }
 

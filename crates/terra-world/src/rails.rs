@@ -23,8 +23,9 @@ pub(crate) mod placement;
 pub use clearance::{MAX_CLEARED_PROPS, PropClearance, PropSource, clearance};
 #[cfg(feature = "bevy")]
 pub use placement::{
-    break_layout, commit, connection, connection_sites, connection_target, cost, environment,
-    placement, placement_sites, plan, proposal, proposal_connection, select_endpoint, set_wood,
+    break_layout, commit, connection, connection_sites, connection_target, continuation_endpoint,
+    cost, environment, next_endpoint, placement, placement_sites, plan, proposal,
+    proposal_connection, proposal_seed, seed, seed_signature, select_endpoint, set_wood,
     support_edit_allowed, toggle_switch_plan,
 };
 

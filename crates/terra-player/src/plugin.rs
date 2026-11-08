@@ -45,6 +45,8 @@ impl Plugin for TerraPlayerPlugin {
             .add_message::<terra_network::client::ConveyorConnectRequest>()
             .add_message::<terra_network::client::RailConnectRequest>()
             .add_message::<terra_network::client::RailBuildRequest>()
+            .add_message::<terra_network::client::RailPlacementRequest>()
+            .add_message::<terra_network::client::RailPlacementSent>()
             .add_message::<terra_network::client::ConveyorInteractionRequest>()
             .add_message::<terra_network::client::ConfirmedEdit>()
             .configure_sets(
@@ -93,6 +95,7 @@ impl Plugin for TerraPlayerPlugin {
                 Update,
                 (
                     crate::interaction::rail_wheel::prepare_intent,
+                    crate::interaction::rail_sequence::confirm,
                     crate::interaction::rail_wheel::update,
                 )
                     .chain()

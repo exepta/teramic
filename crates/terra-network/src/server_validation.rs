@@ -110,6 +110,7 @@ pub(super) fn check(command: EditCommand, peer: &Peer, world: &ControlWorld) -> 
         | EditAction::ConnectConveyor { .. }
         | EditAction::ConnectRail { .. }
         | EditAction::BuildRail { .. }
+        | EditAction::SeedRail { .. }
         | EditAction::CollectConveyor { .. }
         | EditAction::DyeConveyor { .. }
         | EditAction::DyeFabric { .. }
@@ -172,6 +173,7 @@ pub(super) fn check(command: EditCommand, peer: &Peer, world: &ControlWorld) -> 
         EditAction::Block { position, .. }
         | EditAction::ConnectRail { position, .. }
         | EditAction::BuildRail { position, .. }
+        | EditAction::SeedRail { position, .. }
         | EditAction::Farm { position, .. }
         | EditAction::RotateObject { position, .. }
         | EditAction::Surface { position, .. }
@@ -246,6 +248,7 @@ pub(super) fn check(command: EditCommand, peer: &Peer, world: &ControlWorld) -> 
         EditAction::HarvestTree { .. }
         | EditAction::ConnectRail { .. }
         | EditAction::BuildRail { .. }
+        | EditAction::SeedRail { .. }
         | EditAction::ConnectConveyor { .. }
         | EditAction::CollectConveyor { .. }
         | EditAction::DyeConveyor { .. }
@@ -1158,6 +1161,7 @@ pub(super) fn apply(
         EditAction::HarvestTree { .. }
         | EditAction::ConnectRail { .. }
         | EditAction::BuildRail { .. }
+        | EditAction::SeedRail { .. }
         | EditAction::ConnectConveyor { .. }
         | EditAction::CollectConveyor { .. }
         | EditAction::DyeConveyor { .. }

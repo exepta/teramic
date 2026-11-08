@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": 196,
   "name": "Track",
-  "description": "Three-block-wide wooden track. Plan its start and end to build a continuous railway with matching gauge and grade.",
+  "description": "One-metre starter track, three blocks wide. Place a start, aim at the next endpoint and stretch a continuous straight, curve or ramp.",
   "creative_category": "building",
   "render_kind": "custom_mesh",
   "model_layout": "scene",

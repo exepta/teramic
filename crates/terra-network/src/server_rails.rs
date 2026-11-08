@@ -18,7 +18,10 @@ struct Prepared {
 
 /// Keep historic curve stock usable while retiring new crossing construction.
 fn placement_source_allowed(action: EditAction, source: u16) -> bool {
-    if matches!(action, EditAction::BuildRail { .. }) {
+    if matches!(
+        action,
+        EditAction::BuildRail { .. } | EditAction::SeedRail { .. }
+    ) {
         return source == terra_core::rails::STRAIGHT;
     }
     let target = match action {
@@ -69,7 +72,9 @@ pub(super) fn handles(action: EditAction) -> bool {
         EditAction::ToggleObject { expected, .. } => {
             terra_core::rails::is_rail(expected) || expected == terra_core::rails::SWITCH_STAND
         }
-        EditAction::ConnectRail { .. } | EditAction::BuildRail { .. } => true,
+        EditAction::ConnectRail { .. }
+        | EditAction::BuildRail { .. }
+        | EditAction::SeedRail { .. } => true,
         _ => false,
     }
 }
@@ -100,6 +105,9 @@ fn prepare(
             position, expected, ..
         }
         | EditAction::BuildRail {
+            position, expected, ..
+        }
+        | EditAction::SeedRail {
             position, expected, ..
         } => (position, expected, Operation::Place),
         EditAction::Block {
@@ -217,7 +225,24 @@ fn prepare(
     let mut context: Option<rails::ContextChoice> = None;
     let mut layout = match operation {
         Operation::Place => {
-            if let EditAction::BuildRail {
+            if let EditAction::SeedRail { signature, .. } = command.action {
+                if hit.position != position {
+                    return Err(EditOutcome::Occluded);
+                }
+                let layout = rails::seed(
+                    &world.chunks,
+                    &world.journal,
+                    hit,
+                    (eye, direction),
+                    command.look,
+                    wood,
+                )
+                .map_err(|_| EditOutcome::Invalid)?;
+                if rails::seed_signature(&layout) != signature {
+                    return Err(EditOutcome::Conflict);
+                }
+                layout
+            } else if let EditAction::BuildRail {
                 choice, signature, ..
             } = command.action
             {

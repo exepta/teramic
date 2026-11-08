@@ -12,6 +12,8 @@ use terra_world::{
 
 #[path = "railway_context_tests.rs"]
 mod context;
+#[path = "railway_seed_tests.rs"]
+mod seed;
 
 #[derive(Resource, Clone, Copy)]
 struct FixtureGeometry {

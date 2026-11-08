@@ -782,3 +782,6 @@ mod curve_placement_tests;
 
 #[path = "context_tests.rs"]
 mod context_tests;
+
+#[path = "seed_tests.rs"]
+mod seed_tests;
