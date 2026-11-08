@@ -526,3 +526,151 @@ fn an_exposed_cab_profile_is_reachable_above_its_side_panel_but_never_through_a_
     );
     assert_eq!(app.world().resource::<EditJournal>().gameplay(), &before);
 }
+
+#[test]
+fn real_coal_can_be_clicked_onto_the_cursor_then_deposited_into_an_owned_engine_atomically() {
+    use terra_core::containers::ContainerGesture;
+    let (mut app, peer, id, seat, _) = train_fixture();
+    let coal = ItemKind::Mineral(terra_core::MineralItem::Coal);
+    assert!(terra_core::furnace::fuel_seconds(coal).is_some());
+    let engine = {
+        let mut journal = app.world_mut().resource_mut::<EditJournal>();
+        let car = journal.gameplay_mut().trains.vehicles.get_mut(&id).unwrap();
+        let engine = car.parts.len() as u16;
+        car.parts.push(TrainPart {
+            offset: [1, 1, 3],
+            material: 218,
+            facing: 0,
+            wood: WoodSpecies::Birch,
+        });
+        car.cargo.insert(engine, Inventory::default());
+        assert!(car.valid());
+        assert!(
+            journal
+                .gameplay_mut()
+                .inventories
+                .get_mut(&peer.uuid)
+                .unwrap()
+                .creative_set(
+                    8,
+                    ItemStack {
+                        item: coal,
+                        count: 12
+                    }
+                )
+        );
+        engine
+    };
+    let mut seats = crate::server::trains::SeatedPlayers::default();
+    assert!(matches!(
+        run(
+            &mut app,
+            &peer,
+            TrainAction::Seat {
+                vehicle: id,
+                part: seat
+            },
+            &mut seats
+        ),
+        Ok(TrainOutcome::Seated(Some(_)))
+    ));
+    let TrainOutcome::Cargo(snapshot) = run(
+        &mut app,
+        &peer,
+        TrainAction::OpenCargo {
+            vehicle: id,
+            part: engine,
+        },
+        &mut seats,
+    )
+    .unwrap() else {
+        panic!("the owner must open the fuel inventory");
+    };
+    let player_revision =
+        app.world().resource::<EditJournal>().gameplay().inventories[&peer.uuid].revision;
+    let pickup = TrainAction::Cargo {
+        vehicle: id,
+        part: engine,
+        revision: snapshot.revision,
+        player_revision,
+        gesture: ContainerGesture::Click {
+            slot: 8,
+            secondary: false,
+        },
+        reserved: [0; terra_core::INVENTORY_SLOTS],
+    };
+    let TrainOutcome::Cargo(picked) = run(&mut app, &peer, pickup, &mut seats).unwrap() else {
+        panic!("clicking real coal must pick up the stack");
+    };
+    assert_eq!(
+        app.world().resource::<EditJournal>().gameplay().inventories[&peer.uuid].cursor,
+        Some(ItemStack {
+            item: coal,
+            count: 12
+        })
+    );
+    assert_eq!(picked.inventory.count(coal), 0);
+    let player_revision =
+        app.world().resource::<EditJournal>().gameplay().inventories[&peer.uuid].revision;
+    let deposit = TrainAction::Cargo {
+        vehicle: id,
+        part: engine,
+        revision: picked.revision,
+        player_revision,
+        gesture: ContainerGesture::Click {
+            slot: terra_core::INVENTORY_SLOTS as u8,
+            secondary: false,
+        },
+        reserved: [0; terra_core::INVENTORY_SLOTS],
+    };
+    let TrainOutcome::Cargo(filled) = run(&mut app, &peer, deposit.clone(), &mut seats).unwrap()
+    else {
+        panic!("clicking the engine must deposit the held coal");
+    };
+    assert_eq!(filled.inventory.count(coal), 12);
+    assert!(
+        app.world().resource::<EditJournal>().gameplay().inventories[&peer.uuid]
+            .cursor
+            .is_none()
+    );
+    assert_eq!(
+        app.world().resource::<EditJournal>().gameplay().inventories[&peer.uuid].count(coal),
+        0
+    );
+    let before = app.world().resource::<EditJournal>().gameplay().clone();
+    assert_eq!(
+        run(&mut app, &peer, deposit, &mut seats),
+        Err(TrainError::Stale)
+    );
+    assert_eq!(app.world().resource::<EditJournal>().gameplay(), &before);
+    {
+        let mut journal = app.world_mut().resource_mut::<EditJournal>();
+        let bag = journal
+            .gameplay_mut()
+            .inventories
+            .get_mut(&peer.uuid)
+            .unwrap();
+        bag.cursor = Some(ItemStack {
+            item: ItemKind::Block(3),
+            count: 1,
+        });
+        bag.revision += 1;
+    }
+    let before = app.world().resource::<EditJournal>().gameplay().clone();
+    let invalid = TrainAction::Cargo {
+        vehicle: id,
+        part: engine,
+        revision: filled.revision,
+        player_revision: before.inventories[&peer.uuid].revision,
+        gesture: ContainerGesture::Click {
+            slot: terra_core::INVENTORY_SLOTS as u8,
+            secondary: false,
+        },
+        reserved: [0; terra_core::INVENTORY_SLOTS],
+    };
+    assert_eq!(
+        run(&mut app, &peer, invalid, &mut seats),
+        Err(TrainError::Invalid)
+    );
+    assert_eq!(app.world().resource::<EditJournal>().gameplay(), &before);
+}

@@ -6244,3 +6244,10 @@ Die normale Lokvorlage ergaenzt einen optionalen Kessel-/Fuehrerhausaufbau und
 richtet sich nach vorhandenen Teilen. Beim Standardabstand bleiben nach dem
 Grundgeruest 26 gruene Aufbauplaetze sichtbar. Die Vorlage bleibt bis zur
 bestaetigten Montage erhalten, auch wenn das Fenster vorher geschlossen wird.
+
+Phase 216 korrigiert den Zugriff auf den Laderaum vom Fuehrerstand aus und
+Klicks auf Slotbilder und Stapelzahlen. Inventarstapel lassen sich mit einem
+Klick verschieben; bereits gehaltene Stapel sind sichtbar und koennen in leere
+Motor-/Lagerplaetze oder ins Spielerinventar gelegt werden. Private Inhalte
+bleiben bei Fahrt und Brennstoffverbrauch offen. Veraltete Inventarstaende
+werden vor einer einmaligen sicheren Wiederholung des Klicks neu angefordert.

@@ -56,7 +56,12 @@ Meter. Auf vollstaendig tragendem Kies-/Schotterbett gilt der bestehende
 Geschwindigkeitsbonus von 50 Prozent, einmal angewandt.
 
 **Motor befeuern** oeffnet das Brennstoffinventar. Es nimmt echte Ofenbrennstoffe
-wie Kohle oder Holz an. Der Motor verbraucht Gegenstaende und ihre verbleibende
+wie Kohle oder Holz an. Ein Klick auf einen Stapel im Spielerinventar verschiebt
+ihn in den Motor; im Laderaum funktioniert das entsprechend fuer normale Waren.
+Ein bereits gehaltener Stapel wird angezeigt und laesst sich durch Anklicken
+eines passenden Platzes ablegen, auch wenn dieser leer ist. Zum Zuruecklegen
+eines gehaltenen Gegenstands kann ein freier Platz im Spielerinventar dienen.
+Der Motor verbraucht Gegenstaende und ihre verbleibende
 Brenndauer; ohne Brennstoff gibt es keinen Antrieb. Truhen/Laderaeume und Motor
 sind fuer den Besitzer auch vom gebundenen Fuehrerstand aus erreichbar, unabhaengig
 von ihrer Position im Wagen. Andere Spieler erhalten keinen Zugriff auf private

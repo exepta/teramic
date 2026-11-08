@@ -64,6 +64,7 @@ fn response(host: &mut App, owner: &mut App, watcher: &mut App, id: u64) -> Trai
 
 #[test]
 fn udp_real_vehicle_assembly_private_cargo_seating_late_join_and_atomic_dismantling() {
+    let coal = ItemKind::Mineral(terra_core::MineralItem::Coal);
     let mut host = server();
     let address = host
         .world()
@@ -207,16 +208,7 @@ fn udp_real_vehicle_assembly_private_cargo_seating_late_join_and_atomic_dismantl
             .unwrap();
         journal.set_tint(slab_cell, Some(tint)).unwrap();
         journal
-            .set_container(
-                engine_cell,
-                Inventory {
-                    slots: vec![ItemStack {
-                        item: ItemKind::Block(16),
-                        count: 2,
-                    }],
-                    ..Default::default()
-                },
-            )
+            .set_container(engine_cell, Inventory::default())
             .unwrap();
         journal
             .set_container(
@@ -269,6 +261,20 @@ fn udp_real_vehicle_assembly_private_cargo_seating_late_join_and_atomic_dismantl
                     }
                 )
         );
+        assert!(
+            journal
+                .gameplay_mut()
+                .inventories
+                .get_mut(&uuid)
+                .unwrap()
+                .creative_set(
+                    8,
+                    ItemStack {
+                        item: coal,
+                        count: 3
+                    },
+                )
+        );
         journal.gameplay_mut().revision += 1;
     }
     wait_phase(
@@ -284,6 +290,12 @@ fn udp_real_vehicle_assembly_private_cargo_seating_late_join_and_atomic_dismantl
                 .inventory
                 .count(ItemKind::Block(3))
                 == 5
+                && clients[0]
+                    .world()
+                    .resource::<client::ClientSession>()
+                    .inventory
+                    .count(coal)
+                    == 3
         },
     );
     let feet = [
@@ -394,6 +406,11 @@ fn udp_real_vehicle_assembly_private_cargo_seating_late_join_and_atomic_dismantl
         .parts
         .iter()
         .position(|part| part.material == train_parts::CAB)
+        .unwrap() as u16;
+    let engine = car
+        .parts
+        .iter()
+        .position(|part| part.material == 218)
         .unwrap() as u16;
     let forbidden = send(
         &mut watcher,
@@ -600,6 +617,40 @@ fn udp_real_vehicle_assembly_private_cargo_seating_late_join_and_atomic_dismantl
         matches!(response(&mut host, &mut owner, &mut watcher, drive),
         TrainOutcome::Changed { vehicle: Some(id) } if id == vehicle_id)
     );
+    let open_engine = send(
+        &mut owner,
+        TrainAction::OpenCargo {
+            vehicle: vehicle_id,
+            part: engine,
+        },
+    );
+    let TrainOutcome::Cargo(empty_engine) =
+        response(&mut host, &mut owner, &mut watcher, open_engine)
+    else {
+        panic!("the bound owner must open the empty engine");
+    };
+    assert_eq!(empty_engine.inventory.count(coal), 0);
+    let player_revision = owner
+        .world()
+        .resource::<client::ClientSession>()
+        .inventory
+        .revision;
+    let refuel = send(
+        &mut owner,
+        TrainAction::Cargo {
+            vehicle: vehicle_id,
+            part: engine,
+            revision: empty_engine.revision,
+            player_revision,
+            gesture: terra_core::containers::ContainerGesture::QuickMove { slot: 8 },
+            reserved: [0; terra_core::INVENTORY_SLOTS],
+        },
+    );
+    let TrainOutcome::Cargo(refuelled) = response(&mut host, &mut owner, &mut watcher, refuel)
+    else {
+        panic!("one player-stack click must transfer actual coal into the engine");
+    };
+    assert_eq!(refuelled.inventory.count(coal), 3);
     wait_phase(
         "actual rail motion reaches owner and observer",
         &mut host,
@@ -616,7 +667,22 @@ fn udp_real_vehicle_assembly_private_cargo_seating_late_join_and_atomic_dismantl
                     .is_some_and(|view| {
                         view.motion.speed_mps > 0.1 && view.motion.wheel_distance_m > 0.01
                     })
-            })
+            }) && clients[0]
+                .world()
+                .resource::<client::ClientSession>()
+                .train_cargo
+                .as_ref()
+                .is_some_and(|cargo| {
+                    cargo.vehicle == vehicle_id
+                        && cargo.part == engine
+                        && cargo.inventory.count(coal) == 2
+                })
+                && clients[0]
+                    .world()
+                    .resource::<client::ClientSession>()
+                    .inventory
+                    .count(coal)
+                    == 0
         },
     );
     let brake = send(
@@ -667,12 +733,16 @@ fn udp_real_vehicle_assembly_private_cargo_seating_late_join_and_atomic_dismantl
         .vehicles[&vehicle_id];
     assert!(driven.motion.wheel_distance_m > 0.01);
     assert!(driven.burn_seconds > 0.0);
-    let engine = driven
-        .parts
-        .iter()
-        .position(|part| part.material == 218)
-        .unwrap() as u16;
-    assert_eq!(driven.cargo[&engine].count(ItemKind::Block(16)), 1);
+    assert_eq!(driven.cargo[&engine].count(coal), 2);
+    assert!(
+        owner
+            .world()
+            .resource::<client::ClientSession>()
+            .train_cargo
+            .as_ref()
+            .is_some_and(|cargo| cargo.part == engine && cargo.inventory.count(coal) == 2),
+        "braking and full public snapshots must preserve the open private fuel panel"
+    );
     let restored = driven.disassembly_cells().unwrap();
     let cargo_cell = restored[usize::from(cargo)];
     let chest_cell = restored[usize::from(chest)];
@@ -828,8 +898,8 @@ fn udp_real_vehicle_assembly_private_cargo_seating_late_join_and_atomic_dismantl
             .resource::<EditJournal>()
             .container_at(engine_cell)
             .unwrap()
-            .count(ItemKind::Block(16)),
-        1
+            .count(coal),
+        2
     );
     assert!(
         host.world()

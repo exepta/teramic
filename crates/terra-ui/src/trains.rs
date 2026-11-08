@@ -13,6 +13,8 @@ use terra_network::{
 };
 use tilt_ui::html_shared;
 
+#[path = "trains_cargo.rs"]
+mod cargo;
 #[path = "trains_driving.rs"]
 mod driving;
 
@@ -44,6 +46,7 @@ pub(crate) struct TrainUiState {
     editing: bool,
     drive_queue: Option<(u64, i8, bool)>,
     drive_desired: Option<(u64, i8, bool)>,
+    cargo_retry: Option<cargo::Retry>,
 }
 impl TrainUiState {
     pub(crate) fn blocks_input(&self) -> bool {
@@ -118,6 +121,11 @@ pub struct TrainView {
     pub can_edit: bool,
     pub engine: bool,
     pub has_cargo: bool,
+    pub cargo_hint: String,
+    pub held: bool,
+    pub held_preview: String,
+    pub held_count: String,
+    pub held_name: String,
     pub fuel_mode: bool,
     pub brake: bool,
     pub drive_speed: String,
@@ -241,6 +249,7 @@ fn close(world: &mut World, state: &mut TrainUiState) {
         state.pending = None;
     }
     state.cargo = false;
+    state.cargo_retry = None;
     state.edit_after_leave = None;
     state.editing = false;
     state.consumed_escape = true;
@@ -534,6 +543,10 @@ fn command(world: &mut World, state: &mut TrainUiState, command: &str) {
         }
         "workshop" => {
             state.cargo = false;
+            state.cargo_retry = None;
+            if state.drive_desired.is_none() && !state.pending_assembly {
+                state.pending = None;
+            }
             return;
         }
         _ => {}
@@ -548,16 +561,7 @@ fn command(world: &mut World, state: &mut TrainUiState, command: &str) {
         return;
     };
     let registry_revision = session.trains.revision;
-    let vehicle = state
-        .selected
-        .and_then(|id| {
-            session
-                .trains
-                .vehicles
-                .iter()
-                .find(|vehicle| vehicle.id == id)
-        })
-        .cloned();
+    let vehicle = driving::selected(session, state).cloned();
     if let Some(slot) = command
         .strip_prefix("slot:")
         .and_then(|slot| slot.parse::<u8>().ok())
@@ -572,18 +576,24 @@ fn command(world: &mut World, state: &mut TrainUiState, command: &str) {
             .find(|vehicle| vehicle.id == cargo.vehicle)
             .and_then(|vehicle| vehicle.parts.get(usize::from(cargo.part)))
             .is_some_and(|part| part.material == 218);
+        let held = session.inventory.cursor;
+        let entering_engine = if slot >= terra_core::INVENTORY_SLOTS as u8 {
+            held
+        } else if held.is_none() {
+            session.inventory.slot(usize::from(slot))
+        } else {
+            None
+        };
         if engine
-            && slot < terra_core::INVENTORY_SLOTS as u8
-            && session
-                .inventory
-                .slot(usize::from(slot))
-                .is_none_or(|stack| terra_core::furnace::fuel_seconds(stack.item).is_none())
+            && entering_engine
+                .is_some_and(|stack| terra_core::furnace::fuel_seconds(stack.item).is_none())
         {
             state.status = "Der Motor nimmt nur Brennstoff an.".into();
             return;
         }
         let player_revision = session.inventory.revision;
         let reserved = crate::inventory::reserved_for_transport(world);
+        cargo::capture(world, state, slot);
         request(
             world,
             state,
@@ -592,7 +602,14 @@ fn command(world: &mut World, state: &mut TrainUiState, command: &str) {
                 part: cargo.part,
                 revision: cargo.revision,
                 player_revision,
-                gesture: ContainerGesture::QuickMove { slot },
+                gesture: if held.is_some() {
+                    ContainerGesture::Click {
+                        slot,
+                        secondary: false,
+                    }
+                } else {
+                    ContainerGesture::QuickMove { slot }
+                },
                 reserved,
             },
         );
@@ -909,6 +926,20 @@ fn view(world: &mut World, state: &mut TrainUiState) -> TrainView {
                 })
                 .collect()
         }),
+        held: cargo.is_some() && session.inventory.cursor.is_some(),
+        held_preview: session.inventory.cursor.map_or_else(String::new, |stack| {
+            crate::inventory::preview_key(stack.item)
+        }),
+        held_count: session
+            .inventory
+            .cursor
+            .map_or_else(String::new, |stack| stack.count.to_string()),
+        held_name: session.inventory.cursor.map_or_else(String::new, |stack| {
+            palette.map_or_else(
+                || stack.item.identifier(),
+                |palette| crate::inventory::item_label(stack.item, palette),
+            )
+        }),
         wheelbase: format!("{} m", state.wheelbase()),
         ..default()
     };
@@ -943,6 +974,7 @@ fn update(
             state.pending_assembly = false;
             state.drive_queue = None;
             state.drive_desired = None;
+            state.cargo_retry = None;
             *world.resource_mut::<TrainBlueprint>() = TrainBlueprint::default();
         }
         if state.open && other_panel(world) {
@@ -975,26 +1007,17 @@ fn update(
                     state.status = if edit_alignment {
                         "Für die Montage müssen alle Mitfahrer aussteigen und der Zug auf einem geraden Gleisabschnitt stehen."
                     } else { rejection(error) }.into();
-                    if error == TrainError::Stale
-                        && state.cargo
-                        && let Some(cargo) = world
-                            .get_resource::<ClientSession>()
-                            .and_then(|session| session.train_cargo.clone())
-                    {
-                        request(
-                            world,
-                            &mut state,
-                            TrainAction::OpenCargo {
-                                vehicle: cargo.vehicle,
-                                part: cargo.part,
-                            },
-                        );
+                    if error == TrainError::Stale {
+                        cargo::refresh_stale(world, &mut state);
+                    } else {
+                        state.cargo_retry = None;
                     }
                 }
                 TrainOutcome::Cargo(cargo) => {
                     state.cargo = true;
                     state.selected = Some(cargo.vehicle);
                     state.status = "Klicke einen Stapel, um ihn zu verschieben.".into();
+                    cargo::refreshed(world, &mut state);
                 }
                 TrainOutcome::Changed { vehicle } => {
                     if state.editing {

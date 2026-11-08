@@ -1060,6 +1060,26 @@ fn apply_section_delta(
     result
 }
 
+fn clear_invalid_train_cargo(
+    session: &mut ClientSession,
+    vehicles: &[terra_core::trains::VehicleView],
+) {
+    if session.train_cargo.as_ref().is_some_and(|cargo| {
+        vehicles
+            .iter()
+            .find(|vehicle| vehicle.id == cargo.vehicle)
+            .is_none_or(|vehicle| {
+                Some(vehicle.owner) != session.uuid
+                    || vehicle
+                        .parts
+                        .get(usize::from(cargo.part))
+                        .is_none_or(|part| !matches!(part.material, 29 | 216 | 218))
+            })
+    }) {
+        session.train_cargo = None;
+    }
+}
+
 fn receive_controls(
     mut commands: Commands,
     mut receivers: Query<&mut MessageReceiver<ServerControl>, With<Client>>,
@@ -1552,15 +1572,10 @@ fn receive_controls(
                             .iter()
                             .find(|seat| Some(seat.player) == session.uuid)
                             .copied();
-                        if session.train_cargo.as_ref().is_some_and(|cargo| {
-                            snapshot
-                                .vehicles
-                                .iter()
-                                .find(|vehicle| vehicle.id == cargo.vehicle)
-                                .is_none_or(|vehicle| vehicle.revision != cargo.revision)
-                        }) {
-                            session.train_cargo = None;
-                        }
+                        // Public vehicle revisions also cover driving and other containers.
+                        // Retain private contents/token until a private update or explicit refresh;
+                        // the authority still rejects gestures using a stale token.
+                        clear_invalid_train_cargo(&mut session, &snapshot.vehicles);
                         session.trains = *snapshot;
                     })
                 } else {
@@ -1640,9 +1655,6 @@ fn receive_controls(
                     }
                     if let TrainOutcome::Seated(seat) = &result.outcome {
                         session.train_seat = *seat;
-                    }
-                    if matches!(result.outcome, TrainOutcome::Changed { .. }) {
-                        session.train_cargo = None;
                     }
                     session.train_response = result.request;
                     session.last_train_result = Some(result);
@@ -2425,3 +2437,7 @@ fn send_trains(
         }
     }
 }
+
+#[cfg(test)]
+#[path = "client_train_cargo_tests.rs"]
+mod train_cargo_tests;

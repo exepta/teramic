@@ -7,9 +7,10 @@
       <div class="train-workshop-heading"><icon name="train-front" size="24" /><h2>{{ trainView.title }}</h2></div>
       @if (trainView.cargo) {
         @if (trainView.fuel_mode) {
-          <p>Holz, Kohle oder anderen Brennstoff aus dem Inventar einlegen. Ein Klick verschiebt den Stapel.</p>
+          <p>Holz, Kohle oder anderen Brennstoff im Inventar anklicken. Gehaltene Stapel auf einen Brennstoffplatz legen.</p>
           <h3>Brennstoffvorrat</h3>
-        } @else { <p>Ein Klick verschiebt den ganzen Stapel.</p><h3>Laderaum</h3> }
+        } @else { <p>Ein Klick verschiebt einen Stapel. Gehaltene Stapel mit einem Klick auf einen Platz ablegen.</p><h3>Laderaum</h3> }
+        @if (trainView.held) { <div class="train-held-item"><img [alt]="trainView.held_preview" /><p>Gehalten: {{ trainView.held_name }} × {{ trainView.held_count }} · Platz zum Ablegen anklicken</p></div> }
         <div class="train-slots">
           @for (slot of trainView.cargo_slots; track slot.index) {
             <button class="train-slot" [id]="slot.command" [disabled]="trainView.pending || !slot.enabled" [title]="slot.name" onclick="train_workshop_action">
@@ -77,6 +78,7 @@
               <button id="seat" [disabled]="trainView.pending || !trainView.selected" onclick="train_workshop_action">Einsteigen</button>
               <button id="cargo" [disabled]="trainView.pending || !trainView.has_cargo" onclick="train_workshop_action">Laderaum öffnen</button>
             </div>
+            @if (trainView.selected && !trainView.has_cargo) { <p>{{ trainView.cargo_hint }}</p> }
           </div>
           <div class="train-workshop-vehicles">
             <div class="train-vehicle-heading"><h3>Fahrzeuge</h3><button id="clear" onclick="train_workshop_action">Auswahl lösen</button></div>

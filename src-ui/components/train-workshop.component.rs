@@ -26,11 +26,54 @@ fn train_workshop_action(
                         value as i8
                     )));
                 }
-            } else {
+                break;
+            } else if train_command(&id.0) {
                 actions.write(crate::TrainUiAction::Command(id.0.clone()));
+                break;
             }
-            break;
         }
         target = parents.get(entity).ok().map(ChildOf::parent);
     }
+}
+
+fn train_command(id: &str) -> bool {
+    matches!(
+        id,
+        "close"
+            | "wheelbase-dec"
+            | "wheelbase-inc"
+            | "blueprint"
+            | "blueprint-build"
+            | "blueprint-clear"
+            | "clear"
+            | "front"
+            | "second-front"
+            | "previous"
+            | "next"
+            | "workshop"
+            | "cargo"
+            | "seat"
+            | "assemble"
+            | "dismantle"
+            | "couple"
+            | "uncouple"
+            | "edit"
+            | "engine"
+            | "drive-more"
+            | "drive-less"
+            | "drive-stop"
+            | "drive-brake"
+            | "kind:locomotive"
+            | "kind:tender"
+            | "kind:passenger"
+            | "kind:freight"
+    ) || id
+        .strip_prefix("slot:")
+        .is_some_and(|slot| slot.parse::<u8>().is_ok())
+        || id
+            .strip_prefix("select:")
+            .is_some_and(|vehicle| vehicle.parse::<u64>().is_ok())
+        || id
+            .strip_prefix("drive-throttle:")
+            .is_some_and(|notch| notch.parse::<i8>().is_ok())
 }

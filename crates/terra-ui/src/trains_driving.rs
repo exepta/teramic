@@ -74,7 +74,10 @@ fn control_sign(session: &ClientSession, vehicle: &VehicleView) -> i8 {
     part.map_or(1, |part| vehicle.driver_direction(part))
 }
 
-fn selected<'a>(session: &'a ClientSession, state: &TrainUiState) -> Option<&'a VehicleView> {
+pub(super) fn selected<'a>(
+    session: &'a ClientSession,
+    state: &TrainUiState,
+) -> Option<&'a VehicleView> {
     state
         .selected
         .and_then(|id| {
@@ -430,6 +433,14 @@ pub(super) fn populate(
             .parts
             .iter()
             .any(|part| matches!(part.material, 29 | 216));
+    view.cargo_hint = if view.has_cargo {
+        String::new()
+    } else if Some(vehicle.owner) != session.uuid {
+        "Der Laderaum gehört dem Fahrzeugbesitzer.".into()
+    } else {
+        "Kein Laderaum eingebaut: In der Montage einen Wagen-Laderaum oder eine Truhe anbauen."
+            .into()
+    };
     let editable = state.open
         && !state.cargo
         && Some(vehicle.owner) == session.uuid
@@ -511,12 +522,21 @@ pub(super) fn populate(
             .is_some_and(|part| part.material == 218);
         if view.fuel_mode {
             view.title = "Motor · Befeuerung".into();
-            for slot in &mut view.player_slots {
-                slot.enabled = session
+        }
+        let held = session.inventory.cursor;
+        for slot in &mut view.player_slots {
+            slot.enabled = held.is_some()
+                || session
                     .inventory
                     .slot(usize::from(slot.index))
-                    .is_some_and(|stack| terra_core::furnace::fuel_seconds(stack.item).is_some());
-            }
+                    .is_some_and(|stack| {
+                        !view.fuel_mode || terra_core::furnace::fuel_seconds(stack.item).is_some()
+                    });
+        }
+        for slot in &mut view.cargo_slots {
+            slot.enabled = held.map_or(!slot.empty, |stack| {
+                !view.fuel_mode || terra_core::furnace::fuel_seconds(stack.item).is_some()
+            });
         }
     }
 }

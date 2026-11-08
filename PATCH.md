@@ -6971,3 +6971,33 @@ sind als CPU-Faelle abgedeckt.
 Der vollstaendige Workspace-Build besteht einschliesslich Linking (7 min 37 s),
 ebenso Clippy aller Targets mit `-D warnings`, Format und Diff. Keine
 Grafiktests, Spielfenster, echten Screenshots oder GPU-Abnahmen gestartet.
+
+
+## 216. Zuglager Und Motor Per Klick Bedienen
+
+Die Zugoberflaeche erkennt Slotklicks auch auf verschachtelten Bildern und
+Stapelzahlen. Die Laderaumauswahl verwendet bei fehlender Listenauswahl den
+aktuell besetzten Wagen. Der Spieler kann Inventarstapel direkt verschieben
+und bereits gehaltene Stapel auf passende leere Plaetze legen. Gehaltene
+Gegenstaende werden angezeigt; Nichtbrennstoffe koennen aus der Motoransicht
+ins Spielerinventar zurueckgelegt werden.
+
+Oeffentliche Fahrzeugrevisionen fuer Fahrt, Bremse oder andere Behaelter
+verwerfen die private Inventaransicht nicht mehr. Private Brennstoffmeldungen
+aktualisieren den offenen Motor auch bei der ersten Entnahme. Veraltete
+Transaktionen werden weiterhin vom Server abgelehnt; die Oberflaeche fordert
+den aktuellen Stand an und wiederholt den Klick hoechstens einmal, solange
+Verbindung, Besitzer, Behaelter und angeklickte Gegenstaende unveraendert sind.
+Schliessen, ein geaenderter Quellstapel oder Zieltyp brechen die Wiederholung ab.
+Die Inventare werden erst nach Serverbestaetigung veraendert.
+
+Abnahme 216: Alle 4.228 Workspace-Library-Tests bestehen, keiner fehlgeschlagen;
+neun bestehende Tests ignoriert. Dazu gehoeren native Button-/Bild-/Zahlenklicks,
+gehaltene Kohle und Nichtbrennstoffe, begrenzte Wiederholung und deren Abbruch,
+private Cache-Invalidierung sowie leeren Motor befuellen, Fahrt, Verbrauch und
+Ladungserhalt beim Rueckbau ueber echtes UDP.
+[Pruefbericht](tools/benchmarks/results/train-cargo-coal-click-2026-11-08/README.md).
+
+Der vollstaendige Workspace-Build besteht einschliesslich Client-/Server-Linking
+(4 min 09 s), ebenso Clippy aller Targets mit `-D warnings`, Format und Diff.
+Keine Grafiktests, Spielfenster oder GPU-Abnahmen gestartet.
