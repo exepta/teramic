@@ -53,17 +53,23 @@ impl BlockPalette {
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub(crate) fn select_block(
     mut wheel: MessageReader<MouseWheel>,
     input: Res<crate::CameraInputState>,
     blocked: Res<crate::PlayerInputBlock>,
     mut palette: ResMut<BlockPalette>,
+    mut context: Option<ResMut<super::RailBuildContext>>,
     active: Option<ResMut<ActiveItem>>,
     slot: Option<ResMut<terra_network::client::SelectedInventorySlot>>,
     session: Option<Res<terra_network::client::ClientSession>>,
 ) {
     let movement: f32 = wheel.read().map(|e| e.y).sum();
-    if session.as_ref().is_some_and(|s| s.ready)
+    if context
+        .as_ref()
+        .is_some_and(|context| context.captures_wheel)
+        || !movement.is_finite()
+        || session.as_ref().is_some_and(|s| s.ready)
         || !input.captured
         || blocked.0
         || movement == 0.0
@@ -78,11 +84,17 @@ pub(crate) fn select_block(
     if let Some(mut slot) = slot {
         slot.0 = None;
     }
-    palette.selected = if movement > 0.0 {
+    let selected = if movement > 0.0 {
         (palette.selected + count - 1) % count
     } else {
         (palette.selected + 1) % count
     };
+    if selected != palette.selected {
+        palette.selected = selected;
+        if let Some(context) = context.as_mut() {
+            context.mark_hotbar_changed();
+        }
+    }
 }
 
 #[cfg(test)]
@@ -121,6 +133,48 @@ mod tests {
             phase: bevy::input::touch::TouchPhase::Moved,
         });
     }
+    #[test]
+    fn rail_context_owns_wheel_without_deferring_offline_palette_navigation() {
+        let mut app = app();
+        app.insert_resource(super::super::RailBuildContext {
+            captures_wheel: true,
+            ..default()
+        });
+        let item = terra_core::ItemKind::Block(196);
+        app.insert_resource(ActiveItem(Some(item)))
+            .insert_resource(terra_network::client::SelectedInventorySlot(Some(2)));
+        wheel(&mut app, -1.0);
+        app.update();
+        assert_eq!(app.world().resource::<BlockPalette>().selected, 0);
+        assert_eq!(app.world().resource::<ActiveItem>().0, Some(item));
+        assert_eq!(
+            app.world()
+                .resource::<terra_network::client::SelectedInventorySlot>()
+                .0,
+            Some(2)
+        );
+        app.world_mut()
+            .resource_mut::<super::super::RailBuildContext>()
+            .captures_wheel = false;
+        app.update();
+        assert_eq!(app.world().resource::<BlockPalette>().selected, 0);
+        wheel(&mut app, -1.0);
+        app.update();
+        assert_eq!(app.world().resource::<BlockPalette>().selected, 1);
+        assert!(
+            app.world()
+                .resource::<super::super::RailBuildContext>()
+                .hotbar_changed
+        );
+        assert_eq!(app.world().resource::<ActiveItem>().0, None);
+        assert_eq!(
+            app.world()
+                .resource::<terra_network::client::SelectedInventorySlot>()
+                .0,
+            None
+        );
+    }
+
     #[test]
     fn gameplay_wheel_wraps_the_material_selection() {
         let mut app = app();

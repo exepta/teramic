@@ -566,6 +566,7 @@ pub(super) fn edit_allowed(action: EditAction, peer: &Peer, world: &ControlWorld
         }
         EditAction::Block { position, .. }
         | EditAction::ConnectRail { position, .. }
+        | EditAction::BuildRail { position, .. }
         | EditAction::Surface { position, .. }
         | EditAction::Farm { position, .. }
         | EditAction::RotateObject { position, .. }

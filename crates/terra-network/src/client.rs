@@ -107,6 +107,14 @@ pub struct ConveyorConnectRequest {
 }
 
 #[derive(Message, Clone, Copy, Debug)]
+pub struct RailBuildRequest {
+    pub position: [i64; 3],
+    pub expected: u16,
+    pub choice: terra_core::rails::BuildChoice,
+    pub signature: u64,
+}
+
+#[derive(Message, Clone, Copy, Debug)]
 pub struct RailConnectRequest {
     pub start: terra_core::rails::Endpoint,
     pub position: [i64; 3],
@@ -607,6 +615,7 @@ pub(crate) fn install(app: &mut App) {
         .init_resource::<CrankInput>()
         .add_message::<ObjectInteractionRequest>()
         .add_message::<RailConnectRequest>()
+        .add_message::<RailBuildRequest>()
         .add_message::<InventoryRequest>()
         .add_message::<ContainerRequest>()
         .add_message::<KingdomRequest>()
@@ -1745,6 +1754,7 @@ fn send_inputs(
 #[derive(SystemParam)]
 struct EditRequests<'w, 's> {
     rails: MessageReader<'w, 's, RailConnectRequest>,
+    rail_builds: MessageReader<'w, 's, RailBuildRequest>,
     belt_interactions: MessageReader<'w, 's, ConveyorInteractionRequest>,
     conveyors: MessageReader<'w, 's, ConveyorConnectRequest>,
     objects: MessageReader<'w, 's, ObjectInteractionRequest>,
@@ -1808,6 +1818,14 @@ fn send_edits(
             end: request.end,
             start_revision: request.start_revision,
             item: request.item,
+        });
+    }
+    for request in requests.rail_builds.read() {
+        actions.push(EditAction::BuildRail {
+            position: request.position,
+            expected: request.expected,
+            choice: request.choice,
+            signature: request.signature,
         });
     }
     for request in requests.rails.read() {
@@ -1882,6 +1900,7 @@ fn send_edits(
             }
             EditAction::Block { position, .. }
             | EditAction::ConnectRail { position, .. }
+            | EditAction::BuildRail { position, .. }
             | EditAction::ToggleObject { position, .. }
             | EditAction::RotateObject { position, .. } => {
                 journal.revision(terra_voxel::global_to_section(position).0)
@@ -1907,6 +1926,7 @@ fn send_edits(
                 | EditAction::RotateObject { .. }
                 | EditAction::ConnectConveyor { .. }
                 | EditAction::ConnectRail { .. }
+                | EditAction::BuildRail { .. }
                 | EditAction::DyeConveyor { .. }
                 | EditAction::DyeFabric { .. }
                 | EditAction::ToggleObject {

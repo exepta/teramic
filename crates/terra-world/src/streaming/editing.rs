@@ -134,9 +134,6 @@ fn commit(
     {
         return Err("Rail modules require a complete rail transaction".into());
     }
-    if !crate::rails::support_edit_allowed(chunks, journal, request.position, request.material) {
-        return Err("Remove the supported rail module before changing its floor".into());
-    }
     let dependent_drops = crate::lanterns::released_dependents(
         chunks,
         journal,

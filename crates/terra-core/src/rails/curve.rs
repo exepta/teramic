@@ -7,10 +7,22 @@ use std::{
 };
 
 pub const MAX_CURVE_LENGTH: f64 = 32.0;
-pub const MAX_CURVE_GRADE: f64 = 0.25;
-pub const MIN_CURVE_RADIUS: f64 = 4.5;
+pub const MAX_CURVE_GRADE: f64 = 0.5;
+pub const MIN_CURVE_RADIUS: f64 = 2.5;
 pub const MAX_CURVE_SAMPLES: usize = 257;
 pub const DYNAMIC_CACHE_LIMIT: usize = 64;
+
+/// Contextual track construction choices. The automatic choice uses the
+/// highest-priority valid route reconstructed from the actual world hit.
+#[derive(
+    Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize,
+)]
+pub enum BuildChoice {
+    #[default]
+    Automatic,
+    Straight,
+    Curve,
+}
 
 /// A genuine cubic Bezier in local sixteenth-block coordinates, including its
 /// exact two endpoint tangents. The anchor supplies only an integer translation.
@@ -206,7 +218,7 @@ impl CurveSpec {
         }
         let handles = |vector: [f64; 3], projection: f64| {
             let magnitude = norm(vector);
-            let candidates = [
+            let mut candidates = vec![
                 distance * 0.4,
                 projection * 0.85,
                 projection * 0.4,
@@ -214,6 +226,12 @@ impl CurveSpec {
                 projection * 1.25,
                 distance * 0.6,
             ];
+            // A flat-ended one-block rise over six blocks needs two-block
+            // handles: shorter handles bend too tightly, longer ones climb
+            // too steeply through the middle of the transition.
+            if chord[1].abs() > 1e-8 {
+                candidates.insert(1, projection / 3.0);
+            }
             let mut result = Vec::with_capacity(candidates.len());
             for candidate in candidates {
                 let handle = (candidate / magnitude).round().max(1.0) as i32;

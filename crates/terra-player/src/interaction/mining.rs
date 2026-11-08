@@ -18,6 +18,7 @@ mod rail_placement_tests;
 #[derive(SystemParam)]
 pub(crate) struct EditRequests<'w> {
     rails: MessageWriter<'w, terra_network::client::RailConnectRequest>,
+    rail_builds: MessageWriter<'w, terra_network::client::RailBuildRequest>,
     creatures: Option<ResMut<'w, terra_network::client::CreatureActions>>,
     player_attacks: Option<ResMut<'w, terra_network::client::PlayerAttacks>>,
     nests: Option<ResMut<'w, terra_network::client::BeeNestActions>>,
@@ -62,6 +63,10 @@ pub struct PlacementPreview {
     pub rail_mode: u8,
     pub rail_cost: u16,
     pub rail_error: Option<String>,
+    pub rail_choice: Option<terra_core::rails::BuildChoice>,
+    pub rail_options: bool,
+    pub rail_replacing: bool,
+    pub rail_ramp: bool,
 }
 
 #[derive(Resource, Default, Debug)]
@@ -82,6 +87,7 @@ pub(crate) struct EditPresentation<'w> {
 
 #[derive(SystemParam)]
 pub(crate) struct EditTarget<'w, 's> {
+    rail_context: Option<Res<'w, super::RailBuildContext>>,
     creature: Option<Res<'w, super::TargetCreature>>,
     world: Res<'w, TargetWorld>,
     block: Res<'w, TargetBlock>,
@@ -138,6 +144,10 @@ pub(crate) fn edit_target_block(
     });
     presentation.preview.rail_cost = 0;
     presentation.preview.rail_error = None;
+    presentation.preview.rail_choice = None;
+    presentation.preview.rail_options = false;
+    presentation.preview.rail_replacing = false;
+    presentation.preview.rail_ramp = false;
     if blocked || selected != presentation.preview.rail_item {
         presentation.preview.rail_start = None;
         if selected != presentation.preview.rail_item {
@@ -1250,6 +1260,7 @@ mod tests {
             .add_message::<terra_network::client::ObjectRotateRequest>()
             .add_message::<terra_network::client::ConveyorConnectRequest>()
             .add_message::<terra_network::client::RailConnectRequest>()
+            .add_message::<terra_network::client::RailBuildRequest>()
             .add_message::<terra_network::client::ConveyorInteractionRequest>()
             .insert_resource(TargetBlock(Some(BlockHit {
                 position: [1, 0, 1],

@@ -218,13 +218,22 @@ pub(crate) fn install(app: &mut App) {
                 held_consumption,
                 pointer::finish_gesture,
                 pointer::send_requests,
-                view::update_view.run_if(crate::cadence::ready),
-                pointer::cursor_view,
             )
                 .chain()
                 .after(crate::menu::MenuInputSet)
                 .before(crate::survival::SurvivalUiSet)
                 .before(PlayerSet::Movement),
+        )
+        .add_systems(Update, hotbar_wheel.in_set(PlayerSet::WheelSelection))
+        .add_systems(
+            Update,
+            (
+                view::update_view.run_if(crate::cadence::ready),
+                pointer::cursor_view,
+            )
+                .chain()
+                .after(PlayerSet::Retargeting)
+                .before(PlayerSet::Interaction),
         )
         .add_systems(
             PostUpdate,
@@ -1002,7 +1011,6 @@ fn keyboard(
     focus: Option<Res<InputFocus>>,
     elements: Query<&ElementId>,
     pickers: Query<(Entity, &tilt_ui::ColorPickerState)>,
-    mut wheel: MessageReader<MouseWheel>,
     mut actions: MessageWriter<InventoryAction>,
     crafting: Res<crafting::CraftingView>,
     mut crafting_actions: MessageWriter<crafting::CraftingAction>,
@@ -1010,28 +1018,17 @@ fn keyboard(
     mut objects: MessageWriter<terra_network::client::ObjectInteractionRequest>,
 ) {
     if !context.available() {
-        wheel.clear();
         return;
     }
     if state.open
         && let Some((picker, _)) = pickers.iter().find(|(_, picker)| picker.open)
     {
-        wheel.clear();
         if input.just_pressed(GameAction::Pause) {
             commands.queue(move |world: &mut World| {
                 tilt_ui::set_color_picker_open(world, picker, false);
             });
         }
         return;
-    }
-    if state.open {
-        wheel.clear();
-    } else {
-        let delta: f32 = wheel.read().map(|event| event.y).sum();
-        if delta.is_finite() && delta.abs() > f32::EPSILON {
-            let slot = (i32::from(state.hotbar) - delta.signum() as i32).rem_euclid(9) as u8;
-            actions.write(InventoryAction::Hotbar(slot));
-        }
     }
     let typing = focus
         .as_ref()
@@ -1224,6 +1221,32 @@ struct InventorySelection<'w> {
     reservations: Res<'w, crafting::CraftingState>,
 }
 impl InventorySelection<'_> {
+    fn hotbar(&mut self, state: &mut InventoryState, session: &ClientSession, index: u8) {
+        state.hotbar = index;
+        state.active_slot = Some(index);
+        self.slot.0 = Some(index);
+        if let Some(from) = state.source.take()
+            && state.open
+            && from != index
+            && let Some(stack) = session.inventory.slot(usize::from(from))
+        {
+            self.request(
+                session,
+                ServerAction::Move {
+                    from,
+                    to: index,
+                    count: stack.count,
+                },
+            );
+        }
+        let item = session
+            .inventory
+            .slot(usize::from(index))
+            .map(|stack| stack.item);
+        state.focused = item;
+        self.select(item);
+    }
+
     fn choose(
         &mut self,
         state: &mut InventoryState,
@@ -1304,6 +1327,32 @@ impl InventorySelection<'_> {
         if !matches!(action, ServerAction::Move { count: 0, .. }) {
             self.queue.push(action);
         }
+    }
+}
+
+fn hotbar_wheel(
+    mut wheel: MessageReader<MouseWheel>,
+    mut state: ResMut<InventoryState>,
+    context: InventoryContext,
+    mut selection: InventorySelection,
+    mut rail: Option<ResMut<terra_player::interaction::RailBuildContext>>,
+) {
+    let delta: f32 = wheel.read().map(|event| event.y).sum();
+    if !context.available()
+        || state.open
+        || rail.as_ref().is_some_and(|rail| rail.captures_wheel)
+        || !delta.is_finite()
+        || delta.abs() <= f32::EPSILON
+    {
+        return;
+    }
+    let Some(session) = context.session.as_deref() else {
+        return;
+    };
+    let index = (i32::from(state.hotbar) - delta.signum() as i32).rem_euclid(9) as u8;
+    selection.hotbar(&mut state, session, index);
+    if let Some(rail) = rail.as_mut() {
+        rail.mark_hotbar_changed();
     }
 }
 
@@ -1652,29 +1701,7 @@ fn actions(
                 }
             }
             InventoryAction::Hotbar(index) if *index < 9 => {
-                state.hotbar = *index;
-                state.active_slot = Some(*index);
-                selection.slot.0 = Some(*index);
-                if let Some(from) = state.source.take()
-                    && state.open
-                    && from != *index
-                    && let Some(stack) = session.inventory.slot(usize::from(from))
-                {
-                    selection.request(
-                        session,
-                        ServerAction::Move {
-                            from,
-                            to: *index,
-                            count: stack.count,
-                        },
-                    );
-                }
-                let item = session
-                    .inventory
-                    .slot(usize::from(*index))
-                    .map(|stack| stack.item);
-                state.focused = item;
-                selection.select(item);
+                selection.hotbar(&mut state, session, *index);
             }
             InventoryAction::Select(id) if state.open => {
                 if filter::select(&mut state, &mut selection, session, id) {

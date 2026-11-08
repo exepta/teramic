@@ -80,7 +80,9 @@ pub(super) fn update(
                 Category::Environment,
             );
         }
-        if let EditAction::ConnectRail { position, .. } = edit.action {
+        if let EditAction::ConnectRail { position, .. } | EditAction::BuildRail { position, .. } =
+            edit.action
+        {
             emit(
                 Vec3::from_array(position.map(|value| value as f32 + 0.5)),
                 terra_core::rails::STRAIGHT,

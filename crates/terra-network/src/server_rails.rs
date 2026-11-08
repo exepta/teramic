@@ -18,6 +18,9 @@ struct Prepared {
 
 /// Historic shapes remain usable without turning separate switches into track stock.
 fn placement_source_allowed(action: EditAction, source: u16) -> bool {
+    if matches!(action, EditAction::BuildRail { .. }) {
+        return source == terra_core::rails::STRAIGHT;
+    }
     let target = match action {
         EditAction::Block { material, .. } => material,
         EditAction::ConnectRail { .. } => terra_core::rails::STRAIGHT,
@@ -31,6 +34,30 @@ fn placement_source_allowed(action: EditAction, source: u16) -> bool {
     }
 }
 
+fn reserve_track_inventory(
+    bag: &Inventory,
+    slot: u8,
+    item: ItemKind,
+    cost: u16,
+) -> Result<Option<Inventory>, EditOutcome> {
+    if cost == 0 {
+        return Ok(None);
+    }
+    if bag.count(item) < cost || bag.revision.checked_add(u64::from(cost)).is_none() {
+        return Err(EditOutcome::Invalid);
+    }
+    let mut next = bag.clone();
+    if !next.take_from(usize::from(slot), item) {
+        return Err(EditOutcome::Invalid);
+    }
+    for _ in 1..cost {
+        if !next.take_one(item) {
+            return Err(EditOutcome::Invalid);
+        }
+    }
+    Ok(Some(next))
+}
+
 pub(super) fn handles(action: EditAction) -> bool {
     match action {
         EditAction::Block {
@@ -42,7 +69,7 @@ pub(super) fn handles(action: EditAction) -> bool {
         EditAction::ToggleObject { expected, .. } => {
             terra_core::rails::is_rail(expected) || expected == terra_core::rails::SWITCH_STAND
         }
-        EditAction::ConnectRail { .. } => true,
+        EditAction::ConnectRail { .. } | EditAction::BuildRail { .. } => true,
         _ => false,
     }
 }
@@ -70,6 +97,9 @@ fn prepare(
     }
     let (position, expected, operation) = match command.action {
         EditAction::ConnectRail {
+            position, expected, ..
+        }
+        | EditAction::BuildRail {
             position, expected, ..
         } => (position, expected, Operation::Place),
         EditAction::Block {
@@ -184,9 +214,65 @@ fn prepare(
     if hit.distance > 4.5 {
         return Err(EditOutcome::OutOfReach);
     }
+    let mut context: Option<rails::ContextChoice> = None;
     let mut layout = match operation {
         Operation::Place => {
-            if let EditAction::ConnectRail { start, .. } = command.action {
+            if let EditAction::BuildRail {
+                choice, signature, ..
+            } = command.action
+            {
+                if hit.position != position {
+                    return Err(EditOutcome::Occluded);
+                }
+                let selected = rails::context_choice(
+                    &world.chunks,
+                    &world.journal,
+                    hit,
+                    (eye, direction),
+                    command.look,
+                    wood,
+                    choice,
+                );
+                if rails::context_signature(&selected) != signature {
+                    return Err(EditOutcome::Conflict);
+                }
+                if !selected.valid || selected.error.is_some() {
+                    return Err(EditOutcome::Invalid);
+                }
+                let layout = selected
+                    .layout
+                    .as_ref()
+                    .ok_or(EditOutcome::Invalid)?
+                    .clone();
+                if let Some(source) = selected.source {
+                    if selected.replaced.is_none() {
+                        let piece = rails::owner_at(&world.journal, source.anchor)
+                            .ok_or(EditOutcome::Conflict)?;
+                        let port = piece
+                            .ports()
+                            .into_iter()
+                            .find(|port| port.index == source.port)
+                            .ok_or(EditOutcome::Conflict)?;
+                        if (0..3)
+                            .map(|axis| (port.position.position()[axis] - eye[axis]).powi(2))
+                            .sum::<f64>()
+                            > 4.5 * 4.5
+                        {
+                            return Err(EditOutcome::OutOfReach);
+                        }
+                    }
+                    if let Some(destination) = rails::connection_target(&layout)
+                        && (0..3)
+                            .map(|axis| (destination.position.position()[axis] - eye[axis]).powi(2))
+                            .sum::<f64>()
+                            > 4.5 * 4.5
+                    {
+                        return Err(EditOutcome::OutOfReach);
+                    }
+                }
+                context = Some(selected);
+                layout
+            } else if let EditAction::ConnectRail { start, .. } = command.action {
                 if hit.position != position {
                     return Err(EditOutcome::Occluded);
                 }
@@ -281,17 +367,40 @@ fn prepare(
             }
         }
     };
+    let mut replaced_cost = 0;
     if matches!(operation, Operation::Place) {
-        let existing_sites = match command.action {
-            EditAction::ConnectRail { start, .. } => {
-                rails::connection_sites(&world.journal, start, hit)
+        let existing_sites = if let Some(context) = &context {
+            if let Some(replaced) = context.replaced {
+                if replaced.material != terra_core::rails::STRAIGHT
+                    || replaced.curve.is_some()
+                    || !rails::complete(&world.journal, replaced)
+                    || world
+                        .journal
+                        .object_state(replaced.anchor)
+                        .is_none_or(|state| state.wood != wood)
+                {
+                    return Err(EditOutcome::Invalid);
+                }
+                replaced_cost = rails::piece_cost(replaced);
             }
-            _ => rails::placement_sites(&world.journal, hit),
+            rails::context_sites(&world.journal, context)
+        } else {
+            match command.action {
+                EditAction::ConnectRail { start, .. } => {
+                    rails::connection_sites(&world.journal, start, hit)
+                }
+                _ => rails::placement_sites(&world.journal, hit),
+            }
         }
         .ok_or(EditOutcome::Conflict)?;
         if existing_sites.iter().any(|cell| {
             world.chunks.block_at(*cell).is_none()
-                || world.chunks.block_at(*cell) != world.journal.block(*cell)
+                || (context.is_none()
+                    || world
+                        .journal
+                        .block(*cell)
+                        .is_some_and(terra_core::rails::is_rail))
+                    && world.chunks.block_at(*cell) != world.journal.block(*cell)
                 || !super::super::kingdoms::permission_allowed(
                     peer.uuid,
                     KingdomPermission::Build,
@@ -341,6 +450,21 @@ fn prepare(
     if layout.edits.iter().any(|edit| {
         !super::super::kingdoms::permission_allowed(peer.uuid, permission, edit.position, world)
             || world.config.world.bounded_world && !(-128..=356).contains(&edit.position[1])
+            || context.is_some()
+                && terra_core::rails::is_rail(edit.expected_material)
+                && (edit.material != edit.expected_material
+                    || layout
+                        .states
+                        .iter()
+                        .find(|(cell, _)| *cell == edit.position)
+                        .and_then(|(_, state)| *state)
+                        != world.journal.object_state(edit.position))
+                && !super::super::kingdoms::permission_allowed(
+                    peer.uuid,
+                    KingdomPermission::Break,
+                    edit.position,
+                    world,
+                )
     }) {
         return Err(EditOutcome::Invalid);
     }
@@ -376,28 +500,15 @@ fn prepare(
     let inventory = if matches!(operation, Operation::Place)
         && peer.game_mode(&world.config) == GameMode::Survival
     {
-        let cost = rails::cost(&layout).ok_or(EditOutcome::Invalid)?;
+        let cost = rails::cost(&layout)
+            .ok_or(EditOutcome::Invalid)?
+            .saturating_sub(replaced_cost);
         let bag = gameplay
             .inventories
             .get(&peer.uuid)
             .ok_or(EditOutcome::Invalid)?;
-        if cost == 0
-            || bag.count(selected_item) < cost
-            || bag.revision.checked_add(u64::from(cost)).is_none()
-        {
-            return Err(EditOutcome::Invalid);
-        }
-        let mut next = bag.clone();
         let source = command.source.ok_or(EditOutcome::Invalid)?;
-        if !next.take_from(usize::from(source.slot), selected_item) {
-            return Err(EditOutcome::Invalid);
-        }
-        for _ in 1..cost {
-            if !next.take_one(selected_item) {
-                return Err(EditOutcome::Invalid);
-            }
-        }
-        Some(next)
+        reserve_track_inventory(bag, source.slot, selected_item, cost)?
     } else {
         None
     };
@@ -508,5 +619,25 @@ pub(super) fn apply(
             tracing::warn!(%error, "Rail transaction rejected");
             EditOutcome::Invalid
         }
+    }
+}
+
+#[cfg(test)]
+mod reservation_tests {
+    use super::*;
+    #[test]
+    fn zero_additional_material_never_consumes_or_revises_inventory() {
+        let item = ItemKind::Block(terra_core::rails::STRAIGHT);
+        let mut bag = Inventory::default();
+        assert!(bag.creative_set(0, ItemStack { item, count: 1 }));
+        bag.revision = u64::MAX;
+        let before = bag.clone();
+        assert_eq!(reserve_track_inventory(&bag, 0, item, 0), Ok(None));
+        assert_eq!(bag, before);
+        assert_eq!(
+            reserve_track_inventory(&bag, 0, item, 1),
+            Err(EditOutcome::Invalid)
+        );
+        assert_eq!(bag, before);
     }
 }

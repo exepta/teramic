@@ -223,7 +223,7 @@ fn water_is_retained_around_real_rails_and_survives_module_removal() {
 }
 
 #[test]
-fn protected_hives_cannot_be_overwritten_and_a_saved_slab_floor_cannot_rotate_out_of_support() {
+fn protected_hives_cannot_be_overwritten_but_existing_rails_allow_later_slab_floor_changes() {
     let piece = Piece::new([0, 16, 0], rails::STRAIGHT, 0).unwrap();
     let mut chunks = ChunkStore::default();
     let mut journal = EditJournal::default();
@@ -256,7 +256,7 @@ fn protected_hives_cannot_be_overwritten_and_a_saved_slab_floor_cannot_rotate_ou
         )
         .unwrap();
     install(&mut chunks, &mut journal, piece);
-    assert!(!placement::support_state_allowed(
+    assert!(placement::support_state_allowed(
         &journal,
         support,
         slab,
@@ -268,7 +268,7 @@ fn protected_hives_cannot_be_overwritten_and_a_saved_slab_floor_cannot_rotate_ou
 }
 
 #[test]
-fn sleeper_support_is_protected_even_when_its_rail_section_is_unloaded() {
+fn rail_section_unloading_does_not_prevent_later_bedding_changes() {
     let piece = Piece::new([-17, 16, -17], rails::SLOPE_ENTRY, 0).unwrap();
     let mut chunks = ChunkStore::default();
     let mut journal = EditJournal::default();
@@ -278,10 +278,114 @@ fn sleeper_support_is_protected_even_when_its_rail_section_is_unloaded() {
     for point in piece.supports().iter() {
         let support =
             std::array::from_fn(|axis| piece.anchor[axis] + i64::from(point.support[axis]));
-        assert!(!support_edit_allowed(&chunks, &journal, support, 0));
+        assert!(support_edit_allowed(&chunks, &journal, support, 0));
         assert!(support_edit_allowed(&chunks, &journal, support, 3));
     }
     assert!(support_edit_allowed(&chunks, &journal, [-500, 0, -500], 0));
+}
+
+#[test]
+fn real_underlay_edits_leave_floating_rail_ownership_water_geometry_and_routes_intact() {
+    for material in [rails::STRAIGHT, rails::SLOPE_ENTRY, rails::SWITCH_RIGHT] {
+        let original = Piece::new([-17, 16, -17], material, 0).unwrap();
+        let mut chunks = ChunkStore::default();
+        let mut journal = EditJournal::default();
+        prepare(&mut chunks, original);
+        for point in original.supports().iter() {
+            block(
+                &mut chunks,
+                std::array::from_fn(|axis| original.anchor[axis] + i64::from(point.support[axis])),
+                206,
+            );
+        }
+        install(&mut chunks, &mut journal, original);
+        for cell in cells(original) {
+            journal
+                .set_fluid(
+                    cell,
+                    crate::water::FluidCell {
+                        amount: 8,
+                        source: true,
+                        ..Default::default()
+                    },
+                )
+                .unwrap();
+        }
+        let graph = network(&journal).unwrap();
+        let geometry = original.local_geometry();
+        let epoch = journal.rail_epoch();
+        assert_eq!(
+            ballast::speed_multiplier(&chunks, &journal, original.anchor),
+            1.5
+        );
+        for point in original.supports().iter() {
+            let support =
+                std::array::from_fn(|axis| original.anchor[axis] + i64::from(point.support[axis]));
+            assert!(
+                crate::streaming::commit_block_edit(
+                    &mut chunks,
+                    &mut journal,
+                    &crate::streaming::BlockEditRequest {
+                        position: support,
+                        expected_material: 206,
+                        material: 0
+                    },
+                    &Default::default()
+                )
+                .unwrap()
+            );
+            assert_eq!(journal.block(support), Some(0));
+            assert!(complete(&journal, original));
+            assert_eq!(network(&journal).unwrap(), graph);
+            assert_eq!(journal.rail_epoch(), epoch);
+            assert_eq!(
+                ballast::speed_multiplier(&chunks, &journal, original.anchor),
+                1.0
+            );
+            assert!(std::sync::Arc::ptr_eq(
+                &geometry,
+                &original.local_geometry()
+            ));
+            for cell in cells(original) {
+                assert_eq!(chunks.block_at(cell), Some(material));
+                assert_eq!(
+                    journal.object_state(cell),
+                    Some(object_state(original, cell))
+                );
+                assert_eq!(journal.fluid(cell).unwrap().amount, 8);
+            }
+        }
+        let sections: Vec<_> = journal.changed_sections().collect();
+        let mut replica = EditJournal::default();
+        for section in sections {
+            replica
+                .import_delta(journal.section_delta(section))
+                .unwrap();
+        }
+        assert!(complete(&replica, original));
+        assert_eq!(network(&replica).unwrap(), graph);
+        for point in original.supports().iter() {
+            let support =
+                std::array::from_fn(|axis| original.anchor[axis] + i64::from(point.support[axis]));
+            assert_eq!(replica.block(support), Some(0));
+        }
+        let piece = if original.kind().is_some_and(rails::Kind::is_switch) {
+            let toggle = toggle_switch_plan(&chunks, &journal, original.anchor).unwrap();
+            assert!(commit(&mut chunks, &mut journal, &toggle).unwrap());
+            let switched = Piece::new(original.anchor, material, 4).unwrap();
+            assert!(complete(&journal, switched));
+            switched
+        } else {
+            original
+        };
+        let remove = break_layout(&chunks, &journal, piece.anchor).unwrap();
+        assert!(commit(&mut chunks, &mut journal, &remove).unwrap());
+        assert!(!complete(&journal, piece));
+        assert!(
+            plan(&chunks, &journal, piece.anchor, piece.material, 0).is_err(),
+            "new placement still requires the removed foundation"
+        );
+    }
 }
 
 #[test]
@@ -675,3 +779,6 @@ fn connection_sites_cover_complete_modules_and_a_nearby_curve_hit_can_have_a_dis
 
 #[path = "curve_placement_tests.rs"]
 mod curve_placement_tests;
+
+#[path = "context_tests.rs"]
+mod context_tests;

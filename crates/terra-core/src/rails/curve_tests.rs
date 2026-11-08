@@ -240,7 +240,7 @@ fn adaptive_handles_fit_asymmetric_right_angle_turns_without_changing_existing_c
     };
     for facing in 0..4 {
         let first = [8, 2, 8];
-        let delta = rotate([96, 0, 192], facing);
+        let delta = rotate([52, 0, 112], facing);
         let last = std::array::from_fn(|axis| first[axis] + delta[axis]);
         let start = Port {
             position: FixedPoint(std::array::from_fn(|axis| {
@@ -258,7 +258,7 @@ fn adaptive_handles_fit_asymmetric_right_angle_turns_without_changing_existing_c
             index: 0,
             connectable: true,
         };
-        let old_handle = 86;
+        let old_handle = 49;
         let old = CurveSpec {
             points: [
                 first,
@@ -305,5 +305,40 @@ fn adaptive_handles_fit_asymmetric_right_angle_turns_without_changing_existing_c
     assert_eq!(
         CurveSpec::between_checked(reversed, end, [0; 3]),
         Err(CurveError::Reverses)
+    );
+}
+
+#[test]
+fn compact_one_block_rises_have_flat_exact_ports_and_bounded_smooth_curvature() {
+    for span in [4, 6] {
+        let start = Port {
+            position: FixedPoint([8, 2, 0]),
+            tangent: [0, 0, 1],
+            index: 1,
+            connectable: true,
+        };
+        let end = Port {
+            position: FixedPoint([8, 18, span * 16]),
+            tangent: [0, 0, -1],
+            index: 0,
+            connectable: true,
+        };
+        let curve = CurveSpec::between_checked(start, end, [0; 3]).unwrap();
+        let metrics = curve.validate().unwrap();
+        assert!(metrics.max_grade <= MAX_CURVE_GRADE);
+        assert!(metrics.min_radius >= MIN_CURVE_RADIUS);
+        assert_eq!(curve.points[0][1], curve.points[1][1]);
+        assert_eq!(curve.points[2][1], curve.points[3][1]);
+        assert!(metrics.length > span as f64);
+        if span == 4 {
+            assert!(metrics.max_grade > 0.25);
+        }
+        let piece = Piece::new_curve([0; 3], curve).unwrap();
+        assert!(start.connects(piece.ports()[0]));
+        assert!(end.connects(piece.ports()[1]));
+    }
+    assert_eq!(
+        Piece::new([0; 3], CURVE_SMALL, 0).unwrap().paths()[0].length(),
+        std::f64::consts::FRAC_PI_2 * 4.5
     );
 }

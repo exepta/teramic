@@ -6522,3 +6522,51 @@ Schotteroberseiten und der einmalige Faktor 1,5 sind geprüft. Zielkarten und
 Bauhinweise bestehen ihre CPU-Prüfungen. Clippy aller Targets mit `-D warnings`,
 Format, Diff, kopfloser Assetexport und aktueller Client-/Server-Build sind sauber.
 Keine Grafiktests, Spielclients oder Screenshots wurden gestartet.
+
+## 207. Kontextgleise, Sanfte Stufen Und Freier Unterbau
+
+Die aktuelle Zielerfassung liefert direkte Andockvorschläge für Geradeaus und
+echte Kurven zwischen freien Gleisenden. Nur ein sichtbarer Andockpunkt mit
+zwei tatsächlich verschiedenen Geometrien übernimmt das Mausrad; sonst bleiben
+Hotbar und Offline-Palette normal nutzbar. Die Radereignisse wirken nicht später
+nach. Slot, aktives Item und Ansicht wechseln sofort, das Targeting wird vor
+der Interaktion mit dem neuen Item wiederholt. Alte Bauabsichten einer anderen
+Holzvariante werden nicht übernommen. Shift+Platzieren merkt zusätzlich einen
+manuellen Verbindungsstart und verwirft einen bereits gemerkten Start.
+
+Eine direkt angrenzende Stufe um einen Block kann das letzte vollständige gerade
+Viermeterstück in eine glatte kubische Rampe umformen. Der hintere Anschluss
+bleibt exakt erhalten, das neue obere Ende dockt am erhöhten Gleis oder an der
+nahen Oberkante des Bodens an. Vertikale Wandtreffer werden ausgewertet.
+Dynamische Verbindungen erlauben jetzt mindestens 2,5 Meter Radius und maximal
+50 Prozent Steigung; alte native Kurven/Steigungen bleiben geometrisch gleich.
+Der Rampenplaner prüft höchstens 49 Griffpaare, ebene Kurven weiterhin 36.
+
+Protokoll 114 überträgt Kontextauswahl und einen stabilen Fingerabdruck des
+Bauvorhabens. Die Authority rekonstruiert Geometrie, Quell-/Zielports und Kosten
+aus dem tatsächlichen Zielstrahl. Veränderte Vorschläge, fehlende Rechte,
+veraltete Revisionen oder falsche Holzart werden vor jedem Commit abgelehnt.
+Ein Rampenumbau reserviert nur den positiven Mehrbedarf; es gibt keine doppelte
+Rückgabe des alten Stücks. Alte/neue Zellen, Wasser, Props und Besitz werden
+atomar aus betroffenen Sparse-Sections veröffentlicht. Lokale Portabfragen
+ersetzen globale Scans; die Suche erzeugt keine Terrainchunks.
+
+Die gesonderte Sperre für Abbau und Änderungen unter vorhandenen Schienen ist
+entfernt. Normale Rechte, Werkzeuge, Zielstrahlen und Abbauzeiten bleiben nötig.
+Vorhandene Gleise behalten Geometrie, Wasser und Routing; der Schotterbonus fällt
+bei fehlender Auflage sofort weg. Neue Platzierungen prüfen weiterhin ihren
+Unterbau. RG13/ID12/PLY7 und die vorhandenen Block-/Item-/Rezept-IDs bleiben gleich.
+
+[Prüfbericht und Bedienung](tools/benchmarks/results/contextual-track-building-2026-11-08/README.md).
+Keine Grafiktests oder Spielclients werden gestartet.
+
+Abnahme 207: 4.233 Workspace-Library-/Bin-Tests bestanden, keiner fehlgeschlagen,
+neun bestehende Tests ignoriert. Echte Stufenwände, Rampen in vier Ausrichtungen,
+erhaltene Nachbaranschlüsse, atomare Prop-/Wasser-/Besitzänderungen, Rechte und
+Überlauf-Rollbacks sind geprüft. Die direkte Kontextwahl läuft über echte
+UDP-Clients mit Survival-Verbrauch, Late Join und veralteter Bauabsicht.
+Mausrad, sofortiger Hotbarwechsel, erneutes Targeting und manueller Shift-Start
+bestehen ihre CPU-Prüfungen. Normaler Unterbauabbau erhält Gleise und entfernt
+den fehlenden Schotterbonus. Clippy aller Targets mit `-D warnings`, Format,
+Diff, kopfloser Assetexport und aktueller Client-/Server-Build sind sauber.
+Keine Grafiktests, Spielclients oder Screenshots wurden gestartet.

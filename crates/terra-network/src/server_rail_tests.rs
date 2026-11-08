@@ -5,6 +5,8 @@ use terra_voxel::{BlockSection, SectionPos, global_to_section};
 
 #[path = "server_rail_connections_tests.rs"]
 mod connections;
+#[path = "server_rail_context_tests.rs"]
+mod context;
 
 fn set_block(app: &mut App, cell: [i64; 3], material: u16) {
     let (owner, local) = global_to_section(cell);
@@ -463,43 +465,131 @@ fn switches_require_the_correct_opcode_facing_and_real_ray_then_update_every_sli
 }
 
 #[test]
-fn ordinary_block_mining_cannot_remove_a_real_rail_support() {
-    let (mut app, peer, piece, command) = rail_fixture(rails::STRAIGHT, [8, 4, 10]);
-    assert_eq!(run(&mut app, &peer, command, false), EditOutcome::Applied);
-    let support = [8, 3, 10];
-    let eye = Vec3::new(9.0, 2.0, 10.5);
-    app.world_mut()
-        .get_mut::<Transform>(peer.body)
-        .unwrap()
-        .translation = eye - Vec3::Y * PLAYER_EYE_OFFSET;
-    let look = aim(&app, &peer, [8.5, 3.0, 10.5]);
-    let command = EditCommand {
-        request: 2,
-        revision: app
-            .world()
-            .resource::<EditJournal>()
-            .revision(global_to_section(support).0),
-        look,
-        source: None,
-        action: EditAction::Block {
-            position: support,
-            expected: 3,
-            material: 0,
-        },
-    };
-    assert!(!terra_world::rails::support_edit_allowed(
-        app.world().resource::<ChunkStore>(),
-        app.world().resource::<EditJournal>(),
-        support,
-        0
-    ));
-    let before = snapshot(&app, piece);
-    assert_eq!(run(&mut app, &peer, command, true), EditOutcome::Invalid);
-    assert_eq!(snapshot(&app, piece), before);
-    assert_eq!(
-        app.world().resource::<ChunkStore>().block_at(support),
-        Some(3)
-    );
+fn timed_survival_mining_removes_only_the_underlay_and_immediately_loses_its_ballast_bonus() {
+    for floor_material in [3, 206] {
+        let (mut app, peer, piece, place) = rail_fixture(rails::STRAIGHT, [8, 4, 10]);
+        for bearing in piece.supports().iter() {
+            set_block(
+                &mut app,
+                std::array::from_fn(|axis| piece.anchor[axis] + i64::from(bearing.support[axis])),
+                floor_material,
+            );
+        }
+        assert_eq!(run(&mut app, &peer, place, false), EditOutcome::Applied);
+        {
+            let mut journal = app.world_mut().resource_mut::<EditJournal>();
+            let bag = journal
+                .gameplay_mut()
+                .inventories
+                .get_mut(&peer.uuid)
+                .unwrap();
+            assert!(bag.creative_set(
+                0,
+                ItemStack {
+                    item: ItemKind::Tool(terra_core::ToolKind::WoodPickaxe),
+                    count: 1
+                }
+            ));
+            for cell in terra_world::rails::cells(piece) {
+                journal
+                    .set_fluid(
+                        cell,
+                        terra_world::water::FluidCell {
+                            amount: 8,
+                            source: true,
+                            ..Default::default()
+                        },
+                    )
+                    .unwrap();
+            }
+        }
+        let support = [8, 3, 10];
+        let eye = Vec3::new(9.0, 2.0, 10.5);
+        app.world_mut()
+            .get_mut::<Transform>(peer.body)
+            .unwrap()
+            .translation = eye - Vec3::Y * PLAYER_EYE_OFFSET;
+        let look = aim(&app, &peer, [8.5, 3.0, 10.5]);
+        let command = EditCommand {
+            request: 2,
+            revision: app
+                .world()
+                .resource::<EditJournal>()
+                .revision(global_to_section(support).0),
+            look,
+            source: None,
+            action: EditAction::Block {
+                position: support,
+                expected: floor_material,
+                material: 0,
+            },
+        };
+        let before = snapshot(&app, piece);
+        assert_eq!(
+            run(&mut app, &peer, command, false),
+            EditOutcome::Invalid,
+            "ordinary Survival mining must remain timed"
+        );
+        assert_eq!(snapshot(&app, piece), before);
+        let before_graph =
+            terra_world::rails::network(app.world().resource::<EditJournal>()).unwrap();
+        let before_epoch = app.world().resource::<EditJournal>().rail_epoch();
+        let states: Vec<_> = terra_world::rails::cells(piece)
+            .into_iter()
+            .map(|cell| {
+                let journal = app.world().resource::<EditJournal>();
+                (cell, journal.object_state(cell), journal.fluid(cell))
+            })
+            .collect();
+        let factor = terra_world::rails::ballast::speed_multiplier(
+            app.world().resource::<ChunkStore>(),
+            app.world().resource::<EditJournal>(),
+            piece.anchor,
+        );
+        assert_eq!(factor, if floor_material == 206 { 1.5 } else { 1.0 });
+        let drops_before = app.world().resource::<EditJournal>().gameplay().next_drop;
+        assert_eq!(run(&mut app, &peer, command, true), EditOutcome::Applied);
+        let journal = app.world().resource::<EditJournal>();
+        assert_eq!(
+            app.world().resource::<ChunkStore>().block_at(support),
+            Some(0)
+        );
+        assert_eq!(journal.block(support), Some(0));
+        assert!(terra_world::rails::complete(journal, piece));
+        assert_eq!(terra_world::rails::network(journal).unwrap(), before_graph);
+        assert_eq!(journal.rail_epoch(), before_epoch);
+        for (cell, state, fluid) in states {
+            assert_eq!(journal.object_state(cell), state);
+            assert_eq!(journal.fluid(cell), fluid);
+            assert!(
+                !terra_world::rails::cell_boxes(cell, piece.material, state.unwrap()).is_empty()
+            );
+        }
+        assert_eq!(
+            terra_world::rails::ballast::speed_multiplier(
+                app.world().resource::<ChunkStore>(),
+                journal,
+                piece.anchor
+            ),
+            1.0
+        );
+        assert_eq!(journal.gameplay().next_drop, drops_before + 1);
+        let drops: Vec<_> = journal
+            .gameplay()
+            .drops
+            .iter()
+            .filter(|drop| drop.id > drops_before)
+            .collect();
+        assert_eq!(drops.len(), 1);
+        assert_eq!(
+            drops[0].stack,
+            ItemStack {
+                item: ItemKind::Block(floor_material),
+                count: 1
+            }
+        );
+        assert_eq!(journal.gameplay().player_stats[&peer.uuid].blocks_broken, 1);
+    }
 }
 
 fn fill_stats(app: &mut App, peer: &Peer, include_actor: bool) {

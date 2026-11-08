@@ -11,11 +11,19 @@ impl EditJournal {
         plan: &Layout,
     ) -> Result<bool, String> {
         crate::rails::placement::validate_commit(plan, chunks, self)?;
-        let cleared = if plan
-            .edits
-            .iter()
-            .all(|edit| matches!(edit.expected_material, 0 | 14 | 27))
-        {
+        let cleared = if plan.edits.iter().any(|edit| {
+            terra_core::rails::is_rail(edit.material)
+                && (edit.material != edit.expected_material
+                    || plan
+                        .states
+                        .iter()
+                        .find(|(cell, _)| *cell == edit.position)
+                        .and_then(|(_, state)| *state)
+                        .is_some_and(|state| {
+                            Some(state.rail_curve)
+                                != self.object_state(edit.position).map(|old| old.rail_curve)
+                        }))
+        }) {
             crate::rails::clearance(plan, chunks, self)?
         } else {
             Vec::new()
@@ -319,6 +327,114 @@ mod tests {
                     .into_iter()
                     .all(|(owner, data)| chunks.loaded[&owner].data == data)
             );
+        }
+    }
+
+    #[test]
+    fn a_mixed_ramp_replacement_clears_props_atomically_and_rolls_back_prop_counter_overflow() {
+        use terra_core::{WoodSpecies, rails::BuildChoice};
+        for overflow in [false, true] {
+            let old = Piece::new([15, 16, 0], STRAIGHT, 0).unwrap();
+            let mut chunks = ChunkStore::default();
+            let mut journal = EditJournal::default();
+            let mut set = |cell, material| {
+                let (owner, local) = global_to_section(cell);
+                chunks
+                    .loaded
+                    .entry(owner)
+                    .or_insert_with(|| LoadedSection {
+                        data: BlockSection::empty(owner).unwrap(),
+                        mesh: None,
+                        mesh_epoch: 0,
+                        water_epoch: 0,
+                        water: None,
+                        props: Vec::new(),
+                    })
+                    .data
+                    .set_block(local, material)
+                    .unwrap();
+            };
+            for x in 14..=16 {
+                for z in 0..=4 {
+                    set([x, 15, z], 3);
+                    if z == 4 {
+                        set([x, 16, z], 3);
+                    }
+                }
+            }
+            let placed = rails::plan(&chunks, &journal, old.anchor, old.material, 0).unwrap();
+            assert!(rails::commit(&mut chunks, &mut journal, &placed).unwrap());
+            let prop = crate::props::WorldProp {
+                id: crate::props::PropId(20701),
+                kind: crate::props::PropKind::Grass,
+                position: [15.5, 17.0, 3.5],
+                rotation: 0.0,
+                scale: 1.0,
+                variant: 0,
+                section: global_to_section([15, 16, 3]).0,
+                removed: false,
+            };
+            assert!(journal.place_prop(prop).unwrap());
+            let eye = [15.5, 18.125, 2.0];
+            let target = [15.5, 16.75, 4.0];
+            let delta: [f64; 3] = std::array::from_fn(|axis| target[axis] - eye[axis]);
+            let length = delta.iter().map(|value| value * value).sum::<f64>().sqrt();
+            let direction = delta.map(|value| value / length);
+            let hit = crate::interaction_shapes::raycast_solid(
+                &chunks,
+                &journal,
+                &Default::default(),
+                eye,
+                direction,
+                4.5,
+            )
+            .unwrap();
+            let choice = rails::context_choice(
+                &chunks,
+                &journal,
+                hit,
+                (eye, direction),
+                [0.0, -0.5],
+                WoodSpecies::Oak,
+                BuildChoice::Straight,
+            );
+            assert!(choice.valid, "{:?}", choice.error);
+            let layout = choice.layout.unwrap();
+            assert!(
+                rails::clearance(&layout, &chunks, &journal)
+                    .unwrap()
+                    .iter()
+                    .any(|entry| entry.prop.id == prop.id)
+            );
+            let before: BTreeMap<_, _> = chunks
+                .loaded
+                .iter()
+                .map(|(owner, section)| (*owner, section.data.clone()))
+                .collect();
+            let rail_epoch = journal.rail_epoch();
+            if overflow {
+                journal.sections.get_mut(&prop.section).unwrap().prop_epoch = u64::MAX;
+            }
+            let result = rails::commit(&mut chunks, &mut journal, &layout);
+            if overflow {
+                assert!(result.is_err());
+                assert!(rails::complete(&journal, old));
+                assert!(!journal.prop_removed(prop.section, prop.id));
+                assert_eq!(journal.rail_epoch(), rail_epoch);
+                assert!(
+                    before
+                        .into_iter()
+                        .all(|(owner, data)| chunks.loaded[&owner].data == data)
+                );
+            } else {
+                assert_eq!(result, Ok(true));
+                assert!(journal.prop_removed(prop.section, prop.id));
+                assert_eq!(journal.rail_module_count(), 1);
+                assert!(
+                    journal.gameplay().drops.is_empty(),
+                    "the authority reserves and emits prop drops separately"
+                );
+            }
         }
     }
 }

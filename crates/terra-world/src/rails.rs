@@ -12,6 +12,12 @@ pub mod ballast;
 #[cfg(feature = "bevy")]
 mod clearance;
 #[cfg(feature = "bevy")]
+mod context;
+#[cfg(feature = "bevy")]
+pub use context::{
+    ContextChoice, context_choice, context_choices, context_signature, context_sites,
+};
+#[cfg(feature = "bevy")]
 pub(crate) mod placement;
 #[cfg(feature = "bevy")]
 pub use clearance::{MAX_CLEARED_PROPS, PropClearance, PropSource, clearance};

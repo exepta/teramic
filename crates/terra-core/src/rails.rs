@@ -5,8 +5,8 @@ mod network;
 mod surfaces;
 
 pub use curve::{
-    CurveError, CurveMetrics, CurveSpec, DYNAMIC_CACHE_LIMIT, MAX_CURVE_GRADE, MAX_CURVE_LENGTH,
-    MAX_CURVE_SAMPLES, MIN_CURVE_RADIUS,
+    BuildChoice, CurveError, CurveMetrics, CurveSpec, DYNAMIC_CACHE_LIMIT, MAX_CURVE_GRADE,
+    MAX_CURVE_LENGTH, MAX_CURVE_SAMPLES, MIN_CURVE_RADIUS,
 };
 pub use geometry::{Beam, PartMaterial, Sample, SupportPoint};
 pub use network::{DISTANCE_SCALE, Endpoint, RailError, Route, RouteLeg, RouteNetwork};

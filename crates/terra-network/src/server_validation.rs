@@ -68,18 +68,6 @@ pub(super) fn check(command: EditCommand, peer: &Peer, world: &ControlWorld) -> 
     if rails::handles(command.action) {
         return rails::check(command, peer, world);
     }
-    if let EditAction::Block {
-        position, material, ..
-    } = command.action
-        && !terra_world::rails::support_edit_allowed(
-            &world.chunks,
-            &world.journal,
-            position,
-            material,
-        )
-    {
-        return EditOutcome::Invalid;
-    }
     if matches!(command.action, EditAction::HarvestTree { .. }) {
         return super::fruit::check(command, peer, world);
     }
@@ -121,6 +109,7 @@ pub(super) fn check(command: EditCommand, peer: &Peer, world: &ControlWorld) -> 
         | EditAction::RotateObject { .. }
         | EditAction::ConnectConveyor { .. }
         | EditAction::ConnectRail { .. }
+        | EditAction::BuildRail { .. }
         | EditAction::CollectConveyor { .. }
         | EditAction::DyeConveyor { .. }
         | EditAction::DyeFabric { .. }
@@ -182,6 +171,7 @@ pub(super) fn check(command: EditCommand, peer: &Peer, world: &ControlWorld) -> 
     let target = match command.action {
         EditAction::Block { position, .. }
         | EditAction::ConnectRail { position, .. }
+        | EditAction::BuildRail { position, .. }
         | EditAction::Farm { position, .. }
         | EditAction::RotateObject { position, .. }
         | EditAction::Surface { position, .. }
@@ -255,6 +245,7 @@ pub(super) fn check(command: EditCommand, peer: &Peer, world: &ControlWorld) -> 
     match command.action {
         EditAction::HarvestTree { .. }
         | EditAction::ConnectRail { .. }
+        | EditAction::BuildRail { .. }
         | EditAction::ConnectConveyor { .. }
         | EditAction::CollectConveyor { .. }
         | EditAction::DyeConveyor { .. }
@@ -1166,6 +1157,7 @@ pub(super) fn apply(
     let result = match command.action {
         EditAction::HarvestTree { .. }
         | EditAction::ConnectRail { .. }
+        | EditAction::BuildRail { .. }
         | EditAction::ConnectConveyor { .. }
         | EditAction::CollectConveyor { .. }
         | EditAction::DyeConveyor { .. }

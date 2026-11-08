@@ -8,7 +8,7 @@ use terra_voxel::SectionPos;
 use terra_world::{edits::SectionDelta, props::PropId};
 
 // Version 113 adds ballast blocks and separate switch items and stands.
-pub const PROTOCOL_VERSION: u32 = 113;
+pub const PROTOCOL_VERSION: u32 = 114;
 pub const PROTOCOL_ID: u64 = 0x5445525241000001;
 pub const MAX_INPUT_BACKLOG: usize = 128;
 pub const MAX_TREE_INTEREST: usize = 256;
@@ -245,6 +245,12 @@ pub enum EditAction {
         start: terra_core::rails::Endpoint,
         position: [i64; 3],
         expected: u16,
+    },
+    BuildRail {
+        position: [i64; 3],
+        expected: u16,
+        choice: terra_core::rails::BuildChoice,
+        signature: u64,
     },
 }
 #[derive(Clone, Copy, Debug, Serialize, Deserialize)]
@@ -912,7 +918,7 @@ mod layout_tests {
                 .collect::<Vec<_>>()
         );
         assert_eq!(received.creatures.len(), 10);
-        assert_eq!(PROTOCOL_VERSION, 113);
+        assert_eq!(PROTOCOL_VERSION, 114);
     }
     #[test]
     fn kinetic_stress_capacity_roundtrip_and_reject_nonfinite_or_impossible_reserves() {

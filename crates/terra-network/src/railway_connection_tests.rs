@@ -10,6 +10,9 @@ use terra_world::{
     streaming::{BlockEditRequest, commit_block_edit},
 };
 
+#[path = "railway_context_tests.rs"]
+mod context;
+
 #[derive(Resource, Clone, Copy)]
 struct FixtureGeometry {
     original: Piece,

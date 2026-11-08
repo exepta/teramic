@@ -2298,6 +2298,7 @@ fn app(mode: GameMode) -> App {
                 actions,
                 pointer::finish_gesture,
                 pointer::send_requests,
+                hotbar_wheel,
                 view::update_view,
             )
                 .chain()
@@ -4245,6 +4246,83 @@ fn search_focus_does_not_trigger_inventory_binding_and_escape_clears_focus() {
     assert!(!app.world().resource::<InventoryView>().open);
     assert!(app.world().resource::<InputFocus>().get().is_none());
     assert_eq!(app.world().resource::<MenuState>().page, MenuPage::Playing);
+}
+
+#[test]
+fn late_rail_owned_wheel_never_changes_slots_or_replays_and_normal_wheel_applies_immediately() {
+    let mut app = app(GameMode::Survival);
+    let track = ItemKind::for_wood(196, terra_core::WoodSpecies::Birch);
+    app.world_mut()
+        .resource_mut::<ClientSession>()
+        .inventory
+        .creative_set(
+            0,
+            terra_core::ItemStack {
+                item: track,
+                count: 8,
+            },
+        );
+    app.world_mut()
+        .resource_mut::<ClientSession>()
+        .inventory
+        .creative_set(
+            1,
+            terra_core::ItemStack {
+                item: ItemKind::Block(3),
+                count: 8,
+            },
+        );
+    action(&mut app, InventoryAction::Hotbar(0));
+    app.insert_resource(terra_player::interaction::RailBuildContext {
+        captures_wheel: true,
+        active: true,
+        item: Some(track),
+        ..default()
+    });
+    let wheel = || MouseWheel {
+        unit: bevy::input::mouse::MouseScrollUnit::Line,
+        x: 0.0,
+        y: -1.0,
+        window: Entity::PLACEHOLDER,
+        phase: bevy::input::touch::TouchPhase::Moved,
+    };
+    app.world_mut().write_message(wheel());
+    app.update();
+    assert_eq!(app.world().resource::<InventoryState>().hotbar, 0);
+    assert_eq!(app.world().resource::<ActiveItem>().0, Some(track));
+    assert_eq!(app.world().resource::<SelectedInventorySlot>().0, Some(0));
+    app.world_mut()
+        .resource_mut::<terra_player::interaction::RailBuildContext>()
+        .captures_wheel = false;
+    app.update();
+    assert_eq!(
+        app.world().resource::<InventoryState>().hotbar,
+        0,
+        "captured wheel must be drained"
+    );
+    app.world_mut()
+        .resource_mut::<Messages<InventoryAction>>()
+        .clear();
+    app.world_mut().write_message(wheel());
+    app.update();
+    assert_eq!(app.world().resource::<InventoryState>().hotbar, 1);
+    assert_eq!(
+        app.world().resource::<ActiveItem>().0,
+        Some(ItemKind::Block(3))
+    );
+    assert_eq!(app.world().resource::<SelectedInventorySlot>().0, Some(1));
+    assert_eq!(app.world().resource::<BlockPalette>().selected, 0);
+    assert!(
+        app.world()
+            .resource::<terra_player::interaction::RailBuildContext>()
+            .hotbar_changed
+    );
+    assert!(
+        app.world()
+            .resource::<Messages<InventoryAction>>()
+            .is_empty(),
+        "late navigation applies shared helper, without a next-frame event"
+    );
 }
 
 #[test]

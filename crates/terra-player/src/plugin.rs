@@ -13,6 +13,9 @@ use terra_world::streaming::StreamingSet;
 pub enum PlayerSet {
     Movement,
     Targeting,
+    RailWheel,
+    WheelSelection,
+    Retargeting,
     Interaction,
 }
 pub struct TerraPlayerPlugin;
@@ -32,6 +35,7 @@ impl Plugin for TerraPlayerPlugin {
             .init_resource::<crate::interaction::ActiveItem>()
             .init_resource::<crate::interaction::MiningVisual>()
             .init_resource::<crate::interaction::PlacementPreview>()
+            .init_resource::<crate::interaction::RailBuildContext>()
             .init_resource::<crate::interaction::InteractionMotion>()
             .init_resource::<crate::interaction::VesselMotion>()
             .add_message::<terra_network::client::MiningRequest>()
@@ -40,6 +44,7 @@ impl Plugin for TerraPlayerPlugin {
             .add_message::<terra_network::client::ObjectRotateRequest>()
             .add_message::<terra_network::client::ConveyorConnectRequest>()
             .add_message::<terra_network::client::RailConnectRequest>()
+            .add_message::<terra_network::client::RailBuildRequest>()
             .add_message::<terra_network::client::ConveyorInteractionRequest>()
             .add_message::<terra_network::client::ConfirmedEdit>()
             .configure_sets(
@@ -47,6 +52,9 @@ impl Plugin for TerraPlayerPlugin {
                 (
                     PlayerSet::Movement,
                     PlayerSet::Targeting,
+                    PlayerSet::RailWheel,
+                    PlayerSet::WheelSelection,
+                    PlayerSet::Retargeting,
                     PlayerSet::Interaction,
                 )
                     .chain()
@@ -83,10 +91,17 @@ impl Plugin for TerraPlayerPlugin {
             )
             .add_systems(
                 Update,
-                (select_block, edit_target_block)
+                crate::interaction::rail_wheel::update.in_set(PlayerSet::RailWheel),
+            )
+            .add_systems(Update, select_block.in_set(PlayerSet::WheelSelection))
+            .add_systems(
+                Update,
+                (target_block, crate::interaction::target_creature)
                     .chain()
-                    .in_set(PlayerSet::Interaction),
-            );
+                    .run_if(crate::interaction::rail_wheel::retarget_needed)
+                    .in_set(PlayerSet::Retargeting),
+            )
+            .add_systems(Update, edit_target_block.in_set(PlayerSet::Interaction));
         if std::env::args().any(|argument| {
             argument.starts_with("--smoke-test")
                 && argument != "--smoke-test-physics"

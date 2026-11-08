@@ -113,6 +113,176 @@ fn connection_fixture() -> (App, Entity, terra_core::rails::Endpoint, ItemKind) 
 }
 
 #[test]
+fn shift_remembers_a_long_connection_start_even_when_one_click_docking_is_available() {
+    let (mut app, _, start, item) = connection_fixture();
+    let hit = app.world().resource::<TargetBlock>().0.unwrap();
+    let eye = [4.5, 2.0, 9.5];
+    let choices = terra_world::rails::context_choices(
+        app.world().resource::<ChunkStore>(),
+        app.world().resource::<EditJournal>(),
+        hit,
+        (eye, [0.0, 0.0, -1.0]),
+        [0.0, 0.0],
+        item.wood_species().unwrap(),
+    );
+    assert!(choices.iter().any(|choice| choice.layout.is_some()));
+    app.insert_resource(super::super::RailBuildContext {
+        choices,
+        selected: rails::BuildChoice::Straight,
+        active: true,
+        hit: Some(hit),
+        item: Some(item),
+        ..Default::default()
+    });
+    app.world_mut()
+        .resource_mut::<ButtonInput<KeyCode>>()
+        .press(KeyCode::ShiftLeft);
+    app.world_mut()
+        .resource_mut::<ButtonInput<KeyCode>>()
+        .press(KeyCode::KeyB);
+    app.update();
+    assert_eq!(
+        app.world().resource::<PlacementPreview>().rail_start,
+        Some(start)
+    );
+    assert!(
+        app.world()
+            .resource::<Messages<terra_network::client::RailBuildRequest>>()
+            .is_empty()
+    );
+    assert!(
+        app.world()
+            .resource::<Messages<BlockEditRequest>>()
+            .is_empty()
+    );
+    app.world_mut()
+        .resource_mut::<ButtonInput<KeyCode>>()
+        .reset_all();
+    app.world_mut()
+        .resource_mut::<ButtonInput<KeyCode>>()
+        .press(KeyCode::ShiftLeft);
+    app.world_mut()
+        .resource_mut::<ButtonInput<KeyCode>>()
+        .press(KeyCode::KeyB);
+    app.update();
+    assert!(
+        app.world()
+            .resource::<PlacementPreview>()
+            .rail_start
+            .is_none()
+    );
+    assert!(
+        app.world()
+            .resource::<Messages<terra_network::client::RailBuildRequest>>()
+            .is_empty()
+    );
+}
+
+#[test]
+fn contextual_step_preview_sends_one_signed_build_intent_without_speculative_replacement() {
+    let mut app = app();
+    session(&mut app, GameMode::Creative, false);
+    app.world_mut()
+        .resource_mut::<terra_network::client::ClientSession>()
+        .uuid = Some(PlayerUuid::from_u128(1));
+    let old = Piece::new([4, 1, 4], rails::STRAIGHT, 0).unwrap();
+    let behind = Piece::new([4, 1, 0], rails::STRAIGHT, 0).unwrap();
+    let upper = Piece::new([4, 2, 8], rails::STRAIGHT, 0).unwrap();
+    let mut journal = EditJournal::default();
+    {
+        let mut chunks = app.world_mut().resource_mut::<ChunkStore>();
+        for x in 2..=6 {
+            for z in -1..=12 {
+                block(&mut chunks, [x, 0, z], 3);
+                if z >= 8 {
+                    block(&mut chunks, [x, 1, z], 3);
+                }
+            }
+        }
+        for piece in [behind, old, upper] {
+            support(&mut chunks, piece);
+            let plan = terra_world::rails::plan(&chunks, &journal, piece.anchor, piece.material, 0)
+                .unwrap();
+            terra_world::rails::commit(&mut chunks, &mut journal, &plan).unwrap();
+        }
+    }
+    let eye = Vec3::new(4.5, 3.0, 6.0);
+    let direction = (Vec3::new(4.5, 1.75, 8.0) - eye).normalize();
+    let look = [(-direction.x).atan2(-direction.z), direction.y.asin()];
+    let ray = (
+        eye.to_array().map(f64::from),
+        direction.to_array().map(f64::from),
+    );
+    let chunks = app.world().resource::<ChunkStore>();
+    let hit = terra_world::interaction_shapes::raycast_solid(
+        chunks,
+        &journal,
+        &Default::default(),
+        ray.0,
+        ray.1,
+        4.5,
+    )
+    .unwrap();
+    assert_eq!(hit.position, [4, 1, 8]);
+    let choices =
+        terra_world::rails::context_choices(chunks, &journal, hit, ray, look, WoodSpecies::Oak);
+    let choice = choices
+        .iter()
+        .find(|choice| choice.choice == rails::BuildChoice::Straight)
+        .unwrap();
+    assert!(choice.valid, "{:?}", choice.error);
+    assert_eq!(choice.replaced, Some(old));
+    let signature = terra_world::rails::context_signature(choice);
+    let item = ItemKind::Block(rails::STRAIGHT);
+    app.insert_resource(super::super::RailBuildContext {
+        choices,
+        selected: rails::BuildChoice::Straight,
+        active: true,
+        hit: Some(hit),
+        item: Some(item),
+        ..Default::default()
+    });
+    let mut camera = crate::CameraLook::default();
+    camera.sync_external(Quat::from_euler(EulerRot::YXZ, look[0], look[1], 0.0));
+    app.world_mut()
+        .spawn((crate::TerraCamera, Transform::from_translation(eye), camera));
+    app.insert_resource(journal)
+        .insert_resource(terra_core::block_properties::BlockPropertiesCatalog::default())
+        .insert_resource(super::super::ActiveItem(Some(item)))
+        .insert_resource(TargetBlock(Some(hit)))
+        .insert_resource(TargetWorld(Some(WorldTarget::Block(hit))));
+    app.world_mut()
+        .resource_mut::<ButtonInput<KeyCode>>()
+        .press(KeyCode::KeyB);
+    app.update();
+    let preview = app.world().resource::<PlacementPreview>();
+    assert!(preview.valid, "{:?}", preview.rail_error);
+    assert!(preview.rail_replacing && preview.rail_ramp);
+    assert_eq!(preview.rail_cost, 1);
+    let requests: Vec<_> = app
+        .world_mut()
+        .resource_mut::<Messages<terra_network::client::RailBuildRequest>>()
+        .drain()
+        .collect();
+    assert_eq!(requests.len(), 1);
+    assert_eq!(requests[0].signature, signature);
+    assert_eq!(requests[0].position, hit.position);
+    assert!(
+        app.world()
+            .resource::<Messages<BlockEditRequest>>()
+            .is_empty()
+    );
+    assert!(
+        app.world()
+            .resource::<Messages<terra_network::client::RailConnectRequest>>()
+            .is_empty()
+    );
+    let journal = app.world().resource::<EditJournal>();
+    assert_eq!(journal.rail_module_count(), 3);
+    assert!(terra_world::rails::complete(journal, old));
+}
+
+#[test]
 fn each_wood_switch_is_placed_as_its_own_handed_block_and_never_as_a_track_mode() {
     for material in [rails::SWITCH_LEFT, rails::SWITCH_RIGHT] {
         for wood in [

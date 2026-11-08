@@ -158,7 +158,7 @@ pub fn proposal_connection(
         .ok_or_else(|| "No rail curve candidate".into())
 }
 
-fn connection_candidates(
+pub(super) fn connection_candidates(
     chunks: &ChunkStore,
     journal: &EditJournal,
     start: terra_core::rails::Endpoint,
@@ -212,10 +212,14 @@ fn connection_candidates(
         }
         ports
     } else {
-        if hit.normal != [0, 1, 0] {
-            return Err("A free rail destination needs a floor top".into());
-        }
-        let cell = hit.adjacent();
+        let cell = if hit.normal == [0, 1, 0] {
+            hit.adjacent()
+        } else if matches!(hit.normal, [1, 0, 0] | [-1, 0, 0] | [0, 0, 1] | [0, 0, -1]) {
+            [hit.position[0], hit.position[1] + 1, hit.position[2]]
+        } else {
+            return Err("A free rail destination needs a floor top or a terrain-step side".into());
+        };
+        let elevated = cell[1] as f64 + terra_core::rails::DECK_HEIGHT > position[1] + 1e-8;
         let delta: [f64; 3] = std::array::from_fn(|axis| cell[axis] as f64 + 0.5 - position[axis]);
         let mut headings = [[0_i64, 0, 1], [1, 0, 0], [0, 0, -1], [-1, 0, 0]];
         let score = |heading: [i64; 3]| delta[0] * heading[0] as f64 + delta[2] * heading[2] as f64;
@@ -235,7 +239,7 @@ fn connection_candidates(
                 let local = [
                     if forward[0] == 0 {
                         8
-                    } else if forward[0] > 0 {
+                    } else if (forward[0] > 0) != elevated {
                         16
                     } else {
                         0
@@ -243,7 +247,7 @@ fn connection_candidates(
                     2,
                     if forward[2] == 0 {
                         8
-                    } else if forward[2] > 0 {
+                    } else if (forward[2] > 0) != elevated {
                         16
                     } else {
                         0
@@ -271,7 +275,7 @@ fn connection_candidates(
     for end_port in end_ports {
         let result = CurveSpec::between_checked(start_port, end_port, anchor).map_err(|error| match error {
             CurveError::Reverses => "The selected ends face away from this route; choose a free end facing the route or use a switch for a side branch".to_string(),
-            CurveError::TooTight => "Rail ends are too close for the 4.5 m turning radius; move the destination farther away".to_string(),
+            CurveError::TooTight => "Rail ends are too close for the 2.5 m turning radius; move the destination farther away".to_string(),
             other => other.to_string(),
         }).and_then(|curve| Piece::new_curve(anchor, curve).ok_or_else(|| "Invalid rail curve".into()))
             .and_then(|curve| candidate_piece(chunks, curve, wood));
@@ -398,35 +402,43 @@ fn placement_candidate(
     Err(last_error)
 }
 
-fn port_connected(journal: &EditJournal, piece: Piece, port: terra_core::rails::Port) -> bool {
+pub(super) fn port_connected(
+    journal: &EditJournal,
+    piece: Piece,
+    port: terra_core::rails::Port,
+) -> bool {
     let center = global_to_section(
         port.position
             .position()
             .map(|coordinate| coordinate.floor() as i64),
     )
     .0;
-    journal
-        .rail_sections()
-        .filter(|section| {
-            section.x.abs_diff(center.x) <= 2
-                && section.y.abs_diff(center.y) <= 1
-                && section.z.abs_diff(center.z) <= 2
-        })
-        .any(|section| {
-            journal
-                .object_states_in_section(section)
-                .any(|(cell, material, state)| {
-                    terra_core::rails::is_rail(material)
-                        && !state.secondary
-                        && cell != piece.anchor
-                        && owner_at(journal, cell).is_some_and(|other| {
-                            other
-                                .ports()
-                                .into_iter()
-                                .any(|other_port| port.connects(other_port))
-                        })
-                })
-        })
+    for x in -2..=2 {
+        for y in -1..=1 {
+            for z in -2..=2 {
+                let Ok(section) = center.offset([x, y, z]) else {
+                    continue;
+                };
+                if journal
+                    .object_states_in_section(section)
+                    .any(|(cell, material, state)| {
+                        terra_core::rails::is_rail(material)
+                            && !state.secondary
+                            && cell != piece.anchor
+                            && owner_at(journal, cell).is_some_and(|other| {
+                                other
+                                    .ports()
+                                    .into_iter()
+                                    .any(|other_port| port.connects(other_port))
+                            })
+                    })
+                {
+                    return true;
+                }
+            }
+        }
+    }
+    false
 }
 
 /// A placement reserves only the authored module footprint, never its bounds box.
@@ -452,7 +464,7 @@ fn candidate(
     candidate_piece(chunks, piece, terra_core::WoodSpecies::Oak)
 }
 
-fn candidate_piece(
+pub(super) fn candidate_piece(
     chunks: &ChunkStore,
     piece: Piece,
     wood: terra_core::WoodSpecies,
@@ -540,7 +552,7 @@ pub fn toggle_switch_plan(
     Ok(result)
 }
 
-fn proposed_piece(plan: &Layout) -> Option<Piece> {
+pub(super) fn proposed_piece(plan: &Layout) -> Option<Piece> {
     plan.states.iter().find_map(|(cell, state)| {
         let state = (*state)?;
         if state.secondary || state.peer != Some(*cell) {
@@ -591,7 +603,16 @@ pub fn environment(
     chunks: &ChunkStore,
     journal: &EditJournal,
 ) -> Result<(), String> {
-    if journal.rail_module_count() >= terra_core::rails::MAX_PIECES {
+    environment_for(plan, chunks, journal, None)
+}
+
+fn environment_for(
+    plan: &Layout,
+    chunks: &ChunkStore,
+    journal: &EditJournal,
+    replaced: Option<Piece>,
+) -> Result<(), String> {
+    if replaced.is_none() && journal.rail_module_count() >= terra_core::rails::MAX_PIECES {
         return Err("Rail network has reached its module limit".into());
     }
     let piece = proposed_piece(plan).ok_or("Missing canonical rail placement state")?;
@@ -599,7 +620,11 @@ pub fn environment(
         return Err("Every rail sleeper needs a loaded, full-height supporting floor".into());
     }
     let positions: BTreeSet<_> = plan.edits.iter().map(|edit| edit.position).collect();
-    if positions != cells(piece).into_iter().collect()
+    let mut expected: BTreeSet<_> = cells(piece).into_iter().collect();
+    if let Some(old) = replaced {
+        expected.extend(cells(old));
+    }
+    if positions != expected
         || plan.edits.len() != positions.len()
         || plan.states.len() != positions.len()
         || !plan.belts.is_empty()
@@ -624,19 +649,24 @@ pub fn environment(
                 false,
             )?;
         }
-        if terra_core::rails::is_rail(edit.expected_material) {
+        let state = plan
+            .states
+            .iter()
+            .find(|(cell, _)| *cell == edit.position)
+            .and_then(|(_, state)| *state);
+        let offset = std::array::from_fn(|axis| (edit.position[axis] - piece.anchor[axis]) as i32);
+        let occupied = piece.contains_offset(offset);
+        let old_cell = replaced.is_some_and(|old| owner_at(journal, edit.position) == Some(old));
+        if !old_cell && terra_core::rails::is_rail(edit.expected_material) {
             return Err("Rail curve overlaps an existing module; connect its free end or use a switch for a side branch".into());
         }
-        if edit.material != piece.material
-            || chunks.block_at(edit.position) != Some(edit.expected_material)
-            || !matches!(edit.expected_material, 0 | 14 | 27)
-            || journal.object_state(edit.position).is_some()
-            || plan
-                .states
-                .iter()
-                .find(|(cell, _)| *cell == edit.position)
-                .and_then(|(_, state)| *state)
-                != Some(object_state_with_wood(piece, edit.position, wood))
+        if chunks.block_at(edit.position) != Some(edit.expected_material)
+            || (old_cell && replaced.is_none_or(|old| edit.expected_material != old.material))
+            || (!old_cell
+                && (!matches!(edit.expected_material, 0 | 14 | 27)
+                    || journal.object_state(edit.position).is_some()))
+            || edit.material != if occupied { piece.material } else { 0 }
+            || state != occupied.then(|| object_state_with_wood(piece, edit.position, wood))
         {
             return Err("Rail footprint is occupied or changed".into());
         }
@@ -645,8 +675,122 @@ pub fn environment(
     Ok(())
 }
 
-/// Removing a sleeper's floor is rejected until its entire module is removed.
-/// The journal lookup also protects a rail whose section is currently unloaded.
+/// Replace only a complete, plain four-block straight with its own smooth
+/// one-block height transition. The opposite physical port stays unchanged.
+pub(super) fn ramp_replacement(
+    chunks: &ChunkStore,
+    journal: &EditJournal,
+    old: Piece,
+    near: u8,
+    end: terra_core::rails::Port,
+    wood: terra_core::WoodSpecies,
+) -> Result<Layout, String> {
+    use terra_core::rails::{CurveSpec, Port};
+    if old.material != terra_core::rails::STRAIGHT
+        || old.curve.is_some()
+        || near > 1
+        || !complete(journal, old)
+    {
+        return Err("Only a complete plain straight can become a terrain ramp".into());
+    }
+    if journal
+        .object_state(old.anchor)
+        .is_none_or(|state| state.wood != wood)
+    {
+        return Err("A terrain ramp must use the same wood as the replaced straight".into());
+    }
+    let ports = old.ports();
+    let near_port = ports[usize::from(near)];
+    let far_port = ports[usize::from(1 - near)];
+    if port_connected(journal, old, near_port)
+        || end.position.0[0] != near_port.position.0[0]
+        || end.position.0[2] != near_port.position.0[2]
+        || end.position.0[1].abs_diff(near_port.position.0[1]) != 16
+        || end.tangent != near_port.tangent.map(|value| -value)
+    {
+        return Err("A terrain ramp must join the raised end of this straight".into());
+    }
+    let start = Port {
+        tangent: far_port.tangent.map(|value| -value),
+        ..far_port
+    };
+    let point = start.position.position();
+    let anchor = std::array::from_fn(|axis| {
+        (point[axis]
+            + if axis == 1 {
+                0.0
+            } else {
+                f64::from(start.tangent[axis]).signum() * 1e-6
+            })
+        .floor() as i64
+    });
+    let spec = CurveSpec::between_checked(start, end, anchor).map_err(|error| error.to_string())?;
+    let next = Piece::new_curve(anchor, spec).ok_or("Invalid terrain ramp")?;
+    let mut layout = candidate_piece(chunks, next, wood)?;
+    let next_cells: BTreeSet<_> = cells(next).into_iter().collect();
+    for cell in cells(old) {
+        if !next_cells.contains(&cell) {
+            layout.edits.push(BlockEditRequest {
+                position: cell,
+                expected_material: old.material,
+                material: 0,
+            });
+            layout.states.push((cell, None));
+        }
+    }
+    Ok(layout)
+}
+
+pub(super) fn replacement_environment(
+    plan: &Layout,
+    chunks: &ChunkStore,
+    journal: &EditJournal,
+    old: Piece,
+) -> Result<(), String> {
+    let next = proposed_piece(plan).ok_or("Missing terrain ramp owner")?;
+    let ports = next.ports();
+    let end = terra_core::rails::Port {
+        tangent: ports[1].tangent.map(|value| -value),
+        ..ports[1]
+    };
+    let old_ports = old.ports();
+    let near = old_ports
+        .iter()
+        .find(|port| {
+            port.position.0[0] == end.position.0[0] && port.position.0[2] == end.position.0[2]
+        })
+        .ok_or("Terrain ramp changed its original endpoints")?
+        .index;
+    let wood = plan
+        .states
+        .iter()
+        .find(|(cell, _)| *cell == next.anchor)
+        .and_then(|(_, state)| *state)
+        .ok_or("Missing ramp wood")?
+        .wood;
+    let canonical = ramp_replacement(chunks, journal, old, near, end, wood)?;
+    let edits = |layout: &Layout| {
+        layout
+            .edits
+            .iter()
+            .map(|edit| (edit.position, (edit.expected_material, edit.material)))
+            .collect::<std::collections::BTreeMap<_, _>>()
+    };
+    let states = |layout: &Layout| {
+        layout
+            .states
+            .iter()
+            .copied()
+            .collect::<std::collections::BTreeMap<_, _>>()
+    };
+    if edits(plan) != edits(&canonical) || states(plan) != states(&canonical) {
+        return Err("Terrain ramp is not the canonical complete replacement".into());
+    }
+    environment_for(plan, chunks, journal, Some(old))
+}
+
+/// Existing rails retain ownership when their bedding changes. This compatibility
+/// hook does not bypass the caller's ordinary terrain authorization or collisions.
 pub fn support_edit_allowed(
     _chunks: &ChunkStore,
     journal: &EditJournal,
@@ -661,25 +805,14 @@ pub fn support_edit_allowed(
     )
 }
 
+/// Support is a placement requirement, not a restriction on later terrain edits.
 pub(crate) fn support_state_allowed(
-    journal: &EditJournal,
-    position: Cell,
-    new_material: u16,
-    state: Option<crate::edits::BlockObjectState>,
+    _journal: &EditJournal,
+    _position: Cell,
+    _new_material: u16,
+    _state: Option<crate::edits::BlockObjectState>,
 ) -> bool {
-    if supports_floor_with_state(new_material, state) {
-        return true;
-    }
-    let Some(above_y) = position[1].checked_add(1) else {
-        return false;
-    };
-    let above = [position[0], above_y, position[2]];
-    let Some(piece) = super::piece_at(journal, above) else {
-        return true;
-    };
-    !piece.supports().iter().any(|point| {
-        position == std::array::from_fn(|axis| piece.anchor[axis] + i64::from(point.support[axis]))
-    })
+    true
 }
 
 /// No item ownership changes here: the server consumes/returns one module item.
@@ -722,8 +855,18 @@ pub(crate) fn validate_commit(
     {
         return environment(plan, chunks, journal);
     }
-    let first = &plan.edits[0];
+    let first = plan
+        .edits
+        .iter()
+        .find(|edit| terra_core::rails::is_rail(edit.expected_material))
+        .ok_or("Missing replaced rail")?;
     let current = owner_at(journal, first.position).ok_or("Missing rail owner")?;
+    if current.material == terra_core::rails::STRAIGHT
+        && current.curve.is_none()
+        && proposed_piece(plan).is_some_and(|next| next.curve.is_some())
+    {
+        return replacement_environment(plan, chunks, journal, current);
+    }
     if !complete(journal, current)
         || plan.edits.len() != cells(current).len()
         || plan.states.len() != plan.edits.len()
