@@ -1,0 +1,114 @@
+   Compiling terra-render v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-render)
+    Finished `test` profile [optimized + debuginfo] target(s) in 3m 50s
+     Running unittests src/lib.rs (target/debug/deps/terra_core-10e34521e769403b)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 449 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/deps/terra_network-c5d9f026ccc9655e)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 537 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/deps/terra_physics-39fc91b7ff7b2366)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 76 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/deps/terra_player-0d7802a0f29507e2)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 118 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/deps/terra_render-98842a997e349445)
+
+running 52 tests
+test previews::alchemy::tests::all_bottles_have_bounded_real_contents_and_a_shared_transparent_shell ... ok
+test previews::hardware::tests::hardware_has_coloured_closed_bounded_geometry_in_one_shared_batch ... ok
+test previews::hardware::tests::torch_item_reuses_world_positions_and_indices_without_emissive_materials ... ok
+test previews::bellows::tests::four_nozzle_variants_have_distinct_colors_and_shared_bounded_geometry ... ok
+test previews::sculpt::tests::solid_faces_are_outward_wound_and_shared_faces_are_removed ... ok
+test previews::dust::tests::six_mineral_dust_piles_are_distinct_solid_bounded_item_meshes ... ok
+test previews::tests::a_failed_final_lazy_item_still_finishes_and_releases_the_preview_scene ... ok
+test previews::tests::a_warmed_preview_captures_after_two_active_frames_without_overwriting_a_published_image ... ok
+test previews::products::tests::all_products_have_bounded_indexed_solids_and_at_most_one_glass_batch ... ok
+test previews::tests::all_minerals_have_bounded_real_3d_item_geometry_using_their_shared_material ... ok
+test previews::tests::blank_transparent_capture_is_not_published_as_a_finished_preview ... ok
+test previews::tests::captured_prop_is_published_to_prop_registry_not_block_registry ... ok
+test previews::crops::tests::all_crop_items_are_finite_solid_cached_models_with_bounded_indices ... ok
+test previews::tests::changing_visible_pages_preserves_the_active_readback_but_drops_hidden_successors ... ok
+test previews::tests::blank_retries_allow_shader_readiness_by_time_not_frame_or_attempt_count ... ok
+test previews::tests::completed_real_capture_is_published_even_when_ready_at_the_deadline ... ok
+test previews::tests::demand_only_smoke_initializes_without_catalog_jobs_meshes_targets_or_cameras ... ok
+test previews::tests::every_prop_preview_uses_valid_fitted_near_geometry ... ok
+test previews::tests::dynamic_icon_eviction_only_drops_cache_ownership_and_keeps_static_icons ... ok
+test previews::tests::filled_can_requests_reuse_one_preloaded_icon_per_tool ... ok
+test previews::tests::kinetic_icons_keep_their_own_rotor_material_and_fit_extended_silhouettes ... ok
+test previews::tests::all_thirteen_dyes_have_distinct_solid_shared_material_previews ... ok
+test previews::tests::neutral_grass_previews_are_green_independent_of_the_preview_world_origin ... ok
+test previews::tests::dark_readback_finishes_startup_while_transparent_readback_retains_the_failure_gate ... ok
+test previews::tests::normal_startup_preloads_the_catalog_but_benchmark_and_alchemy_remain_demand_only ... ok
+test previews::tests::one_cell_machine_icons_keep_body_proportions_and_include_their_moving_parts ... ok
+test previews::tests::failed_lazy_compositions_pause_the_camera_and_do_not_clear_the_published_target ... ok
+test previews::tests::preview_coverage_accepts_black_metal_without_accepting_transparency_or_pixel_noise ... ok
+test previews::tests::preview_warmup_control_is_lod_smoke_only_and_keeps_capture_and_retry_frames_active ... ok
+test previews::tests::queued_gpu_completion_is_consumed_before_wall_clock_deadlines ... ok
+test previews::tests::preview_camera_pauses_middle_warmup_frames_and_reactivates_before_the_eighth_frame_capture ... ok
+test previews::tests::startup_catalog_includes_all_fixed_families_and_wood_variants_without_rgb_expansion ... ok
+test previews::tests::lazy_previews_admit_one_item_per_frame_and_publish_every_independent_image ... ok
+test previews::tests::startup_completion_drains_the_finite_pass_and_reports_failures_without_retrying_it ... ok
+test previews::tests::visible_fixed_items_use_their_correct_existing_preview_cache ... ok
+test previews::tests::visible_admission_deduplicates_and_discards_stale_fixed_and_dynamic_requests ... ok
+test previews::tests::slow_gpu_readback_retains_one_request_and_publishes_its_late_success ... ok
+test previews::tints::tests::fabric_tint_keeps_vertex_shading_and_special_alpha_metadata ... ok
+test previews::tints::tests::dye_sculpt_already_decodes_srgb_once_and_agrees_with_direct_pbr_tints ... ok
+test previews::tints::tests::rgb_belt_and_bed_icons_preserve_independent_wood_and_metal ... ok
+test previews::tools::tests::all_spoons_share_a_real_concave_bowl_but_keep_their_material_palette ... ok
+test previews::tools::tests::axe_and_pick_heads_have_large_connected_sloped_facets_and_a_thick_backbone ... ok
+test previews::tests::visible_preview_requests_keep_fixed_items_and_bound_real_rgb_objects_independently ... ok
+test previews::tools::tests::broad_double_axe_and_curved_pick_silhouettes_are_not_rectangular_plates ... ok
+test previews::tools::tests::farming_models_have_distinct_functional_profiles_for_all_five_tiers ... ok
+test previews::tools::tests::all_tools_are_detailed_bounded_three_dimensional_shared_solids ... ok
+test previews::tools::farming::bucket_tests::water_surface_is_inset_inside_the_staves_and_faces_upwards ... ok
+test previews::tools::tests::inventory_camera_fits_all_tool_geometry_without_special_case_assets ... ok
+test previews::tools::tests::wrench_is_a_meter_long_open_forging_with_a_wooden_grip ... ok
+test previews::tools::tests::sharpened_head_edges_have_exactly_one_sidewall_and_no_coplanar_rim_overlay ... ok
+test previews::tools::tests::six_materials_have_distinct_facets_without_per_material_draws_or_emission ... ok
+test previews::tools::tests::real_equipped_dimensions_and_handles_match_every_material_row ... ok
+
+test result: ok. 52 passed; 0 failed; 0 ignored; 0 measured; 1014 filtered out; finished in 0.03s
+
+     Running unittests src/lib.rs (target/debug/deps/terra_server-7709e3a0803ace85)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 8 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/deps/terra_storage-92253726775aa49c)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 166 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/deps/terra_ui-fe4f225496ef9414)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 554 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/deps/terra_voxel-9ebdcff654b5745e)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 25 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/deps/terra_world-757ccf46c33dd22b)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 1218 filtered out; finished in 0.00s
+

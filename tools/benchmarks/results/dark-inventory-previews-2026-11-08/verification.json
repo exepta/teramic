@@ -1,0 +1,41 @@
+{
+  "schema": 1,
+  "utc": "2026-11-08T18:57:34.500565+00:00",
+  "base_commit": "08ff2673bd918015589f9588801e508ab129f1c3",
+  "checks": {
+    "preview_tests": {
+      "passed": 52,
+      "failed": 0,
+      "new_regressions": 2
+    },
+    "workspace_build": "passed",
+    "workspace_build_elapsed": "2m 30s",
+    "clippy_all_targets_deny_warnings": "passed",
+    "format": "passed",
+    "diff": "passed",
+    "native_train_asset_lint": {
+      "models": 84,
+      "front_facing_triangles": 22413,
+      "minimum_projected_pixels": 252,
+      "result": "passed"
+    }
+  },
+  "graphical_tests": false,
+  "synthetic_image_events_only": true,
+  "logs": {
+    "tests-previews.log": "3f9ed9c6d17b28d706ee0ea6db625d642b546fdbd4116a8e3d4d398e102fc2c0",
+    "build.log": "f85e753dd78cba622ca954fa04f69b17ab98238b1579f3efe1fc39cd54c91668",
+    "clippy.log": "1a518662e985fff37535c4c95a35b3c83983940fd3d14460e041ca263803b690",
+    "format.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "diff.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "asset-lint.log": "9ad846e12ac3390ec82261d01b64720bb7895d9a839fac3875e9d24caa4a7c70"
+  },
+  "source_sha256": {
+    "Cargo.toml": "a14946520f0e261652af0d3ecaa4f891a1580161d08b82afbfd828079ddb4c45",
+    "Cargo.lock": "96eea351a6b27e7f3527dc86ef7a9afa70e2d96640e897efbab6711fe064a0d0",
+    "crates/terra-render/src/previews.rs": "1ff7150545fe334c3c1bffab7b693cdd607d03a6598b3f513a728dd6932aec10",
+    "tools/assets/lint_train_parts.py": "4a8f66a5943f0e4e2cc3804b9ab6f5ef03568f8a281597b671d7d468fc15e3cf",
+    "PATCH.md": "f9dc602321dab878c7e28e92f7950ca3b85b5a5f1868ccd9889f5b9ed335611f"
+  },
+  "client_or_server_launches": false
+}

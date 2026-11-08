@@ -26,6 +26,25 @@ WIDTHS = {"SCALAR": 1, "VEC2": 2, "VEC3": 3, "VEC4": 4,
           "MAT2": 4, "MAT3": 9, "MAT4": 16}
 
 
+def dot(first, second):
+    return sum(a * b for a, b in zip(first, second))
+
+
+def subtract(first, second):
+    return tuple(a - b for a, b in zip(first, second))
+
+
+def cross(first, second):
+    a, b, c = first
+    x, y, z = second
+    return b * z - c * y, c * x - a * z, a * y - b * x
+
+
+def unit(vector):
+    length = math.sqrt(dot(vector, vector))
+    return tuple(value / length for value in vector)
+
+
 def require(condition, message):
     if not condition:
         raise ValueError(message)
@@ -115,6 +134,73 @@ def accessor_rows(path, model, buffers, accessor):
     return rows
 
 
+def preview_coverage(path, model, rows):
+    """Rasterize alpha coverage with the actual orthographic preview camera.
+
+    This checks front-face winding, culling and camera framing on the native
+    imported triangles. It deliberately makes no claim about GPU lighting.
+    The shipped train nodes are identity transforms; refuse an unsupported
+    transform rather than silently projecting geometry in the wrong space.
+    """
+    size, height = 128, 1.95
+    eye, target = (2.9, 2.5, 3.5), (0.5, 0.5, 0.5)
+    towards_camera = unit(subtract(eye, target))
+    right = unit(cross((0, 1, 0), towards_camera))
+    up = cross(towards_camera, right)
+    pixels, front_faces = set(), 0
+
+    def edge(first, second, point):
+        return ((second[0] - first[0]) * (point[1] - first[1])
+                - (second[1] - first[1]) * (point[0] - first[0]))
+
+    def visit(index):
+        nonlocal front_faces
+        node = model["nodes"][index]
+        require(not any(key in node for key in ("translation", "rotation", "scale", "matrix")),
+                f"{path.name}: extend CPU projection for transformed native nodes")
+        if "mesh" in node:
+            for primitive in model["meshes"][node["mesh"]]["primitives"]:
+                material = model["materials"][primitive["material"]]
+                alpha = material.get("pbrMetallicRoughness", {}).get("baseColorFactor", [1] * 4)[3]
+                if alpha <= 8 / 255:
+                    continue
+                positions = rows[primitive["attributes"]["POSITION"]]
+                indices = rows[primitive["indices"]]
+                for offset in range(0, len(indices), 3):
+                    points = [positions[indices[offset + corner][0]] for corner in range(3)]
+                    normal = cross(subtract(points[1], points[0]), subtract(points[2], points[0]))
+                    if not material.get("doubleSided", False) and dot(normal, towards_camera) <= 0:
+                        continue
+                    if not all(0.01 < dot(subtract(eye, point), towards_camera) < 30 for point in points):
+                        continue
+                    projected = [(size * (0.5 + dot(subtract(point, target), right) / height),
+                                  size * (0.5 - dot(subtract(point, target), up) / height))
+                                 for point in points]
+                    area = edge(projected[0], projected[1], projected[2])
+                    if abs(area) < 1e-10:
+                        continue
+                    front_faces += 1
+                    sign = 1 if area > 0 else -1
+                    x0 = max(0, math.floor(min(point[0] for point in projected)))
+                    x1 = min(size - 1, math.ceil(max(point[0] for point in projected)))
+                    y0 = max(0, math.floor(min(point[1] for point in projected)))
+                    y1 = min(size - 1, math.ceil(max(point[1] for point in projected)))
+                    for y in range(y0, y1 + 1):
+                        for x in range(x0, x1 + 1):
+                            point = (x + 0.5, y + 0.5)
+                            if all(sign * edge(projected[index], projected[(index + 1) % 3], point) >= -1e-8
+                                   for index in range(3)):
+                                pixels.add((x, y))
+        for child in node.get("children", []):
+            visit(child)
+
+    for index in model["scenes"][model.get("scene", 0)]["nodes"]:
+        visit(index)
+    require(front_faces > 0 and len(pixels) > 64,
+            f"{path.name}: no sufficient front-facing preview alpha coverage ({len(pixels)} pixels)")
+    return front_faces, len(pixels)
+
+
 def check_model(path, material):
     model = read_json(path)
     require(model["asset"]["version"] == "2.0", f"{path.name}: GLTF version")
@@ -144,12 +230,22 @@ def check_model(path, material):
                     f"{path.name}: mesh index outside vertex buffer")
             require(0 <= primitive["material"] < len(model["materials"]),
                     f"{path.name}: material index")
+            normals = rows[attributes["NORMAL"]]
+            for offset in range(0, len(indices), 3):
+                corners = [indices[offset + corner][0] for corner in range(3)]
+                a, b, c = [positions[index] for index in corners]
+                face = cross(subtract(b, a), subtract(c, a))
+                area = math.sqrt(dot(face, face))
+                require(area > 1e-12, f"{path.name}: degenerate triangle")
+                require(all(dot(face, normals[index]) > 0 for index in corners),
+                        f"{path.name}: triangle winding opposes its vertex normals")
             triangles += len(indices) // 3
     require(triangles > 0, f"{path.name}: empty mesh")
     for image in model.get("images", []):
         if "uri" in image and not image["uri"].startswith("data:"):
             require((path.parent / image["uri"]).is_file(), f"{path.name}: missing texture")
-    return sum(map(len, buffers)), triangles
+    front_faces, pixels = preview_coverage(path, model, rows)
+    return sum(map(len, buffers)), triangles, front_faces, pixels
 
 
 def check_recipes(parts):
@@ -179,7 +275,8 @@ def check_recipes(parts):
 
 def lint():
     parts = expected_parts()
-    binary_bytes = triangles = boxes = 0
+    binary_bytes = triangles = boxes = front_faces = 0
+    coverage = []
     for material, (slug, name) in sorted(parts.items()):
         path = BLOCKS / (slug + ".json")
         definition = read_json(path)
@@ -193,16 +290,23 @@ def lint():
             require(all(low < high for low, high in zip(box["minimum"], box["maximum"])),
                     f"{slug}: empty or inverted collision volume")
         require(definition["model"] == f"models/{slug}.gltf", f"{slug}: incorrect model path")
-        size, faces = check_model(BLOCKS / definition["model"], material)
+        size, faces, front, pixels = check_model(BLOCKS / definition["model"], material)
         binary_bytes += size
         triangles += faces
         boxes += len(bounds)
+        front_faces += front
+        coverage.append((pixels, material, slug))
     recipe_count, recipe_bytes = check_recipes(parts)
+    affected = ", ".join(f"{material}: {pixels}px" for pixels, material, _ in sorted(coverage, key=lambda row: row[1])
+                         if material in (249, 250, 261, 262, 271, 272))
     return [
         "PASS: CPU-only native train asset lint; no regeneration, window or GPU.",
         f"Train IDs210..293: {len(parts)} complete JSON/model/recipe entries with matching names.",
         f"Collision: {boxes} finite bounded boxes; every part stays within the 128-box budget.",
         f"GLTF: {binary_bytes} binary bytes, {triangles} triangles; buffers, accessors, indices, bounds and textures valid.",
+        f"CPU preview projection: all 84 have >64 alpha-covered pixels at the actual 128x128 camera; {front_faces} front-facing triangles; winding agrees with every vertex normal.",
+        f"Smallest projected coverage: {min(coverage)[0]} pixels ({min(coverage)[2]}).",
+        f"Reported startup icons, projected alpha coverage: {affected}.",
         f"Embedded recipes: {recipe_count} unique IDs/keys; JSON payload {recipe_bytes} bytes within 1MiB.",
     ]
 

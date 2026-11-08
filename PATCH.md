@@ -6898,3 +6898,33 @@ Spielclients, Spielfenster, Screenshots oder GPU-Abnahmen gestartet.
 Der aktuelle vollstaendige Workspace-Build von Client und Server besteht
 (8 min 55 s), ebenso Clippy aller Targets mit `-D warnings`, Format und Diff.
 Die Programme wurden zur Abnahme nicht gestartet.
+
+
+## 214. Dunkle Inventarvorschauen Blockieren Den Start Nicht Mehr
+
+Die Vorschaupruefung akzeptiert sichtbare schwarze Metallteile anhand ihrer
+Alpha-Flaeche. Bisher verlangte sie zusaetzlich einen RGB-Kanal ueber 8; dadurch
+konnten dunkle Lokdaecher, Nietenplatten und Metallformen trotz vorhandener
+Geometrie als leer gelten. Nach zehn Sekunden wurde der Fehler an den
+Ladebildschirm gemeldet und verhinderte den Menuewechsel.
+
+Der transparente Kamerahintergrund und die vorhandene Mindestflaeche von mehr
+als 64 Pixeln bleiben die Grundlage der Erkennung. Schwarze deckende Pixel
+zaehlen jetzt als Inhalt. Vollstaendig transparente Bilder, fast transparente
+Pixel und zu kleine Stoerflecken werden weiterhin abgelehnt; echte Asset- und
+Readbackfehler bleiben sichtbar.
+
+Die Regression prueft RGB-unabhaengige Flaechen und den wirklich registrierten
+Screenshot-Rueckgabehandler mit synthetischen Bilddaten, einschliesslich
+Veroeffentlichung, Ladefortschritt, Abschluss und Fehlerfall. Es wird kein
+Screenshot aufgenommen und kein Grafikbackend gestartet. Die native
+Asset-Pruefung kontrolliert zusaetzlich Dreieckswindung und projizierte
+Flaechen aller 84 Zugmodelle aus dem vorhandenen Vorschauwinkel.
+
+Abnahme 214: Alle 52 Vorschau-Tests bestehen, einschliesslich der zwei neuen
+Regressionen. Clippy aller Workspace-Targets mit `-D warnings` und die
+erweiterte Asset-Pruefung sind sauber.
+[CPU-Pruefbericht](tools/benchmarks/results/dark-inventory-previews-2026-11-08/README.md).
+
+Der vollstaendige Workspace-Build besteht einschliesslich Linking (2 min 30 s).
+Keine Grafiktests, Spielfenster, echten Screenshots oder GPU-Abnahmen gestartet.

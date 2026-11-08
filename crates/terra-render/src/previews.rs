@@ -794,9 +794,11 @@ fn render_next(
 }
 
 pub(crate) fn preview_has_pixels(image: &Image) -> bool {
+    // The preview target clears to transparent. Opaque black metal is rendered
+    // content too; its RGB brightness must not be mistaken for an empty target.
     image.data.as_ref().is_some_and(|data| {
         data.chunks_exact(4)
-            .filter(|pixel| pixel[3] > 8 && pixel[..3].iter().any(|&v| v > 8))
+            .filter(|pixel| pixel[3] > 8)
             .take(65)
             .count()
             > 64
@@ -2169,6 +2171,93 @@ mod tests {
         assert!(!preview_has_pixels(&image));
         image.data = Some(vec![255; 16 * 16 * 4]);
         assert!(preview_has_pixels(&image));
+    }
+
+    fn captured_icon(color: [u8; 4], covered: usize) -> Image {
+        let mut image = Image::new_target_texture(16, 16, TextureFormat::Rgba8UnormSrgb, None);
+        let mut data = vec![0; 16 * 16 * 4];
+        for pixel in data.chunks_exact_mut(4).take(covered) {
+            pixel.copy_from_slice(&color);
+        }
+        image.data = Some(data);
+        image
+    }
+
+    #[test]
+    fn preview_coverage_accepts_black_metal_without_accepting_transparency_or_pixel_noise() {
+        for color in [[0, 0, 0, 255], [1, 2, 3, 128], [8, 8, 8, 255], [255; 4]] {
+            assert!(!preview_has_pixels(&captured_icon(color, 64)));
+            assert!(preview_has_pixels(&captured_icon(color, 65)), "{color:?}");
+        }
+        for color in [[255, 255, 255, 0], [255, 255, 255, 8], [0; 4]] {
+            assert!(!preview_has_pixels(&captured_icon(color, 256)));
+        }
+        let mut missing = captured_icon([0, 0, 0, 255], 256);
+        missing.data = None;
+        assert!(!preview_has_pixels(&missing));
+    }
+
+    #[test]
+    fn dark_readback_finishes_startup_while_transparent_readback_retains_the_failure_gate() {
+        for (color, visible) in [([0, 0, 0, 255], true), ([255, 255, 255, 0], false)] {
+            let item = ItemKind::Block(3);
+            let mut app = lazy_queue_fixture(VecDeque::from([item]));
+            {
+                let mut queue = app.world_mut().resource_mut::<PreviewQueue>();
+                queue.warmup = true;
+                queue.catalog_total = 1;
+                queue.catalog_remaining.insert(item);
+            }
+            app.insert_resource(RenderPreviewStartup {
+                required: true,
+                ..default()
+            })
+            .add_systems(Update, sync_startup.after(render_next));
+            for _ in 0..8 {
+                app.update();
+            }
+            let queue = app.world().resource::<PreviewQueue>();
+            let capture = queue.capture.expect("registered readback observer").0;
+            let expected = queue.jobs.front().unwrap().image.clone();
+            assert!(!app.world().resource::<RenderPreviewStartup>().ready);
+            app.world_mut().trigger(ScreenshotCaptured {
+                entity: capture,
+                image: captured_icon(color, 65),
+            });
+            assert_eq!(
+                app.world().resource::<PreviewQueue>().received,
+                Some(visible)
+            );
+            app.world_mut().despawn(capture);
+            app.update();
+            let startup = app.world().resource::<RenderPreviewStartup>();
+            let previews = app.world().resource::<RenderBlockPreviews>();
+            assert_eq!(startup.ready, visible);
+            assert_eq!(startup.completed, usize::from(visible));
+            assert_eq!(previews.pending, usize::from(!visible));
+            assert!(startup.error.is_none());
+            assert!(previews.error.is_none());
+            if visible {
+                assert_eq!(previews.images.get(&3), Some(&expected));
+                assert_eq!(startup.failed, 0);
+                assert!(app.world().resource::<PreviewQueue>().jobs.is_empty());
+            } else {
+                assert!(previews.images.is_empty());
+                assert!(app.world().resource::<PreviewQueue>().retry_at.is_some());
+                app.world_mut().resource_mut::<PreviewQueue>().started =
+                    Some(Instant::now() - PREVIEW_GRACE - Duration::from_secs(1));
+                app.update();
+                let startup = app.world().resource::<RenderPreviewStartup>();
+                assert_eq!(startup.failed, 1);
+                assert!(startup.error.as_ref().unwrap().contains("remained blank"));
+                assert!(
+                    app.world()
+                        .resource::<RenderBlockPreviews>()
+                        .images
+                        .is_empty()
+                );
+            }
+        }
     }
 
     #[test]
