@@ -84,6 +84,15 @@ pub(super) struct SectionEdits {
 }
 
 impl SectionEdits {
+    pub(super) fn geometry_only(&self) -> Self {
+        Self {
+            blocks: self.blocks.clone(),
+            objects: self.objects.clone(),
+            belts: self.belts.clone(),
+            ..Default::default()
+        }
+    }
+
     pub(super) fn commit_belt_owner(
         &mut self,
         local: [usize; 3],

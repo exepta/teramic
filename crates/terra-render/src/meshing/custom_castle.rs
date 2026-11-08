@@ -130,9 +130,15 @@ pub(super) fn paired_arch(model: &ModelCell) -> bool {
 /// Proper cube rotations vary only decorative faces, retaining authored structure/collision.
 pub(super) fn detail_rotation(section: SectionPos, cell: [i32; 3]) -> Quat {
     let origin = section.origin().unwrap_or([0; 3]);
+    detail_rotation_at(std::array::from_fn(|axis| {
+        origin[axis].wrapping_add(i64::from(cell[axis]))
+    }))
+}
+
+pub(super) fn detail_rotation_at(position: [i64; 3]) -> Quat {
     let mut hash = 0x9e37_79b9_7f4a_7c15_u64;
-    for (offset, local) in origin.into_iter().zip(cell) {
-        hash ^= (offset.wrapping_add(i64::from(local)) as u64).wrapping_mul(0xbf58_476d_1ce4_e5b9);
+    for coordinate in position {
+        hash ^= (coordinate as u64).wrapping_mul(0xbf58_476d_1ce4_e5b9);
         hash = hash.rotate_left(27).wrapping_mul(0x94d0_49bb_1331_11eb);
     }
     Quat::from_rotation_y((hash & 3) as f32 * std::f32::consts::FRAC_PI_2)

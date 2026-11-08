@@ -1,4 +1,4 @@
-//! Persistent, parked modular vehicles; propulsion and arbitrary moving blocks are separate.
+//! Persistent modular vehicles, including frozen arbitrary block assemblies.
 use crate::{Inventory, PlayerUuid, WoodSpecies, containers, train_parts};
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
@@ -9,6 +9,11 @@ pub const MAX_PARTS: usize = 256;
 pub const MAX_TOTAL_PARTS: usize = 4096;
 pub const MAX_CONSIST: usize = 16;
 pub const MAX_SEATED: usize = 1024;
+pub const MAX_PAYLOAD_BYTES: usize = 65_536;
+pub const MAX_VEHICLE_PAYLOAD_BYTES: usize = 1_048_576;
+pub const MAX_TOTAL_PAYLOAD_BYTES: usize = 8 * 1_048_576;
+pub const MAX_VEHICLE_SHAPES: usize = 4096;
+pub const MAX_TOTAL_SHAPES: usize = 16_384;
 pub type Cell = [i64; 3];
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -44,7 +49,38 @@ pub struct TrainPart {
     pub facing: u8,
     pub wood: WoodSpecies,
 }
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+/// Public block appearance and exact local collision, captured before assembly.
+/// Inventories and machine internals remain exclusively in the private payload.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default, deny_unknown_fields)]
+pub struct TrainBlockView {
+    pub boxes: Vec<crate::block_shapes::ShapeBox>,
+    pub tint: Option<[u8; 3]>,
+    pub heraldry: Option<crate::kingdom::KingdomHeraldry>,
+    /// Peer displacement relative to this part, independent of world position.
+    pub peer: Option<[i16; 3]>,
+    pub secondary: bool,
+}
+impl TrainBlockView {
+    pub fn valid(&self) -> bool {
+        self.boxes.len() <= 128
+            && self.boxes.iter().all(|bounds| {
+                (0..3).all(|axis| {
+                    bounds.minimum[axis].is_finite()
+                        && bounds.maximum[axis].is_finite()
+                        && bounds.minimum[axis] >= -2.0
+                        && bounds.maximum[axis] <= 3.0
+                        && bounds.minimum[axis] < bounds.maximum[axis]
+                })
+            })
+            && self
+                .peer
+                .is_none_or(|peer| peer.iter().all(|value| value.unsigned_abs() <= 64))
+            && (!self.secondary || self.peer.is_some())
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Vehicle {
     pub id: u64,
     pub owner: PlayerUuid,
@@ -52,16 +88,23 @@ pub struct Vehicle {
     pub anchor: Cell,
     pub parts: Vec<TrainPart>,
     pub cargo: BTreeMap<u16, Inventory>,
+    #[serde(default)]
+    pub blocks: BTreeMap<u16, TrainBlockView>,
+    /// Frozen world-owned machine state; never included in public snapshots.
+    #[serde(default)]
+    pub payloads: BTreeMap<u16, Vec<u8>>,
     pub couplings: [Option<Coupling>; 2],
     pub revision: u64,
 }
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct VehicleView {
     pub id: u64,
     pub owner: PlayerUuid,
     pub kind: VehicleKind,
     pub anchor: Cell,
     pub parts: Vec<TrainPart>,
+    #[serde(default)]
+    pub blocks: BTreeMap<u16, TrainBlockView>,
     pub couplings: [Option<Coupling>; 2],
     pub revision: u64,
     pub mass_kg: u32,
@@ -77,13 +120,13 @@ impl SeatBinding {
         !self.player.is_nil() && self.vehicle > 0 && usize::from(self.part) < MAX_PARTS
     }
 }
-#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct TrainSnapshot {
     pub revision: u64,
     pub vehicles: Vec<VehicleView>,
     pub seats: Vec<SeatBinding>,
 }
-#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct TrainRegistry {
     pub next_id: u64,
     pub revision: u64,
@@ -92,6 +135,7 @@ pub struct TrainRegistry {
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum TrainError {
     Invalid,
+    AttachedProps,
     Limit,
     Missing,
     NotOwner,
@@ -156,8 +200,11 @@ fn valid_parts(anchor: Cell, parts: &[TrainPart], kind: VehicleKind) -> bool {
     }
     let mut offsets = BTreeSet::new();
     if parts.iter().any(|part| {
-        !train_parts::is_part(part.material)
-            || part.facing > 3
+        part.material == 0
+            || part.material == terra_voxel::MaterialId::FluidWater as u16
+            || part.material == train_parts::STATION
+            || crate::rails::is_rail(part.material)
+            || train_parts::is_part(part.material) && part.facing > 3
             || !offsets.insert(part.offset)
             || part.offset[0].unsigned_abs() > 64
             || part.offset[1].unsigned_abs() > 12
@@ -214,7 +261,6 @@ fn valid_parts(anchor: Cell, parts: &[TrainPart], kind: VehicleKind) -> bool {
     };
     if count(train_parts::CHASSIS) == 0
         || count(train_parts::BOGIE) < 2
-        || count(train_parts::FRAME) == 0
         || count(train_parts::COUPLER) == 0
     {
         return false;
@@ -222,15 +268,55 @@ fn valid_parts(anchor: Cell, parts: &[TrainPart], kind: VehicleKind) -> bool {
     match kind {
         VehicleKind::Locomotive => count(train_parts::CAB) > 0,
         VehicleKind::Tender | VehicleKind::Freight => {
-            count(train_parts::CARGO) > 0
+            (count(train_parts::CARGO) > 0 || count(29) > 0)
                 && count(train_parts::CAB) == 0
                 && count(train_parts::SEAT) == 0
         }
         VehicleKind::Passenger => count(train_parts::SEAT) > 0 && count(train_parts::CAB) == 0,
     }
 }
+/// One collision source for authority, rendering bounds and physics consumers.
+pub fn part_shapes(
+    part: &TrainPart,
+    block: Option<&TrainBlockView>,
+) -> Vec<crate::block_shapes::ShapeBox> {
+    block.map_or_else(
+        || train_parts::boxes(part.material, part.facing),
+        |block| block.boxes.clone(),
+    )
+}
+fn shape_count(parts: &[TrainPart], blocks: &BTreeMap<u16, TrainBlockView>) -> usize {
+    parts
+        .iter()
+        .enumerate()
+        .map(|(index, part)| {
+            blocks.get(&(index as u16)).map_or_else(
+                || train_parts::base_boxes(part.material).len(),
+                |block| block.boxes.len(),
+            )
+        })
+        .sum()
+}
+fn valid_blocks(parts: &[TrainPart], blocks: &BTreeMap<u16, TrainBlockView>) -> bool {
+    blocks.len() <= parts.len()
+        && blocks
+            .iter()
+            .all(|(index, block)| usize::from(*index) < parts.len() && block.valid())
+        && parts.iter().enumerate().all(|(index, part)| {
+            train_parts::is_part(part.material) || blocks.contains_key(&(index as u16))
+        })
+}
 macro_rules! geometry_methods {
     () => {
+        pub fn part_shapes(&self, index: usize) -> Vec<crate::block_shapes::ShapeBox> {
+            let Some(part) = self.parts.get(index) else {
+                return Vec::new();
+            };
+            part_shapes(part, self.blocks.get(&(index as u16)))
+        }
+        pub fn block_view(&self, index: usize) -> Option<&TrainBlockView> {
+            self.blocks.get(&(index as u16))
+        }
         pub fn part_cell(&self, index: usize) -> Option<Cell> {
             part_cell(self.anchor, &self.parts, index)
         }
@@ -248,8 +334,8 @@ macro_rules! geometry_methods {
             let origin = self.model_origin();
             let mut low = [f64::INFINITY; 3];
             let mut high = [f64::NEG_INFINITY; 3];
-            for part in &self.parts {
-                for shape in train_parts::boxes(part.material, part.facing) {
+            for (index, part) in self.parts.iter().enumerate() {
+                for shape in self.part_shapes(index) {
                     for axis in 0..3 {
                         low[axis] = low[axis]
                             .min(origin[axis] + f64::from(part.offset[axis]) + shape.minimum[axis]);
@@ -271,7 +357,7 @@ macro_rules! geometry_methods {
             self.parts
                 .iter()
                 .enumerate()
-                .filter(|(_, part)| part.material == train_parts::CARGO)
+                .filter(|(_, part)| matches!(part.material, 29 | train_parts::CARGO))
                 .map(|(index, _)| index as u16)
         }
         pub fn coupler_cell(&self, end: CouplerEnd) -> Option<Cell> {
@@ -337,18 +423,24 @@ impl Vehicle {
         self.id > 0
             && !self.owner.is_nil()
             && valid_parts(self.anchor, &self.parts, self.kind)
+            && valid_blocks(&self.parts, &self.blocks)
+            && self.payloads.len() <= self.parts.len()
+            && self.payloads.values().map(Vec::len).sum::<usize>() <= MAX_VEHICLE_PAYLOAD_BYTES
+            && self.payloads.iter().all(|(index, payload)| {
+                usize::from(*index) < self.parts.len() && payload.len() <= MAX_PAYLOAD_BYTES
+            })
             && self.cargo.len() == self.cargo_indices().count()
             && self.cargo.iter().all(|(index, inventory)| {
                 self.parts
                     .get(usize::from(*index))
-                    .is_some_and(|part| part.material == train_parts::CARGO)
+                    .is_some_and(|part| matches!(part.material, 29 | train_parts::CARGO))
                     && containers::valid_chest(inventory)
             })
     }
     pub fn mass_kg(&self) -> u32 {
         self.parts
             .iter()
-            .filter_map(|part| train_parts::mass_kg(part.material))
+            .map(|part| train_parts::mass_kg(part.material).unwrap_or(100))
             .sum::<u32>()
             + self
                 .cargo
@@ -364,6 +456,7 @@ impl Vehicle {
             kind: self.kind,
             anchor: self.anchor,
             parts: self.parts.clone(),
+            blocks: self.blocks.clone(),
             couplings: self.couplings,
             revision: self.revision,
             mass_kg: self.mass_kg(),
@@ -376,11 +469,12 @@ impl VehicleView {
         self.id > 0
             && !self.owner.is_nil()
             && valid_parts(self.anchor, &self.parts, self.kind)
+            && valid_blocks(&self.parts, &self.blocks)
             && self.mass_kg
                 >= self
                     .parts
                     .iter()
-                    .filter_map(|part| train_parts::mass_kg(part.material))
+                    .map(|part| train_parts::mass_kg(part.material).unwrap_or(100))
                     .sum::<u32>()
             && self.mass_kg < 1_000_000_000
     }
@@ -393,6 +487,19 @@ impl TrainRegistry {
             .map(|vehicle| vehicle.parts.len())
             .sum::<usize>()
             > MAX_TOTAL_PARTS
+            || self
+                .vehicles
+                .values()
+                .map(|vehicle| shape_count(&vehicle.parts, &vehicle.blocks))
+                .sum::<usize>()
+                > MAX_TOTAL_SHAPES
+            || self
+                .vehicles
+                .values()
+                .flat_map(|vehicle| vehicle.payloads.values())
+                .map(Vec::len)
+                .sum::<usize>()
+                > MAX_TOTAL_PAYLOAD_BYTES
             || self.vehicles.len() > MAX_VEHICLES
             || self
                 .vehicles
@@ -462,6 +569,21 @@ impl TrainRegistry {
                 .sum::<usize>()
                 + vehicle.parts.len()
                 > MAX_TOTAL_PARTS
+            || self
+                .vehicles
+                .values()
+                .map(|old| shape_count(&old.parts, &old.blocks))
+                .sum::<usize>()
+                + shape_count(&vehicle.parts, &vehicle.blocks)
+                > MAX_TOTAL_SHAPES
+            || self
+                .vehicles
+                .values()
+                .flat_map(|old| old.payloads.values())
+                .map(Vec::len)
+                .sum::<usize>()
+                + vehicle.payloads.values().map(Vec::len).sum::<usize>()
+                > MAX_TOTAL_PAYLOAD_BYTES
         {
             return Err(TrainError::Limit);
         }
@@ -617,6 +739,12 @@ impl TrainSnapshot {
             .map(|vehicle| vehicle.parts.len())
             .sum::<usize>()
             > MAX_TOTAL_PARTS
+            || self
+                .vehicles
+                .iter()
+                .map(|vehicle| shape_count(&vehicle.parts, &vehicle.blocks))
+                .sum::<usize>()
+                > MAX_TOTAL_SHAPES
             || self.vehicles.len() > MAX_VEHICLES
             || self.seats.len() > MAX_SEATED
         {

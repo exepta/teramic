@@ -3,26 +3,38 @@ use crate::{
     blocks::{BlockAssets, TemplateSet},
     meshing::{RenderedSections, builder::MeshBatch},
 };
-use bevy::{ecs::system::SystemParam, prelude::*};
+use bevy::{
+    ecs::system::SystemParam,
+    prelude::*,
+    tasks::{AsyncComputeTaskPool, Task, futures_lite::future},
+};
 use std::{
     collections::{BTreeMap, BTreeSet},
     sync::Arc,
 };
-use terra_core::trains::TrainPart;
+use terra_core::trains::{TrainBlockView, TrainPart};
 use terra_world::{
-    edits::{BlockObjectState, EditJournal},
+    edits::EditJournal,
     streaming::{ChunkStore, WorldAccess},
 };
+mod openings;
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+type BlockViews = BTreeMap<u16, TrainBlockView>;
+
+#[derive(Clone, Debug, PartialEq)]
 struct GeometryKey {
     anchor: [i64; 3],
     parts: Vec<TrainPart>,
+    blocks: BlockViews,
 }
 impl GeometryKey {
-    fn matches(&self, anchor: [i64; 3], parts: &[TrainPart]) -> bool {
-        self.anchor == anchor && self.parts == parts
+    fn matches(&self, anchor: [i64; 3], parts: &[TrainPart], blocks: &BlockViews) -> bool {
+        self.anchor == anchor && self.parts == parts && self.blocks == *blocks
     }
+}
+struct Building {
+    key: GeometryKey,
+    task: Task<Result<Vec<MeshBatch>, String>>,
 }
 struct Placed {
     root: Entity,
@@ -34,6 +46,9 @@ struct Trains {
     placed: BTreeMap<u64, Placed>,
     templates: Option<Arc<TemplateSet>>,
     failed: BTreeMap<u64, GeometryKey>,
+    building: BTreeMap<u64, Building>,
+    discarded: Vec<Task<Result<Vec<MeshBatch>, String>>>,
+    palettes: Arc<openings::Palettes>,
 }
 
 pub(crate) fn install(app: &mut App) {
@@ -43,28 +58,68 @@ pub(crate) fn install(app: &mut App) {
 
 /// Local offsets and already-authored poses are baked once. Vehicle cargo,
 /// couplings and gameplay revisions never participate in this geometry key.
-fn geometry(parts: &[TrainPart], templates: &TemplateSet) -> Result<Vec<MeshBatch>, String> {
+fn geometry(
+    parts: &[TrainPart],
+    blocks: &BlockViews,
+    templates: &TemplateSet,
+    anchor: [i64; 3],
+    palettes: &openings::Palettes,
+) -> Result<Vec<MeshBatch>, String> {
     if parts.len() > terra_core::trains::MAX_PARTS {
         return Err("Train render part budget exceeded".into());
     }
     let mut merged = BTreeMap::<usize, MeshBatch>::new();
-    for part in parts {
-        if !terra_core::train_parts::is_part(part.material) || part.facing > 3 {
+    let by_cell: BTreeMap<_, _> = parts.iter().map(|part| (part.offset, part)).collect();
+    let mut frozen_openings = openings::frozen_openings(parts, blocks, templates, palettes)?;
+    for (index, part) in parts.iter().enumerate() {
+        if !templates.blocks.contains_key(&part.material) {
             return Err("Invalid train render part".into());
         }
-        let state = BlockObjectState {
-            facing: part.facing,
-            wood: part.wood,
-            ..default()
+        let presentation = blocks.get(&(index as u16));
+        let neighbors = std::array::from_fn(|side| {
+            let mut cell = part.offset;
+            cell[side / 2] += if side % 2 == 0 { -1 } else { 1 };
+            by_cell.get(&cell).map(|part| (part.material, part.facing))
+        });
+        let peer_wood = presentation
+            .and_then(|view| view.peer)
+            .and_then(|peer| {
+                by_cell.get(&std::array::from_fn(|axis| part.offset[axis] + peer[axis]))
+            })
+            .map_or(part.wood, |peer| peer.wood);
+        let batches = if let Some(batches) = frozen_openings.remove(&(index as u16)) {
+            batches
+        } else if terra_world::segments::is_segment(part.material) {
+            let profile =
+                terra_world::segments::profile(part.offset.map(i64::from), part.material, |cell| {
+                    let cell = cell.map(|value| i16::try_from(value).ok());
+                    let [Some(x), Some(y), Some(z)] = cell else {
+                        return Some(0);
+                    };
+                    Some(by_cell.get(&[x, y, z]).map_or(0, |part| part.material))
+                });
+            let mut batches = BTreeMap::new();
+            crate::meshing::segments::append(
+                &mut batches,
+                templates.blocks[&part.material].face_materials[0],
+                part.material,
+                std::array::from_fn(|axis| anchor[axis] + i64::from(part.offset[axis])),
+                [0; 3],
+                profile,
+                crate::meshing::DetailLevel::Near,
+            )?;
+            batches.into_values().collect()
+        } else {
+            crate::meshing::custom::vehicle_model_geometry(
+                part,
+                presentation,
+                peer_wood,
+                neighbors,
+                templates,
+                std::array::from_fn(|axis| anchor[axis] + i64::from(part.offset[axis])),
+            )?
         };
-        for batch in crate::meshing::custom::model_geometry(
-            part.material,
-            state,
-            part.wood,
-            [None; 6],
-            [0; 6],
-            templates,
-        )? {
+        for batch in batches {
             let target = merged.entry(batch.material).or_insert_with(|| MeshBatch {
                 material: batch.material,
                 ..default()
@@ -117,7 +172,7 @@ fn retire(placed: Placed, commands: &mut Commands, meshes: &mut Assets<Mesh>) {
     release_meshes(meshes, placed.meshes);
 }
 
-type VehicleSource<'a> = (u64, [i64; 3], &'a [TrainPart]);
+type VehicleSource<'a> = (u64, [i64; 3], &'a [TrainPart], &'a BlockViews);
 fn sources<'a>(
     session: Option<&'a terra_network::client::ClientSession>,
     access: Option<&WorldAccess>,
@@ -130,7 +185,14 @@ fn sources<'a>(
             .trains
             .vehicles
             .iter()
-            .map(|vehicle| (vehicle.id, vehicle.anchor, vehicle.parts.as_slice()))
+            .map(|vehicle| {
+                (
+                    vehicle.id,
+                    vehicle.anchor,
+                    vehicle.parts.as_slice(),
+                    &vehicle.blocks,
+                )
+            })
             .collect();
     }
     if access.is_none_or(|access| access.authoritative()) {
@@ -139,7 +201,14 @@ fn sources<'a>(
             .trains
             .vehicles
             .values()
-            .map(|vehicle| (vehicle.id, vehicle.anchor, vehicle.parts.as_slice()))
+            .map(|vehicle| {
+                (
+                    vehicle.id,
+                    vehicle.anchor,
+                    vehicle.parts.as_slice(),
+                    &vehicle.blocks,
+                )
+            })
             .collect();
     }
     Vec::new()
@@ -180,10 +249,9 @@ fn terrain_retired(
         if !chunks.loaded.contains_key(&owner) {
             continue;
         }
-        if chunks
-            .block_at(cell)
-            .is_some_and(terra_core::train_parts::is_part)
-        {
+        if chunks.block_at(cell).is_some_and(|material| {
+            material != 0 && material != terra_voxel::MaterialId::FluidWater as u16
+        }) {
             return false;
         }
         owners.insert(owner);
@@ -204,6 +272,7 @@ struct Scene<'w> {
     rendered: Res<'w, RenderedSections>,
     session: Option<Res<'w, terra_network::client::ClientSession>>,
     access: Option<Res<'w, WorldAccess>>,
+    materials: Res<'w, Assets<StandardMaterial>>,
 }
 fn synchronize(
     mut commands: Commands,
@@ -211,6 +280,11 @@ fn synchronize(
     mut state: ResMut<Trains>,
     mut meshes: ResMut<Assets<Mesh>>,
 ) {
+    // A cancelled native composition may still be running inside its poll.
+    // Keep ownership until it finishes so rapid edits cannot exceed two jobs.
+    state
+        .discarded
+        .retain_mut(|task| future::block_on(future::poll_once(task)).is_none());
     let same_templates = match (&state.templates, &scene.blocks.templates) {
         (Some(old), Some(next)) => Arc::ptr_eq(old, next),
         (None, None) => true,
@@ -221,7 +295,12 @@ fn synchronize(
             retire(placed, &mut commands, &mut meshes);
         }
         state.failed.clear();
+        let old = std::mem::take(&mut state.building);
+        state
+            .discarded
+            .extend(old.into_values().map(|job| job.task));
         state.templates = scene.blocks.templates.clone();
+        state.palettes = Arc::new(openings::palettes(&scene.blocks, &scene.materials));
     }
     let desired = sources(
         scene.session.as_deref(),
@@ -229,9 +308,9 @@ fn synchronize(
         &scene.journal,
     )
     .into_iter()
-    .filter(|(_, anchor, parts)| visible(*anchor, parts, &scene.chunks))
+    .filter(|(_, anchor, parts, _)| visible(*anchor, parts, &scene.chunks))
     .collect::<Vec<_>>();
-    let live: BTreeSet<_> = desired.iter().map(|(id, _, _)| *id).collect();
+    let live: BTreeSet<_> = desired.iter().map(|(id, ..)| *id).collect();
     let removed = state
         .placed
         .keys()
@@ -244,18 +323,32 @@ fn synchronize(
         }
     }
     state.failed.retain(|id, _| live.contains(id));
-    let Some(templates) = scene.blocks.templates.as_deref() else {
+    let obsolete = state
+        .building
+        .iter()
+        .filter(|(id, job)| {
+            !desired.iter().any(|(current, anchor, parts, blocks)| {
+                *id == current && job.key.matches(*anchor, parts, blocks)
+            })
+        })
+        .map(|(&id, _)| id)
+        .collect::<Vec<_>>();
+    for id in obsolete {
+        let job = state.building.remove(&id).unwrap();
+        state.discarded.push(job.task);
+    }
+    if scene.blocks.templates.is_none() {
         return;
-    };
-    for (id, anchor, parts) in desired {
+    }
+    for (id, anchor, parts, blocks) in desired {
         if state
             .placed
             .get(&id)
-            .is_some_and(|placed| placed.key.matches(anchor, parts))
+            .is_some_and(|placed| placed.key.matches(anchor, parts, blocks))
             || state
                 .failed
                 .get(&id)
-                .is_some_and(|key| key.matches(anchor, parts))
+                .is_some_and(|key| key.matches(anchor, parts, blocks))
         {
             continue;
         }
@@ -271,17 +364,42 @@ fn synchronize(
         ) {
             continue;
         }
-        let batches = match geometry(parts, templates) {
+        if !state.building.contains_key(&id) {
+            if state.building.len() + state.discarded.len() >= 2 {
+                continue;
+            }
+            let key = GeometryKey {
+                anchor,
+                parts: parts.to_vec(),
+                blocks: blocks.clone(),
+            };
+            let input = key.clone();
+            let templates = scene.blocks.templates.as_ref().unwrap().clone();
+            let palettes = state.palettes.clone();
+            let task = AsyncComputeTaskPool::get().spawn(async move {
+                geometry(
+                    &input.parts,
+                    &input.blocks,
+                    &templates,
+                    input.anchor,
+                    &palettes,
+                )
+            });
+            state.building.insert(id, Building { key, task });
+        }
+        let Some(result) = state
+            .building
+            .get_mut(&id)
+            .and_then(|job| future::block_on(future::poll_once(&mut job.task)))
+        else {
+            continue;
+        };
+        let key = state.building.remove(&id).unwrap().key;
+        let batches = match result {
             Ok(batches) => batches,
             Err(error) => {
                 tracing::error!(vehicle=id,%error,"Cannot compose assembled train");
-                state.failed.insert(
-                    id,
-                    GeometryKey {
-                        anchor,
-                        parts: parts.to_vec(),
-                    },
-                );
+                state.failed.insert(id, key);
                 continue;
             }
         };
@@ -302,7 +420,7 @@ fn synchronize(
         for batch in batches {
             let mesh = meshes.add(crate::previews::batch_mesh(&batch));
             handles.push(mesh.clone());
-            commands.spawn((
+            let mut entity = commands.spawn((
                 Name::new("Train material batch"),
                 Mesh3d(mesh),
                 MeshMaterial3d(scene.blocks.materials[batch.material].clone()),
@@ -310,16 +428,20 @@ fn synchronize(
                 Visibility::Inherited,
                 ChildOf(root),
             ));
+            if scene
+                .materials
+                .get(&scene.blocks.materials[batch.material])
+                .is_some_and(|material| material.alpha_mode == AlphaMode::Blend)
+            {
+                entity.insert(bevy::light::NotShadowCaster);
+            }
         }
         state.failed.remove(&id);
         state.placed.insert(
             id,
             Placed {
                 root,
-                key: GeometryKey {
-                    anchor,
-                    parts: parts.to_vec(),
-                },
+                key,
                 meshes: handles,
             },
         );

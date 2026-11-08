@@ -8606,6 +8606,7 @@ dependencies = [
  "fastnoise-lite",
  "noise",
  "serde",
+ "serde_json",
  "terra-core",
  "terra-voxel",
  "thiserror 2.0.21",

@@ -1,6 +1,6 @@
 @if (trainView.open) {
 <div class="train-workshop-overlay">
-  <div class="train-workshop-panel">
+  <div id="train-workshop-panel" class="train-workshop-panel">
     <div class="train-panel-fill"></div>
     <ornate-frame></ornate-frame>
     <div class="train-workshop-content">
@@ -29,16 +29,24 @@
           <div class="train-workshop-controls">
             <h3>Aufbau: {{ trainView.kind }}</h3>
             <div class="train-kind-buttons">
-              <button id="kind:locomotive" onclick="train_workshop_action">Lokomotive</button>
-              <button id="kind:tender" onclick="train_workshop_action">Tender</button>
-              <button id="kind:passenger" onclick="train_workshop_action">Personenwagen</button>
-              <button id="kind:freight" onclick="train_workshop_action">Güterwagen</button>
+              <button id="kind:locomotive" [class]="trainView.kind == 'Lokomotive' ? 'selected' : ''" onclick="train_workshop_action">Lokomotive</button>
+              <button id="kind:tender" [class]="trainView.kind == 'Tender' ? 'selected' : ''" onclick="train_workshop_action">Tender</button>
+              <button id="kind:passenger" [class]="trainView.kind == 'Personenwagen' ? 'selected' : ''" onclick="train_workshop_action">Personenwagen</button>
+              <button id="kind:freight" [class]="trainView.kind == 'Güterwagen' ? 'selected' : ''" onclick="train_workshop_action">Güterwagen</button>
+            </div>
+            <p>{{ trainView.blueprint_progress }}</p>
+            <div class="train-blueprint-actions">
+              <button id="blueprint" onclick="train_workshop_action">Vorlage anzeigen</button>
+              <button id="blueprint-build" [disabled]="!trainView.blueprint" onclick="train_workshop_action">Mit Vorlage bauen</button>
+              @if (trainView.blueprint) { <button id="blueprint-clear" onclick="train_workshop_action">Vorlage ausblenden</button> }
             </div>
             <button id="assemble" class="train-primary" [disabled]="trainView.pending" onclick="train_workshop_action">Zusammensetzen</button>
             <p>Lok: Führerstand · Personenwagen: Sitz · Tender/Güterwagen: Laderaum</p>
-            <button id="dismantle" [disabled]="trainView.pending || !trainView.selected" onclick="train_workshop_action">Auswahl zerlegen</button>
-            <button id="seat" [disabled]="trainView.pending || !trainView.selected" onclick="train_workshop_action">Einsteigen</button>
-            <button id="cargo" [disabled]="trainView.pending || !trainView.selected" onclick="train_workshop_action">Laderaum öffnen</button>
+            <div class="train-secondary-actions">
+              <button id="dismantle" [disabled]="trainView.pending || !trainView.selected" onclick="train_workshop_action">Auswahl zerlegen</button>
+              <button id="seat" [disabled]="trainView.pending || !trainView.selected" onclick="train_workshop_action">Einsteigen</button>
+              <button id="cargo" [disabled]="trainView.pending || !trainView.selected" onclick="train_workshop_action">Laderaum öffnen</button>
+            </div>
           </div>
           <div class="train-workshop-vehicles">
             <div class="train-vehicle-heading"><h3>Fahrzeuge</h3><button id="clear" onclick="train_workshop_action">Auswahl lösen</button></div>
@@ -58,4 +66,11 @@
     </div>
   </div>
 </div>
+}
+@if (trainView.blueprint && !trainView.open && !inventoryView.open && !settingsView.open && !chatView.open && !kingdomView.visible) {
+  <div class="train-blueprint-hint">
+    <p>{{ trainView.blueprint_progress }}</p>
+    <p>{{ trainView.blueprint_target }}</p>
+    <p>Montagestelle öffnen: zusammensetzen oder Vorlage ausblenden</p>
+  </div>
 }

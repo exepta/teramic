@@ -61,6 +61,9 @@ mod support_tests;
 #[cfg(test)]
 #[path = "custom_textile_tests.rs"]
 mod textile_tests;
+#[cfg(test)]
+#[path = "custom_vehicle_tests.rs"]
+mod vehicle_tests;
 
 impl ConstructionProfiles {
     const LIMIT: usize = 64;
@@ -154,6 +157,8 @@ fn construction_profile(
 #[derive(Clone)]
 pub(crate) struct ModelSnapshot {
     standalone: bool,
+    /// A mounted cell keeps placed-world connections and its original decoration seed.
+    source_position: Option<[i64; 3]>,
     heraldry: HashMap<[i32; 3], terra_core::kingdom::KingdomHeraldry>,
     domains: Vec<terra_core::kingdom::SettlementDomain>,
     include_moving: bool,
@@ -168,6 +173,10 @@ pub(crate) struct ModelSnapshot {
 }
 
 impl ModelSnapshot {
+    fn preview(&self) -> bool {
+        self.standalone && self.source_position.is_none()
+    }
+
     pub(super) fn campfire_supports_changed(
         &self,
         section: SectionPos,
@@ -291,20 +300,89 @@ pub(crate) fn model_geometry(
     neighbor_facing: [u8; 6],
     templates: &TemplateSet,
 ) -> Result<Vec<MeshBatch>, String> {
-    let snapshot = ModelSnapshot {
-        standalone: true,
-        heraldry: HashMap::new(),
-        domains: Vec::new(),
-        include_moving: true,
-        blocks: vec![0; 4096],
-        models: vec![ModelCell {
+    standalone_geometry(
+        ModelCell {
             cell: [0; 3],
             material,
             state,
             peer_wood,
             neighbors,
             neighbor_facing,
-        }],
+        },
+        templates,
+        None,
+        None,
+    )
+}
+
+/// Vehicle models retain the placed block's pose, connections and appearance.
+pub(crate) fn vehicle_model_geometry(
+    part: &terra_core::trains::TrainPart,
+    presentation: Option<&terra_core::trains::TrainBlockView>,
+    peer_wood: terra_core::WoodSpecies,
+    neighbors: [Option<(u16, u8)>; 6],
+    templates: &TemplateSet,
+    source_position: [i64; 3],
+) -> Result<Vec<MeshBatch>, String> {
+    standalone_geometry(
+        ModelCell {
+            cell: [0; 3],
+            material: part.material,
+            state: terra_world::edits::BlockObjectState {
+                facing: part.facing,
+                wood: part.wood,
+                peer: presentation.and_then(|view| view.peer.map(|peer| peer.map(i64::from))),
+                secondary: presentation.is_some_and(|view| view.secondary),
+                ..Default::default()
+            },
+            peer_wood,
+            neighbors: neighbors.map(|neighbor| neighbor.map(|(material, _)| material)),
+            neighbor_facing: neighbors.map(|neighbor| neighbor.map_or(0, |(_, facing)| facing)),
+        },
+        templates,
+        presentation,
+        Some(source_position),
+    )
+}
+
+fn standalone_geometry(
+    model: ModelCell,
+    templates: &TemplateSet,
+    presentation: Option<&terra_core::trains::TrainBlockView>,
+    source_position: Option<[i64; 3]>,
+) -> Result<Vec<MeshBatch>, String> {
+    let template = templates
+        .blocks
+        .get(&model.material)
+        .ok_or("Missing standalone block template")?;
+    let mut geometry = BlockMesh::default();
+    let custom = !template.model.is_empty();
+    if !custom {
+        geometry.faces = (0..6)
+            .map(|side| BlockFace {
+                minimum: [0; 3],
+                width: 1,
+                height: 1,
+                u_axis: (side / 2 + 1) % 3,
+                v_axis: (side / 2 + 2) % 3,
+                side,
+                material: model.material,
+                occupied_neighbor: false,
+                edge_mask: 15,
+            })
+            .collect();
+    }
+    let snapshot = ModelSnapshot {
+        standalone: true,
+        source_position,
+        heraldry: presentation
+            .and_then(|view| view.heraldry)
+            .map(|heraldry| [([0; 3], heraldry)].into())
+            .unwrap_or_default(),
+        domains: Vec::new(),
+        include_moving: true,
+        blocks: vec![0; 4096],
+        models: if custom { vec![model] } else { Vec::new() },
         border_models: Vec::new(),
         border_glass: HashSet::new(),
         water_contacts: HashMap::new(),
@@ -313,7 +391,7 @@ pub(crate) fn model_geometry(
         funnel_supports: HashSet::new(),
     };
     compose(
-        &BlockMesh::default(),
+        &geometry,
         &snapshot,
         templates,
         SectionPos::default(),
@@ -322,7 +400,12 @@ pub(crate) fn model_geometry(
             detail_level: super::DetailLevel::Near,
             terrain: None,
             exposure: None,
-            tints: Default::default(),
+            tints: std::sync::Arc::new(
+                presentation
+                    .and_then(|view| view.tint)
+                    .map(|tint| [([0; 3], tint)].into())
+                    .unwrap_or_default(),
+            ),
             conditions: Default::default(),
         },
     )
@@ -361,6 +444,7 @@ pub(crate) fn isolate_model(
     let section_geometry = compose(geometry, &remaining, templates, section, options)?;
     let isolated = ModelSnapshot {
         standalone: true,
+        source_position: None,
         heraldry: snapshot.heraldry.clone(),
         domains: snapshot.domains.clone(),
         include_moving: false,
@@ -579,6 +663,7 @@ pub(crate) fn capture(
     } else {
         let mut snapshot = ModelSnapshot {
             standalone: false,
+            source_position: None,
             heraldry: HashMap::new(),
             domains: Vec::new(),
             include_moving: false,
@@ -833,11 +918,11 @@ pub(crate) fn compose(
             profile = std::borrow::Cow::Owned(filling::profile(
                 model,
                 &template.model,
-                snapshot.standalone,
+                snapshot.preview(),
             ));
             profile.as_ref()
         } else if terra_core::plumbing::is_part(model.material) {
-            profile = plumbing_profiles.get(model, &template.model, snapshot.standalone);
+            profile = plumbing_profiles.get(model, &template.model, snapshot.preview());
             profile.as_ref()
         } else {
             &template.model
@@ -863,7 +948,7 @@ pub(crate) fn compose(
             snow_exposed,
         );
         let mut hearth_supports = if model.material == terra_core::campfire::MATERIAL
-            && !snapshot.standalone
+            && !snapshot.preview()
             && model.neighbors[3] == Some(terra_core::brewing::MATERIAL)
         {
             let slot = templates
@@ -946,7 +1031,7 @@ pub(crate) fn compose(
                 || templates
                     .castle_arch_join_materials
                     .contains(&primitive.material)
-                    && !snapshot.standalone
+                    && !snapshot.preview()
                     && castle::paired_arch(model)
             {
                 continue;
@@ -973,12 +1058,16 @@ pub(crate) fn compose(
                 .castle_decor_materials
                 .contains(&primitive.material)
             {
-                rotation * castle::detail_rotation(section, model.cell)
+                rotation
+                    * snapshot.source_position.map_or_else(
+                        || castle::detail_rotation(section, model.cell),
+                        castle::detail_rotation_at,
+                    )
             } else {
                 rotation
             };
             if matches!(model.material, 153 | 157)
-                && !snapshot.standalone
+                && !snapshot.preview()
                 && templates
                     .logistics_support_materials
                     .contains(&primitive.material)
@@ -1520,6 +1609,7 @@ mod wood_tests {
             for facing in 0..4 {
                 let snapshot = ModelSnapshot {
                     standalone: true,
+                    source_position: None,
                     heraldry: HashMap::new(),
                     domains: Vec::new(),
                     include_moving: true,
@@ -1614,6 +1704,7 @@ mod wood_tests {
                 neighbors[2] = below;
                 let snapshot = ModelSnapshot {
                     standalone,
+                    source_position: None,
                     heraldry: HashMap::new(),
                     domains: Vec::new(),
                     include_moving: false,
@@ -1768,6 +1859,7 @@ mod wood_tests {
             let axis = terra_core::kinetic::axis(facing);
             let snapshot = ModelSnapshot {
                 standalone: false,
+                source_position: None,
                 heraldry: HashMap::new(),
                 domains: Vec::new(),
                 include_moving: false,
@@ -1850,6 +1942,7 @@ mod wood_tests {
         };
         let snapshot = ModelSnapshot {
             standalone: false,
+            source_position: None,
             heraldry: HashMap::new(),
             domains: Vec::new(),
             include_moving: false,
@@ -2246,6 +2339,7 @@ mod tests {
             );
             let snapshot = ModelSnapshot {
                 standalone: false,
+                source_position: None,
                 heraldry: HashMap::new(),
                 domains: Vec::new(),
                 include_moving: false,
@@ -2343,6 +2437,7 @@ mod tests {
             let halves = terra_core::construction::slab_halves(82, merged).unwrap();
             let snapshot = ModelSnapshot {
                 standalone: false,
+                source_position: None,
                 heraldry: HashMap::new(),
                 domains: Vec::new(),
                 include_moving: false,
@@ -2552,6 +2647,7 @@ mod tests {
         );
         let mut snapshot = ModelSnapshot {
             standalone: false,
+            source_position: None,
             heraldry: HashMap::new(),
             domains: Vec::new(),
             include_moving: false,
@@ -2616,6 +2712,7 @@ mod tests {
     fn restored_glass_face_keeps_connections_to_local_and_neighbor_sections() {
         let mut snapshot = ModelSnapshot {
             standalone: false,
+            source_position: None,
             heraldry: HashMap::new(),
             domains: Vec::new(),
             include_moving: false,

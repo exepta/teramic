@@ -1,11 +1,14 @@
 //! Parked vehicle collision uses the same authored part volumes as picking.
 use avian3d::prelude::*;
-use bevy::prelude::*;
+use bevy::{
+    prelude::*,
+    tasks::{AsyncComputeTaskPool, Task, futures_lite::future},
+};
 use std::{
     collections::{BTreeMap, BTreeSet},
     sync::Arc,
 };
-use terra_core::trains::{TrainPart, VehicleView};
+use terra_core::trains::{TrainBlockView, TrainPart, VehicleView};
 use terra_world::{
     edits::EditJournal,
     streaming::{ChunkStore, WorldAccess},
@@ -62,7 +65,15 @@ impl TrainCollisionViews {
     fn set_views(&mut self, vehicles: &[VehicleView]) -> bool {
         if self.vehicles.len() == vehicles.len()
             && self.vehicles.iter().zip(vehicles).all(|(old, new)| {
-                old.id == new.id && same_geometry(old.anchor, &old.parts, new.anchor, &new.parts)
+                old.id == new.id
+                    && same_geometry(
+                        old.anchor,
+                        &old.parts,
+                        &old.blocks,
+                        new.anchor,
+                        &new.parts,
+                        &new.blocks,
+                    )
             })
         {
             return false;
@@ -73,13 +84,26 @@ impl TrainCollisionViews {
     }
 }
 
-fn same_geometry(a: [i64; 3], parts: &[TrainPart], b: [i64; 3], other: &[TrainPart]) -> bool {
+type BlockViews = BTreeMap<u16, TrainBlockView>;
+const MAX_COLLIDER_JOBS: usize = 2;
+
+fn same_geometry(
+    a: [i64; 3],
+    parts: &[TrainPart],
+    blocks: &BlockViews,
+    b: [i64; 3],
+    other: &[TrainPart],
+    other_blocks: &BlockViews,
+) -> bool {
     a == b
         && parts.len() == other.len()
-        && parts
-            .iter()
-            .zip(other)
-            .all(|(a, b)| a.offset == b.offset && a.material == b.material && a.facing == b.facing)
+        && parts.iter().zip(other).enumerate().all(|(index, (a, b))| {
+            a.offset == b.offset
+                && a.material == b.material
+                && a.facing == b.facing
+                && blocks.get(&(index as u16)).map(|view| &view.boxes)
+                    == other_blocks.get(&(index as u16)).map(|view| &view.boxes)
+        })
 }
 
 #[derive(Component)]
@@ -88,11 +112,19 @@ pub struct TrainCollider(pub u64);
 struct Entry {
     anchor: [i64; 3],
     parts: Vec<TrainPart>,
+    blocks: BlockViews,
     bounds: [[f64; 3]; 2],
     entity: Option<Entity>,
     active: bool,
     retiring: bool,
     checkpoints: Option<Vec<(terra_voxel::SectionPos, u64)>>,
+    build: Option<u64>,
+    failed: bool,
+}
+
+struct ColliderJob {
+    vehicle: u64,
+    task: Task<Option<Collider>>,
 }
 
 fn checkpoints(
@@ -135,6 +167,8 @@ pub(crate) struct TrainCollisionState {
     entries: BTreeMap<u64, Entry>,
     retired: Vec<[[f64; 3]; 2]>,
     source_identity: Option<Arc<()>>,
+    next_build: u64,
+    jobs: BTreeMap<u64, ColliderJob>,
 }
 impl TrainCollisionState {
     pub(crate) fn ready(
@@ -220,6 +254,7 @@ fn sync(
                         vehicle.id,
                         vehicle.anchor,
                         vehicle.parts.as_slice(),
+                        &vehicle.blocks,
                         vehicle.model_bounds(),
                     )
                 })
@@ -235,6 +270,7 @@ fn sync(
                         vehicle.id,
                         vehicle.anchor,
                         vehicle.parts.as_slice(),
+                        &vehicle.blocks,
                         vehicle.model_bounds(),
                     )
                 })
@@ -257,12 +293,10 @@ fn sync(
                 };
             }
         }
-        for (id, anchor, parts, bounds) in vehicles {
-            if state
-                .entries
-                .get(&id)
-                .is_some_and(|old| same_geometry(old.anchor, &old.parts, anchor, parts))
-            {
+        for (id, anchor, parts, blocks, bounds) in vehicles {
+            if state.entries.get(&id).is_some_and(|old| {
+                same_geometry(old.anchor, &old.parts, &old.blocks, anchor, parts, blocks)
+            }) {
                 state.entries.get_mut(&id).unwrap().retiring = false;
                 continue;
             }
@@ -273,7 +307,7 @@ fn sync(
                     old.retiring
                         && old.active
                         && old.entity.is_some()
-                        && same_geometry(old.anchor, &old.parts, anchor, parts)
+                        && same_geometry(old.anchor, &old.parts, &old.blocks, anchor, parts, blocks)
                 })
                 .map(|(id, _)| *id);
             if let Some(previous) = reusable {
@@ -297,11 +331,14 @@ fn sync(
                 Entry {
                     anchor,
                     parts: parts.to_vec(),
+                    blocks: blocks.clone(),
                     bounds,
                     entity: None,
                     active: false,
                     retiring: false,
                     checkpoints: None,
+                    build: None,
+                    failed: false,
                 },
             );
         }
@@ -332,16 +369,43 @@ fn sync(
         }
         state.retired.push(entry.bounds);
     }
-    // Assembly and late join cannot submit an unbounded number of collider builds.
-    for (&id, entry) in state
-        .entries
+    // Keep obsolete jobs until their CPU work actually completes: dropping a
+    // task cannot interrupt a native mesh cook already in progress. Tracking
+    // those jobs prevents rapid replacements from exceeding the global limit.
+    let completed: Vec<_> = state
+        .jobs
         .iter_mut()
-        .filter(|(_, entry)| entry.entity.is_none())
-        .take(2)
-    {
-        let Some(collider) = collider(&entry.parts) else {
+        .filter_map(|(&generation, job)| {
+            future::block_on(future::poll_once(&mut job.task))
+                .map(|collider| (generation, job.vehicle, collider))
+        })
+        .collect();
+    for (generation, id, collider) in completed {
+        state.jobs.remove(&generation);
+        let Some(entry) = state
+            .entries
+            .get_mut(&id)
+            .filter(|entry| entry.build == Some(generation))
+        else {
             continue;
         };
+        entry.build = None;
+        if entry.retiring || entry.entity.is_some() {
+            continue;
+        }
+        let Some(collider) = collider else {
+            entry.failed = true;
+            bevy::log::error!(vehicle = id, "Train collision geometry could not be built");
+            continue;
+        };
+        let translation = Vec3::from_array(std::array::from_fn(|axis| {
+            (entry.anchor[axis] as f64
+                + if axis == 1 {
+                    terra_core::trains::MODEL_Y_OFFSET
+                } else {
+                    0.0
+                }) as f32
+        }));
         entry.entity = Some(
             commands
                 .spawn((
@@ -350,16 +414,44 @@ fn sync(
                     collider,
                     Friction::new(0.0),
                     Restitution::new(0.0),
-                    Transform::from_translation(Vec3::from_array(std::array::from_fn(|axis| {
-                        (entry.anchor[axis] as f64
-                            + if axis == 1 {
-                                terra_core::trains::MODEL_Y_OFFSET
-                            } else {
-                                0.0
-                            }) as f32
-                    }))),
+                    Position(translation),
+                    Rotation::IDENTITY,
+                    Transform::from_translation(translation),
                 ))
                 .id(),
+        );
+    }
+    let capacity = MAX_COLLIDER_JOBS.saturating_sub(state.jobs.len());
+    let waiting: Vec<_> = state
+        .entries
+        .iter()
+        .filter(|(_, entry)| {
+            entry.entity.is_none() && entry.build.is_none() && !entry.retiring && !entry.failed
+        })
+        .take(capacity)
+        .map(|(&id, _)| id)
+        .collect();
+    for id in waiting {
+        loop {
+            state.next_build = state.next_build.wrapping_add(1);
+            if !state.jobs.contains_key(&state.next_build) {
+                break;
+            }
+        }
+        let generation = state.next_build;
+        let entry = state.entries.get_mut(&id).unwrap();
+        entry.build = Some(generation);
+        let parts = entry.parts.clone();
+        let blocks = entry.blocks.clone();
+        state.jobs.insert(
+            generation,
+            ColliderJob {
+                vehicle: id,
+                task: AsyncComputeTaskPool::get().spawn(async move {
+                    let _scope = terra_core::profiling::ScopeTimer::new("collision.train_cook");
+                    collider(&parts, &blocks)
+                }),
+            },
         );
     }
 }
@@ -371,7 +463,7 @@ fn restored(
     terrain: &crate::TerrainCollisionState,
 ) -> bool {
     let mut sections = BTreeSet::new();
-    for part in &entry.parts {
+    for (index, part) in entry.parts.iter().enumerate() {
         let cell = std::array::from_fn(|axis| entry.anchor[axis] + i64::from(part.offset[axis]));
         let owner = terra_voxel::global_to_section(cell).0;
         if !chunks.loaded.contains_key(&owner) {
@@ -390,7 +482,7 @@ fn restored(
             return false;
         }
         sections.insert(owner);
-        for bounds in terra_core::train_parts::boxes(part.material, part.facing) {
+        for bounds in terra_core::trains::part_shapes(part, entry.blocks.get(&(index as u16))) {
             let low = terra_voxel::global_to_section(std::array::from_fn(|axis| {
                 (cell[axis] as f64 + bounds.minimum[axis]).floor() as i64
             }))
@@ -437,11 +529,11 @@ fn activate(
     state.retired.clear();
 }
 
-fn collider(parts: &[TrainPart]) -> Option<Collider> {
+fn collider(parts: &[TrainPart], blocks: &BlockViews) -> Option<Collider> {
     let mut positions = Vec::new();
     let mut indices = Vec::new();
-    for part in parts {
-        for bounds in terra_core::train_parts::boxes(part.material, part.facing) {
+    for (index, part) in parts.iter().enumerate() {
+        for bounds in terra_core::trains::part_shapes(part, blocks.get(&(index as u16))) {
             let base = positions.len() as u32;
             for corner in 0..8 {
                 positions.push(Vec3::from_array(std::array::from_fn(|axis| {

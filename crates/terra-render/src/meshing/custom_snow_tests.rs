@@ -32,6 +32,7 @@ fn dry_player_snow_plates_keep_cutout_uv1_under_a_roof_at_all_seven_physical_hei
     for layer in 1..=7 {
         let snapshot = ModelSnapshot {
             standalone: false,
+            source_position: None,
             heraldry: HashMap::new(),
             domains: Vec::new(),
             include_moving: false,
@@ -135,6 +136,7 @@ fn saved_snow_coats_actual_stair_slab_path_and_fence_meshes_without_extra_geomet
         };
         let snapshot = ModelSnapshot {
             standalone: false,
+            source_position: None,
             heraldry: HashMap::new(),
             domains: Vec::new(),
             include_moving: false,

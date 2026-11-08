@@ -5,7 +5,7 @@ use terra_core::{
     campfire::{AttachedCampfire, CampfireState},
 };
 
-const MAX_HEARTHS: usize = 4096;
+pub(super) const MAX_HEARTHS: usize = 4096;
 impl EditJournal {
     pub fn has_attached_campfire(&self, position: [i64; 3]) -> bool {
         self.valid_cauldron(position)

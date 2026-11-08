@@ -5,6 +5,7 @@ mod belts;
 mod containers;
 mod farming;
 mod fluids;
+mod geometry_snapshot;
 mod hearths;
 mod infusion;
 mod journal;

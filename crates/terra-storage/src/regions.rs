@@ -17,6 +17,8 @@ mod creature_legacy;
 mod kingdom_legacy;
 #[path = "regions/rail_legacy.rs"]
 mod rail_legacy;
+#[path = "regions/train_legacy.rs"]
+mod train_legacy;
 use kingdom_legacy::{KingdomIndex10, KingdomRecord9, TreeIndex11};
 #[cfg(test)]
 #[path = "regions/hierarchy_tests.rs"]
@@ -58,7 +60,7 @@ struct TreeIndex {
     trees: terra_core::TreeRegistry,
 }
 
-// ID13 appends parked vehicles; the ID12 TreeIndex binary layout stays frozen.
+// ID14 carries arbitrary block appearance/state; ID13 has a frozen decoder.
 #[derive(Serialize, Deserialize)]
 struct TrainIndex {
     prior: TreeIndex,
@@ -225,11 +227,21 @@ struct Index2 {
     index: Index,
     clock: Option<terra_core::WorldClock>,
 }
+fn read_train_index(bytes: &[u8]) -> Result<TrainIndex, String> {
+    if bytes.get(12..16) == Some(b"ID13") {
+        decode::<train_legacy::TrainIndex13>(b"ID13", bytes).map(Into::into)
+    } else {
+        decode(b"ID14", bytes)
+    }
+}
 fn read_index(root: &Path) -> Result<KingdomIndex, String> {
     let bytes = read(&root.join(INDEX))?;
-    if matches!(bytes.get(12..16), Some(b"ID11" | b"ID12" | b"ID13")) {
-        let data: TreeIndex = if bytes.get(12..16) == Some(b"ID13") {
-            let data: TrainIndex = decode(b"ID13", &bytes)?;
+    if matches!(
+        bytes.get(12..16),
+        Some(b"ID11" | b"ID12" | b"ID13" | b"ID14")
+    ) {
+        let data: TreeIndex = if matches!(bytes.get(12..16), Some(b"ID13" | b"ID14")) {
+            let data = read_train_index(&bytes)?;
             if !data.trains.valid() {
                 return Err("Invalid persistent vehicle registry".into());
             }
@@ -2080,7 +2092,7 @@ fn commit(root: &Path, world: WorldId, journal: &EditJournal) -> Result<(), Stri
         };
         if gameplay.trains != Default::default() {
             encode(
-                b"ID13",
+                b"ID14",
                 &TrainIndex {
                     prior,
                     trains: gameplay.trains.clone(),
@@ -2134,8 +2146,8 @@ fn load(root: &Path, world: WorldId) -> Result<EditJournal, String> {
     let index = timed.index;
     let (trees, trains) = {
         let bytes = read(&root.join(INDEX))?;
-        if bytes.get(12..16) == Some(b"ID13") {
-            let data: TrainIndex = decode(b"ID13", &bytes)?;
+        if matches!(bytes.get(12..16), Some(b"ID13" | b"ID14")) {
+            let data = read_train_index(&bytes)?;
             (data.prior.trees, data.trains)
         } else if bytes.get(12..16) == Some(b"ID12") {
             (

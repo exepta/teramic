@@ -6761,3 +6761,65 @@ Screenshots oder GPU-Abnahmen wurden gestartet.
 [Prüfbericht](tools/benchmarks/results/rail-input-recovery-2026-11-08/README.md).
 Clippy aller Workspace-Targets mit `-D warnings`, Format, Diff und der aktuelle
 vollständige Workspace-Build sind sauber.
+
+## 212. Freier Zugbau, Montagevorlagen Und Asynchrone Baukollisionen
+
+Die Montageoberflaeche nimmt Mausereignisse unter dem nichtinteraktiven
+Spieloverlay wieder an. Dekorative Ebenen blockieren keine Eingaben;
+Text-/Icon-Klicks erreichen ihren eigentlichen Button. Die Typauswahl bleibt
+auch waehrend einer laufenden Abfrage bedienbar und zeigt ihren aktiven Zustand.
+
+Lokomotive, Tender, Personen- und Gueterwagen bieten eine optionale Vorlage
+auf einem passenden geraden Gleis. Gruene Kaestchen markieren fehlende Teile,
+rote belegte oder falsch ausgerichtete Stellen. Nach dem Schliessen bleibt die
+Vorlage sichtbar; Zielhinweis und Fortschritt helfen beim Bauen. Fertige Teile,
+erfolgreiche Montage, Abbruch und Welt-/Verbindungswechsel bereinigen die
+entsprechenden Platzhalter. Die Vorlage editiert keine Welt und verbraucht
+keine Gegenstaende. Die allgemeine Bodenpflicht fuer Moebel/Zugteile entfaellt:
+an vorhandenen Blockseiten darf schwebend weitergebaut werden. Spezifische
+Halteregeln fuer Pflanzen, Fackeln, Laternen und andere Befestigungen bleiben.
+
+F64 erweitert montierte Fahrzeuge um selbst gesetzte registrierte Bloecke,
+Formen, volle Ausrichtungscodes, Holzarten, Farben und Wappen. Verbundene
+Fenster, gemischte Doppeltueren, Rohrverbindungen, Becken und Bauteilverbindungen
+behalten ihre Geometrie. Kollisionsvolumen werden mit ausschliesslich eigenen
+Fahrzeugnachbarn erfasst; identische Verbundvolumen werden nur einmal montiert.
+Die urspruengliche Position bestimmt weiterhin die zufaellige Dekorvariante.
+
+Private Inventare, Verarbeitung, Brennstoff, Fluessigkeiten, Filter und
+Oberflaechenzustand wandern atomar in das Fahrzeug und bei Demontage zurueck.
+Normale Truhen lassen sich auch montiert als geschuetzte Ladung benutzen.
+Andere Maschinen pausieren ohne Weltanschluesse. Mehrteilige Objekte muessen
+vollstaendig enthalten sein; Rechte, Kapazitaeten, Zustand und Freiraum werden
+vor der gemeinsamen Veroeffentlichung geprueft. Landschaft, Gleise, Montagestellen
+und freies Weltwasser werden nicht eingesammelt. Separat simulierte angehaengte
+Pflanzen/Weltobjekte und lebende registrierte Baeume bleiben geschuetzt.
+Fahrbetrieb und Dampfantrieb bleiben F53.
+
+Protokoll 117 traegt die oeffentliche Form-/Farbbeschreibung ohne private
+Maschinendaten. Grenzen fuer Teile, Kollisionsvolumen und private Nutzlasten
+begrenzen Speicher und Nachrichten. Zugindex ID14 liest ID13 ueber dessen
+unveraenderte historische Datenstruktur; alte Speicherindizes bleiben lesbar.
+
+Die aufwendige Terrain-Modellgeometrie wird gemeinsam mit dem Collider im
+Hintergrund berechnet. Der Hauptthread uebergibt begrenzte Voxel- und
+Objektmomentaufnahmen. Fahrzeugmeshes und Fahrzeugkollisionen verwenden ebenfalls
+begrenzte Hintergrundjobs. Auch ueberholte native Jobs zaehlen bis zum Abschluss
+gegen die Grenze von zwei Builds; alte Ergebnisse koennen nach Umbau oder
+Demontage nicht publiziert werden. Revisionen, Daten-/Profilpruefung und sichere
+Kollisionsuebergaben bleiben erhalten.
+
+[Bauanleitung](docs/train-building.md).
+
+Abnahme 212: 4.152 Workspace-Library-Tests bestanden, keiner fehlgeschlagen;
+neun bestehende beziehungsweise explizite Messtests ignoriert. Geprueft sind
+unter anderem echte registrierte HTML-Klickhandler, alle Vorlagenausrichtungen,
+schwebender Weiterbau, echte Physikkontakte und veraltete Hintergrundjobs,
+private Zustandsrueckgabe, alte Speicherindizes sowie Montage, normale Truhe,
+gefaerbte Formbloecke, Beobachter und spaeterer Beitritt ueber echtes UDP.
+Eine separate CPU-Mikromessung prueft die Entlastung des Hauptthreads.
+Keine Grafiktests, Spielclients, Screenshots oder GPU-Abnahmen gestartet.
+
+[Pruefbericht](tools/benchmarks/results/free-train-building-2026-11-08/README.md).
+Der aktuelle vollstaendige Workspace-Build, Clippy aller Targets mit
+`-D warnings`, Format und Diff-Pruefung sind sauber.

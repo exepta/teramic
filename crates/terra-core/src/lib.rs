@@ -25,6 +25,7 @@ pub mod logistics;
 pub mod mixer;
 pub mod plumbing;
 pub mod rails;
+pub mod train_blueprint;
 pub mod train_parts;
 pub mod trains;
 pub use crusher::DustKind;

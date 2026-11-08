@@ -62,6 +62,8 @@ fn train_fixture() -> (App, Peer, u64, u16, u16) {
                 ..Default::default()
             },
         )]),
+        blocks: Default::default(),
+        payloads: Default::default(),
         couplings: [None, None],
         revision: 0,
     };

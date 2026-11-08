@@ -45,6 +45,8 @@ fn car(anchor: Cell, kind: VehicleKind) -> Vehicle {
         anchor,
         parts,
         cargo,
+        blocks: Default::default(),
+        payloads: Default::default(),
         couplings: [None, None],
         revision: 0,
     }
@@ -190,4 +192,110 @@ fn parked_model_origin_and_seat_feet_share_exact_authored_wheel_and_cushion_offs
         assert_eq!(vehicle.view().model_bounds(), vehicle.model_bounds());
         assert_eq!(vehicle.view().model_origin(), origin);
     }
+}
+
+#[test]
+fn arbitrary_block_views_preserve_full_facing_and_reject_invalid_collision_or_unbounded_payloads() {
+    let mut vehicle = car([0, 8, 0], VehicleKind::Locomotive);
+    let index = vehicle.parts.len() as u16;
+    vehicle.parts.push(TrainPart {
+        offset: [1, 1, 2],
+        material: 105,
+        facing: crate::construction::LAST_MIXED_SLAB,
+        wood: WoodSpecies::Cherry,
+    });
+    vehicle.blocks.insert(
+        index,
+        TrainBlockView {
+            boxes: vec![crate::block_shapes::ShapeBox {
+                minimum: [0.0; 3],
+                maximum: [1.0; 3],
+                hinged: false,
+            }],
+            tint: Some([31, 92, 211]),
+            heraldry: Some(crate::kingdom::KingdomHeraldry::default()),
+            ..Default::default()
+        },
+    );
+    vehicle
+        .payloads
+        .insert(index, b"private machine state".to_vec());
+    assert!(vehicle.valid());
+    assert!(vehicle.view().valid());
+    assert_eq!(
+        vehicle.view().parts[index as usize].facing,
+        crate::construction::LAST_MIXED_SLAB
+    );
+    assert_eq!(vehicle.part_shapes(index as usize)[0].maximum, [1.0; 3]);
+    let public = serde_json::to_value(vehicle.view()).unwrap();
+    assert!(public.get("payloads").is_none());
+    assert!(public.get("cargo").is_none());
+    vehicle.blocks.get_mut(&index).unwrap().boxes[0].minimum[0] = f64::NAN;
+    assert!(!vehicle.valid());
+    vehicle.blocks.get_mut(&index).unwrap().boxes[0].minimum[0] = 0.0;
+    vehicle
+        .payloads
+        .insert(index, vec![0; MAX_PAYLOAD_BYTES + 1]);
+    assert!(!vehicle.valid());
+}
+
+#[test]
+fn aggregate_collision_and_private_payload_limits_are_atomic_for_registry_and_snapshot() {
+    let shape = crate::block_shapes::ShapeBox {
+        minimum: [0.0; 3],
+        maximum: [1.0; 3],
+        hinged: false,
+    };
+    let mut dense = car([0, 8, 0], VehicleKind::Locomotive);
+    for index in 0..dense.parts.len() {
+        dense.blocks.insert(
+            index as u16,
+            TrainBlockView {
+                boxes: vec![shape; 128],
+                ..Default::default()
+            },
+        );
+    }
+    assert!(dense.valid());
+    let count = shape_count(&dense.parts, &dense.blocks);
+    let capacity = MAX_TOTAL_SHAPES / count;
+    let mut registry = TrainRegistry::default();
+    for index in 0..capacity {
+        let mut car = dense.clone();
+        car.anchor[0] = index as i64 * 100;
+        registry.insert(car).unwrap();
+    }
+    let before = registry.clone();
+    dense.anchor[0] = 100_000;
+    assert_eq!(registry.insert(dense.clone()), Err(TrainError::Limit));
+    assert_eq!(registry, before);
+    let mut excessive = registry.snapshot(Vec::new());
+    let mut view = dense.view();
+    view.id = 999;
+    excessive.vehicles.push(view);
+    assert!(!excessive.valid());
+
+    let mut packed = car([0, 8, 0], VehicleKind::Locomotive);
+    for z in 0..=6 {
+        packed.parts.push(TrainPart {
+            offset: [1, 1, z],
+            material: train_parts::FRAME,
+            facing: 0,
+            wood: WoodSpecies::Birch,
+        });
+    }
+    for index in 0..16 {
+        packed.payloads.insert(index, vec![0; MAX_PAYLOAD_BYTES]);
+    }
+    assert!(packed.valid());
+    let mut registry = TrainRegistry::default();
+    for index in 0..8 {
+        let mut car = packed.clone();
+        car.anchor[0] = index * 100;
+        registry.insert(car).unwrap();
+    }
+    let before = registry.clone();
+    packed.anchor[0] = 100_000;
+    assert_eq!(registry.insert(packed), Err(TrainError::Limit));
+    assert_eq!(registry, before);
 }

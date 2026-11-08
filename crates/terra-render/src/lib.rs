@@ -14,6 +14,7 @@ mod dye_tint;
 pub use draw_calls::{DrawCallSnapshot, DrawCallStatus, GpuSubdrawSnapshot};
 mod chests;
 mod settlement_banners;
+mod train_blueprint;
 mod trains;
 pub use settlement_banners::VillageHeraldryStatus;
 mod chunk_borders;

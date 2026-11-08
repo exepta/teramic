@@ -81,8 +81,8 @@ fn overlaps_vehicle(car: &Vehicle, low: [f64; 3], high: [f64; 3]) -> bool {
     if !(0..3).all(|axis| bounds[0][axis] < high[axis] && bounds[1][axis] > low[axis]) {
         return false;
     }
-    car.parts.iter().any(|part| {
-        terra_world::trains::part_boxes(car.model_origin(), part)
+    car.parts.iter().enumerate().any(|(index, part)| {
+        terra_world::trains::part_boxes_with(car.model_origin(), part, car.part_shapes(index))
             .any(|shape| shape.intersects(low, high))
     })
 }
@@ -438,13 +438,14 @@ pub(super) fn apply(
         } => {
             station(peer, world, cell)?;
             check_revision(world, revision)?;
-            let plan = terra_world::trains::plan_assembly(
+            let plan = terra_world::trains::plan_assembly_with_properties(
                 &world.chunks,
                 &world.journal,
                 peer.uuid,
                 cell,
                 start,
                 kind,
+                &world.block_properties,
             )?;
             let half = Vec3::new(
                 terra_physics::character::PLAYER_RADIUS,
@@ -498,12 +499,7 @@ pub(super) fn apply(
                 if world.bodies.iter().any(|body| {
                     let low = (body.translation - half).to_array().map(f64::from);
                     let high = (body.translation + half).to_array().map(f64::from);
-                    terra_core::train_parts::boxes(
-                        plan.vehicle.parts[index].material,
-                        part.state.unwrap_or_default().facing,
-                    )
-                    .into_iter()
-                    .any(|shape| {
+                    plan.vehicle.part_shapes(index).into_iter().any(|shape| {
                         terra_core::block_shapes::ShapeBox {
                             minimum: std::array::from_fn(|axis| {
                                 shape.minimum[axis] + part.cell[axis] as f64
@@ -924,6 +920,8 @@ mod cleanup_tests {
             })
             .collect(),
             cargo: Default::default(),
+            blocks: Default::default(),
+            payloads: Default::default(),
             couplings: [None; 2],
             revision: 1,
         };

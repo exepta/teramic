@@ -120,6 +120,9 @@ fn udp_real_vehicle_assembly_private_cargo_seating_late_join_and_atomic_dismantl
     let station = at(3, 2, 2);
     let start = at(0, 2, 2);
     let cargo_cell = at(0, 3, 4);
+    let chest_cell = at(-1, 2, 2);
+    let slab_cell = at(-1, 2, 3);
+    let tint = [31, 92, 211];
     let volume: Vec<_> = (-2..=6)
         .flat_map(|x| (0..=6).flat_map(move |y| (-2..=9).map(move |z| at(x, y, z))))
         .collect();
@@ -172,6 +175,8 @@ fn udp_real_vehicle_assembly_private_cargo_seating_late_join_and_atomic_dismantl
         (at(0, 2, 7), train_parts::COUPLER),
         (at(0, 3, 3), train_parts::CAB),
         (cargo_cell, train_parts::CARGO),
+        (chest_cell, 29),
+        (slab_cell, 105),
     ]);
     for (cell, material) in &parts {
         put(&mut host, *cell, *material);
@@ -183,6 +188,33 @@ fn udp_real_vehicle_assembly_private_cargo_seating_late_join_and_atomic_dismantl
                     wood: WoodSpecies::Birch,
                     ..Default::default()
                 }),
+            )
+            .unwrap();
+    }
+    {
+        let mut journal = host.world_mut().resource_mut::<EditJournal>();
+        journal
+            .set_object_state(
+                slab_cell,
+                Some(terra_world::edits::BlockObjectState {
+                    facing: 5,
+                    wood: WoodSpecies::Cherry,
+                    ..Default::default()
+                }),
+            )
+            .unwrap();
+        journal.set_tint(slab_cell, Some(tint)).unwrap();
+        journal
+            .set_container(
+                chest_cell,
+                Inventory {
+                    slots: vec![ItemStack {
+                        item: ItemKind::Block(13),
+                        count: 17,
+                    }],
+                    revision: 6,
+                    ..Default::default()
+                },
             )
             .unwrap();
     }
@@ -312,7 +344,38 @@ fn udp_real_vehicle_assembly_private_cargo_seating_late_join_and_atomic_dismantl
         .clone();
     assert_eq!(car.owner, uuid);
     assert_eq!(car.parts.len(), parts.len());
-    let cargo = car.cargo_indices().next().unwrap();
+    let cargo = car
+        .parts
+        .iter()
+        .position(|part| part.material == train_parts::CARGO)
+        .unwrap() as u16;
+    let chest = car
+        .parts
+        .iter()
+        .position(|part| part.material == 29)
+        .unwrap() as u16;
+    let slab = car
+        .parts
+        .iter()
+        .position(|part| part.material == 105)
+        .unwrap() as u16;
+    assert_eq!(car.cargo[&chest].count(ItemKind::Block(13)), 17);
+    for client in [&owner, &watcher] {
+        let session = client.world().resource::<client::ClientSession>();
+        let view = session
+            .trains
+            .vehicles
+            .iter()
+            .find(|view| view.id == vehicle_id)
+            .unwrap();
+        assert_eq!(view.parts[slab as usize].facing, 5);
+        assert_eq!(view.parts[slab as usize].wood, WoodSpecies::Cherry);
+        assert_eq!(view.blocks[&slab].tint, Some(tint));
+        assert_eq!(view.blocks, car.blocks);
+        let public = serde_json::to_value(view).unwrap();
+        assert!(public.get("cargo").is_none());
+        assert!(public.get("payloads").is_none());
+    }
     let seat = car
         .parts
         .iter()
@@ -322,7 +385,7 @@ fn udp_real_vehicle_assembly_private_cargo_seating_late_join_and_atomic_dismantl
         &mut watcher,
         TrainAction::OpenCargo {
             vehicle: vehicle_id,
-            part: cargo,
+            part: chest,
         },
     );
     wait_phase(
@@ -360,6 +423,19 @@ fn udp_real_vehicle_assembly_private_cargo_seating_late_join_and_atomic_dismantl
         &mut watcher,
         cargo_feet,
     );
+    let open_chest = send(
+        &mut owner,
+        TrainAction::OpenCargo {
+            vehicle: vehicle_id,
+            part: chest,
+        },
+    );
+    let TrainOutcome::Cargo(chest_snapshot) =
+        response(&mut host, &mut owner, &mut watcher, open_chest)
+    else {
+        panic!("ordinary mounted chest must open for its owner");
+    };
+    assert_eq!(chest_snapshot.inventory.count(ItemKind::Block(13)), 17);
     let open = send(
         &mut owner,
         TrainAction::OpenCargo {
@@ -500,6 +576,17 @@ fn udp_real_vehicle_assembly_private_cargo_seating_late_join_and_atomic_dismantl
             .train_cargo
             .is_none()
     );
+    {
+        let session = late.world().resource::<client::ClientSession>();
+        let view = session
+            .trains
+            .vehicles
+            .iter()
+            .find(|view| view.id == vehicle_id)
+            .unwrap();
+        assert_eq!(view.blocks[&slab].tint, Some(tint));
+        assert_eq!(view.parts[slab as usize].facing, 5);
+    }
     teleport(
         "train dismantling stance",
         &mut host,
@@ -540,6 +627,23 @@ fn udp_real_vehicle_assembly_private_cargo_seating_late_join_and_atomic_dismantl
             })
         },
     );
+    for client in [&owner, &watcher, &late] {
+        let journal = client.world().resource::<EditJournal>();
+        assert_eq!(journal.object_state(slab_cell).unwrap().facing, 5);
+        assert_eq!(
+            journal.object_state(slab_cell).unwrap().wood,
+            WoodSpecies::Cherry
+        );
+        assert_eq!(journal.tint_at(slab_cell), Some(tint));
+    }
+    assert_eq!(
+        host.world()
+            .resource::<EditJournal>()
+            .container_at(chest_cell)
+            .unwrap()
+            .count(ItemKind::Block(13)),
+        17
+    );
     assert_eq!(
         host.world()
             .resource::<EditJournal>()
@@ -561,5 +665,81 @@ fn udp_real_vehicle_assembly_private_cargo_seating_late_join_and_atomic_dismantl
             .inventories[&uuid]
             .cursor
             .is_none()
+    );
+}
+
+#[test]
+fn bounded_full_train_registry_public_packet_stays_below_two_mebibytes() {
+    use std::collections::BTreeMap;
+    use terra_core::trains::{SeatBinding, TrainBlockView, TrainPart, TrainSnapshot, VehicleView};
+    let parts: Vec<_> = (0..16)
+        .flat_map(|x| {
+            (0..16).map(move |z| TrainPart {
+                offset: [x, 0, z],
+                material: match (x, z) {
+                    (0, 0) => train_parts::CHASSIS,
+                    (0, 1 | 2) => train_parts::BOGIE,
+                    (0, 3) => train_parts::COUPLER,
+                    _ => train_parts::CAB,
+                },
+                facing: 0,
+                wood: WoodSpecies::Cherry,
+            })
+        })
+        .collect();
+    let blocks: BTreeMap<_, _> = (0..256)
+        .map(|index| {
+            (
+                index,
+                TrainBlockView {
+                    boxes: vec![
+                        terra_core::block_shapes::ShapeBox {
+                            minimum: [0.0; 3],
+                            maximum: [1.0; 3],
+                            hinged: false,
+                        };
+                        4
+                    ],
+                    tint: Some([255; 3]),
+                    heraldry: Some(terra_core::kingdom::KingdomHeraldry {
+                        color: [255; 3],
+                        icon: terra_core::kingdom::KingdomIcon::Catalog(u64::MAX),
+                    }),
+                    ..Default::default()
+                },
+            )
+        })
+        .collect();
+    let vehicles = (1..=16)
+        .map(|id| VehicleView {
+            id,
+            owner: terra_core::PlayerUuid::from_u128(1),
+            kind: VehicleKind::Locomotive,
+            anchor: [id as i64 * 100, 8, 0],
+            parts: parts.clone(),
+            blocks: blocks.clone(),
+            couplings: [None; 2],
+            revision: u64::MAX,
+            mass_kg: 999_999_999,
+        })
+        .collect();
+    let seats = (0..1024)
+        .map(|index| SeatBinding {
+            player: terra_core::PlayerUuid::from_u128(index + 1),
+            vehicle: index as u64 / 64 + 1,
+            part: (index as u16 % 64) + 4,
+        })
+        .collect();
+    let snapshot = TrainSnapshot {
+        revision: u64::MAX,
+        vehicles,
+        seats,
+    };
+    assert!(snapshot.valid());
+    let bytes = postcard::to_allocvec(&snapshot).unwrap();
+    assert!(bytes.len() < 2 * 1024 * 1024, "{} bytes", bytes.len());
+    assert_eq!(
+        postcard::from_bytes::<TrainSnapshot>(&bytes).unwrap(),
+        snapshot
     );
 }

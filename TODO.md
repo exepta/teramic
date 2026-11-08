@@ -24,8 +24,6 @@ Wachstum, NPC-Arbeit und bewegte Fahrzeuge muessen begrenzt simuliert werden.
 
 ### Gleise Und Zugbau
 
-- [ ] **F64 Freier Zugbau Mit Allen Blocktypen:** Wie bei Create Zuege aus **allen vorhandenen Blocktypen** bauen koennen, einschliesslich Formen, Drehungen, Farben, Dekoration und spaeter registrierten Mod-Bloecken. Aufbau, Inventare und Maschinenzustand bei Montage, Fahrt und Demontage erhalten. Verhalten bewegter Maschinen und Item-/Fluessigkeits-/Antriebsanschluesse festlegen; echte Fahrzeuggeometrie fuer Kollisionen, Mitfahrer und Durchfahrtshoehen verwenden.
-
 - [ ] **F54 Modularer Dampflok-Baukasten (BR 52):** Die [Bildreferenz](docs/references/br52-train-system.png) als gestalterische und modulare Vorlage fuer passende Zugbloecke verwenden:
   - Gerade/gebogene Kessel, Abschluesse, Rauchkammer, nummerierte Rauchkammertuer, Schornstein, Dampfdom, gerade/gebogene Messingrohre, Ventile und Druckanzeige/-einheit.
   - Grosse/mittlere/kleine Raeder, Achsen, lange/kurze Kuppelstangen, Treibstangen, Gelenke und Kreuzkopf; Hauptrahmen, roter Rahmen, Pufferbohle, Puffer und Kupplungen.

@@ -17,6 +17,7 @@ fastnoise-lite.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
 serde.workspace = true
+serde_json.workspace = true
 bevy_math.workspace = true
 bevy = { workspace = true, optional = true }
 

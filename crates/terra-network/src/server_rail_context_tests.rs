@@ -543,6 +543,8 @@ fn a_signed_stretch_uses_the_real_long_ray_and_one_target_support_without_spendi
         })
         .collect(),
         cargo: Default::default(),
+        blocks: Default::default(),
+        payloads: Default::default(),
         couplings: [None; 2],
         revision: 1,
     };

@@ -6206,3 +6206,13 @@ Phase 211 korrigiert den Ladefehler im Zug-Stylesheet und den wachsenden
 Eingaberueckstand bei nur serverseitigen Simulationspausen. Gleise lassen sich
 durch die eigene Figur platzieren; andere Spieler bleiben geschuetzt.
 [Korrekturen und CPU-Abnahme](tools/benchmarks/results/rail-input-recovery-2026-11-08/README.md).
+
+Phase 212 erweitert die Montagestelle um bedienbare Typauswahl und eine optionale
+gruene Bauvorlage direkt am Gleis. Nach dem Schliessen bleibt sie als Bauhilfe
+sichtbar. Auch schwebende Bloecke koennen an vorhandene Blockseiten gesetzt werden.
+F64 erlaubt einen freien Aufbau aus registrierten Bloecken mit Formen, Farben,
+Verbindungen und gespeicherten Inventar-/Maschinenzustaenden. Montierte Maschinen
+pausieren ohne Weltanschluesse; der Fahrbetrieb folgt mit F53. Kollisions- und
+Fahrzeuggeometrie wird in begrenzten Hintergrundjobs berechnet.
+Protokoll 117; der neue Zugindex ID14 uebernimmt alte ID13-Spielstaende.
+[Aktuelle Bauanleitung und Bedienung](docs/train-building.md).

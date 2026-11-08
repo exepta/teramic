@@ -42,6 +42,7 @@ fn compose_shape(
 ) -> Vec<MeshBatch> {
     let snapshot = ModelSnapshot {
         standalone: true,
+        source_position: None,
         heraldry: HashMap::new(),
         domains: Vec::new(),
         include_moving: true,

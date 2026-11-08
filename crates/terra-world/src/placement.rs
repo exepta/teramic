@@ -715,32 +715,10 @@ pub fn environment(
         {
             return Err("Bed requires a full-height supporting floor".into());
         }
-        let planned = plan
-            .edits
-            .iter()
-            .any(|other| other.position == below && matches!(other.material, 59 | 65..=67 | 139));
-        let wall = crate::objects::is_window(edit.material)
-            && crate::objects::DIRECTIONS.iter().any(|d| {
-                chunks
-                    .block_at(offset(edit.position, *d, 1))
-                    .and_then(terra_voxel::MaterialId::from_raw)
-                    .is_some_and(terra_voxel::MaterialId::is_solid)
-            });
-        if furniture(edit.material)
-            && !matches!(edit.material, 60..=64 | 100 | 141..=147|149..=151|154..=155 |163..=167|171..=172)
-            && !(edit.material == 148
-                && plan.states.iter().any(|(p, state)| {
-                    *p == edit.position && state.is_some_and(|s| s.peer.is_some())
-                }))
-            && !planned
-            && !wall
-            && !chunks
-                .block_at(below)
-                .and_then(terra_voxel::MaterialId::from_raw)
-                .is_some_and(terra_voxel::MaterialId::is_solid)
-        {
-            return Err("Object requires solid floor".into());
-        }
+        // Ordinary construction, furniture and vehicle parts can extend from
+        // any clicked face and remain suspended. Only objects with an explicit
+        // mounting rule above require support; a generic floor check prevents
+        // connecting the frames between a train's two bogies.
     }
     Ok(())
 }
@@ -1804,6 +1782,51 @@ mod tests {
             },
         );
         (chunks, EditJournal::default())
+    }
+    #[test]
+    fn construction_and_train_parts_attach_to_every_face_without_a_floor() {
+        for material in [3, 29, 70, 210, 211, 212, 213, 214, 215, 216, 217] {
+            for normal in crate::objects::DIRECTIONS {
+                let (mut chunks, mut journal) = fixture();
+                let clicked = [7, 7, 7];
+                let position = std::array::from_fn(|axis| clicked[axis] + normal[axis]);
+                chunks
+                    .loaded
+                    .get_mut(&SectionPos::default())
+                    .unwrap()
+                    .data
+                    .set_block([7, 7, 7], 212)
+                    .unwrap();
+                journal.record(clicked, 212).unwrap();
+                journal
+                    .set_object_state(clicked, Some(Default::default()))
+                    .unwrap();
+                let hit = terra_voxel::blocks::BlockHit {
+                    position: clicked,
+                    normal: normal.map(|v| v as i32),
+                    distance: 2.0,
+                };
+                let plan = resolve(
+                    &chunks,
+                    &journal,
+                    hit,
+                    terra_core::ItemKind::Block(material),
+                    ([7.5, 7.5, 11.5], [0.0, 0.0, -1.0]),
+                    [0.0; 2],
+                    true,
+                )
+                .unwrap_or_else(|error| panic!("{material} on {normal:?}: {error}"));
+                assert!(
+                    plan.edits
+                        .iter()
+                        .any(|edit| edit.position == position && edit.material == material)
+                );
+                assert_eq!(
+                    chunks.block_at([position[0], position[1] - 1, position[2]]),
+                    Some(if normal == [0, 1, 0] { 212 } else { 0 })
+                );
+            }
+        }
     }
     #[test]
     fn shared_furniture_layout_keeps_all_four_facings_and_real_multicell_axes() {

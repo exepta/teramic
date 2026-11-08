@@ -75,12 +75,14 @@ fn car(anchor: [i64; 3], kind: VehicleKind) -> Vehicle {
         anchor,
         parts,
         cargo,
+        blocks: Default::default(),
+        payloads: Default::default(),
         couplings: [None, None],
         revision: 1,
     }
 }
 #[test]
-fn id13_preserves_the_parked_consist_exact_parts_owner_mass_and_private_cargo_across_real_save_reload()
+fn id14_preserves_the_parked_consist_exact_parts_owner_mass_and_private_cargo_across_real_save_reload()
  {
     let root = temporary();
     let world = WorldId(21001);
@@ -104,7 +106,7 @@ fn id13_preserves_the_parked_consist_exact_parts_owner_mass_and_private_cargo_ac
     let expected = registry.clone();
     assert!(journal.gameplay().valid());
     save_edits(&root, world, &journal).unwrap();
-    assert_eq!(&read(&root.join(INDEX)).unwrap()[12..16], b"ID13");
+    assert_eq!(&read(&root.join(INDEX)).unwrap()[12..16], b"ID14");
     let loaded = load_edits(&root, world).unwrap();
     assert_eq!(loaded.gameplay().trains, expected);
     assert_eq!(loaded.gameplay().trains.consist(a).unwrap(), vec![a, b]);
@@ -120,7 +122,7 @@ fn id13_preserves_the_parked_consist_exact_parts_owner_mass_and_private_cargo_ac
     fs::remove_dir_all(root).unwrap();
 }
 #[test]
-fn a_frozen_id12_index_loads_with_no_invented_train_and_empty_id13_keeps_retired_ids() {
+fn a_frozen_id12_index_loads_with_no_invented_train_and_empty_id14_keeps_retired_ids() {
     let root = temporary();
     let world = WorldId(21002);
     let mut journal = EditJournal::default();
@@ -160,6 +162,97 @@ fn a_frozen_id12_index_loads_with_no_invented_train_and_empty_id13_keeps_retired
             .unwrap()
             > id
     );
-    assert_eq!(&read(&root.join(INDEX)).unwrap()[12..16], b"ID13");
+    assert_eq!(&read(&root.join(INDEX)).unwrap()[12..16], b"ID14");
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
+fn id14_roundtrip_preserves_arbitrary_block_appearance_and_private_machine_payloads() {
+    let root = temporary();
+    let world = WorldId(21201);
+    let mut vehicle = car([8, 12, 8], VehicleKind::Locomotive);
+    let index = vehicle.parts.len() as u16;
+    vehicle.parts.push(TrainPart {
+        offset: [1, 1, 2],
+        material: 105,
+        facing: 75,
+        wood: WoodSpecies::Cherry,
+    });
+    vehicle.blocks.insert(
+        index,
+        terra_core::trains::TrainBlockView {
+            boxes: vec![terra_core::block_shapes::ShapeBox {
+                minimum: [0.0; 3],
+                maximum: [1.0; 3],
+                hinged: false,
+            }],
+            tint: Some([31, 92, 211]),
+            heraldry: Some(terra_core::kingdom::KingdomHeraldry::default()),
+            ..Default::default()
+        },
+    );
+    vehicle.payloads.insert(
+        index,
+        b"frozen private state with progress and inventories".to_vec(),
+    );
+    let mut journal = EditJournal::default();
+    let id = journal.gameplay_mut().trains.insert(vehicle).unwrap();
+    let expected = journal.gameplay().trains.clone();
+    save_edits(&root, world, &journal).unwrap();
+    assert_eq!(&read(&root.join(INDEX)).unwrap()[12..16], b"ID14");
+    let loaded = load_edits(&root, world).unwrap();
+    assert_eq!(loaded.gameplay().trains, expected);
+    assert_eq!(
+        loaded.gameplay().trains.vehicles[&id].blocks[&index].tint,
+        Some([31, 92, 211])
+    );
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
+fn frozen_id13_vehicle_registry_loads_without_reinterpreting_new_fields() {
+    let root = temporary();
+    let world = WorldId(21202);
+    let mut journal = EditJournal::default();
+    journal
+        .gameplay_mut()
+        .trains
+        .insert(car([8, 12, 8], VehicleKind::Locomotive))
+        .unwrap();
+    let expected = journal.gameplay().trains.clone();
+    save_edits(&root, world, &journal).unwrap();
+    let current = read_train_index(&read(&root.join(INDEX)).unwrap()).unwrap();
+    let old = train_legacy::TrainIndex13 {
+        prior: current.prior,
+        trains: train_legacy::Registry13 {
+            next_id: current.trains.next_id,
+            revision: current.trains.revision,
+            vehicles: current
+                .trains
+                .vehicles
+                .into_iter()
+                .map(|(id, car)| {
+                    (
+                        id,
+                        train_legacy::Vehicle13 {
+                            id: car.id,
+                            owner: car.owner,
+                            kind: car.kind,
+                            anchor: car.anchor,
+                            parts: car.parts,
+                            cargo: car.cargo,
+                            couplings: car.couplings,
+                            revision: car.revision,
+                        },
+                    )
+                })
+                .collect(),
+        },
+    };
+    fs::write(root.join(INDEX), encode(b"ID13", &old).unwrap()).unwrap();
+    let loaded = load_edits(&root, world).unwrap();
+    assert_eq!(loaded.gameplay().trains, expected);
+    save_edits(&root, world, &loaded).unwrap();
+    assert_eq!(&read(&root.join(INDEX)).unwrap()[12..16], b"ID14");
     fs::remove_dir_all(root).unwrap();
 }

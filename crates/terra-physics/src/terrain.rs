@@ -233,7 +233,41 @@ struct ColliderJob {
     plain: Option<PlainCollision>,
     epoch: u64,
     profile: Option<[u64; 4]>,
-    task: Task<Result<Option<Collider>, String>>,
+    task: Task<Result<ColliderOutput, String>>,
+}
+
+struct ColliderOutput {
+    collider: Option<Collider>,
+    modeled: bool,
+}
+
+/// Copy only the finite voxel halo; meshes, props, fluid patches and the rest of
+/// the loaded world never cross into a collider worker.
+fn geometry_chunks(center: SectionPos, chunks: &ChunkStore) -> Result<ChunkStore, String> {
+    let mut snapshot = ChunkStore::default();
+    for x in -1..=1 {
+        for y in -2..=2 {
+            for z in -1..=1 {
+                let position = center
+                    .offset([x, y, z])
+                    .map_err(|error| error.to_string())?;
+                if let Some(source) = chunks.loaded.get(&position) {
+                    snapshot.loaded.insert(
+                        position,
+                        terra_world::streaming::LoadedSection {
+                            data: source.data.clone(),
+                            mesh: None,
+                            mesh_epoch: source.mesh_epoch,
+                            water_epoch: 0,
+                            water: None,
+                            props: Vec::new(),
+                        },
+                    );
+                }
+            }
+        }
+    }
+    Ok(snapshot)
 }
 
 // Connected shapes read the one-section halo; mineral profiles also consult
@@ -405,8 +439,15 @@ fn dispatch(
                 continue;
             }
         };
-        let shapes = match model_geometry(&data, &chunks, &journal, &properties) {
-            Ok(shapes) => shapes,
+        let metadata = match journal.geometry_snapshot(position) {
+            Ok(snapshot) => snapshot,
+            Err(error) => {
+                state.error = Some(error.to_string());
+                continue;
+            }
+        };
+        let voxels = match geometry_chunks(position, &chunks) {
+            Ok(snapshot) => snapshot,
             Err(error) => {
                 state.error = Some(error);
                 continue;
@@ -423,21 +464,20 @@ fn dispatch(
                 216, 217,
             ])
             .collect();
+        let worker_properties = (*properties).clone();
         jobs.0.insert(
             position,
             ColliderJob {
                 data: data.clone(),
-                plain: (shapes.boxes.is_empty()
-                    && shapes.triangles.is_empty()
-                    && data
-                        .blocks()
-                        .iter()
-                        .all(|&m| properties.shape(m).is_empty()))
-                .then(|| PlainCollision {
-                    revision: journal.revision(position),
-                    blocks: data.blocks().to_vec(),
-                    properties: properties.clone(),
-                }),
+                plain: data
+                    .blocks()
+                    .iter()
+                    .all(|&m| properties.shape(m).is_empty())
+                    .then(|| PlainCollision {
+                        revision: journal.revision(position),
+                        blocks: data.blocks().to_vec(),
+                        properties: properties.clone(),
+                    }),
                 epoch: journal.mesh_epoch(position),
                 profile: data
                     .blocks()
@@ -445,7 +485,16 @@ fn dispatch(
                     .any(|m| terra_world::segments::is_crystal(*m))
                     .then(|| profile_snapshot(position, &chunks, &journal)),
                 task: AsyncComputeTaskPool::get().spawn(async move {
-                    build_collider_with_geometry(&data, &shapes.boxes, &shapes.triangles, &masked)
+                    let _scope = terra_core::profiling::ScopeTimer::new("collision.build_geometry");
+                    let shapes = model_geometry(&data, &voxels, &metadata, &worker_properties)?;
+                    let modeled = !shapes.boxes.is_empty() || !shapes.triangles.is_empty();
+                    let collider = build_collider_with_geometry(
+                        &data,
+                        &shapes.boxes,
+                        &shapes.triangles,
+                        &masked,
+                    )?;
+                    Ok(ColliderOutput { collider, modeled })
                 }),
             },
         );
@@ -460,7 +509,21 @@ fn model_shapes(
     journal: &EditJournal,
     properties: &terra_core::block_properties::BlockPropertiesCatalog,
 ) -> Result<Vec<terra_core::block_shapes::ShapeBox>, String> {
-    model_geometry(data, chunks, journal, properties).map(|geometry| geometry.boxes)
+    let original = model_geometry(data, chunks, journal, properties)?;
+    let voxels = geometry_chunks(data.position(), chunks)?;
+    let metadata = journal
+        .geometry_snapshot(data.position())
+        .map_err(|error| error.to_string())?;
+    let worker = model_geometry(data, &voxels, &metadata, properties)?;
+    assert_eq!(
+        original.boxes, worker.boxes,
+        "background metadata must retain authored contact volumes"
+    );
+    assert_eq!(
+        original.triangles, worker.triangles,
+        "background metadata must retain clipped belt profiles"
+    );
+    Ok(original.boxes)
 }
 
 fn model_geometry(
@@ -653,13 +716,15 @@ fn receive(
         {
             continue;
         }
-        let collider = match result {
-            Ok(collider) => collider,
+        let output = match result {
+            Ok(output) => output,
             Err(error) => {
                 state.error = Some(error);
                 continue;
             }
         };
+        let collider = output.collider;
+        let plain = plain.filter(|_| !output.modeled);
         let Ok(origin) = position.origin() else {
             continue;
         };
@@ -809,6 +874,8 @@ fn build_collider_with_geometry(
 
 #[cfg(test)]
 mod confirmed_rail_tests;
+#[cfg(test)]
+mod dispatch_snapshot_tests;
 #[cfg(test)]
 mod fixed_receive_tests;
 #[cfg(test)]

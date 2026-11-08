@@ -273,7 +273,12 @@ fn collider_worker_discards_a_replaced_voxel_payload_even_at_the_same_mesh_epoch
             plain: None,
             profile: None,
             epoch: 0,
-            task: AsyncComputeTaskPool::get().spawn(async move { build_collider(&worker_data) }),
+            task: AsyncComputeTaskPool::get().spawn(async move {
+                build_collider(&worker_data).map(|collider| ColliderOutput {
+                    collider,
+                    modeled: false,
+                })
+            }),
         },
     );
     app.world_mut()
@@ -356,7 +361,12 @@ fn eviction_removes_colliders_and_old_jobs_cannot_resurrect_edited_data() {
             plain: None,
             profile: None,
             epoch: 0,
-            task: AsyncComputeTaskPool::get().spawn(async move { build_collider(&data) }),
+            task: AsyncComputeTaskPool::get().spawn(async move {
+                build_collider(&data).map(|collider| ColliderOutput {
+                    collider,
+                    modeled: false,
+                })
+            }),
         },
     );
     app.world_mut()

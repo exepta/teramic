@@ -27,6 +27,8 @@ fn vehicle(owner: PlayerUuid) -> Vehicle {
         })
         .collect(),
         cargo: Default::default(),
+        blocks: Default::default(),
+        payloads: Default::default(),
         couplings: [None; 2],
         revision: 1,
     };

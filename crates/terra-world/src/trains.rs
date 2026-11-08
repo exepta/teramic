@@ -29,6 +29,7 @@ pub struct AssemblyPlan {
     pub assembling: bool,
     pub registry_revision: u64,
     pub parts: Vec<PartEdit>,
+    pub properties: terra_core::block_properties::BlockPropertiesCatalog,
 }
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct TrainHit {
@@ -90,7 +91,7 @@ pub fn candidate_start(chunks: &ChunkStore, station: Cell) -> Option<Cell> {
     candidates.sort_unstable();
     candidates.first().map(|(_, cell)| *cell)
 }
-fn bogie_supported(chunks: &ChunkStore, journal: &EditJournal, cell: Cell) -> bool {
+pub fn bogie_supported(chunks: &ChunkStore, journal: &EditJournal, cell: Cell) -> bool {
     let below = [cell[0], cell[1] - 1, cell[2]];
     let Some(piece) = rails::owner_at(journal, below) else {
         return false;
@@ -117,10 +118,45 @@ pub fn plan_assembly(
     start: Cell,
     kind: VehicleKind,
 ) -> Result<AssemblyPlan, TrainError> {
+    plan_assembly_with_properties(
+        chunks,
+        journal,
+        actor,
+        station,
+        start,
+        kind,
+        &Default::default(),
+    )
+}
+/// Capture registered block mechanics once; no machine is simulated while mounted.
+pub fn plan_assembly_with_properties(
+    chunks: &ChunkStore,
+    journal: &EditJournal,
+    actor: PlayerUuid,
+    station: Cell,
+    start: Cell,
+    kind: VehicleKind,
+    properties: &terra_core::block_properties::BlockPropertiesCatalog,
+) -> Result<AssemblyPlan, TrainError> {
     station_ready(chunks, journal, actor, station)?;
     if (0..3).any(|axis| start[axis].abs_diff(station[axis]) > 8) {
         return Err(TrainError::OutOfReach);
     }
+    // The rail deck forms a hard lower boundary. Natural terrain never joins
+    // a train: ordinary parts must be explicit edits in the building envelope.
+    let floor = (1..=12)
+        .find_map(|drop| {
+            let y = start[1] - drop;
+            (-4..=4).find_map(|x| {
+                (-4..=4).find_map(|z| {
+                    let cell = [start[0] + x, y, start[2] + z];
+                    rails::owner_at(journal, cell)
+                        .filter(|piece| rails::complete(journal, *piece))
+                        .map(|_| y + 1)
+                })
+            })
+        })
+        .ok_or(TrainError::Unsupported)?;
     let mut queue = VecDeque::from([start]);
     let mut visited = BTreeSet::new();
     let mut cells = BTreeMap::new();
@@ -128,8 +164,22 @@ pub fn plan_assembly(
         if !visited.insert(cell) {
             continue;
         }
+        if cell[1] < floor {
+            continue;
+        }
         let material = chunks.block_at(cell).ok_or(TrainError::Incomplete)?;
-        if !train_parts::is_part(material) {
+        if material == 0
+            || material == terra_voxel::MaterialId::FluidWater as u16
+            || material == train_parts::STATION
+            || terra_core::rails::is_rail(material)
+        {
+            continue;
+        }
+        if !train_parts::is_part(material)
+            && (journal.block(cell) != Some(material)
+                || terra_voxel::MaterialId::from_raw(material).is_none()
+                    && !properties.0.contains_key(&material))
+        {
             continue;
         }
         if cells.len() >= MAX_PARTS
@@ -159,13 +209,44 @@ pub fn plan_assembly(
     if cells.is_empty() {
         return Err(TrainError::Missing);
     }
+    if cells.keys().any(|cell| journal.crop_at(*cell).is_some()) {
+        return Err(TrainError::AttachedProps);
+    }
+    let owners: BTreeSet<_> = cells
+        .keys()
+        .map(|cell| terra_voxel::global_to_section(*cell).0)
+        .collect();
+    for owner in owners {
+        if chunks
+            .loaded
+            .get(&owner)
+            .into_iter()
+            .flat_map(|section| section.props.iter())
+            .chain(journal.placed_props(owner))
+            .any(|prop| {
+                !prop.removed
+                    && !journal.prop_removed(prop.section, prop.id)
+                    && cells.contains_key(&crate::props::placement::support(prop))
+            })
+        {
+            return Err(TrainError::AttachedProps);
+        }
+    }
     let anchor = *cells.keys().next().unwrap();
     let mut parts = Vec::new();
     let mut edits = Vec::new();
     let mut cargo = BTreeMap::new();
-    for (cell, material) in cells {
+    let mut blocks = BTreeMap::new();
+    let mut payloads = BTreeMap::new();
+    let mut occupied_boxes = BTreeSet::new();
+    for (&cell, &material) in &cells {
         if (0..3).any(|axis| cell[axis].abs_diff(station[axis]) > 64) {
             return Err(TrainError::OutOfReach);
+        }
+        if journal.gameplay().kingdoms.active_at(cell).is_some()
+            || journal.gameplay().trees.owner(cell, material).is_some()
+        {
+            return Err(TrainError::Protected);
         }
         for permission in [
             KingdomPermission::Build,
@@ -181,20 +262,81 @@ pub fn plan_assembly(
         }
         let state = journal.object_state(cell);
         if state.is_some_and(|state| {
-            state.facing > 3
-                || state.peer.is_some()
-                || state.secondary
-                || state.rail_curve.is_some()
+            !state.valid_for(cell, material)
+                || state.peer.is_some_and(|peer| !cells.contains_key(&peer))
         }) {
-            return Err(TrainError::Invalid);
+            // Multi-cell objects must enter and leave the world as a whole.
+            return Err(TrainError::Incomplete);
+        }
+        if journal
+            .belt_owner(cell)
+            .is_some_and(|belt| !cells.contains_key(&belt.start) || !cells.contains_key(&belt.end))
+        {
+            return Err(TrainError::Incomplete);
         }
         let pose = state.unwrap_or_default();
         let index = parts.len() as u16;
-        let inventory = (material == train_parts::CARGO)
+        let inventory = matches!(material, 29 | train_parts::CARGO)
             .then(|| journal.container_at(cell).cloned().unwrap_or_default());
         if let Some(inventory) = &inventory {
             cargo.insert(index, inventory.clone());
         }
+        let mut boxes = Vec::new();
+        let authored = crate::interaction_shapes::visit_collision_boxes_with(
+            journal,
+            properties,
+            cell,
+            |position| Some(cells.get(&position).copied().unwrap_or(0)),
+            |mut bounds| {
+                // Joined openings return their compound volumes for each cell.
+                // One captured owner supplies each physical volume exactly once.
+                let key: [u64; 6] = std::array::from_fn(|index| {
+                    if index < 3 {
+                        bounds.minimum[index].to_bits()
+                    } else {
+                        bounds.maximum[index - 3].to_bits()
+                    }
+                });
+                if !occupied_boxes.insert(key) {
+                    return;
+                }
+                for (axis, value) in cell.into_iter().enumerate() {
+                    bounds.minimum[axis] -= value as f64;
+                    bounds.maximum[axis] -= value as f64;
+                }
+                boxes.push(bounds);
+            },
+        );
+        if !authored
+            && terra_voxel::MaterialId::from_raw(material)
+                .is_none_or(terra_voxel::MaterialId::is_solid)
+        {
+            boxes.push(ShapeBox {
+                minimum: [0.0; 3],
+                maximum: [1.0; 3],
+                hinged: false,
+            });
+        }
+        let registry = &journal.gameplay().kingdoms;
+        let heraldry = registry.heraldry_at(cell).or_else(|| {
+            chunks
+                .village_settlements()
+                .find(|site| site.domain().contains(cell))
+                .and_then(|site| registry.domain_heraldry(&site.domain(), cell))
+        });
+        blocks.insert(
+            index,
+            terra_core::trains::TrainBlockView {
+                boxes,
+                tint: journal.tint_at(cell),
+                heraldry,
+                peer: pose
+                    .peer
+                    .map(|peer| std::array::from_fn(|axis| (peer[axis] - cell[axis]) as i16)),
+                secondary: pose.secondary,
+            },
+        );
+        payloads.insert(index, journal.train_payload(cell)?);
         parts.push(TrainPart {
             offset: std::array::from_fn(|axis| (cell[axis] - anchor[axis]) as i16),
             material,
@@ -215,6 +357,8 @@ pub fn plan_assembly(
         anchor,
         parts,
         cargo,
+        blocks,
+        payloads,
         couplings: [None, None],
         revision: 1,
     };
@@ -226,7 +370,7 @@ pub fn plan_assembly(
         journal,
         &vehicle,
         &edits.iter().map(|part| part.cell).collect(),
-        &Default::default(),
+        properties,
     )?;
     Ok(AssemblyPlan {
         station,
@@ -236,6 +380,7 @@ pub fn plan_assembly(
         assembling: true,
         registry_revision: journal.gameplay().trains.revision,
         parts: edits,
+        properties: properties.clone(),
     })
 }
 pub fn plan_dismantle(
@@ -276,11 +421,15 @@ pub fn plan_dismantle(
         edits.push(PartEdit {
             cell,
             expected: 0,
-            state: Some(BlockObjectState {
-                facing: part.facing,
-                wood: part.wood,
-                ..Default::default()
-            }),
+            state: if let Some(payload) = vehicle.payloads.get(&(index as u16)) {
+                EditJournal::train_payload_pose(payload)?
+            } else {
+                Some(BlockObjectState {
+                    facing: part.facing,
+                    wood: part.wood,
+                    ..Default::default()
+                })
+            },
             cargo: vehicle.cargo.get(&(index as u16)).cloned(),
         });
     }
@@ -292,6 +441,7 @@ pub fn plan_dismantle(
         assembling: false,
         registry_revision: journal.gameplay().trains.revision,
         parts: edits,
+        properties: Default::default(),
     })
 }
 pub fn commit(
@@ -302,17 +452,22 @@ pub fn commit(
     journal.commit_train_plan(chunks, plan)
 }
 pub fn part_boxes(origin: [f64; 3], part: &TrainPart) -> impl Iterator<Item = ShapeBox> {
-    train_parts::boxes(part.material, part.facing)
-        .into_iter()
-        .map(move |shape| ShapeBox {
-            minimum: std::array::from_fn(|axis| {
-                origin[axis] + f64::from(part.offset[axis]) + shape.minimum[axis]
-            }),
-            maximum: std::array::from_fn(|axis| {
-                origin[axis] + f64::from(part.offset[axis]) + shape.maximum[axis]
-            }),
-            ..shape
-        })
+    part_boxes_with(origin, part, train_parts::boxes(part.material, part.facing))
+}
+pub fn part_boxes_with(
+    origin: [f64; 3],
+    part: &TrainPart,
+    boxes: Vec<ShapeBox>,
+) -> impl Iterator<Item = ShapeBox> {
+    boxes.into_iter().map(move |shape| ShapeBox {
+        minimum: std::array::from_fn(|axis| {
+            origin[axis] + f64::from(part.offset[axis]) + shape.minimum[axis]
+        }),
+        maximum: std::array::from_fn(|axis| {
+            origin[axis] + f64::from(part.offset[axis]) + shape.maximum[axis]
+        }),
+        ..shape
+    })
 }
 pub fn boxes_in(journal: &EditJournal, low: [f64; 3], high: [f64; 3]) -> Vec<ShapeBox> {
     if low
@@ -335,15 +490,29 @@ pub fn boxes_in(journal: &EditJournal, low: [f64; 3], high: [f64; 3]) -> Vec<Sha
             vehicle
                 .parts
                 .iter()
-                .flat_map(move |part| part_boxes(vehicle.model_origin(), part))
+                .enumerate()
+                .flat_map(move |(index, part)| {
+                    part_boxes_with(vehicle.model_origin(), part, vehicle.part_shapes(index))
+                })
         })
         .filter(|shape| shape.intersects(low, high))
         .collect()
+}
+fn shapes(
+    parts: &[TrainPart],
+    blocks: &BTreeMap<u16, terra_core::trains::TrainBlockView>,
+    index: usize,
+) -> Vec<ShapeBox> {
+    blocks.get(&(index as u16)).map_or_else(
+        || train_parts::boxes(parts[index].material, parts[index].facing),
+        |block| block.boxes.clone(),
+    )
 }
 fn reserved_parts(
     anchor: Cell,
     origin: [f64; 3],
     parts: &[TrainPart],
+    blocks: &BTreeMap<u16, terra_core::trains::TrainBlockView>,
     model_bounds: [[f64; 3]; 2],
     cell: Cell,
 ) -> bool {
@@ -357,9 +526,10 @@ fn reserved_parts(
     let high = cell.map(|value| value as f64 + 1.0);
     let [minimum, maximum] = model_bounds;
     (0..3).all(|axis| minimum[axis] < high[axis] && maximum[axis] > low[axis])
-        && parts
-            .iter()
-            .any(|part| part_boxes(origin, part).any(|shape| shape.intersects(low, high)))
+        && parts.iter().enumerate().any(|(index, part)| {
+            part_boxes_with(origin, part, shapes(parts, blocks, index))
+                .any(|shape| shape.intersects(low, high))
+        })
 }
 pub fn reserved(journal: &EditJournal, cell: Cell) -> bool {
     journal.gameplay().trains.vehicles.values().any(|vehicle| {
@@ -367,6 +537,7 @@ pub fn reserved(journal: &EditJournal, cell: Cell) -> bool {
             vehicle.anchor,
             vehicle.model_origin(),
             &vehicle.parts,
+            &vehicle.blocks,
             vehicle.model_bounds(),
             cell,
         )
@@ -378,6 +549,7 @@ pub fn reserved_in(views: &[terra_core::trains::VehicleView], cell: Cell) -> boo
             vehicle.anchor,
             vehicle.model_origin(),
             &vehicle.parts,
+            &vehicle.blocks,
             vehicle.model_bounds(),
             cell,
         )
@@ -395,6 +567,7 @@ pub fn raycast(
                 vehicle.id,
                 vehicle.model_origin(),
                 vehicle.parts.as_slice(),
+                &vehicle.blocks,
                 vehicle.model_bounds(),
             )
         }),
@@ -415,6 +588,7 @@ pub fn raycast_views(
                 vehicle.id,
                 vehicle.model_origin(),
                 vehicle.parts.as_slice(),
+                &vehicle.blocks,
                 vehicle.model_bounds(),
             )
         }),
@@ -424,7 +598,15 @@ pub fn raycast_views(
     )
 }
 fn raycast_parts<'a>(
-    vehicles: impl Iterator<Item = (u64, [f64; 3], &'a [TrainPart], [[f64; 3]; 2])>,
+    vehicles: impl Iterator<
+        Item = (
+            u64,
+            [f64; 3],
+            &'a [TrainPart],
+            &'a BTreeMap<u16, terra_core::trains::TrainBlockView>,
+            [[f64; 3]; 2],
+        ),
+    >,
     origin: [f64; 3],
     direction: [f64; 3],
     reach: f64,
@@ -439,7 +621,7 @@ fn raycast_parts<'a>(
         return None;
     }
     let mut hit: Option<TrainHit> = None;
-    for (id, model_origin, parts, [low, high]) in vehicles {
+    for (id, model_origin, parts, blocks, [low, high]) in vehicles {
         if (ShapeBox {
             minimum: low,
             maximum: high,
@@ -451,7 +633,7 @@ fn raycast_parts<'a>(
             continue;
         }
         for (index, part) in parts.iter().enumerate() {
-            for shape in part_boxes(model_origin, part) {
+            for shape in part_boxes_with(model_origin, part, shapes(parts, blocks, index)) {
                 if let Some((distance, _)) = shape.ray(origin, direction, reach)
                     && hit.is_none_or(|old| distance < old.distance)
                 {
@@ -475,8 +657,8 @@ pub fn model_clearance(
     ignored: &BTreeSet<Cell>,
     properties: &terra_core::block_properties::BlockPropertiesCatalog,
 ) -> Result<(), TrainError> {
-    for part in &vehicle.parts {
-        for mut shape in part_boxes(vehicle.model_origin(), part) {
+    for (index, part) in vehicle.parts.iter().enumerate() {
+        for mut shape in part_boxes_with(vehicle.model_origin(), part, vehicle.part_shapes(index)) {
             for axis in 0..3 {
                 shape.minimum[axis] += 1e-8;
                 shape.maximum[axis] -= 1e-8;

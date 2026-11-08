@@ -1,5 +1,6 @@
 use super::*;
 use crate::blocks::{BlockTemplate, definitions::BlockRenderKind};
+use terra_world::edits::BlockObjectState;
 
 fn templates() -> TemplateSet {
     let mut templates = TemplateSet::default();
@@ -67,7 +68,14 @@ fn assembled_geometry_matches_actual_placed_models_in_every_pose_and_wood() {
             })
         })
         .collect();
-    let merged = geometry(&parts, &templates).unwrap();
+    let merged = geometry(
+        &parts,
+        &Default::default(),
+        &templates,
+        [0; 3],
+        &Default::default(),
+    )
+    .unwrap();
     assert!(!merged.is_empty() && merged.len() <= 7);
     type AuthoredBatch = (Vec<[f32; 3]>, Vec<[f32; 3]>, Vec<[f32; 2]>, Vec<u32>);
     let mut expected = BTreeMap::<usize, AuthoredBatch>::new();
@@ -138,9 +146,10 @@ fn vehicle_geometry_key_ignores_cargo_revisions_and_tracks_authored_pose() {
     let key = GeometryKey {
         anchor: [-16, 12, 31],
         parts: vec![part],
+        blocks: Default::default(),
     };
-    assert!(key.matches([-16, 12, 31], &[part]));
-    assert!(!key.matches([-15, 12, 31], &[part]));
+    assert!(key.matches([-16, 12, 31], &[part], &Default::default()));
+    assert!(!key.matches([-15, 12, 31], &[part], &Default::default()));
     for changed in [
         TrainPart { facing: 1, ..part },
         TrainPart {
@@ -152,7 +161,7 @@ fn vehicle_geometry_key_ignores_cargo_revisions_and_tracks_authored_pose() {
             ..part
         },
     ] {
-        assert!(!key.matches(key.anchor, &[changed]));
+        assert!(!key.matches(key.anchor, &[changed], &Default::default()));
     }
 }
 
@@ -185,10 +194,265 @@ fn assembled_root_uses_the_same_fractional_origin_as_authoritative_models() {
         couplings: [None; 2],
         revision: 1,
         mass_kg: 0,
+        blocks: Default::default(),
     };
     assert_eq!(
         model_translation(vehicle.anchor).to_array(),
         vehicle.model_origin().map(|value| value as f32)
     );
     assert!(model_translation(vehicle.anchor).y < vehicle.anchor[1] as f32);
+}
+
+fn block_template(material: usize, model: Vec<crate::blocks::PrimitiveTemplate>) -> BlockTemplate {
+    BlockTemplate {
+        surface: None,
+        render_kind: if model.is_empty() {
+            BlockRenderKind::Cube
+        } else {
+            BlockRenderKind::CustomMesh
+        },
+        bevel_width: 0.0,
+        faces: crate::blocks::cube::cube_faces(0.0, [material; 6], None),
+        face_materials: [material; 6],
+        side_cap: None,
+        details: Vec::new(),
+        model,
+    }
+}
+
+#[test]
+fn arbitrary_cubes_keep_their_surface_and_dye_instead_of_becoming_invisible() {
+    let mut templates = templates();
+    templates
+        .blocks
+        .insert(103, block_template(100, Vec::new()));
+    let part = TrainPart {
+        material: 103,
+        facing: 0,
+        offset: [3, 2, -1],
+        wood: Default::default(),
+    };
+    let tint = [42, 172, 190];
+    let blocks = [(
+        0,
+        TrainBlockView {
+            tint: Some(tint),
+            ..default()
+        },
+    )]
+    .into();
+    let batches = geometry(&[part], &blocks, &templates, [0; 3], &Default::default()).unwrap();
+    assert_eq!(batches.len(), 1);
+    let batch = &batches[0];
+    assert_eq!(batch.material, 100);
+    assert_eq!(batch.indices.len(), 36);
+    assert_eq!(batch.colors.len(), batch.positions.len());
+    assert!(
+        batch
+            .colors
+            .iter()
+            .all(|color| *color == crate::dye_tint::rgb(tint))
+    );
+    for axis in 0..3 {
+        let low = batch
+            .positions
+            .iter()
+            .map(|p| p[axis])
+            .min_by(f32::total_cmp)
+            .unwrap();
+        let high = batch
+            .positions
+            .iter()
+            .map(|p| p[axis])
+            .max_by(f32::total_cmp)
+            .unwrap();
+        assert_eq!(low, f32::from(part.offset[axis]));
+        assert_eq!(high, f32::from(part.offset[axis]) + 1.0);
+    }
+}
+
+#[test]
+fn side_and_top_slabs_keep_their_non_yaw_poses_and_future_custom_models_are_accepted() {
+    let mut templates = templates();
+    let slab = crate::blocks::cube::box_model(terra_core::construction::boxes(82), 0.0, [100; 6]);
+    templates.blocks.insert(82, block_template(100, slab));
+    let future = crate::blocks::cube::box_model(
+        &[terra_core::block_shapes::ShapeBox {
+            minimum: [0.2, 0.1, 0.3],
+            maximum: [0.8, 0.9, 0.7],
+            hinged: false,
+        }],
+        0.0,
+        [101; 6],
+    );
+    templates.blocks.insert(60_000, block_template(101, future));
+    for facing in [4, 5, 6, 7, 8] {
+        let part = TrainPart {
+            material: 82,
+            facing,
+            offset: [0; 3],
+            wood: Default::default(),
+        };
+        let bounds = terra_core::construction::slab_bounds(facing);
+        let batches = geometry(
+            &[part],
+            &Default::default(),
+            &templates,
+            [0; 3],
+            &Default::default(),
+        )
+        .unwrap();
+        for axis in 0..3 {
+            let points = || {
+                batches
+                    .iter()
+                    .flat_map(|batch| batch.positions.iter().map(move |p| p[axis]))
+            };
+            assert!(
+                (points().min_by(f32::total_cmp).unwrap() - bounds.minimum[axis] as f32).abs()
+                    < 1e-5
+            );
+            assert!(
+                (points().max_by(f32::total_cmp).unwrap() - bounds.maximum[axis] as f32).abs()
+                    < 1e-5
+            );
+        }
+    }
+    let future = TrainPart {
+        material: 60_000,
+        facing: 1,
+        offset: [0; 3],
+        wood: Default::default(),
+    };
+    assert!(
+        !geometry(
+            &[future],
+            &Default::default(),
+            &templates,
+            [0; 3],
+            &Default::default()
+        )
+        .unwrap()[0]
+            .positions
+            .is_empty()
+    );
+}
+
+#[test]
+fn double_chest_retains_both_wood_colors_and_emits_its_shared_body_once() {
+    let mut templates = templates();
+    let mut chest = crate::blocks::test_static_scene("terra/blocks/models/chest.gltf", 29);
+    for primitive in &mut chest {
+        primitive.material = 100;
+    }
+    templates.wood_materials.insert(100);
+    templates.blocks.insert(29, block_template(100, chest));
+    let first = TrainPart {
+        material: 29,
+        facing: 0,
+        offset: [0; 3],
+        wood: terra_core::WoodSpecies::Birch,
+    };
+    let parts = [
+        first,
+        TrainPart {
+            offset: [1, 0, 0],
+            wood: terra_core::WoodSpecies::Cherry,
+            ..first
+        },
+    ];
+    let blocks = [
+        (
+            0,
+            TrainBlockView {
+                peer: Some([1, 0, 0]),
+                ..default()
+            },
+        ),
+        (
+            1,
+            TrainBlockView {
+                peer: Some([-1, 0, 0]),
+                secondary: true,
+                ..default()
+            },
+        ),
+    ]
+    .into();
+    let batches = geometry(&parts, &blocks, &templates, [0; 3], &Default::default()).unwrap();
+    let batch = &batches[0];
+    assert!(batch.colors.contains(&parts[0].wood.tint()));
+    assert!(batch.colors.contains(&parts[1].wood.tint()));
+    let expected = crate::meshing::custom::vehicle_model_geometry(
+        &first,
+        blocks.get(&0),
+        parts[1].wood,
+        [None; 6],
+        &templates,
+        [0; 3],
+    )
+    .unwrap();
+    assert_eq!(batch.indices.len(), expected[0].indices.len());
+}
+
+#[test]
+fn water_refilling_a_removed_source_cell_does_not_hide_the_mounted_model() {
+    let part = TrainPart {
+        offset: [0; 3],
+        material: 163,
+        facing: 0,
+        wood: Default::default(),
+    };
+    let cell = [0, 2, 0];
+    let (owner, local) = terra_voxel::global_to_section(cell);
+    let mut data = terra_voxel::BlockSection::empty(owner).unwrap();
+    data.set_block(local, 27).unwrap();
+    let mut chunks = ChunkStore::default();
+    chunks.loaded.insert(
+        owner,
+        terra_world::streaming::LoadedSection {
+            data,
+            mesh: None,
+            mesh_epoch: 0,
+            water_epoch: 0,
+            water: None,
+            props: Vec::new(),
+        },
+    );
+    let mut journal = EditJournal::default();
+    journal.record(cell, 27).unwrap();
+    let mut rendered = RenderedSections::default();
+    rendered
+        .block_revisions
+        .insert(owner, journal.revision(owner));
+    assert!(terrain_retired(cell, &[part], &chunks, &journal, &rendered));
+    chunks
+        .loaded
+        .get_mut(&owner)
+        .unwrap()
+        .data
+        .set_block(local, part.material)
+        .unwrap();
+    assert!(!terrain_retired(
+        cell,
+        &[part],
+        &chunks,
+        &journal,
+        &rendered
+    ));
+    chunks
+        .loaded
+        .get_mut(&owner)
+        .unwrap()
+        .data
+        .set_block(local, 27)
+        .unwrap();
+    rendered.block_revisions.clear();
+    assert!(!terrain_retired(
+        cell,
+        &[part],
+        &chunks,
+        &journal,
+        &rendered
+    ));
 }

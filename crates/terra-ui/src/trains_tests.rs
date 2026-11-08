@@ -38,6 +38,7 @@ fn car(id: u64) -> VehicleView {
             facing: 0,
             wood: WoodSpecies::Oak,
         }],
+        blocks: Default::default(),
         couplings: [None, None],
         revision: 7,
         mass_kg: 2000,
@@ -281,4 +282,309 @@ fn leaving_a_train_seat_uses_the_configured_action_and_one_confirmed_request() {
         app.world().resource::<ClientSession>().train_seat.is_some(),
         "the client never speculatively clears its authoritative seat"
     );
+}
+
+fn track_fixture(app: &mut App, facing: u8) {
+    use terra_voxel::{BlockSection, global_to_section};
+    use terra_world::{
+        edits::EditJournal,
+        streaming::{ChunkStore, LoadedSection},
+    };
+    let mut chunks = ChunkStore::default();
+    let mut journal = EditJournal::default();
+    fn set(chunks: &mut ChunkStore, cell: [i64; 3], material: u16) {
+        let (owner, local) = global_to_section(cell);
+        chunks
+            .loaded
+            .entry(owner)
+            .or_insert_with(|| LoadedSection {
+                data: BlockSection::empty(owner).unwrap(),
+                mesh: None,
+                mesh_epoch: 0,
+                water_epoch: 0,
+                water: None,
+                props: Vec::new(),
+            })
+            .data
+            .set_block(local, material)
+            .unwrap();
+    }
+    for x in -9..=9 {
+        for y in -2..=6 {
+            for z in -9..=9 {
+                set(&mut chunks, [x, y, z], 0);
+            }
+        }
+    }
+    let rotate = |[x, y, z]: [i64; 3]| match facing {
+        0 => [x, y, z],
+        1 => [z, y, -x],
+        2 => [-x, y, -z],
+        _ => [-z, y, x],
+    };
+    for anchor in [[0, 0, 0], rotate([0, 0, 4])] {
+        let piece =
+            terra_core::rails::Piece::new(anchor, terra_core::rails::STRAIGHT, facing).unwrap();
+        for point in piece.supports().iter() {
+            set(
+                &mut chunks,
+                std::array::from_fn(|axis| anchor[axis] + i64::from(point.support[axis])),
+                3,
+            );
+        }
+        let plan =
+            terra_world::rails::plan(&chunks, &journal, anchor, piece.material, facing).unwrap();
+        terra_world::rails::commit(&mut chunks, &mut journal, &plan).unwrap();
+    }
+    let station = rotate([3, 2, 2]);
+    set(&mut chunks, station, 217);
+    journal.record(station, 217).unwrap();
+    app.insert_resource(chunks).insert_resource(journal);
+    app.world_mut().resource_mut::<TrainUiState>().station = Some(station);
+}
+
+#[test]
+fn registered_html_handler_accepts_label_and_icon_children_and_local_choices_while_inspection_waits()
+ {
+    use tilt_ui::{ElementId, HtmlEvent};
+    let mut app = app();
+    open(&mut app);
+    app.world_mut().resource_mut::<TrainUiState>().pending = Some(123);
+    let button = app
+        .world_mut()
+        .spawn(ElementId("kind:passenger".into()))
+        .id();
+    let label = app.world_mut().spawn(ChildOf(button)).id();
+    let handler = tilt_ui::inventory::iter::<tilt_ui::HtmlHandlerRegistration>
+        .into_iter()
+        .find(|registration| registration.name == "train_workshop_action")
+        .expect("The authored template handler must be registered by the real macro");
+    let system = (handler.register)(app.world_mut());
+    app.world_mut()
+        .run_system_with(
+            system,
+            HtmlEvent {
+                target: label,
+                kind: "click",
+                value: None,
+                submitter: None,
+                data: Default::default(),
+                form_data: None,
+                handler: handler.name.into(),
+            },
+        )
+        .unwrap();
+    app.update();
+    assert_eq!(app.world().resource::<TrainView>().kind, "Personenwagen");
+    assert!(app.world().resource::<TrainView>().pending);
+    assert!(
+        requests(&mut app).is_empty(),
+        "kind choices are visual and never forge server requests"
+    );
+}
+
+#[test]
+fn workshop_restores_pointer_events_under_the_noninteractive_game_overlay() {
+    use tilt_ui::tilt_ui_css::{PointerEvents, StyleDeclaration, parse_stylesheet};
+    let game = parse_stylesheet(include_str!("../../../src-ui/pages/game.component.css")).unwrap();
+    let workshop = parse_stylesheet(include_str!(
+        "../../../src-ui/components/train-workshop.component.css"
+    ))
+    .unwrap();
+    assert!(
+        game.rules[0]
+            .declarations
+            .iter()
+            .any(|declaration| matches!(
+                declaration,
+                StyleDeclaration::PointerEvents(PointerEvents::None)
+            ))
+    );
+    assert!(
+        workshop.rules[0]
+            .declarations
+            .iter()
+            .any(|declaration| matches!(
+                declaration,
+                StyleDeclaration::PointerEvents(PointerEvents::Auto)
+            )),
+        "the workshop must override inherited pointer-events:none"
+    );
+}
+
+#[test]
+fn all_vehicle_guides_snap_both_bogies_to_complete_rails_and_persist_after_closing() {
+    for facing in 0..4 {
+        let mut app = app();
+        open(&mut app);
+        track_fixture(&mut app, facing);
+        for kind in ["locomotive", "passenger", "tender", "freight"] {
+            actions(&mut app, &format!("kind:{kind}"));
+            let guide = app.world().resource::<TrainBlueprint>();
+            assert_eq!(
+                guide.cells.len(),
+                if kind == "locomotive" { 13 } else { 12 }
+            );
+            assert!(guide.cells.iter().all(|part| part.facing % 2 == facing % 2));
+            for part in guide.cells.iter().filter(|part| part.material == 211) {
+                assert!(terra_world::trains::bogie_supported(
+                    app.world().resource::<terra_world::streaming::ChunkStore>(),
+                    app.world().resource::<terra_world::edits::EditJournal>(),
+                    part.cell,
+                ));
+            }
+        }
+        let expected = app.world().resource::<TrainBlueprint>().clone();
+        actions(&mut app, "blueprint-build");
+        assert!(!app.world().resource::<TrainView>().open);
+        assert!(app.world().resource::<TrainView>().blueprint);
+        assert_eq!(app.world().resource::<TrainBlueprint>(), &expected);
+        open(&mut app);
+        actions(&mut app, "blueprint-clear");
+        assert!(app.world().resource::<TrainBlueprint>().cells.is_empty());
+    }
+}
+
+#[test]
+fn missing_or_incomplete_rails_give_actionable_feedback_and_world_changes_clear_the_guide() {
+    let mut app = app();
+    open(&mut app);
+    actions(&mut app, "kind:locomotive");
+    assert!(!app.world().resource::<TrainView>().blueprint);
+    assert!(
+        app.world()
+            .resource::<TrainView>()
+            .status
+            .contains("Gleis verlängern")
+    );
+    track_fixture(&mut app, 0);
+    actions(&mut app, "kind:locomotive");
+    assert!(app.world().resource::<TrainView>().blueprint);
+    app.world_mut().resource_mut::<ClientSession>().ready = false;
+    app.update();
+    assert!(app.world().resource::<TrainBlueprint>().cells.is_empty());
+}
+
+#[test]
+fn ordinary_chest_on_an_assembled_vehicle_opens_the_same_private_cargo_flow() {
+    let mut app = app();
+    let mut controls = terra_core::ControlsConfig::default();
+    controls
+        .rebind(
+            GameAction::Place,
+            terra_core::InputBinding::Mouse(MouseButton::Right),
+        )
+        .unwrap();
+    app.insert_resource(controls);
+    let mut vehicle = car(1);
+    vehicle.parts[0].material = 29;
+    app.world_mut()
+        .resource_mut::<ClientSession>()
+        .trains
+        .vehicles
+        .push(vehicle);
+    let mut capture = terra_player::CameraInputState::default();
+    capture.captured = true;
+    app.insert_resource(capture)
+        .insert_resource(terra_player::TargetTrain(Some(
+            terra_world::trains::TrainHit {
+                vehicle: 1,
+                part: 0,
+                distance: 2.0,
+            },
+        )));
+    app.world_mut()
+        .resource_mut::<ButtonInput<MouseButton>>()
+        .press(MouseButton::Right);
+    app.update();
+    assert!(app.world().resource::<TrainUiState>().open);
+    let sent = requests(&mut app);
+    assert_eq!(sent.len(), 1);
+    assert_eq!(
+        sent[0].0.action,
+        TrainAction::OpenCargo {
+            vehicle: 1,
+            part: 0
+        }
+    );
+}
+
+#[test]
+fn build_guide_never_labels_a_ghost_behind_a_nearer_wall() {
+    let mut app = app();
+    open(&mut app);
+    track_fixture(&mut app, 0);
+    let station = app.world().resource::<TrainUiState>().station;
+    *app.world_mut().resource_mut::<TrainBlueprint>() = TrainBlueprint {
+        station,
+        kind: VehicleKind::Locomotive,
+        cells: vec![train_blueprint::BlueprintCell {
+            cell: [0, 2, -2],
+            material: 210,
+            facing: 0,
+        }],
+    };
+    app.world_mut().spawn((
+        terra_player::TerraCamera,
+        Transform::from_xyz(0.5, 2.5, 2.5),
+    ));
+    app.update();
+    assert!(
+        app.world()
+            .resource::<TrainView>()
+            .blueprint_target
+            .contains("Zug-Fahrgestell")
+    );
+    app.insert_resource(terra_player::TargetWorld(Some(
+        terra_player::WorldTarget::Block(terra_voxel::blocks::BlockHit {
+            position: [0, 2, 0],
+            normal: [0, 0, 1],
+            distance: 1.5,
+        }),
+    )));
+    app.update();
+    assert!(
+        !app.world()
+            .resource::<TrainView>()
+            .blueprint_target
+            .contains("Zug-Fahrgestell")
+    );
+}
+
+#[test]
+fn a_new_connection_or_replaced_world_cannot_replay_old_build_ghosts() {
+    let mut app = app();
+    open(&mut app);
+    track_fixture(&mut app, 0);
+    actions(&mut app, "kind:locomotive");
+    assert!(!app.world().resource::<TrainBlueprint>().cells.is_empty());
+    app.world_mut().resource_mut::<TrainUiState>().identity =
+        Some((None, Some(PlayerUuid::from_u128(1))));
+    let connection = app.world_mut().spawn_empty().id();
+    app.world_mut().resource_mut::<ClientSession>().connection = Some(connection);
+    app.update();
+    assert!(app.world().resource::<TrainBlueprint>().cells.is_empty());
+    open(&mut app);
+    actions(&mut app, "kind:locomotive");
+    assert!(!app.world().resource::<TrainBlueprint>().cells.is_empty());
+    app.insert_resource(terra_world::streaming::ChunkStore::default());
+    app.update();
+    assert!(app.world().resource::<TrainBlueprint>().cells.is_empty());
+}
+
+#[test]
+fn workshop_panel_fits_hd_through_4k_without_enlarging_text_independently() {
+    let content = Vec2::new(880.0, 720.0);
+    for (viewport, scale) in [
+        (Vec2::new(1280.0, 720.0), 1.5),
+        (Vec2::new(1920.0, 1080.0), 1.5),
+        (Vec2::new(2560.0, 1440.0), 2.0),
+        (Vec2::new(3840.0, 2160.0), 2.0),
+    ] {
+        let logical = viewport / scale;
+        let fitted = panel_scale(logical, content);
+        assert!(fitted <= 1.0);
+        assert!(content.x * fitted <= logical.x * 0.94 + 0.01);
+        assert!(content.y * fitted <= logical.y * 0.92 + 0.01);
+    }
 }
