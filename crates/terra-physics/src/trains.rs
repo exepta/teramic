@@ -65,6 +65,18 @@ impl TrainCollisionViews {
         vehicles: &[VehicleView],
         journal: &EditJournal,
     ) -> Result<bool, String> {
+        self.set_confirmed_views_with_removals(vehicles, &[], journal)
+    }
+    /// Explicit destruction has no subsequent terrain restoration to wait for.
+    pub fn set_confirmed_views_with_removals(
+        &mut self,
+        vehicles: &[VehicleView],
+        destroyed: &[u64],
+        journal: &EditJournal,
+    ) -> Result<bool, String> {
+        if destroyed.len() > terra_core::trains::MAX_VEHICLES {
+            return Err("Too many destroyed train IDs".into());
+        }
         if vehicles.len() > terra_core::trains::MAX_VEHICLES
             || vehicles
                 .iter()
@@ -85,7 +97,11 @@ impl TrainCollisionViews {
                         .filter_map(|index| previous.world_cell(index))
                         .collect()
                 });
-                let required = checkpoints(&cells, journal, true)?;
+                let required = if destroyed.contains(&previous.id) {
+                    Vec::new()
+                } else {
+                    checkpoints(&cells, journal, true)?
+                };
                 removed.push((
                     previous.id,
                     Retirement {

@@ -7211,3 +7211,38 @@ Inventarklicks und Modell/Rauch geprueft. Drei 25-Sekunden-Messungen in frischen
 Kopien der Test-Welt: Blockbau maximal 27.23 ms, Gleisbau 28.62 ms, Streaming
 ueber rund 237 Meter 25.16 ms pro Frame. Die urspruenglichen acht Weltdateien
 sind unveraendert. Diese Stichproben sind keine allgemeine Framerate-Garantie.
+
+## 222. Sicheres Zug-Aussteigen, Weltbeitritt Und Isolierte Montagevorschau
+
+Die Ausstiegssuche erreicht auch freien Boden neben breiten, erhoehten Kabinen;
+Terrain und andere Fahrzeuge blockieren weiterhin den geprueften Uebergang.
+Waehrend des Sitzens beziehungsweise eines noch offenen Ausstiegs bleibt die
+letzte stehende Speicherposition erhalten. Alte Sitzpositionen werden vor dem
+Weltbeitritt gegen echte Zugformen geprueft und in freien Raum korrigiert, statt
+nach dem Laden mit „Spawn changed before terrain became ready“ abgewiesen zu
+werden. Das Fahrpult hat einen expliziten Aussteigen-Button.
+
+„Zug zerstoeren“ entfernt nach zweiter Bestaetigung Fahrzeug und Ladung dauerhaft.
+Der Besitzer muss in Reichweite sein; Stillstand, freie Sitze, geloeste Kupplungen,
+Revision und Baurechte werden serverseitig geprueft. Der eigene Fahrer steigt
+vorher aus. Zuverlaessige Loeschmarkierungen verhindern auf Replikaten das Warten
+auf eine nicht stattfindende Blockwiederherstellung. Montage bleibt die Aktion
+zum Wiederherstellen bearbeitbarer Bloecke. Client und Server: Protokoll 124;
+bestehende Saveformate bleiben unveraendert.
+
+Die neue 3x-Vorlage erhoeht Sitz, Boden, Fenster und Dach um weitere zwei Bloecke
+und verbindet den Zugang mit einer hinteren Treppe. Eigenbauten werden nicht
+ungefragt umgebaut. Die Montagekamera nutzt Ebene 25 statt der mit der
+Weltminiatur geteilten Ebene 28; Terrain-/Grasbloecke geraten dadurch nicht mehr
+in die Vorschau. Gefressene Bodenwachstums-Grasbueschel werden nicht mehr in den
+fuer sie ungueltigen allgemeinen Futter-Nachwuchstimer eingetragen.
+
+4496 Workspace-Tests bestanden, 10 ignoriert; ein separat fehlendes originales
+FIVERR-GLB-Referenzasset wurde gezielt ausgefiltert, dessen Loeschung blieb
+unangetastet. Strenges Clippy, Build, Formatierung und Whitespace-Pruefung bestanden.
+Native Montage-UI samt echter Maus-Bestaetigung in 1080p/720p und isolierten
+Render-Ebenen geprueft. Die aktuelle Test-Welt zweimal nativ ueber ihren echten
+Integrated Server geladen, dazwischen gespeichert; acht Originaldateien per
+SHA-256 unveraendert. Reale UDP-Tests pruefen auch alte Sitz-Saves und Loeschung
+bei Besitzer sowie Beobachter. Details und Screenshots:
+[Train Exit / Rejoin / Preview](tools/benchmarks/results/train-exit-rejoin-preview-2026-11-09/README.md).

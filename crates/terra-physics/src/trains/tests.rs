@@ -870,3 +870,30 @@ fn compact_train_motion_moves_the_existing_backend_body_without_recooking() {
             > 0.9999
     );
 }
+
+#[test]
+fn explicit_destruction_retires_replica_collision_without_restored_section_packets() {
+    let view = vehicle().view();
+    let mut app = app(view.clone());
+    loaded_cells(&mut app, &view, false);
+    wait_active(&mut app, view.id);
+    app.world_mut()
+        .resource_scope(|world, mut views: Mut<TrainCollisionViews>| {
+            views
+                .set_confirmed_views_with_removals(&[], &[view.id], world.resource::<EditJournal>())
+                .unwrap();
+        });
+    wait_retired(&mut app, view.id);
+    assert!(
+        app.world_mut()
+            .query::<&TrainCollider>()
+            .iter(app.world())
+            .all(|collider| collider.0 != view.id)
+    );
+    assert!(view.parts.iter().enumerate().all(|(index, part)| {
+        app.world()
+            .resource::<ChunkStore>()
+            .block_at(view.part_cell(index).unwrap())
+            != Some(part.material)
+    }));
+}

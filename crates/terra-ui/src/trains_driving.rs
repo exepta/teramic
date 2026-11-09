@@ -182,6 +182,53 @@ pub(super) fn keyboard(world: &mut World, state: &mut TrainUiState, input: &Inpu
 }
 
 pub(super) fn command(world: &mut World, state: &mut TrainUiState, command: &str) -> bool {
+    if command == "leave" {
+        if state.pending.is_none()
+            && world
+                .get_resource::<ClientSession>()
+                .is_some_and(|session| session.train_seat.is_some())
+        {
+            request(world, state, TrainAction::Leave);
+        }
+        return true;
+    }
+    if matches!(command, "destroy" | "destroy-confirm" | "destroy-cancel") {
+        if state.pending.is_some() {
+            return true;
+        }
+        if command == "destroy-cancel" {
+            state.confirm_destroy = None;
+            return true;
+        }
+        let Some(session) = world.get_resource::<ClientSession>() else {
+            return true;
+        };
+        let Some(vehicle) = selected(session, state).cloned() else {
+            return true;
+        };
+        if Some(vehicle.owner) != session.uuid
+            || !vehicle.motion.stopped()
+            || vehicle.couplings.iter().any(Option::is_some)
+        {
+            state.confirm_destroy = None;
+            state.status = "Eigenes Fahrzeug anhalten und Kupplungen lösen.".into();
+            return true;
+        }
+        if command == "destroy" {
+            state.confirm_destroy = Some(vehicle.id);
+        } else if state.confirm_destroy == Some(vehicle.id) {
+            state.destroy_after_leave = Some(vehicle.id);
+            if session
+                .train_seat
+                .is_some_and(|seat| seat.vehicle == vehicle.id)
+            {
+                request(world, state, TrainAction::Leave);
+            } else {
+                resume_destroy(world, state);
+            }
+        }
+        return true;
+    }
     if matches!(command, "dismantle" | "edit") {
         if state.pending.is_none() {
             edit(world, state);
@@ -373,6 +420,30 @@ pub(super) fn edit(world: &mut World, state: &mut TrainUiState) {
     }
 }
 
+pub(super) fn resume_destroy(world: &mut World, state: &mut TrainUiState) {
+    let Some(id) = state.destroy_after_leave.take() else {
+        return;
+    };
+    let revision = world
+        .get_resource::<ClientSession>()
+        .and_then(|session| session.trains.vehicles.iter().find(|car| car.id == id))
+        .map(|car| car.revision);
+    if let Some(revision) = revision {
+        state.destroying = true;
+        request(
+            world,
+            state,
+            TrainAction::Destroy {
+                vehicle: id,
+                revision,
+            },
+        );
+    } else {
+        state.confirm_destroy = None;
+        state.status = "Das Fahrzeug ist nicht mehr vorhanden.".into();
+    }
+}
+
 pub(super) fn resume_edit(world: &mut World, state: &mut TrainUiState) {
     let Some((station, id)) = state.edit_after_leave.take() else {
         return;
@@ -482,6 +553,13 @@ pub(super) fn populate(
         } else {
             state.station.is_some()
         };
+    view.can_destroy = editable
+        && session
+            .trains
+            .seats
+            .iter()
+            .all(|seat| seat.vehicle != vehicle.id || Some(seat.player) == session.uuid);
+    view.confirm_destroy = state.confirm_destroy == Some(vehicle.id);
     view.brake = vehicle.motion.brake;
     view.drive_speed = format!("{:.1} Blöcke/s", vehicle.motion.speed_mps.abs()).replace('.', ",");
     let logical_speed = vehicle.motion.speed_mps * f64::from(sign);

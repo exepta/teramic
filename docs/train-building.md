@@ -56,6 +56,23 @@ ermoeglicht das Mitfahren. Der Besitzer steuert vom Fuehrerstand aus:
 | Springen (Leertaste) | Bremse umschalten |
 | Benutzen / Platzieren (R / B) | Fahrpult oeffnen |
 | Absteigen / Abwaerts (X / Shift) | Aussteigen |
+| Fahrpult: Aussteigen | Sicheren Platz neben dem Fahrzeug suchen |
+
+Zum Aussteigen muss neben dem Fahrzeug geladener, freier Boden erreichbar sein.
+Auch bei einem hohen Fuehrerhaus wird bis zum Boden gesucht. Waehrend einer Fahrt
+bleibt die letzte sichere Position ausserhalb des Sitzes fuer den naechsten
+Weltbeitritt gespeichert. Aeltere Spielstaende mit einer Position im Zug werden
+gegen die echten Zugkollisionen geprueft und bei Bedarf in freien Raum versetzt.
+
+**Zug zerstoeren** entfernt das ausgewaehlte Fahrzeug samt Ladung und Brennstoff
+dauerhaft. Die Aktion verlangt eine zweite Bestaetigung, einen angehaltenen,
+entkoppelten eigenen Zug und einen erreichbaren Fahrzeugteil. Mitfahrer muessen
+zuerst aussteigen; der eigene Fahrer steigt nach der Bestaetigung automatisch aus.
+Zum Wiederverwenden der Baubloecke weiterhin **Montage / Bearbeiten** nutzen.
+
+Die grosse 3x-Lokvorlage setzt Fuehrersitz, Kabinenboden, Fenster und Dach zwei
+Bloecke hoeher als zuvor und verbindet den Zugang mit einer hinteren Treppe.
+Bestehende individuelle Aufbauten werden dabei nicht automatisch umgebaut.
 
 Diese Tasten folgen der konfigurierten Belegung. Der Fahrhebel hat neun Positionen
 von -2 bis +6 und laesst sich im Fahrpult per Schieber und Buttons bedienen.
@@ -141,7 +158,7 @@ Der Gleismodus **Prellbock** stoppt den Zug vor dem Anschlag einschliesslich
 Wagenkasten und Kupplung. Ein Verbund wird gemeinsam angehalten; Rueckwaerts
 vom Prellbock wegzufahren bleibt erlaubt.
 
-Client und Server benoetigen Protokoll 123. Zugindex ID17 speichert
+Client und Server benoetigen Protokoll 124. Zugindex ID17 speichert
 Namen, Restbrennstoff, Wasser und Druck und uebernimmt bestehende Zuege aus
 ID13, ID14, ID15 und ID16. Alte Fahrzeuge erhalten kein kostenloses Wasser.
 

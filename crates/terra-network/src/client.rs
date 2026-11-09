@@ -1620,7 +1620,11 @@ fn receive_controls(
                     let collision_result = if let Some(views) = &mut world.train_collision_views {
                         let result = views
                             .bypass_change_detection()
-                            .set_confirmed_views(&snapshot.vehicles, &world.journal);
+                            .set_confirmed_views_with_removals(
+                                &snapshot.vehicles,
+                                &snapshot.destroyed,
+                                &world.journal,
+                            );
                         if matches!(result, Ok(true)) {
                             views.set_changed();
                         }

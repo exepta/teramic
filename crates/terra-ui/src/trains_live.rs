@@ -143,6 +143,45 @@ fn workshop(world: &mut World, probe: &mut Probe) {
         return;
     }
     probe.frames += 1;
+    if probe.frames == 1 {
+        // Deliberately occupy the miniature and environment layers at the same
+        // coordinates as the train studio. Their geometry must never leak into it.
+        let mesh = world
+            .resource_mut::<Assets<Mesh>>()
+            .add(Cuboid::new(24.0, 24.0, 24.0));
+        let material = world
+            .resource_mut::<Assets<StandardMaterial>>()
+            .add(StandardMaterial {
+                base_color: Color::srgb(1.0, 0.0, 1.0),
+                unlit: true,
+                cull_mode: None,
+                ..default()
+            });
+        for layer in [terra_core::miniature::WORLD_LAYER, 26] {
+            world.spawn((
+                Mesh3d(mesh.clone()),
+                MeshMaterial3d(material.clone()),
+                Transform::from_xyz(0.0, 4.0, 3.0),
+                bevy::camera::visibility::RenderLayers::layer(layer),
+            ));
+        }
+    }
+    if probe.frames == 100 {
+        let studio = world
+            .query::<(&Camera, &bevy::camera::visibility::RenderLayers)>()
+            .iter(world)
+            .find_map(|(camera, layers)| (camera.order == -13).then_some(layers.clone()))
+            .expect("train studio camera is ready");
+        for layer in [
+            0,
+            26,
+            terra_core::miniature::WORLD_LAYER,
+            terra_core::miniature::CREATURE_LAYER,
+        ] {
+            assert!(!studio.intersects(&bevy::camera::visibility::RenderLayers::layer(layer)));
+        }
+        info!("Native train preview isolation passed with overlapping magenta terrain sentinels");
+    }
     let window = world
         .query_filtered::<Entity, With<PrimaryWindow>>()
         .single(world)
@@ -188,6 +227,58 @@ fn workshop(world: &mut World, probe: &mut Probe) {
             .unwrap()
             .resolution
             .set_physical_resolution(1280, 720);
+    }
+    if probe.frames == 400 {
+        let position = world
+            .query::<(&tilt_ui::ElementId, &UiGlobalTransform)>()
+            .iter(world)
+            .find_map(|(id, transform)| (id.0 == "destroy").then_some(transform.translation))
+            .expect("destroy button is materialized");
+        let position = position
+            / world
+                .get::<Window>(window)
+                .unwrap()
+                .resolution
+                .scale_factor();
+        world
+            .get_mut::<Window>(window)
+            .unwrap()
+            .set_cursor_position(Some(position));
+        probe.location = Some(Location {
+            target: RenderTarget::Window(WindowRef::Entity(window))
+                .normalize(Some(window))
+                .unwrap(),
+            position,
+        });
+    }
+    if let Some(location) = probe.location.clone()
+        && (400..=404).contains(&probe.frames)
+    {
+        world.write_message(PointerInput::new(
+            PointerId::Mouse,
+            location.clone(),
+            PointerAction::Move { delta: Vec2::ZERO },
+        ));
+        if probe.frames == 402 {
+            world.write_message(PointerInput::new(
+                PointerId::Mouse,
+                location.clone(),
+                PointerAction::Press(PointerButton::Primary),
+            ));
+        }
+        if probe.frames == 404 {
+            world.write_message(PointerInput::new(
+                PointerId::Mouse,
+                location,
+                PointerAction::Release(PointerButton::Primary),
+            ));
+        }
+    }
+    if matches!(probe.frames, 420 | 540) {
+        assert!(
+            world.resource::<TrainView>().confirm_destroy,
+            "native button click must reveal destruction confirmation"
+        );
     }
     if matches!(probe.frames, 120 | 240 | 420 | 540) {
         let folder = std::path::PathBuf::from(
@@ -303,6 +394,10 @@ fn workshop_bounds(world: &mut World, window: Entity) -> Result<(), String> {
                 | "assemble"
                 | "edit"
                 | "seat"
+                | "leave"
+                | "destroy"
+                | "destroy-confirm"
+                | "destroy-cancel"
                 | "train-vehicle"
                 | "previous"
                 | "next"

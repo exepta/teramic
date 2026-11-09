@@ -49,6 +49,9 @@ pub(crate) struct TrainUiState {
     wheelbase: u8,
     width: u8,
     edit_after_leave: Option<([i64; 3], u64)>,
+    confirm_destroy: Option<u64>,
+    destroy_after_leave: Option<u64>,
+    destroying: bool,
     editing: bool,
     drive_queue: Option<(u64, i8, bool)>,
     drive_desired: Option<(u64, i8, bool)>,
@@ -141,6 +144,8 @@ pub struct TrainView {
     pub driver: bool,
     pub drive_controls: bool,
     pub can_edit: bool,
+    pub can_destroy: bool,
+    pub confirm_destroy: bool,
     pub engine: bool,
     pub has_cargo: bool,
     pub cargo_hint: String,
@@ -326,6 +331,9 @@ fn close(world: &mut World, state: &mut TrainUiState) {
     state.cargo = false;
     state.cargo_retry = None;
     state.edit_after_leave = None;
+    state.confirm_destroy = None;
+    state.destroy_after_leave = None;
+    state.destroying = false;
     state.editing = false;
     state.consumed_escape = true;
     if playing(world) && !other_panel(world) {
@@ -585,6 +593,7 @@ fn command(world: &mut World, state: &mut TrainUiState, command: &str) {
         .strip_prefix("select:")
         .and_then(|id| id.parse::<u64>().ok())
     {
+        state.confirm_destroy = None;
         if state.selected == Some(id) {
             state.second = None;
         } else if state.selected.is_none() {
@@ -1394,6 +1403,9 @@ fn update(
                     state.drive_queue = None;
                     state.drive_desired = None;
                     state.edit_after_leave = None;
+                    state.destroy_after_leave = None;
+                    state.destroying = false;
+                    state.confirm_destroy = None;
                     state.editing = false;
                     state.status = if edit_alignment {
                         "Für die Montage müssen alle Mitfahrer aussteigen und der Zug auf einem geraden Gleisabschnitt stehen."
@@ -1413,7 +1425,12 @@ fn update(
                     cargo::refreshed(world, &mut state);
                 }
                 TrainOutcome::Changed { vehicle } => {
-                    if state.editing {
+                    if std::mem::take(&mut state.destroying) {
+                        state.selected = None;
+                        state.second = None;
+                        state.confirm_destroy = None;
+                        state.status = "Fahrzeug und Ladung wurden zerstört.".into();
+                    } else if state.editing {
                         state.selected = None;
                         state.editing = false;
                         state.status = "Montage aktiv: Verziere den Zug mit Blöcken und setze ihn anschließend wieder zusammen.".into();
@@ -1431,7 +1448,9 @@ fn update(
                     }
                 }
                 TrainOutcome::Seated(binding) => {
-                    if binding.is_none() && state.edit_after_leave.is_some() {
+                    if binding.is_none() && state.destroy_after_leave.is_some() {
+                        driving::resume_destroy(world, &mut state);
+                    } else if binding.is_none() && state.edit_after_leave.is_some() {
                         driving::resume_edit(world, &mut state);
                     } else {
                         close(world, &mut state);

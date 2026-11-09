@@ -1019,6 +1019,7 @@ fn bounded_full_train_registry_public_packet_stays_below_two_mebibytes() {
         })
         .collect();
     let snapshot = TrainSnapshot {
+        destroyed: vec![],
         revision: u64::MAX,
         vehicles,
         seats,

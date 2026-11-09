@@ -81,6 +81,10 @@ pub enum TrainAction {
         clockwise: bool,
     },
     Leave,
+    Destroy {
+        vehicle: u64,
+        revision: u64,
+    },
     FillWater {
         vehicle: u64,
         player_revision: u64,

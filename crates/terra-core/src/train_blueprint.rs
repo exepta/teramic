@@ -194,7 +194,7 @@ pub fn building_template_with_width(
         cells.retain(|part| !(245..=250).contains(&part.material));
         for part in &mut cells {
             if part.material == train_parts::CAB {
-                part.cell[1] += 1;
+                part.cell[1] += 3;
             }
             if part.material == train_parts::FRAME {
                 part.material = 242;
@@ -219,31 +219,40 @@ pub fn building_template_with_width(
         };
         for z in 0..=1 {
             for x in -1..=1 {
-                add([x, 1, z], 270, 0);
-                add([x, 5, z], 250, 0);
+                add([x, 3, z], 270, 0);
+                add([x, 7, z], 250, 0);
             }
             for x in [-1, 1] {
-                for y in 1..=4 {
+                for y in 1..=6 {
                     add(
                         [x, y, z],
-                        if y >= 3 { 246 } else { 245 },
+                        if y >= 5 { 246 } else { 245 },
                         if x < 0 { 1 } else { 3 },
                     );
                 }
             }
-            add([0, 1, z], 270, 0);
+            for y in 1..=3 {
+                add([0, y, z], 270, 0);
+            }
         }
         // Front panes are above the boiler, rather than a solid wall at eye level.
         for x in -1..=1 {
-            add([x, 3, 2], 246, 2);
-            add([x, 4, 2], 246, 2);
-            add([x, 5, 2], 250, 0);
+            add([x, 5, 2], 246, 2);
+            add([x, 6, 2], 246, 2);
+            add([x, 7, 2], 250, 0);
         }
         // A rear step reaches the raised floor without blocking the side aisles.
-        add([0, 1, -1], 272, 2);
-        add([0, 3, 2], 230, 2);
-        add([0, 2, 2], 229, 0);
-        add([0, 3, 0], 231, 2);
+        for z in -3..=-1 {
+            for y in 1..=4 + z {
+                add([0, y, z], if y == 4 + z { 272 } else { 270 }, 2);
+            }
+        }
+        add([0, 5, 2], 230, 2);
+        for y in 2..=3 {
+            add([0, y, 2], 270, 0);
+        }
+        add([0, 4, 2], 229, 0);
+        add([0, 5, 0], 231, 2);
         add([-1, 1, -1], 254, 0);
         add([1, 1, -1], 255, 0);
         for x in [-1, 1] {
@@ -672,8 +681,8 @@ mod tests {
                     );
                 }
             }
-            assert!(guide.iter().any(|p| p.material == 246 && p.cell[1] == 4));
-            assert!(guide.iter().any(|p| p.material == 250 && p.cell[1] == 5));
+            assert!(guide.iter().any(|p| p.material == 246 && p.cell[1] == 6));
+            assert!(guide.iter().any(|p| p.material == 250 && p.cell[1] == 7));
             let parts: Vec<_> = guide
                 .iter()
                 .map(|p| crate::trains::TrainPart {

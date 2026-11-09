@@ -2156,3 +2156,40 @@ fn actual_hungry_animals_find_ripe_crops_and_graze_without_drops_or_duplicate_pl
         assert_eq!(journal.forage_regrowth().count(), 0);
     }
 }
+
+#[test]
+fn grazing_a_soil_growth_tuft_does_not_schedule_invalid_generic_forage_regrowth() {
+    use crate::props::{PropId, PropKind, WorldProp};
+    let (_, mut chunks, mut journal) = fixture();
+    let section = SectionPos::new(0, 0, 0);
+    let prop = WorldProp {
+        id: PropId(222333),
+        kind: PropKind::Grass,
+        position: [8.5, 3.0, 8.5],
+        rotation: 0.0,
+        scale: 0.7,
+        variant: 66,
+        section,
+        removed: false,
+    };
+    assert!(prop.growing_grass());
+    chunks.loaded.get_mut(&section).unwrap().props.push(prop);
+    let mut cow = animal(CreatureKind::Cow);
+    cow.needs.food = 1.0;
+    assert!(
+        apply_forage(
+            Forage::Prop {
+                section,
+                id: prop.id
+            },
+            &mut cow,
+            &mut chunks,
+            &mut journal,
+            Default::default()
+        )
+        .unwrap()
+    );
+    assert!(cow.needs.food > 1.0);
+    assert!(journal.prop_removed(section, prop.id));
+    assert_eq!(journal.forage_regrowth().count(), 0);
+}

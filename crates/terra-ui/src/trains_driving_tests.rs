@@ -1070,3 +1070,57 @@ fn train_interaction_respects_debug_chords_and_wheelbase_controls_are_local_and_
         "guides never place free blocks or forge server actions"
     );
 }
+
+#[test]
+fn destroying_requires_confirmation_and_acknowledged_dismount_before_deletion() {
+    let mut app = driver_app();
+    app.world_mut()
+        .resource_mut::<ClientSession>()
+        .trains
+        .vehicles[0]
+        .motion = Default::default();
+    open(&mut app);
+    app.world_mut().resource_mut::<TrainUiState>().selected = Some(1);
+    html_click(&mut app, "destroy-confirm", 0);
+    assert!(requests(&mut app).is_empty());
+    html_click(&mut app, "destroy", 1);
+    assert!(app.world().resource::<TrainView>().confirm_destroy);
+    assert!(requests(&mut app).is_empty());
+    html_click(&mut app, "destroy-cancel", 0);
+    assert!(!app.world().resource::<TrainView>().confirm_destroy);
+    html_click(&mut app, "destroy", 0);
+    html_click(&mut app, "destroy-confirm", 0);
+    let commands = requests(&mut app);
+    assert_eq!(commands.len(), 1);
+    assert_eq!(commands[0].0.action, TrainAction::Leave);
+    let revision = app.world().resource::<ClientSession>().trains.vehicles[0].revision;
+    {
+        let mut session = app.world_mut().resource_mut::<ClientSession>();
+        session.train_seat = None;
+        session.last_train_result = Some(TrainResult {
+            request: commands[0].0.request,
+            outcome: TrainOutcome::Seated(None),
+        });
+    }
+    app.update();
+    let commands = requests(&mut app);
+    assert_eq!(commands.len(), 1);
+    assert_eq!(
+        commands[0].0.action,
+        TrainAction::Destroy {
+            vehicle: 1,
+            revision
+        }
+    );
+    {
+        let mut session = app.world_mut().resource_mut::<ClientSession>();
+        session.trains.vehicles.clear();
+        session.last_train_result = Some(TrainResult {
+            request: commands[0].0.request,
+            outcome: TrainOutcome::Changed { vehicle: None },
+        });
+    }
+    app.update();
+    assert!(app.world().resource::<TrainUiState>().selected.is_none());
+    assert!(!app.world().resource::<TrainView>().confirm_destroy);
+}

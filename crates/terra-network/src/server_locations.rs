@@ -110,8 +110,26 @@ pub(super) fn resolve(
             .or_insert_with(|| journal.block(p).or_else(|| generator.block_at(p).ok()))
     };
     let original = Vec3::from_array(location.position);
+    let (low, high) = bounds(original);
+    let containing: Vec<_> = journal
+        .gameplay()
+        .trains
+        .vehicles
+        .values()
+        .filter(|car| {
+            car.parts.iter().enumerate().any(|(index, _)| {
+                car.transformed_shapes(index).iter().any(|shape| {
+                    shape.intersects(
+                        low.to_array().map(f64::from),
+                        high.to_array().map(f64::from),
+                    )
+                })
+            })
+        })
+        .map(|car| car.id)
+        .collect();
     // Only nearby clearance recovery; never relocate to a different cave or surface.
-    for offset in [
+    let mut offsets = vec![
         Vec3::ZERO,
         Vec3::Y * 0.5,
         Vec3::Y,
@@ -120,9 +138,40 @@ pub(super) fn resolve(
         -Vec3::X,
         Vec3::Z,
         -Vec3::Z,
-    ] {
+    ];
+    // Old saves may contain a mounted position without a persistent seat binding.
+    // Recover outside that vehicle, using the same collision volumes as spawning.
+    for id in &containing {
+        let extent = journal.gameplay().trains.vehicles[id].model_bounds();
+        let margin = PLAYER_RADIUS + 0.15;
+        offsets.extend([
+            Vec3::new(extent[0][0] as f32 - margin - original.x, 0.0, 0.0),
+            Vec3::new(extent[1][0] as f32 + margin - original.x, 0.0, 0.0),
+            Vec3::new(0.0, 0.0, extent[0][2] as f32 - margin - original.z),
+            Vec3::new(0.0, 0.0, extent[1][2] as f32 + margin - original.z),
+            Vec3::Y * (extent[1][1] as f32 + PLAYER_HALF_HEIGHT + 0.15 - original.y),
+        ]);
+    }
+    for offset in offsets {
         let candidate = original + offset;
-        let clear = recovery_clear(original, candidate, journal, properties, &mut block_at);
+        let steps = (offset.length() / 0.1).ceil().max(1.0) as u32;
+        let train_clear = (0..=steps).all(|step| {
+            let position = original.lerp(candidate, step as f32 / steps as f32);
+            let (low, high) = bounds(position);
+            !journal.gameplay().trains.vehicles.values().any(|car| {
+                (step == steps || !containing.contains(&car.id))
+                    && car.parts.iter().enumerate().any(|(index, _)| {
+                        car.transformed_shapes(index).iter().any(|shape| {
+                            shape.intersects(
+                                low.to_array().map(f64::from),
+                                high.to_array().map(f64::from),
+                            )
+                        })
+                    })
+            })
+        });
+        let clear =
+            train_clear && recovery_clear(original, candidate, journal, properties, &mut block_at);
         if clear {
             location.position = candidate.to_array();
             return location.valid().then_some(location);
@@ -174,6 +223,7 @@ pub(super) fn capture(
     peers: Query<&Peer>,
     bodies: Query<&Transform, With<ServerCharacter>>,
     config: Res<GameConfig>,
+    seated: Option<Res<super::trains::SeatedPlayers>>,
     mut journal: ResMut<EditJournal>,
 ) {
     for peer in &peers {
@@ -183,6 +233,9 @@ pub(super) fn capture(
             || peer.vitals.dead()
             || peer.chat.teleport.is_some()
             || peer.restore_location.is_some()
+            || seated.as_ref().is_some_and(|seats| {
+                seats.binding(peer.uuid).is_some() || seats.has_exit(peer.uuid)
+            })
         {
             continue;
         }
@@ -237,6 +290,95 @@ mod tests {
             &journal,
             &properties,
             lookup
+        ));
+    }
+
+    #[test]
+    fn old_seated_save_recovers_outside_the_train_using_spawn_collision_geometry() {
+        use terra_core::{
+            train_blueprint,
+            trains::{TrainPart, Vehicle, VehicleKind},
+        };
+        let terrain = TerraGenerator::new(terra_core::WorldConfig::default()).unwrap();
+        let properties = BlockPropertiesCatalog::default();
+        let mut journal = EditJournal::default();
+        for x in -6..=6 {
+            for z in -6..=12 {
+                for y in -41..=-28 {
+                    journal
+                        .record([x, y, z], if y == -41 { 3 } else { 0 })
+                        .unwrap();
+                }
+            }
+        }
+        let guide = train_blueprint::building_template_with_width(
+            [0, -39, 0],
+            0,
+            VehicleKind::Locomotive,
+            4,
+            3,
+        );
+        let mut car = Vehicle {
+            name: String::new(),
+            id: 1,
+            owner: terra_core::PlayerUuid::from_u128(222),
+            kind: VehicleKind::Locomotive,
+            anchor: [0, -39, 0],
+            parts: guide
+                .iter()
+                .map(|p| TrainPart {
+                    offset: [p.cell[0] as i16, (p.cell[1] + 39) as i16, p.cell[2] as i16],
+                    material: p.material,
+                    facing: p.facing,
+                    wood: Default::default(),
+                })
+                .collect(),
+            cargo: Default::default(),
+            blocks: Default::default(),
+            payloads: Default::default(),
+            motion: Default::default(),
+            burn_seconds: 0.0,
+            steam: Default::default(),
+            couplings: [None; 2],
+            revision: 1,
+        };
+        for index in car.cargo_indices().collect::<Vec<_>>() {
+            car.cargo.insert(index, terra_core::Inventory::default());
+        }
+        let index = car
+            .parts
+            .iter()
+            .position(|p| p.material == terra_core::train_parts::CAB)
+            .unwrap();
+        let (feet, _) = car.seat_pose(index).unwrap();
+        let location = PlayerLocation {
+            position: [
+                feet[0] as f32,
+                feet[1] as f32 + PLAYER_HALF_HEIGHT,
+                feet[2] as f32,
+            ],
+            look: [0.0; 2],
+            flying: false,
+        };
+        journal.gameplay_mut().trains.insert(car).unwrap();
+        let restored = resolve(location, &terrain, &journal, &properties, false, false)
+            .expect("legacy mounted save is recoverable");
+        assert_ne!(restored.position, location.position);
+        let (low, high) = bounds(Vec3::from_array(restored.position));
+        assert!(
+            terra_world::trains::boxes_in(
+                &journal,
+                low.to_array().map(f64::from),
+                high.to_array().map(f64::from)
+            )
+            .is_empty()
+        );
+        assert!(recovery_clear(
+            Vec3::from_array(location.position),
+            Vec3::from_array(restored.position),
+            &journal,
+            &properties,
+            |p| journal.block(p)
         ));
     }
 

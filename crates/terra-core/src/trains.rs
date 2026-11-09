@@ -136,6 +136,9 @@ impl SeatBinding {
 }
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct TrainSnapshot {
+    /// Removed vehicles whose blocks were deleted, rather than restored to terrain.
+    #[serde(default)]
+    pub destroyed: Vec<u64>,
     pub revision: u64,
     pub vehicles: Vec<VehicleView>,
     pub seats: Vec<SeatBinding>,
@@ -979,6 +982,7 @@ impl TrainRegistry {
     }
     pub fn snapshot(&self, seats: Vec<SeatBinding>) -> TrainSnapshot {
         TrainSnapshot {
+            destroyed: Vec::new(),
             revision: self.revision,
             vehicles: self.vehicles.values().map(Vehicle::view).collect(),
             seats,
@@ -1001,6 +1005,7 @@ impl TrainSnapshot {
                 > MAX_TOTAL_SHAPES
             || self.vehicles.len() > MAX_VEHICLES
             || self.seats.len() > MAX_SEATED
+            || self.destroyed.len() > MAX_VEHICLES
         {
             return false;
         }
@@ -1009,6 +1014,14 @@ impl TrainSnapshot {
             .vehicles
             .iter()
             .any(|vehicle| !vehicle.valid() || !ids.insert(vehicle.id))
+        {
+            return false;
+        }
+        let mut removed = BTreeSet::new();
+        if self
+            .destroyed
+            .iter()
+            .any(|id| *id == 0 || ids.contains(id) || !removed.insert(*id))
         {
             return false;
         }

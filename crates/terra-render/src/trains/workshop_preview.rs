@@ -6,7 +6,8 @@ use bevy::{
     render::render_resource::TextureFormat,
 };
 use terra_core::train_blueprint::WorkshopPreviewRequest;
-const LAYER: usize = 28;
+// World miniatures occupy layer 28; preview cameras must never see their terrain.
+const LAYER: usize = 25;
 #[derive(Resource, Default)]
 pub struct WorkshopPreviewImage {
     pub image: Handle<Image>,
@@ -257,5 +258,31 @@ fn synchronize(
                 compose_geometry(&parts, &frozen, &templates, [0; 3], &palettes, false)
             }),
         ));
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn workshop_camera_cannot_see_terrain_or_other_previews() {
+        let preview = RenderLayers::layer(LAYER);
+        for layer in [
+            0,
+            26,
+            terra_core::miniature::WORLD_LAYER,
+            terra_core::miniature::CREATURE_LAYER,
+            29,
+            30,
+            31,
+            58,
+            61,
+            62,
+        ] {
+            assert!(
+                !preview.intersects(&RenderLayers::layer(layer)),
+                "shared render layer {layer}"
+            );
+        }
     }
 }

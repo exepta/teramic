@@ -54,7 +54,13 @@
                 <div class="train-template-actions"><button id="blueprint" onclick="train_workshop_action">Vorlage anzeigen</button>@if (trainView.blueprint) { <button id="blueprint-clear" onclick="train_workshop_action">Ausblenden</button> }</div>
               } @else {
                 <button id="edit" [disabled]="trainView.pending || !trainView.can_edit" onclick="train_workshop_action"><icon name="hammer" size="18" />Montage / Bearbeiten</button>
-                <button id="seat" [disabled]="trainView.pending" onclick="train_workshop_action"><icon name="armchair" size="18" />Einsteigen</button>
+                @if (trainView.riding) { <button id="leave" [disabled]="trainView.pending" onclick="train_workshop_action"><icon name="log-out" size="18" />Aussteigen</button> } @else { <button id="seat" [disabled]="trainView.pending" onclick="train_workshop_action"><icon name="armchair" size="18" />Einsteigen</button> }
+                @if (trainView.confirm_destroy) {
+                  <p>Fahrzeug samt Ladung dauerhaft löschen?</p>
+                  <div class="train-template-actions"><button id="destroy-confirm" [disabled]="trainView.pending || !trainView.can_destroy" onclick="train_workshop_action">Jetzt zerstören</button><button id="destroy-cancel" [disabled]="trainView.pending" onclick="train_workshop_action">Abbrechen</button></div>
+                } @else {
+                  <button id="destroy" [disabled]="trainView.pending || !trainView.can_destroy" onclick="train_workshop_action"><icon name="trash-2" size="16" />Zug zerstören</button>
+                }
               }
             </div>
           </div>

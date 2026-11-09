@@ -138,7 +138,7 @@ fn safe_exit(
         journal,
     };
     let (sin, cos) = f64::from(intent.yaw).sin_cos();
-    for distance in [1.2, 1.8, 2.4] {
+    for distance in [1.2, 1.8, 2.4, 3.2, 4.0, 5.0, 6.0, 8.0] {
         for [x, z] in [
             [1.0, 0.0],
             [-1.0, 0.0],
@@ -149,7 +149,9 @@ fn safe_exit(
             [1.0, -1.0],
             [-1.0, -1.0],
         ] {
-            for vertical in [0.5, -0.5, -1.5, -2.5, 1.5] {
+            for vertical in [
+                0.5, -0.5, -1.5, -2.5, 1.5, -3.5, -4.5, -5.5, -6.5, -7.5, -8.5,
+            ] {
                 let probe = [
                     intent.feet[0] + distance * (x * cos + z * sin),
                     intent.feet[1] + vertical,
@@ -191,6 +193,7 @@ pub(super) struct TrainRuntime {
     rail_cache: terra_world::rails::NetworkCache,
     ticks: u64,
     retired_motions: Vec<terra_core::train_motion::TrainMotionFrame>,
+    destroyed: Vec<u64>,
     fuel_updates: Vec<(PlayerUuid, TrainCargoSnapshot)>,
 }
 struct TrainPeer {
@@ -403,6 +406,11 @@ pub(super) fn control(
     seated: &mut SeatedPlayers,
 ) {
     let building = matches!(&command.action, TrainAction::Build { .. });
+    let destroying = if let TrainAction::Destroy { vehicle, .. } = &command.action {
+        Some(*vehicle)
+    } else {
+        None
+    };
     let retiring = if let TrainAction::Dismantle { vehicle, .. } = &command.action {
         world
             .journal
@@ -424,8 +432,19 @@ pub(super) fn control(
         .entry(peer.id)
         .or_default()
         .accept(command.request)
-        .and_then(|()| apply(command.action, peer, world, seated));
+        .and_then(|()| {
+            if destroying.is_some() && runtime.destroyed.len() >= terra_core::trains::MAX_VEHICLES {
+                Err(TrainError::RateLimited)
+            } else {
+                apply(command.action, peer, world, seated)
+            }
+        });
     let outcome = result.unwrap_or_else(TrainOutcome::Rejected);
+    if let Some(id) = destroying
+        && matches!(outcome, TrainOutcome::Changed { .. })
+    {
+        runtime.destroyed.push(id);
+    }
     if let Some(frame) = retiring
         && matches!(outcome, TrainOutcome::Changed { .. })
     {
@@ -937,6 +956,47 @@ pub(super) fn apply(
             }
             Ok(TrainOutcome::Changed { vehicle: Some(id) })
         }
+        TrainAction::Destroy {
+            vehicle: id,
+            revision,
+        } => {
+            let selected = vehicle(peer, world, id)?;
+            if selected.revision != revision {
+                return Err(TrainError::Stale);
+            }
+            if !selected.motion.stopped() || seated.bindings.values().any(|seat| seat.vehicle == id)
+            {
+                return Err(TrainError::Busy);
+            }
+            // Deletion is deliberately separate from Montage: no blocks or private
+            // inventories are restored, and the UI explicitly confirms that loss.
+            if !(0..selected.parts.len())
+                .any(|index| reach_part(peer, world, &selected, index as u16).is_ok())
+            {
+                return Err(TrainError::OutOfReach);
+            }
+            if (0..selected.parts.len()).any(|index| {
+                !permitted(
+                    peer,
+                    world,
+                    selected.world_cell(index).unwrap(),
+                    KingdomPermission::Build,
+                )
+            }) {
+                return Err(TrainError::Protected);
+            }
+            let revision = world
+                .journal
+                .gameplay()
+                .revision
+                .checked_add(1)
+                .ok_or(TrainError::Overflow)?;
+            // Registry removal preflights owner, couplings and its own epoch before
+            // changing anything. The surrounding gameplay epoch advances only on success.
+            world.journal.gameplay_mut().trains.remove(peer.uuid, id)?;
+            world.journal.gameplay_mut().revision = revision;
+            Ok(TrainOutcome::Changed { vehicle: None })
+        }
         TrainAction::Couple {
             station: cell,
             first,
@@ -1327,6 +1387,7 @@ pub(super) fn broadcast(
         })
         .collect::<Vec<_>>();
     let retired = std::mem::take(&mut runtime.retired_motions);
+    let destroyed = std::mem::take(&mut runtime.destroyed);
     let fuel_updates = std::mem::take(&mut runtime.fuel_updates);
     for (peer, mut sender) in &mut peers {
         if !peer.synced {
@@ -1338,7 +1399,8 @@ pub(super) fn broadcast(
             if already_joined && !retired.is_empty() {
                 sender.send::<ControlChannel>(ServerControl::TrainMotions(retired.clone()));
             }
-            let snapshot = registry.snapshot(seated.bindings.values().copied().collect());
+            let mut snapshot = registry.snapshot(seated.bindings.values().copied().collect());
+            snapshot.destroyed = destroyed.clone();
             sender.send::<ControlChannel>(ServerControl::Trains(Box::new(snapshot)));
             state.sent = Some(registry.revision);
             state.motion_tick = tick;
@@ -1867,5 +1929,96 @@ mod cleanup_tests {
                 .is_none()
         );
         assert!(seats.has_exit(owner_id));
+    }
+    #[test]
+    fn tall_three_wide_cab_can_dismount_to_ground_below_the_boiler() {
+        use terra_core::{
+            train_blueprint,
+            trains::{TrainPart, VehicleKind},
+        };
+        use terra_voxel::{BlockSection, SectionPos};
+        use terra_world::streaming::LoadedSection;
+        let mut chunks = ChunkStore::default();
+        let mut data = BlockSection::empty(SectionPos::default()).unwrap();
+        for x in 0..16 {
+            for z in 0..16 {
+                data.set_block([x, 2, z], 3).unwrap();
+            }
+        }
+        chunks.loaded.insert(
+            SectionPos::default(),
+            LoadedSection {
+                data,
+                mesh: None,
+                mesh_epoch: 0,
+                water_epoch: 0,
+                water: None,
+                props: vec![],
+            },
+        );
+        let guide = train_blueprint::building_template_with_width(
+            [7, 4, 5],
+            0,
+            VehicleKind::Locomotive,
+            4,
+            3,
+        );
+        let mut car = Vehicle {
+            name: String::new(),
+            id: 1,
+            owner: PlayerUuid::from_u128(222),
+            kind: VehicleKind::Locomotive,
+            anchor: [7, 4, 5],
+            parts: guide
+                .iter()
+                .map(|p| TrainPart {
+                    offset: std::array::from_fn(|i| (p.cell[i] - [7, 4, 5][i]) as i16),
+                    material: p.material,
+                    facing: p.facing,
+                    wood: Default::default(),
+                })
+                .collect(),
+            cargo: Default::default(),
+            blocks: Default::default(),
+            payloads: Default::default(),
+            motion: Default::default(),
+            burn_seconds: 0.0,
+            steam: Default::default(),
+            couplings: [None; 2],
+            revision: 1,
+        };
+        for index in car.cargo_indices().collect::<Vec<_>>() {
+            car.cargo.insert(index, terra_core::Inventory::default());
+        }
+        let index = car
+            .parts
+            .iter()
+            .position(|p| p.material == terra_core::train_parts::CAB)
+            .unwrap();
+        let (feet, yaw) = car.seat_pose(index).unwrap();
+        assert!(feet[1] > 7.0);
+        let mut journal = EditJournal::default();
+        journal.gameplay_mut().trains.insert(car).unwrap();
+        let terrain = terra_world::TerraGenerator::new(Default::default()).unwrap();
+        let properties = Default::default();
+        let position = safe_exit(
+            ExitIntent {
+                vehicle: 1,
+                feet,
+                yaw,
+            },
+            &chunks,
+            &journal,
+            &terrain,
+            &properties,
+        )
+        .expect("ground beside an elevated cab is reachable");
+        assert!((position.y - 3.9).abs() < 0.03);
+        assert!(terra_physics::character::space_clear_with_shapes(
+            &chunks,
+            &journal,
+            &properties,
+            position
+        ));
     }
 }

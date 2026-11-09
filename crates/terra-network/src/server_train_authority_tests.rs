@@ -1115,3 +1115,140 @@ fn steam_water_transfer_and_gear_limits_are_owner_authorized_atomic_and_directio
     );
     assert_eq!(game.inventories[&owner], inventory);
 }
+
+#[test]
+fn destroying_is_owner_authorized_reach_checked_revision_checked_and_atomic() {
+    let (mut app, mut peer, id, _, _) = train_fixture();
+    let mut seats = crate::server::trains::SeatedPlayers::default();
+    let before = app.world().resource::<EditJournal>().gameplay().clone();
+    let revision = before.trains.vehicles[&id].revision;
+    assert_eq!(
+        run(
+            &mut app,
+            &peer,
+            TrainAction::Destroy {
+                vehicle: id,
+                revision: revision + 1
+            },
+            &mut seats
+        ),
+        Err(TrainError::Stale)
+    );
+    assert_eq!(*app.world().resource::<EditJournal>().gameplay(), before);
+    let owner = peer.uuid;
+    peer.uuid = terra_core::PlayerUuid::from_u128(222999);
+    assert_eq!(
+        run(
+            &mut app,
+            &peer,
+            TrainAction::Destroy {
+                vehicle: id,
+                revision
+            },
+            &mut seats
+        ),
+        Err(TrainError::NotOwner)
+    );
+    peer.uuid = owner;
+    let near = app.world().get::<Transform>(peer.body).unwrap().translation;
+    app.world_mut()
+        .get_mut::<Transform>(peer.body)
+        .unwrap()
+        .translation = Vec3::splat(300.0);
+    assert_eq!(
+        run(
+            &mut app,
+            &peer,
+            TrainAction::Destroy {
+                vehicle: id,
+                revision
+            },
+            &mut seats
+        ),
+        Err(TrainError::OutOfReach)
+    );
+    assert_eq!(*app.world().resource::<EditJournal>().gameplay(), before);
+    app.world_mut()
+        .get_mut::<Transform>(peer.body)
+        .unwrap()
+        .translation = near;
+    let edits = app.world().resource::<EditJournal>().edited_blocks();
+    assert_eq!(
+        run(
+            &mut app,
+            &peer,
+            TrainAction::Destroy {
+                vehicle: id,
+                revision
+            },
+            &mut seats
+        ),
+        Ok(TrainOutcome::Changed { vehicle: None })
+    );
+    let journal = app.world().resource::<EditJournal>();
+    assert!(journal.gameplay().trains.vehicles.is_empty());
+    assert_eq!(journal.gameplay().revision, before.revision + 1);
+    assert_eq!(
+        journal.edited_blocks(),
+        edits,
+        "destruction must not restore world blocks"
+    );
+    assert_eq!(journal.gameplay().inventories, before.inventories);
+    assert_eq!(
+        run(
+            &mut app,
+            &peer,
+            TrainAction::Destroy {
+                vehicle: id,
+                revision
+            },
+            &mut seats
+        ),
+        Err(TrainError::Missing)
+    );
+}
+
+#[test]
+fn capturing_a_seated_player_preserves_the_last_standing_save_position() {
+    let (mut app, mut peer, id, seat, _) = train_fixture();
+    let mut seats = crate::server::trains::SeatedPlayers::default();
+    assert!(matches!(
+        run(
+            &mut app,
+            &peer,
+            TrainAction::Seat {
+                vehicle: id,
+                part: seat
+            },
+            &mut seats
+        ),
+        Ok(TrainOutcome::Seated(Some(_)))
+    ));
+    let last_standing = terra_core::PlayerLocation {
+        position: [0.5, 6.0, 0.5],
+        look: [0.0; 2],
+        flying: false,
+    };
+    let uuid = peer.uuid;
+    app.world_mut()
+        .resource_mut::<EditJournal>()
+        .update_player_location(uuid, last_standing)
+        .unwrap();
+    peer.spawned = true;
+    peer.accepted = true;
+    app.world_mut()
+        .get_entity_mut(peer.body)
+        .unwrap()
+        .insert(crate::server::ServerCharacter {
+            link: Entity::PLACEHOLDER,
+        });
+    app.world_mut().spawn(peer);
+    app.insert_resource(seats);
+    app.world_mut()
+        .run_system_cached(crate::server::locations::capture)
+        .unwrap();
+    assert_eq!(
+        app.world().resource::<EditJournal>().player_location(uuid),
+        Some(last_standing)
+    );
+}

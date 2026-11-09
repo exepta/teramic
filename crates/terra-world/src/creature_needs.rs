@@ -330,10 +330,14 @@ pub fn apply_forage(
             return Ok(false);
         }
         let delay = 120.0 + (id.0 % 61) as f32;
-        if let Err(error) = journal.set_forage_regrowth(crate::farming::ForageRegrowth {
-            prop,
-            remaining_seconds: delay,
-        }) {
+        // Growing grass is tracked by the soil growth system, not the generic
+        // forage timer (which intentionally rejects these transient props).
+        if !prop.growing_grass()
+            && let Err(error) = journal.set_forage_regrowth(crate::farming::ForageRegrowth {
+                prop,
+                remaining_seconds: delay,
+            })
+        {
             tracing::warn!(%error, "Cannot schedule grazed plant regrowth");
         }
     }
