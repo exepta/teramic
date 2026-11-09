@@ -99,11 +99,15 @@ pub struct Vehicle {
     pub motion: crate::train_motion::TrainMotion,
     #[serde(default)]
     pub burn_seconds: f64,
+    #[serde(default)]
+    pub steam: crate::train_power::SteamState,
     pub couplings: [Option<Coupling>; 2],
     pub revision: u64,
 }
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct VehicleView {
+    #[serde(default)]
+    pub steam: crate::train_power::SteamState,
     #[serde(default)]
     pub name: String,
     pub id: u64,
@@ -163,6 +167,7 @@ pub enum TrainError {
     BogieAlignment,
     Wheelbase,
     MissingMaterials,
+    GearLocked,
 }
 impl std::fmt::Display for TrainError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -647,6 +652,7 @@ impl Vehicle {
             && !self.owner.is_nil()
             && valid_name(&self.name)
             && self.motion.valid()
+            && self.steam.valid()
             && valid_parts(self.anchor, &self.parts, self.kind)
             && valid_blocks(&self.parts, &self.blocks)
             && self.burn_seconds.is_finite()
@@ -682,6 +688,7 @@ impl Vehicle {
     }
     pub fn view(&self) -> VehicleView {
         VehicleView {
+            steam: self.steam,
             name: self.name.clone(),
             id: self.id,
             owner: self.owner,
@@ -703,6 +710,7 @@ impl VehicleView {
             && !self.owner.is_nil()
             && valid_name(&self.name)
             && self.motion.valid()
+            && self.steam.valid()
             && valid_parts(self.anchor, &self.parts, self.kind)
             && valid_blocks(&self.parts, &self.blocks)
             && self.mass_kg

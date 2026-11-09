@@ -7,7 +7,7 @@ license.workspace = true
 publish.workspace = true
 
 [features]
-bevy = ["dep:bevy"]
+bevy = ["dep:bevy", "dep:indexmap"]
 controls = ["bevy", "bevy/keyboard", "bevy/mouse", "bevy/serialize"]
 
 [dependencies]
@@ -18,3 +18,5 @@ toml.workspace = true
 thiserror.workspace = true
 uuid.workspace = true
 terra-voxel.workspace = true
+
+indexmap = { version = "2", optional = true }

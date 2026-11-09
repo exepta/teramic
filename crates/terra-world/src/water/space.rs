@@ -284,34 +284,50 @@ impl FluidSpace {
     ) -> bool {
         let axis = direction.iter().position(|&v| v != 0).unwrap();
         let high = direction[axis] > 0;
-        if self.solids.is_empty() && other.solids.is_empty() {
-            return cell.amount > 0
-                && other_cell.amount > 0
-                && (axis != 1
-                    || if high {
-                        cell.amount == 8
-                    } else {
-                        other_cell.amount == 8
-                    });
+        if cell.amount == 0
+            || other_cell.amount == 0
+            || axis == 1
+                && if high {
+                    cell.amount != 8
+                } else {
+                    other_cell.amount != 8
+                }
+        {
+            return false;
         }
-        let other_water = other.wet_boxes(other_cell.height());
-        self.wet_boxes(cell.height()).iter().any(|a| {
-            (if high {
-                (a.maximum[axis] - 1.0).abs()
-            } else {
-                a.minimum[axis].abs()
-            }) < EPS
-                && other_water.iter().any(|b| {
-                    (if high {
-                        b.minimum[axis].abs()
-                    } else {
-                        (b.maximum[axis] - 1.0).abs()
-                    }) < EPS
-                        && (0..3).filter(|&i| i != axis).all(|i| {
-                            a.maximum[i].min(b.maximum[i]) - a.minimum[i].max(b.minimum[i]) > EPS
-                        })
-                })
-        })
+        let _scope = terra_core::profiling::ScopeTimer::new("water.space.connected");
+        // Only the shared face matters. Extrude its free rectangles along the
+        // normal so the existing subtraction routine performs two-dimensional
+        // cuts. Cutting both entire rail volumes creates thousands of interior
+        // fragments that cannot influence a connection across this face.
+        let mut face = unit();
+        if axis != 1 {
+            face.maximum[1] = cell.height().min(other_cell.height());
+        }
+        let mut open = vec![face];
+        for (space, positive) in [(self, high), (other, !high)] {
+            for solid in &space.solids {
+                let touches = if positive {
+                    solid.maximum[axis] >= 1.0 - EPS && solid.minimum[axis] < 1.0 - EPS
+                } else {
+                    solid.minimum[axis] <= EPS && solid.maximum[axis] > EPS
+                };
+                if !touches {
+                    continue;
+                }
+                let mut shadow = *solid;
+                shadow.minimum[axis] = 0.0;
+                shadow.maximum[axis] = 1.0;
+                open = open
+                    .into_iter()
+                    .flat_map(|box_| subtract(box_, shadow))
+                    .collect();
+                if open.is_empty() {
+                    return false;
+                }
+            }
+        }
+        true
     }
 }
 
@@ -453,6 +469,119 @@ fn subtract(mut water: ShapeBox, solid: ShapeBox) -> Vec<ShapeBox> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn volume_connection(
+        a: &FluidSpace,
+        cell: FluidCell,
+        b: &FluidSpace,
+        other: FluidCell,
+        direction: [i64; 3],
+    ) -> bool {
+        let axis = direction.iter().position(|&value| value != 0).unwrap();
+        let positive = direction[axis] > 0;
+        let right = b.wet_boxes(other.height());
+        a.wet_boxes(cell.height()).iter().any(|left| {
+            (if positive {
+                (left.maximum[axis] - 1.0).abs()
+            } else {
+                left.minimum[axis].abs()
+            }) < EPS
+                && right.iter().any(|right| {
+                    (if positive {
+                        right.minimum[axis].abs()
+                    } else {
+                        (right.maximum[axis] - 1.0).abs()
+                    }) < EPS
+                        && (0..3).filter(|&i| i != axis).all(|i| {
+                            left.maximum[i].min(right.maximum[i])
+                                - left.minimum[i].max(right.minimum[i])
+                                > EPS
+                        })
+                })
+        })
+    }
+
+    #[test]
+    fn face_connections_match_volume_subtraction_for_overlapping_partial_solids() {
+        let mut random = 0x51a7_u64;
+        let mut next = || {
+            random = random.wrapping_mul(6364136223846793005).wrapping_add(1);
+            (random >> 32) as usize
+        };
+        for _ in 0..160 {
+            let spaces = std::array::from_fn::<_, 2, _>(|_| {
+                let count = next() % 7;
+                FluidSpace {
+                    solids: (0..count)
+                        .map(|_| {
+                            let mut bounds = unit();
+                            for axis in 0..3 {
+                                let a = (next() % 13) as f64 * 0.125 - 0.25;
+                                let b = (next() % 13) as f64 * 0.125 - 0.25;
+                                bounds.minimum[axis] = a.min(b);
+                                bounds.maximum[axis] = a.max(b) + 0.125;
+                            }
+                            bounds
+                        })
+                        .collect(),
+                }
+            });
+            for direction in [
+                [1, 0, 0],
+                [-1, 0, 0],
+                [0, 1, 0],
+                [0, -1, 0],
+                [0, 0, 1],
+                [0, 0, -1],
+            ] {
+                for amount in [0, 1, 4, 8] {
+                    for other_amount in [0, 1, 4, 8] {
+                        let a = FluidCell {
+                            amount,
+                            ..Default::default()
+                        };
+                        let b = FluidCell {
+                            amount: other_amount,
+                            ..Default::default()
+                        };
+                        assert_eq!(
+                            spaces[0].connected(a, &spaces[1], b, direction),
+                            volume_connection(&spaces[0], a, &spaces[1], b, direction),
+                            "{spaces:?}/{direction:?}/{amount}/{other_amount}"
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn dense_rail_face_connections_preserve_the_real_water_passages() {
+        let piece = terra_core::rails::Piece::seed([0; 3], 0).unwrap();
+        let air = FluidSpace { solids: Vec::new() };
+        let full = FluidCell {
+            amount: 8,
+            ..Default::default()
+        };
+        for offset in piece.footprint().iter().take(3) {
+            let rail = FluidSpace {
+                solids: piece.cell_boxes(*offset).to_vec(),
+            };
+            for direction in [
+                [1, 0, 0],
+                [-1, 0, 0],
+                [0, 1, 0],
+                [0, -1, 0],
+                [0, 0, 1],
+                [0, 0, -1],
+            ] {
+                assert_eq!(
+                    rail.connected(full, &air, full, direction),
+                    volume_connection(&rail, full, &air, full, direction)
+                );
+            }
+        }
+    }
 
     #[test]
     fn stacked_pillars_water_fills_the_shaft_surround_without_hidden_interior_friezes() {

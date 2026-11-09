@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "id": 260,
-  "name": "Handlauf-Stütze",
+  "name": "Handlauf-St\u00fctze",
   "description": "Decorative BR52 locomotive component. Attach to the connected vehicle body before assembly.",
   "creative_category": "trains",
   "render_kind": "custom_mesh",

@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": 229,
   "name": "Lok-Dampfventil",
-  "description": "Decorative steam valve fitting. The fuel engine is controlled by its cab lever; steam circuits follow the steam engine system.",
+  "description": "Steam valve required for the highest locomotive gear. Combine with a six-block boiler, water tank, gauge and fuel engine.",
   "creative_category": "trains",
   "render_kind": "custom_mesh",
   "model_layout": "scene",

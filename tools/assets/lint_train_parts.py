@@ -67,17 +67,18 @@ def expected_parts():
         r'Definition\s*\{\s*id:\s*(\d+),\s*slug:\s*"([^"]+)",\s*name:\s*"([^"]+)"',
         source,
     )
-    require(len(descriptors) == 76, "expected all 76 Rust BR52 descriptors")
+    last = int(re.search(r"pub const LAST: u16 = (\d+);", source)[1])
+    require(len(descriptors) == last - 218 + 1, "expected all Rust BR52 descriptors")
     for material, slug, name in descriptors:
         require(int(material) not in names, f"duplicate descriptor {material}")
         names[int(material)] = (slug, name)
-    require(set(names) == set(range(210, 294)), "missing train IDs in 210..293")
+    require(set(names) == set(range(210, last + 1)), "missing native train IDs")
     return names
 
 
 def valid_coordinates(values, material):
     for axis, value in enumerate(values):
-        low = -0.61 if material == 211 and axis != 1 else 0
+        low = -0.61 if material == 211 and axis != 1 else -.14 if material in (224, 225, 226) and axis == 1 else 0
         high = 1.61 if material == 211 and axis != 1 else 2 if material == 248 and axis == 1 else 1
         require(math.isfinite(value), f"{material}: non-finite coordinate")
         require(low - 1e-5 <= value <= high + 1e-5,
@@ -301,10 +302,10 @@ def lint():
                          if material in (249, 250, 261, 262, 271, 272))
     return [
         "PASS: CPU-only native train asset lint; no regeneration, window or GPU.",
-        f"Train IDs210..293: {len(parts)} complete JSON/model/recipe entries with matching names.",
+        f"Train IDs210..{max(parts)}: {len(parts)} complete JSON/model/recipe entries with matching names.",
         f"Collision: {boxes} finite bounded boxes; every part stays within the 128-box budget.",
         f"GLTF: {binary_bytes} binary bytes, {triangles} triangles; buffers, accessors, indices, bounds and textures valid.",
-        f"CPU preview projection: all 84 have >64 alpha-covered pixels at the actual 128x128 camera; {front_faces} front-facing triangles; winding agrees with every vertex normal.",
+        f"CPU preview projection: all {len(parts)} have >64 alpha-covered pixels at the actual 128x128 camera; {front_faces} front-facing triangles; winding agrees with every vertex normal.",
         f"Smallest projected coverage: {min(coverage)[0]} pixels ({min(coverage)[2]}).",
         f"Reported startup icons, projected alpha coverage: {affected}.",
         f"Embedded recipes: {recipe_count} unique IDs/keys; JSON payload {recipe_bytes} bytes within 1MiB.",

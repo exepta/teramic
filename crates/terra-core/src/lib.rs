@@ -112,3 +112,8 @@ pub mod trees;
 pub use trees::{FruitPhase, FruitState, TreeRecord, TreeRegistry, TreeSpecies, TreeStage};
 
 pub mod train_boiler;
+
+#[cfg(feature = "bevy")]
+mod initial_ticks;
+
+pub mod train_power;

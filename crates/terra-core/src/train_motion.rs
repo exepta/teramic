@@ -64,8 +64,8 @@ impl TrainMotion {
             && self.pitch.is_finite()
             && self.pitch.abs() <= std::f64::consts::FRAC_PI_2
             && self.speed_mps.is_finite()
-            && self.speed_mps.abs() <= 64.0
-            && (-3..=3).contains(&self.throttle)
+            && self.speed_mps.abs() <= 96.0
+            && (-6..=6).contains(&self.throttle)
             && self.wheel_distance_m.is_finite()
             && self.wheel_distance_m.abs() <= 1e12
             && self.cursor.is_none_or(|cursor| {
@@ -111,6 +111,7 @@ impl TrainMotion {
 }
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 pub struct TrainMotionFrame {
+    pub steam: crate::train_power::SteamState,
     pub id: u64,
     pub revision: u64,
     pub motion: TrainMotion,
@@ -136,7 +137,7 @@ pub fn speed_step(
         return 0.0;
     }
     let target = if powered && !brake {
-        f64::from(throttle.clamp(-3, 3)) * limit / 3.0
+        f64::from(throttle.signum()) * limit
     } else {
         0.0
     };
@@ -149,7 +150,7 @@ pub fn speed_step(
         1.25
     };
     let delta = (target - speed).clamp(-rate * dt, rate * dt);
-    (speed + delta).clamp(-limit, limit)
+    (speed + delta).clamp(-96.0, 96.0)
 }
 #[cfg(test)]
 mod tests {
@@ -179,5 +180,19 @@ mod tests {
         assert!(speed_step(8.0, 3, false, false, 12.0, 0.1) < 8.0);
         assert!(speed_step(8.0, -3, false, true, 12.0, 0.1) < 8.0);
         assert_eq!(speed_step(f64::NAN, 3, false, true, 12.0, 0.1), 0.0);
+    }
+    #[test]
+    fn discrete_gears_accelerate_smoothly_and_downshifts_never_snap_speed() {
+        for gear in 1..=6 {
+            let target = crate::train_power::gear_speed(gear, 6);
+            let mut speed = 0.0;
+            for _ in 0..2000 {
+                speed = speed_step(speed, gear, false, true, target, 0.1);
+            }
+            assert!((speed - target).abs() < 1e-9);
+        }
+        let reduced = speed_step(50.0, 1, false, true, 4.0, 0.1);
+        assert!(reduced > 49.0 && reduced < 50.0);
+        assert!(speed_step(10.0, -2, false, true, 10.0, 0.1) > 0.0);
     }
 }

@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "id": 274,
-  "name": "Schwarzes Eisen Außenecke",
+  "name": "Schwarzes Eisen Au\u00dfenecke",
   "description": "Structural locomotive construction shape. Build the connected vehicle body with matching metal parts.",
   "creative_category": "trains",
   "render_kind": "custom_mesh",

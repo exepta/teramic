@@ -30,7 +30,7 @@
       } @else {
         <div class="train-build-grid">
           <div class="train-card train-types">
-            <h3><icon name="train-front" size="18" />Fahrzeugtyp</h3>
+            <h3><icon name="train-front" size="18" />Typ</h3>
             <button id="kind:locomotive" [class]="trainView.kind == 'Lokomotive' ? 'train-kind selected' : 'train-kind'" [disabled]="trainView.pending || trainView.selected" onclick="train_workshop_action"><img alt="Block preview 218" /><p>Lokomotive</p></button>
             <button id="kind:tender" [class]="trainView.kind == 'Tender' ? 'train-kind selected' : 'train-kind'" [disabled]="trainView.pending || trainView.selected" onclick="train_workshop_action"><img alt="Block preview 253" /><p>Tender</p></button>
             <button id="kind:passenger" [class]="trainView.kind == 'Personenwagen' ? 'train-kind selected' : 'train-kind'" [disabled]="trainView.pending || trainView.selected" onclick="train_workshop_action"><img alt="Block preview 215" /><p>Personenwagen</p></button>
@@ -75,8 +75,8 @@
             @if (trainView.selected) {
               <div class="train-drive-heading"><p class="train-drive-speed">{{ trainView.drive_speed }}</p><p>{{ trainView.drive_direction }}</p></div>
               <div class="train-drive-heading"><p>{{ trainView.drive_throttle }}</p><p>{{ trainView.drive_fuel }}</p></div>
-              <slider id="drive-throttle" class="train-drive-slider" min="-3" max="3" step="1" [value]="trainView.drive_value" [disabled]="!trainView.drive_controls" onchange="train_workshop_action" />
-              <div class="train-throttle-notches">@for (step of trainView.drive_levels; track step.command) { <button id="train-notch" [class]="step.selected ? 'selected' : ''" [disabled]="!trainView.drive_controls" onclick="$set(trainIntent.command, step.command); train_workshop_action">{{ step.label }}</button> }</div>
+              <slider id="drive-throttle" class="train-drive-slider" min="-2" [max]="trainView.drive_max" step="1" [value]="trainView.drive_value" [disabled]="!trainView.drive_controls" onchange="train_workshop_action" />
+              <div class="train-throttle-notches">@for (step of trainView.drive_levels; track step.command) { <button id="train-notch" [title]="step.title" [class]="step.selected ? 'selected' : ''" [disabled]="!trainView.drive_controls || !step.enabled" onclick="$set(trainIntent.command, step.command); train_workshop_action">{{ step.label }}</button> }</div>
               <div class="train-drive-actions"><button id="drive-start" class="train-go" [disabled]="!trainView.drive_controls" onclick="train_workshop_action"><icon name="play" size="16" />Fahren</button><button id="drive-stop" class="train-stop" [disabled]="!trainView.drive_controls" onclick="train_workshop_action"><icon name="square" size="15" />Halten</button></div>
               <button id="drive-brake" [disabled]="!trainView.drive_controls" onclick="train_workshop_action">@if (trainView.brake) { Bremse lösen } @else { Bremsen }</button>
               <p class="train-small-label">{{ trainView.drive_hint }}</p>
@@ -87,6 +87,8 @@
             <button id="engine" [disabled]="trainView.pending || !trainView.engine" onclick="train_workshop_action"><icon name="fuel" size="18" />Motor befeuern</button>
             <button id="cargo" [disabled]="trainView.pending || !trainView.has_cargo" onclick="train_workshop_action"><icon name="package" size="18" />Laderaum öffnen</button>
             @if (trainView.turntable_available) { <p>Drehgleis · 90°</p><div class="train-coupling"><button id="turn-left" [disabled]="trainView.pending || !trainView.can_turn" onclick="train_workshop_action"><icon name="rotate-ccw" size="18" />Links</button><button id="turn-right" [disabled]="trainView.pending || !trainView.can_turn" onclick="train_workshop_action"><icon name="rotate-cw" size="18" />Rechts</button></div> }
+            <p>{{ trainView.steam_status }}</p>
+            @if (trainView.has_water_tank) { <button id="water" [disabled]="trainView.pending" onclick="train_workshop_action"><icon name="droplets" size="16" />Tank füllen</button> }
             <p class="train-ready">{{ trainView.drive_status }}</p>
           </div>
         </div>

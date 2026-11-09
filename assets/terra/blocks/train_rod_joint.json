@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "id": 238,
-  "name": "Gestänge-Gelenk",
+  "name": "Gest\u00e4nge-Gelenk",
   "description": "Functional visual running gear. Motion follows the wheel phase of an assembled train.",
   "creative_category": "trains",
   "render_kind": "custom_mesh",

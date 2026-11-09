@@ -5,7 +5,7 @@ use crate::protocol::trains::{
 };
 use std::collections::{BTreeMap, HashSet};
 use terra_core::{
-    GameMode, PlayerUuid,
+    GameMode, ItemKind, PlayerUuid, ToolKind,
     kingdom::KingdomPermission,
     trains::{SeatBinding, TrainError, Vehicle},
 };
@@ -411,6 +411,7 @@ pub(super) fn control(
             .vehicles
             .get(vehicle)
             .map(|car| terra_core::train_motion::TrainMotionFrame {
+                steam: car.steam,
                 id: car.id,
                 revision: car.revision,
                 motion: car.motion,
@@ -515,7 +516,7 @@ pub(super) fn apply(
             throttle,
             brake,
         } => {
-            if !(-3..=3).contains(&throttle) {
+            if !(-6..=6).contains(&throttle) {
                 return Err(TrainError::Invalid);
             }
             let binding = seated
@@ -532,6 +533,10 @@ pub(super) fn apply(
             }
             if !car.parts.iter().any(|part| part.material == 218) {
                 return Err(TrainError::Incomplete);
+            }
+            let logical = throttle * car.driver_direction(usize::from(binding.part));
+            if !(-2..=terra_core::train_power::max_gear(&car.parts, car.steam)).contains(&logical) {
+                return Err(TrainError::GearLocked);
             }
             let next_revision = car.revision.checked_add(1).ok_or(TrainError::Overflow)?;
             touch(world)?;
@@ -874,6 +879,22 @@ pub(super) fn apply(
             if seated.bindings.values().any(|seat| seat.vehicle == id) {
                 return Err(TrainError::Busy);
             }
+            let mut refunded_water = None;
+            let buckets =
+                (selected.steam.water / terra_core::train_power::BUCKET_WATER).floor() as u16;
+            if buckets > 0 && peer.game_mode(&world.config) != GameMode::Creative {
+                let mut bag = world
+                    .journal
+                    .gameplay()
+                    .inventories
+                    .get(&peer.uuid)
+                    .ok_or(TrainError::Missing)?
+                    .clone();
+                if bag.insert(ItemKind::Tool(ToolKind::WaterBucket), buckets) != 0 {
+                    return Err(TrainError::Limit);
+                }
+                refunded_water = Some(bag);
+            }
             let plan = terra_world::trains::plan_dismantle(
                 &world.chunks,
                 &world.journal,
@@ -907,6 +928,13 @@ pub(super) fn apply(
                 }
             }
             terra_world::trains::commit(&mut world.chunks, &mut world.journal, &plan)?;
+            if let Some(bag) = refunded_water {
+                world
+                    .journal
+                    .gameplay_mut()
+                    .inventories
+                    .insert(peer.uuid, bag);
+            }
             Ok(TrainOutcome::Changed { vehicle: Some(id) })
         }
         TrainAction::Couple {
@@ -999,6 +1027,63 @@ pub(super) fn apply(
                 .trains
                 .uncouple(peer.uuid, id, end)?;
             world.journal.gameplay_mut().revision = next;
+            Ok(TrainOutcome::Changed { vehicle: Some(id) })
+        }
+        TrainAction::FillWater {
+            vehicle: id,
+            player_revision,
+        } => {
+            let car = vehicle(peer, world, id)?;
+            let tank = car
+                .parts
+                .iter()
+                .position(|p| p.material == 254)
+                .ok_or(TrainError::Incomplete)?;
+            if !car.motion.stopped() {
+                return Err(TrainError::Busy);
+            }
+            if seated
+                .binding(peer.uuid)
+                .is_none_or(|seat| seat.vehicle != id)
+            {
+                reach_part(peer, world, &car, tank as u16)?;
+            }
+            let mut bag = world
+                .journal
+                .gameplay()
+                .inventories
+                .get(&peer.uuid)
+                .ok_or(TrainError::Missing)?
+                .clone();
+            if bag.revision != player_revision {
+                return Err(TrainError::Stale);
+            }
+            let creative = peer.game_mode(&world.config) == GameMode::Creative;
+            if !creative
+                && car.steam.water + terra_core::train_power::BUCKET_WATER
+                    > terra_core::train_power::WATER_CAPACITY
+            {
+                return Err(TrainError::Limit);
+            }
+            if !creative {
+                if !bag.take_one(ItemKind::Tool(ToolKind::WaterBucket)) {
+                    return Err(TrainError::MissingMaterials);
+                }
+                if bag.insert(ItemKind::Tool(ToolKind::Bucket), 1) != 0 {
+                    return Err(TrainError::Limit);
+                }
+            }
+            let revision = car.revision.checked_add(1).ok_or(TrainError::Overflow)?;
+            touch(world)?;
+            let game = world.journal.gameplay_mut();
+            game.inventories.insert(peer.uuid, bag);
+            let car = game.trains.vehicles.get_mut(&id).unwrap();
+            car.steam.water = if creative {
+                terra_core::train_power::WATER_CAPACITY
+            } else {
+                car.steam.water + terra_core::train_power::BUCKET_WATER
+            };
+            car.revision = revision;
             Ok(TrainOutcome::Changed { vehicle: Some(id) })
         }
         TrainAction::OpenCargo { vehicle: id, part } => {
@@ -1235,6 +1320,7 @@ pub(super) fn broadcast(
         .vehicles
         .values()
         .map(|car| terra_core::train_motion::TrainMotionFrame {
+            steam: car.steam,
             id: car.id,
             revision: car.revision,
             motion: car.motion,
@@ -1724,6 +1810,7 @@ mod cleanup_tests {
 
             motion: Default::default(),
             burn_seconds: 0.0,
+            steam: Default::default(),
         };
         assert!(vehicle.valid());
         let (feet, yaw) = vehicle.seat_pose(4).unwrap();

@@ -41,7 +41,7 @@ pub fn walk(
     }
     let direction = if meters < 0.0 { -1.0 } else { 1.0 };
     let mut remaining = meters.abs();
-    for _ in 0..64 {
+    for _ in 0..512 {
         let path = path(network, cursor).ok_or(StopReason::InvalidTrack)?;
         if !loaded(chunks, journal, path) {
             return Err(StopReason::Unloaded);
@@ -353,13 +353,23 @@ pub fn advance(
 ) -> Result<Vehicle, StopReason> {
     let mut next = car.clone();
     let (cursor, pivot, wheelbase) = initialize(chunks, journal, network, car)?;
-    let limit = rails::ballast::speed_limit(chunks, journal, cursor.anchor, 12.0)
+    let installed = terra_core::train_power::steam_installed(&car.parts);
+    let heating = installed && car.steam.water > 0.0 && car.steam.pressure_bar < 12.0;
+    let gear = terra_core::train_power::max_gear(&car.parts, car.steam);
+    let requested_speed = terra_core::train_power::gear_speed(car.motion.throttle, gear).max(4.0);
+    let limit = rails::ballast::speed_limit(chunks, journal, cursor.anchor, requested_speed)
         .ok_or(StopReason::InvalidTrack)?;
-    let powered = if car.motion.throttle != 0 && !car.motion.brake {
+    let powered = if car.motion.throttle != 0 && !car.motion.brake || heating {
         burn(&mut next, dt)
     } else {
         fuel_available(car)
     };
+    next.steam.advance(
+        installed,
+        powered && (heating || car.motion.throttle != 0 && !car.motion.brake),
+        car.motion.throttle.unsigned_abs() == 6 && !car.motion.brake,
+        dt,
+    );
     next.motion.fuel_available = fuel_available(&next);
     let speed = terra_core::train_motion::speed_step(
         car.motion.speed_mps,
@@ -371,7 +381,7 @@ pub fn advance(
     );
     let meters = (car.motion.speed_mps + speed) * 0.5 * dt;
     // Look ahead by the stopping distance. Known end points start braking before impact.
-    let stopping = (speed * speed / 12.0 + 0.25).min(32.0);
+    let stopping = (speed * speed / 12.0 + 0.25).min(512.0);
     let nose = leading_clearance(
         car,
         pivot,
@@ -838,6 +848,7 @@ mod tests {
             revision: 1,
             motion: Default::default(),
             burn_seconds: 0.0,
+            steam: Default::default(),
         };
         (chunks, journal, car)
     }

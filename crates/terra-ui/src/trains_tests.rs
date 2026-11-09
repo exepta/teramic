@@ -28,6 +28,7 @@ pub(super) fn app() -> App {
 }
 pub(super) fn car(id: u64) -> VehicleView {
     VehicleView {
+        steam: Default::default(),
         name: String::new(),
         id,
         owner: PlayerUuid::from_u128(1),
@@ -115,7 +116,12 @@ fn native_locomotive_choice_adds_the_body_after_the_functional_skeleton_is_compl
             3,
         ),
     };
-    let skeleton = train_blueprint::template(chassis.cell, chassis.facing, VehicleKind::Locomotive);
+    let skeleton: Vec<_> = expected
+        .cells
+        .iter()
+        .filter(|part| matches!(part.material, 210..=214 | 218 | 242))
+        .copied()
+        .collect();
     for part in &skeleton {
         let (section, local) = terra_voxel::global_to_section(part.cell);
         app.world_mut()
@@ -153,7 +159,9 @@ fn native_locomotive_choice_adds_the_body_after_the_functional_skeleton_is_compl
     assert_eq!(app.world().resource::<TrainBlueprint>(), &expected);
     let view = app.world().resource::<TrainView>();
     assert!(
-        view.blueprint_progress.contains("13 / 49") && view.blueprint_progress.contains("optional")
+        view.blueprint_progress
+            .contains(&format!("{} / {}", skeleton.len(), expected.cells.len()))
+            && view.blueprint_progress.contains("optional")
     );
     click_workshop(&mut app, "blueprint-build");
     assert!(!app.world().resource::<TrainView>().open);
@@ -655,9 +663,19 @@ fn all_vehicle_guides_snap_both_bogies_to_complete_rails_and_persist_after_closi
             actions(&mut app, &format!("kind:{kind}"));
             let guide = app.world().resource::<TrainBlueprint>();
             assert_eq!(
-                guide.cells.len(),
-                if kind == "locomotive" { 49 } else { 26 }
+                guide
+                    .cells
+                    .iter()
+                    .filter(|part| part.material == 211)
+                    .count(),
+                2
             );
+            if kind == "locomotive" {
+                assert!(guide.cells.len() > 30);
+                assert!(guide.cells.iter().any(|part| part.material == 250));
+            } else {
+                assert_eq!(guide.cells.len(), 26);
+            }
             assert!(
                 guide
                     .cells

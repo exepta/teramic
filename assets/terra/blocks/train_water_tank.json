@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": 254,
   "name": "Tender-Wassertank",
-  "description": "Decorative tender water tank casing. Fuel-powered driving needs no water; steam and water ports follow the steam engine system.",
+  "description": "Steam locomotive water tank. Fill it from the train controls using water buckets. Fuel gears one through five need no water.",
   "creative_category": "trains",
   "render_kind": "custom_mesh",
   "model_layout": "scene",

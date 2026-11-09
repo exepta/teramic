@@ -652,7 +652,14 @@ pub fn build_app() -> Result<App, Box<dyn Error>> {
     if frontend || token.is_some() {
         app.add_plugins(TerraNetworkPlugin(NetworkRole::Client));
     }
-    if !frontend && connect_address.is_some() {
+    if !frontend
+        && (connect_address.is_some()
+            || benchmark_save
+                .as_ref()
+                .is_some_and(|save| save.entry.is_some()))
+    {
+        // Existing-world benchmarks use the saved player's identity and location,
+        // including train ownership, rather than measuring an unrelated spawn.
         let profile = terra_core::PlayerProfile::load_for_client(&profile_path)?;
         app.insert_resource(profile);
     }

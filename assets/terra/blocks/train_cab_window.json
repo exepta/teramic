@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "id": 247,
-  "name": "Führerhaus-Fenster",
+  "name": "F\u00fchrerhaus-Fenster",
   "description": "Functional framed locomotive opening. Use to open and close its leaf.",
   "creative_category": "trains",
   "render_kind": "custom_mesh",

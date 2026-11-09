@@ -8456,6 +8456,7 @@ name = "terra-client"
 version = "0.1.0"
 dependencies = [
  "bevy",
+ "indexmap",
  "serde_json",
  "terra-core",
  "terra-network",
@@ -8477,6 +8478,7 @@ name = "terra-core"
 version = "0.1.0"
 dependencies = [
  "bevy",
+ "indexmap",
  "serde",
  "serde_json",
  "terra-voxel",

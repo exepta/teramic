@@ -136,7 +136,10 @@ impl EditJournal {
         position: [i64; 3],
         state: terra_core::furnace::FurnaceState,
     ) -> Result<(), String> {
-        if !state.valid() || !self.valid_container(position, &Inventory::default()) {
+        if !state.valid()
+            || !matches!(self.block(position), Some(59 | 218))
+            || !self.valid_container(position, &Inventory::default())
+        {
             return Err("Invalid or orphaned furnace state".into());
         }
         if self.furnaces.get(&position) != Some(&state) {

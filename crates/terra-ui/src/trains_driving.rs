@@ -171,7 +171,10 @@ pub(super) fn keyboard(world: &mut World, state: &mut TrainUiState, input: &Inpu
                 world,
                 state,
                 vehicle.id,
-                (throttle * sign + step).clamp(-3, 3) * sign,
+                (throttle * sign + step).clamp(
+                    -2,
+                    terra_core::train_power::max_gear(&vehicle.parts, vehicle.steam),
+                ) * sign,
                 if input.brake { !brake } else { false },
             );
         }
@@ -239,12 +242,16 @@ pub(super) fn command(world: &mut World, state: &mut TrainUiState, command: &str
                 desired_throttle
             }
         }
-        "drive-more" => (desired_throttle + 1).min(3),
-        "drive-less" => (desired_throttle - 1).max(-3),
+        "drive-more" => (desired_throttle + 1).min(terra_core::train_power::max_gear(
+            &vehicle.parts,
+            vehicle.steam,
+        )),
+        "drive-less" => (desired_throttle - 1).max(-2),
         "drive-stop" => 0,
         _ => throttle.unwrap_or(desired_throttle),
     };
-    if !(-3..=3).contains(&throttle) {
+    if !(-2..=terra_core::train_power::max_gear(&vehicle.parts, vehicle.steam)).contains(&throttle)
+    {
         return true;
     }
     send_drive(
@@ -493,8 +500,8 @@ pub(super) fn populate(
         * sign;
     view.drive_throttle = match throttle {
         0 => "Leerlauf".into(),
-        level if level < 0 => format!("Rückwärts {} / 3", level.unsigned_abs()),
-        level => format!("Vorwärts {level} / 3"),
+        level if level < 0 => format!("Rückwärts {} / 2", level.unsigned_abs()),
+        level => format!("Vorwärts {level} / 6"),
     };
     view.drive_value = f32::from(throttle);
     view.drive_status = status(vehicle.motion.stop_reason).into();
@@ -521,8 +528,30 @@ pub(super) fn populate(
             binding(world, GameAction::FlyDown)
         )
     };
-    view.drive_levels = (-3..=3)
+    let max_gear = terra_core::train_power::max_gear(&vehicle.parts, vehicle.steam);
+    view.drive_max = f32::from(max_gear);
+    view.has_water_tank = vehicle.parts.iter().any(|part| part.material == 254);
+    view.steam_status = if view.has_water_tank {
+        format!(
+            "Wasser {:.1}/8 Eimer · {:.1} bar",
+            vehicle.steam.water / 1000.0,
+            vehicle.steam.pressure_bar
+        )
+    } else {
+        format!(
+            "Kessel: {} Blöcke · Stufe {max_gear}",
+            terra_core::train_power::boiler_length(&vehicle.parts)
+        )
+    };
+    view.drive_levels = (-2..=6)
         .map(|level| TrainThrottleStep {
+            enabled: level <= max_gear,
+            title: match level {
+                4 => "20 Blöcke/s · mindestens 4 Kesselblöcke".into(),
+                5 => "30 Blöcke/s · mindestens 6 Kesselblöcke".into(),
+                6 => "50 Blöcke/s · Dampf, Wasser und mindestens 8 bar".into(),
+                _ => format!("{} Blöcke/s", terra_core::train_power::gear_speed(level, 6)),
+            },
             command: format!("drive-throttle:{level}"),
             label: if level > 0 {
                 format!("+{level}")

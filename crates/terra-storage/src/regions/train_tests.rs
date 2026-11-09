@@ -83,6 +83,7 @@ fn car(anchor: [i64; 3], kind: VehicleKind) -> Vehicle {
 
         motion: Default::default(),
         burn_seconds: 0.0,
+        steam: Default::default(),
     }
 }
 #[test]
@@ -110,7 +111,7 @@ fn id14_preserves_the_parked_consist_exact_parts_owner_mass_and_private_cargo_ac
     let expected = registry.clone();
     assert!(journal.gameplay().valid());
     save_edits(&root, world, &journal).unwrap();
-    assert_eq!(&read(&root.join(INDEX)).unwrap()[12..16], b"ID16");
+    assert_eq!(&read(&root.join(INDEX)).unwrap()[12..16], b"ID17");
     let loaded = load_edits(&root, world).unwrap();
     assert_eq!(loaded.gameplay().trains, expected);
     assert_eq!(loaded.gameplay().trains.consist(a).unwrap(), vec![a, b]);
@@ -166,7 +167,7 @@ fn a_frozen_id12_index_loads_with_no_invented_train_and_empty_id14_keeps_retired
             .unwrap()
             > id
     );
-    assert_eq!(&read(&root.join(INDEX)).unwrap()[12..16], b"ID16");
+    assert_eq!(&read(&root.join(INDEX)).unwrap()[12..16], b"ID17");
     fs::remove_dir_all(root).unwrap();
 }
 
@@ -203,7 +204,7 @@ fn id14_roundtrip_preserves_arbitrary_block_appearance_and_private_machine_paylo
     let id = journal.gameplay_mut().trains.insert(vehicle).unwrap();
     let expected = journal.gameplay().trains.clone();
     save_edits(&root, world, &journal).unwrap();
-    assert_eq!(&read(&root.join(INDEX)).unwrap()[12..16], b"ID16");
+    assert_eq!(&read(&root.join(INDEX)).unwrap()[12..16], b"ID17");
     let loaded = load_edits(&root, world).unwrap();
     assert_eq!(loaded.gameplay().trains, expected);
     assert_eq!(
@@ -257,7 +258,7 @@ fn frozen_id13_vehicle_registry_loads_without_reinterpreting_new_fields() {
     let loaded = load_edits(&root, world).unwrap();
     assert_eq!(loaded.gameplay().trains, expected);
     save_edits(&root, world, &loaded).unwrap();
-    assert_eq!(&read(&root.join(INDEX)).unwrap()[12..16], b"ID16");
+    assert_eq!(&read(&root.join(INDEX)).unwrap()[12..16], b"ID17");
     fs::remove_dir_all(root).unwrap();
 }
 
@@ -321,7 +322,7 @@ fn frozen_id14_keeps_machine_payloads_and_defaults_only_the_new_drive_state() {
     let loaded = load_edits(&root, world).unwrap();
     assert_eq!(loaded.gameplay().trains, expected);
     save_edits(&root, world, &loaded).unwrap();
-    assert_eq!(&read(&root.join(INDEX)).unwrap()[12..16], b"ID16");
+    assert_eq!(&read(&root.join(INDEX)).unwrap()[12..16], b"ID17");
     fs::remove_dir_all(root).unwrap();
 }
 
@@ -438,6 +439,71 @@ fn frozen_id15_motion_and_fuel_survive_name_upgrade_and_new_names_roundtrip() {
     save_edits(&root, world, &loaded).unwrap();
     let again = load_edits(&root, world).unwrap();
     assert_eq!(again.gameplay().trains, loaded.gameplay().trains);
-    assert_eq!(&read(&root.join(INDEX)).unwrap()[12..16], b"ID16");
+    assert_eq!(&read(&root.join(INDEX)).unwrap()[12..16], b"ID17");
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
+fn frozen_id16_names_and_parts_migrate_to_id17_without_inventing_water_or_pressure() {
+    let root = temporary();
+    let world = WorldId(22117);
+    let mut journal = EditJournal::default();
+    let mut vehicle = car([8, 12, 8], VehicleKind::Locomotive);
+    vehicle.name = "Test Lok".into();
+    let id = journal.gameplay_mut().trains.insert(vehicle).unwrap();
+    save_edits(&root, world, &journal).unwrap();
+    let current = read_train_index(&read(&root.join(INDEX)).unwrap()).unwrap();
+    let old = train_legacy::TrainIndex16 {
+        prior: current.prior,
+        trains: train_legacy::Registry16 {
+            next_id: current.trains.next_id,
+            revision: current.trains.revision,
+            vehicles: current
+                .trains
+                .vehicles
+                .into_iter()
+                .map(|(id, car)| {
+                    (
+                        id,
+                        train_legacy::Vehicle16 {
+                            name: car.name,
+                            id: car.id,
+                            owner: car.owner,
+                            kind: car.kind,
+                            anchor: car.anchor,
+                            parts: car.parts,
+                            cargo: car.cargo,
+                            blocks: car.blocks,
+                            payloads: car.payloads,
+                            motion: car.motion,
+                            burn_seconds: car.burn_seconds,
+                            couplings: car.couplings,
+                            revision: car.revision,
+                        },
+                    )
+                })
+                .collect(),
+        },
+    };
+    fs::write(root.join(INDEX), encode(b"ID16", &old).unwrap()).unwrap();
+    let mut loaded = load_edits(&root, world).unwrap();
+    assert_eq!(
+        loaded.gameplay().trains.vehicles[&id],
+        journal.gameplay().trains.vehicles[&id]
+    );
+    loaded
+        .gameplay_mut()
+        .trains
+        .vehicles
+        .get_mut(&id)
+        .unwrap()
+        .steam = terra_core::train_power::SteamState {
+        water: 5432.5,
+        pressure_bar: 9.125,
+    };
+    save_edits(&root, world, &loaded).unwrap();
+    let again = load_edits(&root, world).unwrap();
+    assert_eq!(again.gameplay().trains, loaded.gameplay().trains);
+    assert_eq!(&read(&root.join(INDEX)).unwrap()[12..16], b"ID17");
     fs::remove_dir_all(root).unwrap();
 }

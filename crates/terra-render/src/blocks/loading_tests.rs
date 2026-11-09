@@ -1710,7 +1710,8 @@ fn br52_metadata_and_the_complete_recipe_catalog_fit_the_transport_budgets() {
             locomotive_parts::base_boxes(part.id)
         );
         if matches!(part.kind, Kind::Valve | Kind::Gauge | Kind::Tank) {
-            assert!(definition.description.starts_with("Decorative "));
+            assert!(!definition.description.starts_with("Decorative "));
+            assert!(definition.description.to_lowercase().contains("steam"));
         }
     }
     let recipes = terra_core::crafting::RecipeBook::builtins();
@@ -1880,4 +1881,23 @@ fn non_rotary_extended_conveyor_metadata_does_not_relax_authored_unit_bounds() {
         overhang.positions[0][axis] = -0.001;
         assert!(bake_transform(id, &mut overhang, bevy::math::Affine3A::IDENTITY).is_err());
     }
+}
+
+#[test]
+fn locomotive_saddles_have_a_bounded_lower_skin_allowance_without_relaxing_other_parts() {
+    let primitive = PrimitiveTemplate {
+        positions: vec![[0.12, -0.14, 0.12], [0.88, 0.12, 0.12], [0.88, 0.12, 0.88]],
+        normals: vec![[0.0, 0.0, 1.0]; 3],
+        tangents: vec![],
+        uvs: vec![[0.0; 2]; 3],
+        indices: vec![0, 1, 2],
+        material: 0,
+    };
+    for id in 224..=226 {
+        assert!(bake_transform(id, &mut primitive.clone(), bevy::math::Affine3A::IDENTITY).is_ok());
+        let mut beyond = primitive.clone();
+        beyond.positions[0][1] = -0.15;
+        assert!(bake_transform(id, &mut beyond, bevy::math::Affine3A::IDENTITY).is_err());
+    }
+    assert!(bake_transform(245, &mut primitive.clone(), bevy::math::Affine3A::IDENTITY).is_err());
 }

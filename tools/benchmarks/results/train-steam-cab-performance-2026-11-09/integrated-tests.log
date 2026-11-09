@@ -1,0 +1,82 @@
+   Compiling terra-server v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/apps/server)
+   Compiling terra-client v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/apps/client)
+    Finished `test` profile [optimized + debuginfo] target(s) in 37.37s
+     Running unittests src/main.rs (target/debug/deps/terra_client-e41b4c6b2f9171ae)
+
+running 3 tests
+test bootstrap::tests::benchmark_ui_requires_the_real_integrated_static_benchmark ... ok
+test inventory_benchmark::tests::comparison_requires_real_integrated_ui_and_enough_time_without_a_route ... ok
+test mixer_smoke::tests::integrated_setup_without_frontend_menu_still_configures_and_captures_gameplay ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 206 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/deps/terra_core-9b797b1d7b621d51)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 464 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/deps/terra_network-ecf37ef10b49abc1)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 546 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/deps/terra_physics-4665ba0bbcc05895)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 76 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/deps/terra_player-b5db00464e9edfa1)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 119 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/deps/terra_render-f7a442dd347461f8)
+
+running 1 test
+test meshing::custom::rails::tests::steel_tongues_move_without_an_integrated_lever_while_sleepers_stay_fixed ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1071 filtered out; finished in 0.02s
+
+     Running unittests src/lib.rs (target/debug/deps/terra_server-9f3f2fe81e8c0324)
+
+running 3 tests
+test integrated::save_tests::integrated_systems_and_nested_schedules_stay_on_the_server_thread ... ok
+test integrated::save_tests::integrated_server_serializes_manual_background_save_and_reload_without_another_writer ... ok
+test integrated::save_tests::actual_singleplayer_join_and_save_keep_world_custom_rules_and_ignore_dedicated_override ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 6 filtered out; finished in 0.41s
+
+     Running unittests src/main.rs (target/debug/deps/terra_server-bf09ff4ffa0a2d6b)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 8 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/deps/terra_storage-4f404d795f6f728e)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 169 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/deps/terra_ui-1ac5f6af3992c743)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 569 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/deps/terra_voxel-9ebdcff654b5745e)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 25 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/deps/terra_world-6f3da2b8b8419254)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 1230 filtered out; finished in 0.00s
+

@@ -645,3 +645,47 @@ fn shared_plank_batches_keep_existing_terrain_vertex_colors_aligned() {
     assert_eq!(batch.colors[0], [0.4, 0.5, 0.6, 1.0]);
     assert!(batch.colors[1..].iter().all(|&color| color == [1.0; 4]));
 }
+
+#[test]
+fn immutable_rail_profiles_are_shared_across_jobs_but_never_across_palettes_or_wood() {
+    let template = template();
+    let key = ProfileKey {
+        material: rails::STRAIGHT,
+        facing: 1,
+        curve: None,
+        wood: WoodSpecies::Oak,
+    };
+    let a = shared_profile(key, &template, Some(991)).unwrap();
+    let b = shared_profile(key, &template, Some(991)).unwrap();
+    assert!(std::sync::Arc::ptr_eq(&a, &b));
+    let mut other = template.clone();
+    other.model[1].material = 12345;
+    let c = shared_profile(key, &other, Some(991)).unwrap();
+    assert!(!std::sync::Arc::ptr_eq(&a, &c));
+    assert!(c.full.contains_key(&12345));
+    let cherry = shared_profile(
+        ProfileKey {
+            wood: WoodSpecies::Cherry,
+            ..key
+        },
+        &template,
+        Some(992),
+    )
+    .unwrap();
+    assert!(!std::sync::Arc::ptr_eq(&a, &cherry));
+    assert!(cherry.full.contains_key(&992));
+    let baseline = profile_with_wood(
+        rails::Piece::new([0; 3], rails::STRAIGHT, 1).unwrap(),
+        &template,
+        Some(991),
+        WoodSpecies::Oak,
+    )
+    .unwrap();
+    assert_eq!(a.cells.len(), baseline.cells.len());
+    for (cell, batches) in &a.cells {
+        for (material, batch) in batches {
+            assert_eq!(batch.positions, baseline.cells[cell][material].positions);
+            assert_eq!(batch.indices, baseline.cells[cell][material].indices);
+        }
+    }
+}

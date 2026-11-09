@@ -37,7 +37,7 @@ impl TrainCollisionViews {
         if frames.len() > terra_core::trains::MAX_VEHICLES
             || frames
                 .iter()
-                .any(|frame| frame.id == 0 || !frame.motion.valid())
+                .any(|frame| frame.id == 0 || !frame.motion.valid() || !frame.steam.valid())
         {
             return Err("Invalid train motion packet".into());
         }
@@ -51,6 +51,7 @@ impl TrainCollisionViews {
             {
                 changed |= vehicle.motion != frame.motion;
                 vehicle.motion = frame.motion;
+                vehicle.steam = frame.steam;
                 vehicle.revision = frame.revision;
             }
         }

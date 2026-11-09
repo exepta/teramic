@@ -1168,6 +1168,7 @@ fn train_camera_uses_the_seat_without_physics_lerp_walk_bob_or_stair_smoothing()
         part: 0,
     });
     session.trains.vehicles.push(VehicleView {
+        steam: Default::default(),
         name: String::new(),
         id: 1,
         owner,

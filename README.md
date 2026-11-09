@@ -6286,3 +6286,19 @@ Protokoll 122, weiterhin Zugindex ID16.
 [Aktuelle Zugbedienung](docs/train-building.md).
 
 Phase-220-Pruefbericht mit Live-Aufnahmen und Einzeltests: [Drehgleis, Breiten und Zug-UI](tools/benchmarks/results/train-turntable-width-ui-2026-11-09/README.md).
+
+
+Phase 221 ergaenzt sechs laengen-/druckabhaengige Zugfahrstufen, Tankbefuellung,
+gespeicherten Wasser-/Dampfdruckzustand und Schornsteinrauch. Die breite
+Bauvorlage besitzt einen hoeheren Fuehrerstand und geschlossene Anschluesse.
+Motor-Restbrand laesst sich speichern; bedingte Systeme starten ohne kuenstlich
+alte Aenderungsticks. Geteilte Gleisflaechen reduzieren wiederholte Arbeit bei
+Terrainbearbeitungen. Protokoll 123, Zugindex ID17 mit ID16-Migration.
+[Zugbedienung](docs/train-building.md).
+[Pruefbericht und Live-Aufnahmen](tools/benchmarks/results/train-steam-cab-performance-2026-11-09/README.md).
+
+Die Ausfuehrung des integrierten Servers ist vom Renderer-Aufgabenpool getrennt;
+Wasserverbindungspruefungen um Schienen vermeiden teure Volumenzerlegung.
+Drei native Messungen in Kopien der Test-Welt erreichen 27.23/28.62/25.16 ms als
+laengsten Frame fuer Blockbau, Gleisbau und Chunk-Streaming; die Originalwelt
+bleibt unveraendert. 4488 Tests bestanden, zehn ignoriert.

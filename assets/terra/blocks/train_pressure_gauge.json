@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": 230,
   "name": "Lok-Druckanzeige",
-  "description": "Decorative pressure instrument casing. Live steam pressure follows the steam engine system; fuel driving uses the cab display.",
+  "description": "Pressure instrument required by the steam system. Water and pressure are displayed in the locomotive controls.",
   "creative_category": "trains",
   "render_kind": "custom_mesh",
   "model_layout": "scene",

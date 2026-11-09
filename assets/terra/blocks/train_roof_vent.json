@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "id": 251,
-  "name": "Lok-Dachlüfter",
+  "name": "Lok-Dachl\u00fcfter",
   "description": "Decorative BR52 locomotive component. Attach to the connected vehicle body before assembly.",
   "creative_category": "trains",
   "render_kind": "custom_mesh",

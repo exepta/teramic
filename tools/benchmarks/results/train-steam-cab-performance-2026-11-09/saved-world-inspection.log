@@ -1,0 +1,15 @@
+edited_blocks=6028 sections=286 furnaces=0 trains=1
+train id=3 kind=Locomotive anchor=[32, 90, 269] bounds=[[34.8326517517859, 88.3125, 268.0], [46.8326517517859, 94.2625, 271.0]] parts=61 speed=0 boiler=5 steam=SteamState { water: 0.0, pressure_bar: 0.0 }
+rail_modules=37
+rail anchor=[2, 87, 269] material=205
+rail anchor=[6, 88, 269] material=196
+rail anchor=[7, 88, 269] material=196
+rail anchor=[8, 88, 269] material=196
+rail anchor=[11, 88, 269] material=196
+rail anchor=[12, 88, 269] material=196
+rail anchor=[13, 88, 269] material=196
+rail anchor=[56, 88, 269] material=196
+rail anchor=[57, 88, 269] material=196
+rail anchor=[62, 87, 269] material=196
+rail anchor=[63, 87, 269] material=196
+rail anchor=[76, 87, 255] material=196

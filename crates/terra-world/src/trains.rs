@@ -487,6 +487,7 @@ pub fn plan_assembly_with_properties(
         couplings: [None, None],
         revision: 1,
         motion: Default::default(),
+        steam: Default::default(),
         burn_seconds: cells
             .iter()
             .find(|(_, material)| **material == 218)

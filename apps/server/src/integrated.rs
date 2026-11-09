@@ -63,6 +63,7 @@ impl IntegratedServer {
                 });
                 app.finish();
                 app.cleanup();
+                isolate_simulation(&mut app);
                 app.update();
                 let runtime = app.world().resource::<ServerRuntime>();
                 let result = runtime.error.clone().map_or_else(
@@ -86,7 +87,10 @@ impl IntegratedServer {
                 let mut requested = None;
                 while !signal.load(Ordering::Acquire) {
                     let started = Instant::now();
-                    app.update();
+                    {
+                        let _scope = terra_core::profiling::ScopeTimer::new("integrated.tick");
+                        app.update();
+                    }
                     if requested.is_none() {
                         requested = saves.try_recv().ok();
                     }
@@ -168,6 +172,17 @@ impl IntegratedServer {
         Ok(receiver)
     }
 }
+
+/// Keep synchronous server systems on their owning OS thread. Client parallel
+/// queries otherwise can steal a long server simulation job from the shared
+/// ComputeTaskPool while waiting for their own tiny visibility/material jobs.
+/// Explicit generation, collision cooking and save jobs retain their async pool.
+fn isolate_simulation(app: &mut App) {
+    use bevy::ecs::schedule::{Schedules, SingleThreadedExecutor};
+    for (_, schedule) in app.world_mut().resource_mut::<Schedules>().iter_mut() {
+        schedule.set_executor(SingleThreadedExecutor::new());
+    }
+}
 impl Drop for IntegratedServer {
     fn drop(&mut self) {
         self.stop.store(true, Ordering::Release);
@@ -184,6 +199,31 @@ impl Drop for IntegratedServer {
 #[cfg(test)]
 mod save_tests {
     use super::*;
+
+    #[test]
+    fn integrated_systems_and_nested_schedules_stay_on_the_server_thread() {
+        use bevy::ecs::schedule::ScheduleLabel;
+        #[derive(ScheduleLabel, Clone, Debug, PartialEq, Eq, Hash)]
+        struct Nested;
+        #[derive(Resource, Default)]
+        struct Threads(Vec<std::thread::ThreadId>);
+        fn capture(mut threads: ResMut<Threads>) {
+            threads.0.push(std::thread::current().id());
+        }
+        let mut app = App::new();
+        app.init_resource::<Threads>()
+            .add_systems(Update, capture)
+            .add_systems(FixedPostUpdate, capture)
+            .add_systems(Nested, capture);
+        isolate_simulation(&mut app);
+        app.update();
+        app.world_mut().run_schedule(FixedPostUpdate);
+        app.world_mut().run_schedule(Nested);
+        assert_eq!(
+            app.world().resource::<Threads>().0,
+            vec![std::thread::current().id(); 3]
+        );
+    }
     #[test]
     fn actual_singleplayer_join_and_save_keep_world_custom_rules_and_ignore_dedicated_override() {
         let root = std::env::temp_dir().join(format!(

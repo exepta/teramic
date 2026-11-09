@@ -43,7 +43,7 @@ fn train_workshop_action(
                     .and_then(|value| value.parse::<f64>().ok())
                     && value.is_finite()
                     && value.fract().abs() < 1e-6
-                    && (-3.0..=3.0).contains(&value)
+                    && (-2.0..=6.0).contains(&value)
                 {
                     actions.write(crate::TrainUiAction::Command(format!(
                         "drive-throttle:{}",
@@ -89,6 +89,7 @@ fn train_command(id: &str) -> bool {
             | "couple"
             | "uncouple"
             | "edit"
+            | "water"
             | "engine"
             | "drive-more"
             | "drive-less"

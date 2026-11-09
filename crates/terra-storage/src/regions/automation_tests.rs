@@ -208,3 +208,37 @@ fn logistics_ports_in_flight_output_and_chest_survive_real_region_commits_and_co
     assert_eq!(settled.container_at(SOURCE), reloaded.container_at(SOURCE));
     fs::remove_dir_all(root).unwrap();
 }
+
+#[test]
+fn dismantled_train_engine_burn_budget_survives_region_save_and_load() {
+    let root = std::env::temp_dir().join(format!("terra-engine-regions-{}", PlayerUuid::new_v4()));
+    let world = WorldId(221);
+    let cell = [8, 105, 24];
+    let mut journal = EditJournal::default();
+    journal.record(cell, 218).unwrap();
+    journal
+        .set_object_state(cell, Some(BlockObjectState::default()))
+        .unwrap();
+    let mut inventory = Inventory::default();
+    inventory.creative_set(
+        0,
+        ItemStack {
+            item: ItemKind::Mineral(MineralItem::Coal),
+            count: 7,
+        },
+    );
+    journal.set_container(cell, inventory.clone()).unwrap();
+    let state = furnace::FurnaceState {
+        burn_remaining: 23.5,
+        burn_total: 80.0,
+        outlet: cell,
+        ..Default::default()
+    };
+    journal.set_furnace(cell, state.clone()).unwrap();
+    save_edits(&root, world, &journal).unwrap();
+    let loaded = load_edits(&root, world).unwrap();
+    assert_eq!(loaded.furnace_at(cell), Some(&state));
+    assert_eq!(loaded.container_at(cell), Some(&inventory));
+    assert_eq!(loaded.block(cell), Some(218));
+    std::fs::remove_dir_all(root).unwrap();
+}

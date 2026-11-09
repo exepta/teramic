@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "id": 286,
-  "name": "Lok-Blech Außenecke",
+  "name": "Lok-Blech Au\u00dfenecke",
   "description": "Structural locomotive construction shape. Build the connected vehicle body with matching metal parts.",
   "creative_category": "trains",
   "render_kind": "custom_mesh",

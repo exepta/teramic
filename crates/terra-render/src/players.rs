@@ -1312,6 +1312,7 @@ mod tests {
                 .trains
                 .vehicles
                 .push(terra_core::trains::VehicleView {
+                    steam: Default::default(),
                     name: String::new(),
                     id: 7,
                     owner: player,

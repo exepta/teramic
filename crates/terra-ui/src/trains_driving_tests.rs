@@ -675,7 +675,12 @@ fn driving_hud_uses_authoritative_meter_speed_and_configured_controls_then_clear
     let view = app.world().resource::<TrainView>();
     assert!(view.riding && view.driver);
     assert_eq!(view.drive_speed, "2,8 Blöcke/s");
-    assert_eq!(view.drive_levels.len(), 7);
+    assert_eq!(view.drive_levels.len(), 9);
+    assert!(
+        view.drive_levels
+            .iter()
+            .any(|step| step.command == "drive-throttle:6" && !step.enabled)
+    );
     assert!(view.drive_hint.contains('W') && view.drive_hint.contains('S'));
     app.world_mut()
         .resource_mut::<ButtonInput<KeyCode>>()

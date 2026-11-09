@@ -38,6 +38,7 @@ impl From<Vehicle13> for Vehicle {
             payloads: Default::default(),
             motion: Default::default(),
             burn_seconds: 0.0,
+            steam: Default::default(),
             couplings: old.couplings,
             revision: old.revision,
         }
@@ -125,6 +126,7 @@ impl From<TrainIndex14> for TrainIndex {
                                 revision: car.revision,
                                 motion: Default::default(),
                                 burn_seconds: 0.0,
+                                steam: Default::default(),
                             },
                         )
                     })
@@ -187,6 +189,73 @@ impl From<TrainIndex15> for TrainIndex {
                                 payloads: car.payloads,
                                 motion: car.motion,
                                 burn_seconds: car.burn_seconds,
+                                steam: Default::default(),
+                                couplings: car.couplings,
+                                revision: car.revision,
+                            },
+                        )
+                    })
+                    .collect(),
+            },
+        }
+    }
+}
+
+/// Frozen ID16 layout predates persistent steam resources.
+#[derive(Serialize, Deserialize)]
+pub(super) struct TrainIndex16 {
+    pub prior: TreeIndex,
+    pub trains: Registry16,
+}
+#[derive(Serialize, Deserialize)]
+pub(super) struct Registry16 {
+    pub next_id: u64,
+    pub revision: u64,
+    pub vehicles: BTreeMap<u64, Vehicle16>,
+}
+#[derive(Serialize, Deserialize)]
+pub(super) struct Vehicle16 {
+    pub name: String,
+    pub id: u64,
+    pub owner: PlayerUuid,
+    pub kind: VehicleKind,
+    pub anchor: [i64; 3],
+    pub parts: Vec<TrainPart>,
+    pub cargo: BTreeMap<u16, Inventory>,
+    pub blocks: BTreeMap<u16, terra_core::trains::TrainBlockView>,
+    pub payloads: BTreeMap<u16, Vec<u8>>,
+    pub motion: terra_core::train_motion::TrainMotion,
+    pub burn_seconds: f64,
+    pub couplings: [Option<Coupling>; 2],
+    pub revision: u64,
+}
+impl From<TrainIndex16> for TrainIndex {
+    fn from(old: TrainIndex16) -> Self {
+        Self {
+            prior: old.prior,
+            trains: terra_core::trains::TrainRegistry {
+                next_id: old.trains.next_id,
+                revision: old.trains.revision,
+                vehicles: old
+                    .trains
+                    .vehicles
+                    .into_iter()
+                    .map(|(id, car)| {
+                        (
+                            id,
+                            Vehicle {
+                                name: car.name,
+                                id: car.id,
+                                owner: car.owner,
+                                kind: car.kind,
+                                anchor: car.anchor,
+                                parts: car.parts,
+                                cargo: car.cargo,
+                                blocks: car.blocks,
+                                payloads: car.payloads,
+                                motion: car.motion,
+                                burn_seconds: car.burn_seconds,
+                                steam: Default::default(),
                                 couplings: car.couplings,
                                 revision: car.revision,
                             },

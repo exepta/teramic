@@ -996,6 +996,7 @@ fn bounded_full_train_registry_public_packet_stays_below_two_mebibytes() {
         .collect();
     let vehicles = (1..=16)
         .map(|id| VehicleView {
+            steam: Default::default(),
             name: String::new(),
             id,
             owner: terra_core::PlayerUuid::from_u128(1),

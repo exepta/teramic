@@ -275,6 +275,7 @@ fn retired_train_mesh_assets_are_released_without_a_render_app() {
 #[test]
 fn assembled_root_uses_the_same_fractional_origin_as_authoritative_models() {
     let vehicle = terra_core::trains::VehicleView {
+        steam: Default::default(),
         name: String::new(),
         id: 1,
         owner: terra_core::PlayerUuid::from_u128(1),

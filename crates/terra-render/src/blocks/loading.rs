@@ -1338,6 +1338,10 @@ fn bake_transform(
         if position.iter().enumerate().any(|(axis, value)| {
             let (minimum, maximum) = if let Some((low, high)) = rail_bounds {
                 (low[axis] as f32, high[axis] as f32)
+            } else if matches!(id, 224..=226) && axis == 1 {
+                // The fitting's visible saddle seals against the curved boiler;
+                // its physical owner/collision volume stays within the unit cell.
+                (-0.14, 1.0)
             } else if id == terra_core::train_parts::BOGIE && axis != 1 {
                 (
                     terra_core::train_parts::BOGIE_MIN_HORIZONTAL as f32,

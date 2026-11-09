@@ -38,6 +38,7 @@ fn vehicle() -> Vehicle {
 
         motion: Default::default(),
         burn_seconds: 0.0,
+        steam: Default::default(),
     };
     assert!(vehicle.valid());
     vehicle
@@ -462,6 +463,7 @@ fn moved_dismantling_waits_for_current_cells_even_when_final_pose_and_removal_ar
     app.world_mut()
         .resource_mut::<TrainCollisionViews>()
         .set_motions(&[terra_core::train_motion::TrainMotionFrame {
+            steam: Default::default(),
             id: moved.id,
             revision: moved.revision,
             motion: moved.motion,
@@ -842,6 +844,7 @@ fn compact_train_motion_moves_the_existing_backend_body_without_recooking() {
     app.world_mut()
         .resource_mut::<TrainCollisionViews>()
         .set_motions(&[terra_core::train_motion::TrainMotionFrame {
+            steam: Default::default(),
             id: view.id,
             revision: view.revision,
             motion,

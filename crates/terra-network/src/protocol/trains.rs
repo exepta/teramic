@@ -81,6 +81,10 @@ pub enum TrainAction {
         clockwise: bool,
     },
     Leave,
+    FillWater {
+        vehicle: u64,
+        player_revision: u64,
+    },
 }
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct TrainCommand {

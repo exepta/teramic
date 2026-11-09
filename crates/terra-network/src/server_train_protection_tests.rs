@@ -35,6 +35,7 @@ fn vehicle(owner: PlayerUuid) -> Vehicle {
 
         motion: Default::default(),
         burn_seconds: 0.0,
+        steam: Default::default(),
     };
     assert!(vehicle.valid());
     vehicle

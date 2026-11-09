@@ -2,7 +2,10 @@
 use super::{MeshBatch, ModelCell};
 use crate::blocks::{BlockTemplate, TemplateSet};
 use bevy::math::{Vec2, Vec3, Vec4};
-use std::collections::BTreeMap;
+use std::{
+    collections::BTreeMap,
+    sync::{Arc, Mutex, OnceLock},
+};
 use terra_core::{
     WoodSpecies,
     rails::{CurveSpec, PartMaterial, Piece},
@@ -31,7 +34,102 @@ struct ProfileKey {
 }
 
 #[derive(Default)]
-pub(super) struct Profiles(BTreeMap<ProfileKey, Profile>);
+pub(super) struct Profiles(BTreeMap<ProfileKey, Arc<Profile>>);
+
+// Canonical rail profiles depend only on their pose and semantic material
+// indices. Sharing these immutable slices avoids clipping every module again
+// for each chunk, unrelated block edit and placement silhouette.
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
+struct SharedKey {
+    pose: ProfileKey,
+    materials: Vec<usize>,
+    wood_material: Option<usize>,
+}
+type Prepared = OnceLock<Result<Arc<Profile>, String>>;
+struct Cached {
+    prepared: Arc<Prepared>,
+    bytes: usize,
+    used: u64,
+}
+#[derive(Default)]
+struct SharedProfiles {
+    entries: BTreeMap<SharedKey, Cached>,
+    bytes: usize,
+    clock: u64,
+}
+const PROFILE_CACHE_BYTES: usize = 32 * 1024 * 1024;
+const PROFILE_CACHE_ENTRIES: usize = 128;
+static SHARED: OnceLock<Mutex<SharedProfiles>> = OnceLock::new();
+fn shared_profile(
+    pose: ProfileKey,
+    template: &BlockTemplate,
+    wood_material: Option<usize>,
+) -> Result<Arc<Profile>, String> {
+    let key = SharedKey {
+        pose,
+        materials: template.model.iter().map(|part| part.material).collect(),
+        wood_material,
+    };
+    let cache = SHARED.get_or_init(Default::default);
+    let prepared = {
+        let mut cache = cache.lock().unwrap_or_else(|error| error.into_inner());
+        cache.clock = cache.clock.wrapping_add(1);
+        let stamp = cache.clock;
+        let entry = cache.entries.entry(key.clone()).or_insert_with(|| Cached {
+            prepared: Arc::new(OnceLock::new()),
+            bytes: 0,
+            used: stamp,
+        });
+        entry.used = stamp;
+        entry.prepared.clone()
+    };
+    // Concurrent workers share one cold build without holding the cache lock.
+    let result = prepared
+        .get_or_init(|| {
+            let _scope = terra_core::profiling::ScopeTimer::new("rails.profile.build");
+            let piece = Piece::from_facing([0; 3], pose.material, pose.facing)
+                .and_then(|piece| match pose.curve {
+                    Some(curve) => piece.with_curve(curve),
+                    None => Some(piece),
+                })
+                .ok_or("Invalid rail profile")?;
+            profile_with_wood(piece, template, wood_material, pose.wood).map(Arc::new)
+        })
+        .clone();
+    let mut retired = Vec::new();
+    {
+        let mut cache = cache.lock().unwrap_or_else(|error| error.into_inner());
+        if let Some(entry) = cache.entries.get_mut(&key)
+            && entry.bytes == 0
+        {
+            let bytes = result.as_ref().map_or(1, |profile| {
+                std::iter::once(&profile.full)
+                    .chain(profile.cells.values())
+                    .flat_map(|batches| batches.values())
+                    .map(crate::upload_budget::batch_bytes)
+                    .sum::<usize>()
+                    .max(1)
+            });
+            entry.bytes = bytes;
+            cache.bytes += bytes;
+        }
+        while cache.bytes > PROFILE_CACHE_BYTES || cache.entries.len() > PROFILE_CACHE_ENTRIES {
+            let Some(oldest) = cache
+                .entries
+                .iter()
+                .min_by_key(|(_, entry)| entry.used)
+                .map(|(key, _)| key.clone())
+            else {
+                break;
+            };
+            let entry = cache.entries.remove(&oldest).unwrap();
+            cache.bytes = cache.bytes.saturating_sub(entry.bytes);
+            retired.push(entry);
+        }
+    }
+    drop(retired);
+    result
+}
 
 impl Profiles {
     pub(super) fn append(
@@ -69,12 +167,7 @@ impl Profiles {
                 .blocks
                 .get(&plank)
                 .map(|plank| plank.face_materials[0]);
-            entry.insert(profile_with_wood(
-                piece,
-                template,
-                wood_material,
-                model.state.wood,
-            )?);
+            entry.insert(shared_profile(key, template, wood_material)?);
         }
         let profile = &self.0[&key];
         let cell = std::array::from_fn(|axis| origin[axis] + i64::from(model.cell[axis]));

@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "id": 223,
-  "name": "Rauchkammertür 52 4867",
+  "name": "Rauchkammert\u00fcr 52 4867",
   "description": "Decorative BR52 locomotive component. Attach to the connected vehicle body before assembly.",
   "creative_category": "trains",
   "render_kind": "custom_mesh",

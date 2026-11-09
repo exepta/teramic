@@ -20,6 +20,7 @@ use terra_world::{
 mod accessories;
 mod animation;
 mod openings;
+mod smoke;
 pub(crate) mod workshop_preview;
 
 type BlockViews = BTreeMap<u16, TrainBlockView>;
@@ -65,6 +66,7 @@ struct AnimatedBatch {
 }
 pub(crate) fn install(app: &mut App) {
     accessories::install(app);
+    smoke::install(app);
     workshop_preview::install(app);
     app.init_resource::<Trains>()
         .add_systems(Update, synchronize.after(crate::meshing::upload_sections))

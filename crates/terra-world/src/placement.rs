@@ -1047,6 +1047,31 @@ pub fn propose(
         })
         .flatten();
     let mut plan = layout(chunks, journal, position, expected, material, look, crank)?;
+    if matches!(material, 245 | 246) {
+        // Thin cab panels attach to the clicked face. On floors/ceilings the
+        // nearest edge selects either inside or outside, independent of yaw.
+        let normal = if hit.normal[1] == 0 {
+            hit.normal
+        } else {
+            let point: [f64; 3] =
+                std::array::from_fn(|axis| ray.0[axis] + ray.1[axis] * hit.distance);
+            let local = [point[0] - position[0] as f64, point[2] - position[2] as f64];
+            let edge = [local[0], 1.0 - local[0], local[1], 1.0 - local[1]];
+            let nearest = (0..4).min_by(|&a, &b| edge[a].total_cmp(&edge[b])).unwrap();
+            [[1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1]][nearest]
+        };
+        let facing = match normal {
+            [1, 0, 0] => 1,
+            [-1, 0, 0] => 3,
+            [0, 0, 1] => 0,
+            _ => 2,
+        };
+        for (_, state) in &mut plan.states {
+            if let Some(state) = state {
+                state.facing = facing;
+            }
+        }
+    }
     if terra_core::logistics::is_port(material) && hit.normal[1] == 0 {
         for (_, state) in &mut plan.states {
             if let Some(state) = state {

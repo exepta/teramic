@@ -901,6 +901,7 @@ fn environment_for(
     journal: &EditJournal,
     replaced: Option<Piece>,
 ) -> Result<(), String> {
+    let _scope = terra_core::profiling::ScopeTimer::new("rails.environment");
     if replaced.is_none() && journal.rail_module_count() >= terra_core::rails::MAX_PIECES {
         return Err("Rail network has reached its module limit".into());
     }

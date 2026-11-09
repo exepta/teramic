@@ -1,0 +1,33 @@
+{
+  "case": "rail",
+  "exit_code": 0,
+  "wall_seconds": 64.07569972297642,
+  "command": [
+    "target/debug/terra-client",
+    "--smoke-test-benchmark"
+  ],
+  "overrides": {
+    "WINIT_UNIX_BACKEND": "x11",
+    "WINIT_X11_SCALE_FACTOR": "1",
+    "TERRA_PREVIEW_WARMUP": "1",
+    "TERRA_CAPTURE_DIR": "/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/target/live221/screenshots",
+    "TERRA_BENCH_MODE": "integrated",
+    "TERRA_BENCH_UI": "1",
+    "TERRA_BENCH_GRAPHICS": "1",
+    "TERRA_BENCH_WORLD_ID": "17236484579404363793",
+    "TERRA_BENCH_SAVE_DIR": "/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/target/live221/final-rail-worlds/Test",
+    "TERRA_WORLD_DIR": "/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/target/live221/final-rail-worlds",
+    "TERRA_CONFIG_DIR": "/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/target/live221/configs",
+    "TERRA_MENU_CONFIG_DIR": "/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/target/live221/configs",
+    "TERRA_BENCH_CAMERA": "40.5,89.62,273.5",
+    "TERRA_BENCH_LOOK_AT": "40,92,269",
+    "TERRA_BENCH_SECONDS": "25",
+    "TERRA_BENCH_LOAD_SECONDS": "75",
+    "TERRA_CPU_SCOPES": "1",
+    "TERRA_SCREENSHOT": "/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/target/live221/screenshots/test-world-rail.png",
+    "TERRA_SOAK_EDITS": "1",
+    "TERRA_SOAK_EDIT_MODE": "rapid",
+    "TERRA_SOAK_EDIT_CYCLES": "120",
+    "TERRA_SOAK_EDIT_RAILS": "1"
+  }
+}

@@ -89,8 +89,8 @@ GLYPHS = {
 
 def palette(mesh):
     mesh.materials.update({
-        'train_black_iron': ([.115, .125, .14], 'machinery-iron-hd.png', .82, .54),
-        'train_dark_steel': ([.20, .215, .235], 'machinery-iron-hd.png', .85, .48),
+        'train_black_iron': ([.25, .265, .28], 'machinery-iron-hd.png', .56, .66),
+        'train_dark_steel': ([.30, .315, .335], 'machinery-iron-hd.png', .62, .60),
         'train_sheet_metal': ([.30, .31, .315], 'machinery-iron-hd.png', .78, .59),
         'train_grate': ([.10, .115, .13], 'machinery-iron-hd.png', .88, .57),
         'train_red': ([.52, .055, .035], 'machinery-iron-hd.png', .66, .6),
@@ -207,6 +207,8 @@ def boiler(mesh, material='train_black_iron', door=False):
     cylinder(mesh, [.5, .5, .5], .48, 0, 1, 2, material)
     for x in [.20, .72]:
         mesh.box([x, 0, .16], [x + .08, .20, .84], 'train_black_iron', solid=True)
+    for x in [.025, .975]:
+        cylinder(mesh, [x, .62, .5], .014, 0, 1, 2, 'train_brass', solid=False, sides=8)
     for z in [.03, .91]:
         cylinder(mesh, [.5, .5, .5], .49, z, z + .055, 2, 'train_dark_steel', inner=.465, solid=False)
     for z in [.10, .50, .90]:
@@ -338,11 +340,17 @@ def make(material, slug):
     elif material == 220:
         curved_boiler(mesh)
     elif material in [224, 225, 226]:
+        # A thin visible saddle overlaps the boiler skin; the occupied fitting
+        # volume stays inside its own cell, as the shared collision contract.
+        mesh.box([.12, -.14, .12], [.88, .10, .88], 'train_black_iron', solid=False)
         mesh.box([.12, 0, .12], [.88, .12, .88], 'train_black_iron', solid=True)
-        cylinder(mesh, [.5, .5, .5], .26 if material == 224 else .37, .10, .90, 1, 'train_black_iron')
-        cylinder(mesh, [.5, .5, .5], .32 if material == 224 else .40, .84, .98, 1, 'train_dark_steel')
-        if material != 224:
-            cylinder(mesh, [.5, .5, .5], .16, .95, 1, 1, 'train_brass')
+        if material == 224:
+            cylinder(mesh, [.5, .5, .5], .26, .10, .90, 1, 'train_black_iron', inner=.20)
+            cylinder(mesh, [.5, .5, .5], .32, .84, .98, 1, 'train_brass', inner=.20, solid=False)
+        else:
+            for radius, low, high in [(.35, .10, .22), (.32, .22, .36), (.25, .36, .48), (.14, .48, .55)]:
+                cylinder(mesh, [.5, .5, .5], radius, low, high, 1, 'train_black_iron')
+            cylinder(mesh, [.5,.5,.5], .08, .54, .62, 1, 'train_brass')
     elif material in [227, 228, 229]:
         if material == 227:
             cylinder(mesh, [.5, .5, .5], .065, 0, 1, 2, 'train_brass')
@@ -748,9 +756,9 @@ def main(materials=None):
             'Engine': 'Functional fuel-powered train engine. Open its fuel inventory and drive from a connected cab.',
             'Wheel': 'Functional running gear. Wheel rotation follows the actual travelled distance of an assembled train.',
             'Rod': 'Functional visual running gear. Motion follows the wheel phase of an assembled train.',
-            'Valve': 'Decorative steam valve fitting. The fuel engine is controlled by its cab lever; steam circuits follow the steam engine system.',
-            'Gauge': 'Decorative pressure instrument casing. Live steam pressure follows the steam engine system; fuel driving uses the cab display.',
-            'Tank': 'Decorative tender water tank casing. Fuel-powered driving needs no water; steam and water ports follow the steam engine system.',
+            'Valve': 'Steam valve required for the highest locomotive gear. Combine with a six-block boiler, water tank, gauge and fuel engine.',
+            'Gauge': 'Pressure instrument required by the steam system. Water and pressure are displayed in the locomotive controls.',
+            'Tank': 'Steam locomotive water tank. Fill it from the train controls using water buckets. Fuel gears one through five need no water.',
             'Headlight': 'Functional warm train light. Front and side lamps cast a forward cone; the ceiling lamp lights the carriage below.',
         }
         definition = {

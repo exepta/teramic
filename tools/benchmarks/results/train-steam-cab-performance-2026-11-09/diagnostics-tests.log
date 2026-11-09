@@ -1,0 +1,13 @@
+   Compiling terra-client v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/apps/client)
+    Finished `test` profile [optimized + debuginfo] target(s) in 42.84s
+     Running unittests src/main.rs (target/debug/deps/terra_client-e41b4c6b2f9171ae)
+
+running 5 tests
+test main_diagnostics::system_bodies::tests::exact_bodies_retain_conditions_order_and_deferred_commands ... ok
+test main_diagnostics::tests::instrumentation_brackets_schedules_without_changing_their_order ... ok
+test main_diagnostics::tests::text_content_and_layout_intervals_are_separate_and_release_afterward ... ok
+test main_diagnostics::tests::style_interval_encloses_application_and_releases_afterward ... ok
+test main_diagnostics::tests::ui_interval_encloses_existing_reactivity_and_releases_afterward ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 204 filtered out; finished in 0.00s
+

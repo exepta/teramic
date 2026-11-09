@@ -53,6 +53,7 @@ fn car(anchor: Cell, kind: VehicleKind) -> Vehicle {
 
         motion: Default::default(),
         burn_seconds: 0.0,
+        steam: Default::default(),
     }
 }
 #[test]

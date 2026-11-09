@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "id": 287,
-  "name": "Lok-Blech Schräge",
+  "name": "Lok-Blech Schr\u00e4ge",
   "description": "Structural locomotive construction shape. Build the connected vehicle body with matching metal parts.",
   "creative_category": "trains",
   "render_kind": "custom_mesh",

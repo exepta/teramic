@@ -1,0 +1,50 @@
+PASS Full workspace library/binary suite: 4488 passed, 0 failed, 10 ignored, 12 suites (--test-threads=4).
+PASS cargo build --locked --workspace --jobs 3
+PASS cargo clippy --locked --workspace --all-targets --jobs 3 -- -D warnings
+PASS cargo fmt --all -- --check
+PASS git diff --check
+PASS Native workshop/driving DOM bounds at 1920x1080 and 1280x720; synthetic UI-only vehicle.
+PASS Native fuel/storage: four actual pointer transactions with controlled acknowledgements.
+PASS Native rendered locomotive and exhaust; synthetic visual-only motion.
+PASS Native real integrated Test copies: 218 block edits, 214 rail edits, 237.32 m streaming movement.
+PASS Three final 25-second samples at 2560x1440; no WARN/ERROR in those logs.
+PASS Original Test content SHA256 unchanged: 8 files.
+PASS 75 changed JSON/glTF documents parsed; 85 train previews and 417 recipes pass CPU asset lint.
+Protocol 123; saved train index ID17, explicit ID16 migration.
+Limits: short wall-frame samples, no universal bound; rail final render pending at last ack, then idle sampling.
+One earlier unconstrained-parallel workspace attempt timed out in an existing UDP disconnection test; the final four-thread full suite passed.
+One deep trace encountered an Occluded rejection; it was excluded. Native debugger runs are diagnostic, not FPS data.
+Base commit: 607d88dc79789f21e358bc52c5a84dd77e18d90a
+
+SHA256 artifacts (excluding this manifest):
+38e47c34adc0bcec0259e6f77cbddb6e1dfaefa193330fdb45c0ca981e4abfbe  README.md
+826a1b6951263b27f1b0d9492c409f236023d2509e7eba1fd2939c2c32316f25  asset-lint.log
+170de2f459e71cc3ddcfa8c4e57f432823fab856b84efc4f870977a6e652a59b  build.log
+39fd5fc83868ea40e888db099df96b9bb86765e20188f204db6f71d92a597cfb  clippy.log
+33e0f924b499c3fbd6b692034ef7c168189e7b0bec0cbf8c286d8aadcd910959  diagnostics-tests.log
+b60c30c1777ec721337b5a61fe2a2d3bddc698a93029b3d990ad88093244fd74  engine-filled.png
+ccd3ecea5a156f97751c1a684cd11b1335cc79779c2a109552d03c597037470b  integrated-tests.log
+c3f80c9c1f9acc53ee3896efcfae6ea4e21ed7f6866b7ffe3fe2ab08859678d4  locomotive-exhaust.png
+2f5d26a2eb7b0cc9c88490e9e3ebc3ecd5294a95180e98600528dc2e9fea59e9  native-building-run.json
+d7f31d19013b73beb7f192cbad80cc769bb1d91350fb8f02cfb47d7004dbd195  native-building.log
+14969f7a634598f01cb3cb8ba713c954e20bb3d951e31348dcdbd101b8ca904d  native-cargo.log
+bb42bbc21d8c4ad575cfdd8b7be9b14bdcf6e21cc4ec5b51c8bbc6eb43cc0437  native-model.log
+0edc85ddd4e2fc7812e47fdaba1b3aef43557c5c648f1a2a3c8df412d8a228a8  native-rail-run.json
+21253ad07bfc28c6634e8d7aca1575b2dd7fe345eff336fd5168f0f2ba95e597  native-rail.log
+7e25a07ec463ea9ea2d7a3fd22d05246929191e227c3541f728a3e787433d8b5  native-streaming-run.json
+78c0bca42fa41952eaa64e8d26b9b7716bebd507cb7abe076e0fec44a5190409  native-streaming.log
+c9ff48e82ea58480d59fca259ca81138f6a4d269137417dae19b59e43f326918  native-workshop.log
+3db31143e8c788616023a47bebf8418c75850c0a0e06bb2b7373e1b56f903d18  rail-after-isolation.log
+d6b4f5baa9d0ca5a3fd1e0feea019724c07dcfd222035ce53d80865b1eae7d33  rail-before-isolation.log
+f4c8aaf42baaa0ed5ad3c7cdf931023aa872fd05970c6708756a93a46f696a47  rail-system-body-trace.log
+4544621303061ee68c04bfd08448af42ec359c996023d154043e96da233e4a40  saved-world-inspection.log
+d03c90c24deb11fa986564fdde12b8fbe04fc631c2d507a4dbcb96ad6ffbf5c0  source-world-check.json
+bae34215bb3ac7183236b4ea2f69d6273007d360b1625b89a4c9fa41c4935989  storage-filled.png
+beba8982d8ce02e3077fa762d4621c42fe9ab3059e385d0956e0ddd636bfb830  test-world-rail.png
+e35e60cc09ae76b8d2446a445628d112295bebf396d61643c8b235e1e8c838f0  test-world-streaming.png
+6c033872151a266181234b41a09fdade5abca34009e32d9dc799667b8ad87416  tests.log
+c54c1fec6c4030e22613bf5f2643a57fbf9bb7666781b2cda35fd2d0ec8e8cb6  train-driving-1080.png
+9c14bea82cc90f79bbe902efcca11d95857d76d2d452a0bc454a2bc34ee4f2e5  train-driving-720.png
+7804646b42235d43896df12b15f73d910c012370c9a938fa9f61c5d2dc0dfd8e  train-workshop-1080.png
+9d477c9b3371dc4dad5c0cf7632fa08937e39bb4812d24aa754ea04efc728368  train-workshop-720.png
+a28d2717f6b3ab283eea6cbbc19b01ee77f93b4c4ddea0968895654b62c82503  workload-metrics.json

@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "id": 245,
-  "name": "Führerhaus-Seitenwand",
+  "name": "F\u00fchrerhaus-Seitenwand",
   "description": "Decorative BR52 locomotive component. Attach to the connected vehicle body before assembly.",
   "creative_category": "trains",
   "render_kind": "custom_mesh",

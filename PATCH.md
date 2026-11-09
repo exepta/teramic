@@ -7155,3 +7155,59 @@ bei 720p/1080p sowie vier echte Motor-/Lager-Klicks geprueft. Nativer Bau-/
 Abbautest: 139 Platzierungsframes, Median 6.84 ms, P95 9.98 ms, Maximum 48.44 ms.
 Dies ist eine isolierte Messung ohne Vorher-/Nachher-Vergleich im Problemspielstand;
 sie belegt keine allgemeine Freiheit von Streaming-Haengern.
+
+
+## 221. Dampfstufen, Hoeheres Fuehrerhaus Und Gleisprofil-Wiederverwendung
+
+Die neue breite Bauvorlage setzt den Fuehrerstand ueber den 3x3-Kessel. Ein
+vollstaendiger dunkler Unterbau, Treppen, nach aussen gesetzte Seitenwaende und
+Frontfenster schaffen Sicht und Innenraum. Duennwaende lassen sich anhand der
+angeklickten Kante innen oder aussen ausrichten. Bestehende Aufbauten werden
+nicht umgebaut; die aktualisierte Vorlage steht nach Montage bereit.
+Schornsteine und Dome erhalten eine begrenzte sichtbare Anschlusssockel-Geometrie.
+Schwarzstahl, Messingdetails und roter Rahmen naehern die Grundmodelle der
+Referenz an. Fahrende befeuerte Loks erzeugen begrenzten Schornsteinrauch.
+
+Die sechs Fahrstufen entsprechen 4, 10, 16, 20, 30 und 50 Metern pro Sekunde vor
+dem vorhandenen Schotterbonus. Stufe 4 verlangt mindestens vier zusammenhaengende
+Kesselmodule, Stufe 5 sechs. Stufe 6 verlangt zusaetzlich Motor, Ventil, Anzeige,
+Tank, Wasser und mindestens acht bar. Brennstoff heizt den Kessel; Dampfbetrieb
+verbraucht Wasser. Rueckwaerts stehen relativ zum Fuehrerstand zwei Stufen zur
+Verfuegung. Der Tank nimmt echte Wassereimer auf und gibt leere Eimer zurueck;
+Creative fuellt ihn vollstaendig. Bei Demontage kommen volle Wassereimer zurueck,
+Restwasser und Druck werden abgelassen. Wasser und Druck sind gespeichert und
+werden mit kompakten Bewegungsdaten synchronisiert. Die Rohr-/Kinetikanbindung
+von F53 bleibt in TODO.md offen.
+
+Die Speicherung erlaubt nun Brennstoff- und Restbrandzustaende auf dem Zugmotor
+218. Der vorherige Validator behandelte diesen Zustand beim Speichern als
+ungueltigen Ofen. Neue bedingte Bevy-Systeme erhalten einen korrekten initialen
+Aenderungstick; Warnfilter und bestehende Systemticks werden nicht umgestellt.
+
+Vorbereitete Gleisflaechen werden zwischen Chunk-Aufbaujobs geteilt. Gleichzeitige
+kalte Anfragen teilen eine Berechnung; der Cache begrenzt Eintraege und erfasste
+Vertex-/Index-Nutzdaten. Form, Holz und Materialzuordnung bleiben Teil des
+Schluessels. Dadurch wird unveraenderte Gleisgeometrie bei Terrainbearbeitungen
+nicht fuer jeden betroffenen Abschnitt erneut geschnitten.
+
+Client und Server verwenden Protokoll 123. Zugindex ID17 migriert ID16 und
+uebernimmt die bisherigen aelteren Zugmigrationen.
+
+[Bedienung](docs/train-building.md) und
+[Pruefbericht](tools/benchmarks/results/train-steam-cab-performance-2026-11-09/README.md).
+
+Der integrierte Server fuehrt seine synchronen Systeme auf dem eigenen
+Betriebssystem-Thread aus. Dadurch koennen parallele Renderer-Abfragen keine
+langen Server-Simulationsaufgaben aus dem gemeinsamen Compute-Pool uebernehmen.
+Wasserverbindungen pruefen die freie Flaeche an der gemeinsamen Zellseite;
+aufwendiges Zerschneiden beider gesamten Schienen-Wasservolumen entfaellt.
+Die Darstellung nutzt weiterhin dieselben realen Festkoerperformen. Rauch folgt
+der interpolierten Fahrzeugpose, damit er auch bei schneller Fahrt am
+Schornstein beginnt.
+
+Verifiziert: 4488 Workspace-Tests bestanden, zehn ignoriert; Build, strenges
+Clippy und Formatierung erfolgreich. Native Montage in 720p/1080p, vier echte
+Inventarklicks und Modell/Rauch geprueft. Drei 25-Sekunden-Messungen in frischen
+Kopien der Test-Welt: Blockbau maximal 27.23 ms, Gleisbau 28.62 ms, Streaming
+ueber rund 237 Meter 25.16 ms pro Frame. Die urspruenglichen acht Weltdateien
+sind unveraendert. Diese Stichproben sind keine allgemeine Framerate-Garantie.

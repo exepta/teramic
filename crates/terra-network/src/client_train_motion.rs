@@ -69,6 +69,7 @@ mod tests {
         session.train_motion_tracks.insert(1, track);
         session.train_display_time = received + std::time::Duration::from_millis(10);
         let vehicle = terra_core::trains::VehicleView {
+            steam: Default::default(),
             name: String::new(),
             id: 1,
             owner: terra_core::PlayerUuid::nil(),

@@ -18,6 +18,7 @@ use terra_network::{
 struct Probe {
     initialized: bool,
     workshop: bool,
+    model: bool,
     failed: bool,
     frames: u32,
     transactions: u8,
@@ -27,6 +28,7 @@ struct Probe {
 pub(super) fn install(app: &mut App) {
     if std::env::var("TERRA_TRAIN_INVENTORY_LIVE").as_deref() != Ok("1")
         && std::env::var("TERRA_TRAIN_WORKSHOP_LIVE").as_deref() != Ok("1")
+        && std::env::var("TERRA_TRAIN_MODEL_LIVE").as_deref() != Ok("1")
     {
         return;
     }
@@ -38,11 +40,13 @@ fn run(world: &mut World) {
         if !probe.initialized {
             if !world.get_resource::<crate::menu::MenuState>().is_some_and(|menu| menu.page == crate::menu::MenuPage::Main) { return; }
             if world.get_resource::<crate::menu::StartupProgress>().is_some_and(|progress| progress.active) { return; }
-            probe.workshop = std::env::var("TERRA_TRAIN_WORKSHOP_LIVE").as_deref() == Ok("1");
+            probe.model = std::env::var("TERRA_TRAIN_MODEL_LIVE").as_deref() == Ok("1");
+            probe.workshop = probe.model || std::env::var("TERRA_TRAIN_WORKSHOP_LIVE").as_deref() == Ok("1");
             let owner = PlayerUuid::from_u128(1);
-            let parts = terra_core::train_blueprint::template([0, 2, 2], 0, VehicleKind::Locomotive).into_iter().map(|cell| TrainPart {offset: cell.cell.map(|v| v as i16), material: cell.material, facing: cell.facing, wood: Default::default()}).collect::<Vec<_>>();
+            let guide = if probe.workshop { terra_core::train_blueprint::building_template_with_width([0,2,2],0,VehicleKind::Locomotive,8,3) } else { terra_core::train_blueprint::template([0,2,2],0,VehicleKind::Locomotive) };
+            let parts = guide.into_iter().map(|cell| TrainPart {offset: cell.cell.map(|v| v as i16), material: cell.material, facing: cell.facing, wood: Default::default()}).collect::<Vec<_>>();
             let engine = parts.iter().position(|part| part.material == 218).unwrap() as u16;
-            let car = Vehicle { name: String::new(), id: 1, owner, kind: VehicleKind::Locomotive, anchor: [0;3], parts, cargo: [(engine, Inventory::default())].into(), blocks: Default::default(), payloads: Default::default(), couplings: [None;2], revision: 7, motion: Default::default(), burn_seconds: 0.0 };
+            let car = Vehicle { name: String::new(), id: 1, owner, kind: VehicleKind::Locomotive, anchor: [0;3], parts, cargo: [(engine, Inventory::default())].into(), blocks: Default::default(), payloads: Default::default(), couplings: [None;2], revision: 7, motion: Default::default(), burn_seconds: 0.0, steam: Default::default() };
             assert!(car.valid());
             world.resource_mut::<crate::menu::MenuState>().page = crate::menu::MenuPage::Playing;
             let identity = {
@@ -55,10 +59,24 @@ fn run(world: &mut World) {
             };
             let mut state = world.resource_mut::<TrainUiState>(); state.open=true; state.cargo=true; state.selected=Some(1); state.identity=Some(identity);
             if probe.workshop { state.cargo=false; state.selected=None; state.station=Some([0;3]); state.name="TERAMIC EXPRESS".into(); }
+            if probe.model { state.open=false; state.cargo=false; }
+            if probe.model {
+                // The normal vehicle renderer requires loaded, retired source
+                // sections. Supply explicit empty visual-fixture sections; this
+                // does not generate or modify a user's saved world.
+                let owners: std::collections::BTreeSet<_> = world.resource::<ClientSession>().trains.vehicles[0].parts.iter().map(|part| terra_voxel::global_to_section(part.offset.map(i64::from)).0).collect();
+                for owner in owners {
+                    world.resource_mut::<terra_world::streaming::ChunkStore>().loaded.insert(owner, terra_world::streaming::LoadedSection {
+                        data: terra_voxel::BlockSection::empty(owner).unwrap(),
+                        mesh: Some(Default::default()), mesh_epoch: 0, water_epoch: 0, water: None, props: Vec::new(),
+                    });
+                }
+            }
             world.write_message(terra_player::CaptureRequest(false));
             probe.initialized=true;
             return;
         }
+        if probe.model { model(world, &mut probe); return; }
         if probe.workshop { workshop(world, &mut probe); return; }
         if world.query::<&tilt_ui::ElementId>().iter(world).filter(|id| id.0 == "train-slot").count() != 45 { return; }
         probe.frames += 1;
@@ -346,4 +364,67 @@ fn workshop_bounds(world: &mut World, window: Entity) -> Result<(), String> {
         "Native workshop painted bounds fit window and frame"
     );
     Ok(())
+}
+
+/// Visual-only exhaust capture; authoritative driving is tested separately.
+fn model(world: &mut World, probe: &mut Probe) {
+    if probe.failed {
+        return;
+    }
+    probe.frames += 1;
+    let translation = (f64::from(probe.frames) / 120.0).sin() * 0.3;
+    {
+        let mut session = world.resource_mut::<ClientSession>();
+        let car = &mut session.trains.vehicles[0];
+        car.motion.speed_mps = 10.0;
+        car.motion.fuel_available = true;
+        car.motion.brake = false;
+        car.motion.translation[0] = translation;
+    }
+    for mut camera in world
+        .query_filtered::<&mut Transform, With<terra_player::TerraCamera>>()
+        .iter_mut(world)
+    {
+        *camera =
+            Transform::from_xyz(10.0, 9.0, 16.0).looking_at(Vec3::new(0.5, 4.6, 6.0), Vec3::Y);
+    }
+    if matches!(probe.frames, 240 | 420) {
+        let mesh = world
+            .query::<(&Name, &bevy::mesh::Mesh3d)>()
+            .iter(world)
+            .find_map(|(name, mesh)| {
+                (name.as_str() == "Locomotive exhaust").then_some(mesh.0.clone())
+            });
+        let vertices = mesh
+            .as_ref()
+            .and_then(|handle| world.resource::<Assets<Mesh>>().get(handle))
+            .map_or(0, Mesh::count_vertices);
+        let body = world
+            .query::<&Name>()
+            .iter(world)
+            .any(|name| name.as_str() == "Assembled train");
+        if vertices <= 32 || !body {
+            error!(vertices, body, "Native model/exhaust did not materialize");
+            probe.failed = true;
+            world.write_message(bevy::app::AppExit::error());
+            return;
+        }
+        let folder = std::path::PathBuf::from(std::env::var("TERRA_CAPTURE_DIR").unwrap());
+        std::fs::create_dir_all(&folder).unwrap();
+        let name = if probe.frames == 240 {
+            "locomotive-model.png"
+        } else {
+            "locomotive-exhaust.png"
+        };
+        world
+            .spawn(Screenshot::primary_window())
+            .observe(save_to_disk(folder.join(name)));
+        info!(
+            vertices,
+            "Native locomotive model and exhaust are visible; visual-only fixture"
+        );
+    }
+    if probe.frames == 480 {
+        world.write_message(bevy::app::AppExit::Success);
+    }
 }

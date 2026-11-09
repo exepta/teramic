@@ -1,7 +1,7 @@
 use super::*;
 use crate::protocol::trains::{TrainAction, TrainOutcome};
 use terra_core::{
-    WoodSpecies, train_parts,
+    ToolKind, WoodSpecies, train_parts,
     trains::{TrainError, TrainPart, Vehicle, VehicleKind},
 };
 fn train_fixture() -> (App, Peer, u64, u16, u16) {
@@ -70,6 +70,7 @@ fn train_fixture() -> (App, Peer, u64, u16, u16) {
 
         motion: Default::default(),
         burn_seconds: 0.0,
+        steam: Default::default(),
     };
     let id = app
         .world_mut()
@@ -939,4 +940,178 @@ fn turntable_action_rotates_the_owned_vehicle_and_track_atomically() {
         .is_err()
     );
     assert_eq!(app.world().resource::<EditJournal>().rail_epoch(), epoch);
+}
+
+#[test]
+fn steam_water_transfer_and_gear_limits_are_owner_authorized_atomic_and_directional() {
+    let (mut app, mut peer, id, seat, _) = train_fixture();
+    {
+        let mut journal = app.world_mut().resource_mut::<EditJournal>();
+        let game = journal.gameplay_mut();
+        game.inventories.entry(peer.uuid).or_default().creative_set(
+            0,
+            ItemStack {
+                item: ItemKind::Tool(ToolKind::WaterBucket),
+                count: 1,
+            },
+        );
+        let car = game.trains.vehicles.get_mut(&id).unwrap();
+        let engine = car.parts.len() as u16;
+        car.parts.push(TrainPart {
+            offset: [0, 2, 5],
+            material: 218,
+            facing: 0,
+            wood: Default::default(),
+        });
+        car.cargo.insert(engine, Inventory::default());
+        car.parts.push(TrainPart {
+            offset: [0, 2, 2],
+            material: 254,
+            facing: 0,
+            wood: Default::default(),
+        });
+        for z in 0..6 {
+            car.parts.push(TrainPart {
+                offset: [1, 1, z],
+                material: 219,
+                facing: 0,
+                wood: Default::default(),
+            });
+        }
+        for (offset, material) in [([1, 2, 0], 229), ([1, 2, 1], 230)] {
+            car.parts.push(TrainPart {
+                offset,
+                material,
+                facing: 0,
+                wood: Default::default(),
+            });
+        }
+        assert!(car.valid());
+    }
+    let mut seats = crate::server::trains::SeatedPlayers::default();
+    run(
+        &mut app,
+        &peer,
+        TrainAction::Seat {
+            vehicle: id,
+            part: seat,
+        },
+        &mut seats,
+    )
+    .unwrap();
+    let revision =
+        app.world().resource::<EditJournal>().gameplay().inventories[&peer.uuid].revision;
+    let command = TrainAction::FillWater {
+        vehicle: id,
+        player_revision: revision,
+    };
+    let owner = peer.uuid;
+    peer.uuid = PlayerUuid::from_u128(999);
+    let before = app.world().resource::<EditJournal>().gameplay().clone();
+    assert_eq!(
+        run(&mut app, &peer, command.clone(), &mut seats),
+        Err(TrainError::NotOwner)
+    );
+    assert_eq!(app.world().resource::<EditJournal>().gameplay(), &before);
+    peer.uuid = owner;
+    run(&mut app, &peer, command.clone(), &mut seats).unwrap();
+    let game = app.world().resource::<EditJournal>().gameplay();
+    assert_eq!(game.trains.vehicles[&id].steam.water, 1000.0);
+    assert_eq!(
+        game.inventories[&owner].count(ItemKind::Tool(ToolKind::WaterBucket)),
+        0
+    );
+    assert_eq!(
+        game.inventories[&owner].count(ItemKind::Tool(ToolKind::Bucket)),
+        1
+    );
+    assert_eq!(
+        run(&mut app, &peer, command, &mut seats),
+        Err(TrainError::Stale)
+    );
+    // This cab faces opposite the build axis: negative world throttle is forward.
+    assert_eq!(
+        run(
+            &mut app,
+            &peer,
+            TrainAction::Drive {
+                vehicle: id,
+                throttle: -6,
+                brake: false
+            },
+            &mut seats
+        ),
+        Err(TrainError::GearLocked)
+    );
+    app.world_mut()
+        .resource_mut::<EditJournal>()
+        .gameplay_mut()
+        .trains
+        .vehicles
+        .get_mut(&id)
+        .unwrap()
+        .steam
+        .pressure_bar = 9.0;
+    run(
+        &mut app,
+        &peer,
+        TrainAction::Drive {
+            vehicle: id,
+            throttle: -6,
+            brake: false,
+        },
+        &mut seats,
+    )
+    .unwrap();
+    assert_eq!(
+        run(
+            &mut app,
+            &peer,
+            TrainAction::Drive {
+                vehicle: id,
+                throttle: 3,
+                brake: false
+            },
+            &mut seats
+        ),
+        Err(TrainError::GearLocked)
+    );
+    run(
+        &mut app,
+        &peer,
+        TrainAction::Drive {
+            vehicle: id,
+            throttle: 2,
+            brake: true,
+        },
+        &mut seats,
+    )
+    .unwrap();
+    peer.mode = Some(GameMode::Creative);
+    app.world_mut()
+        .resource_mut::<EditJournal>()
+        .gameplay_mut()
+        .trains
+        .vehicles
+        .get_mut(&id)
+        .unwrap()
+        .steam
+        .water = 7900.0;
+    let inventory = app.world().resource::<EditJournal>().gameplay().inventories[&owner].clone();
+    run(
+        &mut app,
+        &peer,
+        TrainAction::FillWater {
+            vehicle: id,
+            player_revision: inventory.revision,
+        },
+        &mut seats,
+    )
+    .unwrap();
+    let game = app.world().resource::<EditJournal>().gameplay();
+    assert_eq!(
+        game.trains.vehicles[&id].steam.water,
+        terra_core::train_power::WATER_CAPACITY
+    );
+    assert_eq!(game.inventories[&owner], inventory);
 }

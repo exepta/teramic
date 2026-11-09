@@ -1,6 +1,7 @@
 //! Optional whole-schedule timings without replacing or reordering game systems.
 use bevy::{app::MainScheduleOrder, ecs::schedule::ScheduleLabel, prelude::*};
 use terra_core::profiling::ScopeTimer;
+mod system_bodies;
 
 #[derive(ScheduleLabel, Clone, Debug, PartialEq, Eq, Hash)]
 enum Boundary {
@@ -19,6 +20,25 @@ struct UiStyleTimer(Option<ScopeTimer>);
 
 #[derive(Resource, Default)]
 struct UiLayoutTimers([Option<ScopeTimer>; 2]);
+
+#[derive(Resource, Default)]
+struct PostTimers([Option<ScopeTimer>; 5]);
+
+fn start_post<const N: usize>(mut timers: ResMut<PostTimers>) {
+    timers.0[N] = Some(ScopeTimer::new(
+        [
+            "main.transforms",
+            "main.bounds",
+            "main.visibility_propagate",
+            "main.visibility_check",
+            "main.ui_prepare",
+        ][N],
+    ));
+}
+
+fn stop_post<const N: usize>(mut timers: ResMut<PostTimers>) {
+    drop(timers.0[N].take());
+}
 
 const NAMES: [&str; 6] = [
     "main.first",
@@ -68,6 +88,28 @@ fn stop_ui_layout<const N: usize>(mut timers: ResMut<UiLayoutTimers>) {
 }
 
 fn install_enabled(app: &mut App) {
+    if std::env::var("TERRA_SYSTEM_SCOPES").as_deref() == Ok("1") {
+        app.add_systems(PreStartup, system_bodies::install);
+    }
+    use bevy::{camera::visibility::VisibilitySystems, transform::TransformSystems};
+    app.init_resource::<PostTimers>();
+    macro_rules! post_interval {
+        ($index:literal, $set:expr) => {
+            app.add_systems(
+                PostUpdate,
+                (
+                    start_post::<$index>.before($set),
+                    stop_post::<$index>.after($set),
+                )
+                    .chain(),
+            );
+        };
+    }
+    post_interval!(0, TransformSystems::Propagate);
+    post_interval!(1, VisibilitySystems::CalculateBounds);
+    post_interval!(2, VisibilitySystems::VisibilityPropagate);
+    post_interval!(3, VisibilitySystems::CheckVisibility);
+    post_interval!(4, bevy::ui::UiSystems::Prepare);
     app.init_resource::<Timers>()
         .init_resource::<UiReactivityTimer>()
         .init_resource::<UiStyleTimer>()

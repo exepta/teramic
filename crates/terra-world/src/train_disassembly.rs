@@ -288,6 +288,7 @@ mod tests {
             revision: 7,
             motion: Default::default(),
             burn_seconds: 1.75,
+            steam: Default::default(),
         };
         let mut journal = EditJournal::default();
         for index in 0..vehicle.parts.len() {

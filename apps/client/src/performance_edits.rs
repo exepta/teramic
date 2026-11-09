@@ -52,6 +52,8 @@ pub(crate) struct Edits {
 }
 
 struct RapidEdits {
+    rails: bool,
+    baseline_rails: usize,
     material_requested: bool,
     stop_after: Duration,
     submitted: Option<Instant>,
@@ -126,6 +128,8 @@ pub(crate) fn install(app: &mut App) -> Result<(), String> {
         std::env::var("TERRA_SOAK_EDIT_CYCLES").ok().as_deref(),
     )?;
     let rapid = (mode == EditMode::Rapid).then(|| RapidEdits {
+        rails: std::env::var("TERRA_SOAK_EDIT_RAILS").as_deref() == Ok("1"),
+        baseline_rails: 0,
         material_requested: false,
         stop_after: rapid_stop_after(std::env::var("TERRA_BENCH_SECONDS").ok().as_deref()),
         submitted: None,
@@ -154,6 +158,7 @@ pub(crate) fn install(app: &mut App) -> Result<(), String> {
 }
 
 fn run(world: &mut World) {
+    let _scope = terra_core::profiling::ScopeTimer::new("benchmark.edits");
     if crate::smoke_test::benchmark_ready_time(world).is_none() {
         return;
     }
@@ -386,21 +391,39 @@ fn advance(world: &mut World, state: &mut Edits) -> Result<(), String> {
 fn advance_rapid(world: &mut World, state: &mut Edits, elapsed: Duration) -> Result<(), String> {
     match state.stage {
         Stage::Select => {
-            if !prepare_rapid_material(world, &mut state.rapid.as_mut().unwrap().material_requested)
-            {
+            let rail_mode = state.rapid.as_ref().unwrap().rails;
+            let material = if rail_mode {
+                terra_core::rails::STRAIGHT
+            } else {
+                MaterialId::Stone as u16
+            };
+            if !prepare_rapid_item(
+                world,
+                &mut state.rapid.as_mut().unwrap().material_requested,
+                material,
+            ) {
                 return Ok(());
             }
-            let Some((ground, original)) = choose_ground_for(world, false) else {
+            let Some((ground, original)) = choose_ground_for_kind(world, false, rail_mode) else {
                 if elapsed > Duration::from_secs(8) {
-                    return Err(
-                        "No reachable dry ground beside the real player for rapid edits".into(),
-                    );
+                    return Err(format!(
+                        "No reachable dry ground beside the real player for rapid edits: eye={:?}, confirmed={:?}, target={:?}",
+                        eye(world),
+                        world
+                            .resource::<ClientSession>()
+                            .confirmed_state()
+                            .map(|state| state.position),
+                        world.resource::<TargetWorld>().0
+                    ));
                 }
                 return Ok(());
             };
             state.ground = ground;
             state.original = original;
+            state.rapid.as_mut().unwrap().baseline_rails =
+                world.resource::<EditJournal>().rail_module_count();
             tracing::info!(
+                rail_mode,
                 ?ground,
                 original,
                 requested_cycles = state.cycles,
@@ -415,7 +438,7 @@ fn advance_rapid(world: &mut World, state: &mut Edits, elapsed: Duration) -> Res
             {
                 return finish_rapid(world, state);
             }
-            aim(world, state.ground, operation)?;
+            aim_rapid(world, state, operation)?;
             let rapid = state.rapid.as_ref().unwrap();
             // Let production picking observe the new aim. Stay below the real
             // server's ten-edits-per-second rate even when acknowledgements are fast.
@@ -436,9 +459,15 @@ fn advance_rapid(world: &mut World, state: &mut Edits, elapsed: Duration) -> Res
                 return Ok(());
             }
             let position = operation_position(state.ground, operation);
+            let rail_mode = state.rapid.as_ref().unwrap().rails;
+            let placed_material = if rail_mode {
+                terra_core::rails::STRAIGHT
+            } else {
+                MaterialId::Stone as u16
+            };
             let (expected, material) = match operation {
-                Operation::PlaceDryStone => (0, MaterialId::Stone as u16),
-                Operation::RemoveSeal => (MaterialId::Stone as u16, 0),
+                Operation::PlaceDryStone => (0, placed_material),
+                Operation::RemoveSeal => (placed_material, 0),
                 _ => unreachable!(),
             };
             if world.resource::<ChunkStore>().block_at(position) != Some(expected) {
@@ -453,11 +482,49 @@ fn advance_rapid(world: &mut World, state: &mut Edits, elapsed: Duration) -> Res
             let previous_revision = world
                 .resource::<EditJournal>()
                 .revision(global_to_section(position).0);
-            world.write_message(BlockEditRequest {
-                position,
-                expected_material: expected,
-                material,
-            });
+            if rail_mode && matches!(operation, Operation::PlaceDryStone) {
+                let _scope = terra_core::profiling::ScopeTimer::new("benchmark.edits.rail_seed");
+                let Some(WorldTarget::Block(hit)) = world.resource::<TargetWorld>().0 else {
+                    return Err("Missing rail ground hit".into());
+                };
+                let eye = eye(world).ok_or("Missing rail camera")?;
+                let camera = world
+                    .query_filtered::<&Transform, With<TerraCamera>>()
+                    .iter(world)
+                    .next()
+                    .unwrap();
+                let (yaw, pitch, _) = camera.rotation.to_euler(EulerRot::YXZ);
+                let ray = (
+                    eye.to_array().map(f64::from),
+                    (camera.rotation * Vec3::NEG_Z).to_array().map(f64::from),
+                );
+                let plan = terra_world::rails::proposal_seed(
+                    world.resource::<ChunkStore>(),
+                    world.resource::<EditJournal>(),
+                    hit,
+                    ray,
+                    [yaw, pitch],
+                    Default::default(),
+                )?;
+                let signature = terra_world::rails::seed_signature(&plan);
+                world.write_message(terra_network::client::RailPlacementRequest {
+                    token: previous_request + 1,
+                    action: terra_network::client::RailPlacementAction::Seed {
+                        position: hit.position,
+                        expected: world
+                            .resource::<ChunkStore>()
+                            .block_at(hit.position)
+                            .unwrap(),
+                        signature,
+                    },
+                });
+            } else {
+                world.write_message(BlockEditRequest {
+                    position,
+                    expected_material: expected,
+                    material,
+                });
+            }
             state.rapid.as_mut().unwrap().submitted = Some(Instant::now());
             transition(
                 state,
@@ -475,7 +542,7 @@ fn advance_rapid(world: &mut World, state: &mut Edits, elapsed: Duration) -> Res
             previous_revision,
             material,
         } => {
-            aim(world, state.ground, operation)?;
+            aim_rapid(world, state, operation)?;
             let Some((request, outcome)) = world.resource::<ClientSession>().last_edit else {
                 return Ok(());
             };
@@ -547,13 +614,17 @@ fn advance_rapid(world: &mut World, state: &mut Edits, elapsed: Duration) -> Res
     Ok(())
 }
 
+#[cfg(test)]
 fn prepare_rapid_material(world: &mut World, requested: &mut bool) -> bool {
+    prepare_rapid_item(world, requested, MaterialId::Stone as u16)
+}
+fn prepare_rapid_item(world: &mut World, requested: &mut bool, material: u16) -> bool {
     use terra_network::{
         client::{InventoryRequest, SelectedInventorySlot},
         protocol::inventory::{InventoryAction, InventoryCommand},
     };
     let session = world.resource::<ClientSession>();
-    let stone = terra_core::ItemKind::Block(MaterialId::Stone as u16);
+    let stone = terra_core::ItemKind::Block(material);
     if session
         .inventory
         .slot(0)
@@ -590,6 +661,12 @@ fn rapid_ground_allowed(before: u16, after: u16) -> bool {
 }
 
 fn finish_rapid(world: &World, state: &mut Edits) -> Result<(), String> {
+    if state.rapid.as_ref().unwrap().rails
+        && world.resource::<EditJournal>().rail_module_count()
+            != state.rapid.as_ref().unwrap().baseline_rails
+    {
+        return Err("Rapid rails did not restore the original module registry".into());
+    }
     let position = operation_position(state.ground, Operation::PlaceDryStone);
     let chunks = world.resource::<ChunkStore>();
     let ground_after = chunks
@@ -692,6 +769,30 @@ fn eye(world: &mut World) -> Option<Vec3> {
         .map(|camera| camera.translation)
 }
 
+fn aim_rapid(world: &mut World, state: &Edits, operation: Operation) -> Result<(), String> {
+    if state.rapid.as_ref().is_some_and(|rapid| rapid.rails)
+        && matches!(operation, Operation::RemoveSeal)
+    {
+        let eye = eye(world).ok_or("Missing rail camera")?;
+        let target = Vec3::new(
+            state.ground[0] as f32 + 0.5,
+            state.ground[1] as f32 + 1.06,
+            state.ground[2] as f32 + 0.5,
+        );
+        for mut camera in world
+            .query_filtered::<&mut Transform, With<TerraCamera>>()
+            .iter_mut(world)
+        {
+            camera.rotation = Transform::from_translation(eye)
+                .looking_at(target, Vec3::Y)
+                .rotation;
+        }
+        Ok(())
+    } else {
+        aim(world, state.ground, operation)
+    }
+}
+
 fn aim(world: &mut World, ground: [i64; 3], operation: Operation) -> Result<(), String> {
     let eye = eye(world).ok_or("No actual player camera for soak edits")?;
     let y = match operation {
@@ -727,6 +828,9 @@ fn choose_ground(world: &mut World) -> Option<([i64; 3], u16)> {
 }
 
 fn choose_ground_for(world: &mut World, water: bool) -> Option<([i64; 3], u16)> {
+    choose_ground_for_kind(world, water, false)
+}
+fn choose_ground_for_kind(world: &mut World, water: bool, rails: bool) -> Option<([i64; 3], u16)> {
     let confirmed = world.resource::<ClientSession>().confirmed_state()?;
     let body = Vec3::from_array(confirmed.position);
     let eye = eye(world)?;
@@ -743,7 +847,18 @@ fn choose_ground_for(world: &mut World, water: bool) -> Option<([i64; 3], u16)> 
         ),
     };
     let base = body.floor().as_i64vec3().to_array();
-    for [dx, dz] in [[1, 0], [-1, 0], [0, 1], [0, -1]] {
+    // Dense vegetation beside the saved railway can cover all four immediate
+    // neighbors. Search the same real four-metre reach without moving the player.
+    let mut offsets = vec![[1, 0], [-1, 0], [0, 1], [0, -1]];
+    for x in -3_i64..=3 {
+        for z in -3_i64..=3 {
+            if x * x + z * z > 1 && x * x + z * z <= 9 {
+                offsets.push([x, z]);
+            }
+        }
+    }
+    offsets.sort_by_key(|[x, z]| x * x + z * z);
+    for [dx, dz] in offsets {
         for dy in -3..=0 {
             let ground = [base[0] + dx, base[1] + dy, base[2] + dz];
             let source = [ground[0], ground[1] + 1, ground[2]];
@@ -756,7 +871,16 @@ fn choose_ground_for(world: &mut World, water: bool) -> Option<([i64; 3], u16)> 
                     .and_then(MaterialId::from_raw)
                     .is_some_and(MaterialId::is_opaque)
                 || chunks.fluid_cell_at(terrain, journal, source, 0).amount != 0
-                || nearby_fluid_cells(journal, ground) != 0
+                || water && nearby_fluid_cells(journal, ground) != 0
+            {
+                continue;
+            }
+            if rails
+                && (-1..=1).any(|x| {
+                    (-1..=1).any(|z| {
+                        chunks.block_at([source[0] + x, source[1], source[2] + z]) != Some(0)
+                    })
+                })
             {
                 continue;
             }

@@ -10,6 +10,7 @@ pub(super) fn update(
     item: ItemKind,
     creative: bool,
 ) {
+    let _scope = terra_core::profiling::ScopeTimer::new("rails.player_preview");
     use terra_core::{kingdom::KingdomPermission, rails};
     if keys.pressed(Action::Break) {
         return;

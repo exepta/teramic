@@ -188,6 +188,69 @@ pub fn building_template_with_width(
             }
         }
     }
+    if kind == VehicleKind::Locomotive && width == 3 {
+        // The boiler top sits three cells above its anchor. Put the driver's
+        // eye above it, with a continuous floor and outward-facing thin walls.
+        cells.retain(|part| !(245..=250).contains(&part.material));
+        for part in &mut cells {
+            if part.material == train_parts::CAB {
+                part.cell[1] += 1;
+            }
+            if part.material == train_parts::FRAME {
+                part.material = 242;
+            }
+        }
+        let mut add = |local: [i64; 3], material: u16, relative: u8| {
+            let [x, y, z] = local;
+            let [x, z] = match facing {
+                0 => [x, z],
+                1 => [z, -x],
+                2 => [-x, -z],
+                _ => [-z, x],
+            };
+            let cell = [chassis[0] + x, chassis[1] + y, chassis[2] + z];
+            if !cells.iter().any(|part| part.cell == cell) {
+                cells.push(BlueprintCell {
+                    cell,
+                    material,
+                    facing: (facing + relative) % 4,
+                });
+            }
+        };
+        for z in 0..=1 {
+            for x in -1..=1 {
+                add([x, 1, z], 270, 0);
+                add([x, 5, z], 250, 0);
+            }
+            for x in [-1, 1] {
+                for y in 1..=4 {
+                    add(
+                        [x, y, z],
+                        if y >= 3 { 246 } else { 245 },
+                        if x < 0 { 1 } else { 3 },
+                    );
+                }
+            }
+            add([0, 1, z], 270, 0);
+        }
+        // Front panes are above the boiler, rather than a solid wall at eye level.
+        for x in -1..=1 {
+            add([x, 3, 2], 246, 2);
+            add([x, 4, 2], 246, 2);
+            add([x, 5, 2], 250, 0);
+        }
+        // A rear step reaches the raised floor without blocking the side aisles.
+        add([0, 1, -1], 272, 2);
+        add([0, 3, 2], 230, 2);
+        add([0, 2, 2], 229, 0);
+        add([0, 3, 0], 231, 2);
+        add([-1, 1, -1], 254, 0);
+        add([1, 1, -1], 255, 0);
+        for x in [-1, 1] {
+            add([x, 0, i64::from(wheelbase) + 1], 243, 0);
+            add([x, 1, i64::from(wheelbase) + 1], 264, 2);
+        }
+    }
     cells
 }
 
@@ -285,7 +348,7 @@ mod tests {
                 assert_eq!(
                     parts
                         .iter()
-                        .filter(|part| part.material == train_parts::FRAME)
+                        .filter(|part| matches!(part.material, train_parts::FRAME | 242))
                         .count(),
                     6
                 );
@@ -320,11 +383,8 @@ mod tests {
                     .filter(|part| part.material == train_parts::BOGIE)
                 {
                     let above = [bogie.cell[0], bogie.cell[1] + 1, bogie.cell[2]];
-                    assert!(
-                        parts
-                            .iter()
-                            .any(|part| part.cell == above && part.material == train_parts::FRAME)
-                    );
+                    assert!(parts.iter().any(|part| part.cell == above
+                        && matches!(part.material, train_parts::FRAME | 242)));
                 }
             }
         }
@@ -546,14 +606,10 @@ mod tests {
                 let wide = building_template_with_width([0; 3], facing, kind, 4, 3);
                 let side = if facing % 2 == 0 { 0 } else { 2 };
                 assert!(narrow.iter().all(|part| part.cell[side] == 0));
-                assert!(
-                    wide.iter()
-                        .any(|part| part.cell[side] == -1 && part.material == train_parts::FRAME)
-                );
-                assert!(
-                    wide.iter()
-                        .any(|part| part.cell[side] == 1 && part.material == train_parts::FRAME)
-                );
+                assert!(wide.iter().any(|part| part.cell[side] == -1
+                    && matches!(part.material, train_parts::FRAME | 242)));
+                assert!(wide.iter().any(|part| part.cell[side] == 1
+                    && matches!(part.material, train_parts::FRAME | 242)));
                 let bogies = |cells: &[BlueprintCell]| {
                     cells
                         .iter()
@@ -576,5 +632,58 @@ mod tests {
             }
         }
         assert!(building_template_with_width([0; 3], 0, VehicleKind::Locomotive, 4, 2).is_empty());
+    }
+    #[test]
+    fn wide_cab_has_clear_forward_windows_above_the_boiler_and_outward_side_walls() {
+        for facing in 0..4 {
+            let guide = building_template_with_width([0; 3], facing, VehicleKind::Locomotive, 8, 3);
+            let cab = guide
+                .iter()
+                .find(|p| p.material == train_parts::CAB)
+                .unwrap();
+            let highest_boiler = guide
+                .iter()
+                .filter(|p| crate::train_boiler::is_boiler(p.material))
+                .flat_map(|p| {
+                    crate::train_boiler::boxes(p.material, p.facing)
+                        .into_iter()
+                        .map(move |b| p.cell[1] as f64 + b.maximum[1])
+                })
+                .fold(0.0, f64::max);
+            // Seat feet + half body height + eye offset, as used by the
+            // mounted character controller. Leave clearance for the whole body.
+            assert!(cab.cell[1] as f64 + 0.485 + 0.9 + 0.72 > highest_boiler);
+            let head = crate::block_shapes::ShapeBox {
+                minimum: [0.16, cab.cell[1] as f64 + 0.485, 1.15],
+                maximum: [0.84, cab.cell[1] as f64 + 0.485 + 1.8, 1.85],
+                hinged: false,
+            }
+            .rotated_y(facing);
+            for part in guide.iter().filter(|p| p.material != train_parts::CAB) {
+                for mut bounds in train_parts::boxes(part.material, part.facing) {
+                    for axis in 0..3 {
+                        bounds.minimum[axis] += part.cell[axis] as f64;
+                        bounds.maximum[axis] += part.cell[axis] as f64;
+                    }
+                    assert!(
+                        !bounds.intersects(head.minimum, head.maximum),
+                        "wide cab part {} clips driver",
+                        part.material
+                    );
+                }
+            }
+            assert!(guide.iter().any(|p| p.material == 246 && p.cell[1] == 4));
+            assert!(guide.iter().any(|p| p.material == 250 && p.cell[1] == 5));
+            let parts: Vec<_> = guide
+                .iter()
+                .map(|p| crate::trains::TrainPart {
+                    offset: p.cell.map(|v| v as i16),
+                    material: p.material,
+                    facing: p.facing,
+                    wood: Default::default(),
+                })
+                .collect();
+            assert!(crate::train_power::steam_installed(&parts));
+        }
     }
 }

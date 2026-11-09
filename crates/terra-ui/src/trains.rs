@@ -99,6 +99,8 @@ pub struct TrainSlot {
 
 #[derive(Clone, Serialize, PartialEq)]
 pub struct TrainThrottleStep {
+    pub enabled: bool,
+    pub title: String,
     pub command: String,
     pub label: String,
     pub selected: bool,
@@ -106,6 +108,9 @@ pub struct TrainThrottleStep {
 #[html_shared]
 #[derive(Resource, Default, Serialize, PartialEq)]
 pub struct TrainView {
+    pub drive_max: f32,
+    pub has_water_tank: bool,
+    pub steam_status: String,
     pub open: bool,
     pub cargo: bool,
     pub pending: bool,
@@ -253,6 +258,9 @@ fn rejection(error: TrainError) -> &'static str {
         TrainError::NotOwner | TrainError::Protected => "Dafür fehlen dir die Rechte.",
         TrainError::Stale => "Der Aufbau hat sich geändert. Bitte erneut versuchen.",
         TrainError::Incomplete => "Bauteile fehlen oder sind nicht miteinander verbunden.",
+        TrainError::GearLocked => {
+            "Diese Fahrstufe benötigt einen längeren Kessel oder Wasser und mindestens 8 bar Dampfdruck."
+        }
         TrainError::Unsupported => {
             "Unter beiden Drehgestellen wird ein vollständiger, durchgehender Gleisabschnitt benötigt."
         }
@@ -792,6 +800,20 @@ fn command(world: &mut World, state: &mut TrainUiState, command: &str) {
                 TrainAction::OpenCargo {
                     vehicle: vehicle.id,
                     part: part as u16,
+                },
+            );
+        }
+        return;
+    }
+    if command == "water" {
+        if let Some(vehicle) = vehicle {
+            let player_revision = session.inventory.revision;
+            request(
+                world,
+                state,
+                TrainAction::FillWater {
+                    vehicle: vehicle.id,
+                    player_revision,
                 },
             );
         }

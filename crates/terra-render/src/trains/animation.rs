@@ -55,7 +55,7 @@ pub(super) fn pose(animation: Animation, distance: f64, throttle: i8) -> Transfo
             (Quat::from_axis_angle(animation.axis, phase), Vec3::ZERO)
         }
         TrainAnimationRole::Throttle => (
-            Quat::from_axis_angle(animation.axis, -f32::from(throttle.clamp(-3, 3)) * 0.18),
+            Quat::from_axis_angle(animation.axis, -f32::from(throttle.clamp(-6, 6)) * 0.09),
             Vec3::ZERO,
         ),
         TrainAnimationRole::ConnectingRod | TrainAnimationRole::RodJoint => (
@@ -228,7 +228,7 @@ mod tests {
         for notch in -3..=3 {
             let transform = pose(lever, 0.0, notch);
             assert!(transform.transform_point(lever.pivot).distance(lever.pivot) < 1e-5);
-            let angle = -f32::from(notch) * 0.18;
+            let angle = -f32::from(notch) * 0.09;
             assert_same_rotation(transform.rotation, Quat::from_axis_angle(lever.axis, angle));
             assert!(f32::from(notch) > last);
             last = f32::from(notch);

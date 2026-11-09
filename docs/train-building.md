@@ -57,8 +57,10 @@ ermoeglicht das Mitfahren. Der Besitzer steuert vom Fuehrerstand aus:
 | Benutzen / Platzieren (R / B) | Fahrpult oeffnen |
 | Absteigen / Abwaerts (X / Shift) | Aussteigen |
 
-Diese Tasten folgen der konfigurierten Belegung. Der Fahrhebel hat sieben Stufen
-von -3 bis +3 und laesst sich im Fahrpult auch per Schieber und Buttons bedienen.
+Diese Tasten folgen der konfigurierten Belegung. Der Fahrhebel hat neun Positionen
+von -2 bis +6 und laesst sich im Fahrpult per Schieber und Buttons bedienen.
+Rueckwaerts sind nur zwei Stufen erlaubt; hoehere Vorwaertsstufen werden passend
+zum Kessel und Dampfdruck freigeschaltet. Die Tooltips zeigen die Anforderungen.
 Eine Gegenstufe bremst zuerst bis zum Stillstand und wechselt dann die Richtung.
 Der sichtbare Hebel im Fuehrerstand, Raeder und Gestaenge folgen der echten Fahrt.
 Die Anzeige zeigt Geschwindigkeit in **Bloecken/s**; ein Block entspricht einem
@@ -139,8 +141,9 @@ Der Gleismodus **Prellbock** stoppt den Zug vor dem Anschlag einschliesslich
 Wagenkasten und Kupplung. Ein Verbund wird gemeinsam angehalten; Rueckwaerts
 vom Prellbock wegzufahren bleibt erlaubt.
 
-Client und Server benoetigen Protokoll 122. Zugindex ID16 speichert die neuen
-Namen und uebernimmt bestehende Zuege aus ID13, ID14 und ID15.
+Client und Server benoetigen Protokoll 123. Zugindex ID17 speichert
+Namen, Restbrennstoff, Wasser und Druck und uebernimmt bestehende Zuege aus
+ID13, ID14, ID15 und ID16. Alte Fahrzeuge erhalten kein kostenloses Wasser.
 
 
 ## Neue Montageansicht
@@ -175,3 +178,53 @@ stehen. Nach einer passenden Reparatur kann er wieder anfahren. Dabei duerfen
 Drehgestell und Schiene denselben Voxel belegen, solange sich ihre tatsaechlichen
 Formen nicht ueberschneiden. Eine Reparatur mit neuen Gleismodul-Ankern wird an
 der bestehenden Fahrzeugposition erkannt.
+
+
+## Fahrstufen und Dampfbetrieb
+
+| Stufe | Grundtempo | Voraussetzung |
+| --- | --- | --- |
+| Vorwaerts 1 | 4 Bloecke/s | Brennstoffmotor |
+| Vorwaerts 2 | 10 Bloecke/s | Brennstoffmotor |
+| Vorwaerts 3 | 16 Bloecke/s | Brennstoffmotor |
+| Vorwaerts 4 | 20 Bloecke/s | mindestens 4 durchgehende Kesselmodule |
+| Vorwaerts 5 | 30 Bloecke/s | mindestens 6 durchgehende Kesselmodule |
+| Vorwaerts 6 | 50 Bloecke/s | 6 Kesselmodule, Wasser, mindestens 8 bar, Tank, Dampfventil und Druckinstrument |
+| Rueckwaerts 1 / 2 | 4 / 10 Bloecke/s | Brennstoffmotor |
+
+Die Kessellaenge ist eine zusammenhaengende axiale Reihe der Kessel- und
+Rauchkammermodule. Seitlich verteilte Einzelteile zaehlen nicht als Laenge.
+Auf vollstaendig tragendem Schotter/Kies gilt der bestehende einmalige Bonus
+von 50 Prozent auch fuer diese Grundtempi. Herunterschalten und Richtungswechsel
+bremsen gleichmaessig; die Streckenvorschau beruecksichtigt den laengeren Bremsweg.
+
+Einen **Lok-Wassertank (254)**, ein **Dampfventil (229)** und eine
+**Druckanzeige (230 oder 231)** mit dem mindestens sechs Module langen Kessel
+und Brennstoffmotor verbinden. Die breite Lokvorlage schlaegt diese Anbauteile
+vor. Anhalten und **Tank fuellen** anklicken: im Ueberlebensmodus wird ein echter
+Wassereimer gegen einen leeren Eimer getauscht. Der Tank fasst acht Eimer; im
+Kreativmodus fuellt der Button ihn sofort. Eine volle Spielertasche verhindert
+Transfers ohne teilweisen Verbrauch.
+
+Mit Kohle im Motor heizt die stehende Lok bei gesetzter Bremse vor. Wasser und
+Druck erscheinen im Fahrpult; ab 8 bar ist Stufe 6 freigegeben. Fahrt verbraucht
+Wasser und Brennstoff, Druck kuehlt ohne Feuer ab. Bei fehlenden Voraussetzungen
+steht nur die passende niedrigere Stufe zur Verfuegung. Beim Umbauen wird der
+Kessel drucklos und entleert; volle unbenutzte Wassereimer gehen im
+Ueberlebensmodus ins Spielerinventar zurueck, angebrochenes Kesselwasser wird
+abgelassen. Dafuer muss Inventarplatz frei sein. Wasser/Druck montierter Zuege
+bleiben ueber Speichern und Neuladen erhalten.
+
+Die 3x-Vorlage hat einen erhoehten Fuehrerstand mit durchgehendem Boden,
+hoeheren Fenstern oberhalb des Kessels und nach aussen orientierten Seitenwaenden.
+Beim manuellen Setzen waehlen die angeklickte Seitenflaeche beziehungsweise die
+naechste Kante einer Boden-/Deckenflaeche die Lage der duennen Wand. Damit lassen
+sich Innen- und Aussenflaechen gezielt nutzen. Fuer diese Kabine vorhandene
+Eigenbauten in der Montage mit der neuen Vorlage entsprechend umbauen.
+
+Schornstein und Dome besitzen einen anliegenden Sattel; Dome haben eine
+niedrigere Kuppelform. Eisen, Messingbaender, roter Rahmen und Frontleuchten
+orientieren sich an der Modellreferenz. Bei Fahrt mit vorhandenem Brennstoff
+entsteht an der echten Schornsteinmuendung eine mit der Bewegung zurueckbleibende
+Rauchfahne. Sie verwendet eine gemeinsame weiche Partikelgeometrie, hoechstens
+256 Partikel und vier nahe Zuege.

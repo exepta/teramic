@@ -539,6 +539,7 @@ fn a_signed_stretch_uses_the_real_long_ray_and_one_target_support_without_spendi
 
         motion: Default::default(),
         burn_seconds: 0.0,
+        steam: Default::default(),
     };
     blocking_car.cargo.insert(
         4,

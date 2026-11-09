@@ -25,7 +25,7 @@ const MAX_SMOKE_CELLS: usize = 256;
 #[derive(Asset, AsBindGroup, Reflect, Debug, Clone)]
 pub(crate) struct SmokeExtension {
     #[uniform(100)]
-    animation: Vec4,
+    pub(crate) animation: Vec4,
 }
 impl MaterialExtension for SmokeExtension {
     fn fragment_shader() -> ShaderRef {
@@ -76,7 +76,7 @@ pub(crate) fn install(app: &mut App) {
         );
 }
 
-fn mesh() -> Mesh {
+pub(crate) fn mesh() -> Mesh {
     Mesh::new(
         PrimitiveTopology::TriangleList,
         RenderAssetUsages::MAIN_WORLD | RenderAssetUsages::RENDER_WORLD,
@@ -150,7 +150,7 @@ fn setup(
 }
 
 #[derive(Default)]
-struct Geometry {
+pub(crate) struct Geometry {
     positions: Vec<[f32; 3]>,
     normals: Vec<[f32; 3]>,
     colors: Vec<[f32; 4]>,
@@ -180,7 +180,14 @@ impl Geometry {
             }
         }
     }
-    fn wisp(&mut self, center: Vec3, radius: f32, right: Vec3, up: Vec3, color: [f32; 4]) {
+    pub(crate) fn wisp(
+        &mut self,
+        center: Vec3,
+        radius: f32,
+        right: Vec3,
+        up: Vec3,
+        color: [f32; 4],
+    ) {
         let base = self.positions.len() as u32;
         self.positions.extend(
             [(-1.0, -1.0), (1.0, -1.0), (1.0, 1.0), (-1.0, 1.0)]
@@ -211,7 +218,7 @@ impl Geometry {
             *position = Vec3::from_array(*position).clamp(low, high).to_array();
         }
     }
-    fn write(self, target: &mut Mesh) -> bool {
+    pub(crate) fn write(self, target: &mut Mesh) -> bool {
         if self.positions.is_empty() || self.indices.is_empty() {
             return false;
         }

@@ -39,6 +39,7 @@ fn public_vehicle_updates_keep_private_contents_and_token_until_the_container_be
         revision: 7,
         motion: Default::default(),
         burn_seconds: 0.0,
+        steam: Default::default(),
     };
     assert!(car.valid());
     let cached = crate::protocol::trains::TrainCargoSnapshot {
