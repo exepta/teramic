@@ -140,6 +140,13 @@ impl Surface {
             {
                 Self::Dirt
             }
+            Some(material) if terra_core::locomotive_parts::is_part(material as u16) => {
+                if terra_core::locomotive_parts::supports_wood(material as u16) {
+                    Self::Wood
+                } else {
+                    Self::Stone
+                }
+            }
             Some(Grass) => Self::Grass,
             Some(Sand) => Self::Sand,
             Some(
@@ -428,6 +435,9 @@ mod tests {
         expected.push(Stone); // The separate switch stand has an iron base.
         expected.extend([Stone; 5]); // Chassis, wheelsets, frame, coupler and cab floor are metal.
         expected.extend([Dirt, Wood, Wood]); // Upholstered seat, timber cargo and workshop tabletop.
+        expected.extend([Stone; terra_core::locomotive_parts::COUNT]);
+        expected[267] = Wood;
+        expected[268] = Wood;
         assert_eq!(
             expected.len(),
             usize::from(terra_voxel::MaterialId::LAST) + 1

@@ -39,6 +39,7 @@ fn car(anchor: Cell, kind: VehicleKind) -> Vehicle {
         .map(|(index, _)| (index as u16, Inventory::default()))
         .collect();
     Vehicle {
+        name: String::new(),
         id: 1,
         owner: PlayerUuid::from_u128(1),
         kind,

@@ -23,9 +23,21 @@ impl Inputs {
         else {
             return Self::default();
         };
+        let typing = world
+            .get_resource::<bevy::input_focus::InputFocus>()
+            .and_then(bevy::input_focus::InputFocus::get)
+            .is_some_and(|entity| {
+                world
+                    .get::<tilt_ui::ElementId>(entity)
+                    .is_some_and(|id| id.0 == "train-name")
+                    || world
+                        .get::<ChildOf>(entity)
+                        .and_then(|parent| world.get::<tilt_ui::ElementId>(parent.parent()))
+                        .is_some_and(|id| id.0 == "train-name")
+            });
         Self {
             close: input.just_pressed(GameAction::Pause)
-                || input.just_pressed(GameAction::Inventory),
+                || !typing && input.just_pressed(GameAction::Inventory),
             leave: input.just_pressed(GameAction::FlyDown)
                 || input.just_pressed(GameAction::Dismount),
             interact: input.just_pressed(GameAction::Use) || input.just_pressed(GameAction::Place),
@@ -386,6 +398,7 @@ fn status(reason: StopReason) -> &'static str {
         StopReason::Braking => "Bremse aktiv",
         StopReason::NoFuel => "Motor benötigt Brennstoff",
         StopReason::NoEngine => "Brennstoffmotor fehlt",
+        StopReason::Buffer => "Prellbock erreicht",
         StopReason::EndOfTrack => "Gleisende erreicht",
         StopReason::Unloaded => "Warte auf geladene Strecke",
         StopReason::Obstructed => "Strecke blockiert",

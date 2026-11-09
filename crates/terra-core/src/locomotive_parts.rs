@@ -4,7 +4,7 @@ use serde::Deserialize;
 use std::sync::OnceLock;
 
 pub const FIRST: u16 = 218;
-pub const LAST: u16 = 293;
+pub const LAST: u16 = 294;
 pub const ENGINE: u16 = 218;
 pub const WATER_TANK: u16 = 254;
 pub const THROTTLE_PIVOT: [f32; 3] = [0.72, 0.57, 0.25];
@@ -487,6 +487,12 @@ pub const DEFINITIONS: [Definition; COUNT] = [
         name: "Lok-Gitter Schräge",
         kind: Kind::Structure,
     },
+    Definition {
+        id: 294,
+        slug: "train_ceiling_light",
+        name: "Wagen-Deckenleuchte",
+        kind: Kind::Headlight,
+    },
 ];
 const SOURCES: [&str; COUNT] = [
     include_str!("../../../assets/terra/blocks/train_fuel_engine.json"),
@@ -565,6 +571,7 @@ const SOURCES: [&str; COUNT] = [
     include_str!("../../../assets/terra/blocks/train_grate_inner_corner.json"),
     include_str!("../../../assets/terra/blocks/train_grate_outer_corner.json"),
     include_str!("../../../assets/terra/blocks/train_grate_slope.json"),
+    include_str!("../../../assets/terra/blocks/train_ceiling_light.json"),
 ];
 pub const fn is_part(material: u16) -> bool {
     material >= FIRST && material <= LAST
@@ -577,7 +584,7 @@ pub const fn definition(material: u16) -> Option<&'static Definition> {
     }
 }
 pub const fn is_metal_shape(material: u16) -> bool {
-    material >= 270 && material <= LAST
+    material >= 270 && material <= 293
 }
 pub const fn is_slab(material: u16) -> bool {
     is_metal_shape(material) && (material - 270) % 6 == 1
@@ -607,7 +614,12 @@ pub fn valid_facing(material: u16, facing: u8) -> bool {
     if crate::construction::is_shape(material) {
         crate::construction::valid_facing(material, facing)
     } else {
-        facing < if matches!(material, 247 | 248) { 8 } else { 4 }
+        facing
+            < if matches!(material, 219..=223 | 247 | 248) {
+                8
+            } else {
+                4
+            }
     }
 }
 /// Preserve authored lattice bars while applying the shared slab/stair pose.
@@ -740,12 +752,11 @@ mod tests {
         assert!(
             DEFINITIONS
                 .iter()
-                .filter(|definition| definition.id >= 270)
+                .filter(|definition| (270..=293).contains(&definition.id))
                 .count()
                 == 24
         );
     }
-
     #[test]
     fn every_component_is_craftable_from_the_embedded_catalog() {
         let recipes = crate::crafting::RecipeBook::builtins();
@@ -754,7 +765,6 @@ mod tests {
             assert!(recipes.get(key).is_some(), "{}", definition.slug);
         }
     }
-
     #[test]
     fn boilers_and_roofs_have_supports_at_their_owner_cell_floor() {
         for material in [219, 220, 221, 222, 223, 249, 250, 251] {
@@ -765,7 +775,6 @@ mod tests {
             );
         }
     }
-
     #[test]
     fn piston_and_crosshead_collars_share_their_rigid_body_motion() {
         for (slug, expected) in [
@@ -789,7 +798,6 @@ mod tests {
             assert_eq!(names, [expected].into());
         }
     }
-
     #[test]
     fn mixed_grate_slabs_keep_both_authored_halves_and_the_open_lattice() {
         for first in [82, 289] {

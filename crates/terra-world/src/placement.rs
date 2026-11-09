@@ -293,6 +293,16 @@ pub fn layout(
         return Ok(result);
     }
     let mut state = BlockObjectState::from_yaw(look[0]);
+    if terra_core::train_boiler::is_boiler(material)
+        && terra_core::train_boiler::wide_support(position, state.facing, |cell| {
+            chunks.block_at(cell)
+        })
+    {
+        state.facing |= 4;
+    }
+    if matches!(material, 264 | 265) {
+        state.facing = (state.facing + 2) % 4;
+    }
     if material == terra_core::infusion::HOLD_BLOCK {
         state.facing = crate::conveyors::infusion_facing(journal, position, state.facing).0;
     } else if material == terra_core::infusion::FLUID_INFUSER {

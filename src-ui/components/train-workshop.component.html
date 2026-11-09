@@ -28,7 +28,8 @@
         </div>
         <button id="workshop" onclick="train_workshop_action">Zur Fahrzeugsteuerung</button>
       } @else {
-        <p>{{ trainView.requirements }}</p>
+        <p class="train-requirements">{{ trainView.requirements }}</p>
+        <div class="train-name-row"><label for="train-name">Zugname / Schild</label><input id="train-name" type="text" maxlength="24" placeholder="z. B. TERAMIC EXPRESS" [value]="trainView.name" onchange="train_workshop_action" />@if (trainView.selected) { <button id="name-save" [disabled]="trainView.pending" onclick="train_workshop_action">Schild übernehmen</button> }</div>
         @if (trainView.selected) {
           <div class="train-drive-panel">
             <div class="train-drive-heading"><h3>Fahrhebel</h3><p class="train-drive-speed">{{ trainView.drive_speed }}</p><p>{{ trainView.drive_direction }}</p></div>
@@ -67,17 +68,21 @@
               <button id="blueprint-build" [disabled]="!trainView.blueprint" onclick="train_workshop_action">Mit Vorlage bauen</button>
               @if (trainView.blueprint) { <button id="blueprint-clear" onclick="train_workshop_action">Vorlage ausblenden</button> }
             </div>
+            <button id="blueprint-auto" class="train-primary" [disabled]="trainView.pending" onclick="train_workshop_action">Vorlage automatisch bauen</button>
+            <p>Übernimmt fehlende Teile aus dem Inventar. Im Kreativmodus ohne Materialverbrauch.</p>
             <button id="assemble" class="train-primary" [disabled]="trainView.pending" onclick="train_workshop_action">Zusammensetzen</button>
             <p>Lok: Motor und Führerstand · Personenwagen: Sitz · Laderaum frei platzierbar</p>
             } @else {
               <h3>Fahrzeug montiert</h3>
               <p>Zur Montage wechseln, um Rahmen, Verkleidung und Einrichtung mit beliebigen Blöcken weiterzubauen.</p>
             }
+            @if (trainView.selected) {
             <div class="train-secondary-actions">
               <button id="dismantle" [disabled]="trainView.pending || !trainView.can_edit" onclick="train_workshop_action">Zur Montage</button>
               <button id="seat" [disabled]="trainView.pending || !trainView.selected" onclick="train_workshop_action">Einsteigen</button>
               <button id="cargo" [disabled]="trainView.pending || !trainView.has_cargo" onclick="train_workshop_action">Laderaum öffnen</button>
             </div>
+            }
             @if (trainView.selected && !trainView.has_cargo) { <p>{{ trainView.cargo_hint }}</p> }
           </div>
           <div class="train-workshop-vehicles">
@@ -89,8 +94,10 @@
               </button>
             }
             <div class="train-pagination"><button id="previous" onclick="train_workshop_action"><icon name="chevron-left" size="16" /></button><p>{{ trainView.page }}</p><button id="next" onclick="train_workshop_action"><icon name="chevron-right" size="16" /></button></div>
+            @if (trainView.selected) {
             <div class="train-coupling"><button id="front" onclick="train_workshop_action">Erstes Ende: {{ trainView.front }}</button><button id="second-front" onclick="train_workshop_action">Zweites Ende: {{ trainView.second_front }}</button></div>
             <div class="train-coupling"><button id="couple" [disabled]="trainView.pending || !trainView.pair" onclick="train_workshop_action">Zwei Auswahlen koppeln</button><button id="uncouple" [disabled]="trainView.pending || !trainView.selected" onclick="train_workshop_action">Kupplung lösen</button></div>
+            }
           </div>
         </div>
       }

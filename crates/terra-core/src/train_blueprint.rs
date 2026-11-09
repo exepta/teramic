@@ -147,6 +147,9 @@ pub fn matches(cell: BlueprintCell, material: Option<u16>, facing: u8) -> bool {
             train_parts::BOGIE | train_parts::COUPLER => facing % 2 == cell.facing % 2,
             train_parts::CAB | train_parts::SEAT => facing == cell.facing,
             train_parts::ENGINE => true,
+            material if crate::train_boiler::is_boiler(material) => {
+                facing < 8 && facing % 4 == cell.facing % 4
+            }
             material if crate::locomotive_parts::is_part(material) => facing == cell.facing,
             _ => true,
         }

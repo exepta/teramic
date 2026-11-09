@@ -108,6 +108,79 @@ pub(super) fn layout(material: u16, facing: u8) -> Option<Arc<Layout>> {
             .clone(),
     )
 }
+/// Retain small occupancy records independently of the heavyweight beam LRU.
+/// Section validation must not rebuild a mesh after another worker evicts its beams.
+pub(super) fn piece_footprint(piece: Piece) -> Arc<[[i32; 3]]> {
+    type Footprints = BTreeMap<CurveSpec, Arc<[[i32; 3]]>>;
+    static FOOTPRINTS: OnceLock<Mutex<Footprints>> = OnceLock::new();
+    if !piece.valid() {
+        return Arc::from([]);
+    }
+    let Some(curve) = piece.curve else {
+        return layout(piece.material, piece.encoded_facing())
+            .map_or_else(|| Arc::from([]), |layout| layout.footprint.clone());
+    };
+    let cache = FOOTPRINTS.get_or_init(Default::default);
+    if let Some(cells) = cache
+        .lock()
+        .unwrap_or_else(|error| error.into_inner())
+        .get(&curve)
+        .cloned()
+    {
+        return cells;
+    }
+    let cells =
+        piece_layout(piece).map_or_else(|| Arc::from([]), |layout| layout.footprint.clone());
+    let mut entries = cache.lock().unwrap_or_else(|error| error.into_inner());
+    if entries.len() >= MAX_PIECES + 256 {
+        entries.pop_first();
+    }
+    entries
+        .entry(curve)
+        .or_insert_with(|| cells.clone())
+        .clone()
+}
+
+/// Water and picking use small collision slices without retaining render surfaces.
+/// Background import preparation warms this cache before publishing a section.
+pub(super) fn piece_cell_boxes(piece: Piece, offset: [i32; 3]) -> Arc<[ShapeBox]> {
+    type Cells = BTreeMap<[i32; 3], Arc<[ShapeBox]>>;
+    type Entries = VecDeque<(CurveSpec, Arc<Cells>)>;
+    static COLLISIONS: OnceLock<Mutex<Entries>> = OnceLock::new();
+    if !piece.valid() {
+        return Arc::from([]);
+    }
+    let Some(curve) = piece.curve else {
+        return layout(piece.material, piece.encoded_facing())
+            .and_then(|layout| layout.cells.get(&offset).cloned())
+            .unwrap_or_default();
+    };
+    let cache = COLLISIONS.get_or_init(Default::default);
+    {
+        let mut entries = cache.lock().unwrap_or_else(|error| error.into_inner());
+        if let Some(index) = entries.iter().position(|(spec, _)| *spec == curve) {
+            let entry = entries.remove(index).expect("located collision slices");
+            let result = entry.1.get(&offset).cloned().unwrap_or_default();
+            entries.push_back(entry);
+            return result;
+        }
+    }
+    let Some(layout) = piece_layout(piece) else {
+        return Arc::from([]);
+    };
+    let cells = Arc::new(layout.cells.clone());
+    let result = cells.get(&offset).cloned().unwrap_or_default();
+    let mut entries = cache.lock().unwrap_or_else(|error| error.into_inner());
+    if let Some((_, previous)) = entries.iter().find(|(spec, _)| *spec == curve) {
+        return previous.get(&offset).cloned().unwrap_or_default();
+    }
+    if entries.len() >= DYNAMIC_CACHE_LIMIT * 4 {
+        entries.pop_front();
+    }
+    entries.push_back((curve, cells));
+    result
+}
+
 pub(super) fn piece_layout(piece: Piece) -> Option<Arc<Layout>> {
     if !piece.valid() {
         return None;

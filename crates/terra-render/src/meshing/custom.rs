@@ -830,6 +830,7 @@ pub(crate) fn compose(
             templates,
             snapshot.chimney_infill.get(&model.cell),
         )?;
+        let wide_boiler = terra_core::train_boiler::is_wide(model.material, model.state.facing);
         let width = if matches!(model.material, 28 | 29 | 99) && model.state.peer.is_some() {
             2.0
         } else {
@@ -909,6 +910,7 @@ pub(crate) fn compose(
                         } else if terra_core::logistics::is_port(model.material)
                             || model.material == terra_core::brewing::MATERIAL
                             || matches!(model.material, 167 | 168)
+                            || terra_core::train_boiler::is_boiler(model.material)
                         {
                             model.state.facing % 4
                         } else {
@@ -1209,6 +1211,10 @@ pub(crate) fn compose(
                         return std::array::from_fn(|i| p[i] as f32 + model.cell[i] as f32);
                     }
                     let mut point = bevy::math::Vec3::from_array(*point);
+                    if wide_boiler {
+                        point.x = (point.x - 0.5) * 3.0 + 0.5;
+                        point.y *= 3.0;
+                    }
                     point.x = point.x * width - 0.5;
                     point.z -= 0.5;
                     if centered {
@@ -1228,6 +1234,10 @@ pub(crate) fn compose(
                     .map(|v| v as f32);
                 }
                 let mut normal = bevy::math::Vec3::from_array(*normal);
+                if wide_boiler {
+                    normal.x /= 3.0;
+                    normal.y /= 3.0;
+                }
                 normal.x /= width;
                 (rotation * normal).normalize_or_zero().to_array()
             }));
@@ -1257,6 +1267,12 @@ pub(crate) fn compose(
                                 .map(|v| v as f32),
                             );
                         } else {
+                            if wide_boiler {
+                                direction.x *= 3.0;
+                                direction.y *= 3.0;
+                                normal.x /= 3.0;
+                                normal.y /= 3.0;
+                            }
                             direction.x *= width;
                             normal.x /= width;
                             direction = rotation * direction;

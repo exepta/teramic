@@ -27,6 +27,7 @@ pub(super) struct Vehicle13 {
 impl From<Vehicle13> for Vehicle {
     fn from(old: Vehicle13) -> Self {
         Self {
+            name: String::new(),
             id: old.id,
             owner: old.owner,
             kind: old.kind,
@@ -111,6 +112,7 @@ impl From<TrainIndex14> for TrainIndex {
                         (
                             id,
                             Vehicle {
+                                name: String::new(),
                                 id: car.id,
                                 owner: car.owner,
                                 kind: car.kind,
@@ -123,6 +125,70 @@ impl From<TrainIndex14> for TrainIndex {
                                 revision: car.revision,
                                 motion: Default::default(),
                                 burn_seconds: 0.0,
+                            },
+                        )
+                    })
+                    .collect(),
+            },
+        }
+    }
+}
+
+/// Frozen ID15 layout, before editable vehicle names were added.
+#[derive(Serialize, Deserialize)]
+pub(super) struct TrainIndex15 {
+    pub prior: super::TreeIndex,
+    pub trains: Registry15,
+}
+#[derive(Serialize, Deserialize)]
+pub(super) struct Registry15 {
+    pub next_id: u64,
+    pub revision: u64,
+    pub vehicles: BTreeMap<u64, Vehicle15>,
+}
+#[derive(Serialize, Deserialize)]
+pub(super) struct Vehicle15 {
+    pub id: u64,
+    pub owner: PlayerUuid,
+    pub kind: VehicleKind,
+    pub anchor: [i64; 3],
+    pub parts: Vec<TrainPart>,
+    pub cargo: BTreeMap<u16, Inventory>,
+    pub blocks: BTreeMap<u16, terra_core::trains::TrainBlockView>,
+    pub payloads: BTreeMap<u16, Vec<u8>>,
+    pub motion: terra_core::train_motion::TrainMotion,
+    pub burn_seconds: f64,
+    pub couplings: [Option<Coupling>; 2],
+    pub revision: u64,
+}
+impl From<TrainIndex15> for TrainIndex {
+    fn from(old: TrainIndex15) -> Self {
+        Self {
+            prior: old.prior,
+            trains: terra_core::trains::TrainRegistry {
+                next_id: old.trains.next_id,
+                revision: old.trains.revision,
+                vehicles: old
+                    .trains
+                    .vehicles
+                    .into_iter()
+                    .map(|(id, car)| {
+                        (
+                            id,
+                            Vehicle {
+                                name: String::new(),
+                                id: car.id,
+                                owner: car.owner,
+                                kind: car.kind,
+                                anchor: car.anchor,
+                                parts: car.parts,
+                                cargo: car.cargo,
+                                blocks: car.blocks,
+                                payloads: car.payloads,
+                                motion: car.motion,
+                                burn_seconds: car.burn_seconds,
+                                couplings: car.couplings,
+                                revision: car.revision,
                             },
                         )
                     })

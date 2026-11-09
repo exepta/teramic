@@ -5,6 +5,97 @@ use std::collections::{BTreeMap, BTreeSet};
 use terra_core::{train_parts, trains::TrainError};
 use terra_voxel::global_to_section;
 impl EditJournal {
+    pub(crate) fn commit_train_build(
+        &mut self,
+        chunks: &mut ChunkStore,
+        plan: &crate::trains::BuildPlan,
+    ) -> Result<(), TrainError> {
+        if plan.cells.is_empty() {
+            return Ok(());
+        }
+        let owners: BTreeSet<_> = plan
+            .cells
+            .iter()
+            .map(|(part, _)| global_to_section(part.cell).0)
+            .collect();
+        let mut staged = Self::default();
+        let mut blocks = BTreeMap::new();
+        let mut halo = BTreeSet::new();
+        for owner in &owners {
+            if let Some(section) = self.sections.get(owner) {
+                staged.sections.insert(*owner, section.clone());
+            }
+            blocks.insert(
+                *owner,
+                chunks
+                    .loaded
+                    .get(owner)
+                    .ok_or(TrainError::Incomplete)?
+                    .data
+                    .clone(),
+            );
+            for x in -1..=1 {
+                for y in -1..=1 {
+                    for z in -1..=1 {
+                        let neighbor = owner.offset([x, y, z]).map_err(|_| TrainError::Overflow)?;
+                        halo.insert(neighbor);
+                        staged
+                            .mesh_epochs
+                            .insert(neighbor, self.mesh_epoch(neighbor));
+                        staged
+                            .water_mesh_epochs
+                            .insert(neighbor, self.water_mesh_epoch(neighbor));
+                    }
+                }
+            }
+        }
+        for (part, wood) in &plan.cells {
+            let (owner, local) = global_to_section(part.cell);
+            staged
+                .record(part.cell, part.material)
+                .map_err(|_| TrainError::Overflow)?;
+            staged
+                .set_object_state(
+                    part.cell,
+                    Some(crate::edits::BlockObjectState {
+                        facing: part.facing,
+                        wood: *wood,
+                        ..Default::default()
+                    }),
+                )
+                .map_err(|_| TrainError::Invalid)?;
+            blocks
+                .get_mut(&owner)
+                .unwrap()
+                .set_block(local, part.material)
+                .map_err(|_| TrainError::Invalid)?;
+        }
+        for (owner, section) in std::mem::take(&mut staged.sections) {
+            self.sections.insert(owner, section);
+        }
+        for owner in &owners {
+            self.refresh_object_section(*owner);
+        }
+        self.mesh_epochs
+            .extend(std::mem::take(&mut staged.mesh_epochs));
+        self.water_mesh_epochs
+            .extend(std::mem::take(&mut staged.water_mesh_epochs));
+        for (owner, data) in blocks {
+            chunks.loaded.get_mut(&owner).unwrap().data = data;
+        }
+        self.gameplay
+            .inventories
+            .insert(plan.request.actor, plan.after.clone());
+        self.gameplay.revision += 1;
+        for (part, _) in &plan.cells {
+            self.publish_train_runtime(&mut staged, part.cell);
+            self.wake_fluid_neighbors(part.cell);
+        }
+        for section in halo {
+            chunks.mark_dirty_if_wanted(section);
+        }
+        Ok(())
+    }
     pub(crate) fn commit_train_plan(
         &mut self,
         chunks: &mut ChunkStore,

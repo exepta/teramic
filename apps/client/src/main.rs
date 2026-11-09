@@ -94,3 +94,5 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
     Ok(())
 }
+
+mod train_audio;

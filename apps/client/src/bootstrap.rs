@@ -722,6 +722,7 @@ pub fn build_app() -> Result<App, Box<dyn Error>> {
     crate::tree_collapse_smoke::install(&mut app);
     crate::village_smoke::install(&mut app);
     crate::equipment_smoke::install(&mut app);
+    crate::train_audio::install(&mut app);
     crate::crusher_smoke::install(&mut app);
     crate::mixer_smoke::install(&mut app);
     crate::rgb_logistics_smoke::install(&mut app);

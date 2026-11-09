@@ -361,6 +361,33 @@ fn udp_real_vehicle_assembly_private_cargo_seating_late_join_and_atomic_dismantl
             .train_cargo
             .is_none()
     );
+    let rename = send(
+        &mut owner,
+        TrainAction::Name {
+            vehicle: vehicle_id,
+            name: "TERAMIC EXPRESS".into(),
+            station: Some(station),
+        },
+    );
+    assert!(
+        matches!(response(&mut host,&mut owner,&mut watcher,rename),TrainOutcome::Changed{vehicle:Some(id)} if id==vehicle_id)
+    );
+    wait_phase(
+        "train sign replicated to both clients",
+        &mut host,
+        &mut [&mut owner, &mut watcher],
+        |_, clients| {
+            clients.iter().all(|client| {
+                client
+                    .world()
+                    .resource::<client::ClientSession>()
+                    .trains
+                    .vehicles
+                    .iter()
+                    .any(|car| car.id == vehicle_id && car.name == "TERAMIC EXPRESS")
+            })
+        },
+    );
     let car = host
         .world()
         .resource::<EditJournal>()
@@ -969,6 +996,7 @@ fn bounded_full_train_registry_public_packet_stays_below_two_mebibytes() {
         .collect();
     let vehicles = (1..=16)
         .map(|id| VehicleView {
+            name: String::new(),
             id,
             owner: terra_core::PlayerUuid::from_u128(1),
             kind: VehicleKind::Locomotive,
@@ -1000,5 +1028,160 @@ fn bounded_full_train_registry_public_packet_stays_below_two_mebibytes() {
     assert_eq!(
         postcard::from_bytes::<TrainSnapshot>(&bytes).unwrap(),
         snapshot
+    );
+}
+
+#[test]
+fn udp_creative_workshop_builds_the_real_template_with_empty_inventory_on_both_clients() {
+    let mut host = server();
+    let address = host
+        .world()
+        .resource::<server::ServerRuntime>()
+        .address
+        .unwrap();
+    let mut owner = profile_client(
+        address,
+        PlayerProfile {
+            name: "AutoBuilder".into(),
+            ..Default::default()
+        },
+    );
+    let mut watcher = profile_client(
+        address,
+        PlayerProfile {
+            name: "BuildObserver".into(),
+            ..Default::default()
+        },
+    );
+    wait_phase(
+        "auto-build clients ready",
+        &mut host,
+        &mut [&mut owner, &mut watcher],
+        |_, clients| {
+            clients.iter().all(|app| {
+                app.world().resource::<client::ClientSession>().ready
+                    && app
+                        .world()
+                        .resource::<client::ClientSession>()
+                        .confirmed_state()
+                        .is_some_and(|state| state.grounded)
+            })
+        },
+    );
+    let state = owner
+        .world()
+        .resource::<client::ClientSession>()
+        .confirmed_state()
+        .unwrap();
+    let ground =
+        (state.position[1] - terra_physics::character::PLAYER_HALF_HEIGHT).floor() as i64 - 1;
+    let base = [
+        state.position[0].floor() as i64,
+        ground + 1,
+        state.position[2].floor() as i64 + 3,
+    ];
+    let at = |x, y, z| [base[0] + x, base[1] + y, base[2] + z];
+    let station = at(3, 2, 2);
+    let chassis = at(0, 2, 2);
+    let volume: Vec<_> = (-3..=6)
+        .flat_map(|x| (0..=7).flat_map(move |y| (-2..=10).map(move |z| at(x, y, z))))
+        .collect();
+    wait_phase(
+        "auto-build area loaded",
+        &mut host,
+        &mut [&mut owner, &mut watcher],
+        |host, _| {
+            volume.iter().all(|cell| {
+                host.world()
+                    .resource::<ChunkStore>()
+                    .block_at(*cell)
+                    .is_some()
+            })
+        },
+    );
+    for cell in volume {
+        put(&mut host, cell, 0);
+    }
+    floor(
+        &mut host,
+        (-3..=6).flat_map(|x| (-2..=10).map(move |z| at(x, -1, z))),
+    );
+    host.world_mut()
+        .resource_scope(|world, mut journal: Mut<EditJournal>| {
+            let mut chunks = world.resource_mut::<ChunkStore>();
+            for piece in [
+                Piece::new(base, terra_core::rails::STRAIGHT, 0).unwrap(),
+                Piece::new(at(0, 0, 4), terra_core::rails::STRAIGHT, 0).unwrap(),
+            ] {
+                let plan = rails::plan(&chunks, &journal, piece.anchor, piece.material, 0).unwrap();
+                rails::commit(&mut chunks, &mut journal, &plan).unwrap();
+            }
+        });
+    for y in 0..=1 {
+        put(&mut host, at(3, y, 2), 3);
+    }
+    put(&mut host, station, train_parts::STATION);
+    let player_revision = owner
+        .world()
+        .resource::<client::ClientSession>()
+        .inventory
+        .revision;
+    let request = send(
+        &mut owner,
+        TrainAction::Build {
+            station,
+            chassis,
+            facing: 0,
+            kind: VehicleKind::Locomotive,
+            wheelbase: 4,
+            player_revision,
+        },
+    );
+    assert_eq!(
+        response(&mut host, &mut owner, &mut watcher, request),
+        TrainOutcome::Changed { vehicle: None }
+    );
+    let guide =
+        terra_core::train_blueprint::building_template(chassis, 0, VehicleKind::Locomotive, 4);
+    wait_phase(
+        "auto-built template replicated",
+        &mut host,
+        &mut [&mut owner, &mut watcher],
+        |_, clients| {
+            clients.iter().all(|app| {
+                guide.iter().all(|part| {
+                    app.world().resource::<ChunkStore>().block_at(part.cell) == Some(part.material)
+                })
+            })
+        },
+    );
+    assert!(
+        owner
+            .world()
+            .resource::<client::ClientSession>()
+            .inventory
+            .slots
+            .iter()
+            .all(|stack| stack.count == 0)
+    );
+    let player_revision = owner
+        .world()
+        .resource::<client::ClientSession>()
+        .inventory
+        .revision;
+    let again = send(
+        &mut owner,
+        TrainAction::Build {
+            station,
+            chassis,
+            facing: 0,
+            kind: VehicleKind::Locomotive,
+            wheelbase: 4,
+            player_revision,
+        },
+    );
+    assert_eq!(
+        response(&mut host, &mut owner, &mut watcher, again),
+        TrainOutcome::Changed { vehicle: None }
     );
 }

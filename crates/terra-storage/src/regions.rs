@@ -232,17 +232,22 @@ fn read_train_index(bytes: &[u8]) -> Result<TrainIndex, String> {
         decode::<train_legacy::TrainIndex13>(b"ID13", bytes).map(Into::into)
     } else if bytes.get(12..16) == Some(b"ID14") {
         decode::<train_legacy::TrainIndex14>(b"ID14", bytes).map(Into::into)
+    } else if bytes.get(12..16) == Some(b"ID15") {
+        decode::<train_legacy::TrainIndex15>(b"ID15", bytes).map(Into::into)
     } else {
-        decode(b"ID15", bytes)
+        decode(b"ID16", bytes)
     }
 }
 fn read_index(root: &Path) -> Result<KingdomIndex, String> {
     let bytes = read(&root.join(INDEX))?;
     if matches!(
         bytes.get(12..16),
-        Some(b"ID11" | b"ID12" | b"ID13" | b"ID14" | b"ID15")
+        Some(b"ID11" | b"ID12" | b"ID13" | b"ID14" | b"ID15" | b"ID16")
     ) {
-        let data: TreeIndex = if matches!(bytes.get(12..16), Some(b"ID13" | b"ID14" | b"ID15")) {
+        let data: TreeIndex = if matches!(
+            bytes.get(12..16),
+            Some(b"ID13" | b"ID14" | b"ID15" | b"ID16")
+        ) {
             let data = read_train_index(&bytes)?;
             if !data.trains.valid() {
                 return Err("Invalid persistent vehicle registry".into());
@@ -2094,7 +2099,7 @@ fn commit(root: &Path, world: WorldId, journal: &EditJournal) -> Result<(), Stri
         };
         if gameplay.trains != Default::default() {
             encode(
-                b"ID15",
+                b"ID16",
                 &TrainIndex {
                     prior,
                     trains: gameplay.trains.clone(),
@@ -2148,7 +2153,10 @@ fn load(root: &Path, world: WorldId) -> Result<EditJournal, String> {
     let index = timed.index;
     let (trees, trains) = {
         let bytes = read(&root.join(INDEX))?;
-        if matches!(bytes.get(12..16), Some(b"ID13" | b"ID14" | b"ID15")) {
+        if matches!(
+            bytes.get(12..16),
+            Some(b"ID13" | b"ID14" | b"ID15" | b"ID16")
+        ) {
             let data = read_train_index(&bytes)?;
             (data.prior.trees, data.trains)
         } else if bytes.get(12..16) == Some(b"ID12") {

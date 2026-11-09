@@ -81,6 +81,9 @@ pub fn boxes(material: u16, facing: u8) -> Vec<ShapeBox> {
     if crate::locomotive_parts::is_slab(material) || crate::locomotive_parts::is_stair(material) {
         return crate::construction::placed_boxes(material, facing, [None; 6]);
     }
+    if crate::train_boiler::is_boiler(material) && facing < 8 {
+        return crate::train_boiler::boxes(material, facing);
+    }
     if facing >= 4 {
         return Vec::new();
     }

@@ -328,6 +328,16 @@ fn visit_boxes_with_state(
         }
         return true;
     }
+    if terra_core::train_boiler::is_boiler(material) {
+        for mut bounds in terra_core::train_boiler::boxes(material, state.facing) {
+            for (axis, coordinate) in position.iter().enumerate() {
+                bounds.minimum[axis] += *coordinate as f64;
+                bounds.maximum[axis] += *coordinate as f64;
+            }
+            visit(bounds);
+        }
+        return true;
+    }
     if material == 98 {
         let mut bounds = terra_core::construction::snow_bounds(state.facing);
         for (axis, value) in position.iter().enumerate() {

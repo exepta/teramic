@@ -469,6 +469,7 @@ pub fn plan_assembly_with_properties(
         });
     }
     let mut vehicle = Vehicle {
+        name: String::new(),
         id: 1,
         owner: actor,
         kind,
@@ -815,3 +816,7 @@ pub fn model_clearance(
 #[cfg(test)]
 #[path = "trains_tests.rs"]
 mod tests;
+
+#[path = "train_building.rs"]
+mod building;
+pub use building::{BuildPlan, BuildRequest, commit_blueprint, plan_blueprint};

@@ -28,6 +28,7 @@ pub(super) fn app() -> App {
 }
 pub(super) fn car(id: u64) -> VehicleView {
     VehicleView {
+        name: String::new(),
         id,
         owner: PlayerUuid::from_u128(1),
         kind: VehicleKind::Freight,
@@ -820,4 +821,102 @@ fn workshop_panel_fits_hd_through_4k_without_enlarging_text_independently() {
         assert!(content.x * fitted <= logical.x * 0.94 + 0.01);
         assert!(content.y * fitted <= logical.y * 0.92 + 0.01);
     }
+}
+
+#[test]
+fn real_auto_build_handler_submits_the_displayed_guide_with_the_inventory_revision() {
+    let mut app = app();
+    open(&mut app);
+    track_fixture(&mut app, 0);
+    click_workshop(&mut app, "kind:freight");
+    let guide = app.world().resource::<TrainBlueprint>().clone();
+    let chassis = *guide
+        .cells
+        .iter()
+        .find(|part| part.material == 210)
+        .unwrap();
+    click_workshop(&mut app, "blueprint-auto");
+    let sent = requests(&mut app);
+    assert_eq!(sent.len(), 1);
+    assert_eq!(
+        sent[0].0.action,
+        TrainAction::Build {
+            station: guide.station.unwrap(),
+            chassis: chassis.cell,
+            facing: chassis.facing,
+            kind: VehicleKind::Freight,
+            wheelbase: 4,
+            player_revision: app.world().resource::<ClientSession>().inventory.revision
+        }
+    );
+    assert!(app.world().resource::<TrainView>().pending);
+}
+#[test]
+fn name_input_uses_its_actual_html_handler_and_saves_the_edited_train_name() {
+    let mut app = app();
+    open(&mut app);
+    app.world_mut()
+        .resource_mut::<ClientSession>()
+        .trains
+        .vehicles
+        .push(car(1));
+    app.world_mut().resource_mut::<TrainUiState>().selected = Some(1);
+    let entity = app
+        .world_mut()
+        .spawn(tilt_ui::ElementId("train-name".into()))
+        .id();
+    let handler = tilt_ui::inventory::iter::<tilt_ui::HtmlHandlerRegistration>
+        .into_iter()
+        .find(|registration| registration.name == "train_workshop_action")
+        .unwrap();
+    let system = (handler.register)(app.world_mut());
+    app.world_mut()
+        .run_system_with(
+            system,
+            tilt_ui::HtmlEvent {
+                target: entity,
+                kind: "change",
+                value: Some("TERAMIC EXPRESS".into()),
+                submitter: None,
+                data: default(),
+                form_data: None,
+                handler: handler.name.into(),
+            },
+        )
+        .unwrap();
+    app.update();
+    assert_eq!(app.world().resource::<TrainView>().name, "TERAMIC EXPRESS");
+    click_workshop(&mut app, "name-save");
+    let sent = requests(&mut app);
+    assert_eq!(sent.len(), 1);
+    assert!(
+        matches!(&sent[0].0.action,TrainAction::Name{vehicle:1,name,..} if name=="TERAMIC EXPRESS")
+    );
+}
+#[test]
+fn typing_e_does_not_close_the_train_name_input_but_escape_does() {
+    use bevy::input_focus::{FocusCause, InputFocus};
+    let mut app = app();
+    open(&mut app);
+    app.init_resource::<InputFocus>();
+    let entity = app
+        .world_mut()
+        .spawn(tilt_ui::ElementId("train-name".into()))
+        .id();
+    app.world_mut()
+        .resource_mut::<InputFocus>()
+        .set(entity, FocusCause::Navigated);
+    app.world_mut()
+        .resource_mut::<ButtonInput<KeyCode>>()
+        .press(KeyCode::KeyE);
+    app.update();
+    assert!(app.world().resource::<TrainView>().open);
+    app.world_mut()
+        .resource_mut::<ButtonInput<KeyCode>>()
+        .clear();
+    app.world_mut()
+        .resource_mut::<ButtonInput<KeyCode>>()
+        .press(KeyCode::Escape);
+    app.update();
+    assert!(!app.world().resource::<TrainView>().open);
 }

@@ -268,6 +268,7 @@ mod tests {
         let engine = parts.iter().position(|p| p.material == 218).unwrap() as u16;
         let slab = parts.iter().position(|p| p.material == 105).unwrap() as u16;
         let mut vehicle = Vehicle {
+            name: String::new(),
             id: 1,
             owner: PlayerUuid::from_u128(1),
             kind: VehicleKind::Locomotive,

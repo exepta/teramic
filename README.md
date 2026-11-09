@@ -6260,3 +6260,17 @@ Kollisionsvorbereitung reduzieren Arbeit beim Bauen. Neue gezeichnete Kurven
 benoetigen mindestens 16 Meter horizontalen Radius; alte Gleisdaten bleiben
 lesbar. Client und Server verwenden Protokoll 120.
 [Pruefbericht mit nativer Baumessung](tools/benchmarks/results/train-motion-build-curves-2026-11-08/README.md).
+
+
+Phase 219 ergaenzt den materialbasierten automatischen Vorlagenbau, gespeicherte
+Zugnamen und beschriftete Nummernschilder sowie Scheinwerfer mit echtem
+Lichtkegel und Wagen-Deckenleuchten. Die Montageansicht besitzt geordnete
+Abstaende und ein eigenes Namensfeld. Kessel erkennen drei Bloecke breite
+Zugrahmen und verwenden denselben 3x3-Querschnitt fuer Darstellung und Kollision.
+Lok, Brennraum und Schienenlauf erhalten eine begrenzte entfernungsgerechte
+Klangmischung. Prellboecke stoppen die ganze Fahrzeughuelle. Importierte
+Gleisbelegung bleibt unabhaengig vom grossen Geometriecache erhalten;
+kalte Kurven werden vor dem Import im Hintergrund vorbereitet.
+Protokoll 121; Zugindex ID16 uebernimmt ID13-/ID14-/ID15-Zuege.
+[Aktuelle Zugbedienung](docs/train-building.md).
+[Pruefbericht und native Montageaufnahmen](tools/benchmarks/results/train-workshop-stops-lights-2026-11-09/README.md).

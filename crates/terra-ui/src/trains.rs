@@ -42,6 +42,7 @@ pub(crate) struct TrainUiState {
     pending: Option<u64>,
     pending_assembly: bool,
     status: String,
+    name: String,
     identity: Option<(Option<Entity>, Option<terra_core::PlayerUuid>)>,
     wheelbase: u8,
     edit_after_leave: Option<([i64; 3], u64)>,
@@ -65,6 +66,7 @@ impl TrainUiState {
 
 #[derive(Message, Clone)]
 pub enum TrainUiAction {
+    Name(String),
     Command(String),
 }
 
@@ -104,6 +106,7 @@ pub struct TrainView {
     pub title: String,
     pub status: String,
     pub requirements: String,
+    pub name: String,
     pub kind: String,
     pub blueprint: bool,
     pub blueprint_progress: String,
@@ -238,6 +241,7 @@ fn rejection(error: TrainError) -> &'static str {
         TrainError::RateLimited => "Bitte kurz warten.",
         TrainError::Limit | TrainError::Overflow => "Die Fahrzeuggrenze ist erreicht.",
         TrainError::Missing => "Montagestelle, Bauteil oder Fahrzeug ist nicht vorhanden.",
+        TrainError::MissingMaterials => "Für die Vorlage fehlen Materialien im Inventar.",
         TrainError::Invalid => "Dieser Aufbau oder diese Verbindung ist nicht möglich.",
         TrainError::AttachedProps => {
             "Entferne zuerst Pflanzen oder andere aufgesetzte Props vom Aufbau."
@@ -259,6 +263,19 @@ fn request(world: &mut World, state: &mut TrainUiState, action: TrainAction) {
     }
 }
 fn close(world: &mut World, state: &mut TrainUiState) {
+    let focus = world
+        .get_resource::<bevy::input_focus::InputFocus>()
+        .and_then(bevy::input_focus::InputFocus::get);
+    if focus.is_some_and(|entity| {
+        world
+            .get::<tilt_ui::ElementId>(entity)
+            .is_some_and(|id| id.0 == "train-name")
+    }) {
+        world
+            .resource_mut::<bevy::input_focus::InputFocus>()
+            .clear();
+    }
+
     state.open = false;
     // Driving intent and a successful assembly still need their acknowledgements
     // after closing: the final notch must apply and assembled build ghosts must clear.
@@ -516,14 +533,66 @@ fn command(world: &mut World, state: &mut TrainUiState, command: &str) {
             state.second = None;
         } else if state.selected.is_none() {
             state.selected = Some(id);
+            state.name = world
+                .get_resource::<ClientSession>()
+                .and_then(|session| session.trains.vehicles.iter().find(|car| car.id == id))
+                .map_or_else(String::new, |car| car.name.clone());
         } else {
             state.second = Some(id);
         }
         return;
     }
     match command {
+        "name-save" => {
+            if state.pending.is_none()
+                && let Some(vehicle) = state.selected
+            {
+                request(
+                    world,
+                    state,
+                    TrainAction::Name {
+                        vehicle,
+                        name: state.name.clone(),
+                        station: state.station,
+                    },
+                );
+            }
+            return;
+        }
         "blueprint" => {
             show_blueprint(world, state);
+            return;
+        }
+        "blueprint-auto" => {
+            if state.pending.is_some() {
+                return;
+            }
+            if world.resource::<TrainBlueprint>().cells.is_empty() {
+                show_blueprint(world, state);
+            }
+            let guide = world.resource::<TrainBlueprint>();
+            if let (Some(station), Some(chassis)) = (
+                state.station,
+                guide
+                    .cells
+                    .iter()
+                    .find(|part| part.material == 210)
+                    .copied(),
+            ) {
+                let player_revision = world.resource::<ClientSession>().inventory.revision;
+                request(
+                    world,
+                    state,
+                    TrainAction::Build {
+                        station,
+                        chassis: chassis.cell,
+                        facing: chassis.facing,
+                        kind: state.kind,
+                        wheelbase: state.wheelbase(),
+                        player_revision,
+                    },
+                );
+            }
             return;
         }
         "blueprint-build" => {
@@ -538,6 +607,7 @@ fn command(world: &mut World, state: &mut TrainUiState, command: &str) {
             return;
         }
         "clear" => {
+            state.name.clear();
             state.selected = None;
             state.second = None;
             return;
@@ -879,7 +949,11 @@ fn view(world: &mut World, state: &mut TrainUiState) -> TrainView {
         .map(|vehicle| TrainRow {
             id: vehicle.id,
             command: format!("select:{}", vehicle.id),
-            label: format!("{} #{}", kind_label(vehicle.kind), vehicle.id),
+            label: if vehicle.name.is_empty() {
+                format!("{} #{}", kind_label(vehicle.kind), vehicle.id)
+            } else {
+                vehicle.name.clone()
+            },
             detail: format!(
                 "{} kg · {} Bauteile · {} Sitze · {:.1} Blöcke/s",
                 vehicle.mass_kg,
@@ -908,6 +982,7 @@ fn view(world: &mut World, state: &mut TrainUiState) -> TrainView {
             "Zug-Montagestelle".into()
         },
         status: state.status.clone(),
+        name: state.name.clone(),
         requirements:
             "Fahrgestell · 2 Drehgestelle (3–15 m Abstand) · verbundener Rahmen · Kupplung".into(),
         kind: kind_label(state.kind).into(),
@@ -1047,6 +1122,11 @@ fn update(
                     }
                     if assembled && vehicle.is_some() {
                         *world.resource_mut::<TrainBlueprint>() = TrainBlueprint::default();
+                        if let Some(vehicle) = vehicle && !state.name.is_empty() {
+                            let name = state.name.clone();
+                            let station = state.station;
+                            request(world, &mut state, TrainAction::Name { vehicle, name, station });
+                        }
                     }
                 }
                 TrainOutcome::Seated(binding) => {
@@ -1207,8 +1287,10 @@ fn update(
                 if !state.open {
                     break;
                 }
-                let TrainUiAction::Command(action) = action;
-                command(world, &mut state, &action);
+                match action {
+                    TrainUiAction::Command(action) => command(world, &mut state, &action),
+                    TrainUiAction::Name(name) => { if terra_core::trains::valid_name(&name) { state.name = name; } },
+                }
             }
             if let Some(mut block) = world.get_resource_mut::<terra_player::PlayerInputBlock>() {
                 block.0 = true;

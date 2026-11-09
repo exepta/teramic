@@ -208,7 +208,7 @@ pub fn builtin_boxes(material: u16) -> &'static [ShapeBox] {
     static GEARBOXES: [OnceLock<Vec<ShapeBox>>; 2] = [const { OnceLock::new() }; 2];
     static KINETICS: [OnceLock<Vec<ShapeBox>>; 11] = [const { OnceLock::new() }; 11];
     match material {
-        210..=293 => crate::train_parts::base_boxes(material),
+        210..=294 => crate::train_parts::base_boxes(material),
         209 => SWITCH_STAND.get_or_init(|| {
             read(
                 include_str!("../../../assets/terra/blocks/rail_switch_stand.json"),

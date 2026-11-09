@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": 265,
   "name": "Lok-Scheinwerfer Seite",
-  "description": "Emissive locomotive headlamp. Attach to the front or side of a connected train body.",
+  "description": "Functional warm train light. Front and side lamps cast a forward cone; the ceiling lamp lights the carriage below.",
   "creative_category": "building",
   "render_kind": "custom_mesh",
   "model_layout": "scene",

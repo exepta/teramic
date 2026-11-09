@@ -510,6 +510,7 @@ fn a_signed_stretch_uses_the_real_long_ray_and_one_target_support_without_spendi
         },
     };
     let mut blocking_car = terra_core::trains::Vehicle {
+        name: String::new(),
         id: 1,
         owner: peer.uuid,
         kind: terra_core::trains::VehicleKind::Freight,

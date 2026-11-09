@@ -1031,3 +1031,158 @@ fn saved_mixed_yaw_train_on_a_long_drawn_rail_assembles_without_reorienting_any_
         1
     );
 }
+
+#[test]
+fn automatic_build_is_atomic_consumes_only_missing_parts_and_preserves_wood() {
+    let (mut chunks, mut journal, station, chassis) = fixture(VehicleKind::Freight);
+    let actor = PlayerUuid::from_u128(219);
+    let guide = terra_core::train_blueprint::building_template(chassis, 0, VehicleKind::Freight, 4);
+    for part in &guide {
+        block(&mut chunks, part.cell, 0);
+        journal.record(part.cell, 0).unwrap();
+    }
+    let request = BuildRequest {
+        actor,
+        station,
+        chassis,
+        facing: 0,
+        kind: VehicleKind::Freight,
+        wheelbase: 4,
+        creative: false,
+    };
+    let before = journal.gameplay().clone();
+    assert!(matches!(
+        plan_blueprint(&chunks, &journal, request),
+        Err(TrainError::MissingMaterials)
+    ));
+    assert_eq!(journal.gameplay(), &before);
+    assert!(
+        guide
+            .iter()
+            .all(|part| chunks.block_at(part.cell) == Some(0))
+    );
+    let mut bag = Inventory::default();
+    for part in &guide {
+        assert_eq!(
+            bag.insert(ItemKind::for_wood(part.material, WoodSpecies::Cherry), 1),
+            0
+        );
+    }
+    journal
+        .gameplay_mut()
+        .inventories
+        .insert(actor, bag.clone());
+    let plan = plan_blueprint(&chunks, &journal, request).unwrap();
+    let blocked = guide.last().unwrap().cell;
+    block(&mut chunks, blocked, 3);
+    journal.record(blocked, 3).unwrap();
+    assert!(commit_blueprint(&mut chunks, &mut journal, &plan).is_err());
+    assert_eq!(journal.gameplay().inventories[&actor], bag);
+    block(&mut chunks, blocked, 0);
+    journal.record(blocked, 0).unwrap();
+    let plan = plan_blueprint(&chunks, &journal, request).unwrap();
+    commit_blueprint(&mut chunks, &mut journal, &plan).unwrap();
+    for part in &guide {
+        assert_eq!(chunks.block_at(part.cell), Some(part.material));
+        if ItemKind::supports_wood(part.material) {
+            assert_eq!(
+                journal.object_state(part.cell).unwrap().wood,
+                WoodSpecies::Cherry
+            );
+        }
+    }
+    assert!(
+        journal.gameplay().inventories[&actor]
+            .slots
+            .iter()
+            .all(|s| s.count == 0)
+    );
+    let bag = journal.gameplay().inventories[&actor].clone();
+    let again = plan_blueprint(&chunks, &journal, request).unwrap();
+    assert!(again.cells.is_empty());
+    commit_blueprint(&mut chunks, &mut journal, &again).unwrap();
+    assert_eq!(journal.gameplay().inventories[&actor], bag);
+    let assembly = plan_assembly(
+        &chunks,
+        &journal,
+        actor,
+        station,
+        chassis,
+        VehicleKind::Freight,
+    )
+    .unwrap();
+    assert!(assembly.vehicle.valid());
+}
+#[test]
+fn creative_build_needs_no_materials_and_rejects_missing_rails() {
+    let (mut chunks, mut journal, station, chassis) = fixture(VehicleKind::Freight);
+    let actor = PlayerUuid::from_u128(220);
+    let guide = terra_core::train_blueprint::building_template(chassis, 0, VehicleKind::Freight, 4);
+    for part in &guide {
+        block(&mut chunks, part.cell, 0);
+        journal.record(part.cell, 0).unwrap();
+    }
+    let request = BuildRequest {
+        actor,
+        station,
+        chassis,
+        facing: 0,
+        kind: VehicleKind::Freight,
+        wheelbase: 4,
+        creative: true,
+    };
+    let plan = plan_blueprint(&chunks, &journal, request).unwrap();
+    commit_blueprint(&mut chunks, &mut journal, &plan).unwrap();
+    assert!(
+        guide
+            .iter()
+            .all(|part| chunks.block_at(part.cell) == Some(part.material))
+    );
+    assert!(
+        journal.gameplay().inventories[&actor]
+            .slots
+            .iter()
+            .all(|stack| stack.count == 0)
+    );
+    block(&mut chunks, [0, 0, 1], 0);
+    assert!(matches!(
+        plan_blueprint(&chunks, &journal, request),
+        Err(TrainError::Unsupported)
+    ));
+}
+#[test]
+fn wide_boilers_keep_placed_visual_pose_collision_and_roundtrip_metadata() {
+    let (mut chunks, mut journal, _, _) = fixture(VehicleKind::Freight);
+    let cell = [0, 3, 2];
+    for x in -1..=1 {
+        block(&mut chunks, [x, 2, 2], 212);
+        journal.record([x, 2, 2], 212).unwrap();
+    }
+    block(&mut chunks, cell, 0);
+    journal.record(cell, 0).unwrap();
+    let plan = crate::placement::layout(&chunks, &journal, cell, 0, 219, [0.0; 2], None).unwrap();
+    let state = plan
+        .states
+        .iter()
+        .find(|(p, _)| *p == cell)
+        .unwrap()
+        .1
+        .unwrap();
+    assert_eq!(state.facing, 4);
+    block(&mut chunks, cell, 219);
+    journal.record(cell, 219).unwrap();
+    journal.set_object_state(cell, Some(state)).unwrap();
+    assert!(crate::interaction_shapes::space_intersects(
+        &chunks,
+        &journal,
+        &Default::default(),
+        [1, 5, 2],
+        [1.3, 5.0, 2.3],
+        [1.6, 5.8, 2.7]
+    ));
+    let mut loaded = EditJournal::default();
+    for section in journal.changed_sections() {
+        loaded.import_delta(journal.section_delta(section)).unwrap();
+    }
+    assert_eq!(loaded.object_state(cell), Some(state));
+}

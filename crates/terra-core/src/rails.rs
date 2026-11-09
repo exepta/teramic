@@ -203,21 +203,19 @@ impl Piece {
     }
     /// Cached occupied cells, relative to the anchor; no full bounding-box fill.
     pub fn footprint(self) -> Arc<[[i32; 3]]> {
-        geometry::piece_layout(self)
-            .map_or_else(|| Arc::from([]), |layout| layout.footprint.clone())
+        geometry::piece_footprint(self)
     }
     /// Cached local collision/selection boxes, clipped into the requested cell.
     pub fn cell_boxes(self, offset: [i32; 3]) -> Arc<[crate::block_shapes::ShapeBox]> {
-        geometry::piece_layout(self)
-            .and_then(|layout| layout.cells.get(&offset).cloned())
-            .unwrap_or_else(|| Arc::from([]))
+        geometry::piece_cell_boxes(self, offset)
     }
     pub fn supports(self) -> Arc<[SupportPoint]> {
         geometry::piece_layout(self).map_or_else(|| Arc::from([]), |layout| layout.supports.clone())
     }
     pub fn contains_offset(self, offset: [i32; 3]) -> bool {
-        geometry::piece_layout(self)
-            .is_some_and(|layout| layout.footprint.binary_search(&offset).is_ok())
+        geometry::piece_footprint(self)
+            .binary_search(&offset)
+            .is_ok()
     }
     /// All physical paths; inactive switch branches remain visible geometry.
     pub fn paths(self) -> Vec<Path> {

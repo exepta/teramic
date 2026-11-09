@@ -132,7 +132,9 @@ impl BlockObjectState {
                 }
                 247 => self.facing < 8 && self.peer.is_none() && !self.secondary,
                 id if terra_core::locomotive_parts::is_part(id) && id != 248 => {
-                    self.facing < 4 && self.peer.is_none() && !self.secondary
+                    terra_core::locomotive_parts::valid_facing(id, self.facing)
+                        && self.peer.is_none()
+                        && !self.secondary
                 }
                 209..=217 => self.facing < 4 && self.peer.is_none() && !self.secondary,
                 162 | 170 | 171 => self.facing < 4 && self.peer.is_none() && !self.secondary,

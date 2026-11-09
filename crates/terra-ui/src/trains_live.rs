@@ -17,13 +17,17 @@ use terra_network::{
 #[derive(Resource, Default)]
 struct Probe {
     initialized: bool,
+    workshop: bool,
+    failed: bool,
     frames: u32,
     transactions: u8,
     cursor: MessageCursor<TrainRequest>,
     location: Option<Location>,
 }
 pub(super) fn install(app: &mut App) {
-    if std::env::var("TERRA_TRAIN_INVENTORY_LIVE").as_deref() != Ok("1") {
+    if std::env::var("TERRA_TRAIN_INVENTORY_LIVE").as_deref() != Ok("1")
+        && std::env::var("TERRA_TRAIN_WORKSHOP_LIVE").as_deref() != Ok("1")
+    {
         return;
     }
     app.init_resource::<Probe>()
@@ -33,10 +37,12 @@ fn run(world: &mut World) {
     world.resource_scope(|world, mut probe: Mut<Probe>| {
         if !probe.initialized {
             if !world.get_resource::<crate::menu::MenuState>().is_some_and(|menu| menu.page == crate::menu::MenuPage::Main) { return; }
+            if world.get_resource::<crate::menu::StartupProgress>().is_some_and(|progress| progress.active) { return; }
+            probe.workshop = std::env::var("TERRA_TRAIN_WORKSHOP_LIVE").as_deref() == Ok("1");
             let owner = PlayerUuid::from_u128(1);
             let parts = terra_core::train_blueprint::template([0, 2, 2], 0, VehicleKind::Locomotive).into_iter().map(|cell| TrainPart {offset: cell.cell.map(|v| v as i16), material: cell.material, facing: cell.facing, wood: Default::default()}).collect::<Vec<_>>();
             let engine = parts.iter().position(|part| part.material == 218).unwrap() as u16;
-            let car = Vehicle { id: 1, owner, kind: VehicleKind::Locomotive, anchor: [0;3], parts, cargo: [(engine, Inventory::default())].into(), blocks: Default::default(), payloads: Default::default(), couplings: [None;2], revision: 7, motion: Default::default(), burn_seconds: 0.0 };
+            let car = Vehicle { name: String::new(), id: 1, owner, kind: VehicleKind::Locomotive, anchor: [0;3], parts, cargo: [(engine, Inventory::default())].into(), blocks: Default::default(), payloads: Default::default(), couplings: [None;2], revision: 7, motion: Default::default(), burn_seconds: 0.0 };
             assert!(car.valid());
             world.resource_mut::<crate::menu::MenuState>().page = crate::menu::MenuPage::Playing;
             let identity = {
@@ -48,10 +54,12 @@ fn run(world: &mut World) {
                 (session.connection, session.uuid)
             };
             let mut state = world.resource_mut::<TrainUiState>(); state.open=true; state.cargo=true; state.selected=Some(1); state.identity=Some(identity);
+            if probe.workshop { state.cargo=false; state.selected=None; state.station=Some([0;3]); state.name="TERAMIC EXPRESS".into(); }
             world.write_message(terra_player::CaptureRequest(false));
             probe.initialized=true;
             return;
         }
+        if probe.workshop { workshop(world, &mut probe); return; }
         if world.query::<&tilt_ui::ElementId>().iter(world).filter(|id| id.0 == "train-slot").count() != 45 { return; }
         probe.frames += 1;
         if probe.frames > 900 { world.write_message(bevy::app::AppExit::error()); return; }
@@ -109,4 +117,152 @@ fn run(world: &mut World) {
             world.write_message(bevy::app::AppExit::Success);
         }
     });
+}
+
+fn workshop(world: &mut World, probe: &mut Probe) {
+    if probe.failed {
+        return;
+    }
+    probe.frames += 1;
+    let window = world
+        .query_filtered::<Entity, With<PrimaryWindow>>()
+        .single(world)
+        .unwrap();
+    if probe.frames == 60 {
+        world
+            .get_mut::<Window>(window)
+            .unwrap()
+            .resolution
+            .set_physical_resolution(1920, 1080);
+    }
+    if probe.frames == 180 {
+        world
+            .get_mut::<Window>(window)
+            .unwrap()
+            .resolution
+            .set_physical_resolution(1280, 720);
+    }
+    if matches!(probe.frames, 120 | 240) {
+        let folder = std::path::PathBuf::from(
+            std::env::var("TERRA_CAPTURE_DIR")
+                .unwrap_or_else(|_| "target/live219/screenshots".into()),
+        );
+        std::fs::create_dir_all(&folder).unwrap();
+        let label = if probe.frames == 120 {
+            "train-workshop-1080.png"
+        } else {
+            "train-workshop-720.png"
+        };
+        let auto_build = world
+            .query::<&tilt_ui::ElementId>()
+            .iter(world)
+            .any(|id| id.0 == "blueprint-auto");
+        let name = world
+            .query::<&tilt_ui::ElementId>()
+            .iter(world)
+            .any(|id| id.0 == "train-name");
+        let bounds = workshop_bounds(world, window);
+        if !auto_build || !name || bounds.is_err() {
+            error!(auto_build, name, ?bounds, page=?world.resource::<crate::menu::MenuState>().page, open=world.resource::<TrainUiState>().open, ready=world.resource::<ClientSession>().ready, "Native train workshop failed: required controls missing or clipped");
+            probe.failed = true;
+            world.write_message(bevy::app::AppExit::error());
+            return;
+        }
+        world
+            .spawn(Screenshot::primary_window())
+            .observe(save_to_disk(folder.join(label)));
+        info!(
+            label,
+            "Native train workshop: auto-build button and editable name materialized"
+        );
+    }
+    if probe.frames == 300 {
+        info!("Native train workshop responsive capture passed: 1080p and 720p; UI-only fixture");
+        world.write_message(bevy::app::AppExit::Success);
+    }
+}
+
+/// Inspect painted coordinates, including the responsive transform and window scale.
+fn workshop_bounds(world: &mut World, window: Entity) -> Result<(), String> {
+    fn bounds(node: &ComputedNode, transform: &UiGlobalTransform) -> (Vec2, Vec2) {
+        let half = node.size() * 0.5;
+        [
+            Vec2::new(-half.x, -half.y),
+            Vec2::new(half.x, -half.y),
+            Vec2::new(-half.x, half.y),
+            half,
+        ]
+        .into_iter()
+        .map(|point| transform.transform_point2(point))
+        .fold(
+            (Vec2::splat(f32::INFINITY), Vec2::splat(f32::NEG_INFINITY)),
+            |(low, high), point| (low.min(point), high.max(point)),
+        )
+    }
+    let root = world
+        .query::<(Entity, &tilt_ui::ElementId)>()
+        .iter(world)
+        .find_map(|(entity, id)| (id.0 == "train-workshop-panel").then_some(entity))
+        .ok_or("Missing workshop panel")?;
+    let (low, high) = bounds(
+        world
+            .get::<ComputedNode>(root)
+            .ok_or("Missing panel geometry")?,
+        world
+            .get::<UiGlobalTransform>(root)
+            .ok_or("Missing panel transform")?,
+    );
+    let size = world
+        .get::<Window>(window)
+        .ok_or("Missing window")?
+        .resolution
+        .physical_size()
+        .as_vec2();
+    if low.cmplt(Vec2::ZERO).any() || high.cmpgt(size).any() {
+        return Err(format!("Panel outside window: {low:?} {high:?}, {size:?}"));
+    }
+    let mut controls = 0;
+    for (entity, id, node, transform) in world
+        .query::<(
+            Entity,
+            &tilt_ui::ElementId,
+            &ComputedNode,
+            &UiGlobalTransform,
+        )>()
+        .iter(world)
+    {
+        if !matches!(id.0.as_str(), "blueprint-auto" | "train-name" | "close") {
+            continue;
+        }
+        let mut parent = entity;
+        while parent != root {
+            let Some(next) = world.get::<ChildOf>(parent) else {
+                break;
+            };
+            parent = next.parent();
+        }
+        if parent != root {
+            continue;
+        }
+        let (a, b) = bounds(node, transform);
+        if a.cmplt(low + Vec2::splat(8.0)).any() || b.cmpgt(high - Vec2::splat(8.0)).any() {
+            return Err(format!(
+                "Control {} touches frame: {a:?} {b:?}, panel {low:?} {high:?}",
+                id.0
+            ));
+        }
+        controls += 1;
+    }
+    if controls != 3 {
+        return Err(format!(
+            "Expected three visible workshop controls, found {controls}"
+        ));
+    }
+    info!(
+        ?low,
+        ?high,
+        controls,
+        "Native workshop painted bounds fit window and frame"
+    );
+    Ok(())
 }

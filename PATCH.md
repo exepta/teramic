@@ -7061,3 +7061,54 @@ Platzierungsframes mit maximal 12,60 ms und 66,61 ms asynchroner Zeit bis zum
 bestaetigten sichtbaren Block. Der isolierte Lauf enthaelt keinen fahrenden Zug;
 Fahrt, Kamera und UDP-Verhalten werden automatisiert geprueft.
 [Pruefbericht und Aufnahme](tools/benchmarks/results/train-motion-build-curves-2026-11-08/README.md).
+
+
+## 219. Zugwerkstatt, Prellboecke, Kessel, Beschriftung Und Licht
+
+Prellboecke besitzen eine feste Halteebene vor dem Anschlag. Bremsvorschau und
+Bewegungsfreigabe beruecksichtigen den fuehrenden Wagenkasten und die Kupplung,
+auch bei mitgezogenen Wagen und Rueckwaertsfahrt. Wegfahren vom Anschlag bleibt
+moeglich. Ein blockierter Verbund wird vor der gemeinsamen Veroeffentlichung
+angehalten.
+
+Die Werkstatt baut ihre sichtbare Vorlage auf Knopfdruck. Der Server prueft
+Gleislage, geladene Zellen, Bau-/Inventarrechte, Figuren, Fahrzeuge und
+Materialbestand. Nur fehlende passende Teile werden gesetzt und bezahlt;
+Creative benoetigt keine Materialien. Sparse Sections, Geometrieepochen und
+Inventar werden gemeinsam veroeffentlicht; die frische Inventarantwort wird
+auch bei Bauaktionen direkt repliziert. Rahmen, Kessel und Verkleidung bleiben
+anschliessend normal editierbare Weltbloecke.
+
+Zugnamen mit bis zu 24 druckbaren Zeichen werden im Namensfeld bearbeitet und
+besitzgeprueft uebertragen. Nummernschild-Metall und Schrift liegen getrennt;
+Namensaenderungen ersetzen die kleine Schriftgeometrie ohne Wagenneubau.
+Zugindex ID16 uebernimmt ID13-/ID14-/ID15-Daten ueber eingefrorene Decoder.
+Client und Server verwenden Protokoll 121.
+
+Auf einem drei Bloecke breiten Zugrahmen erhaelt ein neu gesetzter Kessel eine
+persistente 3x3-Querschnittspose. Eigene volle Verkleidung auf dem Rahmen wird
+mitberuecksichtigt. Modell, Normalen, Tangenten, Auswahl, Hintergrundkollision,
+Randabschnitte und eingefrorene Fahrzeuggeometrie verwenden dieselbe Pose.
+
+Lok-Scheinwerfer erzeugen warme gerichtete Spotlights; die neue herstellbare
+Wagen-Deckenleuchte strahlt nach unten. Bewegte Lampen erben den dargestellten
+Wagentransform. Maximal zwoelf nahe Lampen und 32 Schilder begrenzen die
+Zusatzarbeit. Die neue entfernungsgerechte Stereo-Klangmischung verwendet
+deterministisch synthetisierte Lok-/Gleisklaenge und die vorhandene Ofenaufnahme.
+Rhythmus und Laufklang folgen Geschwindigkeit und bestaetigtem Motorzustand;
+Master-, Ambiente- und Stummschaltung werden beruecksichtigt.
+
+Beim Streaming werden kalte Kurven vor ihrer unveraenderten Importvalidierung
+im Hintergrund vorbereitet. Ein Zwei-Millisekunden-Budget verteilt die
+anschliessenden Kontrollimporte. Kleine Belegungsdaten bleiben in einem
+separaten begrenzten Cache erhalten, auch wenn die schweren Geometrie-/Meshprofile
+aus dem Geometriecache verdraengt wurden.
+
+Abnahme 219: 4.465 Workspace-Tests bestanden, zehn bestehende Tests ignoriert;
+beide gezielten Schrift-/Lichttests nach der letzten Geometriekorrektur erneut
+bestanden. Client-/Server-Build mit Linking, Clippy aller Targets mit
+`-D warnings`, Formatierung und Diff-Pruefung bestanden. Die native
+Montageansicht wurde in 1080p und 720p aufgenommen; Namensfeld, Baubutton und
+unterer Schliessen-Button liegen innerhalb des eingepassten Rahmens. Keine
+manuelle Fahrt oder Messung der bisherigen 0,4-s-Aussetzer in der Problemwelt.
+[Pruefbericht und Aufnahmen](tools/benchmarks/results/train-workshop-stops-lights-2026-11-09/README.md).

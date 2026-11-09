@@ -12,6 +12,7 @@ pub enum StopReason {
     Unloaded,
     Obstructed,
     InvalidTrack,
+    Buffer,
 }
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 pub struct RailCursor {

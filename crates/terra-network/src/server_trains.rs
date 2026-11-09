@@ -402,6 +402,7 @@ pub(super) fn control(
     runtime: &mut TrainRuntime,
     seated: &mut SeatedPlayers,
 ) {
+    let building = matches!(&command.action, TrainAction::Build { .. });
     let retiring = if let TrainAction::Dismantle { vehicle, .. } = &command.action {
         world
             .journal
@@ -429,7 +430,7 @@ pub(super) fn control(
     {
         runtime.retired_motions.push(frame);
     }
-    if matches!(outcome, TrainOutcome::Cargo(_))
+    if (matches!(outcome, TrainOutcome::Cargo(_)) || building)
         && let Some(inventory) = world.journal.gameplay().inventories.get(&peer.uuid)
     {
         sender.send::<ControlChannel>(ServerControl::InventoryResult {
@@ -547,9 +548,116 @@ pub(super) fn apply(
             car.revision = next_revision;
             Ok(TrainOutcome::Changed { vehicle: Some(id) })
         }
+        TrainAction::Name {
+            vehicle: id,
+            name,
+            station: editing_station,
+        } => {
+            if !terra_core::trains::valid_name(&name) {
+                return Err(TrainError::Invalid);
+            }
+            let car = vehicle(peer, world, id)?;
+            if seated
+                .binding(peer.uuid)
+                .is_none_or(|binding| binding.vehicle != id)
+            {
+                if let Some(cell) = editing_station {
+                    station(peer, world, cell)?;
+                    if (0..3)
+                        .any(|axis| (car.model_origin()[axis] - cell[axis] as f64).abs() > 48.0)
+                    {
+                        return Err(TrainError::OutOfReach);
+                    }
+                } else if !(0..car.parts.len())
+                    .any(|index| reach_part(peer, world, &car, index as u16).is_ok())
+                {
+                    return Err(TrainError::OutOfReach);
+                }
+            }
+            let revision = car.revision.checked_add(1).ok_or(TrainError::Overflow)?;
+            touch(world)?;
+            let car = world
+                .journal
+                .gameplay_mut()
+                .trains
+                .vehicles
+                .get_mut(&id)
+                .unwrap();
+            car.name = name.trim().to_string();
+            car.revision = revision;
+            Ok(TrainOutcome::Changed { vehicle: Some(id) })
+        }
         TrainAction::Inspect { station: cell } => {
             station(peer, world, cell)?;
             Ok(TrainOutcome::Inspected)
+        }
+        TrainAction::Build {
+            station: cell,
+            chassis,
+            facing,
+            kind,
+            wheelbase,
+            player_revision,
+        } => {
+            station(peer, world, cell)?;
+            if world
+                .journal
+                .gameplay()
+                .inventories
+                .get(&peer.uuid)
+                .map_or(0, |bag| bag.revision)
+                != player_revision
+            {
+                return Err(TrainError::Stale);
+            }
+            let plan = terra_world::trains::plan_blueprint(
+                &world.chunks,
+                &world.journal,
+                terra_world::trains::BuildRequest {
+                    actor: peer.uuid,
+                    station: cell,
+                    chassis,
+                    facing,
+                    kind,
+                    wheelbase,
+                    creative: peer.game_mode(&world.config) == GameMode::Creative,
+                },
+            )?;
+            let half = Vec3::new(
+                terra_physics::character::PLAYER_RADIUS,
+                terra_physics::character::PLAYER_HALF_HEIGHT,
+                terra_physics::character::PLAYER_RADIUS,
+            );
+            for (part, _) in &plan.cells {
+                for bounds in terra_core::train_parts::boxes(part.material, part.facing) {
+                    let low =
+                        std::array::from_fn(|axis| part.cell[axis] as f64 + bounds.minimum[axis]);
+                    let high =
+                        std::array::from_fn(|axis| part.cell[axis] as f64 + bounds.maximum[axis]);
+                    if world.bodies.iter().any(|body| {
+                        terra_core::block_shapes::ShapeBox {
+                            minimum: low,
+                            maximum: high,
+                            hinged: false,
+                        }
+                        .intersects(
+                            (body.translation - half).to_array().map(f64::from),
+                            (body.translation + half).to_array().map(f64::from),
+                        )
+                    }) || world
+                        .journal
+                        .gameplay()
+                        .trains
+                        .vehicles
+                        .values()
+                        .any(|car| overlaps_vehicle(car, low, high))
+                    {
+                        return Err(TrainError::Occupied);
+                    }
+                }
+            }
+            terra_world::trains::commit_blueprint(&mut world.chunks, &mut world.journal, &plan)?;
+            Ok(TrainOutcome::Changed { vehicle: None })
         }
         TrainAction::Assemble {
             station: cell,
@@ -1427,6 +1535,7 @@ mod cleanup_tests {
         );
         let owner_id = PlayerUuid::from_u128(210_718);
         let vehicle = Vehicle {
+            name: String::new(),
             id: 1,
             owner: owner_id,
             kind: VehicleKind::Passenger,

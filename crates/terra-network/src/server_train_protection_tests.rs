@@ -6,6 +6,7 @@ use terra_core::{
 
 fn vehicle(owner: PlayerUuid) -> Vehicle {
     let vehicle = Vehicle {
+        name: String::new(),
         id: 1,
         owner,
         kind: VehicleKind::Passenger,

@@ -46,7 +46,11 @@ pub fn walk(
         }
         let increasing = cursor.forward == (direction > 0.0);
         let available = if increasing {
-            path.length() - cursor.distance
+            (if path.piece.material == terra_core::rails::BUFFER {
+                3.25
+            } else {
+                path.length()
+            }) - cursor.distance
         } else {
             cursor.distance
         };
@@ -54,6 +58,9 @@ pub fn walk(
             cursor.distance = (cursor.distance + remaining * if increasing { 1.0 } else { -1.0 })
                 .clamp(0.0, path.length());
             return Ok((cursor, sample(path, cursor)));
+        }
+        if path.piece.material == terra_core::rails::BUFFER && increasing {
+            return Err(StopReason::Buffer);
         }
         remaining -= available.max(0.0);
         let endpoint = Endpoint {
@@ -79,6 +86,23 @@ pub fn walk(
         };
     }
     Err(StopReason::InvalidTrack)
+}
+/// Keep the leading body and coupler behind the physical buffer, not just its axle.
+fn leading_clearance(car: &Vehicle, pivot: [f64; 3], point: Sample, direction: f64) -> f64 {
+    let origin = car.world_point(pivot);
+    let bounds = car.model_bounds();
+    let forward = point.tangent.map(|value| value * direction);
+    (0..8)
+        .map(|corner| {
+            (0..3)
+                .map(|axis| {
+                    (bounds[usize::from(corner & (1 << axis) != 0)][axis] - origin[axis])
+                        * forward[axis]
+                })
+                .sum::<f64>()
+        })
+        .fold(0.0, f64::max)
+        + 0.05
 }
 fn initialize(
     chunks: &ChunkStore,
@@ -331,13 +355,34 @@ pub fn advance(
     let meters = (car.motion.speed_mps + speed) * 0.5 * dt;
     // Look ahead by the stopping distance. Known end points start braking before impact.
     let stopping = (speed * speed / 12.0 + 0.25).min(32.0);
+    let nose = leading_clearance(
+        car,
+        pivot,
+        sample(
+            path(network, cursor).ok_or(StopReason::InvalidTrack)?,
+            cursor,
+        ),
+        meters.signum(),
+    );
+    let buffer_ahead = walk(
+        chunks,
+        journal,
+        network,
+        cursor,
+        speed.signum() * (stopping + nose),
+    ) == Err(StopReason::Buffer);
     if speed.abs() > 0.01
-        && walk(chunks, journal, network, cursor, speed.signum() * stopping).is_err()
+        && (buffer_ahead
+            || walk(chunks, journal, network, cursor, speed.signum() * stopping).is_err())
     {
         next.motion.speed_mps =
             terra_core::train_motion::speed_step(car.motion.speed_mps, 0, true, powered, limit, dt);
         next.motion.brake = true;
-        next.motion.stop_reason = StopReason::EndOfTrack;
+        next.motion.stop_reason = if buffer_ahead {
+            StopReason::Buffer
+        } else {
+            StopReason::EndOfTrack
+        };
     } else {
         next.motion.speed_mps = speed;
         next.motion.stop_reason = if car.motion.brake {
@@ -357,6 +402,17 @@ pub fn advance(
     } else {
         meters
     };
+    if meters.abs() > 1e-10
+        && walk(
+            chunks,
+            journal,
+            network,
+            cursor,
+            meters.signum() * (meters.abs() + nose),
+        ) == Err(StopReason::Buffer)
+    {
+        return Err(StopReason::Buffer);
+    }
     let (cursor, front) = walk(chunks, journal, network, cursor, meters)?;
     let back = trailing(chunks, journal, network, cursor, front, wheelbase)?;
     set_pose(&mut next, pivot, front, back);
@@ -375,6 +431,26 @@ pub fn follow(
     speed: f64,
 ) -> Result<Vehicle, StopReason> {
     let (cursor, pivot, wheelbase) = initialize(chunks, journal, network, car)?;
+    let nose = leading_clearance(
+        car,
+        pivot,
+        sample(
+            path(network, cursor).ok_or(StopReason::InvalidTrack)?,
+            cursor,
+        ),
+        meters.signum(),
+    );
+    if meters.abs() > 1e-10
+        && walk(
+            chunks,
+            journal,
+            network,
+            cursor,
+            meters.signum() * (meters.abs() + nose),
+        ) == Err(StopReason::Buffer)
+    {
+        return Err(StopReason::Buffer);
+    }
     let (cursor, front) = walk(chunks, journal, network, cursor, meters)?;
     let back = trailing(chunks, journal, network, cursor, front, wheelbase)?;
     let mut next = car.clone();
@@ -627,6 +703,7 @@ mod tests {
             },
         );
         let car = Vehicle {
+            name: String::new(),
             id: 1,
             owner: PlayerUuid::from_u128(1),
             kind: VehicleKind::Locomotive,
@@ -641,6 +718,76 @@ mod tests {
             burn_seconds: 0.0,
         };
         (chunks, journal, car)
+    }
+    #[test]
+    fn powered_train_brakes_with_its_whole_body_before_the_buffer_and_can_reverse() {
+        let (mut chunks, mut journal, mut car) = fixture();
+        let piece =
+            terra_core::rails::Piece::new([0, 0, 36], terra_core::rails::BUFFER, 0).unwrap();
+        for support in piece.supports().iter() {
+            set(
+                &mut chunks,
+                std::array::from_fn(|axis| piece.anchor[axis] + i64::from(support.support[axis])),
+                3,
+            );
+        }
+        let plan = rails::plan(&chunks, &journal, piece.anchor, piece.material, 0).unwrap();
+        rails::commit(&mut chunks, &mut journal, &plan).unwrap();
+        let network = rails::network(&journal).unwrap();
+        car.motion.throttle = 3;
+        car.motion.brake = false;
+        let mut buffer_seen = false;
+        for _ in 0..1800 {
+            match advance(&chunks, &journal, &network, &car, 1.0 / 60.0) {
+                Ok(next) => {
+                    buffer_seen |= next.motion.stop_reason == StopReason::Buffer;
+                    car = next;
+                }
+                Err(StopReason::Buffer) => {
+                    buffer_seen = true;
+                    car.motion.speed_mps = 0.0;
+                    car.motion.brake = true;
+                }
+                Err(reason) => panic!("unexpected stop: {reason:?}"),
+            }
+            assert!(
+                car.model_bounds()[1][2] <= 39.25 + 1e-8,
+                "the body must not pass the stop beam"
+            );
+            if buffer_seen && car.motion.stopped() {
+                break;
+            }
+        }
+        assert!(buffer_seen && car.motion.stopped());
+        let before = car.motion.wheel_distance_m;
+        car.motion.throttle = -1;
+        car.motion.brake = false;
+        for _ in 0..60 {
+            car = advance(&chunks, &journal, &network, &car, 1.0 / 60.0).unwrap();
+        }
+        assert!(car.motion.wheel_distance_m < before);
+    }
+    #[test]
+    fn buffer_stops_before_the_physical_beam_but_allows_retreat_in_every_facing() {
+        for facing in 0..4 {
+            let piece =
+                terra_core::rails::Piece::new([0; 3], terra_core::rails::BUFFER, facing).unwrap();
+            let (chunks, journal) = single_piece(piece);
+            let network = rails::network(&journal).unwrap();
+            let cursor = RailCursor {
+                anchor: piece.anchor,
+                path: 0,
+                distance: 3.2,
+                forward: true,
+            };
+            assert_eq!(
+                walk(&chunks, &journal, &network, cursor, 0.2).unwrap_err(),
+                StopReason::Buffer
+            );
+            let back = walk(&chunks, &journal, &network, cursor, -0.5).unwrap();
+            assert!((back.0.distance - 2.7).abs() < 1e-8);
+            assert!(walk(&chunks, &journal, &network, cursor, 100.0).is_err());
+        }
     }
     #[test]
     fn fueled_train_consumes_one_real_item_moves_and_brakes_on_the_same_rails() {

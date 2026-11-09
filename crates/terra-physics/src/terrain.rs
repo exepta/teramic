@@ -625,9 +625,10 @@ fn model_geometry(
                 for dz in -1..=1 {
                     if let Ok(section) = data.position().offset([dx, dy, dz]) {
                         for owner in journal.extended_kinetics_in_section(section) {
-                            if (0..3)
-                                .all(|i| owner[i] >= origin[i] - 1 && owner[i] <= origin[i] + 16)
-                                && let Some(material) = block_at(owner)
+                            if (0..3).all(|i| {
+                                owner[i] >= origin[i] - if i == 1 { 2 } else { 1 }
+                                    && owner[i] <= origin[i] + 16
+                            }) && let Some(material) = block_at(owner)
                             {
                                 append(owner, material);
                             }

@@ -47,6 +47,7 @@ fn train_fixture() -> (App, Peer, u64, u16, u16) {
         .position(|part| part.material == train_parts::CARGO)
         .unwrap() as u16;
     let vehicle = Vehicle {
+        name: String::new(),
         id: 1,
         owner: peer.uuid,
         kind: VehicleKind::Locomotive,
@@ -673,4 +674,76 @@ fn real_coal_can_be_clicked_onto_the_cursor_then_deposited_into_an_owned_engine_
         Err(TrainError::Invalid)
     );
     assert_eq!(app.world().resource::<EditJournal>().gameplay(), &before);
+}
+
+#[test]
+fn train_names_require_ownership_and_reject_controls_or_oversized_text_atomically() {
+    let (mut app, peer, id, seat, _) = train_fixture();
+    let mut seats = crate::server::trains::SeatedPlayers::default();
+    assert!(
+        run(
+            &mut app,
+            &peer,
+            TrainAction::Seat {
+                vehicle: id,
+                part: seat
+            },
+            &mut seats
+        )
+        .is_ok()
+    );
+    for name in ["a".repeat(25), "bad\nname".into(), "\u{0000}".into()] {
+        let before = app.world().resource::<EditJournal>().gameplay().clone();
+        assert_eq!(
+            run(
+                &mut app,
+                &peer,
+                TrainAction::Name {
+                    vehicle: id,
+                    name,
+                    station: None
+                },
+                &mut seats
+            ),
+            Err(TrainError::Invalid)
+        );
+        assert_eq!(app.world().resource::<EditJournal>().gameplay(), &before);
+    }
+    assert!(
+        run(
+            &mut app,
+            &peer,
+            TrainAction::Name {
+                vehicle: id,
+                name: "Lok Köln".into(),
+                station: None
+            },
+            &mut seats
+        )
+        .is_ok()
+    );
+    assert_eq!(
+        app.world()
+            .resource::<EditJournal>()
+            .gameplay()
+            .trains
+            .vehicles[&id]
+            .name,
+        "Lok Köln"
+    );
+    let mut foreign = peer;
+    foreign.uuid = terra_core::PlayerUuid::from_u128(999_219);
+    assert_eq!(
+        run(
+            &mut app,
+            &foreign,
+            TrainAction::Name {
+                vehicle: id,
+                name: "stolen".into(),
+                station: None
+            },
+            &mut seats
+        ),
+        Err(TrainError::NotOwner)
+    );
 }

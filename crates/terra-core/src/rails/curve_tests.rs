@@ -419,3 +419,27 @@ fn new_horizontal_track_requires_room_but_legacy_curves_remain_readable() {
         .is_ok()
     );
 }
+
+#[test]
+fn section_occupancy_survives_eviction_of_heavy_rail_geometry() {
+    let curve = CurveSpec::new([[8, 2, 0], [8, 2, 16], [8, 2, 96], [8, 2, 256]]).unwrap();
+    let piece = Piece::new_curve([0; 3], curve).unwrap();
+    let original = piece.footprint();
+    let collision = piece.cell_boxes(original[0]);
+    for index in 1..=DYNAMIC_CACHE_LIMIT as i32 + 16 {
+        let curve = CurveSpec::new([
+            [8, 2, 0],
+            [8, 2, 16 + index],
+            [8, 2, 96 + index],
+            [8, 2, 256],
+        ])
+        .unwrap();
+        let _ = Piece::new_curve([0; 3], curve).unwrap().local_geometry();
+    }
+    assert!(std::sync::Arc::ptr_eq(&original, &piece.footprint()));
+    assert!(original.iter().all(|offset| piece.contains_offset(*offset)));
+    assert!(std::sync::Arc::ptr_eq(
+        &collision,
+        &piece.cell_boxes(original[0])
+    ));
+}

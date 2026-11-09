@@ -1,6 +1,6 @@
 # TERAMIC: Offene Aufgaben
 
-Stand: 08.11.2026. Nur offene Features, Korrekturen und Abnahmen.
+Stand: 09.11.2026. Nur offene Features, Korrekturen und Abnahmen.
 Erledigte Aufgaben werden entfernt; die Umsetzungshistorie steht in
 [PATCH.md](PATCH.md). Bestehende IDs bleiben erhalten, neue IDs werden fortlaufend angehaengt.
 `F` = Feature, `O` = Optimierung/Fehlerkorrektur, `A` = Abnahme.
@@ -106,7 +106,7 @@ Wachstum, NPC-Arbeit und bewegte Fahrzeuge muessen begrenzt simuliert werden.
 
 - [ ] **A01 Grafik-Abnahme:** Blockformen/-oberflaechen, Kronen, Gras, Blumen, Pilze, Mineralien, Hoehlen, Ufer, Korallen, Anemonen und Tiere gemeinsam an nativen Referenzansichten menschlich beurteilen. Avatar-Gesichter, Griffpunkte und menschliche Animationen einschliessen.
 
-- [ ] **A02 Audio-Abnahme:** Tier-/Schritt-/Ess-/Ofen-/Oeffnungs-/Husten-/Wasser-/Wetterklang mit Kopfhoerern und Lautsprechern menschlich pruefen. Dekodiertests durch tatsaechliche Hoerabnahme ergaenzen.
+- [ ] **A02 Audio-Abnahme:** Tier-/Schritt-/Ess-/Ofen-/Zug-/Oeffnungs-/Husten-/Wasser-/Wetterklang mit Kopfhoerern und Lautsprechern menschlich pruefen. Dekodiertests durch tatsaechliche Hoerabnahme ergaenzen.
 
 - [ ] **A03 Weitere Plattformen:** Serverkonsole unter Windows/macOS, PowerShell/Legacy-Terminals, Signalabbruch und Pipe-/Zeileneingabe nativ pruefen.
 

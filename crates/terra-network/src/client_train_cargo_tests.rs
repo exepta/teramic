@@ -26,6 +26,7 @@ fn public_vehicle_updates_keep_private_contents_and_token_until_the_container_be
         ..Default::default()
     };
     let car = Vehicle {
+        name: String::new(),
         id: 1,
         owner,
         kind: VehicleKind::Locomotive,

@@ -76,6 +76,7 @@
     include_str!("../../../../assets/crafting/train_grate_inner_corner.json"),
     include_str!("../../../../assets/crafting/train_grate_outer_corner.json"),
     include_str!("../../../../assets/crafting/train_grate_slope.json"),
+    include_str!("../../../../assets/crafting/train_ceiling_light.json"),
     // F54_RECIPES_END
     include_str!("../../../../assets/crafting/train_chassis.json"),
     include_str!("../../../../assets/crafting/train_bogie.json"),

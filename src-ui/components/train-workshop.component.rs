@@ -15,6 +15,10 @@ fn train_workshop_action(
     parents: Query<&ChildOf>,
     mut actions: MessageWriter<crate::TrainUiAction>,
 ) {
+    if ids.get(event.target).is_ok_and(|id| id.0 == "train-name") {
+        if let Some(value) = event.value { actions.write(crate::TrainUiAction::Name(value)); }
+        return;
+    }
     let mut target = Some(event.target);
     for _ in 0..16 {
         let Some(entity) = target else { break };
@@ -60,10 +64,12 @@ fn train_command(id: &str) -> bool {
     matches!(
         id,
         "close"
+            | "name-save"
             | "wheelbase-dec"
             | "wheelbase-inc"
             | "blueprint"
             | "blueprint-build"
+            | "blueprint-auto"
             | "blueprint-clear"
             | "clear"
             | "front"

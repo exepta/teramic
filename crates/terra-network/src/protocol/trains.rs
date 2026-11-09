@@ -10,6 +10,14 @@ pub enum TrainAction {
     Inspect {
         station: [i64; 3],
     },
+    Build {
+        station: [i64; 3],
+        chassis: [i64; 3],
+        facing: u8,
+        kind: VehicleKind,
+        wheelbase: u8,
+        player_revision: u64,
+    },
     Assemble {
         station: [i64; 3],
         start: [i64; 3],
@@ -55,6 +63,11 @@ pub enum TrainAction {
         vehicle: u64,
         throttle: i8,
         brake: bool,
+    },
+    Name {
+        vehicle: u64,
+        name: String,
+        station: Option<[i64; 3]>,
     },
     Leave,
 }

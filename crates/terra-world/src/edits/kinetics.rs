@@ -27,7 +27,8 @@ impl EditJournal {
         if !self.has_extended_kinetics() {
             return;
         }
-        let low = terra_voxel::global_to_section(position.map(|v| v - 1)).0;
+        let low =
+            terra_voxel::global_to_section([position[0] - 1, position[1] - 2, position[2] - 1]).0;
         let high = terra_voxel::global_to_section(position.map(|v| v + 1)).0;
         for x in low.x..=high.x {
             for y in low.y..=high.y {
@@ -35,7 +36,18 @@ impl EditJournal {
                     for owner in
                         self.extended_kinetics_in_section(terra_voxel::SectionPos { x, y, z })
                     {
-                        if (0..3).all(|i| (owner[i] - position[i]).abs() <= 1) {
+                        if (owner[0] - position[0]).abs() <= 1
+                            && (owner[2] - position[2]).abs() <= 1
+                            && (owner[1] - position[1]).abs()
+                                <= if self
+                                    .block(owner)
+                                    .is_some_and(terra_core::train_boiler::is_boiler)
+                                {
+                                    2
+                                } else {
+                                    1
+                                }
+                        {
                             visit(owner);
                         }
                     }

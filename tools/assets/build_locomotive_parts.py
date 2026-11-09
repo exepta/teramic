@@ -75,6 +75,8 @@ for family_index, (family, label) in enumerate(FAMILIES):
         PARTS.append((270 + family_index * 6 + shape_index,
                       'train_' + family + '_' + shape, label + ' ' + shape_label, 'Structure'))
 
+PARTS.append((294, 'train_ceiling_light', 'Wagen-Deckenleuchte', 'Headlight'))
+
 GLYPHS = {
     ' ': ['000','000','000','000','000'],
     '0': ['111','101','101','101','111'], '1': ['010','110','010','010','111'],
@@ -214,7 +216,7 @@ def boiler(mesh, material='train_black_iron', door=False):
             mesh.box(p, [p[0] + .034, p[1] + .034, z + .017], 'rivet', bevel=.007)
     if door:
         mesh.box([.15, .35, .001], [.85, .65, .028], 'train_dark_steel', bevel=.012)
-        text(mesh, '52 4867', x=.18, y=.43, z=.0, width=.64, height=.14)
+        # The runtime renders the saved vehicle name on a separate front plane.
         for x in [.13, .81]:
             mesh.box([x, .31, .03], [x + .06, .7, .12], 'rivet')
 
@@ -317,7 +319,7 @@ def metal_shape(mesh, family, shape):
 
 def make(material, slug):
     mesh = Mesh(slug); palette(mesh)
-    if material >= 270:
+    if 270 <= material <= 293:
         family = FAMILIES[(material - 270) // 6][0]
         shape = SHAPES[(material - 270) % 6][0]
         metal_shape(mesh, family, shape)
@@ -446,7 +448,10 @@ def make(material, slug):
             mesh.box([.11, .11, .04], [.89, .89, .15], 'train_dark_steel', solid=True)
             mesh.box([.36, .35, .15], [.64, .42, .22], 'train_brass')
         elif material == 266:
-            text(mesh, '52 4867', z=.067)
+            pass  # Runtime lettering occupies its own front plane.
+    elif material == 294:
+        mesh.box([.12, .84, .18], [.88, 1, .82], 'train_black_iron', solid=True)
+        mesh.box([.2, .78, .25], [.8, .85, .75], 'train_lamp_glow', solid=True)
     elif material in [264, 265]:
         mesh.box([.25, 0, .32], [.75, .22, .78], 'train_black_iron', solid=True)
         cylinder(mesh, [.5, .55, .5], .29, .14, .75, 2, 'train_dark_steel')
@@ -468,7 +473,7 @@ def make(material, slug):
 
 
 def recipe(material, slug, role):
-    if material >= 270:
+    if 270 <= material <= 293:
         centre = 210 if (material - 270) % 6 == 0 else material - (material - 270) % 6
     else:
         centre = {218: 59, 219: 210, 220: 219, 221: 219, 222: 219, 223: 222,
@@ -479,7 +484,7 @@ def recipe(material, slug, role):
                   247: 15, 248: 245, 249: 241, 250: 241, 251: 250, 252: 241,
                   253: 252, 254: 169, 255: 32, 256: 210, 257: 210, 258: 146,
                   259: 146, 260: 146, 261: 210, 262: 143, 263: 210,
-                  264: 193, 265: 193, 266: 210, 267: 29, 268: 18, 269: 32}[material]
+                  264: 193, 265: 193, 266: 210, 267: 29, 268: 18, 269: 32, 294: 193}[material]
     ingredient = lambda item: {'item': item, 'count': 1}
     cells = [None] * 9
     cells[0] = ingredient({'mineral': 'iron_ingot'})
@@ -523,7 +528,7 @@ use serde::Deserialize;
 use std::sync::OnceLock;
 
 pub const FIRST: u16 = 218;
-pub const LAST: u16 = 293;
+pub const LAST: u16 = 294;
 pub const ENGINE: u16 = 218;
 pub const WATER_TANK: u16 = 254;
 pub const THROTTLE_PIVOT: [f32; 3] = [0.72, 0.57, 0.25];
@@ -548,7 +553,7 @@ pub const fn is_part(material: u16) -> bool { material >= FIRST && material <= L
 pub const fn definition(material: u16) -> Option<&'static Definition> {
     if is_part(material) { Some(&DEFINITIONS[(material - FIRST) as usize]) } else { None }
 }
-pub const fn is_metal_shape(material: u16) -> bool { material >= 270 && material <= LAST }
+pub const fn is_metal_shape(material: u16) -> bool { material >= 270 && material <= 293 }
 pub const fn is_slab(material: u16) -> bool { is_metal_shape(material) && (material - 270) % 6 == 1 }
 pub const fn is_stair(material: u16) -> bool { is_metal_shape(material) && (material - 270) % 6 == 2 }
 pub fn is_animated(material: u16) -> bool { matches!(material, 211 | 232..=234 | 236..=240) }
@@ -559,7 +564,7 @@ pub const fn supports_wood(material: u16) -> bool { matches!(material, 267 | 268
 pub const fn is_full_support(material: u16) -> bool { matches!(material, 210 | 212 | 241 | 242 | 254 | 270 | 276 | 282) }
 pub fn valid_facing(material: u16, facing: u8) -> bool {
     if crate::construction::is_shape(material) { crate::construction::valid_facing(material, facing) }
-    else { facing < if matches!(material, 247 | 248) { 8 } else { 4 } }
+    else { facing < if matches!(material, 219..=223 | 247 | 248) { 8 } else { 4 } }
 }
 /// Preserve authored lattice bars while applying the shared slab/stair pose.
 pub fn grate_boxes(material: u16, facing: u8) -> Option<Vec<ShapeBox>> {
@@ -619,7 +624,7 @@ pub fn base_boxes(material: u16) -> &'static [ShapeBox] {
         for kind in [Kind::Engine, Kind::Wheel, Kind::Rod, Kind::Structure, Kind::Valve, Kind::Gauge, Kind::Tank, Kind::Headlight] {
             assert!(DEFINITIONS.iter().any(|definition| definition.kind == kind));
         }
-        assert!(DEFINITIONS.iter().filter(|definition| definition.id >= 270).count() == 24);
+        assert!(DEFINITIONS.iter().filter(|definition| (270..=293).contains(&definition.id)).count() == 24);
     }
     #[test] fn every_component_is_craftable_from_the_embedded_catalog() {
         let recipes = crate::crafting::RecipeBook::builtins();
@@ -675,8 +680,8 @@ pub fn base_boxes(material: u16) -> &'static [ShapeBox] {
     ]:
         assert anchor in source
         source = source.replace(anchor, anchor + '\n    // F54_' + name + '_START\n' + body + '\n    // F54_' + name + '_END')
-    source = source.replace('Self::TrainAssemblyStation as u16;', 'Self::TrainGrateSlope as u16;')
-    source = source.replace('assert_eq!(MaterialId::LAST, 217);', 'assert_eq!(MaterialId::LAST, 293);')
+    source = source.replace('Self::TrainAssemblyStation as u16;', 'Self::TrainCeilingLight as u16;').replace('Self::TrainGrateSlope as u16;', 'Self::TrainCeilingLight as u16;')
+    source = source.replace('assert_eq!(MaterialId::LAST, 217);', 'assert_eq!(MaterialId::LAST, 294);').replace('assert_eq!(MaterialId::LAST, 293);', 'assert_eq!(MaterialId::LAST, 294);')
     path.write_text(source)
     update_builtin_recipes()
 
@@ -746,13 +751,13 @@ def main(materials=None):
             'Valve': 'Decorative steam valve fitting. The fuel engine is controlled by its cab lever; steam circuits follow the steam engine system.',
             'Gauge': 'Decorative pressure instrument casing. Live steam pressure follows the steam engine system; fuel driving uses the cab display.',
             'Tank': 'Decorative tender water tank casing. Fuel-powered driving needs no water; steam and water ports follow the steam engine system.',
-            'Headlight': 'Emissive locomotive headlamp. Attach to the front or side of a connected train body.',
+            'Headlight': 'Functional warm train light. Front and side lamps cast a forward cone; the ceiling lamp lights the carriage below.',
         }
         definition = {
             'schema_version': 1, 'id': material, 'name': name,
             'description': ('Structural BR52 frame block. Connect it to the train chassis as part of the vehicle body.' if material in [241, 242]
                             else 'Structural buffer mounting beam. Attach buffers and couplings to the connected train body.' if material == 243
-                            else 'Structural locomotive construction shape. Build the connected vehicle body with matching metal parts.' if material >= 270
+                            else 'Structural locomotive construction shape. Build the connected vehicle body with matching metal parts.' if 270 <= material <= 293
                             else 'Functional framed locomotive opening. Use to open and close its leaf.' if material in [247, 248]
                             else functional.get(role, 'Decorative BR52 locomotive component. Attach to the connected vehicle body before assembly.')),
             'creative_category': 'building', 'render_kind': 'custom_mesh',

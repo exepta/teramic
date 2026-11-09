@@ -17,6 +17,7 @@ use terra_world::{
     edits::EditJournal,
     streaming::{ChunkStore, WorldAccess},
 };
+mod accessories;
 mod animation;
 mod openings;
 
@@ -62,6 +63,7 @@ struct AnimatedBatch {
     animation: animation::Animation,
 }
 pub(crate) fn install(app: &mut App) {
+    accessories::install(app);
     app.init_resource::<Trains>()
         .add_systems(Update, synchronize.after(crate::meshing::upload_sections))
         .add_systems(Update, animation::animate.after(synchronize));

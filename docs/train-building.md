@@ -33,7 +33,13 @@ wenn entsprechend belegt).
    Wagen-Laderaeume koennen an beliebiger verbundener Position sitzen, auch hinter
    dem Fahrer. Fuer Tender und Wagen sind kein eigener Motor und kein Fahrer
    erforderlich; sie koennen an eine Lok gekuppelt werden.
-7. Seitlich neben den Zug stellen, Montagestelle erneut oeffnen und
+7. Alternativ **Vorlage automatisch bauen** waehlen. Der Server setzt alle noch
+   fehlenden Teile der sichtbaren Vorlage gemeinsam. Im Ueberlebensmodus muessen
+   die Materialien im Inventar liegen; vorhandene passende Teile werden erhalten.
+   Holzvarianten der verwendeten Inventarteile bleiben erhalten. Im Kreativmodus
+   wird ohne Materialverbrauch gebaut. Bei fehlenden Materialien oder belegtem
+   Platz wird nichts teilweise gesetzt oder verbraucht.
+8. Seitlich neben den Zug stellen, Montagestelle erneut oeffnen und
    **Zusammensetzen** waehlen. Die Vorlage verschwindet nach erfolgreicher Montage.
    **Vorlage ausblenden** bricht die Bauhilfe vorher ab.
 
@@ -98,6 +104,36 @@ nach dem Rueckbau wieder aktiv. Separat simulierte Pflanzen/Weltobjekte vor der
 Montage entfernen; voxelbasierte Laternen, Ketten und Banner sind mitmontierbar.
 
 Ein Fahrzeug darf bis zu 256 Blockteile enthalten. Die Vorlage ist eine Bauhilfe;
-Materialien werden beim normalen Platzieren verbraucht. Netzwerkprotokoll 120 und
-Zugindex ID15 speichern die Fahrt; alte ID13-/ID14-Zuege bleiben lesbar.
+Materialien werden beim normalen Platzieren verbraucht. Netzwerkprotokoll 121 und
+Zugindex ID16 speichern Fahrt und Namen; ID13-/ID14-/ID15-Zuege bleiben lesbar.
 Client und Server gemeinsam neu bauen und neu starten.
+
+
+Im Feld **Zugname / Schild** einen Namen mit bis zu 24 Zeichen eintragen.
+Beim Zusammensetzen wird dieser Name uebernommen; am montierten Fahrzeug aendert
+**Schild uebernehmen** die Beschriftung seiner Nummernschilder. Zugnamen werden
+gespeichert und an Mitspieler uebertragen. Metall und Schrift liegen auf
+getrennten Flaechen. Im Namensfeld schliesst die Inventartaste E das Fenster
+nicht, ESC bleibt zum Schliessen verfuegbar.
+
+Ein Kessel auf einem drei Bloecke breiten tragenden Zugrahmen nimmt eine
+3 x 3 grosse Querschnittsform an. Ein schmaler Rahmen behaelt die kleine Form.
+Auch eine volle Verkleidung ueber dem Rahmen wird erkannt. Die gewaehlte
+Ausrichtung und Groesse bleiben gespeichert; Auswahl, Kollision und montiertes
+Fahrzeug verwenden denselben Querschnitt.
+Bereits gesetzte kleine Kesselteile zum Vergroessern auf dem breiten Rahmen
+abbauen und neu platzieren.
+
+**Lok-Scheinwerfer Front / Seite** ansetzen, um einen warmen Lichtkegel nach
+vorne zu richten. Die neue **Wagen-Deckenleuchte** sitzt unter einer Decke und
+beleuchtet den Wagen nach unten. Beide bleiben am fahrenden Wagen befestigt.
+Die Lichtquellen sind nach Naehe begrenzt. Abgas-/Antriebsrhythmus, Feuer und
+Schienenrollen folgen der bestaetigten Fahrt und der Entfernung; die
+Ambiente-Lautstaerke und Stummschaltung gelten auch fuer Zuege.
+
+Der Gleismodus **Prellbock** stoppt den Zug vor dem Anschlag einschliesslich
+Wagenkasten und Kupplung. Ein Verbund wird gemeinsam angehalten; Rueckwaerts
+vom Prellbock wegzufahren bleibt erlaubt.
+
+Client und Server benoetigen Protokoll 121. Zugindex ID16 speichert die neuen
+Namen und uebernimmt bestehende Zuege aus ID13, ID14 und ID15.

@@ -1312,6 +1312,7 @@ mod tests {
                 .trains
                 .vehicles
                 .push(terra_core::trains::VehicleView {
+                    name: String::new(),
                     id: 7,
                     owner: player,
                     kind: terra_core::trains::VehicleKind::Passenger,

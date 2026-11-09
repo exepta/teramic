@@ -1,0 +1,21 @@
+workspace library/binary tests: 4465 passed, 0 failed, 10 ignored (12 suites)
+final targeted lettering/light tests: 2 passed, 0 failed
+cargo build --locked --workspace: exit 0
+cargo clippy --locked --workspace --all-targets -- -D warnings: exit 0
+cargo fmt --all -- --check: exit 0
+git diff --check: exit 0
+native workshop fixture: exit 0; 1920x1080 and 1280x720; painted bounds passed
+native train ride in existing problem world: not performed
+0.4-second hitch comparison in existing problem world: not measured
+human audio listening acceptance: not performed (A02)
+network protocol: 121
+train storage index: ID16 (reads ID13, ID14, ID15)
+
+c014374c85bc85ab48ac0adb0d9541263018cd855dfc003145aa8c4ae7eb6f04  README.md
+fe2f47676501fd7cd10ecf90900544216e3c8843b4b560930e8e7db228de57e9  accessories-tests.log
+4e55a639ef8f1fa164e6ad894003bca0ad0e0e96ce60ba660a51992f2cc7118c  build.log
+e8bcb52fe57376e1b8b0dabd19bccdd98811d235c134799a330c48a6406c7535  clippy.log
+98dd3260dd10b59cff626488511cba827c5e10271a56478b6a6650b936e6efc9  native-workshop.log
+5fd932ec9def1ed29580728557c7534b9ed2bfcff7a545a3e3ba93d3971eaa45  tests.log
+3c4c7a4800f624661e32b2fd621b1dc36b630ce08529387cf091f37e1b5a6a0e  train-workshop-1080.png
+2379281a9eeaa44bdaf9613fbafe5a9573e09d44ada5db908bd80ed9c804ec55  train-workshop-720.png

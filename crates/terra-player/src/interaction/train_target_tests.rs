@@ -8,6 +8,7 @@ use terra_world::{edits::EditJournal, streaming::LoadedSection};
 
 fn vehicle() -> Vehicle {
     let vehicle = Vehicle {
+        name: String::new(),
         id: 1,
         owner: PlayerUuid::from_u128(210_501),
         kind: VehicleKind::Passenger,

@@ -284,6 +284,7 @@ pub fn disconnect_session(world: &mut World) {
     session.train_cargo = None;
     session.train_seat = None;
     session.train_motion_tracks.clear();
+    session.rail_preparation = None;
     session.last_train_result = None;
     session.train_response = 0;
     session.train_request = 0;
@@ -302,6 +303,7 @@ pub struct ClientSession {
     pub train_cargo: Option<crate::protocol::trains::TrainCargoSnapshot>,
     train_motion_tracks: std::collections::BTreeMap<u64, train_motion_display::Track>,
     train_display_time: Instant,
+    rail_preparation: Option<bevy::tasks::Task<ServerControl>>,
     pub train_seat: Option<terra_core::trains::SeatBinding>,
     pub last_train_result: Option<crate::protocol::trains::TrainResult>,
     pub train_response: u64,
@@ -378,6 +380,7 @@ impl Default for ClientSession {
             train_cargo: None,
             train_motion_tracks: Default::default(),
             train_display_time: Instant::now(),
+            rail_preparation: None,
             train_seat: None,
             last_train_result: None,
             train_response: 0,
@@ -679,6 +682,7 @@ impl ClientSession {
         self.train_cargo = None;
         self.train_seat = None;
         self.train_motion_tracks.clear();
+        self.rail_preparation = None;
         self.last_train_result = None;
         self.train_response = 0;
         self.train_request = 0;
@@ -1115,9 +1119,47 @@ fn receive_controls(
             session.control.push_back(message);
         }
     }
-    for _ in 0..8 {
-        let Some(message) = session.control.pop_front() else {
+    let import_started = Instant::now();
+    for processed in 0..8 {
+        if processed != 0 && import_started.elapsed() >= Duration::from_millis(2) {
             break;
+        }
+        let message = if let Some(task) = session.rail_preparation.as_mut() {
+            let Some(message) = bevy::tasks::futures_lite::future::block_on(
+                bevy::tasks::futures_lite::future::poll_once(task),
+            ) else {
+                break;
+            };
+            session.rail_preparation = None;
+            message
+        } else {
+            let Some(message) = session.control.pop_front() else {
+                break;
+            };
+            if let ServerControl::Section(delta) = &message
+                && delta
+                    .objects
+                    .iter()
+                    .any(|(_, state)| state.rail_curve.is_some())
+            {
+                session.rail_preparation =
+                    Some(bevy::tasks::AsyncComputeTaskPool::get().spawn(async move {
+                        if let ServerControl::Section(delta) = &message {
+                            for (_, state) in &delta.objects {
+                                if let Some(curve) = state.rail_curve
+                                    && let Some(piece) =
+                                        terra_core::rails::Piece::new_curve([0; 3], curve)
+                                {
+                                    let _ = piece.footprint();
+                                    let _ = piece.cell_boxes([0; 3]);
+                                }
+                            }
+                        }
+                        message
+                    }));
+                break;
+            }
+            message
         };
         let result: Result<(), String> = match message {
             ServerControl::TreeCollapse(collapse) => {
