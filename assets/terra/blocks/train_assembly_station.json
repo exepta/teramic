@@ -3,7 +3,7 @@
   "id": 217,
   "name": "Zug-Montagestelle",
   "description": "Assemble or dismantle connected modular railway vehicles. Right-click to manage the workshop.",
-  "creative_category": "building",
+  "creative_category": "trains",
   "render_kind": "custom_mesh",
   "model_layout": "scene",
   "model": "models/train_assembly_station.gltf",

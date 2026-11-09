@@ -27,6 +27,7 @@ pub use placement::{
     connection_target, continuation_endpoint, cost, environment, next_endpoint, placement,
     placement_sites, plan, proposal, proposal_connection, proposal_connection_aim, proposal_seed,
     seed, seed_signature, select_endpoint, set_wood, support_edit_allowed, toggle_switch_plan,
+    turntable_plan,
 };
 
 pub mod stand;
@@ -119,6 +120,53 @@ pub fn cells(piece: Piece) -> Vec<Cell> {
 
 /// Partial imports cannot create traversable routes or a second module item.
 pub fn complete(journal: &EditJournal, piece: Piece) -> bool {
+    // A train probes the same module many times per step. Metadata changes
+    // invalidate the journal identity/epoch; unchanged routes share one result.
+    type Entry = (std::sync::Weak<()>, u64, BTreeMap<Cell, (Piece, bool)>);
+    static CACHE: std::sync::Mutex<Vec<Entry>> = std::sync::Mutex::new(Vec::new());
+    let identity = journal.rail_cache_identity();
+    {
+        let cache = CACHE.lock().unwrap_or_else(|error| error.into_inner());
+        if let Some((_, _, pieces)) = cache.iter().find(|(owner, epoch, _)| {
+            *epoch == journal.rail_epoch() && owner.ptr_eq(&Arc::downgrade(&identity))
+        }) && let Some((saved, complete)) = pieces.get(&piece.anchor)
+            && *saved == piece
+        {
+            return *complete;
+        }
+    }
+    let result = complete_uncached(journal, piece);
+    let mut cache = CACHE.lock().unwrap_or_else(|error| error.into_inner());
+    cache.retain(|(owner, epoch, _)| {
+        owner.strong_count() > 0
+            && (!owner.ptr_eq(&Arc::downgrade(&identity)) || *epoch == journal.rail_epoch())
+    });
+    if !cache
+        .iter()
+        .any(|(owner, _, _)| owner.ptr_eq(&Arc::downgrade(&identity)))
+    {
+        if cache.len() >= 4 {
+            cache.remove(0);
+        }
+        cache.push((
+            Arc::downgrade(&identity),
+            journal.rail_epoch(),
+            BTreeMap::new(),
+        ));
+    }
+    let pieces = &mut cache
+        .iter_mut()
+        .find(|(owner, _, _)| owner.ptr_eq(&Arc::downgrade(&identity)))
+        .unwrap()
+        .2;
+    if pieces.len() >= terra_core::rails::MAX_PIECES {
+        pieces.pop_first();
+    }
+    pieces.insert(piece.anchor, (piece, result));
+    result
+}
+
+fn complete_uncached(journal: &EditJournal, piece: Piece) -> bool {
     let Some(anchor_state) = journal.object_state(piece.anchor) else {
         return false;
     };
@@ -152,7 +200,9 @@ pub fn cell_boxes(cell: Cell, material: u16, state: BlockObjectState) -> Arc<[Sh
 
 /// Construction and dismantling use the same four-metre item unit.
 pub fn piece_cost(piece: Piece) -> u16 {
-    if piece.kind().is_some_and(terra_core::rails::Kind::is_switch) {
+    if piece.material == terra_core::rails::TURNTABLE
+        || piece.kind().is_some_and(terra_core::rails::Kind::is_switch)
+    {
         return 1;
     }
     let length: f64 = piece.paths().iter().map(|path| path.length()).sum();

@@ -15,9 +15,11 @@ fn path(network: &RouteNetwork, cursor: RailCursor) -> Option<Path> {
 }
 fn loaded(chunks: &ChunkStore, journal: &EditJournal, path: Path) -> bool {
     rails::complete(journal, path.piece)
-        && rails::cells(path.piece)
-            .into_iter()
-            .all(|cell| chunks.block_at(cell) == Some(path.piece.material))
+        && path.piece.footprint().iter().all(|offset| {
+            let cell =
+                std::array::from_fn(|axis| path.piece.anchor[axis] + i64::from(offset[axis]));
+            chunks.block_at(cell) == Some(path.piece.material)
+        })
 }
 fn sample(path: Path, cursor: RailCursor) -> Sample {
     let mut point = path.sample_distance(cursor.distance);
@@ -104,12 +106,8 @@ fn leading_clearance(car: &Vehicle, pivot: [f64; 3], point: Sample, direction: f
         .fold(0.0, f64::max)
         + 0.05
 }
-fn initialize(
-    chunks: &ChunkStore,
-    journal: &EditJournal,
-    network: &RouteNetwork,
-    car: &Vehicle,
-) -> Result<(RailCursor, [f64; 3], f64), StopReason> {
+/// Geometry-only wheelset layout; rebuilding rails never changes the local pivots.
+fn wheelsets(car: &Vehicle) -> Result<([f64; 3], f64), StopReason> {
     let facing = car.build_yaw();
     let forward = [facing.sin(), 0.0, facing.cos()];
     let mut bogies = car
@@ -141,13 +139,33 @@ fn initialize(
             - terra_core::trains::MODEL_Y_OFFSET,
         f64::from(front.offset[2]) + 0.5,
     ];
-    if let Some(cursor) = car.motion.cursor {
-        let current = path(network, cursor).ok_or(StopReason::InvalidTrack)?;
-        if !loaded(chunks, journal, current) {
-            return Err(StopReason::Unloaded);
+    Ok((pivot, wheelbase))
+}
+fn initialize(
+    chunks: &ChunkStore,
+    journal: &EditJournal,
+    network: &RouteNetwork,
+    car: &Vehicle,
+) -> Result<(RailCursor, [f64; 3], f64), StopReason> {
+    let (pivot, wheelbase) = wheelsets(car)?;
+    let heading = car.build_yaw() + car.motion.yaw;
+    let world_forward = [heading.sin(), 0.0, heading.cos()];
+    if let Some(cursor) = car.motion.cursor
+        && let Some(current) = path(network, cursor)
+        && loaded(chunks, journal, current)
+        && (0.0..=current.length()).contains(&cursor.distance)
+    {
+        let expected = car.world_point(pivot);
+        let actual = sample(current, cursor);
+        let error: f64 = (0..3)
+            .map(|axis| (expected[axis] - actual.position[axis]).powi(2))
+            .sum();
+        if error < 0.05 * 0.05 {
+            return Ok((cursor, pivot, wheelbase));
         }
-        return Ok((cursor, pivot, wheelbase));
     }
+    // A removed module leaves the physical pose intact. Rebind to replacement
+    // rails at that pose rather than retaining the retired module forever.
     let origin = car.world_point(pivot);
     let mut candidates = std::collections::BTreeMap::new();
     let cell = origin.map(|v| v.floor() as i64);
@@ -175,8 +193,9 @@ fn initialize(
                     .map(|i| (point.position[i] - origin[i]).powi(2))
                     .sum::<f64>();
                 if error <= 0.75 * 0.75 && best.as_ref().is_none_or(|(old, _)| error < *old) {
-                    let aligned =
-                        point.tangent[0] * forward[0] + point.tangent[2] * forward[2] >= 0.0;
+                    let aligned = point.tangent[0] * world_forward[0]
+                        + point.tangent[2] * world_forward[2]
+                        >= 0.0;
                     best = Some((
                         error,
                         RailCursor {
@@ -190,10 +209,8 @@ fn initialize(
             }
         }
     }
-    let cursor = car
-        .motion
-        .cursor
-        .or(best.map(|(_, cursor)| cursor))
+    let cursor = best
+        .map(|(_, cursor)| cursor)
         .ok_or(StopReason::InvalidTrack)?;
     Ok((cursor, pivot, wheelbase))
 }
@@ -527,6 +544,111 @@ pub fn clear_swept(
     }
     Ok(swept)
 }
+/// Rotate an entirely supported, uncoupled parked vehicle and its platform together.
+pub fn turntable(
+    chunks: &ChunkStore,
+    journal: &EditJournal,
+    properties: &terra_core::block_properties::BlockPropertiesCatalog,
+    network: &RouteNetwork,
+    car: &Vehicle,
+    clockwise: bool,
+) -> Result<
+    (
+        crate::placement::Layout,
+        Vehicle,
+        Vec<terra_core::block_shapes::ShapeBox>,
+    ),
+    terra_core::trains::TrainError,
+> {
+    use terra_core::trains::TrainError;
+    if !car.motion.stopped() || !car.motion.brake || car.couplings.iter().any(Option::is_some) {
+        return Err(TrainError::Invalid);
+    }
+    let (cursor, _, wheelbase) =
+        initialize(chunks, journal, network, car).map_err(|_| TrainError::Unsupported)?;
+    let piece = *network.get(cursor.anchor).ok_or(TrainError::Unsupported)?;
+    if piece.material != terra_core::rails::TURNTABLE
+        || cursor.distance < wheelbase
+        || cursor.distance > 25.0
+    {
+        return Err(TrainError::Unsupported);
+    }
+    let center = [
+        piece.anchor[0] as f64 + 0.5,
+        piece.anchor[1] as f64,
+        piece.anchor[2] as f64 + 0.5,
+    ];
+    for index in 0..car.parts.len() {
+        for shape in car.transformed_shapes(index) {
+            for x in [shape.minimum[0], shape.maximum[0]] {
+                for z in [shape.minimum[2], shape.maximum[2]] {
+                    if (x - center[0]).hypot(z - center[2]) > terra_core::rails::TURNTABLE_RADIUS {
+                        return Err(TrainError::Unsupported);
+                    }
+                }
+            }
+        }
+    }
+    let plan = rails::turntable_plan(chunks, journal, piece.anchor, clockwise)
+        .map_err(|_| TrainError::Unsupported)?;
+    let original = car.world_point(car.motion.pivot);
+    let mut previous = car.clone();
+    let mut swept = Vec::new();
+    for step in 1..=18 {
+        let angle = f64::from(step) / 18.0
+            * std::f64::consts::FRAC_PI_2
+            * if clockwise { 1.0 } else { -1.0 };
+        let (sin, cos) = angle.sin_cos();
+        let delta = [original[0] - center[0], original[2] - center[2]];
+        let target = [
+            center[0] + delta[0] * cos + delta[1] * sin,
+            original[1],
+            center[2] - delta[0] * sin + delta[1] * cos,
+        ];
+        let mut next = car.clone();
+        next.motion.yaw = (car.motion.yaw + angle + std::f64::consts::PI)
+            .rem_euclid(std::f64::consts::TAU)
+            - std::f64::consts::PI;
+        for axis in 0..3 {
+            next.motion.translation[axis] += target[axis] - original[axis];
+        }
+        // The rotating platform, rather than the bogie, is the arc pivot.
+        // Bound the sagitta between samples even for thin corner obstacles.
+        let padding = terra_core::rails::TURNTABLE_RADIUS
+            * (std::f64::consts::FRAC_PI_2 / 18.0).powi(2)
+            / 8.0;
+        let mut probes = 0;
+        for index in 0..next.parts.len() {
+            for (before, after) in previous
+                .transformed_shapes(index)
+                .into_iter()
+                .zip(next.transformed_shapes(index))
+            {
+                let shape = terra_core::block_shapes::ShapeBox {
+                    minimum: std::array::from_fn(|axis| {
+                        before.minimum[axis].min(after.minimum[axis])
+                            - if axis == 1 { 0.0 } else { padding }
+                    }),
+                    maximum: std::array::from_fn(|axis| {
+                        before.maximum[axis].max(after.maximum[axis])
+                            + if axis == 1 { 0.0 } else { padding }
+                    }),
+                    hinged: false,
+                };
+                clear_shape(chunks, journal, properties, shape, &mut probes)
+                    .map_err(|_| TrainError::Occupied)?;
+                swept.push(shape);
+            }
+        }
+        previous = next;
+    }
+    previous.motion.throttle = 0;
+    previous.motion.cursor = Some(cursor);
+    previous.motion.stop_reason = StopReason::Braking;
+    previous.revision = car.revision.checked_add(1).ok_or(TrainError::Overflow)?;
+    Ok((plan, previous, swept))
+}
+
 /// Cars in a consist may touch through couplers but cannot pass through bodies.
 pub fn consist_clear(cars: &[Vehicle]) -> Result<(), StopReason> {
     if cars.len() > terra_core::trains::MAX_CONSIST {
@@ -878,8 +1000,8 @@ mod tests {
             distance: 8.0,
             forward: true,
         });
-        let (initial_cursor, initial_pivot, wheelbase) =
-            initialize(&chunks, &journal, &network, &car).unwrap();
+        let (initial_pivot, wheelbase) = wheelsets(&car).unwrap();
+        let initial_cursor = car.motion.cursor.unwrap();
         let front = walk(&chunks, &journal, &network, initial_cursor, 0.0)
             .unwrap()
             .1;
@@ -1052,8 +1174,8 @@ mod tests {
                 distance: 8.0 + index as f64 * 9.0,
                 forward: true,
             });
-            let (cursor, pivot, wheelbase) =
-                initialize(&curved_chunks, &curved_journal, &curved_network, car).unwrap();
+            let (pivot, wheelbase) = wheelsets(car).unwrap();
+            let cursor = car.motion.cursor.unwrap();
             let front = walk(
                 &curved_chunks,
                 &curved_journal,
@@ -1090,5 +1212,159 @@ mod tests {
         }
         second.motion.translation[2] = -8.0;
         assert_eq!(consist_clear(&[first, second]), Err(StopReason::Obstructed));
+    }
+    #[test]
+    fn removed_native_track_rebinds_to_new_starters_without_moving_the_body() {
+        let (mut chunks, mut journal, car) = fixture();
+        let network = rails::network(&journal).unwrap();
+        let car = advance(&chunks, &journal, &network, &car, 0.0).unwrap();
+        let old_cursor = car.motion.cursor.unwrap();
+        let old = network.get(old_cursor.anchor).unwrap();
+        journal.gameplay_mut().trains.insert(car.clone()).unwrap();
+        let plan = rails::break_layout(&chunks, &journal, old.anchor).unwrap();
+        rails::commit(&mut chunks, &mut journal, &plan).unwrap();
+        assert!(
+            advance(
+                &chunks,
+                &journal,
+                &rails::network(&journal).unwrap(),
+                &car,
+                0.0
+            )
+            .is_err()
+        );
+        // Repair must also pass the real placement reservation checks with
+        // the assembled car still registered above the removed module.
+        let repair = rails::plan(
+            &chunks,
+            &journal,
+            old.anchor,
+            old.material,
+            old.encoded_facing(),
+        )
+        .unwrap();
+        rails::commit(&mut chunks, &mut journal, &repair).unwrap();
+        let remove_again = rails::break_layout(&chunks, &journal, old.anchor).unwrap();
+        rails::commit(&mut chunks, &mut journal, &remove_again).unwrap();
+        for z in 0..4 {
+            let piece = terra_core::rails::Piece::seed(
+                [old.anchor[0], old.anchor[1], old.anchor[2] + z],
+                0,
+            )
+            .unwrap();
+            for cell in rails::cells(piece) {
+                set(&mut chunks, cell, piece.material);
+                journal.record(cell, piece.material).unwrap();
+                journal
+                    .set_object_state(cell, Some(rails::object_state(piece, cell)))
+                    .unwrap();
+            }
+        }
+        let recovered = advance(
+            &chunks,
+            &journal,
+            &rails::network(&journal).unwrap(),
+            &car,
+            0.0,
+        )
+        .unwrap();
+        assert_ne!(recovered.motion.cursor.unwrap().anchor, old_cursor.anchor);
+        for index in 0..car.parts.len() {
+            let before = car.world_cell(index).unwrap();
+            let after = recovered.world_cell(index).unwrap();
+            assert_eq!(before, after, "repair must not teleport any vehicle part");
+        }
+        let mut driving = recovered;
+        driving.motion.brake = false;
+        driving.motion.throttle = 1;
+        let moved = advance(
+            &chunks,
+            &journal,
+            &rails::network(&journal).unwrap(),
+            &driving,
+            1.0 / 60.0,
+        )
+        .unwrap();
+        assert!(moved.motion.speed_mps > 0.0);
+    }
+
+    #[test]
+    fn turntable_rotates_vehicle_and_route_together_and_rejects_a_swept_obstacle() {
+        let (mut chunks, mut journal, car) = fixture();
+        let old: Vec<_> = rails::network(&journal)
+            .unwrap()
+            .records()
+            .copied()
+            .collect();
+        for piece in old {
+            let plan = rails::break_layout(&chunks, &journal, piece.anchor).unwrap();
+            rails::commit(&mut chunks, &mut journal, &plan).unwrap();
+        }
+        for x in -15..=15 {
+            for y in -2..=8 {
+                for z in -15..=15 {
+                    set(&mut chunks, [x, y, z], if y == -1 { 3 } else { 0 });
+                }
+            }
+        }
+        let table = terra_core::rails::Piece::new([0; 3], terra_core::rails::TURNTABLE, 0).unwrap();
+        let plan = rails::plan(&chunks, &journal, table.anchor, table.material, 0).unwrap();
+        rails::commit(&mut chunks, &mut journal, &plan).unwrap();
+        let network = rails::network(&journal).unwrap();
+        let car = advance(&chunks, &journal, &network, &car, 0.0).unwrap();
+        let original = car.world_point([0.5, 2.0, 3.5]);
+        let (plan, turned, swept) =
+            turntable(&chunks, &journal, &Default::default(), &network, &car, true).unwrap();
+        assert!(!swept.is_empty());
+        rails::commit(&mut chunks, &mut journal, &plan).unwrap();
+        let network = rails::network(&journal).unwrap();
+        assert_eq!(network.get([0; 3]).unwrap().facing, 1);
+        let turned = advance(&chunks, &journal, &network, &turned, 0.0).unwrap();
+        let (plan, restored, _) = turntable(
+            &chunks,
+            &journal,
+            &Default::default(),
+            &network,
+            &turned,
+            false,
+        )
+        .unwrap();
+        rails::commit(&mut chunks, &mut journal, &plan).unwrap();
+        let restored_point = restored.world_point([0.5, 2.0, 3.5]);
+        assert!((0..3).all(|axis| (original[axis] - restored_point[axis]).abs() < 1e-6));
+        // An obstacle at the final cab position must prevent the whole action.
+        let cab = turned
+            .parts
+            .iter()
+            .position(|part| part.material == train_parts::CAB)
+            .unwrap();
+        let cell = turned.world_cell(cab).unwrap();
+        set(&mut chunks, cell, 3);
+        let before = journal.rail_epoch();
+        assert!(
+            turntable(
+                &chunks,
+                &journal,
+                &Default::default(),
+                &rails::network(&journal).unwrap(),
+                &restored,
+                true
+            )
+            .is_err()
+        );
+        assert_eq!(journal.rail_epoch(), before);
+        let mut moving = restored;
+        moving.motion.brake = false;
+        assert!(
+            turntable(
+                &chunks,
+                &journal,
+                &Default::default(),
+                &rails::network(&journal).unwrap(),
+                &moving,
+                true
+            )
+            .is_err()
+        );
     }
 }

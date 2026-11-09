@@ -3,7 +3,7 @@
   "id": 218,
   "name": "Brennstoffmotor",
   "description": "Functional fuel-powered train engine. Open its fuel inventory and drive from a connected cab.",
-  "creative_category": "building",
+  "creative_category": "trains",
   "render_kind": "custom_mesh",
   "model_layout": "scene",
   "model": "models/train_fuel_engine.gltf",

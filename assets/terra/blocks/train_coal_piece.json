@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
   "id": 269,
-  "name": "Lok-Kohlest\u00fccke",
+  "name": "Lok-Kohlestücke",
   "description": "Decorative BR52 locomotive component. Attach to the connected vehicle body before assembly.",
-  "creative_category": "building",
+  "creative_category": "trains",
   "render_kind": "custom_mesh",
   "model_layout": "scene",
   "model": "models/train_coal_piece.gltf",

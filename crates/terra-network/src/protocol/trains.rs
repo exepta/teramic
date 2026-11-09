@@ -16,6 +16,7 @@ pub enum TrainAction {
         facing: u8,
         kind: VehicleKind,
         wheelbase: u8,
+        width: u8,
         player_revision: u64,
     },
     Assemble {
@@ -68,6 +69,16 @@ pub enum TrainAction {
         vehicle: u64,
         name: String,
         station: Option<[i64; 3]>,
+    },
+    Turntable {
+        vehicle: u64,
+        clockwise: bool,
+        station: Option<[i64; 3]>,
+    },
+    RotateEmpty {
+        station: [i64; 3],
+        anchor: [i64; 3],
+        clockwise: bool,
     },
     Leave,
 }

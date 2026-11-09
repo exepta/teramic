@@ -6274,3 +6274,15 @@ kalte Kurven werden vor dem Import im Hintergrund vorbereitet.
 Protokoll 121; Zugindex ID16 uebernimmt ID13-/ID14-/ID15-Zuege.
 [Aktuelle Zugbedienung](docs/train-building.md).
 [Pruefbericht und native Montageaufnahmen](tools/benchmarks/results/train-workshop-stops-lights-2026-11-09/README.md).
+
+
+Phase 220 ergaenzt Drehgleise, explizite Modellbreiten 1x/3x und den TMI-Tab
+Trains. Die neue Montageansicht folgt der Bildreferenz und zeigt die wirklichen
+Bauteilmodelle. Zug-Inventare verwenden ausgerichtete Standardslots.
+Gleisreparaturen unter stehenden Fahrzeugen und das Neubinden ersetzter
+Gleismodule sind moeglich; zwischengespeicherte Kontaktpruefungen und begrenzte
+Kollisionsaktivierung reduzieren Arbeitsspitzen beim Bauen und Abbauen.
+Protokoll 122, weiterhin Zugindex ID16.
+[Aktuelle Zugbedienung](docs/train-building.md).
+
+Phase-220-Pruefbericht mit Live-Aufnahmen und Einzeltests: [Drehgleis, Breiten und Zug-UI](tools/benchmarks/results/train-turntable-width-ui-2026-11-09/README.md).

@@ -1,38 +1,81 @@
-.train-workshop-overlay { position: absolute; top: 0; right: 0; bottom: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background-color: #09060488; pointer-events: auto; z-index: 230; }
-.train-workshop-panel { position: relative; width: 880px; max-width: 94%; max-height: 94%; display: flex; flex-direction: column; min-height: 0; }
-.train-panel-fill { position: absolute; left: 14px; right: 14px; top: 14px; bottom: 14px; background-color: #241a14f2; pointer-events: none; }
-.train-workshop-content { position: relative; display: flex; flex-direction: column; gap: 10px; padding: 32px; min-height: 0; overflow-y: auto; }
-.train-workshop-content p { margin: 0; color: #dfcba5; font-size: 12px; line-height: 16px; text-wrap: wrap; }
-.train-workshop-content h2 { margin: 0; color: #f5dfb0; font-family: serif; font-size: 23px; }
-.train-workshop-content h3 { margin: 0; color: #efdab2; font-size: 14px; }
-.train-workshop-heading, .train-vehicle-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.train-workshop-heading { justify-content: center; }
-.train-workshop-columns { display: flex; gap: 20px; }
-.train-workshop-controls { display: flex; flex-direction: column; gap: 8px; width: 240px; flex-shrink: 0; }
-.train-workshop-vehicles { display: flex; flex-direction: column; gap: 6px; flex-grow: 1; min-width: 0; }
-.train-workshop-content button { min-height: 30px; padding: 5px 10px; border: 1px solid #89603f; border-radius: 3px; background-color: #38271c; color: #f0dcb7; font-size: 12px; text-align: center; }
-.train-workshop-content button:hover { border-color: #b68752; background-color: #4b3423; }
-.train-workshop-content button:disabled { opacity: .45; }
-.train-workshop-content .train-primary { background-color: #644325; }
-.train-kind-buttons { display: flex; flex-wrap: wrap; gap: 5px; }
-.train-kind-buttons button { width: 47%; }
-.train-blueprint-actions, .train-secondary-actions { display: flex; flex-wrap: wrap; gap: 5px; }
-.train-blueprint-actions button, .train-secondary-actions button { flex-grow: 1; width: 47%; }
-.train-kind-buttons button.selected { border-color: #a2b77a; background-color: #354030; color: #f8edc5; }
-.train-wheelbase { display: flex; align-items: center; justify-content: center; gap: 12px; }
-.train-wheelbase p { min-width: 42px; text-align: center; }
-.train-drive-panel { display: flex; flex-direction: column; gap: 6px; padding: 12px; background-color: #1b1510; border: 1px solid #73573e; border-radius: 3px; }
-.train-drive-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
-.train-workshop-content .train-drive-speed { font-size: 19px; line-height: 24px; color: #f5dfb0; }
-.train-drive-slider { width: 100%; height: 30px; }
-.train-drive-slider::track { height: 5px; background-color: #241a14 !important; border: 1px solid #89603f !important; }
-.train-drive-slider::fill { background-color: #ad8552 !important; }
-.train-drive-slider::thumb { width: 18px; height: 27px; background-color: #30271e !important; border: 2px solid #e2bd7b !important; border-radius: 3px; }
-.train-throttle-notches { display: flex; justify-content: space-between; gap: 5px; }
-.train-throttle-notches button { flex-grow: 1; min-width: 30px; }
-.train-throttle-notches button.selected { background-color: #6c512f; border-color: #d0ad71; color: #fff0cc; }
-.train-drive-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.train-workshop-overlay { position: absolute; top: 0; right: 0; bottom: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background-color: #090604aa; pointer-events: auto; z-index: 230; }
+.train-workshop-panel { position: relative; width: 1180px; max-width: 94%; max-height: 9999px; display: flex; flex-direction: column; flex-shrink: 0; }
+.train-panel-fill { position: absolute; top: 14px; right: 14px; bottom: 14px; left: 14px; background-color: #241a14f5; pointer-events: none; }
+.train-workshop-content { position: relative; display: flex; flex-direction: column; padding: 30px; gap: 12px; flex-shrink: 0; }
+.train-workshop-content p, .train-workshop-content label { margin: 0; color: #dfcba5; font-size: 12px; line-height: 18px; text-wrap: wrap; }
+.train-workshop-content h2 { margin: 0; color: #f5dfb0; font-family: serif; font-size: 24px; line-height: 32px; }
+.train-workshop-content h3 { margin: 0; display: flex; align-items: center; gap: 8px; color: #f1d6ab; font-family: serif; font-size: 17px; line-height: 24px; }
+.train-workshop-content button { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 36px; min-width: 0; padding: 8px 12px; border: 1px solid #947051; border-radius: 3px; background-color: #493125; background-image: linear-gradient(to bottom, #594030, #38271e); color: #f0dbb7; font-size: 12px; line-height: 18px; text-align: center; text-wrap: wrap; flex-shrink: 0; }
+.train-workshop-content button:hover { border-color: #c19a6d; background-color: #654934; }
+.train-workshop-content button:disabled { opacity: .40; }
+.train-workshop-content button.selected { border: 2px solid #c7a260; background-color: #66502f; background-image: linear-gradient(to bottom, #735633, #453523); }
+.train-title { display: flex; align-items: center; justify-content: center; gap: 12px; position: relative; min-height: 40px; padding: 0 44px; }
+.train-workshop-content .train-close { position: absolute; right: 0; top: 0; width: 34px; height: 34px; min-height: 34px; padding: 7px; background-color: #6a3525; }
+.train-build-grid { display: grid; grid-template-columns: 190px 1fr 270px; gap: 12px; }
+.train-bottom-grid { display: grid; grid-template-columns: 1fr 1fr 270px; gap: 12px; }
+.train-card { display: flex; flex-direction: column; gap: 10px; padding: 15px; min-width: 0; border: 1px solid #876246; border-radius: 4px; background-color: #30221a; background-image: linear-gradient(to bottom, #39281e, #261c16); }
+.train-types .train-kind { justify-content: flex-start; min-height: 51px; padding: 7px; gap: 7px; }
+.train-kind img { width: 35px; height: 35px; flex-shrink: 0; }
+.train-kind p { font-size: 12px; }
+.train-width-buttons, .train-template-actions, .train-coupling { display: flex; gap: 6px; }
+.train-width-buttons button, .train-template-actions button, .train-coupling button { flex-grow: 1; }
+.train-preview-card { padding: 12px; background-color: #211c20; background-image: linear-gradient(to bottom, #28242a, #19191e); }
+.train-wheelbase { display: flex; align-items: center; justify-content: center; gap: 8px; }
+.train-wheelbase p { font-size: 12px; }
+.train-workshop-content .train-wheelbase button { min-height: 30px; width: 30px; padding: 5px; }
+.train-wheelbase-value { min-width: 40px; text-align: center; }
+.train-model-preview { width: 100%; height: 220px; min-width: 0; flex-shrink: 0; }
+.train-progress { display: flex; align-items: center; gap: 8px; }
+.train-progress progress-bar { flex-grow: 1; height: 14px; }
+.train-progress progress-bar::track { background-color: #171510; border: 1px solid #80664b; border-radius: 3px; }
+.train-progress progress-bar::fill { background-color: #7da146; border-radius: 2px; }
+.train-workshop-content .train-preview-caption { font-size: 10px; line-height: 14px; }
+.train-build-actions { display: flex; flex-direction: column; gap: 12px; }
+.train-name-input { display: flex; align-items: center; gap: 7px; }
+.train-name-input input { width: 100%; min-width: 0; height: 34px; padding: 7px 9px; font-size: 12px; color: #f0dcb7; background-color: #19120f; border: 1px solid #94765d; text-align: left; }
+.train-name-input p { font-size: 10px; flex-shrink: 0; }
+.train-build-buttons { flex-grow: 1; justify-content: center; }
+.train-workshop-content .train-primary { border-color: #ad8958; }
+.train-template-actions { flex-wrap: wrap; }
+.train-template-actions button { padding: 5px; font-size: 10px; min-height: 28px; }
+.train-workshop-vehicles { gap: 9px; }
+.train-vehicle-list { display: flex; flex-direction: column; gap: 6px; }
+.train-workshop-content .train-vehicle { flex-direction: column; align-items: flex-start; gap: 2px; padding: 8px 10px; min-height: 46px; }
+.train-vehicle p { text-align: left; }
+.train-workshop-content .train-vehicle-detail { font-size: 10px; line-height: 14px; }
+.train-workshop-content .train-vehicle.second { border-color: #94ad7f; background-color: #354030; }
+.train-pagination { display: flex; align-items: center; justify-content: space-between; gap: 7px; }
+.train-pagination button { padding: 6px 9px; }
+.train-coupling button { font-size: 10px; padding: 5px 6px; min-height: 28px; }
+.train-drive-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.train-workshop-content .train-drive-speed { font-family: serif; font-size: 23px; line-height: 30px; color: #f8e3ba; }
+.train-drive-slider { width: 100%; height: 22px; }
+.train-drive-slider::track { height: 5px; background-color: #211a14; border: 1px solid #89603f; }
+.train-drive-slider::fill { background-color: #ad8552; }
+.train-drive-slider::thumb { width: 14px; height: 22px; background-color: #493527; border: 1px solid #d3ac71; border-radius: 3px; }
+.train-throttle-notches { display: flex; justify-content: space-between; gap: 4px; }
+.train-throttle-notches button { flex-grow: 1; min-height: 25px; padding: 3px; }
+.train-drive-actions { display: flex; gap: 8px; }
 .train-drive-actions button { flex-grow: 1; }
+.train-workshop-content .train-go { background-image: linear-gradient(to bottom, #52602e, #354523); }
+.train-workshop-content .train-stop { background-image: linear-gradient(to bottom, #793f2b, #53281f); }
+.train-workshop-content .train-small-label { font-size: 10px; line-height: 14px; }
+.train-ready { padding: 12px; background-color: #211a15; border: 1px solid #6e5944; text-align: center; }
+.train-workshop-footer { padding: 3px 4px 0; min-height: 20px; }
+.train-workshop-footer p { font-size: 11px; line-height: 16px; }
+.train-workshop-panel.train-cargo-panel { width: 396px; }
+.train-cargo-panel .train-workshop-content { padding: 26px; gap: 8px; }
+.train-cargo-panel h2 { font-size: 18px; line-height: 25px; }
+.train-cargo-panel h3 { font-family: sans-serif; font-size: 13px; }
+.train-cargo-panel p { font-size: 11px; line-height: 16px; }
+.train-slots { display: grid; grid-template-columns: repeat(9, 33.6px); width: 318.4px; gap: 2px; align-self: center; flex-shrink: 0; }
+.train-workshop-content .train-slot { position: relative; width: 33.6px; height: 33.6px; min-width: 33.6px; min-height: 33.6px; padding: 4px; border: 2px solid #94765d; border-radius: 3px; background-color: #38271f; background-image: linear-gradient(to bottom, #4a352a, #2a1d19); }
+.train-slot img { width: 100%; height: 100%; min-width: 0; min-height: 0; pointer-events: none; }
+.train-slot p { position: absolute; top: 2px; right: 3px; font-size: 10px; line-height: 12px; color: #fff3d5; text-shadow: 1px 2px #000000; pointer-events: none; }
+.train-held-item { display: flex; align-items: center; gap: 8px; padding: 6px; background-color: #30271e; }
+.train-held-item img { width: 27px; height: 27px; }
+@media (max-width: 1000px) { .train-build-grid { grid-template-columns: 160px 1fr 230px; gap: 9px; } .train-bottom-grid { grid-template-columns: 1fr 1fr 230px; gap: 9px; } .train-card { padding: 12px; } .train-workshop-content { padding: 26px; gap: 9px; } }
+@media (max-width: 700px) { .train-build-grid { grid-template-columns: 135px 1fr 195px; gap: 7px; } .train-bottom-grid { grid-template-columns: 1fr 1fr 195px; gap: 7px; } .train-card { padding: 10px; } .train-types .train-kind { flex-direction: column; gap: 2px; } .train-model-preview { height: 190px; } .train-wheelbase { flex-wrap: wrap; } }
 .train-driver-hud { position: absolute; right: 24px; bottom: 16%; width: 280px; display: flex; flex-direction: column; gap: 4px; padding: 12px; background-color: #21190fe8; border: 1px solid #8e6b42; border-radius: 3px; pointer-events: none; }
 .train-driver-hud p { margin: 0; color: #ead5ae; font-size: 11px; line-height: 15px; text-wrap: wrap; text-shadow: 1px 2px #0c0906; }
 .train-driver-hud .train-driver-speed { color: #fff0cb; font-family: serif; font-size: 23px; line-height: 29px; }
@@ -41,67 +84,15 @@
 .train-hud-notches p.selected { background-color: #715334; border-color: #d7b37b; color: #fff0cc; }
 .train-blueprint-hint { position: absolute; bottom: 20%; left: 20%; width: 60%; display: flex; flex-direction: column; align-items: center; gap: 3px; pointer-events: none; }
 .train-blueprint-hint p { margin: 0; color: #e2efd0; font-size: 13px; text-align: center; text-shadow: 1px 2px #10130d; }
-.train-workshop-content .train-vehicle { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-height: 46px; padding: 7px 12px; }
-.train-workshop-content .train-vehicle.selected { border-color: #d3ac64; background-color: #573a24; }
-.train-workshop-content .train-vehicle.second { border-color: #9aa481; background-color: #354030; }
-.train-pagination, .train-coupling { display: flex; align-items: center; justify-content: flex-end; gap: 6px; }
-.train-coupling button { flex-grow: 1; }
-.train-workshop-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-top: 8px; }
-.train-workshop-footer p { flex-grow: 1; }
-.train-slots { display: flex; flex-wrap: wrap; gap: 4px; width: 334.4px; max-width: 100%; align-self: center; }
-.train-workshop-content .train-slot { position: relative; width: 33.6px; height: 33.6px; min-width: 33.6px; min-height: 33.6px; padding: 3px; border: 1px solid #73573e; background-color: #1b1510; }
-.train-slot img { width: 25.6px; height: 25.6px; }
-.train-held-item { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 6px; background-color: #30271e; }
-.train-held-item img { width: 25.6px; height: 25.6px; }
-.train-slot p { position: absolute; bottom: 1px; right: 3px; color: #fff3d5; font-size: 11px; text-shadow: 1px 2px #000000; }
-@media (max-width: 900px) {
-  .train-workshop-panel { width: 700px; }
-  .train-workshop-content { padding: 25px; gap: 7px; }
-  .train-workshop-controls { width: 200px; gap: 5px; }
-  .train-workshop-columns { gap: 12px; }
-  .train-workshop-content .train-vehicle { min-height: 39px; padding: 4px 8px; }
-}
-@media (max-height: 680px) {
-  .train-workshop-content { padding: 23px; gap: 5px; }
-  .train-workshop-content h2 { font-size: 20px; }
-  .train-slots { width: 302px; }
-  .train-workshop-content .train-slot { width: 30px; height: 30px; min-width: 30px; min-height: 30px; }
-  .train-slot img { width: 22px; height: 22px; }
-  .train-workshop-content .train-vehicle { min-height: 32px; padding: 3px 8px; }
-  .train-workshop-content button { min-height: 25px; padding: 3px 7px; }
-}
 
-/* Share the player inventory cell geometry and responsive zoom. */
-.train-workshop-panel.train-cargo-panel { width: 396px; max-height: 9999px; }
-.train-cargo-panel .train-workshop-content { padding: 24px; gap: 5px; overflow-y: visible; }
-.train-cargo-panel .train-slots { display: grid; grid-template-columns: repeat(9, 33.6px); width: 318.4px; gap: 2px; flex-shrink: 0; }
-.train-cargo-panel .train-slot { width: 33.6px; height: 33.6px; min-width: 33.6px; min-height: 33.6px; flex-shrink: 0; padding: 4px; border: 2px solid #94765d; background-color: #38271f; background-image: linear-gradient(to bottom, #4a352a, #2a1d19); }
-.train-cargo-panel .train-slot img { width: 100%; height: 100%; }
-.train-cargo-panel h2 { font-size: 18px; }
-.train-cargo-panel .train-workshop-footer { flex-wrap: wrap; }
-
-/* Match the inventory palette and keep typography inside padded controls. */
-.train-workshop-panel { width: 920px; max-height: 9999px; flex-shrink: 0; }
-.train-workshop-content { padding: 30px; gap: 12px; overflow-y: visible; flex-shrink: 0; }
-.train-workshop-content h2 { font-size: 21px; line-height: 28px; }
-.train-workshop-content h3 { font-size: 14px; line-height: 20px; }
-.train-workshop-content p, .train-workshop-content label { font-size: 12px; line-height: 18px; text-wrap: wrap; }
-.train-workshop-content button { min-height: 34px; padding: 7px 12px; font-size: 12px; line-height: 18px; border: 1px solid #94765d; background-color: #38271f; color: #ead4b1; text-wrap: wrap; flex-shrink: 0; }
-.train-workshop-content button:hover { background-color: #503c2e; border-color: #b5926a; }
-.train-workshop-content .train-primary { background-color: #59432d; }
-.train-workshop-controls { width: 280px; gap: 9px; }
-.train-workshop-vehicles { gap: 9px; }
-.train-workshop-content .train-vehicle { min-height: 66px; padding: 10px 14px; gap: 4px; }
-.train-workshop-content .train-vehicle p { text-align: left; }
-.train-name-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px 12px; background-color: #211813; border: 1px solid #73573e; }
-.train-name-row label { color: #dfcba5; }
-.train-name-row input { min-width: 150px; flex-grow: 1; height: 34px; padding: 7px 10px; font-size: 12px; color: #f0dcb7; background-color: #19120f; border: 1px solid #94765d; text-align: left; }
-.train-workshop-footer { border-top: 1px solid #73573e; padding-top: 12px; min-height: 44px; }
-.train-cargo-panel .train-slot { min-height: 33.6px; padding: 4px; }
-@media (max-width: 740px) {
-  .train-workshop-panel { width: 94%; }
-  .train-workshop-columns { flex-direction: column; gap: 14px; }
-  .train-workshop-controls { width: 100%; }
-  .train-name-row input { width: 100%; }
-  .train-cargo-panel .train-workshop-content { padding: 24px; }
-}
+/* Explicit glyph bounds keep labels inside their padded controls. */
+.train-workshop-content button icon { width: 16px !important; height: 16px !important; min-width: 0 !important; min-height: 0 !important; flex-shrink: 0; }
+.train-workshop-content h3 icon { width: 18px !important; height: 18px !important; min-width: 0 !important; min-height: 0 !important; flex-shrink: 0; }
+.train-workshop-content .train-close { font-size: 22px; line-height: 24px; padding: 4px; color: #f5d8b0; }
+.train-kind p { min-width: 0; text-align: left; }
+@media (max-width: 1000px) { .train-types .train-kind { flex-direction: column; gap: 2px; padding: 5px; } .train-kind img { width: 26px; height: 26px; } .train-kind p { text-align: center; } }
+@media (max-width: 1000px) { .train-workshop-content h3 { font-size: 15px; line-height: 21px; gap: 6px; } }
+/* Cargo headings follow the compact inventory hierarchy, not the workshop hero title. */
+.train-workshop-content .train-cargo-title { font-size: 16px !important; line-height: 22px !important; }
+.train-workshop-content .train-cargo-heading { font-family: sans-serif; font-size: 12px !important; line-height: 18px !important; }
+.train-cargo-panel .train-title > icon { width: 18px !important; height: 18px !important; min-width: 0 !important; min-height: 0 !important; flex-shrink: 0; }

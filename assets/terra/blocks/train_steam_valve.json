@@ -3,7 +3,7 @@
   "id": 229,
   "name": "Lok-Dampfventil",
   "description": "Decorative steam valve fitting. The fuel engine is controlled by its cab lever; steam circuits follow the steam engine system.",
-  "creative_category": "building",
+  "creative_category": "trains",
   "render_kind": "custom_mesh",
   "model_layout": "scene",
   "model": "models/train_steam_valve.gltf",

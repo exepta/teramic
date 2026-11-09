@@ -1704,7 +1704,7 @@ fn br52_metadata_and_the_complete_recipe_catalog_fit_the_transport_budgets() {
         assert_eq!(definition.model, format!("models/{}.gltf", part.slug));
         assert!(definition.gameplay.struct_block);
         assert!(!definition.description.is_empty());
-        assert_eq!(definition.creative_category.as_deref(), Some("building"));
+        assert_eq!(definition.creative_category.as_deref(), Some("trains"));
         assert_eq!(
             definition.collision_boxes.as_slice(),
             locomotive_parts::base_boxes(part.id)

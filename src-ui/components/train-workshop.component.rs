@@ -65,6 +65,11 @@ fn train_command(id: &str) -> bool {
         id,
         "close"
             | "name-save"
+            | "width:1"
+            | "width:3"
+            | "turn-left"
+            | "turn-right"
+            | "drive-start"
             | "wheelbase-dec"
             | "wheelbase-inc"
             | "blueprint"

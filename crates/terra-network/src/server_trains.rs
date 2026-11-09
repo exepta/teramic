@@ -548,6 +548,164 @@ pub(super) fn apply(
             car.revision = next_revision;
             Ok(TrainOutcome::Changed { vehicle: Some(id) })
         }
+        TrainAction::RotateEmpty {
+            station: cell,
+            anchor,
+            clockwise,
+        } => {
+            station(peer, world, cell)?;
+            if (0..3).any(|axis| anchor[axis].abs_diff(cell[axis]) > 32) {
+                return Err(TrainError::OutOfReach);
+            }
+            let piece = terra_world::rails::owner_at(&world.journal, anchor)
+                .filter(|piece| piece.material == terra_core::rails::TURNTABLE)
+                .ok_or(TrainError::Unsupported)?;
+            let center = [
+                piece.anchor[0] as f64 + 0.5,
+                piece.anchor[1] as f64,
+                piece.anchor[2] as f64 + 0.5,
+            ];
+            if world
+                .journal
+                .gameplay()
+                .trains
+                .vehicles
+                .values()
+                .any(|car| {
+                    let bounds = car.model_bounds();
+                    let x = center[0].clamp(bounds[0][0], bounds[1][0]);
+                    let z = center[2].clamp(bounds[0][2], bounds[1][2]);
+                    bounds[0][1] < center[1] + 1.0
+                        && bounds[1][1] > center[1]
+                        && (x - center[0]).hypot(z - center[2])
+                            < terra_core::rails::TURNTABLE_RADIUS
+                })
+                || world.bodies.iter().any(|body| {
+                    let feet = body.translation.y - terra_physics::character::PLAYER_HALF_HEIGHT;
+                    f64::from(feet) < center[1] + 1.5
+                        && f64::from(
+                            body.translation.y + terra_physics::character::PLAYER_HALF_HEIGHT,
+                        ) > center[1]
+                        && (f64::from(body.translation.x) - center[0])
+                            .hypot(f64::from(body.translation.z) - center[2])
+                            < terra_core::rails::TURNTABLE_RADIUS
+                })
+            {
+                return Err(TrainError::Occupied);
+            }
+            let plan = terra_world::rails::turntable_plan(
+                &world.chunks,
+                &world.journal,
+                anchor,
+                clockwise,
+            )
+            .map_err(|_| TrainError::Unsupported)?;
+            if plan
+                .edits
+                .iter()
+                .any(|edit| !permitted(peer, world, edit.position, KingdomPermission::Build))
+            {
+                return Err(TrainError::Protected);
+            }
+            terra_world::rails::commit(&mut world.chunks, &mut world.journal, &plan)
+                .map_err(|_| TrainError::Stale)?;
+            Ok(TrainOutcome::Changed { vehicle: None })
+        }
+        TrainAction::Turntable {
+            vehicle: id,
+            clockwise,
+            station: editing_station,
+        } => {
+            let car = vehicle(peer, world, id)?;
+            if seated
+                .binding(peer.uuid)
+                .is_none_or(|binding| binding.vehicle != id)
+            {
+                if let Some(cell) = editing_station {
+                    station(peer, world, cell)?;
+                    if (0..3)
+                        .any(|axis| (car.model_origin()[axis] - cell[axis] as f64).abs() > 48.0)
+                    {
+                        return Err(TrainError::OutOfReach);
+                    }
+                } else {
+                    if !(0..car.parts.len())
+                        .any(|index| reach_part(peer, world, &car, index as u16).is_ok())
+                    {
+                        return Err(TrainError::OutOfReach);
+                    }
+                }
+            }
+            let network =
+                terra_world::rails::network(&world.journal).map_err(|_| TrainError::Unsupported)?;
+            let (plan, next, swept) = terra_world::train_motion::turntable(
+                &world.chunks,
+                &world.journal,
+                &world.block_properties,
+                &network,
+                &car,
+                clockwise,
+            )?;
+            for edit in &plan.edits {
+                if !permitted(peer, world, edit.position, KingdomPermission::Build) {
+                    return Err(TrainError::Protected);
+                }
+            }
+            let half = Vec3::new(
+                terra_physics::character::PLAYER_RADIUS,
+                terra_physics::character::PLAYER_HALF_HEIGHT,
+                terra_physics::character::PLAYER_RADIUS,
+            );
+            for shape in &swept {
+                if world.bodies.iter().any(|body| {
+                    !seated.poses.iter().any(|(uuid, (position, _))| {
+                        seated.binding(*uuid).is_some_and(|seat| seat.vehicle == id)
+                            && position.distance(body.translation) < 0.01
+                    }) && shape.intersects(
+                        (body.translation - half).to_array().map(f64::from),
+                        (body.translation + half).to_array().map(f64::from),
+                    )
+                }) || world
+                    .journal
+                    .gameplay()
+                    .trains
+                    .vehicles
+                    .values()
+                    .any(|other| {
+                        other.id != id && overlaps_vehicle(other, shape.minimum, shape.maximum)
+                    })
+                {
+                    return Err(TrainError::Occupied);
+                }
+                for x in shape.minimum[0].floor() as i64..=shape.maximum[0].floor() as i64 {
+                    for z in shape.minimum[2].floor() as i64..=shape.maximum[2].floor() as i64 {
+                        if !permitted(
+                            peer,
+                            world,
+                            [x, shape.minimum[1].floor() as i64, z],
+                            KingdomPermission::Inventories,
+                        ) {
+                            return Err(TrainError::Protected);
+                        }
+                    }
+                }
+            }
+            if world.journal.gameplay().revision == u64::MAX
+                || world.journal.gameplay().trains.revision == u64::MAX
+            {
+                return Err(TrainError::Overflow);
+            }
+            terra_world::rails::commit(&mut world.chunks, &mut world.journal, &plan)
+                .map_err(|_| TrainError::Stale)?;
+            touch(world)?;
+            world
+                .journal
+                .gameplay_mut()
+                .trains
+                .vehicles
+                .insert(id, next);
+            Ok(TrainOutcome::Changed { vehicle: Some(id) })
+        }
         TrainAction::Name {
             vehicle: id,
             name,
@@ -597,6 +755,7 @@ pub(super) fn apply(
             facing,
             kind,
             wheelbase,
+            width,
             player_revision,
         } => {
             station(peer, world, cell)?;
@@ -620,6 +779,7 @@ pub(super) fn apply(
                     facing,
                     kind,
                     wheelbase,
+                    width,
                     creative: peer.game_mode(&world.config) == GameMode::Creative,
                 },
             )?;

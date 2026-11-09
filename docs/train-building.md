@@ -9,6 +9,10 @@ wenn entsprechend belegt).
    aufstellen. Die Vorlage umfasst einen durchgehenden Rahmen, zwei Drehgestelle
    und zwei Kupplungen. Ihr Achsabstand ist zwischen 3 und 15 Bloecken einstellbar;
    voreingestellt sind 4 Bloecke. Gemeint ist der Abstand der Drehgestellmitten.
+   Mit **Modellbreite 1x / 3x** den schmalen oder drei Bloecke breiten Aufbau
+   waehlen. Die Breite vor dem Bauen festlegen; bestehende Aufbauten in der
+   Montage bearbeiten. Die breite Vorlage hat durchgehende seitliche Rahmen und einen
+   3x3-Kessel; die Drehgestelle behalten dieselbe Spurweite.
 2. Die Montagestelle mit leerer Hand oeffnen. Lokomotive, Tender, Personenwagen
    oder Gueterwagen und den Achsabstand auswaehlen. Die Auswahl zeigt eine am
    Gleis ausgerichtete Vorlage und die benoetigten Bauteile. Bei der Lokomotive
@@ -104,7 +108,7 @@ nach dem Rueckbau wieder aktiv. Separat simulierte Pflanzen/Weltobjekte vor der
 Montage entfernen; voxelbasierte Laternen, Ketten und Banner sind mitmontierbar.
 
 Ein Fahrzeug darf bis zu 256 Blockteile enthalten. Die Vorlage ist eine Bauhilfe;
-Materialien werden beim normalen Platzieren verbraucht. Netzwerkprotokoll 121 und
+Materialien werden beim normalen Platzieren verbraucht. Netzwerkprotokoll 122 und
 Zugindex ID16 speichern Fahrt und Namen; ID13-/ID14-/ID15-Zuege bleiben lesbar.
 Client und Server gemeinsam neu bauen und neu starten.
 
@@ -135,5 +139,39 @@ Der Gleismodus **Prellbock** stoppt den Zug vor dem Anschlag einschliesslich
 Wagenkasten und Kupplung. Ein Verbund wird gemeinsam angehalten; Rueckwaerts
 vom Prellbock wegzufahren bleibt erlaubt.
 
-Client und Server benoetigen Protokoll 121. Zugindex ID16 speichert die neuen
+Client und Server benoetigen Protokoll 122. Zugindex ID16 speichert die neuen
 Namen und uebernimmt bestehende Zuege aus ID13, ID14 und ID15.
+
+
+## Neue Montageansicht
+
+Links stehen Fahrzeugtyp und Modellbreite, in der Mitte die echte gerenderte
+Modellvorschau mit Achsabstand und Baufortschritt, rechts Name und Bauaktionen.
+Darunter liegen Fahrzeugliste, Fahrpult und Aktionen. Die Vorschau zeigt die
+aktuelle Vorlage beziehungsweise das ausgewaehlte montierte Fahrzeug und wird
+nur bei Aenderungen der Geometrie neu aufgebaut. Das X oben rechts sowie E/ESC
+schliessen die Ansicht; einen unteren Schliessen-/ESC-Button gibt es nicht.
+Motor und Ladung benutzen die gleichen auf ganze Bildpunkte ausgerichteten
+Slotmasse wie die uebrigen Inventare und werden kompakter dargestellt.
+
+Im TMI-Katalog liegen Gleise, Weichen, Drehgleis und Zugbauteile im eigenen
+Tab **Trains**. Die herstellbare **Drehscheibe / Drehgleis** hat ein 25 Meter
+langes Gleis auf einer runden Plattform. Ein Modul wird mit einem Item gesetzt
+und beim Abbau als ein Item zurueckgegeben.
+
+Auch ein leeres Drehgleis laesst sich an einer Montagestelle mit **Links / Rechts**
+ausrichten: die Fahrzeugauswahl loesen und neben der Plattform stehen.
+
+Zum Drehen das vollstaendige Fahrzeug auf die Plattform fahren, anhalten,
+die Bremse setzen und Kupplungen loesen. Fahrzeug in der Montageansicht oder
+im Fahrpult auswaehlen und bei den Aktionen **Links / Rechts** waehlen. Zug und
+Plattform drehen gemeinsam um 90 Grad; der Anschluss folgt der neuen Richtung.
+Der Drehraum muss geladen, frei und zugaenglich sein. Andere Fahrzeuge,
+Personen, feste Hindernisse und geschuetzte Bereiche verhindern die Aktion.
+Ein Fahrzeug, das ueber den Plattformrand ragt, kann nicht gedreht werden.
+
+Wird ein Gleis unter dem Zug entfernt, bleibt dieser sicher an seiner Position
+stehen. Nach einer passenden Reparatur kann er wieder anfahren. Dabei duerfen
+Drehgestell und Schiene denselben Voxel belegen, solange sich ihre tatsaechlichen
+Formen nicht ueberschneiden. Eine Reparatur mit neuen Gleismodul-Ankern wird an
+der bestehenden Fahrzeugposition erkannt.

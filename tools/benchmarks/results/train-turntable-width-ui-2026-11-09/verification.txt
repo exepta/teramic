@@ -1,0 +1,36 @@
+PASS cargo test --locked --workspace --lib --bins -- --test-threads=4 (4474 passed, 10 ignored)
+PASS cargo test --locked -p terra-ui --lib (569 passed, final layout)
+PASS cargo test --locked --workspace --lib --bins automatically_built_widths_assemble_the_whole_body -- --test-threads=4
+PASS cargo build --locked --workspace
+PASS cargo clippy --locked --workspace --all-targets -- -D warnings
+PASS cargo fmt --all -- --check
+PASS git diff --check
+PASS Native TERRA_TRAIN_WORKSHOP_LIVE=1, 1080p/720p workshop and driving capture, UI-only fixture
+PASS Native TERRA_TRAIN_INVENTORY_LIVE=1, actual DOM/picking, four pointer transactions, controlled acknowledgements
+PASS Native --smoke-test-building, TERRA_BUILD_CREATIVE=1, TERRA_PLACEMENT_TIMING=1, isolated real integrated server
+PASS Changed existing JSON/glTF parse and generated rail profile source provenance
+Protocol 122; train saved index ID16.
+Placement sample: 139 frames; median 6.836826 ms; P95 9.982243 ms; max 48.440514 ms.
+Limits: no manual ride or before/after benchmark in the reported user save. No universal streaming stall guarantee.
+Base commit: 711e31cee9dd061a7180d9f80df0882427b41d66
+
+SHA256 artifacts:
+d33e134ad7b752ac12e4c211797bcb1b1f6f8be41ae5e89dd5d303b1cd168c72  README.md
+6d4622d57a3b4c0f5cda00f65f47a3402c209bb0650f0251c670776eedfe26ef  assembly-integration.log
+60d23853b4b644fbd1aa42953a2299c93a8e8ff12ae4146a0e6741606b14d22b  build.log
+188836dfe8c8e57f87977ad7b9af66461335347bad6a037644201633922310a4  building-restored.png
+c80475e44ded6f838b3935abee5fefdd8ff0504a2e53c3646fef6d9061cf6446  clippy.log
+b1372fe8aff35d54ff6b303703b761058479f343c76ba4eeec98371471aa0cbd  engine-before.png
+9aa4c34ae6bd22589e5bc7283f837b118717ea2235193d3c715c05ea76ec8619  engine-filled.png
+47e74a7ac25dfd9b40e63c477c8e905287028124d827b1700ce0b4638978646d  native-building.log
+22ce3b7fdf3cb3bcadceaa774dd5858e4dca7be12bb1bcc5a6cc47348c6f2af9  native-inventory.log
+d80ed3d9fd51be051070a048b5767fbdf441ad93d589b2f22674b7813ca927a3  native-workshop.log
+f3bd9702fddb450ef8cd6ab39b6be5ff63a4fd1a955f6c90234dcde47009569b  placement-metrics.json
+8a3114eb9aaf745d0371c7214824be40cb5bfee68dab7ed747e0dc43c51bbf12  storage-before.png
+576efa77567ae5fb607ccba230860d44b5daf1040a25803c6a413df850239f2c  storage-filled.png
+1fd8213f2a49606008d9b87ad3cff7037958abdad213fd16423f910c3e11dc17  tests.log
+26e435a4564fd5839c5405c90c45e6242cd3f4a20a81010bbfbd56c6cfc67b8f  train-driving-1080.png
+b56ac0bd25842865a7e7b283a00163b7fb8b46c8505b3e332160b2c312879b37  train-driving-720.png
+ffe4abd5848df967507994aaaffbd33b709e18da7864fbab0e871fd50fcbaaed  train-workshop-1080.png
+ef024e66a424b17f916bed8f2ec61299b6ef51184e63192a7e4379abb0259d3d  train-workshop-720.png
+f1c3f1fab962887fbea64098fc62de29360ee9f505ca0ad432e966324f431b42  ui-final-tests.log

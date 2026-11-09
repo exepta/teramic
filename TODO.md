@@ -104,7 +104,7 @@ Wachstum, NPC-Arbeit und bewegte Fahrzeuge muessen begrenzt simuliert werden.
 
 ## 6. Offene Abnahmen
 
-- [ ] **A01 Grafik-Abnahme:** Blockformen/-oberflaechen, Kronen, Gras, Blumen, Pilze, Mineralien, Hoehlen, Ufer, Korallen, Anemonen und Tiere gemeinsam an nativen Referenzansichten menschlich beurteilen. Avatar-Gesichter, Griffpunkte und menschliche Animationen einschliessen.
+- [ ] **A01 Grafik-Abnahme:** Blockformen/-oberflaechen, Kronen, Gras, Blumen, Pilze, Mineralien, Hoehlen, Ufer, Korallen, Anemonen und Tiere gemeinsam an nativen Referenzansichten menschlich beurteilen. Avatar-Gesichter, Griffpunkte, Zug-Montageansicht/Inventare und menschliche Animationen einschliessen.
 
 - [ ] **A02 Audio-Abnahme:** Tier-/Schritt-/Ess-/Ofen-/Zug-/Oeffnungs-/Husten-/Wasser-/Wetterklang mit Kopfhoerern und Lautsprechern menschlich pruefen. Dekodiertests durch tatsaechliche Hoerabnahme ergaenzen.
 

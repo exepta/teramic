@@ -30,9 +30,9 @@ fn placement_source_allowed(action: EditAction, source: u16) -> bool {
         _ => return false,
     };
     match source {
-        196 => terra_core::rails::is_rail(target) && !matches!(target, 202..=204),
+        196 => terra_core::rails::is_rail(target) && !matches!(target, 202..=204 | 295),
         197..=201 => target == source || target == terra_core::rails::STRAIGHT,
-        202 | 203 | 205 => target == source,
+        202 | 203 | 205 | 295 => target == source,
         _ => false,
     }
 }

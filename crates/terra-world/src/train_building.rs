@@ -9,6 +9,7 @@ pub struct BuildRequest {
     pub facing: u8,
     pub kind: VehicleKind,
     pub wheelbase: u8,
+    pub width: u8,
     pub creative: bool,
 }
 pub struct BuildPlan {
@@ -23,11 +24,12 @@ pub fn plan_blueprint(
     request: BuildRequest,
 ) -> Result<BuildPlan, TrainError> {
     station_ready(chunks, journal, request.actor, request.station)?;
-    let guide = train_blueprint::building_template(
+    let guide = train_blueprint::building_template_with_width(
         request.chassis,
         request.facing,
         request.kind,
         request.wheelbase,
+        request.width,
     );
     if guide.is_empty()
         || guide.iter().any(|part| {
@@ -55,14 +57,7 @@ pub fn plan_blueprint(
     }
     let mut after = before.clone();
     let mut cells = Vec::new();
-    for mut part in guide {
-        if terra_core::train_boiler::is_boiler(part.material)
-            && terra_core::train_boiler::wide_support(part.cell, part.facing, |cell| {
-                chunks.block_at(cell)
-            })
-        {
-            part.facing |= 4;
-        }
+    for part in guide {
         if !allowed(
             chunks,
             journal,
@@ -84,6 +79,40 @@ pub fn plan_blueprint(
         }
         if current != 0 {
             return Err(TrainError::Occupied);
+        }
+        if terra_core::train_boiler::is_wide(part.material, part.facing) {
+            // A three-wide model must fit outside its one owner voxel as well.
+            // Existing matching parts are skipped above; only new geometry is checked.
+            for shape in terra_core::train_parts::boxes(part.material, part.facing) {
+                let low: [i64; 3] = std::array::from_fn(|axis| {
+                    (part.cell[axis] as f64 + shape.minimum[axis] + 1e-6).floor() as i64
+                });
+                let high: [i64; 3] = std::array::from_fn(|axis| {
+                    (part.cell[axis] as f64 + shape.maximum[axis] - 1e-6).floor() as i64
+                });
+                for x in low[0]..=high[0] {
+                    for y in low[1]..=high[1] {
+                        for z in low[2]..=high[2] {
+                            let cell = [x, y, z];
+                            if cell == part.cell {
+                                continue;
+                            }
+                            if !allowed(
+                                chunks,
+                                journal,
+                                request.actor,
+                                cell,
+                                KingdomPermission::Build,
+                            ) {
+                                return Err(TrainError::Protected);
+                            }
+                            if chunks.block_at(cell).ok_or(TrainError::Incomplete)? != 0 {
+                                return Err(TrainError::Occupied);
+                            }
+                        }
+                    }
+                }
+            }
         }
         let mut wood = terra_core::WoodSpecies::Spruce;
         if !request.creative {

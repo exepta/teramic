@@ -747,3 +747,196 @@ fn train_names_require_ownership_and_reject_controls_or_oversized_text_atomicall
         Err(TrainError::NotOwner)
     );
 }
+
+#[test]
+fn turntable_action_rotates_the_owned_vehicle_and_track_atomically() {
+    let (mut app, mut peer, id, seat, _) = train_fixture();
+    // Construct the platform before publishing the fixture's assembled car.
+    let car = app
+        .world_mut()
+        .resource_mut::<EditJournal>()
+        .gameplay_mut()
+        .trains
+        .vehicles
+        .remove(&id)
+        .unwrap();
+    app.world_mut()
+        .resource_scope(|world, mut journal: Mut<EditJournal>| {
+            let mut chunks = world.resource_mut::<ChunkStore>();
+            for x in -10..=18 {
+                for y in 3..=10 {
+                    for z in -8..=20 {
+                        let (section, local) = terra_voxel::global_to_section([x, y, z]);
+                        chunks
+                            .loaded
+                            .entry(section)
+                            .or_insert_with(|| LoadedSection {
+                                data: terra_voxel::BlockSection::empty(section).unwrap(),
+                                mesh: None,
+                                mesh_epoch: 0,
+                                water_epoch: 0,
+                                water: None,
+                                props: Vec::new(),
+                            })
+                            .data
+                            .set_block(local, if y == 3 { 3 } else { 0 })
+                            .unwrap();
+                    }
+                }
+            }
+            let plan = terra_world::rails::plan(
+                &chunks,
+                &journal,
+                [4, 4, 6],
+                terra_core::rails::TURNTABLE,
+                0,
+            )
+            .unwrap();
+            terra_world::rails::commit(&mut chunks, &mut journal, &plan).unwrap();
+        });
+    let station = [18, 5, 6];
+    {
+        let mut chunks = app.world_mut().resource_mut::<ChunkStore>();
+        let (owner, local) = terra_voxel::global_to_section(station);
+        chunks
+            .loaded
+            .get_mut(&owner)
+            .unwrap()
+            .data
+            .set_block(local, train_parts::STATION)
+            .unwrap();
+    }
+    app.world_mut()
+        .resource_mut::<EditJournal>()
+        .record(station, train_parts::STATION)
+        .unwrap();
+    app.world_mut()
+        .get_mut::<Transform>(peer.body)
+        .unwrap()
+        .translation = Vec3::new(18.5, 6.0, 6.5);
+    let mut empty_seats = crate::server::trains::SeatedPlayers::default();
+    for clockwise in [true, false] {
+        assert_eq!(
+            run(
+                &mut app,
+                &peer,
+                TrainAction::RotateEmpty {
+                    station,
+                    anchor: [4, 4, 6],
+                    clockwise
+                },
+                &mut empty_seats
+            ),
+            Ok(TrainOutcome::Changed { vehicle: None })
+        );
+    }
+    assert_eq!(
+        terra_world::rails::owner_at(app.world().resource::<EditJournal>(), [4, 4, 6])
+            .unwrap()
+            .facing,
+        0
+    );
+    app.world_mut()
+        .get_mut::<Transform>(peer.body)
+        .unwrap()
+        .translation = Vec3::new(6.5, 6.0, 6.5);
+    app.world_mut()
+        .resource_mut::<EditJournal>()
+        .gameplay_mut()
+        .trains
+        .vehicles
+        .insert(id, car);
+    let mut seats = crate::server::trains::SeatedPlayers::default();
+    run(
+        &mut app,
+        &peer,
+        TrainAction::Seat {
+            vehicle: id,
+            part: seat,
+        },
+        &mut seats,
+    )
+    .unwrap();
+    let (position, _) = seats.pose(peer.uuid).unwrap();
+    app.world_mut()
+        .get_mut::<Transform>(peer.body)
+        .unwrap()
+        .translation = position;
+    let before = app
+        .world()
+        .resource::<EditJournal>()
+        .gameplay()
+        .trains
+        .vehicles[&id]
+        .clone();
+    let owner = peer.uuid;
+    peer.uuid = PlayerUuid::from_u128(220_999);
+    assert_eq!(
+        run(
+            &mut app,
+            &peer,
+            TrainAction::Turntable {
+                vehicle: id,
+                clockwise: true,
+                station: None
+            },
+            &mut seats
+        ),
+        Err(TrainError::NotOwner)
+    );
+    peer.uuid = owner;
+    assert_eq!(
+        app.world()
+            .resource::<EditJournal>()
+            .gameplay()
+            .trains
+            .vehicles[&id],
+        before
+    );
+    assert_eq!(
+        run(
+            &mut app,
+            &peer,
+            TrainAction::Turntable {
+                vehicle: id,
+                clockwise: true,
+                station: None
+            },
+            &mut seats
+        ),
+        Ok(TrainOutcome::Changed { vehicle: Some(id) })
+    );
+    let journal = app.world().resource::<EditJournal>();
+    let turned = &journal.gameplay().trains.vehicles[&id];
+    assert!((turned.motion.yaw - std::f64::consts::FRAC_PI_2).abs() < 1e-6);
+    assert_eq!(
+        terra_world::rails::owner_at(journal, [4, 4, 6])
+            .unwrap()
+            .facing,
+        1
+    );
+    assert_eq!(turned.cargo, before.cargo);
+    let mut car = turned.clone();
+    car.motion.speed_mps = 0.5;
+    app.world_mut()
+        .resource_mut::<EditJournal>()
+        .gameplay_mut()
+        .trains
+        .vehicles
+        .insert(id, car);
+    let epoch = app.world().resource::<EditJournal>().rail_epoch();
+    assert!(
+        run(
+            &mut app,
+            &peer,
+            TrainAction::Turntable {
+                vehicle: id,
+                clockwise: false,
+                station: None
+            },
+            &mut seats
+        )
+        .is_err()
+    );
+    assert_eq!(app.world().resource::<EditJournal>().rail_epoch(), epoch);
+}

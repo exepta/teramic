@@ -15,7 +15,7 @@ fn one_track_recipe_preserves_all_four_plank_species_and_retires_shape_recipes()
     for kind in crate::rails::Kind::ALL
         .into_iter()
         .skip(1)
-        .filter(|kind| !kind.is_switch())
+        .filter(|kind| !kind.is_switch() && *kind != crate::rails::Kind::Turntable)
     {
         assert!(
             book.get(recipe_key(&format!("teramic::{}", kind.key())))
@@ -1125,7 +1125,7 @@ fn builtin_recipes_are_valid_and_catalog_roundtrip_preserves_keys() {
     assert_eq!(book.error, None);
     assert_eq!(
         book.iter().count(),
-        86 + crate::ArmorItem::ALL.len()
+        87 + crate::ArmorItem::ALL.len()
             + crate::AccessoryKind::ALL.len()
             + crate::CapeItem::ALL.len()
             + crate::CapeItem::ALL_WHITE.len()

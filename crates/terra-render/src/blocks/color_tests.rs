@@ -96,7 +96,7 @@ fn ballast_block_stairs_and_slab_share_the_actual_angular_material_and_physical_
         let definition = library.blocks.iter().find(|block| block.id == id).unwrap();
         definition.validate().unwrap();
         assert_eq!(definition.render_kind, kind);
-        assert_eq!(definition.creative_category.as_deref(), Some("building"));
+        assert_eq!(definition.creative_category.as_deref(), Some("trains"));
         assert_eq!(definition.collision_boxes.len(), boxes);
         assert_eq!(definition.bevel_width, 0.0);
         assert!(definition.model.is_empty());

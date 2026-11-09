@@ -7112,3 +7112,46 @@ Montageansicht wurde in 1080p und 720p aufgenommen; Namensfeld, Baubutton und
 unterer Schliessen-Button liegen innerhalb des eingepassten Rahmens. Keine
 manuelle Fahrt oder Messung der bisherigen 0,4-s-Aussetzer in der Problemwelt.
 [Pruefbericht und Aufnahmen](tools/benchmarks/results/train-workshop-stops-lights-2026-11-09/README.md).
+
+
+## 220. Drehgleis, Modellbreiten Und Neue Zug-Montageansicht
+
+Die Montageansicht folgt der neuen Referenz mit Fahrzeugtypen links, echter
+Modellvorschau und Drehgestell-Abstand in der Mitte, Name und Bauaktionen rechts
+sowie Fahrzeugliste, Fahrpult und Aktionen darunter. Der untere Schliessen-/ESC-
+Button entfaellt. Eine einzelne begrenzte Vorschaukamera rendert die vorhandenen
+Bauteilmodelle in ein eigenes 1024x576-Ziel; Hintergrundaufbau und Studio-
+Umgebungslicht erhalten Metalloberflaechen ohne Aenderung der Weltmaterialien.
+
+Die Auswahl 1x/3x bestimmt die Vorlagenbreite. Breite Vorlagen erhalten seitliche
+Rahmen und den 3x3-Kessel, schmale Vorlagen bleiben einblockbreit. Die gemeinsame
+Spurweite bleibt erhalten. Die Serveraktion rekonstruiert dieselbe Breite und
+berechnet ihren echten Materialbedarf. Gleise und Zugbauteile besitzen den
+TMI-Tab Trains. Zug-Inventare verwenden dieselben auf Bildpunkte ausgerichteten
+Slotmasse wie andere Inventare und eine begrenzte Vergroesserung.
+
+Das neue herstellbare Drehgleis besitzt eine kreisfoermige Plattform und einen
+25-Meter-Fahrweg. Ein gestoppter, gebremster und entkuppelter Zug wird gemeinsam
+mit dem Gleis um 90 Grad gedreht. Auch leere Plattformen lassen sich an der
+Montagestelle ausrichten. Der gesamte Drehraum wird einschliesslich der
+Kreisboegen zwischen den Proben auf Hindernisse, Personen, Fahrzeuge und Rechte
+geprueft. Abgewiesene Aktionen aendern weder Plattform noch Fahrzeug.
+
+Die Reparatur von Gleisen unter stehenden Zuegen prueft die wirklichen Formen
+anstelle einer ganzen reservierten Blockzelle. Retirierte Gleisverweise werden
+an der unveraenderten Fahrzeugposition neu gebunden. Unveraenderte Gleismodule
+teilen zwischengespeicherte Vollstaendigkeitspruefungen; Schienenkontakt-Abfragen
+vermeiden temporaere Zellvektoren. Pro Frame werden hoechstens zwei fertige
+Terrain-Kollisionen aktiviert. Monotone Interpolation erhaelt konstante
+Koordinaten beim Schneiden von Gleisflaechen an Blockgrenzen.
+
+Client und Server verwenden Protokoll 122; Zugindex ID16 bleibt unveraendert.
+
+Pruefbericht: [Phase 220](tools/benchmarks/results/train-turntable-width-ui-2026-11-09/README.md).
+
+Verifiziert: 4474 Workspace-Tests bestanden, 10 regulaer ignoriert; Build,
+Clippy mit -D warnings und Formatierung erfolgreich. Native Montage-/Fahransicht
+bei 720p/1080p sowie vier echte Motor-/Lager-Klicks geprueft. Nativer Bau-/
+Abbautest: 139 Platzierungsframes, Median 6.84 ms, P95 9.98 ms, Maximum 48.44 ms.
+Dies ist eine isolierte Messung ohne Vorher-/Nachher-Vergleich im Problemspielstand;
+sie belegt keine allgemeine Freiheit von Streaming-Haengern.

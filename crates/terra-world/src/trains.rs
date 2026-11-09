@@ -258,6 +258,12 @@ pub fn plan_assembly_with_properties(
             return Err(TrainError::Limit);
         }
         cells.insert(cell, material);
+        let facing = journal.object_state(cell).map_or(0, |state| state.facing);
+        for offset in terra_core::train_boiler::attachment_offsets(material, facing).iter() {
+            queue.push_back(std::array::from_fn(|axis| {
+                cell[axis] + i64::from(offset[axis])
+            }));
+        }
         for delta in [
             [1, 0, 0],
             [-1, 0, 0],

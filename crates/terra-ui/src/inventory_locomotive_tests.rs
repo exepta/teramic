@@ -105,13 +105,13 @@ fn authored_f54_items_page_through_tmi_with_real_names_previews_and_default_reci
     app.insert_resource(palette);
     let before = app.world().resource::<ClientSession>().inventory.clone();
     action(&mut app, InventoryAction::Toggle);
-    action(&mut app, InventoryAction::Category("building".into()));
+    action(&mut app, InventoryAction::Category("trains".into()));
     assert!(
         app.world()
             .resource::<InventoryView>()
             .categories
             .iter()
-            .any(|category| category.id == "building" && category.selected)
+            .any(|category| category.id == "trains" && category.selected)
     );
     let mut discovered = BTreeMap::new();
     let pages = app.world().resource::<InventoryView>().browser_pages;
@@ -144,7 +144,7 @@ fn authored_f54_items_page_through_tmi_with_real_names_previews_and_default_reci
         assert!(!entry.description.is_empty());
         assert_eq!(entry.identifier, item.identifier());
         assert_eq!(entry.preview_key, format!("Block preview {material}"));
-        assert_eq!(entry.category, "building");
+        assert_eq!(entry.category, "trains");
     }
     for material in [214, 215, 216, 217, 267, 268] {
         for wood in [
@@ -169,7 +169,7 @@ fn authored_f54_items_page_through_tmi_with_real_names_previews_and_default_reci
             if wood != terra_core::WoodSpecies::Oak {
                 assert!(view.name.contains(wood.slug()));
             }
-            assert_eq!(view.category, "building");
+            assert_eq!(view.category, "trains");
         }
     }
     for (item, entry) in discovered {

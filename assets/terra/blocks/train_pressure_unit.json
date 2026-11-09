@@ -3,7 +3,7 @@
   "id": 231,
   "name": "Lok-Druckeinheit",
   "description": "Decorative pressure instrument casing. Live steam pressure follows the steam engine system; fuel driving uses the cab display.",
-  "creative_category": "building",
+  "creative_category": "trains",
   "render_kind": "custom_mesh",
   "model_layout": "scene",
   "model": "models/train_pressure_unit.gltf",

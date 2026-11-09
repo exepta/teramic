@@ -3,7 +3,7 @@
   "id": 237,
   "name": "Kuppelstange kurz",
   "description": "Functional visual running gear. Motion follows the wheel phase of an assembled train.",
-  "creative_category": "building",
+  "creative_category": "trains",
   "render_kind": "custom_mesh",
   "model_layout": "scene",
   "model": "models/train_connecting_rod_short.gltf",

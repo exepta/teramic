@@ -107,19 +107,19 @@ def main():
         gltf['extras'] = {'core_source_sha256': provenance, 'core_source_fnv64': source_fnv64, 'rail_material': material}
         model_path.write_text(json.dumps(gltf, separators=(',', ':'))+'\n')
         definition = {
-            'schema_version': 1, 'id': material, 'name': NAMES[material-196],
-            'description': ('One-metre starter track, three blocks wide. Place a start, aim at the next endpoint and stretch a continuous straight, curve or ramp.'
+            'schema_version': 1, 'id': material, 'name': ('Drehgleis / Drehscheibe' if material == 295 else NAMES[material-196]),
+            'description': ('Rotating 25-metre rail platform. Park the complete uncoupled train, set its brake and rotate it by 90 degrees from the workshop or cab.' if material == 295 else 'One-metre starter track, three blocks wide. Place a start, aim at the next endpoint and stretch a continuous straight, curve or ramp.'
                             if material == 196 else
                             'Three-block-wide track with wooden sleepers, steel rail heads and bolted feet. '
                             'The complete module follows its shared collision and routing profile.'),
-            'creative_category': 'building', 'render_kind': 'custom_mesh',
+            'creative_category': 'trains', 'render_kind': 'custom_mesh',
             'model_layout': 'scene', 'model': f'models/{slug}.gltf',
             'struct_block': True, 'hardness': 1.5, 'resistance': 8.,
             'required_tool': 'pickaxe', 'mining_level': 0,
             'collision_boxes': profile['anchor_collision'],
         }
         (BLOCKS / f'{slug}.json').write_text(json.dumps(definition, indent=2)+'\n')
-    print(f'Generated ten complete rail assemblies from Core profile {provenance[:12]}.')
+    print(f'Generated complete rail assemblies from Core profile {provenance[:12]}.')
 
 
 if __name__ == '__main__':

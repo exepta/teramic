@@ -803,3 +803,24 @@ mod seed_tests;
 
 #[path = "build_reach_tests.rs"]
 mod build_reach_tests;
+
+#[test]
+fn cached_completeness_is_invalidated_by_pose_edits_and_cloned_worlds() {
+    let piece = Piece::new([0; 3], rails::STRAIGHT, 0).unwrap();
+    let mut chunks = ChunkStore::default();
+    let mut journal = EditJournal::default();
+    prepare(&mut chunks, piece);
+    install(&mut chunks, &mut journal, piece);
+    for _ in 0..10 {
+        assert!(complete(&journal, piece));
+    }
+    let mut fork = journal.clone();
+    let cell = cells(piece)[1];
+    fork.set_object_state(cell, None).unwrap();
+    assert!(!complete(&fork, piece));
+    assert!(complete(&journal, piece));
+    let plan = break_layout(&chunks, &journal, piece.anchor).unwrap();
+    commit(&mut chunks, &mut journal, &plan).unwrap();
+    assert!(!complete(&journal, piece));
+    assert!(!complete(&fork, piece));
+}

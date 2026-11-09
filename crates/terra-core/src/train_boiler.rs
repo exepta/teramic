@@ -50,6 +50,42 @@ pub fn boxes(material: u16, facing: u8) -> Vec<ShapeBox> {
         .collect()
 }
 
+/// Canonical occupied-voxel contacts connect fittings to an extended boiler.
+pub fn attachment_offsets(material: u16, facing: u8) -> &'static [[i16; 3]] {
+    use std::sync::OnceLock;
+    static CONTACTS: [OnceLock<Vec<[i16; 3]>>; 20] = [const { OnceLock::new() }; 20];
+    if !is_wide(material, facing) {
+        return &[];
+    }
+    CONTACTS[usize::from(material - 219) * 4 + usize::from(facing - 4)]
+        .get_or_init(|| {
+            let mut contacts = std::collections::BTreeSet::new();
+            for shape in boxes(material, facing) {
+                let low = shape.minimum.map(|value| (value + 1e-6).floor() as i16);
+                let high = shape.maximum.map(|value| (value - 1e-6).floor() as i16);
+                for x in low[0]..=high[0] {
+                    for y in low[1]..=high[1] {
+                        for z in low[2]..=high[2] {
+                            for delta in [
+                                [0, 0, 0],
+                                [1, 0, 0],
+                                [-1, 0, 0],
+                                [0, 1, 0],
+                                [0, -1, 0],
+                                [0, 0, 1],
+                                [0, 0, -1],
+                            ] {
+                                contacts.insert([x + delta[0], y + delta[1], z + delta[2]]);
+                            }
+                        }
+                    }
+                }
+            }
+            contacts.into_iter().collect::<Vec<_>>()
+        })
+        .as_slice()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

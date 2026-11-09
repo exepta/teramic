@@ -64,7 +64,7 @@ pub(super) fn update(
     }
     let fixed_piece = matches!(
         held_material,
-        rails::SWITCH_LEFT | rails::SWITCH_RIGHT | rails::BUFFER
+        rails::SWITCH_LEFT | rails::SWITCH_RIGHT | rails::BUFFER | rails::TURNTABLE
     );
     let start = presentation.preview.rail_start;
     if start.is_none()

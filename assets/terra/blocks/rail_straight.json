@@ -3,7 +3,7 @@
   "id": 196,
   "name": "Track",
   "description": "One-metre starter track, three blocks wide. Place a start, aim at the next endpoint and stretch a continuous straight, curve or ramp.",
-  "creative_category": "building",
+  "creative_category": "trains",
   "render_kind": "custom_mesh",
   "model_layout": "scene",
   "model": "models/rail_straight.gltf",

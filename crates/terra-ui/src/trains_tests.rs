@@ -107,7 +107,13 @@ fn native_locomotive_choice_adds_the_body_after_the_functional_skeleton_is_compl
     let expected = TrainBlueprint {
         station: initial.station,
         kind: initial.kind,
-        cells: train_blueprint::building_template(chassis.cell, chassis.facing, initial.kind, 4),
+        cells: train_blueprint::building_template_with_width(
+            chassis.cell,
+            chassis.facing,
+            initial.kind,
+            4,
+            3,
+        ),
     };
     let skeleton = train_blueprint::template(chassis.cell, chassis.facing, VehicleKind::Locomotive);
     for part in &skeleton {
@@ -147,7 +153,7 @@ fn native_locomotive_choice_adds_the_body_after_the_functional_skeleton_is_compl
     assert_eq!(app.world().resource::<TrainBlueprint>(), &expected);
     let view = app.world().resource::<TrainView>();
     assert!(
-        view.blueprint_progress.contains("13 / 39") && view.blueprint_progress.contains("optional")
+        view.blueprint_progress.contains("13 / 49") && view.blueprint_progress.contains("optional")
     );
     click_workshop(&mut app, "blueprint-build");
     assert!(!app.world().resource::<TrainView>().open);
@@ -650,7 +656,7 @@ fn all_vehicle_guides_snap_both_bogies_to_complete_rails_and_persist_after_closi
             let guide = app.world().resource::<TrainBlueprint>();
             assert_eq!(
                 guide.cells.len(),
-                if kind == "locomotive" { 39 } else { 12 }
+                if kind == "locomotive" { 49 } else { 26 }
             );
             assert!(
                 guide
@@ -846,6 +852,7 @@ fn real_auto_build_handler_submits_the_displayed_guide_with_the_inventory_revisi
             facing: chassis.facing,
             kind: VehicleKind::Freight,
             wheelbase: 4,
+            width: 3,
             player_revision: app.world().resource::<ClientSession>().inventory.revision
         }
     );
@@ -919,4 +926,31 @@ fn typing_e_does_not_close_the_train_name_input_but_escape_does() {
         .press(KeyCode::Escape);
     app.update();
     assert!(!app.world().resource::<TrainView>().open);
+}
+
+#[test]
+fn width_buttons_update_the_real_preview_and_auto_build_request() {
+    let mut app = app();
+    open(&mut app);
+    track_fixture(&mut app, 0);
+    click_workshop(&mut app, "width:1");
+    assert_eq!(app.world().resource::<TrainView>().width, "1");
+    assert!(
+        app.world()
+            .resource::<TrainBlueprint>()
+            .cells
+            .iter()
+            .all(|part| part.cell[0] == app.world().resource::<TrainBlueprint>().cells[0].cell[0])
+    );
+    assert!(
+        app.world()
+            .resource::<train_blueprint::WorkshopPreviewRequest>()
+            .visible
+    );
+    click_workshop(&mut app, "blueprint-auto");
+    assert!(
+        requests(&mut app)
+            .iter()
+            .any(|request| matches!(request.0.action, TrainAction::Build { width: 1, .. }))
+    );
 }

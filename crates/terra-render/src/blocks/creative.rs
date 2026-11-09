@@ -17,6 +17,12 @@ pub(crate) fn item_category(item: ItemKind, declared: Option<&str>) -> String {
             _ => return category.into(),
         }
     }
+    if item
+        .block_material()
+        .is_some_and(|material| (196..=295).contains(&material))
+    {
+        return "trains".into();
+    }
     if terra_core::food(item).is_some() {
         return "food".into();
     }
@@ -276,7 +282,7 @@ mod tests {
                     "Switch"
                 }));
                 assert!(definitions[0].2.contains("sleepers"));
-                assert_eq!(item_category(item, None), "building");
+                assert_eq!(item_category(item, None), "trains");
             }
         }
         items.extend(
@@ -299,6 +305,7 @@ mod tests {
             [
                 "building",
                 "decoration",
+                "trains",
                 "materials",
                 "animal_materials",
                 "food",

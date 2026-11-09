@@ -219,6 +219,16 @@ fn valid_parts(anchor: Cell, parts: &[TrainPart], kind: VehicleKind) -> bool {
     }) {
         return false;
     }
+    let mut contacts = BTreeMap::<[i16; 3], BTreeSet<[i16; 3]>>::new();
+    for part in parts {
+        for offset in crate::train_boiler::attachment_offsets(part.material, part.facing).iter() {
+            let other = std::array::from_fn(|axis| part.offset[axis] + offset[axis]);
+            if other != part.offset && offsets.contains(&other) {
+                contacts.entry(part.offset).or_default().insert(other);
+                contacts.entry(other).or_default().insert(part.offset);
+            }
+        }
+    }
     let mut pending = vec![parts[0].offset];
     let mut connected = BTreeSet::new();
     while let Some(cell) = pending.pop() {
@@ -237,6 +247,14 @@ fn valid_parts(anchor: Cell, parts: &[TrainPart], kind: VehicleKind) -> bool {
             if offsets.contains(&neighbor) && !connected.contains(&neighbor) {
                 pending.push(neighbor);
             }
+        }
+        if let Some(adjacent) = contacts.get(&cell) {
+            pending.extend(
+                adjacent
+                    .iter()
+                    .copied()
+                    .filter(|next| !connected.contains(next)),
+            );
         }
     }
     if connected.len() != parts.len() {

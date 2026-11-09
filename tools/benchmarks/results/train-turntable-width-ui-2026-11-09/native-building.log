@@ -1,0 +1,199 @@
+2026-11-09T10:04:07.372353Z  INFO bevy_render::renderer: AdapterInfo { name: "AMD Radeon RX 6950 XT (RADV NAVI21)", vendor: 4098, device: 29605, device_type: DiscreteGpu, device_pci_bus_id: "0000:0c:00.0", driver: "radv", driver_info: "Mesa 26.2.5-arch3.1", backend: Vulkan, subgroup_min_size: 32, subgroup_max_size: 64, transient_saves_memory: Some(false), limit_bucket: None }
+2026-11-09T10:04:07.465523Z  INFO bevy_pbr::cluster: GPU clustering is supported on this device.
+2026-11-09T10:04:07.465684Z  INFO bevy_render::batching::gpu_preprocessing: GPU preprocessing is fully supported on this device.
+2026-11-09T10:04:07.466551Z  INFO bevy_winit::system: Creating new window TERAMIC (161v0)
+2026-11-09T10:04:07.466857Z  INFO winit::platform_impl::linux::x11::window: Guessed window scale factor: 1.5
+2026-11-09T10:04:08.230594Z  INFO lightyear_netcode::client: client connecting to server 127.0.0.1:42681 [1/1]
+2026-11-09T10:04:08.230696Z  INFO lightyear_udp: UDP socket bound to 0.0.0.0:0
+2026-11-09T10:04:08.604674Z  INFO terra_ui::settings: Applied window presentation policy mode=Mailbox
+2026-11-09T10:04:08.604965Z  INFO terra_client::creature_audio::scene: Recorded animal/environment audio decoded clips=105
+2026-11-09T10:04:08.661278Z  INFO lightyear_udp::endpoint: Received UDP packet from new address 127.0.0.1:58532, Spawn new LinkOf entity=248v0 endpoint_entity=227v0
+2026-11-09T10:04:08.668411Z  INFO terra_render::weather::surfaces: Terrain wet material GPU binding mode legacy_smoke_control=false bindless=true
+2026-11-09T10:04:08.710816Z  INFO terra_render::scene::caves::lights::soft_core: Torch soft-core attenuation installed in existing clustered PBR path
+2026-11-09T10:04:08.712071Z  INFO terra_render::water::raymarch: Water SSR hardware depth filtering ready; multisampled views retain the original path
+2026-11-09T10:04:08.717840Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 21, generation: 0} mip_levels=11 rebound_materials=1
+2026-11-09T10:04:08.717863Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 30, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-09T10:04:08.717870Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/wood.png mip_levels=10 rebound_materials=1
+2026-11-09T10:04:08.717875Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 31, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-09T10:04:08.717881Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/machinery-oak-hd.png mip_levels=11 rebound_materials=0
+2026-11-09T10:04:08.717885Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/machinery-belt-hd.png mip_levels=11 rebound_materials=0
+2026-11-09T10:04:08.717890Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 33, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-09T10:04:08.717895Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 35, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-09T10:04:08.717900Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 36, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-09T10:04:08.717905Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 24, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-09T10:04:08.717909Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 38, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-09T10:04:08.717914Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 40, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-09T10:04:08.717927Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 27, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-09T10:04:08.717944Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/machinery-iron-hd.png mip_levels=11 rebound_materials=0
+2026-11-09T10:04:08.717949Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 32, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-09T10:04:08.717954Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 39, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-09T10:04:08.717964Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 34, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-09T10:04:08.717969Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/forged-iron-warm.png mip_levels=11 rebound_materials=0
+2026-11-09T10:04:08.717974Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/stone.png mip_levels=10 rebound_materials=0
+2026-11-09T10:04:08.717978Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 37, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-09T10:04:08.717983Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 28, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-09T10:04:08.717988Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 41, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-09T10:04:08.718184Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/stone-strata-hd.png mip_levels=11 rebound_materials=1
+2026-11-09T10:04:08.718191Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/oak-crafted-hd.png mip_levels=11 rebound_materials=0
+2026-11-09T10:04:08.718196Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 29, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-09T10:04:08.718200Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 25, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-09T10:04:08.718205Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 26, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-09T10:04:08.718210Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 22, generation: 0} mip_levels=11 rebound_materials=1
+2026-11-09T10:04:08.718214Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 23, generation: 0} mip_levels=1 rebound_materials=1
+2026-11-09T10:04:08.757049Z  INFO terra_render::blocks::loading: Block template library ready blocks=295 materials=788
+2026-11-09T10:04:08.828545Z  INFO lightyear_netcode::server_plugin: New connection on netcode from 1 (248v0)
+2026-11-09T10:04:08.847995Z  INFO lightyear_netcode::client_plugin: Client Netcode(1) connected
+2026-11-09T10:04:08.864552Z  INFO terra_network::server: Player profile accepted (local, not verified online) player=1 uuid=3bb520ef-a18c-4261-ab32-475d38f69eca name=Player-3bb520ef
+2026-11-09T10:04:09.055805Z  INFO terra_network::client: Authoritative world synchronized player=Some(PlayerId(1))
+2026-11-09T10:04:30.211349Z  INFO terra_client::building_smoke: Native building session ready target=[7, 112, 24] material=1 creative=true
+2026-11-09T10:04:31.089066Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/target/live220/screenshots/building-debug-default-off.png
+2026-11-09T10:04:31.256098Z  INFO terra_client::building_smoke: Authoritative block removal received latency_ms=37 creative=true
+2026-11-09T10:04:31.266285Z  INFO terra_client::building_smoke: Replicated pickup count verified count=0
+2026-11-09T10:04:31.336333Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/target/live220/screenshots/building-broken.png
+2026-11-09T10:04:32.124736Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/target/live220/screenshots/building-inventory.png
+2026-11-09T10:04:33.612243Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/target/live220/screenshots/building-inventory-small.png
+2026-11-09T10:04:34.647929Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/target/live220/screenshots/building-normal-block-no-outline.png
+2026-11-09T10:04:35.626665Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/target/live220/screenshots/building-normal-block-no-outline-fov45-small.png
+2026-11-09T10:04:36.045632Z  INFO terra_client::building_smoke: Native placement frame frame_ms=6.725884 stage=Place
+2026-11-09T10:04:36.082508Z  INFO terra_client::building_smoke: Native placement frame frame_ms=48.440514 stage=Place
+2026-11-09T10:04:36.101888Z  INFO terra_client::building_smoke: Native placement frame frame_ms=34.116429 stage=Place
+2026-11-09T10:04:36.120699Z  INFO terra_client::building_smoke: Native placement frame frame_ms=18.842542 stage=Place
+2026-11-09T10:04:36.131018Z  INFO terra_client::building_smoke: Native placement frame frame_ms=18.690769 stage=Place
+2026-11-09T10:04:36.138242Z  INFO terra_client::building_smoke: Native placement frame frame_ms=10.047343999999999 stage=Place
+2026-11-09T10:04:36.144610Z  INFO terra_client::building_smoke: Native placement frame frame_ms=7.158923000000001 stage=Place
+2026-11-09T10:04:36.151538Z  INFO terra_client::building_smoke: Native placement frame frame_ms=5.519138 stage=Place
+2026-11-09T10:04:36.157713Z  INFO terra_client::building_smoke: Native placement frame frame_ms=8.321007999999999 stage=Place
+2026-11-09T10:04:36.165060Z  INFO terra_client::building_smoke: Native placement frame frame_ms=5.037116999999999 stage=Place
+2026-11-09T10:04:36.172153Z  INFO terra_client::building_smoke: Native placement frame frame_ms=9.089084000000001 stage=Place
+2026-11-09T10:04:36.178707Z  INFO terra_client::building_smoke: Native placement frame frame_ms=5.205901 stage=Place
+2026-11-09T10:04:36.185872Z  INFO terra_client::building_smoke: Native placement frame frame_ms=7.028601 stage=Place
+2026-11-09T10:04:36.192379Z  INFO terra_client::building_smoke: Native placement frame frame_ms=7.212784 stage=Place
+2026-11-09T10:04:36.199078Z  INFO terra_client::building_smoke: Native placement frame frame_ms=6.312684 stage=Place
+2026-11-09T10:04:36.205477Z  INFO terra_client::building_smoke: Native placement frame frame_ms=7.676114 stage=Place
+2026-11-09T10:04:36.212027Z  INFO terra_client::building_smoke: Native placement frame frame_ms=5.6660010000000005 stage=Place
+2026-11-09T10:04:36.219254Z  INFO terra_client::building_smoke: Native placement frame frame_ms=6.55474 stage=Place
+2026-11-09T10:04:36.226365Z  INFO terra_client::building_smoke: Native placement frame frame_ms=8.153774 stage=Place
+2026-11-09T10:04:36.233967Z  INFO terra_client::building_smoke: Native placement frame frame_ms=6.560331 stage=Place
+2026-11-09T10:04:36.240106Z  INFO terra_client::building_smoke: Native placement frame frame_ms=6.819025 stage=Place
+2026-11-09T10:04:36.246174Z  INFO terra_client::building_smoke: Native placement frame frame_ms=6.5757699999999994 stage=Place
+2026-11-09T10:04:36.252922Z  INFO terra_client::building_smoke: Native placement frame frame_ms=5.923996 stage=Place
+2026-11-09T10:04:36.259072Z  INFO terra_client::building_smoke: Native placement frame frame_ms=6.592482 stage=Placed
+2026-11-09T10:04:36.266403Z  INFO terra_client::building_smoke: Native placement frame frame_ms=6.643402 stage=Placed
+2026-11-09T10:04:36.273765Z  INFO terra_client::building_smoke: Native placement frame frame_ms=7.843407 stage=Placed
+2026-11-09T10:04:36.281684Z  INFO terra_client::building_smoke: Native placement frame frame_ms=7.628593 stage=Placed
+2026-11-09T10:04:36.291742Z  INFO terra_client::building_smoke: Native placement frame frame_ms=7.105880999999999 stage=Placed
+2026-11-09T10:04:36.298422Z  INFO terra_client::building_smoke: Native placement frame frame_ms=11.253331 stage=Placed
+2026-11-09T10:04:36.307138Z  INFO terra_client::building_smoke: Native placement frame frame_ms=8.602993999999999 stage=Placed
+2026-11-09T10:04:36.315137Z  INFO terra_client::building_smoke: Native placement frame frame_ms=5.877495 stage=Placed
+2026-11-09T10:04:36.323159Z  INFO terra_client::building_smoke: Native placement frame frame_ms=9.982243 stage=Placed
+2026-11-09T10:04:36.323208Z  INFO terra_client::building_smoke: Native placement latency: authoritative block and current visible mesh request_to_visible_ms=70.2376 collision_to_visible_ms=41.485676 owner=SectionPos { x: 0, y: 7, z: 1 } material=1
+2026-11-09T10:04:36.332164Z  INFO terra_client::building_smoke: Native placement frame frame_ms=9.134595000000001 stage=Placed
+2026-11-09T10:04:36.340900Z  INFO terra_client::building_smoke: Native placement frame frame_ms=8.88097 stage=Placed
+2026-11-09T10:04:36.348579Z  INFO terra_client::building_smoke: Native placement frame frame_ms=4.510366 stage=Placed
+2026-11-09T10:04:36.354726Z  INFO terra_client::building_smoke: Native placement frame frame_ms=9.149645 stage=Placed
+2026-11-09T10:04:36.361375Z  INFO terra_client::building_smoke: Native placement frame frame_ms=5.7068520000000005 stage=Placed
+2026-11-09T10:04:36.368680Z  INFO terra_client::building_smoke: Native placement frame frame_ms=6.6614320000000005 stage=Placed
+2026-11-09T10:04:36.375967Z  INFO terra_client::building_smoke: Native placement frame frame_ms=7.838707 stage=Placed
+2026-11-09T10:04:36.384483Z  INFO terra_client::building_smoke: Native placement frame frame_ms=7.245625 stage=Placed
+2026-11-09T10:04:36.390290Z  INFO terra_client::building_smoke: Native placement frame frame_ms=7.514731 stage=Placed
+2026-11-09T10:04:36.397615Z  INFO terra_client::building_smoke: Native placement frame frame_ms=7.966610000000001 stage=Placed
+2026-11-09T10:04:36.404482Z  INFO terra_client::building_smoke: Native placement frame frame_ms=5.306493 stage=Placed
+2026-11-09T10:04:36.410543Z  INFO terra_client::building_smoke: Native placement frame frame_ms=7.000299 stage=Placed
+2026-11-09T10:04:36.418448Z  INFO terra_client::building_smoke: Native placement frame frame_ms=5.831155 stage=Placed
+2026-11-09T10:04:36.425554Z  INFO terra_client::building_smoke: Native placement frame frame_ms=8.391789000000001 stage=Placed
+2026-11-09T10:04:36.433162Z  INFO terra_client::building_smoke: Native placement frame frame_ms=7.423169000000001 stage=Placed
+2026-11-09T10:04:36.439297Z  INFO terra_client::building_smoke: Native placement frame frame_ms=7.101172 stage=Placed
+2026-11-09T10:04:36.445617Z  INFO terra_client::building_smoke: Native placement frame frame_ms=6.036168 stage=Placed
+2026-11-09T10:04:36.452680Z  INFO terra_client::building_smoke: Native placement frame frame_ms=6.158811999999999 stage=Placed
+2026-11-09T10:04:36.458533Z  INFO terra_client::building_smoke: Native placement frame frame_ms=7.102861 stage=Placed
+2026-11-09T10:04:36.465662Z  INFO terra_client::building_smoke: Native placement frame frame_ms=5.972918 stage=Placed
+2026-11-09T10:04:36.472442Z  INFO terra_client::building_smoke: Native placement frame frame_ms=7.438509000000001 stage=Placed
+2026-11-09T10:04:36.480165Z  INFO terra_client::building_smoke: Native placement frame frame_ms=6.672972 stage=Placed
+2026-11-09T10:04:36.487681Z  INFO terra_client::building_smoke: Native placement frame frame_ms=7.821556999999999 stage=Placed
+2026-11-09T10:04:36.493630Z  INFO terra_client::building_smoke: Native placement frame frame_ms=7.46672 stage=Placed
+2026-11-09T10:04:36.500503Z  INFO terra_client::building_smoke: Native placement frame frame_ms=5.684691000000001 stage=Placed
+2026-11-09T10:04:36.507192Z  INFO terra_client::building_smoke: Native placement frame frame_ms=6.997688999999999 stage=Placed
+2026-11-09T10:04:36.513570Z  INFO terra_client::building_smoke: Native placement frame frame_ms=6.649663 stage=Placed
+2026-11-09T10:04:36.520859Z  INFO terra_client::building_smoke: Native placement frame frame_ms=6.4058459999999995 stage=Placed
+2026-11-09T10:04:36.527638Z  INFO terra_client::building_smoke: Native placement frame frame_ms=7.560802 stage=Placed
+2026-11-09T10:04:36.535254Z  INFO terra_client::building_smoke: Native placement frame frame_ms=6.833605 stage=Placed
+2026-11-09T10:04:36.541481Z  INFO terra_client::building_smoke: Native placement frame frame_ms=7.146653000000001 stage=Placed
+2026-11-09T10:04:36.548522Z  INFO terra_client::building_smoke: Native placement frame frame_ms=5.999048 stage=Placed
+2026-11-09T10:04:36.554692Z  INFO terra_client::building_smoke: Native placement frame frame_ms=7.257675 stage=Placed
+2026-11-09T10:04:36.560436Z  INFO terra_client::building_smoke: Native placement frame frame_ms=6.302074999999999 stage=Placed
+2026-11-09T10:04:36.567988Z  INFO terra_client::building_smoke: Native placement frame frame_ms=6.067788999999999 stage=Placed
+2026-11-09T10:04:36.575018Z  INFO terra_client::building_smoke: Native placement frame frame_ms=7.4830499999999995 stage=Placed
+2026-11-09T10:04:36.582704Z  INFO terra_client::building_smoke: Native placement frame frame_ms=7.392507 stage=Placed
+2026-11-09T10:04:36.588922Z  INFO terra_client::building_smoke: Native placement frame frame_ms=7.136782999999999 stage=Placed
+2026-11-09T10:04:36.595370Z  INFO terra_client::building_smoke: Native placement frame frame_ms=6.669073 stage=Placed
+2026-11-09T10:04:36.602587Z  INFO terra_client::building_smoke: Native placement frame frame_ms=5.708931000000001 stage=Placed
+2026-11-09T10:04:36.608662Z  INFO terra_client::building_smoke: Native placement frame frame_ms=7.208074 stage=Placed
+2026-11-09T10:04:36.615702Z  INFO terra_client::building_smoke: Native placement frame frame_ms=6.300484 stage=Placed
+2026-11-09T10:04:36.621952Z  INFO terra_client::building_smoke: Native placement frame frame_ms=7.565242 stage=Placed
+2026-11-09T10:04:36.630503Z  INFO terra_client::building_smoke: Native placement frame frame_ms=6.157772 stage=Placed
+2026-11-09T10:04:36.637850Z  INFO terra_client::building_smoke: Native placement frame frame_ms=8.361229 stage=Placed
+2026-11-09T10:04:36.643793Z  INFO terra_client::building_smoke: Native placement frame frame_ms=6.946648 stage=Placed
+2026-11-09T10:04:36.652126Z  INFO terra_client::building_smoke: Native placement frame frame_ms=5.953736999999999 stage=Placed
+2026-11-09T10:04:36.658319Z  INFO terra_client::building_smoke: Native placement frame frame_ms=7.951478999999999 stage=Placed
+2026-11-09T10:04:36.665225Z  INFO terra_client::building_smoke: Native placement frame frame_ms=6.778915 stage=Placed
+2026-11-09T10:04:36.671920Z  INFO terra_client::building_smoke: Native placement frame frame_ms=7.174263 stage=Placed
+2026-11-09T10:04:36.678943Z  INFO terra_client::building_smoke: Native placement frame frame_ms=6.802496 stage=Placed
+2026-11-09T10:04:36.686715Z  INFO terra_client::building_smoke: Native placement frame frame_ms=6.702323 stage=Placed
+2026-11-09T10:04:36.693079Z  INFO terra_client::building_smoke: Native placement frame frame_ms=7.5625409999999995 stage=Placed
+2026-11-09T10:04:36.699927Z  INFO terra_client::building_smoke: Native placement frame frame_ms=6.350126 stage=Placed
+2026-11-09T10:04:36.707541Z  INFO terra_client::building_smoke: Native placement frame frame_ms=8.141713 stage=Placed
+2026-11-09T10:04:36.713867Z  INFO terra_client::building_smoke: Native placement frame frame_ms=6.368316 stage=Placed
+2026-11-09T10:04:36.720983Z  INFO terra_client::building_smoke: Native placement frame frame_ms=6.363957 stage=Placed
+2026-11-09T10:04:36.727778Z  INFO terra_client::building_smoke: Native placement frame frame_ms=7.52025 stage=Placed
+2026-11-09T10:04:36.735413Z  INFO terra_client::building_smoke: Native placement frame frame_ms=6.799535 stage=Placed
+2026-11-09T10:04:36.741798Z  INFO terra_client::building_smoke: Native placement frame frame_ms=7.175143 stage=Placed
+2026-11-09T10:04:36.748607Z  INFO terra_client::building_smoke: Native placement frame frame_ms=6.340635 stage=Placed
+2026-11-09T10:04:36.755782Z  INFO terra_client::building_smoke: Native placement frame frame_ms=6.680103 stage=Placed
+2026-11-09T10:04:36.761968Z  INFO terra_client::building_smoke: Native placement frame frame_ms=7.45393 stage=Placed
+2026-11-09T10:04:36.768955Z  INFO terra_client::building_smoke: Native placement frame frame_ms=6.294753999999999 stage=Placed
+2026-11-09T10:04:36.775537Z  INFO terra_client::building_smoke: Native placement frame frame_ms=6.56911 stage=Placed
+2026-11-09T10:04:36.782958Z  INFO terra_client::building_smoke: Native placement frame frame_ms=7.799407 stage=Placed
+2026-11-09T10:04:36.789246Z  INFO terra_client::building_smoke: Native placement frame frame_ms=6.752264 stage=Placed
+2026-11-09T10:04:36.796320Z  INFO terra_client::building_smoke: Native placement frame frame_ms=6.721553 stage=Placed
+2026-11-09T10:04:36.803125Z  INFO terra_client::building_smoke: Native placement frame frame_ms=6.221583 stage=Placed
+2026-11-09T10:04:36.808906Z  INFO terra_client::building_smoke: Native placement frame frame_ms=6.7054030000000004 stage=Placed
+2026-11-09T10:04:36.816332Z  INFO terra_client::building_smoke: Native placement frame frame_ms=5.922257 stage=Placed
+2026-11-09T10:04:36.822990Z  INFO terra_client::building_smoke: Native placement frame frame_ms=7.795666 stage=Placed
+2026-11-09T10:04:36.829715Z  INFO terra_client::building_smoke: Native placement frame frame_ms=6.716293 stage=Placed
+2026-11-09T10:04:36.837096Z  INFO terra_client::building_smoke: Native placement frame frame_ms=6.663563 stage=Placed
+2026-11-09T10:04:36.843331Z  INFO terra_client::building_smoke: Native placement frame frame_ms=7.065591 stage=Placed
+2026-11-09T10:04:36.850576Z  INFO terra_client::building_smoke: Native placement frame frame_ms=6.12234 stage=Placed
+2026-11-09T10:04:36.857271Z  INFO terra_client::building_smoke: Native placement frame frame_ms=7.141393 stage=Placed
+2026-11-09T10:04:36.863498Z  INFO terra_client::building_smoke: Native placement frame frame_ms=6.921247 stage=Placed
+2026-11-09T10:04:36.871148Z  INFO terra_client::building_smoke: Native placement frame frame_ms=6.377757000000001 stage=Placed
+2026-11-09T10:04:36.877720Z  INFO terra_client::building_smoke: Native placement frame frame_ms=7.876078 stage=Placed
+2026-11-09T10:04:36.885416Z  INFO terra_client::building_smoke: Native placement frame frame_ms=6.837015999999999 stage=Placed
+2026-11-09T10:04:36.891602Z  INFO terra_client::building_smoke: Native placement frame frame_ms=7.156813 stage=Placed
+2026-11-09T10:04:36.898588Z  INFO terra_client::building_smoke: Native placement frame frame_ms=5.942817000000001 stage=Placed
+2026-11-09T10:04:36.904876Z  INFO terra_client::building_smoke: Native placement frame frame_ms=7.087801000000001 stage=Placed
+2026-11-09T10:04:36.910820Z  INFO terra_client::building_smoke: Native placement frame frame_ms=6.313915 stage=Placed
+2026-11-09T10:04:36.917674Z  INFO terra_client::building_smoke: Native placement frame frame_ms=5.764863 stage=Placed
+2026-11-09T10:04:36.924680Z  INFO terra_client::building_smoke: Native placement frame frame_ms=7.273515000000001 stage=Placed
+2026-11-09T10:04:36.932297Z  INFO terra_client::building_smoke: Native placement frame frame_ms=7.078171 stage=Placed
+2026-11-09T10:04:36.939241Z  INFO terra_client::building_smoke: Native placement frame frame_ms=7.712235 stage=Placed
+2026-11-09T10:04:36.945418Z  INFO terra_client::building_smoke: Native placement frame frame_ms=6.3079540000000005 stage=Placed
+2026-11-09T10:04:36.951953Z  INFO terra_client::building_smoke: Native placement frame frame_ms=6.321356 stage=Placed
+2026-11-09T10:04:36.957851Z  INFO terra_client::building_smoke: Native placement frame frame_ms=6.369216 stage=Placed
+2026-11-09T10:04:36.964830Z  INFO terra_client::building_smoke: Native placement frame frame_ms=6.294424 stage=Placed
+2026-11-09T10:04:36.971024Z  INFO terra_client::building_smoke: Native placement frame frame_ms=6.836825999999999 stage=Placed
+2026-11-09T10:04:36.978294Z  INFO terra_client::building_smoke: Native placement frame frame_ms=6.908547 stage=Placed
+2026-11-09T10:04:36.986246Z  INFO terra_client::building_smoke: Native placement frame frame_ms=7.346137 stage=Placed
+2026-11-09T10:04:36.992155Z  INFO terra_client::building_smoke: Native placement frame frame_ms=7.00299 stage=Placed
+2026-11-09T10:04:36.999054Z  INFO terra_client::building_smoke: Native placement frame frame_ms=5.974557 stage=Placed
+2026-11-09T10:04:37.005012Z  INFO terra_client::building_smoke: Native placement frame frame_ms=7.194294 stage=Placed
+2026-11-09T10:04:37.010702Z  INFO terra_client::building_smoke: Native placement frame frame_ms=5.534217999999999 stage=Placed
+2026-11-09T10:04:37.017933Z  INFO terra_client::building_smoke: Native placement frame frame_ms=6.1203009999999995 stage=Placed
+2026-11-09T10:04:37.025229Z  INFO terra_client::building_smoke: Native placement frame frame_ms=7.740085 stage=Placed
+2026-11-09T10:04:37.032381Z  INFO terra_client::building_smoke: Native placement frame frame_ms=6.705013 stage=Placed
+2026-11-09T10:04:37.038722Z  INFO terra_client::building_smoke: Native placement frame frame_ms=7.334847 stage=Placed
+2026-11-09T10:04:37.044397Z  INFO terra_client::building_smoke: Native placement frame frame_ms=5.65591 stage=Placed
+2026-11-09T10:04:37.050683Z  INFO terra_client::building_smoke: Native placement frame frame_ms=5.651731 stage=Placed
+2026-11-09T10:04:37.056073Z  INFO terra_client::building_smoke: Native placement frame frame_ms=6.312575 stage=Placed
+2026-11-09T10:04:37.056130Z  INFO terra_client::building_smoke: Native building: real break, inventory and placement verified material=Some(1) count=1 creative=true
+2026-11-09T10:04:37.419632Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/target/live220/screenshots/building-restored.png
+2026-11-09T10:04:38.068449Z  INFO terra_client::building_smoke: Native building render effects observed particles=12 drops=0

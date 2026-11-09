@@ -17,6 +17,7 @@ mod settlement_banners;
 mod train_blueprint;
 mod trains;
 pub use settlement_banners::VillageHeraldryStatus;
+pub use trains::workshop_preview::WorkshopPreviewImage;
 mod chunk_borders;
 pub use chunk_borders::ChunkBorderGizmos;
 mod foliage;

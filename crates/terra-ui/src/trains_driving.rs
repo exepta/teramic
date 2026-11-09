@@ -191,7 +191,7 @@ pub(super) fn command(world: &mut World, state: &mut TrainUiState, command: &str
     if throttle.is_none()
         && !matches!(
             command,
-            "drive-more" | "drive-less" | "drive-stop" | "drive-brake" | "engine"
+            "drive-more" | "drive-less" | "drive-start" | "drive-stop" | "drive-brake" | "engine"
         )
     {
         return false;
@@ -232,6 +232,13 @@ pub(super) fn command(world: &mut World, state: &mut TrainUiState, command: &str
         .unwrap_or((vehicle.id, vehicle.motion.throttle, vehicle.motion.brake));
     let desired_throttle = desired_throttle * sign;
     let throttle = match command {
+        "drive-start" => {
+            if desired_throttle == 0 {
+                1
+            } else {
+                desired_throttle
+            }
+        }
         "drive-more" => (desired_throttle + 1).min(3),
         "drive-less" => (desired_throttle - 1).max(-3),
         "drive-stop" => 0,

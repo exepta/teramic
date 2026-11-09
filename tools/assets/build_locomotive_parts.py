@@ -760,7 +760,7 @@ def main(materials=None):
                             else 'Structural locomotive construction shape. Build the connected vehicle body with matching metal parts.' if 270 <= material <= 293
                             else 'Functional framed locomotive opening. Use to open and close its leaf.' if material in [247, 248]
                             else functional.get(role, 'Decorative BR52 locomotive component. Attach to the connected vehicle body before assembly.')),
-            'creative_category': 'building', 'render_kind': 'custom_mesh',
+            'creative_category': 'trains', 'render_kind': 'custom_mesh',
             'model_layout': 'scene', 'model': f'models/{slug}.gltf',
             'struct_block': True, 'hardness': 1.8, 'resistance': 12,
             'required_tool': 'pickaxe', 'mining_level': 0,

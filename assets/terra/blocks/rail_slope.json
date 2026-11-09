@@ -3,7 +3,7 @@
   "id": 199,
   "name": "Rail: Slope",
   "description": "Three-block-wide track with wooden sleepers, steel rail heads and bolted feet. The complete module follows its shared collision and routing profile.",
-  "creative_category": "building",
+  "creative_category": "trains",
   "render_kind": "custom_mesh",
   "model_layout": "scene",
   "model": "models/rail_slope.gltf",

@@ -269,7 +269,9 @@ fn clip_cell(triangle: [Vertex; 3], cell: [i32; 3]) -> Vec<Vertex> {
                     let fraction = (plane - previous.position[axis])
                         / (current.position[axis] - previous.position[axis]);
                     let mut intersection = Vertex {
-                        position: previous.position.lerp(current.position, fraction),
+                        // Preserve constant coordinates exactly at shared cell planes.
+                        position: previous.position
+                            + (current.position - previous.position) * fraction,
                         normal: previous.normal.lerp(current.normal, fraction),
                         uv: previous.uv.lerp(current.uv, fraction),
                         tangent: previous.tangent.lerp(current.tangent, fraction),

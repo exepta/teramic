@@ -93,6 +93,7 @@
     include_str!("../../../../assets/crafting/rail_switch_right.json"),
     include_str!("../../../../assets/crafting/rail_switch_stand.json"),
     include_str!("../../../../assets/crafting/rail_straight.json"),
+    include_str!("../../../../assets/crafting/rail_turntable.json"),
     include_str!("../../../../assets/crafting/apple_sapling.json"),
     include_str!("../../../../assets/crafting/apple_sapling_from_core.json"),
     include_str!("../../../../assets/crafting/hold_block.json"),

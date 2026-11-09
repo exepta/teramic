@@ -3,7 +3,7 @@
   "id": 283,
   "name": "Lok-Blech Slab",
   "description": "Structural locomotive construction shape. Build the connected vehicle body with matching metal parts.",
-  "creative_category": "building",
+  "creative_category": "trains",
   "render_kind": "custom_mesh",
   "model_layout": "scene",
   "model": "models/train_sheet_metal_slab.gltf",

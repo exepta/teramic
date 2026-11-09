@@ -1,0 +1,53 @@
+2026-11-09T10:01:36.829935Z  INFO bevy_render::renderer: AdapterInfo { name: "AMD Radeon RX 6950 XT (RADV NAVI21)", vendor: 4098, device: 29605, device_type: DiscreteGpu, device_pci_bus_id: "0000:0c:00.0", driver: "radv", driver_info: "Mesa 26.2.5-arch3.1", backend: Vulkan, subgroup_min_size: 32, subgroup_max_size: 64, transient_saves_memory: Some(false), limit_bucket: None }
+2026-11-09T10:01:37.040774Z  INFO bevy_pbr::cluster: GPU clustering is supported on this device.
+2026-11-09T10:01:37.040834Z  INFO bevy_render::batching::gpu_preprocessing: GPU preprocessing is fully supported on this device.
+2026-11-09T10:01:37.042541Z  INFO bevy_winit::system: Creating new window TERAMIC (179v0)
+2026-11-09T10:01:37.043399Z  INFO winit::platform_impl::linux::x11::window: Guessed window scale factor: 1.5
+2026-11-09T10:01:38.534912Z  INFO terra_ui::settings: Applied window presentation policy mode=Mailbox
+2026-11-09T10:01:38.535645Z  INFO terra_client::creature_audio::scene: Recorded animal/environment audio decoded clips=105
+2026-11-09T10:01:38.667178Z  INFO terra_render::weather::surfaces: Terrain wet material GPU binding mode legacy_smoke_control=false bindless=true
+2026-11-09T10:01:38.776665Z  INFO terra_render::water::raymarch: Water SSR hardware depth filtering ready; multisampled views retain the original path
+2026-11-09T10:01:38.776922Z  INFO terra_render::scene::caves::lights::soft_core: Torch soft-core attenuation installed in existing clustered PBR path
+2026-11-09T10:01:38.810601Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/machinery-iron-hd.png mip_levels=11 rebound_materials=0
+2026-11-09T10:01:38.810628Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 67, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-09T10:01:38.810635Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 66, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-09T10:01:38.810642Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 71, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-09T10:01:38.810650Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 72, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-09T10:01:38.810656Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 54, generation: 0} mip_levels=11 rebound_materials=1
+2026-11-09T10:01:38.810663Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/machinery-oak-hd.png mip_levels=11 rebound_materials=0
+2026-11-09T10:01:38.810669Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 69, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-09T10:01:38.810676Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 55, generation: 0} mip_levels=11 rebound_materials=1
+2026-11-09T10:01:38.810681Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 70, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-09T10:01:38.810687Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 60, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-09T10:01:38.810692Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 61, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-09T10:01:38.810698Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/wood.png mip_levels=10 rebound_materials=1
+2026-11-09T10:01:38.810705Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 62, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-09T10:01:38.810716Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 64, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-09T10:01:38.810730Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 65, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-09T10:01:38.810749Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 68, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-09T10:01:38.810755Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 74, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-09T10:01:38.810761Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/oak-crafted-hd.png mip_levels=11 rebound_materials=0
+2026-11-09T10:01:38.810767Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/machinery-belt-hd.png mip_levels=11 rebound_materials=0
+2026-11-09T10:01:38.810773Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 56, generation: 0} mip_levels=1 rebound_materials=1
+2026-11-09T10:01:38.810779Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/stone.png mip_levels=10 rebound_materials=0
+2026-11-09T10:01:38.810784Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/stone-strata-hd.png mip_levels=11 rebound_materials=1
+2026-11-09T10:01:38.810790Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/forged-iron-warm.png mip_levels=11 rebound_materials=0
+2026-11-09T10:01:38.810796Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 59, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-09T10:01:38.810801Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 58, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-09T10:01:38.810807Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 63, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-09T10:01:38.810813Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 73, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-09T10:01:38.810819Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 57, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-09T10:01:38.852093Z  INFO terra_render::blocks::loading: Block template library ready blocks=295 materials=788
+2026-11-09T10:02:26.143867Z  INFO terra_ui::trains::live: Native workshop painted bounds fit window and frame low=Vec2(284.2578, 43.19998) high=Vec2(1635.7422, 1036.8) controls=3
+2026-11-09T10:02:26.143915Z  INFO terra_ui::trains::live: Native train workshop: auto-build button and editable name materialized label="train-workshop-1080.png"
+2026-11-09T10:02:26.546451Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/target/live220/screenshots/train-workshop-1080.png
+2026-11-09T10:02:28.634006Z  INFO terra_ui::trains::live: Native workshop painted bounds fit window and frame low=Vec2(202.96826, 28.799988) high=Vec2(1077.0317, 691.2) controls=3
+2026-11-09T10:02:28.634041Z  INFO terra_ui::trains::live: Native train workshop: auto-build button and editable name materialized label="train-workshop-720.png"
+2026-11-09T10:02:28.696068Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/target/live220/screenshots/train-workshop-720.png
+2026-11-09T10:02:31.749172Z  INFO terra_ui::trains::live: Native workshop painted bounds fit window and frame low=Vec2(378.825, 43.19998) high=Vec2(1541.175, 1036.8) controls=3
+2026-11-09T10:02:31.749217Z  INFO terra_ui::trains::live: Native train workshop: auto-build button and editable name materialized label="train-driving-1080.png"
+2026-11-09T10:02:31.828399Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/target/live220/screenshots/train-driving-1080.png
+2026-11-09T10:02:33.868379Z  INFO terra_ui::trains::live: Native workshop painted bounds fit window and frame low=Vec2(262.8, 28.799988) high=Vec2(1017.2, 691.2) controls=3
+2026-11-09T10:02:33.868420Z  INFO terra_ui::trains::live: Native train workshop: auto-build button and editable name materialized label="train-driving-720.png"
+2026-11-09T10:02:33.930283Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/target/live220/screenshots/train-driving-720.png
+2026-11-09T10:02:34.873423Z  INFO terra_ui::trains::live: Native train workshop responsive capture passed: 1080p and 720p; UI-only fixture

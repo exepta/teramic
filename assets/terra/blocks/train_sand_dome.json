@@ -3,7 +3,7 @@
   "id": 226,
   "name": "Sanddom",
   "description": "Decorative BR52 locomotive component. Attach to the connected vehicle body before assembly.",
-  "creative_category": "building",
+  "creative_category": "trains",
   "render_kind": "custom_mesh",
   "model_layout": "scene",
   "model": "models/train_sand_dome.gltf",

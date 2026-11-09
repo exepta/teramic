@@ -1,0 +1,11 @@
+{
+  "scenario": "native creative building smoke: real mining, inventory selection, placement and visible replacement",
+  "samples": 139,
+  "median_ms": 6.836825999999999,
+  "p95_ms": 9.982243,
+  "max_ms": 48.440514,
+  "over_100_ms": 0,
+  "over_400_ms": 0,
+  "scope": "Place and Placed stages only; one isolated world, not a manual drive or a user-save streaming benchmark",
+  "source_log": "native-building.log"
+}

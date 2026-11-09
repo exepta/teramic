@@ -102,7 +102,7 @@ def main(materials=None):
             'description': ('Assemble or dismantle connected modular railway vehicles. Right-click to manage the workshop.'
                             if material == 217 else
                             'Modular railway vehicle part. Connect parts beside an assembly station, then assemble the vehicle.'),
-            'creative_category': 'building', 'render_kind': 'custom_mesh',
+            'creative_category': 'trains', 'render_kind': 'custom_mesh',
             'model_layout': 'scene', 'model': f'models/{slug}.gltf',
             'struct_block': True, 'hardness': 1.8, 'resistance': 9,
             'required_tool': 'pickaxe', 'mining_level': 0,

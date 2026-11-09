@@ -300,10 +300,11 @@ pub enum MaterialId {
     TrainGrateSlope = 293,
     TrainCeilingLight = 294,
     // F54_enum_END
+    RailTurntable = 295,
 }
 
 impl MaterialId {
-    pub const LAST: u16 = Self::TrainCeilingLight as u16;
+    pub const LAST: u16 = Self::RailTurntable as u16;
     pub const FOLIAGE: [u16; 6] = [7, 8, 9, 132, 133, 195];
     pub const BLOCK_COUNT: usize = Self::LAST as usize;
 
@@ -411,6 +412,7 @@ impl MaterialId {
             Self::TrainGrateSlope => "teramic::train_grate_slope",
             Self::TrainCeilingLight => "teramic::train_ceiling_light",
             // F54_identifiers_END
+            Self::RailTurntable => "teramic::rail_turntable",
             Self::Lantern => "teramic::lantern",
             Self::Chain => "teramic::chain",
             Self::WoodPipe => "teramic::wood_pipe",
@@ -906,6 +908,7 @@ impl MaterialId {
             293 => Self::TrainGrateSlope,
             294 => Self::TrainCeilingLight,
             // F54_raw_END
+            295 => Self::RailTurntable,
             193 => Self::Lantern,
             194 => Self::Chain,
             _ => return None,
@@ -1083,7 +1086,7 @@ mod tests {
             assert_eq!(material.is_opaque(), opaque);
             assert!(!material.flammable());
         }
-        assert_eq!(MaterialId::LAST, 294);
+        assert_eq!(MaterialId::LAST, 295);
     }
 
     #[test]

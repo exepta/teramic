@@ -25,7 +25,9 @@ pub const SWITCH_RIGHT: u16 = 203;
 pub const CROSSING: u16 = 204;
 pub const BUFFER: u16 = 205;
 pub const SWITCH_STAND: u16 = 209;
-pub const MATERIALS: [u16; 10] = [196, 197, 198, 199, 200, 201, 202, 203, 204, 205];
+pub const TURNTABLE: u16 = 295;
+pub const TURNTABLE_RADIUS: f64 = 12.75;
+pub const MATERIALS: [u16; 11] = [196, 197, 198, 199, 200, 201, 202, 203, 204, 205, TURNTABLE];
 pub const FIXED_SCALE: i64 = 16;
 pub const TRACK_WIDTH: f64 = 3.0;
 /// Construction-only ray and endpoint reach. Ordinary block actions retain
@@ -51,9 +53,10 @@ pub enum Kind {
     SwitchRight,
     Crossing,
     Buffer,
+    Turntable,
 }
 impl Kind {
-    pub const ALL: [Self; 10] = [
+    pub const ALL: [Self; 11] = [
         Self::Straight,
         Self::CurveSmall,
         Self::CurveLarge,
@@ -64,9 +67,14 @@ impl Kind {
         Self::SwitchRight,
         Self::Crossing,
         Self::Buffer,
+        Self::Turntable,
     ];
     pub const fn material(self) -> u16 {
-        STRAIGHT + self as u16
+        if matches!(self, Self::Turntable) {
+            TURNTABLE
+        } else {
+            STRAIGHT + self as u16
+        }
     }
     pub fn from_material(material: u16) -> Option<Self> {
         MATERIALS
@@ -89,6 +97,7 @@ impl Kind {
             Self::SwitchRight => "rail_switch_right",
             Self::Crossing => "rail_crossing",
             Self::Buffer => "rail_buffer",
+            Self::Turntable => "rail_turntable",
         }
     }
 }

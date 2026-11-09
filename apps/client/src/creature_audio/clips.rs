@@ -132,6 +132,9 @@ pub(super) enum Surface {
 }
 impl Surface {
     pub(super) fn material(raw: u16) -> Self {
+        if raw == terra_core::rails::TURNTABLE {
+            return Self::Stone;
+        }
         use terra_voxel::MaterialId::*;
         match terra_voxel::MaterialId::from_raw(raw) {
             Some(material)
@@ -438,6 +441,7 @@ mod tests {
         expected.extend([Stone; terra_core::locomotive_parts::COUNT]);
         expected[267] = Wood;
         expected[268] = Wood;
+        expected.push(Stone); // Rotating steel turntable deck.
         assert_eq!(
             expected.len(),
             usize::from(terra_voxel::MaterialId::LAST) + 1

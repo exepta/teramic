@@ -28,7 +28,7 @@ fn assert_joint(first: Piece, first_port: u8, second: Piece, second_port: u8) {
 #[test]
 fn material_tags_poses_and_span_limits_are_explicit() {
     for (index, kind) in Kind::ALL.into_iter().enumerate() {
-        assert_eq!(kind.material(), 196 + index as u16);
+        assert_eq!(kind.material(), MATERIALS[index]);
         assert_eq!(Kind::from_material(kind.material()), Some(kind));
         for facing in 0..8 {
             assert_eq!(
@@ -137,7 +137,10 @@ fn cached_geometry_cells_supports_and_three_wide_flat_tracks_share_one_shape() {
             let piece = piece(kind.material(), [0; 3], facing);
             let footprint = piece.footprint();
             assert!(footprint.contains(&[0; 3]));
-            assert!(!footprint.is_empty() && footprint.len() < 256);
+            assert!(
+                !footprint.is_empty()
+                    && footprint.len() < if kind == Kind::Turntable { 1024 } else { 256 }
+            );
             assert!(Arc::ptr_eq(&piece.footprint(), &piece.footprint()));
             assert!(Arc::ptr_eq(
                 &piece.local_geometry(),
@@ -412,5 +415,22 @@ fn separate_switch_stands_preserve_every_historic_owned_cell_without_invisible_l
                 );
             }
         }
+    }
+}
+
+#[test]
+fn turntable_footprint_is_invariant_and_connects_at_exact_endpoints_in_every_yaw() {
+    let table = piece(TURNTABLE, [0; 3], 0);
+    for facing in 0..4 {
+        let rotated = piece(TURNTABLE, [0; 3], facing);
+        assert_eq!(table.footprint(), rotated.footprint());
+        assert!((rotated.paths()[0].length() - 25.0).abs() < 1e-9);
+        let exit = rotated.ports()[1];
+        let base = piece(STRAIGHT, [0; 3], facing).ports()[0];
+        let delta: [i64; 3] =
+            std::array::from_fn(|axis| exit.position.0[axis] - base.position.0[axis]);
+        assert!(delta.iter().all(|value| value % FIXED_SCALE == 0));
+        let next = piece(STRAIGHT, delta.map(|value| value / FIXED_SCALE), facing);
+        assert_joint(rotated, 1, next, 0);
     }
 }

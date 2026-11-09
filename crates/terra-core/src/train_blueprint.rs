@@ -140,6 +140,66 @@ pub fn building_template(
     cells
 }
 
+/// Width is the authored body cross-section; wheelsets retain the shared gauge.
+pub fn building_template_with_width(
+    chassis: [i64; 3],
+    facing: u8,
+    kind: VehicleKind,
+    wheelbase: u8,
+    width: u8,
+) -> Vec<BlueprintCell> {
+    if !matches!(width, 1 | 3) {
+        return Vec::new();
+    }
+    let mut cells = building_template(chassis, facing, kind, wheelbase);
+    if cells.is_empty() {
+        return cells;
+    }
+    let side = if facing.is_multiple_of(2) { 0 } else { 2 };
+    if width == 1 {
+        cells.retain(|part| part.cell[side] == chassis[side]);
+        // Keep a compact canopy above the driver without a three-wide shell.
+        for part in &mut cells {
+            if part.cell[1] == chassis[1] + 4 {
+                part.cell[1] -= 2;
+            }
+        }
+    } else {
+        let base = template_with_wheelbase(chassis, facing, kind, wheelbase);
+        for part in base
+            .iter()
+            .filter(|part| matches!(part.material, train_parts::CHASSIS | train_parts::FRAME))
+        {
+            for offset in [-1, 1] {
+                let mut wing = *part;
+                wing.cell[side] += offset;
+                wing.material = train_parts::FRAME;
+                if !cells.iter().any(|old| old.cell == wing.cell) {
+                    cells.push(wing);
+                }
+            }
+        }
+        for part in &mut cells {
+            if crate::train_boiler::is_boiler(part.material) {
+                part.facing |= 4;
+            }
+            if matches!(part.material, 224 | 225) {
+                part.cell[1] += 2;
+            }
+        }
+    }
+    cells
+}
+
+/// The workshop requests an actual model preview without creating a world vehicle.
+#[cfg_attr(feature = "bevy", derive(bevy::prelude::Resource))]
+#[derive(Clone, Default, PartialEq)]
+pub struct WorkshopPreviewRequest {
+    pub visible: bool,
+    pub parts: Vec<crate::trains::TrainPart>,
+    pub blocks: std::collections::BTreeMap<u16, crate::trains::TrainBlockView>,
+}
+
 /// Green ghosts disappear only when the correct part and required axis are present.
 pub fn matches(cell: BlueprintCell, material: Option<u16>, facing: u8) -> bool {
     material == Some(cell.material)
@@ -148,7 +208,7 @@ pub fn matches(cell: BlueprintCell, material: Option<u16>, facing: u8) -> bool {
             train_parts::CAB | train_parts::SEAT => facing == cell.facing,
             train_parts::ENGINE => true,
             material if crate::train_boiler::is_boiler(material) => {
-                facing < 8 && facing % 4 == cell.facing % 4
+                facing < 8 && facing == cell.facing
             }
             material if crate::locomotive_parts::is_part(material) => facing == cell.facing,
             _ => true,
@@ -472,5 +532,49 @@ mod tests {
                 }
             }
         }
+    }
+    #[test]
+    fn body_width_is_explicit_in_all_yaws_and_does_not_resize_the_wheelsets() {
+        for facing in 0..4 {
+            for kind in [
+                VehicleKind::Locomotive,
+                VehicleKind::Tender,
+                VehicleKind::Passenger,
+                VehicleKind::Freight,
+            ] {
+                let narrow = building_template_with_width([0; 3], facing, kind, 4, 1);
+                let wide = building_template_with_width([0; 3], facing, kind, 4, 3);
+                let side = if facing % 2 == 0 { 0 } else { 2 };
+                assert!(narrow.iter().all(|part| part.cell[side] == 0));
+                assert!(
+                    wide.iter()
+                        .any(|part| part.cell[side] == -1 && part.material == train_parts::FRAME)
+                );
+                assert!(
+                    wide.iter()
+                        .any(|part| part.cell[side] == 1 && part.material == train_parts::FRAME)
+                );
+                let bogies = |cells: &[BlueprintCell]| {
+                    cells
+                        .iter()
+                        .filter(|part| part.material == train_parts::BOGIE)
+                        .copied()
+                        .collect::<Vec<_>>()
+                };
+                assert_eq!(bogies(&narrow), bogies(&wide));
+                assert!(
+                    wide.iter()
+                        .filter(|part| crate::train_boiler::is_boiler(part.material))
+                        .all(|part| part.facing >= 4)
+                );
+                assert!(
+                    narrow
+                        .iter()
+                        .filter(|part| crate::train_boiler::is_boiler(part.material))
+                        .all(|part| part.facing < 4)
+                );
+            }
+        }
+        assert!(building_template_with_width([0; 3], 0, VehicleKind::Locomotive, 4, 2).is_empty());
     }
 }

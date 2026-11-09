@@ -1,0 +1,84 @@
+   Compiling terra-core v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-core)
+   Compiling terra-ui v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-ui)
+   Compiling terra-world v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-world)
+   Compiling terra-physics v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-physics)
+   Compiling terra-network v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-network)
+   Compiling terra-storage v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-storage)
+   Compiling terra-player v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-player)
+   Compiling terra-server v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/apps/server)
+   Compiling terra-render v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-render)
+   Compiling terra-client v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/apps/client)
+    Finished `test` profile [optimized + debuginfo] target(s) in 7m 46s
+     Running unittests src/main.rs (target/debug/deps/terra_client-3a8f27425d62600c)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 208 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/deps/terra_core-10e34521e769403b)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 460 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/deps/terra_network-c5d9f026ccc9655e)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 545 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/deps/terra_physics-39fc91b7ff7b2366)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 76 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/deps/terra_player-0d7802a0f29507e2)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 119 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/deps/terra_render-98842a997e349445)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 1069 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/deps/terra_server-7709e3a0803ace85)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 8 filtered out; finished in 0.00s
+
+     Running unittests src/main.rs (target/debug/deps/terra_server-4213a0525571e643)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 8 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/deps/terra_storage-92253726775aa49c)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 167 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/deps/terra_ui-fe4f225496ef9414)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 569 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/deps/terra_voxel-9ebdcff654b5745e)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 25 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/deps/terra_world-757ccf46c33dd22b)
+
+running 1 test
+test trains::tests::automatically_built_widths_assemble_the_whole_body_including_boiler_top_fittings ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1229 filtered out; finished in 0.01s
+

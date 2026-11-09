@@ -702,7 +702,14 @@ fn receive(
         false
     });
     let positions: Vec<_> = jobs.0.keys().copied().collect();
+    let receive_started = std::time::Instant::now();
+    let mut activated = 0;
     for position in positions {
+        if activated >= 2
+            || activated > 0 && receive_started.elapsed() >= std::time::Duration::from_millis(2)
+        {
+            break;
+        }
         let Some(job) = jobs.0.get_mut(&position) else {
             continue;
         };
@@ -724,6 +731,7 @@ fn receive(
         {
             continue;
         }
+        activated += 1;
         let output = match result {
             Ok(output) => output,
             Err(error) => {

@@ -3,7 +3,7 @@
   "id": 234,
   "name": "Laufrad klein",
   "description": "Functional running gear. Wheel rotation follows the actual travelled distance of an assembled train.",
-  "creative_category": "building",
+  "creative_category": "trains",
   "render_kind": "custom_mesh",
   "model_layout": "scene",
   "model": "models/train_wheel_small.gltf",

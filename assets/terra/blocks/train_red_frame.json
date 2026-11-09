@@ -3,7 +3,7 @@
   "id": 242,
   "name": "Lokrahmen rot",
   "description": "Structural BR52 frame block. Connect it to the train chassis as part of the vehicle body.",
-  "creative_category": "building",
+  "creative_category": "trains",
   "render_kind": "custom_mesh",
   "model_layout": "scene",
   "model": "models/train_red_frame.gltf",

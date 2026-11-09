@@ -3,7 +3,7 @@
   "id": 206,
   "name": "Schotter Block",
   "description": "Compacted angular railway ballast in warm grey stone. A solid embankment block for railway foundations.",
-  "creative_category": "building",
+  "creative_category": "trains",
   "render_kind": "cube",
   "bevel_width": 0.0,
   "materials": {

@@ -89,7 +89,7 @@ pub(super) struct Layout {
     pub supports: Arc<[SupportPoint]>,
     pub surfaces: OnceLock<Arc<[Surface]>>,
 }
-static LAYOUTS: [OnceLock<Arc<Layout>>; 80] = [const { OnceLock::new() }; 80];
+static LAYOUTS: [OnceLock<Arc<Layout>>; 88] = [const { OnceLock::new() }; 88];
 type DynamicEntries = VecDeque<(CurveSpec, Arc<Layout>)>;
 static DYNAMIC: OnceLock<Mutex<DynamicEntries>> = OnceLock::new();
 
@@ -97,7 +97,7 @@ pub(super) fn layout(material: u16, facing: u8) -> Option<Arc<Layout>> {
     if !valid_facing(material, facing) {
         return None;
     }
-    let index = usize::from(material - STRAIGHT) * 8 + usize::from(facing);
+    let index = MATERIALS.iter().position(|id| *id == material)? * 8 + usize::from(facing);
     Some(
         LAYOUTS[index]
             .get_or_init(|| {
@@ -244,6 +244,13 @@ pub(super) fn paths(piece: Piece) -> Vec<Path> {
     };
     let specifications = match piece.kind().expect("validated rail kind") {
         Kind::Straight | Kind::Buffer => vec![([0, 1], line(4.0, 0.0))],
+        Kind::Turntable => vec![(
+            [0, 1],
+            PathShape::Line {
+                start: [0.5, DECK_HEIGHT, -12.0],
+                end: [0.5, DECK_HEIGHT, 13.0],
+            },
+        )],
         Kind::CurveSmall => vec![(
             [0, 1],
             PathShape::Curve {
@@ -382,6 +389,7 @@ pub(super) fn ports(piece: Piece) -> Vec<Port> {
     }
     let canonical = match piece.kind().expect("validated rail kind") {
         Kind::Straight | Kind::Buffer => vec![([8, 2, 0], [0, 0, -1]), ([8, 2, 64], [0, 0, 1])],
+        Kind::Turntable => vec![([8, 2, -192], [0, 0, -1]), ([8, 2, 208], [0, 0, 1])],
         Kind::CurveSmall => vec![([8, 2, 0], [0, 0, -1]), ([80, 2, 72], [1, 0, 0])],
         Kind::CurveLarge => vec![([8, 2, 0], [0, 0, -1]), ([144, 2, 136], [1, 0, 0])],
         Kind::Slope => vec![([8, 2, 0], [0, -1, -4]), ([8, 18, 64], [0, 1, 4])],
@@ -515,6 +523,24 @@ fn make_layout(piece: Piece) -> Layout {
 fn make_beams(piece: Piece) -> Vec<Beam> {
     let canonical = Piece { facing: 0, ..piece };
     let mut beams = Vec::new();
+    if piece.material == TURNTABLE {
+        // Full-cell strips make the circular platform quarter-turn invariant.
+        for z in -12_i32..=12 {
+            let edge = f64::from(z.abs()) + 0.5;
+            let half_cells = ((TURNTABLE_RADIUS * TURNTABLE_RADIUS - edge * edge).sqrt() - 0.5)
+                .floor()
+                .max(0.0);
+            beams.push(Beam {
+                center: [0.5, 0.03, f64::from(z) + 0.5],
+                right: [1.0, 0.0, 0.0],
+                up: [0.0, 1.0, 0.0],
+                forward: [0.0, 0.0, 1.0],
+                half_extents: [half_cells + 0.5, 0.03, 0.5],
+                material: PartMaterial::Steel,
+                cross_sections: None,
+            });
+        }
+    }
     let paths = canonical.paths();
     let mut tie_centers: Vec<[f64; 3]> = Vec::new();
     let combined_ties =

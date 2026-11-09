@@ -3,7 +3,7 @@
   "id": 243,
   "name": "Pufferbohle",
   "description": "Structural buffer mounting beam. Attach buffers and couplings to the connected train body.",
-  "creative_category": "building",
+  "creative_category": "trains",
   "render_kind": "custom_mesh",
   "model_layout": "scene",
   "model": "models/train_buffer_beam.gltf",

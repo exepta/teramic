@@ -622,7 +622,12 @@ pub fn build_app() -> Result<App, Box<dyn Error>> {
     ))
     .add_systems(
         Update,
-        (sync_block_previews, sync_pet_portrait, preview_demand::sync),
+        (
+            sync_block_previews,
+            sync_workshop_preview,
+            sync_pet_portrait,
+            preview_demand::sync,
+        ),
     );
     crate::memory_hints::install_report(&mut app, &memory_hints);
     if compute_thread_cap != bevy::app::TaskPoolOptions::default().compute.max_threads {
@@ -1220,6 +1225,20 @@ fn sync_pet_portrait(
         ui.id = rendered.id;
         ui.image = rendered.image.clone();
         ui.ready = ready;
+    }
+}
+
+fn sync_workshop_preview(
+    rendered: Res<terra_render::WorkshopPreviewImage>,
+    mut nodes: Query<(&tilt_ui::ElementId, &mut bevy::ui::widget::ImageNode)>,
+) {
+    if !rendered.ready {
+        return;
+    }
+    for (id, mut node) in &mut nodes {
+        if id.0 == "train-model-preview" && node.image != rendered.image {
+            node.image = rendered.image.clone();
+        }
     }
 }
 

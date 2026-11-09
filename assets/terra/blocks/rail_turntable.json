@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "id": 295,
+  "name": "Drehgleis / Drehscheibe",
+  "description": "Rotating 25-metre rail platform. Park the complete uncoupled train, set its brake and rotate it by 90 degrees from the workshop or cab.",
+  "creative_category": "trains",
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/rail_turntable.gltf",
+  "struct_block": true,
+  "hardness": 1.5,
+  "resistance": 8.0,
+  "required_tool": "pickaxe",
+  "mining_level": 0,
+  "collision_boxes": [
+    {
+      "minimum": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "maximum": [
+        1.0,
+        0.06,
+        1.0
+      ]
+    },
+    {
+      "minimum": [
+        0.0,
+        0.0,
+        0.33999999999999997
+      ],
+      "maximum": [
+        1.0,
+        0.125,
+        0.66
+      ]
+    }
+  ]
+}

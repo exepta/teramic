@@ -416,7 +416,7 @@ fn native_gltf_and_exported_profile_are_exactly_the_core_profile_not_a_second_cu
         .unwrap();
         definition.validate().unwrap();
         assert!(definition.gameplay.struct_block);
-        assert_eq!(definition.creative_category.as_deref(), Some("building"));
+        assert_eq!(definition.creative_category.as_deref(), Some("trains"));
         let mut preview_templates = TemplateSet::default();
         preview_templates.blocks.insert(
             material,

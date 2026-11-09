@@ -1036,7 +1036,13 @@ fn saved_mixed_yaw_train_on_a_long_drawn_rail_assembles_without_reorienting_any_
 fn automatic_build_is_atomic_consumes_only_missing_parts_and_preserves_wood() {
     let (mut chunks, mut journal, station, chassis) = fixture(VehicleKind::Freight);
     let actor = PlayerUuid::from_u128(219);
-    let guide = terra_core::train_blueprint::building_template(chassis, 0, VehicleKind::Freight, 4);
+    let guide = terra_core::train_blueprint::building_template_with_width(
+        chassis,
+        0,
+        VehicleKind::Freight,
+        4,
+        3,
+    );
     for part in &guide {
         block(&mut chunks, part.cell, 0);
         journal.record(part.cell, 0).unwrap();
@@ -1048,6 +1054,7 @@ fn automatic_build_is_atomic_consumes_only_missing_parts_and_preserves_wood() {
         facing: 0,
         kind: VehicleKind::Freight,
         wheelbase: 4,
+        width: 3,
         creative: false,
     };
     let before = journal.gameplay().clone();
@@ -1117,7 +1124,13 @@ fn automatic_build_is_atomic_consumes_only_missing_parts_and_preserves_wood() {
 fn creative_build_needs_no_materials_and_rejects_missing_rails() {
     let (mut chunks, mut journal, station, chassis) = fixture(VehicleKind::Freight);
     let actor = PlayerUuid::from_u128(220);
-    let guide = terra_core::train_blueprint::building_template(chassis, 0, VehicleKind::Freight, 4);
+    let guide = terra_core::train_blueprint::building_template_with_width(
+        chassis,
+        0,
+        VehicleKind::Freight,
+        4,
+        3,
+    );
     for part in &guide {
         block(&mut chunks, part.cell, 0);
         journal.record(part.cell, 0).unwrap();
@@ -1129,6 +1142,7 @@ fn creative_build_needs_no_materials_and_rejects_missing_rails() {
         facing: 0,
         kind: VehicleKind::Freight,
         wheelbase: 4,
+        width: 3,
         creative: true,
     };
     let plan = plan_blueprint(&chunks, &journal, request).unwrap();
@@ -1185,4 +1199,133 @@ fn wide_boilers_keep_placed_visual_pose_collision_and_roundtrip_metadata() {
         loaded.import_delta(journal.section_delta(section)).unwrap();
     }
     assert_eq!(loaded.object_state(cell), Some(state));
+}
+
+#[test]
+fn wide_auto_build_checks_the_boiler_overhang_before_spending_or_publishing() {
+    let (mut chunks, mut journal, station, chassis) = fixture(VehicleKind::Locomotive);
+    let actor = PlayerUuid::from_u128(220);
+    let guide = terra_core::train_blueprint::building_template_with_width(
+        chassis,
+        0,
+        VehicleKind::Locomotive,
+        4,
+        3,
+    );
+    for part in &guide {
+        block(&mut chunks, part.cell, 0);
+        journal.record(part.cell, 0).unwrap();
+    }
+    let request = BuildRequest {
+        actor,
+        station,
+        chassis,
+        facing: 0,
+        kind: VehicleKind::Locomotive,
+        wheelbase: 4,
+        width: 3,
+        creative: true,
+    };
+    let plan = plan_blueprint(&chunks, &journal, request).unwrap();
+    let boiler = guide
+        .iter()
+        .find(|part| terra_core::train_boiler::is_boiler(part.material))
+        .unwrap();
+    let obstruction = [boiler.cell[0] + 1, boiler.cell[1] + 1, boiler.cell[2]];
+    block(&mut chunks, obstruction, 3);
+    let before = journal.edited_blocks();
+    assert!(matches!(
+        plan_blueprint(&chunks, &journal, request),
+        Err(TrainError::Occupied)
+    ));
+    assert!(commit_blueprint(&mut chunks, &mut journal, &plan).is_err());
+    assert_eq!(journal.edited_blocks(), before);
+    assert!(!journal.gameplay().inventories.contains_key(&actor));
+}
+
+#[test]
+fn automatically_built_widths_assemble_the_whole_body_including_boiler_top_fittings() {
+    for width in [1, 3] {
+        let (mut chunks, mut journal, station, chassis) = fixture(VehicleKind::Locomotive);
+        let actor = PlayerUuid::from_u128(220);
+        let guide = terra_core::train_blueprint::building_template_with_width(
+            chassis,
+            0,
+            VehicleKind::Locomotive,
+            4,
+            width,
+        );
+        // Retire the fixture skeleton, including its previous cargo where the
+        // new fuel motor will be constructed.
+        for x in -1..=1 {
+            for y in 2..=6 {
+                for z in -1..=7 {
+                    block(&mut chunks, [x, y, z], 0);
+                    journal.record([x, y, z], 0).unwrap();
+                }
+            }
+        }
+        let request = BuildRequest {
+            actor,
+            station,
+            chassis,
+            facing: 0,
+            kind: VehicleKind::Locomotive,
+            wheelbase: 4,
+            width,
+            creative: true,
+        };
+        let build = plan_blueprint(&chunks, &journal, request).unwrap();
+        commit_blueprint(&mut chunks, &mut journal, &build).unwrap();
+        let assembly = plan_assembly(
+            &chunks,
+            &journal,
+            actor,
+            station,
+            chassis,
+            VehicleKind::Locomotive,
+        )
+        .unwrap();
+        assert_eq!(
+            assembly.vehicle.parts.len(),
+            guide.len(),
+            "every visual fitting must join width {width}"
+        );
+        assert!(
+            assembly
+                .vehicle
+                .parts
+                .iter()
+                .any(|part| part.material == 224)
+        );
+        assert!(
+            assembly
+                .vehicle
+                .parts
+                .iter()
+                .any(|part| part.material == 225)
+        );
+        assert!(assembly.vehicle.valid());
+        let id = commit(&mut chunks, &mut journal, &assembly).unwrap();
+        assert_eq!(
+            journal.gameplay().trains.vehicles[&id].parts.len(),
+            guide.len()
+        );
+        assert!(
+            guide
+                .iter()
+                .all(|part| chunks.block_at(part.cell) == Some(0))
+        );
+        let restore = plan_dismantle(&chunks, &journal, actor, station, id).unwrap();
+        commit(&mut chunks, &mut journal, &restore).unwrap();
+        assert!(guide.iter().all(|part| {
+            terra_core::train_blueprint::matches(
+                *part,
+                chunks.block_at(part.cell),
+                journal
+                    .object_state(part.cell)
+                    .map_or(0, |state| state.facing),
+            )
+        }));
+    }
 }

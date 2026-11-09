@@ -3,7 +3,7 @@
   "id": 209,
   "name": "Rail Switch Stand",
   "description": "Place directly beside the throat of a left or right switch. Right-click to select its route.",
-  "creative_category": "building",
+  "creative_category": "trains",
   "render_kind": "custom_mesh",
   "model_layout": "scene",
   "model": "models/rail_switch_stand.gltf",

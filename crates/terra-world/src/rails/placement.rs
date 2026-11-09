@@ -8,7 +8,7 @@ use std::collections::BTreeSet;
 use terra_core::rails::{Piece, RAIL_BUILD_REACH};
 use terra_voxel::global_to_section;
 
-const MAX_MODULE_CELLS: usize = 512;
+const MAX_MODULE_CELLS: usize = 1024;
 
 pub fn set_wood(plan: &mut Layout, wood: terra_core::WoodSpecies) {
     for (_, state) in &mut plan.states {
@@ -761,6 +761,38 @@ pub fn break_layout(
 }
 
 /// The reserved footprint stays fixed when a switch selects its other route.
+/// Rotate a complete turntable without consuming or dropping its one item.
+pub fn turntable_plan(
+    chunks: &ChunkStore,
+    journal: &EditJournal,
+    cell: Cell,
+    clockwise: bool,
+) -> Result<Layout, String> {
+    let old = owner_at(journal, cell).ok_or("Missing turntable")?;
+    if old.material != terra_core::rails::TURNTABLE {
+        return Err("Not a turntable".into());
+    }
+    let next = Piece::new(
+        old.anchor,
+        old.material,
+        (old.facing + if clockwise { 1 } else { 3 }) % 4,
+    )
+    .ok_or("Invalid turntable pose")?;
+    let mut result = break_layout(chunks, journal, cell)?;
+    let old_cells: BTreeSet<_> = cells(old).into_iter().collect();
+    if cells(next).into_iter().collect::<BTreeSet<_>>() != old_cells {
+        return Err("Turntable platform must be rotation invariant".into());
+    }
+    let wood = journal.object_state(old.anchor).unwrap().wood;
+    for edit in &mut result.edits {
+        edit.material = old.material;
+    }
+    for (position, state) in &mut result.states {
+        *state = Some(object_state_with_wood(next, *position, wood));
+    }
+    Ok(result)
+}
+
 pub fn toggle_switch_plan(
     chunks: &ChunkStore,
     journal: &EditJournal,
@@ -829,6 +861,32 @@ fn supported(piece: Piece, chunks: &ChunkStore, journal: &EditJournal) -> bool {
 }
 
 /// Check support and real occupied prop space using the same shape as collision.
+/// A wheel can share a voxel with its supporting rail without intersecting it.
+/// Shrink only the contact tolerance, never reserve the entire wheel voxel.
+fn rail_intersects_vehicle(journal: &EditJournal, piece: Piece, cell: Cell) -> bool {
+    let offset = std::array::from_fn(|axis| (cell[axis] - piece.anchor[axis]) as i32);
+    let boxes = piece.cell_boxes(offset);
+    journal.gameplay().trains.vehicles.values().any(|car| {
+        let bounds = car.model_bounds();
+        boxes.iter().any(|rail| {
+            let low = std::array::from_fn(|axis| cell[axis] as f64 + rail.minimum[axis] + 1e-6);
+            let high = std::array::from_fn(|axis| cell[axis] as f64 + rail.maximum[axis] - 1e-6);
+            if !(0..3).all(|axis| {
+                low[axis] < high[axis]
+                    && bounds[0][axis] < high[axis]
+                    && bounds[1][axis] > low[axis]
+            }) {
+                return false;
+            }
+            car.parts.iter().enumerate().any(|(index, _)| {
+                car.transformed_shapes(index)
+                    .iter()
+                    .any(|shape| shape.intersects(low, high))
+            })
+        })
+    })
+}
+
 pub fn environment(
     plan: &Layout,
     chunks: &ChunkStore,
@@ -872,8 +930,8 @@ fn environment_for(
         .ok_or("Missing rail wood state")?
         .wood;
     for edit in &plan.edits {
-        if edit.material != 0 && crate::trains::reserved(journal, edit.position) {
-            return Err("An assembled vehicle occupies the rail footprint".into());
+        if edit.material != 0 && rail_intersects_vehicle(journal, piece, edit.position) {
+            return Err("An assembled vehicle intersects the physical rail".into());
         }
         if journal.has_extended_kinetics() {
             crate::placement::kinetic_clearance(
@@ -1139,7 +1197,11 @@ pub(crate) fn validate_commit(
     if next.anchor != current.anchor
         || next.material != current.material
         || next.curve != current.curve
-        || next.encoded_facing() != (current.encoded_facing() ^ 4)
+        || if current.material == terra_core::rails::TURNTABLE {
+            next.facing != (current.facing + 1) % 4 && next.facing != (current.facing + 3) % 4
+        } else {
+            next.encoded_facing() != (current.encoded_facing() ^ 4)
+        }
         || plan.edits.iter().any(|edit| edit.material != next.material)
         || plan
             .states

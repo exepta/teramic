@@ -32,6 +32,7 @@ pub(crate) struct TrainUiState {
     pub open: bool,
     pub consumed_escape: bool,
     station: Option<[i64; 3]>,
+    empty_table: Option<[i64; 3]>,
     kind: VehicleKind,
     selected: Option<u64>,
     second: Option<u64>,
@@ -41,10 +42,12 @@ pub(crate) struct TrainUiState {
     page: usize,
     pending: Option<u64>,
     pending_assembly: bool,
+    pending_turntable: bool,
     status: String,
     name: String,
     identity: Option<(Option<Entity>, Option<terra_core::PlayerUuid>)>,
     wheelbase: u8,
+    width: u8,
     edit_after_leave: Option<([i64; 3], u64)>,
     editing: bool,
     drive_queue: Option<(u64, i8, bool)>,
@@ -54,6 +57,9 @@ pub(crate) struct TrainUiState {
 impl TrainUiState {
     pub(crate) fn blocks_input(&self) -> bool {
         self.open || self.consumed_escape
+    }
+    fn width(&self) -> u8 {
+        if self.width == 1 { 1 } else { 3 }
     }
     fn wheelbase(&self) -> u8 {
         if self.wheelbase == 0 {
@@ -120,6 +126,12 @@ pub struct TrainView {
     pub player_slots: Vec<TrainSlot>,
     pub cargo_slots: Vec<TrainSlot>,
     pub wheelbase: String,
+    pub width: String,
+    pub name_count: String,
+    pub progress_value: f32,
+    pub progress_count: String,
+    pub can_turn: bool,
+    pub turntable_available: bool,
     pub riding: bool,
     pub driver: bool,
     pub drive_controls: bool,
@@ -148,6 +160,7 @@ pub(crate) fn install(app: &mut App) {
     app.init_resource::<TrainUiState>()
         .init_resource::<TrainView>()
         .init_resource::<TrainBlueprint>()
+        .init_resource::<train_blueprint::WorkshopPreviewRequest>()
         .add_message::<TrainUiAction>()
         .add_message::<terra_network::client::TrainRequest>()
         .add_systems(
@@ -156,7 +169,22 @@ pub(crate) fn install(app: &mut App) {
                 .before(crate::menu::MenuInputSet)
                 .before(terra_player::PlayerSet::Movement),
         )
-        .add_systems(PostUpdate, fit_panel.before(bevy::ui::UiSystems::Prepare));
+        .add_systems(
+            PostUpdate,
+            (fit_panel, fit_preview).before(bevy::ui::UiSystems::Prepare),
+        );
+}
+
+/// Preserve the render target aspect instead of stretching the vehicle image.
+fn fit_preview(mut nodes: Query<(&tilt_ui::ElementId, &mut Node)>) {
+    for (id, mut node) in &mut nodes {
+        if id.0 == "train-model-preview"
+            && (node.aspect_ratio != Some(16.0 / 9.0) || node.height != Val::Auto)
+        {
+            node.aspect_ratio = Some(16.0 / 9.0);
+            node.height = Val::Auto;
+        }
+    }
 }
 
 /// Fit the whole workshop, including its labels, inside the available viewport.
@@ -186,6 +214,7 @@ fn fit_panel(
                 scale,
                 false,
             )
+            .min(1.5 / scale)
             .min(
                 (window.width() * 0.94 / scale / size.x)
                     .min(window.height() * 0.92 / scale / size.y),
@@ -257,6 +286,10 @@ fn request(world: &mut World, state: &mut TrainUiState, action: TrainAction) {
         .and_then(|mut session| session.train_request(action))
     {
         state.pending_assembly = matches!(request.0.action, TrainAction::Assemble { .. });
+        state.pending_turntable = matches!(
+            request.0.action,
+            TrainAction::Turntable { .. } | TrainAction::RotateEmpty { .. }
+        );
         state.pending = Some(request.0.request);
         state.status = "Wird ausgeführt…".into();
         world.write_message(request);
@@ -341,32 +374,40 @@ fn blueprint(
     station: [i64; 3],
     kind: VehicleKind,
     wheelbase: u8,
+    width: u8,
 ) -> Option<TrainBlueprint> {
     let chunks = world.get_resource::<terra_world::streaming::ChunkStore>()?;
     let journal = world.get_resource::<terra_world::edits::EditJournal>()?;
     let previous = world.get_resource::<TrainBlueprint>();
     if let Some(previous) = previous.filter(|guide| guide.station == Some(station))
         && let Some(chassis) = previous.cells.iter().find(|part| part.material == 210)
-        && train_blueprint::building_template(chassis.cell, chassis.facing, kind, wheelbase)
-            .iter()
-            .filter(|part| part.material == 211)
-            .all(|part| {
-                terra_world::trains::bogie_supported_with_facing(
-                    chunks,
-                    journal,
-                    part.cell,
-                    part.facing,
-                )
-            })
+        && train_blueprint::building_template_with_width(
+            chassis.cell,
+            chassis.facing,
+            kind,
+            wheelbase,
+            width,
+        )
+        .iter()
+        .filter(|part| part.material == 211)
+        .all(|part| {
+            terra_world::trains::bogie_supported_with_facing(
+                chunks,
+                journal,
+                part.cell,
+                part.facing,
+            )
+        })
     {
         return Some(TrainBlueprint {
             station: Some(station),
             kind,
-            cells: train_blueprint::building_template(
+            cells: train_blueprint::building_template_with_width(
                 chassis.cell,
                 chassis.facing,
                 kind,
                 wheelbase,
+                width,
             ),
         });
     }
@@ -405,7 +446,9 @@ fn blueprint(
                 std::cmp::Reverse(matched),
                 distance,
                 facing,
-                train_blueprint::building_template(chassis, facing, kind, wheelbase),
+                train_blueprint::building_template_with_width(
+                    chassis, facing, kind, wheelbase, width,
+                ),
             ));
         }
     };
@@ -484,7 +527,7 @@ fn blueprint(
 
 fn show_blueprint(world: &mut World, state: &mut TrainUiState) {
     let Some(station) = state.station else { return };
-    if let Some(guide) = blueprint(world, station, state.kind, state.wheelbase()) {
+    if let Some(guide) = blueprint(world, station, state.kind, state.wheelbase(), state.width()) {
         *world.resource_mut::<TrainBlueprint>() = guide;
         state.status =
             "Vorlage auf dem Gleis: Grün fehlt, Rot ist belegt. Mit „Mit Vorlage bauen“ schließen."
@@ -498,6 +541,11 @@ fn show_blueprint(world: &mut World, state: &mut TrainUiState) {
 fn command(world: &mut World, state: &mut TrainUiState, command: &str) {
     if command == "close" {
         close(world, state);
+        return;
+    }
+    if matches!(command, "width:1" | "width:3") {
+        state.width = if command == "width:1" { 1 } else { 3 };
+        show_blueprint(world, state);
         return;
     }
     if matches!(command, "wheelbase-dec" | "wheelbase-inc") {
@@ -589,6 +637,7 @@ fn command(world: &mut World, state: &mut TrainUiState, command: &str) {
                         facing: chassis.facing,
                         kind: state.kind,
                         wheelbase: state.wheelbase(),
+                        width: state.width(),
                         player_revision,
                     },
                 );
@@ -637,6 +686,34 @@ fn command(world: &mut World, state: &mut TrainUiState, command: &str) {
             return;
         }
         _ => {}
+    }
+    if matches!(command, "turn-left" | "turn-right") {
+        if state.pending.is_none()
+            && let Some(vehicle) = state.selected
+        {
+            request(
+                world,
+                state,
+                TrainAction::Turntable {
+                    vehicle,
+                    clockwise: command == "turn-right",
+                    station: state.station,
+                },
+            );
+        } else if state.pending.is_none()
+            && let (Some(station), Some(anchor)) = (state.station, state.empty_table)
+        {
+            request(
+                world,
+                state,
+                TrainAction::RotateEmpty {
+                    station,
+                    anchor,
+                    clockwise: command == "turn-right",
+                },
+            );
+        }
+        return;
     }
     if driving::command(world, state, command) {
         return;
@@ -909,6 +986,129 @@ fn guide_view(world: &mut World) -> (bool, String, String) {
     )
 }
 
+fn update_preview(world: &mut World, state: &TrainUiState) {
+    if state.open
+        && !state.cargo
+        && let Some(car) = world.get_resource::<ClientSession>().and_then(|session| {
+            session
+                .trains
+                .vehicles
+                .iter()
+                .find(|car| Some(car.id) == state.selected)
+        })
+        && world
+            .get_resource::<train_blueprint::WorkshopPreviewRequest>()
+            .is_some_and(|previous| {
+                previous.visible && previous.parts == car.parts && previous.blocks == car.blocks
+            })
+    {
+        return;
+    }
+    let mut request = train_blueprint::WorkshopPreviewRequest {
+        visible: state.open && !state.cargo,
+        ..default()
+    };
+    if request.visible {
+        if let Some(car) = world.get_resource::<ClientSession>().and_then(|session| {
+            session
+                .trains
+                .vehicles
+                .iter()
+                .find(|car| Some(car.id) == state.selected)
+        }) {
+            request.parts = car.parts.clone();
+            request.blocks = car.blocks.clone();
+        } else {
+            request.parts = train_blueprint::building_template_with_width(
+                [0; 3],
+                0,
+                state.kind,
+                state.wheelbase(),
+                state.width(),
+            )
+            .into_iter()
+            .map(|part| terra_core::trains::TrainPart {
+                offset: part.cell.map(|value| value as i16),
+                material: part.material,
+                facing: part.facing,
+                wood: terra_core::WoodSpecies::Spruce,
+            })
+            .collect();
+        }
+    }
+    if world.get_resource::<train_blueprint::WorkshopPreviewRequest>() != Some(&request) {
+        world.insert_resource(request);
+    }
+}
+
+fn nearby_turntable(world: &World, station: [i64; 3]) -> Option<[i64; 3]> {
+    let journal = world.get_resource::<terra_world::edits::EditJournal>()?;
+    let section = terra_voxel::global_to_section(station).0;
+    journal
+        .rail_sections()
+        .filter(|owner| {
+            (owner.x - section.x).abs() <= 3
+                && (owner.y - section.y).abs() <= 2
+                && (owner.z - section.z).abs() <= 3
+        })
+        .flat_map(|owner| journal.object_states_in_section(owner))
+        .filter_map(|(cell, material, pose)| {
+            (material == terra_core::rails::TURNTABLE
+                && !pose.secondary
+                && (0..3).all(|axis| cell[axis].abs_diff(station[axis]) <= 32))
+            .then_some(cell)
+        })
+        .min_by_key(|cell| {
+            (0..3)
+                .map(|axis| cell[axis].abs_diff(station[axis]))
+                .sum::<u64>()
+        })
+}
+
+fn vehicle_dimensions(car: &terra_core::trains::VehicleView) -> (u8, u8) {
+    let side = if car.build_yaw().sin().abs() > 0.5 {
+        2
+    } else {
+        0
+    };
+    let body = car
+        .parts
+        .iter()
+        .filter(|part| part.material != terra_core::train_parts::BOGIE);
+    let low = body
+        .clone()
+        .map(|part| part.offset[side])
+        .min()
+        .unwrap_or(0);
+    let high = body.map(|part| part.offset[side]).max().unwrap_or(0);
+    let width = if high - low >= 2
+        || car
+            .parts
+            .iter()
+            .any(|part| terra_core::train_boiler::is_wide(part.material, part.facing))
+    {
+        3
+    } else {
+        1
+    };
+    let bogies = car
+        .parts
+        .iter()
+        .filter(|part| part.material == terra_core::train_parts::BOGIE)
+        .collect::<Vec<_>>();
+    let wheelbase = bogies
+        .iter()
+        .flat_map(|a| {
+            bogies.iter().map(move |b| {
+                f64::from(a.offset[0] - b.offset[0]).hypot(f64::from(a.offset[2] - b.offset[2]))
+            })
+        })
+        .fold(0.0, f64::max)
+        .round()
+        .clamp(3.0, 15.0) as u8;
+    (width, wheelbase)
+}
+
 fn view(world: &mut World, state: &mut TrainUiState) -> TrainView {
     let (blueprint, blueprint_progress, blueprint_target) = guide_view(world);
     if !state.open {
@@ -923,6 +1123,9 @@ fn view(world: &mut World, state: &mut TrainUiState) -> TrainView {
         }
         return view;
     }
+    state.empty_table = state
+        .station
+        .and_then(|station| nearby_turntable(world, station));
     let capacity = page_capacity(world).min(if state.selected.is_some() { 4 } else { 6 });
     let Some(session) = world.get_resource::<ClientSession>() else {
         return TrainView::default();
@@ -970,6 +1173,73 @@ fn view(world: &mut World, state: &mut TrainUiState) -> TrainView {
             foreign: Some(vehicle.owner) != session.uuid,
         })
         .collect();
+    let guide = world.resource::<TrainBlueprint>();
+    let placed = guide
+        .cells
+        .iter()
+        .filter(|part| {
+            world
+                .get_resource::<terra_world::streaming::ChunkStore>()
+                .is_some_and(|chunks| {
+                    train_blueprint::matches(
+                        **part,
+                        chunks.block_at(part.cell),
+                        world
+                            .get_resource::<terra_world::edits::EditJournal>()
+                            .and_then(|journal| journal.object_state(part.cell))
+                            .map_or(0, |pose| pose.facing),
+                    )
+                })
+        })
+        .count();
+    let progress_count = format!("{placed} / {}", guide.cells.len());
+    let progress_value = if guide.cells.is_empty() {
+        0.0
+    } else {
+        placed as f32 / guide.cells.len() as f32 * 100.0
+    };
+    let can_turn = session
+        .trains
+        .vehicles
+        .iter()
+        .find(|car| Some(car.id) == state.selected)
+        .is_some_and(|car| {
+            Some(car.owner) == session.uuid
+                && car.motion.stopped()
+                && car.motion.brake
+                && car.couplings.iter().all(Option::is_none)
+                && world
+                    .get_resource::<terra_world::edits::EditJournal>()
+                    .is_some_and(|journal| {
+                        car.motion.cursor.is_some_and(|cursor| {
+                            journal.block(cursor.anchor) == Some(terra_core::rails::TURNTABLE)
+                        }) || car
+                            .parts
+                            .iter()
+                            .filter(|part| part.material == 211)
+                            .any(|part| {
+                                let point = car.world_point([
+                                    f64::from(part.offset[0]) + 0.5,
+                                    f64::from(part.offset[1]) - 1.0
+                                        + terra_core::rails::DECK_HEIGHT
+                                        - terra_core::trains::MODEL_Y_OFFSET,
+                                    f64::from(part.offset[2]) + 0.5,
+                                ]);
+                                terra_world::rails::owner_at(
+                                    journal,
+                                    point.map(|value| value.floor() as i64),
+                                )
+                                .is_some_and(|piece| piece.material == terra_core::rails::TURNTABLE)
+                            })
+                    })
+        });
+    let selected_car = session
+        .trains
+        .vehicles
+        .iter()
+        .find(|car| Some(car.id) == state.selected);
+    let (width, wheelbase) =
+        selected_car.map_or((state.width(), state.wheelbase()), vehicle_dimensions);
     let cargo = session.train_cargo.as_ref().filter(|_| state.cargo);
     let palette = world.get_resource::<terra_player::interaction::BlockPalette>();
     let mut view = TrainView {
@@ -985,7 +1255,7 @@ fn view(world: &mut World, state: &mut TrainUiState) -> TrainView {
         name: state.name.clone(),
         requirements:
             "Fahrgestell · 2 Drehgestelle (3–15 m Abstand) · verbundener Rahmen · Kupplung".into(),
-        kind: kind_label(state.kind).into(),
+        kind: kind_label(selected_car.map_or(state.kind, |car| car.kind)).into(),
         blueprint,
         blueprint_progress,
         blueprint_target,
@@ -1032,7 +1302,13 @@ fn view(world: &mut World, state: &mut TrainUiState) -> TrainView {
                 |palette| crate::inventory::item_label(stack.item, palette),
             )
         }),
-        wheelbase: format!("{} m", state.wheelbase()),
+        wheelbase: format!("{wheelbase} m"),
+        width: width.to_string(),
+        name_count: format!("{}/24", state.name.chars().count()),
+        progress_value,
+        progress_count,
+        can_turn: can_turn || selected_car.is_none() && state.empty_table.is_some(),
+        turntable_available: can_turn || state.empty_table.is_some(),
         ..default()
     };
     driving::populate(world, session, state, &mut view);
@@ -1086,6 +1362,7 @@ fn update(
         {
             state.pending = None;
             let assembled = std::mem::take(&mut state.pending_assembly);
+            let turning = std::mem::take(&mut state.pending_turntable);
             driving::acknowledged(&mut state);
             match result.outcome {
                 TrainOutcome::Rejected(error) => {
@@ -1098,6 +1375,8 @@ fn update(
                     state.editing = false;
                     state.status = if edit_alignment {
                         "Für die Montage müssen alle Mitfahrer aussteigen und der Zug auf einem geraden Gleisabschnitt stehen."
+                    } else if turning && error == TrainError::Unsupported {
+                        "Das Drehgleis muss vollständig geladen sein. Einen Zug mittig auf die Plattform fahren."
                     } else { rejection(error) }.into();
                     if error == TrainError::Stale {
                         cargo::refresh_stale(world, &mut state);
@@ -1296,6 +1575,7 @@ fn update(
                 block.0 = true;
             }
         }
+        update_preview(world, &state);
         let next = view(world, &mut state);
         if *world.resource::<TrainView>() != next {
             *world.resource_mut::<TrainView>() = next;

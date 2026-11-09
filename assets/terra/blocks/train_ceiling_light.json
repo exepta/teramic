@@ -3,7 +3,7 @@
   "id": 294,
   "name": "Wagen-Deckenleuchte",
   "description": "Functional warm train light. Front and side lamps cast a forward cone; the ceiling lamp lights the carriage below.",
-  "creative_category": "building",
+  "creative_category": "trains",
   "render_kind": "custom_mesh",
   "model_layout": "scene",
   "model": "models/train_ceiling_light.gltf",

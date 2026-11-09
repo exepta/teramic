@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
   "id": 248,
-  "name": "F\u00fchrerhaus-T\u00fcr",
+  "name": "Führerhaus-Tür",
   "description": "Functional framed locomotive opening. Use to open and close its leaf.",
-  "creative_category": "building",
+  "creative_category": "trains",
   "render_kind": "custom_mesh",
   "model_layout": "scene",
   "model": "models/train_cab_door.gltf",

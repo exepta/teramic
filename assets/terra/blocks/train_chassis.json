@@ -3,7 +3,7 @@
   "id": 210,
   "name": "Zug-Fahrgestell",
   "description": "Modular railway vehicle part. Connect parts beside an assembly station, then assemble the vehicle.",
-  "creative_category": "building",
+  "creative_category": "trains",
   "render_kind": "custom_mesh",
   "model_layout": "scene",
   "model": "models/train_chassis.gltf",

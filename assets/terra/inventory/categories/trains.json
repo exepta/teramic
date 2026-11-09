@@ -1,0 +1,8 @@
+{
+  "id": "trains",
+  "name": "Trains",
+  "icon": {
+    "block": 210
+  },
+  "order": 25
+}

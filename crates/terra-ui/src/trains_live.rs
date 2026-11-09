@@ -89,7 +89,8 @@ fn run(world: &mut World) {
             info!(?position, size=?world.get::<ComputedNode>(target).unwrap().size(), "LIVE TRAIN actual materialized slot");
             let location = Location {target: RenderTarget::Window(WindowRef::Entity(window)).normalize(Some(window)).unwrap(), position};
             probe.location=Some(location);
-            world.spawn(Screenshot::primary_window()).observe(save_to_disk(if probe.frames < 360 { if cargo {"target/live217/engine-filled.png"} else {"target/live217/engine-before.png"} } else if cargo {"target/live217/storage-filled.png"} else {"target/live217/storage-before.png"}));
+            let folder = std::path::PathBuf::from(std::env::var("TERRA_CAPTURE_DIR").unwrap_or_else(|_| "target/live217".into())); std::fs::create_dir_all(&folder).unwrap();
+            world.spawn(Screenshot::primary_window()).observe(save_to_disk(folder.join(if probe.frames < 360 { if cargo {"engine-filled.png"} else {"engine-before.png"} } else if cargo {"storage-filled.png"} else {"storage-before.png"})));
         }
         if let Some(location) = probe.location.clone() {
             world.get_mut::<Window>(window).unwrap().set_cursor_position(Some(location.position));
@@ -142,21 +143,55 @@ fn workshop(world: &mut World, probe: &mut Probe) {
             .resolution
             .set_physical_resolution(1280, 720);
     }
-    if matches!(probe.frames, 120 | 240) {
+    if probe.frames == 300 {
+        let part = world.resource::<ClientSession>().trains.vehicles[0]
+            .parts
+            .iter()
+            .position(|part| part.material == terra_core::train_parts::CAB)
+            .unwrap() as u16;
+        let owner = world.resource::<ClientSession>().uuid.unwrap();
+        world.resource_mut::<ClientSession>().train_seat = Some(terra_core::trains::SeatBinding {
+            player: owner,
+            vehicle: 1,
+            part,
+        });
+        world.resource_mut::<TrainUiState>().selected = Some(1);
+    }
+    if probe.frames == 360 {
+        world
+            .get_mut::<Window>(window)
+            .unwrap()
+            .resolution
+            .set_physical_resolution(1920, 1080);
+    }
+    if probe.frames == 480 {
+        world
+            .get_mut::<Window>(window)
+            .unwrap()
+            .resolution
+            .set_physical_resolution(1280, 720);
+    }
+    if matches!(probe.frames, 120 | 240 | 420 | 540) {
         let folder = std::path::PathBuf::from(
             std::env::var("TERRA_CAPTURE_DIR")
-                .unwrap_or_else(|_| "target/live219/screenshots".into()),
+                .unwrap_or_else(|_| "target/live220/screenshots".into()),
         );
         std::fs::create_dir_all(&folder).unwrap();
-        let label = if probe.frames == 120 {
-            "train-workshop-1080.png"
+        let label = match probe.frames {
+            120 => "train-workshop-1080.png",
+            240 => "train-workshop-720.png",
+            420 => "train-driving-1080.png",
+            _ => "train-driving-720.png",
+        };
+        let primary = if world.resource::<TrainUiState>().selected.is_some() {
+            "drive-start"
         } else {
-            "train-workshop-720.png"
+            "blueprint-auto"
         };
         let auto_build = world
             .query::<&tilt_ui::ElementId>()
             .iter(world)
-            .any(|id| id.0 == "blueprint-auto");
+            .any(|id| id.0 == primary);
         let name = world
             .query::<&tilt_ui::ElementId>()
             .iter(world)
@@ -176,7 +211,7 @@ fn workshop(world: &mut World, probe: &mut Probe) {
             "Native train workshop: auto-build button and editable name materialized"
         );
     }
-    if probe.frames == 300 {
+    if probe.frames == 600 {
         info!("Native train workshop responsive capture passed: 1080p and 720p; UI-only fixture");
         world.write_message(bevy::app::AppExit::Success);
     }
@@ -221,6 +256,11 @@ fn workshop_bounds(world: &mut World, window: Entity) -> Result<(), String> {
     if low.cmplt(Vec2::ZERO).any() || high.cmpgt(size).any() {
         return Err(format!("Panel outside window: {low:?} {high:?}, {size:?}"));
     }
+    let primary = if world.resource::<TrainUiState>().selected.is_some() {
+        "drive-start"
+    } else {
+        "blueprint-auto"
+    };
     let mut controls = 0;
     for (entity, id, node, transform) in world
         .query::<(
@@ -231,7 +271,39 @@ fn workshop_bounds(world: &mut World, window: Entity) -> Result<(), String> {
         )>()
         .iter(world)
     {
-        if !matches!(id.0.as_str(), "blueprint-auto" | "train-name" | "close") {
+        if !matches!(
+            id.0.as_str(),
+            "blueprint-auto"
+                | "train-name"
+                | "close"
+                | "name-save"
+                | "wheelbase-dec"
+                | "wheelbase-inc"
+                | "blueprint"
+                | "blueprint-build"
+                | "blueprint-clear"
+                | "assemble"
+                | "edit"
+                | "seat"
+                | "train-vehicle"
+                | "previous"
+                | "next"
+                | "clear"
+                | "front"
+                | "second-front"
+                | "couple"
+                | "uncouple"
+                | "drive-start"
+                | "drive-stop"
+                | "drive-brake"
+                | "engine"
+                | "cargo"
+                | "width:1"
+                | "width:3"
+                | "turn-left"
+                | "turn-right"
+        ) && !id.0.starts_with("kind:")
+        {
             continue;
         }
         let mut parent = entity;
@@ -251,7 +323,16 @@ fn workshop_bounds(world: &mut World, window: Entity) -> Result<(), String> {
                 id.0
             ));
         }
-        controls += 1;
+        if id.0 == primary || matches!(id.0.as_str(), "train-name" | "close") {
+            controls += 1;
+        }
+    }
+    let model = world
+        .query::<(&tilt_ui::ElementId, &bevy::ui::widget::ImageNode)>()
+        .iter(world)
+        .find_map(|(id, image)| (id.0 == "train-model-preview").then_some(image));
+    if model.is_none_or(|image| image.image == Handle::default()) {
+        return Err("Real train model preview was not bound".into());
     }
     if controls != 3 {
         return Err(format!(

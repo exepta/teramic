@@ -1081,7 +1081,7 @@ fn udp_creative_workshop_builds_the_real_template_with_empty_inventory_on_both_c
         state.position[2].floor() as i64 + 3,
     ];
     let at = |x, y, z| [base[0] + x, base[1] + y, base[2] + z];
-    let station = at(3, 2, 2);
+    let station = at(3, 2, -1);
     let chassis = at(0, 2, 2);
     let volume: Vec<_> = (-3..=6)
         .flat_map(|x| (0..=7).flat_map(move |y| (-2..=10).map(move |z| at(x, y, z))))
@@ -1118,7 +1118,7 @@ fn udp_creative_workshop_builds_the_real_template_with_empty_inventory_on_both_c
             }
         });
     for y in 0..=1 {
-        put(&mut host, at(3, y, 2), 3);
+        put(&mut host, at(3, y, -1), 3);
     }
     put(&mut host, station, train_parts::STATION);
     let player_revision = owner
@@ -1134,6 +1134,7 @@ fn udp_creative_workshop_builds_the_real_template_with_empty_inventory_on_both_c
             facing: 0,
             kind: VehicleKind::Locomotive,
             wheelbase: 4,
+            width: 3,
             player_revision,
         },
     );
@@ -1141,8 +1142,13 @@ fn udp_creative_workshop_builds_the_real_template_with_empty_inventory_on_both_c
         response(&mut host, &mut owner, &mut watcher, request),
         TrainOutcome::Changed { vehicle: None }
     );
-    let guide =
-        terra_core::train_blueprint::building_template(chassis, 0, VehicleKind::Locomotive, 4);
+    let guide = terra_core::train_blueprint::building_template_with_width(
+        chassis,
+        0,
+        VehicleKind::Locomotive,
+        4,
+        3,
+    );
     wait_phase(
         "auto-built template replicated",
         &mut host,
@@ -1177,6 +1183,7 @@ fn udp_creative_workshop_builds_the_real_template_with_empty_inventory_on_both_c
             facing: 0,
             kind: VehicleKind::Locomotive,
             wheelbase: 4,
+            width: 3,
             player_revision,
         },
     );

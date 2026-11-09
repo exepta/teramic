@@ -228,6 +228,8 @@ fn inventory_slot_size(
         let has = |name| classes.classes.iter().any(|class| class == name);
         let grid = match id {
             "inventory-grid" => Some((9, 2)),
+            "train-player-grid" => Some((9, 3)),
+            "train-cargo-grid" => Some((9, 2)),
             "inventory-hotbar" => Some((9, 1)),
             "container-grid" => Some((9, view.container_items.len().div_ceil(9).max(1))),
             "workbench-container-grid" => Some((9, view.container_items.len().div_ceil(9).max(1))),
@@ -241,7 +243,8 @@ fn inventory_slot_size(
             || has("furnace-slot")
             || has("furnace-result")
             || has("funnel-filter-slot")
-            || has("reference-equipment");
+            || has("reference-equipment")
+            || has("train-slot");
         if grid.is_none() && !single {
             continue;
         }
