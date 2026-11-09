@@ -149,7 +149,7 @@ impl TrainAnimationRole {
             return Some(Self::BogieWheel(index));
         }
         match name {
-            "train_wheel_tire" | "train_wheel_spokes" => Some(Self::Wheel),
+            "train_wheel_tire" | "train_wheel_spokes" | "train_wheel_rim" => Some(Self::Wheel),
             "train_rod_main" => Some(Self::ConnectingRod),
             "train_rod_joint" => Some(Self::RodJoint),
             "train_rod_piston" => Some(Self::Piston),

@@ -19,7 +19,7 @@
   <tooltip for="fullmap-mode" trigger="hover" variant="follow" class="map-tool-tooltip"><p>{{ fullMapView.three_dimensional_available ? 'Switch 2.5D / 3D' : 'Cave maps are always 2D' }}</p></tooltip>
   <tooltip for="fullmap-center" trigger="hover" variant="follow" class="map-tool-tooltip"><p>Center on player</p></tooltip>
   <tooltip for="fullmap-list" trigger="hover" variant="follow" class="map-tool-tooltip"><p>Waypoints</p></tooltip>
-  <tooltip for="fullmap-diplomacy" trigger="hover" variant="follow" class="map-tool-tooltip"><p>Diplomatie · Kingdom-Grenzen und Claims</p></tooltip>
+  <tooltip for="fullmap-diplomacy" trigger="hover" variant="follow" class="map-tool-tooltip" id="fullmap-diplomacy-tooltip"><p>Diplomatie · Grenzen und Claims</p></tooltip>
   <div id="full-map-viewport" class="full-map-viewport" [style]="fullMapView.surface_style">
     <img id="full-map-surface" class="full-map-surface" alt="World map" />
     @for (point of fullMapView.markers; track point.id) { <waypoint-marker></waypoint-marker> }

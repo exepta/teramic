@@ -78,8 +78,8 @@ def expected_parts():
 
 def valid_coordinates(values, material):
     for axis, value in enumerate(values):
-        low = -0.61 if material == 211 and axis != 1 else -.14 if material in (224, 225, 226) and axis == 1 else 0
-        high = 1.61 if material == 211 and axis != 1 else 2 if material == 248 and axis == 1 else 1
+        low = -0.36 if material == 232 else -0.61 if material == 211 and axis != 1 else -.14 if material in (224, 225, 226) and axis == 1 else 0
+        high = 1.76 if material == 232 else 1.61 if material == 211 and axis != 1 else 2 if material == 248 and axis == 1 else 1
         require(math.isfinite(value), f"{material}: non-finite coordinate")
         require(low - 1e-5 <= value <= high + 1e-5,
                 f"{material}: coordinate {axis}={value} outside owner bounds")

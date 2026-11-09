@@ -598,7 +598,7 @@ pub fn is_animated(material: u16) -> bool {
 pub const fn wheel_radius(material: u16) -> Option<f64> {
     match material {
         211 => Some(0.45),
-        232 => Some(0.48),
+        232 => Some(0.85),
         233 => Some(0.38),
         234 => Some(0.28),
         _ => None,

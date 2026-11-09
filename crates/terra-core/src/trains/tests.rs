@@ -482,3 +482,47 @@ fn train_bounds_repeated_query_cost_is_measured_against_the_previous_shape_walk(
         started.elapsed().as_micros()
     );
 }
+
+#[test]
+fn touching_couplers_use_fractional_world_positions_on_curves_and_slopes() {
+    let owner = PlayerUuid::from_u128(1);
+    for (yaw, pitch) in [(0.0, 0.0), (0.37, 0.0), (-0.8, 0.10), (2.1, -0.08)] {
+        let mut registry = TrainRegistry::default();
+        let a = registry
+            .insert(car([0, 5, 0], VehicleKind::Locomotive))
+            .unwrap();
+        let b = registry
+            .insert(car([0, 5, 9], VehicleKind::Tender))
+            .unwrap();
+        for id in [a, b] {
+            let motion = &mut registry.vehicles.get_mut(&id).unwrap().motion;
+            motion.yaw = yaw;
+            motion.pitch = pitch;
+        }
+        let point = registry.vehicles[&a]
+            .coupler_point(CouplerEnd::Front)
+            .unwrap();
+        let axis = registry.vehicles[&a]
+            .coupler_direction(CouplerEnd::Front)
+            .unwrap();
+        let other = registry.vehicles[&b]
+            .coupler_point(CouplerEnd::Rear)
+            .unwrap();
+        registry.vehicles.get_mut(&b).unwrap().motion.translation =
+            std::array::from_fn(|i| point[i] + axis[i] * 0.9 - other[i]);
+        assert!(
+            registry.vehicles[&a]
+                .coupling_distance(CouplerEnd::Front, &registry.vehicles[&b], CouplerEnd::Rear)
+                .is_some()
+        );
+        assert!(
+            registry.vehicles[&a]
+                .coupling_distance(CouplerEnd::Rear, &registry.vehicles[&b], CouplerEnd::Rear)
+                .is_none()
+        );
+        registry
+            .couple(owner, a, CouplerEnd::Front, b, CouplerEnd::Rear)
+            .unwrap();
+        assert!(registry.valid());
+    }
+}

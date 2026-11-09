@@ -62,6 +62,8 @@ impl ShapeBox {
                         -1.01
                     } else if material == 148 {
                         -0.15
+                    } else if material == 232 {
+                        -0.36
                     } else if material == crate::train_parts::BOGIE && axis != 1 {
                         crate::train_parts::BOGIE_MIN_HORIZONTAL
                     } else if crate::kinetic::is_large_gear(material) {
@@ -76,6 +78,8 @@ impl ShapeBox {
                         2.01
                     } else if material == 148 {
                         1.15
+                    } else if material == 232 {
+                        1.76
                     } else if material == crate::train_parts::BOGIE && axis != 1 {
                         crate::train_parts::BOGIE_MAX_HORIZONTAL
                     } else if crate::kinetic::is_large_gear(material) {

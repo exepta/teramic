@@ -1723,7 +1723,7 @@ fn primary_window(world: &mut World) -> Result<Entity, String> {
         .ok_or_else(|| "Missing primary map window".into())
 }
 
-fn key_event(world: &mut World, key: KeyCode, pressed: bool) {
+pub(crate) fn key_event(world: &mut World, key: KeyCode, pressed: bool) {
     let Ok(window) = primary_window(world) else {
         return;
     };
@@ -1853,7 +1853,7 @@ fn validate_tool_rail(world: &mut World) -> Result<(), String> {
     Ok(())
 }
 
-fn hover_map_tool(world: &mut World, id: &str) -> Result<(), String> {
+pub(crate) fn hover_map_tool(world: &mut World, id: &str) -> Result<(), String> {
     let target = world
         .query::<(&ElementId, &bevy::ui::UiGlobalTransform)>()
         .iter(world)

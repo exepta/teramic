@@ -221,6 +221,30 @@ fn bounds(world: &mut World, picker: bool) -> Result<(), String> {
             "Kingdom panel escapes the viewport: {panel_rect:?}"
         ));
     }
+    if !picker
+        && world.resource::<KingdomView>().bound
+        && world.resource::<KingdomView>().overview_tab
+    {
+        let scroll = element(world, "kingdom-scroll").ok_or("Missing overview viewport")?;
+        let viewport = rect(world, scroll).ok_or("Missing overview geometry")?;
+        for id in [
+            "kingdom-claim-protected",
+            "kingdom-claim-territory",
+            "kingdom-release",
+        ] {
+            let button =
+                element(world, id).ok_or_else(|| format!("Missing overview action {id}"))?;
+            if !within(
+                rect(world, button).ok_or("Overview action has no layout")?,
+                viewport,
+            ) {
+                return Err(format!(
+                    "Overview action is below the fold: {id}, {:?} outside {viewport:?}",
+                    rect(world, button)
+                ));
+            }
+        }
+    }
     let texts = world
         .query::<(Entity, &Text)>()
         .iter(world)
@@ -511,8 +535,29 @@ pub(crate) fn run(world: &mut World) -> Result<bool, String> {
                 if world.resource::<KingdomView>().diplomacy.iter().any(|r|r.can_neutral||r.can_ally||r.can_hostile)||element(world,"kingdom-relation-allied").is_some(){return Err("Readonly diplomacy exposed relation controls".into());}
                 bounds(world,false)?;shot(world,&mut g,"kingdom-diplomacy-readonly")?;
             }
+            44 => { world.write_message(KingdomMenuAction::Close); }
+            45 => {
+                let terra_core::InputBinding::Key(key) = world.resource::<terra_core::ControlsConfig>().binding(terra_core::GameAction::FullMap) else { return Err("Gallery needs a keyboard map binding".into()); };
+                crate::minimap_smoke::key_event(world,key,true);
+            }
+            46 => {
+                let terra_core::InputBinding::Key(key) = world.resource::<terra_core::ControlsConfig>().binding(terra_core::GameAction::FullMap) else { return Err("Gallery needs a keyboard map binding".into()); };
+                crate::minimap_smoke::key_event(world,key,false);
+            }
+            47 => { crate::minimap_smoke::hover_map_tool(world,"fullmap-diplomacy")?; }
+            48 => {
+                let tooltip=element(world,"fullmap-diplomacy-tooltip").ok_or("Diplomacy hover did not open the tooltip")?;
+                let panel=rect(world,tooltip).ok_or("Tooltip has no layout")?;
+                if panel.width() < 100.0 || panel.height() < 20.0 { return Err("Diplomacy tooltip is clipped".into()); }
+                let text=world.query::<(Entity,&Text,&TextFont)>().iter(world).filter(|(_,text,_)| text.0.contains("Diplomatie ·")).map(|(entity,_,font)|(entity,font.font_size)).collect::<Vec<_>>();
+                if text.is_empty() { return Err("Diplomacy tooltip text is missing".into()); }
+                for (entity,size) in text {
+                    if !within(rect(world,entity).ok_or("Tooltip text has no layout")?,panel) || !matches!(size, bevy::text::FontSize::Px(value) if value <= 14.0) { return Err("Diplomacy tooltip text exceeds its frame or font limit".into()); }
+                }
+                shot(world,&mut g,"kingdom-diplomacy-tooltip")?;
+            }
             _ => {
-                if g.captures < 17 { return Ok(false); }
+                if g.captures < 18 { return Ok(false); }
                 info!(captures=g.captures,"Native Kingdom UI gallery passed: real founding/appearance ack, full icon search, themed colorpicker, QHD/1024x768/4K frames, real secondary Visitor join/Worker grant/revocation, rejected self-promotion, NPC allied/pending acknowledgements and authenticated Visitor reconnect/read-only controls");
                 return Ok(true);
             }

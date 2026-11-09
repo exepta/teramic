@@ -1,128 +1,72 @@
 @if (kingdomView.visible) {
-  <div id="kingdom-backdrop" class="kingdom-backdrop">
-    <div id="kingdom-dialog" class="kingdom-dialog">
-      <ornate-frame></ornate-frame>
-      <div class="kingdom-heading"><icon name="crown" size="32" /><h1>{{ kingdomView.title }}</h1><button id="kingdom-close" class="kingdom-close" title="Close" onclick="kingdom_command"><icon name="close" size="22" /></button></div>
-      <p class="kingdom-location">{{ kingdomView.location }}</p>
-      @if (kingdomView.error) { <p id="kingdom-error" class="kingdom-error">{{ kingdomView.error }}</p> }
-      @if (kingdomView.status) { <p id="kingdom-status" class="kingdom-status">{{ kingdomView.status }}</p> }
-      @if (kingdomView.bound) { <div class="kingdom-tabs">
-        <button id="kingdom-tab-overview" [class]="kingdomView.overview_tab ? 'kingdom-tab selected' : 'kingdom-tab'" onclick="kingdom_command">Overview</button>
-        <button id="kingdom-tab-members" [class]="kingdomView.members_tab ? 'kingdom-tab selected' : 'kingdom-tab'" onclick="kingdom_command">Members &amp; Rights</button>
-        <button id="kingdom-tab-diplomacy" [class]="kingdomView.diplomacy_tab ? 'kingdom-tab selected' : 'kingdom-tab'" onclick="kingdom_command">Diplomacy</button>
-      </div> }
-      <div id="kingdom-scroll" class="kingdom-scroll">
-        @if (!kingdomView.bound) {
-          <div class="kingdom-card"><h2>Make this Bergfried your seat</h2><p>Choose your settlement, name and banner. Founding protects the Bergfried chunk and starts your settlement at level 1.</p><p class="kingdom-hint">{{ kingdomView.membership }}</p></div>
-          <div class="kingdom-kind-options">
-            @for (kind of kingdomView.kinds; track kind.key) {
-              @if (kind.key == 'kingdom') { <button id="kingdom-kind-kingdom" [class]="kind.selected ? 'kingdom-choice kingdom-kind selected' : 'kingdom-choice kingdom-kind'" [disabled]="kingdomView.pending" onclick="kingdom_command"><icon name="flag" size="32" [src]="kind.icon" /><p>{{ kind.label }}</p></button> }
-              @if (kind.key == 'village') { <button id="kingdom-kind-village" [class]="kind.selected ? 'kingdom-choice kingdom-kind selected' : 'kingdom-choice kingdom-kind'" [disabled]="kingdomView.pending" onclick="kingdom_command"><icon name="flag" size="32" [src]="kind.icon" /><p>{{ kind.label }}</p></button> }
-              @if (kind.key == 'city') { <button id="kingdom-kind-city" [class]="kind.selected ? 'kingdom-choice kingdom-kind selected' : 'kingdom-choice kingdom-kind'" [disabled]="kingdomView.pending" onclick="kingdom_command"><icon name="flag" size="32" [src]="kind.icon" /><p>{{ kind.label }}</p></button> }
-            }
+<div id="kingdom-backdrop" class="kingdom-backdrop">
+  <div id="kingdom-dialog" class="kingdom-dialog">
+    <ornate-frame></ornate-frame>
+    <div class="kingdom-heading"><icon name="landmark" size="25" /><h1>{{ kingdomView.bound ? 'Bergfried' : 'Bergfried gründen' }}</h1><button id="kingdom-close" class="kingdom-close" title="Schließen" onclick="kingdom_command"><icon name="close" size="18" /></button></div>
+    @if (kingdomView.bound) {
+      <div class="kingdom-summary"><div class="kingdom-banner-preview" [style]="kingdomView.emblem_style"><icon name="landmark" size="45" [src]="kingdomView.emblem_source" /></div><div class="kingdom-summary-name"><h2>{{ kingdomView.title }}</h2><p>{{ kingdomView.settlement_kind }} · {{ kingdomView.level }}</p><p>Gründer: {{ kingdomView.founder }}</p></div><div class="kingdom-summary-location"><p>{{ kingdomView.kingdom_id }}</p><p class="kingdom-location">{{ kingdomView.location }}</p></div></div>
+      <div class="kingdom-tabs"><button id="kingdom-tab-overview" [class]="kingdomView.overview_tab ? 'kingdom-tab selected' : 'kingdom-tab'" onclick="kingdom_command">Übersicht</button><button id="kingdom-tab-members" [class]="kingdomView.members_tab ? 'kingdom-tab selected' : 'kingdom-tab'" onclick="kingdom_command">Mitglieder &amp; Rechte</button><button id="kingdom-tab-diplomacy" [class]="kingdomView.diplomacy_tab ? 'kingdom-tab selected' : 'kingdom-tab'" onclick="kingdom_command">Diplomatie</button></div>
+    }
+    @if (kingdomView.error) { <p id="kingdom-error" class="kingdom-error">{{ kingdomView.error }}</p> }
+    @if (kingdomView.status) { <p id="kingdom-status" class="kingdom-status">{{ kingdomView.status }}</p> }
+    <div id="kingdom-scroll" class="kingdom-scroll">
+      @if (!kingdomView.bound) {
+        <div class="kingdom-kind-options">
+          @for (kind of kingdomView.kinds; track kind.key) {
+            @if (kind.key == 'kingdom') { <button id="kingdom-kind-kingdom" [class]="kind.selected ? 'kingdom-choice selected' : 'kingdom-choice'" [disabled]="kingdomView.pending" onclick="kingdom_command"><icon name="crown" size="27" /><p>Königreich</p></button> }
+            @if (kind.key == 'village') { <button id="kingdom-kind-village" [class]="kind.selected ? 'kingdom-choice selected' : 'kingdom-choice'" [disabled]="kingdomView.pending" onclick="kingdom_command"><icon name="trees" size="27" /><p>Dorf</p></button> }
+            @if (kind.key == 'city') { <button id="kingdom-kind-city" [class]="kind.selected ? 'kingdom-choice selected' : 'kingdom-choice'" [disabled]="kingdomView.pending" onclick="kingdom_command"><icon name="landmark" size="27" /><p>Stadt</p></button> }
+            @if (kind.key == 'outpost') { <button id="kingdom-kind-outpost" [class]="kind.selected ? 'kingdom-choice selected' : 'kingdom-choice'" [disabled]="kingdomView.pending" onclick="kingdom_command"><icon name="flag" size="27" /><p>Außenposten</p></button> }
+          }
+        </div>
+      }
+      @if (!kingdomView.bound || kingdomView.overview_tab) {
+        <div [class]="kingdomView.bound ? 'kingdom-overview-top' : 'kingdom-foundation-top'">
+        <div class="kingdom-card kingdom-identity-grid">
+          <div class="kingdom-banner-preview kingdom-large-banner" [style]="kingdomView.emblem_style"><icon name="landmark" size="54" [src]="kingdomView.emblem_source" /><label>Wappen</label></div>
+          <div class="kingdom-identity-fields">
+            <label for="kingdom-name">Name der Siedlung</label>
+            <div class="kingdom-name-row"><input id="kingdom-name" type="text" maxlength="32" placeholder="Name wählen" [value]="kingdomView.name" [disabled]="kingdomView.pending || (kingdomView.bound && !kingdomView.manager_controls)" onchange="kingdom_name" />@if (kingdomView.bound && kingdomView.manager_controls) { <button id="kingdom-rename" class="kingdom-primary" [disabled]="!kingdomView.can_rename" onclick="kingdom_command">Speichern</button> }</div>
+            <div class="kingdom-appearance-row"><div class="kingdom-color-field"><label>Farbe</label><color-picker id="kingdom-color" class="kingdom-color-picker" [value]="kingdomView.color" [disabled]="!kingdomView.can_edit_appearance" onchange="kingdom_color" /></div><button id="kingdom-icons" class="kingdom-icon-select" [disabled]="!kingdomView.can_edit_appearance" onclick="kingdom_command"><icon name="flag" size="20" [src]="kingdomView.emblem_source" />Symbol wählen<icon name="chevron-down" size="14" /></button>@if (kingdomView.bound && kingdomView.manager_controls) { <button id="kingdom-save-appearance" class="kingdom-secondary" [disabled]="!kingdomView.can_save_appearance" onclick="kingdom_command">Wappen speichern</button> }</div>
           </div>
-        } @else {
-          <div class="kingdom-summary">
-            <div class="kingdom-card kingdom-identity"><icon name="landmark" size="32" [src]="kingdomView.emblem_source" [style]="kingdomView.emblem_style" /><div><h2>{{ kingdomView.settlement_kind }}</h2><p>{{ kingdomView.kingdom_id }}</p></div></div>
-            <div class="kingdom-card"><label>Founder</label><p>{{ kingdomView.founder }}</p></div>
-            <div class="kingdom-card"><label>Progression</label><h2>{{ kingdomView.level }}</h2></div>
-          </div>
+        </div>
+        @if (kingdomView.bound) {
+          <div class="kingdom-card kingdom-upgrade-grid"><div class="kingdom-level-step"><div><label>Aktuell</label><h2>{{ kingdomView.level }}</h2></div><icon name="chevron-right" size="22" /><div><label>Nächste Stufe</label><h2>{{ kingdomView.next_level }}</h2></div></div><div class="kingdom-upgrade-materials"><label>Aufwertungskosten</label><div class="kingdom-material-row"><icon name="layers" size="19" /><p>Steinmauern</p><p [class]="kingdomView.walls_available ? 'kingdom-amount available' : 'kingdom-amount missing'">{{ kingdomView.upgrade_walls }}</p></div><div class="kingdom-material-row"><icon name="coins" size="19" /><p>Goldbarren</p><p [class]="kingdomView.gold_available ? 'kingdom-amount available' : 'kingdom-amount missing'">{{ kingdomView.upgrade_gold }}</p></div></div><div class="kingdom-upgrade-action"><p>{{ kingdomView.level_gain }}</p>@if (kingdomView.manager_controls) { <button id="kingdom-upgrade" class="kingdom-primary" [disabled]="!kingdomView.can_upgrade" [title]="kingdomView.upgrade_hint" onclick="kingdom_command"><icon name="arrow-up" size="19" />Aufwerten</button> }</div></div>
         }
-        @if (!kingdomView.bound || (kingdomView.manager_controls && kingdomView.overview_tab)) {
-          <div class="kingdom-name-field"><label for="kingdom-name">Settlement Name</label><input id="kingdom-name" type="text" maxlength="32" placeholder="Choose a settlement name" [value]="kingdomView.name" [disabled]="kingdomView.pending" onchange="kingdom_name" /></div>
-          @if (kingdomView.bound) { <button id="kingdom-rename" class="kingdom-primary" [disabled]="!kingdomView.can_rename" onclick="kingdom_command">Rename Settlement</button> }
+        </div>
+      }
+      @if (!kingdomView.bound) {
+        <div class="kingdom-card"><label>Zugehöriges Königreich</label><p>{{ kingdomView.parent_name }}</p><p class="kingdom-hint">{{ kingdomView.membership }}</p></div>
+        <div class="kingdom-card"><h2>Voraussetzungen</h2><p>Der Bergfried-Chunk wird bei der Gründung geschützt. Die Siedlung beginnt auf Level 1.</p><p class="kingdom-hint">Dörfer und Städte benötigen eigenes Territorium. Stadt und Außenposten beachten die Level- und Abstandsregeln deiner Welt.</p></div>
+      } @else {
+        @if (kingdomView.overview_tab) {
+          <div class="kingdom-land-grid"><div class="kingdom-card kingdom-land-totals"><div><icon name="shield" size="19" /><p>Bau-Chunks</p><p>{{ kingdomView.protected_claims }}</p></div><div><icon name="map" size="19" /><p>Territorium</p><p>{{ kingdomView.territory_claims }}</p></div><div><icon name="flag" size="19" /><p>Außenposten</p><p>{{ kingdomView.outposts }}</p></div><div><icon name="crown" size="19" /><p>Königreich</p><p>{{ kingdomView.parent_name }}</p></div></div><div class="kingdom-card kingdom-current-chunk"><h2>Aktueller Chunk</h2><p>{{ kingdomView.current_chunk }}</p><p class="kingdom-current-claim">{{ kingdomView.current_claim }}</p><p class="kingdom-hint">{{ kingdomView.claim_hint }}</p></div></div>
+          <div class="kingdom-claim-actions"><button id="kingdom-claim-protected" class="kingdom-secondary" [disabled]="!kingdomView.can_claim_protected" onclick="kingdom_command"><icon name="shield" size="17" />Bau-Chunk beanspruchen</button><button id="kingdom-claim-territory" class="kingdom-secondary" [disabled]="!kingdomView.can_claim_territory" onclick="kingdom_command"><icon name="flag" size="17" />Territorium markieren</button><button id="kingdom-release" class="kingdom-danger-button" [disabled]="!kingdomView.can_release" onclick="kingdom_command"><icon name="close" size="17" />Chunk freigeben</button></div>
+          <p class="kingdom-hint">Weitere Chunks auf der Weltkarte unter Diplomatie auswählen.</p>
         }
-        @if (!kingdomView.bound || (kingdomView.manager_controls && kingdomView.overview_tab)) {
-          <div class="kingdom-card kingdom-appearance">
-            <div class="kingdom-appearance-heading"><div class="kingdom-banner-preview" [style]="kingdomView.emblem_style"><icon name="landmark" size="32" [src]="kingdomView.emblem_source" /></div><div class="kingdom-color-field"><label>Banner Color</label><color-picker id="kingdom-color" class="kingdom-color-picker" [value]="kingdomView.color" [disabled]="!kingdomView.can_edit_appearance" onchange="kingdom_color" /></div></div>
-            <label>Banner Emblem</label>
-            <button id="kingdom-icons" class="kingdom-icon-select" title="Choose banner emblem" [disabled]="!kingdomView.can_edit_appearance" onclick="kingdom_command"><icon name="flag" size="32" [src]="kingdomView.emblem_source" /><p>{{ kingdomView.icon_label }}</p><icon name="chevron-down" size="16" /></button>
-            @if (kingdomView.bound) { <button id="kingdom-save-appearance" class="kingdom-secondary" [disabled]="!kingdomView.can_save_appearance" onclick="kingdom_command">Save Banner</button> }
-          </div>
-        }
-        @if (!kingdomView.bound) {
-          <button id="kingdom-found" class="kingdom-primary" [disabled]="!kingdomView.can_found" onclick="kingdom_command"><icon name="flag" size="20" />Found {{ kingdomView.settlement_kind }}</button>
-        } @else {
-          @if (kingdomView.overview_tab) {
-          <div class="kingdom-card kingdom-level-card">
-            <div class="kingdom-section-heading"><h2>{{ kingdomView.level }}</h2><p>+6 protected / +16 territory per level</p></div>
-            <p>{{ kingdomView.upgrade_cost }}</p><p class="kingdom-hint">{{ kingdomView.upgrade_hint }}</p>
-            @if (kingdomView.manager_controls) { <button id="kingdom-upgrade" class="kingdom-primary" [disabled]="!kingdomView.can_upgrade" onclick="kingdom_command">Upgrade Settlement</button> }
-          </div>
-          <div class="kingdom-card kingdom-land-card">
-            <div><h2>Land &amp; Protection</h2><p>{{ kingdomView.current_chunk }}</p><p class="kingdom-current-claim">{{ kingdomView.current_claim }}</p></div>
-            <div class="kingdom-claim-options">
-              <div class="kingdom-claim-card"><div class="kingdom-section-heading"><icon name="shield" size="24" /><h3>Protected Buildings</h3><p>{{ kingdomView.protected_claims }}</p></div><p>A role with Build / Break permission is required here.</p><button id="kingdom-claim-protected" class="kingdom-secondary" [disabled]="!kingdomView.can_claim_protected" onclick="kingdom_command">Protect Current Chunk</button></div>
-              <div class="kingdom-claim-card"><div class="kingdom-section-heading"><icon name="flag" size="24" /><h3>Realm Territory</h3><p>{{ kingdomView.territory_claims }}</p></div><p>Marked land. Outsiders can still mine and build here.</p><button id="kingdom-claim-territory" class="kingdom-secondary" [disabled]="!kingdomView.can_claim_territory" onclick="kingdom_command">Mark Current Chunk</button></div>
+        @if (kingdomView.members_tab) {
+          <div class="kingdom-member-summary"><div class="kingdom-card"><label>Mitglieder</label><h2>{{ kingdomView.member_count }}</h2></div><div class="kingdom-card"><label>Deine Rolle</label><h2>{{ kingdomView.own_role }}</h2></div></div>
+          <div id="kingdom-capabilities" class="kingdom-capabilities">@for (capability of kingdomView.capabilities; track capability.label) { <div [class]="capability.allowed ? 'kingdom-capability allowed' : 'kingdom-capability denied'"><icon name="shield" size="16" [src]="capability.icon" /><p>{{ capability.label }}</p><p>{{ capability.allowed ? '✓' : '—' }}</p></div> }</div>
+          <div class="kingdom-member-table-heading"><p>Mitglied</p><p>Rolle</p><p>Bauen</p><p>Abbau</p><p>Lager</p><p>NPC</p><p></p></div>
+          <div id="kingdom-members" class="kingdom-members">@for (member of kingdomView.members; track member.id) {
+            <div class="kingdom-member"><div class="kingdom-member-row"><h3>{{ member.name }}</h3>@if (member.can_edit_role) { <button id="kingdom-edit-role" class="kingdom-secondary" onclick="$set(kingdomIntent.member, member.id); kingdom_command">{{ member.role }}<icon name="chevron-down" size="13" /></button> } @else { <p>{{ member.role }}</p> }<p [class]="member.build ? 'kingdom-permission yes' : 'kingdom-permission no'">{{ member.build ? '✓' : '—' }}</p><p [class]="member.break_blocks ? 'kingdom-permission yes' : 'kingdom-permission no'">{{ member.break_blocks ? '✓' : '—' }}</p><p [class]="member.inventories ? 'kingdom-permission yes' : 'kingdom-permission no'">{{ member.inventories ? '✓' : '—' }}</p><p [class]="member.npc_work ? 'kingdom-permission yes' : 'kingdom-permission no'">{{ member.npc_work ? '✓' : '—' }}</p>@if (member.can_kick) { <button id="kingdom-kick" class="kingdom-remove-member" title="Mitglied entfernen" onclick="$set(kingdomIntent.member, member.id); kingdom_command"><icon name="trash" size="16" /></button> } @else { <p></p> }</div>
+              @if (member.editing) { <div id="kingdom-role-editor" class="kingdom-role-choices">@for (choice of member.roles; track choice.key) { <button id="kingdom-set-role" [class]="choice.selected ? 'kingdom-secondary selected' : 'kingdom-secondary'" [disabled]="kingdomView.pending || choice.selected" onclick="$set(kingdomIntent.member, member.id); $set(kingdomIntent.role, choice.key); kingdom_command">{{ choice.label }}</button> }</div> }
             </div>
-            <p class="kingdom-hint">{{ kingdomView.claim_hint }}</p>
-            <div class="kingdom-claim-footer"><button id="kingdom-release" class="kingdom-secondary" [disabled]="!kingdomView.can_release" onclick="kingdom_command">Release Current Chunk</button><p>Use Diplomacy on the world map to select other chunks.</p></div>
-          </div>
-          }
-          @if (kingdomView.members_tab) {
-          <div id="kingdom-capabilities" class="kingdom-card kingdom-access-card">
-            <div class="kingdom-section-heading"><h2>Your Role · {{ kingdomView.own_role }}</h2></div><p class="kingdom-hint">Protected land permissions. Marked Realm Territory stays open for building and breaking.</p>
-            <div class="kingdom-capabilities">@for (capability of kingdomView.capabilities; track capability.label) {
-              <div [class]="capability.allowed ? 'kingdom-capability allowed' : 'kingdom-capability denied'"><icon name="shield" size="20" [src]="capability.icon" /><p>{{ capability.label }}</p><p>{{ capability.allowed ? 'Allowed' : 'Denied' }}</p></div>
-            }</div><p class="kingdom-hint">{{ kingdomView.access_hint }}</p>
-          </div>
-          <div class="kingdom-role-guide"><div><h3>Member</h3><p>All four permissions, no management</p></div><div><h3>Builder</h3><p>Build · Break · Inventories</p></div><div><h3>Worker</h3><p>Inventories · NPC Work</p></div><div><h3>Visitor</h3><p>No protected-land permissions</p></div></div>
-          <div class="kingdom-section-heading"><h2>Members</h2><p>{{ kingdomView.member_count }}</p></div>
-          <div id="kingdom-members" class="kingdom-members">
-            @for (member of kingdomView.members; track member.id) {
-              <div class="kingdom-member">
-                <div class="kingdom-member-heading"><div><h3>{{ member.name }}</h3><p>{{ member.role }}</p></div><div class="kingdom-member-actions">
-                  @if (member.can_edit_role) { <button id="kingdom-edit-role" class="kingdom-secondary" onclick="$set(kingdomIntent.member, member.id); kingdom_command">Change Role</button> }
-                  @if (member.can_kick) { <button id="kingdom-kick" class="kingdom-secondary" onclick="$set(kingdomIntent.member, member.id); kingdom_command">Remove</button> }
-                </div></div>
-                <p class="kingdom-hint">{{ member.permissions }}</p>
-                @if (member.editing) { <div id="kingdom-role-editor" class="kingdom-role-choices">@for (choice of member.roles; track choice.key) {
-                  <button id="kingdom-set-role" [class]="choice.selected ? 'kingdom-secondary selected' : 'kingdom-secondary'" [disabled]="kingdomView.pending || choice.selected" onclick="$set(kingdomIntent.member, member.id); $set(kingdomIntent.role, choice.key); kingdom_command">{{ choice.label }}</button>
-                }</div> }
-              </div>
-            }
-          </div>
-          }
-          @if (kingdomView.diplomacy_tab) {
-            <div class="kingdom-card"><h2>Relations &amp; Shared Access</h2><p>Both player realms must offer an alliance. Either realm can declare hostility or withdraw its offer.</p><p class="kingdom-hint">{{ kingdomView.access_hint }}</p></div>
-            <div id="kingdom-diplomacy" class="kingdom-diplomacy">
-              @for (realm of kingdomView.diplomacy; track realm.key) {
-                <div class="kingdom-card kingdom-relation-card">
-                  <div class="kingdom-relation-heading"><icon name="flag" size="28" [src]="realm.emblem" [style]="realm.color" /><div><h3>{{ realm.name }}</h3><p class="kingdom-hint">{{ realm.kind }}</p></div><p [class]="realm.relation_key == 'allied' ? 'kingdom-relation-badge realm-allied' : (realm.relation_key == 'hostile' ? 'kingdom-relation-badge realm-hostile' : 'kingdom-relation-badge realm-neutral')">{{ realm.relation }}</p></div>
-                  <p>Effective: {{ realm.relation }} · Our stance: {{ realm.offered }}</p>
-                  @if (realm.pending_alliance) { <p class="kingdom-alliance-pending">Alliance offer pending acceptance</p> }
-                  <p class="kingdom-hint">{{ realm.hint }}</p>
-                  @if (kingdomView.manager_controls) { <div class="kingdom-relation-actions">
-                    <button id="kingdom-relation-neutral" class="kingdom-secondary" [disabled]="!realm.can_neutral" onclick="$set(kingdomIntent.target, realm.key); kingdom_command">Neutral</button>
-                    <button id="kingdom-relation-allied" class="kingdom-secondary" [disabled]="!realm.can_ally" onclick="$set(kingdomIntent.target, realm.key); kingdom_command">Offer Alliance</button>
-                    <button id="kingdom-relation-hostile" class="kingdom-secondary" [disabled]="!realm.can_hostile" onclick="$set(kingdomIntent.target, realm.key); kingdom_command">Hostile</button>
-                  </div> }
-                </div>
-              }
+          }</div><p class="kingdom-hint">{{ kingdomView.access_hint }}</p>
+        }
+        @if (kingdomView.diplomacy_tab) {
+          <div class="kingdom-relation-table-heading"><p>Bergfried / Königreich</p><p>Beziehung</p><p>Eigene Haltung</p></div>
+          <div id="kingdom-diplomacy" class="kingdom-diplomacy">@for (realm of kingdomView.diplomacy; track realm.key) {
+            <div class="kingdom-card kingdom-relation-card"><div class="kingdom-relation-row"><div class="kingdom-relation-heading"><icon name="flag" size="27" [src]="realm.emblem" [style]="realm.color" /><div><h3>{{ realm.name }}</h3><p class="kingdom-hint">{{ realm.kind }}</p></div></div><p [class]="realm.relation_key == 'allied' ? 'kingdom-relation-badge realm-allied' : (realm.relation_key == 'hostile' ? 'kingdom-relation-badge realm-hostile' : 'kingdom-relation-badge realm-neutral')">{{ realm.relation }}</p><div class="kingdom-relation-actions">@if (kingdomView.manager_controls) { <button id="kingdom-relation-neutral" class="kingdom-secondary" title="Neutral" [disabled]="!realm.can_neutral" onclick="$set(kingdomIntent.target, realm.key); kingdom_command"><icon name="globe" size="17" /></button><button id="kingdom-relation-allied" class="kingdom-secondary" title="Bündnis anbieten" [disabled]="!realm.can_ally" onclick="$set(kingdomIntent.target, realm.key); kingdom_command"><icon name="handshake" size="17" /></button><button id="kingdom-relation-hostile" class="kingdom-secondary" title="Feindlich" [disabled]="!realm.can_hostile" onclick="$set(kingdomIntent.target, realm.key); kingdom_command"><icon name="swords" size="17" /></button> }<p>{{ realm.offered }}</p></div></div>
+              @if (realm.pending_alliance) { <p class="kingdom-alliance-pending">Bündnisangebot wartet auf Zustimmung</p> }<p class="kingdom-hint">{{ realm.hint }}</p>
             </div>
-          }
-          <p class="kingdom-hint">{{ kingdomView.membership }}</p>
-          @if (kingdomView.can_join) { <button id="kingdom-join" class="kingdom-primary" [disabled]="kingdomView.pending" onclick="kingdom_command">Join Settlement</button> }
-          @if (kingdomView.can_leave) { <button id="kingdom-leave" class="kingdom-secondary" [disabled]="kingdomView.pending" onclick="kingdom_command">Leave Settlement</button> }
+          }</div><p class="kingdom-hint">Ein Bündnis zwischen Spielerreichen benötigt die Zustimmung beider Seiten.</p>
         }
-        @if (kingdomView.founder_controls && kingdomView.overview_tab) {
-          <div class="kingdom-danger">
-            @if (kingdomView.confirm_dissolve) {
-              <h2>Dissolve this settlement?</h2><p>Members and all claimed chunks are released. This action cannot be undone.</p>
-              <div class="kingdom-actions"><button id="kingdom-dissolve" class="kingdom-danger-button" [disabled]="kingdomView.pending" onclick="kingdom_command">Dissolve Settlement</button><button id="kingdom-dissolve-cancel" class="kingdom-secondary" onclick="kingdom_command">Cancel</button></div>
-            } @else {
-              <p>Dissolve the settlement before removing its Bergfried.</p><button id="kingdom-dissolve-prompt" class="kingdom-secondary" [disabled]="kingdomView.pending" onclick="kingdom_command">Dissolve…</button>
-            }
-          </div>
-        }
-      </div>
-      @if (kingdomView.icon_picker) {
-        <div class="kingdom-icon-backdrop"><div id="kingdom-icon-picker" class="kingdom-icon-picker"><ornate-frame></ornate-frame>
-          <div class="kingdom-heading"><h2>Banner Emblem</h2><button id="kingdom-icons-close" class="kingdom-close" title="Close icon picker" onclick="kingdom_command"><icon name="close" size="22" /></button></div>
-          <input id="kingdom-icon-search" class="kingdom-icon-search" type="text" maxlength="48" placeholder="Search all icons" [value]="kingdomView.icon_search" onchange="kingdom_icon_search" />
-          <div id="kingdom-icon-grid" class="kingdom-icon-grid">@for (choice of kingdomView.icons; track choice.key) { <button id="kingdom-icon-option" [class]="choice.selected ? 'kingdom-icon-option selected' : 'kingdom-icon-option'" [title]="choice.label" onclick="$set(kingdomIntent.icon, choice.key); kingdom_command"><icon name="flag" size="32" [src]="choice.icon" /></button> }</div>
-        </div></div>
       }
     </div>
+    <div class="kingdom-footer"><p class="kingdom-hint">{{ kingdomView.membership }}</p><div class="kingdom-actions">@if (!kingdomView.bound) { <button id="kingdom-found" class="kingdom-primary" [disabled]="!kingdomView.can_found" onclick="kingdom_command"><icon name="landmark" size="18" />Gründen</button> }@if (kingdomView.can_join) { <button id="kingdom-join" class="kingdom-primary" [disabled]="kingdomView.pending" onclick="kingdom_command">Beitreten</button> }@if (kingdomView.can_leave) { <button id="kingdom-leave" class="kingdom-secondary" [disabled]="kingdomView.pending" onclick="kingdom_command">Verlassen</button> }@if (kingdomView.founder_controls && kingdomView.overview_tab) { <button id="kingdom-dissolve-prompt" class="kingdom-danger-button" [disabled]="kingdomView.pending" onclick="kingdom_command">Auflösen…</button> }</div></div>
+    @if (kingdomView.confirm_dissolve) { <div class="kingdom-icon-backdrop"><div class="kingdom-confirm-dialog"><ornate-frame></ornate-frame><div class="kingdom-heading"><icon name="warning" size="24" /><h2>Siedlung endgültig auflösen?</h2></div><p>Alle Mitglieder und beanspruchten Chunks werden freigegeben. Diese Aktion kann nicht rückgängig gemacht werden.</p><div class="kingdom-actions"><button id="kingdom-dissolve" class="kingdom-danger-button" [disabled]="kingdomView.pending" onclick="kingdom_command">Endgültig auflösen</button><button id="kingdom-dissolve-cancel" class="kingdom-secondary" onclick="kingdom_command">Abbrechen</button></div></div></div> }
+    @if (kingdomView.icon_picker) { <div class="kingdom-icon-backdrop"><div id="kingdom-icon-picker" class="kingdom-icon-picker"><ornate-frame></ornate-frame><div class="kingdom-heading"><icon name="flag" size="22" /><h2>Wappen wählen</h2><button id="kingdom-icons-close" class="kingdom-close" title="Zurück" onclick="kingdom_command"><icon name="close" size="18" /></button></div><input id="kingdom-icon-search" class="kingdom-icon-search" type="text" maxlength="48" placeholder="Symbol suchen …" [value]="kingdomView.icon_search" onchange="kingdom_icon_search" /><div id="kingdom-icon-grid" class="kingdom-icon-grid">@for (choice of kingdomView.icons; track choice.key) { <button id="kingdom-icon-option" [class]="choice.selected ? 'kingdom-icon-option selected' : 'kingdom-icon-option'" [title]="choice.label" onclick="$set(kingdomIntent.icon, choice.key); kingdom_command"><icon name="flag" size="30" [src]="choice.icon" /></button> }</div></div></div> }
   </div>
+</div>
 }

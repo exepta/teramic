@@ -125,6 +125,10 @@ pub struct KingdomMemberView {
     pub can_edit_role: bool,
     pub editing: bool,
     pub permissions: String,
+    pub build: bool,
+    pub break_blocks: bool,
+    pub inventories: bool,
+    pub npc_work: bool,
     pub roles: Vec<KingdomChoiceView>,
 }
 
@@ -216,6 +220,14 @@ pub struct KingdomView {
     pub can_claim_territory: bool,
     pub can_release: bool,
     pub can_upgrade: bool,
+    pub next_level: String,
+    pub level_gain: String,
+    pub parent_name: String,
+    pub outposts: String,
+    pub upgrade_walls: String,
+    pub upgrade_gold: String,
+    pub walls_available: bool,
+    pub gold_available: bool,
     pub upgrade_cost: String,
     pub upgrade_hint: String,
 }
@@ -1149,7 +1161,13 @@ fn sync_view(world: &mut World, position: [i64; 3]) {
                         < usize::from(parent.level) * usize::from(rules.outposts_per_level))
         }
     });
-    let upgrade = record.as_ref().and_then(|k| upgrade_materials(session, k));
+    let inherited_level = record
+        .as_ref()
+        .is_some_and(|k| k.parent.is_some() && rules.settlements_follow_kingdom_level);
+    let upgrade = record
+        .as_ref()
+        .filter(|_| !inherited_level)
+        .and_then(|k| upgrade_materials(session, k));
     let can_upgrade = manages
         && !record.as_ref().is_some_and(|record| {
             record.parent.is_some() && rules.settlements_follow_kingdom_level
@@ -1182,6 +1200,10 @@ fn sync_view(world: &mut World, position: [i64; 3]) {
                     can_edit_role: editable && !pending,
                     editing: editable && state.role_member == Some(*id),
                     permissions: permission_summary(role),
+                    build: role.permissions().build,
+                    break_blocks: role.permissions().break_blocks,
+                    inventories: role.permissions().inventories,
+                    npc_work: role.permissions().npc_work,
                     roles: KingdomRole::ALL
                         .into_iter()
                         .filter(|&choice| {
@@ -1412,6 +1434,38 @@ fn sync_view(world: &mut World, position: [i64; 3]) {
         can_claim_territory,
         can_release: manages && owned_claim && !at_base && !pending,
         can_upgrade,
+        next_level: if inherited_level {
+            "Königreich".into()
+        } else {
+            record.as_ref().map_or_else(|| "Level 2".into(), |k| {
+                if k.level < terra_core::kingdom::MAX_SETTLEMENT_LEVEL {
+                    format!("Level {}", k.level + 1)
+                } else {
+                    "Max.".into()
+                }
+            })
+        },
+        level_gain: {
+            let kind = record.as_ref().map_or(state.draft_kind, |k| k.kind);
+            let (build, territory) = match kind {
+                SettlementKind::Kingdom => (rules.kingdom_build_per_level,rules.kingdom_territory_per_level),
+                SettlementKind::Outpost => (rules.outpost_build_per_level,rules.outpost_territory_per_level),
+                SettlementKind::Village => (rules.village_build_per_level,0),
+                SettlementKind::City => (rules.city_build_per_level,0),
+            };
+            format!("Bau +{build} · Territorium +{territory}")
+        },
+        parent_name: record.as_ref().and_then(|k| k.parent).and_then(|id| session.kingdoms.get(id)).or_else(|| if record.is_none() { membership } else {None}).map_or_else(|| "Eigenständig".into(), |parent| parent.name.clone()),
+        outposts: record.as_ref().map_or_else(|| "0 / 0".into(), |k| {
+            let parent = session.kingdoms.realm_id(k.id);
+            let count = session.kingdoms.kingdoms.iter().filter(|child| child.parent == Some(parent) && child.kind == SettlementKind::Outpost && child.state == KingdomState::Active).count();
+            let max = session.kingdoms.get(parent).map_or(k.level, |parent| parent.level) * rules.outposts_per_level;
+            format!("{count} / {max}")
+        }),
+        upgrade_walls: upgrade.map_or_else(|| "—".into(), |(have,_,cost)| format!("{have} / {}",cost.stone_wall)),
+        upgrade_gold: upgrade.map_or_else(|| "—".into(), |(_,have,cost)| format!("{have} / {}",cost.gold_ingot)),
+        walls_available: upgrade.is_some_and(|(have,_,cost)| have >= u32::from(cost.stone_wall)),
+        gold_available: upgrade.is_some_and(|(_,have,cost)| have >= u32::from(cost.gold_ingot)),
         upgrade_cost: upgrade.map_or_else(
             || "Maximum level reached".into(),
             |(walls, gold, cost)| {
@@ -1421,7 +1475,9 @@ fn sync_view(world: &mut World, position: [i64; 3]) {
                 )
             },
         ),
-        upgrade_hint: if !manages {
+        upgrade_hint: if inherited_level {
+            "This settlement follows its kingdom level. Upgrade the parent kingdom."
+        } else if !manages {
             "Only the Founder or an Officer can upgrade this settlement."
         } else if upgrade.is_none() {
             "Your settlement has reached the maximum level."

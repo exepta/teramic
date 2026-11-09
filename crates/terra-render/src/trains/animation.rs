@@ -32,6 +32,7 @@ pub(super) fn descriptor(part: &TrainPart, role: TrainAnimationRole) -> Animatio
         TrainAnimationRole::Throttle => {
             Vec3::from_array(terra_core::locomotive_parts::THROTTLE_PIVOT)
         }
+        TrainAnimationRole::Wheel if part.material == 232 => Vec3::new(0.02, 0.90, 0.5),
         _ => center,
     };
     Animation {
@@ -60,7 +61,7 @@ pub(super) fn pose(animation: Animation, distance: f64, throttle: i8) -> Transfo
         ),
         TrainAnimationRole::ConnectingRod | TrainAnimationRole::RodJoint => (
             Quat::IDENTITY,
-            Vec3::Y * (phase.sin() * 0.12) + animation.forward * ((phase.cos() - 1.0) * 0.12),
+            Vec3::Y * (-phase.sin() * 0.12) + animation.forward * ((phase.cos() - 1.0) * 0.12),
         ),
         TrainAnimationRole::Piston | TrainAnimationRole::Crosshead => (
             Quat::IDENTITY,
@@ -262,5 +263,35 @@ mod tests {
         }
         assert!(TrainAnimationRole::from_material("train_bogie_wheel_4_tire").is_none());
         assert!(TrainAnimationRole::from_material("train_axle").is_none());
+    }
+}
+
+#[cfg(test)]
+mod crank_tests {
+    use super::*;
+    #[test]
+    fn coupling_rod_stays_on_the_rotating_wheels_eccentric_pin() {
+        let wheel = descriptor(
+            &TrainPart {
+                material: 232,
+                offset: [0; 3],
+                facing: 0,
+                wood: Default::default(),
+            },
+            TrainAnimationRole::Wheel,
+        );
+        let rod = Animation {
+            role: TrainAnimationRole::ConnectingRod,
+            ..wheel
+        };
+        let pin = wheel.pivot + wheel.forward * 0.12;
+        for distance in [0.0, 0.1, 0.5, 1.0, 2.0, -0.4] {
+            assert!(
+                pose(wheel, distance, 0)
+                    .transform_point(pin)
+                    .distance(pose(rod, distance, 0).transform_point(pin))
+                    < 1e-5
+            );
+        }
     }
 }

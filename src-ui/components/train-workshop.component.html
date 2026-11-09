@@ -41,7 +41,7 @@
           <div class="train-card train-preview-card">
             <div class="train-wheelbase"><p>Drehgestell-Abstand</p><button id="wheelbase-dec" [disabled]="trainView.selected" onclick="train_workshop_action"><icon name="minus" size="16" /></button><p class="train-wheelbase-value">{{ trainView.wheelbase }}</p><button id="wheelbase-inc" [disabled]="trainView.selected" onclick="train_workshop_action"><icon name="plus" size="16" /></button></div>
             <img id="train-model-preview" class="train-model-preview" alt="Train model preview" />
-            <div class="train-progress"><icon name="wrench" size="17" /><p>Baufortschritt</p><progress-bar min="0" max="100" [value]="trainView.progress_value" /><p>{{ trainView.progress_count }}</p></div>
+            <div class="train-progress"><icon name="tool" size="17" /><p>Baufortschritt</p><progress-bar min="0" max="100" [value]="trainView.progress_value" /><p>{{ trainView.progress_count }}</p></div>
             <p class="train-preview-caption">{{ trainView.blueprint_progress }}</p>
           </div>
           <div class="train-build-actions">
@@ -54,12 +54,12 @@
                 <div class="train-template-actions"><button id="blueprint" onclick="train_workshop_action">Vorlage anzeigen</button>@if (trainView.blueprint) { <button id="blueprint-clear" onclick="train_workshop_action">Ausblenden</button> }</div>
               } @else {
                 <button id="edit" [disabled]="trainView.pending || !trainView.can_edit" onclick="train_workshop_action"><icon name="hammer" size="18" />Montage / Bearbeiten</button>
-                @if (trainView.riding) { <button id="leave" [disabled]="trainView.pending" onclick="train_workshop_action"><icon name="log-out" size="18" />Aussteigen</button> } @else { <button id="seat" [disabled]="trainView.pending" onclick="train_workshop_action"><icon name="armchair" size="18" />Einsteigen</button> }
+                @if (trainView.riding) { <button id="leave" [disabled]="trainView.pending" onclick="train_workshop_action"><icon name="log-out" size="18" />Aussteigen</button> } @else { <button id="seat" [disabled]="trainView.pending" onclick="train_workshop_action"><icon name="users-round" size="18" />Einsteigen</button> }
                 @if (trainView.confirm_destroy) {
                   <p>Fahrzeug samt Ladung dauerhaft löschen?</p>
                   <div class="train-template-actions"><button id="destroy-confirm" [disabled]="trainView.pending || !trainView.can_destroy" onclick="train_workshop_action">Jetzt zerstören</button><button id="destroy-cancel" [disabled]="trainView.pending" onclick="train_workshop_action">Abbrechen</button></div>
                 } @else {
-                  <button id="destroy" [disabled]="trainView.pending || !trainView.can_destroy" onclick="train_workshop_action"><icon name="trash-2" size="16" />Zug zerstören</button>
+                  <button id="destroy" [disabled]="trainView.pending || !trainView.can_destroy" onclick="train_workshop_action"><icon name="trash" size="16" />Zug zerstören</button>
                 }
               }
             </div>
@@ -77,7 +77,7 @@
               <div class="train-coupling"><button id="couple" [disabled]="trainView.pending || !trainView.pair" onclick="train_workshop_action">Koppeln</button><button id="uncouple" [disabled]="trainView.pending" onclick="train_workshop_action">Lösen</button></div>
             }
           </div>
-          <div class="train-card train-drive-panel"><h3><icon name="gauge" size="18" />Fahrpult</h3>
+          <div class="train-card train-drive-panel"><h3><icon name="activity" size="18" />Fahrpult</h3>
             @if (trainView.selected) {
               <div class="train-drive-heading"><p class="train-drive-speed">{{ trainView.drive_speed }}</p><p>{{ trainView.drive_direction }}</p></div>
               <div class="train-drive-heading"><p>{{ trainView.drive_throttle }}</p><p>{{ trainView.drive_fuel }}</p></div>
@@ -89,9 +89,9 @@
             } @else { <p>Fahrzeug auswählen und in den eigenen Führerstand einsteigen.</p> }
             <p class="train-small-label">1 Block = 1 Meter</p>
           </div>
-          <div class="train-card train-secondary-actions"><h3><icon name="wrench" size="18" />Aktionen</h3>
+          <div class="train-card train-secondary-actions"><h3><icon name="tool" size="18" />Aktionen</h3>
             <button id="engine" [disabled]="trainView.pending || !trainView.engine" onclick="train_workshop_action"><icon name="fuel" size="18" />Motor befeuern</button>
-            <button id="cargo" [disabled]="trainView.pending || !trainView.has_cargo" onclick="train_workshop_action"><icon name="package" size="18" />Laderaum öffnen</button>
+            <button id="cargo" [disabled]="trainView.pending || !trainView.has_cargo" onclick="train_workshop_action"><icon name="layers" size="18" />Laderaum öffnen</button>
             @if (trainView.turntable_available) { <p>Drehgleis · 90°</p><div class="train-coupling"><button id="turn-left" [disabled]="trainView.pending || !trainView.can_turn" onclick="train_workshop_action"><icon name="rotate-ccw" size="18" />Links</button><button id="turn-right" [disabled]="trainView.pending || !trainView.can_turn" onclick="train_workshop_action"><icon name="rotate-cw" size="18" />Rechts</button></div> }
             <p>{{ trainView.steam_status }}</p>
             @if (trainView.has_water_tank) { <button id="water" [disabled]="trainView.pending" onclick="train_workshop_action"><icon name="droplets" size="16" />Tank füllen</button> }

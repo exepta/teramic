@@ -972,3 +972,39 @@ fn width_buttons_update_the_real_preview_and_auto_build_request() {
             .any(|request| matches!(request.0.action, TrainAction::Build { width: 1, .. }))
     );
 }
+
+#[test]
+fn selecting_a_second_vehicle_prefills_the_facing_free_coupler_ends() {
+    let mut app = app();
+    let mut first = car(1);
+    first.parts = [([0, 0, 0], 210), ([0, 0, -3], 213), ([0, 0, 5], 213)]
+        .into_iter()
+        .map(|(offset, material)| TrainPart {
+            offset,
+            material,
+            facing: 0,
+            wood: Default::default(),
+        })
+        .collect();
+    let mut second = first.clone();
+    second.id = 2;
+    second.anchor = [0, 0, 9];
+    app.world_mut()
+        .resource_mut::<ClientSession>()
+        .trains
+        .vehicles = vec![first, second];
+    open(&mut app);
+    actions(&mut app, "select:1");
+    actions(&mut app, "select:2");
+    assert!(app.world().resource::<TrainUiState>().front);
+    assert!(!app.world().resource::<TrainUiState>().second_front);
+    actions(&mut app, "couple");
+    assert!(matches!(
+        requests(&mut app)[0].0.action,
+        TrainAction::Couple {
+            first_end: CouplerEnd::Front,
+            second_end: CouplerEnd::Rear,
+            ..
+        }
+    ));
+}

@@ -631,20 +631,46 @@ macro_rules! geometry_methods {
         pub fn coupler_cell(&self, end: CouplerEnd) -> Option<Cell> {
             Some(self.coupler_point(end)?.map(|v| v.floor() as i64))
         }
-        pub fn coupler_tangent(&self, end: CouplerEnd) -> Option<Cell> {
-            self.coupler_cell(end)?;
+        /// Continuous outward axis, including a parked vehicle's curve or slope.
+        pub fn coupler_direction(&self, end: CouplerEnd) -> Option<[f64; 3]> {
+            self.coupler_point(end)?;
             let facing = build_facing(&self.parts);
-            let direction = [[0, 0, 1], [1, 0, 0], [0, 0, -1], [-1, 0, 0]][usize::from(facing)];
-            self.disassembly_turns()?;
-            let vector = self.world_vector(direction.map(|value| value as f64));
-            Some(vector.map(|value| {
-                (if end == CouplerEnd::Front {
-                    value
-                } else {
-                    -value
-                })
-                .round() as i64
-            }))
+            let direction =
+                [[0., 0., 1.], [1., 0., 0.], [0., 0., -1.], [-1., 0., 0.]][usize::from(facing)];
+            let sign = if end == CouplerEnd::Front { 1.0 } else { -1.0 };
+            Some(self.world_vector(direction).map(|value| value * sign))
+        }
+        /// Couple facing drawbars using world meters, never rounded owner cells.
+        pub fn coupling_distance(
+            &self,
+            end: CouplerEnd,
+            other: &Self,
+            other_end: CouplerEnd,
+        ) -> Option<f64> {
+            let a = self.coupler_point(end)?;
+            let b = other.coupler_point(other_end)?;
+            let direction = self.coupler_direction(end)?;
+            let opposite = other.coupler_direction(other_end)?;
+            let delta: [f64; 3] = std::array::from_fn(|axis| b[axis] - a[axis]);
+            let dot = |a: [f64; 3], b: [f64; 3]| (0..3).map(|axis| a[axis] * b[axis]).sum::<f64>();
+            let distance = dot(delta, delta).sqrt();
+            let forward = dot(delta, direction);
+            let backward = -dot(delta, opposite);
+            let lateral = (distance * distance - forward * forward).max(0.0).sqrt();
+            let other_lateral = (distance * distance - backward * backward).max(0.0).sqrt();
+            ((0.55..=2.15).contains(&distance)
+                && forward > 0.0
+                && backward > 0.0
+                && dot(direction, opposite) < -0.9
+                && lateral <= 0.35
+                && other_lateral <= 0.35)
+                .then_some(distance)
+        }
+        pub fn coupler_tangent(&self, end: CouplerEnd) -> Option<Cell> {
+            Some(
+                self.coupler_direction(end)?
+                    .map(|value| value.round() as i64),
+            )
         }
     };
 }
@@ -906,14 +932,9 @@ impl TrainRegistry {
         if ca.len() + cb.len() > MAX_CONSIST {
             return Err(TrainError::Limit);
         }
-        let ac = a.coupler_cell(first_end).ok_or(TrainError::Incomplete)?;
-        let bc = b.coupler_cell(second_end).ok_or(TrainError::Incomplete)?;
-        let distance = (0..3).map(|axis| ac[axis].abs_diff(bc[axis])).sum::<u64>();
-        let direction = a.coupler_tangent(first_end).ok_or(TrainError::Incomplete)?;
-        if b.coupler_tangent(second_end) != Some(direction.map(|value| -value))
-            || !(1..=2).contains(&distance)
-            || (0..3).any(|axis| bc[axis] - ac[axis] != direction[axis] * distance as i64)
-        {
+        a.coupler_point(first_end).ok_or(TrainError::Incomplete)?;
+        b.coupler_point(second_end).ok_or(TrainError::Incomplete)?;
+        if a.coupling_distance(first_end, b, second_end).is_none() {
             return Err(TrainError::OutOfReach);
         }
         self.change_link(

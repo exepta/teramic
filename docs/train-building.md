@@ -96,6 +96,24 @@ sind fuer den Besitzer auch vom gebundenen Fuehrerstand aus erreichbar, unabhaen
 von ihrer Position im Wagen. Andere Spieler erhalten keinen Zugriff auf private
 Ladung oder Steuerung.
 
+Zum Kuppeln beide Fahrzeuge anhalten und an der Montagestelle nacheinander
+auswaehlen. Beim zweiten Fahrzeug werden passende freie, einander zugewandte
+Kupplungsenden automatisch vorgewaehlt. Vorn/Hinten bleibt manuell umschaltbar.
+Die Kupplung verwendet die tatsaechlichen Positionen und Ausrichtungen,
+einschliesslich Zwischenpositionen, Kurven und Steigungen. Seitlich versetzte,
+falsch ausgerichtete oder zu weit entfernte Enden werden weiterhin abgelehnt.
+
+Die Fahrdarstellung puffert bestaetigte Positionen kurz gegen ungleichmaessig
+eintreffende Pakete. Wagenkasten, Mitfahrer und Raeder verwenden denselben
+Darstellungszeitpunkt; ueber das bestaetigte Streckenende hinaus wird keine
+Bewegung vorausberechnet.
+
+Die breite Lokvorlage enthaelt grosse rote Speichen-Treibraeder mit 1,7 Metern
+Durchmesser. Stahlreifen, Naben, Gegengewichte und Kurbelzapfen sind sichtbare
+Geometrie. Die Drehrichtung und das Gestaenge folgen der gefahrenen Strecke.
+Bestehende Aufbauten lassen sich ueber Montage mit den neuen Vorlagenteilen
+ergaenzen; individuelle Fahrzeuge werden nicht automatisch umgebaut.
+
 Zum Umbauen an einem geraden, ebenen Gleis neben einer Montagestelle anhalten,
 Kupplungen loesen und im Fahrpult oder an der Montagestelle **Montage** waehlen.
 Der Fahrer steigt dabei zuerst aus. Die Bloecke werden an der aktuellen Position
@@ -158,7 +176,7 @@ Der Gleismodus **Prellbock** stoppt den Zug vor dem Anschlag einschliesslich
 Wagenkasten und Kupplung. Ein Verbund wird gemeinsam angehalten; Rueckwaerts
 vom Prellbock wegzufahren bleibt erlaubt.
 
-Client und Server benoetigen Protokoll 124. Zugindex ID17 speichert
+Client und Server benoetigen Protokoll 125. Zugindex ID17 speichert
 Namen, Restbrennstoff, Wasser und Druck und uebernimmt bestehende Zuege aus
 ID13, ID14, ID15 und ID16. Alte Fahrzeuge erhalten kein kostenloses Wasser.
 

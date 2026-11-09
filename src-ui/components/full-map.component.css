@@ -16,8 +16,8 @@
 .map-tool icon { width: 29px; height: 29px; flex-shrink: 0; color: #b8cfa3; }
 .full-map-panel .map-tool.unavailable, .full-map-panel .map-tool.unavailable:hover { background-color: #242b28; border-color: #535b55; color: #717970; opacity: 0.5; }
 .map-tool.unavailable icon { color: #717970; }
-.map-tool-tooltip { min-width: 0; max-width: 260px; padding: 8px 12px; background-color: #111c18; border: 1px solid #bba66a; border-radius: 4px; overflow: visible; pointer-events: none; z-index: 550; }
-.map-tool-tooltip p { margin: 0; min-width: 0; max-width: 100%; flex-shrink: 0; text-wrap: wrap; overflow: visible; font-size: 13px; color: #f3e6bc; }
+.map-tool-tooltip { font-size: 12px !important; line-height: 17px !important; width: 232px; min-width: 0; max-width: 260px; box-sizing: border-box; padding: 8px 12px; background-color: #111c18; border: 1px solid #bba66a; border-radius: 4px; overflow: visible; pointer-events: none; z-index: 550; }
+.map-tool-tooltip p { margin: 0; min-width: 0; max-width: 100%; flex-shrink: 0; text-wrap: wrap; overflow: visible; font-size: 12px !important; line-height: 17px !important; color: #f3e6bc; }
 .full-map-viewport { position: absolute; left: 108px; top: 70px; overflow: hidden; background-color: #101719; border: 1px solid #a38a55; border-radius: 3px; box-sizing: border-box; }
 .full-map-surface { width: 100%; height: 100%; pointer-events: none; }
 .full-map-compass { position: absolute; right: 12px; top: 10px; width: 82px; height: 82px; pointer-events: none; }

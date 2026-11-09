@@ -604,6 +604,34 @@ fn command(world: &mut World, state: &mut TrainUiState, command: &str) {
                 .map_or_else(String::new, |car| car.name.clone());
         } else {
             state.second = Some(id);
+            if let Some(session) = world.get_resource::<ClientSession>()
+                && let Some(first) = session
+                    .trains
+                    .vehicles
+                    .iter()
+                    .find(|car| Some(car.id) == state.selected)
+                && let Some(second) = session.trains.vehicles.iter().find(|car| car.id == id)
+            {
+                let mut nearest = None;
+                for a in [CouplerEnd::Front, CouplerEnd::Rear] {
+                    for b in [CouplerEnd::Front, CouplerEnd::Rear] {
+                        if first.couplings[a.index()].is_some()
+                            || second.couplings[b.index()].is_some()
+                        {
+                            continue;
+                        }
+                        if let Some(distance) = first.coupling_distance(a, second, b)
+                            && nearest.is_none_or(|(best, _, _)| distance < best)
+                        {
+                            nearest = Some((distance, a, b));
+                        }
+                    }
+                }
+                if let Some((_, a, b)) = nearest {
+                    state.front = a == CouplerEnd::Front;
+                    state.second_front = b == CouplerEnd::Front;
+                }
+            }
         }
         return;
     }

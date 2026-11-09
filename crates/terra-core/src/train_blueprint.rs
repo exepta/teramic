@@ -69,6 +69,7 @@ pub fn template_with_wheelbase(
     local
         .into_iter()
         .map(|([x, y, z], material)| {
+            let rear_coupler = material == train_parts::COUPLER && z < 0;
             let [x, z] = match facing {
                 0 => [x, z],
                 1 => [z, -x],
@@ -78,7 +79,7 @@ pub fn template_with_wheelbase(
             BlueprintCell {
                 cell: [chassis[0] + x, chassis[1] + y, chassis[2] + z],
                 material,
-                facing: if material == train_parts::CAB {
+                facing: if material == train_parts::CAB || rear_coupler {
                     (facing + 2) % 4
                 } else {
                     facing
@@ -255,6 +256,12 @@ pub fn building_template_with_width(
         add([0, 5, 0], 231, 2);
         add([-1, 1, -1], 254, 0);
         add([1, 1, -1], 255, 0);
+        // Full-size driving wheels share the rail contact height of the bogies.
+        // Their outer faces stay visible beside the three-wide frame.
+        for z in (0..=i64::from(wheelbase) - 2).step_by(2) {
+            add([-1, -1, z], 232, 0);
+            add([1, -1, z], 232, 2);
+        }
         for x in [-1, 1] {
             add([x, 0, i64::from(wheelbase) + 1], 243, 0);
             add([x, 1, i64::from(wheelbase) + 1], 264, 2);
@@ -376,17 +383,36 @@ mod tests {
                         .len(),
                     parts.len()
                 );
-                assert!(parts.iter().all(|part| part.facing
-                    == if part.material == train_parts::CAB {
-                        (facing + 2) % 4
-                    } else {
-                        facing
-                    }));
+                assert!(
+                    parts
+                        .iter()
+                        .filter(|part| part.material != train_parts::COUPLER)
+                        .all(|part| part.facing
+                            == if part.material == train_parts::CAB {
+                                (facing + 2) % 4
+                            } else {
+                                facing
+                            })
+                );
                 let chassis = parts
                     .iter()
                     .find(|part| part.material == train_parts::CHASSIS)
                     .unwrap();
                 assert_eq!(chassis.cell, [16, 18, -17]);
+                for coupling in parts
+                    .iter()
+                    .filter(|part| part.material == train_parts::COUPLER)
+                {
+                    let forward = [[0, 0, 1], [1, 0, 0], [0, 0, -1], [-1, 0, 0]]
+                        [usize::from(coupling.facing)];
+                    assert!(
+                        (0..3)
+                            .map(|axis| (coupling.cell[axis] - chassis.cell[axis]) * forward[axis])
+                            .sum::<i64>()
+                            > 0,
+                        "both drawbar heads must face away from their own chassis"
+                    );
+                }
                 for bogie in parts
                     .iter()
                     .filter(|part| part.material == train_parts::BOGIE)

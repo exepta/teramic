@@ -7246,3 +7246,36 @@ Integrated Server geladen, dazwischen gespeichert; acht Originaldateien per
 SHA-256 unveraendert. Reale UDP-Tests pruefen auch alte Sitz-Saves und Loeschung
 bei Besitzer sowie Beobachter. Details und Screenshots:
 [Train Exit / Rejoin / Preview](tools/benchmarks/results/train-exit-rejoin-preview-2026-11-09/README.md).
+
+## 223. Kontinuierliche Kupplungen, Ruhigere Zugdarstellung Und Bergfried-UI
+
+Kupplungen pruefen echte Weltpositionen und kontinuierliche Ausrichtungen statt
+gerundeter Blockzellen. Dadurch funktionieren auch passende Zwischenpositionen
+auf Kurven und Steigungen. Bei der zweiten Fahrzeugauswahl werden kompatible
+freie Enden vorgewaehlt; die manuelle Auswahl bleibt erhalten. Die hintere
+Kupplung der Bauvorlage zeigt fuer alle vier Baurichtungen nach aussen.
+
+Ein begrenzter 60-ms-Darstellungspuffer gleicht unregelmaessige Paketankuenfte aus.
+Wagenkasten, Raeder und Mitfahrer teilen denselben Darstellungszeitpunkt.
+Spruenge setzen den Puffer zurueck; unbekannte Strecke wird nicht extrapoliert.
+Client und Server verwenden Protokoll 125, Speicherformate bleiben unveraendert.
+
+Die 3x-Lokvorlage hat grosse rote Speichenraeder mit 1,7 m Durchmesser,
+Stahlreifen, Gegengewichten und Kurbelzapfen. Auch kleine Raeder und Drehgestelle
+verwenden die ueberarbeitete Radgeometrie. Animation, Vorschau und Kollisionsform
+beruecksichtigen den neuen Radius; Kurbelzapfen und Gestaenge drehen gleichsinnig.
+Individuelle Fahrzeuge werden nicht automatisch umgebaut.
+
+Der Bergfried zeigt Uebersicht, Mitglieder/Rechte und Diplomatie in einem
+Kupfer-/Braunrahmen mit Wappen, Aufwertungskosten, Landzaehlern und Claimaktionen.
+Symbolsuche, Farbwahl, Rollen und Aufloesen bleiben echte bedienbare Aktionen.
+Kleine Fenster verwenden eine verdichtete Uebersicht. Der Karten-Diplomatietooltip
+hat begrenzte Schriftgroesse und Textumbruch; ungueltige Aktionsicons sind ersetzt.
+
+4500 Workspace-Tests bestanden, 10 ignoriert, ein bereits separat geloeschtes
+FIVERR-Referenzasset gezielt ausgefiltert. Strenges Clippy, Build, Formatierung,
+Whitespace und CPU-Lint aller 85 Zugteile bestanden. Native Bergfriedpruefung
+mit echtem Server, Rollenwechsel und Visitor-Reconnect in QHD/1024x768/4K;
+Montage in 1080p/720p und Rad-/Rauchdarstellung geprueft. Die nativen Zugbilder
+sind Darstellungsfixtures; sie ersetzen keinen Langzeit-Fahrtest.
+[Pruefbericht](tools/benchmarks/results/train-coupling-running-gear-bergfried-2026-11-09/README.md).

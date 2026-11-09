@@ -97,7 +97,7 @@ def palette(mesh):
         'train_brass': ([.90, .56, .14], None, .82, .35),
         'train_coal': ([.035, .04, .045], 'stone.png', .08, .95),
         'train_wheel_tire': ([.115, .12, .13], 'machinery-iron-hd.png', .88, .42),
-        'train_wheel_spokes': ([.50, .05, .035], 'machinery-iron-hd.png', .72, .5),
+        'train_wheel_spokes': ([.64, .055, .035], 'machinery-iron-hd.png', .08, .62),
         'train_axle': ([.29, .30, .31], 'machinery-iron-hd.png', .88, .42),
         'train_rod_main': ([.54, .55, .56], 'machinery-iron-hd.png', .9, .37),
         'train_rod_joint': ([.65, .64, .60], 'machinery-iron-hd.png', .9, .33),
@@ -189,18 +189,31 @@ def text(mesh, value, x=.16, y=.39, z=.01, width=.68, height=.20):
 
 
 def wheel(mesh, radius, center=(.5, .5, .5), low=.40, high=.60, prefix='train_wheel'):
-    tire, spokes = prefix + '_tire', prefix + '_spokes'
-    for name, source in [(tire, 'train_wheel_tire'), (spokes, 'train_wheel_spokes')]:
-        mesh.materials[name] = mesh.materials[source]
-    cylinder(mesh, center, radius, low, high, 0, tire, inner=radius * .80, solid=False, sides=20)
-    cylinder(mesh, center, radius * .15, low - .015, high + .015, 0, spokes, solid=False, sides=12)
+    """Flanged steel tire, red spokes, counterweight and eccentric crank pin."""
+    tire, spokes, rim = prefix + '_tire', prefix + '_spokes', prefix + '_rim'
+    mesh.materials[tire] = mesh.materials['train_wheel_tire']
+    mesh.materials[spokes] = mesh.materials['train_wheel_spokes']
+    mesh.materials[rim] = ([.56, .58, .59], None, .94, .30)
+    cylinder(mesh, center, radius, low, high, 0, tire, inner=radius * .82, solid=False, sides=32)
+    for rim_low, rim_high in [(low - .012, low + .002), (high - .002, high + .012)]:
+        cylinder(mesh, center, radius * .985, rim_low, rim_high, 0, rim, inner=radius * .91, solid=False, sides=32)
+    cylinder(mesh, center, radius * .17, low - .015, high + .015, 0, spokes, solid=False, sides=20)
     for index in range(12):
         angle = index * math.tau / 12
-        p = [sum([low, high]) / 2, center[1], center[2]]
+        p = [(low + high) / 2, center[1], center[2]]
         q = [p[0], center[1] + math.cos(angle) * radius * .85, center[2] + math.sin(angle) * radius * .85]
-        rod(mesh, p, q, radius * .10, spokes)
-    mesh.collision.append({'minimum': [low, center[1] - radius, center[2] - radius],
-                           'maximum': [high, center[1] + radius, center[2] + radius]})
+        rod(mesh, p, q, radius * .075, spokes)
+    # The balance weight sits opposite the eccentric pin and turns with the rim.
+    for side, face in enumerate([low - .003, high + .003]):
+        points = [[face, center[1], center[2]]]
+        for index in range(9):
+            angle = math.pi * .72 + index * math.pi * .56 / 8
+            points.append([face, center[1] + math.sin(angle) * radius * .73, center[2] + math.cos(angle) * radius * .73])
+        mesh.polygon(list(reversed(points)) if side else points, spokes)
+    crank = [center[0], center[1], center[2] + min(.12, radius * .30)]
+    cylinder(mesh, crank, radius * .085, low - .018, high + .018, 0, rim, solid=False, sides=16)
+    mesh.collision.append({'minimum': [low - .018, center[1] - radius, center[2] - radius],
+                           'maximum': [high + .018, center[1] + radius, center[2] + radius]})
 
 
 def boiler(mesh, material='train_black_iron', door=False):
@@ -378,7 +391,7 @@ def make(material, slug):
         if material == 231:
             for x in [.2, .8]: cylinder(mesh, [x, .18, .5], .045, 0, .5, 2, 'train_brass')
     elif material in [232, 233, 234]:
-        wheel(mesh, {232: .48, 233: .38, 234: .28}[material])
+        wheel(mesh, .85, [.02, .90, .5], -.07, .11) if material == 232 else wheel(mesh, {233: .38, 234: .28}[material])
         cylinder(mesh, [.5, .5, .5], .075, 0, .50, 0, 'train_axle')
     elif material == 235:
         cylinder(mesh, [.5, .5, .5], .12, 0, 1, 0, 'train_axle')
@@ -566,7 +579,7 @@ pub const fn is_slab(material: u16) -> bool { is_metal_shape(material) && (mater
 pub const fn is_stair(material: u16) -> bool { is_metal_shape(material) && (material - 270) % 6 == 2 }
 pub fn is_animated(material: u16) -> bool { matches!(material, 211 | 232..=234 | 236..=240) }
 pub const fn wheel_radius(material: u16) -> Option<f64> {
-    match material { 211 => Some(0.45), 232 => Some(0.48), 233 => Some(0.38), 234 => Some(0.28), _ => None }
+    match material { 211 => Some(0.45), 232 => Some(0.85), 233 => Some(0.38), 234 => Some(0.28), _ => None }
 }
 pub const fn supports_wood(material: u16) -> bool { matches!(material, 267 | 268) }
 pub const fn is_full_support(material: u16) -> bool { matches!(material, 210 | 212 | 241 | 242 | 254 | 270 | 276 | 282) }

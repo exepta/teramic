@@ -1,0 +1,9 @@
+{
+  "suites": 12,
+  "passed": 4500,
+  "failed": 0,
+  "ignored": 10,
+  "filtered": 1,
+  "protocol": 125,
+  "presentation_delay_ms": 60
+}

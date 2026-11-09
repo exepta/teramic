@@ -475,6 +475,9 @@ fn model(world: &mut World, probe: &mut Probe) {
         car.motion.fuel_available = true;
         car.motion.brake = false;
         car.motion.translation[0] = translation;
+        // Two captures exercise visibly different wheel/crank poses, using the
+        // same distance-driven animation as authoritative vehicles.
+        car.motion.wheel_distance_m = f64::from(probe.frames) * 0.04;
     }
     for mut camera in world
         .query_filtered::<&mut Transform, With<terra_player::TerraCamera>>()
