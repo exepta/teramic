@@ -526,3 +526,24 @@ fn touching_couplers_use_fractional_world_positions_on_curves_and_slopes() {
         assert!(registry.valid());
     }
 }
+
+#[test]
+fn saved_driving_wheel_profiles_follow_the_corrected_canonical_tread() {
+    let part = TrainPart {
+        material: 232,
+        offset: [-1, -1, 0],
+        facing: 0,
+        wood: Default::default(),
+    };
+    let legacy = TrainBlockView {
+        boxes: vec![crate::block_shapes::ShapeBox {
+            minimum: [-0.088, 0.05, -0.35],
+            maximum: [0.128, 1.75, 1.35],
+            hinged: false,
+        }],
+        ..Default::default()
+    };
+    assert_eq!(part_shapes(&part, Some(&legacy)), part_shapes(&part, None));
+    let wheel = part_shapes(&part, Some(&legacy));
+    assert!(wheel.iter().all(|shape| shape.minimum[0] >= 0.3));
+}

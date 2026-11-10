@@ -13,6 +13,7 @@ fn templates() -> TemplateSet {
         (214, "terra/blocks/models/train_cab.gltf"),
         (215, "terra/blocks/models/train_seat.gltf"),
         (216, "terra/blocks/models/train_cargo.gltf"),
+        (232, "terra/blocks/models/train_wheel_large.gltf"),
     ] {
         let source: serde_json::Value = serde_json::from_str(
             &std::fs::read_to_string(terra_core::asset_directory().join(path)).unwrap(),
@@ -548,4 +549,43 @@ fn water_refilling_a_removed_source_cell_does_not_hide_the_mounted_model() {
         &journal,
         &rendered
     ));
+}
+
+#[test]
+fn driving_wheels_replace_bogie_wheel_meshes_and_land_on_the_same_rail_gauge() {
+    let templates = templates();
+    let parts = [
+        (211, [0, 0, 0], 0),
+        (232, [-1, 0, 0], 0),
+        (232, [1, 0, 0], 2),
+    ]
+    .map(|(material, offset, facing)| TrainPart {
+        material,
+        offset,
+        facing,
+        wood: Default::default(),
+    });
+    let composed = compose_geometry(
+        &parts,
+        &Default::default(),
+        &templates,
+        [0; 3],
+        &Default::default(),
+        true,
+    )
+    .unwrap();
+    assert!(!composed.animated.iter().any(|batch| matches!(
+        batch.animation.role,
+        crate::blocks::TrainAnimationRole::BogieWheel(_)
+    )));
+    let mut centers = composed
+        .animated
+        .iter()
+        .filter(|batch| batch.animation.role == crate::blocks::TrainAnimationRole::Wheel)
+        .map(|batch| batch.animation.pivot.x)
+        .collect::<Vec<_>>();
+    centers.sort_by(f32::total_cmp);
+    centers.dedup();
+    assert_eq!(centers, vec![-0.5, 1.5]);
+    assert!((f64::from(centers[1] - centers[0]) - terra_core::rails::GAUGE).abs() < 1e-6);
 }

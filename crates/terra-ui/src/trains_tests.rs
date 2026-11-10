@@ -490,7 +490,7 @@ fn coupling_uses_two_explicit_end_choices_and_registry_revision() {
     assert_eq!(
         requests[0].0.action,
         TrainAction::Couple {
-            station: [0, 0, 0],
+            station: Some([0, 0, 0]),
             first: 1,
             first_end: CouplerEnd::Front,
             second: 2,
@@ -1004,6 +1004,42 @@ fn selecting_a_second_vehicle_prefills_the_facing_free_coupler_ends() {
         TrainAction::Couple {
             first_end: CouplerEnd::Front,
             second_end: CouplerEnd::Rear,
+            ..
+        }
+    ));
+}
+
+#[test]
+fn coupling_and_uncoupling_from_vehicle_workshop_dispatch_without_a_station() {
+    let mut app = app();
+    app.world_mut()
+        .resource_mut::<ClientSession>()
+        .trains
+        .vehicles = vec![car(1), car(2)];
+    open(&mut app);
+    {
+        let mut state = app.world_mut().resource_mut::<TrainUiState>();
+        state.station = None;
+        state.selected = Some(1);
+        state.second = Some(2);
+    }
+    click_workshop(&mut app, "couple");
+    assert!(matches!(
+        requests(&mut app)[0].0.action,
+        TrainAction::Couple {
+            station: None,
+            first: 1,
+            second: 2,
+            ..
+        }
+    ));
+    app.world_mut().resource_mut::<TrainUiState>().pending = None;
+    click_workshop(&mut app, "uncouple");
+    assert!(matches!(
+        requests(&mut app)[0].0.action,
+        TrainAction::Uncouple {
+            station: None,
+            vehicle: 1,
             ..
         }
     ));

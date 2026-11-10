@@ -1252,3 +1252,105 @@ fn capturing_a_seated_player_preserves_the_last_standing_save_position() {
         Some(last_standing)
     );
 }
+
+#[test]
+fn vehicle_workshop_can_couple_and_release_nearby_owned_cars_without_a_station() {
+    use terra_core::trains::CouplerEnd;
+    let (mut app, peer, first, _, _) = train_fixture();
+    let mut other = app
+        .world()
+        .resource::<EditJournal>()
+        .gameplay()
+        .trains
+        .vehicles[&first]
+        .clone();
+    other.anchor[2] += 9;
+    let second = app
+        .world_mut()
+        .resource_mut::<EditJournal>()
+        .gameplay_mut()
+        .trains
+        .insert(other)
+        .unwrap();
+    let section = terra_voxel::global_to_section([4, 5, 20]).0;
+    app.world_mut()
+        .resource_mut::<ChunkStore>()
+        .loaded
+        .entry(section)
+        .or_insert_with(|| LoadedSection {
+            data: terra_voxel::BlockSection::empty(section).unwrap(),
+            mesh: None,
+            mesh_epoch: 0,
+            water_epoch: 0,
+            water: None,
+            props: Vec::new(),
+        });
+    app.world_mut()
+        .get_mut::<Transform>(peer.body)
+        .unwrap()
+        .translation = Vec3::new(6.5, 6., 11.5);
+    let mut seated = crate::server::trains::SeatedPlayers::default();
+    let revision = app
+        .world()
+        .resource::<EditJournal>()
+        .gameplay()
+        .trains
+        .revision;
+    let action = TrainAction::Couple {
+        station: None,
+        first,
+        first_end: CouplerEnd::Front,
+        second,
+        second_end: CouplerEnd::Rear,
+        revision,
+    };
+    assert!(run(&mut app, &peer, action.clone(), &mut seated).is_ok());
+    assert!(
+        app.world()
+            .resource::<EditJournal>()
+            .gameplay()
+            .trains
+            .vehicles[&first]
+            .couplings[0]
+            .is_some()
+    );
+    assert_eq!(
+        run(&mut app, &peer, action, &mut seated),
+        Err(TrainError::Stale)
+    );
+    let revision = app
+        .world()
+        .resource::<EditJournal>()
+        .gameplay()
+        .trains
+        .revision;
+    let action = TrainAction::Uncouple {
+        station: None,
+        vehicle: first,
+        end: CouplerEnd::Front,
+        revision,
+    };
+    // Opening an old UI remotely must not authorize a later operation.
+    app.world_mut()
+        .get_mut::<Transform>(peer.body)
+        .unwrap()
+        .translation = Vec3::splat(100.);
+    assert_eq!(
+        run(&mut app, &peer, action.clone(), &mut seated),
+        Err(TrainError::OutOfReach)
+    );
+    app.world_mut()
+        .get_mut::<Transform>(peer.body)
+        .unwrap()
+        .translation = Vec3::new(6.5, 6., 11.5);
+    assert!(run(&mut app, &peer, action, &mut seated).is_ok());
+    assert!(
+        app.world()
+            .resource::<EditJournal>()
+            .gameplay()
+            .trains
+            .vehicles[&first]
+            .couplings[0]
+            .is_none()
+    );
+}

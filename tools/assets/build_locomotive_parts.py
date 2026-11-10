@@ -391,8 +391,8 @@ def make(material, slug):
         if material == 231:
             for x in [.2, .8]: cylinder(mesh, [x, .18, .5], .045, 0, .5, 2, 'train_brass')
     elif material in [232, 233, 234]:
-        wheel(mesh, .85, [.02, .90, .5], -.07, .11) if material == 232 else wheel(mesh, {233: .38, 234: .28}[material])
-        cylinder(mesh, [.5, .5, .5], .075, 0, .50, 0, 'train_axle')
+        wheel(mesh, .85, [.5, .90, .5], .41, .59) if material == 232 else wheel(mesh, {233: .38, 234: .28}[material])
+        cylinder(mesh, [.5, .90 if material == 232 else .5, .5], .075, .5 if material == 232 else 0, 1 if material == 232 else .5, 0, 'train_axle')
     elif material == 235:
         cylinder(mesh, [.5, .5, .5], .12, 0, 1, 0, 'train_axle')
         for x in [.03, .82]: mesh.box([x, .28, .28], [x + .15, .72, .72], 'train_red', solid=True)

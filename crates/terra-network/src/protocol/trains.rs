@@ -31,7 +31,7 @@ pub enum TrainAction {
         revision: u64,
     },
     Couple {
-        station: [i64; 3],
+        station: Option<[i64; 3]>,
         first: u64,
         first_end: CouplerEnd,
         second: u64,
@@ -39,7 +39,7 @@ pub enum TrainAction {
         revision: u64,
     },
     Uncouple {
-        station: [i64; 3],
+        station: Option<[i64; 3]>,
         vehicle: u64,
         end: CouplerEnd,
         revision: u64,

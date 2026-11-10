@@ -853,6 +853,61 @@ mod tests {
         (chunks, journal, car)
     }
     #[test]
+    fn decorated_broad_locomotive_has_clear_straight_track() {
+        let (mut chunks, journal, mut car) = fixture();
+        for x in -5..=5 {
+            for y in -2..=12 {
+                for z in -8..=40 {
+                    if chunks.block_at([x, y, z]).is_none() {
+                        set(&mut chunks, [x, y, z], 0);
+                    }
+                }
+            }
+        }
+        car.parts = train_blueprint::building_template_with_width(
+            [0, 2, 4],
+            0,
+            VehicleKind::Locomotive,
+            8,
+            3,
+        )
+        .into_iter()
+        .map(|part| TrainPart {
+            offset: part.cell.map(|v| v as i16),
+            material: part.material,
+            facing: part.facing,
+            wood: Default::default(),
+        })
+        .collect();
+        car.cargo.clear();
+        for index in car.cargo_indices().collect::<Vec<_>>() {
+            car.cargo.insert(index, Inventory::default());
+        }
+        let engine = car
+            .parts
+            .iter()
+            .position(|part| part.material == 218)
+            .unwrap() as u16;
+        car.cargo.get_mut(&engine).unwrap().slots = vec![ItemStack {
+            item: ItemKind::Block(18),
+            count: 2,
+        }];
+        assert!(car.valid());
+        assert_eq!(clear(&chunks, &journal, &Default::default(), &car), Ok(()));
+        let network = rails::network(&journal).unwrap();
+        car.motion.throttle = 1;
+        car.motion.brake = false;
+        for _ in 0..20 {
+            let next = advance(&chunks, &journal, &network, &car, 1.0 / 60.0).unwrap();
+            assert_eq!(
+                clear_swept(&chunks, &journal, &Default::default(), &car, &next).map(|_| ()),
+                Ok(())
+            );
+            car = next;
+        }
+        assert!(car.motion.wheel_distance_m > 0.01);
+    }
+    #[test]
     fn powered_train_brakes_with_its_whole_body_before_the_buffer_and_can_reverse() {
         let (mut chunks, mut journal, mut car) = fixture();
         let piece =

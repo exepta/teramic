@@ -32,7 +32,7 @@ pub(super) fn descriptor(part: &TrainPart, role: TrainAnimationRole) -> Animatio
         TrainAnimationRole::Throttle => {
             Vec3::from_array(terra_core::locomotive_parts::THROTTLE_PIVOT)
         }
-        TrainAnimationRole::Wheel if part.material == 232 => Vec3::new(0.02, 0.90, 0.5),
+        TrainAnimationRole::Wheel if part.material == 232 => Vec3::new(0.5, 0.90, 0.5),
         _ => center,
     };
     Animation {

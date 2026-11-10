@@ -1139,7 +1139,7 @@ fn run(world: &mut World) {
 fn step(world: &mut World, state: &mut MenuSmoke) -> Result<bool, String> {
     match state.stage {
         0 => {
-            if state.started.elapsed() < Duration::from_secs(2) {
+            if !state.startup_only && state.started.elapsed() < Duration::from_secs(2) {
                 return Ok(false);
             }
             if !matches!(
@@ -1153,7 +1153,7 @@ fn step(world: &mut World, state: &mut MenuSmoke) -> Result<bool, String> {
                     .get_resource::<terra_render::RenderPreviewStartup>()
                     .is_some_and(|startup| startup.required)
             {
-                return Err("Startup-only menu smoke requires TERRA_PREVIEW_WARMUP=1".into());
+                return Err("Startup-only menu smoke requires the frontend asset barrier".into());
             }
             if world
                 .get_resource::<terra_ui::menu::StartupProgress>()
@@ -1319,10 +1319,17 @@ fn step(world: &mut World, state: &mut MenuSmoke) -> Result<bool, String> {
                         .resource::<terra_render::RenderItemPreviews>()
                         .images
                         .len();
-                require(
-                    published == total,
-                    "Startup catalog does not own every completed icon",
-                )?;
+                if std::env::var("TERRA_PREVIEW_WARMUP").as_deref() == Ok("1") {
+                    require(
+                        published == total,
+                        "Startup catalog does not own every completed icon",
+                    )?;
+                } else {
+                    require(
+                        total == 1 && published == 0,
+                        "Normal startup must load models without rendering the entire inventory catalog",
+                    )?;
+                }
                 let ui = world
                     .get_resource::<crate::bootstrap::startup_ui::UiStartupAssets>()
                     .ok_or("Startup UI asset preload is missing")?;

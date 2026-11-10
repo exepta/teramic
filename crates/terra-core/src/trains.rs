@@ -311,6 +311,11 @@ pub fn part_shapes(
     part: &TrainPart,
     block: Option<&TrainBlockView>,
 ) -> Vec<crate::block_shapes::ShapeBox> {
+    // Driving-wheel geometry is canonical, including for existing assembled
+    // saves whose captured profile predates the corrected tread position.
+    if part.material == 232 {
+        return train_parts::boxes(part.material, part.facing);
+    }
     block.map_or_else(
         || train_parts::boxes(part.material, part.facing),
         |block| block.boxes.clone(),

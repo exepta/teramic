@@ -1,9 +1,11 @@
 //! Moving vehicle collision uses the same authored part volumes as picking.
+mod dismount;
 use avian3d::prelude::*;
 use bevy::{
     prelude::*,
     tasks::{AsyncComputeTaskPool, Task, futures_lite::future},
 };
+pub use dismount::safe_exit;
 use std::{
     collections::{BTreeMap, BTreeSet},
     sync::Arc,

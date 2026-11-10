@@ -874,6 +874,53 @@ fn command(world: &mut World, state: &mut TrainUiState, command: &str) {
         }
         return;
     }
+    match command {
+        "couple" => {
+            if let (Some(first), Some(second)) = (state.selected, state.second) {
+                request(
+                    world,
+                    state,
+                    TrainAction::Couple {
+                        station: state.station,
+                        first,
+                        first_end: if state.front {
+                            CouplerEnd::Front
+                        } else {
+                            CouplerEnd::Rear
+                        },
+                        second,
+                        second_end: if state.second_front {
+                            CouplerEnd::Front
+                        } else {
+                            CouplerEnd::Rear
+                        },
+                        revision: registry_revision,
+                    },
+                );
+            }
+            return;
+        }
+        "uncouple" => {
+            if let Some(vehicle) = vehicle {
+                request(
+                    world,
+                    state,
+                    TrainAction::Uncouple {
+                        station: state.station,
+                        vehicle: vehicle.id,
+                        end: if state.front {
+                            CouplerEnd::Front
+                        } else {
+                            CouplerEnd::Rear
+                        },
+                        revision: registry_revision,
+                    },
+                );
+            }
+            return;
+        }
+        _ => {}
+    }
     let Some(station) = state.station else { return };
     match command {
         "assemble" => {
@@ -897,48 +944,6 @@ fn command(world: &mut World, state: &mut TrainUiState, command: &str) {
         }
         "dismantle" => {
             driving::edit(world, state);
-        }
-        "couple" => {
-            if let (Some(first), Some(second)) = (state.selected, state.second) {
-                request(
-                    world,
-                    state,
-                    TrainAction::Couple {
-                        station,
-                        first,
-                        first_end: if state.front {
-                            CouplerEnd::Front
-                        } else {
-                            CouplerEnd::Rear
-                        },
-                        second,
-                        second_end: if state.second_front {
-                            CouplerEnd::Front
-                        } else {
-                            CouplerEnd::Rear
-                        },
-                        revision: registry_revision,
-                    },
-                );
-            }
-        }
-        "uncouple" => {
-            if let Some(vehicle) = vehicle {
-                request(
-                    world,
-                    state,
-                    TrainAction::Uncouple {
-                        station,
-                        vehicle: vehicle.id,
-                        end: if state.front {
-                            CouplerEnd::Front
-                        } else {
-                            CouplerEnd::Rear
-                        },
-                        revision: registry_revision,
-                    },
-                );
-            }
         }
         _ => {}
     }

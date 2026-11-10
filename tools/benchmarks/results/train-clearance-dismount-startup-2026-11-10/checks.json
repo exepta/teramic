@@ -1,0 +1,36 @@
+{
+  "suites": 12,
+  "passed": 4506,
+  "failed": 0,
+  "ignored": 10,
+  "filtered": 1,
+  "protocol": 126,
+  "original_world_files_unchanged": 11,
+  "saved_passenger_seats_with_exit": 10,
+  "nearby_coupling_distance_m": 1.0,
+  "saved_locomotive_steps_per_direction": 60,
+  "saved_locomotive_travel_m": 0.625,
+  "startup_full": {
+    "exit_code": 0,
+    "seconds": 18.448
+  },
+  "startup_demand": {
+    "exit_code": 0,
+    "seconds": 5.774
+  },
+  "native_model": {
+    "case": "model",
+    "exit_code": 0,
+    "seconds": 14.337
+  },
+  "native_workshop": {
+    "case": "workshop",
+    "exit_code": 0,
+    "seconds": 17.192
+  },
+  "native_world": {
+    "case": "world",
+    "exit_code": 0,
+    "seconds": 33.824
+  }
+}

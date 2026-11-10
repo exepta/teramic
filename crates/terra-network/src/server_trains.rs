@@ -87,44 +87,6 @@ fn overlaps_vehicle(car: &Vehicle, low: [f64; 3], high: [f64; 3]) -> bool {
             .any(|shape| shape.intersects(low, high))
     })
 }
-fn exit_clear(
-    intent: ExitIntent,
-    chunks: &ChunkStore,
-    journal: &EditJournal,
-    properties: &terra_core::block_properties::BlockPropertiesCatalog,
-    center: Vec3,
-    ignore_mount: bool,
-) -> bool {
-    let half = Vec3::new(
-        terra_physics::character::PLAYER_RADIUS,
-        terra_physics::character::PLAYER_HALF_HEIGHT,
-        terra_physics::character::PLAYER_RADIUS,
-    );
-    let low = (center - half).to_array().map(f64::from);
-    let high = (center + half).to_array().map(f64::from);
-    for x in low[0].floor() as i64..=(high[0] - 1e-6).floor() as i64 {
-        for y in low[1].floor() as i64..=(high[1] - 1e-6).floor() as i64 {
-            for z in low[2].floor() as i64..=(high[2] - 1e-6).floor() as i64 {
-                if terra_world::interaction_shapes::space_intersects(
-                    chunks,
-                    journal,
-                    properties,
-                    [x, y, z],
-                    low,
-                    high,
-                ) {
-                    return false;
-                }
-            }
-        }
-    }
-    !journal
-        .gameplay()
-        .trains
-        .vehicles
-        .values()
-        .any(|car| (!ignore_mount || car.id != intent.vehicle) && overlaps_vehicle(car, low, high))
-}
 fn safe_exit(
     intent: ExitIntent,
     chunks: &ChunkStore,
@@ -132,60 +94,15 @@ fn safe_exit(
     terrain: &terra_world::TerraGenerator,
     properties: &terra_core::block_properties::BlockPropertiesCatalog,
 ) -> Option<Vec3> {
-    let habitat = terra_world::creatures::Habitat {
-        terrain,
+    terra_physics::safe_train_exit(
+        intent.vehicle,
+        intent.feet,
+        intent.yaw,
         chunks,
         journal,
-    };
-    let (sin, cos) = f64::from(intent.yaw).sin_cos();
-    for distance in [1.2, 1.8, 2.4, 3.2, 4.0, 5.0, 6.0, 8.0] {
-        for [x, z] in [
-            [1.0, 0.0],
-            [-1.0, 0.0],
-            [0.0, 1.0],
-            [0.0, -1.0],
-            [1.0, 1.0],
-            [-1.0, 1.0],
-            [1.0, -1.0],
-            [-1.0, -1.0],
-        ] {
-            for vertical in [
-                0.5, -0.5, -1.5, -2.5, 1.5, -3.5, -4.5, -5.5, -6.5, -7.5, -8.5,
-            ] {
-                let probe = [
-                    intent.feet[0] + distance * (x * cos + z * sin),
-                    intent.feet[1] + vertical,
-                    intent.feet[2] + distance * (-x * sin + z * cos),
-                ];
-                let Some(feet) = habitat.ground_sized(probe, [0.64, 1.8, 0.64], 0.0) else {
-                    continue;
-                };
-                let target = Vec3::from_array(feet.map(|v| v as f32))
-                    + Vec3::Y * terra_physics::character::PLAYER_HALF_HEIGHT;
-                if !exit_clear(intent, chunks, journal, properties, target, false) {
-                    continue;
-                }
-                let start = Vec3::from_array(intent.feet.map(|v| v as f32))
-                    + Vec3::Y * terra_physics::character::PLAYER_HALF_HEIGHT;
-                let samples = (start.distance(target) / 0.125).ceil().max(1.0) as usize;
-                // Like rider dismount, the controlled transition ignores its
-                // own mount. Terrain and every other vehicle still block it.
-                if (0..=samples).all(|step| {
-                    exit_clear(
-                        intent,
-                        chunks,
-                        journal,
-                        properties,
-                        start.lerp(target, step as f32 / samples as f32),
-                        true,
-                    )
-                }) {
-                    return Some(target);
-                }
-            }
-        }
-    }
-    None
+        terrain,
+        properties,
+    )
 }
 #[derive(Resource, Default)]
 pub(super) struct TrainRuntime {
@@ -1005,16 +922,28 @@ pub(super) fn apply(
             second_end,
             revision,
         } => {
-            station(peer, world, cell)?;
+            if let Some(cell) = cell {
+                station(peer, world, cell)?;
+            }
             check_revision(world, revision)?;
+            let mounted_pair = seated
+                .binding(peer.uuid)
+                .is_some_and(|seat| seat.vehicle == first || seat.vehicle == second);
             for id in [first, second] {
                 let car = vehicle(peer, world, id)?;
                 if !car.motion.stopped() {
                     return Err(TrainError::Busy);
                 }
-                if car.world_cell(0).is_none_or(|position| {
-                    (0..3).any(|axis| position[axis].abs_diff(cell[axis]) > 64)
-                }) {
+                if let Some(cell) = cell {
+                    if car.world_cell(0).is_none_or(|position| {
+                        (0..3).any(|axis| position[axis].abs_diff(cell[axis]) > 64)
+                    }) {
+                        return Err(TrainError::OutOfReach);
+                    }
+                } else if !mounted_pair
+                    && !(0..car.parts.len())
+                        .any(|index| reach_part(peer, world, &car, index as u16).is_ok())
+                {
                     return Err(TrainError::OutOfReach);
                 }
                 if (0..car.parts.len()).any(|index| {
@@ -1050,18 +979,30 @@ pub(super) fn apply(
             end,
             revision,
         } => {
-            station(peer, world, cell)?;
+            if let Some(cell) = cell {
+                station(peer, world, cell)?;
+            }
             check_revision(world, revision)?;
             let car = vehicle(peer, world, id)?;
             let link = car.couplings[end.index()].ok_or(TrainError::Missing)?;
             let other = vehicle(peer, world, link.vehicle)?;
+            let mounted_pair = seated
+                .binding(peer.uuid)
+                .is_some_and(|seat| seat.vehicle == car.id || seat.vehicle == other.id);
             for car in [car, other] {
                 if !car.motion.stopped() {
                     return Err(TrainError::Busy);
                 }
-                if car.world_cell(0).is_none_or(|position| {
-                    (0..3).any(|axis| position[axis].abs_diff(cell[axis]) > 64)
-                }) {
+                if let Some(cell) = cell {
+                    if car.world_cell(0).is_none_or(|position| {
+                        (0..3).any(|axis| position[axis].abs_diff(cell[axis]) > 64)
+                    }) {
+                        return Err(TrainError::OutOfReach);
+                    }
+                } else if !mounted_pair
+                    && !(0..car.parts.len())
+                        .any(|index| reach_part(peer, world, &car, index as u16).is_ok())
+                {
                     return Err(TrainError::OutOfReach);
                 }
                 if (0..car.parts.len()).any(|index| {
@@ -1999,6 +1940,10 @@ mod cleanup_tests {
         assert!(feet[1] > 7.0);
         let mut journal = EditJournal::default();
         journal.gameplay_mut().trains.insert(car).unwrap();
+        let mut neighbor = journal.gameplay().trains.vehicles[&1].clone();
+        neighbor.anchor[2] -= 9;
+        journal.gameplay_mut().trains.insert(neighbor).unwrap();
+
         let terrain = terra_world::TerraGenerator::new(Default::default()).unwrap();
         let properties = Default::default();
         let position = safe_exit(

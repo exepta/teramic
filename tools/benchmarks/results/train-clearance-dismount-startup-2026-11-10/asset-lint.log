@@ -1,0 +1,8 @@
+PASS: CPU-only native train asset lint; no regeneration, window or GPU.
+Train IDs210..294: 85 complete JSON/model/recipe entries with matching names.
+Collision: 933 finite bounded boxes; every part stays within the 128-box budget.
+GLTF: 5562048 binary bytes, 49176 triangles; buffers, accessors, indices, bounds and textures valid.
+CPU preview projection: all 85 have >64 alpha-covered pixels at the actual 128x128 camera; 24607 front-facing triangles; winding agrees with every vertex normal.
+Smallest projected coverage: 252 pixels (train_handrail_post).
+Reported startup icons, projected alpha coverage: 249: 2449px, 250: 2843px, 261: 3186px, 262: 3554px, 271: 4556px, 272: 5331px.
+Embedded recipes: 417 unique IDs/keys; JSON payload 143297 bytes within 1MiB.

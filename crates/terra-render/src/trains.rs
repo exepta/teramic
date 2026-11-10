@@ -100,6 +100,7 @@ fn compose_geometry(
     let mut moving = Vec::new();
     let by_cell: BTreeMap<_, _> = parts.iter().map(|part| (part.offset, part)).collect();
     let mut frozen_openings = openings::frozen_openings(parts, blocks, templates, palettes)?;
+    let driving_wheels = parts.iter().any(|part| part.material == 232);
     for (index, part) in parts.iter().enumerate() {
         if !templates.blocks.contains_key(&part.material) {
             return Err("Invalid train render part".into());
@@ -149,6 +150,15 @@ fn compose_geometry(
             )?
         };
         for mut batch in batches {
+            if driving_wheels
+                && part.material == terra_core::train_parts::BOGIE
+                && matches!(
+                    templates.train_moving_materials.get(&batch.material),
+                    Some(crate::blocks::TrainAnimationRole::BogieWheel(_))
+                )
+            {
+                continue;
+            }
             if animated && let Some(&role) = templates.train_moving_materials.get(&batch.material) {
                 for point in &mut batch.positions {
                     for (axis, offset) in part.offset.into_iter().enumerate() {

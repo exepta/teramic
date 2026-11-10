@@ -58,14 +58,12 @@ fn catalog_warmup(
         .into_iter()
         .map(|argument| argument.as_ref().to_owned())
         .collect::<Vec<_>>();
-    let smoke = arguments
-        .iter()
-        .any(|argument| argument.starts_with("--smoke-test"));
-    !smoke
-        || explicit == Some("1")
-            && !arguments.iter().any(|argument| {
-                argument == "--smoke-test-benchmark" || argument == "--smoke-test-alchemy"
-            })
+    // Models and textures still load before the menu. Hundreds of rendered
+    // inventory variants are generated only when their slots become visible.
+    explicit == Some("1")
+        && !arguments.iter().any(|argument| {
+            argument == "--smoke-test-benchmark" || argument == "--smoke-test-alchemy"
+        })
 }
 
 fn finite_catalog(materials: impl IntoIterator<Item = u16>) -> VecDeque<ItemKind> {
@@ -275,7 +273,9 @@ pub(crate) fn install(app: &mut App) {
         std::env::args(),
         std::env::var("TERRA_PREVIEW_WARMUP").ok().as_deref(),
     );
-    let required = app.world().resource::<PreviewQueue>().warmup;
+    let required = app.world().resource::<PreviewQueue>().warmup
+        || !std::env::args()
+            .any(|arg| arg.starts_with("--smoke-test") && !arg.starts_with("--smoke-test-menu"));
     app.world_mut()
         .resource_mut::<RenderPreviewStartup>()
         .required = required;
@@ -346,14 +346,18 @@ fn sync_startup(
     }
     if !startup.initialized {
         startup.initialized = true;
-        startup.total = queue.catalog_total;
+        startup.total = if queue.warmup { queue.catalog_total } else { 1 };
     }
     startup.failed = queue.catalog_failed;
-    startup.completed = startup.total.saturating_sub(queue.catalog_remaining.len());
+    startup.completed = if queue.warmup {
+        startup.total.saturating_sub(queue.catalog_remaining.len())
+    } else {
+        1
+    };
     if queue.catalog_failed > 0 && startup.error.is_none() {
         startup.error = previews.error.clone();
     }
-    if queue.catalog_remaining.is_empty() && queue.pending() == 0 {
+    if !queue.warmup || queue.catalog_remaining.is_empty() && queue.pending() == 0 {
         startup.ready = true;
         queue.warmup = false;
     }
@@ -1294,9 +1298,12 @@ mod tests {
     }
 
     #[test]
-    fn normal_startup_preloads_the_catalog_but_benchmark_and_alchemy_remain_demand_only() {
+    fn normal_startup_loads_assets_but_renders_inventory_variants_on_demand() {
         for setting in [None, Some("0"), Some("1"), Some("true")] {
-            assert!(catalog_warmup(["terra-client"], setting));
+            assert_eq!(
+                catalog_warmup(["terra-client"], setting),
+                setting == Some("1")
+            );
             for args in [vec!["--smoke-test-benchmark"], vec!["--smoke-test-alchemy"]] {
                 assert!(!catalog_warmup(args, setting));
             }

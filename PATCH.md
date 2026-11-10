@@ -7279,3 +7279,35 @@ mit echtem Server, Rollenwechsel und Visitor-Reconnect in QHD/1024x768/4K;
 Montage in 1080p/720p und Rad-/Rauchdarstellung geprueft. Die nativen Zugbilder
 sind Darstellungsfixtures; sie ersetzen keinen Langzeit-Fahrtest.
 [Pruefbericht](tools/benchmarks/results/train-coupling-running-gear-bergfried-2026-11-09/README.md).
+
+## 224. Fahrwerkskorrektur, Kuppeln Ohne Station Und Ausstieg Auf Wagenboeden
+
+Die grossen Treibraeder stehen auf derselben 2-m-Spur wie die Drehgestelle.
+Bei damit ausgestatteten Fahrzeugen werden die kleinen Drehgestellraeder nicht
+zusaetzlich gerendert. Alte gespeicherte Treibrad-Kollisionsprofile verwenden
+ebenfalls die korrigierte kanonische Form. Dadurch bleiben Darstellung und
+Streckenfreigabe auch fuer vorhandene Aufbauten konsistent.
+
+Koppeln und Loesen funktionieren aus der Fahrzeug-Montageansicht ohne gesetzte
+Montagestelle. Der bisherige fruehe Ruecksprung ohne Serveranfrage entfaellt.
+Besitz, Baurechte, Stillstand, Revision und entweder Naehe oder Bindung an eines
+der Fahrzeuge werden serverseitig geprueft. Client und Server: Protokoll 126;
+Speicherformate bleiben unveraendert.
+
+Die gemeinsame Ausstiegssuche beruecksichtigt einen seitlichen Weg aus hohen
+Kabinen und freie, physisch vorhandene Wagenboeden. Ein trockener Terrainboden
+ist damit nicht mehr die einzige erlaubte Landeflaeche. Hindernisse, andere
+Fahrzeuge und ungeladene Bereiche bleiben gesperrt. Eine Kopie der aktuellen
+Test-Welt reproduziert den nahen Wagen; der Ausstieg funktioniert jetzt auch bei
+1 m Kupplungsabstand und an allen Sitzen des Personenwagens.
+
+Vor dem Hauptmenue werden Modelle, Texturen, Schriften, Audio und UI geladen.
+Die 617 Inventarvorschauen werden standardmaessig bei Bedarf gerendert.
+Ein kontrollierter nativer Startvergleich mit denselben Einstellungen benoetigte
+18,45 s mit vollstaendigem Vorschaukatalog und 5,77 s mit der neuen Vorbereitung.
+Das sind einzelne Start-Smoke-Messungen, keine allgemeine Ladezeitgarantie.
+
+4506 Workspace-Tests bestanden, 10 ignoriert; das separat fehlende originale
+FIVERR-GLB-Referenzasset bleibt gezielt ausgefiltert. Strenges Clippy, Build,
+Formatierung, Whitespace und Asset-Lint bestanden. Details und native Belege:
+[Fahrwerk, Ausstieg Und Startzeit](tools/benchmarks/results/train-clearance-dismount-startup-2026-11-10/README.md).

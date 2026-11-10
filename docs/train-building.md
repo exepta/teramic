@@ -96,8 +96,9 @@ sind fuer den Besitzer auch vom gebundenen Fuehrerstand aus erreichbar, unabhaen
 von ihrer Position im Wagen. Andere Spieler erhalten keinen Zugriff auf private
 Ladung oder Steuerung.
 
-Zum Kuppeln beide Fahrzeuge anhalten und an der Montagestelle nacheinander
-auswaehlen. Beim zweiten Fahrzeug werden passende freie, einander zugewandte
+Zum Kuppeln beide Fahrzeuge anhalten und in der Montageansicht nacheinander
+auswaehlen. Das geht an einer Montagestelle, direkt neben den Fahrzeugen oder
+aus dem eigenen gebundenen Fuehrerstand. Beim zweiten Fahrzeug werden passende freie, einander zugewandte
 Kupplungsenden automatisch vorgewaehlt. Vorn/Hinten bleibt manuell umschaltbar.
 Die Kupplung verwendet die tatsaechlichen Positionen und Ausrichtungen,
 einschliesslich Zwischenpositionen, Kurven und Steigungen. Seitlich versetzte,
@@ -110,9 +111,15 @@ Bewegung vorausberechnet.
 
 Die breite Lokvorlage enthaelt grosse rote Speichen-Treibraeder mit 1,7 Metern
 Durchmesser. Stahlreifen, Naben, Gegengewichte und Kurbelzapfen sind sichtbare
-Geometrie. Die Drehrichtung und das Gestaenge folgen der gefahrenen Strecke.
+Geometrie. Ihre Laufflaechen sitzen auf der 2-m-Spur; zusaetzliche kleine
+Drehgestellraeder werden bei Treibrad-Aufbauten ausgeblendet. Die Drehrichtung und das Gestaenge folgen der gefahrenen Strecke.
 Bestehende Aufbauten lassen sich ueber Montage mit den neuen Vorlagenteilen
 ergaenzen; individuelle Fahrzeuge werden nicht automatisch umgebaut.
+
+Beim Aussteigen wird zuerst freier Boden neben dem Zug gesucht. Wenn darunter
+kein sicherer trockener Boden erreichbar ist, kann der Spieler auf einen freien
+Wagenboden wechseln. Erhoehte Gleise und ein naher Wagen verhindern den Ausstieg
+dadurch nicht pauschal; echte Hindernisse und belegte Landeplaetze bleiben gesperrt.
 
 Zum Umbauen an einem geraden, ebenen Gleis neben einer Montagestelle anhalten,
 Kupplungen loesen und im Fahrpult oder an der Montagestelle **Montage** waehlen.
@@ -176,7 +183,7 @@ Der Gleismodus **Prellbock** stoppt den Zug vor dem Anschlag einschliesslich
 Wagenkasten und Kupplung. Ein Verbund wird gemeinsam angehalten; Rueckwaerts
 vom Prellbock wegzufahren bleibt erlaubt.
 
-Client und Server benoetigen Protokoll 125. Zugindex ID17 speichert
+Client und Server benoetigen Protokoll 126. Zugindex ID17 speichert
 Namen, Restbrennstoff, Wasser und Druck und uebernimmt bestehende Zuege aus
 ID13, ID14, ID15 und ID16. Alte Fahrzeuge erhalten kein kostenloses Wasser.
 
