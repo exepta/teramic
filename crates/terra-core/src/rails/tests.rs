@@ -434,3 +434,56 @@ fn turntable_footprint_is_invariant_and_connects_at_exact_endpoints_in_every_yaw
         assert_joint(rotated, 1, next, 0);
     }
 }
+
+#[test]
+fn gentle_turnouts_keep_legacy_records_and_bound_every_branch_heading_below_twenty_degrees() {
+    for material in [SWITCH_LEFT, SWITCH_RIGHT] {
+        for facing in 0..4 {
+            let old = Piece::new([0; 3], material, facing).unwrap();
+            assert!(old.curve.is_none());
+            let piece = Piece::for_build([0; 3], material, facing).unwrap();
+            let switched = Piece::for_build([0; 3], material, facing | 4).unwrap();
+            assert!(piece.is_gentle_switch());
+            assert_eq!(piece.footprint(), switched.footprint());
+            assert_eq!(
+                serde_json::from_str::<Piece>(&serde_json::to_string(&piece).unwrap()).unwrap(),
+                piece
+            );
+            let forward = piece.paths()[0].sample(0.).tangent;
+            for path in piece.paths() {
+                let ports = piece.ports();
+                assert_eq!(
+                    path.sample(1.).position,
+                    ports[usize::from(path.ports[1])].position.position()
+                );
+                for step in 0..=256 {
+                    let tangent = path.sample(step as f64 / 256.).tangent;
+                    let angle = (0..3)
+                        .map(|i| tangent[i] * forward[i])
+                        .sum::<f64>()
+                        .clamp(-1., 1.)
+                        .acos()
+                        .to_degrees();
+                    assert!(angle <= 20., "heading={angle}");
+                }
+            }
+            assert!(piece.curve.unwrap().validate().unwrap().min_radius >= 16.);
+            assert_eq!(piece.paths()[0].length(), 20.);
+            assert!(old.footprint() != piece.footprint());
+        }
+    }
+}
+#[test]
+fn sixty_four_meter_connections_preserve_quarter_meter_tessellation() {
+    let curve = CurveSpec::new([[8, 2, 0], [8, 2, 341], [8, 2, 683], [8, 2, 1024]]).unwrap();
+    assert!((curve.length().unwrap() - 64.).abs() < 1e-6);
+    let parameters = curve.parameters().unwrap();
+    assert!(parameters.len() <= MAX_CURVE_SAMPLES);
+    for pair in parameters.windows(2) {
+        let a = curve.sample(pair[0]).position;
+        let b = curve.sample(pair[1]).position;
+        assert!((0..3).map(|i| (a[i] - b[i]).powi(2)).sum::<f64>().sqrt() <= 0.250001);
+    }
+    assert!(CurveSpec::new([[8, 2, 0], [8, 2, 341], [8, 2, 683], [8, 2, 1040]]).is_none());
+    assert_eq!(RAIL_BUILD_REACH, 64.);
+}

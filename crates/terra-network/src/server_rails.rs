@@ -459,7 +459,7 @@ fn prepare(
         } else {
             match command.action {
                 EditAction::ConnectRail { start, .. } | EditAction::StretchRail { start, .. } => {
-                    rails::connection_sites(&world.journal, start, hit)
+                    rails::connection_sites_for_plan(&world.journal, start, hit, &layout)
                 }
                 _ => rails::placement_sites(&world.journal, hit),
             }

@@ -757,7 +757,7 @@ mod tests {
         trains::{TrainPart, VehicleKind},
     };
     use terra_voxel::{BlockSection, global_to_section};
-    fn set(chunks: &mut ChunkStore, cell: [i64; 3], material: u16) {
+    pub(super) fn set(chunks: &mut ChunkStore, cell: [i64; 3], material: u16) {
         let (owner, local) = global_to_section(cell);
         chunks
             .loaded
@@ -774,7 +774,7 @@ mod tests {
             .set_block(local, material)
             .unwrap();
     }
-    fn fixture() -> (ChunkStore, EditJournal, Vehicle) {
+    pub(super) fn fixture() -> (ChunkStore, EditJournal, Vehicle) {
         let mut chunks = ChunkStore::default();
         let mut journal = EditJournal::default();
         for x in -3..=3 {
@@ -1432,5 +1432,107 @@ mod tests {
             )
             .is_err()
         );
+    }
+}
+
+#[cfg(test)]
+mod shallow_turnout_tests {
+    use super::tests::{fixture, set};
+    use super::*;
+    use terra_core::{
+        Inventory, ItemKind, ItemStack,
+        rails::{CurveSpec, Piece, SWITCH_LEFT, SWITCH_RIGHT},
+        train_blueprint,
+        trains::{TrainPart, VehicleKind},
+    };
+    #[test]
+    fn shallow_switches_carry_eight_and_fifteen_meter_wheelbases_on_both_routes_without_sticking() {
+        for (material, side) in [(SWITCH_LEFT, -1), (SWITCH_RIGHT, 1)] {
+            for (switched, wheelbase) in [false, true]
+                .into_iter()
+                .flat_map(|route| [8, 15].map(|wheelbase| (route, wheelbase)))
+            {
+                let mut chunks = ChunkStore::default();
+                let mut journal = EditJournal::default();
+                for x in -8..=8 {
+                    for y in -2..=12 {
+                        for z in -28..=52 {
+                            set(&mut chunks, [x, y, z], 0);
+                        }
+                    }
+                }
+                let line =
+                    CurveSpec::new([[8, 2, 0], [8, 2, 128], [8, 2, 256], [8, 2, 384]]).unwrap();
+                let approach = Piece::new_curve([0, 0, -24], line).unwrap();
+                let switch =
+                    Piece::for_build([0; 3], material, if switched { 4 } else { 0 }).unwrap();
+                let outgoing =
+                    Piece::new_curve([if switched { side * 4 } else { 0 }, 0, 20], line).unwrap();
+                assert!(approach.ports()[1].connects(switch.ports()[0]));
+                assert!(switch.ports()[if switched { 2 } else { 1 }].connects(outgoing.ports()[0]));
+                for piece in [approach, switch, outgoing] {
+                    for cell in rails::cells(piece) {
+                        assert!(
+                            !journal.block(cell).is_some_and(terra_core::rails::is_rail),
+                            "rail modules must retain disjoint owned cells"
+                        );
+                        set(&mut chunks, cell, piece.material);
+                        journal.record(cell, piece.material).unwrap();
+                        journal
+                            .set_object_state(cell, Some(rails::object_state(piece, cell)))
+                            .unwrap();
+                    }
+                }
+                let network = rails::network(&journal).unwrap();
+                let (_, _, mut car) = fixture();
+                car.parts = train_blueprint::template_with_wheelbase(
+                    [0, 2, -i64::from(wheelbase) - 3],
+                    0,
+                    VehicleKind::Locomotive,
+                    wheelbase,
+                )
+                .into_iter()
+                .map(|part| TrainPart {
+                    offset: part.cell.map(|v| v as i16),
+                    material: part.material,
+                    facing: part.facing,
+                    wood: Default::default(),
+                })
+                .collect();
+                car.cargo.clear();
+                for index in car.cargo_indices().collect::<Vec<_>>() {
+                    car.cargo.insert(index, Inventory::default());
+                }
+                let engine = car
+                    .parts
+                    .iter()
+                    .position(|part| part.material == 218)
+                    .unwrap() as u16;
+                car.cargo.get_mut(&engine).unwrap().slots = vec![ItemStack {
+                    item: ItemKind::Block(18),
+                    count: 4,
+                }];
+                car.motion = terra_core::train_motion::TrainMotion {
+                    throttle: 1,
+                    brake: false,
+                    ..Default::default()
+                };
+                assert!(car.valid());
+                for tick in 0..720 {
+                    let next = advance(&chunks, &journal, &network, &car, 1. / 60.).unwrap_or_else(
+                        |reason| panic!("{material} switched={switched} wheelbase={wheelbase} tick={tick}: {reason:?}"),
+                    );
+                    assert_eq!(
+                        clear_swept(&chunks, &journal, &Default::default(), &car, &next)
+                            .map(|_| ()),
+                        Ok(())
+                    );
+                    car = next;
+                }
+                assert!(car.motion.wheel_distance_m > 39.);
+                assert_eq!(car.motion.cursor.unwrap().anchor, outgoing.anchor);
+                assert!(car.motion.yaw.abs() < 0.02);
+            }
+        }
     }
 }

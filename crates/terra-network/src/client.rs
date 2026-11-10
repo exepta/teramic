@@ -1145,10 +1145,17 @@ fn receive_controls(
                 session.rail_preparation =
                     Some(bevy::tasks::AsyncComputeTaskPool::get().spawn(async move {
                         if let ServerControl::Section(delta) = &message {
-                            for (_, state) in &delta.objects {
+                            let materials: std::collections::BTreeMap<_, _> =
+                                delta.blocks.iter().copied().collect();
+                            for (cell, state) in &delta.objects {
                                 if let Some(curve) = state.rail_curve
-                                    && let Some(piece) =
-                                        terra_core::rails::Piece::new_curve([0; 3], curve)
+                                    && let Some(&material) = materials.get(cell)
+                                    && let Some(piece) = terra_core::rails::Piece::from_facing(
+                                        [0; 3],
+                                        material,
+                                        state.facing,
+                                    )
+                                    .and_then(|piece| piece.with_curve(curve))
                                 {
                                     let _ = piece.footprint();
                                     let _ = piece.cell_boxes([0; 3]);

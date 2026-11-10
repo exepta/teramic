@@ -7,6 +7,7 @@ mod hardware;
 mod products;
 mod sculpt;
 mod showcase;
+mod startup_batch;
 pub(crate) mod tints;
 pub(crate) mod tools;
 use std::{
@@ -58,12 +59,14 @@ fn catalog_warmup(
         .into_iter()
         .map(|argument| argument.as_ref().to_owned())
         .collect::<Vec<_>>();
-    // Models and textures still load before the menu. Hundreds of rendered
-    // inventory variants are generated only when their slots become visible.
-    explicit == Some("1")
-        && !arguments.iter().any(|argument| {
-            argument == "--smoke-test-benchmark" || argument == "--smoke-test-alchemy"
-        })
+    let smoke = arguments
+        .iter()
+        .any(|arg| arg.starts_with("--smoke-test") && !arg.starts_with("--smoke-test-menu"));
+    !smoke
+        || explicit == Some("1")
+            && !arguments
+                .iter()
+                .any(|arg| arg == "--smoke-test-benchmark" || arg == "--smoke-test-alchemy")
 }
 
 fn finite_catalog(materials: impl IntoIterator<Item = u16>) -> VecDeque<ItemKind> {
@@ -240,6 +243,8 @@ struct PreviewJob {
 struct PreviewQueue {
     initialized: bool,
     warmup: bool,
+    parallel: bool,
+    preload: startup_batch::State,
     failed: HashSet<ItemKind>,
     items: VecDeque<ItemKind>,
     jobs: VecDeque<PreviewJob>,
@@ -258,7 +263,7 @@ struct PreviewQueue {
 
 impl PreviewQueue {
     fn pending(&self) -> usize {
-        self.items.len() + self.jobs.len()
+        self.items.len() + self.jobs.len() + self.preload.jobs.len()
     }
 }
 
@@ -273,6 +278,9 @@ pub(crate) fn install(app: &mut App) {
         std::env::args(),
         std::env::var("TERRA_PREVIEW_WARMUP").ok().as_deref(),
     );
+    let parallel = app.world().resource::<PreviewQueue>().warmup
+        && std::env::var("TERRA_PREVIEW_SERIAL").as_deref() != Ok("1");
+    app.world_mut().resource_mut::<PreviewQueue>().parallel = parallel;
     let required = app.world().resource::<PreviewQueue>().warmup
         || !std::env::args()
             .any(|arg| arg.starts_with("--smoke-test") && !arg.starts_with("--smoke-test-menu"));
@@ -338,7 +346,8 @@ fn sync_startup(
             .jobs
             .front()
             .map(|job| job.item)
-            .or_else(|| queue.items.front().copied()),
+            .or_else(|| queue.items.front().copied())
+            .or_else(|| queue.preload.jobs.first().map(|job| job.item)),
         server.as_deref(),
     );
     if !queue.initialized {
@@ -401,6 +410,7 @@ fn admit_requested(
             && !queue.failed.contains(item)
             && !queue.items.contains(item)
             && !queue.jobs.iter().any(|job| job.item == *item)
+            && !queue.preload.jobs.iter().any(|job| job.item == *item)
         {
             queue.items.push_back(*item);
         }
@@ -434,7 +444,7 @@ fn prepare(
     let Some(templates) = assets.blocks.templates.clone() else {
         return;
     };
-    let Some(water) = assets.water.as_ref().map(|water| water.0.clone()) else {
+    let Some(_water) = assets.water.as_ref().map(|water| water.0.clone()) else {
         return;
     };
     let Some(foliage) = assets.foliage.as_ref() else {
@@ -465,43 +475,24 @@ fn prepare(
             queue.catalog_total = queue.catalog_remaining.len();
         }
     }
+    if queue.parallel {
+        startup_batch::prepare(
+            &mut commands,
+            &mut assets,
+            &templates,
+            &options,
+            &mut queue,
+            &mut previews,
+        );
+        return;
+    }
     // Captures are serial. Keep only the current icon and one prepared successor
     // instead of publishing every preview mesh/target in the same startup frame.
     let Some(item) = queue.items.pop_front() else {
         return;
     };
     let was_empty = queue.jobs.is_empty();
-    let batches = match match item {
-        ItemKind::Block(material) => block_batches(material, &templates, &options),
-        ItemKind::WoodenBlock { .. } => wooden_block_batches(item, &templates, &options),
-        ItemKind::TintedBlock { .. } => tints::batches(item, &templates, &options),
-        ItemKind::DyedBed { material, color } => {
-            dyed_bed_batches(material, color, &templates, &options)
-        }
-        ItemKind::Dye(color) => dye_batches(color, &templates),
-        ItemKind::GlassBottle | ItemKind::WaterBottle | ItemKind::Potion(_) => {
-            alchemy::batches(item, &templates)
-        }
-        ItemKind::Prop(kind) => prop_batches(kind, &templates),
-        ItemKind::Mineral(kind) => mineral_batches(kind, &templates),
-        ItemKind::Animal(kind) => animal_batches(kind, &templates),
-        ItemKind::Bellows(kind) => bellows_batches(kind, &templates),
-        ItemKind::Armor(_)
-        | ItemKind::Accessory(_)
-        | ItemKind::Cape(_)
-        | ItemKind::HeraldicCape { .. } => {
-            crate::armor::item_batches(item, templates.item_materials.opaque)
-        }
-        ItemKind::Dust(kind) => dust::batches(kind, templates.item_materials.opaque),
-        ItemKind::Crop(kind) => crop_batches(kind, &templates),
-        ItemKind::Apple | ItemKind::AppleCore => {
-            apple_batches(item == ItemKind::AppleCore, &templates)
-        }
-        ItemKind::Flower(color) => flower_batches(color, &templates),
-        ItemKind::Tool(_) | ItemKind::FilledWateringCan { .. } | ItemKind::Stick => {
-            tool_batches(item, &templates)
-        }
-    } {
+    let batches = match compose_item(item, &templates, &options) {
         Ok(batches) => batches,
         Err(error) => {
             if queue.catalog_remaining.remove(&item) {
@@ -514,32 +505,15 @@ fn prepare(
             return;
         }
     };
-    let root = commands
-        .spawn((PreviewScene, Transform::default(), Visibility::Hidden))
-        .id();
-    for batch in batches {
-        let mesh = assets.meshes.add(batch_mesh(&batch));
-        let mut entity = commands.spawn((
-            Mesh3d(mesh),
-            Transform::default(),
-            RenderLayers::layer(PREVIEW_LAYER),
-            ChildOf(root),
-        ));
-        if matches!(item, ItemKind::Block(14 | 27)) {
-            entity.insert(MeshMaterial3d::<WaterMaterial>(water.clone()));
-        } else if let Some(handle) = assets
-            .foliage
-            .as_ref()
-            .and_then(|foliage| foliage.materials.get(&batch.material))
-        {
-            entity.insert(MeshMaterial3d(handle.clone()));
-        } else if let Some(handle) = assets.blocks.materials.get(batch.material) {
-            entity.insert(MeshMaterial3d(handle.clone()));
-        }
-        if templates.glass_material(batch.material) {
-            entity.insert(bevy::light::NotShadowCaster);
-        }
-    }
+    let root = spawn_item(
+        &mut commands,
+        &mut assets,
+        &templates,
+        item,
+        batches,
+        Vec3::ZERO,
+        Visibility::Hidden,
+    );
     let mut image = Image::new_target_texture(
         PREVIEW_SIZE,
         PREVIEW_SIZE,
@@ -611,6 +585,92 @@ fn prepare(
     ));
 }
 
+fn spawn_item(
+    commands: &mut Commands,
+    assets: &mut PreviewAssets,
+    templates: &TemplateSet,
+    item: ItemKind,
+    batches: Vec<MeshBatch>,
+    origin: Vec3,
+    visibility: Visibility,
+) -> Entity {
+    let water = assets
+        .water
+        .as_ref()
+        .expect("water preview assets ready")
+        .0
+        .clone();
+    let root = commands
+        .spawn((
+            PreviewScene,
+            Transform::from_translation(origin),
+            visibility,
+        ))
+        .id();
+    for batch in batches {
+        let mesh = assets.meshes.add(batch_mesh(&batch));
+        let mut entity = commands.spawn((
+            Mesh3d(mesh),
+            Transform::default(),
+            RenderLayers::layer(PREVIEW_LAYER),
+            ChildOf(root),
+        ));
+        if matches!(item, ItemKind::Block(14 | 27)) {
+            entity.insert(MeshMaterial3d::<WaterMaterial>(water.clone()));
+        } else if let Some(handle) = assets
+            .foliage
+            .as_ref()
+            .and_then(|foliage| foliage.materials.get(&batch.material))
+        {
+            entity.insert(MeshMaterial3d(handle.clone()));
+        } else if let Some(handle) = assets.blocks.materials.get(batch.material) {
+            entity.insert(MeshMaterial3d(handle.clone()));
+        }
+        if templates.glass_material(batch.material) {
+            entity.insert(bevy::light::NotShadowCaster);
+        }
+    }
+    root
+}
+
+fn compose_item(
+    item: ItemKind,
+    templates: &TemplateSet,
+    options: &RenderOptions,
+) -> Result<Vec<MeshBatch>, String> {
+    match item {
+        ItemKind::Block(material) => block_batches(material, templates, options),
+        ItemKind::WoodenBlock { .. } => wooden_block_batches(item, templates, options),
+        ItemKind::TintedBlock { .. } => tints::batches(item, templates, options),
+        ItemKind::DyedBed { material, color } => {
+            dyed_bed_batches(material, color, templates, options)
+        }
+        ItemKind::Dye(color) => dye_batches(color, templates),
+        ItemKind::GlassBottle | ItemKind::WaterBottle | ItemKind::Potion(_) => {
+            alchemy::batches(item, templates)
+        }
+        ItemKind::Prop(kind) => prop_batches(kind, templates),
+        ItemKind::Mineral(kind) => mineral_batches(kind, templates),
+        ItemKind::Animal(kind) => animal_batches(kind, templates),
+        ItemKind::Bellows(kind) => bellows_batches(kind, templates),
+        ItemKind::Armor(_)
+        | ItemKind::Accessory(_)
+        | ItemKind::Cape(_)
+        | ItemKind::HeraldicCape { .. } => {
+            crate::armor::item_batches(item, templates.item_materials.opaque)
+        }
+        ItemKind::Dust(kind) => dust::batches(kind, templates.item_materials.opaque),
+        ItemKind::Crop(kind) => crop_batches(kind, templates),
+        ItemKind::Apple | ItemKind::AppleCore => {
+            apple_batches(item == ItemKind::AppleCore, templates)
+        }
+        ItemKind::Flower(color) => flower_batches(color, templates),
+        ItemKind::Tool(_) | ItemKind::FilledWateringCan { .. } | ItemKind::Stick => {
+            tool_batches(item, templates)
+        }
+    }
+}
+
 fn render_next(
     mut commands: Commands,
     mut queue: ResMut<PreviewQueue>,
@@ -620,6 +680,16 @@ fn render_next(
     mut cameras: Query<(&mut RenderTarget, &mut Camera), With<PreviewCamera>>,
     scene: Query<Entity, With<PreviewScene>>,
 ) {
+    if queue.parallel {
+        startup_batch::advance(
+            &mut commands,
+            &mut queue,
+            &mut previews,
+            &mut prop_previews,
+            &mut item_previews,
+        );
+        return;
+    }
     if queue.jobs.is_empty() {
         if queue.initialized && queue.items.is_empty() {
             for entity in &scene {
@@ -962,7 +1032,10 @@ pub(crate) fn block_batches(
     {
         crate::meshing::custom::model_geometry(
             material,
-            Default::default(),
+            terra_world::edits::BlockObjectState {
+                rail_curve: terra_core::rails::Piece::switch_curve(material),
+                ..Default::default()
+            },
             Default::default(),
             [None; 6],
             [0; 6],
@@ -1105,6 +1178,7 @@ pub(crate) fn wooden_block_batches(
             material,
             terra_world::edits::BlockObjectState {
                 wood,
+                rail_curve: terra_core::rails::Piece::switch_curve(material),
                 ..Default::default()
             },
             wood,
@@ -1298,12 +1372,10 @@ mod tests {
     }
 
     #[test]
-    fn normal_startup_loads_assets_but_renders_inventory_variants_on_demand() {
+    fn normal_startup_preloads_all_items_including_menu_smoke_runs() {
         for setting in [None, Some("0"), Some("1"), Some("true")] {
-            assert_eq!(
-                catalog_warmup(["terra-client"], setting),
-                setting == Some("1")
-            );
+            assert!(catalog_warmup(["terra-client"], setting));
+            assert!(catalog_warmup(["--smoke-test-menu"], setting));
             for args in [vec!["--smoke-test-benchmark"], vec!["--smoke-test-alchemy"]] {
                 assert!(!catalog_warmup(args, setting));
             }

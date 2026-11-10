@@ -1319,17 +1319,10 @@ fn step(world: &mut World, state: &mut MenuSmoke) -> Result<bool, String> {
                         .resource::<terra_render::RenderItemPreviews>()
                         .images
                         .len();
-                if std::env::var("TERRA_PREVIEW_WARMUP").as_deref() == Ok("1") {
-                    require(
-                        published == total,
-                        "Startup catalog does not own every completed icon",
-                    )?;
-                } else {
-                    require(
-                        total == 1 && published == 0,
-                        "Normal startup must load models without rendering the entire inventory catalog",
-                    )?;
-                }
+                require(
+                    published == total,
+                    "Startup must own every finite inventory preview before exposing the menu",
+                )?;
                 let ui = world
                     .get_resource::<crate::bootstrap::startup_ui::UiStartupAssets>()
                     .ok_or("Startup UI asset preload is missing")?;

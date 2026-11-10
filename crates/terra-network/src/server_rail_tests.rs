@@ -32,7 +32,7 @@ fn set_block(app: &mut App, cell: [i64; 3], material: u16) {
 }
 fn rail_fixture(material: u16, anchor: [i64; 3]) -> (App, Peer, Piece, EditCommand) {
     let (mut app, peer, _) = fixture(ResourcePropKind::SmallStones, false);
-    let piece = Piece::new(anchor, material, 2).unwrap();
+    let piece = Piece::for_build(anchor, material, 2).unwrap();
     for cell in terra_world::rails::cells(piece) {
         set_block(&mut app, cell, 0);
     }
@@ -444,7 +444,10 @@ fn switches_require_the_correct_opcode_facing_and_real_ray_then_update_every_sli
     );
     assert!(terra_world::rails::complete(
         journal,
-        Piece::new(piece.anchor, piece.material, 6).unwrap()
+        Piece {
+            switched: true,
+            ..piece
+        }
     ));
     let (mut plain, peer, piece, command) = rail_fixture(rails::STRAIGHT, [8, 4, 10]);
     assert_eq!(run(&mut plain, &peer, command, false), EditOutcome::Applied);

@@ -1,0 +1,5 @@
+    Checking terra-ui v0.1.0 ($REPO/crates/terra-ui)
+    Checking terra-client v0.1.0 ($REPO/apps/client)
+    Checking terra-player v0.1.0 ($REPO/crates/terra-player)
+    Checking terra-network v0.1.0 ($REPO/crates/terra-network)
+    Finished `dev` profile [optimized + debuginfo] target(s) in 17.37s

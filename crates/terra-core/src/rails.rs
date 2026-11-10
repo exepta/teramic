@@ -32,7 +32,7 @@ pub const FIXED_SCALE: i64 = 16;
 pub const TRACK_WIDTH: f64 = 3.0;
 /// Construction-only ray and endpoint reach. Ordinary block actions retain
 /// their independent interaction range.
-pub const RAIL_BUILD_REACH: f64 = 32.0;
+pub const RAIL_BUILD_REACH: f64 = 64.0;
 pub const GAUGE: f64 = 2.0;
 /// The connection plane is the rail foot, above the wooden sleeper.
 pub const DECK_HEIGHT: f64 = 0.125;
@@ -122,6 +122,32 @@ impl Piece {
     pub fn new(anchor: [i64; 3], material: u16, encoded_facing: u8) -> Option<Self> {
         Self::from_facing(anchor, material, encoded_facing)
     }
+    /// New turnouts use a long shallow branch; legacy records keep their exact ports.
+    pub fn for_build(anchor: [i64; 3], material: u16, facing: u8) -> Option<Self> {
+        let mut piece = Self::from_facing(anchor, material, facing)?;
+        if piece.kind()?.is_switch() {
+            piece.curve = Self::switch_curve(material);
+        }
+        piece.valid().then_some(piece)
+    }
+    pub fn switch_curve(material: u16) -> Option<CurveSpec> {
+        let side = match material {
+            SWITCH_LEFT => -1,
+            SWITCH_RIGHT => 1,
+            _ => return None,
+        };
+        Some(CurveSpec {
+            points: [
+                [8, 2, 0],
+                [8, 2, 112],
+                [8 + side * 64, 2, 208],
+                [8 + side * 64, 2, 320],
+            ],
+        })
+    }
+    pub fn is_gentle_switch(self) -> bool {
+        self.kind().is_some_and(Kind::is_switch) && self.curve.is_some()
+    }
     pub fn from_facing(anchor: [i64; 3], material: u16, facing: u8) -> Option<Self> {
         if !valid_facing(material, facing) {
             return None;
@@ -173,11 +199,14 @@ impl Piece {
                 .kind()
                 .is_some_and(|kind| !self.switched || kind.is_switch())
             && self.curve.is_none_or(|curve| {
-                self.material == STRAIGHT && self.facing == 0 && !self.switched && curve.valid()
+                (self.material == STRAIGHT && self.facing == 0 && !self.switched && curve.valid())
+                    || self.kind().is_some_and(Kind::is_switch)
+                        && Some(curve) == Self::switch_curve(self.material)
+                        && curve.valid()
             })
             && self.anchor.iter().all(|coordinate| {
                 coordinate.abs_diff(0)
-                    <= (MAX_COORDINATE - if self.curve.is_some() { 48 } else { 32 }) as u64
+                    <= (MAX_COORDINATE - if self.curve.is_some() { 80 } else { 32 }) as u64
             })
     }
     pub const fn encoded_facing(self) -> u8 {
@@ -297,9 +326,9 @@ impl Path {
         geometry::path_length(self)
     }
     pub fn sample_distance(self, distance: f64) -> Sample {
-        let t = match self.piece.curve {
-            Some(curve) => curve.parameter_at_distance(distance),
-            None => (distance / self.length()).clamp(0.0, 1.0),
+        let t = match self.shape {
+            geometry::PathShape::Bezier(curve) => curve.parameter_at_distance(distance),
+            _ => (distance / self.length()).clamp(0.0, 1.0),
         };
         self.sample(t)
     }

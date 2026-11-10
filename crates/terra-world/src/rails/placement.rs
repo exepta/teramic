@@ -192,10 +192,30 @@ pub fn connection_sites(
     Some(sites.into_iter().collect())
 }
 
+/// Include every existing destination actually joined by the reconstructed plan.
+/// A cursor near a port may hit its floor instead of a rail-owned cell.
+pub fn connection_sites_for_plan(
+    journal: &EditJournal,
+    start: terra_core::rails::Endpoint,
+    hit: terra_voxel::blocks::BlockHit,
+    plan: &Layout,
+) -> Option<Vec<Cell>> {
+    let mut sites: BTreeSet<_> = connection_sites(journal, start, hit)?.into_iter().collect();
+    let next = proposed_piece(plan)?;
+    for port in next.ports() {
+        for target in super::context::nearby_pieces(journal, port.position.position()) {
+            if target.ports().iter().any(|other| port.connects(*other)) {
+                sites.extend(cells(target));
+            }
+        }
+    }
+    Some(sites.into_iter().collect())
+}
+
 /// The terminal physical port, independent of the clicked voxel's distance.
 pub fn connection_target(plan: &Layout) -> Option<terra_core::rails::Port> {
     proposed_piece(plan)
-        .filter(|piece| piece.curve.is_some())?
+        .filter(|piece| piece.material == terra_core::rails::STRAIGHT && piece.curve.is_some())?
         .ports()
         .into_iter()
         .find(|port| port.index == 1)
@@ -399,7 +419,7 @@ fn connection_candidates_with_ray(
             || distance_squared(position, ray.0) > RAIL_BUILD_REACH * RAIL_BUILD_REACH + 1e-8
         {
             return Err(
-                "The rail source or destination is beyond the 32-block construction reach".into(),
+                "The rail source or destination is beyond the 64-block construction reach".into(),
             );
         }
         Some(std::array::from_fn(|axis| {
@@ -408,7 +428,25 @@ fn connection_candidates_with_ray(
     } else {
         None
     };
-    let end_ports = if let Some(target) = owner_at(journal, hit.position) {
+    // Snap close to a real free port even when the pointer hits the floor beside
+    // it. Exact clicked modules retain priority; no terrain search is involved.
+    let target = owner_at(journal, hit.position).or_else(|| {
+        let point = aimed?;
+        super::context::nearby_pieces(journal, point)
+            .into_iter()
+            .filter(|target| target.anchor != piece.anchor)
+            .flat_map(|target| {
+                target
+                    .ports()
+                    .into_iter()
+                    .filter(move |port| port.connectable && !port_connected(journal, target, *port))
+                    .map(move |port| (distance_squared(port.position.position(), point), target))
+            })
+            .filter(|(distance, _)| *distance <= 1.5 * 1.5)
+            .min_by(|a, b| a.0.total_cmp(&b.0).then(a.1.anchor.cmp(&b.1.anchor)))
+            .map(|(_, target)| target)
+    });
+    let end_ports = if let Some(target) = target {
         if !complete(journal, target) {
             return Err("Rail destination is incomplete".into());
         }
@@ -573,11 +611,13 @@ fn placement_candidate(
     }
     let preferred = crate::edits::BlockObjectState::from_yaw(look[0] + std::f32::consts::PI).facing;
     let Some(existing) = owner_at(journal, hit.position) else {
-        return if validate {
-            plan(chunks, journal, hit.adjacent(), material, preferred)
-        } else {
-            candidate(chunks, hit.adjacent(), material, preferred)
-        };
+        let piece =
+            Piece::for_build(hit.adjacent(), material, preferred).ok_or("Invalid rail module")?;
+        let layout = candidate_piece(chunks, piece, terra_core::WoodSpecies::Oak)?;
+        if validate {
+            environment(&layout, chunks, journal)?;
+        }
+        return Ok(layout);
     };
     if !complete(journal, existing) {
         return Err("The clicked rail module is incomplete".into());
@@ -604,7 +644,7 @@ fn placement_candidate(
     for port in ports {
         for turn in [0, 1, 3, 2] {
             let yaw = (preferred + turn) % 4;
-            let local = Piece::from_facing([0; 3], material, yaw).ok_or("Invalid rail module")?;
+            let local = Piece::for_build([0; 3], material, yaw).ok_or("Invalid rail module")?;
             for incoming in local.ports() {
                 if !incoming.connectable || port.tangent.map(|value| -value) != incoming.tangent {
                     continue;
@@ -618,11 +658,15 @@ fn placement_candidate(
                     continue;
                 }
                 let anchor = translation.map(|value| value / terra_core::rails::FIXED_SCALE);
-                let layout = if validate {
-                    plan(chunks, journal, anchor, material, yaw)
-                } else {
-                    candidate(chunks, anchor, material, yaw)
-                };
+                let layout = Piece::for_build(anchor, material, yaw)
+                    .ok_or_else(|| "Invalid rail module".to_string())
+                    .and_then(|piece| candidate_piece(chunks, piece, terra_core::WoodSpecies::Oak))
+                    .and_then(|layout| {
+                        if validate {
+                            environment(&layout, chunks, journal)?;
+                        }
+                        Ok(layout)
+                    });
                 match layout {
                     Ok(layout) => return Ok(layout),
                     Err(error) => last_error = error,
@@ -803,8 +847,13 @@ pub fn toggle_switch_plan(
         .object_state(old.anchor)
         .ok_or("Missing rail wood state")?
         .wood;
-    let switched = Piece::from_facing(old.anchor, old.material, old.encoded_facing() ^ 4)
-        .ok_or("Only rail switches can change route")?;
+    if !old.kind().is_some_and(terra_core::rails::Kind::is_switch) {
+        return Err("Only rail switches can change route".into());
+    }
+    let switched = Piece {
+        switched: !old.switched,
+        ..old
+    };
     let mut result = break_layout(chunks, journal, cell)?;
     for edit in &mut result.edits {
         edit.material = old.material;

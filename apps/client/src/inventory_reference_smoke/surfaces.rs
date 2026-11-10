@@ -538,7 +538,7 @@ fn responsive_bounds(world: &mut World, size: Vec2) -> Result<(), String> {
     let view = world.resource::<InventoryView>();
     let linked = view.linked_container;
     let layout_width = if linked { 1044.0 } else { 682.0 };
-    let layout_height = if view.player { 366.0 } else { 400.0 };
+    let layout_height = if view.player { 439.2 } else { 480.0 };
     let shell = element(world, "inventory-shell").ok_or("Missing responsive shell")?;
     let (mut low, mut high) = rectangle(world, shell)?;
     if linked {
@@ -556,8 +556,22 @@ fn responsive_bounds(world: &mut World, size: Vec2) -> Result<(), String> {
             "Responsive inventory does not fill the available viewport: painted {painted:?}, minimum height {minimum_height}, viewport {size:?}"
         ));
     }
+    let titles = world
+        .query::<(Entity, &ElementClasses)>()
+        .iter(world)
+        .filter_map(|(entity, classes)| {
+            classes
+                .classes
+                .iter()
+                .any(|class| class == "inventory-reference-title")
+                .then_some(entity)
+        })
+        .collect::<Vec<_>>();
+    for title in titles {
+        inside(world, title, size, "inventory title")?;
+    }
     let center = (low + high) * 0.5;
-    let expected_center = size * Vec2::new(0.5, 0.45);
+    let expected_center = size * Vec2::new(0.5, 0.465);
     if (center - expected_center)
         .abs()
         .cmpgt(Vec2::splat(4.0))

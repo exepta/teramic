@@ -7311,3 +7311,36 @@ Das sind einzelne Start-Smoke-Messungen, keine allgemeine Ladezeitgarantie.
 FIVERR-GLB-Referenzasset bleibt gezielt ausgefiltert. Strenges Clippy, Build,
 Formatierung, Whitespace und Asset-Lint bestanden. Details und native Belege:
 [Fahrwerk, Ausstieg Und Startzeit](tools/benchmarks/results/train-clearance-dismount-startup-2026-11-10/README.md).
+
+## 225. Hoehere Inventare, Vollstaendiges Icon-Preload Und Flache Weichen
+
+Inventare mit Item-Browser erhalten 20 Prozent mehr logische Hoehe:
+Spielerinventar 439,2 statt 366 px, Geraete 480 statt 400 px. Slots bleiben
+33,6 px gross, Ergebnisfelder 38,4 px. Die responsive Begrenzung laesst Titel
+und HUD sichtbar und vergroessert Schrift beziehungsweise Icons nicht mit.
+
+Alle 617 endlichen Inventarvorschauen werden wieder vor dem Hauptmenue geladen.
+16 getrennte Renderplaetze bearbeiten begrenzt mehrere Vorschauen gleichzeitig;
+jede besteht weiterhin die GPU-Pruefung auf sichtbare Pixel. Modelle, Texturen,
+Schriften, UI und Audio bleiben im Preload. Der native Vergleich benoetigt bei
+gleichen Einstellungen 9,032 statt 19,148 s mit serieller Vorbereitung. Das sind
+Einzelmessungen mit warmen Caches inklusive Aufnahmen und Prozessende.
+
+Neue Weichen haben einen 20 m langen S-Abzweig mit 4 m Seitenversatz und maximal
+rund 17,1 Grad Richtungsabweichung. Beide Ausgaenge bleiben parallel. Fahrpruefungen
+mit 8 und 15 m Radstand passieren beide Wege linker und rechter Weichen mit
+gepruefter Bewegung und Kollisionsfreiheit. Vorhandene alte 90-Grad-Weichen
+behalten ihre Anschluesse; fuer den flachen Verlauf muessen sie mit mehr Platz
+neu gebaut und ihre Anschlussgleise angepasst werden. Umschalten, Replikation
+und Vorschau verwenden dasselbe Profil; Gleis-Assets wurden daraus neu exportiert.
+
+Gleisbau und einzelne Verbindungen reichen nun bis 64 m. Nahe freie Endpunkte
+rasten auch beim Zielen knapp daneben auf den Boden ein. Client und Server
+rekonstruieren denselben Bogen und pruefen weiterhin die kompletten angeschlossenen
+Module auf Baurechte. Viertelmeter-Unterteilung bleibt bei begrenztem Budget erhalten.
+Client und Server verwenden Protokoll 127; persistente Schemas bleiben unveraendert.
+
+4512 Workspace-Tests bestanden, 10 ignoriert, eine separat fehlende originale
+FIVERR-GLB-Datei ausgefiltert. Native Layoutpruefungen bestehen mit 52 Aufnahmen
+ueber breite, kompakte und 4K-Ansichten. Original-Spielstaende wurden nicht
+migriert. Details: [Inventare, Preload Und Weichen](tools/benchmarks/results/inventory-preload-shallow-switches-2026-11-10/README.md).

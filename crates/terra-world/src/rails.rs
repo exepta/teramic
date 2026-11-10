@@ -24,10 +24,10 @@ pub use clearance::{MAX_CLEARED_PROPS, PropClearance, PropSource, clearance};
 #[cfg(feature = "bevy")]
 pub use placement::{
     break_layout, commit, connection, connection_aim, connection_signature, connection_sites,
-    connection_target, continuation_endpoint, cost, environment, next_endpoint, placement,
-    placement_sites, plan, proposal, proposal_connection, proposal_connection_aim, proposal_seed,
-    seed, seed_signature, select_endpoint, set_wood, support_edit_allowed, toggle_switch_plan,
-    turntable_plan,
+    connection_sites_for_plan, connection_target, continuation_endpoint, cost, environment,
+    next_endpoint, placement, placement_sites, plan, proposal, proposal_connection,
+    proposal_connection_aim, proposal_seed, seed, seed_signature, select_endpoint, set_wood,
+    support_edit_allowed, toggle_switch_plan, turntable_plan,
 };
 
 pub mod stand;

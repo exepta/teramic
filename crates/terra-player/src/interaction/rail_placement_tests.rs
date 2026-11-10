@@ -126,7 +126,7 @@ fn each_wood_switch_is_placed_as_its_own_handed_block_and_never_as_a_track_mode(
             app.world_mut()
                 .resource_mut::<terra_network::client::ClientSession>()
                 .uuid = Some(PlayerUuid::from_u128(1));
-            let piece = Piece::new([4, 1, 4], material, 0).unwrap();
+            let piece = Piece::for_build([4, 1, 4], material, 0).unwrap();
             support(&mut app.world_mut().resource_mut::<ChunkStore>(), piece);
             let item = ItemKind::for_wood(material, wood);
             app.insert_resource(EditJournal::default())
@@ -796,6 +796,14 @@ fn continuous_preview_uses_real_curved_and_rising_geometry_from_the_confirmed_se
 fn a_confirmed_seed_previews_and_signs_a_real_target_beyond_ordinary_block_reach() {
     use terra_network::{client::RailPlacementAction, protocol::session::EditOutcome};
     let (mut app, camera, _) = floor_fixture(WoodSpecies::Spruce);
+    {
+        let mut chunks = app.world_mut().resource_mut::<ChunkStore>();
+        for x in 0..=10 {
+            for z in 32..=70 {
+                block(&mut chunks, [x, 0, z], 3);
+            }
+        }
+    }
     press(&mut app, KeyCode::KeyB);
     app.update();
     let request = take_placement(&mut app);
@@ -818,7 +826,7 @@ fn a_confirmed_seed_previews_and_signs_a_real_target_beyond_ordinary_block_reach
         &mut app,
         camera,
         Vec3::new(4.5, 3.0, 8.5),
-        Vec3::new(4.5, 1.0, 24.5),
+        Vec3::new(4.5, 1.0, 64.5),
     );
     app.update();
     let hit = app
@@ -826,7 +834,7 @@ fn a_confirmed_seed_previews_and_signs_a_real_target_beyond_ordinary_block_reach
         .resource::<TargetBlock>()
         .0
         .expect("the rail-specific picker reaches the actual distant floor");
-    assert!(hit.distance > 8.0 && hit.distance <= rails::RAIL_BUILD_REACH);
+    assert!(hit.distance > 48.0 && hit.distance <= rails::RAIL_BUILD_REACH);
     let preview = app.world().resource::<PlacementPreview>();
     assert!(preview.valid, "{:?}", preview.rail_error);
     let plan = preview.plan.clone().unwrap();

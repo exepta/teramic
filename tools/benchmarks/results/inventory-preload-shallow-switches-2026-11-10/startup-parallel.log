@@ -1,0 +1,47 @@
+2026-11-10T09:49:19.650146Z  INFO bevy_render::renderer: AdapterInfo { name: "AMD Radeon RX 6950 XT (RADV NAVI21)", vendor: 4098, device: 29605, device_type: DiscreteGpu, device_pci_bus_id: "0000:0c:00.0", driver: "radv", driver_info: "Mesa 26.2.5-arch3.1", backend: Vulkan, subgroup_min_size: 32, subgroup_max_size: 64, transient_saves_memory: Some(false), limit_bucket: None }
+2026-11-10T09:49:19.750910Z  INFO bevy_pbr::cluster: GPU clustering is supported on this device.
+2026-11-10T09:49:19.750992Z  INFO bevy_render::batching::gpu_preprocessing: GPU preprocessing is fully supported on this device.
+2026-11-10T09:49:19.752258Z  INFO bevy_winit::system: Creating new window TERAMIC (178v0)
+2026-11-10T09:49:19.752412Z  INFO winit::platform_impl::linux::x11::window: Guessed window scale factor: 1
+2026-11-10T09:49:20.901884Z  INFO terra_ui::settings: Applied window presentation policy mode=Mailbox
+2026-11-10T09:49:20.902315Z  INFO terra_client::creature_audio::scene: Recorded animal/environment audio decoded clips=105
+2026-11-10T09:49:20.977022Z  INFO terra_render::weather::surfaces: Terrain wet material GPU binding mode legacy_smoke_control=false bindless=true
+2026-11-10T09:49:21.066481Z  INFO terra_render::water::raymarch: Water SSR hardware depth filtering ready; multisampled views retain the original path
+2026-11-10T09:49:21.066889Z  INFO terra_render::scene::caves::lights::soft_core: Torch soft-core attenuation installed in existing clustered PBR path
+2026-11-10T09:49:21.075610Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 46, generation: 0} mip_levels=11 rebound_materials=1
+2026-11-10T09:49:21.075637Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/machinery-belt-hd.png mip_levels=11 rebound_materials=0
+2026-11-10T09:49:21.075644Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/machinery-oak-hd.png mip_levels=11 rebound_materials=0
+2026-11-10T09:49:21.075649Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/wood.png mip_levels=10 rebound_materials=1
+2026-11-10T09:49:21.075656Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 50, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-10T09:49:21.075661Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/stone-strata-hd.png mip_levels=11 rebound_materials=1
+2026-11-10T09:49:21.075666Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/forged-iron-warm.png mip_levels=11 rebound_materials=0
+2026-11-10T09:49:21.075671Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 59, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-10T09:49:21.075676Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 52, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-10T09:49:21.075681Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 48, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-10T09:49:21.075686Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 45, generation: 0} mip_levels=11 rebound_materials=1
+2026-11-10T09:49:21.075691Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 51, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-10T09:49:21.075696Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 54, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-10T09:49:21.075700Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 56, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-10T09:49:21.075711Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/oak-crafted-hd.png mip_levels=11 rebound_materials=0
+2026-11-10T09:49:21.075724Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/machinery-iron-hd.png mip_levels=11 rebound_materials=0
+2026-11-10T09:49:21.075730Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 49, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-10T09:49:21.075735Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 58, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-10T09:49:21.075740Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 57, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-10T09:49:21.075744Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 65, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-10T09:49:21.075749Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 47, generation: 0} mip_levels=1 rebound_materials=1
+2026-11-10T09:49:21.075754Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 55, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-10T09:49:21.075759Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/stone.png mip_levels=10 rebound_materials=0
+2026-11-10T09:49:21.075764Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 60, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-10T09:49:21.075769Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 64, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-10T09:49:21.075774Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 53, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-10T09:49:21.075779Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 62, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-10T09:49:21.075784Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 63, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-10T09:49:21.075789Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 61, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-10T09:49:21.118501Z  INFO terra_render::blocks::loading: Block template library ready blocks=295 materials=797
+2026-11-10T09:49:21.864809Z  INFO bevy_render::view::window::screenshot: Screenshot saved to $REPO/target/live225/parallel-final/screenshots/startup-icons.png
+2026-11-10T09:49:26.500216Z  INFO bevy_render::view::window::screenshot: Screenshot saved to $REPO/target/live225/parallel-final/screenshots/startup-transition.png
+2026-11-10T09:49:26.864161Z  INFO terra_client::menu_smoke: Native startup catalog preload passed before world/session creation inventory_icons=617 ui_assets=1642 ui_icons=1611
+2026-11-10T09:49:26.864214Z  INFO terra_client::menu_smoke: Menu smoke advanced stage=10000
+2026-11-10T09:49:27.316529Z  INFO terra_client::menu_smoke: Menu smoke advanced stage=10001
+2026-11-10T09:49:27.367553Z  INFO bevy_render::view::window::screenshot: Screenshot saved to $REPO/target/live225/parallel-final/screenshots/main-menu.png
+2026-11-10T09:49:27.769730Z  INFO terra_client::menu_smoke: Native startup-only smoke passed with no world, server or pending catalog jobs

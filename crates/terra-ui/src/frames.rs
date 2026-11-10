@@ -55,7 +55,7 @@ fn responsive_inventory_scale(
         }
         if id.0 == "inventory-workspace" {
             // Leave room for the larger HUD hotbar below the open inventory.
-            let offset = Val::Px(-viewport.y * 0.05 / ui_scale.0.max(0.1));
+            let offset = Val::Px(-viewport.y * 0.035 / ui_scale.0.max(0.1));
             if transform.translation.y != offset {
                 transform.translation.y = offset;
             }
@@ -74,10 +74,10 @@ fn responsive_inventory_scale(
 
 pub(crate) fn inventory_zoom(viewport: Vec2, requested: f32, global: f32, linked: bool) -> f32 {
     let width = if linked { 1044.0 } else { 682.0 };
-    // The extra 18 pixels include the title above the 400px machine frame.
+    // Preserve the established slot scale; fit the taller 480px frame and 18px title.
     let desired =
         (viewport.x * 0.94 / width).min(viewport.y * 0.77 / 418.0) * requested.clamp(0.75, 1.5);
-    let fit = (viewport.x * 0.96 / width).min(viewport.y * 0.82 / 418.0);
+    let fit = (viewport.x * 0.96 / width).min(viewport.y * 0.89 / 498.0);
     desired.min(fit).max(0.1) / global.max(0.1)
 }
 
@@ -472,15 +472,15 @@ mod tests {
             let zoom = inventory_zoom(viewport, 1.0, 1.0, false);
             assert!(28.0 * zoom > previous);
             previous = 28.0 * zoom;
-            assert!(400.0 * zoom >= viewport.y * 0.73);
-            assert!(400.0 * zoom <= viewport.y * 0.82);
+            assert!(480.0 * zoom >= viewport.y * 0.85);
+            assert!(480.0 * zoom <= viewport.y * 0.90);
             assert!(28.0 * hotbar_zoom(viewport, 1.0, 1.0) >= viewport.y * 0.034);
             for linked in [false, true] {
                 for preference in [0.75, 1.0, 1.1, 1.5] {
                     let zoom = inventory_zoom(viewport, preference, 1.0, linked);
                     let width = if linked { 1044.0 } else { 682.0 };
                     assert!(width * zoom <= viewport.x * 0.96 + 0.01);
-                    assert!(418.0 * zoom <= viewport.y * 0.82 + 0.01);
+                    assert!(498.0 * zoom <= viewport.y * 0.89 + 0.01);
                 }
             }
         }
@@ -508,8 +508,9 @@ mod tests {
         assert!(
             inventory_zoom(physical, 0.75, 1.0, false) < inventory_zoom(physical, 1.0, 1.0, false)
         );
+        // Larger preferences saturate once the taller frame reaches its fit limit.
         assert!(
-            inventory_zoom(physical, 1.0, 1.0, false) < inventory_zoom(physical, 1.5, 1.0, false)
+            inventory_zoom(physical, 1.0, 1.0, false) <= inventory_zoom(physical, 1.5, 1.0, false)
         );
     }
 

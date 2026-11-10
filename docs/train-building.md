@@ -134,6 +134,19 @@ Kurvenradius. Die Endpunkte entsprechend weiter auseinander setzen; gerade
 Steigungsuebergaenge behalten ihre bisherige Steigungsregel. Bestehende
 Gleisformen bleiben im Spielstand lesbar.
 
+Gleise lassen sich beim Ziehen bis zu **64 Bloecke** vom Spieler entfernt
+bauen; ein einzelner Verbindungsbogen darf ebenfalls bis zu 64 Meter lang sein.
+Nahe freie Gleisenden rasten auch bei einem Klick knapp daneben auf den Boden
+ein. Die Vorschau und der Server rekonstruieren denselben Bogen und pruefen
+weiterhin geladene Bereiche, Materialbedarf und Baurechte.
+
+Neue linke und rechte Weichen besitzen einen 20 Meter langen, flachen S-Abzweig
+mit vier Metern Seitenversatz. Die groesste Richtungsabweichung betraegt rund
+17,1 Grad; beide Ausgaenge verlaufen parallel zum Hauptgleis. Lange Radstaende
+koennen damit dem Abzweig folgen. Bereits gespeicherte alte 90-Grad-Weichen
+behalten ihre Anschlussstellen: Fuer den flachen Verlauf muessen sie mit
+entsprechend mehr Platz neu gebaut und die Anschlussgleise angepasst werden.
+
 Die Strecke muss geladen und frei sein. Fehlende Gleise, geschlossene Weichenwege,
 unbekannte Bereiche, Hindernisse, andere Fahrzeuge und ungeschuetzte Personen im
 Fahrweg stoppen die Fahrt. Der Zug folgt Kurven und Hoehenwechseln; Drehgestelle
@@ -183,7 +196,7 @@ Der Gleismodus **Prellbock** stoppt den Zug vor dem Anschlag einschliesslich
 Wagenkasten und Kupplung. Ein Verbund wird gemeinsam angehalten; Rueckwaerts
 vom Prellbock wegzufahren bleibt erlaubt.
 
-Client und Server benoetigen Protokoll 126. Zugindex ID17 speichert
+Client und Server benoetigen Protokoll 127. Zugindex ID17 speichert
 Namen, Restbrennstoff, Wasser und Druck und uebernimmt bestehende Zuege aus
 ID13, ID14, ID15 und ID16. Alte Fahrzeuge erhalten kein kostenloses Wasser.
 

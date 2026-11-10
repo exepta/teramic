@@ -108,6 +108,25 @@ pub(super) fn layout(material: u16, facing: u8) -> Option<Arc<Layout>> {
             .clone(),
     )
 }
+fn gentle_switch_layout(piece: Piece) -> Option<Arc<Layout>> {
+    static SWITCHES: [OnceLock<Arc<Layout>>; 16] = [const { OnceLock::new() }; 16];
+    if !piece.is_gentle_switch() || !piece.valid() {
+        return None;
+    }
+    let side = usize::from(piece.material == SWITCH_RIGHT);
+    let index = side * 8 + usize::from(piece.encoded_facing());
+    Some(
+        SWITCHES[index]
+            .get_or_init(|| {
+                Arc::new(make_layout(Piece {
+                    anchor: [0; 3],
+                    ..piece
+                }))
+            })
+            .clone(),
+    )
+}
+
 /// Retain small occupancy records independently of the heavyweight beam LRU.
 /// Section validation must not rebuild a mesh after another worker evicts its beams.
 pub(super) fn piece_footprint(piece: Piece) -> Arc<[[i32; 3]]> {
@@ -115,6 +134,9 @@ pub(super) fn piece_footprint(piece: Piece) -> Arc<[[i32; 3]]> {
     static FOOTPRINTS: OnceLock<Mutex<Footprints>> = OnceLock::new();
     if !piece.valid() {
         return Arc::from([]);
+    }
+    if let Some(layout) = gentle_switch_layout(piece) {
+        return layout.footprint.clone();
     }
     let Some(curve) = piece.curve else {
         return layout(piece.material, piece.encoded_facing())
@@ -150,6 +172,9 @@ pub(super) fn piece_cell_boxes(piece: Piece, offset: [i32; 3]) -> Arc<[ShapeBox]
     if !piece.valid() {
         return Arc::from([]);
     }
+    if let Some(layout) = gentle_switch_layout(piece) {
+        return layout.cells.get(&offset).cloned().unwrap_or_default();
+    }
     let Some(curve) = piece.curve else {
         return layout(piece.material, piece.encoded_facing())
             .and_then(|layout| layout.cells.get(&offset).cloned())
@@ -184,6 +209,9 @@ pub(super) fn piece_cell_boxes(piece: Piece, offset: [i32; 3]) -> Arc<[ShapeBox]
 pub(super) fn piece_layout(piece: Piece) -> Option<Arc<Layout>> {
     if !piece.valid() {
         return None;
+    }
+    if let Some(layout) = gentle_switch_layout(piece) {
+        return Some(layout);
     }
     let Some(curve) = piece.curve else {
         return layout(piece.material, piece.encoded_facing());
@@ -230,7 +258,7 @@ pub(super) fn paths(piece: Piece) -> Vec<Path> {
     if !piece.valid() {
         return vec![];
     }
-    if let Some(curve) = piece.curve {
+    if let Some(curve) = piece.curve.filter(|_| piece.material == STRAIGHT) {
         return vec![Path {
             piece,
             index: 0,
@@ -269,16 +297,23 @@ pub(super) fn paths(piece: Piece) -> Vec<Path> {
         Kind::SlopeEntry => vec![([0, 1], PathShape::Entry)],
         Kind::SlopeExit => vec![([0, 1], PathShape::Exit)],
         Kind::SwitchLeft | Kind::SwitchRight => vec![
-            ([0, 1], line(8.0, 0.0)),
+            (
+                [0, 1],
+                line(if piece.is_gentle_switch() { 20.0 } else { 8.0 }, 0.0),
+            ),
             (
                 [0, 2],
-                PathShape::Curve {
-                    radius: 4.5,
-                    side: if piece.material == SWITCH_LEFT {
-                        -1.0
-                    } else {
-                        1.0
-                    },
+                if let Some(curve) = piece.curve {
+                    PathShape::Bezier(curve)
+                } else {
+                    PathShape::Curve {
+                        radius: 4.5,
+                        side: if piece.material == SWITCH_LEFT {
+                            -1.0
+                        } else {
+                            1.0
+                        },
+                    }
                 },
             ),
         ],
@@ -370,7 +405,7 @@ pub(super) fn ports(piece: Piece) -> Vec<Port> {
     if !piece.valid() {
         return vec![];
     }
-    if let Some(curve) = piece.curve {
+    if let Some(curve) = piece.curve.filter(|_| piece.material == STRAIGHT) {
         return [false, true]
             .into_iter()
             .enumerate()
@@ -387,30 +422,44 @@ pub(super) fn ports(piece: Piece) -> Vec<Port> {
             })
             .collect();
     }
-    let canonical = match piece.kind().expect("validated rail kind") {
-        Kind::Straight | Kind::Buffer => vec![([8, 2, 0], [0, 0, -1]), ([8, 2, 64], [0, 0, 1])],
-        Kind::Turntable => vec![([8, 2, -192], [0, 0, -1]), ([8, 2, 208], [0, 0, 1])],
-        Kind::CurveSmall => vec![([8, 2, 0], [0, 0, -1]), ([80, 2, 72], [1, 0, 0])],
-        Kind::CurveLarge => vec![([8, 2, 0], [0, 0, -1]), ([144, 2, 136], [1, 0, 0])],
-        Kind::Slope => vec![([8, 2, 0], [0, -1, -4]), ([8, 18, 64], [0, 1, 4])],
-        Kind::SlopeEntry => vec![([8, 2, 0], [0, 0, -1]), ([8, 18, 128], [0, 1, 4])],
-        Kind::SlopeExit => vec![([8, 2, 0], [0, -1, -4]), ([8, 18, 128], [0, 0, 1])],
-        Kind::SwitchLeft => vec![
-            ([8, 2, 0], [0, 0, -1]),
-            ([8, 2, 128], [0, 0, 1]),
-            ([-64, 2, 72], [-1, 0, 0]),
-        ],
-        Kind::SwitchRight => vec![
-            ([8, 2, 0], [0, 0, -1]),
-            ([8, 2, 128], [0, 0, 1]),
-            ([80, 2, 72], [1, 0, 0]),
-        ],
-        Kind::Crossing => vec![
-            ([8, 2, 0], [0, 0, -1]),
-            ([8, 2, 112], [0, 0, 1]),
-            ([-48, 2, 56], [-1, 0, 0]),
-            ([64, 2, 56], [1, 0, 0]),
-        ],
+    let canonical = if let Some(curve) = piece.curve.filter(|_| piece.is_gentle_switch()) {
+        vec![
+            (curve.points[0].map(i64::from), [0, 0, -1]),
+            ([8, 2, 320], [0, 0, 1]),
+            (
+                curve.points[3].map(i64::from),
+                curve
+                    .endpoint_tangent(true)
+                    .expect("canonical switch tangent")
+                    .map(i64::from),
+            ),
+        ]
+    } else {
+        match piece.kind().expect("validated rail kind") {
+            Kind::Straight | Kind::Buffer => vec![([8, 2, 0], [0, 0, -1]), ([8, 2, 64], [0, 0, 1])],
+            Kind::Turntable => vec![([8, 2, -192], [0, 0, -1]), ([8, 2, 208], [0, 0, 1])],
+            Kind::CurveSmall => vec![([8, 2, 0], [0, 0, -1]), ([80, 2, 72], [1, 0, 0])],
+            Kind::CurveLarge => vec![([8, 2, 0], [0, 0, -1]), ([144, 2, 136], [1, 0, 0])],
+            Kind::Slope => vec![([8, 2, 0], [0, -1, -4]), ([8, 18, 64], [0, 1, 4])],
+            Kind::SlopeEntry => vec![([8, 2, 0], [0, 0, -1]), ([8, 18, 128], [0, 1, 4])],
+            Kind::SlopeExit => vec![([8, 2, 0], [0, -1, -4]), ([8, 18, 128], [0, 0, 1])],
+            Kind::SwitchLeft => vec![
+                ([8, 2, 0], [0, 0, -1]),
+                ([8, 2, 128], [0, 0, 1]),
+                ([-64, 2, 72], [-1, 0, 0]),
+            ],
+            Kind::SwitchRight => vec![
+                ([8, 2, 0], [0, 0, -1]),
+                ([8, 2, 128], [0, 0, 1]),
+                ([80, 2, 72], [1, 0, 0]),
+            ],
+            Kind::Crossing => vec![
+                ([8, 2, 0], [0, 0, -1]),
+                ([8, 2, 112], [0, 0, 1]),
+                ([-48, 2, 56], [-1, 0, 0]),
+                ([64, 2, 56], [1, 0, 0]),
+            ],
+        }
     };
     canonical
         .into_iter()
@@ -423,7 +472,7 @@ pub(super) fn ports(piece: Piece) -> Vec<Port> {
                 2 => [16 - x, y, 16 - z],
                 _ => [16 - z, y, x],
             };
-            let tangent_f64 = rotate_vector(tangent.map(f64::from), piece.facing);
+            let tangent_f64 = rotate_vector(tangent.map(|v| v as f64), piece.facing);
             Port {
                 index: index as u8,
                 position: FixedPoint(std::array::from_fn(|axis| {

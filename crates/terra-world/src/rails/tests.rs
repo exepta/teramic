@@ -824,3 +824,124 @@ fn cached_completeness_is_invalidated_by_pose_edits_and_cloned_worlds() {
     assert!(!complete(&journal, piece));
     assert!(!complete(&fork, piece));
 }
+
+#[test]
+fn new_turnout_placement_retains_its_shallow_profile_through_replication_and_live_toggle() {
+    for material in [rails::SWITCH_LEFT, rails::SWITCH_RIGHT] {
+        let piece = rails::Piece::for_build([0, 1, 0], material, 0).unwrap();
+        let mut chunks = ChunkStore::default();
+        let mut journal = EditJournal::default();
+        prepare(&mut chunks, piece);
+        let hit = terra_voxel::blocks::BlockHit {
+            position: [0, 0, 0],
+            normal: [0, 1, 0],
+            distance: 4.,
+        };
+        let plan = placement(
+            &chunks,
+            &journal,
+            hit,
+            material,
+            ([0.5, 4., 0.5], [0., -1., 0.]),
+            [std::f32::consts::PI, -1.],
+        )
+        .unwrap();
+        assert_eq!(cost(&plan), Some(1));
+        assert!(commit(&mut chunks, &mut journal, &plan).unwrap());
+        let actual = owner_at(&journal, piece.anchor).unwrap();
+        assert_eq!(actual, piece);
+        let sections: std::collections::BTreeSet<_> = cells(piece)
+            .iter()
+            .map(|cell| global_to_section(*cell).0)
+            .collect();
+        let mut replica = EditJournal::default();
+        for section in sections {
+            let encoded = serde_json::to_string(&journal.section_delta(section)).unwrap();
+            replica
+                .import_delta(serde_json::from_str(&encoded).unwrap())
+                .unwrap();
+        }
+        assert_eq!(owner_at(&replica, piece.anchor), Some(piece));
+        assert!(complete(&replica, piece));
+        let toggle = toggle_switch_plan(&chunks, &journal, piece.anchor).unwrap();
+        commit(&mut chunks, &mut journal, &toggle).unwrap();
+        let toggled = owner_at(&journal, piece.anchor).unwrap();
+        assert!(toggled.switched);
+        assert_eq!(toggled.curve, piece.curve);
+        assert_eq!(toggled.footprint(), piece.footprint());
+    }
+}
+
+#[test]
+fn curved_connection_snaps_to_a_nearby_free_end_and_authorizes_the_entire_destination() {
+    let source = rails::Piece::new([0, 1, 0], rails::STRAIGHT, 0).unwrap();
+    let target = rails::Piece::new([20, 1, 24], rails::STRAIGHT, 1).unwrap();
+    let mut chunks = ChunkStore::default();
+    let mut journal = EditJournal::default();
+    for piece in [source, target] {
+        prepare(&mut chunks, piece);
+        install(&mut chunks, &mut journal, piece);
+    }
+    let start = rails::Endpoint {
+        anchor: source.anchor,
+        port: 1,
+    };
+    let hit = terra_voxel::blocks::BlockHit {
+        position: [19, 0, 24],
+        normal: [0, 1, 0],
+        distance: (19_f64 * 19. + 2. * 2. + 20. * 20.).sqrt(),
+    };
+    let ray = (
+        [0.5, 3., 4.5],
+        [19. / hit.distance, -2. / hit.distance, 20. / hit.distance],
+    );
+    let proposal = proposal_connection_aim(
+        &chunks,
+        &journal,
+        start,
+        hit,
+        ray,
+        [0., -0.5],
+        Default::default(),
+    )
+    .unwrap();
+    let curve = super::placement::proposed_piece(&proposal).unwrap();
+    prepare(&mut chunks, curve);
+    assert!(curve.ports()[1].connects(target.ports()[0]));
+    let plan = connection_aim(
+        &chunks,
+        &journal,
+        start,
+        hit,
+        ray,
+        [0., -0.5],
+        Default::default(),
+    )
+    .unwrap();
+    let sites = connection_sites_for_plan(&journal, start, hit, &plan).unwrap();
+    assert!(
+        cells(target).iter().all(|cell| sites.contains(cell)),
+        "snapping beside a protected destination must not bypass its ownership checks"
+    );
+    assert_eq!(
+        connection_signature(&proposal, start),
+        connection_signature(&plan, start)
+    );
+    commit(&mut chunks, &mut journal, &plan).unwrap();
+    let graph = network(&journal).unwrap();
+    assert!(
+        graph
+            .route(
+                Endpoint {
+                    anchor: source.anchor,
+                    port: 0
+                },
+                Endpoint {
+                    anchor: target.anchor,
+                    port: 1
+                },
+                64
+            )
+            .is_ok()
+    );
+}

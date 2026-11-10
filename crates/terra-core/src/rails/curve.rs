@@ -6,12 +6,15 @@ use std::{
     sync::{Arc, Mutex, OnceLock},
 };
 
-pub const MAX_CURVE_LENGTH: f64 = 32.0;
+pub const MAX_CURVE_LENGTH: f64 = 64.0;
 pub const MAX_CURVE_GRADE: f64 = 0.5;
 pub const MIN_CURVE_RADIUS: f64 = 2.5;
 /// New horizontal bends need room for a full railway vehicle; old records remain readable.
 pub const MIN_BUILD_RADIUS: f64 = 16.0;
-pub const MAX_CURVE_SAMPLES: usize = 257;
+pub const MAX_CURVE_SAMPLES: usize = 513;
+// Metrics retain the established sampling cost; geometry may subdivide a full
+// 64 m connection into more quarter-metre segments without failing its budget.
+const METRIC_SAMPLES: usize = 257;
 pub const DYNAMIC_CACHE_LIMIT: usize = 64;
 
 /// Contextual track construction choices. The automatic choice uses the
@@ -49,7 +52,7 @@ impl fmt::Display for CurveError {
         formatter.write_str(match self {
             Self::Coordinates => "Bezier control points exceed the local rail span.",
             Self::Degenerate => "The rail curve has no stable forward tangent.",
-            Self::TooLong => "A rail connection may be at most 32 blocks long.",
+            Self::TooLong => "A rail connection may be at most 64 blocks long.",
             Self::TooSteep => "The rail connection exceeds its maximum grade.",
             Self::TooTight => "The rail connection bends more tightly than its minimum radius.",
             Self::Reverses => "The rail connection reverses against its endpoint chord.",
@@ -167,7 +170,7 @@ impl CurveSpec {
         }
         let previous = analysis.distances[index - 1];
         let fraction = (distance - previous) / (analysis.distances[index] - previous);
-        (index as f64 - 1.0 + fraction) / (MAX_CURVE_SAMPLES - 1) as f64
+        (index as f64 - 1.0 + fraction) / (analysis.distances.len() - 1) as f64
     }
 
     /// Connect two existing outward-facing ports; the new segment faces each
@@ -282,9 +285,9 @@ impl CurveSpec {
                 };
                 // Reject tight candidates before the quadratic self-intersection analysis.
                 if radius > 0.0
-                    && !(0..MAX_CURVE_SAMPLES).all(|step| {
+                    && !(0..METRIC_SAMPLES).all(|step| {
                         let (_, tangent, second) =
-                            curve.evaluate(step as f64 / (MAX_CURVE_SAMPLES - 1) as f64);
+                            curve.evaluate(step as f64 / (METRIC_SAMPLES - 1) as f64);
                         let turn = (tangent[0] * second[2] - tangent[2] * second[0]).abs();
                         turn < 1e-10 || tangent[0].hypot(tangent[2]).powi(3) / turn >= radius
                     })
@@ -381,7 +384,7 @@ impl CurveSpec {
             .points
             .iter()
             .flatten()
-            .any(|value| value.unsigned_abs() > 32 * 16 + 16)
+            .any(|value| value.unsigned_abs() > MAX_CURVE_LENGTH as u32 * 16 + 16)
             || self.points[0].iter().any(|value| !(0..=16).contains(value))
             || self.endpoint_tangent(false).is_none()
             || self.endpoint_tangent(true).is_none()
@@ -399,11 +402,11 @@ impl CurveSpec {
         }
         let mut max_grade: f64 = 0.0;
         let mut min_radius = f64::INFINITY;
-        let mut samples = Vec::with_capacity(MAX_CURVE_SAMPLES);
-        let mut distances = Vec::with_capacity(MAX_CURVE_SAMPLES);
+        let mut samples = Vec::with_capacity(METRIC_SAMPLES);
+        let mut distances = Vec::with_capacity(METRIC_SAMPLES);
         let mut length = 0.0;
-        for index in 0..MAX_CURVE_SAMPLES {
-            let t = index as f64 / (MAX_CURVE_SAMPLES - 1) as f64;
+        for index in 0..METRIC_SAMPLES {
+            let t = index as f64 / (METRIC_SAMPLES - 1) as f64;
             let (position, tangent, second) = self.evaluate(t);
             let speed = norm(tangent);
             let horizontal = tangent[0].hypot(tangent[2]);
@@ -463,7 +466,7 @@ impl CurveSpec {
                 || error > 0.002
                 || dot(start.tangent, end.tangent) < 0.998
             {
-                if parameters.len() + pending.len() + 2 >= MAX_CURVE_SAMPLES {
+                if parameters.len() + pending.len() + 2 > MAX_CURVE_SAMPLES {
                     return Err(CurveError::SamplingBudget);
                 }
                 let half = (first + last) * 0.5;

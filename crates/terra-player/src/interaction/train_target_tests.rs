@@ -191,16 +191,16 @@ fn long_track_targets_stop_at_real_train_geometry_without_extending_cargo_intera
         app.world().resource::<EditJournal>(),
         eye,
         [0.0, 0.0, -1.0],
-        32.0,
+        64.0,
     )
     .unwrap();
-    assert!(ray.distance > 8.0 && ray.distance < 32.0);
+    assert!(ray.distance > 8.0 && ray.distance < 64.0);
     assert!(
         terra_world::trains::raycast(
             app.world().resource::<EditJournal>(),
             eye,
             [0.0, 0.0, -1.0],
-            33.0
+            65.0
         )
         .is_none()
     );

@@ -1,0 +1,72 @@
+{
+  "tests": {
+    "suites": 12,
+    "passed": 4512,
+    "failed": 0,
+    "ignored": 10,
+    "filtered": 1
+  },
+  "protocol": 127,
+  "startup": {
+    "parallel-final": {
+      "exit_code": 0,
+      "seconds": 9.032,
+      "icons": 617,
+      "ui_icons": 1611,
+      "ui_assets": 1642
+    },
+    "serial-final": {
+      "exit_code": 0,
+      "seconds": 19.148,
+      "icons": 617,
+      "ui_icons": 1611,
+      "ui_assets": 1642
+    }
+  },
+  "galleries": {
+    "surfaces": {
+      "exit_code": 0,
+      "seconds": 59.418,
+      "captures": 26
+    },
+    "layout4k": {
+      "exit_code": 0,
+      "seconds": 61.673,
+      "captures": 26
+    }
+  },
+  "captures": {
+    "player-4k.png": {
+      "sha256": "e602c9d0156f507bc6823baad9c838e006ec554d524d50ecfeb615ec72040488",
+      "bytes": 4324150,
+      "dimensions": [
+        3840,
+        2160
+      ]
+    },
+    "chest-compact.png": {
+      "sha256": "a1d3c3c5b2ac43d8f65ac44c1b3ba3ff265909b8bbe648cf0877abcf9a617cfa",
+      "bytes": 411477,
+      "dimensions": [
+        1024,
+        640
+      ]
+    },
+    "workbench-4k.png": {
+      "sha256": "0ecffe07aeff9d79d1602f441e56a64974864f393d42d1eb4fea13d816372c3b",
+      "bytes": 4146260,
+      "dimensions": [
+        3840,
+        2160
+      ]
+    },
+    "startup-fade.png": {
+      "sha256": "d5e3a10703e45455c133766711066bb26f13cfad0542ba5dd663a1f2fd50830f",
+      "bytes": 1412136,
+      "dimensions": [
+        1920,
+        1080
+      ]
+    }
+  }
+}

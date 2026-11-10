@@ -76,7 +76,7 @@ fn distance(first: [f64; 3], second: [f64; 3]) -> f64 {
         .sum()
 }
 
-fn nearby_pieces(journal: &EditJournal, point: [f64; 3]) -> Vec<Piece> {
+pub(super) fn nearby_pieces(journal: &EditJournal, point: [f64; 3]) -> Vec<Piece> {
     let low = global_to_section(point.map(|value| (value - 4.5).floor() as i64)).0;
     let high = global_to_section(point.map(|value| (value + 4.5).floor() as i64)).0;
     let mut anchors = BTreeSet::new();

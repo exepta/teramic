@@ -167,7 +167,7 @@ pub(super) fn update(
         .any(|curve| curve.points[0][1] != curve.points[3][1]);
     let cost = terra_world::rails::cost(&plan).unwrap_or(u16::MAX);
     let existing_sites = if let Some(start) = start {
-        terra_world::rails::connection_sites(journal, start, hit)
+        terra_world::rails::connection_sites_for_plan(journal, start, hit, &plan)
     } else {
         terra_world::rails::placement_sites(journal, hit)
     };

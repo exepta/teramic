@@ -93,7 +93,7 @@ fn udp_separate_switch_and_real_stand_replicate_toggle_and_return_one_switch_aft
         ground_y + 1,
         state.position[2].floor() as i64 + 3,
     ];
-    let piece = Piece::new(anchor, terra_core::rails::SWITCH_RIGHT, 0).unwrap();
+    let piece = Piece::for_build(anchor, terra_core::rails::SWITCH_RIGHT, 0).unwrap();
     let cells = rails::cells(piece);
     let minimum: [i64; 3] =
         std::array::from_fn(|axis| cells.iter().map(|cell| cell[axis]).min().unwrap());
@@ -411,7 +411,10 @@ fn udp_separate_switch_and_real_stand_replicate_toggle_and_return_one_switch_aft
             facing: stand_state.facing,
             closing: false,
         });
-    let switched = Piece::new(anchor, piece.material, 4).unwrap();
+    let switched = Piece {
+        switched: true,
+        ..piece
+    };
     wait(
         &mut host,
         &mut [&mut first, &mut second, &mut late],

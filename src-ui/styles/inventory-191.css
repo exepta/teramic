@@ -24,3 +24,7 @@
 #inventory-shell .machine-switch::track { width: 30px !important; height: 16px !important; border-radius: 8px !important; }
 #inventory-shell .machine-switch::thumb { width: 10px !important; height: 10px !important; left: 2px !important; top: 2px !important; }
 #inventory-shell .machine-switch:checked::thumb { transform: translateX(14px) !important; }
+
+/* Item-browser inventories have 20% more vertical room at the same slot scale. */
+#inventory-shell { height: 480px !important; }
+#inventory-shell.inventory-shell-player { height: 439.2px !important; }

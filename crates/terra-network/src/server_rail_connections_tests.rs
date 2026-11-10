@@ -599,7 +599,7 @@ fn snapping_separate_switches_and_common_specials_cannot_occupy_a_foreign_module
     for material in [rails::SWITCH_LEFT, rails::SWITCH_RIGHT, rails::BUFFER] {
         let (mut app, peer, old, initial) = rail_fixture(rails::STRAIGHT, [8, 4, 3]);
         assert_eq!(run(&mut app, &peer, initial, false), EditOutcome::Applied);
-        let special = Piece::new([8, 4, -1], material, 2).unwrap();
+        let special = Piece::for_build([8, 4, -1], material, 2).unwrap();
         for cell in terra_world::rails::cells(special) {
             set_block(&mut app, cell, 0);
         }
@@ -815,11 +815,11 @@ fn clicking_a_long_destination_middle_does_not_reach_its_distant_free_port() {
     .unwrap();
     commit_existing_module(&mut fixture, target);
     // The clicked middle is visible within rail reach, while the selected
-    // compatible end is over 32 m away on the other side of this saved module.
-    let eye = [6.5, 6.0, -18.0];
+    // compatible end is over 64 m away on the other side of this saved module.
+    let eye = [6.5, 6.0, -50.0];
     for x in 3..=7 {
         for y in 4..=6 {
-            for z in -20..=1 {
+            for z in -52..=1 {
                 let cell = [x, y, z];
                 if fixture
                     .app

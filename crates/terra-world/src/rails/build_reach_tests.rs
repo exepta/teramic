@@ -175,11 +175,11 @@ fn broad_turns_follow_the_real_corner_aim_and_one_support_holds_over_void() {
 }
 
 #[test]
-fn construction_rays_reach_thirty_two_but_stop_at_real_obstructions_and_unloaded_cells() {
+fn construction_rays_reach_sixty_four_but_stop_at_real_obstructions_and_unloaded_cells() {
     let mut chunks = ChunkStore::default();
     let journal = EditJournal::default();
     let properties = BlockPropertiesCatalog::default();
-    for z in 0..=40 {
+    for z in 0..=70 {
         block(&mut chunks, [0, 0, z], 0);
     }
     let origin = [0.5, 0.5, 0.0];
@@ -206,12 +206,12 @@ fn construction_rays_reach_thirty_two_but_stop_at_real_obstructions_and_unloaded
     );
     block(&mut chunks, [0, 0, 5], 0);
     block(&mut chunks, [0, 0, 20], 0);
-    block(&mut chunks, [0, 0, 32], 3);
+    block(&mut chunks, [0, 0, 64], 3);
     assert!(
-        matches!(pick_world_for_rails(&chunks,&journal,&properties,origin,direction,crate::props::PropPose::Rest).1,Some(WorldTarget::Block(hit)) if hit.distance==32.0)
+        matches!(pick_world_for_rails(&chunks,&journal,&properties,origin,direction,crate::props::PropPose::Rest).1,Some(WorldTarget::Block(hit)) if hit.distance==64.0)
     );
-    block(&mut chunks, [0, 0, 32], 0);
-    block(&mut chunks, [0, 0, 33], 3);
+    block(&mut chunks, [0, 0, 64], 0);
+    block(&mut chunks, [0, 0, 65], 3);
     assert!(
         pick_world_for_rails(
             &chunks,

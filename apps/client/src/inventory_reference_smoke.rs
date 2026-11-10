@@ -118,7 +118,10 @@ fn resize_reference(world: &mut World, size: (u32, u32), unmaximize: bool) {
         }
         // A 4K picker inspection must fit on a 4K desktop without the
         // compositor subtracting its title bar from the requested viewport.
-        if std::env::var("TERRA_PICKER_SMOKE").is_ok_and(|value| value == "1") {
+        if ["TERRA_PICKER_SMOKE", "TERRA_INVENTORY_4K_SMOKE"]
+            .into_iter()
+            .any(|key| std::env::var(key).is_ok_and(|value| value == "1"))
+        {
             window.decorations = false;
         }
         if unmaximize {
@@ -128,21 +131,33 @@ fn resize_reference(world: &mut World, size: (u32, u32), unmaximize: bool) {
     resize(world, size);
 }
 fn size_ready(world: &mut World, size: (u32, u32)) -> bool {
-    if world
+    let requested = world
         .query_filtered::<&Window, With<PrimaryWindow>>()
         .iter(world)
-        // Fractional Wayland scaling can round either physical dimension by one pixel.
+        // Fractional desktop scaling may round either dimension by one pixel.
         .all(|window| {
             let actual = window.physical_size();
             actual.x.abs_diff(size.0) <= 1 && actual.y.abs_diff(size.1) <= 1
-        })
-    {
-        true
-    } else {
+        });
+    if !requested {
         resize(world, size);
-        false
+        return false;
     }
+    // The requested Window size changes before Winit acknowledges it and before
+    // the UI camera/layout updates. Measure only the resulting painted viewport.
+    if let Some(backdrop) = element(world, "inventory-backdrop")
+        && let Some(node) = world.get::<ComputedNode>(backdrop)
+        && node.size().min_element() > 0.0
+        && (node.size() - Vec2::new(size.0 as f32, size.1 as f32))
+            .abs()
+            .max_element()
+            > 1.5
+    {
+        return false;
+    }
+    true
 }
+
 fn previews_ready(world: &mut World) -> bool {
     world
         .query::<(
