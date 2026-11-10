@@ -13,6 +13,8 @@ pub enum StopReason {
     Obstructed,
     InvalidTrack,
     Buffer,
+    /// Unsafe curvature: remain on the last validated pose with the brake applied.
+    Derailed,
 }
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 pub struct RailCursor {

@@ -7,6 +7,7 @@ use terra_voxel::SectionPos;
 mod occlusion;
 mod partial;
 mod pipes;
+pub(crate) mod rails;
 
 #[cfg(test)]
 mod construction_tests;
@@ -17,6 +18,7 @@ mod construction_tests;
 pub(crate) struct FluidOccluders {
     boxes: HashMap<[i64; 3], Vec<ShapeBox>>,
     pub dry_regions: HashMap<[i64; 3], Vec<ShapeBox>>,
+    pub rails: HashMap<[i64; 3], std::sync::Arc<[rails::Profile]>>,
     pub pipes: HashMap<[i64; 3], u8>,
     pub fixtures: HashMap<[i64; 3], (u16, u8)>,
 }
@@ -25,7 +27,7 @@ impl FluidOccluders {
         Self::default()
     }
     pub fn profiled(&self, p: &[i64; 3]) -> bool {
-        self.pipes.contains_key(p) || self.fixtures.contains_key(p)
+        self.pipes.contains_key(p) || self.fixtures.contains_key(p) || self.rails.contains_key(p)
     }
     fn space(&self, p: [i64; 3]) -> super::space::FluidSpace {
         let mut space =
@@ -171,7 +173,12 @@ pub(crate) fn append_fluid_patch<'a>(
             // A ceiling can cover the water without lowering the surrounding
             // reservoir's head. Keep the worker's precise natural level; the
             // visible complement below the ceiling is clipped separately.
-            let space = options.occluders?.space(p);
+            let masks = options.occluders?;
+            let space = if masks.rails.contains_key(&p) {
+                super::space::FluidSpace { solids: vec![] }
+            } else {
+                masks.space(p)
+            };
             if space.wet_boxes(level - p[1] as f64).is_empty() {
                 return None;
             }

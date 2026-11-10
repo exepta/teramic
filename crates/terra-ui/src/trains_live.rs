@@ -14,6 +14,8 @@ use terra_network::{
     client::TrainRequest,
     protocol::trains::{TrainCargoSnapshot, TrainResult},
 };
+#[path = "trains_yard_live.rs"]
+mod yard;
 #[derive(Resource, Default)]
 struct Probe {
     initialized: bool,
@@ -26,6 +28,7 @@ struct Probe {
     location: Option<Location>,
 }
 pub(super) fn install(app: &mut App) {
+    yard::install(app);
     if std::env::var("TERRA_TRAIN_INVENTORY_LIVE").as_deref() != Ok("1")
         && std::env::var("TERRA_TRAIN_WORKSHOP_LIVE").as_deref() != Ok("1")
         && std::env::var("TERRA_TRAIN_MODEL_LIVE").as_deref() != Ok("1")

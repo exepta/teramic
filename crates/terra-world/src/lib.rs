@@ -70,3 +70,9 @@ pub mod enclosure;
 pub mod fruit;
 #[cfg(feature = "bevy")]
 pub mod saplings;
+
+#[cfg(feature = "bevy")]
+pub mod train_yard;
+
+#[cfg(feature = "bevy")]
+pub mod train_services;

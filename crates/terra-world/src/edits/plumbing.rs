@@ -91,6 +91,9 @@ impl EditJournal {
                 .is_some_and(|activity| !activity.valid_for(position))
             || !self
                 .object_state(position)
+                .or_else(|| {
+                    (material == terra_core::plumbing::TRAIN_DOCK).then_some(Default::default())
+                })
                 .is_some_and(|pose| pose.valid_for(position, material))
             || state.basin.is_some_and(|shape| !shape.contains(position))
             || !self.plumbing_slot_available(position)

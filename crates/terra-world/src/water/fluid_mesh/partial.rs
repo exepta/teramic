@@ -142,7 +142,13 @@ pub(super) fn append(
             }
             let mut fragments = occlusion::fragments(face, normal, origin, &masks);
             for q in std::iter::once(p).chain(super::super::fluid::adjacent(p, direction)) {
-                if let Some(&mask) = occluders.pipes.get(&q) {
+                if let Some(profiles) = occluders.rails.get(&q) {
+                    fragments = super::rails::fragments(
+                        fragments,
+                        profiles,
+                        std::array::from_fn(|axis| (q[axis] - origin[axis]) as f32),
+                    );
+                } else if let Some(&mask) = occluders.pipes.get(&q) {
                     fragments = super::pipes::fragments(
                         fragments,
                         face,

@@ -305,6 +305,7 @@ pub(crate) fn prepare(
                     ..default()
                 },
                 pump_credit: 0.0,
+                train_reserve: None,
                 basin: Some(shape),
                 intake: None,
                 flowing: false,

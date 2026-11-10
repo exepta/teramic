@@ -85,6 +85,9 @@ mod tests;
 #[derive(Debug, Default, Clone, PartialEq, Serialize, Deserialize)]
 pub struct PlumbingState {
     pub water: FluidCell,
+    /// Water recovered during disassembly; pressure is vented before storage.
+    #[serde(skip)]
+    pub train_reserve: Option<terra_core::train_power::SteamState>,
     pub pump_credit: f32,
     pub basin: Option<BasinShape>,
     #[serde(skip)]
@@ -97,6 +100,12 @@ pub struct PlumbingState {
 impl PlumbingState {
     pub fn valid(&self, material: u16) -> bool {
         core::is_part(material)
+            && self.train_reserve.is_none_or(|reserve| {
+                material == core::TRAIN_DOCK
+                    && reserve.valid()
+                    && reserve.water > 0.0
+                    && reserve.pressure_bar == 0.0
+            })
             && self.water.validate()
             && !self.water.source
             && self.pump_credit.is_finite()

@@ -467,6 +467,13 @@ struct PlumbingRegion {
     plumbing: Vec<([i64; 3], terra_world::plumbing::PlumbingState)>,
 }
 
+/// Service reserves wrap the frozen RG12/RG13 bytes without changing legacy plumbing records.
+#[derive(Serialize, Deserialize)]
+struct TrainServiceRegion {
+    prior: Vec<u8>,
+    reserves: Vec<([i64; 3], terra_core::train_power::SteamState)>,
+}
+
 /// Curve metadata extends, rather than changes, every historical region payload.
 #[derive(Serialize, Deserialize)]
 struct RailRegion {
@@ -533,6 +540,14 @@ mod bees_tests;
 #[path = "regions/pets_tests.rs"]
 mod pet_tests;
 fn read_creature_region(bytes: &[u8]) -> Result<CreatureRegion, String> {
+    if bytes.get(12..16) == Some(b"RG14") {
+        let data: TrainServiceRegion = decode(b"RG14", bytes)?;
+        if data.prior.get(12..16) == Some(b"RG14") {
+            return Err("Nested train service wrapper".into());
+        }
+        return read_creature_region(&data.prior);
+    }
+
     if bytes.get(12..16) == Some(b"RG13") {
         let data: RailRegion = decode(b"RG13", bytes)?;
         if data.prior.get(12..16) == Some(b"RG13") {
@@ -722,6 +737,7 @@ fn read_region(bytes: &[u8]) -> Result<Region, String> {
                 | b"RG11"
                 | b"RG12"
                 | b"RG13"
+                | b"RG14"
         )
     ) {
         return read_creature_region(bytes).map(|data| data.region);
@@ -1911,6 +1927,11 @@ fn commit(root: &Path, world: WorldId, journal: &EditJournal) -> Result<(), Stri
         let random_tunnel = random_tunnels.remove(&p).unwrap_or_default();
         let attached = attached_campfires.remove(&p).unwrap_or_default();
         let plumbing = plumbing.remove(&p).unwrap_or_default();
+        let reserves = plumbing
+            .iter()
+            .filter_map(|(cell, state)| state.train_reserve.map(|reserve| (*cell, reserve)))
+            .collect::<Vec<_>>();
+
         let bytes = if !rgb.is_empty()
             || !filter.is_empty()
             || !belt.is_empty()
@@ -2042,6 +2063,17 @@ fn commit(root: &Path, world: WorldId, journal: &EditJournal) -> Result<(), Stri
                 &RailRegion {
                     prior: bytes,
                     curves,
+                },
+            )?
+        };
+        let bytes = if reserves.is_empty() {
+            bytes
+        } else {
+            encode(
+                b"RG14",
+                &TrainServiceRegion {
+                    prior: bytes,
+                    reserves,
                 },
             )?
         };
@@ -2213,6 +2245,7 @@ fn load(root: &Path, world: WorldId) -> Result<EditJournal, String> {
     let mut attached_positions = BTreeSet::new();
     let mut plumbing = Vec::new();
     let mut plumbing_positions = BTreeSet::new();
+    let mut train_reserves = BTreeMap::new();
     let mut cauldron_positions = BTreeSet::new();
     let mut campfire_positions = BTreeSet::new();
     let mut random_tunnel_positions = BTreeSet::new();
@@ -2230,6 +2263,26 @@ fn load(root: &Path, world: WorldId) -> Result<EditJournal, String> {
         }
         let mut bytes = read(&root.join(region_name(p)))?;
         let mut rail_curves = BTreeMap::new();
+        if bytes.get(12..16) == Some(b"RG14") {
+            let data: TrainServiceRegion = decode(b"RG14", &bytes)?;
+            if data.reserves.len() > terra_world::plumbing::MAX_NODES - train_reserves.len()
+                || data.prior.get(12..16) == Some(b"RG14")
+            {
+                return Err("Invalid train reserve count or nesting".into());
+            }
+            for (cell, reserve) in data.reserves {
+                if region_at(cell) != p
+                    || !reserve.valid()
+                    || reserve.water <= 0.0
+                    || reserve.pressure_bar != 0.0
+                    || train_reserves.insert(cell, reserve).is_some()
+                {
+                    return Err("Invalid, duplicate or misplaced train reserve".into());
+                }
+            }
+            bytes = data.prior;
+        }
+
         if bytes.get(12..16) == Some(b"RG13") {
             let data: RailRegion = decode(b"RG13", &bytes)?;
             if data.curves.len() > terra_core::rails::MAX_PIECES * 512
@@ -2678,8 +2731,12 @@ fn load(root: &Path, world: WorldId) -> Result<EditJournal, String> {
         return Err("Belt owner has no saved section".into());
     }
     // Multi-block stations may refer to another section; validate after all imports.
-    for (position, state) in plumbing {
+    for (position, mut state) in plumbing {
+        state.train_reserve = train_reserves.remove(&position);
         journal.set_plumbing(position, state)?;
+    }
+    if !train_reserves.is_empty() {
+        return Err("Train reserve has no saved plumbing owner".into());
     }
     for (position, filter) in filters {
         // Older builds exposed ghost filters on the ordinary port variants.

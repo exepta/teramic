@@ -7,6 +7,7 @@ pub(super) struct Schedule {
     next_send: f64,
     runtime: terra_world::plumbing::Runtime,
     rain: terra_world::plumbing::RainRuntime,
+    trains: terra_world::train_services::Runtime,
     sent: HashMap<PlayerId, (u32, Vec<PlumbingVisual>)>,
     sent_infusion: HashMap<PlayerId, (u32, Vec<terra_core::infusion::HoldVisual>)>,
 }
@@ -126,6 +127,14 @@ pub(super) fn tick(
         elapsed,
     ) {
         debug!(%error, "Basin rain collection deferred");
+    }
+    if let Err(error) = terra_world::train_services::advance(
+        &mut schedule.trains,
+        &world.chunks,
+        world.journal.bypass_change_detection(),
+        elapsed,
+    ) {
+        debug!(%error,"Train service update deferred");
     }
     let now = time.elapsed_secs_f64();
     if now < schedule.next_send {

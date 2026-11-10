@@ -487,6 +487,9 @@ fn status(reason: StopReason) -> &'static str {
         StopReason::EndOfTrack => "Gleisende erreicht",
         StopReason::Unloaded => "Warte auf geladene Strecke",
         StopReason::Obstructed => "Strecke blockiert",
+        StopReason::Derailed => {
+            "Entgleisungsgefahr: gesichert angehalten. Gleis prüfen und Fahrhebel neu setzen."
+        }
         StopReason::InvalidTrack => "Gleisverbindung prüfen",
     }
 }

@@ -7344,3 +7344,42 @@ Client und Server verwenden Protokoll 127; persistente Schemas bleiben unveraend
 FIVERR-GLB-Datei ausgefiltert. Native Layoutpruefungen bestehen mit 52 Aufnahmen
 ueber breite, kompakte und 4K-Ansichten. Original-Spielstaende wurden nicht
 migriert. Details: [Inventare, Preload Und Weichen](tools/benchmarks/results/inventory-preload-shallow-switches-2026-11-10/README.md).
+
+
+## 226. Montagegleise, Wasser an Gleisboegen und verbleibender Dampfantrieb
+
+Die Montagestelle prueft lokale Drehgestellpositionen auf dem echten Gleisverlauf.
+Ein nahezu gerader Bereich eines langen gezogenen Moduls bleibt nutzbar, auch
+wenn dessen Besitzerabschnitt weiter entfernt oder ungeladen ist. Beide Raeder
+und der tatsaechliche Fahrweg muessen weiterhin auf geladenem gueltigem Gleis
+liegen. Metallplatten, gelbe Warnstreifen und Klammern heben den zugeordneten
+Montagebereich hervor.
+
+Wasser wird an den wirklichen konvexen Formen der Schienen und Schwellen
+beschnitten. Diagonale Begrenzungsboxen erzeugen damit keine rechteckigen
+Loecher mehr; Wasser oberhalb versenkter Boegen und Weichen bleibt geschlossen.
+
+F53 ergaenzt endliche Tankversorgung ueber bestehende Rohre, Montagestellen und
+Fluid Infucer sowie wirkliche angekuppelte Tender. Ein betriebsbereiter geparkter
+Dampfkessel kann ueber eine Welle an der Montagestelle vorhandene Maschinen
+antreiben; mechanische Last verbraucht Wasser und Druck. Demontage belaesst
+Tankwasser als begrenzte Reserve an der Montagestelle, laesst Druck ab und
+prueft Ueberlauf vor jeder Veroeffentlichung. Wiederaufbau und Rohre koennen
+die Reserve nutzen. Besitz-, Transport-, Lade- und Revisionspruefungen bleiben
+verbindlich; die Simulation bearbeitet begrenzte Budgets.
+
+Kurvenradius und Bremsweg begrenzen das Tempo des gesamten Verbands. Kritische
+Uebergeschwindigkeit wird als Entgleisungsgefahr durch einen gesicherten Stopp
+behandelt. Die vorhandene Live-Schotterbegrenzung wird einmalig angewandt.
+Geladene lokale Gleise, Unload und bewusste Wiederaufnahme nach Reparatur/Laden
+sind geprueft. Client und Server verwenden Protokoll 128. Neue Wasserreserven
+liegen in einem RG14-Wrapper; bisherige RG12-Rohrdaten und RG13-Gleisboegen
+bleiben lesbar, ohne ihre inneren Datenformate zu veraendern.
+
+Details und Abnahme: [Montagegleis, Wasser und Dampf](tools/benchmarks/results/train-yard-water-steam-2026-11-10/README.md).
+
+4523 Workspace-Tests bestanden; zehn bestehende Tests ignoriert und nur die
+separat fehlende originale FIVERR-GLB-Datei ausgefiltert. Striktes Clippy,
+Builds, Formatierung und Asset-Pruefung bestanden. Die native Testwelt-Kopie
+zeigt eine 116-teilige gueltige Montagevorlage. Alle 14 ueberwachten Dateien
+der Originalwelt bleiben unveraendert.

@@ -276,3 +276,27 @@ fn saved_pieces(journal: &EditJournal) -> impl Iterator<Item = Piece> + '_ {
 
 #[cfg(all(test, feature = "bevy"))]
 mod tests;
+
+/// Validate only the loaded gauge slices around a real contact, not a distant owner voxel.
+/// Canonical metadata must still describe the complete module.
+#[cfg(feature = "bevy")]
+pub fn local_loaded(chunks: &crate::streaming::ChunkStore, piece: Piece, point: [f64; 3]) -> bool {
+    let center = point.map(|v| v.floor() as i64);
+    let footprint = piece.footprint();
+    let mut found = false;
+    for x in -1..=1 {
+        for y in -1..=1 {
+            for z in -1..=1 {
+                let cell = [center[0] + x, center[1] + y, center[2] + z];
+                let offset = std::array::from_fn(|i| (cell[i] - piece.anchor[i]) as i32);
+                if footprint.binary_search(&offset).is_ok() {
+                    found = true;
+                    if chunks.block_at(cell) != Some(piece.material) {
+                        return false;
+                    }
+                }
+            }
+        }
+    }
+    found
+}

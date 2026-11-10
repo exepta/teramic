@@ -1,6 +1,6 @@
 # TERAMIC: Offene Aufgaben
 
-Stand: 09.11.2026. Nur offene Features, Korrekturen und Abnahmen.
+Stand: 10.11.2026. Nur offene Features, Korrekturen und Abnahmen.
 Erledigte Aufgaben werden entfernt; die Umsetzungshistorie steht in
 [PATCH.md](PATCH.md). Bestehende IDs bleiben erhalten, neue IDs werden fortlaufend angehaengt.
 `F` = Feature, `O` = Optimierung/Fehlerkorrektur, `A` = Abnahme.
@@ -24,7 +24,6 @@ Wachstum, NPC-Arbeit und bewegte Fahrzeuge muessen begrenzt simuliert werden.
 
 ### Fahrbetrieb Und Automatisierung
 
-- [ ] **F53 Dampfantrieb Und Verbleibende Fahrregeln:** Brennstofffahrt, Fahrhebel, Bremsen, Rueckwaertsfahrt, Kupplungen und Mitfahren sind vorhanden. Wasserverbrauch, Kesseldruck, Tankbefuellung mit echten Eimern und sechs laengen-/druckabhaengige Fahrstufen sind vorhanden (Phase 221); Rueckwaerts zwei Stufen. Kontinuierliche Kupplungspruefung und gegen Paketjitter gepufferte gemeinsame Fahrzeug-/Sitz-/Raddarstellung sind vorhanden (Phase 223). Die weitere Anbindung der Dampfloks an vorhandene Rohr-Wassertechnik und Kinetik bleibt offen. Das vorhandene Live-Gleisbettlimit `terra_world::rails::ballast::speed_limit` weiterverwenden: vollstaendig tragender Kies/Schotter erlaubt einmalig 50 Prozent mehr Tempo. Verbleibende Entgleisungsregeln definieren und Fahrzeug-Unload sowie Wiederaufnahme ueber ungeladene Strecken und Spielstandwechsel weiter pruefen.
 
 - [ ] **F65 NPC-Lokfuehrer:** Einen zuweisbaren Zugfuehrer-Beruf ergaenzen. Fuehrerstand erreichen, zugewiesenen Zug fahren, Weichen/Signale und Haltepunkte beachten sowie bei Hindernissen sicher bremsen. Wasser-/Brennstoffmangel, blockierte Strecke und fehlende Berechtigung anzeigen; Dienstzeit, Spieleruebernahme und Wiederaufnahme nach Laden regeln.
 

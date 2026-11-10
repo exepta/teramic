@@ -11,6 +11,8 @@ pub const FAUCET: u16 = 167;
 pub const PUMP: u16 = 168;
 pub const BASIN: u16 = 169;
 pub const FLUID_INFUSER: u16 = crate::infusion::FLUID_INFUSER;
+/// The assembly block is also a finite-water service connection.
+pub const TRAIN_DOCK: u16 = crate::train_parts::STATION;
 pub const CELL_CAPACITY: u8 = 8;
 pub const MAX_COMPONENT: usize = 512;
 pub const MAX_BASIN: usize = 250;
@@ -44,7 +46,10 @@ impl IntakeActivity {
 }
 
 pub const fn is_part(material: u16) -> bool {
-    matches!(material, WOOD_PIPE..=BASIN | FLUID_INFUSER | GLASS_PIPE)
+    matches!(
+        material,
+        WOOD_PIPE..=BASIN | FLUID_INFUSER | GLASS_PIPE | TRAIN_DOCK
+    )
 }
 pub const fn is_pipe(material: u16) -> bool {
     matches!(material, WOOD_PIPE..=IRON_PIPE | GLASS_PIPE)
@@ -65,7 +70,7 @@ pub const fn valid_facing(material: u16, facing: u8) -> bool {
         FAUCET => matches!(facing, 0..=11 | 16..=19),
         PUMP => facing < 4,
         BASIN => facing < 64,
-        FLUID_INFUSER => facing < 4,
+        FLUID_INFUSER | TRAIN_DOCK => facing < 4,
         _ => false,
     }
 }
@@ -133,7 +138,7 @@ pub fn ports(material: u16, facing: u8) -> u8 {
     if !valid_facing(material, facing) {
         return 0;
     }
-    if is_pipe(material) || material == BASIN {
+    if is_pipe(material) || matches!(material, BASIN | TRAIN_DOCK) {
         return 63;
     }
     // A downward nozzle consumes supply. Its lower side is never a pipe outlet.

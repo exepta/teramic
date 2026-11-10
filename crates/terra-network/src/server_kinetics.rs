@@ -26,6 +26,7 @@ fn node_at(
     chunks: &ChunkStore,
     journal: &EditJournal,
     cranks: &HashSet<Cell>,
+    steam: &BTreeMap<Cell, terra_world::train_services::MechanicalDrive>,
 ) -> Option<Node> {
     let material = chunks.block_at(position)?;
     kinetic::part(material)?;
@@ -55,6 +56,11 @@ fn node_at(
         }
     } else if material == kinetic::WATER_WHEEL {
         wheel_drive(position, state.facing, terrain, chunks, journal)
+    } else if let Some(drive) = steam.get(&position) {
+        kinetic::SourceDrive {
+            rpm: drive.rpm,
+            capacity: drive.capacity,
+        }
     } else {
         kinetic::SourceDrive::default()
     };
@@ -182,6 +188,7 @@ pub(super) fn advance(
     journal: &mut EditJournal,
     cranks: &HashSet<Cell>,
 ) {
+    let steam = terra_world::train_services::mechanical_drives(chunks, journal);
     let seeds = loaded_seeds(chunks, journal);
     let mut budget = NODE_BUDGET;
     let mut states = BTreeMap::<Cell, KineticState>::new();
@@ -196,7 +203,7 @@ pub(super) fn advance(
         let solved = kinetic::solve_component(seed, &mut budget, |p| {
             *cached
                 .entry(p)
-                .or_insert_with(|| node_at(p, terrain, chunks, journal, cranks))
+                .or_insert_with(|| node_at(p, terrain, chunks, journal, cranks, &steam))
         });
         for (node, state) in solved {
             states.insert(node.position, state);
@@ -1181,6 +1188,112 @@ mod tests {
         assert_eq!(journal.gameplay().drops.len(), 1025);
         assert_eq!(journal.gameplay().drops[0].position, [2.5, 1.4, 2.5]);
     }
+    #[test]
+    fn steam_dock_drives_a_real_loaded_pump_and_stops_when_the_boiler_is_empty() {
+        use terra_core::{
+            PlayerUuid,
+            train_power::SteamState,
+            trains::{TrainPart, Vehicle, VehicleKind},
+        };
+        let (mut chunks, mut journal) = fixture();
+        let mut parts =
+            terra_core::train_blueprint::template([8, 2, 4], 0, VehicleKind::Locomotive)
+                .into_iter()
+                .map(|p| (p.cell.map(|v| v as i16), (p.material, p.facing)))
+                .collect::<BTreeMap<_, _>>();
+        for z in 4..10 {
+            parts.insert([8, 4, z], (219, 0));
+        }
+        for (cell, material) in [
+            ([8, 3, 7], 218),
+            ([8, 4, 10], 229),
+            ([9, 4, 10], 230),
+            ([8, 3, 8], 254),
+        ] {
+            parts.insert(cell, (material, 0));
+        }
+        let parts = parts
+            .into_iter()
+            .map(|(offset, (material, facing))| TrainPart {
+                offset,
+                material,
+                facing,
+                wood: Default::default(),
+            })
+            .collect::<Vec<_>>();
+        let cargo = parts
+            .iter()
+            .enumerate()
+            .filter(|(_, p)| matches!(p.material, 29 | 216 | 218))
+            .map(|(index, _)| (index as u16, Inventory::default()))
+            .collect();
+        let car = Vehicle {
+            id: 1,
+            owner: PlayerUuid::from_u128(1),
+            name: String::new(),
+            kind: VehicleKind::Locomotive,
+            anchor: [0; 3],
+            parts,
+            cargo,
+            blocks: Default::default(),
+            payloads: Default::default(),
+            couplings: [None; 2],
+            revision: 0,
+            motion: Default::default(),
+            burn_seconds: 0.0,
+            steam: SteamState {
+                water: 1000.0,
+                pressure_bar: 9.0,
+            },
+        };
+        assert!(car.valid());
+        assert!(terra_core::train_power::steam_installed(&car.parts));
+        journal.gameplay_mut().trains.insert(car).unwrap();
+        for (cell, material) in [
+            ([12, 2, 6], 217),
+            ([13, 2, 6], kinetic::IRON_SHAFT),
+            ([14, 2, 6], terra_core::plumbing::PUMP),
+        ] {
+            place(
+                &mut chunks,
+                &mut journal,
+                cell,
+                material,
+                Default::default(),
+            );
+        }
+        let mut runtime = Runtime::default();
+        advance(
+            &mut runtime,
+            &terrain(),
+            &chunks,
+            &mut journal,
+            &HashSet::new(),
+        );
+        let pump = journal.kinetic_state([14, 2, 6]);
+        assert!(pump.running() && pump.stress > 0.0, "{pump:?}");
+        let before = journal.gameplay().trains.vehicles[&1].steam;
+        terra_world::train_services::advance(&mut Default::default(), &chunks, &mut journal, 0.2)
+            .unwrap();
+        assert!(journal.gameplay().trains.vehicles[&1].steam.water < before.water);
+        journal
+            .gameplay_mut()
+            .trains
+            .vehicles
+            .get_mut(&1)
+            .unwrap()
+            .steam
+            .water = 0.0;
+        advance(
+            &mut runtime,
+            &terrain(),
+            &chunks,
+            &mut journal,
+            &HashSet::new(),
+        );
+        assert!(!journal.kinetic_state([14, 2, 6]).running());
+    }
+
     #[test]
     fn malformed_attachments_and_visual_states_cannot_create_authoritative_power() {
         let (mut chunks, mut journal) = fixture();

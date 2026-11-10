@@ -233,7 +233,52 @@ impl EditJournal {
                 }
             }};
         }
-        capacity!(plumbing, crate::plumbing::MAX_NODES);
+        // The dock keeps recovered tank water across block editing, saves and reassembly.
+        // Stage it with all other ownership changes, before publishing any live state.
+        let mut dock = self.plumbing_at(plan.station).cloned().unwrap_or_default();
+        if plan.assembling && plan.vehicle.parts.iter().any(|part| part.material == 254) {
+            dock.train_reserve = None;
+        } else if !plan.assembling && plan.vehicle.steam.water > 0.0 {
+            let water = dock.train_reserve.unwrap_or_default().water + plan.vehicle.steam.water;
+            if water > terra_core::train_power::WATER_CAPACITY {
+                return Err(TrainError::WaterCapacity);
+            }
+            dock.train_reserve = Some(terra_core::train_power::SteamState {
+                water,
+                pressure_bar: 0.0,
+            });
+        }
+        if dock != self.plumbing_at(plan.station).cloned().unwrap_or_default() {
+            let owner = terra_voxel::global_to_section(plan.station).0;
+            if let Some(section) = self.sections.get(&owner) {
+                staged
+                    .sections
+                    .entry(owner)
+                    .or_insert_with(|| section.clone());
+            }
+            staged
+                .set_plumbing(plan.station, dock)
+                .map_err(|_| TrainError::Invalid)?;
+        }
+        let removed = plan
+            .parts
+            .iter()
+            .filter(|part| self.plumbing.contains_key(&part.cell))
+            .count();
+        let retained_dock = usize::from(
+            staged.plumbing.contains_key(&plan.station)
+                && self.plumbing.contains_key(&plan.station),
+        );
+        if self
+            .plumbing
+            .len()
+            .saturating_sub(removed + retained_dock)
+            .saturating_add(staged.plumbing.len())
+            > crate::plumbing::MAX_NODES
+        {
+            return Err(TrainError::Limit);
+        }
+
         capacity!(cauldrons, crate::edits::hearths::MAX_HEARTHS);
         capacity!(campfires, crate::edits::hearths::MAX_HEARTHS);
         capacity!(attached_campfires, crate::edits::hearths::MAX_HEARTHS);
@@ -255,6 +300,9 @@ impl EditJournal {
         for part in &plan.parts {
             self.publish_train_runtime(&mut staged, part.cell);
             self.wake_fluid_neighbors(part.cell);
+        }
+        if staged.plumbing.contains_key(&plan.station) {
+            self.publish_train_runtime(&mut staged, plan.station);
         }
         if plan
             .vehicle

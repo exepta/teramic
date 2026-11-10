@@ -397,6 +397,14 @@ fn capture_occluders(
                 occluders.dry_regions.insert(q, boxes.split_off(physical));
                 occluders.insert(q, boxes);
             }
+            if !occluders.rails.contains_key(&q)
+                && block_at(q).is_some_and(terra_core::rails::is_rail)
+                && let Some(piece) = crate::rails::piece_at(journal, q)
+            {
+                occluders
+                    .rails
+                    .insert(q, crate::water::fluid_mesh::rails::profiles(piece, q));
+            }
             if let Some(material) = block_at(q).filter(|m| terra_core::plumbing::is_pipe(*m)) {
                 occluders.pipes.entry(q).or_insert_with(|| {
                     crate::plumbing::connection_mask(

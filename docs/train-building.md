@@ -5,8 +5,10 @@ zusammenhaengenden Aufbau ueber dem Gleis. Interaktionen verwenden die
 konfigurierte Benutzen-/Platzieren-Belegung (standardmaessig R/B; Rechtsklick,
 wenn entsprechend belegt).
 
-1. Ein ausreichend langes, gerades Gleis bauen und eine Zug-Montagestelle daneben
-   aufstellen. Die Vorlage umfasst einen durchgehenden Rahmen, zwei Drehgestelle
+1. Ein ausreichend langes Gleis bauen und eine Zug-Montagestelle daneben
+   aufstellen. Auch ein nahezu gerader Abschnitt eines laengeren gezogenen Gleises
+   ist geeignet; beide Drehgestelle muessen lokal auf das Gleis passen. Metallplatten,
+   gelbe Markierungen und Halteklammern kennzeichnen den zugeordneten Montagebereich. Die Vorlage umfasst einen durchgehenden Rahmen, zwei Drehgestelle
    und zwei Kupplungen. Ihr Achsabstand ist zwischen 3 und 15 Bloecken einstellbar;
    voreingestellt sind 4 Bloecke. Gemeint ist der Abstand der Drehgestellmitten.
    Mit **Modellbreite 1x / 3x** den schmalen oder drei Bloecke breiten Aufbau
@@ -283,3 +285,42 @@ orientieren sich an der Modellreferenz. Bei Fahrt mit vorhandenem Brennstoff
 entsteht an der echten Schornsteinmuendung eine mit der Bewegung zurueckbleibende
 Rauchfahne. Sie verwendet eine gemeinsame weiche Partikelgeometrie, hoechstens
 256 Partikel und vier nahe Zuege.
+
+
+## Dampfversorgung und Betriebssicherheit
+
+Eine angehaltene Lok mit angezogener Bremse und eingebautem Wassertank kann an
+der Montagestelle aus dem vorhandenen Rohrnetz Wasser aufnehmen. Ein Rohr an
+die Montagestelle anschliessen und mit einer Pumpe versorgen. Ein gefuellter
+Rohrmund direkt neben dem Tank oder ein Fluid Infucer ueber dem Tank funktioniert
+auch. Pro Versorgungsschritt werden hoechstens 125 mB aus dem endlichen Puffer
+entnommen; der Tank fasst 8000 mB. Ein wirklich angekuppelter, geladener Tender
+kann seinen endlichen Wasservorrat an die Lok weitergeben. Fremde geschuetzte
+Versorgungen bleiben gesperrt.
+
+Beim Zerlegen wird Tankwasser an der Montagestelle gespeichert und Kesseldruck
+abgelassen. Der naechste Aufbau mit Tank erhaelt diese Reserve zurueck. Ueber
+angeschlossene Rohre laesst sie sich auch in ein Becken abpumpen. Sind bereits
+8000 mB Reserve vorhanden, muss vor einer weiteren wasserhaltigen Demontage
+Platz geschaffen werden. Die Reserve bleibt nach Speichern und Laden erhalten.
+
+Eine vollstaendig ausgestattete Dampflok mit Wasser und mindestens 8 bar kann
+im Stillstand vorhandene Maschinen antreiben. Dazu einen axial ausgerichteten
+Wellenblock direkt neben die Montagestelle setzen. Ein Kessel versorgt genau
+einen Anschluss mit 40 RPM und 128 Kapazitaet. Belastete Wellen verbrauchen
+zusaetzlich 4 mB Wasser und 0,45 bar pro Sekunde. Kohle und Wasser werden weiterhin
+fuer den Druckaufbau benoetigt; vor dem Losfahren Bremse loesen.
+
+Die Geschwindigkeit wird vor Kurven anhand des wirklichen Gleisverlaufs und des
+Bremswegs begrenzt. Kritische Uebergeschwindigkeit fuehrt zu einem gesicherten
+Stillstand mit dem Hinweis auf Entgleisungsgefahr; Fahrzeug und Ladung bleiben
+an der letzten gueltigen Position erhalten. Fehlende oder ungeladene Gleise,
+Hindernisse und Puffer stoppen ebenfalls sicher. Nach Wiederherstellung und
+Laden der Strecke den Fahrhebel beziehungsweise die Bremse erneut bedienen.
+Ein entfernter, ungeladener Besitzerabschnitt eines langen Gleises sperrt den
+bekannten lokalen Fahrweg nicht mehr. Unter jedem Rad und auf dem tatsaechlichen
+Fahrweg muessen weiterhin geladene, vollstaendige Gleisscheiben liegen.
+
+Client und Server verwenden gemeinsam Protokoll 128. Neue Montage-Wasserreserven
+verwenden den RG14-Speicherwrapper; bestehende RG12-Rohrdaten und RG13-Gleisboegen
+bleiben unveraendert lesbar.

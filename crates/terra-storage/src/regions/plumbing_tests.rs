@@ -34,6 +34,7 @@ fn fixture() -> EditJournal {
             .set_plumbing(
                 position,
                 PlumbingState {
+                    train_reserve: None,
                     water: FluidCell {
                         amount: index as u8 + 1,
                         flow: [0, 0],
@@ -64,6 +65,7 @@ fn fixture() -> EditJournal {
             .set_plumbing(
                 position,
                 PlumbingState {
+                    train_reserve: None,
                     water: FluidCell {
                         amount: index as u8,
                         flow: [-1, 1],
@@ -246,4 +248,68 @@ fn confirmed_transfer_is_ephemeral_and_does_not_change_the_saved_water_format() 
     let restored: PlumbingState = postcard::from_bytes(&bytes).unwrap();
     assert_eq!(restored, idle);
     assert!(!restored.flowing);
+}
+
+#[test]
+fn rg14_persists_dock_reserves_without_changing_the_frozen_plumbing_payload() {
+    let root = std::env::temp_dir().join(format!("terra-train-reserve-{}", PlayerUuid::new_v4()));
+    let world = WorldId(2261);
+    let cell = [-17, 18, -1];
+    let mut journal = fixture();
+    node(&mut journal, cell, 217, 0);
+    let state = PlumbingState {
+        water: FluidCell {
+            amount: 3,
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+    journal.set_plumbing(cell, state.clone()).unwrap();
+    save_edits(&root, world, &journal).unwrap();
+    let path = root.join(region_name(region_at(cell)));
+    let prior = read(&path).unwrap();
+    let reserve = terra_core::train_power::SteamState {
+        water: 1234.5,
+        pressure_bar: 0.0,
+    };
+    journal
+        .set_plumbing(
+            cell,
+            PlumbingState {
+                train_reserve: Some(reserve),
+                ..state
+            },
+        )
+        .unwrap();
+    save_edits(&root, world, &journal).unwrap();
+    let bytes = read(&path).unwrap();
+    assert_eq!(bytes.get(12..16), Some(b"RG14".as_slice()));
+    let wrapped: TrainServiceRegion = decode(b"RG14", &bytes).unwrap();
+    assert_eq!(
+        wrapped.prior, prior,
+        "new reserves must wrap the exact previous bytes"
+    );
+    assert_eq!(wrapped.reserves, vec![(cell, reserve)]);
+    let loaded = load_edits(&root, world).unwrap();
+    assert_eq!(
+        loaded.plumbing_at(cell).unwrap().train_reserve,
+        Some(reserve)
+    );
+    assert_eq!(loaded.plumbing_at(cell).unwrap().water.amount, 3);
+    save_edits(&root, world, &loaded).unwrap();
+    assert_eq!(read(&path).unwrap(), bytes);
+    for failure in 0..5 {
+        let mut bad: TrainServiceRegion = decode(b"RG14", &bytes).unwrap();
+        match failure {
+            0 => bad.reserves.push(bad.reserves[0]),
+            1 => bad.reserves[0].0 = [-18, 18, -1],
+            2 => bad.reserves[0].1.water = f64::NAN,
+            3 => bad.reserves[0].1.pressure_bar = 1.0,
+            4 => bad.reserves[0].0 = [600, 18, -1],
+            _ => unreachable!(),
+        };
+        std::fs::write(&path, encode(b"RG14", &bad).unwrap()).unwrap();
+        assert!(load_edits(&root, world).is_err(), "case {failure}");
+    }
+    std::fs::remove_dir_all(root).unwrap();
 }

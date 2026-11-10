@@ -1,4 +1,8 @@
 //! Bounded rail-following motion. Missing track, unloaded cells and collisions fail closed.
+#[path = "train_safety.rs"]
+mod safety;
+pub use safety::speed_limit;
+
 use crate::{edits::EditJournal, rails, streaming::ChunkStore};
 use terra_core::rails::{Endpoint, Path, RouteNetwork, Sample};
 use terra_core::{
@@ -13,14 +17,21 @@ fn path(network: &RouteNetwork, cursor: RailCursor) -> Option<Path> {
         .into_iter()
         .find(|path| path.index == cursor.path)
 }
-fn loaded(chunks: &ChunkStore, journal: &EditJournal, path: Path) -> bool {
+fn loaded(journal: &EditJournal, path: Path) -> bool {
     rails::complete(journal, path.piece)
-        && path.piece.footprint().iter().all(|offset| {
-            let cell =
-                std::array::from_fn(|axis| path.piece.anchor[axis] + i64::from(offset[axis]));
-            chunks.block_at(cell) == Some(path.piece.material)
-        })
 }
+fn segment_loaded(chunks: &ChunkStore, path: Path, start: f64, end: f64) -> bool {
+    let steps = (end - start).abs().ceil().max(1.0) as usize;
+    (0..=steps).all(|step| {
+        rails::local_loaded(
+            chunks,
+            path.piece,
+            path.sample_distance(start + (end - start) * step as f64 / steps as f64)
+                .position,
+        )
+    })
+}
+
 fn sample(path: Path, cursor: RailCursor) -> Sample {
     let mut point = path.sample_distance(cursor.distance);
     if !cursor.forward {
@@ -43,7 +54,7 @@ pub fn walk(
     let mut remaining = meters.abs();
     for _ in 0..512 {
         let path = path(network, cursor).ok_or(StopReason::InvalidTrack)?;
-        if !loaded(chunks, journal, path) {
+        if !loaded(journal, path) {
             return Err(StopReason::Unloaded);
         }
         let increasing = cursor.forward == (direction > 0.0);
@@ -56,6 +67,11 @@ pub fn walk(
         } else {
             cursor.distance
         };
+        let destination = cursor.distance
+            + remaining.min(available.max(0.0)) * if increasing { 1.0 } else { -1.0 };
+        if !segment_loaded(chunks, path, cursor.distance, destination) {
+            return Err(StopReason::Unloaded);
+        }
         if remaining <= available + 1e-9 {
             cursor.distance = (cursor.distance + remaining * if increasing { 1.0 } else { -1.0 })
                 .clamp(0.0, path.length());
@@ -152,7 +168,12 @@ fn initialize(
     let world_forward = [heading.sin(), 0.0, heading.cos()];
     if let Some(cursor) = car.motion.cursor
         && let Some(current) = path(network, cursor)
-        && loaded(chunks, journal, current)
+        && loaded(journal, current)
+        && rails::local_loaded(
+            chunks,
+            current.piece,
+            current.sample_distance(cursor.distance).position,
+        )
         && (0.0..=current.length()).contains(&cursor.distance)
     {
         let expected = car.world_point(pivot);
@@ -183,7 +204,7 @@ fn initialize(
     let mut best: Option<(f64, RailCursor)> = None;
     for piece in candidates.into_values() {
         for path in piece.active_paths() {
-            if !loaded(chunks, journal, path) {
+            if !loaded(journal, path) {
                 continue;
             }
             for step in 0..=128 {
@@ -192,7 +213,10 @@ fn initialize(
                 let error = (0..3)
                     .map(|i| (point.position[i] - origin[i]).powi(2))
                     .sum::<f64>();
-                if error <= 0.75 * 0.75 && best.as_ref().is_none_or(|(old, _)| error < *old) {
+                if error <= 0.75 * 0.75
+                    && best.as_ref().is_none_or(|(old, _)| error < *old)
+                    && rails::local_loaded(chunks, piece, point.position)
+                {
                     let aligned = point.tangent[0] * world_forward[0]
                         + point.tangent[2] * world_forward[2]
                         >= 0.0;
@@ -351,6 +375,17 @@ pub fn advance(
     car: &Vehicle,
     dt: f64,
 ) -> Result<Vehicle, StopReason> {
+    advance_with_speed_limit(chunks, journal, network, car, dt, f64::INFINITY)
+}
+/// Apply one shared limit to the entire consist without multiplying ballast twice.
+pub fn advance_with_speed_limit(
+    chunks: &ChunkStore,
+    journal: &EditJournal,
+    network: &RouteNetwork,
+    car: &Vehicle,
+    dt: f64,
+    consist_limit: f64,
+) -> Result<Vehicle, StopReason> {
     let mut next = car.clone();
     let (cursor, pivot, wheelbase) = initialize(chunks, journal, network, car)?;
     let installed = terra_core::train_power::steam_installed(&car.parts);
@@ -358,7 +393,17 @@ pub fn advance(
     let gear = terra_core::train_power::max_gear(&car.parts, car.steam);
     let requested_speed = terra_core::train_power::gear_speed(car.motion.throttle, gear).max(4.0);
     let limit = rails::ballast::speed_limit(chunks, journal, cursor.anchor, requested_speed)
-        .ok_or(StopReason::InvalidTrack)?;
+        .ok_or(StopReason::InvalidTrack)?
+        .min(safety::curve_limit(
+            chunks,
+            journal,
+            network,
+            car,
+            cursor,
+            wheelbase,
+            f64::from(car.motion.throttle),
+        )?)
+        .min(consist_limit);
     let powered = if car.motion.throttle != 0 && !car.motion.brake || heating {
         burn(&mut next, dt)
     } else {
@@ -398,22 +443,30 @@ pub fn advance(
         cursor,
         speed.signum() * (stopping + nose),
     ) == Err(StopReason::Buffer);
-    if speed.abs() > 0.01
-        && (buffer_ahead
-            || walk(chunks, journal, network, cursor, speed.signum() * stopping).is_err())
-    {
+    let ahead = walk(chunks, journal, network, cursor, speed.signum() * stopping);
+    if speed.abs() > 0.01 && (buffer_ahead || ahead.is_err()) {
         next.motion.speed_mps =
             terra_core::train_motion::speed_step(car.motion.speed_mps, 0, true, powered, limit, dt);
         next.motion.brake = true;
         next.motion.stop_reason = if buffer_ahead {
             StopReason::Buffer
+        } else if ahead == Err(StopReason::Unloaded) {
+            StopReason::Unloaded
         } else {
             StopReason::EndOfTrack
         };
     } else {
         next.motion.speed_mps = speed;
         next.motion.stop_reason = if car.motion.brake {
-            StopReason::Braking
+            match car.motion.stop_reason {
+                StopReason::Unloaded
+                | StopReason::EndOfTrack
+                | StopReason::Buffer
+                | StopReason::Obstructed
+                | StopReason::InvalidTrack
+                | StopReason::Derailed => car.motion.stop_reason,
+                _ => StopReason::Braking,
+            }
         } else if !powered {
             if car.parts.iter().any(|p| p.material == 218) {
                 StopReason::NoFuel
@@ -1534,5 +1587,80 @@ mod shallow_turnout_tests {
                 assert!(car.motion.yaw.abs() < 0.02);
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod local_streaming_tests {
+    use super::tests::set;
+    use super::*;
+    use terra_core::rails::{CurveSpec, Piece};
+    #[test]
+    fn a_distant_unloaded_owner_does_not_hide_the_loaded_track_but_crossing_unknown_space_stops() {
+        let mut chunks = ChunkStore::default();
+        let mut journal = EditJournal::default();
+        let piece = Piece::new_curve(
+            [0; 3],
+            CurveSpec::new([[8, 2, 0], [8, 2, 341], [8, 2, 683], [8, 2, 1024]]).unwrap(),
+        )
+        .unwrap();
+        for cell in rails::cells(piece) {
+            set(&mut chunks, cell, piece.material);
+            journal.record(cell, piece.material).unwrap();
+            journal
+                .set_object_state(cell, Some(rails::object_state(piece, cell)))
+                .unwrap();
+        }
+        let graph = rails::network(&journal).unwrap();
+        chunks.loaded.remove(&terra_voxel::SectionPos::new(0, 0, 0));
+        chunks
+            .loaded
+            .remove(&terra_voxel::SectionPos::new(-1, 0, 0));
+        assert!(crate::trains::bogie_supported_with_facing(
+            &chunks,
+            &journal,
+            [0, 1, 40],
+            0
+        ));
+        let cursor = RailCursor {
+            anchor: piece.anchor,
+            path: 0,
+            distance: 40.,
+            forward: true,
+        };
+        assert!(walk(&chunks, &journal, &graph, cursor, 4.).is_ok());
+        assert_eq!(
+            walk(&chunks, &journal, &graph, cursor, -30.).map(|_| ()),
+            Err(StopReason::Unloaded)
+        );
+        let local_owner = terra_voxel::SectionPos::new(0, 0, 2);
+        let local = chunks.loaded.remove(&local_owner).unwrap();
+        assert!(!crate::trains::bogie_supported_with_facing(
+            &chunks,
+            &journal,
+            [0, 1, 40],
+            0
+        ));
+        // Saving a secured train must not fabricate motion while its gauge is missing.
+        let (_, _, mut car) = super::tests::fixture();
+        let (pivot, wheelbase) = wheelsets(&car).unwrap();
+        chunks.loaded.insert(local_owner, local);
+        let front = sample(path(&graph, cursor).unwrap(), cursor);
+        let back = trailing(&chunks, &journal, &graph, cursor, front, wheelbase).unwrap();
+        set_pose(&mut car, pivot, front, back);
+        car.motion.cursor = Some(cursor);
+        car.motion.stop_reason = StopReason::Unloaded;
+        car.steam.water = 1234.5;
+        let bytes = serde_json::to_vec(&car).unwrap();
+        let mut resumed: Vehicle = serde_json::from_slice(&bytes).unwrap();
+        let held = advance(&chunks, &journal, &graph, &resumed, 0.0).unwrap();
+        assert_eq!(held.motion.stop_reason, StopReason::Unloaded);
+        assert_eq!(held.steam, car.steam);
+        assert_eq!(held.motion.translation, car.motion.translation);
+        resumed.motion.brake = false;
+        resumed.motion.throttle = 1;
+        let resumed = advance(&chunks, &journal, &graph, &resumed, 0.05).unwrap();
+        assert_eq!(resumed.motion.stop_reason, StopReason::Ready);
+        assert!(resumed.motion.speed_mps > 0.0);
     }
 }

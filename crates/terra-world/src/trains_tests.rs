@@ -1329,3 +1329,223 @@ fn automatically_built_widths_assemble_the_whole_body_including_boiler_top_fitti
         }));
     }
 }
+
+#[test]
+fn finite_dock_water_survives_dismantling_and_reassembly_without_duplication() {
+    let (mut chunks, mut journal, station, start) = fixture(VehicleKind::Locomotive);
+    let actor = PlayerUuid::from_u128(1);
+    let tank = [1, 3, 4];
+    block(&mut chunks, tank, 254);
+    journal.record(tank, 254).unwrap();
+    journal
+        .set_object_state(tank, Some(BlockObjectState::default()))
+        .unwrap();
+    journal
+        .set_object_state(station, Some(BlockObjectState::default()))
+        .unwrap();
+    let plan = plan_assembly(
+        &chunks,
+        &journal,
+        actor,
+        station,
+        start,
+        VehicleKind::Locomotive,
+    )
+    .unwrap();
+    let id = commit(&mut chunks, &mut journal, &plan).unwrap();
+    journal
+        .set_plumbing(
+            station,
+            crate::plumbing::PlumbingState {
+                water: crate::water::FluidCell {
+                    amount: 4,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+        )
+        .unwrap();
+    let mut runtime = crate::train_services::Runtime::default();
+    crate::train_services::advance(&mut runtime, &chunks, &mut journal, 0.2).unwrap();
+    assert_eq!(journal.gameplay().trains.vehicles[&id].steam.water, 125.0);
+    assert_eq!(journal.plumbing_at(station).unwrap().water.amount, 3);
+    let plan = plan_dismantle(&chunks, &journal, actor, station, id).unwrap();
+    commit(&mut chunks, &mut journal, &plan).unwrap();
+    let dock = journal.plumbing_at(station).unwrap();
+    assert_eq!(dock.train_reserve.unwrap().water, 125.0);
+    assert_eq!(dock.train_reserve.unwrap().pressure_bar, 0.0);
+    let plan = plan_assembly(
+        &chunks,
+        &journal,
+        actor,
+        station,
+        start,
+        VehicleKind::Locomotive,
+    )
+    .unwrap();
+    let rebuilt = commit(&mut chunks, &mut journal, &plan).unwrap();
+    assert_eq!(
+        journal.gameplay().trains.vehicles[&rebuilt].steam.water,
+        125.0
+    );
+    assert!(
+        journal
+            .plumbing_at(station)
+            .unwrap()
+            .train_reserve
+            .is_none()
+    );
+    assert_eq!(journal.plumbing_at(station).unwrap().water.amount, 3);
+}
+
+#[test]
+fn train_service_never_draws_water_while_moving_unloaded_protected_or_at_revision_overflow() {
+    for failure in ["moving", "unloaded", "protected", "overflow"] {
+        let (mut chunks, mut journal, station, start) = fixture(VehicleKind::Locomotive);
+        let actor = PlayerUuid::from_u128(1);
+        let tank = [1, 3, 4];
+        block(&mut chunks, tank, 254);
+        journal.record(tank, 254).unwrap();
+        journal
+            .set_object_state(tank, Some(BlockObjectState::default()))
+            .unwrap();
+        journal
+            .set_object_state(station, Some(BlockObjectState::default()))
+            .unwrap();
+        let plan = plan_assembly(
+            &chunks,
+            &journal,
+            actor,
+            station,
+            start,
+            VehicleKind::Locomotive,
+        )
+        .unwrap();
+        let id = commit(&mut chunks, &mut journal, &plan).unwrap();
+        journal
+            .set_plumbing(
+                station,
+                crate::plumbing::PlumbingState {
+                    water: crate::water::FluidCell {
+                        amount: 4,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+            )
+            .unwrap();
+        match failure {
+            "moving" => {
+                let car = journal.gameplay_mut().trains.vehicles.get_mut(&id).unwrap();
+                car.motion.speed_mps = 1.0;
+                car.motion.brake = false;
+            }
+            "unloaded" => {
+                chunks
+                    .loaded
+                    .remove(&terra_voxel::SectionPos::new(-1, 0, 0));
+            }
+            "protected" => {
+                journal
+                    .gameplay_mut()
+                    .kingdoms
+                    .found(PlayerUuid::from_u128(999), station, "Foreign service area")
+                    .unwrap();
+            }
+            "overflow" => journal.gameplay_mut().revision = u64::MAX - 1,
+            _ => unreachable!(),
+        }
+        let before = journal.plumbing_at(station).unwrap().clone();
+        let water = journal.gameplay().trains.vehicles[&id].steam.water;
+        crate::train_services::advance(&mut Default::default(), &chunks, &mut journal, 0.2)
+            .unwrap();
+        assert_eq!(journal.plumbing_at(station), Some(&before), "{failure}");
+        assert_eq!(
+            journal.gameplay().trains.vehicles[&id].steam.water,
+            water,
+            "{failure}"
+        );
+    }
+}
+
+#[test]
+fn a_parked_steam_boiler_supplies_one_real_shaft_and_spends_pressure_and_water_under_load() {
+    let (mut chunks, mut journal, station, start) = fixture(VehicleKind::Locomotive);
+    let actor = PlayerUuid::from_u128(1);
+    journal
+        .set_object_state(station, Some(BlockObjectState::default()))
+        .unwrap();
+    let mut extra = (0..6).map(|z| ([1, 4, z], 219)).collect::<Vec<_>>();
+    extra.extend([
+        ([1, 3, 3], 218),
+        ([1, 4, 6], 229),
+        ([2, 4, 6], 230),
+        ([1, 3, 4], 254),
+    ]);
+    for (cell, material) in extra {
+        block(&mut chunks, cell, material);
+        journal.record(cell, material).unwrap();
+        journal
+            .set_object_state(cell, Some(BlockObjectState::default()))
+            .unwrap();
+    }
+    let plan = plan_assembly(
+        &chunks,
+        &journal,
+        actor,
+        station,
+        start,
+        VehicleKind::Locomotive,
+    )
+    .unwrap();
+    let id = commit(&mut chunks, &mut journal, &plan).unwrap();
+    let car = journal.gameplay_mut().trains.vehicles.get_mut(&id).unwrap();
+    car.steam = terra_core::train_power::SteamState {
+        water: 1000.0,
+        pressure_bar: 9.0,
+    };
+    for (cell, facing) in [([4, 2, 2], 0), ([3, 2, 3], 1)] {
+        block(&mut chunks, cell, 144);
+        journal.record(cell, 144).unwrap();
+        journal
+            .set_object_state(
+                cell,
+                Some(BlockObjectState {
+                    facing,
+                    ..Default::default()
+                }),
+            )
+            .unwrap();
+    }
+    let drives = crate::train_services::mechanical_drives(&chunks, &journal);
+    assert_eq!(
+        drives.len(),
+        1,
+        "several shafts must not multiply one boiler's capacity"
+    );
+    let (&shaft, drive) = drives.first_key_value().unwrap();
+    assert_eq!(drive.vehicle, id);
+    journal.replace_kinetic_states(std::collections::BTreeMap::from([(
+        shaft,
+        terra_core::kinetic::KineticState {
+            rpm: 40.0,
+            stress: 32.0,
+            capacity: 128.0,
+            available_capacity: 96.0,
+            overloaded: false,
+        },
+    )]));
+    let before = journal.gameplay().trains.vehicles[&id].steam;
+    crate::train_services::advance(&mut Default::default(), &chunks, &mut journal, 0.2).unwrap();
+    let after = journal.gameplay().trains.vehicles[&id].steam;
+    assert!(after.water < before.water && after.pressure_bar < before.pressure_bar);
+    journal
+        .gameplay_mut()
+        .trains
+        .vehicles
+        .get_mut(&id)
+        .unwrap()
+        .steam
+        .water = 0.0;
+    assert!(crate::train_services::mechanical_drives(&chunks, &journal).is_empty());
+}

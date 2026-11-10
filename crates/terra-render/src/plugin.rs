@@ -44,6 +44,7 @@ impl Plugin for TerraRenderPlugin {
         crate::chests::install(app);
         crate::trains::install(app);
         crate::train_blueprint::install(app);
+        crate::train_yards::install(app);
         crate::settlement_banners::install(app);
         crate::chunk_borders::install(app);
         crate::previews::install(app);

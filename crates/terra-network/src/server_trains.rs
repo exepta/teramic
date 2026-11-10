@@ -1444,7 +1444,11 @@ pub(super) fn drive(
         };
         handled.extend(group.iter().copied());
         let active = group.iter().any(|member| {
-            registry.vehicles[member].motion.speed_mps.abs() > 0.001
+            let car = &registry.vehicles[member];
+            (terra_core::train_power::steam_installed(&car.parts)
+                && (car.steam.pressure_bar > 0.0
+                    || car.steam.water > 0.0 && terra_world::train_motion::fuel_available(car)))
+                || registry.vehicles[member].motion.speed_mps.abs() > 0.001
                 || (registry.vehicles[member].motion.throttle != 0
                     && !registry.vehicles[member].motion.brake)
         });
@@ -1476,13 +1480,37 @@ pub(super) fn drive(
             source.motion.brake = true;
         }
         let mut candidates = Vec::new();
-        let result = terra_world::train_motion::advance(
-            &chunks,
-            &journal,
-            runtime.rail_cache.graph(),
-            &source,
-            dt,
-        );
+        let base_speed = terra_core::train_power::gear_speed(
+            source.motion.throttle,
+            terra_core::train_power::max_gear(&source.parts, source.steam),
+        )
+        .max(4.0);
+        let consist_limit = group.iter().try_fold(f64::INFINITY, |limit, id| {
+            let car = &registry.vehicles[id];
+            terra_world::train_motion::speed_limit(
+                &chunks,
+                &journal,
+                runtime.rail_cache.graph(),
+                car,
+                base_speed,
+                if car.motion.speed_mps.abs() > 0.001 {
+                    car.motion.speed_mps.signum()
+                } else {
+                    f64::from(source.motion.throttle)
+                },
+            )
+            .map(|next| limit.min(next))
+        });
+        let result = consist_limit.and_then(|limit| {
+            terra_world::train_motion::advance_with_speed_limit(
+                &chunks,
+                &journal,
+                runtime.rail_cache.graph(),
+                &source,
+                dt,
+                limit,
+            )
+        });
         let mut failure = None;
         match result {
             Ok(leader) => {

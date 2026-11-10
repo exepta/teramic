@@ -4,7 +4,7 @@ pub mod buckets;
 mod channels;
 pub(crate) mod fluid;
 #[cfg(any(feature = "bevy", test))]
-mod fluid_mesh;
+pub(crate) mod fluid_mesh;
 mod geometry;
 #[cfg(feature = "bevy")]
 mod motion;

@@ -134,11 +134,7 @@ pub fn bogie_supported_with_facing(
     }
     let mut supported = [false; 2];
     for piece in candidates.into_values() {
-        if !rails::complete(journal, piece)
-            || rails::cells(piece)
-                .into_iter()
-                .any(|cell| chunks.block_at(cell) != Some(piece.material))
-        {
+        if !rails::complete(journal, piece) {
             continue;
         }
         for path in piece.active_paths() {
@@ -167,7 +163,10 @@ pub fn bogie_supported_with_facing(
                     let nearest: [f64; 3] = std::array::from_fn(|i| previous[i] + delta[i] * t);
                     let error =
                         (nearest[0] - contact[0]).powi(2) + (nearest[2] - contact[2]).powi(2);
-                    if error <= 0.18_f64.powi(2) && (nearest[1] - contact[1]).abs() <= 0.08 {
+                    if error <= 0.18_f64.powi(2)
+                        && (nearest[1] - contact[1]).abs() <= 0.08
+                        && rails::local_loaded(chunks, piece, nearest)
+                    {
                         supported[index] = true;
                     }
                 }
@@ -494,6 +493,12 @@ pub fn plan_assembly_with_properties(
             .and_then(|(cell, _)| journal.furnace_at(*cell))
             .map_or(0.0, |state| f64::from(state.burn_remaining)),
     };
+    if vehicle.parts.iter().any(|part| part.material == 254) {
+        vehicle.steam = journal
+            .plumbing_at(station)
+            .and_then(|state| state.train_reserve)
+            .unwrap_or_default();
+    }
     vehicle.motion.fuel_available = crate::train_motion::fuel_available(&vehicle);
     if !vehicle.valid() {
         return Err(TrainError::Incomplete);

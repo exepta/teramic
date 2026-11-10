@@ -15,6 +15,7 @@ pub use draw_calls::{DrawCallSnapshot, DrawCallStatus, GpuSubdrawSnapshot};
 mod chests;
 mod settlement_banners;
 mod train_blueprint;
+mod train_yards;
 mod trains;
 pub use settlement_banners::VillageHeraldryStatus;
 pub use trains::workshop_preview::WorkshopPreviewImage;

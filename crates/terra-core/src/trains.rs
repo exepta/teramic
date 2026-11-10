@@ -171,6 +171,7 @@ pub enum TrainError {
     Wheelbase,
     MissingMaterials,
     GearLocked,
+    WaterCapacity,
 }
 impl std::fmt::Display for TrainError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

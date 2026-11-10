@@ -266,6 +266,9 @@ fn rejection(error: TrainError) -> &'static str {
         TrainError::GearLocked => {
             "Diese Fahrstufe benötigt einen längeren Kessel oder Wasser und mindestens 8 bar Dampfdruck."
         }
+        TrainError::WaterCapacity => {
+            "Wasserreserve der Montagestelle voll. Über ein Rohr in ein Becken leeren oder einen leeren Tankwagen befüllen."
+        }
         TrainError::Unsupported => {
             "Unter beiden Drehgestellen wird ein vollständiger, durchgehender Gleisabschnitt benötigt."
         }
@@ -383,8 +386,6 @@ fn page_capacity(world: &mut World) -> usize {
     if height / scale < 600.0 { 3 } else { 6 }
 }
 
-/// Search only the bounded station neighborhood, and validate both wheelsets
-/// against the same complete rails that the assembly authority accepts.
 fn blueprint(
     world: &World,
     station: [i64; 3],
@@ -392,153 +393,15 @@ fn blueprint(
     wheelbase: u8,
     width: u8,
 ) -> Option<TrainBlueprint> {
-    let chunks = world.get_resource::<terra_world::streaming::ChunkStore>()?;
-    let journal = world.get_resource::<terra_world::edits::EditJournal>()?;
-    let previous = world.get_resource::<TrainBlueprint>();
-    if let Some(previous) = previous.filter(|guide| guide.station == Some(station))
-        && let Some(chassis) = previous.cells.iter().find(|part| part.material == 210)
-        && train_blueprint::building_template_with_width(
-            chassis.cell,
-            chassis.facing,
-            kind,
-            wheelbase,
-            width,
-        )
-        .iter()
-        .filter(|part| part.material == 211)
-        .all(|part| {
-            terra_world::trains::bogie_supported_with_facing(
-                chunks,
-                journal,
-                part.cell,
-                part.facing,
-            )
-        })
-    {
-        return Some(TrainBlueprint {
-            station: Some(station),
-            kind,
-            cells: train_blueprint::building_template_with_width(
-                chassis.cell,
-                chassis.facing,
-                kind,
-                wheelbase,
-                width,
-            ),
-        });
-    }
-    let mut candidates = Vec::new();
-    let mut candidate = |chassis, facing, distance| {
-        let skeleton = train_blueprint::template_with_wheelbase(chassis, facing, kind, wheelbase);
-        if skeleton.is_empty() {
-            return;
-        }
-        if skeleton
-            .iter()
-            .filter(|part| part.material == 211)
-            .all(|part| {
-                terra_world::trains::bogie_supported_with_facing(
-                    chunks,
-                    journal,
-                    part.cell,
-                    part.facing,
-                )
-            })
-        {
-            let matched = skeleton
-                .iter()
-                .filter(|part| {
-                    train_blueprint::matches(
-                        **part,
-                        chunks.block_at(part.cell),
-                        journal
-                            .object_state(part.cell)
-                            .map_or(0, |state| state.facing),
-                    )
-                })
-                .count();
-            candidates.push((
-                chunks.block_at(chassis) != Some(210),
-                std::cmp::Reverse(matched),
-                distance,
-                facing,
-                train_blueprint::building_template_with_width(
-                    chassis, facing, kind, wheelbase, width,
-                ),
-            ));
-        }
-    };
-    let mut complete = std::collections::BTreeMap::new();
-    for x in -8_i64..=8 {
-        for y in -4_i64..=4 {
-            for z in -8_i64..=8 {
-                let cell = [station[0] + x, station[1] + y, station[2] + z];
-                if chunks.block_at(cell) == Some(210) {
-                    for facing in 0..4 {
-                        candidate(cell, facing, x * x + y * y + z * z);
-                    }
-                }
-                if !chunks
-                    .block_at(cell)
-                    .is_some_and(terra_core::rails::is_rail)
-                {
-                    continue;
-                }
-                let Some(piece) = terra_world::rails::owner_at(journal, cell) else {
-                    continue;
-                };
-                if !*complete
-                    .entry(piece.anchor)
-                    .or_insert_with(|| terra_world::rails::complete(journal, piece))
-                {
-                    continue;
-                }
-                for path in piece.active_paths() {
-                    let start = path.sample(0.0).position;
-                    let end = path.sample(1.0).position;
-                    let delta = [end[0] - start[0], end[2] - start[2]];
-                    let axis = usize::from(delta[0].abs() <= delta[1].abs()) * 2;
-                    let perpendicular = 2 - axis;
-                    if (end[1] - start[1]).abs() > 0.01
-                        || (end[perpendicular] - start[perpendicular]).abs() > 0.01
-                        || (start[perpendicular] - (cell[perpendicular] as f64 + 0.5)).abs() > 0.05
-                        || [0.25, 0.5, 0.75].into_iter().any(|t| {
-                            let point = path.sample(t).position;
-                            (point[perpendicular] - start[perpendicular]).abs() > 0.01
-                                || (point[1] - start[1]).abs() > 0.01
-                        })
-                    {
-                        continue;
-                    }
-                    let facing = if axis == 2 {
-                        if end[2] >= start[2] { 0 } else { 2 }
-                    } else if end[0] >= start[0] {
-                        1
-                    } else {
-                        3
-                    };
-                    for facing in [facing, (facing + 2) % 4] {
-                        candidate(
-                            [cell[0], cell[1] + 2, cell[2]],
-                            facing,
-                            x * x + y * y + z * z,
-                        );
-                    }
-                }
-            }
-        }
-    }
-    candidates.sort_by_key(|(empty, matched, distance, facing, cells)| {
-        (*empty, *matched, *distance, *facing, cells[0].cell)
-    });
-    candidates
-        .into_iter()
-        .next()
-        .map(|(_, _, _, _, cells)| TrainBlueprint {
-            station: Some(station),
-            kind,
-            cells,
-        })
+    terra_world::train_yard::blueprint(
+        world.get_resource::<terra_world::streaming::ChunkStore>()?,
+        world.get_resource::<terra_world::edits::EditJournal>()?,
+        world.get_resource::<TrainBlueprint>(),
+        station,
+        kind,
+        wheelbase,
+        width,
+    )
 }
 
 fn show_blueprint(world: &mut World, state: &mut TrainUiState) {
