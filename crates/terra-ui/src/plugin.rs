@@ -5,6 +5,7 @@ pub struct TerraUiPlugin;
 impl Plugin for TerraUiPlugin {
     fn build(&self, app: &mut App) {
         crate::cadence::install(app);
+        crate::localization::install(app);
         crate::biome_previews::install(app);
         crate::fonts::install(app);
         crate::text_editing::install(app);
@@ -16,6 +17,7 @@ impl Plugin for TerraUiPlugin {
         crate::inventory::install(app);
         crate::inventory_portrait::install(app);
         crate::kingdom::install(app);
+        crate::npc_work::install(app);
         crate::realm_title::install(app);
         crate::multiplayer::install(app);
         crate::survival::install(app);
@@ -66,9 +68,13 @@ impl Plugin for TerraUiPlugin {
             .init_resource::<__tilt_ui_generated_components::network_notice_component::PendingNotices>()
             .add_message::<terra_network::client::ReconnectRequest>()
             .add_plugins(
-                TiltUiPlugin::new(tilt_ui_component_catalog())
+                {
+                    let plugin = TiltUiPlugin::new(tilt_ui_component_catalog());
+                    let plugin = if let Some(configuration) = crate::localization::configuration() { plugin.with_localization(configuration) } else { plugin };
+                    plugin
                     .with_source_root(concat!(env!("CARGO_MANIFEST_DIR"), "/../../src-ui"))
-                    .without_camera(),
+                    .without_camera()
+                },
             )
             .add_systems(
                 Update,

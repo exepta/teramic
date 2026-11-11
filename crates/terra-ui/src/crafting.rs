@@ -548,6 +548,21 @@ fn can_load_crushing(recipe: &terra_core::crusher::CrusherRecipe, session: &Clie
             })
 }
 
+fn recipe_matches_search(
+    language: &crate::localization::SearchText,
+    query: &str,
+    key: &str,
+    name: &str,
+    output: ItemKind,
+    palette: &BlockPalette,
+) -> bool {
+    if key.to_lowercase().contains(query) || language.matches(query, name) {
+        return true;
+    }
+    let (name, _, description) = view::item_metadata(output, palette);
+    language.matches(query, &name) || language.matches(query, &description)
+}
+
 #[allow(clippy::too_many_arguments)]
 fn actions(
     mut slots: MessageReader<InventoryAction>,
@@ -562,6 +577,7 @@ fn actions(
     mouse: Res<ButtonInput<MouseButton>>,
     time: Res<Time>,
     mut wheel: MessageReader<MouseWheel>,
+    language: crate::localization::SearchText,
 ) {
     let Some(session) =
         session.filter(|s| s.ready && !s.dead() && !s.teleporting && inventory.open)
@@ -821,9 +837,16 @@ fn actions(
             }
             CraftingAction::Search(search) => {
                 state.search = search.chars().take(96).collect();
+                let query = state.search.to_lowercase();
                 if let Some(recipe) = book.iter().find(|r| {
-                    r.id.contains(&state.search)
-                        || r.name.to_lowercase().contains(&state.search.to_lowercase())
+                    recipe_matches_search(
+                        &language,
+                        &query,
+                        &r.id,
+                        &r.name,
+                        r.output.item,
+                        &palette,
+                    )
                 }) {
                     state.recipe_item = Some(recipe.output.item);
                     select_choice(
@@ -833,8 +856,14 @@ fn actions(
                         &session,
                     );
                 } else if let Some(recipe) = terra_core::furnace::recipes().iter().find(|r| {
-                    r.key.contains(&state.search)
-                        || r.name.to_lowercase().contains(&state.search.to_lowercase())
+                    recipe_matches_search(
+                        &language,
+                        &query,
+                        &r.key,
+                        &r.name,
+                        r.output.item,
+                        &palette,
+                    )
                 }) {
                     state.recipe_item = Some(recipe.output.item);
                     select_choice(
@@ -844,8 +873,14 @@ fn actions(
                         &session,
                     );
                 } else if let Some(recipe) = terra_core::crusher::recipes().iter().find(|r| {
-                    r.key.contains(&state.search)
-                        || r.name.to_lowercase().contains(&state.search.to_lowercase())
+                    recipe_matches_search(
+                        &language,
+                        &query,
+                        &r.key,
+                        &r.name,
+                        r.output.item,
+                        &palette,
+                    )
                 }) {
                     state.recipe_item = Some(recipe.output.item);
                     select_choice(
@@ -855,8 +890,14 @@ fn actions(
                         &session,
                     );
                 } else if let Some(recipe) = terra_core::brewing::recipes().iter().find(|r| {
-                    r.key.contains(&state.search)
-                        || r.name.to_lowercase().contains(&state.search.to_lowercase())
+                    recipe_matches_search(
+                        &language,
+                        &query,
+                        &r.key,
+                        &r.name,
+                        r.output().item,
+                        &palette,
+                    )
                 }) {
                     state.recipe_item = Some(recipe.output().item);
                     select_choice(&mut state, RecipeChoice::Brew(recipe), &inventory, &session);

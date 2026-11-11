@@ -1,0 +1,20 @@
+@if (menuView.in_game || !menuView.visible) { <game></game> }
+@if (menuView.visible) {
+<div id="menu-shell" class="menu-shell" [style]="menuView.style">
+  <div id="menu-content" class="menu-content" [style]="menuView.content_style">
+    @if (menuView.in_game) { <div class="game-shade"></div> } @else { @if (!menuView.startup || menuView.startup_fading) { <menu-background></menu-background> } }
+    @if (!menuView.in_game && !menuView.main && (!menuView.startup || menuView.startup_fading)) { <div class="menu-topbar"><div class="small-brand"><icon name="leaf" size="22" /><p>{{ i18n.text_teramic_8c2c17828466 }}</p></div><p class="build-label">{{ localizedUi.menuView.version }}</p></div> }
+    @if (menuView.main) { <main-menu></main-menu><div class="painted-main-version"><icon name="leaf" size="19" /><p>{{ localizedUi.menuView.version }}</p></div> }
+    @if (menuView.worlds) { <singleplayer></singleplayer> }
+    @if (menuView.servers) { <multiplayer></multiplayer> }
+    @if (menuView.options) { <options></options> }
+    @if (menuView.pause) { <game-menu></game-menu> }
+    @if (menuView.loading && !menuView.startup) { <loading-screen></loading-screen> }
+    @if (!menuView.loading) { <div class="page-message"><p class="error-text">{{ localizedUi.menuView.error }}</p><p>{{ localizedUi.menuView.status }}</p></div> }
+    @if (!menuView.in_game && !menuView.main && (!menuView.startup || menuView.startup_fading)) { <div class="menu-footer"><p>{{ i18n.text_explore_build_belong_8120f0c742e4 }}</p><icon name="leaf" size="20" /></div> }
+    <modal-dialog></modal-dialog>
+    <character-editor></character-editor>
+  </div>
+  @if (menuView.startup) { <div id="startup-overlay" class="startup-overlay" [style]="menuView.startup_style"><div class="startup-backdrop"></div><loading-screen></loading-screen></div> }
+</div>
+}

@@ -150,6 +150,10 @@ impl Surface {
                     Self::Stone
                 }
             }
+            Some(LumberjackStation | MarketStation | ButcherStation | FarmStation) => Self::Wood,
+            Some(SmithStation | ArmyStation | RailwayStation | MineStation | BishopStation) => {
+                Self::Stone
+            }
             Some(Grass) => Self::Grass,
             Some(Sand) => Self::Sand,
             Some(
@@ -443,6 +447,8 @@ mod tests {
         expected[268] = Wood;
         expected.push(Stone); // Rotating steel turntable deck.
         expected.push(Stone); // Steel rail builder scoop and frame.
+        // Station contacts follow their authored timber counters or masonry/metal bases.
+        expected.extend([Wood, Stone, Wood, Stone, Stone, Stone, Wood, Stone, Wood]);
         assert_eq!(
             expected.len(),
             usize::from(terra_voxel::MaterialId::LAST) + 1

@@ -353,6 +353,7 @@ impl From<Motion17> for terra_core::train_motion::TrainMotion {
     fn from(old: Motion17) -> Self {
         Self {
             rail_builder_active: false,
+            rail_builder_autoload: false,
             rail_clearance: Default::default(),
             translation: old.translation,
             pivot: old.pivot,
@@ -474,6 +475,7 @@ impl From<Motion18> for terra_core::train_motion::TrainMotion {
         Self {
             rail_builder_active: old.rail_builder_active,
             rail_clearance: Default::default(),
+            rail_builder_autoload: false,
             translation: old.translation,
             pivot: old.pivot,
             yaw: old.yaw,
@@ -493,6 +495,130 @@ impl From<terra_core::train_motion::TrainMotion> for Motion18 {
     fn from(old: terra_core::train_motion::TrainMotion) -> Self {
         Self {
             rail_builder_active: old.rail_builder_active,
+            translation: old.translation,
+            pivot: old.pivot,
+            yaw: old.yaw,
+            pitch: old.pitch,
+            speed_mps: old.speed_mps,
+            throttle: old.throttle,
+            brake: old.brake,
+            wheel_distance_m: old.wheel_distance_m,
+            fuel_available: old.fuel_available,
+            stop_reason: old.stop_reason,
+            cursor: old.cursor,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+pub(super) struct TrainIndex19 {
+    pub prior: TreeIndex,
+    pub trains: Registry19,
+}
+#[derive(Serialize, Deserialize)]
+pub(super) struct Registry19 {
+    pub next_id: u64,
+    pub revision: u64,
+    pub vehicles: BTreeMap<u64, Vehicle19>,
+}
+#[derive(Serialize, Deserialize)]
+pub(super) struct Vehicle19 {
+    pub name: String,
+    pub id: u64,
+    pub owner: PlayerUuid,
+    pub kind: VehicleKind,
+    pub anchor: [i64; 3],
+    pub parts: Vec<TrainPart>,
+    pub cargo: BTreeMap<u16, Inventory>,
+    pub blocks: BTreeMap<u16, terra_core::trains::TrainBlockView>,
+    pub payloads: BTreeMap<u16, Vec<u8>>,
+    pub motion: Motion19,
+    pub burn_seconds: f64,
+    pub steam: terra_core::train_power::SteamState,
+    pub couplings: [Option<Coupling>; 2],
+    pub revision: u64,
+}
+impl From<TrainIndex19> for TrainIndex {
+    fn from(old: TrainIndex19) -> Self {
+        Self {
+            prior: old.prior,
+            trains: terra_core::trains::TrainRegistry {
+                next_id: old.trains.next_id,
+                revision: old.trains.revision,
+                vehicles: old
+                    .trains
+                    .vehicles
+                    .into_iter()
+                    .map(|(id, car)| {
+                        (
+                            id,
+                            Vehicle {
+                                name: car.name,
+                                id: car.id,
+                                owner: car.owner,
+                                kind: car.kind,
+                                anchor: car.anchor,
+                                parts: car.parts,
+                                cargo: car.cargo,
+                                blocks: car.blocks,
+                                payloads: car.payloads,
+                                motion: car.motion.into(),
+                                burn_seconds: car.burn_seconds,
+                                steam: car.steam,
+                                couplings: car.couplings,
+                                revision: car.revision,
+                            },
+                        )
+                    })
+                    .collect(),
+            },
+        }
+    }
+}
+
+/// Frozen ID19 layout: postcard does not honor defaults for appended binary fields.
+#[derive(Serialize, Deserialize)]
+pub(super) struct Motion19 {
+    pub rail_builder_active: bool,
+    pub rail_clearance: terra_core::train_motion::RailClearance,
+    pub translation: [f64; 3],
+    pub pivot: [f64; 3],
+    pub yaw: f64,
+    pub pitch: f64,
+    pub speed_mps: f64,
+    pub throttle: i8,
+    pub brake: bool,
+    pub wheel_distance_m: f64,
+    pub fuel_available: bool,
+    pub stop_reason: terra_core::train_motion::StopReason,
+    pub cursor: Option<terra_core::train_motion::RailCursor>,
+}
+impl From<Motion19> for terra_core::train_motion::TrainMotion {
+    fn from(old: Motion19) -> Self {
+        Self {
+            rail_builder_active: old.rail_builder_active,
+            rail_builder_autoload: false,
+            rail_clearance: old.rail_clearance,
+            translation: old.translation,
+            pivot: old.pivot,
+            yaw: old.yaw,
+            pitch: old.pitch,
+            speed_mps: old.speed_mps,
+            throttle: old.throttle,
+            brake: old.brake,
+            wheel_distance_m: old.wheel_distance_m,
+            fuel_available: old.fuel_available,
+            stop_reason: old.stop_reason,
+            cursor: old.cursor,
+        }
+    }
+}
+#[cfg(test)]
+impl From<terra_core::train_motion::TrainMotion> for Motion19 {
+    fn from(old: terra_core::train_motion::TrainMotion) -> Self {
+        Self {
+            rail_builder_active: old.rail_builder_active,
+            rail_clearance: old.rail_clearance,
             translation: old.translation,
             pivot: old.pivot,
             yaw: old.yaw,

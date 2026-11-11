@@ -1,0 +1,942 @@
+[
+  {
+    "source": "A dependent settlement still occupies this territorial chunk.",
+    "de": "Eine abhängige Siedlung belegt diesen Territoriums-Chunk noch.",
+    "en": "A dependent settlement still occupies this territorial chunk."
+  },
+  {
+    "source": "A rail connection may be at most 64 blocks long.",
+    "de": "Eine Gleisverbindung darf höchstens 64 Blöcke lang sein.",
+    "en": "A rail connection may be at most 64 blocks long."
+  },
+  {
+    "source": "A rail module already occupies this anchor.",
+    "de": "An diesem Anker befindet sich bereits ein Gleismodul.",
+    "en": "A rail module already occupies this anchor."
+  },
+  {
+    "source": "A valid player identity is required.",
+    "de": "Eine gültige Spieleridentität ist erforderlich.",
+    "en": "A valid player identity is required."
+  },
+  {
+    "source": "All gameplay actions need a binding",
+    "de": "Alle Spielaktionen benötigen eine Tastenbelegung",
+    "en": "All gameplay actions need a binding"
+  },
+  {
+    "source": "AltLeft",
+    "de": "Alt links",
+    "en": "Left Alt"
+  },
+  {
+    "source": "AltLeft + {}",
+    "de": "Alt links + {}",
+    "en": "Left Alt + {}"
+  },
+  {
+    "source": "AltRight",
+    "de": "Alt rechts",
+    "en": "Right Alt"
+  },
+  {
+    "source": "AltRight + {}",
+    "de": "Alt rechts + {}",
+    "en": "Right Alt + {}"
+  },
+  {
+    "source": "An active kingdom already uses this name.",
+    "de": "Ein aktives Königreich verwendet diesen Namen bereits.",
+    "en": "An active kingdom already uses this name."
+  },
+  {
+    "source": "Anchor",
+    "de": "Anker",
+    "en": "Anchor"
+  },
+  {
+    "source": "ArrowDown",
+    "de": "Pfeil nach unten",
+    "en": "Down Arrow"
+  },
+  {
+    "source": "ArrowLeft",
+    "de": "Pfeil nach links",
+    "en": "Left Arrow"
+  },
+  {
+    "source": "ArrowRight",
+    "de": "Pfeil nach rechts",
+    "en": "Right Arrow"
+  },
+  {
+    "source": "ArrowUp",
+    "de": "Pfeil nach oben",
+    "en": "Up Arrow"
+  },
+  {
+    "source": "Backquote",
+    "de": "Gravis",
+    "en": "Backquote"
+  },
+  {
+    "source": "Backslash",
+    "de": "Umgekehrter Schrägstrich",
+    "en": "Backslash"
+  },
+  {
+    "source": "Backspace",
+    "de": "Rücktaste",
+    "en": "Backspace"
+  },
+  {
+    "source": "Bezier control points exceed the local rail span.",
+    "de": "Die Bézier-Kontrollpunkte liegen außerhalb der lokalen Gleisausdehnung.",
+    "en": "Bezier control points exceed the local rail span."
+  },
+  {
+    "source": "BracketLeft",
+    "de": "Eckige Klammer links",
+    "en": "Left Bracket"
+  },
+  {
+    "source": "BracketRight",
+    "de": "Eckige Klammer rechts",
+    "en": "Right Bracket"
+  },
+  {
+    "source": "Break Block / Prop",
+    "de": "Block / Objekt abbauen",
+    "en": "Break Block / Prop"
+  },
+  {
+    "source": "Build claims must connect to the Bergfried through Build claims; Territory must stay connected to your land.",
+    "de": "Bauansprüche müssen über andere Bauansprüche mit dem Bergfried verbunden sein; das Territorium muss mit deinem Land verbunden bleiben.",
+    "en": "Build claims must connect to the Bergfried through Build claims; Territory must stay connected to your land."
+  },
+  {
+    "source": "Builder",
+    "de": "Baumeister",
+    "en": "Builder"
+  },
+  {
+    "source": "Camera Perspective",
+    "de": "Kameraperspektive",
+    "en": "Camera Perspective"
+  },
+  {
+    "source": "CapsLock",
+    "de": "Feststelltaste",
+    "en": "Caps Lock"
+  },
+  {
+    "source": "Castle",
+    "de": "Burg",
+    "en": "Castle"
+  },
+  {
+    "source": "Cherry Grove",
+    "de": "Kirschhain",
+    "en": "Cherry Grove"
+  },
+  {
+    "source": "Choose a valid heraldry icon.",
+    "de": "Wähle ein gültiges Wappensymbol.",
+    "en": "Choose a valid heraldry icon."
+  },
+  {
+    "source": "Choose another active realm and a permitted diplomatic stance.",
+    "de": "Wähle ein anderes aktives Reich und eine erlaubte diplomatische Haltung.",
+    "en": "Choose another active realm and a permitted diplomatic stance."
+  },
+  {
+    "source": "Chunk Borders",
+    "de": "Chunk-Grenzen",
+    "en": "Chunk Borders"
+  },
+  {
+    "source": "Comma",
+    "de": "Komma",
+    "en": "Comma"
+  },
+  {
+    "source": "ContextMenu",
+    "de": "Kontextmenü",
+    "en": "Context Menu"
+  },
+  {
+    "source": "ControlLeft",
+    "de": "Strg links",
+    "en": "Left Ctrl"
+  },
+  {
+    "source": "ControlLeft + {}",
+    "de": "Strg links + {}",
+    "en": "Left Ctrl + {}"
+  },
+  {
+    "source": "ControlRight",
+    "de": "Strg rechts",
+    "en": "Right Ctrl"
+  },
+  {
+    "source": "ControlRight + {}",
+    "de": "Strg rechts + {}",
+    "en": "Right Ctrl + {}"
+  },
+  {
+    "source": "Copy Target Block (Creative)",
+    "de": "Anvisierten Block kopieren (Kreativmodus)",
+    "en": "Copy Target Block (Creative)"
+  },
+  {
+    "source": "Create Waypoint",
+    "de": "Wegpunkt erstellen",
+    "en": "Create Waypoint"
+  },
+  {
+    "source": "Crown",
+    "de": "Krone",
+    "en": "Crown"
+  },
+  {
+    "source": "Ctrl",
+    "de": "Strg",
+    "en": "Ctrl"
+  },
+  {
+    "source": "Debug Placement Bounds",
+    "de": "Platzierungsgrenzen anzeigen",
+    "en": "Debug Placement Bounds"
+  },
+  {
+    "source": "Dismount",
+    "de": "Absteigen",
+    "en": "Dismount"
+  },
+  {
+    "source": "Drop One Item",
+    "de": "Einen Gegenstand ablegen",
+    "en": "Drop One Item"
+  },
+  {
+    "source": "Drop Stack",
+    "de": "Stapel ablegen",
+    "en": "Drop Stack"
+  },
+  {
+    "source": "Duplicate input bindings",
+    "de": "Doppelte Tastenbelegungen",
+    "en": "Duplicate input bindings"
+  },
+  {
+    "source": "End",
+    "de": "Ende",
+    "en": "End"
+  },
+  {
+    "source": "Enter",
+    "de": "Eingabe",
+    "en": "Enter"
+  },
+  {
+    "source": "Equal",
+    "de": "Gleichheitszeichen",
+    "en": "Equals"
+  },
+  {
+    "source": "Escape",
+    "de": "Esc",
+    "en": "Escape"
+  },
+  {
+    "source": "Fantasy Mountains",
+    "de": "Fantasiegebirge",
+    "en": "Fantasy Mountains"
+  },
+  {
+    "source": "Fly Down / Mount Sprint",
+    "de": "Sinken / Reittier sprinten lassen",
+    "en": "Fly Down / Mount Sprint"
+  },
+  {
+    "source": "Found a kingdom at a placed Bergfried structure block.",
+    "de": "Gründe ein Königreich an einem gesetzten Bergfried-Strukturblock.",
+    "en": "Found a kingdom at a placed Bergfried structure block."
+  },
+  {
+    "source": "Founder",
+    "de": "Gründer",
+    "en": "Founder"
+  },
+  {
+    "source": "Hammer",
+    "de": "Hammer",
+    "en": "Hammer"
+  },
+  {
+    "source": "Hilly Plains",
+    "de": "Hügelige Ebene",
+    "en": "Hilly Plains"
+  },
+  {
+    "source": "Home",
+    "de": "Pos1",
+    "en": "Home"
+  },
+  {
+    "source": "Insert",
+    "de": "Einfg",
+    "en": "Insert"
+  },
+  {
+    "source": "Inspect Animal Stats",
+    "de": "Tierwerte untersuchen",
+    "en": "Inspect Animal Stats"
+  },
+  {
+    "source": "IntlBackslash",
+    "de": "Internationale Schrägstrichtaste",
+    "en": "International Backslash"
+  },
+  {
+    "source": "IntlRo",
+    "de": "Internationale Ro-Taste",
+    "en": "International Ro"
+  },
+  {
+    "source": "IntlYen",
+    "de": "Internationale Yen-Taste",
+    "en": "International Yen"
+  },
+  {
+    "source": "Invalid rail piece or pose.",
+    "de": "Ungültiges Gleismodul oder ungültige Ausrichtung.",
+    "en": "Invalid rail piece or pose."
+  },
+  {
+    "source": "Inventory / Materials",
+    "de": "Inventar / Materialien",
+    "en": "Inventory / Materials"
+  },
+  {
+    "source": "Join and manage a kingdom before founding this settlement.",
+    "de": "Tritt einem Königreich bei und übernimm dessen Verwaltung, bevor du diese Siedlung gründest.",
+    "en": "Join and manage a kingdom before founding this settlement."
+  },
+  {
+    "source": "Jump / Fly Up (Double Tap: Flight)",
+    "de": "Springen / Aufsteigen (doppelt tippen: Flugmodus)",
+    "en": "Jump / Fly Up (Double Tap: Flight)"
+  },
+  {
+    "source": "Leave the configured free-chunk border between city and kingdom/village build land.",
+    "de": "Halte zwischen dem Bauland einer Stadt und dem eines Königreichs oder Dorfs den festgelegten Abstand freier Chunks ein.",
+    "en": "Leave the configured free-chunk border between city and kingdom/village build land."
+  },
+  {
+    "source": "Leave the configured free-chunk border between kingdoms and outposts.",
+    "de": "Halte zwischen Königreichen und Außenposten den festgelegten Abstand freier Chunks ein.",
+    "en": "Leave the configured free-chunk border between kingdoms and outposts."
+  },
+  {
+    "source": "Map Zoom In",
+    "de": "Karte vergrößern",
+    "en": "Map Zoom In"
+  },
+  {
+    "source": "Map Zoom Out",
+    "de": "Karte verkleinern",
+    "en": "Map Zoom Out"
+  },
+  {
+    "source": "Member",
+    "de": "Mitglied",
+    "en": "Member"
+  },
+  {
+    "source": "Minus",
+    "de": "Minus",
+    "en": "Minus"
+  },
+  {
+    "source": "Missing {} binding",
+    "de": "Fehlende Belegung für {}",
+    "en": "Missing {} binding"
+  },
+  {
+    "source": "Mob Hitboxes",
+    "de": "Kreaturen-Trefferboxen",
+    "en": "Mob Hitboxes"
+  },
+  {
+    "source": "More than one rail module uses the same directed connection.",
+    "de": "Mehrere Gleismodule verwenden dieselbe gerichtete Verbindung.",
+    "en": "More than one rail module uses the same directed connection."
+  },
+  {
+    "source": "Mountain",
+    "de": "Berg",
+    "en": "Mountain"
+  },
+  {
+    "source": "Mountain Forest",
+    "de": "Bergwald",
+    "en": "Mountain Forest"
+  },
+  {
+    "source": "Mouse Back",
+    "de": "Maustaste Zurück",
+    "en": "Mouse Back"
+  },
+  {
+    "source": "Mouse Forward",
+    "de": "Maustaste Vorwärts",
+    "en": "Mouse Forward"
+  },
+  {
+    "source": "Mouse Left",
+    "de": "Linke Maustaste",
+    "en": "Left Mouse Button"
+  },
+  {
+    "source": "Mouse Middle",
+    "de": "Mittlere Maustaste",
+    "en": "Middle Mouse Button"
+  },
+  {
+    "source": "Mouse Other({})",
+    "de": "Maustaste {}",
+    "en": "Mouse Button {}"
+  },
+  {
+    "source": "Mouse Right",
+    "de": "Rechte Maustaste",
+    "en": "Right Mouse Button"
+  },
+  {
+    "source": "Mouse sensitivity must be 0.0001..0.02",
+    "de": "Die Mausempfindlichkeit muss zwischen 0,0001 und 0,02 liegen",
+    "en": "Mouse sensitivity must be 0.0001..0.02"
+  },
+  {
+    "source": "Move Backward",
+    "de": "Rückwärts bewegen",
+    "en": "Move Backward"
+  },
+  {
+    "source": "Move Forward",
+    "de": "Vorwärts bewegen",
+    "en": "Move Forward"
+  },
+  {
+    "source": "Move Left",
+    "de": "Nach links bewegen",
+    "en": "Move Left"
+  },
+  {
+    "source": "Move Right",
+    "de": "Nach rechts bewegen",
+    "en": "Move Right"
+  },
+  {
+    "source": "Move closer to this kingdom's Bergfried.",
+    "de": "Gehe näher an den Bergfried dieses Königreichs heran.",
+    "en": "Move closer to this kingdom's Bergfried."
+  },
+  {
+    "source": "No active rail route connects these endpoints.",
+    "de": "Keine aktive Gleisroute verbindet diese Endpunkte.",
+    "en": "No active rail route connects these endpoints."
+  },
+  {
+    "source": "NumLock",
+    "de": "Num-Feststelltaste",
+    "en": "Num Lock"
+  },
+  {
+    "source": "NumpadAdd",
+    "de": "Ziffernblock +",
+    "en": "Numpad +"
+  },
+  {
+    "source": "NumpadDecimal",
+    "de": "Ziffernblock Komma",
+    "en": "Numpad Decimal"
+  },
+  {
+    "source": "NumpadDivide",
+    "de": "Ziffernblock ÷",
+    "en": "Numpad ÷"
+  },
+  {
+    "source": "NumpadEnter",
+    "de": "Ziffernblock-Eingabe",
+    "en": "Numpad Enter"
+  },
+  {
+    "source": "NumpadMultiply",
+    "de": "Ziffernblock ×",
+    "en": "Numpad ×"
+  },
+  {
+    "source": "NumpadSubtract",
+    "de": "Ziffernblock −",
+    "en": "Numpad −"
+  },
+  {
+    "source": "Ocean & Coast",
+    "de": "Ozean und Küste",
+    "en": "Ocean & Coast"
+  },
+  {
+    "source": "Officer",
+    "de": "Offizier",
+    "en": "Officer"
+  },
+  {
+    "source": "Only the founder can change this kingdom.",
+    "de": "Nur der Gründer kann dieses Königreich ändern.",
+    "en": "Only the founder can change this kingdom."
+  },
+  {
+    "source": "Open Chat",
+    "de": "Chat öffnen",
+    "en": "Open Chat"
+  },
+  {
+    "source": "Open Command",
+    "de": "Befehlseingabe öffnen",
+    "en": "Open Command"
+  },
+  {
+    "source": "Open Full Map",
+    "de": "Vollbildkarte öffnen",
+    "en": "Open Full Map"
+  },
+  {
+    "source": "PageDown",
+    "de": "Bild ab",
+    "en": "Page Down"
+  },
+  {
+    "source": "PageUp",
+    "de": "Bild auf",
+    "en": "Page Up"
+  },
+  {
+    "source": "Pause",
+    "de": "Pause",
+    "en": "Pause"
+  },
+  {
+    "source": "Pause / Menu",
+    "de": "Pause / Menü",
+    "en": "Pause / Menu"
+  },
+  {
+    "source": "Period",
+    "de": "Punkt",
+    "en": "Period"
+  },
+  {
+    "source": "Place Block / Eat",
+    "de": "Block setzen / Essen",
+    "en": "Place Block / Eat"
+  },
+  {
+    "source": "Please wait before sending another kingdom request.",
+    "de": "Warte bitte, bevor du eine weitere Königreichsanfrage sendest.",
+    "en": "Please wait before sending another kingdom request."
+  },
+  {
+    "source": "Precision Flight",
+    "de": "Präziser Flug",
+    "en": "Precision Flight"
+  },
+  {
+    "source": "PrintScreen",
+    "de": "Druck",
+    "en": "Print Screen"
+  },
+  {
+    "source": "Protected Building",
+    "de": "Geschütztes Baugebiet",
+    "en": "Protected Building"
+  },
+  {
+    "source": "Quote",
+    "de": "Anführungszeichen",
+    "en": "Quote"
+  },
+  {
+    "source": "Realm Territory",
+    "de": "Reichsterritorium",
+    "en": "Realm Territory"
+  },
+  {
+    "source": "Release Cursor",
+    "de": "Mauszeiger freigeben",
+    "en": "Release Cursor"
+  },
+  {
+    "source": "Rolling Plains",
+    "de": "Sanft gewellte Ebene",
+    "en": "Rolling Plains"
+  },
+  {
+    "source": "ScrollLock",
+    "de": "Rollen",
+    "en": "Scroll Lock"
+  },
+  {
+    "source": "Semicolon",
+    "de": "Semikolon",
+    "en": "Semicolon"
+  },
+  {
+    "source": "ShiftLeft",
+    "de": "Umschalt links",
+    "en": "Left Shift"
+  },
+  {
+    "source": "ShiftLeft + {}",
+    "de": "Umschalt links + {}",
+    "en": "Left Shift + {}"
+  },
+  {
+    "source": "ShiftRight",
+    "de": "Umschalt rechts",
+    "en": "Right Shift"
+  },
+  {
+    "source": "ShiftRight + {}",
+    "de": "Umschalt rechts + {}",
+    "en": "Right Shift + {}"
+  },
+  {
+    "source": "Slash",
+    "de": "Schrägstrich",
+    "en": "Slash"
+  },
+  {
+    "source": "Snowy Highlands",
+    "de": "Verschneites Hochland",
+    "en": "Snowy Highlands"
+  },
+  {
+    "source": "Space",
+    "de": "Leertaste",
+    "en": "Space"
+  },
+  {
+    "source": "Spirit Forest",
+    "de": "Geisterwald",
+    "en": "Spirit Forest"
+  },
+  {
+    "source": "Sprint / Flight Boost / Dive",
+    "de": "Sprinten / Flugbeschleunigung / Tauchen",
+    "en": "Sprint / Flight Boost / Dive"
+  },
+  {
+    "source": "Star",
+    "de": "Stern",
+    "en": "Star"
+  },
+  {
+    "source": "SuperLeft",
+    "de": "Super links",
+    "en": "Left Super"
+  },
+  {
+    "source": "SuperLeft + {}",
+    "de": "Super links + {}",
+    "en": "Left Super + {}"
+  },
+  {
+    "source": "SuperRight",
+    "de": "Super rechts",
+    "en": "Right Super"
+  },
+  {
+    "source": "SuperRight + {}",
+    "de": "Super rechts + {}",
+    "en": "Right Super + {}"
+  },
+  {
+    "source": "Tab",
+    "de": "Tabulator",
+    "en": "Tab"
+  },
+  {
+    "source": "The Bergfried chunk must stay protected. Dissolve the settlement to release it.",
+    "de": "Der Bergfried-Chunk muss geschützt bleiben. Löse die Siedlung auf, um ihn freizugeben.",
+    "en": "The Bergfried chunk must stay protected. Dissolve the settlement to release it."
+  },
+  {
+    "source": "The Bergfried location is outside the world bounds.",
+    "de": "Der Standort des Bergfrieds liegt außerhalb der Weltgrenzen.",
+    "en": "The Bergfried location is outside the world bounds."
+  },
+  {
+    "source": "The Bergfried must be visible and unobstructed.",
+    "de": "Der Bergfried muss sichtbar sein und darf nicht verdeckt sein.",
+    "en": "The Bergfried must be visible and unobstructed."
+  },
+  {
+    "source": "The bounded rail search budget was exhausted.",
+    "de": "Das Suchlimit für Gleisrouten wurde erreicht.",
+    "en": "The bounded rail search budget was exhausted."
+  },
+  {
+    "source": "The founder must dissolve the kingdom before leaving.",
+    "de": "Der Gründer muss das Königreich vor dem Austritt auflösen.",
+    "en": "The founder must dissolve the kingdom before leaving."
+  },
+  {
+    "source": "The kingdom or member limit has been reached.",
+    "de": "Das Königreichs- oder Mitgliederlimit wurde erreicht.",
+    "en": "The kingdom or member limit has been reached."
+  },
+  {
+    "source": "The kingdom rules are invalid.",
+    "de": "Die Regeln des Königreichs sind ungültig.",
+    "en": "The kingdom rules are invalid."
+  },
+  {
+    "source": "The rail connection bends more tightly than its minimum radius.",
+    "de": "Der Kurvenradius der Gleisverbindung ist zu klein.",
+    "en": "The rail connection bends more tightly than its minimum radius."
+  },
+  {
+    "source": "The rail connection exceeds its maximum grade.",
+    "de": "Die Gleisverbindung überschreitet ihre maximale Steigung.",
+    "en": "The rail connection exceeds its maximum grade."
+  },
+  {
+    "source": "The rail connection exceeds its sampling budget.",
+    "de": "Die Gleisverbindung überschreitet das Limit für Stützpunkte.",
+    "en": "The rail connection exceeds its sampling budget."
+  },
+  {
+    "source": "The rail connection intersects its own track width.",
+    "de": "Die Gleisverbindung überschneidet sich innerhalb ihrer Gleisbreite.",
+    "en": "The rail connection intersects its own track width."
+  },
+  {
+    "source": "The rail connection reverses against its endpoint chord.",
+    "de": "Die Gleisverbindung kehrt entgegen der Richtung zwischen ihren Endpunkten um.",
+    "en": "The rail connection reverses against its endpoint chord."
+  },
+  {
+    "source": "The rail curve has no stable forward tangent.",
+    "de": "Die Gleiskurve hat keine stabile Vorwärtsrichtung.",
+    "en": "The rail curve has no stable forward tangent."
+  },
+  {
+    "source": "The rail endpoint does not exist.",
+    "de": "Der Gleisendpunkt existiert nicht.",
+    "en": "The rail endpoint does not exist."
+  },
+  {
+    "source": "The rail network has reached its piece limit.",
+    "de": "Das Gleisnetz hat sein Modullimit erreicht.",
+    "en": "The rail network has reached its piece limit."
+  },
+  {
+    "source": "This Bergfried already belongs to an active kingdom.",
+    "de": "Dieser Bergfried gehört bereits einem aktiven Königreich.",
+    "en": "This Bergfried already belongs to an active kingdom."
+  },
+  {
+    "source": "This bot must be alive, nearby and owned by an authorized settlement member.",
+    "de": "Dieser Bot muss leben, in der Nähe sein und einem berechtigten Siedlungsmitglied gehören.",
+    "en": "This bot must be alive, nearby and owned by an authorized settlement member."
+  },
+  {
+    "source": "This chunk belongs to another settlement or contains its Bergfried.",
+    "de": "Dieser Chunk gehört einer anderen Siedlung oder enthält deren Bergfried.",
+    "en": "This chunk belongs to another settlement or contains its Bergfried."
+  },
+  {
+    "source": "This chunk is not claimed by your settlement.",
+    "de": "Dieser Chunk wird nicht von deiner Siedlung beansprucht.",
+    "en": "This chunk is not claimed by your settlement."
+  },
+  {
+    "source": "This chunk is outside the claimable world.",
+    "de": "Dieser Chunk liegt außerhalb des beanspruchbaren Weltgebiets.",
+    "en": "This chunk is outside the claimable world."
+  },
+  {
+    "source": "This claim type has reached the settlement's level limit.",
+    "de": "Dieser Anspruchstyp hat das Limit für die Siedlungsstufe erreicht.",
+    "en": "This claim type has reached the settlement's level limit."
+  },
+  {
+    "source": "This kingdom has already been dissolved.",
+    "de": "Dieses Königreich wurde bereits aufgelöst.",
+    "en": "This kingdom has already been dissolved."
+  },
+  {
+    "source": "This kingdom no longer exists.",
+    "de": "Dieses Königreich existiert nicht mehr.",
+    "en": "This kingdom no longer exists."
+  },
+  {
+    "source": "This kingdom request has already been processed.",
+    "de": "Diese Königreichsanfrage wurde bereits verarbeitet.",
+    "en": "This kingdom request has already been processed."
+  },
+  {
+    "source": "This player is not a member of the kingdom.",
+    "de": "Dieser Spieler ist kein Mitglied des Königreichs.",
+    "en": "This player is not a member of the kingdom."
+  },
+  {
+    "source": "This settlement has reached the maximum level of 64.",
+    "de": "Diese Siedlung hat die Höchststufe 64 erreicht.",
+    "en": "This settlement has reached the maximum level of 64."
+  },
+  {
+    "source": "This settlement inherits its kingdom level under the current rules.",
+    "de": "Nach den aktuellen Regeln übernimmt diese Siedlung die Stufe ihres Königreichs.",
+    "en": "This settlement inherits its kingdom level under the current rules."
+  },
+  {
+    "source": "This settlement must be inside its kingdom's territorial claims.",
+    "de": "Diese Siedlung muss innerhalb der Territoriumsansprüche ihres Königreichs liegen.",
+    "en": "This settlement must be inside its kingdom's territorial claims."
+  },
+  {
+    "source": "Toggle Creative Flight",
+    "de": "Kreativflug umschalten",
+    "en": "Toggle Creative Flight"
+  },
+  {
+    "source": "Toggle HUD",
+    "de": "HUD umschalten",
+    "en": "Toggle HUD"
+  },
+  {
+    "source": "Toggle MiniMap",
+    "de": "Minikarte umschalten",
+    "en": "Toggle MiniMap"
+  },
+  {
+    "source": "Tree",
+    "de": "Baum",
+    "en": "Tree"
+  },
+  {
+    "source": "Unrecognized key or repeated key in chord",
+    "de": "Unbekannte Taste oder dieselbe Taste mehrfach in einer Tastenkombination",
+    "en": "Unrecognized key or repeated key in chord"
+  },
+  {
+    "source": "Use / Eat Selected Item",
+    "de": "Ausgewählten Gegenstand benutzen / essen",
+    "en": "Use / Eat Selected Item"
+  },
+  {
+    "source": "Use 1–32 printable characters for the kingdom name.",
+    "de": "Verwende 1 bis 32 darstellbare Zeichen für den Namen des Königreichs.",
+    "en": "Use 1–32 printable characters for the kingdom name."
+  },
+  {
+    "source": "Villages and cities use their kingdom's territory; claim build land only.",
+    "de": "Dörfer und Städte nutzen das Territorium ihres Königreichs; beanspruche nur Bauland.",
+    "en": "Villages and cities use their kingdom's territory; claim build land only."
+  },
+  {
+    "source": "Visitor",
+    "de": "Besucher",
+    "en": "Visitor"
+  },
+  {
+    "source": "Worker",
+    "de": "Arbeiter",
+    "en": "Worker"
+  },
+  {
+    "source": "You already belong to an active kingdom.",
+    "de": "Du gehörst bereits einem aktiven Königreich an.",
+    "en": "You already belong to an active kingdom."
+  },
+  {
+    "source": "You cannot manage a kingdom in the current player state.",
+    "de": "In deinem aktuellen Zustand kannst du kein Königreich verwalten.",
+    "en": "You cannot manage a kingdom in the current player state."
+  },
+  {
+    "source": "Your inventory does not contain the stone walls and gold ingots needed for this upgrade.",
+    "de": "In deinem Inventar fehlen die für diesen Ausbau benötigten Steinmauern und Goldbarren.",
+    "en": "Your inventory does not contain the stone walls and gold ingots needed for this upgrade."
+  },
+  {
+    "source": "Your kingdom level does not allow another outpost.",
+    "de": "Deine Königreichsstufe erlaubt keinen weiteren Außenposten.",
+    "en": "Your kingdom level does not allow another outpost."
+  },
+  {
+    "source": "Your kingdom must reach the configured level before founding a city.",
+    "de": "Dein Königreich muss vor der Stadtgründung die festgelegte Stufe erreichen.",
+    "en": "Your kingdom must reach the configured level before founding a city."
+  },
+  {
+    "source": "Your kingdom role does not permit this action.",
+    "de": "Deine Rolle im Königreich erlaubt diese Aktion nicht.",
+    "en": "Your kingdom role does not permit this action."
+  },
+  {
+    "source": "{} + AltLeft",
+    "de": "{} + Alt links",
+    "en": "{} + Left Alt"
+  },
+  {
+    "source": "{} + AltRight",
+    "de": "{} + Alt rechts",
+    "en": "{} + Right Alt"
+  },
+  {
+    "source": "{} + ControlLeft",
+    "de": "{} + Strg links",
+    "en": "{} + Left Ctrl"
+  },
+  {
+    "source": "{} + ControlRight",
+    "de": "{} + Strg rechts",
+    "en": "{} + Right Ctrl"
+  },
+  {
+    "source": "{} + ShiftLeft",
+    "de": "{} + Umschalt links",
+    "en": "{} + Left Shift"
+  },
+  {
+    "source": "{} + ShiftRight",
+    "de": "{} + Umschalt rechts",
+    "en": "{} + Right Shift"
+  },
+  {
+    "source": "{} + SuperLeft",
+    "de": "{} + Super links",
+    "en": "{} + Left Super"
+  },
+  {
+    "source": "{} + SuperRight",
+    "de": "{} + Super rechts",
+    "en": "{} + Right Super"
+  },
+  {
+    "source": "{} + {}",
+    "de": "{} + {}",
+    "en": "{} + {}"
+  },
+  {
+    "source": "{} is already assigned to {}",
+    "de": "{} ist bereits {} zugewiesen",
+    "en": "{} is already assigned to {}"
+  }
+]

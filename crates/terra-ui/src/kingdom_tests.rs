@@ -356,7 +356,7 @@ fn disconnect_clears_only_owned_focus_and_closes_the_panel() {
 #[test]
 fn kingdom_template_styles_use_registered_components_and_parse() {
     tilt_ui::tilt_ui_css::parse_stylesheet(include_str!(
-        "../../../src-ui/components/kingdom-menu.component.css"
+        "../../../src-ui/components/kingdom-menu/kingdom-menu.component.css"
     ))
     .unwrap();
     assert!(
@@ -364,7 +364,8 @@ fn kingdom_template_styles_use_registered_components_and_parse() {
             .iter()
             .any(|component| component.name == "kingdom-menu")
     );
-    let template = include_str!("../../../src-ui/components/kingdom-menu.component.html");
+    let template =
+        include_str!("../../../src-ui/components/kingdom-menu/kingdom-menu.component.html");
     for id in [
         "kingdom-dialog",
         "kingdom-name",

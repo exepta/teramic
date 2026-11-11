@@ -357,6 +357,9 @@ fn shot(world: &mut World, gallery: &mut Gallery, name: &str) -> Result<(), Stri
 }
 
 pub(crate) fn run(world: &mut World) -> Result<bool, String> {
+    if crate::npc_work_smoke::requested() {
+        return crate::npc_work_smoke::run(world);
+    }
     if !world.contains_resource::<Gallery>() {
         world.insert_resource(Gallery {
             step: 0,

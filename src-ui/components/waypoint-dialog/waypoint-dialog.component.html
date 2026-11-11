@@ -1,0 +1,27 @@
+@if (!fullMapView.icon_picker) {
+<div class="waypoint-dialog-backdrop">
+  <div id="waypoint-dialog" class="waypoint-dialog" [style]="fullMapView.editor_style">
+    <ornate-frame></ornate-frame>
+    <div class="waypoint-dialog-header"><icon name="map-pin" size="32" /><h2>{{ localizedUi.fullMapView.deleting ? localizedUi.messages.text_delete_waypoint_9488c87ee75c : localizedUi.messages.text_waypoint_d7cfab3c32d0 }}</h2></div><button id="fullmap-cancel" class="map-icon-button waypoint-dialog-close" [title]="i18n.text_close_7d9eb7acb13e" onclick="fullmap_action"><icon name="close" size="32" /></button>
+    @if (fullMapView.error) { <p class="full-map-error">{{ localizedUi.fullMapView.error }}</p> }
+    @if (fullMapView.deleting) {
+      <p class="waypoint-delete-label">{{ i18n.text_delete_the_selected_waypoint_34fd8f5f322e }}</p><div class="full-map-editor-actions"><button id="fullmap-delete-confirm" class="map-command" onclick="fullmap_action"><icon name="trash" size="16" />{{ i18n.text_delete_e2d0a54968ea }}</button><button id="fullmap-delete-cancel" class="map-command" onclick="fullmap_action">{{ i18n.text_cancel_19766ed6ccb2 }}</button></div>
+    } @else {
+      <div class="full-map-editor">
+        <label>{{ i18n.text_name_dcd1d5223f73 }}</label><input id="fullmap-name" type="text" maxlength="48" [value]="fullMapView.name" onchange="fullmap_change" />
+        <div class="full-map-coordinate-inputs"><div><label>X</label><input id="fullmap-x" type="text" maxlength="32" [value]="fullMapView.x" onchange="fullmap_change" /></div><div><label>Y</label><input id="fullmap-y" type="text" maxlength="32" [value]="fullMapView.y" onchange="fullmap_change" /></div><div><label>Z</label><input id="fullmap-z" type="text" maxlength="32" [value]="fullMapView.z" onchange="fullmap_change" /></div></div>
+        <div class="waypoint-appearance"><div class="waypoint-color"><label>{{ i18n.text_marker_color_f0b964856b9e }}</label><color-picker id="fullmap-color" [value]="fullMapView.color" onchange="fullmap_change" /></div><div class="waypoint-icon"><label>{{ i18n.text_marker_icon_5cf027cc7544 }}</label><button id="fullmap-icon" class="waypoint-icon-select" onclick="fullmap_action" onchange="fullmap_change" [title]="i18n.text_choose_icon_1ae4fec7b2da"><icon name="map-pin" size="32" [src]="fullMapView.icon_source" /><icon name="chevron-down" size="16" /></button></div></div>
+        <div class="full-map-world-toggle"><label>{{ i18n.text_show_in_world_9ec765072a79 }}</label><switch-button class="copper-setting-switch" id="fullmap-world" [checked]="fullMapView.show_in_world" onchange="fullmap_change" /></div>
+      </div>
+      <div class="full-map-editor-actions"><button id="fullmap-save" class="map-command primary" [disabled]="!fullMapView.available" onclick="fullmap_action"><icon name="check" size="16" />{{ i18n.text_save_waypoint_c670e13cbb8e }}</button><button id="fullmap-cancel" class="map-command" onclick="fullmap_action">{{ i18n.text_cancel_19766ed6ccb2 }}</button></div>
+    }
+  </div>
+</div>
+}
+@if (fullMapView.icon_picker) {
+  <div class="waypoint-icon-backdrop"><div id="waypoint-icon-picker" class="waypoint-icon-picker" [style]="fullMapView.picker_style"><ornate-frame></ornate-frame>
+    <div class="waypoint-dialog-header"><h2>{{ i18n.text_waypoint_icon_e60e57836529 }}</h2></div><button id="fullmap-icons-close" class="map-icon-button waypoint-dialog-close" [title]="i18n.text_close_icon_picker_e220b82cb44c" onclick="fullmap_action"><icon name="close" size="32" /></button>
+    <input id="fullmap-icon-search" class="waypoint-icon-search" type="text" [placeholder]="i18n.text_search_icons_9a6b4e9be2f3" [value]="fullMapView.icon_search" onchange="fullmap_change" />
+    <div class="waypoint-icon-grid">@for (item of localizedUi.fullMapView.icons; track item.key) { <button id="fullmap-icon-option" [class]="item.selected ? 'waypoint-icon-option selected' : 'waypoint-icon-option'" [title]="item.title" onclick="$set(fullMapIntent.value, item.key); fullmap_icon_select"><icon name="map-pin" size="32" [src]="item.source" /></button> }</div>
+  </div></div>
+}

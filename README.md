@@ -1,5 +1,12 @@
 # Project Terra
 
+Neu: [Gleisleger mit Schotterfundamenten und Wagenbeladung](docs/train-excavation.md)
+sowie [NPC-Arbeitsauftraege (F58)](docs/npc-work.md) mit Gebieten, Lageranbindung,
+Prioritaeten und Statusanzeige im Bergfried. F61 ergaenzt produktive Holzfaeller
+und neun Berufsstationen. [Deutsch/Englisch (F72)](docs/localization.md) laesst
+sich in den Gameplay-Einstellungen je Profil waehlen. Client und Server verwenden
+gemeinsam Protokoll 135; aeltere Spielstaende werden migriert.
+
 Aktueller UI-/Wetterabgleich: gemeinsame Inventar-/Katalogslots, ueberarbeitete
 Rahmen und Karten, begrenzte Wegpunktanzeige und sichere Wasserabfragen bei
 Wetter-Edits. [Phase 187: Pruefbericht](tools/benchmarks/results/inventory-frame-weather-2026-11-03/README.md).
@@ -58,6 +65,11 @@ Die Implementierung liegt in fachlich benannten Modulen:
 | apps/server | Gemeinsamer Headless-Bootstrap fuer Integrated/Dedicated Server, verwalteter Serverthread, automatischer Join-Handshake und Signalbehandlung |
 
 `src-ui/` enthaelt die echten TiltUI-Komponententripel, Einstellungsmenue, Overlay und Fadenkreuz.
+Jede Komponente liegt zusammen in `src-ui/components/<name>/` mit
+`<name>.component.rs`, `.html` und `.css`; Seiten folgen demselben Muster unter
+`src-ui/pages/<name>/`. `index.html`, geteilte `styles/` und `assets/` bleiben
+am UI-Root. TiltUI entdeckt diese Ordner rekursiv und behaelt die bestehenden
+Komponentennamen bei.
 `configs/` enthaelt client.toml, server.toml und world.toml sowie die gespeicherten Menue-Einstellungen.
 `assets/terra/blocks/` enthaelt datengetriebene Cube-/Spezialdefinitionen, vier gemeinsam genutzte
 aktive PNG-Texturen und sieben wiederverwendete prozedurale Texturmuster. Die zehn nicht mehr benoetigten Standard-GLBs,

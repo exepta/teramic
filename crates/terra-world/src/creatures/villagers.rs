@@ -675,7 +675,7 @@ fn local_exit(a: &Creature, h: &Habitat, dt: f32) -> Option<[f64; 3]> {
     })
 }
 
-fn walk(
+pub(super) fn walk(
     a: &mut Creature,
     h: &Habitat,
     target: [f64; 3],

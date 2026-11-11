@@ -13,7 +13,9 @@ use terra_core::{
 use terra_voxel::global_to_section;
 
 mod clearing;
-pub use clearing::{ClearancePlan, HEIGHT, WIDTH, plan_clearance};
+mod foundation;
+pub use clearing::{ClearancePlan, HEIGHT, WIDTH, extension_in_reach, plan_clearance};
+pub use foundation::MAX_FOUNDATION_DEPTH;
 
 pub const SPEED: f64 = 3.0;
 
@@ -161,9 +163,10 @@ fn plan_with_clearance(
     )?;
     let mut clearance_cells = clearing::cells(&sweep_columns, anchor[1], size.height);
     clearance_cells.extend(extra_clearance.iter().copied());
-    // A pitched vehicle can sweep through the extension's support level.
-    // The ballast transaction owns these cells and accounts for their drops once.
-    clearance_cells.retain(|cell| cell[1] != floor_y || !columns.contains(&[cell[0], cell[2]]));
+    let foundation = foundation::plan(chunks, journal, &columns, floor_y)?;
+    // A pitched vehicle can sweep through the support level. The foundation
+    // owns its fill and bearing cells so excavation cannot remove their support.
+    clearance_cells.retain(|cell| !foundation.read_cells.contains(cell));
     let clearance = clearing::collect(chunks, journal, clearance_cells)?;
     let mut edits: BTreeMap<_, _> = clearance
         .layout
@@ -173,48 +176,17 @@ fn plan_with_clearance(
         .collect();
     let mut drops = clearance.drops;
     let cleared = clearance.cleared;
-    let mut ballast = 0;
-    for [x, z] in columns {
-        let cell = [x, floor_y, z];
-        let old = chunks
-            .block_at(cell)
-            .ok_or("Arbeitsbereich noch nicht geladen")?;
-        if journal.object_state(cell).is_some() || journal.fluid(cell).is_some_and(|f| f.amount > 0)
-        {
-            return Err("Gebautes Objekt oder Wasser unter dem Gleisbett".into());
-        }
-        if old == 206 {
-            continue;
-        }
-        if old != 0 && !earth(old) {
-            return Err("Geschützter Boden unter dem Gleisbett".into());
-        }
-        if old == 0 && !chunks.block_at([x, floor_y - 1, z]).is_some_and(earth) {
-            return Err("Boden liegt mehr als einen Block tiefer".into());
-        }
-        ballast += 1;
-        if old != 0 {
-            for stack in clearing::block_drops(journal, cell, old) {
-                drops.push((
-                    [x as f64 + 0.5, floor_y as f64 + 1.5, z as f64 + 0.5],
-                    stack,
-                ));
-            }
-        }
-        edits.insert(
-            cell,
-            BlockEditRequest {
-                position: cell,
-                expected_material: old,
-                material: 206,
-            },
-        );
+    let ballast = foundation.edits.len() as u16;
+    drops.extend(foundation.drops);
+    for edit in foundation.edits {
+        edits.insert(edit.position, edit);
     }
     // Project only the handful of affected sections; never clone the whole world.
     let mut projected = ChunkStore::default();
     let owners: BTreeSet<_> = edits
         .keys()
         .chain(cells.iter())
+        .chain(foundation.read_cells.iter())
         .map(|p| global_to_section(*p).0)
         .collect();
     for owner in owners {
@@ -465,7 +437,7 @@ mod tests {
         }
     }
     #[test]
-    fn earthworks_fill_one_block_clear_nine_blocks_and_reject_large_gaps_or_machines() {
+    fn earthworks_fill_gaps_clear_nine_blocks_and_reject_protected_ground() {
         let mut chunks = terrain();
         let journal = EditJournal::default();
         let port = Piece::seed([0, 10, 0], 0).unwrap().ports()[1];
@@ -480,7 +452,10 @@ mod tests {
         set(&mut chunks, floor, 0);
         assert!(plan(&chunks, &journal, port, WoodSpecies::Oak).is_ok());
         set(&mut chunks, [floor[0], floor[1] - 1, floor[2]], 0);
+        assert!(plan(&chunks, &journal, port, WoodSpecies::Oak).is_ok());
+        set(&mut chunks, [floor[0], floor[1] - 2, floor[2]], 29);
         assert!(plan(&chunks, &journal, port, WoodSpecies::Oak).is_err());
+        set(&mut chunks, [floor[0], floor[1] - 2, floor[2]], 3);
         set(&mut chunks, floor, 3);
         set(&mut chunks, [floor[0], floor[1] + 1, floor[2]], 3);
         assert!(plan(&chunks, &journal, port, WoodSpecies::Oak).is_ok());
@@ -588,6 +563,65 @@ mod tests {
                 .filter(|edit| edit.position != front)
                 .all(|edit| chunks.block_at(edit.position) == Some(edit.expected_material))
         );
+    }
+
+    #[test]
+    fn deep_foundations_are_counted_and_revalidated_with_the_whole_rail_transaction() {
+        let mut chunks = terrain();
+        let mut journal = EditJournal::default();
+        let port = Piece::seed([0, 10, 0], 0).unwrap().ports()[1];
+        let initial = plan(&chunks, &journal, port, WoodSpecies::Oak).unwrap();
+        let original_ballast = initial.ballast;
+        let floor = initial
+            .layout
+            .edits
+            .iter()
+            .find(|edit| edit.material == 206)
+            .unwrap()
+            .position;
+        for depth in 0..=2 {
+            set(&mut chunks, [floor[0], floor[1] - depth, floor[2]], 0);
+        }
+        let prepared = plan(&chunks, &journal, port, WoodSpecies::Oak).unwrap();
+        assert_eq!(prepared.ballast, original_ballast + 2);
+        let expected = prepared.layout.edits.clone();
+        let support = [floor[0], floor[1] - 3, floor[2]];
+        set(&mut chunks, support, 29);
+        assert!(prepared.commit(&mut chunks, &mut journal).is_err());
+        assert!(
+            expected
+                .iter()
+                .all(|edit| { chunks.block_at(edit.position) == Some(edit.expected_material) })
+        );
+        assert_eq!(journal.rail_epoch(), 0);
+        set(&mut chunks, support, 3);
+        let prepared = plan(&chunks, &journal, port, WoodSpecies::Oak).unwrap();
+        prepared.commit(&mut chunks, &mut journal).unwrap();
+        for depth in 0..=2 {
+            assert_eq!(
+                chunks.block_at([floor[0], floor[1] - depth, floor[2]]),
+                Some(206)
+            );
+        }
+        assert_eq!(chunks.block_at(support), Some(3));
+    }
+
+    #[test]
+    fn existing_ballast_is_projected_across_a_vertical_section_boundary_without_consumption() {
+        let mut chunks = ChunkStore::default();
+        let mut journal = EditJournal::default();
+        for x in -8..=8 {
+            for z in -8..=8 {
+                for y in 15..=30 {
+                    set(&mut chunks, [x, y, z], if y == 15 { 206 } else { 0 });
+                }
+            }
+        }
+        let port = Piece::seed([-1, 16, -1], 0).unwrap().ports()[1];
+        let prepared = plan(&chunks, &journal, port, WoodSpecies::Oak).unwrap();
+        assert_eq!(prepared.ballast(), 0);
+        prepared.commit(&mut chunks, &mut journal).unwrap();
+        assert_eq!(journal.rail_epoch(), 1);
     }
 
     #[test]

@@ -15,9 +15,10 @@ terra-world = { workspace = true, features = ["bevy"] }
 terra-voxel.workspace = true
 terra-player.workspace = true
 terra-network = { workspace = true, features = ["client"] }
-tilt-ui = { workspace = true, features = ["tilt-icons"] }
+tilt-ui = { workspace = true, features = ["tilt-icons", "fluent"] }
 serde.workspace = true
 serde_json.workspace = true
+fluent-bundle = "0.16"
 
 [build-dependencies]
 tilt-ui-build.workspace = true

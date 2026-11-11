@@ -1,6 +1,45 @@
 use super::{Config, ConfigError, ensure};
 use serde::{Deserialize, Serialize};
 
+/// Client preference; never changes identifiers or the authoritative world.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub enum GameLanguage {
+    #[default]
+    #[serde(rename = "de")]
+    German,
+    #[serde(rename = "en")]
+    English,
+}
+
+impl GameLanguage {
+    pub const fn locale(self) -> &'static str {
+        match self {
+            Self::German => "de-DE",
+            Self::English => "en-US",
+        }
+    }
+
+    pub const fn code(self) -> &'static str {
+        match self {
+            Self::German => "de",
+            Self::English => "en",
+        }
+    }
+}
+
+/// Stored beside local profiles, rather than in server-owned player state.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default, deny_unknown_fields)]
+pub struct LanguagePreference {
+    pub language: GameLanguage,
+}
+
+impl Config for LanguagePreference {
+    fn validate(&self) -> Result<(), ConfigError> {
+        Ok(())
+    }
+}
+
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum MapMode {
@@ -62,6 +101,7 @@ impl Default for MinimapConfig {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct GameplayConfig {
+    pub language: GameLanguage,
     pub minimap: MinimapConfig,
     pub heartbeat: bool,
     pub view_bobbing: bool,
@@ -87,6 +127,7 @@ fn deserialize_rgb<'de, D: serde::Deserializer<'de>>(deserializer: D) -> Result<
 impl Default for GameplayConfig {
     fn default() -> Self {
         Self {
+            language: GameLanguage::default(),
             minimap: MinimapConfig::default(),
             heartbeat: true,
             view_bobbing: true,
@@ -122,6 +163,53 @@ impl Config for GameplayConfig {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn language_defaults_legacy_configs_and_both_supported_codes_roundtrip() {
+        assert_eq!(GameLanguage::default(), GameLanguage::German);
+        assert_eq!(
+            GameplayConfig::from_toml("").unwrap().language,
+            GameLanguage::German
+        );
+        assert_eq!(
+            LanguagePreference::from_toml("").unwrap().language,
+            GameLanguage::German
+        );
+        for (language, code, locale) in [
+            (GameLanguage::German, "de", "de-DE"),
+            (GameLanguage::English, "en", "en-US"),
+        ] {
+            assert_eq!(language.code(), code);
+            assert_eq!(language.locale(), locale);
+            let input = format!("language = '{code}'");
+            let gameplay = GameplayConfig::from_toml(&input).unwrap();
+            assert_eq!(gameplay.language, language);
+            gameplay.validate().unwrap();
+            let encoded = toml::to_string(&gameplay).unwrap();
+            assert_eq!(GameplayConfig::from_toml(&encoded).unwrap(), gameplay);
+            let preference = LanguagePreference::from_toml(&input).unwrap();
+            assert_eq!(preference.language, language);
+            preference.validate().unwrap();
+            let encoded = toml::to_string(&preference).unwrap();
+            assert_eq!(LanguagePreference::from_toml(&encoded).unwrap(), preference);
+        }
+    }
+
+    #[test]
+    fn unsupported_languages_and_unknown_preference_fields_are_rejected() {
+        for input in [
+            "language = 'fr'",
+            "language = 'de-DE'",
+            "language = 'EN'",
+            "language = ''",
+            "language = 7",
+            "language = false",
+        ] {
+            assert!(GameplayConfig::from_toml(input).is_err(), "{input}");
+            assert!(LanguagePreference::from_toml(input).is_err(), "{input}");
+        }
+        assert!(LanguagePreference::from_toml("language = 'de'\nlocale = 'en-US'").is_err());
+    }
 
     #[test]
     fn minimap_defaults_partial_configs_and_bounds_are_validated() {

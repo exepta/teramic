@@ -81,6 +81,9 @@ pub struct ContainerRequest(pub crate::protocol::inventory::ContainerCommand);
 pub struct KingdomRequest(pub crate::protocol::kingdom::KingdomCommand);
 
 #[derive(Message, Clone, Debug)]
+pub struct NpcWorkRequest(pub crate::protocol::npc_work::WorkCommand);
+
+#[derive(Message, Clone, Debug)]
 pub struct TrainRequest(pub crate::protocol::trains::TrainCommand);
 
 #[derive(Resource, Default)]
@@ -280,6 +283,9 @@ pub fn disconnect_session(world: &mut World) {
     session.watering_reserve = (0, 0);
     session.infusion.clear();
     session.kingdoms = Default::default();
+    session.work = Default::default();
+    session.last_work_result = None;
+    session.work_request = 0;
     session.trains = Default::default();
     session.train_cargo = None;
     session.train_seat = None;
@@ -310,6 +316,9 @@ pub struct ClientSession {
     train_request: u64,
     tree_patch_signature: Option<u64>,
     pub kingdoms: terra_core::kingdom::KingdomRegistry,
+    pub work: crate::protocol::npc_work::WorkSnapshot,
+    pub last_work_result: Option<crate::protocol::npc_work::WorkResult>,
+    work_request: u64,
     pub last_kingdom_result: Option<crate::protocol::kingdom::KingdomResult>,
     pub kingdom_response: u64,
     pub sleepers: Vec<SleepingPlayer>,
@@ -386,6 +395,9 @@ impl Default for ClientSession {
             train_response: 0,
             train_request: 0,
             kingdoms: Default::default(),
+            work: Default::default(),
+            last_work_result: None,
+            work_request: 0,
             trees: Default::default(),
             tree_patch_signature: None,
             last_kingdom_result: None,
@@ -541,6 +553,16 @@ impl ClientSession {
             action,
         }))
     }
+    pub fn make_work_request(
+        &mut self,
+        action: crate::protocol::npc_work::WorkAction,
+    ) -> Option<NpcWorkRequest> {
+        self.work_request = self.work_request.checked_add(1)?;
+        Some(NpcWorkRequest(crate::protocol::npc_work::WorkCommand {
+            request: self.work_request,
+            action,
+        }))
+    }
     pub fn confirmed_state(&self) -> Option<PlayerState> {
         self.latest.map(|(_, state)| state)
     }
@@ -677,6 +699,9 @@ impl ClientSession {
         true
     }
     fn fail(&mut self, error: impl Into<String>) {
+        self.work = Default::default();
+        self.last_work_result = None;
+        self.work_request = 0;
         self.kingdoms = Default::default();
         self.trains = Default::default();
         self.train_cargo = None;
@@ -842,6 +867,7 @@ pub(crate) fn install(app: &mut App) {
         .add_message::<InventoryRequest>()
         .add_message::<ContainerRequest>()
         .add_message::<KingdomRequest>()
+        .add_message::<NpcWorkRequest>()
         .add_message::<TrainRequest>()
         .init_resource::<SocialState>()
         .init_resource::<CursorShare>()
@@ -878,6 +904,7 @@ pub(crate) fn install(app: &mut App) {
         .add_systems(Update, send_consumption.after(send_mining))
         .add_systems(Update, send_inventory.after(StreamingSet::Edits))
         .add_systems(Update, send_kingdoms.after(StreamingSet::Edits))
+        .add_systems(Update, send_npc_work.after(StreamingSet::Edits))
         .add_systems(Update, send_trains.after(StreamingSet::Edits))
         .add_systems(Update, send_cursor.after(StreamingSet::Edits))
         .add_systems(Update, send_respawn.after(StreamingSet::Edits))
@@ -1790,6 +1817,31 @@ fn receive_controls(
                     Ok(())
                 }
             }
+            ServerControl::NpcWork(snapshot) => {
+                if session.player.is_none() || !snapshot.valid() {
+                    Err("Invalid NPC work snapshot".into())
+                } else {
+                    session.work = *snapshot;
+                    Ok(())
+                }
+            }
+            ServerControl::NpcWorkResult(result) => {
+                if session.player.is_none()
+                    || result.request == 0
+                    || result.request > session.work_request
+                {
+                    Err("Invalid NPC work response".into())
+                } else {
+                    if session
+                        .last_work_result
+                        .as_ref()
+                        .is_none_or(|last| result.request > last.request)
+                    {
+                        session.last_work_result = Some(result);
+                    }
+                    Ok(())
+                }
+            }
         };
         if let Err(error) = result {
             session.fail(error);
@@ -1873,6 +1925,21 @@ fn send_kingdoms(
             && let Some(mut sender) = senders.iter_mut().next()
         {
             sender.send::<ControlChannel>(ClientControl::Kingdom(request.0.clone()));
+        }
+    }
+}
+
+fn send_npc_work(
+    mut requests: MessageReader<NpcWorkRequest>,
+    session: Res<ClientSession>,
+    mut senders: Query<&mut MessageSender<ClientControl>, With<Client>>,
+) {
+    for request in requests.read().take(8) {
+        if session.ready
+            && !session.teleporting
+            && let Some(mut sender) = senders.iter_mut().next()
+        {
+            sender.send::<ControlChannel>(ClientControl::NpcWork(request.0.clone()));
         }
     }
 }

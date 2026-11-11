@@ -1,0 +1,41 @@
+{
+  "id": "teramic::smith_station",
+  "name": "Schmiede-Station",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "block": 298
+    },
+    "count": 1
+  },
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "block": 16
+        },
+        "wood": true,
+        "count": 2
+      },
+      {
+        "item": {
+          "block": 29
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "mineral": "iron_ingot"
+        },
+        "count": 3
+      },
+      {
+        "item": {
+          "block": 3
+        },
+        "count": 1
+      }
+    ]
+  }
+}

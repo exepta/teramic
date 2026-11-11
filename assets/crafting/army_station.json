@@ -1,0 +1,41 @@
+{
+  "id": "teramic::army_station",
+  "name": "Armee-Station",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "block": 300
+    },
+    "count": 1
+  },
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "block": 16
+        },
+        "wood": true,
+        "count": 2
+      },
+      {
+        "item": {
+          "block": 29
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "mineral": "iron_ingot"
+        },
+        "count": 2
+      },
+      {
+        "item": {
+          "block": 103
+        },
+        "count": 1
+      }
+    ]
+  }
+}

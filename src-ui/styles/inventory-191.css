@@ -32,18 +32,24 @@
 /* Compact sorting controls share the inventory scale and open upward. */
 #inventory-shell .inventory-section-heading { width: 100% !important; }
 #inventory-shell .inventory-sort-control, #train-workshop-panel .inventory-sort-control { position: absolute; width: 28px; height: 28px; flex-shrink: 0; z-index: 31; }
-#inventory-sort-player { right: 299px; bottom: 32px; }
-#inventory-sort-storage { right: 333px; bottom: 32px; }
+#inventory-sort-player { right: 299px; bottom: 34px; }
+#inventory-sort-storage { right: 333px; bottom: 34px; }
 #inventory-shell.inventory-catalog-collapsed #inventory-sort-player { right: 24px; }
 #inventory-shell #workbench-storage { padding-bottom: 52px !important; }
 #inventory-shell #inventory-sort-linked { right: 16px; bottom: 16px; }
-#inventory-shell .inventory-sort-trigger, #train-workshop-panel .inventory-sort-trigger { display: flex; align-items: center; justify-content: center; width: 28px !important; min-width: 28px !important; height: 28px !important; min-height: 28px !important; padding: 4px !important; border: 1px solid #896443 !important; border-radius: 4px; background-color: #4b3527 !important; background-image: none !important; box-shadow: none !important; color: #e8d1ac !important; }
+#train-workshop-panel .inventory-sort-trigger { display: flex; align-items: center; justify-content: center; width: 28px !important; min-width: 28px !important; height: 28px !important; min-height: 28px !important; padding: 4px !important; border: 1px solid #896443 !important; border-radius: 4px; background-color: #4b3527 !important; background-image: none !important; box-shadow: none !important; color: #e8d1ac !important; }
+#inventory-shell .inventory-action-button { display: flex; box-sizing: border-box; flex-shrink: 0; align-items: center; justify-content: center; width: 28px !important; min-width: 28px !important; height: 28px !important; min-height: 28px !important; padding: 3px !important; border: 2px solid #9a724c !important; border-radius: 5px !important; background-color: #3e291e !important; background-image: none !important; box-shadow: none !important; color: #edc18b !important; }
+#inventory-shell .inventory-action-button icon { width: 16px !important; min-width: 0 !important; height: 16px !important; min-height: 0 !important; flex-shrink: 0; }
 #inventory-shell .inventory-sort-dropup, #train-workshop-panel .inventory-sort-dropup { position: absolute; right: 0; bottom: 34px; width: 116px; display: flex; flex-direction: column; gap: 3px; padding: 5px; border: 1px solid #b18a5e; border-radius: 5px; background-color: #2d2018; z-index: 32; }
 #inventory-shell .inventory-sort-option, #train-workshop-panel .inventory-sort-option { display: flex; align-items: center; justify-content: flex-start; gap: 8px; width: 100% !important; min-width: 0 !important; height: 27px !important; min-height: 27px !important; padding: 4px 7px !important; border: 0 !important; border-radius: 3px; background-color: #3d2b21 !important; background-image: none !important; box-shadow: none !important; color: #e8d1ac !important; }
-#inventory-shell .inventory-sort-option p, #train-workshop-panel .inventory-sort-option p { margin: 0 !important; padding: 0 !important; font-size: 11px !important; line-height: 16px !important; color: #e8d1ac !important; }
+#inventory-shell .inventory-sort-option p, #train-workshop-panel .inventory-sort-option p { flex-grow: 1; margin: 0 !important; padding: 0 !important; font-size: 11px !important; line-height: 16px !important; color: #e8d1ac !important; }
+#inventory-shell .inventory-sort-check { display: flex; align-items: center; justify-content: center; width: 16px; min-width: 16px; height: 16px; flex-shrink: 0; color: #ffe2a0; }
 #inventory-shell .inventory-sort-control icon, #train-workshop-panel .inventory-sort-control icon { width: 16px !important; height: 16px !important; min-width: 0 !important; min-height: 0 !important; font-size: 16px !important; flex-shrink: 0; }
-#inventory-shell .inventory-sort-trigger:hover, #inventory-shell .inventory-sort-option:hover, #train-workshop-panel .inventory-sort-trigger:hover, #train-workshop-panel .inventory-sort-option:hover { background-color: #62452f !important; border-color: #b18a5e !important; }
-#inventory-shell .inventory-sort-trigger:disabled, #train-workshop-panel .inventory-sort-trigger:disabled { opacity: 0.45; }
+#inventory-shell .inventory-action-button:hover, #inventory-shell .inventory-action-button.selected { background-color: #6b4629 !important; border-color: #ffd064 !important; color: #ffe2a0 !important; }
+#inventory-shell .inventory-sort-option:hover, #inventory-shell .inventory-sort-option.selected, #train-workshop-panel .inventory-sort-trigger:hover, #train-workshop-panel .inventory-sort-option:hover { background-color: #62452f !important; border-color: #b18a5e !important; color: #ffe2a0 !important; }
+#inventory-shell .inventory-sort-option:hover p, #inventory-shell .inventory-sort-option.selected p { color: #ffe2a0 !important; }
+#inventory-shell .inventory-action-button:disabled { opacity: 0.45; background-color: #3e291e !important; border-color: #9a724c !important; color: #edc18b !important; }
+#train-workshop-panel .inventory-sort-trigger:disabled { opacity: 0.45; }
 #inventory-shell .inventory-sort-dismiss, #train-workshop-panel .inventory-sort-dismiss { position: absolute; top: 0; right: 0; bottom: 0; left: 0; width: 100% !important; height: 100% !important; min-height: 0 !important; padding: 0 !important; border: 0 !important; border-radius: 0; background-color: transparent !important; background-image: none !important; box-shadow: none !important; z-index: 30; }
 #inventory-shell.inventory-shell-linked .inventory-sort-dismiss { left: -362px; width: calc(100% + 362px) !important; }
 #train-workshop-panel .train-sort-region { position: relative; display: flex; flex-direction: column; padding-bottom: 34px; }

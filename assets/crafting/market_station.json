@@ -1,0 +1,35 @@
+{
+  "id": "teramic::market_station",
+  "name": "Verkaufsstand",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "block": 299
+    },
+    "count": 1
+  },
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "block": 16
+        },
+        "wood": true,
+        "count": 2
+      },
+      {
+        "item": {
+          "block": 29
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "block": 105
+        },
+        "count": 1
+      }
+    ]
+  }
+}

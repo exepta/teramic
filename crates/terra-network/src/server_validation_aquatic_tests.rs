@@ -11,6 +11,8 @@ use terra_world::{
 
 #[path = "server_conveyor_interaction_tests.rs"]
 mod conveyor_interaction_tests;
+#[path = "server_npc_work_tests.rs"]
+mod npc_work_tests;
 #[path = "server_validation_pot_tests.rs"]
 mod pot_tests;
 #[path = "server_rail_tests.rs"]

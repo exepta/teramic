@@ -1,6 +1,6 @@
 # TERAMIC: Offene Aufgaben
 
-Stand: 10.11.2026. Nur offene Features, Korrekturen und Abnahmen.
+Stand: 11.11.2026. Nur offene Features, Korrekturen und Abnahmen.
 Erledigte Aufgaben werden entfernt; die Umsetzungshistorie steht in
 [PATCH.md](PATCH.md). Bestehende IDs bleiben erhalten, neue IDs werden fortlaufend angehaengt.
 `F` = Feature, `O` = Optimierung/Fehlerkorrektur, `A` = Abnahme.
@@ -11,12 +11,16 @@ Fahrzeugautomatisierung. Vorhandene Registries, Navigation, Inventare,
 Wassertechnik sowie Speicher- und Netzwerkpfade werden erweitert.
 Neue Systeme brauchen passende Save/Reload-, Mehrspieler- und Besitzpruefungen;
 Wachstum, NPC-Arbeit und bewegte Fahrzeuge muessen begrenzt simuliert werden.
+F58/F61 sind umgesetzt; Bedienung und Grenzen stehen in [docs/npc-work.md](docs/npc-work.md).
+F72 mit Deutsch/Englisch steht in [docs/localization.md](docs/localization.md).
 
-## 1. Baeume, Obst Und Waldwirtschaft
+## 1. NPCs, Siedlungen Und Waldwirtschaft
 
-- [ ] **F58 NPC-Arbeitsgebiete, Auftraege Und Lager:** Berufe ueber Arbeitsgebiete, Prioritaeten und erreichbare Lager steuern. Werkzeuge/Verbrauchsmaterial aus echten Inventaren beziehen; Ziele zwischen NPCs reservieren. Volle Lager, fehlendes Material und unpassierbare Wege als Wartegrund anzeigen. Auftraege speichern und Kingdom-Rechte beachten; eine kleine Berufs-/Auftragsansicht fuer Zuweisung und Status ergaenzen.
+- [ ] **F78 Neutrale Nomaden:** Gelegentlich kleine NPC-Nomadengruppen in geladenen neutralen Gebieten erscheinen und umherziehen lassen. Kingdom-/Dorfgrenzen, erreichbare Wege, Tagesrhythmus und begrenzte Spawn-/Simulationsbudgets beachten; kein Erscheinen in Spielerbauten oder beanspruchten Gebieten.
 
-- [ ] **F61 Produktiver Baumfaeller-NPC:** Die vorhandene Baumfaeller-Rolle **tagsueber selbststaendig** passende Baeume in der Naehe beziehungsweise im Arbeitsgebiet suchen, anlaufen und faellen lassen. Baumzuordnung und vorhandene Faellplaene fuer natuerliche/gepflanzte Baeume nutzen; Holzgebaeude und geschuetzte Baeume erhalten. Axt, Arbeitszeit, Haltbarkeit, echte Drops, Einsammeln und Lageranlieferung einbeziehen. Anschliessend einen passenden Setzling aus dem Vorrat an geeignetem Standort pflanzen; fehlenden Nachschub/Pflanzplatz anzeigen. Nachts Heimkehr-/Schlafrhythmus nutzen.
+- [ ] **F79 Produktive Doerfer Und Bot-Doerfer:** Dorfaufbau um Berufsstationen, zugewiesene Arbeitsgebiete und echte Vorratstruhen erweitern. Holzfaeller und weitere unterstuetzte Arbeiter sollen ihre Arbeitsplaetze erreichen, Werkzeuge/Vorraete beziehen und Ertraege anliefern. Dorf-/Bot-Besitz und Rechte, begrenzte Simulation sowie Save/Reload erhalten.
+
+- [ ] **F80 Kingdom-Startbevoelkerung:** Bei erfolgreicher Kingdom-Gruendung genau einmal drei Schwertkaempfer, zwei Bogenschuetzen, drei Lanzentraeger und zehn zuweisbare Arbeitslose an sicheren erreichbaren Stellen erscheinen lassen. Alle NPCs dem Gruender/Kingdom zuordnen; atomare Gruendung, Spawn-Limits, Speicherstand und Schutz vor erneuter Vergabe beim Laden beachten.
 
 - [ ] **F49 Verbleibende Mob-/Villager-Navigation:** Reproduzierbare Restfaelle bei Hindernissen, Tueren, Hoehenwechseln, Ausweichbewegungen und festgefahrenen Zielen beheben. Bestehende begrenzte Navigation um verlaessliche Ankunft, Zielwechsel und Abbruchgruende erweitern. Berufs-, Pflanz- und Transportziele anbinden; sichtbare Aktionen an tatsaechlichen Fortschritt koppeln.
 
@@ -85,8 +89,6 @@ Wachstum, NPC-Arbeit und bewegte Fahrzeuge muessen begrenzt simuliert werden.
 - [ ] **F22 Ressourcen-Stapelphysik:** Gegenseitige Kollision und Stapelbildung loser Items bei tatsaechlichem Gameplaybedarf ergaenzen; bewegte Drops und Einsammeln weiterhin budgetieren.
 
 ## 5. Multiplayer, Befehle Und Erweiterbarkeit
-
-- [ ] **F72 Sprachsystem Mit Fluent:** Den vorhandenen Fluent-Support von `tilt-ui` fuer ein durchgaengiges Sprachsystem nutzen. UI, HUD, Tooltips, Item-/Block-/Rezeptnamen, Meldungen und Serverantworten ueber stabile Schluessel lokalisieren. Deutsch und Englisch mit Fallback, Platzhaltern sowie Plural-/Zahlformaten bereitstellen; Sprache in den Einstellungen auswaehlen und pro Profil speichern. Mod-Inhalte, fehlende Schluessel und lokalisierte autoritative Fehler beruecksichtigen; Tests fuer Sprachwechsel, Fallback und Formatierung ergaenzen.
 
 - [ ] **F50 Heal-Befehl:** Autoritativen `/heal`-Befehl fuer den eigenen sowie explizit benannte andere Spieler ergaenzen. Berechtigungen, Zielspieler, maximale HP, Rueckmeldungen und Replikation pruefen; bestehende Effekte und weitere Beduerfnisse erhalten.
 

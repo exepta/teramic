@@ -1,0 +1,82 @@
+<div id="recipe-modal" class="recipe-backdrop">
+  <div id="recipe-inspector" [class]="craftingView.smelting ? 'recipe-dialog recipe-reference furnace-reference' : (craftingView.brewing ? 'recipe-dialog recipe-reference cauldron-reference' : 'recipe-dialog recipe-reference')">
+    <div class="copper-frame-background"></div><img class="inventory-reference-frame" src="tilt-ui://assets/inventory-copper-frame.png" alt="" />
+    <div class="inventory-reference-title"><p class="title-diamond">◆</p><h2 class="inventory-reference-label">{{ localizedUi.craftingView.recipe_heading }}</h2><p class="title-diamond">◆</p></div>
+    <div id="recipe-category-tabs" class="recipe-category-tabs">@for (category of localizedUi.craftingView.recipe_categories; track category.id) { <recipe-category [category]="category" /> }</div>
+    <div id="recipe-content" class="recipe-content">
+      @if (craftingView.selected && craftingView.brewing) {
+      <div id="cauldron-recipe-header" class="cauldron-recipe-header">
+        <div class="cauldron-output-icon"><img [alt]="craftingView.item_preview" /></div>
+        <div class="cauldron-recipe-title"><h2 class="cauldron-recipe-name">{{ localizedUi.craftingView.name }}</h2><p>{{ i18n.text_cauldron_brew_a71300a42fa7 }}</p></div>
+        <div class="cauldron-recipe-facts"><p><icon name="flask-conical" size="22" />{{ i18n.text_recipe_type_brewing_7bf192b6e2a0 }}</p><p><icon name="timer" size="22" />{{ i18n.text_brew_time_953e46f5f26b }} {{ localizedUi.craftingView.recipe_duration }}</p></div>
+      </div>
+      <div id="cauldron-recipe-process" class="cauldron-recipe-process">
+        <div class="cauldron-input-column"><div id="recipe-preview-grid" class="cauldron-ingredient-grid">@for (slot of localizedUi.craftingView.cauldron_inputs; track slot.id) { <inventory-slot [slot]="slot" /> }</div><div class="cauldron-tool-row">@for (slot of localizedUi.craftingView.cauldron_tools; track slot.id) { <div class="cauldron-tool-slot"><inventory-slot [slot]="slot" /></div> }<p>{{ i18n.text_stirring_tool_reusable_3f04438ae438 }}</p></div></div>
+        <icon class="cauldron-process-arrow" name="arrow-right" size="38" />
+        <div class="cauldron-model-column"><div class="cauldron-model"><img class="cauldron-painted-art" src="tilt-ui://assets/cauldron-recipe-184.png" alt="Brewing cauldron" /></div><div class="cauldron-heat-track"><div class="cauldron-heat-fill" [style]="craftingView.cauldron_progress"></div></div><p class="cauldron-heat-caption">{{ localizedUi.craftingView.cauldron_heat }}</p></div>
+        <icon class="cauldron-process-arrow" name="arrow-right" size="38" />
+        <div id="recipe-preview-output" class="cauldron-result">@for (slot of localizedUi.craftingView.recipe_output; track slot.id) { <inventory-slot [slot]="slot" /> }</div>
+        <button id="craft-apply-recipe" class="recipe-add" [title]="localizedUi.craftingView.apply_title" [disabled]="!craftingView.can_apply_recipe" onclick="crafting_command"><icon name="plus" size="20" /></button>
+      </div>
+      <div class="cauldron-alternatives"><h3 class="cauldron-alternative-title">{{ i18n.text_alternative_recipes_b0b64f6ad3e5 }}</h3><div id="recipe-alternative-list" class="cauldron-alternative-list">@for (alternative of localizedUi.craftingView.recipe_alternatives; track alternative.id) { <button id="recipe-alternative" [class]="alternative.selected ? 'cauldron-alternative selected' : 'cauldron-alternative'" onclick="recipe_alternative"><div class="cauldron-row-inputs">@for (slot of alternative.input; track slot.id) { <div class="cauldron-row-slot"><img [alt]="slot.preview_key" /><p>{{ slot.count }}</p></div> }</div><icon name="arrow-right" size="24" /><div class="cauldron-row-model"><img src="tilt-ui://assets/cauldron-recipe-184.png" alt="Cauldron" /></div><icon name="arrow-right" size="24" /><div class="cauldron-row-output">@for (slot of alternative.output; track slot.id) { <img [alt]="slot.preview_key" /> }</div><icon name="timer" size="21" /><p>{{ alternative.duration }}</p></button> }</div></div>
+      } @else if (craftingView.selected && craftingView.smelting) {
+
+      <div id="furnace-recipe-header" class="furnace-recipe-header">
+        <div class="furnace-recipe-item">@for (slot of localizedUi.craftingView.recipe_grid; track slot.id) { <img [alt]="slot.preview_key" /> }</div>
+        <div class="furnace-recipe-description"><h2 class="furnace-recipe-name">{{ localizedUi.craftingView.name }}</h2><h3 class="furnace-recipe-subtitle">{{ i18n.text_smelting_2ac38c619a13 }}</h3><p>{{ localizedUi.craftingView.description }}</p></div>
+        <div class="furnace-recipe-facts"><div class="furnace-category-fact"><img class="furnace-fact-icon" src="tilt-ui://assets/furnace-recipe-185.png" alt="Furnace" /><div><p>{{ i18n.text_category_292c06f0045a }}</p><h3 class="furnace-fact-value">{{ i18n.text_furnace_smelting_2ef9dcf34935 }}</h3></div></div><div class="furnace-time"><icon name="timer" size="26" /><div><p>{{ i18n.text_smelt_time_24a0d946ae8e }}</p><h3 class="furnace-time-value">{{ localizedUi.craftingView.furnace_time }}</h3></div></div></div>
+      </div>
+      <div id="furnace-recipe-process" class="furnace-recipe-process">
+        <div class="furnace-recipe-feed"><div class="furnace-recipe-feed-row"><p>{{ i18n.text_input_36ecb4f86691 }}</p><div id="recipe-preview-grid" class="furnace-recipe-slot">@for (slot of localizedUi.craftingView.recipe_grid; track slot.id) { <inventory-slot [slot]="slot" /> }</div></div><div class="furnace-recipe-feed-row"><p>{{ i18n.text_fuel_a80f942f4112 }}</p><div id="recipe-fuel-preview" class="furnace-recipe-slot">@for (slot of localizedUi.craftingView.furnace_fuel; track slot.id) { <inventory-slot [slot]="slot" /> }</div></div></div>
+        <div class="furnace-recipe-model"><img class="furnace-painted-art" src="tilt-ui://assets/furnace-recipe-185.png" alt="Smelting furnace" /><div class="furnace-recipe-flames"><icon name="flame" size="30" /><icon name="flame" size="39" /><icon name="flame" size="30" /></div></div>
+        <div class="furnace-recipe-arrow"><icon name="arrow-right" size="58" /></div>
+        <div class="furnace-recipe-result"><div id="recipe-preview-output" class="furnace-recipe-slot">@for (slot of localizedUi.craftingView.recipe_output; track slot.id) { <inventory-slot [slot]="slot" /> }</div><p>{{ i18n.text_result_6e7d50e84f47 }}</p></div>
+        <button id="craft-apply-recipe" class="recipe-add" [title]="localizedUi.craftingView.apply_title" [disabled]="!craftingView.can_apply_recipe" onclick="crafting_command"><icon name="plus" size="20" /></button>
+      </div>
+      <div class="furnace-alternative-tabs"><button id="recipe-smelting-tab" [class]="craftingView.furnace_fuels ? 'furnace-alternative-tab' : 'furnace-alternative-tab selected'" onclick="crafting_command"><icon name="layers" size="21" /><p>{{ i18n.text_alternative_smelting_2ad8fe2ced19 }}</p></button><button id="recipe-fuels-tab" [class]="craftingView.furnace_fuels ? 'furnace-alternative-tab selected' : 'furnace-alternative-tab'" onclick="crafting_command"><icon name="flame" size="21" /><p>{{ i18n.text_alternative_fuels_99b72a3d0168 }}</p></button></div>
+      <div class="furnace-alternatives">
+        @if (craftingView.furnace_fuels) {
+        <div id="recipe-fuel-list" class="furnace-alternative-list">@for (fuel of localizedUi.craftingView.furnace_fuel_options; track fuel.index) { <button id="recipe-fuel" [class]="fuel.selected ? 'recipe-furnace-fuel-row selected' : 'recipe-furnace-fuel-row'" onclick="recipe_fuel"><div class="furnace-alternative-icon">@for (slot of fuel.slots; track slot.id) { <img [alt]="slot.preview_key" /> }</div><p class="furnace-row-name">{{ fuel.name }}</p><icon name="flame" size="23" /><p>{{ fuel.yield_text }}</p><icon name="timer" size="23" /><p>{{ fuel.burn_time }}</p></button> }</div>
+        } @else {
+        <div id="recipe-alternative-list" class="furnace-alternative-list">@for (alternative of localizedUi.craftingView.recipe_alternatives; track alternative.id) { <button id="recipe-alternative" [class]="alternative.selected ? 'furnace-smelting-row selected' : 'furnace-smelting-row'" onclick="recipe_alternative"><div class="furnace-alternative-icon">@for (slot of alternative.input; track slot.id) { <img [alt]="slot.preview_key" /> }</div><p class="furnace-row-name">{{ alternative.name }}</p><icon class="furnace-row-flame" name="flame" size="26" /><icon name="arrow-right" size="30" /><div class="furnace-alternative-icon">@for (slot of alternative.output; track slot.id) { <img [alt]="slot.preview_key" /> }</div><icon name="timer" size="23" /><p>{{ alternative.duration }}</p></button> }</div>
+        }
+      </div>
+      } @else {
+      @if (craftingView.selected) {
+      <div class="recipe-featured">
+        <div class="recipe-card">
+          <div class="recipe-card-heading"><p>{{ localizedUi.craftingView.recipe_station }}</p><p class="recipe-kind">{{ localizedUi.craftingView.recipe_shape }}</p></div>
+          <div class="recipe-workspace">
+            <div class="recipe-input-area"><div id="recipe-preview-grid" [class]="craftingView.recipe_layout">@for (slot of localizedUi.craftingView.recipe_grid; track slot.id) { <inventory-slot [slot]="slot" /> }</div></div>
+            <div class="recipe-process"><icon name="arrow-right" size="40" />@if (craftingView.recipe_duration != '') { <p>{{ localizedUi.craftingView.recipe_duration }}</p> }</div>
+            <div class="recipe-output-area"><div id="recipe-preview-output" class="recipe-result">@for (slot of localizedUi.craftingView.recipe_output; track slot.id) { <inventory-slot [slot]="slot" /> }</div></div>
+          </div>
+          <button id="craft-apply-recipe" class="recipe-add" [title]="localizedUi.craftingView.apply_title" [disabled]="!craftingView.can_apply_recipe" onclick="crafting_command"><icon name="plus" size="20" /></button>
+        </div>
+        <div class="recipe-item-details">
+          <div class="recipe-item-heading"><img class="recipe-item-icon" [alt]="craftingView.item_preview" /><div><h2 class="recipe-item-name">{{ localizedUi.craftingView.name }}</h2><p class="recipe-item-category">{{ localizedUi.craftingView.item_category }}</p></div></div>
+          <p class="recipe-item-description">{{ localizedUi.craftingView.description }}</p>
+          @if (craftingView.any_wood) {
+          <div class="recipe-wood-options"><p class="recipe-wood-caption">{{ i18n.text_accepts_every_wood_type_9ad267f4faa6 }}</p><div id="recipe-wood-options" class="recipe-wood-buttons">@for (wood of localizedUi.craftingView.wood_options; track wood.index) { <button id="recipe-wood" [class]="wood.selected ? 'recipe-wood-option selected' : 'recipe-wood-option'" onclick="recipe_wood">@for (slot of wood.slots; track slot.id) { <img [alt]="slot.preview_key" /> }<p>{{ wood.name }}</p></button> }</div></div>
+          }
+          <div class="recipe-summary-facts"><div class="recipe-item-fact"><icon name="grid-3x3" size="18" /><p>{{ localizedUi.craftingView.source_summary }}</p></div><div class="recipe-item-fact"><icon name="hammer" size="18" /><p>{{ localizedUi.craftingView.uses_summary }}</p></div></div>
+        </div>
+      </div>
+      <div class="recipe-alternative-section">
+        <div class="recipe-section-title"><div class="recipe-title-rule"></div><h3 class="recipe-section-label">{{ i18n.text_alternative_recipes_b0b64f6ad3e5 }}</h3><div class="recipe-title-rule"></div></div>
+        <div id="recipe-alternative-list" [class]="craftingView.any_wood ? 'recipe-alternatives recipe-wood-alternatives' : 'recipe-alternatives'">@for (alternative of localizedUi.craftingView.recipe_alternatives; track alternative.id) {
+          <button id="recipe-alternative" [class]="alternative.selected ? 'recipe-alternative selected' : 'recipe-alternative'" onclick="recipe_alternative">
+            <p class="recipe-alternative-number">{{ alternative.number }}</p>
+            @if (alternative.has_grid) { <div class="recipe-mini-grid">@for (cell of alternative.grid; track cell.id) { <div class="recipe-mini-slot">@if (!cell.empty) { <img [alt]="cell.preview_key" /> }</div> }</div><icon class="recipe-mini-arrow" name="arrow-right" size="32" /><div class="recipe-mini-output">@for (cell of alternative.output; track cell.id) { <img [alt]="cell.preview_key" /> }</div> }
+            <div class="recipe-alternative-copy"><h3 class="recipe-alternative-name">{{ alternative.name }}</h3><p>{{ alternative.summary }}</p></div>
+            @if (alternative.selected) { <icon class="recipe-alternative-check" name="check" size="27" /> }
+          </button>
+        }</div>
+      </div>
+      @if (craftingView.message != '') { <div class="recipe-message"><icon name="info" size="16" /><p>{{ localizedUi.craftingView.message }}</p></div> }
+      } @else { <div class="recipe-empty"><icon name="book-open" size="40" /><p>{{ localizedUi.craftingView.message }}</p></div> }
+      }
+      <div class="recipe-footer"><div class="recipe-title-rule"></div><button id="craft-alternative-previous" class="recipe-page-button" [title]="i18n.text_previous_recipe_00d3ba6fcd35" [disabled]="!craftingView.recipe_previous" onclick="crafting_command"><icon name="chevron-left" size="24" /></button><p id="craft-recipe-page">{{ localizedUi.craftingView.recipe_page }}</p><button id="craft-alternative-next" class="recipe-page-button" [title]="i18n.text_next_recipe_6e0efec6cb58" [disabled]="!craftingView.recipe_next" onclick="crafting_command"><icon name="chevron-right" size="24" /></button><div class="recipe-title-rule"></div></div>
+    </div>
+  </div>
+</div>

@@ -7,6 +7,7 @@ use terra_voxel::SectionPos;
 pub const WIDTH: f64 = 5.0;
 pub const HEIGHT: i64 = 9;
 const MAX_CELLS: usize = 8192;
+const FRONT_REACH: f64 = 2.0;
 
 type Before = (Cell, u16, Option<BlockObjectState>, Option<[u8; 3]>);
 
@@ -118,6 +119,31 @@ pub fn plan_clearance(
 }
 
 pub(super) fn front_cells(car: &Vehicle) -> Result<BTreeSet<Cell>, String> {
+    let (origin, forward, base_y) = front_pose(car)?;
+    let size = dimensions(car)?;
+    Ok(cells(
+        &columns(origin, forward, FRONT_REACH, size.width)?,
+        base_y,
+        size.height,
+    ))
+}
+
+/// Distant optional construction must not block clearing along existing track.
+/// The port height does not shorten the attachment's horizontal working reach.
+pub fn extension_in_reach(car: &Vehicle, port: Port) -> Result<bool, String> {
+    let (origin, forward, _) = front_pose(car)?;
+    let magnitude = forward[0].hypot(forward[2]);
+    if magnitude < 0.5 || !magnitude.is_finite() {
+        return Err("Ungültige Räumrichtung".into());
+    }
+    let position = port.position.position();
+    let distance = ((position[0] - origin[0]) * forward[0]
+        + (position[2] - origin[2]) * forward[2])
+        / magnitude;
+    Ok(distance <= FRONT_REACH + 1e-7)
+}
+
+fn front_pose(car: &Vehicle) -> Result<([f64; 3], [f64; 3], i64), String> {
     let module = car
         .parts
         .iter()
@@ -139,12 +165,7 @@ pub(super) fn front_cells(car: &Vehicle) -> Result<BTreeSet<Cell>, String> {
         f64::from(module.offset[2]) + 0.5,
     ]);
     let base_y = (contact[1] - terra_core::rails::DECK_HEIGHT + 1e-7).floor() as i64;
-    let size = dimensions(car)?;
-    Ok(cells(
-        &columns(origin, forward, 2.0, size.width)?,
-        base_y,
-        size.height,
-    ))
+    Ok((origin, forward, base_y))
 }
 
 pub(super) fn dimensions(car: &Vehicle) -> Result<terra_core::train_motion::RailClearance, String> {
@@ -167,6 +188,7 @@ fn protected(
         || terra_core::plumbing::is_part(material)
         || terra_core::logistics::is_port(material)
         || terra_core::train_parts::is_train(material)
+        || terra_core::profession_stations::is_station(material)
         || material == terra_core::brewing::MATERIAL
         || material == terra_core::campfire::MATERIAL
         || journal.container_at(cell).is_some()
@@ -414,6 +436,64 @@ fn props(
 mod tests {
     use super::*;
     use terra_voxel::BlockSection;
+
+    #[test]
+    fn extension_reach_follows_exact_horizontal_attachment_pose_not_height_or_cell_rounding() {
+        use terra_core::{rails::FixedPoint, trains::TrainPart};
+        for facing in 0..4 {
+            for yaw in [0.0, std::f64::consts::FRAC_PI_4] {
+                let mut car = Vehicle {
+                    name: String::new(),
+                    id: 1,
+                    owner: terra_core::PlayerUuid::from_u128(1),
+                    kind: VehicleKind::Locomotive,
+                    anchor: [-32, 10, -32],
+                    parts: vec![
+                        TrainPart {
+                            offset: [0, 0, 0],
+                            material: terra_core::train_parts::BOGIE,
+                            facing: 0,
+                            wood: WoodSpecies::Oak,
+                        },
+                        TrainPart {
+                            offset: [0, 1, 2],
+                            material: terra_core::train_parts::RAIL_BUILDER,
+                            facing,
+                            wood: WoodSpecies::Oak,
+                        },
+                    ],
+                    cargo: Default::default(),
+                    blocks: Default::default(),
+                    payloads: Default::default(),
+                    couplings: [None; 2],
+                    revision: 0,
+                    motion: terra_core::train_motion::TrainMotion {
+                        yaw,
+                        translation: [0.125, 0.0, -0.25],
+                        ..Default::default()
+                    },
+                    burn_seconds: 0.0,
+                    steam: Default::default(),
+                };
+                let (origin, forward, _) = front_pose(&car).unwrap();
+                let mut port = Port {
+                    index: 0,
+                    position: FixedPoint(std::array::from_fn(|axis| {
+                        ((origin[axis] + forward[axis] * (FRONT_REACH + 0.25)) * 16.0).round()
+                            as i64
+                    })),
+                    tangent: [0; 3],
+                    connectable: true,
+                };
+                assert!(!extension_in_reach(&car, port).unwrap());
+                car.motion.translation[0] += forward[0] * 0.5;
+                car.motion.translation[2] += forward[2] * 0.5;
+                assert!(extension_in_reach(&car, port).unwrap());
+                port.position.0[1] += 30 * 16;
+                assert!(extension_in_reach(&car, port).unwrap());
+            }
+        }
+    }
 
     #[test]
     fn configured_sweeps_use_exact_width_and_height_in_every_direction() {

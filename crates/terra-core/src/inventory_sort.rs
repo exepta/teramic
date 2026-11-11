@@ -38,7 +38,10 @@ fn category(item: ItemKind) -> u8 {
         | ItemKind::Dye(_)
         | ItemKind::Dust(_)
         | ItemKind::Animal(_) => 2,
-        ItemKind::Tool(_) | ItemKind::FilledWateringCan { .. } | ItemKind::Bellows(_) => 3,
+        ItemKind::Tool(_)
+        | ItemKind::WornTool { .. }
+        | ItemKind::FilledWateringCan { .. }
+        | ItemKind::Bellows(_) => 3,
         ItemKind::Armor(_)
         | ItemKind::Accessory(_)
         | ItemKind::Cape(_)

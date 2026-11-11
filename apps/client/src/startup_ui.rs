@@ -191,7 +191,7 @@ fn warm(world: &mut World) {
         let document_ready =
             document.is_some_and(|document| document.0.load == tilt_ui::UiLoadState::Ready);
         if state.current_path.is_empty() && !document_ready {
-            state.current_path = "tilt-ui://app-shell.component.html".into();
+            state.current_path = "tilt-ui://components/app-shell/app-shell.component.html".into();
         }
         state.completed =
             state.pins.len() + loaded + audio_loaded + if fonts { 3 } else { 0 }

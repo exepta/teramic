@@ -7549,3 +7549,96 @@ fehlende Original-FIVERR-GLB ausgefiltert. Clippy, Builds, Formatierung und
 Stylesheet-Parser bestanden. Native Pruefung: 125 Editor-Schritte und 30 Inventar-
 Aufnahmen einschliesslich echter Dropup-Klicks und Mausdrehung.
 [Pruefbericht](tools/benchmarks/results/clearance-sorting-characters-2026-11-11/README.md).
+
+## 232. Staerkeres Zuglicht Und Lokaler Gleisleger-Arbeitsbereich
+
+Front-/Seitenscheinwerfer und Deckenleuchten haben 50 Prozent mehr Lichtstaerke:
+270000 statt 180000 beziehungsweise 4200 statt 2800. Reichweite, Farbe,
+Lichtkegel und Schattenbudgets bleiben unveraendert.
+
+Der Gleisleger konnte eine Verlaengerung bis zu zwoelf Meter voraus planen und
+bei fehlendem Untergrund auch den gueltigen Freiraeumer vor der Lok stoppen.
+Jetzt wartet der Bauversuch, bis der Anschluss den lokalen Zwei-Meter-Raeumbereich
+erreicht. Auf bestehenden Gleisen wird waehrenddessen weiter geraeumt.
+Exakte Anbauposition und horizontale Entfernung ersetzen gerundete Zellpositionen;
+Hoehe und Rotation der Lok verkuerzen die Reichweite nicht unbeabsichtigt.
+
+Der vorhandene Test-Spielstand wurde nur gelesen: Der entfernte Bauversuch
+scheiterte rund elf Meter vor dem Anbau am fehlenden Unterbau, waehrend lokal
+18 Bloecke raeumbar waren. `inspect_train_save --builder` gibt Anschluss,
+Arbeitsreichweite und den konkreten Planungsfehler ohne Schreibzugriff aus.
+Rechte, Hindernisschutz, Materialverbrauch und atomare Publikation bleiben erhalten.
+Tiefe Luecken werden nicht automatisch ueberbrueckt; beim Erreichen wird gebremst.
+
+35 gezielte Tests fuer Zugautoritaet, Gleisbau/Raeumung und Licht bestanden.
+Ein mehrsekundiger Ablaufstest prueft Weiterfahrt durch den nahen Hang ohne
+vorzeitigen Materialverbrauch und anschliessendes sicheres Bremsen vor der Luecke.
+Geometrietests decken vier Ausrichtungen, Rotation und negative Koordinaten ab.
+Workspace-Check, striktes Clippy, Formatierung sowie Client-/Server-Build bestanden.
+Keine grafische Fahrpruefung; die Problemwelt wurde ausschliesslich gelesen.
+
+## 233. Schotterfundamente, Wagenbeladung Und NPC-Arbeitsauftraege
+
+Gleisleger koennen fehlenden Untergrund mit Schotter aus echten Zuglagern bis
+zum tragfaehigen Boden auffuellen. Tiefe und Transaktionsgroesse sind begrenzt;
+Materialmangel, geschuetzter oder ungeladener Untergrund lassen den Plan unveraendert.
+Ein gespeicherter Activated/Deactivated-Schalter im Fuehrerstandsmenue leitet
+Raeumbeute in den angekuppelten eigenen Gueterwagen. Ueberschuesse bleiben Drops,
+Brennstofflager und Creative-Ertraege werden nicht zweckentfremdet.
+
+F58 ergaenzt Arbeitsgebiete, Prioritaeten, Lager, reservierte Ziele und echte
+NPC-Inventare. Bergarbeiter bauen erreichbare natuerliche Bloecke ab, Landwirte
+ernten/neupflanzen vorhandene Kulturbeete und Sammler liefern echte Drops an.
+Werkzeuge und Saatgut stammen aus der zugewiesenen Truhe. Pausieren, volle Lager,
+fehlende Materialien/Rechte, unpassierbare Wege, Nachtruhe und ungeladene Bereiche
+werden behandelt und in der neuen Bergfried-Ansicht Arbeitsauftraege angezeigt.
+Der vollstaendige Baumfaeller bleibt F61, erweiterte Navigation F49.
+
+Index ID20 migriert die alte Zugbewegung mit deaktivierter Beladung; ID21
+erhaelt zusaetzlich Auftraege und getragene NPC-Inventare. Protokoll 134 ist
+gemeinsam fuer Client und Server erforderlich. Bedienung und Grenzen:
+[NPC-Arbeit](docs/npc-work.md), [Gleisleger](docs/train-excavation.md).
+
+Abnahme: 4650 Workspace-Library-/Bin-Tests bestanden, zehn bestehende Tests
+ignoriert und der Test fuer die fehlende Original-FIVERR-GLB ausgefiltert.
+Workspace-Check, striktes Clippy, Formatierung, Client-/Server-Build und
+Headless-Smoke-Test bestanden. Native NPC-Ansicht mit echten Serverantworten
+fuer Zuweisung, Pause und Wiederaufnahme in drei Fenstergroessen geprueft.
+Dabei gefundene Probleme mit frischen leeren Truhen und Komponentenstyles
+sind korrigiert und erneut getestet.
+[Pruefbericht](tools/benchmarks/results/train-npc-work-2026-11-11/README.md).
+
+## 234. Produktive Holzfaeller, Berufsstationen, Komponentenordner Und Sprachen
+
+F61 erweitert F58 um echte Holzfaellerarbeit: zugeordnete natuerliche/gepflanzte
+Baeume erreichen, Axt aus dem Depot beziehen, mit gespeicherten Restbenutzungen
+faellen, reale Drops einsammeln/anliefern und einen passenden Setzling pflanzen.
+Teilauftraege ueberstehen Pause, Nachtruhe, Materialmangel und Save/Reload.
+Breite Staemme besitzen eine physisch erreichbare aeussere Arbeitsflaeche;
+vollstaendige Ertragskonservation und Nachpflanzung sind getestet.
+
+Neun eigene GLBs/Block-JSONs/Rezepte ergaenzen Holzfaeller-, Schmiede-, Verkaufs-,
+Armee-, Lok-, Minen-, Metzger-, Bischofs- und Farmerstationen (IDs297–305).
+Alle sind echte private Depots mit Kollision/Rotation und Inhaltserhalt.
+Passende produktive Berufe nutzen die Stationen; Sammler koennen alle beliefern.
+Die weiteren sechs Berufe erhalten keine vorgetaeuschte Automatisierung.
+
+45 Komponenten-/Page-Triplets liegen jetzt in eigenen Verzeichnissen unter
+`src-ui/components/<name>/` beziehungsweise `src-ui/pages/<name>/`.
+Aktive Assetpfade, Tests und Skripte wurden angepasst; der Charaktereditorbutton
+liegt unten rechts im Hauptmenue.
+
+F72 integriert TiltUI-Fluent fuer Deutsch/Englisch, 3230 Katalogeintraege,
+Fallbacks, Pluralparameter, dynamische Darstellung und lokalisierte Suche.
+Die Sprachwahl steht unter Gameplay/Spiel und wird pro Profil-UUID gespeichert.
+Namen, Spielerchat, Eingaben, Registry-/Befehlswerte und grosse Seeds bleiben
+unveraendert. Neue TODOs F78/F79/F80 halten neutrale Nomaden, produktive
+Doerfer/Bot-Doerfer und die einmalige Kingdom-Startbevoelkerung fest.
+
+ID22 migriert bisherige ID21-Auftraege; Client und Server verwenden gemeinsam
+Protokoll135. 4684 Workspace-Tests bestanden; zehn bestehende Tests ignoriert
+und die bereits fehlende Original-FIVERR-GLB-Abnahme ausgefiltert. Formatierung,
+Workspace-Check, striktes Clippy, Client-/Server-/Galerie-Build und
+Headless-Smoke-Test bestanden. Native Aufnahmen bestaetigen Sprachwechsel,
+Profilspeicherung, Menueposition und die neun GLBs.
+[Pruefbericht](tools/benchmarks/results/f61-f72-stations-2026-11-11/README.md).

@@ -1117,6 +1117,7 @@ impl EditJournal {
             || terra_core::castle::is_castle(material)
             || terra_core::rails::is_rail(material)
             || terra_core::train_parts::is_train(material)
+            || terra_core::profession_stations::is_station(material)
             || terra_core::lantern::is_part(material))
             || previous.is_some_and(|old| old != material)
         {

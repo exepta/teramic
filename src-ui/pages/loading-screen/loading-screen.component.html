@@ -1,0 +1,16 @@
+<div id="asset-loading" [class]="menuView.startup ? 'world-loading copper-loading startup-loading' : 'world-loading copper-loading'">
+  <img class="loading-teramic-logo" src="tilt-ui://assets/menu-logo-182.png" alt="Teramic" />
+  <div class="loading-status-panel">
+    @if (!menuView.startup) { <div class="copper-frame-background"></div><img class="inventory-reference-frame" src="tilt-ui://assets/inventory-copper-frame.png" alt="" /> }
+    <h2 class="loading-caption">{{ i18n.text_laden_00d5d22d958b }}</h2>
+    @if (!menuView.startup) { <p class="loading-world-name">{{ localizedUi.sessionView.title }}</p><p class="loading-world-status">{{ localizedUi.menuView.status }}</p> }
+    @if (sessionView.show_progress) {
+      <div class="progress-row">
+        <div id="loading-progress-meter" class="loading-progress"><progress-bar class="copper-loading-progress" min="0" max="100" [value]="sessionView.progress" /><div class="loading-progress-label"><p>{{ localizedUi.sessionView.progress_label }}</p></div></div>
+        <div class="loading-asset-row"><p id="loading-asset-path" class="loading-asset-path">{{ localizedUi.sessionView.detail }}</p></div>
+      </div>
+    }
+    <p class="error-text">{{ localizedUi.menuView.error }}</p>
+  </div>
+  @if (menuView.cancel_connect && !menuView.startup) { <button id="cancel-connect" class="loading-back-button" onclick="menu_command"><img class="painted-menu-button-frame" src="tilt-ui://assets/menu-button-182.png" alt="" /><icon name="arrow-left" size="20" /><p>{{ i18n.text_back_to_menu_754dcd4b8ce6 }}</p></button> }
+</div>

@@ -665,9 +665,10 @@ fn compose_item(
             apple_batches(item == ItemKind::AppleCore, templates)
         }
         ItemKind::Flower(color) => flower_batches(color, templates),
-        ItemKind::Tool(_) | ItemKind::FilledWateringCan { .. } | ItemKind::Stick => {
-            tool_batches(item, templates)
-        }
+        ItemKind::Tool(_)
+        | ItemKind::WornTool { .. }
+        | ItemKind::FilledWateringCan { .. }
+        | ItemKind::Stick => tool_batches(item, templates),
     }
 }
 
@@ -725,6 +726,7 @@ fn render_next(
                         prop_previews.images.insert(kind, job.image);
                     }
                     ItemKind::Tool(_)
+                    | ItemKind::WornTool { .. }
                     | ItemKind::FilledWateringCan { .. }
                     | ItemKind::Stick
                     | ItemKind::WoodenBlock { .. }
@@ -841,6 +843,7 @@ fn render_next(
             item,
             ItemKind::Animal(_)
                 | ItemKind::Tool(_)
+                | ItemKind::WornTool { .. }
                 | ItemKind::Armor(_)
                 | ItemKind::Accessory(_)
                 | ItemKind::Cape(_)
@@ -1251,6 +1254,32 @@ pub(crate) fn batch_mesh(batch: &MeshBatch) -> Mesh {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn worn_tool_requests_share_one_icon_per_tool_instead_of_one_per_remaining_use() {
+        let mut requests = RenderItemPreviewRequests::default();
+        let mut expected = 0;
+        for tool in terra_core::ToolKind::ALL {
+            if tool.durability() == 0 {
+                continue;
+            }
+            expected += 1;
+            let fresh = ItemKind::Tool(tool);
+            requests.request(fresh);
+            for remaining in 1..tool.durability() {
+                let worn = ItemKind::WornTool { tool, remaining };
+                assert_eq!(requested_preview(worn), Some(fresh));
+                requests.request(worn);
+            }
+        }
+        assert_eq!(requests.items.len(), expected);
+        assert!(
+            requests
+                .items
+                .iter()
+                .all(|item| matches!(item, ItemKind::Tool(_)))
+        );
+    }
 
     #[test]
     fn filled_can_requests_reuse_one_preloaded_icon_per_tool() {

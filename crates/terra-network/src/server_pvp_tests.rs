@@ -254,6 +254,46 @@ fn held_tool_damage_can_kill_once_without_consuming_the_tool() {
 }
 
 #[test]
+fn npc_returned_worn_axes_keep_their_damage_and_wear_when_reused_by_a_player() {
+    for tool in [
+        ToolKind::WoodAxe,
+        ToolKind::StoneAxe,
+        ToolKind::IronAxe,
+        ToolKind::GoldAxe,
+        ToolKind::DiamondAxe,
+        ToolKind::RubyAxe,
+    ] {
+        let mut arena = Arena::new();
+        let (mut attacker, mut victim) = players();
+        let item = ItemKind::WornTool { tool, remaining: 3 };
+        let stack = ItemStack { item, count: 1 };
+        let mut bag = Inventory::default();
+        assert_eq!(bag.insert(item, 1), 0);
+        arena
+            .journal
+            .gameplay_mut()
+            .inventories
+            .insert(attacker.uuid, bag);
+        attacker.held_slot = Some(0);
+        assert!(strike(
+            &mut attacker,
+            &mut victim,
+            [0.0; 2],
+            arena.environment()
+        ));
+        assert_eq!(
+            victim.vitals.health,
+            50.0 - tool.attack_damage(),
+            "{tool:?}"
+        );
+        assert_eq!(
+            arena.journal.gameplay().inventories[&attacker.uuid].slot(0),
+            Some(stack)
+        );
+    }
+}
+
+#[test]
 fn forged_farther_target_is_rejected_when_a_nearer_player_intercepts_the_ray() {
     let mut arena = Arena::new();
     let (mut attacker, mut victim) = players();

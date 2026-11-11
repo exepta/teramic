@@ -21,7 +21,9 @@ pub mod spiders;
 pub mod stalker;
 mod support;
 pub mod villagers;
+mod work;
 pub use needs::{Forage, apply_forage};
+pub use work::{work_rest, work_step};
 
 pub const ACTIVE_RADIUS: f64 = 150.0;
 pub const UPDATE_BUDGET: usize = 128;

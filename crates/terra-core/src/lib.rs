@@ -25,7 +25,9 @@ pub mod lantern;
 pub mod locomotive_parts;
 pub mod logistics;
 pub mod mixer;
+pub mod npc_jobs;
 pub mod plumbing;
+pub mod profession_stations;
 pub mod rails;
 pub mod train_blueprint;
 pub mod train_motion;
@@ -77,10 +79,10 @@ pub use config::controls::{ControlsConfig, GameAction, GameplayInput, InputBindi
 pub use config::{
     AudioConfig, BiomeDefinition, BiomeDefinitions, BiomeKind, BiomeTerrain, BlockDetailConfig,
     BlockDetailQuality, ChunkAnimation, ClientConfig, Config, ConfigError, GameConfig,
-    GameplayConfig, LandscapeDefinitions, LandscapeProfile, MapMode, MarineFloorWeights,
-    MarineHabitatConfig, MinimapConfig, MobHealthBars, MultiplayerConfig, OceanBiomeConfig,
-    PlayerPermissions, ServerConfig, StructureSettings, TerrainKind, WaterQuality, WeatherKind,
-    WeatherQuality, WorldConfig, config_directory,
+    GameLanguage, GameplayConfig, LandscapeDefinitions, LandscapeProfile, LanguagePreference,
+    MapMode, MarineFloorWeights, MarineHabitatConfig, MinimapConfig, MobHealthBars,
+    MultiplayerConfig, OceanBiomeConfig, PlayerPermissions, ServerConfig, StructureSettings,
+    TerrainKind, WaterQuality, WeatherKind, WeatherQuality, WorldConfig, config_directory,
 };
 pub use config::{
     CaveQuality, GraphicsConfig, ShadowQuality, TreeFallAnimation, WindowModeSetting,

@@ -270,6 +270,62 @@ fn rail_builder_button_and_its_children_send_both_authoritative_toggle_requests(
 }
 
 #[test]
+fn excavation_autoload_switch_uses_the_authoritative_choice_and_rejects_malformed_values() {
+    let mut app = driver_app();
+    {
+        let mut session = app.world_mut().resource_mut::<ClientSession>();
+        let vehicle = &mut session.trains.vehicles[0];
+        vehicle.motion.speed_mps = 0.0;
+        vehicle.parts.push(terra_core::trains::TrainPart {
+            offset: [0, 0, -1],
+            material: terra_core::train_parts::RAIL_BUILDER,
+            facing: 0,
+            wood: Default::default(),
+        });
+    }
+    open(&mut app);
+    app.world_mut().resource_mut::<TrainUiState>().selected = Some(1);
+    app.update();
+    assert!(app.world().resource::<TrainView>().builder_size_ready);
+    assert!(!app.world().resource::<TrainView>().builder_autoload);
+    html_change(&mut app, "builder-autoload", "invalid");
+    html_change(&mut app, "builder-autoload", "false");
+    assert!(requests(&mut app).is_empty());
+    html_change(&mut app, "builder-autoload", "true");
+    let sent = requests(&mut app);
+    assert_eq!(sent.len(), 1);
+    assert_eq!(
+        sent[0].0.action,
+        TrainAction::RailBuilderAutoload {
+            vehicle: 1,
+            active: true
+        }
+    );
+    assert!(!app.world().resource::<TrainView>().builder_autoload);
+    assert!(app.world().resource::<TrainView>().pending);
+    {
+        let mut session = app.world_mut().resource_mut::<ClientSession>();
+        session.trains.vehicles[0].motion.rail_builder_autoload = true;
+        session.last_train_result = Some(TrainResult {
+            request: sent[0].0.request,
+            outcome: TrainOutcome::Changed { vehicle: Some(1) },
+        });
+    }
+    app.update();
+    assert!(app.world().resource::<TrainView>().builder_autoload);
+    html_change(&mut app, "builder-autoload", "false");
+    let sent = requests(&mut app);
+    assert_eq!(sent.len(), 1);
+    assert_eq!(
+        sent[0].0.action,
+        TrainAction::RailBuilderAutoload {
+            vehicle: 1,
+            active: false
+        }
+    );
+}
+
+#[test]
 fn train_sort_buttons_and_children_use_authoritative_cargo_transactions_for_both_targets() {
     use terra_core::inventory_sort::SortOrder;
     for (command, backpack, order) in [

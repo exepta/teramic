@@ -122,6 +122,23 @@ pub struct Plan {
 }
 
 impl Plan {
+    /// Exact saved attribution for productive NPCs; never guesses connected wooden buildings.
+    pub(crate) fn worker_task(&self) -> Option<terra_core::npc_jobs::TreeWork> {
+        let task = terra_core::npc_jobs::TreeWork {
+            root: self.origin,
+            foot: self.foot,
+            species: self.species?,
+            planted: self.planted,
+            wood: self.wood.clone(),
+            leaves: self.leaves.clone(),
+            drops: Vec::new(),
+            stage: terra_core::npc_jobs::TreeWorkStage::Cutting,
+            sapling_loaded: false,
+            sapling_dropped: false,
+            started: false,
+        };
+        task.valid().then_some(task)
+    }
     /// Reads immutable prepared primitives; never samples terrain noise or flood-fills wood.
     pub fn prepare(chunks: &ChunkStore, journal: &EditJournal, foot: [i64; 3]) -> Option<Self> {
         if !eligible(chunks, journal, foot) {
@@ -322,10 +339,83 @@ impl Plan {
     }
 }
 
+/// A root-only NPC target avoids several workers reserving separate branches of one tree.
+pub(crate) fn worker_root(chunks: &ChunkStore, journal: &EditJournal, cell: [i64; 3]) -> bool {
+    if let Some(tree) = planted_tree(journal, cell) {
+        return tree.root == cell;
+    }
+    eligible(chunks, journal, cell)
+        && chunks
+            .prepared_column([cell[0].div_euclid(16), cell[2].div_euclid(16)])
+            .is_some_and(|column| {
+                column.felling_owner(cell, chunks.block_at(cell).unwrap_or(0)) == Some(cell)
+            })
+}
+
+/// One attributed commit and its real item drop form one worker operation. Capacity
+/// is checked before removal, and saved progress is advanced only after that commit.
+pub(crate) fn worker_cut_one(
+    chunks: &mut ChunkStore,
+    journal: &mut EditJournal,
+    properties: &BlockPropertiesCatalog,
+    owner: PlayerUuid,
+    task: &mut terra_core::npc_jobs::TreeWork,
+    wood: bool,
+) -> Result<bool, terra_core::npc_jobs::WaitReason> {
+    use terra_core::npc_jobs::WaitReason;
+    let Some(&cell) = (if wood { &task.wood } else { &task.leaves }).last() else {
+        return Ok(false);
+    };
+    if chunks.block_at(cell).is_none() {
+        return Err(WaitReason::Unloaded);
+    }
+    if !break_allowed(chunks, journal, owner, cell, &[]) {
+        return Err(WaitReason::Protected);
+    }
+    let extra = usize::from(wood) + usize::from(wood && !task.sapling_dropped);
+    if journal.gameplay().drops.len() + extra + 6 > terra_core::MAX_WORLD_DROPS
+        || journal
+            .gameplay()
+            .next_drop
+            .checked_add((extra + 6) as u64)
+            .is_none()
+    {
+        return Err(WaitReason::StorageFull);
+    }
+    let material = if wood {
+        task.species.wood()
+    } else {
+        task.species.leaves()
+    };
+    let removed = remove_owned(chunks, journal, properties, cell, material, task.planted)
+        .map_err(|_| WaitReason::Protected)?;
+    if wood {
+        task.wood.pop();
+    } else {
+        task.leaves.pop();
+    }
+    if removed && wood {
+        let at = task.foot.map(|v| v as f64 + 0.5);
+        let game = journal.gameplay_mut();
+        if !game.drop_one(at, ItemKind::Block(material)) {
+            return Err(WaitReason::StorageFull);
+        }
+        task.drops.push(game.next_drop);
+        if !task.sapling_dropped {
+            if !game.drop_one(at, ItemKind::Prop(task.species.sapling())) {
+                return Err(WaitReason::StorageFull);
+            }
+            task.drops.push(game.next_drop);
+            task.sapling_dropped = true;
+        }
+    }
+    Ok(removed)
+}
+
 /// Gold/ruby skip each third log only in the timer, never in removal or drops.
 pub fn duration(wood: usize, tool: Option<ItemKind>) -> f32 {
     use terra_core::ToolKind;
-    let (seconds, skip_thirds) = match tool {
+    let (seconds, skip_thirds) = match tool.map(ItemKind::preview_item) {
         Some(ItemKind::Tool(ToolKind::StoneAxe)) => (0.0925, false),
         Some(ItemKind::Tool(ToolKind::IronAxe)) => (0.08, false),
         Some(ItemKind::Tool(ToolKind::GoldAxe)) => (0.09, true),
@@ -340,7 +430,7 @@ pub fn duration(wood: usize, tool: Option<ItemKind>) -> f32 {
 pub fn is_axe(tool: Option<ItemKind>) -> bool {
     use terra_core::ToolKind;
     matches!(
-        tool,
+        tool.map(ItemKind::preview_item),
         Some(ItemKind::Tool(
             ToolKind::WoodAxe
                 | ToolKind::StoneAxe

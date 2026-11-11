@@ -1,0 +1,184 @@
+@if (inventoryView.visible) {
+    <div id="inventory-backdrop" class="inventory-backdrop" [style]="inventoryView.open ? inventoryView.layout_style : (inventoryView.prewarming ? 'opacity: 0; pointer-events: none;' : 'display: none;')" onmousedown="inventory_outside">
+      @if (inventoryView.player) { <div class="inventory-brand"><icon name="leaf" size="30" /><p>{{ i18n.text_teramic_ef5881194402 }}</p></div> }
+      <div id="inventory-workspace" [class]="craftingView.recipe_open ? 'inventory-workspace inventory-workspace-muted' : 'inventory-workspace'">
+      <div id="inventory-shell" [class]="inventoryView.player ? (inventoryView.browser_visible ? 'inventory-shell inventory-shell-player' : 'inventory-shell inventory-shell-player inventory-catalog-collapsed') : (inventoryView.linked_container ? 'inventory-shell inventory-machine-shell inventory-shell-linked' : 'inventory-shell inventory-machine-shell')">
+        @if (inventoryView.player) {
+          <div class="copper-frame-background"></div><img class="inventory-reference-frame" src="tilt-ui://assets/inventory-copper-frame.png" alt="" />
+          <div class="inventory-reference-title"><p class="title-diamond">◆</p><h2 class="inventory-reference-label">{{ i18n.text_player_inventory_76e5b8337dfd }}</h2><p class="title-diamond">◆</p></div>
+        }
+        @if (!inventoryView.player) {
+          <div class="copper-frame-background"></div><img class="inventory-reference-frame" src="tilt-ui://assets/inventory-copper-frame.png" alt="" />
+          <div class="inventory-reference-title machine-title"><p class="title-diamond">◆</p><h2 class="inventory-reference-label">{{ localizedUi.inventoryView.title }}</h2><p class="title-diamond">◆</p></div>
+        }
+        @if (inventoryView.linked_container) {
+          <div id="workbench-storage" [class]="inventoryView.sort_storage_open ? 'workbench-storage machine-linked-storage inventory-sort-active-region' : 'workbench-storage machine-linked-storage'"><ornate-frame></ornate-frame>
+            @if (inventoryView.sort_storage_open) { <button id="inventory-sort-dismiss" class="inventory-sort-dismiss inventory-sort-local-dismiss" onclick="inventory_sort"></button> }
+            <div class="inventory-section-heading"><h3 class="machine-section-title">{{ localizedUi.inventoryView.linked_title }}</h3>
+
+            </div>
+            <div id="workbench-container-grid" class="linked-container-grid">@for (slot of localizedUi.inventoryView.container_items; track slot.id) { <inventory-slot [slot]="slot" /> }</div>
+            @if (inventoryView.storage_sortable) { <div id="inventory-sort-linked" class="inventory-sort-control">
+          <button id="sort-linked-menu" [class]="inventoryView.sort_storage_open ? 'inventory-sort-trigger inventory-action-button selected' : 'inventory-sort-trigger inventory-action-button'" [title]="i18n.text_verbundenes_lager_sortieren_4db0d688eff9" [disabled]="!inventoryView.sort_ready" onclick="inventory_sort"><icon name="filter" size="18" /></button>
+          @if (inventoryView.sort_storage_open) { <div id="inventory-sort-linked-options" class="inventory-sort-dropup">
+            <button id="sort-linked-name" [class]="inventoryView.sort_storage_order == 'name' ? 'inventory-sort-option selected' : 'inventory-sort-option'" [title]="i18n.text_alphabetisch_nach_anzeigename_sortie_ccbf249574fc" onclick="inventory_sort"><icon name="sort-ascending" size="16" /><p>{{ i18n.text_a_z_f9f6c8502eb0 }}</p><div class="inventory-sort-check">@if (inventoryView.sort_storage_order == 'name') { <icon name="check" size="16" /> }</div></button>
+            <button id="sort-linked-id" [class]="inventoryView.sort_storage_order == 'id' ? 'inventory-sort-option selected' : 'inventory-sort-option'" [title]="i18n.text_nach_block_id_und_item_id_sortieren_c551c8fdacf1" onclick="inventory_sort"><icon name="hash" size="16" /><p>{{ i18n.text_id_3843971dcfde }}</p><div class="inventory-sort-check">@if (inventoryView.sort_storage_order == 'id') { <icon name="check" size="16" /> }</div></button>
+            <button id="sort-linked-quantity" [class]="inventoryView.sort_storage_order == 'quantity' ? 'inventory-sort-option selected' : 'inventory-sort-option'" [title]="i18n.text_gr_te_stapel_zuerst_66c5b404b865" onclick="inventory_sort"><icon name="sort-descending" size="16" /><p>{{ i18n.text_menge_1bece813ec41 }}</p><div class="inventory-sort-check">@if (inventoryView.sort_storage_order == 'quantity') { <icon name="check" size="16" /> }</div></button>
+          </div> }
+        </div> }
+          </div>
+        }
+        <div id="inventory-panel" [class]="inventoryView.mixer ? 'inventory-panel inventory-furnace-panel inventory-mixer-panel machine-main-panel' : ((inventoryView.furnace || inventoryView.crusher || inventoryView.filtered_funnel || inventoryView.tunnel_options || inventoryView.cauldron.active || inventoryView.campfire.active) ? 'inventory-panel inventory-furnace-panel machine-main-panel' : (inventoryView.double_container ? 'inventory-panel inventory-double-container machine-main-panel' : ((inventoryView.container || inventoryView.assembly) ? 'inventory-panel machine-main-panel' : 'inventory-panel inventory-player-panel')))">
+          @if (!inventoryView.player) {
+          <div class="inventory-heading machine-heading">
+            @if (inventoryView.cauldron.active) { <icon name="flask-conical" size="25" /> } @else if (inventoryView.filtered_funnel) { <icon name="filter" size="25" /> } @else if (inventoryView.tunnel_options) { <icon name="shuffle" size="25" /> } @else if (inventoryView.mixer) { <icon name="palette" size="25" /> } @else if (inventoryView.crusher) { <icon name="settings" size="25" /> } @else if (inventoryView.furnace || inventoryView.campfire.active) { <icon name="flame" size="25" /> } @else if (inventoryView.container) { <icon name="archive" size="25" /> } @else { <icon name="leaf" size="25" /> }<h2>{{ localizedUi.inventoryView.title }}</h2>
+            <p class="inventory-mode">{{ localizedUi.inventoryView.mode }}</p>
+          </div>
+          }
+          <div id="inventory-scroll" [class]="(inventoryView.furnace || inventoryView.crusher || inventoryView.cauldron.active || inventoryView.campfire.active) ? 'inventory-body furnace-body' : 'inventory-body'">
+            @if (inventoryView.filtered_funnel || inventoryView.tunnel_options) {
+              @if (inventoryView.filtered_funnel) {
+                @if (inventoryView.distributor) {
+                  <div id="distributor-filter-slots" class="distributor-filter-workspace">
+                    @for (output of localizedUi.inventoryView.distributor_filters; track output.index) {
+                      <div class="distributor-filter-row">
+                        <div class="distributor-output-label">@if (output.index == 0) { <icon name="arrow-left" size="21" /> } @else if (output.index == 1) { <icon name="arrow-up" size="21" /> } @else { <icon name="arrow-right" size="21" /> }<label class="distributor-output-name">{{ output.name }}</label></div>
+                        <div [class]="output.selecting ? 'funnel-filter-slot filter-selecting' : 'funnel-filter-slot'">@if (!output.has_item) { <icon class="filter-placeholder" name="filter" size="25" /> }@for (slot of output.slots; track slot.id) { <inventory-slot [slot]="slot" /> }</div>
+                        <div class="funnel-filter-mode">@if (output.index == 0) { <switch-button class="machine-switch" id="distributor-filter-mode-0" [checked]="output.allowed" onchange="inventory_distributor_mode" /> } @else if (output.index == 1) { <switch-button class="machine-switch" id="distributor-filter-mode-1" [checked]="output.allowed" onchange="inventory_distributor_mode" /> } @else { <switch-button class="machine-switch" id="distributor-filter-mode-2" [checked]="output.allowed" onchange="inventory_distributor_mode" /> }<label>{{ output.mode }}</label></div>
+                        @if (output.index == 0) { <button id="distributor-filter-clear-0" class="filter-clear" [title]="i18n.text_clear_filter_ba59e2d4a5e3" onclick="inventory_distributor_clear"><icon class="machine-button-icon" name="trash" size="20" /></button> } @else if (output.index == 1) { <button id="distributor-filter-clear-1" class="filter-clear" [title]="i18n.text_clear_filter_ba59e2d4a5e3" onclick="inventory_distributor_clear"><icon class="machine-button-icon" name="trash" size="20" /></button> } @else { <button id="distributor-filter-clear-2" class="filter-clear" [title]="i18n.text_clear_filter_ba59e2d4a5e3" onclick="inventory_distributor_clear"><icon class="machine-button-icon" name="trash" size="20" /></button> }
+                      </div>
+                    }
+                  </div>
+                } @else {
+                <div id="funnel-filter-workspace" class="funnel-filter-workspace">
+                  <div id="funnel-filter-slot" [class]="inventoryView.filter_selecting ? 'funnel-filter-slot filter-selecting' : 'funnel-filter-slot'" [title]="i18n.text_choose_a_filter_item_ff8936369387">@if (!inventoryView.filter_has_item) { <icon class="filter-placeholder" name="filter" size="25" /> }@for (slot of localizedUi.inventoryView.funnel_filter; track slot.id) { <inventory-slot [slot]="slot" /> }</div>
+                  <div class="funnel-filter-mode"><switch-button class="machine-switch" id="funnel-filter-mode" [checked]="inventoryView.filter_allowed" onchange="inventory_filter_mode" /><label>{{ localizedUi.inventoryView.filter_mode }}</label></div>
+                  <button id="funnel-filter-clear" class="filter-clear" [title]="i18n.text_clear_filter_ba59e2d4a5e3" onclick="inventory_action"><icon class="machine-button-icon" name="trash" size="20" /></button>
+                </div>
+                }
+              }
+              @if (inventoryView.tunnel_options) { <div id="tunnel-extraction-mode" class="tunnel-extraction-mode"><icon name="shuffle" size="22" /><label id="tunnel-random-label" class="tunnel-random-label" for="tunnel-random-extraction">{{ i18n.text_random_67bc484430fe }}</label><switch-button class="machine-switch" id="tunnel-random-extraction" [checked]="inventoryView.tunnel_random" onchange="inventory_tunnel_random" /></div> }
+            } @else if (inventoryView.cauldron.active) {
+              <div id="cauldron-workspace" class="alchemy-workspace">
+                @if (inventoryView.hearth_navigation) { <div class="alchemy-navigation"><button id="hearth-view-switch" class="alchemy-station-button" [title]="i18n.text_open_attached_campfire_fa57a1fe3436" [disabled]="!inventoryView.hearth_navigation_enabled" onclick="inventory_hearth_view"><icon name="flame" size="20" /><p>{{ i18n.text_campfire_bf3fac40de1b }}</p></button></div> }
+                <choice-box id="cauldron-recipe" class="alchemy-recipe-choice machine-choice" max-visible-items="6" [value]="inventoryView.cauldron.recipe" onchange="inventory_brewing_recipe"><div class="cauldron-recipe-options">@for (recipe of localizedUi.inventoryView.cauldron.recipes; track recipe.value) { <option [value]="recipe.value" [selected]="recipe.selected">{{ recipe.name }}</option> }</div></choice-box>
+                <div class="alchemy-materials">
+                  <div class="alchemy-supplies"><div id="cauldron-water" class="furnace-slot" [title]="i18n.text_water_7ca7dea90680">@for (slot of localizedUi.inventoryView.cauldron.water; track slot.id) { <inventory-slot [slot]="slot" /> @if (slot.empty) { <icon class="furnace-placeholder" name="droplets" size="26" /> } }</div><div class="alchemy-water-track"><div class="alchemy-water-fill" [style]="inventoryView.cauldron.water_fill"></div></div><p class="alchemy-water-amount">{{ localizedUi.inventoryView.cauldron.water_amount }}</p></div>
+                  <div id="cauldron-inputs" class="alchemy-inputs">@for (slot of localizedUi.inventoryView.cauldron.inputs; track slot.id) { <inventory-slot [slot]="slot" /> }</div>
+                  <div id="cauldron-spoon" class="furnace-slot" [title]="i18n.text_stirring_spoon_4efffe563e7d">@for (slot of localizedUi.inventoryView.cauldron.spoon; track slot.id) { <inventory-slot [slot]="slot" /> @if (slot.empty) { <icon class="furnace-placeholder" name="utensils" size="26" /> } }</div>
+                  <div class="alchemy-process"><icon [class]="inventoryView.cauldron.heated ? 'alchemy-heat alchemy-heated' : 'alchemy-heat'" name="flame" size="26" /><div class="furnace-progress-track"><div class="furnace-progress-fill alchemy-progress" [style]="inventoryView.cauldron.progress"></div></div><icon name="arrow-right" size="22" /></div>
+                  <div class="alchemy-results"><div id="cauldron-bottles" class="furnace-slot" [title]="i18n.text_glass_bottles_9f4fb3ddbae5">@for (slot of localizedUi.inventoryView.cauldron.bottles; track slot.id) { <inventory-slot [slot]="slot" /> @if (slot.empty) { <icon class="furnace-placeholder" name="flask-conical" size="25" /> } }</div><div id="cauldron-output" class="furnace-slot furnace-result">@for (slot of localizedUi.inventoryView.cauldron.output; track slot.id) { <inventory-slot [slot]="slot" /> }</div></div>
+                </div>
+                <div class="alchemy-summary"><p class="alchemy-effects">{{ localizedUi.inventoryView.cauldron.effects }}</p><p id="cauldron-status" class="furnace-status">{{ localizedUi.inventoryView.cauldron.status }}</p></div>
+              </div>
+            } @else if (inventoryView.campfire.active) {
+              <div id="campfire-workspace" class="alchemy-workspace">
+                @if (inventoryView.hearth_navigation) { <div class="alchemy-navigation"><button id="hearth-view-switch" class="alchemy-station-button" [title]="i18n.text_return_to_cauldron_3ab46f5c9cce" [disabled]="!inventoryView.hearth_navigation_enabled" onclick="inventory_hearth_view"><icon name="arrow-left" size="20" /><p>{{ i18n.text_cauldron_a89529480936 }}</p></button></div> }
+                <div class="campfire-materials">
+                  <div class="furnace-feed-column"><div id="campfire-input" class="furnace-slot">@for (slot of localizedUi.inventoryView.campfire.input; track slot.id) { <inventory-slot [slot]="slot" /> @if (slot.empty) { <icon class="furnace-placeholder" name="utensils" size="28" /> } }</div><div class="furnace-fuel-row"><div id="campfire-fuel" class="furnace-slot">@for (slot of localizedUi.inventoryView.campfire.fuel; track slot.id) { <inventory-slot [slot]="slot" /> @if (slot.empty) { <icon class="furnace-placeholder" name="flame" size="28" /> } }</div><div id="campfire-fuel-level" class="furnace-fuel-track"><div class="furnace-fuel-fill" [style]="inventoryView.campfire.fuel_fill"></div></div></div></div>
+                  <div class="alchemy-process"><icon [class]="inventoryView.campfire.lit ? 'alchemy-heat alchemy-heated' : 'alchemy-heat'" name="flame" size="30" /><div class="furnace-progress-track"><div class="furnace-progress-fill" [style]="inventoryView.campfire.progress"></div></div><icon name="arrow-right" size="24" /></div>
+                  <div id="campfire-output" class="furnace-slot furnace-result">@for (slot of localizedUi.inventoryView.campfire.output; track slot.id) { <inventory-slot [slot]="slot" /> }</div>
+                  @if (inventoryView.campfire.lit) { <button id="campfire-extinguish" class="alchemy-fire-button" [title]="i18n.text_extinguish_campfire_0599b33df31b" onclick="inventory_campfire_lit"><icon name="droplets" size="26" /></button> } @else { <button id="campfire-light" class="alchemy-fire-button" [title]="i18n.text_light_campfire_5d8d025e7902" [disabled]="!inventoryView.campfire.can_toggle" onclick="inventory_campfire_lit"><icon name="flame" size="26" /></button> }
+                </div>
+                <p id="campfire-status" class="furnace-status">{{ localizedUi.inventoryView.campfire.status }}</p>
+              </div>
+            } @else if (inventoryView.mixer) {
+              <div id="mixer-workspace" class="mixer-workspace">
+                <div class="mixer-target"><color-picker class="machine-color-picker" id="mixer-color" [value]="inventoryView.mixer_color" onchange="inventory_mixer_color" /></div>
+                <p id="mixer-recipe" class="mixer-recipe">{{ localizedUi.inventoryView.mixer_recipe }}</p>
+                <div class="mixer-materials">
+                  <div id="mixer-input" class="mixer-input">@for (slot of localizedUi.inventoryView.mixer_input; track slot.id) { <inventory-slot [slot]="slot" /> }</div>
+                  <div class="crusher-process"><icon [class]="inventoryView.mixer_working ? 'crusher-gear crusher-running' : 'crusher-gear'" name="settings" size="28" /><div class="furnace-progress-track"><div class="furnace-progress-fill mixer-progress" [style]="inventoryView.mixer_progress_style"></div></div><icon name="arrow-right" size="22" /></div>
+                  <div id="mixer-output" class="furnace-slot furnace-result">@for (slot of localizedUi.inventoryView.mixer_output; track slot.id) { <inventory-slot [slot]="slot" /> }</div>
+                </div>
+                <p id="mixer-status" class="furnace-status">{{ localizedUi.inventoryView.mixer_status }}</p>
+              </div>
+            } @else if (inventoryView.crusher) {
+              <div id="crusher-workspace" class="crusher-workspace">
+                <div id="crusher-input" class="furnace-slot">@for (slot of localizedUi.inventoryView.crusher_input; track slot.id) { <inventory-slot [slot]="slot" /> @if (slot.empty) { <icon class="furnace-placeholder" name="layers" size="30" /> } }</div>
+                <div class="crusher-process"><icon [class]="inventoryView.crusher_working ? 'crusher-gear crusher-running' : 'crusher-gear'" name="settings" size="34" /><div class="furnace-progress-track"><div class="furnace-progress-fill" [style]="inventoryView.crusher_progress_style"></div></div><icon name="arrow-right" size="24" /></div>
+                <div id="crusher-output" class="furnace-slot furnace-result">@for (slot of localizedUi.inventoryView.crusher_output; track slot.id) { <inventory-slot [slot]="slot" /> }</div>
+              </div>
+            } @else if (inventoryView.furnace) {
+              <div id="furnace-workspace" class="furnace-workspace">
+                <div class="furnace-material-row">
+                  <div class="furnace-slot-group"><p class="machine-slot-caption">{{ i18n.text_bellows_7b10e2358b70 }}</p><div id="furnace-bellows" class="furnace-slot">@for (slot of localizedUi.inventoryView.furnace_bellows; track slot.id) { <inventory-slot [slot]="slot" /> @if (slot.empty) { <icon class="furnace-placeholder" name="wind" size="30" /> } }</div></div>
+                  <icon class="furnace-air" name="wind" size="22" />
+                  <div class="furnace-feed-column">
+                    <div class="furnace-slot-group"><p class="machine-slot-caption">{{ i18n.text_input_36ecb4f86691 }}</p><div id="furnace-input" class="furnace-slot">@for (slot of localizedUi.inventoryView.furnace_input; track slot.id) { <inventory-slot [slot]="slot" /> @if (slot.empty) { <icon class="furnace-placeholder" name="layers" size="30" /> } }</div></div>
+                    <div class="furnace-fuel-row"><div class="furnace-slot-group"><p class="machine-slot-caption">{{ i18n.text_fuel_a80f942f4112 }}</p><div id="furnace-fuel" class="furnace-slot">@for (slot of localizedUi.inventoryView.furnace_fuel; track slot.id) { <inventory-slot [slot]="slot" /> @if (slot.empty) { <icon class="furnace-placeholder" name="flame" size="30" /> } }</div></div><div class="furnace-fuel-track"><div class="furnace-fuel-fill" [style]="inventoryView.furnace_fuel_style"></div></div></div>
+                  </div>
+                  <div class="furnace-progress-group"><icon name="arrow-right" size="28" /><div class="furnace-progress-track"><div class="furnace-progress-fill" [style]="inventoryView.furnace_progress_style"></div></div></div>
+                  <div class="furnace-slot-group"><p class="machine-slot-caption">{{ i18n.text_result_6e7d50e84f47 }}</p><div id="furnace-output" class="furnace-slot furnace-result">@for (slot of localizedUi.inventoryView.furnace_output; track slot.id) { <inventory-slot [slot]="slot" /> }</div></div>
+                </div>
+                <p class="furnace-status">{{ localizedUi.inventoryView.furnace_status }}</p>
+              </div>
+            } @else if (inventoryView.container) {
+              <div class="inventory-container-section">
+                <div class="inventory-section-heading"><h3 class="machine-section-title">{{ i18n.text_storage_a69c4dece144 }}</h3><p>{{ localizedUi.inventoryView.container_capacity }}</p>
+
+                </div>
+                <div id="container-grid" class="inventory-grid container-grid">@for (slot of localizedUi.inventoryView.container_items; track slot.id) { <inventory-slot [slot]="slot" /> }</div>
+              </div>
+            } @else if (inventoryView.assembly) {
+              <crafting-panel></crafting-panel>
+            } @else {
+              <div class="inventory-player-top">
+                <div class="inventory-loadout">
+                <div id="inventory-equipment" class="equipment-grid">
+                  @for (equipment of localizedUi.inventoryView.equipment; track equipment.kind) { <div [class]="'equipment-mount equipment-' + equipment.kind"><equipment-slot /></div> }
+                </div>
+                <div class="inventory-character"><div class="avatar-stage"><img id="inventory-character-preview" class="avatar-image" alt="Player preview" [title]="i18n.text_mit_gedr_ckter_linker_maustaste_dreh_7758bc3b5b19" /></div></div>
+                </div>
+                <div class="inventory-crafting">
+                  <div class="craft-heading"><icon name="settings-wrench" size="19" /><h3>{{ i18n.text_crafting_000b821603b6 }}</h3><button id="craft-clear-grid" class="craft-clear" [title]="i18n.text_clear_crafting_grid_9af1b38b8d8e" onclick="crafting_command"><icon name="rotate-ccw" size="18" /></button></div>
+                  <div class="craft-workspace">
+                    <div id="inventory-crafting" class="craft-grid">@for (slot of localizedUi.inventoryView.crafting; track slot.id) { <inventory-slot [slot]="slot" /> }</div>
+                    <icon name="arrow-right" size="30" />
+                    <div id="inventory-craft-result" class="craft-result">@for (slot of localizedUi.inventoryView.craft_results; track slot.id) { <inventory-slot [slot]="slot" /> }</div>
+                  </div>
+                  <button id="inventory-recipe-book" class="reference-recipe-book" [title]="i18n.text_show_hide_item_browser_0f10490f2822" onclick="inventory_recipe_book"><icon name="book-open" size="30" /></button>
+                </div>
+              </div>
+            }
+            <div class="inventory-backpack-section">
+              <div class="inventory-section-heading"><h3 class="machine-section-title">{{ i18n.text_backpack_5118f76d9067 }}</h3><p>{{ localizedUi.inventoryView.capacity }}</p></div>
+              <div id="inventory-grid" class="inventory-grid">@for (slot of localizedUi.inventoryView.items; track slot.id) { <inventory-slot [slot]="slot" /> }</div>
+            </div>
+            <div class="inventory-hotbar-section"><div id="inventory-hotbar" class="inventory-hotbar">@for (slot of localizedUi.inventoryView.hotbar; track slot.id) { <inventory-slot [slot]="slot" /> }</div></div>
+          </div>
+          <div class="inventory-status">
+            @if (inventoryView.error != '') { <p class="inventory-error">{{ localizedUi.inventoryView.error }}</p> }
+
+          </div>
+        </div>
+        @if (!craftingView.recipe_open) {
+          @if (inventoryView.sort_player_open || inventoryView.sort_storage_open) { <button id="inventory-sort-dismiss" class="inventory-sort-dismiss" onclick="inventory_sort"></button> }
+          <div id="inventory-sort-player" class="inventory-sort-control">
+          <button id="sort-player-menu" [class]="inventoryView.sort_player_open ? 'inventory-sort-trigger inventory-action-button selected' : 'inventory-sort-trigger inventory-action-button'" [title]="i18n.text_rucksack_sortieren_hotbar_bleibt_unv_400b3b954090" [disabled]="!inventoryView.sort_ready" onclick="inventory_sort"><icon name="filter" size="18" /></button>
+          @if (inventoryView.sort_player_open) { <div id="inventory-sort-player-options" class="inventory-sort-dropup">
+            <button id="sort-player-name" [class]="inventoryView.sort_player_order == 'name' ? 'inventory-sort-option selected' : 'inventory-sort-option'" [title]="i18n.text_alphabetisch_nach_anzeigename_sortie_ccbf249574fc" onclick="inventory_sort"><icon name="sort-ascending" size="16" /><p>{{ i18n.text_a_z_f9f6c8502eb0 }}</p><div class="inventory-sort-check">@if (inventoryView.sort_player_order == 'name') { <icon name="check" size="16" /> }</div></button>
+            <button id="sort-player-id" [class]="inventoryView.sort_player_order == 'id' ? 'inventory-sort-option selected' : 'inventory-sort-option'" [title]="i18n.text_nach_block_id_und_item_id_sortieren_c551c8fdacf1" onclick="inventory_sort"><icon name="hash" size="16" /><p>{{ i18n.text_id_3843971dcfde }}</p><div class="inventory-sort-check">@if (inventoryView.sort_player_order == 'id') { <icon name="check" size="16" /> }</div></button>
+            <button id="sort-player-quantity" [class]="inventoryView.sort_player_order == 'quantity' ? 'inventory-sort-option selected' : 'inventory-sort-option'" [title]="i18n.text_gr_te_stapel_zuerst_66c5b404b865" onclick="inventory_sort"><icon name="sort-descending" size="16" /><p>{{ i18n.text_menge_1bece813ec41 }}</p><div class="inventory-sort-check">@if (inventoryView.sort_player_order == 'quantity') { <icon name="check" size="16" /> }</div></button>
+          </div> }
+        </div>
+          @if (inventoryView.storage_sortable && !inventoryView.linked_container) { <div id="inventory-sort-storage" class="inventory-sort-control">
+          <button id="sort-storage-menu" [class]="inventoryView.sort_storage_open ? 'inventory-sort-trigger inventory-action-button selected' : 'inventory-sort-trigger inventory-action-button'" [title]="i18n.text_lager_sortieren_da98c6f3dd59" [disabled]="!inventoryView.sort_ready" onclick="inventory_sort"><icon name="filter" size="18" /></button>
+          @if (inventoryView.sort_storage_open) { <div id="inventory-sort-storage-options" class="inventory-sort-dropup">
+            <button id="sort-storage-name" [class]="inventoryView.sort_storage_order == 'name' ? 'inventory-sort-option selected' : 'inventory-sort-option'" [title]="i18n.text_alphabetisch_nach_anzeigename_sortie_ccbf249574fc" onclick="inventory_sort"><icon name="sort-ascending" size="16" /><p>{{ i18n.text_a_z_f9f6c8502eb0 }}</p><div class="inventory-sort-check">@if (inventoryView.sort_storage_order == 'name') { <icon name="check" size="16" /> }</div></button>
+            <button id="sort-storage-id" [class]="inventoryView.sort_storage_order == 'id' ? 'inventory-sort-option selected' : 'inventory-sort-option'" [title]="i18n.text_nach_block_id_und_item_id_sortieren_c551c8fdacf1" onclick="inventory_sort"><icon name="hash" size="16" /><p>{{ i18n.text_id_3843971dcfde }}</p><div class="inventory-sort-check">@if (inventoryView.sort_storage_order == 'id') { <icon name="check" size="16" /> }</div></button>
+            <button id="sort-storage-quantity" [class]="inventoryView.sort_storage_order == 'quantity' ? 'inventory-sort-option selected' : 'inventory-sort-option'" [title]="i18n.text_gr_te_stapel_zuerst_66c5b404b865" onclick="inventory_sort"><icon name="sort-descending" size="16" /><p>{{ i18n.text_menge_1bece813ec41 }}</p><div class="inventory-sort-check">@if (inventoryView.sort_storage_order == 'quantity') { <icon name="check" size="16" /> }</div></button>
+          </div> }
+        </div> }
+        }
+        @if (inventoryView.browser_visible && !craftingView.recipe_open) { <item-browser></item-browser> }
+      </div>
+      </div>
+      @if (inventoryView.open && craftingView.recipe_open) { <recipe-inspector></recipe-inspector> }
+    </div>
+    @if (inventoryView.open && inventoryCursor.visible) { <div id="inventory-cursor" class="inventory-cursor" [style]="inventoryCursor.position"><img class="cursor-item-image" [alt]="inventoryCursor.preview" /><p class="cursor-item-count">{{ inventoryCursor.count }}</p></div> }
+    <div id="inventory-hud" class="inventory-hud">
+      @if (!inventoryView.selected_empty) { <p class="hud-item-name">{{ localizedUi.inventoryView.selected_name }}</p> }
+      <div id="inventory-hud-hotbar" class="hud-hotbar"><img class="painted-hotbar-frame" src="tilt-ui://assets/hotbar-frame-182.png" alt="" />@for (slot of localizedUi.inventoryView.hotbar; track slot.id) { <hud-slot [slot]="slot" /> }</div>
+    </div>
+}

@@ -1,0 +1,2637 @@
+[
+  {
+    "source": "New world",
+    "de": "Neue Welt",
+    "en": "New world"
+  },
+  {
+    "source": "Nicht bereit",
+    "de": "Nicht bereit",
+    "en": "Not ready"
+  },
+  {
+    "source": "No bottles",
+    "de": "Keine Flaschen",
+    "en": "No bottles"
+  },
+  {
+    "source": "No building protection",
+    "de": "Kein Bauschutz",
+    "en": "No building protection"
+  },
+  {
+    "source": "No fuel",
+    "de": "Kein Brennstoff",
+    "en": "No fuel"
+  },
+  {
+    "source": "No matching biome or structure was found within 6144 blocks. Try another location or world settings.",
+    "de": "Im Umkreis von 6144 Blöcken wurde kein passendes Biom oder Bauwerk gefunden. Versuche einen anderen Standort oder andere Welteinstellungen.",
+    "en": "No matching biome or structure was found within 6144 blocks. Try another location or world settings."
+  },
+  {
+    "source": "No protected-land permissions",
+    "de": "Keine Rechte auf geschütztem Land",
+    "en": "No protected-land permissions"
+  },
+  {
+    "source": "No recipe",
+    "de": "Kein Rezept",
+    "en": "No recipe"
+  },
+  {
+    "source": "No room for the plant",
+    "de": "Kein Platz für die Pflanze",
+    "en": "No room for the plant"
+  },
+  {
+    "source": "No rotational power",
+    "de": "Keine Rotationskraft",
+    "en": "No rotational power"
+  },
+  {
+    "source": "No safe dry landing spot near this result; teleport is unavailable.",
+    "de": "In der Nähe dieses Ergebnisses gibt es keinen sicheren, trockenen Landeplatz; Teleportieren ist nicht verfügbar.",
+    "en": "No safe dry landing spot near this result; teleport is unavailable."
+  },
+  {
+    "source": "No server response yet. The map refreshes when the authoritative update arrives.",
+    "de": "Noch keine Serverantwort. Die Karte wird aktualisiert, sobald die verbindliche Weltaktualisierung eintrifft.",
+    "en": "No server response yet. The map refreshes when the authoritative update arrives."
+  },
+  {
+    "source": "No spoon",
+    "de": "Kein Löffel",
+    "en": "No spoon"
+  },
+  {
+    "source": "No surface is selected",
+    "de": "Keine Oberfläche ausgewählt",
+    "en": "No surface is selected"
+  },
+  {
+    "source": "No water",
+    "de": "Kein Wasser",
+    "en": "No water"
+  },
+  {
+    "source": "Noch kein reifer Honig",
+    "de": "Noch kein reifer Honig",
+    "en": "No ripe honey yet"
+  },
+  {
+    "source": "Nord",
+    "de": "Nord",
+    "en": "North"
+  },
+  {
+    "source": "Normal · 100 %",
+    "de": "Normal · 100 %",
+    "en": "Normal · 100 %"
+  },
+  {
+    "source": "North (-Z)",
+    "de": "Nord (-Z)",
+    "en": "North (-Z)"
+  },
+  {
+    "source": "Not an equipment identity",
+    "de": "Keine Ausrüstungskennung",
+    "en": "Not an equipment identity"
+  },
+  {
+    "source": "Not available",
+    "de": "Nicht verfügbar",
+    "en": "Not available"
+  },
+  {
+    "source": "Not synchronized",
+    "de": "Nicht synchronisiert",
+    "en": "Not synchronized"
+  },
+  {
+    "source": "Oak",
+    "de": "Eiche",
+    "en": "Oak"
+  },
+  {
+    "source": "Oak sapling",
+    "de": "Eichensetzling",
+    "en": "Oak sapling"
+  },
+  {
+    "source": "Ocean",
+    "de": "Ozean",
+    "en": "Ocean"
+  },
+  {
+    "source": "Ocean coast",
+    "de": "Ozeanküste",
+    "en": "Ocean coast"
+  },
+  {
+    "source": "Off: settlements have their own levels. On: limits follow the kingdom.",
+    "de": "Aus: Siedlungen haben eigene Stufen. An: Grenzen folgen der Königreichsstufe.",
+    "en": "Off: settlements have their own levels. On: limits follow the kingdom."
+  },
+  {
+    "source": "Offen",
+    "de": "Offen",
+    "en": "Open"
+  },
+  {
+    "source": "Offline / {}",
+    "de": "Offline / {}",
+    "en": "Offline / {}"
+  },
+  {
+    "source": "Ohne Auftrag",
+    "de": "Ohne Auftrag",
+    "en": "No assignment"
+  },
+  {
+    "source": "Online",
+    "de": "Online",
+    "en": "Online"
+  },
+  {
+    "source": "Only founders and officers can manage realm claims.",
+    "de": "Nur Gründer und Offiziere können Gebietsansprüche des Reichs verwalten.",
+    "en": "Only founders and officers can manage realm claims."
+  },
+  {
+    "source": "Only the Founder or an Officer can upgrade this settlement.",
+    "de": "Nur der Gründer oder ein Offizier kann diese Siedlung ausbauen.",
+    "en": "Only the Founder or an Officer can upgrade this settlement."
+  },
+  {
+    "source": "Open HUD Layout from Gameplay.",
+    "de": "Öffne das HUD-Layout unter Spiel.",
+    "en": "Open HUD Layout from Gameplay."
+  },
+  {
+    "source": "Open realm territory",
+    "de": "Offenes Reichsgebiet",
+    "en": "Open realm territory"
+  },
+  {
+    "source": "Options",
+    "de": "Optionen",
+    "en": "Options"
+  },
+  {
+    "source": "Ost",
+    "de": "Ost",
+    "en": "East"
+  },
+  {
+    "source": "Outpost",
+    "de": "Außenposten",
+    "en": "Outpost"
+  },
+  {
+    "source": "Outpost: Build per Level",
+    "de": "Außenposten: Baugebiet je Stufe",
+    "en": "Outpost: Build per Level"
+  },
+  {
+    "source": "Outpost: Level 1 Build",
+    "de": "Außenposten: Baugebiet auf Stufe 1",
+    "en": "Outpost: Level 1 Build"
+  },
+  {
+    "source": "Outpost: Level 1 Territory",
+    "de": "Außenposten: Territorium auf Stufe 1",
+    "en": "Outpost: Level 1 Territory"
+  },
+  {
+    "source": "Outpost: Territory per Level",
+    "de": "Außenposten: Territorium je Stufe",
+    "en": "Outpost: Territory per Level"
+  },
+  {
+    "source": "Outposts",
+    "de": "Außenposten",
+    "en": "Outposts"
+  },
+  {
+    "source": "Outposts per Kingdom Level",
+    "de": "Außenposten je Königreichsstufe",
+    "en": "Outposts per Kingdom Level"
+  },
+  {
+    "source": "Output blocked",
+    "de": "Ausgabe blockiert",
+    "en": "Output blocked"
+  },
+  {
+    "source": "Outsider",
+    "de": "Außenstehender",
+    "en": "Outsider"
+  },
+  {
+    "source": "Overloaded",
+    "de": "Überlastet",
+    "en": "Overloaded"
+  },
+  {
+    "source": "Pants",
+    "de": "Hose",
+    "en": "Pants"
+  },
+  {
+    "source": "Paused",
+    "de": "Pausiert",
+    "en": "Paused"
+  },
+  {
+    "source": "Peaks / Valleys",
+    "de": "Gipfel / Täler",
+    "en": "Peaks / Valleys"
+  },
+  {
+    "source": "Percent of eligible players needed to skip the night (0-100).",
+    "de": "Anteil der berechtigten Spieler zum Überspringen der Nacht (0–100).",
+    "en": "Percent of eligible players needed to skip the night (0-100)."
+  },
+  {
+    "source": "Permanently delete \"{}\" and all its saved changes?",
+    "de": "„{}“ und alle gespeicherten Änderungen dauerhaft löschen?",
+    "en": "Permanently delete \"{}\" and all its saved changes?"
+  },
+  {
+    "source": "Pet command paw",
+    "de": "Begleiter-Befehlspfote",
+    "en": "Pet command paw"
+  },
+  {
+    "source": "Pet command ring",
+    "de": "Begleiter-Befehlsring",
+    "en": "Pet command ring"
+  },
+  {
+    "source": "Pet compact plaque",
+    "de": "Kompakte Begleiteranzeige",
+    "en": "Pet compact plaque"
+  },
+  {
+    "source": "Pet follow plaque",
+    "de": "Begleiteranzeige: Folgen",
+    "en": "Pet follow plaque"
+  },
+  {
+    "source": "Pet health heart",
+    "de": "Begleiter-Lebensherz",
+    "en": "Pet health heart"
+  },
+  {
+    "source": "Pet none plaque",
+    "de": "Begleiteranzeige: Kein Befehl",
+    "en": "Pet none plaque"
+  },
+  {
+    "source": "Pet preview",
+    "de": "Begleitervorschau",
+    "en": "Pet preview"
+  },
+  {
+    "source": "Pet rest plaque",
+    "de": "Begleiteranzeige: Ruhen",
+    "en": "Pet rest plaque"
+  },
+  {
+    "source": "Petora remains hostile: no building, mining or interactions; alliances are not accepted.",
+    "de": "Petora bleibt feindlich: Bauen, Abbauen und Interaktionen sind gesperrt; Bündnisse werden nicht angenommen.",
+    "en": "Petora remains hostile: no building, mining or interactions; alliances are not accepted."
+  },
+  {
+    "source": "Pilz",
+    "de": "Pilz",
+    "en": "Mushroom"
+  },
+  {
+    "source": "Place food in the campfire material slot",
+    "de": "Lege Nahrung in den Materialplatz des Lagerfeuers",
+    "en": "Place food in the campfire material slot"
+  },
+  {
+    "source": "Place the food in the campfire material slot.",
+    "de": "Lege die Nahrung in den Materialplatz des Lagerfeuers.",
+    "en": "Place the food in the campfire material slot."
+  },
+  {
+    "source": "Plains",
+    "de": "Ebene",
+    "en": "Plains"
+  },
+  {
+    "source": "Plate coral",
+    "de": "Tischkoralle",
+    "en": "Plate coral"
+  },
+  {
+    "source": "Play World",
+    "de": "Welt spielen",
+    "en": "Play World"
+  },
+  {
+    "source": "Play heartbeat feedback at low health.",
+    "de": "Herzschlag bei niedriger Gesundheit abspielen.",
+    "en": "Play heartbeat feedback at low health."
+  },
+  {
+    "source": "Player",
+    "de": "Spieler",
+    "en": "Player"
+  },
+  {
+    "source": "Player / 2 x 2",
+    "de": "Spieler / 2 x 2",
+    "en": "Player / 2 x 2"
+  },
+  {
+    "source": "Player Name Distance",
+    "de": "Sichtweite für Spielernamen",
+    "en": "Player Name Distance"
+  },
+  {
+    "source": "Player is not online or is still loading.",
+    "de": "Der Spieler ist offline oder lädt noch.",
+    "en": "Player is not online or is still loading."
+  },
+  {
+    "source": "Player is not online.",
+    "de": "Der Spieler ist offline.",
+    "en": "Player is not online."
+  },
+  {
+    "source": "Player name is ambiguous.",
+    "de": "Der Spielername ist nicht eindeutig.",
+    "en": "Player name is ambiguous."
+  },
+  {
+    "source": "Player {}",
+    "de": "Spieler {}",
+    "en": "Player {}"
+  },
+  {
+    "source": "Player-{}",
+    "de": "Spieler-{}",
+    "en": "Player-{}"
+  },
+  {
+    "source": "Port must be 1..65535",
+    "de": "Der Port muss zwischen 1 und 65535 liegen",
+    "en": "Port must be 1..65535"
+  },
+  {
+    "source": "Prellbock",
+    "de": "Prellbock",
+    "en": "Buffer stop"
+  },
+  {
+    "source": "Prellbock erreicht",
+    "de": "Prellbock erreicht",
+    "en": "Buffer stop reached"
+  },
+  {
+    "source": "Press a key ...",
+    "de": "Drücke eine Taste ...",
+    "en": "Press a key ..."
+  },
+  {
+    "source": "Preview only. Apply confirms all selected chunks.",
+    "de": "Nur Vorschau. Anwenden bestätigt alle ausgewählten Chunks.",
+    "en": "Preview only. Apply confirms all selected chunks."
+  },
+  {
+    "source": "Previously played",
+    "de": "Zuletzt gespielt",
+    "en": "Previously played"
+  },
+  {
+    "source": "Primary",
+    "de": "Primär",
+    "en": "Primary"
+  },
+  {
+    "source": "Priorität muss zwischen 0 und 9 liegen",
+    "de": "Priorität muss zwischen 0 und 9 liegen",
+    "en": "Priority must be between 0 and 9"
+  },
+  {
+    "source": "Profile names need 1..32 ASCII letters, digits, underscores or hyphens, starting with a letter or digit",
+    "de": "Profilnamen müssen aus 1 bis 32 ASCII-Buchstaben, Ziffern, Unterstrichen oder Bindestrichen bestehen und mit einem Buchstaben oder einer Ziffer beginnen",
+    "en": "Profile names need 1..32 ASCII letters, digits, underscores or hyphens, starting with a letter or digit"
+  },
+  {
+    "source": "Profile unavailable",
+    "de": "Profil nicht verfügbar",
+    "en": "Profile unavailable"
+  },
+  {
+    "source": "Prop preview ",
+    "de": "Objektvorschau ",
+    "en": "Prop preview "
+  },
+  {
+    "source": "Protected building chunks at level 1.",
+    "de": "Geschütztes Baugebiet in Chunks auf Stufe 1.",
+    "en": "Protected building chunks at level 1."
+  },
+  {
+    "source": "Protected building land",
+    "de": "Geschütztes Bauland",
+    "en": "Protected building land"
+  },
+  {
+    "source": "Protected chunks; cities have no territory of their own.",
+    "de": "Geschützte Chunks; Städte haben kein eigenes Territorium.",
+    "en": "Protected chunks; cities have no territory of their own."
+  },
+  {
+    "source": "Protected chunks; villages have no territory of their own.",
+    "de": "Geschützte Chunks; Dörfer haben kein eigenes Territorium.",
+    "en": "Protected chunks; villages have no territory of their own."
+  },
+  {
+    "source": "PvP",
+    "de": "PvP",
+    "en": "PvP"
+  },
+  {
+    "source": "Quit",
+    "de": "Beenden",
+    "en": "Quit"
+  },
+  {
+    "source": "RGB: {}, {}, {}",
+    "de": "RGB: {}, {}, {}",
+    "en": "RGB: {}, {}, {}"
+  },
+  {
+    "source": "RMB",
+    "de": "RMT",
+    "en": "RMB"
+  },
+  {
+    "source": "Realm updated.",
+    "de": "Reich aktualisiert.",
+    "en": "Realm updated."
+  },
+  {
+    "source": "Recipe",
+    "de": "Rezept",
+    "en": "Recipe"
+  },
+  {
+    "source": "Reflect the surrounding world on water.",
+    "de": "Die Umgebung auf dem Wasser spiegeln.",
+    "en": "Reflect the surrounding world on water."
+  },
+  {
+    "source": "Reifung",
+    "de": "Reifung",
+    "en": "Ripening"
+  },
+  {
+    "source": "Remove the plant with an empty hand first",
+    "de": "Entferne zuerst die Pflanze mit leerer Hand",
+    "en": "Remove the plant with an empty hand first"
+  },
+  {
+    "source": "Render Distance",
+    "de": "Sichtweite",
+    "en": "Render Distance"
+  },
+  {
+    "source": "Render distance must be an integer from 2 to 32",
+    "de": "Die Sichtweite muss eine ganze Zahl zwischen 2 und 32 sein",
+    "en": "Render distance must be an integer from 2 to 32"
+  },
+  {
+    "source": "Replica",
+    "de": "Replik",
+    "en": "Replica"
+  },
+  {
+    "source": "Required kingdom level before founding a city.",
+    "de": "Erforderliche Königreichsstufe zum Gründen einer Stadt.",
+    "en": "Required kingdom level before founding a city."
+  },
+  {
+    "source": "Requires a campfire.",
+    "de": "Benötigt ein Lagerfeuer.",
+    "en": "Requires a campfire."
+  },
+  {
+    "source": "Requires a cauldron over a lit campfire.",
+    "de": "Benötigt einen Kessel über einem brennenden Lagerfeuer.",
+    "en": "Requires a cauldron over a lit campfire."
+  },
+  {
+    "source": "Requires a cauldron.",
+    "de": "Benötigt einen Kessel.",
+    "en": "Requires a cauldron."
+  },
+  {
+    "source": "Requires a crafting grid.",
+    "de": "Benötigt ein Handwerksraster.",
+    "en": "Requires a crafting grid."
+  },
+  {
+    "source": "Requires a crusher.",
+    "de": "Benötigt einen Zerkleinerer.",
+    "en": "Requires a crusher."
+  },
+  {
+    "source": "Requires a furnace.",
+    "de": "Benötigt einen Ofen.",
+    "en": "Requires a furnace."
+  },
+  {
+    "source": "Requires a mixer.",
+    "de": "Benötigt einen Mischer.",
+    "en": "Requires a mixer."
+  },
+  {
+    "source": "Requires a workbench.",
+    "de": "Benötigt eine Werkbank.",
+    "en": "Requires a workbench."
+  },
+  {
+    "source": "Requires heat and stirring",
+    "de": "Benötigt Hitze und Rühren",
+    "en": "Requires heat and stirring"
+  },
+  {
+    "source": "Resolution",
+    "de": "Auflösung",
+    "en": "Resolution"
+  },
+  {
+    "source": "Respawn or finish teleporting before changing game mode.",
+    "de": "Kehre nach dem Tod zurück oder beende den Teleport, bevor du den Spielmodus änderst.",
+    "en": "Respawn or finish teleporting before changing game mode."
+  },
+  {
+    "source": "Resume Game",
+    "de": "Spiel fortsetzen",
+    "en": "Resume Game"
+  },
+  {
+    "source": "Revert",
+    "de": "Zurücksetzen",
+    "en": "Revert"
+  },
+  {
+    "source": "Ridge {:.3} / Weirdness {:.3}",
+    "de": "Gratkamm {:.3} / Eigenart {:.3}",
+    "en": "Ridge {:.3} / Weirdness {:.3}"
+  },
+  {
+    "source": "Right",
+    "de": "Rechts",
+    "en": "Right"
+  },
+  {
+    "source": "River Current",
+    "de": "Flussströmung",
+    "en": "River Current"
+  },
+  {
+    "source": "River Network",
+    "de": "Flussnetz",
+    "en": "River Network"
+  },
+  {
+    "source": "Roasting",
+    "de": "Rösten",
+    "en": "Roasting"
+  },
+  {
+    "source": "Roasting Recipe",
+    "de": "Röstrezept",
+    "en": "Roasting Recipe"
+  },
+  {
+    "source": "Rohes Fleisch / roher Fisch",
+    "de": "Rohes Fleisch / roher Fisch",
+    "en": "Raw meat / raw fish"
+  },
+  {
+    "source": "Room / Rock",
+    "de": "Raum / Fels",
+    "en": "Room / Rock"
+  },
+  {
+    "source": "Rotate the map with your facing direction.",
+    "de": "Die Karte mit deiner Blickrichtung drehen.",
+    "en": "Rotate the map with your facing direction."
+  },
+  {
+    "source": "Rotate with Player",
+    "de": "Mit Spieler drehen",
+    "en": "Rotate with Player"
+  },
+  {
+    "source": "Rotational power",
+    "de": "Rotationskraft",
+    "en": "Rotational power"
+  },
+  {
+    "source": "Ruht",
+    "de": "Ruht",
+    "en": "Resting"
+  },
+  {
+    "source": "Ruin",
+    "de": "Ruine",
+    "en": "Ruin"
+  },
+  {
+    "source": "Ruins",
+    "de": "Ruinen",
+    "en": "Ruins"
+  },
+  {
+    "source": "Rückwärts",
+    "de": "Rückwärts",
+    "en": "Reverse"
+  },
+  {
+    "source": "Rückwärts {} / 2",
+    "de": "Rückwärts {} / 2",
+    "en": "Reverse {} / 2"
+  },
+  {
+    "source": "Salat",
+    "de": "Salat",
+    "en": "Lettuce"
+  },
+  {
+    "source": "Sammelt Nektar",
+    "de": "Sammelt Nektar",
+    "en": "Gathering nectar"
+  },
+  {
+    "source": "Sanfte Rampe",
+    "de": "Sanfte Rampe",
+    "en": "Gentle slope"
+  },
+  {
+    "source": "Save World",
+    "de": "Welt speichern",
+    "en": "Save World"
+  },
+  {
+    "source": "Saved fullscreen resolution is unavailable on this monitor; using Windowed.",
+    "de": "Die gespeicherte Vollbildauflösung ist auf diesem Monitor nicht verfügbar; Fenstermodus wird verwendet.",
+    "en": "Saved fullscreen resolution is unavailable on this monitor; using Windowed."
+  },
+  {
+    "source": "Saving ...",
+    "de": "Wird gespeichert ...",
+    "en": "Saving ..."
+  },
+  {
+    "source": "Saving and closing ...",
+    "de": "Wird gespeichert und geschlossen ...",
+    "en": "Saving and closing ..."
+  },
+  {
+    "source": "Scene Reflections",
+    "de": "Szenenspiegelungen",
+    "en": "Scene Reflections"
+  },
+  {
+    "source": "Schlaeft",
+    "de": "Schlaeft",
+    "en": "Sleeping"
+  },
+  {
+    "source": "Schotter · +50 %",
+    "de": "Schotter · +50 %",
+    "en": "Ballast · +50 %"
+  },
+  {
+    "source": "Schuettelt sich",
+    "de": "Schuettelt sich",
+    "en": "Shaking"
+  },
+  {
+    "source": "Schwimmt",
+    "de": "Schwimmt",
+    "en": "Swimming"
+  },
+  {
+    "source": "Sea anemone",
+    "de": "Seeanemone",
+    "en": "Sea anemone"
+  },
+  {
+    "source": "Sea cucumber",
+    "de": "Seegurke",
+    "en": "Sea cucumber"
+  },
+  {
+    "source": "Searching LAN",
+    "de": "LAN-Suche läuft",
+    "en": "Searching LAN"
+  },
+  {
+    "source": "Searching for {}...",
+    "de": "Suche nach {}...",
+    "en": "Searching for {}..."
+  },
+  {
+    "source": "Season length must be 1..3650 days",
+    "de": "Eine Jahreszeit muss 1 bis 3650 Tage lang sein",
+    "en": "Season length must be 1..3650 days"
+  },
+  {
+    "source": "Season set to {}.",
+    "de": "Jahreszeit auf {} gesetzt.",
+    "en": "Season set to {}."
+  },
+  {
+    "source": "Seasons are disabled or the calendar cannot advance.",
+    "de": "Jahreszeiten sind deaktiviert oder der Kalender kann nicht fortschreiten.",
+    "en": "Seasons are disabled or the calendar cannot advance."
+  },
+  {
+    "source": "Secondary",
+    "de": "Sekundär",
+    "en": "Secondary"
+  },
+  {
+    "source": "Seed must be an unsigned 64-bit number",
+    "de": "Der Seed muss eine vorzeichenlose 64-Bit-Zahl sein",
+    "en": "Seed must be an unsigned 64-bit number"
+  },
+  {
+    "source": "Seilt sich ab",
+    "de": "Seilt sich ab",
+    "en": "Abseiling"
+  },
+  {
+    "source": "Select a server first",
+    "de": "Wähle zuerst einen Server aus",
+    "en": "Select a server first"
+  },
+  {
+    "source": "Select a world first",
+    "de": "Wähle zuerst eine Welt aus",
+    "en": "Select a world first"
+  },
+  {
+    "source": "Select at most 256 chunks per Apply.",
+    "de": "Wähle höchstens 256 Chunks pro Anwendung aus.",
+    "en": "Select at most 256 chunks per Apply."
+  },
+  {
+    "source": "Select cauldron recipe",
+    "de": "Kesselrezept auswählen",
+    "en": "Select cauldron recipe"
+  },
+  {
+    "source": "Selected settlement is no longer available. Choose it again before applying.",
+    "de": "Die ausgewählte Siedlung ist nicht mehr verfügbar. Wähle sie vor dem Anwenden erneut aus.",
+    "en": "Selected settlement is no longer available. Choose it again before applying."
+  },
+  {
+    "source": "Server is no longer available",
+    "de": "Server ist nicht mehr verfügbar",
+    "en": "Server is no longer available"
+  },
+  {
+    "source": "Server is not listening",
+    "de": "Server wartet nicht auf Verbindungen",
+    "en": "Server is not listening"
+  },
+  {
+    "source": "Servers ({})",
+    "de": "Server ({})",
+    "en": "Servers ({})"
+  },
+  {
+    "source": "Set mixer target",
+    "de": "Mischerziel festlegen",
+    "en": "Set mixer target"
+  },
+  {
+    "source": "Set the display resolution.",
+    "de": "Die Bildschirmauflösung festlegen.",
+    "en": "Set the display resolution."
+  },
+  {
+    "source": "Settings saved",
+    "de": "Einstellungen gespeichert",
+    "en": "Settings saved"
+  },
+  {
+    "source": "Settlement #{}",
+    "de": "Siedlung #{}",
+    "en": "Settlement #{}"
+  },
+  {
+    "source": "Settlement appearance saved.",
+    "de": "Siedlungsaussehen gespeichert.",
+    "en": "Settlement appearance saved."
+  },
+  {
+    "source": "Settlement dissolved.",
+    "de": "Siedlung aufgelöst.",
+    "en": "Settlement dissolved."
+  },
+  {
+    "source": "Settlement founded.",
+    "de": "Siedlung gegründet.",
+    "en": "Settlement founded."
+  },
+  {
+    "source": "Settlement renamed.",
+    "de": "Siedlung umbenannt.",
+    "en": "Settlement renamed."
+  },
+  {
+    "source": "Settlement upgraded to level {level}.",
+    "de": "Siedlung auf Stufe {level} ausgebaut.",
+    "en": "Settlement upgraded to level {level}."
+  },
+  {
+    "source": "Setzlinge brauchen Gras, Erde oder Ackerboden.",
+    "de": "Setzlinge brauchen Gras, Erde oder Ackerboden.",
+    "en": "Saplings need grass, dirt or farmland."
+  },
+  {
+    "source": "Setzlinge können nicht im Wasser gepflanzt werden.",
+    "de": "Setzlinge können nicht im Wasser gepflanzt werden.",
+    "en": "Saplings cannot be planted in water."
+  },
+  {
+    "source": "Shadow Quality",
+    "de": "Schattenqualität",
+    "en": "Shadow Quality"
+  },
+  {
+    "source": "Shaped",
+    "de": "Mit Anordnung",
+    "en": "Shaped"
+  },
+  {
+    "source": "Shapeless",
+    "de": "Ohne feste Anordnung",
+    "en": "Shapeless"
+  },
+  {
+    "source": "Shared Chest Cursors",
+    "de": "Gemeinsame Truhenzeiger",
+    "en": "Shared Chest Cursors"
+  },
+  {
+    "source": "Shared cursor ",
+    "de": "Gemeinsamer Zeiger ",
+    "en": "Shared cursor "
+  },
+  {
+    "source": "Shared cursor {r:02x}{g:02x}{b:02x}",
+    "de": "Gemeinsamer Zeiger {r:02x}{g:02x}{b:02x}",
+    "en": "Shared cursor {r:02x}{g:02x}{b:02x}"
+  },
+  {
+    "source": "Shield Power: {} / {}",
+    "de": "Schildkraft: {} / {}",
+    "en": "Shield Power: {} / {}"
+  },
+  {
+    "source": "Shift",
+    "de": "Umschalt",
+    "en": "Shift"
+  },
+  {
+    "source": "Show Animals",
+    "de": "Tiere anzeigen",
+    "en": "Show Animals"
+  },
+  {
+    "source": "Show Bars",
+    "de": "Leisten anzeigen",
+    "en": "Show Bars"
+  },
+  {
+    "source": "Show Biome",
+    "de": "Biom anzeigen",
+    "en": "Show Biome"
+  },
+  {
+    "source": "Show Clock",
+    "de": "Uhr anzeigen",
+    "en": "Show Clock"
+  },
+  {
+    "source": "Show Coordinates",
+    "de": "Koordinaten anzeigen",
+    "en": "Show Coordinates"
+  },
+  {
+    "source": "Show MiniMap",
+    "de": "Minikarte anzeigen",
+    "en": "Show MiniMap"
+  },
+  {
+    "source": "Show Players",
+    "de": "Spieler anzeigen",
+    "en": "Show Players"
+  },
+  {
+    "source": "Show creature markers.",
+    "de": "Kreaturenmarkierungen anzeigen.",
+    "en": "Show creature markers."
+  },
+  {
+    "source": "Show mist around waterfalls.",
+    "de": "Nebel an Wasserfällen anzeigen.",
+    "en": "Show mist around waterfalls."
+  },
+  {
+    "source": "Show other players using the same chest.",
+    "de": "Andere Spieler an derselben Truhe anzeigen.",
+    "en": "Show other players using the same chest."
+  },
+  {
+    "source": "Show player markers.",
+    "de": "Spielermarkierungen anzeigen.",
+    "en": "Show player markers."
+  },
+  {
+    "source": "Show player names in the world.",
+    "de": "Spielernamen in der Welt anzeigen.",
+    "en": "Show player names in the world."
+  },
+  {
+    "source": "Show small plants and surface details.",
+    "de": "Kleine Pflanzen und Oberflächendetails anzeigen.",
+    "en": "Show small plants and surface details."
+  },
+  {
+    "source": "Show terrain height shading.",
+    "de": "Schattierung der Geländehöhen anzeigen.",
+    "en": "Show terrain height shading."
+  },
+  {
+    "source": "Show the current biome.",
+    "de": "Das aktuelle Biom anzeigen.",
+    "en": "Show the current biome."
+  },
+  {
+    "source": "Show the minimap.",
+    "de": "Die Minikarte anzeigen.",
+    "en": "Show the minimap."
+  },
+  {
+    "source": "Show the world time.",
+    "de": "Die Weltzeit anzeigen.",
+    "en": "Show the world time."
+  },
+  {
+    "source": "Show world and performance diagnostics.",
+    "de": "Welt- und Leistungsdiagnose anzeigen.",
+    "en": "Show world and performance diagnostics."
+  },
+  {
+    "source": "Show world coordinates.",
+    "de": "Weltkoordinaten anzeigen.",
+    "en": "Show world coordinates."
+  },
+  {
+    "source": "Sichtweite muss 2 bis 32 Chunk-Spalten betragen",
+    "de": "Sichtweite muss 2 bis 32 Chunk-Spalten betragen",
+    "en": "Render distance must be 2 to 32 chunk columns"
+  },
+  {
+    "source": "Sleep Percentage",
+    "de": "Schlafanteil",
+    "en": "Sleep Percentage"
+  },
+  {
+    "source": "Small plant",
+    "de": "Kleine Pflanze",
+    "en": "Small plant"
+  },
+  {
+    "source": "Small stones",
+    "de": "Kleine Steine",
+    "en": "Small stones"
+  },
+  {
+    "source": "Smelting speed: +10%",
+    "de": "Schmelzgeschwindigkeit: +10%",
+    "en": "Smelting speed: +10%"
+  },
+  {
+    "source": "Smelting speed: +10%\nDouble result chance: 5%",
+    "de": "Schmelzgeschwindigkeit: +10%\nChance auf doppelten Ertrag: 5%",
+    "en": "Smelting speed: +10%\nDouble result chance: 5%"
+  },
+  {
+    "source": "Smelting speed: +15%\nDouble result chance: 7.5%",
+    "de": "Schmelzgeschwindigkeit: +15%\nChance auf doppelten Ertrag: 7,5%",
+    "en": "Smelting speed: +15%\nDouble result chance: 7.5%"
+  },
+  {
+    "source": "Smelting speed: +20%",
+    "de": "Schmelzgeschwindigkeit: +20%",
+    "en": "Smelting speed: +20%"
+  },
+  {
+    "source": "Smoke: {} blocks",
+    "de": "Rauch: {} Blöcke",
+    "en": "Smoke: {} blocks"
+  },
+  {
+    "source": "Snow Cover",
+    "de": "Schneedecke",
+    "en": "Snow Cover"
+  },
+  {
+    "source": "Source: {} ({} recipes)",
+    "de": "Quelle: {} ({} Rezepte)",
+    "en": "Source: {} ({} recipes)"
+  },
+  {
+    "source": "South (+Z)",
+    "de": "Süd (+Z)",
+    "en": "South (+Z)"
+  },
+  {
+    "source": "Spawned {} at {x:.1}, {y:.1}, {z:.1}.",
+    "de": "{} bei {x:.1}, {y:.1}, {z:.1} erzeugt.",
+    "en": "Spawned {} at {x:.1}, {y:.1}, {z:.1}."
+  },
+  {
+    "source": "Speichern fehlgeschlagen: {error}",
+    "de": "Speichern fehlgeschlagen: {error}",
+    "en": "Saving failed: {error}"
+  },
+  {
+    "source": "Speichern fehlgeschlagen: {source}",
+    "de": "Speichern fehlgeschlagen: {source}",
+    "en": "Saving failed: {source}"
+  },
+  {
+    "source": "Spider web",
+    "de": "Spinnennetz",
+    "en": "Spider web"
+  },
+  {
+    "source": "Spieler {}",
+    "de": "Spieler {}",
+    "en": "Player {}"
+  },
+  {
+    "source": "Spring",
+    "de": "Frühling",
+    "en": "Spring"
+  },
+  {
+    "source": "Springt",
+    "de": "Springt",
+    "en": "Jumping"
+  },
+  {
+    "source": "Spruce",
+    "de": "Fichte",
+    "en": "Spruce"
+  },
+  {
+    "source": "Spruce sapling",
+    "de": "Fichtensetzling",
+    "en": "Spruce sapling"
+  },
+  {
+    "source": "Stamina",
+    "de": "Ausdauer",
+    "en": "Stamina"
+  },
+  {
+    "source": "Standardwerte in der Vorschau",
+    "de": "Standardwerte in der Vorschau",
+    "en": "Default values in preview"
+  },
+  {
+    "source": "Start setzen",
+    "de": "Start setzen",
+    "en": "Set start"
+  },
+  {
+    "source": "Startgleis · 1×3",
+    "de": "Startgleis · 1×3",
+    "en": "Starting rail · 1×3"
+  },
+  {
+    "source": "Starting integrated server ...",
+    "de": "Integrierter Server wird gestartet ...",
+    "en": "Starting integrated server ..."
+  },
+  {
+    "source": "Station",
+    "de": "Station",
+    "en": "Station"
+  },
+  {
+    "source": "Status effect ",
+    "de": "Statuseffekt ",
+    "en": "Status effect "
+  },
+  {
+    "source": "Status effect {}",
+    "de": "Statuseffekt {}",
+    "en": "Status effect {}"
+  },
+  {
+    "source": "Status effects cleared.",
+    "de": "Statuseffekte entfernt.",
+    "en": "Status effects cleared."
+  },
+  {
+    "source": "Status effects require a living Survival player; Night Vision also works in Creative and Spectator.",
+    "de": "Statuseffekte benötigen einen lebenden Spieler im Überlebensmodus; Nachtsicht funktioniert auch im Kreativ- und Zuschauermodus.",
+    "en": "Status effects require a living Survival player; Night Vision also works in Creative and Spectator."
+  },
+  {
+    "source": "Steht",
+    "de": "Steht",
+    "en": "Standing"
+  },
+  {
+    "source": "Still",
+    "de": "Kein Durchfluss",
+    "en": "Still"
+  },
+  {
+    "source": "Stillstand",
+    "de": "Stillstand",
+    "en": "Stopped"
+  },
+  {
+    "source": "Stirring spoon (reusable)",
+    "de": "Rührlöffel (wiederverwendbar)",
+    "en": "Stirring spoon (reusable)"
+  },
+  {
+    "source": "Stone Walls {walls} / {} · Gold Ingots {gold} / {}",
+    "de": "Steinmauern {walls} / {} · Goldbarren {gold} / {}",
+    "en": "Stone Walls {walls} / {} · Gold Ingots {gold} / {}"
+  },
+  {
+    "source": "Strecke blockiert",
+    "de": "Strecke blockiert",
+    "en": "Track blocked"
+  },
+  {
+    "source": "Stress / Kapazitaet",
+    "de": "Stress / Kapazitaet",
+    "en": "Stress / Capacity"
+  },
+  {
+    "source": "Strg",
+    "de": "Strg",
+    "en": "Ctrl"
+  },
+  {
+    "source": "Stufe {level} / 3",
+    "de": "Stufe {level} / 3",
+    "en": "Level {level} / 3"
+  },
+  {
+    "source": "Sucht Futter",
+    "de": "Sucht Futter",
+    "en": "Searching for food"
+  },
+  {
+    "source": "Sucht Wasser",
+    "de": "Sucht Wasser",
+    "en": "Searching for water"
+  },
+  {
+    "source": "Summer",
+    "de": "Sommer",
+    "en": "Summer"
+  },
+  {
+    "source": "Surface Normals",
+    "de": "Oberflächennormalen",
+    "en": "Surface Normals"
+  },
+  {
+    "source": "Surface State",
+    "de": "Oberflächenzustand",
+    "en": "Surface State"
+  },
+  {
+    "source": "Surface Variation",
+    "de": "Oberflächenvariation",
+    "en": "Surface Variation"
+  },
+  {
+    "source": "Surface command sent to server",
+    "de": "Oberflächenbefehl an den Server gesendet",
+    "en": "Surface command sent to server"
+  },
+  {
+    "source": "Surface is no longer loaded",
+    "de": "Oberfläche ist nicht mehr geladen",
+    "en": "Surface is no longer loaded"
+  },
+  {
+    "source": "Synchronize frames with your display.",
+    "de": "Bildwiederholrate mit dem Bildschirm synchronisieren.",
+    "en": "Synchronize frames with your display."
+  },
+  {
+    "source": "Süd",
+    "de": "Süd",
+    "en": "South"
+  },
+  {
+    "source": "TERAMIC EXPRESS",
+    "de": "TERAMIC EXPRESS",
+    "en": "TERAMIC EXPRESS"
+  },
+  {
+    "source": "TERAMIC {}",
+    "de": "TERAMIC {}",
+    "en": "TERAMIC {}"
+  },
+  {
+    "source": "TERRA_PROFILE_FILE cannot be empty",
+    "de": "TERRA_PROFILE_FILE darf nicht leer sein",
+    "en": "TERRA_PROFILE_FILE cannot be empty"
+  },
+  {
+    "source": "Target Surface",
+    "de": "Zieloberfläche",
+    "en": "Target Surface"
+  },
+  {
+    "source": "Teleport cancelled: destination unavailable or no longer permitted.",
+    "de": "Teleport abgebrochen: Ziel nicht verfügbar oder nicht mehr erlaubt.",
+    "en": "Teleport cancelled: destination unavailable or no longer permitted."
+  },
+  {
+    "source": "Teleport requires Creative mode or environment permission.",
+    "de": "Teleportieren erfordert den Kreativmodus oder die Umgebungsberechtigung.",
+    "en": "Teleport requires Creative mode or environment permission."
+  },
+  {
+    "source": "Teleported.",
+    "de": "Teleportiert.",
+    "en": "Teleported."
+  },
+  {
+    "source": "Temperatur",
+    "de": "Temperatur",
+    "en": "Temperature"
+  },
+  {
+    "source": "Terrain Relief",
+    "de": "Geländerelief",
+    "en": "Terrain Relief"
+  },
+  {
+    "source": "Territorial chunks at level 1.",
+    "de": "Territoriumschunks auf Stufe 1.",
+    "en": "Territorial chunks at level 1."
+  },
+  {
+    "source": "The Bergfried chunk stays protected until the settlement is dissolved.",
+    "de": "Der Bergfried-Chunk bleibt geschützt, bis die Siedlung aufgelöst wird.",
+    "en": "The Bergfried chunk stays protected until the settlement is dissolved."
+  },
+  {
+    "source": "The calendar cannot advance.",
+    "de": "Der Kalender kann nicht fortschreiten.",
+    "en": "The calendar cannot advance."
+  },
+  {
+    "source": "The chat is busy. Please try again shortly.",
+    "de": "Der Chat ist ausgelastet. Versuche es gleich erneut.",
+    "en": "The chat is busy. Please try again shortly."
+  },
+  {
+    "source": "The crusher material slot is occupied.",
+    "de": "Der Materialplatz des Zerkleinerers ist belegt.",
+    "en": "The crusher material slot is occupied."
+  },
+  {
+    "source": "The destination is no longer safe. Run locate again.",
+    "de": "Das Ziel ist nicht mehr sicher. Führe locate erneut aus.",
+    "en": "The destination is no longer safe. Run locate again."
+  },
+  {
+    "source": "The effect queue is busy. Try again shortly.",
+    "de": "Die Effektwarteschlange ist ausgelastet. Versuche es gleich erneut.",
+    "en": "The effect queue is busy. Try again shortly."
+  },
+  {
+    "source": "The furnace material slot is occupied.",
+    "de": "Der Materialplatz des Ofens ist belegt.",
+    "en": "The furnace material slot is occupied."
+  },
+  {
+    "source": "The kingdom request limit was reached. Reconnect to continue.",
+    "de": "Das Limit für Königreichsanfragen wurde erreicht. Verbinde dich erneut, um fortzufahren.",
+    "en": "The kingdom request limit was reached. Reconnect to continue."
+  },
+  {
+    "source": "The search queue is busy. Please try again shortly.",
+    "de": "Die Suchwarteschlange ist ausgelastet. Versuche es gleich erneut.",
+    "en": "The search queue is busy. Please try again shortly."
+  },
+  {
+    "source": "The server did not answer. Close and reopen the Bergfried to refresh.",
+    "de": "Der Server hat nicht geantwortet. Schließe und öffne den Bergfried zum Aktualisieren erneut.",
+    "en": "The server did not answer. Close and reopen the Bergfried to refresh."
+  },
+  {
+    "source": "They declared Hostile. Their stance must change before peace or an alliance can take effect.",
+    "de": "Sie haben ihre Haltung auf feindlich gesetzt. Diese muss sich ändern, bevor Frieden oder ein Bündnis wirksam werden kann.",
+    "en": "They declared Hostile. Their stance must change before peace or an alliance can take effect."
+  },
+  {
+    "source": "They offered an alliance. Offer an alliance here to accept it.",
+    "de": "Sie haben ein Bündnis angeboten. Biete hier ebenfalls ein Bündnis an, um es anzunehmen.",
+    "en": "They offered an alliance. Offer an alliance here to accept it."
+  },
+  {
+    "source": "This LAN server is no longer available",
+    "de": "Dieser LAN-Server ist nicht mehr verfügbar",
+    "en": "This LAN server is no longer available"
+  },
+  {
+    "source": "This chunk belongs to another settlement.",
+    "de": "Dieser Chunk gehört einer anderen Siedlung.",
+    "en": "This chunk belongs to another settlement."
+  },
+  {
+    "source": "This command requires Creative mode or environment permission.",
+    "de": "Dieser Befehl benötigt den Kreativmodus oder die Umgebungsberechtigung.",
+    "en": "This command requires Creative mode or environment permission."
+  },
+  {
+    "source": "This item cannot be planted in a pot",
+    "de": "Dieser Gegenstand kann nicht in einen Topf gepflanzt werden",
+    "en": "This item cannot be planted in a pot"
+  },
+  {
+    "source": "This material is not flammable",
+    "de": "Dieses Material ist nicht brennbar",
+    "en": "This material is not flammable"
+  },
+  {
+    "source": "This monitor does not support the selected exclusive fullscreen resolution. Choose another resolution or Borderless.",
+    "de": "Dieser Monitor unterstützt die gewählte exklusive Vollbildauflösung nicht. Wähle eine andere Auflösung oder den randlosen Modus.",
+    "en": "This monitor does not support the selected exclusive fullscreen resolution. Choose another resolution or Borderless."
+  },
+  {
+    "source": "This settlement follows its kingdom level. Upgrade the parent kingdom.",
+    "de": "Diese Siedlung folgt ihrer Königreichsstufe. Baue das übergeordnete Königreich aus.",
+    "en": "This settlement follows its kingdom level. Upgrade the parent kingdom."
+  },
+  {
+    "source": "This teleport target has expired. Run locate again.",
+    "de": "Dieses Teleportziel ist abgelaufen. Führe locate erneut aus.",
+    "en": "This teleport target has expired. Run locate again."
+  },
+  {
+    "source": "Time set to {:02}:{:02}.",
+    "de": "Zeit auf {:02}:{:02} gesetzt.",
+    "en": "Time set to {:02}:{:02}."
+  },
+  {
+    "source": "Too many server character profiles",
+    "de": "Zu viele Charakterprofile auf dem Server",
+    "en": "Too many server character profiles"
+  },
+  {
+    "source": "Tot",
+    "de": "Tot",
+    "en": "Dead"
+  },
+  {
+    "source": "Tragfähiger Untergrund fehlt",
+    "de": "Tragfähiger Untergrund fehlt",
+    "en": "No load-bearing ground"
+  },
+  {
+    "source": "Tree Fall Animation",
+    "de": "Baumfallanimation",
+    "en": "Tree Fall Animation"
+  },
+  {
+    "source": "Trinkt",
+    "de": "Trinkt",
+    "en": "Drinking"
+  },
+  {
+    "source": "Tube coral",
+    "de": "Röhrenkoralle",
+    "en": "Tube coral"
+  },
+  {
+    "source": "Turns {} into {} in a furnace.",
+    "de": "Wird im Ofen aus {} zu {}.",
+    "en": "Turns {} into {} in a furnace."
+  },
+  {
+    "source": "UI FPS",
+    "de": "UI-FPS",
+    "en": "UI FPS"
+  },
+  {
+    "source": "UI Scale",
+    "de": "UI-Skalierung",
+    "en": "UI Scale"
+  },
+  {
+    "source": "UI scale must be between 75% and 150%",
+    "de": "Die UI-Skalierung muss zwischen 75% und 150% liegen",
+    "en": "UI scale must be between 75% and 150%"
+  },
+  {
+    "source": "Ueberlastet",
+    "de": "Ueberlastet",
+    "en": "Overloaded"
+  },
+  {
+    "source": "Uferpflanze",
+    "de": "Uferpflanze",
+    "en": "Shore plant"
+  },
+  {
+    "source": "Unbekannte Einstellung",
+    "de": "Unbekannte Einstellung",
+    "en": "Unknown setting"
+  },
+  {
+    "source": "Unbekannte Wasserqualitaet",
+    "de": "Unbekannte Wasserqualitaet",
+    "en": "Unknown water quality"
+  },
+  {
+    "source": "Unbekannte Wetterqualitaet",
+    "de": "Unbekannte Wetterqualitaet",
+    "en": "Unknown weather quality"
+  },
+  {
+    "source": "Unclaimed",
+    "de": "Nicht beansprucht",
+    "en": "Unclaimed"
+  },
+  {
+    "source": "Unclaimed land",
+    "de": "Nicht beanspruchtes Land",
+    "en": "Unclaimed land"
+  },
+  {
+    "source": "Unexplored",
+    "de": "Unerkundet",
+    "en": "Unexplored"
+  },
+  {
+    "source": "Ungueltiger Schalterwert",
+    "de": "Ungueltiger Schalterwert",
+    "en": "Invalid toggle value"
+  },
+  {
+    "source": "Ungueltiger Zahlenwert",
+    "de": "Ungueltiger Zahlenwert",
+    "en": "Invalid numeric value"
+  },
+  {
+    "source": "Ungültiger Arbeitsauftrag",
+    "de": "Ungültiger Arbeitsauftrag",
+    "en": "Invalid work order"
+  },
+  {
+    "source": "Unknown",
+    "de": "Unbekannt",
+    "en": "Unknown"
+  },
+  {
+    "source": "Unknown biome. Use /help for biome names.",
+    "de": "Unbekanntes Biom. Verwende /help für Biomnamen.",
+    "en": "Unknown biome. Use /help for biome names."
+  },
+  {
+    "source": "Unknown kingdom setting",
+    "de": "Unbekannte Königreichseinstellung",
+    "en": "Unknown kingdom setting"
+  },
+  {
+    "source": "Unknown setting",
+    "de": "Unbekannte Einstellung",
+    "en": "Unknown setting"
+  },
+  {
+    "source": "Unknown waypoint icon",
+    "de": "Unbekanntes Wegpunktsymbol",
+    "en": "Unknown waypoint icon"
+  },
+  {
+    "source": "Unknown world setting",
+    "de": "Unbekannte Welteinstellung",
+    "en": "Unknown world setting"
+  },
+  {
+    "source": "Unloaded block",
+    "de": "Ungeladener Block",
+    "en": "Unloaded block"
+  },
+  {
+    "source": "Unsupported language",
+    "de": "Nicht unterstützte Sprache",
+    "en": "Unsupported language"
+  },
+  {
+    "source": "Unterwegs",
+    "de": "Unterwegs",
+    "en": "Travelling"
+  },
+  {
+    "source": "Unzerstoerbar",
+    "de": "Unzerstoerbar",
+    "en": "Unbreakable"
+  },
+  {
+    "source": "Upgrading consumes the listed materials from your inventory.",
+    "de": "Der Ausbau verbraucht die aufgeführten Materialien aus deinem Inventar.",
+    "en": "Upgrading consumes the listed materials from your inventory."
+  },
+  {
+    "source": "Use --gender only once",
+    "de": "Verwende --gender nur einmal",
+    "en": "Use --gender only once"
+  },
+  {
+    "source": "Use --profile only once",
+    "de": "Verwende --profile nur einmal",
+    "en": "Use --profile only once"
+  },
+  {
+    "source": "Use /help to browse commands.",
+    "de": "Verwende /help, um Befehle anzusehen.",
+    "en": "Use /help to browse commands."
+  },
+  {
+    "source": "Use Kingdom Level",
+    "de": "Königreichsstufe verwenden",
+    "en": "Use Kingdom Level"
+  },
+  {
+    "source": "Use an advertised reachable address to issue join tokens",
+    "de": "Verwende eine angekündigte erreichbare Adresse, um Beitrittstoken auszustellen",
+    "en": "Use an advertised reachable address to issue join tokens"
+  },
+  {
+    "source": "Use crafting grid",
+    "de": "Handwerksraster verwenden",
+    "en": "Use crafting grid"
+  },
+  {
+    "source": "Used in: {used} crafting recipes",
+    "de": "Verwendet in: {used} Handwerksrezepten",
+    "en": "Used in: {used} crafting recipes"
+  },
+  {
+    "source": "Vary the appearance of natural surfaces.",
+    "de": "Das Aussehen natürlicher Oberflächen variieren.",
+    "en": "Vary the appearance of natural surfaces."
+  },
+  {
+    "source": "Ventil",
+    "de": "Ventil",
+    "en": "Valve"
+  },
+  {
+    "source": "Verbindung unterbrochen: {error}",
+    "de": "Verbindung unterbrochen: {error}",
+    "en": "Disconnected: {error}"
+  },
+  {
+    "source": "Verfolgt Ziel",
+    "de": "Verfolgt Ziel",
+    "en": "Pursuing target"
+  },
+  {
+    "source": "Versorgt",
+    "de": "Versorgt",
+    "en": "Supplied"
+  },
+  {
+    "source": "Versprueht Tinte",
+    "de": "Versprueht Tinte",
+    "en": "Spraying ink"
+  },
+  {
+    "source": "Vertrauen",
+    "de": "Vertrauen",
+    "en": "Trust"
+  },
+  {
+    "source": "Village",
+    "de": "Dorf",
+    "en": "Village"
+  },
+  {
+    "source": "Village building claims remain inside your realm's territory.",
+    "de": "Bauansprüche von Dörfern bleiben innerhalb des Territoriums deines Reichs.",
+    "en": "Village building claims remain inside your realm's territory."
+  },
+  {
+    "source": "Village: Build per Level",
+    "de": "Dorf: Baugebiet je Stufe",
+    "en": "Village: Build per Level"
+  },
+  {
+    "source": "Village: Level 1 Build",
+    "de": "Dorf: Baugebiet auf Stufe 1",
+    "en": "Village: Level 1 Build"
+  },
+  {
+    "source": "Villages",
+    "de": "Dörfer",
+    "en": "Villages"
+  },
+  {
+    "source": "Villages Require Territory",
+    "de": "Dörfer benötigen Territorium",
+    "en": "Villages Require Territory"
+  },
+  {
+    "source": "Visual quality of water and waves.",
+    "de": "Darstellungsqualität von Wasser und Wellen.",
+    "en": "Visual quality of water and waves."
+  },
+  {
+    "source": "VmRSS:",
+    "de": "VmRSS:",
+    "en": "VmRSS:"
+  },
+  {
+    "source": "Volumetric Waterfall Mist",
+    "de": "Volumetrischer Wasserfallnebel",
+    "en": "Volumetric Waterfall Mist"
+  },
+  {
+    "source": "Vor der Montage anhalten und die Bremse setzen.",
+    "de": "Vor der Montage anhalten und die Bremse setzen.",
+    "en": "Stop and engage the brake before assembly."
+  },
+  {
+    "source": "Vor der Montage die Kupplungen lösen.",
+    "de": "Vor der Montage die Kupplungen lösen.",
+    "en": "Release the couplings before assembly."
+  },
+  {
+    "source": "Vorwärts",
+    "de": "Vorwärts",
+    "en": "Forward"
+  },
+  {
+    "source": "Vorwärts {level} / 6",
+    "de": "Vorwärts {level} / 6",
+    "en": "Forward {level} / 6"
+  },
+  {
+    "source": "Wachstum",
+    "de": "Wachstum",
+    "en": "Growth"
+  },
+  {
+    "source": "Waiting for player position",
+    "de": "Warte auf Spielerposition",
+    "en": "Waiting for player position"
+  },
+  {
+    "source": "Waiting for the inventory update.",
+    "de": "Warte auf die Inventaraktualisierung.",
+    "en": "Waiting for the inventory update."
+  },
+  {
+    "source": "Waiting for the server…",
+    "de": "Warte auf den Server…",
+    "en": "Waiting for the server…"
+  },
+  {
+    "source": "Walking Camera Motion",
+    "de": "Kamerabewegung beim Gehen",
+    "en": "Walking Camera Motion"
+  },
+  {
+    "source": "Warte auf Server …",
+    "de": "Warte auf Server …",
+    "en": "Waiting for server …"
+  },
+  {
+    "source": "Warte auf Serverentscheidung",
+    "de": "Warte auf Serverentscheidung",
+    "en": "Waiting for server decision"
+  },
+  {
+    "source": "Warte auf geladene Strecke",
+    "de": "Warte auf geladene Strecke",
+    "en": "Waiting for track to load"
+  },
+  {
+    "source": "Wartet auf Wachstum",
+    "de": "Wartet auf Wachstum",
+    "en": "Waiting for growth"
+  },
+  {
+    "source": "Wartet auf Wasser",
+    "de": "Wartet auf Wasser",
+    "en": "Waiting for water"
+  },
+  {
+    "source": "Wasser",
+    "de": "Wasser",
+    "en": "Water"
+  },
+  {
+    "source": "Wasser {:.1}/8 Eimer · {:.1} bar",
+    "de": "Wasser {:.1}/8 Eimer · {:.1} bar",
+    "en": "Water {:.1}/8 buckets · {:.1} bar"
+  },
+  {
+    "source": "Wasser: {} / {}",
+    "de": "Wasser: {} / {}",
+    "en": "Water: {} / {}"
+  },
+  {
+    "source": "Wasserbedarf",
+    "de": "Wasserbedarf",
+    "en": "Water demand"
+  },
+  {
+    "source": "Wasserquelle",
+    "de": "Wasserquelle",
+    "en": "Water source"
+  },
+  {
+    "source": "Water & Shore",
+    "de": "Wasser und Ufer",
+    "en": "Water & Shore"
+  },
+  {
+    "source": "Water Level",
+    "de": "Wasserstand",
+    "en": "Water Level"
+  },
+  {
+    "source": "Water Quality",
+    "de": "Wasserqualität",
+    "en": "Water Quality"
+  },
+  {
+    "source": "Water Wave Strength",
+    "de": "Stärke der Wasserwellen",
+    "en": "Water Wave Strength"
+  },
+  {
+    "source": "Waterfalls",
+    "de": "Wasserfälle",
+    "en": "Waterfalls"
+  },
+  {
+    "source": "Weather Cycle",
+    "de": "Wetterwechsel",
+    "en": "Weather Cycle"
+  },
+  {
+    "source": "Weather Quality",
+    "de": "Wetterqualität",
+    "en": "Weather Quality"
+  },
+  {
+    "source": "Weather changing to {}{}.",
+    "de": "Wetter wechselt zu {}{}.",
+    "en": "Weather changing to {}{}."
+  },
+  {
+    "source": "Weg versperrt",
+    "de": "Weg versperrt",
+    "en": "Path blocked"
+  },
+  {
+    "source": "Weiche links",
+    "de": "Weiche links",
+    "en": "Switch left"
+  },
+  {
+    "source": "Weiche rechts",
+    "de": "Weiche rechts",
+    "en": "Switch right"
+  },
+  {
+    "source": "Weichensteller zum Umschalten",
+    "de": "Weichensteller zum Umschalten",
+    "en": "Use a switch lever to change direction"
+  },
+  {
+    "source": "Weichenstellung",
+    "de": "Weichenstellung",
+    "en": "Switch position"
+  },
+  {
+    "source": "Weitertransport",
+    "de": "Weitertransport",
+    "en": "Forward transport"
+  },
+  {
+    "source": "Weizen",
+    "de": "Weizen",
+    "en": "Wheat"
+  },
+  {
+    "source": "Weizen, Mais, Salat",
+    "de": "Weizen, Mais, Salat",
+    "en": "Wheat, corn, lettuce"
+  },
+  {
+    "source": "Weltzustand hat sich bereits geaendert.",
+    "de": "Weltzustand hat sich bereits geaendert.",
+    "en": "World state has already changed."
+  },
+  {
+    "source": "Werkzeug fehlt",
+    "de": "Werkzeug fehlt",
+    "en": "Missing tool"
+  },
+  {
+    "source": "West",
+    "de": "West",
+    "en": "West"
+  },
+  {
+    "source": "West (-X)",
+    "de": "West (-X)",
+    "en": "West (-X)"
+  },
+  {
+    "source": "Wet / Extinguish",
+    "de": "Befeuchten / Löschen",
+    "en": "Wet / Extinguish"
+  },
+  {
+    "source": "Wet the targeted surface.",
+    "de": "Die anvisierte Oberfläche befeuchten.",
+    "en": "Wet the targeted surface."
+  },
+  {
+    "source": "While in smoke",
+    "de": "Während du im Rauch bist",
+    "en": "While in smoke"
+  },
+  {
+    "source": "Wild",
+    "de": "Wild",
+    "en": "Wild"
+  },
+  {
+    "source": "Wildblumen",
+    "de": "Wildblumen",
+    "en": "Wildflowers"
+  },
+  {
+    "source": "Wilderness",
+    "de": "Wildnis",
+    "en": "Wilderness"
+  },
+  {
+    "source": "Wilderness · Unclaimed",
+    "de": "Wildnis · Nicht beansprucht",
+    "en": "Wilderness · Unclaimed"
+  },
+  {
+    "source": "Window Mode",
+    "de": "Fenstermodus",
+    "en": "Window Mode"
+  },
+  {
+    "source": "Winter",
+    "de": "Winter",
+    "en": "Winter"
+  },
+  {
+    "source": "Wird erfasst",
+    "de": "Wird erfasst",
+    "en": "Being captured"
+  },
+  {
+    "source": "Wird gebaut…",
+    "de": "Wird gebaut…",
+    "en": "Building…"
+  },
+  {
+    "source": "Wird synchronisiert",
+    "de": "Wird synchronisiert",
+    "en": "Synchronizing"
+  },
+  {
+    "source": "Wood planks",
+    "de": "Holzplanken",
+    "en": "Wood planks"
+  },
+  {
+    "source": "Wood planks (any type)",
+    "de": "Holzplanken (beliebige Art)",
+    "en": "Wood planks (any type)"
+  },
+  {
+    "source": "Workbench / 3 x 3",
+    "de": "Werkbank / 3 x 3",
+    "en": "Workbench / 3 x 3"
+  },
+  {
+    "source": "Workbench no longer available.",
+    "de": "Werkbank nicht mehr verfügbar.",
+    "en": "Workbench no longer available."
+  },
+  {
+    "source": "World is no longer available",
+    "de": "Welt ist nicht mehr verfügbar",
+    "en": "World is no longer available"
+  },
+  {
+    "source": "Worlds ({})",
+    "de": "Welten ({})",
+    "en": "Worlds ({})"
+  },
+  {
+    "source": "X {:.0}  Y {:.0}  Z {:.0}",
+    "de": "X {:.0}  Y {:.0}  Z {:.0}",
+    "en": "X {:.0}  Y {:.0}  Z {:.0}"
+  },
+  {
+    "source": "You bled out.",
+    "de": "Du bist verblutet.",
+    "en": "You bled out."
+  },
+  {
+    "source": "You burned to death.",
+    "de": "Du bist verbrannt.",
+    "en": "You burned to death."
+  },
+  {
+    "source": "You do not belong to a settlement.",
+    "de": "Du gehörst keiner Siedlung an.",
+    "en": "You do not belong to a settlement."
+  },
+  {
+    "source": "You fell beyond the world.",
+    "de": "Du bist aus der Welt gefallen.",
+    "en": "You fell beyond the world."
+  },
+  {
+    "source": "You fell from too high.",
+    "de": "Du bist aus zu großer Höhe gestürzt.",
+    "en": "You fell from too high."
+  },
+  {
+    "source": "You froze to death.",
+    "de": "Du bist erfroren.",
+    "en": "You froze to death."
+  },
+  {
+    "source": "You joined this settlement.",
+    "de": "Du bist dieser Siedlung beigetreten.",
+    "en": "You joined this settlement."
+  },
+  {
+    "source": "You left this settlement.",
+    "de": "Du hast diese Siedlung verlassen.",
+    "en": "You left this settlement."
+  },
+  {
+    "source": "You ran out of breath.",
+    "de": "Dir ist die Luft ausgegangen.",
+    "en": "You ran out of breath."
+  },
+  {
+    "source": "You ran out of food.",
+    "de": "Du bist verhungert.",
+    "en": "You ran out of food."
+  },
+  {
+    "source": "You succumbed to poison.",
+    "de": "Du bist an Gift gestorben.",
+    "en": "You succumbed to poison."
+  },
+  {
+    "source": "You suffocated in smoke.",
+    "de": "Du bist im Rauch erstickt.",
+    "en": "You suffocated in smoke."
+  },
+  {
+    "source": "You were attacked by an animal.",
+    "de": "Du wurdest von einem Tier angegriffen.",
+    "en": "You were attacked by an animal."
+  },
+  {
+    "source": "You were defeated by another player.",
+    "de": "Du wurdest von einem anderen Spieler besiegt.",
+    "en": "You were defeated by another player."
+  },
+  {
+    "source": "You were overcome by sickness.",
+    "de": "Du bist an einer Krankheit gestorben.",
+    "en": "You were overcome by sickness."
+  },
+  {
+    "source": "You were run over by a train.",
+    "de": "Du wurdest von einem Zug überfahren.",
+    "en": "You were run over by a train."
+  },
+  {
+    "source": "You were struck by falling stone.",
+    "de": "Du wurdest von herabfallendem Stein getroffen.",
+    "en": "You were struck by falling stone."
+  },
+  {
+    "source": "You were struck by lightning.",
+    "de": "Du wurdest vom Blitz getroffen.",
+    "en": "You were struck by lightning."
+  },
+  {
+    "source": "Your hostile stance blocks all shared access. Choose Neutral to withdraw it.",
+    "de": "Deine feindliche Haltung sperrt jeden gemeinsamen Zugriff. Wähle Neutral, um sie aufzuheben.",
+    "en": "Your hostile stance blocks all shared access. Choose Neutral to withdraw it."
+  },
+  {
+    "source": "Your journey ended here.",
+    "de": "Deine Reise endete hier.",
+    "en": "Your journey ended here."
+  },
+  {
+    "source": "Your next adventure",
+    "de": "Dein nächstes Abenteuer",
+    "en": "Your next adventure"
+  },
+  {
+    "source": "Your settlement has reached the maximum level.",
+    "de": "Deine Siedlung hat die höchste Stufe erreicht.",
+    "en": "Your settlement has reached the maximum level."
+  },
+  {
+    "source": "Your settlement: {}",
+    "de": "Deine Siedlung: {}",
+    "en": "Your settlement: {}"
+  },
+  {
+    "source": "Your unapplied settings will be discarded.",
+    "de": "Deine noch nicht angewendeten Einstellungen werden verworfen.",
+    "en": "Your unapplied settings will be discarded."
+  },
+  {
+    "source": "Ziel ist ausser Reichweite.",
+    "de": "Ziel ist ausser Reichweite.",
+    "en": "Target is out of reach."
+  },
+  {
+    "source": "Ziel ist verdeckt.",
+    "de": "Ziel ist verdeckt.",
+    "en": "Target is obstructed."
+  },
+  {
+    "source": "Ziel setzen",
+    "de": "Ziel setzen",
+    "en": "Set target"
+  },
+  {
+    "source": "Zu jung",
+    "de": "Zu jung",
+    "en": "Too young"
+  },
+  {
+    "source": "Zu viele Aktionen. Bitte kurz warten.",
+    "de": "Zu viele Aktionen. Bitte kurz warten.",
+    "en": "Too many actions. Please wait a moment."
+  },
+  {
+    "source": "Zu · Stufe 0 / 3",
+    "de": "Zu · Stufe 0 / 3",
+    "en": "Closed · Level 0 / 3"
+  },
+  {
+    "source": "Zucht",
+    "de": "Zucht",
+    "en": "Breeding"
+  },
+  {
+    "source": "Zugriff verweigert",
+    "de": "Zugriff verweigert",
+    "en": "Access denied"
+  },
+  {
+    "source": "Zum Bearbeiten neben einer Montagestelle anhalten und aussteigen.",
+    "de": "Zum Bearbeiten neben einer Montagestelle anhalten und aussteigen.",
+    "en": "To edit, stop beside an assembly station and get out."
+  },
+  {
+    "source": "Zum Fahren in den eigenen Führerstand einsteigen.",
+    "de": "Zum Fahren in den eigenen Führerstand einsteigen.",
+    "en": "To drive, enter your own cab."
+  },
+  {
+    "source": "at most {EFFECT_COUNT} unique, finite status effects",
+    "de": "höchstens {EFFECT_COUNT} eindeutige, endliche Statuseffekte",
+    "en": "at most {EFFECT_COUNT} unique, finite status effects"
+  },
+  {
+    "source": "authored rail builder",
+    "de": "gebauter Gleisleger",
+    "en": "authored rail builder"
+  },
+  {
+    "source": "automatic climate",
+    "de": "automatisches Klima",
+    "en": "automatic climate"
+  },
+  {
+    "source": "duplicate or invalid status effect",
+    "de": "doppelter oder ungültiger Statuseffekt",
+    "en": "duplicate or invalid status effect"
+  },
+  {
+    "source": "face away",
+    "de": "abgewandt",
+    "en": "face away"
+  },
+  {
+    "source": "farther than",
+    "de": "weiter entfernt als",
+    "en": "farther than"
+  },
+  {
+    "source": "no free end",
+    "de": "kein freies Ende",
+    "en": "no free end"
+  },
+  {
+    "source": "overlaps an existing",
+    "de": "überschneidet ein bestehendes",
+    "en": "overlaps an existing"
+  },
+  {
+    "source": "same wood",
+    "de": "gleiches Holz",
+    "en": "same wood"
+  },
+  {
+    "source": "supporting floor",
+    "de": "tragender Boden",
+    "en": "supporting floor"
+  },
+  {
+    "source": "too close",
+    "de": "zu nah",
+    "en": "too close"
+  },
+  {
+    "source": "too many status effects",
+    "de": "zu viele Statuseffekte",
+    "en": "too many status effects"
+  },
+  {
+    "source": "too steep",
+    "de": "zu steil",
+    "en": "too steep"
+  },
+  {
+    "source": "turning radius",
+    "de": "Kurvenradius",
+    "en": "turning radius"
+  },
+  {
+    "source": "vollständig geladen",
+    "de": "vollständig geladen",
+    "en": "fully loaded"
+  },
+  {
+    "source": "von {}",
+    "de": "von {}",
+    "en": "by {}"
+  },
+  {
+    "source": "v{}  /  {}",
+    "de": "v{}  /  {}",
+    "en": "v{}  /  {}"
+  },
+  {
+    "source": "v{} (Early Access)",
+    "de": "v{} (Vorabversion)",
+    "en": "v{} (Early Access)"
+  },
+  {
+    "source": "zu weit",
+    "de": "zu weit",
+    "en": "too far"
+  },
+  {
+    "source": "{:.0} Grad",
+    "de": "{:.0} Grad",
+    "en": "{:.0} degrees"
+  },
+  {
+    "source": "{:.0} MiB",
+    "de": "{:.0} MiB",
+    "en": "{:.0} MiB"
+  },
+  {
+    "source": "{:.0} degrees",
+    "de": "{:.0} Grad",
+    "en": "{:.0} degrees"
+  },
+  {
+    "source": "{:.0} m",
+    "de": "{:.0} m",
+    "en": "{:.0} m"
+  },
+  {
+    "source": "{:.0}% (fit {:.0}%)",
+    "de": "{:.0}% (passend {:.0}%)",
+    "en": "{:.0}% (fit {:.0}%)"
+  },
+  {
+    "source": "{:.1} Blöcke/s",
+    "de": "{:.1} Blöcke/s",
+    "en": "{:.1} blocks/s"
+  },
+  {
+    "source": "{:.1} RPM - Waiting",
+    "de": "{:.1} U/min - Wartet",
+    "en": "{:.1} RPM - Waiting"
+  },
+  {
+    "source": "{:.1} RPM - {:.0}%",
+    "de": "{:.1} U/min - {:.0}%",
+    "en": "{:.1} RPM - {:.0}%"
+  },
+  {
+    "source": "{:.1} m",
+    "de": "{:.1} m",
+    "en": "{:.1} m"
+  },
+  {
+    "source": "{:.1} s",
+    "de": "{:.1} s",
+    "en": "{:.1} s"
+  },
+  {
+    "source": "{:.1} s ({} ticks)",
+    "de": "{:.1} s ({} Ticks)",
+    "en": "{:.1} s ({} ticks)"
+  },
+  {
+    "source": "{:.2} m",
+    "de": "{:.2} m",
+    "en": "{:.2} m"
+  },
+  {
+    "source": "{:?} / rain {:.0}% / wind {:.1}, {:.1}",
+    "de": "{:?} / Regen {:.0}% / Wind {:.1}, {:.1}",
+    "en": "{:?} / rain {:.0}% / wind {:.1}, {:.1}"
+  },
+  {
+    "source": "{available} / {}",
+    "de": "{available} / {}",
+    "en": "{available} / {}"
+  },
+  {
+    "source": "{cardinal} / yaw {yaw:.1} / pitch {pitch:.1}",
+    "de": "{cardinal} / Gierwinkel {yaw:.1} / Neigung {pitch:.1}",
+    "en": "{cardinal} / yaw {yaw:.1} / pitch {pitch:.1}"
+  },
+  {
+    "source": "{count} / 1",
+    "de": "{count} / 1",
+    "en": "{count} / 1"
+  },
+  {
+    "source": "{count} / {max}",
+    "de": "{count} / {max}",
+    "en": "{count} / {max}"
+  },
+  {
+    "source": "{count} / {}",
+    "de": "{count} / {}",
+    "en": "{count} / {}"
+  },
+  {
+    "source": "{count} chunks applied.",
+    "de": "{count} Chunks angewendet.",
+    "en": "{count} chunks applied."
+  },
+  {
+    "source": "{count} claims saved.",
+    "de": "{count} Gebietsansprüche gespeichert.",
+    "en": "{count} claims saved."
+  },
+  {
+    "source": "{description}\nHeraldry: {}",
+    "de": "{description}\nWappen: {}",
+    "en": "{description}\nHeraldry: {}"
+  },
+  {
+    "source": "{have} / {}",
+    "de": "{have} / {}",
+    "en": "{have} / {}"
+  },
+  {
+    "source": "{milliseconds:.2} ms",
+    "de": "{milliseconds:.2} ms",
+    "en": "{milliseconds:.2} ms"
+  },
+  {
+    "source": "{name} ({units}/{})",
+    "de": "{name} ({units}/{})",
+    "en": "{name} ({units}/{})"
+  },
+  {
+    "source": "{name} ({})",
+    "de": "{name} ({})",
+    "en": "{name} ({})"
+  },
+  {
+    "source": "{occupied} / {} slots",
+    "de": "{occupied} / {} Plätze",
+    "en": "{occupied} / {} slots"
+  },
+  {
+    "source": "{span} m",
+    "de": "{span} m",
+    "en": "{span} m"
+  },
+  {
+    "source": "{temperature:.2} / {props} / {minerals}",
+    "de": "{temperature:.2} / {props} / {minerals}",
+    "en": "{temperature:.2} / {props} / {minerals}"
+  },
+  {
+    "source": "{trust} / 100",
+    "de": "{trust} / 100",
+    "en": "{trust} / 100"
+  },
+  {
+    "source": "{value:.1} m",
+    "de": "{value:.1} m",
+    "en": "{value:.1} m"
+  },
+  {
+    "source": "{w} x {h}",
+    "de": "{w} x {h}",
+    "en": "{w} x {h}"
+  },
+  {
+    "source": "{} ({role})",
+    "de": "{} ({role})",
+    "en": "{} ({role})"
+  },
+  {
+    "source": "{} / 9 Plätze",
+    "de": "{} / 9 Plätze",
+    "en": "{} / 9 slots"
+  },
+  {
+    "source": "{} / Ausdauer {} / Sprung {:.2} m",
+    "de": "{} / Ausdauer {} / Sprung {:.2} m",
+    "en": "{} / Stamina {} / Jump {:.2} m"
+  },
+  {
+    "source": "{} / Level {}",
+    "de": "{} / Stufe {}",
+    "en": "{} / Level {}"
+  },
+  {
+    "source": "{} / Players: {}/{} / Ping: {} ms / Local profiles",
+    "de": "{} / Spieler: {}/{} / Ping: {} ms / Lokale Profile",
+    "en": "{} / Players: {}/{} / Ping: {} ms / Local profiles"
+  },
+  {
+    "source": "{} / {:.2} ms",
+    "de": "{} / {:.2} ms",
+    "en": "{} / {:.2} ms"
+  },
+  {
+    "source": "{} / {capacity}",
+    "de": "{} / {capacity}",
+    "en": "{} / {capacity}"
+  },
+  {
+    "source": "{} / {count}",
+    "de": "{} / {count}",
+    "en": "{} / {count}"
+  },
+  {
+    "source": "{} / {} / {} logical threads",
+    "de": "{} / {} / {} logische Threads",
+    "en": "{} / {} / {} logical threads"
+  },
+  {
+    "source": "{} / {} / {} pending inputs",
+    "de": "{} / {} / {} ausstehende Eingaben",
+    "en": "{} / {} / {} pending inputs"
+  },
+  {
+    "source": "{} / {} slots",
+    "de": "{} / {} Plätze",
+    "en": "{} / {} slots"
+  },
+  {
+    "source": "{} / {}: Fahrhebel · {}: Bremse · {}: Bedienung · {}: Aussteigen",
+    "de": "{} / {}: Fahrhebel · {}: Bremse · {}: Bedienung · {}: Aussteigen",
+    "en": "{} / {}: Throttle · {}: Brake · {}: Controls · {}: Exit"
+  },
+  {
+    "source": "{} = {value}",
+    "de": "{} = {value}",
+    "en": "{} = {value}"
+  },
+  {
+    "source": "{} Blöcke/s",
+    "de": "{} Blöcke/s",
+    "en": "{} blocks/s"
+  },
+  {
+    "source": "{} U/min",
+    "de": "{} U/min",
+    "en": "{} RPM"
+  },
+  {
+    "source": "{} chunks",
+    "de": "{} Chunks",
+    "en": "{} chunks"
+  },
+  {
+    "source": "{} chunks selected",
+    "de": "{} Chunks ausgewählt",
+    "en": "{} chunks selected"
+  },
+  {
+    "source": "{} claim saved.",
+    "de": "{} Gebietsanspruch gespeichert.",
+    "en": "{} claim saved."
+  },
+  {
+    "source": "{} creature replicas / {} loose items",
+    "de": "{} Kreaturenrepliken / {} lose Gegenstände",
+    "en": "{} creature replicas / {} loose items"
+  },
+  {
+    "source": "{} found at {x}, {y}, {z}.",
+    "de": "{} bei {x}, {y}, {z} gefunden.",
+    "en": "{} found at {x}, {y}, {z}."
+  },
+  {
+    "source": "{} loaded / {} solid meshes / {} water meshes",
+    "de": "{} geladen / {} feste Meshes / {} Wassermeshes",
+    "en": "{} loaded / {} solid meshes / {} water meshes"
+  },
+  {
+    "source": "{} m",
+    "de": "{} m",
+    "en": "{} m"
+  },
+  {
+    "source": "{} m / {} Sections",
+    "de": "{} m / {} Sections",
+    "en": "{} m / {} sections"
+  },
+  {
+    "source": "{} must be {}..={}",
+    "de": "{} muss zwischen {} und {} liegen",
+    "en": "{} must be {}..={}"
+  },
+  {
+    "source": "{} operations / fuel",
+    "de": "{} Vorgänge / Brennstoff",
+    "en": "{} operations / fuel"
+  },
+  {
+    "source": "{} px",
+    "de": "{} px",
+    "en": "{} px"
+  },
+  {
+    "source": "{} s",
+    "de": "{} s",
+    "en": "{} s"
+  },
+  {
+    "source": "{} wanted / {} jobs / {} columns",
+    "de": "{} angefordert / {} Aufträge / {} Spalten",
+    "en": "{} wanted / {} jobs / {} columns"
+  },
+  {
+    "source": "{} x {} / {:?}",
+    "de": "{} x {} / {:?}",
+    "en": "{} x {} / {:?}"
+  },
+  {
+    "source": "{} x{}",
+    "de": "{} x{}",
+    "en": "{} x{}"
+  },
+  {
+    "source": "{} {}: {} s",
+    "de": "{} {}: {} s",
+    "en": "{} {}: {} s"
+  },
+  {
+    "source": "{} | Armor: {:.1}",
+    "de": "{} | Rüstung: {:.1}",
+    "en": "{} | Armor: {:.1}"
+  },
+  {
+    "source": "{} · Level {}",
+    "de": "{} · Stufe {}",
+    "en": "{} · Level {}"
+  },
+  {
+    "source": "{} · Level {}\nBuilding {} / {} · Territory {} / {}",
+    "de": "{} · Stufe {}\nBaugebiet {} / {} · Territorium {} / {}",
+    "en": "{} · Level {}\nBuilding {} / {} · Territory {} / {}"
+  },
+  {
+    "source": "{} · Level {} · {}",
+    "de": "{} · Stufe {} · {}",
+    "en": "{} · Level {} · {}"
+  },
+  {
+    "source": "{} · Neutral",
+    "de": "{} · Neutral",
+    "en": "{} · Neutral"
+  },
+  {
+    "source": "{} · realm territory",
+    "de": "{} · Territorium des Reichs",
+    "en": "{} · realm territory"
+  },
+  {
+    "source": "{} · unclaimed settlement",
+    "de": "{} · Siedlung ohne Territorium",
+    "en": "{} · unclaimed settlement"
+  },
+  {
+    "source": "{} · {owner_name} · {actor}",
+    "de": "{} · {owner_name} · {actor}",
+    "en": "{} · {owner_name} · {actor}"
+  },
+  {
+    "source": "{} × {} planks",
+    "de": "{} × {} Planken",
+    "en": "{} × {} planks"
+  },
+  {
+    "source": "{}+{}: Abbrechen",
+    "de": "{}+{}: Abbrechen",
+    "en": "{}+{}: Cancel"
+  },
+  {
+    "source": "{}+{}: Auswahl lösen",
+    "de": "{}+{}: Auswahl lösen",
+    "en": "{}+{}: Clear selection"
+  },
+  {
+    "source": "{}+{}: Start merken",
+    "de": "{}+{}: Start merken",
+    "en": "{}+{}: Remember start"
+  },
+  {
+    "source": "{}, {}, {} / face {}, {}, {}",
+    "de": "{}, {}, {} / Fläche {}, {}, {}",
+    "en": "{}, {}, {} / face {}, {}, {}"
+  },
+  {
+    "source": "{}: Setzen",
+    "de": "{}: Setzen",
+    "en": "{}: Place"
+  },
+  {
+    "source": "{}: press a key or mouse button. Escape cancels.",
+    "de": "{}: Drücke eine Taste oder Maustaste. Escape bricht ab.",
+    "en": "{}: press a key or mouse button. Escape cancels."
+  },
+  {
+    "source": "{}: {e}",
+    "de": "{}: {e}",
+    "en": "{}: {e}"
+  },
+  {
+    "source": "{}{}: Form · {}: {}",
+    "de": "{}{}: Form · {}: {}",
+    "en": "{}{}: Shape · {}: {}"
+  }
+]

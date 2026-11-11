@@ -1,0 +1,42 @@
+[
+  {
+    "source": "{:02}:{:02} Spring",
+    "de": "{:02}:{:02} Frühling",
+    "en": "{:02}:{:02} Spring"
+  },
+  {
+    "source": "{:02}:{:02}  Spring",
+    "de": "{:02}:{:02}  Frühling",
+    "en": "{:02}:{:02}  Spring"
+  },
+  {
+    "source": "{:02}:{:02} Summer",
+    "de": "{:02}:{:02} Sommer",
+    "en": "{:02}:{:02} Summer"
+  },
+  {
+    "source": "{:02}:{:02}  Summer",
+    "de": "{:02}:{:02}  Sommer",
+    "en": "{:02}:{:02}  Summer"
+  },
+  {
+    "source": "{:02}:{:02} Autumn",
+    "de": "{:02}:{:02} Herbst",
+    "en": "{:02}:{:02} Autumn"
+  },
+  {
+    "source": "{:02}:{:02}  Autumn",
+    "de": "{:02}:{:02}  Herbst",
+    "en": "{:02}:{:02}  Autumn"
+  },
+  {
+    "source": "{:02}:{:02} Winter",
+    "de": "{:02}:{:02} Winter",
+    "en": "{:02}:{:02} Winter"
+  },
+  {
+    "source": "{:02}:{:02}  Winter",
+    "de": "{:02}:{:02}  Winter",
+    "en": "{:02}:{:02}  Winter"
+  }
+]

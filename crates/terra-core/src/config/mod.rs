@@ -28,7 +28,9 @@ pub use audio::AudioConfig;
 pub use client::{ChunkAnimation, ClientConfig, WaterQuality, WeatherKind, WeatherQuality};
 pub use error::ConfigError;
 pub use game::GameConfig;
-pub use gameplay::{GameplayConfig, MapMode, MinimapConfig, MobHealthBars};
+pub use gameplay::{
+    GameLanguage, GameplayConfig, LanguagePreference, MapMode, MinimapConfig, MobHealthBars,
+};
 pub use graphics::{
     CaveQuality, GraphicsConfig, ShadowQuality, TreeFallAnimation, WindowModeSetting,
 };

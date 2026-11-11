@@ -69,6 +69,10 @@ pub(crate) fn install(app: &mut App) {
     if !std::env::args().any(|a| a.starts_with("--smoke-test-menu")) {
         return;
     }
+    if crate::localization_smoke::requested() {
+        crate::localization_smoke::install(app);
+        return;
+    }
     if std::env::var("TERRA_MENU_REFERENCE_SMOKE").as_deref() == Ok("1") {
         crate::inventory_smoke::reference::install_menu(app);
         return;
@@ -264,7 +268,7 @@ fn subtree_has_text(world: &World, entity: Entity, title: &str, depth: usize) ->
     }
     world
         .get::<bevy::ui::widget::Text>(entity)
-        .is_some_and(|text| text.0 == title)
+        .is_some_and(|text| text.0 == title || text.0 == terra_ui::localized_text(world, title))
         || world.get::<Children>(entity).is_some_and(|children| {
             children
                 .iter()

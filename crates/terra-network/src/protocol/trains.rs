@@ -97,6 +97,10 @@ pub enum TrainAction {
         vehicle: u64,
         player_revision: u64,
     },
+    RailBuilderAutoload {
+        vehicle: u64,
+        active: bool,
+    },
 }
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct TrainCommand {

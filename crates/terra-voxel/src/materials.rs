@@ -302,10 +302,19 @@ pub enum MaterialId {
     // F54_enum_END
     RailTurntable = 295,
     TrainRailBuilder = 296,
+    LumberjackStation = 297,
+    SmithStation = 298,
+    MarketStation = 299,
+    ArmyStation = 300,
+    RailwayStation = 301,
+    MineStation = 302,
+    ButcherStation = 303,
+    BishopStation = 304,
+    FarmStation = 305,
 }
 
 impl MaterialId {
-    pub const LAST: u16 = Self::TrainRailBuilder as u16;
+    pub const LAST: u16 = Self::FarmStation as u16;
     pub const FOLIAGE: [u16; 6] = [7, 8, 9, 132, 133, 195];
     pub const BLOCK_COUNT: usize = Self::LAST as usize;
 
@@ -415,6 +424,15 @@ impl MaterialId {
             // F54_identifiers_END
             Self::RailTurntable => "teramic::rail_turntable",
             Self::TrainRailBuilder => "teramic::train_rail_builder",
+            Self::LumberjackStation => "teramic::lumberjack_station",
+            Self::SmithStation => "teramic::smith_station",
+            Self::MarketStation => "teramic::market_station",
+            Self::ArmyStation => "teramic::army_station",
+            Self::RailwayStation => "teramic::railway_station",
+            Self::MineStation => "teramic::mine_station",
+            Self::ButcherStation => "teramic::butcher_station",
+            Self::BishopStation => "teramic::bishop_station",
+            Self::FarmStation => "teramic::farm_station",
             Self::Lantern => "teramic::lantern",
             Self::Chain => "teramic::chain",
             Self::WoodPipe => "teramic::wood_pipe",
@@ -912,6 +930,15 @@ impl MaterialId {
             // F54_raw_END
             295 => Self::RailTurntable,
             296 => Self::TrainRailBuilder,
+            297 => Self::LumberjackStation,
+            298 => Self::SmithStation,
+            299 => Self::MarketStation,
+            300 => Self::ArmyStation,
+            301 => Self::RailwayStation,
+            302 => Self::MineStation,
+            303 => Self::ButcherStation,
+            304 => Self::BishopStation,
+            305 => Self::FarmStation,
             193 => Self::Lantern,
             194 => Self::Chain,
             _ => return None,
@@ -1089,7 +1116,7 @@ mod tests {
             assert_eq!(material.is_opaque(), opaque);
             assert!(!material.flammable());
         }
-        assert_eq!(MaterialId::LAST, 296);
+        assert_eq!(MaterialId::LAST, 305);
     }
 
     #[test]

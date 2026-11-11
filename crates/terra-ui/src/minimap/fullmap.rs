@@ -2350,7 +2350,8 @@ mod tests {
 
     #[test]
     fn map_tool_rail_is_icon_only_with_hover_tooltips_for_all_eight_actions() {
-        let template = include_str!("../../../../src-ui/components/full-map.component.html");
+        let template =
+            include_str!("../../../../src-ui/components/full-map/full-map.component.html");
         let rail = template
             .split("<div class=\"full-map-tool-rail\">")
             .nth(1)
@@ -2730,12 +2731,20 @@ mod tests {
     #[test]
     fn map_styles_use_supported_tilt_ui_properties() {
         for source in [
-            include_str!("../../../../src-ui/components/full-map.component.css"),
-            include_str!("../../../../src-ui/components/waypoint-dialog.component.css"),
-            include_str!("../../../../src-ui/components/mini-map.component.css"),
-            include_str!("../../../../src-ui/components/waypoint-marker.component.css"),
-            include_str!("../../../../src-ui/components/waypoint-symbol.component.css"),
-            include_str!("../../../../src-ui/components/world-waypoints.component.css"),
+            include_str!("../../../../src-ui/components/full-map/full-map.component.css"),
+            include_str!(
+                "../../../../src-ui/components/waypoint-dialog/waypoint-dialog.component.css"
+            ),
+            include_str!("../../../../src-ui/components/mini-map/mini-map.component.css"),
+            include_str!(
+                "../../../../src-ui/components/waypoint-marker/waypoint-marker.component.css"
+            ),
+            include_str!(
+                "../../../../src-ui/components/waypoint-symbol/waypoint-symbol.component.css"
+            ),
+            include_str!(
+                "../../../../src-ui/components/world-waypoints/world-waypoints.component.css"
+            ),
         ] {
             tilt_ui::tilt_ui_css::parse_stylesheet(source).unwrap();
         }
@@ -2764,7 +2773,9 @@ mod tests {
             .map(|name| {
                 app.world()
                     .resource::<AssetServer>()
-                    .load::<tilt_ui::UiTemplateAsset>(format!("components/{name}.component.html"))
+                    .load::<tilt_ui::UiTemplateAsset>(format!(
+                        "components/{name}/{name}.component.html"
+                    ))
             })
             .collect();
         let until = std::time::Instant::now() + std::time::Duration::from_secs(5);

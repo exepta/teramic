@@ -1156,6 +1156,7 @@ fn builtin_recipes_are_valid_and_catalog_roundtrip_preserves_keys() {
             + 8 // Modular railway vehicle parts and assembly station.
             + crate::locomotive_parts::COUNT // Complete BR52 modular locomotive kit.
             + 1 // Cargo-fed locomotive rail builder.
+            + crate::profession_stations::ALL.len() // Nine independently craftable profession depots.
     );
     for id in [
         "lantern",

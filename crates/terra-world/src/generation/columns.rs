@@ -78,6 +78,12 @@ mod snow_tests {
 }
 
 impl PreparedColumn {
+    pub(crate) fn is_structure_block(&self, cell: [i64; 3]) -> bool {
+        self.structures
+            .iter()
+            .any(|site| site.block_at(cell).is_some())
+    }
+
     #[cfg(test)]
     pub(crate) fn with_settlement_for_test(
         mut self,

@@ -1,3 +1,4 @@
+language = "en"
 heartbeat = true
 view_bobbing = true
 mob_health_bars = "looking_at"

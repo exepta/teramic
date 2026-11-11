@@ -1,0 +1,9 @@
+<div id="crafting-panel" class="crafting-panel copper-crafting-panel">
+  <div class="bench-heading"><icon name="settings-wrench" size="20" /><h3 class="bench-station-title">{{ localizedUi.craftingView.station }}</h3><button id="craft-clear-grid" class="craft-clear" [title]="i18n.text_clear_crafting_grid_9af1b38b8d8e" onclick="crafting_command"><icon name="rotate-ccw" size="18" /></button></div>
+  <div class="bench-workspace">
+    <div id="crafting-grid" class="bench-grid">@for (slot of localizedUi.craftingView.grid; track slot.id) { <inventory-slot [slot]="slot" /> }</div>
+    <icon name="arrow-right" size="40" />
+    <div class="bench-output-area"><div id="crafting-output" class="bench-output">@for (slot of localizedUi.craftingView.output; track slot.id) { <inventory-slot [slot]="slot" /> }</div>@if (craftingView.enabled) { @for (slot of localizedUi.craftingView.output; track slot.id) { <p>{{ slot.name }}</p> } }</div>
+  </div>
+  @if (craftingView.message != '') { <p class="craft-message">{{ localizedUi.craftingView.message }}</p> }
+</div>

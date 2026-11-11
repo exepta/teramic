@@ -451,6 +451,42 @@ pub(super) fn apply(
         return Err(TrainError::Protected);
     }
     match action {
+        TrainAction::RailBuilderAutoload {
+            vehicle: id,
+            active,
+        } => {
+            let car = vehicle(peer, world, id)?;
+            if !car.motion.stopped() {
+                return Err(TrainError::Busy);
+            }
+            if seated.binding(peer.uuid).is_none_or(|seat| {
+                seat.vehicle != id
+                    || car
+                        .parts
+                        .get(usize::from(seat.part))
+                        .is_none_or(|part| part.material != terra_core::train_parts::CAB)
+            }) {
+                return Err(TrainError::OutOfReach);
+            }
+            if active {
+                terra_world::rails::builder::validate_consist(
+                    &world.journal.gameplay().trains,
+                    &car,
+                )?;
+            }
+            let revision = car.revision.checked_add(1).ok_or(TrainError::Overflow)?;
+            touch(world)?;
+            let car = world
+                .journal
+                .gameplay_mut()
+                .trains
+                .vehicles
+                .get_mut(&id)
+                .unwrap();
+            car.motion.rail_builder_autoload = active;
+            car.revision = revision;
+            Ok(TrainOutcome::Changed { vehicle: Some(id) })
+        }
         TrainAction::RailClearance { vehicle: id, size } => {
             if !size.valid() {
                 return Err(TrainError::Limit);

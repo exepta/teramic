@@ -789,6 +789,34 @@ fn press_compact_hearth(
 }
 
 #[test]
+fn profession_station_use_opens_authoritative_depots_and_blocks_place_or_eating() {
+    for material in terra_core::profession_stations::ALL {
+        let mut app = press_compact_hearth(
+            InputBinding::Mouse(MouseButton::Right),
+            material,
+            ItemKind::Apple,
+            false,
+        );
+        assert!(app.world().resource::<PlayerInputBlock>().0);
+        assert!(food_requests(&mut app).is_empty());
+        assert!(requests(&mut app).iter().any(|command| matches!(
+            command.action,
+            ServerAction::OpenContainer {
+                position: [3, 1, 1]
+            }
+        )));
+        app.world_mut().resource_mut::<ClientSession>().container =
+            Some(chest_snapshot([3, 1, 1], false));
+        app.update();
+        app.update();
+        assert_eq!(
+            app.world().resource::<InventoryView>().title,
+            terra_core::profession_stations::label(material).unwrap()
+        );
+    }
+}
+
+#[test]
 fn rebound_place_assembles_both_compact_hearth_orders_without_opening_or_blocking_input() {
     for binding in [
         InputBinding::Key(KeyCode::KeyU),
@@ -2118,13 +2146,15 @@ fn inventory_stylesheets_use_supported_tilt_ui_properties() {
     ))
     .unwrap();
     for source in [
-        include_str!("../../../src-ui/components/inventory-panel.component.css"),
-        include_str!("../../../src-ui/components/inventory-slot.component.css"),
-        include_str!("../../../src-ui/components/inventory-category.component.css"),
-        include_str!("../../../src-ui/components/equipment-slot.component.css"),
-        include_str!("../../../src-ui/components/crafting-panel.component.css"),
-        include_str!("../../../src-ui/components/item-browser.component.css"),
-        include_str!("../../../src-ui/components/recipe-inspector.component.css"),
+        include_str!("../../../src-ui/components/inventory-panel/inventory-panel.component.css"),
+        include_str!("../../../src-ui/components/inventory-slot/inventory-slot.component.css"),
+        include_str!(
+            "../../../src-ui/components/inventory-category/inventory-category.component.css"
+        ),
+        include_str!("../../../src-ui/components/equipment-slot/equipment-slot.component.css"),
+        include_str!("../../../src-ui/components/crafting-panel/crafting-panel.component.css"),
+        include_str!("../../../src-ui/components/item-browser/item-browser.component.css"),
+        include_str!("../../../src-ui/components/recipe-inspector/recipe-inspector.component.css"),
     ] {
         tilt_ui::tilt_ui_css::parse_stylesheet(source).unwrap();
     }
@@ -2155,7 +2185,7 @@ fn inventory_templates_load_with_only_builtin_or_registered_tilt_ui_elements() {
             .world()
             .resource::<AssetServer>()
             .load::<tilt_ui::UiTemplateAsset>(format!(
-                "tilt-ui://components/{name}.component.html"
+                "tilt-ui://components/{name}/{name}.component.html"
             ));
         (name, handle)
     });
@@ -2464,8 +2494,10 @@ fn creative_trash_ignores_empty_targets_closed_inventory_and_other_modes() {
         action(&mut app, InventoryAction::Trash);
         assert!(requests(&mut app).is_empty());
     }
-    let template = include_str!("../../../src-ui/components/inventory-panel.component.html");
-    let browser = include_str!("../../../src-ui/components/item-browser.component.html");
+    let template =
+        include_str!("../../../src-ui/components/inventory-panel/inventory-panel.component.html");
+    let browser =
+        include_str!("../../../src-ui/components/item-browser/item-browser.component.html");
     assert!(!template.contains("id=\"inventory-trash\""));
     assert!(browser.contains("id=\"inventory-trash\""));
     assert!(browser.contains("!inventoryView.creative || !inventoryView.trash_available"));
@@ -3487,6 +3519,67 @@ fn dye_image_identifiers_request_the_actual_item_and_hide_retired_sand_fences() 
             assert!(!catalog_item(ItemKind::DyedBed { material, color }));
         }
     }
+}
+
+#[test]
+fn catalog_search_accepts_localized_names_descriptions_and_canonical_namespaces() {
+    let mut app = app(GameMode::Creative);
+    let axe = ItemKind::Tool(terra_core::ToolKind::IronAxe);
+    app.world_mut()
+        .resource_mut::<BlockPalette>()
+        .item_metadata
+        .insert(
+            axe,
+            ("Iron Axe".into(), "A iron tool for harvesting wood.".into()),
+        );
+    crate::localization::install_test_language(app.world_mut(), "de-DE");
+    action(&mut app, InventoryAction::Toggle);
+    let before = app.world().resource::<ClientSession>().inventory.clone();
+    for query in [
+        "EISEN",
+        "holzfällen",
+        "Iron Axe",
+        "harvesting wood",
+        "teramic::iron_axe",
+    ] {
+        action(&mut app, InventoryAction::Search(query.into()));
+        let view = app.world().resource::<InventoryView>();
+        let matched = view
+            .browser_items
+            .iter()
+            .find(|entry| entry.item == Some(axe))
+            .unwrap_or_else(|| panic!("No axe for {query:?}"));
+        assert_eq!(matched.name, "Iron Axe");
+        assert_eq!(matched.identifier, "teramic::iron_axe");
+        assert_eq!(view.search, query);
+    }
+    action(&mut app, InventoryAction::Search("eisenaxt".into()));
+    app.world_mut()
+        .resource_mut::<tilt_ui::UiLocalization>()
+        .set_locale("en-US")
+        .unwrap();
+    app.update();
+    assert!(
+        app.world()
+            .resource::<InventoryView>()
+            .browser_items
+            .iter()
+            .all(|entry| entry.item != Some(axe)),
+        "Changing language must invalidate localized search terms"
+    );
+    action(
+        &mut app,
+        InventoryAction::Search("teramic::iron_axe".into()),
+    );
+    assert!(
+        app.world()
+            .resource::<InventoryView>()
+            .browser_items
+            .iter()
+            .any(|entry| entry.item == Some(axe))
+    );
+    assert_eq!(app.world().resource::<ClientSession>().inventory, before);
+    assert!(requests(&mut app).is_empty());
 }
 
 #[test]
@@ -6550,6 +6643,50 @@ fn faucet_mouse_buttons_send_one_directional_step_and_shift_keeps_removal_availa
         );
         assert!(!app.world().resource::<InventoryState>().open);
     }
+}
+
+#[test]
+fn worn_tools_keep_slot_identity_and_show_remaining_uses_with_one_shared_icon() {
+    let mut palette = BlockPalette::default();
+    let tool = terra_core::ToolKind::IronAxe;
+    let fresh = ItemKind::Tool(tool);
+    let first = ItemKind::WornTool {
+        tool,
+        remaining: 37,
+    };
+    let second = ItemKind::WornTool {
+        tool,
+        remaining: 36,
+    };
+    palette
+        .item_metadata
+        .insert(fresh, ("Iron Axe".into(), "A reusable axe".into()));
+    palette.item_categories.insert(fresh, "tools".into());
+    let view = view::item_view(first, 1, &palette);
+    assert_eq!(view.item, Some(first));
+    assert_eq!(view.identifier, first.identifier());
+    assert_eq!(view.name, "Iron Axe");
+    assert!(view.description.contains("A reusable axe"));
+    assert!(view.description.contains("Haltbarkeit: 37 / 256"));
+    assert_eq!(view.category, "tools");
+    assert_ne!(item_id(first), item_id(second));
+    assert_ne!(item_id(first), item_id(fresh));
+    assert_eq!(preview_key(first), preview_key(fresh));
+    assert_eq!(preview_key(second), preview_key(fresh));
+    let mut session = ClientSession::default();
+    for (slot, item) in [first, second].into_iter().enumerate() {
+        session
+            .inventory
+            .creative_set(slot, terra_core::ItemStack { item, count: 1 });
+    }
+    assert_eq!(
+        inspectable_item(&session, &palette, &item_id(first)),
+        Some(first)
+    );
+    assert_eq!(
+        inspectable_item(&session, &palette, &item_id(second)),
+        Some(second)
+    );
 }
 
 #[test]

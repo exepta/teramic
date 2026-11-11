@@ -1730,7 +1730,7 @@ mod tests {
     #[test]
     fn hud_styles_use_tilt_parser() {
         tilt_ui::tilt_ui_css::parse_stylesheet(include_str!(
-            "../../../src-ui/components/target-card.component.css"
+            "../../../src-ui/components/target-card/target-card.component.css"
         ))
         .unwrap();
     }

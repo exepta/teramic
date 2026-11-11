@@ -136,6 +136,9 @@ impl ShapeBox {
 }
 
 pub fn builtin_boxes(material: u16) -> &'static [ShapeBox] {
+    if crate::profession_stations::is_station(material) {
+        return crate::profession_stations::boxes(material);
+    }
     if crate::castle::is_castle(material) {
         return crate::castle::boxes(material);
     }

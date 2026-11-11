@@ -1,0 +1,81 @@
+@if (debugOverlay.visible || debugOverlay.animal_visible) {
+<div id="debug-overlay" [class]="debugOverlay.visible ? 'debug-overlay' : 'debug-overlay debug-animal-only'">
+  @if (debugOverlay.visible) {
+  <div class="debug-column debug-left">
+    <p class="debug-build">{{ localizedUi.debugOverlay.build }}</p>
+    <p>{{ i18n.text_fps_69164c79ec84 }} {{ localizedUi.debugOverlay.fps }} / {{ localizedUi.debugOverlay.frame_ms }}</p>
+    <p>{{ i18n.text_fps_min_max_3a6cd11e4f9f }} {{ localizedUi.debugOverlay.fps_min }} / {{ localizedUi.debugOverlay.fps_max }}</p>
+    <p>{{ i18n.text_sections_6317819fd02a }} {{ localizedUi.debugOverlay.render_sections }}</p>
+    <p>{{ i18n.text_streaming_b116a01af386 }} {{ localizedUi.debugOverlay.streaming }}</p>
+    <p>{{ i18n.text_entities_73530db610a0 }} {{ localizedUi.debugOverlay.entities }}</p>
+    @if (terrainDebugView.visible) {
+  <p class="terrain-profile">{{ localizedUi.terrainDebugView.profile }}</p>
+  <p class="terrain-position">{{ localizedUi.terrainDebugView.xyz }}</p>
+  <div class="terrain-map-row">
+    <div class="terrain-map">
+      <img id="terrain-debug-surface" class="terrain-surface" src="tilt-ui://assets/hand.png" alt="Terrain field" />
+      <icon class="terrain-cross" name="plus" size="12" />
+    </div>
+    <div class="terrain-current"><p class="terrain-layer">{{ localizedUi.terrainDebugView.layer }}</p><p class="terrain-reading">{{ localizedUi.terrainDebugView.value }}</p><p class="terrain-scale">{{ localizedUi.terrainDebugView.low }} / {{ localizedUi.terrainDebugView.high }}</p></div>
+  </div>
+  <p class="terrain-slice">{{ localizedUi.terrainDebugView.slice }}</p>
+  <div class="debug-divider"></div>
+  @for (field of localizedUi.terrainDebugView.rows; track field.id) {
+  <div [class]="field.selected ? 'terrain-row terrain-selected' : 'terrain-row'"><p class="terrain-label">{{ field.label }}</p><p class="terrain-value">{{ field.value }}</p></div>
+  }
+  <p class="terrain-extra">{{ localizedUi.terrainDebugView.extra }}</p>
+    } @else {
+    <div class="debug-space"></div>
+    <p>{{ i18n.text_xyz_98ad5cec30b7 }} {{ localizedUi.debugOverlay.xyz }}</p>
+    <p>{{ i18n.text_block_a29f3c9d5da3 }} {{ localizedUi.debugOverlay.block_position }}</p>
+    <p>{{ i18n.text_chunk_96d2e8a9ef5c }} {{ localizedUi.debugOverlay.chunk }} {{ i18n.text_local_948900e650ea }} {{ localizedUi.debugOverlay.local_position }}</p>
+    <p>{{ i18n.text_facing_b3574e8dd0f4 }} {{ localizedUi.debugOverlay.facing }}</p>
+    <div class="debug-space"></div>
+    <p>{{ i18n.text_world_b90fccbaebbd }} {{ localizedUi.debugOverlay.world }}</p>
+    <p>{{ i18n.text_biome_5e197c9a7909 }} {{ localizedUi.debugOverlay.biome }}</p>
+    <p>{{ i18n.text_time_91ab197bfabc }} {{ localizedUi.debugOverlay.world_time }}</p>
+    <p>{{ i18n.text_weather_6c02745d32fd }} {{ localizedUi.debugOverlay.weather }}</p>
+    <p>{{ i18n.text_seed_b784ffe8db31 }} {{ localizedUi.debugOverlay.seed }}</p>
+    @if (debugOverlay.cave_visible) {
+    <div class="debug-space"></div>
+    <p>{{ i18n.text_cave_e2fa1d364e42 }} {{ localizedUi.debugOverlay.cave_biome }} / {{ localizedUi.debugOverlay.cave_region }}</p>
+    <p>{{ i18n.text_mix_wet_355cc3025127 }} {{ localizedUi.debugOverlay.cave_conditions }}</p>
+    <p>{{ i18n.text_boundary_e6413e60af2d }} {{ localizedUi.debugOverlay.cave_boundary }}</p>
+    <p>{{ i18n.text_path_0831a9db649e }} {{ localizedUi.debugOverlay.cave_connector }}</p>
+    <p>{{ i18n.text_t_p_c_e99e517e6b99 }} {{ localizedUi.debugOverlay.cave_local }}</p>
+    <p>{{ i18n.text_fluid_tick_b25aaae279e1 }} {{ localizedUi.debugOverlay.cave_fluid }}</p>
+    }
+    <div class="debug-space"></div>
+    <p class="debug-hint">{{ i18n.text_f1_debug_f1_g_terrain_f1_e_creatures_58d5524c598d }}</p>
+    }
+  </div>
+  }
+  <div class="debug-column debug-right">
+    @if (debugOverlay.visible) {
+    <p class="debug-build">{{ localizedUi.debugOverlay.system }}</p>
+    <p>{{ i18n.text_cpu_app_4669de6cd53c }} {{ localizedUi.debugOverlay.cpu }}</p>
+    <p>{{ i18n.text_ram_app_d40a22da567a }} {{ localizedUi.debugOverlay.ram }}</p>
+    <p>{{ i18n.text_gpu_4728386bbdc0 }} {{ localizedUi.debugOverlay.gpu }}</p>
+    <p>{{ i18n.text_display_88150308f8bc }} {{ localizedUi.debugOverlay.display }}</p>
+    <p>{{ i18n.text_network_76011314cc1f }} {{ localizedUi.debugOverlay.network }}</p>
+    <div class="debug-space"></div>
+    <p class="debug-build">{{ i18n.text_target_890d34fffcde }} {{ localizedUi.debugOverlay.block_name }}</p>
+    <p>{{ localizedUi.debugOverlay.target_identifier }}</p>
+    <p>{{ localizedUi.debugOverlay.target_position }}</p>
+    }
+    @if (debugOverlay.animal_visible) {
+    <div class="creature-overlay">
+  <p class="animal-heading">{{ localizedUi.debugOverlay.animal_name }}</p>
+  <div class="debug-row"><p class="debug-label">{{ i18n.text_leben_81303849049e }}</p><p class="debug-value">{{ localizedUi.debugOverlay.animal_health }}</p></div>
+  <div class="debug-row"><p class="debug-label">{{ i18n.text_hunger_37cf5259e3c6 }}</p><p class="debug-value">{{ localizedUi.debugOverlay.animal_food }}</p></div>
+  <div class="debug-row"><p class="debug-label">{{ i18n.text_durst_3039a4ca1f78 }}</p><p class="debug-value">{{ localizedUi.debugOverlay.animal_water }}</p></div>
+  <div class="debug-divider"></div>
+  <p class="animal-behavior">{{ localizedUi.debugOverlay.animal_behavior }}</p>
+  <p class="animal-intention">{{ localizedUi.debugOverlay.animal_intention }}</p>
+  <div class="debug-row"><p class="debug-label">{{ i18n.text_ziel_f487ce396018 }}</p><p class="debug-value">{{ localizedUi.debugOverlay.animal_destination }}</p></div>
+  <p class="animal-path">{{ localizedUi.debugOverlay.animal_path }}</p>
+    </div>
+    }
+  </div>
+</div>
+}

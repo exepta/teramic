@@ -104,6 +104,9 @@ pub struct InventoryView {
     pub sort_ready: bool,
     pub sort_player_open: bool,
     pub sort_storage_open: bool,
+    /// Last UI choice, not a claim that the authoritative inventory stays sorted.
+    pub sort_player_order: String,
+    pub sort_storage_order: String,
     pub furnace: bool,
     pub cauldron: alchemy::CauldronWorkspace,
     pub campfire: alchemy::CampfireWorkspace,
@@ -181,6 +184,17 @@ pub struct InventoryView {
     pub browser_next: bool,
 }
 
+fn sort_order_key(order: Option<terra_core::inventory_sort::SortOrder>) -> &'static str {
+    use terra_core::inventory_sort::SortOrder;
+    match order {
+        Some(SortOrder::Category) => "type",
+        Some(SortOrder::Alphabetical) => "name",
+        Some(SortOrder::Id) => "id",
+        Some(SortOrder::Quantity) => "quantity",
+        None => "",
+    }
+}
+
 fn item_category(item: ItemKind, palette: &BlockPalette) -> &str {
     palette
         .item_categories
@@ -253,6 +267,19 @@ pub(super) fn item_metadata(item: ItemKind, palette: &BlockPalette) -> (String, 
         );
     }
     match item {
+        ItemKind::WornTool { tool, remaining } => {
+            use std::fmt::Write;
+            let (name, _, mut description) = item_metadata(ItemKind::Tool(tool), palette);
+            if !description.is_empty() {
+                description.push('\n');
+            }
+            let _ = write!(
+                description,
+                "Haltbarkeit: {remaining} / {}",
+                tool.durability()
+            );
+            (name, item.identifier(), description)
+        }
         ItemKind::FilledWateringCan { tool, units } => {
             let (name, _, description) = item_metadata(ItemKind::Tool(tool), palette);
             (
@@ -489,10 +516,11 @@ fn slot_view(
 pub(super) struct CatalogViewCache {
     entries: Vec<(ItemKind, InventoryItemView, String, String)>,
     ready: bool,
+    localized: bool,
 }
 
 impl CatalogViewCache {
-    fn rebuild(&mut self, palette: &BlockPalette) {
+    fn rebuild(&mut self, palette: &BlockPalette, translate: impl Fn(&str) -> String) {
         self.entries = available_items(
             GameMode::Creative,
             &terra_core::Inventory::default(),
@@ -504,7 +532,14 @@ impl CatalogViewCache {
             let mut view = item_view(item, STACK_LIMIT, palette);
             view.command = "catalog".into();
             view.count.clear();
-            let name = view.name.to_lowercase();
+            let name = format!(
+                "{}\n{}\n{}\n{}",
+                view.name,
+                view.description,
+                translate(&view.name),
+                translate(&view.description),
+            )
+            .to_lowercase();
             let identifier = view.identifier.to_lowercase();
             (item, view, name, identifier)
         })
@@ -560,6 +595,7 @@ pub(super) fn update_view(
     queue: Option<Res<pointer::InventoryQueue>>,
     mut stamp: Local<Option<SessionViewStamp>>,
     mut catalog: Local<CatalogViewCache>,
+    language: crate::localization::SearchText,
     mut view: ResMut<InventoryView>,
 ) {
     let session = context.session.as_ref();
@@ -640,6 +676,8 @@ pub(super) fn update_view(
     let session_changed = *stamp != next_stamp;
     *stamp = next_stamp;
     if !state.is_changed()
+        && !language.changed()
+        && catalog.localized == language.available()
         && !palette.is_changed()
         && !active.is_changed()
         && !settings.is_changed()
@@ -766,8 +804,13 @@ pub(super) fn update_view(
         .find(|category| category.id == state.category)
         .map_or("all", |category| category.id.as_str());
     let query = state.search.to_lowercase();
-    if !catalog.ready || palette.is_changed() {
-        catalog.rebuild(&palette);
+    if !catalog.ready
+        || palette.is_changed()
+        || language.changed()
+        || catalog.localized != language.available()
+    {
+        catalog.rebuild(&palette, |source| language.text(source));
+        catalog.localized = language.available();
     }
     let page_size = if state.page_capacity == 0 {
         45
@@ -859,6 +902,14 @@ pub(super) fn update_view(
             && state.container_open_response.is_none(),
         sort_player_open: state.sort_menu == Some(false),
         sort_storage_open: state.sort_menu == Some(true),
+        sort_player_order: sort_order_key(state.sort_player_order).into(),
+        sort_storage_order: sort_order_key(container.and_then(|container| {
+            state
+                .sort_storage_order
+                .filter(|(anchor, view, _)| *anchor == container.anchor && *view == container.view)
+                .map(|(_, _, order)| order)
+        }))
+        .into(),
         source_container: container.map(|container| (container.anchor, container.view)),
         hearth_navigation: container.is_some_and(|container| {
             container.attached_campfire
@@ -1065,6 +1116,14 @@ pub(super) fn update_view(
         empty: browser_items.is_empty(),
         title: container
             .map_or("Inventory", |container| {
+                if let Some(title) = context
+                    .chunks
+                    .as_ref()
+                    .and_then(|chunks| chunks.block_at(container.anchor))
+                    .and_then(terra_core::profession_stations::label)
+                {
+                    return title;
+                }
                 if container.cauldron.is_some() {
                     return "Cauldron";
                 }
@@ -1252,7 +1311,7 @@ mod tests {
                 .insert(ItemKind::Dye(color), "materials".into());
         }
         let mut catalog = CatalogViewCache::default();
-        catalog.rebuild(&palette);
+        catalog.rebuild(&palette, str::to_owned);
         let (page, _, _) = catalog.page("materials", "", 128, 0, None);
         assert_eq!(
             page.iter()
@@ -1306,7 +1365,7 @@ mod tests {
             ..Default::default()
         };
         let mut catalog = CatalogViewCache::default();
-        catalog.rebuild(&palette);
+        catalog.rebuild(&palette, str::to_owned);
         let mut identifiers = std::collections::BTreeSet::new();
         let mut previews = std::collections::BTreeSet::new();
         for material in [141, 144, 148, 149] {
@@ -1349,7 +1408,7 @@ mod tests {
             ..Default::default()
         };
         let mut cache = CatalogViewCache::default();
-        cache.rebuild(&palette);
+        cache.rebuild(&palette, str::to_owned);
         let pointer = cache.entries.as_ptr();
         for selected in [None, Some(ItemKind::Block(3)), Some(ItemKind::Block(18))] {
             let (page, pages, index) = cache.page("all", "material", 17, 1, selected);
@@ -1365,7 +1424,7 @@ mod tests {
         assert!(page.is_empty());
         assert_eq!((pages, index), (1, 0));
         palette.choices[17].name = "Renamed Block".into();
-        cache.rebuild(&palette);
+        cache.rebuild(&palette, str::to_owned);
         let (page, _, _) = cache.page("all", "renamed", 17, 0, None);
         assert_eq!(page.len(), 1);
         assert_eq!(page[0].name, item_metadata(ItemKind::Block(18), &palette).0);
@@ -1662,11 +1721,11 @@ mod tests {
             );
         }
         tilt_ui::tilt_ui_css::parse_stylesheet(include_str!(
-            "../../../src-ui/components/inventory-panel.component.css"
+            "../../../src-ui/components/inventory-panel/inventory-panel.component.css"
         ))
         .unwrap();
         tilt_ui::tilt_ui_css::parse_stylesheet(include_str!(
-            "../../../src-ui/components/recipe-inspector.component.css"
+            "../../../src-ui/components/recipe-inspector/recipe-inspector.component.css"
         ))
         .unwrap();
     }
@@ -1699,13 +1758,15 @@ mod tests {
     #[test]
     fn equipment_cells_use_supported_css_and_declare_all_positions() {
         tilt_ui::tilt_ui_css::parse_stylesheet(include_str!(
-            "../../../src-ui/components/equipment-slot.component.css"
+            "../../../src-ui/components/equipment-slot/equipment-slot.component.css"
         ))
         .unwrap();
-        let template = include_str!("../../../src-ui/components/inventory-panel.component.html");
-        assert!(
-            template.contains("@for (equipment of inventoryView.equipment; track equipment.kind)")
+        let template = include_str!(
+            "../../../src-ui/components/inventory-panel/inventory-panel.component.html"
         );
+        assert!(template.contains(
+            "@for (equipment of localizedUi.inventoryView.equipment; track equipment.kind)"
+        ));
         let mut app = view_app();
         app.update();
         let equipment = &app.world().resource::<InventoryView>().equipment;

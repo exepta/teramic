@@ -4,6 +4,8 @@ use terra_core::{
     ToolKind, WoodSpecies, train_parts,
     trains::{TrainError, TrainPart, Vehicle, VehicleKind},
 };
+#[path = "server_train_autoload_tests.rs"]
+mod autoload;
 #[path = "server_train_clearance_tests.rs"]
 mod clearance;
 #[path = "server_train_sort_tests.rs"]
@@ -1514,8 +1516,7 @@ fn rail_builder_missing_materials_or_a_second_locomotive_changes_nothing() {
         .cargo
         .get_mut(&cargo)
         .unwrap()
-        .slots[1]
-        .count = 0;
+        .slots[1] = ItemStack::EMPTY;
     let before = app
         .world()
         .resource::<EditJournal>()
@@ -1838,7 +1839,8 @@ fn seated_driver_enables_builder_then_scheduled_drive_clears_and_extends_real_tr
             .init_resource::<trains::TrainRuntime>()
             .init_resource::<crate::server::train_damage::Impacts>()
             .add_systems(Update, (train_builder::tick, trains::drive).chain());
-        for _ in 0..60 {
+        // Construction now starts when the scoop reaches the endpoint's work range.
+        for _ in 0..120 {
             app.update();
         }
         let journal = app.world().resource::<EditJournal>();

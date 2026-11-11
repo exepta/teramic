@@ -1,0 +1,2012 @@
+[
+  {
+    "source": "1 Block = 1 Meter",
+    "de": "1 Block = 1 Meter",
+    "en": "1 block = 1 meter"
+  },
+  {
+    "source": "127.0.0.1 or a hostname",
+    "de": "127.0.0.1 oder ein Hostname",
+    "en": "127.0.0.1 or a hostname"
+  },
+  {
+    "source": "2.5D / 3D",
+    "de": "2.5D / 3D",
+    "en": "2.5D / 3D"
+  },
+  {
+    "source": "3 m/s · 1 Güterwagen bis 15 m",
+    "de": "3 m/s · 1 Güterwagen bis 15 m",
+    "en": "3 m/s · 1 freight wagon up to 15 m"
+  },
+  {
+    "source": "30 (Default)",
+    "de": "30 (Standard)",
+    "en": "30 (Default)"
+  },
+  {
+    "source": "A world of your own",
+    "de": "Deine eigene Welt",
+    "en": "A world of your own"
+  },
+  {
+    "source": "Abbau",
+    "de": "Abbau",
+    "en": "Mining"
+  },
+  {
+    "source": "Abbau ins Wagenlager",
+    "de": "Abbau ins Wagenlager",
+    "en": "Load mined blocks into wagons"
+  },
+  {
+    "source": "Abbrechen",
+    "de": "Abbrechen",
+    "en": "Cancel"
+  },
+  {
+    "source": "Accepts every wood type",
+    "de": "Geeignet für jede Holzart",
+    "en": "Accepts every wood type"
+  },
+  {
+    "source": "Aenderungen verwerfen",
+    "de": "Änderungen verwerfen",
+    "en": "Discard changes"
+  },
+  {
+    "source": "Aktion nicht ausgefuehrt",
+    "de": "Aktion nicht ausgeführt",
+    "en": "Action not performed"
+  },
+  {
+    "source": "Aktionen",
+    "de": "Aktionen",
+    "en": "Actions"
+  },
+  {
+    "source": "Aktiviert",
+    "de": "Aktiviert",
+    "en": "Enabled"
+  },
+  {
+    "source": "Aktuell",
+    "de": "Aktuell",
+    "en": "Current"
+  },
+  {
+    "source": "Aktueller Chunk",
+    "de": "Aktueller Chunk",
+    "en": "Current chunk"
+  },
+  {
+    "source": "All Time",
+    "de": "Immer",
+    "en": "Always"
+  },
+  {
+    "source": "Alle Mitglieder und beanspruchten Chunks werden freigegeben. Diese Aktion kann nicht rückgängig gemacht werden.",
+    "de": "Alle Mitglieder und beanspruchten Chunks werden freigegeben. Diese Aktion kann nicht rückgängig gemacht werden.",
+    "en": "All members and claimed chunks will be released. This action cannot be undone."
+  },
+  {
+    "source": "Allied",
+    "de": "Verbündet",
+    "en": "Allied"
+  },
+  {
+    "source": "Alphabetisch nach Anzeigename sortieren",
+    "de": "Alphabetisch nach Anzeigenamen sortieren",
+    "en": "Sort alphabetically by display name"
+  },
+  {
+    "source": "Alternative Fuels",
+    "de": "Alternative Brennstoffe",
+    "en": "Alternative fuels"
+  },
+  {
+    "source": "Alternative Recipes",
+    "de": "Alternative Rezepte",
+    "en": "Alternative recipes"
+  },
+  {
+    "source": "Alternative Smelting",
+    "de": "Alternative Schmelzrezepte",
+    "en": "Alternative smelting recipes"
+  },
+  {
+    "source": "Anderer Besitzer",
+    "de": "Anderer Besitzer",
+    "en": "Different owner"
+  },
+  {
+    "source": "Apply",
+    "de": "Übernehmen",
+    "en": "Apply"
+  },
+  {
+    "source": "Arbeitsaufträge",
+    "de": "Arbeitsaufträge",
+    "en": "Work orders"
+  },
+  {
+    "source": "Arbeitsgebiet",
+    "de": "Arbeitsgebiet",
+    "en": "Work area"
+  },
+  {
+    "source": "Arbeitsgebiet bis X",
+    "de": "Arbeitsgebiet bis X",
+    "en": "Work area maximum X"
+  },
+  {
+    "source": "Arbeitsgebiet bis Y",
+    "de": "Arbeitsgebiet bis Y",
+    "en": "Work area maximum Y"
+  },
+  {
+    "source": "Arbeitsgebiet bis Z",
+    "de": "Arbeitsgebiet bis Z",
+    "en": "Work area maximum Z"
+  },
+  {
+    "source": "Arbeitsgebiet von X",
+    "de": "Arbeitsgebiet von X",
+    "en": "Work area minimum X"
+  },
+  {
+    "source": "Arbeitsgebiet von Y",
+    "de": "Arbeitsgebiet von Y",
+    "en": "Work area minimum Y"
+  },
+  {
+    "source": "Arbeitsgebiet von Z",
+    "de": "Arbeitsgebiet von Z",
+    "en": "Work area minimum Z"
+  },
+  {
+    "source": "Arbeitskräfte",
+    "de": "Arbeitskräfte",
+    "en": "Workers"
+  },
+  {
+    "source": "Audio",
+    "de": "Audio",
+    "en": "Audio"
+  },
+  {
+    "source": "Auflösen…",
+    "de": "Auflösen…",
+    "en": "Dissolve…"
+  },
+  {
+    "source": "Auftrag speichern",
+    "de": "Auftrag speichern",
+    "en": "Save order"
+  },
+  {
+    "source": "Aufträge aktualisieren",
+    "de": "Aufträge aktualisieren",
+    "en": "Refresh orders"
+  },
+  {
+    "source": "Aufwerten",
+    "de": "Aufwerten",
+    "en": "Upgrade"
+  },
+  {
+    "source": "Aufwertungskosten",
+    "de": "Aufwertungskosten",
+    "en": "Upgrade cost"
+  },
+  {
+    "source": "Augen",
+    "de": "Augen",
+    "en": "Eyes"
+  },
+  {
+    "source": "Aus",
+    "de": "Aus",
+    "en": "Off"
+  },
+  {
+    "source": "Ausblenden",
+    "de": "Ausblenden",
+    "en": "Hide"
+  },
+  {
+    "source": "Aussteigen",
+    "de": "Aussteigen",
+    "en": "Leave vehicle"
+  },
+  {
+    "source": "Auswahl lösen",
+    "de": "Auswahl aufheben",
+    "en": "Clear selection"
+  },
+  {
+    "source": "Automatic",
+    "de": "Automatisch",
+    "en": "Automatic"
+  },
+  {
+    "source": "Außenposten",
+    "de": "Außenposten",
+    "en": "Outpost"
+  },
+  {
+    "source": "A–Z",
+    "de": "A–Z",
+    "en": "A–Z"
+  },
+  {
+    "source": "Back to Menu",
+    "de": "Zurück zum Menü",
+    "en": "Back to menu"
+  },
+  {
+    "source": "Backpack",
+    "de": "Rucksack",
+    "en": "Backpack"
+  },
+  {
+    "source": "Bau-Chunk beanspruchen",
+    "de": "Bau-Chunk beanspruchen",
+    "en": "Claim building chunk"
+  },
+  {
+    "source": "Bau-Chunks",
+    "de": "Bau-Chunks",
+    "en": "Building chunks"
+  },
+  {
+    "source": "Bauen",
+    "de": "Bauen",
+    "en": "Build"
+  },
+  {
+    "source": "Baufortschritt",
+    "de": "Baufortschritt",
+    "en": "Construction progress"
+  },
+  {
+    "source": "Beitreten",
+    "de": "Beitreten",
+    "en": "Join"
+  },
+  {
+    "source": "Bellows",
+    "de": "Blasebalg",
+    "en": "Bellows"
+  },
+  {
+    "source": "Bergarbeiter",
+    "de": "Bergarbeiter",
+    "en": "Miner"
+  },
+  {
+    "source": "Bergfried",
+    "de": "Bergfried",
+    "en": "Keep"
+  },
+  {
+    "source": "Bergfried / Königreich",
+    "de": "Bergfried / Königreich",
+    "en": "Keep / kingdom"
+  },
+  {
+    "source": "Bergfried gründen",
+    "de": "Bergfried gründen",
+    "en": "Establish keep"
+  },
+  {
+    "source": "Beruf",
+    "de": "Beruf",
+    "en": "Profession"
+  },
+  {
+    "source": "Bewegung",
+    "de": "Bewegung",
+    "en": "Movement"
+  },
+  {
+    "source": "Beziehung",
+    "de": "Beziehung",
+    "en": "Relationship"
+  },
+  {
+    "source": "Biome",
+    "de": "Biom",
+    "en": "Biome"
+  },
+  {
+    "source": "Biome / Structs",
+    "de": "Biome / Bauwerke",
+    "en": "Biomes / structures"
+  },
+  {
+    "source": "Bis",
+    "de": "Bis",
+    "en": "To"
+  },
+  {
+    "source": "Boden benaessen",
+    "de": "Boden befeuchten",
+    "en": "Wet soil"
+  },
+  {
+    "source": "Boden verkohlen",
+    "de": "Boden verkohlen",
+    "en": "Char soil"
+  },
+  {
+    "source": "Boden zuruecksetzen",
+    "de": "Boden zurücksetzen",
+    "en": "Reset soil"
+  },
+  {
+    "source": "Borderless",
+    "de": "Randlos",
+    "en": "Borderless"
+  },
+  {
+    "source": "Bot Kingdoms",
+    "de": "KI-Königreiche",
+    "en": "AI kingdoms"
+  },
+  {
+    "source": "Bounce",
+    "de": "Federn",
+    "en": "Bounce"
+  },
+  {
+    "source": "Breite",
+    "de": "Breite",
+    "en": "Width"
+  },
+  {
+    "source": "Build Chunk",
+    "de": "Bau-Chunk",
+    "en": "Building chunk"
+  },
+  {
+    "source": "Bündnis anbieten",
+    "de": "Bündnis anbieten",
+    "en": "Offer alliance"
+  },
+  {
+    "source": "Bündnisangebot wartet auf Zustimmung",
+    "de": "Bündnisangebot wartet auf Zustimmung",
+    "en": "Alliance offer awaiting approval"
+  },
+  {
+    "source": "Campfire",
+    "de": "Lagerfeuer",
+    "en": "Campfire"
+  },
+  {
+    "source": "Cancel",
+    "de": "Abbrechen",
+    "en": "Cancel"
+  },
+  {
+    "source": "Category",
+    "de": "Kategorie",
+    "en": "Category"
+  },
+  {
+    "source": "Cauldron",
+    "de": "Kessel",
+    "en": "Cauldron"
+  },
+  {
+    "source": "Cauldron Brew",
+    "de": "Trank brauen",
+    "en": "Cauldron brewing"
+  },
+  {
+    "source": "Cave maps are always 2D",
+    "de": "Höhlenkarten sind immer in 2D",
+    "en": "Cave maps are always 2D"
+  },
+  {
+    "source": "Caves",
+    "de": "Höhlen",
+    "en": "Caves"
+  },
+  {
+    "source": "Caves / Overworld",
+    "de": "Höhlen / Oberwelt",
+    "en": "Caves / overworld"
+  },
+  {
+    "source": "Center on player",
+    "de": "Auf Spieler zentrieren",
+    "en": "Center on player"
+  },
+  {
+    "source": "Charakter",
+    "de": "Charakter",
+    "en": "Character"
+  },
+  {
+    "source": "Charakter anpassen",
+    "de": "Charakter anpassen",
+    "en": "Customize character"
+  },
+  {
+    "source": "Charaktertyp",
+    "de": "Charaktertyp",
+    "en": "Character type"
+  },
+  {
+    "source": "Choose Biome",
+    "de": "Biom wählen",
+    "en": "Choose biome"
+  },
+  {
+    "source": "Choose a biome",
+    "de": "Ein Biom wählen",
+    "en": "Choose a biome"
+  },
+  {
+    "source": "Choose a chunk type, drag an area, then Apply. Use Pan to move the map. Green previews are building land; blue previews are territory. Right-click removes chunks from the preview.",
+    "de": "Wähle einen Chunk-Typ, ziehe einen Bereich auf und wähle „Übernehmen“. Mit „Verschieben“ bewegst du die Karte. Grüne Vorschauen zeigen Bauland, blaue Vorschauen Territorium. Ein Rechtsklick entfernt Chunks aus der Vorschau.",
+    "en": "Choose a chunk type, drag an area, then select Apply. Use Pan to move the map. Green previews show building land; blue previews show territory. Right-click to remove chunks from the preview."
+  },
+  {
+    "source": "Choose a filter item",
+    "de": "Filtergegenstand wählen",
+    "en": "Choose a filter item"
+  },
+  {
+    "source": "Choose icon",
+    "de": "Symbol wählen",
+    "en": "Choose icon"
+  },
+  {
+    "source": "Choose your starting area.",
+    "de": "Wähle dein Startgebiet.",
+    "en": "Choose your starting area."
+  },
+  {
+    "source": "Choose your starting area. The rest of the world keeps its natural biome variety.",
+    "de": "Wähle dein Startgebiet. Der Rest der Welt behält seine natürliche Biomvielfalt.",
+    "en": "Choose your starting area. The rest of the world keeps its natural biome variety."
+  },
+  {
+    "source": "Chunk freigeben",
+    "de": "Chunk freigeben",
+    "en": "Release chunk"
+  },
+  {
+    "source": "Clear crafting grid",
+    "de": "Herstellungsraster leeren",
+    "en": "Clear crafting grid"
+  },
+  {
+    "source": "Clear filter",
+    "de": "Filter leeren",
+    "en": "Clear filter"
+  },
+  {
+    "source": "Close",
+    "de": "Schließen",
+    "en": "Close"
+  },
+  {
+    "source": "Close diplomacy",
+    "de": "Diplomatie schließen",
+    "en": "Close diplomacy"
+  },
+  {
+    "source": "Close icon picker",
+    "de": "Symbolauswahl schließen",
+    "en": "Close icon picker"
+  },
+  {
+    "source": "Close map",
+    "de": "Karte schließen",
+    "en": "Close map"
+  },
+  {
+    "source": "Close waypoint list",
+    "de": "Wegpunktliste schließen",
+    "en": "Close waypoint list"
+  },
+  {
+    "source": "Controls",
+    "de": "Steuerung",
+    "en": "Controls"
+  },
+  {
+    "source": "Coordinates",
+    "de": "Koordinaten",
+    "en": "Coordinates"
+  },
+  {
+    "source": "Crafting",
+    "de": "Herstellung",
+    "en": "Crafting"
+  },
+  {
+    "source": "Create waypoint",
+    "de": "Wegpunkt erstellen",
+    "en": "Create waypoint"
+  },
+  {
+    "source": "Creative",
+    "de": "Kreativmodus",
+    "en": "Creative"
+  },
+  {
+    "source": "Current (Default)",
+    "de": "Aktuell (Standard)",
+    "en": "Current (Default)"
+  },
+  {
+    "source": "Dark · protected building land",
+    "de": "Dunkel · geschütztes Bauland",
+    "en": "Dark · protected building land"
+  },
+  {
+    "source": "Darstellung",
+    "de": "Darstellung",
+    "en": "Display"
+  },
+  {
+    "source": "Debug-Anzeige",
+    "de": "Debug-Anzeige",
+    "en": "Debug overlay"
+  },
+  {
+    "source": "Deine Rolle",
+    "de": "Deine Rolle",
+    "en": "Your role"
+  },
+  {
+    "source": "Delete",
+    "de": "Löschen",
+    "en": "Delete"
+  },
+  {
+    "source": "Delete Waypoint",
+    "de": "Wegpunkt löschen",
+    "en": "Delete waypoint"
+  },
+  {
+    "source": "Delete stack / Ctrl: clear inventory",
+    "de": "Stapel löschen / Strg: Inventar leeren",
+    "en": "Delete stack / Ctrl: clear inventory"
+  },
+  {
+    "source": "Delete the selected waypoint?",
+    "de": "Ausgewählten Wegpunkt löschen?",
+    "en": "Delete the selected waypoint?"
+  },
+  {
+    "source": "Delete waypoint",
+    "de": "Wegpunkt löschen",
+    "en": "Delete waypoint"
+  },
+  {
+    "source": "Der Bergfried-Chunk wird bei der Gründung geschützt. Die Siedlung beginnt auf Level 1.",
+    "de": "Der Bergfried-Chunk wird bei der Gründung geschützt. Die Siedlung beginnt auf Stufe 1.",
+    "en": "The keep's chunk is protected when founded. The settlement starts at level 1."
+  },
+  {
+    "source": "Desired Biome",
+    "de": "Gewünschtes Biom",
+    "en": "Desired biome"
+  },
+  {
+    "source": "Diplomatie",
+    "de": "Diplomatie",
+    "en": "Diplomacy"
+  },
+  {
+    "source": "Diplomatie · Grenzen und Claims",
+    "de": "Diplomatie · Grenzen und Ansprüche",
+    "en": "Diplomacy · borders and claims"
+  },
+  {
+    "source": "Does nothing",
+    "de": "Keine Aktion",
+    "en": "Does nothing"
+  },
+  {
+    "source": "Done",
+    "de": "Fertig",
+    "en": "Done"
+  },
+  {
+    "source": "Dorf",
+    "de": "Dorf",
+    "en": "Village"
+  },
+  {
+    "source": "Drehgestell-Abstand",
+    "de": "Drehgestellabstand",
+    "en": "Bogie spacing"
+  },
+  {
+    "source": "Drehgleis · 90°",
+    "de": "Drehgleis · 90°",
+    "en": "Turntable · 90°"
+  },
+  {
+    "source": "Durst",
+    "de": "Durst",
+    "en": "Thirst"
+  },
+  {
+    "source": "Dörfer und Städte benötigen eigenes Territorium. Stadt und Außenposten beachten die Level- und Abstandsregeln deiner Welt.",
+    "de": "Dörfer und Städte benötigen eigenes Territorium. Städte und Außenposten beachten die Stufen- und Abstandsregeln deiner Welt.",
+    "en": "Villages and towns require your own territory. Towns and outposts follow your world's level and distance rules."
+  },
+  {
+    "source": "EXPLORE  /  BUILD  /  BELONG",
+    "de": "ENTDECKEN  /  BAUEN  /  DAZUGEHÖREN",
+    "en": "EXPLORE  /  BUILD  /  BELONG"
+  },
+  {
+    "source": "Edit",
+    "de": "Bearbeiten",
+    "en": "Edit"
+  },
+  {
+    "source": "Eigene Haltung",
+    "de": "Eigene Haltung",
+    "en": "Your stance"
+  },
+  {
+    "source": "Ein Bündnis zwischen Spielerreichen benötigt die Zustimmung beider Seiten.",
+    "de": "Ein Bündnis zwischen Spielerreichen benötigt die Zustimmung beider Seiten.",
+    "en": "An alliance between player kingdoms requires both sides to agree."
+  },
+  {
+    "source": "Ein Klick verschiebt einen Stapel. Gehaltene Stapel mit einem Klick auf einen Platz ablegen.",
+    "de": "Ein Klick verschiebt einen Stapel. Klicke auf einen Platz, um einen gehaltenen Stapel abzulegen.",
+    "en": "Click to move a stack. Click a slot to place a held stack."
+  },
+  {
+    "source": "Einsteigen",
+    "de": "Einsteigen",
+    "en": "Board vehicle"
+  },
+  {
+    "source": "Einstellungen",
+    "de": "Einstellungen",
+    "en": "Settings"
+  },
+  {
+    "source": "Endgültig auflösen",
+    "de": "Endgültig auflösen",
+    "en": "Dissolve permanently"
+  },
+  {
+    "source": "Erneut verbinden",
+    "de": "Erneut verbinden",
+    "en": "Reconnect"
+  },
+  {
+    "source": "Expand map",
+    "de": "Karte vergrößern",
+    "en": "Expand map"
+  },
+  {
+    "source": "Extinguish campfire",
+    "de": "Lagerfeuer löschen",
+    "en": "Extinguish campfire"
+  },
+  {
+    "source": "F1: Debug / F1 + G: Terrain / F1 + E: Creatures",
+    "de": "F1: Debug / F1 + G: Gelände / F1 + E: Kreaturen",
+    "en": "F1: Debug / F1 + G: Terrain / F1 + E: Creatures"
+  },
+  {
+    "source": "Fade In / Out",
+    "de": "Ein- / Ausblenden",
+    "en": "Fade in / out"
+  },
+  {
+    "source": "Fahren",
+    "de": "Fahren",
+    "en": "Drive"
+  },
+  {
+    "source": "Fahrpult",
+    "de": "Fahrpult",
+    "en": "Driving controls"
+  },
+  {
+    "source": "Fahrzeug auswählen und in den eigenen Führerstand einsteigen.",
+    "de": "Wähle ein Fahrzeug und steige in deinen Führerstand ein.",
+    "en": "Select a vehicle and board your cab."
+  },
+  {
+    "source": "Fahrzeug samt Ladung dauerhaft löschen?",
+    "de": "Fahrzeug samt Ladung dauerhaft löschen?",
+    "en": "Permanently delete the vehicle and its cargo?"
+  },
+  {
+    "source": "Fahrzeuge",
+    "de": "Fahrzeuge",
+    "en": "Vehicles"
+  },
+  {
+    "source": "Farbe",
+    "de": "Farbe",
+    "en": "Color"
+  },
+  {
+    "source": "Farbige Strähnen",
+    "de": "Farbige Strähnen",
+    "en": "Colored highlights"
+  },
+  {
+    "source": "Feindlich",
+    "de": "Feindlich",
+    "en": "Hostile"
+  },
+  {
+    "source": "Find your people",
+    "de": "Finde deine Gemeinschaft",
+    "en": "Find your people"
+  },
+  {
+    "source": "Fliegen",
+    "de": "Fliegen",
+    "en": "Fly"
+  },
+  {
+    "source": "Follow",
+    "de": "Folgen",
+    "en": "Follow"
+  },
+  {
+    "source": "Fortsetzen",
+    "de": "Fortsetzen",
+    "en": "Resume"
+  },
+  {
+    "source": "Frisur",
+    "de": "Frisur",
+    "en": "Hairstyle"
+  },
+  {
+    "source": "Fuel",
+    "de": "Brennstoff",
+    "en": "Fuel"
+  },
+  {
+    "source": "Fullscreen",
+    "de": "Vollbild",
+    "en": "Fullscreen"
+  },
+  {
+    "source": "Furnace (Smelting)",
+    "de": "Ofen (Schmelzen)",
+    "en": "Furnace (smelting)"
+  },
+  {
+    "source": "Game Mode",
+    "de": "Spielmodus",
+    "en": "Game mode"
+  },
+  {
+    "source": "Gameplay",
+    "de": "Spiel",
+    "en": "Gameplay"
+  },
+  {
+    "source": "Gamerules",
+    "de": "Spielregeln",
+    "en": "Game rules"
+  },
+  {
+    "source": "General",
+    "de": "Allgemein",
+    "en": "General"
+  },
+  {
+    "source": "Generate world structures",
+    "de": "Bauwerke in der Welt generieren",
+    "en": "Generate world structures"
+  },
+  {
+    "source": "Gesicht",
+    "de": "Gesicht",
+    "en": "Face"
+  },
+  {
+    "source": "Glass bottles",
+    "de": "Glasflaschen",
+    "en": "Glass bottles"
+  },
+  {
+    "source": "Glide",
+    "de": "Gleiten",
+    "en": "Glide"
+  },
+  {
+    "source": "Goldbarren",
+    "de": "Goldbarren",
+    "en": "Gold ingots"
+  },
+  {
+    "source": "Graphics",
+    "de": "Grafik",
+    "en": "Graphics"
+  },
+  {
+    "source": "Größte Stapel zuerst",
+    "de": "Größte Stapel zuerst",
+    "en": "Largest stacks first"
+  },
+  {
+    "source": "Gründen",
+    "de": "Gründen",
+    "en": "Found"
+  },
+  {
+    "source": "Güterwagen",
+    "de": "Güterwagen",
+    "en": "Freight wagon"
+  },
+  {
+    "source": "HUD Layout",
+    "de": "HUD-Anordnung",
+    "en": "HUD layout"
+  },
+  {
+    "source": "Haare",
+    "de": "Haare",
+    "en": "Hair"
+  },
+  {
+    "source": "Haarfarbe",
+    "de": "Haarfarbe",
+    "en": "Hair color"
+  },
+  {
+    "source": "Halten",
+    "de": "Anhalten",
+    "en": "Stop"
+  },
+  {
+    "source": "Hautton",
+    "de": "Hautton",
+    "en": "Skin tone"
+  },
+  {
+    "source": "Hell Fall",
+    "de": "Höllensturz",
+    "en": "Hell Fall"
+  },
+  {
+    "source": "Hemd",
+    "de": "Hemd",
+    "en": "Shirt"
+  },
+  {
+    "source": "High",
+    "de": "Hoch",
+    "en": "High"
+  },
+  {
+    "source": "Hoch",
+    "de": "Hoch",
+    "en": "High"
+  },
+  {
+    "source": "Holz, Kohle oder anderen Brennstoff im Inventar anklicken. Gehaltene Stapel auf einen Brennstoffplatz legen.",
+    "de": "Klicke im Inventar auf Holz, Kohle oder einen anderen Brennstoff. Lege gehaltene Stapel auf einen Brennstoffplatz.",
+    "en": "Click wood, coal, or another fuel in your inventory. Place held stacks in a fuel slot."
+  },
+  {
+    "source": "Hose",
+    "de": "Hose",
+    "en": "Trousers"
+  },
+  {
+    "source": "Hostile",
+    "de": "Feindlich",
+    "en": "Hostile"
+  },
+  {
+    "source": "Hunger",
+    "de": "Hunger",
+    "en": "Hunger"
+  },
+  {
+    "source": "Höhe",
+    "de": "Höhe",
+    "en": "Height"
+  },
+  {
+    "source": "Höhe automatisch",
+    "de": "Automatische Höhe",
+    "en": "Automatic height"
+  },
+  {
+    "source": "ID",
+    "de": "ID",
+    "en": "ID"
+  },
+  {
+    "source": "Input",
+    "de": "Eingang",
+    "en": "Input"
+  },
+  {
+    "source": "Instant (Default)",
+    "de": "Sofort (Standard)",
+    "en": "Instant (Default)"
+  },
+  {
+    "source": "Inventar",
+    "de": "Inventar",
+    "en": "Inventory"
+  },
+  {
+    "source": "Jetzt zerstören",
+    "de": "Jetzt zerstören",
+    "en": "Destroy now"
+  },
+  {
+    "source": "Kamera & Welt",
+    "de": "Kamera & Welt",
+    "en": "Camera & world"
+  },
+  {
+    "source": "Keine verfügbaren Arbeitskräfte",
+    "de": "Keine verfügbaren Arbeitskräfte",
+    "en": "No workers available"
+  },
+  {
+    "source": "Kingdom",
+    "de": "Königreich",
+    "en": "Kingdom"
+  },
+  {
+    "source": "Kingdom Rules",
+    "de": "Königreichsregeln",
+    "en": "Kingdom rules"
+  },
+  {
+    "source": "Kleidung",
+    "de": "Kleidung",
+    "en": "Clothing"
+  },
+  {
+    "source": "Koppeln",
+    "de": "Koppeln",
+    "en": "Couple"
+  },
+  {
+    "source": "Königreich",
+    "de": "Königreich",
+    "en": "Kingdom"
+  },
+  {
+    "source": "Körper",
+    "de": "Körper",
+    "en": "Body"
+  },
+  {
+    "source": "Laden",
+    "de": "Laden",
+    "en": "Loading"
+  },
+  {
+    "source": "Laderaum öffnen",
+    "de": "Laderaum öffnen",
+    "en": "Open cargo hold"
+  },
+  {
+    "source": "Lager",
+    "de": "Lager",
+    "en": "Storage"
+  },
+  {
+    "source": "Lager X",
+    "de": "Lager X",
+    "en": "Storage X"
+  },
+  {
+    "source": "Lager Y",
+    "de": "Lager Y",
+    "en": "Storage Y"
+  },
+  {
+    "source": "Lager Z",
+    "de": "Lager Z",
+    "en": "Storage Z"
+  },
+  {
+    "source": "Lager sortieren",
+    "de": "Lager sortieren",
+    "en": "Sort storage"
+  },
+  {
+    "source": "Landwirt",
+    "de": "Landwirt",
+    "en": "Farmer"
+  },
+  {
+    "source": "Laufen",
+    "de": "Laufen",
+    "en": "Walk"
+  },
+  {
+    "source": "Leben",
+    "de": "Leben",
+    "en": "Health"
+  },
+  {
+    "source": "Leder",
+    "de": "Leder",
+    "en": "Leather"
+  },
+  {
+    "source": "Leinen",
+    "de": "Leinen",
+    "en": "Linen"
+  },
+  {
+    "source": "Light campfire",
+    "de": "Lagerfeuer anzünden",
+    "en": "Light campfire"
+  },
+  {
+    "source": "Light · open realm territory",
+    "de": "Hell · offenes Königreichsterritorium",
+    "en": "Light · open kingdom territory"
+  },
+  {
+    "source": "Limits apply to each settlement. Border distances count free chunks between land borders. This world keeps its own rules in singleplayer.",
+    "de": "Die Grenzen gelten für jede Siedlung. Grenzabstände zählen freie Chunks zwischen Gebietsgrenzen. Im Einzelspieler verwendet diese Welt ihre eigenen Regeln.",
+    "en": "Limits apply to each settlement. Border distances count free chunks between land borders. This world uses its own rules in singleplayer."
+  },
+  {
+    "source": "Linkes Auge",
+    "de": "Linkes Auge",
+    "en": "Left eye"
+  },
+  {
+    "source": "Links",
+    "de": "Links",
+    "en": "Left"
+  },
+  {
+    "source": "Links und rechts aus Sicht deines Charakters.",
+    "de": "Links und rechts gelten aus Sicht deines Charakters.",
+    "en": "Left and right are from your character's perspective."
+  },
+  {
+    "source": "Lokhöhe einschließlich Dach und Schornstein plus 1 Block Platz",
+    "de": "Lokhöhe einschließlich Dach und Schornstein plus 1 Block Platz",
+    "en": "Locomotive height including roof and chimney, plus 1 block of clearance"
+  },
+  {
+    "source": "Lokomotive",
+    "de": "Lokomotive",
+    "en": "Locomotive"
+  },
+  {
+    "source": "Looking At",
+    "de": "Beim Ansehen",
+    "en": "When looking at"
+  },
+  {
+    "source": "Low",
+    "de": "Niedrig",
+    "en": "Low"
+  },
+  {
+    "source": "Lösen",
+    "de": "Entkoppeln",
+    "en": "Uncouple"
+  },
+  {
+    "source": "Magic",
+    "de": "Magie",
+    "en": "Magic"
+  },
+  {
+    "source": "Map",
+    "de": "Karte",
+    "en": "Map"
+  },
+  {
+    "source": "Mapping",
+    "de": "Kartierung",
+    "en": "Mapping"
+  },
+  {
+    "source": "Marker Color",
+    "de": "Markierungsfarbe",
+    "en": "Marker color"
+  },
+  {
+    "source": "Marker Icon",
+    "de": "Markierungssymbol",
+    "en": "Marker icon"
+  },
+  {
+    "source": "Materialien",
+    "de": "Materialien",
+    "en": "Materials"
+  },
+  {
+    "source": "Mausempfindlichkeit",
+    "de": "Mausempfindlichkeit",
+    "en": "Mouse sensitivity"
+  },
+  {
+    "source": "Medium",
+    "de": "Mittel",
+    "en": "Medium"
+  },
+  {
+    "source": "Meine Lokomotive",
+    "de": "Meine Lokomotive",
+    "en": "My locomotive"
+  },
+  {
+    "source": "Menge",
+    "de": "Menge",
+    "en": "Amount"
+  },
+  {
+    "source": "Mit Vorlage bauen",
+    "de": "Mit Vorlage bauen",
+    "en": "Build from blueprint"
+  },
+  {
+    "source": "Mit gedrückter linker Maustaste drehen",
+    "de": "Zum Drehen linke Maustaste gedrückt halten",
+    "en": "Hold the left mouse button to rotate"
+  },
+  {
+    "source": "Mitglied",
+    "de": "Mitglied",
+    "en": "Member"
+  },
+  {
+    "source": "Mitglied entfernen",
+    "de": "Mitglied entfernen",
+    "en": "Remove member"
+  },
+  {
+    "source": "Mitglieder",
+    "de": "Mitglieder",
+    "en": "Members"
+  },
+  {
+    "source": "Mitglieder & Rechte",
+    "de": "Mitglieder & Rechte",
+    "en": "Members & permissions"
+  },
+  {
+    "source": "Mittel",
+    "de": "Mittel",
+    "en": "Medium"
+  },
+  {
+    "source": "Modellbreite",
+    "de": "Modellbreite",
+    "en": "Model width"
+  },
+  {
+    "source": "Montage / Bearbeiten",
+    "de": "Montage / Bearbeiten",
+    "en": "Assemble / edit"
+  },
+  {
+    "source": "Montagestelle öffnen: zusammensetzen oder Vorlage ausblenden",
+    "de": "Montagestelle öffnen: zusammensetzen oder Vorlage ausblenden",
+    "en": "Open assembly station: assemble or hide blueprint"
+  },
+  {
+    "source": "Motor befeuern",
+    "de": "Motor befeuern",
+    "en": "Fuel engine"
+  },
+  {
+    "source": "Multiplayer",
+    "de": "Mehrspieler",
+    "en": "Multiplayer"
+  },
+  {
+    "source": "Männlich",
+    "de": "Männlich",
+    "en": "Male"
+  },
+  {
+    "source": "NPC",
+    "de": "NPC",
+    "en": "NPC"
+  },
+  {
+    "source": "Nach Block-ID und Item-ID sortieren",
+    "de": "Nach Block-ID und Gegenstands-ID sortieren",
+    "en": "Sort by block ID and item ID"
+  },
+  {
+    "source": "Nach links drehen",
+    "de": "Nach links drehen",
+    "en": "Rotate left"
+  },
+  {
+    "source": "Nach rechts drehen",
+    "de": "Nach rechts drehen",
+    "en": "Rotate right"
+  },
+  {
+    "source": "Name",
+    "de": "Name",
+    "en": "Name"
+  },
+  {
+    "source": "Name der Siedlung",
+    "de": "Name der Siedlung",
+    "en": "Settlement name"
+  },
+  {
+    "source": "Name wählen",
+    "de": "Name wählen",
+    "en": "Choose name"
+  },
+  {
+    "source": "Neutral",
+    "de": "Neutral",
+    "en": "Neutral"
+  },
+  {
+    "source": "Next help page",
+    "de": "Nächste Hilfeseite",
+    "en": "Next help page"
+  },
+  {
+    "source": "Next item page",
+    "de": "Nächste Gegenstandsseite",
+    "en": "Next item page"
+  },
+  {
+    "source": "Next recipe",
+    "de": "Nächstes Rezept",
+    "en": "Next recipe"
+  },
+  {
+    "source": "Niedrig",
+    "de": "Niedrig",
+    "en": "Low"
+  },
+  {
+    "source": "No matching items",
+    "de": "Keine passenden Gegenstände",
+    "en": "No matching items"
+  },
+  {
+    "source": "No saved servers yet.",
+    "de": "Noch keine gespeicherten Server.",
+    "en": "No saved servers yet."
+  },
+  {
+    "source": "No saved worlds yet.",
+    "de": "Noch keine gespeicherten Welten.",
+    "en": "No saved worlds yet."
+  },
+  {
+    "source": "None",
+    "de": "Keine",
+    "en": "None"
+  },
+  {
+    "source": "Nächste Stufe",
+    "de": "Nächste Stufe",
+    "en": "Next level"
+  },
+  {
+    "source": "Oberteil",
+    "de": "Oberteil",
+    "en": "Top"
+  },
+  {
+    "source": "Off",
+    "de": "Aus",
+    "en": "Off"
+  },
+  {
+    "source": "Open attached campfire",
+    "de": "Verbundenes Lagerfeuer öffnen",
+    "en": "Open attached campfire"
+  },
+  {
+    "source": "PROJECT TERRA",
+    "de": "PROJECT TERRA",
+    "en": "PROJECT TERRA"
+  },
+  {
+    "source": "Pan",
+    "de": "Verschieben",
+    "en": "Pan"
+  },
+  {
+    "source": "Pausiert",
+    "de": "Pausiert",
+    "en": "Paused"
+  },
+  {
+    "source": "Personenwagen",
+    "de": "Personenwagen",
+    "en": "Passenger carriage"
+  },
+  {
+    "source": "Player Inventory",
+    "de": "Spielerinventar",
+    "en": "Player inventory"
+  },
+  {
+    "source": "Port",
+    "de": "Port",
+    "en": "Port"
+  },
+  {
+    "source": "Previous help page",
+    "de": "Vorherige Hilfeseite",
+    "en": "Previous help page"
+  },
+  {
+    "source": "Previous item page",
+    "de": "Vorherige Gegenstandsseite",
+    "en": "Previous item page"
+  },
+  {
+    "source": "Previous recipe",
+    "de": "Vorheriges Rezept",
+    "en": "Previous recipe"
+  },
+  {
+    "source": "Priorität",
+    "de": "Priorität",
+    "en": "Priority"
+  },
+  {
+    "source": "Random",
+    "de": "Zufällig",
+    "en": "Random"
+  },
+  {
+    "source": "Random seed",
+    "de": "Zufälliger Seed",
+    "en": "Random seed"
+  },
+  {
+    "source": "Realm colors show ownership; badges show your relation.",
+    "de": "Die Farbe eines Königreichs zeigt den Besitzer; Symbole zeigen eure Beziehung.",
+    "en": "Kingdom colors show ownership; badges show your relationship."
+  },
+  {
+    "source": "Rechtes Auge",
+    "de": "Rechtes Auge",
+    "en": "Right eye"
+  },
+  {
+    "source": "Rechts",
+    "de": "Rechts",
+    "en": "Right"
+  },
+  {
+    "source": "Recipe Type: Brewing",
+    "de": "Rezepttyp: Brauen",
+    "en": "Recipe type: Brewing"
+  },
+  {
+    "source": "Release selected chunk",
+    "de": "Ausgewählten Chunk freigeben",
+    "en": "Release selected chunk"
+  },
+  {
+    "source": "Reset",
+    "de": "Zurücksetzen",
+    "en": "Reset"
+  },
+  {
+    "source": "Reset category filter",
+    "de": "Kategoriefilter zurücksetzen",
+    "en": "Reset category filter"
+  },
+  {
+    "source": "Rest",
+    "de": "Ruhen",
+    "en": "Rest"
+  },
+  {
+    "source": "Result",
+    "de": "Ergebnis",
+    "en": "Result"
+  },
+  {
+    "source": "Retry",
+    "de": "Erneut versuchen",
+    "en": "Retry"
+  },
+  {
+    "source": "Return to cauldron",
+    "de": "Zurück zum Kessel",
+    "en": "Return to cauldron"
+  },
+  {
+    "source": "Rise",
+    "de": "Aufsteigen",
+    "en": "Rise"
+  },
+  {
+    "source": "Rolle",
+    "de": "Rolle",
+    "en": "Role"
+  },
+  {
+    "source": "Rucksack sortieren · Hotbar bleibt unverändert",
+    "de": "Rucksack sortieren · Schnellzugriffsleiste bleibt unverändert",
+    "en": "Sort backpack · hotbar stays unchanged"
+  },
+  {
+    "source": "Räumbreite um 2 Blöcke erhöhen",
+    "de": "Räumbreite um 2 Blöcke erhöhen",
+    "en": "Increase clearing width by 2 blocks"
+  },
+  {
+    "source": "Räumbreite um 2 Blöcke verringern",
+    "de": "Räumbreite um 2 Blöcke verringern",
+    "en": "Decrease clearing width by 2 blocks"
+  },
+  {
+    "source": "Räumhöhe um 1 Block erhöhen",
+    "de": "Räumhöhe um 1 Block erhöhen",
+    "en": "Increase clearing height by 1 block"
+  },
+  {
+    "source": "Räumhöhe um 1 Block verringern",
+    "de": "Räumhöhe um 1 Block verringern",
+    "en": "Decrease clearing height by 1 block"
+  },
+  {
+    "source": "Sammler",
+    "de": "Sammler",
+    "en": "Collector"
+  },
+  {
+    "source": "Save",
+    "de": "Speichern",
+    "en": "Save"
+  },
+  {
+    "source": "Save Waypoint",
+    "de": "Wegpunkt speichern",
+    "en": "Save waypoint"
+  },
+  {
+    "source": "Schienen/Schotter ins Zuglager",
+    "de": "Schienen/Schotter ins Zuglager",
+    "en": "Load rails/ballast into train storage"
+  },
+  {
+    "source": "Schild übernehmen",
+    "de": "Schild übernehmen",
+    "en": "Apply nameplate"
+  },
+  {
+    "source": "Schließen",
+    "de": "Schließen",
+    "en": "Close"
+  },
+  {
+    "source": "Schuhe",
+    "de": "Schuhe",
+    "en": "Shoes"
+  },
+  {
+    "source": "Search icons",
+    "de": "Symbole suchen",
+    "en": "Search icons"
+  },
+  {
+    "source": "Search...",
+    "de": "Suchen…",
+    "en": "Search…"
+  },
+  {
+    "source": "Segeltuch",
+    "de": "Segeltuch",
+    "en": "Canvas"
+  },
+  {
+    "source": "Send message",
+    "de": "Nachricht senden",
+    "en": "Send message"
+  },
+  {
+    "source": "Server Address",
+    "de": "Serveradresse",
+    "en": "Server address"
+  },
+  {
+    "source": "Server Name",
+    "de": "Servername",
+    "en": "Server name"
+  },
+  {
+    "source": "Settings",
+    "de": "Einstellungen",
+    "en": "Settings"
+  },
+  {
+    "source": "Show / hide grid",
+    "de": "Raster ein- / ausblenden",
+    "en": "Show / hide grid"
+  },
+  {
+    "source": "Show / hide item browser",
+    "de": "Gegenstandsübersicht ein- / ausblenden",
+    "en": "Show / hide item browser"
+  },
+  {
+    "source": "Show / hide mobs",
+    "de": "Kreaturen ein- / ausblenden",
+    "en": "Show / hide creatures"
+  },
+  {
+    "source": "Show in World",
+    "de": "In der Welt anzeigen",
+    "en": "Show in world"
+  },
+  {
+    "source": "Sichtfeld (vertikal)",
+    "de": "Sichtfeld (vertikal)",
+    "en": "Field of view (vertical)"
+  },
+  {
+    "source": "Sichtweite",
+    "de": "Sichtweite",
+    "en": "Render distance"
+  },
+  {
+    "source": "Siedlung endgültig auflösen?",
+    "de": "Siedlung endgültig auflösen?",
+    "en": "Permanently dissolve settlement?"
+  },
+  {
+    "source": "Singleplayer",
+    "de": "Einzelspieler",
+    "en": "Singleplayer"
+  },
+  {
+    "source": "Slow Fade In / Out",
+    "de": "Langsames Ein- / Ausblenden",
+    "en": "Slow fade in / out"
+  },
+  {
+    "source": "Smelt Time",
+    "de": "Schmelzdauer",
+    "en": "Smelt time"
+  },
+  {
+    "source": "Smelting",
+    "de": "Schmelzen",
+    "en": "Smelting"
+  },
+  {
+    "source": "Spectator",
+    "de": "Zuschauermodus",
+    "en": "Spectator"
+  },
+  {
+    "source": "Speichern",
+    "de": "Speichern",
+    "en": "Save"
+  },
+  {
+    "source": "Stadt",
+    "de": "Stadt",
+    "en": "Town"
+  },
+  {
+    "source": "Standardwerte",
+    "de": "Standardwerte",
+    "en": "Defaults"
+  },
+  {
+    "source": "Stays at the current position",
+    "de": "Bleibt an der aktuellen Position",
+    "en": "Stays at the current position"
+  },
+  {
+    "source": "Stays close to you",
+    "de": "Bleibt in deiner Nähe",
+    "en": "Stays close to you"
+  },
+  {
+    "source": "Steinmauern",
+    "de": "Steinmauern",
+    "en": "Stone walls"
+  },
+  {
+    "source": "Stiefel",
+    "de": "Stiefel",
+    "en": "Boots"
+  },
+  {
+    "source": "Stirring spoon",
+    "de": "Rührlöffel",
+    "en": "Stirring spoon"
+  },
+  {
+    "source": "Stirring tool · reusable",
+    "de": "Rührwerkzeug · wiederverwendbar",
+    "en": "Stirring tool · reusable"
+  },
+  {
+    "source": "Storage",
+    "de": "Lager",
+    "en": "Storage"
+  },
+  {
+    "source": "Structures",
+    "de": "Bauwerke",
+    "en": "Structures"
+  },
+  {
+    "source": "Strähnenfarbe",
+    "de": "Strähnenfarbe",
+    "en": "Highlight color"
+  },
+  {
+    "source": "Surface",
+    "de": "Oberfläche",
+    "en": "Surface"
+  },
+  {
+    "source": "Survival",
+    "de": "Überlebensmodus",
+    "en": "Survival"
+  },
+  {
+    "source": "Switch 2.5D / 3D",
+    "de": "Zwischen 2.5D und 3D wechseln",
+    "en": "Switch 2.5D / 3D"
+  },
+  {
+    "source": "Switch caves / overworld",
+    "de": "Zwischen Höhlen und Oberwelt wechseln",
+    "en": "Switch caves / overworld"
+  },
+  {
+    "source": "Symbol suchen …",
+    "de": "Symbol suchen …",
+    "en": "Search icons…"
+  },
+  {
+    "source": "Symbol wählen",
+    "de": "Symbol wählen",
+    "en": "Choose icon"
+  },
+  {
+    "source": "Szenenreflexionen",
+    "de": "Szenenreflexionen",
+    "en": "Scene reflections"
+  },
+  {
+    "source": "TERAMIC",
+    "de": "TERAMIC",
+    "en": "TERAMIC"
+  },
+  {
+    "source": "Tank füllen",
+    "de": "Tank füllen",
+    "en": "Fill tank"
+  },
+  {
+    "source": "Tender",
+    "de": "Tender",
+    "en": "Tender"
+  },
+  {
+    "source": "Teramic",
+    "de": "Teramic",
+    "en": "Teramic"
+  },
+  {
+    "source": "Territorium",
+    "de": "Territorium",
+    "en": "Territory"
+  },
+  {
+    "source": "Territorium Chunk",
+    "de": "Territoriums-Chunk",
+    "en": "Territory chunk"
+  },
+  {
+    "source": "Territorium markieren",
+    "de": "Territorium markieren",
+    "en": "Mark territory"
+  },
+  {
+    "source": "Toggle grid",
+    "de": "Raster umschalten",
+    "en": "Toggle grid"
+  },
+  {
+    "source": "Typ",
+    "de": "Typ",
+    "en": "Type"
+  },
+  {
+    "source": "Uebernehmen",
+    "de": "Übernehmen",
+    "en": "Apply"
+  },
+  {
+    "source": "Ultra",
+    "de": "Ultra",
+    "en": "Ultra"
+  },
+  {
+    "source": "Umgebung",
+    "de": "Umgebung",
+    "en": "Environment"
+  },
+  {
+    "source": "Umhang",
+    "de": "Umhang",
+    "en": "Cape"
+  },
+  {
+    "source": "Unlimited",
+    "de": "Unbegrenzt",
+    "en": "Unlimited"
+  },
+  {
+    "source": "VSync",
+    "de": "VSync",
+    "en": "VSync"
+  },
+  {
+    "source": "Verbundenes Lager sortieren",
+    "de": "Verbundenes Lager sortieren",
+    "en": "Sort connected storage"
+  },
+  {
+    "source": "Verlassen",
+    "de": "Verlassen",
+    "en": "Leave"
+  },
+  {
+    "source": "View Port",
+    "de": "Im Sichtfeld",
+    "en": "In view"
+  },
+  {
+    "source": "Von",
+    "de": "Von",
+    "en": "From"
+  },
+  {
+    "source": "Voraussetzungen",
+    "de": "Voraussetzungen",
+    "en": "Requirements"
+  },
+  {
+    "source": "Vorlage anzeigen",
+    "de": "Vorlage anzeigen",
+    "en": "Show blueprint"
+  },
+  {
+    "source": "Vorlage automatisch bauen",
+    "de": "Vorlage automatisch bauen",
+    "en": "Build blueprint automatically"
+  },
+  {
+    "source": "WORLD MAP",
+    "de": "WELTKARTE",
+    "en": "WORLD MAP"
+  },
+  {
+    "source": "Wappen",
+    "de": "Wappen",
+    "en": "Coat of arms"
+  },
+  {
+    "source": "Wappen speichern",
+    "de": "Wappen speichern",
+    "en": "Save coat of arms"
+  },
+  {
+    "source": "Wappen wählen",
+    "de": "Wappen wählen",
+    "en": "Choose coat of arms"
+  },
+  {
+    "source": "Wasserqualitaet",
+    "de": "Wasserqualität",
+    "en": "Water quality"
+  },
+  {
+    "source": "Water",
+    "de": "Wasser",
+    "en": "Water"
+  },
+  {
+    "source": "Waypoint",
+    "de": "Wegpunkt",
+    "en": "Waypoint"
+  },
+  {
+    "source": "Waypoint Icon",
+    "de": "Wegpunktsymbol",
+    "en": "Waypoint icon"
+  },
+  {
+    "source": "Waypoints",
+    "de": "Wegpunkte",
+    "en": "Waypoints"
+  },
+  {
+    "source": "Weiblich",
+    "de": "Weiblich",
+    "en": "Female"
+  },
+  {
+    "source": "Weitere Chunks auf der Weltkarte unter Diplomatie auswählen.",
+    "de": "Wähle weitere Chunks auf der Weltkarte unter „Diplomatie“ aus.",
+    "en": "Select additional chunks under Diplomacy on the world map."
+  },
+  {
+    "source": "Wellenstaerke",
+    "de": "Wellenstärke",
+    "en": "Wave strength"
+  },
+  {
+    "source": "Wetterqualitaet",
+    "de": "Wetterqualität",
+    "en": "Weather quality"
+  },
+  {
+    "source": "Windowed",
+    "de": "Fenstermodus",
+    "en": "Windowed"
+  },
+  {
+    "source": "Wolle",
+    "de": "Wolle",
+    "en": "Wool"
+  },
+  {
+    "source": "World Chat",
+    "de": "Weltchat",
+    "en": "World chat"
+  },
+  {
+    "source": "World Name",
+    "de": "Weltname",
+    "en": "World name"
+  },
+  {
+    "source": "World Seed (optional)",
+    "de": "Welt-Seed (optional)",
+    "en": "World seed (optional)"
+  },
+  {
+    "source": "You Died",
+    "de": "Du bist gestorben",
+    "en": "You died"
+  },
+  {
+    "source": "Your realm",
+    "de": "Dein Königreich",
+    "en": "Your kingdom"
+  },
+  {
+    "source": "Ziehen zum Drehen",
+    "de": "Zum Drehen ziehen",
+    "en": "Drag to rotate"
+  },
+  {
+    "source": "Ziel",
+    "de": "Ziel",
+    "en": "Target"
+  },
+  {
+    "source": "Zoom in",
+    "de": "Vergrößern",
+    "en": "Zoom in"
+  },
+  {
+    "source": "Zoom out",
+    "de": "Verkleinern",
+    "en": "Zoom out"
+  },
+  {
+    "source": "Zufällig",
+    "de": "Zufällig",
+    "en": "Random"
+  },
+  {
+    "source": "Zufälliges Aussehen",
+    "de": "Zufälliges Aussehen",
+    "en": "Random appearance"
+  },
+  {
+    "source": "Zug zerstören",
+    "de": "Zug zerstören",
+    "en": "Destroy train"
+  },
+  {
+    "source": "Zugehöriges Königreich",
+    "de": "Zugehöriges Königreich",
+    "en": "Associated kingdom"
+  },
+  {
+    "source": "Zuglager sortieren",
+    "de": "Zuglager sortieren",
+    "en": "Sort train storage"
+  },
+  {
+    "source": "Zugname",
+    "de": "Zugname",
+    "en": "Train name"
+  },
+  {
+    "source": "Zum Einstellen anhalten und im Führerstand sitzen.",
+    "de": "Halte zum Einstellen an und setze dich in den Führerstand.",
+    "en": "Stop and sit in the cab to adjust settings."
+  },
+  {
+    "source": "Zum Umschalten anhalten und im Führerstand sitzen",
+    "de": "Zum Umschalten anhalten und im Führerstand sitzen",
+    "en": "Stop and sit in the cab to toggle"
+  },
+  {
+    "source": "Zur Fahrzeugsteuerung",
+    "de": "Zur Fahrzeugsteuerung",
+    "en": "Open vehicle controls"
+  },
+  {
+    "source": "Zurück",
+    "de": "Zurück",
+    "en": "Back"
+  },
+  {
+    "source": "Zurücksetzen",
+    "de": "Zurücksetzen",
+    "en": "Reset"
+  },
+  {
+    "source": "Zusammensetzen",
+    "de": "Zusammensetzen",
+    "en": "Assemble"
+  },
+  {
+    "source": "[Click Me]",
+    "de": "[Hier klicken]",
+    "en": "[Click Me]"
+  },
+  {
+    "source": "found! Locate at",
+    "de": "gefunden! Position:",
+    "en": "found! Locate at"
+  },
+  {
+    "source": "or teleport",
+    "de": "oder teleportieren",
+    "en": "or teleport"
+  },
+  {
+    "source": "Übersicht",
+    "de": "Übersicht",
+    "en": "Overview"
+  }
+]

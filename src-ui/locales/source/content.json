@@ -1,0 +1,4812 @@
+[
+  {
+    "source": "A birch-framed belt that transports dropped items while driven by a mechanical network.",
+    "de": "Ein Förderband mit Birkenholzrahmen, das lose Gegenstände transportiert, solange es von einem mechanischen Netz angetrieben wird.",
+    "en": "A birch-framed belt that transports dropped items while driven by a mechanical network."
+  },
+  {
+    "source": "A birch-wood gear that transfers rotation between connected mechanical parts.",
+    "de": "Ein Zahnrad aus Birkenholz, das die Drehung zwischen verbundenen mechanischen Teilen überträgt.",
+    "en": "A birch-wood gear that transfers rotation between connected mechanical parts."
+  },
+  {
+    "source": "A birch-wood shaft that carries rotation along its axis.",
+    "de": "Eine Welle aus Birkenholz, die die Drehung entlang ihrer Achse überträgt.",
+    "en": "A birch-wood shaft that carries rotation along its axis."
+  },
+  {
+    "source": "A blue giant mushroom cap with spotted skin and gills.",
+    "de": "Ein blauer Riesenpilzhut mit gefleckter Haut und Lamellen.",
+    "en": "A blue giant mushroom cap with spotted skin and gills."
+  },
+  {
+    "source": "A brilliant blue deep-rock crystal.",
+    "de": "Ein leuchtend blauer Kristall aus tiefen Gesteinsschichten.",
+    "en": "A brilliant blue deep-rock crystal."
+  },
+  {
+    "source": "A broad digging tool. Four times faster on soil, sand, clay and snow.",
+    "de": "Ein breites Grabwerkzeug. Baut Erde, Sand, Lehm und Schnee viermal schneller ab.",
+    "en": "A broad digging tool. Four times faster on soil, sand, clay and snow."
+  },
+  {
+    "source": "A broad yellow-green apple canopy. Its flowers and individual fruit follow the saved orchard season.",
+    "de": "Eine breite, gelbgrüne Apfelbaumkrone. Ihre Blüten und einzelnen Früchte folgen der gespeicherten Obstgartensaison.",
+    "en": "A broad yellow-green apple canopy. Its flowers and individual fruit follow the saved orchard season."
+  },
+  {
+    "source": "A browned river fish.",
+    "de": "Ein gebratener Flussfisch mit gebräunter Haut.",
+    "en": "A browned river fish."
+  },
+  {
+    "source": "A bucket holding one water source. Place it to feed the existing water flow.",
+    "de": "Ein Eimer mit einer Wasserquelle. Platziere sie, um den vorhandenen Wasserfluss zu speisen.",
+    "en": "A bucket holding one water source. Place it to feed the existing water flow."
+  },
+  {
+    "source": "A carved wooden blade for close combat.",
+    "de": "Eine geschnitzte Holzklinge für den Nahkampf.",
+    "en": "A carved wooden blade for close combat."
+  },
+  {
+    "source": "A carved wooden ladle for stirring an alchemy cauldron.",
+    "de": "Eine geschnitzte Holzkelle zum Umrühren im Alchemiekessel.",
+    "en": "A carved wooden ladle for stirring an alchemy cauldron."
+  },
+  {
+    "source": "A cherry-framed belt that transports dropped items while driven by a mechanical network.",
+    "de": "Ein Förderband mit Kirschholzrahmen, das lose Gegenstände transportiert, solange es von einem mechanischen Netz angetrieben wird.",
+    "en": "A cherry-framed belt that transports dropped items while driven by a mechanical network."
+  },
+  {
+    "source": "A cherry-wood gear that transfers rotation between connected mechanical parts.",
+    "de": "Ein Zahnrad aus Kirschholz, das die Drehung zwischen verbundenen mechanischen Teilen überträgt.",
+    "en": "A cherry-wood gear that transfers rotation between connected mechanical parts."
+  },
+  {
+    "source": "A cherry-wood shaft that carries rotation along its axis.",
+    "de": "Eine Welle aus Kirschholz, die die Drehung entlang ihrer Achse überträgt.",
+    "en": "A cherry-wood shaft that carries rotation along its axis."
+  },
+  {
+    "source": "A coal flame in a small iron basket. Casts warm light up to 18 blocks away.",
+    "de": "Eine Kohleflamme in einem kleinen Eisenkorb. Spendet warmes Licht bis zu 18 Blöcke weit.",
+    "en": "A coal flame in a small iron basket. Casts warm light up to 18 blocks away."
+  },
+  {
+    "source": "A cold faceted crystal from a highland waterfall cave.",
+    "de": "Ein kalter, facettierter Kristall aus einer Wasserfallhöhle im Hochland.",
+    "en": "A cold faceted crystal from a highland waterfall cave."
+  },
+  {
+    "source": "A compact meshing gear. Matching side gears reverse rotation; axial shafts carry it onward.",
+    "de": "Ein kompaktes Zahnrad. Seitlich eingreifende Zahnräder kehren die Drehrichtung um; axiale Wellen übertragen sie weiter.",
+    "en": "A compact meshing gear. Matching side gears reverse rotation; axial shafts carry it onward."
+  },
+  {
+    "source": "A compact one-block mechanical crusher. Twin toothed rollers grind minerals and plants into dust and dye.",
+    "de": "Ein kompakter mechanischer Brecher, der einen Block belegt. Zwei gezahnte Walzen zermahlen Mineralien und Pflanzen zu Staub und Farbstoff.",
+    "en": "A compact one-block mechanical crusher. Twin toothed rollers grind minerals and plants into dust and dye."
+  },
+  {
+    "source": "A corked glass bottle filled with water for the alchemy cauldron.",
+    "de": "Eine verkorkte Glasflasche mit Wasser für den Alchemiekessel.",
+    "en": "A corked glass bottle filled with water for the alchemy cauldron."
+  },
+  {
+    "source": "A crisp green head. Eat fresh, or keep some seed for the next planting.",
+    "de": "Ein knackiger grüner Salatkopf. Iss ihn frisch oder bewahre Samen für die nächste Aussaat auf.",
+    "en": "A crisp green head. Eat fresh, or keep some seed for the next planting."
+  },
+  {
+    "source": "A deep indigo alchemical brew for seeing in dark places.",
+    "de": "Ein tief indigoblauer alchemistischer Trank, der die Sicht im Dunkeln verbessert.",
+    "en": "A deep indigo alchemical brew for seeing in dark places."
+  },
+  {
+    "source": "A dense mix of warm grey pebbles and small angular stones.",
+    "de": "Eine dichte Mischung aus warmgrauen Kieseln und kleinen kantigen Steinen.",
+    "en": "A dense mix of warm grey pebbles and small angular stones."
+  },
+  {
+    "source": "A dense reef cube covered in warm crimson coral branches and small flower-like rosettes.",
+    "de": "Ein dichter Riffblock mit warmroten Korallenästen und kleinen blütenartigen Rosetten.",
+    "en": "A dense reef cube covered in warm crimson coral branches and small flower-like rosettes."
+  },
+  {
+    "source": "A diamond pickaxe for harvesting stone and mineral deposits.",
+    "de": "Eine Diamantspitzhacke zum Abbau von Gestein und Mineralvorkommen.",
+    "en": "A diamond pickaxe for harvesting stone and mineral deposits."
+  },
+  {
+    "source": "A diamond tool for harvesting wood.",
+    "de": "Ein Diamantwerkzeug zum Holzfällen.",
+    "en": "A diamond tool for harvesting wood."
+  },
+  {
+    "source": "A filtered belt distributor with one rear inlet and three independently filtered left, forward and right outlets.",
+    "de": "Ein gefilterter Förderbandverteiler mit einem Eingang hinten und drei einzeln gefilterten Ausgängen links, vorne und rechts.",
+    "en": "A filtered belt distributor with one rear inlet and three independently filtered left, forward and right outlets."
+  },
+  {
+    "source": "A fired clay pot. Plant a flower or mushroom; use an empty hand to take it out.",
+    "de": "Ein gebrannter Tontopf. Pflanze eine Blume oder einen Pilz hinein; mit leerer Hand nimmst du die Pflanze wieder heraus.",
+    "en": "A fired clay pot. Plant a flower or mushroom; use an empty hand to take it out."
+  },
+  {
+    "source": "A flower with blue pigment.",
+    "de": "Eine Blume mit blauem Farbpigment.",
+    "en": "A flower with blue pigment."
+  },
+  {
+    "source": "A flower with green pigment.",
+    "de": "Eine Blume mit grünem Farbpigment.",
+    "en": "A flower with green pigment."
+  },
+  {
+    "source": "A flower with orange pigment.",
+    "de": "Eine Blume mit orangefarbenem Farbpigment.",
+    "en": "A flower with orange pigment."
+  },
+  {
+    "source": "A flower with purple pigment.",
+    "de": "Eine Blume mit violettem Farbpigment.",
+    "en": "A flower with purple pigment."
+  },
+  {
+    "source": "A flower with red pigment.",
+    "de": "Eine Blume mit rotem Farbpigment.",
+    "en": "A flower with red pigment."
+  },
+  {
+    "source": "A flower with white pigment.",
+    "de": "Eine Blume mit weißem Farbpigment.",
+    "en": "A flower with white pigment."
+  },
+  {
+    "source": "A flower with yellow pigment.",
+    "de": "Eine Blume mit gelbem Farbpigment.",
+    "en": "A flower with yellow pigment."
+  },
+  {
+    "source": "A flowing water source. Fills nearby empty cells and reacts to changed banks.",
+    "de": "Eine fließende Wasserquelle. Füllt benachbarte leere Zellen und reagiert auf Veränderungen am Ufer.",
+    "en": "A flowing water source. Fills nearby empty cells and reacts to changed banks."
+  },
+  {
+    "source": "A forged weapon for close-range combat.",
+    "de": "Eine geschmiedete Waffe für den Nahkampf.",
+    "en": "A forged weapon for close-range combat."
+  },
+  {
+    "source": "A forty-five-degree falling bend connecting the top to the facing side.",
+    "de": "Ein um 45 Grad abfallender Rohrbogen, der den oberen Anschluss mit der Vorderseite verbindet.",
+    "en": "A forty-five-degree falling bend connecting the top to the facing side."
+  },
+  {
+    "source": "A forty-five-degree rising bend connecting the bottom to the facing side.",
+    "de": "Ein um 45 Grad ansteigender Rohrbogen, der den unteren Anschluss mit der Vorderseite verbindet.",
+    "en": "A forty-five-degree rising bend connecting the bottom to the facing side."
+  },
+  {
+    "source": "A four-way belt junction. Three open inputs merge into the clearly marked forward output.",
+    "de": "Eine Förderbandkreuzung mit vier Anschlüssen. Drei offene Eingänge führen zum deutlich markierten Ausgang vorne.",
+    "en": "A four-way belt junction. Three open inputs merge into the clearly marked forward output."
+  },
+  {
+    "source": "A framed birch glass window with iron hinges. Opens smoothly and ventilates furnace smoke.",
+    "de": "Ein gerahmtes Birkenglasfenster mit Eisenscharnieren. Öffnet sich fließend und lässt Ofenrauch entweichen.",
+    "en": "A framed birch glass window with iron hinges. Opens smoothly and ventilates furnace smoke."
+  },
+  {
+    "source": "A framed birch plank door with iron hinges. Opens smoothly and ventilates furnace smoke.",
+    "de": "Eine gerahmte Birkenbrettertür mit Eisenscharnieren. Öffnet sich fließend und lässt Ofenrauch entweichen.",
+    "en": "A framed birch plank door with iron hinges. Opens smoothly and ventilates furnace smoke."
+  },
+  {
+    "source": "A framed cherry glass window with iron hinges. Opens smoothly and ventilates furnace smoke.",
+    "de": "Ein gerahmtes Kirschglasfenster mit Eisenscharnieren. Öffnet sich fließend und lässt Ofenrauch entweichen.",
+    "en": "A framed cherry glass window with iron hinges. Opens smoothly and ventilates furnace smoke."
+  },
+  {
+    "source": "A framed cherry plank door with iron hinges. Opens smoothly and ventilates furnace smoke.",
+    "de": "Eine gerahmte Kirschbrettertür mit Eisenscharnieren. Öffnet sich fließend und lässt Ofenrauch entweichen.",
+    "en": "A framed cherry plank door with iron hinges. Opens smoothly and ventilates furnace smoke."
+  },
+  {
+    "source": "A framed oak glass window with iron hinges. Opens smoothly and ventilates furnace smoke.",
+    "de": "Ein gerahmtes Eichenglasfenster mit Eisenscharnieren. Öffnet sich fließend und lässt Ofenrauch entweichen.",
+    "en": "A framed oak glass window with iron hinges. Opens smoothly and ventilates furnace smoke."
+  },
+  {
+    "source": "A framed oak plank door with iron hinges. Opens smoothly and ventilates furnace smoke.",
+    "de": "Eine gerahmte Eichenbrettertür mit Eisenscharnieren. Öffnet sich fließend und lässt Ofenrauch entweichen.",
+    "en": "A framed oak plank door with iron hinges. Opens smoothly and ventilates furnace smoke."
+  },
+  {
+    "source": "A framed spruce glass window with iron hinges. Opens smoothly and ventilates furnace smoke.",
+    "de": "Ein gerahmtes Fichtenglasfenster mit Eisenscharnieren. Öffnet sich fließend und lässt Ofenrauch entweichen.",
+    "en": "A framed spruce glass window with iron hinges. Opens smoothly and ventilates furnace smoke."
+  },
+  {
+    "source": "A framed spruce plank door with iron hinges. Opens smoothly and ventilates furnace smoke.",
+    "de": "Eine gerahmte Fichtenbrettertür mit Eisenscharnieren. Öffnet sich fließend und lässt Ofenrauch entweichen.",
+    "en": "A framed spruce plank door with iron hinges. Opens smoothly and ventilates furnace smoke."
+  },
+  {
+    "source": "A full block of compact white snow.",
+    "de": "Ein voller Block aus verdichtetem weißem Schnee.",
+    "en": "A full block of compact white snow."
+  },
+  {
+    "source": "A full-block pipe-fed filling head. Place one air block above the Hold Block, then the Infuser. Requires no kinetic drive.",
+    "de": "Ein rohrgespeister Füllkopf, der einen ganzen Block belegt. Lass über der Halteplattform einen Block frei und platziere darüber den Flüssigkeitsfüller. Er benötigt keinen mechanischen Antrieb.",
+    "en": "A full-block pipe-fed filling head. Place one air block above the Hold Block, then the Infuser. Requires no kinetic drive."
+  },
+  {
+    "source": "A gold pickaxe for harvesting stone and mineral deposits.",
+    "de": "Eine Goldspitzhacke zum Abbau von Gestein und Mineralvorkommen.",
+    "en": "A gold pickaxe for harvesting stone and mineral deposits."
+  },
+  {
+    "source": "A gold tool for harvesting wood.",
+    "de": "Ein Goldwerkzeug zum Holzfällen.",
+    "en": "A gold tool for harvesting wood."
+  },
+  {
+    "source": "A golden giant mushroom cap with spotted skin and gills.",
+    "de": "Ein goldener Riesenpilzhut mit gefleckter Haut und Lamellen.",
+    "en": "A golden giant mushroom cap with spotted skin and gills."
+  },
+  {
+    "source": "A golden reef cube built from small layered coral plates with bright scalloped edges.",
+    "de": "Ein goldener Riffblock aus kleinen geschichteten Korallenplatten mit hellen gewellten Rändern.",
+    "en": "A golden reef cube built from small layered coral plates with bright scalloped edges."
+  },
+  {
+    "source": "A green giant mushroom cap with spotted skin and gills.",
+    "de": "Ein grüner Riesenpilzhut mit gefleckter Haut und Lamellen.",
+    "en": "A green giant mushroom cap with spotted skin and gills."
+  },
+  {
+    "source": "A hard-wearing stone ladle for stirring an alchemy cauldron.",
+    "de": "Eine robuste Steinkelle zum Umrühren im Alchemiekessel.",
+    "en": "A hard-wearing stone ladle for stirring an alchemy cauldron."
+  },
+  {
+    "source": "A harsh red brew that causes bleeding.",
+    "de": "Ein scharfer roter Trank, der Blutungen verursacht.",
+    "en": "A harsh red brew that causes bleeding."
+  },
+  {
+    "source": "A heavy grey brew that slows the drinker.",
+    "de": "Ein schwerer grauer Trank, der den Trinkenden verlangsamt.",
+    "en": "A heavy grey brew that slows the drinker."
+  },
+  {
+    "source": "A hollow modular chimney. Placement aligns straight and elbow connections automatically.",
+    "de": "Ein hohler modularer Schornstein. Gerade Anschlüsse und Bögen richten sich beim Platzieren automatisch aus.",
+    "en": "A hollow modular chimney. Placement aligns straight and elbow connections automatically."
+  },
+  {
+    "source": "A iron tool for harvesting wood.",
+    "de": "Ein Eisenwerkzeug zum Holzfällen.",
+    "en": "A iron tool for harvesting wood."
+  },
+  {
+    "source": "A large birch-wood gear for ratio-changing mechanical transmissions.",
+    "de": "Ein großes Zahnrad aus Birkenholz für mechanische Getriebe mit Übersetzung.",
+    "en": "A large birch-wood gear for ratio-changing mechanical transmissions."
+  },
+  {
+    "source": "A large cherry-wood gear for ratio-changing mechanical transmissions.",
+    "de": "Ein großes Zahnrad aus Kirschholz für mechanische Getriebe mit Übersetzung.",
+    "en": "A large cherry-wood gear for ratio-changing mechanical transmissions."
+  },
+  {
+    "source": "A large mechanical gear with twice the pitch radius. Diagonal small gears turn twice as fast.",
+    "de": "Ein großes mechanisches Zahnrad mit doppeltem Teilkreisradius. Diagonal eingreifende kleine Zahnräder drehen sich doppelt so schnell.",
+    "en": "A large mechanical gear with twice the pitch radius. Diagonal small gears turn twice as fast."
+  },
+  {
+    "source": "A large spruce-wood gear for ratio-changing mechanical transmissions.",
+    "de": "Ein großes Zahnrad aus Fichtenholz für mechanische Getriebe mit Übersetzung.",
+    "en": "A large spruce-wood gear for ratio-changing mechanical transmissions."
+  },
+  {
+    "source": "A layered wool cloak and folded scarf with diamond straps and clasp. Recolor the cloth with flower dye.",
+    "de": "Ein mehrlagiger Wollumhang mit gefaltetem Schal sowie Riemen und Schließe aus Diamant. Der Stoff lässt sich mit Blumenfarbstoff umfärben.",
+    "en": "A layered wool cloak and folded scarf with diamond straps and clasp. Recolor the cloth with flower dye."
+  },
+  {
+    "source": "A layered wool cloak and folded scarf with gold straps and clasp. Recolor the cloth with flower dye.",
+    "de": "Ein mehrlagiger Wollumhang mit gefaltetem Schal sowie Riemen und Schließe aus Gold. Der Stoff lässt sich mit Blumenfarbstoff umfärben.",
+    "en": "A layered wool cloak and folded scarf with gold straps and clasp. Recolor the cloth with flower dye."
+  },
+  {
+    "source": "A layered wool cloak and folded scarf with iron straps and clasp. Recolor the cloth with flower dye.",
+    "de": "Ein mehrlagiger Wollumhang mit gefaltetem Schal sowie Riemen und Schließe aus Eisen. Der Stoff lässt sich mit Blumenfarbstoff umfärben.",
+    "en": "A layered wool cloak and folded scarf with iron straps and clasp. Recolor the cloth with flower dye."
+  },
+  {
+    "source": "A layered wool cloak and folded scarf with leather straps and clasp. Recolor the cloth with flower dye.",
+    "de": "Ein mehrlagiger Wollumhang mit gefaltetem Schal sowie Riemen und Schließe aus Leder. Der Stoff lässt sich mit Blumenfarbstoff umfärben.",
+    "en": "A layered wool cloak and folded scarf with leather straps and clasp. Recolor the cloth with flower dye."
+  },
+  {
+    "source": "A layered wool cloak and folded scarf with ruby straps and clasp. Recolor the cloth with flower dye.",
+    "de": "Ein mehrlagiger Wollumhang mit gefaltetem Schal sowie Riemen und Schließe aus Rubin. Der Stoff lässt sich mit Blumenfarbstoff umfärben.",
+    "en": "A layered wool cloak and folded scarf with ruby straps and clasp. Recolor the cloth with flower dye."
+  },
+  {
+    "source": "A light, wind-touched cluster of green tree foliage.",
+    "de": "Ein leichtes Büschel grüner Baumblätter, das sich im Wind bewegt.",
+    "en": "A light, wind-touched cluster of green tree foliage."
+  },
+  {
+    "source": "A low stone-ring fire with crossed charred logs, lit only while real fuel is burning.",
+    "de": "Eine niedrige Feuerstelle im Steinring mit gekreuzten verkohlten Scheiten. Sie brennt nur, solange tatsächlich Brennstoff vorhanden ist.",
+    "en": "A low stone-ring fire with crossed charred logs, lit only while real fuel is burning."
+  },
+  {
+    "source": "A matching pair of golden earrings with ruby insets.",
+    "de": "Ein zusammengehöriges Paar goldener Ohrringe mit Rubinen.",
+    "en": "A matching pair of golden earrings with ruby insets."
+  },
+  {
+    "source": "A mechanically driven paddle mixer with multiple inputs and a reinforced wooden hopper.",
+    "de": "Ein mechanisch angetriebener Rührwerksmischer mit mehreren Eingängen und einem verstärkten Holztrichter.",
+    "en": "A mechanically driven paddle mixer with multiple inputs and a reinforced wooden hopper."
+  },
+  {
+    "source": "A ninety-degree chimney turn connecting the bottom to the facing side.",
+    "de": "Ein Schornsteinbogen mit 90 Grad, der den unteren Anschluss mit der Vorderseite verbindet.",
+    "en": "A ninety-degree chimney turn connecting the bottom to the facing side."
+  },
+  {
+    "source": "A nourishing loaf made from harvested wheat.",
+    "de": "Ein nahrhaftes Brot aus geerntetem Weizen.",
+    "en": "A nourishing loaf made from harvested wheat."
+  },
+  {
+    "source": "A paddled wheel driven by flowing water touching its lower or side paddles.",
+    "de": "Ein Schaufelrad, das durch strömendes Wasser an seinen unteren oder seitlichen Schaufeln angetrieben wird.",
+    "en": "A paddled wheel driven by flowing water touching its lower or side paddles."
+  },
+  {
+    "source": "A pale blue alchemical brew that temporarily increases movement speed.",
+    "de": "Ein hellblauer alchemistischer Trank, der die Bewegungsgeschwindigkeit vorübergehend erhöht.",
+    "en": "A pale blue alchemical brew that temporarily increases movement speed."
+  },
+  {
+    "source": "A pale salt crystal from mineral caves.",
+    "de": "Ein heller Salzkristall aus Mineralhöhlen.",
+    "en": "A pale salt crystal from mineral caves."
+  },
+  {
+    "source": "A passive platform at conveyor height. Holds vessels below a Fluid Infuser, then hands them to the next belt.",
+    "de": "Eine passive Plattform auf Förderbandhöhe. Hält Gefäße unter einem Flüssigkeitsfüller und gibt sie anschließend an das nächste Förderband weiter.",
+    "en": "A passive platform at conveyor height. Holds vessels below a Fluid Infuser, then hands them to the next belt."
+  },
+  {
+    "source": "A polished golden ladle for precise alchemical stirring.",
+    "de": "Eine polierte Goldkelle für präzises alchemistisches Rühren.",
+    "en": "A polished golden ladle for precise alchemical stirring."
+  },
+  {
+    "source": "A polished pendant worn close to the heart.",
+    "de": "Ein polierter Anhänger, der nah am Herzen getragen wird.",
+    "en": "A polished pendant worn close to the heart."
+  },
+  {
+    "source": "A powered conveyor that moves loose items in its placement direction.",
+    "de": "Ein angetriebenes Förderband, das lose Gegenstände in seiner Ausrichtung transportiert.",
+    "en": "A powered conveyor that moves loose items in its placement direction."
+  },
+  {
+    "source": "A purple alchemical brew that restores health over time.",
+    "de": "Ein violetter alchemistischer Trank, der mit der Zeit Gesundheit wiederherstellt.",
+    "en": "A purple alchemical brew that restores health over time."
+  },
+  {
+    "source": "A red giant mushroom cap with spotted skin and gills.",
+    "de": "Ein roter Riesenpilzhut mit gefleckter Haut und Lamellen.",
+    "en": "A red giant mushroom cap with spotted skin and gills."
+  },
+  {
+    "source": "A refined iron mining tool. Harvests diamonds and rubies, mining stone six times faster.",
+    "de": "Ein hochwertiges Eisenwerkzeug für den Bergbau. Kann Diamanten und Rubine abbauen und baut Stein sechsmal schneller ab.",
+    "en": "A refined iron mining tool. Harvests diamonds and rubies, mining stone six times faster."
+  },
+  {
+    "source": "A reinforced basin for the finite hydraulic network.",
+    "de": "Ein verstärktes Becken für das Hydrauliknetz mit begrenzten Wassermengen.",
+    "en": "A reinforced basin for the finite hydraulic network."
+  },
+  {
+    "source": "A reinforced birch basin module storing finite water.",
+    "de": "Ein verstärktes Beckenmodul aus Birkenholz, das eine begrenzte Wassermenge speichert.",
+    "en": "A reinforced birch basin module storing finite water."
+  },
+  {
+    "source": "A reinforced cherry basin module storing finite water.",
+    "de": "Ein verstärktes Beckenmodul aus Kirschholz, das eine begrenzte Wassermenge speichert.",
+    "en": "A reinforced cherry basin module storing finite water."
+  },
+  {
+    "source": "A reinforced faucet for the finite hydraulic network.",
+    "de": "Ein verstärkter Wasserhahn für das Hydrauliknetz mit begrenzten Wassermengen.",
+    "en": "A reinforced faucet for the finite hydraulic network."
+  },
+  {
+    "source": "A reinforced glass pipe for the finite hydraulic network.",
+    "de": "Ein verstärktes Glasrohr für das Hydrauliknetz mit begrenzten Wassermengen.",
+    "en": "A reinforced glass pipe for the finite hydraulic network."
+  },
+  {
+    "source": "A reinforced iron pipe for the finite hydraulic network.",
+    "de": "Ein verstärktes Eisenrohr für das Hydrauliknetz mit begrenzten Wassermengen.",
+    "en": "A reinforced iron pipe for the finite hydraulic network."
+  },
+  {
+    "source": "A reinforced kinetic water pump for the finite hydraulic network.",
+    "de": "Eine verstärkte mechanische Wasserpumpe für das Hydrauliknetz mit begrenzten Wassermengen.",
+    "en": "A reinforced kinetic water pump for the finite hydraulic network."
+  },
+  {
+    "source": "A reinforced oak basin module storing finite water.",
+    "de": "Ein verstärktes Beckenmodul aus Eichenholz, das eine begrenzte Wassermenge speichert.",
+    "en": "A reinforced oak basin module storing finite water."
+  },
+  {
+    "source": "A reinforced shutoff valve for the finite hydraulic network.",
+    "de": "Ein verstärktes Absperrventil für das Hydrauliknetz mit begrenzten Wassermengen.",
+    "en": "A reinforced shutoff valve for the finite hydraulic network."
+  },
+  {
+    "source": "A reinforced stone pipe for the finite hydraulic network.",
+    "de": "Ein verstärktes Steinrohr für das Hydrauliknetz mit begrenzten Wassermengen.",
+    "en": "A reinforced stone pipe for the finite hydraulic network."
+  },
+  {
+    "source": "A reinforced wood pipe for the finite hydraulic network.",
+    "de": "Ein verstärktes Holzrohr für das Hydrauliknetz mit begrenzten Wassermengen.",
+    "en": "A reinforced wood pipe for the finite hydraulic network."
+  },
+  {
+    "source": "A removable mechanical crank for the crusher drive gear.",
+    "de": "Eine abnehmbare Handkurbel für das Antriebsrad des Brechers.",
+    "en": "A removable mechanical crank for the crusher drive gear."
+  },
+  {
+    "source": "A rich blue reef cube with pale tube rims and shadowed hollow coral cups.",
+    "de": "Ein kräftig blauer Riffblock mit hellen Röhrenrändern und schattigen hohlen Korallenkelchen.",
+    "en": "A rich blue reef cube with pale tube rims and shadowed hollow coral cups."
+  },
+  {
+    "source": "A ripe orchard apple. Eat it or grow a new apple sapling from its seeds.",
+    "de": "Ein reifer Apfel aus dem Obstgarten. Iss ihn oder ziehe aus seinen Kernen einen neuen Apfelsetzling.",
+    "en": "A ripe orchard apple. Eat it or grow a new apple sapling from its seeds."
+  },
+  {
+    "source": "A ripe, sweet yellow cob. Can be eaten or separated into planting seeds.",
+    "de": "Ein reifer, süßer gelber Maiskolben. Kann gegessen oder in Saatkörner zerlegt werden.",
+    "en": "A ripe, sweet yellow cob. Can be eaten or separated into planting seeds."
+  },
+  {
+    "source": "A rooted, water-permeable seagrass segment. Harvest the top or cut the stem.",
+    "de": "Ein verwurzeltes Seegrassegment, das Wasser durchlässt. Ernte die Spitze oder schneide den Stängel ab.",
+    "en": "A rooted, water-permeable seagrass segment. Harvest the top or cut the stem."
+  },
+  {
+    "source": "A rose-purple combined brew with regeneration and strength effects.",
+    "de": "Ein rosavioletter Mischtrank mit Regenerations- und Stärkewirkung.",
+    "en": "A rose-purple combined brew with regeneration and strength effects."
+  },
+  {
+    "source": "A ruby pickaxe for harvesting stone and mineral deposits.",
+    "de": "Eine Rubinspitzhacke zum Abbau von Gestein und Mineralvorkommen.",
+    "en": "A ruby pickaxe for harvesting stone and mineral deposits."
+  },
+  {
+    "source": "A ruby tool for harvesting wood.",
+    "de": "Ein Rubinwerkzeug zum Holzfällen.",
+    "en": "A ruby tool for harvesting wood."
+  },
+  {
+    "source": "A ruby-red alchemical brew that temporarily increases strength.",
+    "de": "Ein rubinroter alchemistischer Trank, der die Stärke vorübergehend erhöht.",
+    "en": "A ruby-red alchemical brew that temporarily increases strength."
+  },
+  {
+    "source": "A sakura woodland flower with soft pink pigment.",
+    "de": "Eine Sakura-Waldblume mit zartrosa Farbpigment.",
+    "en": "A sakura woodland flower with soft pink pigment."
+  },
+  {
+    "source": "A salt crystal segment. Detached hanging pieces fall and shatter into salt.",
+    "de": "Ein Salzkristallsegment. Abgetrennte hängende Stücke fallen herab und zerbrechen zu Salz.",
+    "en": "A salt crystal segment. Detached hanging pieces fall and shatter into salt."
+  },
+  {
+    "source": "A sculpted calcite segment, attached to a floor, ceiling or mineral column.",
+    "de": "Ein geformtes Kalzitsegment, das an Boden, Decke oder einer Mineralsäule sitzt.",
+    "en": "A sculpted calcite segment, attached to a floor, ceiling or mineral column."
+  },
+  {
+    "source": "A separate left turnout with birch sleepers. Place a switch stand beside its throat to select the route.",
+    "de": "Eine separate Linksweiche mit Birkenholzschwellen. Platziere neben ihrem Anfang einen Weichenhebel, um den Fahrweg zu wählen.",
+    "en": "A separate left turnout with birch sleepers. Place a switch stand beside its throat to select the route."
+  },
+  {
+    "source": "A separate left turnout with cherry sleepers. Place a switch stand beside its throat to select the route.",
+    "de": "Eine separate Linksweiche mit Kirschholzschwellen. Platziere neben ihrem Anfang einen Weichenhebel, um den Fahrweg zu wählen.",
+    "en": "A separate left turnout with cherry sleepers. Place a switch stand beside its throat to select the route."
+  },
+  {
+    "source": "A separate left turnout with spruce sleepers. Place a switch stand beside its throat to select the route.",
+    "de": "Eine separate Linksweiche mit Fichtenholzschwellen. Platziere neben ihrem Anfang einen Weichenhebel, um den Fahrweg zu wählen.",
+    "en": "A separate left turnout with spruce sleepers. Place a switch stand beside its throat to select the route."
+  },
+  {
+    "source": "A separate right turnout with birch sleepers. Place a switch stand beside its throat to select the route.",
+    "de": "Eine separate Rechtsweiche mit Birkenholzschwellen. Platziere neben ihrem Anfang einen Weichenhebel, um den Fahrweg zu wählen.",
+    "en": "A separate right turnout with birch sleepers. Place a switch stand beside its throat to select the route."
+  },
+  {
+    "source": "A separate right turnout with cherry sleepers. Place a switch stand beside its throat to select the route.",
+    "de": "Eine separate Rechtsweiche mit Kirschholzschwellen. Platziere neben ihrem Anfang einen Weichenhebel, um den Fahrweg zu wählen.",
+    "en": "A separate right turnout with cherry sleepers. Place a switch stand beside its throat to select the route."
+  },
+  {
+    "source": "A separate right turnout with spruce sleepers. Place a switch stand beside its throat to select the route.",
+    "de": "Eine separate Rechtsweiche mit Fichtenholzschwellen. Platziere neben ihrem Anfang einen Weichenhebel, um den Fahrweg zu wählen.",
+    "en": "A separate right turnout with spruce sleepers. Place a switch stand beside its throat to select the route."
+  },
+  {
+    "source": "A shallow, compacted ochre village path with inset pale pebbles and earthy sides.",
+    "de": "Ein flacher, verdichteter ockerfarbener Dorfweg mit eingelassenen hellen Kieseln und erdigen Seiten.",
+    "en": "A shallow, compacted ochre village path with inset pale pebbles and earthy sides."
+  },
+  {
+    "source": "A shaped wooden handle used in tools and assemblies.",
+    "de": "Ein geformter Holzstiel für Werkzeuge und Baugruppen.",
+    "en": "A shaped wooden handle used in tools and assemblies."
+  },
+  {
+    "source": "A small luminous mushroom adapted to damp sheltered ledges.",
+    "de": "Ein kleiner leuchtender Pilz, der an feuchten geschützten Felsvorsprüngen wächst.",
+    "en": "A small luminous mushroom adapted to damp sheltered ledges."
+  },
+  {
+    "source": "A small orange fish with pale bands.",
+    "de": "Ein kleiner orangefarbener Fisch mit hellen Streifen.",
+    "en": "A small orange fish with pale bands."
+  },
+  {
+    "source": "A spoiled olive brew that drains hunger and health.",
+    "de": "Ein verdorbener olivgrüner Trank, der Nahrung und Gesundheit entzieht.",
+    "en": "A spoiled olive brew that drains hunger and health."
+  },
+  {
+    "source": "A spruce-framed belt that transports dropped items while driven by a mechanical network.",
+    "de": "Ein Förderband mit Fichtenholzrahmen, das lose Gegenstände transportiert, solange es von einem mechanischen Netz angetrieben wird.",
+    "en": "A spruce-framed belt that transports dropped items while driven by a mechanical network."
+  },
+  {
+    "source": "A spruce-wood gear that transfers rotation between connected mechanical parts.",
+    "de": "Ein Zahnrad aus Fichtenholz, das die Drehung zwischen verbundenen mechanischen Teilen überträgt.",
+    "en": "A spruce-wood gear that transfers rotation between connected mechanical parts."
+  },
+  {
+    "source": "A spruce-wood shaft that carries rotation along its axis.",
+    "de": "Eine Welle aus Fichtenholz, die die Drehung entlang ihrer Achse überträgt.",
+    "en": "A spruce-wood shaft that carries rotation along its axis."
+  },
+  {
+    "source": "A stone blade with a wooden grip for close combat.",
+    "de": "Eine Steinklinge mit Holzgriff für den Nahkampf.",
+    "en": "A stone blade with a wooden grip for close combat."
+  },
+  {
+    "source": "A stone edge for logs, boards and wooden assemblies. Four times faster on wood.",
+    "de": "Eine Steinschneide für Stämme, Bretter und Holzbauteile. Baut Holz viermal schneller ab.",
+    "en": "A stone edge for logs, boards and wooden assemblies. Four times faster on wood."
+  },
+  {
+    "source": "A straight horizontal connector between opposite chimney ports.",
+    "de": "Ein gerades waagerechtes Rohr zwischen gegenüberliegenden Schornsteinanschlüssen.",
+    "en": "A straight horizontal connector between opposite chimney ports."
+  },
+  {
+    "source": "A strapped wooden right-angle gearbox with horizontal and vertical axle ports.",
+    "de": "Ein verstärktes hölzernes Winkelgetriebe mit waagerechten und senkrechten Wellenanschlüssen.",
+    "en": "A strapped wooden right-angle gearbox with horizontal and vertical axle ports."
+  },
+  {
+    "source": "A strapped wooden right-angle gearbox with perpendicular horizontal axle ports.",
+    "de": "Ein verstärktes hölzernes Winkelgetriebe mit rechtwinklig angeordneten waagerechten Wellenanschlüssen.",
+    "en": "A strapped wooden right-angle gearbox with perpendicular horizontal axle ports."
+  },
+  {
+    "source": "A strong leather belt supporting long journeys.",
+    "de": "Ein strapazierfähiger Ledergürtel für lange Reisen.",
+    "en": "A strong leather belt supporting long journeys."
+  },
+  {
+    "source": "A sturdy assembly bench. Use to craft tools and larger recipes.",
+    "de": "Eine stabile Werkbank. Hier stellst du Werkzeuge und aufwendigere Gegenstände her.",
+    "en": "A sturdy assembly bench. Use to craft tools and larger recipes."
+  },
+  {
+    "source": "A sturdy stone mining tool. Cuts rock and masonry four times faster.",
+    "de": "Ein robustes Steinwerkzeug für den Bergbau. Baut Fels und Mauerwerk viermal schneller ab.",
+    "en": "A sturdy stone mining tool. Cuts rock and masonry four times faster."
+  },
+  {
+    "source": "A thin woven wool carpet, one eighth of a block high. Recolor with flower dye.",
+    "de": "Ein dünner gewebter Wollteppich mit einer Höhe von einem Achtelblock. Mit Blumenfarbstoff lässt er sich umfärben.",
+    "en": "A thin woven wool carpet, one eighth of a block high. Recolor with flower dye."
+  },
+  {
+    "source": "A toxic green brew that poisons the drinker.",
+    "de": "Ein giftgrüner Trank, der den Trinkenden vergiftet.",
+    "en": "A toxic green brew that poisons the drinker."
+  },
+  {
+    "source": "A trailing vine rooted in a damp cave ceiling.",
+    "de": "Eine herabhängende Ranke, die in einer feuchten Höhlendecke wurzelt.",
+    "en": "A trailing vine rooted in a damp cave ceiling."
+  },
+  {
+    "source": "A two-block stone furnace. Burns fuel to smelt and cook; chimney pipes carry its smoke outside.",
+    "de": "Ein zwei Blöcke hoher Steinofen. Verbrennt Brennstoff zum Schmelzen und Kochen; Schornsteinrohre leiten den Rauch nach draußen.",
+    "en": "A two-block stone furnace. Burns fuel to smelt and cook; chimney pipes carry its smoke outside."
+  },
+  {
+    "source": "A two-cell birch bed with a pillow, quilted blanket and carved headboard. Flower dyes recolor its blanket.",
+    "de": "Ein Birkenbett mit zwei Zellen Länge, Kissen, Steppdecke und geschnitztem Kopfteil. Mit Blumenfarbstoff lässt sich die Decke umfärben.",
+    "en": "A two-cell birch bed with a pillow, quilted blanket and carved headboard. Flower dyes recolor its blanket."
+  },
+  {
+    "source": "A two-cell oak bed with a pillow, quilted blanket and carved headboard. Flower dyes recolor its blanket.",
+    "de": "Ein Eichenbett mit zwei Zellen Länge, Kissen, Steppdecke und geschnitztem Kopfteil. Mit Blumenfarbstoff lässt sich die Decke umfärben.",
+    "en": "A two-cell oak bed with a pillow, quilted blanket and carved headboard. Flower dyes recolor its blanket."
+  },
+  {
+    "source": "A two-cell spruce bed with a pillow, quilted blanket and carved headboard. Flower dyes recolor its blanket.",
+    "de": "Ein Fichtenbett mit zwei Zellen Länge, Kissen, Steppdecke und geschnitztem Kopfteil. Mit Blumenfarbstoff lässt sich die Decke umfärben.",
+    "en": "A two-cell spruce bed with a pillow, quilted blanket and carved headboard. Flower dyes recolor its blanket."
+  },
+  {
+    "source": "A violet giant mushroom cap with spotted skin and gills.",
+    "de": "Ein violetter Riesenpilzhut mit gefleckter Haut und Lamellen.",
+    "en": "A violet giant mushroom cap with spotted skin and gills."
+  },
+  {
+    "source": "A violet reef cube with clustered lilac coral folds and small pale polyp centres.",
+    "de": "Ein violetter Riffblock mit gebündelten fliederfarbenen Korallenfalten und kleinen hellen Polypenmitten.",
+    "en": "A violet reef cube with clustered lilac coral folds and small pale polyp centres."
+  },
+  {
+    "source": "A vivid red crystal from deep mineral seams.",
+    "de": "Ein leuchtend roter Kristall aus tiefen Mineraladern.",
+    "en": "A vivid red crystal from deep mineral seams."
+  },
+  {
+    "source": "A warm iron lantern for tables, walls and ceiling chains.",
+    "de": "Eine warm leuchtende Eisenlaterne für Tische, Wände und Deckenketten.",
+    "en": "A warm iron lantern for tables, walls and ceiling chains."
+  },
+  {
+    "source": "A wooden belt tunnel. Its direction arrow shows item flow between the belt and the attached inventory; a wrench reverses it.",
+    "de": "Ein hölzerner Förderbandtunnel. Sein Pfeil zeigt den Warenfluss zwischen Förderband und angeschlossenem Inventar; ein Schraubenschlüssel kehrt ihn um.",
+    "en": "A wooden belt tunnel. Its direction arrow shows item flow between the belt and the attached inventory; a wrench reverses it."
+  },
+  {
+    "source": "A wooden chest with eighteen storage slots. Connect a second chest for shared access to both halves.",
+    "de": "Eine Holztruhe mit achtzehn Lagerplätzen. Verbinde eine zweite Truhe, um gemeinsam auf beide Hälften zuzugreifen.",
+    "en": "A wooden chest with eighteen storage slots. Connect a second chest for shared access to both halves."
+  },
+  {
+    "source": "A wooden edge for logs and boards. Twice as fast on wood.",
+    "de": "Eine Holzschneide für Stämme und Bretter. Baut Holz doppelt so schnell ab.",
+    "en": "A wooden edge for logs and boards. Twice as fast on wood."
+  },
+  {
+    "source": "A wooden mining tool. Cuts stone twice as fast and can harvest dense masonry.",
+    "de": "Ein Holzwerkzeug für den Bergbau. Baut Stein doppelt so schnell ab und kann dichtes Mauerwerk gewinnen.",
+    "en": "A wooden mining tool. Cuts stone twice as fast and can harvest dense masonry."
+  },
+  {
+    "source": "A wooden shovel for soil, sand and snow. Twice as fast on soft ground.",
+    "de": "Eine Holzschaufel für Erde, Sand und Schnee. Baut weichen Boden doppelt so schnell ab.",
+    "en": "A wooden shovel for soil, sand and snow. Twice as fast on soft ground."
+  },
+  {
+    "source": "Adaptive Chimney Pipe",
+    "de": "Anpassbares Schornsteinrohr",
+    "en": "Adaptive Chimney Pipe"
+  },
+  {
+    "source": "Alchemy Cauldron",
+    "de": "Alchemiekessel",
+    "en": "Alchemy Cauldron"
+  },
+  {
+    "source": "Amber Cave Mushroom",
+    "de": "Bernsteinfarbener Höhlenpilz",
+    "en": "Amber Cave Mushroom"
+  },
+  {
+    "source": "An amber alchemical brew that temporarily resists fire.",
+    "de": "Ein bernsteinfarbener alchemistischer Trank, der vorübergehend vor Feuer schützt.",
+    "en": "An amber alchemical brew that temporarily resists fire."
+  },
+  {
+    "source": "An axial mechanical transmission. Matching shafts carry rotation through walls and between machines.",
+    "de": "Eine axiale mechanische Kraftübertragung. Passende Wellen leiten die Drehung durch Wände und zwischen Maschinen weiter.",
+    "en": "An axial mechanical transmission. Matching shafts carry rotation through walls and between machines."
+  },
+  {
+    "source": "An eaten apple with seeds. Combine two cores with dirt to start a new apple sapling.",
+    "de": "Ein Apfelrest mit Kernen. Kombiniere zwei Kerngehäuse mit Erde, um einen neuen Apfelsetzling zu ziehen.",
+    "en": "An eaten apple with seeds. Combine two cores with dirt to start a new apple sapling."
+  },
+  {
+    "source": "An ember-orange brew that sets the drinker on fire.",
+    "de": "Ein glutorangener Trank, der den Trinkenden in Brand setzt.",
+    "en": "An ember-orange brew that sets the drinker on fire."
+  },
+  {
+    "source": "An empty faceted glass bottle for water and brewed potions.",
+    "de": "Eine leere facettierte Glasflasche für Wasser und gebraute Tränke.",
+    "en": "An empty faceted glass bottle for water and brewed potions."
+  },
+  {
+    "source": "An icy blue brew that chills and harms the drinker.",
+    "de": "Ein eisblauer Trank, der den Trinkenden unterkühlt und verletzt.",
+    "en": "An icy blue brew that chills and harms the drinker."
+  },
+  {
+    "source": "An iron bucket for collecting a water source.",
+    "de": "Ein Eiseneimer zum Aufnehmen einer Wasserquelle.",
+    "en": "An iron bucket for collecting a water source."
+  },
+  {
+    "source": "An ivory giant mushroom cap with spotted skin and gills.",
+    "de": "Ein elfenbeinfarbener Riesenpilzhut mit gefleckter Haut und Lamellen.",
+    "en": "An ivory giant mushroom cap with spotted skin and gills."
+  },
+  {
+    "source": "An open iron and copper brewing bowl on a reinforced wooden burner stand.",
+    "de": "Eine offene Brauschale aus Eisen und Kupfer auf einem verstärkten hölzernen Brennergestell.",
+    "en": "An open iron and copper brewing bowl on a reinforced wooden burner stand."
+  },
+  {
+    "source": "An open wooden funnel mounted beside a chest or machine. Its arrow shows insertion or extraction; a wrench reverses it.",
+    "de": "Ein offener Holztrichter neben einer Truhe oder Maschine. Sein Pfeil zeigt Einlagerung oder Entnahme an; ein Schraubenschlüssel kehrt die Richtung um.",
+    "en": "An open wooden funnel mounted beside a chest or machine. Its arrow shows insertion or extraction; a wrench reverses it."
+  },
+  {
+    "source": "An open wooden funnel with a reinforced removable item-filter cassette.",
+    "de": "Ein offener Holztrichter mit einer verstärkten herausnehmbaren Filterkassette für Gegenstände.",
+    "en": "An open wooden funnel with a reinforced removable item-filter cassette."
+  },
+  {
+    "source": "Apple",
+    "de": "Apfel",
+    "en": "Apple"
+  },
+  {
+    "source": "Apple Core",
+    "de": "Apfelgehäuse",
+    "en": "Apple Core"
+  },
+  {
+    "source": "Apple Foliage",
+    "de": "Apfellaub",
+    "en": "Apple Foliage"
+  },
+  {
+    "source": "Apple Sapling",
+    "de": "Apfelsetzling",
+    "en": "Apple Sapling"
+  },
+  {
+    "source": "Armee-Station",
+    "de": "Armeestation",
+    "en": "Army Station"
+  },
+  {
+    "source": "Assemble or dismantle connected modular railway vehicles. Right-click to manage the workshop.",
+    "de": "Montiert oder zerlegt verbundene modulare Schienenfahrzeuge. Mit Rechtsklick verwaltest du die Werkstatt.",
+    "en": "Assemble or dismantle connected modular railway vehicles. Right-click to manage the workshop."
+  },
+  {
+    "source": "Assemble or dismantle connected modular railway vehicles. Right-click to manage the workshop. Birch wood variant.",
+    "de": "Montiert oder zerlegt verbundene modulare Schienenfahrzeuge. Mit Rechtsklick verwaltest du die Werkstatt. Variante aus Birkenholz.",
+    "en": "Assemble or dismantle connected modular railway vehicles. Right-click to manage the workshop. Birch wood variant."
+  },
+  {
+    "source": "Assemble or dismantle connected modular railway vehicles. Right-click to manage the workshop. Cherry wood variant.",
+    "de": "Montiert oder zerlegt verbundene modulare Schienenfahrzeuge. Mit Rechtsklick verwaltest du die Werkstatt. Variante aus Kirschholz.",
+    "en": "Assemble or dismantle connected modular railway vehicles. Right-click to manage the workshop. Cherry wood variant."
+  },
+  {
+    "source": "Assemble or dismantle connected modular railway vehicles. Right-click to manage the workshop. Oak wood variant.",
+    "de": "Montiert oder zerlegt verbundene modulare Schienenfahrzeuge. Mit Rechtsklick verwaltest du die Werkstatt. Variante aus Eichenholz.",
+    "en": "Assemble or dismantle connected modular railway vehicles. Right-click to manage the workshop. Oak wood variant."
+  },
+  {
+    "source": "Autumn Foliage",
+    "de": "Herbstlaub",
+    "en": "Autumn Foliage"
+  },
+  {
+    "source": "Bark",
+    "de": "Rinde",
+    "en": "Bark"
+  },
+  {
+    "source": "Basin",
+    "de": "Becken",
+    "en": "Basin"
+  },
+  {
+    "source": "Basin Module",
+    "de": "Beckenmodul",
+    "en": "Basin Module"
+  },
+  {
+    "source": "Belt",
+    "de": "Gürtel",
+    "en": "Belt"
+  },
+  {
+    "source": "Belt Distributor",
+    "de": "Förderbandverteiler",
+    "en": "Belt Distributor"
+  },
+  {
+    "source": "Belt Merger",
+    "de": "Förderbandzusammenführung",
+    "en": "Belt Merger"
+  },
+  {
+    "source": "Bergfried Mauer",
+    "de": "Bergfriedmauer",
+    "en": "Keep Wall"
+  },
+  {
+    "source": "Berufsstation mit eigenem Lager fuer Werkzeuge und Waren.",
+    "de": "Berufsstation mit eigenem Lager für Werkzeuge und Waren.",
+    "en": "A profession station with its own storage for tools and goods."
+  },
+  {
+    "source": "Bewachsene Mauer",
+    "de": "Bewachsene Mauer",
+    "en": "Overgrown Wall"
+  },
+  {
+    "source": "Birch Basin",
+    "de": "Birkenbecken",
+    "en": "Birch Basin"
+  },
+  {
+    "source": "Birch Bed",
+    "de": "Birkenbett",
+    "en": "Birch Bed"
+  },
+  {
+    "source": "Birch Conveyor",
+    "de": "Birkenförderband",
+    "en": "Birch Conveyor"
+  },
+  {
+    "source": "Birch Door",
+    "de": "Birkentür",
+    "en": "Birch Door"
+  },
+  {
+    "source": "Birch Fence",
+    "de": "Birkenzaun",
+    "en": "Birch Fence"
+  },
+  {
+    "source": "Birch Foliage",
+    "de": "Birkenlaub",
+    "en": "Birch Foliage"
+  },
+  {
+    "source": "Birch Half Slab",
+    "de": "Birkenplatte",
+    "en": "Birch Half Slab"
+  },
+  {
+    "source": "Birch Large Wooden Gear",
+    "de": "Großes Birkenholzzahnrad",
+    "en": "Birch Large Wooden Gear"
+  },
+  {
+    "source": "Birch Left Switch",
+    "de": "Linksweiche mit Birkenholzschwellen",
+    "en": "Birch Left Switch"
+  },
+  {
+    "source": "Birch Planks",
+    "de": "Birkenbretter",
+    "en": "Birch Planks"
+  },
+  {
+    "source": "Birch Right Switch",
+    "de": "Rechtsweiche mit Birkenholzschwellen",
+    "en": "Birch Right Switch"
+  },
+  {
+    "source": "Birch Stairs",
+    "de": "Birkentreppe",
+    "en": "Birch Stairs"
+  },
+  {
+    "source": "Birch Track",
+    "de": "Gleis mit Birkenholzschwellen",
+    "en": "Birch Track"
+  },
+  {
+    "source": "Birch Window",
+    "de": "Birkenfenster",
+    "en": "Birch Window"
+  },
+  {
+    "source": "Birch Wooden Gear",
+    "de": "Birkenholzzahnrad",
+    "en": "Birch Wooden Gear"
+  },
+  {
+    "source": "Birch Wooden Shaft",
+    "de": "Birkenholzwelle",
+    "en": "Birch Wooden Shaft"
+  },
+  {
+    "source": "Birch fence with shaped edges. Built from the same material as its full block.",
+    "de": "Zaun aus Birkenholz mit geformten Kanten. Besteht aus demselben Material wie der zugehörige Vollblock.",
+    "en": "Birch fence with shaped edges. Built from the same material as its full block."
+  },
+  {
+    "source": "Birch half slab with shaped edges. Built from the same material as its full block.",
+    "de": "Platte aus Birkenholz mit geformten Kanten. Besteht aus demselben Material wie der zugehörige Vollblock.",
+    "en": "Birch half slab with shaped edges. Built from the same material as its full block."
+  },
+  {
+    "source": "Birch stairs with shaped edges. Built from the same material as its full block.",
+    "de": "Treppe aus Birkenholz mit geformten Kanten. Besteht aus demselben Material wie der zugehörige Vollblock.",
+    "en": "Birch stairs with shaped edges. Built from the same material as its full block."
+  },
+  {
+    "source": "Bischofs-Station",
+    "de": "Bischofsstation",
+    "en": "Bishop Station"
+  },
+  {
+    "source": "Black Birch Bed",
+    "de": "Schwarzes Birkenbett",
+    "en": "Black Birch Bed"
+  },
+  {
+    "source": "Black Carpet",
+    "de": "Schwarzer Teppich",
+    "en": "Black Carpet"
+  },
+  {
+    "source": "Black Diamond Cape",
+    "de": "Schwarzer Diamantumhang",
+    "en": "Black Diamond Cape"
+  },
+  {
+    "source": "Black Dye",
+    "de": "Schwarzer Farbstoff",
+    "en": "Black Dye"
+  },
+  {
+    "source": "Black Gold Cape",
+    "de": "Schwarzer Goldumhang",
+    "en": "Black Gold Cape"
+  },
+  {
+    "source": "Black Iron Cape",
+    "de": "Schwarzer Eisenumhang",
+    "en": "Black Iron Cape"
+  },
+  {
+    "source": "Black Leather Cape",
+    "de": "Schwarzer Lederumhang",
+    "en": "Black Leather Cape"
+  },
+  {
+    "source": "Black Oak Bed",
+    "de": "Schwarzes Eichenbett",
+    "en": "Black Oak Bed"
+  },
+  {
+    "source": "Black Ruby Cape",
+    "de": "Schwarzer Rubinumhang",
+    "en": "Black Ruby Cape"
+  },
+  {
+    "source": "Black Spruce Bed",
+    "de": "Schwarzes Fichtenbett",
+    "en": "Black Spruce Bed"
+  },
+  {
+    "source": "Black Wool",
+    "de": "Schwarze Wolle",
+    "en": "Black Wool"
+  },
+  {
+    "source": "Bleeding Potion",
+    "de": "Blutungstrank",
+    "en": "Bleeding Potion"
+  },
+  {
+    "source": "Block Crusher",
+    "de": "Blockbrecher",
+    "en": "Block Crusher"
+  },
+  {
+    "source": "Blue Birch Bed",
+    "de": "Blaues Birkenbett",
+    "en": "Blue Birch Bed"
+  },
+  {
+    "source": "Blue Carpet",
+    "de": "Blauer Teppich",
+    "en": "Blue Carpet"
+  },
+  {
+    "source": "Blue Coral Block",
+    "de": "Blauer Korallenblock",
+    "en": "Blue Coral Block"
+  },
+  {
+    "source": "Blue Diamond Cape",
+    "de": "Blauer Diamantumhang",
+    "en": "Blue Diamond Cape"
+  },
+  {
+    "source": "Blue Dye",
+    "de": "Blauer Farbstoff",
+    "en": "Blue Dye"
+  },
+  {
+    "source": "Blue Flower",
+    "de": "Blaue Blume",
+    "en": "Blue Flower"
+  },
+  {
+    "source": "Blue Gold Cape",
+    "de": "Blauer Goldumhang",
+    "en": "Blue Gold Cape"
+  },
+  {
+    "source": "Blue Iron Cape",
+    "de": "Blauer Eisenumhang",
+    "en": "Blue Iron Cape"
+  },
+  {
+    "source": "Blue Leather Cape",
+    "de": "Blauer Lederumhang",
+    "en": "Blue Leather Cape"
+  },
+  {
+    "source": "Blue Mushroom Cap",
+    "de": "Blauer Pilzhut",
+    "en": "Blue Mushroom Cap"
+  },
+  {
+    "source": "Blue Oak Bed",
+    "de": "Blaues Eichenbett",
+    "en": "Blue Oak Bed"
+  },
+  {
+    "source": "Blue Ruby Cape",
+    "de": "Blauer Rubinumhang",
+    "en": "Blue Ruby Cape"
+  },
+  {
+    "source": "Blue Spruce Bed",
+    "de": "Blaues Fichtenbett",
+    "en": "Blue Spruce Bed"
+  },
+  {
+    "source": "Blue Wool",
+    "de": "Blaue Wolle",
+    "en": "Blue Wool"
+  },
+  {
+    "source": "Branching roots descending into a sheltered upper cave.",
+    "de": "Verzweigte Wurzeln, die in eine geschützte obere Höhle hinabhängen.",
+    "en": "Branching roots descending into a sheltered upper cave."
+  },
+  {
+    "source": "Bread",
+    "de": "Brot",
+    "en": "Bread"
+  },
+  {
+    "source": "Brennstoffmotor",
+    "de": "Brennstoffmotor",
+    "en": "Fuel Engine"
+  },
+  {
+    "source": "Bucket",
+    "de": "Eimer",
+    "en": "Bucket"
+  },
+  {
+    "source": "Burning Potion",
+    "de": "Brandtrank",
+    "en": "Burning Potion"
+  },
+  {
+    "source": "Castle masonry: arch left, stone finish. Authored joints, relief and shared physical openings. Place against any face to orient; arch halves form a two-block span.",
+    "de": "Burgmauerwerk: linker Mauerbogen mit Steinoptik. Mit gestalteten Fugen, Relief und gemeinsamen physischen Öffnungen. Lässt sich an jeder Fläche ausrichten; zwei Bogenhälften überspannen zwei Blöcke.",
+    "en": "Castle masonry: arch left, stone finish. Authored joints, relief and shared physical openings. Place against any face to orient; arch halves form a two-block span."
+  },
+  {
+    "source": "Castle masonry: arch right, stone finish. Authored joints, relief and shared physical openings. Place against any face to orient; arch halves form a two-block span.",
+    "de": "Burgmauerwerk: rechter Mauerbogen mit Steinoptik. Mit gestalteten Fugen, Relief und gemeinsamen physischen Öffnungen. Lässt sich an jeder Fläche ausrichten; zwei Bogenhälften überspannen zwei Blöcke.",
+    "en": "Castle masonry: arch right, stone finish. Authored joints, relief and shared physical openings. Place against any face to orient; arch halves form a two-block span."
+  },
+  {
+    "source": "Castle masonry: keep, royal finish. Authored joints, relief and shared physical openings. Place against any face to orient; arch halves form a two-block span.",
+    "de": "Burgmauerwerk: Bergfried mit königlicher Verzierung. Mit gestalteten Fugen, Relief und gemeinsamen physischen Öffnungen. Lässt sich an jeder Fläche ausrichten; zwei Bogenhälften überspannen zwei Blöcke.",
+    "en": "Castle masonry: keep, royal finish. Authored joints, relief and shared physical openings. Place against any face to orient; arch halves form a two-block span."
+  },
+  {
+    "source": "Castle masonry: slit, stone finish. Authored joints, relief and shared physical openings. Place against any face to orient; arch halves form a two-block span.",
+    "de": "Burgmauerwerk: Schießscharte mit Steinoptik. Mit gestalteten Fugen, Relief und gemeinsamen physischen Öffnungen. Lässt sich an jeder Fläche ausrichten; zwei Bogenhälften überspannen zwei Blöcke.",
+    "en": "Castle masonry: slit, stone finish. Authored joints, relief and shared physical openings. Place against any face to orient; arch halves form a two-block span."
+  },
+  {
+    "source": "Castle masonry: wall, blackstone finish. Authored joints, relief and shared physical openings. Place against any face to orient; arch halves form a two-block span.",
+    "de": "Burgmauerwerk: Mauer mit Schwarzsteinoptik. Mit gestalteten Fugen, Relief und gemeinsamen physischen Öffnungen. Lässt sich an jeder Fläche ausrichten; zwei Bogenhälften überspannen zwei Blöcke.",
+    "en": "Castle masonry: wall, blackstone finish. Authored joints, relief and shared physical openings. Place against any face to orient; arch halves form a two-block span."
+  },
+  {
+    "source": "Castle masonry: wall, cracked finish. Authored joints, relief and shared physical openings. Place against any face to orient; arch halves form a two-block span.",
+    "de": "Burgmauerwerk: Mauer mit rissiger Oberfläche. Mit gestalteten Fugen, Relief und gemeinsamen physischen Öffnungen. Lässt sich an jeder Fläche ausrichten; zwei Bogenhälften überspannen zwei Blöcke.",
+    "en": "Castle masonry: wall, cracked finish. Authored joints, relief and shared physical openings. Place against any face to orient; arch halves form a two-block span."
+  },
+  {
+    "source": "Castle masonry: wall, desert finish. Authored joints, relief and shared physical openings. Place against any face to orient; arch halves form a two-block span.",
+    "de": "Burgmauerwerk: Mauer mit Wüstenoptik. Mit gestalteten Fugen, Relief und gemeinsamen physischen Öffnungen. Lässt sich an jeder Fläche ausrichten; zwei Bogenhälften überspannen zwei Blöcke.",
+    "en": "Castle masonry: wall, desert finish. Authored joints, relief and shared physical openings. Place against any face to orient; arch halves form a two-block span."
+  },
+  {
+    "source": "Castle masonry: wall, iron finish. Authored joints, relief and shared physical openings. Place against any face to orient; arch halves form a two-block span.",
+    "de": "Burgmauerwerk: Mauer mit Eisenverstärkung. Mit gestalteten Fugen, Relief und gemeinsamen physischen Öffnungen. Lässt sich an jeder Fläche ausrichten; zwei Bogenhälften überspannen zwei Blöcke.",
+    "en": "Castle masonry: wall, iron finish. Authored joints, relief and shared physical openings. Place against any face to orient; arch halves form a two-block span."
+  },
+  {
+    "source": "Castle masonry: wall, moss finish. Authored joints, relief and shared physical openings. Place against any face to orient; arch halves form a two-block span.",
+    "de": "Burgmauerwerk: Mauer mit Moosbewuchs. Mit gestalteten Fugen, Relief und gemeinsamen physischen Öffnungen. Lässt sich an jeder Fläche ausrichten; zwei Bogenhälften überspannen zwei Blöcke.",
+    "en": "Castle masonry: wall, moss finish. Authored joints, relief and shared physical openings. Place against any face to orient; arch halves form a two-block span."
+  },
+  {
+    "source": "Castle masonry: wall, overgrown finish. Authored joints, relief and shared physical openings. Place against any face to orient; arch halves form a two-block span.",
+    "de": "Burgmauerwerk: Mauer mit starkem Bewuchs. Mit gestalteten Fugen, Relief und gemeinsamen physischen Öffnungen. Lässt sich an jeder Fläche ausrichten; zwei Bogenhälften überspannen zwei Blöcke.",
+    "en": "Castle masonry: wall, overgrown finish. Authored joints, relief and shared physical openings. Place against any face to orient; arch halves form a two-block span."
+  },
+  {
+    "source": "Castle masonry: wall, royal finish. Authored joints, relief and shared physical openings. Place against any face to orient; arch halves form a two-block span.",
+    "de": "Burgmauerwerk: Mauer mit königlicher Verzierung. Mit gestalteten Fugen, Relief und gemeinsamen physischen Öffnungen. Lässt sich an jeder Fläche ausrichten; zwei Bogenhälften überspannen zwei Blöcke.",
+    "en": "Castle masonry: wall, royal finish. Authored joints, relief and shared physical openings. Place against any face to orient; arch halves form a two-block span."
+  },
+  {
+    "source": "Castle masonry: wall, sandstone finish. Authored joints, relief and shared physical openings. Place against any face to orient; arch halves form a two-block span.",
+    "de": "Burgmauerwerk: Mauer mit Sandsteinoptik. Mit gestalteten Fugen, Relief und gemeinsamen physischen Öffnungen. Lässt sich an jeder Fläche ausrichten; zwei Bogenhälften überspannen zwei Blöcke.",
+    "en": "Castle masonry: wall, sandstone finish. Authored joints, relief and shared physical openings. Place against any face to orient; arch halves form a two-block span."
+  },
+  {
+    "source": "Castle masonry: wall, snow finish. Authored joints, relief and shared physical openings. Place against any face to orient; arch halves form a two-block span.",
+    "de": "Burgmauerwerk: Mauer mit Schneeauflage. Mit gestalteten Fugen, Relief und gemeinsamen physischen Öffnungen. Lässt sich an jeder Fläche ausrichten; zwei Bogenhälften überspannen zwei Blöcke.",
+    "en": "Castle masonry: wall, snow finish. Authored joints, relief and shared physical openings. Place against any face to orient; arch halves form a two-block span."
+  },
+  {
+    "source": "Castle masonry: wall, stone finish. Authored joints, relief and shared physical openings. Place against any face to orient; arch halves form a two-block span.",
+    "de": "Burgmauerwerk: Mauer mit Steinoptik. Mit gestalteten Fugen, Relief und gemeinsamen physischen Öffnungen. Lässt sich an jeder Fläche ausrichten; zwei Bogenhälften überspannen zwei Blöcke.",
+    "en": "Castle masonry: wall, stone finish. Authored joints, relief and shared physical openings. Place against any face to orient; arch halves form a two-block span."
+  },
+  {
+    "source": "Castle masonry: wall, timber finish. Authored joints, relief and shared physical openings. Place against any face to orient; arch halves form a two-block span.",
+    "de": "Burgmauerwerk: Mauer mit Holzverstärkung. Mit gestalteten Fugen, Relief und gemeinsamen physischen Öffnungen. Lässt sich an jeder Fläche ausrichten; zwei Bogenhälften überspannen zwei Blöcke.",
+    "en": "Castle masonry: wall, timber finish. Authored joints, relief and shared physical openings. Place against any face to orient; arch halves form a two-block span."
+  },
+  {
+    "source": "Castle masonry: window, stone finish. Authored joints, relief and shared physical openings. Place against any face to orient; arch halves form a two-block span.",
+    "de": "Burgmauerwerk: Mauerfenster mit Steinoptik. Mit gestalteten Fugen, Relief und gemeinsamen physischen Öffnungen. Lässt sich an jeder Fläche ausrichten; zwei Bogenhälften überspannen zwei Blöcke.",
+    "en": "Castle masonry: window, stone finish. Authored joints, relief and shared physical openings. Place against any face to orient; arch halves form a two-block span."
+  },
+  {
+    "source": "Cave Root",
+    "de": "Höhlenwurzel",
+    "en": "Cave Root"
+  },
+  {
+    "source": "Cave Vine",
+    "de": "Höhlenranke",
+    "en": "Cave Vine"
+  },
+  {
+    "source": "Chain",
+    "de": "Kette",
+    "en": "Chain"
+  },
+  {
+    "source": "Cherry Basin",
+    "de": "Kirschbecken",
+    "en": "Cherry Basin"
+  },
+  {
+    "source": "Cherry Blossoms",
+    "de": "Kirschblüten",
+    "en": "Cherry Blossoms"
+  },
+  {
+    "source": "Cherry Conveyor",
+    "de": "Kirschförderband",
+    "en": "Cherry Conveyor"
+  },
+  {
+    "source": "Cherry Door",
+    "de": "Kirschtür",
+    "en": "Cherry Door"
+  },
+  {
+    "source": "Cherry Fence",
+    "de": "Kirschzaun",
+    "en": "Cherry Fence"
+  },
+  {
+    "source": "Cherry Half Slab",
+    "de": "Kirschplatte",
+    "en": "Cherry Half Slab"
+  },
+  {
+    "source": "Cherry Large Wooden Gear",
+    "de": "Großes Kirschholzzahnrad",
+    "en": "Cherry Large Wooden Gear"
+  },
+  {
+    "source": "Cherry Left Switch",
+    "de": "Linksweiche mit Kirschholzschwellen",
+    "en": "Cherry Left Switch"
+  },
+  {
+    "source": "Cherry Log",
+    "de": "Kirschstamm",
+    "en": "Cherry Log"
+  },
+  {
+    "source": "Cherry Planks",
+    "de": "Kirschbretter",
+    "en": "Cherry Planks"
+  },
+  {
+    "source": "Cherry Right Switch",
+    "de": "Rechtsweiche mit Kirschholzschwellen",
+    "en": "Cherry Right Switch"
+  },
+  {
+    "source": "Cherry Stairs",
+    "de": "Kirschtreppe",
+    "en": "Cherry Stairs"
+  },
+  {
+    "source": "Cherry Track",
+    "de": "Gleis mit Kirschholzschwellen",
+    "en": "Cherry Track"
+  },
+  {
+    "source": "Cherry Window",
+    "de": "Kirschfenster",
+    "en": "Cherry Window"
+  },
+  {
+    "source": "Cherry Wooden Gear",
+    "de": "Kirschholzzahnrad",
+    "en": "Cherry Wooden Gear"
+  },
+  {
+    "source": "Cherry Wooden Shaft",
+    "de": "Kirschholzwelle",
+    "en": "Cherry Wooden Shaft"
+  },
+  {
+    "source": "Chest",
+    "de": "Truhe",
+    "en": "Chest"
+  },
+  {
+    "source": "Chimney Pipe",
+    "de": "Schornsteinrohr",
+    "en": "Chimney Pipe"
+  },
+  {
+    "source": "Clay",
+    "de": "Lehm",
+    "en": "Clay"
+  },
+  {
+    "source": "Clear glass panes with joined wooden frames.",
+    "de": "Klare Glasscheiben mit verbundenen Holzrahmen.",
+    "en": "Clear glass panes with joined wooden frames."
+  },
+  {
+    "source": "Coal",
+    "de": "Kohle",
+    "en": "Coal"
+  },
+  {
+    "source": "Coal Dust",
+    "de": "Kohlestaub",
+    "en": "Coal Dust"
+  },
+  {
+    "source": "Coal Ore",
+    "de": "Kohleerz",
+    "en": "Coal Ore"
+  },
+  {
+    "source": "Compacted Path",
+    "de": "Verdichteter Weg",
+    "en": "Compacted Path"
+  },
+  {
+    "source": "Compacted angular railway ballast in warm grey stone. A half-height embankment layer.",
+    "de": "Verdichteter kantiger Bahnschotter aus warmgrauem Gestein. Eine halbhohe Schicht für den Bahndamm.",
+    "en": "Compacted angular railway ballast in warm grey stone. A half-height embankment layer."
+  },
+  {
+    "source": "Compacted angular railway ballast in warm grey stone. A solid embankment block for railway foundations.",
+    "de": "Verdichteter kantiger Bahnschotter aus warmgrauem Gestein. Ein massiver Dammblock als Gleisfundament.",
+    "en": "Compacted angular railway ballast in warm grey stone. A solid embankment block for railway foundations."
+  },
+  {
+    "source": "Compacted angular railway ballast in warm grey stone. Four quarter-height treads shape a stable embankment.",
+    "de": "Verdichteter kantiger Bahnschotter aus warmgrauem Gestein. Vier viertelhohe Stufen formen einen stabilen Bahndamm.",
+    "en": "Compacted angular railway ballast in warm grey stone. Four quarter-height treads shape a stable embankment."
+  },
+  {
+    "source": "Compressed sand with warm layered texture.",
+    "de": "Verdichteter Sand mit warmer Schichtstruktur.",
+    "en": "Compressed sand with warm layered texture."
+  },
+  {
+    "source": "Connected castle battlement; automatically forms ends, corners and junctions.",
+    "de": "Verbundene Burgzinnen; Enden, Ecken und Kreuzungen entstehen automatisch.",
+    "en": "Connected castle battlement; automatically forms ends, corners and junctions."
+  },
+  {
+    "source": "Conveyor",
+    "de": "Förderband",
+    "en": "Conveyor"
+  },
+  {
+    "source": "Cooked Clown Fish",
+    "de": "Gebratener Clownfisch",
+    "en": "Cooked Clown Fish"
+  },
+  {
+    "source": "Cooked Cow Beef",
+    "de": "Gebratenes Rindfleisch",
+    "en": "Cooked Cow Beef"
+  },
+  {
+    "source": "Cooked Fish",
+    "de": "Gebratener Fisch",
+    "en": "Cooked Fish"
+  },
+  {
+    "source": "Cooked Pig Beef",
+    "de": "Gebratenes Schweinefleisch",
+    "en": "Cooked Pig Beef"
+  },
+  {
+    "source": "Cooked Sheep Beef",
+    "de": "Gebratenes Hammelfleisch",
+    "en": "Cooked Sheep Beef"
+  },
+  {
+    "source": "Cooked clown fish with golden scales.",
+    "de": "Gebratener Clownfisch mit goldenen Schuppen.",
+    "en": "Cooked clown fish with golden scales."
+  },
+  {
+    "source": "Corn",
+    "de": "Mais",
+    "en": "Corn"
+  },
+  {
+    "source": "Corn Seeds",
+    "de": "Maissaat",
+    "en": "Corn Seeds"
+  },
+  {
+    "source": "Cow Beef",
+    "de": "Rindfleisch",
+    "en": "Cow Beef"
+  },
+  {
+    "source": "Cream mineral limestone with layered salt crusts. A building stone, not a salt ore deposit.",
+    "de": "Cremefarbener Kalkstein mit geschichteten Salzkrusten. Ein Baustein, aus dem kein Salzerz gewonnen wird.",
+    "en": "Cream mineral limestone with layered salt crusts. A building stone, not a salt ore deposit."
+  },
+  {
+    "source": "Crusher",
+    "de": "Brecher",
+    "en": "Crusher"
+  },
+  {
+    "source": "Cultivates grass and dirt into furrowed farmland.",
+    "de": "Verwandelt Gras und Erde in Ackerboden mit Saatfurchen.",
+    "en": "Cultivates grass and dirt into furrowed farmland."
+  },
+  {
+    "source": "Damp natural stone with patches of moss.",
+    "de": "Feuchter Naturstein mit Moosflecken.",
+    "en": "Damp natural stone with patches of moss."
+  },
+  {
+    "source": "Dampfdom",
+    "de": "Dampfdom",
+    "en": "Steam Dome"
+  },
+  {
+    "source": "Dark carbon-rich mineral used in the first refining recipes.",
+    "de": "Ein dunkles kohlenstoffreiches Mineral für die ersten Veredelungsrezepte.",
+    "en": "Dark carbon-rich mineral used in the first refining recipes."
+  },
+  {
+    "source": "Dark cherry bark with pale horizontal lenticels and a rose-colored cut end.",
+    "de": "Dunkle Kirschbaumrinde mit hellen waagerechten Poren und einer rosafarbenen Schnittfläche.",
+    "en": "Dark cherry bark with pale horizontal lenticels and a rose-colored cut end."
+  },
+  {
+    "source": "Dark cultivated earth. Seeds grow here with light and moisture from nearby water or rain.",
+    "de": "Dunkler bearbeiteter Boden. Samen wachsen hier bei Licht und Feuchtigkeit durch nahes Wasser oder Regen.",
+    "en": "Dark cultivated earth. Seeds grow here with light and moisture from nearby water or rain."
+  },
+  {
+    "source": "Dark spruce boards cut for building.",
+    "de": "Dunkle Fichtenbretter zum Bauen.",
+    "en": "Dark spruce boards cut for building."
+  },
+  {
+    "source": "Dark, deeply furrowed spruce timber. Crafts into four spruce planks.",
+    "de": "Dunkles Fichtenholz mit tief gefurchter Rinde. Ergibt vier Fichtenbretter.",
+    "en": "Dark, deeply furrowed spruce timber. Crafts into four spruce planks."
+  },
+  {
+    "source": "Decorative BR52 locomotive component. Attach to the connected vehicle body before assembly.",
+    "de": "Dekoratives Bauteil einer BR52-Lokomotive. Befestige es vor der Montage am zusammenhängenden Fahrzeugaufbau.",
+    "en": "Decorative BR52 locomotive component. Attach to the connected vehicle body before assembly."
+  },
+  {
+    "source": "Decorative BR52 locomotive component. Attach to the connected vehicle body before assembly. Birch wood variant.",
+    "de": "Dekoratives Bauteil einer BR52-Lokomotive. Befestige es vor der Montage am zusammenhängenden Fahrzeugaufbau. Variante aus Birkenholz.",
+    "en": "Decorative BR52 locomotive component. Attach to the connected vehicle body before assembly. Birch wood variant."
+  },
+  {
+    "source": "Decorative BR52 locomotive component. Attach to the connected vehicle body before assembly. Cherry wood variant.",
+    "de": "Dekoratives Bauteil einer BR52-Lokomotive. Befestige es vor der Montage am zusammenhängenden Fahrzeugaufbau. Variante aus Kirschholz.",
+    "en": "Decorative BR52 locomotive component. Attach to the connected vehicle body before assembly. Cherry wood variant."
+  },
+  {
+    "source": "Decorative BR52 locomotive component. Attach to the connected vehicle body before assembly. Oak wood variant.",
+    "de": "Dekoratives Bauteil einer BR52-Lokomotive. Befestige es vor der Montage am zusammenhängenden Fahrzeugaufbau. Variante aus Eichenholz.",
+    "en": "Decorative BR52 locomotive component. Attach to the connected vehicle body before assembly. Oak wood variant."
+  },
+  {
+    "source": "Dense pink sakura blossoms with small gaps between the clusters.",
+    "de": "Dichte rosa Sakurablüten mit kleinen Lücken zwischen den Blütenbüscheln.",
+    "en": "Dense pink sakura blossoms with small gaps between the clusters."
+  },
+  {
+    "source": "Dense riverbed clay found beside sand.",
+    "de": "Dichter Lehm aus dem Flussbett, der neben Sand vorkommt.",
+    "en": "Dense riverbed clay found beside sand."
+  },
+  {
+    "source": "Densely woven colored wool. Recolor with flower dye.",
+    "de": "Dicht gewebte farbige Wolle. Mit Blumenfarbstoff lässt sie sich umfärben.",
+    "en": "Densely woven colored wool. Recolor with flower dye."
+  },
+  {
+    "source": "Diamond",
+    "de": "Diamant",
+    "en": "Diamond"
+  },
+  {
+    "source": "Diamond Axe",
+    "de": "Diamantaxt",
+    "en": "Diamond Axe"
+  },
+  {
+    "source": "Diamond Boots",
+    "de": "Diamantstiefel",
+    "en": "Diamond Boots"
+  },
+  {
+    "source": "Diamond Cape",
+    "de": "Diamantumhang",
+    "en": "Diamond Cape"
+  },
+  {
+    "source": "Diamond Chestplate",
+    "de": "Diamantbrustpanzer",
+    "en": "Diamond Chestplate"
+  },
+  {
+    "source": "Diamond Dust",
+    "de": "Diamantstaub",
+    "en": "Diamond Dust"
+  },
+  {
+    "source": "Diamond Gloves",
+    "de": "Diamanthandschuhe",
+    "en": "Diamond Gloves"
+  },
+  {
+    "source": "Diamond Helmet",
+    "de": "Diamanthelm",
+    "en": "Diamond Helmet"
+  },
+  {
+    "source": "Diamond Hoe",
+    "de": "Diamanthacke",
+    "en": "Diamond Hoe"
+  },
+  {
+    "source": "Diamond Ore",
+    "de": "Diamanterz",
+    "en": "Diamond Ore"
+  },
+  {
+    "source": "Diamond Pants",
+    "de": "Diamanthose",
+    "en": "Diamond Pants"
+  },
+  {
+    "source": "Diamond Pickaxe",
+    "de": "Diamantspitzhacke",
+    "en": "Diamond Pickaxe"
+  },
+  {
+    "source": "Diamond Scythe",
+    "de": "Diamantsense",
+    "en": "Diamond Scythe"
+  },
+  {
+    "source": "Diamond Sword",
+    "de": "Diamantschwert",
+    "en": "Diamond Sword"
+  },
+  {
+    "source": "Diamond Watering Can",
+    "de": "Diamantgießkanne",
+    "en": "Diamond Watering Can"
+  },
+  {
+    "source": "Diamond boots fitted for protection and comfortable movement.",
+    "de": "Diamantstiefel für Schutz und bequeme Bewegung.",
+    "en": "Diamond boots fitted for protection and comfortable movement."
+  },
+  {
+    "source": "Diamond chestplate fitted for protection and comfortable movement.",
+    "de": "Diamantbrustpanzer für Schutz und bequeme Bewegung.",
+    "en": "Diamond chestplate fitted for protection and comfortable movement."
+  },
+  {
+    "source": "Diamond gloves fitted for protection and comfortable movement.",
+    "de": "Diamanthandschuhe für Schutz und bequeme Bewegung.",
+    "en": "Diamond gloves fitted for protection and comfortable movement."
+  },
+  {
+    "source": "Diamond helmet fitted for protection and comfortable movement.",
+    "de": "Diamanthelm für Schutz und bequeme Bewegung.",
+    "en": "Diamond helmet fitted for protection and comfortable movement."
+  },
+  {
+    "source": "Diamond pants fitted for protection and comfortable movement.",
+    "de": "Diamanthose für Schutz und bequeme Bewegung.",
+    "en": "Diamond pants fitted for protection and comfortable movement."
+  },
+  {
+    "source": "Dirt Fence",
+    "de": "Erdzaun",
+    "en": "Dirt Fence"
+  },
+  {
+    "source": "Dirt Half Slab",
+    "de": "Erdplatte",
+    "en": "Dirt Half Slab"
+  },
+  {
+    "source": "Dirt Stairs",
+    "de": "Erdtreppe",
+    "en": "Dirt Stairs"
+  },
+  {
+    "source": "Dirt fence with shaped edges. Built from the same material as its full block.",
+    "de": "Zaun aus Erde mit geformten Kanten. Besteht aus demselben Material wie der zugehörige Vollblock.",
+    "en": "Dirt fence with shaped edges. Built from the same material as its full block."
+  },
+  {
+    "source": "Dirt half slab with shaped edges. Built from the same material as its full block.",
+    "de": "Platte aus Erde mit geformten Kanten. Besteht aus demselben Material wie der zugehörige Vollblock.",
+    "en": "Dirt half slab with shaped edges. Built from the same material as its full block."
+  },
+  {
+    "source": "Dirt stairs with shaped edges. Built from the same material as its full block.",
+    "de": "Treppe aus Erde mit geformten Kanten. Besteht aus demselben Material wie der zugehörige Vollblock.",
+    "en": "Dirt stairs with shaped edges. Built from the same material as its full block."
+  },
+  {
+    "source": "Drehgestell",
+    "de": "Drehgestell",
+    "en": "Bogie"
+  },
+  {
+    "source": "Drehgleis / Drehscheibe",
+    "de": "Drehgleis / Drehscheibe",
+    "en": "Turntable"
+  },
+  {
+    "source": "Dressed stone for clean building surfaces.",
+    "de": "Behauener Stein für saubere Bauflächen.",
+    "en": "Dressed stone for clean building surfaces."
+  },
+  {
+    "source": "Dripstone",
+    "de": "Tropfstein",
+    "en": "Dripstone"
+  },
+  {
+    "source": "Dripstone Formation",
+    "de": "Tropfsteinformation",
+    "en": "Dripstone Formation"
+  },
+  {
+    "source": "Dry mineral deposits from broad dripstone chambers. Exposed floor and ceiling deposits form tapered points.",
+    "de": "Trockene Mineralablagerungen aus weiten Tropfsteinkammern. Freiliegende Ablagerungen an Boden und Decke bilden spitze Formen.",
+    "en": "Dry mineral deposits from broad dripstone chambers. Exposed floor and ceiling deposits form tapered points."
+  },
+  {
+    "source": "Dunkler Stahl Außenecke",
+    "de": "Dunkle Stahlaußenecke",
+    "en": "Dark Steel Outer Corner"
+  },
+  {
+    "source": "Dunkler Stahl Block",
+    "de": "Dunkler Stahlblock",
+    "en": "Dark Steel Block"
+  },
+  {
+    "source": "Dunkler Stahl Innenecke",
+    "de": "Dunkle Stahlinnenecke",
+    "en": "Dark Steel Inner Corner"
+  },
+  {
+    "source": "Dunkler Stahl Schräge",
+    "de": "Dunkle Stahlschräge",
+    "en": "Dark Steel Slope"
+  },
+  {
+    "source": "Dunkler Stahl Slab",
+    "de": "Dunkle Stahlplatte",
+    "en": "Dark Steel Slab"
+  },
+  {
+    "source": "Dunkler Stahl Treppe",
+    "de": "Dunkle Stahltreppe",
+    "en": "Dark Steel Stairs"
+  },
+  {
+    "source": "Dyed conveyor",
+    "de": "Gefärbtes Förderband",
+    "en": "Dyed conveyor"
+  },
+  {
+    "source": "Dyed wool slab",
+    "de": "Gefärbte Wollplatte",
+    "en": "Dyed wool slab"
+  },
+  {
+    "source": "Dyed wool stairs",
+    "de": "Gefärbte Wolltreppe",
+    "en": "Dyed wool stairs"
+  },
+  {
+    "source": "Earrings",
+    "de": "Ohrringe",
+    "en": "Earrings"
+  },
+  {
+    "source": "Earth",
+    "de": "Erde",
+    "en": "Earth"
+  },
+  {
+    "source": "Elbow Chimney Pipe",
+    "de": "Schornsteinbogen",
+    "en": "Elbow Chimney Pipe"
+  },
+  {
+    "source": "Falling Chimney Bend",
+    "de": "Abfallender Schornsteinbogen",
+    "en": "Falling Chimney Bend"
+  },
+  {
+    "source": "Farmer-Station",
+    "de": "Bauernstation",
+    "en": "Farmer Station"
+  },
+  {
+    "source": "Farmland",
+    "de": "Ackerboden",
+    "en": "Farmland"
+  },
+  {
+    "source": "Faucet",
+    "de": "Wasserhahn",
+    "en": "Faucet"
+  },
+  {
+    "source": "Filtered Funnel",
+    "de": "Gefilterter Trichter",
+    "en": "Filtered Funnel"
+  },
+  {
+    "source": "Fine Sand Fence",
+    "de": "Feinsandzaun",
+    "en": "Fine Sand Fence"
+  },
+  {
+    "source": "Fine Sand Half Slab",
+    "de": "Feinsandplatte",
+    "en": "Fine Sand Half Slab"
+  },
+  {
+    "source": "Fine Sand Stairs",
+    "de": "Feinsandtreppe",
+    "en": "Fine Sand Stairs"
+  },
+  {
+    "source": "Fine Sand fence with shaped edges. Built from the same material as its full block.",
+    "de": "Zaun aus Feinsand mit geformten Kanten. Besteht aus demselben Material wie der zugehörige Vollblock.",
+    "en": "Fine Sand fence with shaped edges. Built from the same material as its full block."
+  },
+  {
+    "source": "Fine Sand half slab with shaped edges. Built from the same material as its full block.",
+    "de": "Platte aus Feinsand mit geformten Kanten. Besteht aus demselben Material wie der zugehörige Vollblock.",
+    "en": "Fine Sand half slab with shaped edges. Built from the same material as its full block."
+  },
+  {
+    "source": "Fine Sand stairs with shaped edges. Built from the same material as its full block.",
+    "de": "Treppe aus Feinsand mit geformten Kanten. Besteht aus demselben Material wie der zugehörige Vollblock.",
+    "en": "Fine Sand stairs with shaped edges. Built from the same material as its full block."
+  },
+  {
+    "source": "Fine cohesive golden sand with subtle wind ripples from deserts, beaches and river banks.",
+    "de": "Feiner zusammenhängender goldener Sand mit zarten Windrippeln aus Wüsten, von Stränden und Flussufern.",
+    "en": "Fine cohesive golden sand with subtle wind ripples from deserts, beaches and river banks."
+  },
+  {
+    "source": "Finely crushed coal for further processing.",
+    "de": "Fein zermahlener Kohlestaub zur Weiterverarbeitung.",
+    "en": "Finely crushed coal for further processing."
+  },
+  {
+    "source": "Finely crushed diamond for further processing.",
+    "de": "Fein zermahlener Diamantstaub zur Weiterverarbeitung.",
+    "en": "Finely crushed diamond for further processing."
+  },
+  {
+    "source": "Finely crushed gold for further processing.",
+    "de": "Fein zermahlener Goldstaub zur Weiterverarbeitung.",
+    "en": "Finely crushed gold for further processing."
+  },
+  {
+    "source": "Finely crushed iron for further processing.",
+    "de": "Fein zermahlener Eisenstaub zur Weiterverarbeitung.",
+    "en": "Finely crushed iron for further processing."
+  },
+  {
+    "source": "Finely crushed ruby for further processing.",
+    "de": "Fein zermahlener Rubinstaub zur Weiterverarbeitung.",
+    "en": "Finely crushed ruby for further processing."
+  },
+  {
+    "source": "Finely crushed salt for further processing.",
+    "de": "Fein zermahlener Salzstaub zur Weiterverarbeitung.",
+    "en": "Finely crushed salt for further processing."
+  },
+  {
+    "source": "Fire Resistance Potion",
+    "de": "Feuerresistenztrank",
+    "en": "Fire Resistance Potion"
+  },
+  {
+    "source": "Flower Pot",
+    "de": "Blumentopf",
+    "en": "Flower Pot"
+  },
+  {
+    "source": "Flower pigment for coloring bed blankets.",
+    "de": "Blütenpigment zum Färben von Bettdecken.",
+    "en": "Flower pigment for coloring bed blankets."
+  },
+  {
+    "source": "Fluid Infuser",
+    "de": "Flüssigkeitsfüller",
+    "en": "Fluid Infuser"
+  },
+  {
+    "source": "Fluid Water Block",
+    "de": "Fließwasserblock",
+    "en": "Fluid Water Block"
+  },
+  {
+    "source": "Foliage",
+    "de": "Laub",
+    "en": "Foliage"
+  },
+  {
+    "source": "Four-crown masonry pillar. Adjacent pillars connect; stacked pillars share one continuous shaft.",
+    "de": "Mauerwerkssäule mit vier Zinnen. Benachbarte Säulen verbinden sich; gestapelte Säulen bilden einen durchgehenden Schaft.",
+    "en": "Four-crown masonry pillar. Adjacent pillars connect; stacked pillars share one continuous shaft."
+  },
+  {
+    "source": "Framed Glass",
+    "de": "Gerahmtes Glas",
+    "en": "Framed Glass"
+  },
+  {
+    "source": "Freezing Potion",
+    "de": "Frosttrank",
+    "en": "Freezing Potion"
+  },
+  {
+    "source": "Fresh green birch foliage with small, delicate hanging leaf clusters.",
+    "de": "Frisches grünes Birkenlaub mit kleinen zarten hängenden Blattbüscheln.",
+    "en": "Fresh green birch foliage with small, delicate hanging leaf clusters."
+  },
+  {
+    "source": "Freshwater fish.",
+    "de": "Ein Süßwasserfisch.",
+    "en": "Freshwater fish."
+  },
+  {
+    "source": "Front attachment. Clears a five-block-wide, nine-block-high path. Enable from train controls. Uses cargo rails and ballast in Survival; maximum 3 m/s with one freight wagon up to 15 m.",
+    "de": "Frontanbau, der einen fünf Blöcke breiten und neun Blöcke hohen Weg räumt. Wird über die Zugsteuerung aktiviert. Verbraucht im Überlebensmodus Gleise und Schotter aus dem Lager; höchstens 3 m/s mit einem Güterwagen von bis zu 15 m Länge.",
+    "en": "Front attachment. Clears a five-block-wide, nine-block-high path. Enable from train controls. Uses cargo rails and ballast in Survival; maximum 3 m/s with one freight wagon up to 15 m."
+  },
+  {
+    "source": "Functional framed locomotive opening. Use to open and close its leaf.",
+    "de": "Funktionsfähige gerahmte Loköffnung. Benutzen öffnet oder schließt den Flügel.",
+    "en": "Functional framed locomotive opening. Use to open and close its leaf."
+  },
+  {
+    "source": "Functional fuel-powered train engine. Open its fuel inventory and drive from a connected cab.",
+    "de": "Funktionsfähiger Zugmotor mit Brennstoffantrieb. Öffne sein Brennstofflager und steuere den Zug aus einem verbundenen Führerstand.",
+    "en": "Functional fuel-powered train engine. Open its fuel inventory and drive from a connected cab."
+  },
+  {
+    "source": "Functional running gear. Wheel rotation follows the actual travelled distance of an assembled train.",
+    "de": "Funktionsfähiges Fahrwerk. Die Räder drehen sich entsprechend der tatsächlich zurückgelegten Strecke eines montierten Zuges.",
+    "en": "Functional running gear. Wheel rotation follows the actual travelled distance of an assembled train."
+  },
+  {
+    "source": "Functional visual running gear. Motion follows the wheel phase of an assembled train.",
+    "de": "Bewegliches Fahrwerk zur Darstellung. Die Bewegung folgt der Radstellung eines montierten Zuges.",
+    "en": "Functional visual running gear. Motion follows the wheel phase of an assembled train."
+  },
+  {
+    "source": "Functional warm train light. Front and side lamps cast a forward cone; the ceiling lamp lights the carriage below.",
+    "de": "Funktionsfähige warme Zugbeleuchtung. Front- und Seitenlampen werfen einen Lichtkegel nach vorne; die Deckenleuchte erhellt den Wagen darunter.",
+    "en": "Functional warm train light. Front and side lamps cast a forward cone; the ceiling lamp lights the carriage below."
+  },
+  {
+    "source": "Funnel",
+    "de": "Trichter",
+    "en": "Funnel"
+  },
+  {
+    "source": "Funnel (Filtered)",
+    "de": "Trichter (gefiltert)",
+    "en": "Funnel (Filtered)"
+  },
+  {
+    "source": "Furnace",
+    "de": "Ofen",
+    "en": "Furnace"
+  },
+  {
+    "source": "Führerhaus-Fenster",
+    "de": "Führerhausfenster",
+    "en": "Cab Window"
+  },
+  {
+    "source": "Führerhaus-Frontwand",
+    "de": "Führerhausfrontwand",
+    "en": "Cab Front Wall"
+  },
+  {
+    "source": "Führerhaus-Seitenwand",
+    "de": "Führerhausseitenwand",
+    "en": "Cab Side Wall"
+  },
+  {
+    "source": "Führerhaus-Tür",
+    "de": "Führerhaustür",
+    "en": "Cab Door"
+  },
+  {
+    "source": "Führerstand",
+    "de": "Führerstand",
+    "en": "Driver Cab"
+  },
+  {
+    "source": "Führerstand (birch)",
+    "de": "Führerstand (Birkenholz)",
+    "en": "Driver Cab (birch)"
+  },
+  {
+    "source": "Führerstand (cherry)",
+    "de": "Führerstand (Kirschholz)",
+    "en": "Driver Cab (cherry)"
+  },
+  {
+    "source": "Führerstand (oak)",
+    "de": "Führerstand (Eichenholz)",
+    "en": "Driver Cab (oak)"
+  },
+  {
+    "source": "Gearbox Horizontal",
+    "de": "Waagerechtes Getriebe",
+    "en": "Gearbox Horizontal"
+  },
+  {
+    "source": "Gearbox Vertical",
+    "de": "Senkrechtes Getriebe",
+    "en": "Gearbox Vertical"
+  },
+  {
+    "source": "Gestänge-Gelenk",
+    "de": "Gestängegelenk",
+    "en": "Rod Joint"
+  },
+  {
+    "source": "Glass Bottle",
+    "de": "Glasflasche",
+    "en": "Glass Bottle"
+  },
+  {
+    "source": "Glass Fence",
+    "de": "Glaszaun",
+    "en": "Glass Fence"
+  },
+  {
+    "source": "Glass Half Slab",
+    "de": "Glasplatte",
+    "en": "Glass Half Slab"
+  },
+  {
+    "source": "Glass Pipe",
+    "de": "Glasrohr",
+    "en": "Glass Pipe"
+  },
+  {
+    "source": "Glass Stairs",
+    "de": "Glastreppe",
+    "en": "Glass Stairs"
+  },
+  {
+    "source": "Glass fence with shaped edges. Built from the same material as its full block.",
+    "de": "Zaun aus Glas mit geformten Kanten. Besteht aus demselben Material wie der zugehörige Vollblock.",
+    "en": "Glass fence with shaped edges. Built from the same material as its full block."
+  },
+  {
+    "source": "Glass half slab with shaped edges. Built from the same material as its full block.",
+    "de": "Platte aus Glas mit geformten Kanten. Besteht aus demselben Material wie der zugehörige Vollblock.",
+    "en": "Glass half slab with shaped edges. Built from the same material as its full block."
+  },
+  {
+    "source": "Glass stairs with shaped edges. Built from the same material as its full block.",
+    "de": "Treppe aus Glas mit geformten Kanten. Besteht aus demselben Material wie der zugehörige Vollblock.",
+    "en": "Glass stairs with shaped edges. Built from the same material as its full block."
+  },
+  {
+    "source": "Gold Axe",
+    "de": "Goldaxt",
+    "en": "Gold Axe"
+  },
+  {
+    "source": "Gold Bellows",
+    "de": "Goldblasebalg",
+    "en": "Gold Bellows"
+  },
+  {
+    "source": "Gold Birch Bed",
+    "de": "Goldfarbenes Birkenbett",
+    "en": "Gold Birch Bed"
+  },
+  {
+    "source": "Gold Boots",
+    "de": "Goldstiefel",
+    "en": "Gold Boots"
+  },
+  {
+    "source": "Gold Cape",
+    "de": "Goldumhang",
+    "en": "Gold Cape"
+  },
+  {
+    "source": "Gold Carpet",
+    "de": "Goldfarbener Teppich",
+    "en": "Gold Carpet"
+  },
+  {
+    "source": "Gold Chestplate",
+    "de": "Goldbrustpanzer",
+    "en": "Gold Chestplate"
+  },
+  {
+    "source": "Gold Diamond Cape",
+    "de": "Goldfarbener Diamantumhang",
+    "en": "Gold Diamond Cape"
+  },
+  {
+    "source": "Gold Dust",
+    "de": "Goldstaub",
+    "en": "Gold Dust"
+  },
+  {
+    "source": "Gold Dye",
+    "de": "Goldfarbener Farbstoff",
+    "en": "Gold Dye"
+  },
+  {
+    "source": "Gold Gloves",
+    "de": "Goldhandschuhe",
+    "en": "Gold Gloves"
+  },
+  {
+    "source": "Gold Gold Cape",
+    "de": "Goldfarbener Goldumhang",
+    "en": "Gold Gold Cape"
+  },
+  {
+    "source": "Gold Helmet",
+    "de": "Goldhelm",
+    "en": "Gold Helmet"
+  },
+  {
+    "source": "Gold Hoe",
+    "de": "Goldhacke",
+    "en": "Gold Hoe"
+  },
+  {
+    "source": "Gold Ingot",
+    "de": "Goldbarren",
+    "en": "Gold Ingot"
+  },
+  {
+    "source": "Gold Iron Cape",
+    "de": "Goldfarbener Eisenumhang",
+    "en": "Gold Iron Cape"
+  },
+  {
+    "source": "Gold Leather Cape",
+    "de": "Goldfarbener Lederumhang",
+    "en": "Gold Leather Cape"
+  },
+  {
+    "source": "Gold Oak Bed",
+    "de": "Goldfarbenes Eichenbett",
+    "en": "Gold Oak Bed"
+  },
+  {
+    "source": "Gold Ore",
+    "de": "Golderz",
+    "en": "Gold Ore"
+  },
+  {
+    "source": "Gold Pants",
+    "de": "Goldhose",
+    "en": "Gold Pants"
+  },
+  {
+    "source": "Gold Pickaxe",
+    "de": "Goldspitzhacke",
+    "en": "Gold Pickaxe"
+  },
+  {
+    "source": "Gold Ruby Cape",
+    "de": "Goldfarbener Rubinumhang",
+    "en": "Gold Ruby Cape"
+  },
+  {
+    "source": "Gold Scythe",
+    "de": "Goldsense",
+    "en": "Gold Scythe"
+  },
+  {
+    "source": "Gold Spoon",
+    "de": "Goldkelle",
+    "en": "Gold Spoon"
+  },
+  {
+    "source": "Gold Spruce Bed",
+    "de": "Goldfarbenes Fichtenbett",
+    "en": "Gold Spruce Bed"
+  },
+  {
+    "source": "Gold Sword",
+    "de": "Goldschwert",
+    "en": "Gold Sword"
+  },
+  {
+    "source": "Gold Watering Can",
+    "de": "Goldgießkanne",
+    "en": "Gold Watering Can"
+  },
+  {
+    "source": "Gold Wool",
+    "de": "Goldfarbene Wolle",
+    "en": "Gold Wool"
+  },
+  {
+    "source": "Gold boots fitted for protection and comfortable movement.",
+    "de": "Goldstiefel für Schutz und bequeme Bewegung.",
+    "en": "Gold boots fitted for protection and comfortable movement."
+  },
+  {
+    "source": "Gold chestplate fitted for protection and comfortable movement.",
+    "de": "Goldbrustpanzer für Schutz und bequeme Bewegung.",
+    "en": "Gold chestplate fitted for protection and comfortable movement."
+  },
+  {
+    "source": "Gold gloves fitted for protection and comfortable movement.",
+    "de": "Goldhandschuhe für Schutz und bequeme Bewegung.",
+    "en": "Gold gloves fitted for protection and comfortable movement."
+  },
+  {
+    "source": "Gold helmet fitted for protection and comfortable movement.",
+    "de": "Goldhelm für Schutz und bequeme Bewegung.",
+    "en": "Gold helmet fitted for protection and comfortable movement."
+  },
+  {
+    "source": "Gold pants fitted for protection and comfortable movement.",
+    "de": "Goldhose für Schutz und bequeme Bewegung.",
+    "en": "Gold pants fitted for protection and comfortable movement."
+  },
+  {
+    "source": "Golden honey from a bee nest.",
+    "de": "Goldener Honig aus einem Bienennest.",
+    "en": "Golden honey from a bee nest."
+  },
+  {
+    "source": "Gravel",
+    "de": "Kies",
+    "en": "Gravel"
+  },
+  {
+    "source": "Green Birch Bed",
+    "de": "Grünes Birkenbett",
+    "en": "Green Birch Bed"
+  },
+  {
+    "source": "Green Carpet",
+    "de": "Grüner Teppich",
+    "en": "Green Carpet"
+  },
+  {
+    "source": "Green Diamond Cape",
+    "de": "Grüner Diamantumhang",
+    "en": "Green Diamond Cape"
+  },
+  {
+    "source": "Green Dye",
+    "de": "Grüner Farbstoff",
+    "en": "Green Dye"
+  },
+  {
+    "source": "Green Flower",
+    "de": "Grüne Blume",
+    "en": "Green Flower"
+  },
+  {
+    "source": "Green Gold Cape",
+    "de": "Grüner Goldumhang",
+    "en": "Green Gold Cape"
+  },
+  {
+    "source": "Green Iron Cape",
+    "de": "Grüner Eisenumhang",
+    "en": "Green Iron Cape"
+  },
+  {
+    "source": "Green Leather Cape",
+    "de": "Grüner Lederumhang",
+    "en": "Green Leather Cape"
+  },
+  {
+    "source": "Green Mushroom Cap",
+    "de": "Grüner Pilzhut",
+    "en": "Green Mushroom Cap"
+  },
+  {
+    "source": "Green Oak Bed",
+    "de": "Grünes Eichenbett",
+    "en": "Green Oak Bed"
+  },
+  {
+    "source": "Green Ruby Cape",
+    "de": "Grüner Rubinumhang",
+    "en": "Green Ruby Cape"
+  },
+  {
+    "source": "Green Spruce Bed",
+    "de": "Grünes Fichtenbett",
+    "en": "Green Spruce Bed"
+  },
+  {
+    "source": "Green Wool",
+    "de": "Grüne Wolle",
+    "en": "Green Wool"
+  },
+  {
+    "source": "Grundstein",
+    "de": "Grundstein",
+    "en": "Bedrock"
+  },
+  {
+    "source": "Half-height woven wool, also placeable upright and combinable with other slab materials.",
+    "de": "Halbhohe gewebte Wolle. Kann auch aufrecht platziert und mit Platten aus anderen Materialien kombiniert werden.",
+    "en": "Half-height woven wool, also placeable upright and combinable with other slab materials."
+  },
+  {
+    "source": "Hand Crank",
+    "de": "Handkurbel",
+    "en": "Hand Crank"
+  },
+  {
+    "source": "Handlauf-Stütze",
+    "de": "Handlaufstütze",
+    "en": "Handrail Support"
+  },
+  {
+    "source": "Harvests ripe crops in a bounded area. Diamond and ruby blades sweep a wider area.",
+    "de": "Erntet reife Nutzpflanzen in einem begrenzten Bereich. Diamant- und Rubinklingen erfassen eine größere Fläche.",
+    "en": "Harvests ripe crops in a bounded area. Diamond and ruby blades sweep a wider area."
+  },
+  {
+    "source": "Hold Block",
+    "de": "Halteplattform",
+    "en": "Hold Block"
+  },
+  {
+    "source": "Holzfaeller-Station",
+    "de": "Holzfällerstation",
+    "en": "Lumberjack Station"
+  },
+  {
+    "source": "Holzverstaerkte Mauer",
+    "de": "Holzverstärkte Mauer",
+    "en": "Timber-Reinforced Wall"
+  },
+  {
+    "source": "Honey",
+    "de": "Honig",
+    "en": "Honey"
+  },
+  {
+    "source": "Horizontal Chimney Pipe",
+    "de": "Waagerechtes Schornsteinrohr",
+    "en": "Horizontal Chimney Pipe"
+  },
+  {
+    "source": "Horizontal Gearbox",
+    "de": "Waagerechtes Getriebe",
+    "en": "Horizontal Gearbox"
+  },
+  {
+    "source": "Ice",
+    "de": "Eis",
+    "en": "Ice"
+  },
+  {
+    "source": "Ice Crystal",
+    "de": "Eiskristall",
+    "en": "Ice Crystal"
+  },
+  {
+    "source": "Ice Fence",
+    "de": "Eiszaun",
+    "en": "Ice Fence"
+  },
+  {
+    "source": "Ice Half Slab",
+    "de": "Eisplatte",
+    "en": "Ice Half Slab"
+  },
+  {
+    "source": "Ice Stairs",
+    "de": "Eistreppe",
+    "en": "Ice Stairs"
+  },
+  {
+    "source": "Ice fence with shaped edges. Built from the same material as its full block.",
+    "de": "Zaun aus Eis mit geformten Kanten. Besteht aus demselben Material wie der zugehörige Vollblock.",
+    "en": "Ice fence with shaped edges. Built from the same material as its full block."
+  },
+  {
+    "source": "Ice half slab with shaped edges. Built from the same material as its full block.",
+    "de": "Platte aus Eis mit geformten Kanten. Besteht aus demselben Material wie der zugehörige Vollblock.",
+    "en": "Ice half slab with shaped edges. Built from the same material as its full block."
+  },
+  {
+    "source": "Ice stairs with shaped edges. Built from the same material as its full block.",
+    "de": "Treppe aus Eis mit geformten Kanten. Besteht aus demselben Material wie der zugehörige Vollblock.",
+    "en": "Ice stairs with shaped edges. Built from the same material as its full block."
+  },
+  {
+    "source": "Interlocking iron links. Attach beneath a solid beam and hang a lantern below.",
+    "de": "Ineinandergreifende Eisenglieder. Befestige sie unter einem festen Balken und hänge darunter eine Laterne auf.",
+    "en": "Interlocking iron links. Attach beneath a solid beam and hang a lantern below."
+  },
+  {
+    "source": "Iron Axe",
+    "de": "Eisenaxt",
+    "en": "Iron Axe"
+  },
+  {
+    "source": "Iron Bellows",
+    "de": "Eisenblasebalg",
+    "en": "Iron Bellows"
+  },
+  {
+    "source": "Iron Boots",
+    "de": "Eisenstiefel",
+    "en": "Iron Boots"
+  },
+  {
+    "source": "Iron Cape",
+    "de": "Eisenumhang",
+    "en": "Iron Cape"
+  },
+  {
+    "source": "Iron Chestplate",
+    "de": "Eisenbrustpanzer",
+    "en": "Iron Chestplate"
+  },
+  {
+    "source": "Iron Dust",
+    "de": "Eisenstaub",
+    "en": "Iron Dust"
+  },
+  {
+    "source": "Iron Gear",
+    "de": "Eisenzahnrad",
+    "en": "Iron Gear"
+  },
+  {
+    "source": "Iron Gloves",
+    "de": "Eisenhandschuhe",
+    "en": "Iron Gloves"
+  },
+  {
+    "source": "Iron Helmet",
+    "de": "Eisenhelm",
+    "en": "Iron Helmet"
+  },
+  {
+    "source": "Iron Hoe",
+    "de": "Eisenhacke",
+    "en": "Iron Hoe"
+  },
+  {
+    "source": "Iron Ingot",
+    "de": "Eisenbarren",
+    "en": "Iron Ingot"
+  },
+  {
+    "source": "Iron Large Gear",
+    "de": "Großes Eisenzahnrad",
+    "en": "Iron Large Gear"
+  },
+  {
+    "source": "Iron Ore",
+    "de": "Eisenerz",
+    "en": "Iron Ore"
+  },
+  {
+    "source": "Iron Pants",
+    "de": "Eisenhose",
+    "en": "Iron Pants"
+  },
+  {
+    "source": "Iron Pickaxe",
+    "de": "Eisenspitzhacke",
+    "en": "Iron Pickaxe"
+  },
+  {
+    "source": "Iron Pipe",
+    "de": "Eisenrohr",
+    "en": "Iron Pipe"
+  },
+  {
+    "source": "Iron Scythe",
+    "de": "Eisensense",
+    "en": "Iron Scythe"
+  },
+  {
+    "source": "Iron Shaft",
+    "de": "Eisenwelle",
+    "en": "Iron Shaft"
+  },
+  {
+    "source": "Iron Sword",
+    "de": "Eisenschwert",
+    "en": "Iron Sword"
+  },
+  {
+    "source": "Iron Watering Can",
+    "de": "Eisengießkanne",
+    "en": "Iron Watering Can"
+  },
+  {
+    "source": "Iron boots fitted for protection and comfortable movement.",
+    "de": "Eisenstiefel für Schutz und bequeme Bewegung.",
+    "en": "Iron boots fitted for protection and comfortable movement."
+  },
+  {
+    "source": "Iron chestplate fitted for protection and comfortable movement.",
+    "de": "Eisenbrustpanzer für Schutz und bequeme Bewegung.",
+    "en": "Iron chestplate fitted for protection and comfortable movement."
+  },
+  {
+    "source": "Iron gloves fitted for protection and comfortable movement.",
+    "de": "Eisenhandschuhe für Schutz und bequeme Bewegung.",
+    "en": "Iron gloves fitted for protection and comfortable movement."
+  },
+  {
+    "source": "Iron helmet fitted for protection and comfortable movement.",
+    "de": "Eisenhelm für Schutz und bequeme Bewegung.",
+    "en": "Iron helmet fitted for protection and comfortable movement."
+  },
+  {
+    "source": "Iron pants fitted for protection and comfortable movement.",
+    "de": "Eisenhose für Schutz und bequeme Bewegung.",
+    "en": "Iron pants fitted for protection and comfortable movement."
+  },
+  {
+    "source": "Item Hopper",
+    "de": "Warentrichter",
+    "en": "Item Hopper"
+  },
+  {
+    "source": "Item Importer",
+    "de": "Wareneinzug",
+    "en": "Item Importer"
+  },
+  {
+    "source": "Kinetic Pump",
+    "de": "Mechanische Pumpe",
+    "en": "Kinetic Pump"
+  },
+  {
+    "source": "Kinetic Water Pump",
+    "de": "Mechanische Wasserpumpe",
+    "en": "Kinetic Water Pump"
+  },
+  {
+    "source": "Koenigsmauer mit Wappen",
+    "de": "Königsmauer mit Wappen",
+    "en": "Royal Heraldic Wall"
+  },
+  {
+    "source": "Kreuzkopf",
+    "de": "Kreuzkopf",
+    "en": "Crosshead"
+  },
+  {
+    "source": "Kuppelstange kurz",
+    "de": "Kurze Kuppelstange",
+    "en": "Short Coupling Rod"
+  },
+  {
+    "source": "Kuppelstange lang",
+    "de": "Lange Kuppelstange",
+    "en": "Long Coupling Rod"
+  },
+  {
+    "source": "Lantern",
+    "de": "Laterne",
+    "en": "Lantern"
+  },
+  {
+    "source": "Laufrad klein",
+    "de": "Kleines Laufrad",
+    "en": "Small Running Wheel"
+  },
+  {
+    "source": "Leather",
+    "de": "Leder",
+    "en": "Leather"
+  },
+  {
+    "source": "Leather Boots",
+    "de": "Lederstiefel",
+    "en": "Leather Boots"
+  },
+  {
+    "source": "Leather Cape",
+    "de": "Lederumhang",
+    "en": "Leather Cape"
+  },
+  {
+    "source": "Leather Chestplate",
+    "de": "Lederbrustpanzer",
+    "en": "Leather Chestplate"
+  },
+  {
+    "source": "Leather Gloves",
+    "de": "Lederhandschuhe",
+    "en": "Leather Gloves"
+  },
+  {
+    "source": "Leather Helmet",
+    "de": "Lederhelm",
+    "en": "Leather Helmet"
+  },
+  {
+    "source": "Leather Pants",
+    "de": "Lederhose",
+    "en": "Leather Pants"
+  },
+  {
+    "source": "Leather bellows with wooden boards and a gold nozzle. Increases furnace processing speed by 10%, with a 5% chance of double output.",
+    "de": "Lederblasebalg mit Holzbrettern und einer Düse aus Gold. Erhöht die Verarbeitungsgeschwindigkeit des Ofens um 10 % und bietet eine Chance von 5 % auf doppelte Ausbeute.",
+    "en": "Leather bellows with wooden boards and a gold nozzle. Increases furnace processing speed by 10%, with a 5% chance of double output."
+  },
+  {
+    "source": "Leather bellows with wooden boards and a ruby nozzle. Increases furnace processing speed by 15%, with a 7.5% chance of double output.",
+    "de": "Lederblasebalg mit Holzbrettern und einer Düse aus Rubin. Erhöht die Verarbeitungsgeschwindigkeit des Ofens um 15 % und bietet eine Chance von 7,5 % auf doppelte Ausbeute.",
+    "en": "Leather bellows with wooden boards and a ruby nozzle. Increases furnace processing speed by 15%, with a 7.5% chance of double output."
+  },
+  {
+    "source": "Leather bellows with wooden boards and a stone nozzle. Increases furnace processing speed by 10%.",
+    "de": "Lederblasebalg mit Holzbrettern und einer Düse aus Stein. Erhöht die Verarbeitungsgeschwindigkeit des Ofens um 10 %.",
+    "en": "Leather bellows with wooden boards and a stone nozzle. Increases furnace processing speed by 10%."
+  },
+  {
+    "source": "Leather bellows with wooden boards and an iron nozzle. Increases furnace processing speed by 20%.",
+    "de": "Lederblasebalg mit Holzbrettern und einer Düse aus Eisen. Erhöht die Verarbeitungsgeschwindigkeit des Ofens um 20 %.",
+    "en": "Leather bellows with wooden boards and an iron nozzle. Increases furnace processing speed by 20%."
+  },
+  {
+    "source": "Leather boots fitted for protection and comfortable movement.",
+    "de": "Lederstiefel für Schutz und bequeme Bewegung.",
+    "en": "Leather boots fitted for protection and comfortable movement."
+  },
+  {
+    "source": "Leather chestplate fitted for protection and comfortable movement.",
+    "de": "Lederbrustpanzer für Schutz und bequeme Bewegung.",
+    "en": "Leather chestplate fitted for protection and comfortable movement."
+  },
+  {
+    "source": "Leather gloves fitted for protection and comfortable movement.",
+    "de": "Lederhandschuhe für Schutz und bequeme Bewegung.",
+    "en": "Leather gloves fitted for protection and comfortable movement."
+  },
+  {
+    "source": "Leather helmet fitted for protection and comfortable movement.",
+    "de": "Lederhelm für Schutz und bequeme Bewegung.",
+    "en": "Leather helmet fitted for protection and comfortable movement."
+  },
+  {
+    "source": "Leather pants fitted for protection and comfortable movement.",
+    "de": "Lederhose für Schutz und bequeme Bewegung.",
+    "en": "Leather pants fitted for protection and comfortable movement."
+  },
+  {
+    "source": "Left Switch",
+    "de": "Linksweiche",
+    "en": "Left Switch"
+  },
+  {
+    "source": "Legacy corner block. New battlement walls form corners automatically.",
+    "de": "Älterer Eckblock. Neue Zinnenmauern bilden Ecken automatisch.",
+    "en": "Legacy corner block. New battlement walls form corners automatically."
+  },
+  {
+    "source": "Lettuce",
+    "de": "Salat",
+    "en": "Lettuce"
+  },
+  {
+    "source": "Lettuce Seeds",
+    "de": "Salatsamen",
+    "en": "Lettuce Seeds"
+  },
+  {
+    "source": "Light Blue Birch Bed",
+    "de": "Hellblaues Birkenbett",
+    "en": "Light Blue Birch Bed"
+  },
+  {
+    "source": "Light Blue Carpet",
+    "de": "Hellblauer Teppich",
+    "en": "Light Blue Carpet"
+  },
+  {
+    "source": "Light Blue Diamond Cape",
+    "de": "Hellblauer Diamantumhang",
+    "en": "Light Blue Diamond Cape"
+  },
+  {
+    "source": "Light Blue Dye",
+    "de": "Hellblauer Farbstoff",
+    "en": "Light Blue Dye"
+  },
+  {
+    "source": "Light Blue Gold Cape",
+    "de": "Hellblauer Goldumhang",
+    "en": "Light Blue Gold Cape"
+  },
+  {
+    "source": "Light Blue Iron Cape",
+    "de": "Hellblauer Eisenumhang",
+    "en": "Light Blue Iron Cape"
+  },
+  {
+    "source": "Light Blue Leather Cape",
+    "de": "Hellblauer Lederumhang",
+    "en": "Light Blue Leather Cape"
+  },
+  {
+    "source": "Light Blue Oak Bed",
+    "de": "Hellblaues Eichenbett",
+    "en": "Light Blue Oak Bed"
+  },
+  {
+    "source": "Light Blue Ruby Cape",
+    "de": "Hellblauer Rubinumhang",
+    "en": "Light Blue Ruby Cape"
+  },
+  {
+    "source": "Light Blue Spruce Bed",
+    "de": "Hellblaues Fichtenbett",
+    "en": "Light Blue Spruce Bed"
+  },
+  {
+    "source": "Light Blue Wool",
+    "de": "Hellblaue Wolle",
+    "en": "Light Blue Wool"
+  },
+  {
+    "source": "Light birch boards cut for building.",
+    "de": "Helle Birkenbretter zum Bauen.",
+    "en": "Light birch boards cut for building."
+  },
+  {
+    "source": "Lime Birch Bed",
+    "de": "Hellgrünes Birkenbett",
+    "en": "Lime Birch Bed"
+  },
+  {
+    "source": "Lime Carpet",
+    "de": "Hellgrüner Teppich",
+    "en": "Lime Carpet"
+  },
+  {
+    "source": "Lime Diamond Cape",
+    "de": "Hellgrüner Diamantumhang",
+    "en": "Lime Diamond Cape"
+  },
+  {
+    "source": "Lime Dye",
+    "de": "Hellgrüner Farbstoff",
+    "en": "Lime Dye"
+  },
+  {
+    "source": "Lime Gold Cape",
+    "de": "Hellgrüner Goldumhang",
+    "en": "Lime Gold Cape"
+  },
+  {
+    "source": "Lime Iron Cape",
+    "de": "Hellgrüner Eisenumhang",
+    "en": "Lime Iron Cape"
+  },
+  {
+    "source": "Lime Leather Cape",
+    "de": "Hellgrüner Lederumhang",
+    "en": "Lime Leather Cape"
+  },
+  {
+    "source": "Lime Oak Bed",
+    "de": "Hellgrünes Eichenbett",
+    "en": "Lime Oak Bed"
+  },
+  {
+    "source": "Lime Ruby Cape",
+    "de": "Hellgrüner Rubinumhang",
+    "en": "Lime Ruby Cape"
+  },
+  {
+    "source": "Lime Spruce Bed",
+    "de": "Hellgrünes Fichtenbett",
+    "en": "Lime Spruce Bed"
+  },
+  {
+    "source": "Lime Wool",
+    "de": "Hellgrüne Wolle",
+    "en": "Lime Wool"
+  },
+  {
+    "source": "Living turf using the authored Fiverr grass-block PBR model.",
+    "de": "Lebendiger Rasen mit dem gestalteten PBR-Grasblockmodell von Fiverr.",
+    "en": "Living turf using the authored Fiverr grass-block PBR model."
+  },
+  {
+    "source": "Lok-Achse",
+    "de": "Lokachse",
+    "en": "Locomotive Axle"
+  },
+  {
+    "source": "Lok-Blech Außenecke",
+    "de": "Lokblechaußenecke",
+    "en": "Locomotive Sheet Outer Corner"
+  },
+  {
+    "source": "Lok-Blech Block",
+    "de": "Lokblechblock",
+    "en": "Locomotive Sheet Block"
+  },
+  {
+    "source": "Lok-Blech Innenecke",
+    "de": "Lokblechinnenecke",
+    "en": "Locomotive Sheet Inner Corner"
+  },
+  {
+    "source": "Lok-Blech Schräge",
+    "de": "Lokblechschräge",
+    "en": "Locomotive Sheet Slope"
+  },
+  {
+    "source": "Lok-Blech Slab",
+    "de": "Lokblechplatte",
+    "en": "Locomotive Sheet Slab"
+  },
+  {
+    "source": "Lok-Blech Treppe",
+    "de": "Lokblechtreppe",
+    "en": "Locomotive Sheet Stairs"
+  },
+  {
+    "source": "Lok-Dachlüfter",
+    "de": "Lokdachlüfter",
+    "en": "Locomotive Roof Vent"
+  },
+  {
+    "source": "Lok-Dampfventil",
+    "de": "Lokdampfventil",
+    "en": "Locomotive Steam Valve"
+  },
+  {
+    "source": "Lok-Druckanzeige",
+    "de": "Lokdruckanzeige",
+    "en": "Locomotive Pressure Gauge"
+  },
+  {
+    "source": "Lok-Druckeinheit",
+    "de": "Lokdruckeinheit",
+    "en": "Locomotive Pressure Unit"
+  },
+  {
+    "source": "Lok-Freiräumer und Gleisleger",
+    "de": "Lokfreiräumer und Gleisleger",
+    "en": "Locomotive Excavator and Rail Builder"
+  },
+  {
+    "source": "Lok-Geländer",
+    "de": "Lokgeländer",
+    "en": "Locomotive Railing"
+  },
+  {
+    "source": "Lok-Gitter Außenecke",
+    "de": "Lokgitteraußenecke",
+    "en": "Locomotive Grating Outer Corner"
+  },
+  {
+    "source": "Lok-Gitter Block",
+    "de": "Lokgitterblock",
+    "en": "Locomotive Grating Block"
+  },
+  {
+    "source": "Lok-Gitter Innenecke",
+    "de": "Lokgitterinnenecke",
+    "en": "Locomotive Grating Inner Corner"
+  },
+  {
+    "source": "Lok-Gitter Schräge",
+    "de": "Lokgitterschräge",
+    "en": "Locomotive Grating Slope"
+  },
+  {
+    "source": "Lok-Gitter Slab",
+    "de": "Lokgitterplatte",
+    "en": "Locomotive Grating Slab"
+  },
+  {
+    "source": "Lok-Gitter Treppe",
+    "de": "Lokgittertreppe",
+    "en": "Locomotive Grating Stairs"
+  },
+  {
+    "source": "Lok-Handlauf",
+    "de": "Lokhandlauf",
+    "en": "Locomotive Handrail"
+  },
+  {
+    "source": "Lok-Hauptrahmen",
+    "de": "Lokhauptrahmen",
+    "en": "Locomotive Main Frame"
+  },
+  {
+    "source": "Lok-Holzplanken",
+    "de": "Lokholzbretter",
+    "en": "Locomotive Wood Planks"
+  },
+  {
+    "source": "Lok-Holzplanken (birch)",
+    "de": "Lokholzbretter (Birkenholz)",
+    "en": "Locomotive Wood Planks (birch)"
+  },
+  {
+    "source": "Lok-Holzplanken (cherry)",
+    "de": "Lokholzbretter (Kirschholz)",
+    "en": "Locomotive Wood Planks (cherry)"
+  },
+  {
+    "source": "Lok-Holzplanken (oak)",
+    "de": "Lokholzbretter (Eichenholz)",
+    "en": "Locomotive Wood Planks (oak)"
+  },
+  {
+    "source": "Lok-Kessel Abschluss",
+    "de": "Lokkesselabschluss",
+    "en": "Locomotive Boiler End"
+  },
+  {
+    "source": "Lok-Kessel gebogen",
+    "de": "Gebogener Lokkessel",
+    "en": "Curved Locomotive Boiler"
+  },
+  {
+    "source": "Lok-Kessel gerade",
+    "de": "Gerader Lokkessel",
+    "en": "Straight Locomotive Boiler"
+  },
+  {
+    "source": "Lok-Kohlestücke",
+    "de": "Lokkohlestücke",
+    "en": "Locomotive Coal Pieces"
+  },
+  {
+    "source": "Lok-Luke",
+    "de": "Lokluke",
+    "en": "Locomotive Hatch"
+  },
+  {
+    "source": "Lok-Nietenplatte",
+    "de": "Loknietenplatte",
+    "en": "Locomotive Rivet Plate"
+  },
+  {
+    "source": "Lok-Nummernschild 52 4867",
+    "de": "Loknummernschild 52 4867",
+    "en": "Locomotive Number Plate 52 4867"
+  },
+  {
+    "source": "Lok-Puffer",
+    "de": "Lokpuffer",
+    "en": "Locomotive Buffer"
+  },
+  {
+    "source": "Lok-Scheinwerfer Front",
+    "de": "Lokfrontscheinwerfer",
+    "en": "Locomotive Front Headlamp"
+  },
+  {
+    "source": "Lok-Scheinwerfer Seite",
+    "de": "Lokseitenscheinwerfer",
+    "en": "Locomotive Side Lamp"
+  },
+  {
+    "source": "Lok-Schornstein",
+    "de": "Lokschornstein",
+    "en": "Locomotive Chimney"
+  },
+  {
+    "source": "Lok-Schraubenblock",
+    "de": "Lokschraubenblock",
+    "en": "Locomotive Bolt Block"
+  },
+  {
+    "source": "Lok-Station",
+    "de": "Lokstation",
+    "en": "Railway Station"
+  },
+  {
+    "source": "Lok-Werkzeugkasten",
+    "de": "Lokwerkzeugkasten",
+    "en": "Locomotive Toolbox"
+  },
+  {
+    "source": "Lok-Werkzeugkasten (birch)",
+    "de": "Lokwerkzeugkasten (Birkenholz)",
+    "en": "Locomotive Toolbox (birch)"
+  },
+  {
+    "source": "Lok-Werkzeugkasten (cherry)",
+    "de": "Lokwerkzeugkasten (Kirschholz)",
+    "en": "Locomotive Toolbox (cherry)"
+  },
+  {
+    "source": "Lok-Werkzeugkasten (oak)",
+    "de": "Lokwerkzeugkasten (Eichenholz)",
+    "en": "Locomotive Toolbox (oak)"
+  },
+  {
+    "source": "Lokdach flach",
+    "de": "Flaches Lokdach",
+    "en": "Flat Locomotive Roof"
+  },
+  {
+    "source": "Lokdach gebogen",
+    "de": "Gebogenes Lokdach",
+    "en": "Curved Locomotive Roof"
+  },
+  {
+    "source": "Lokleiter Front",
+    "de": "Lokfrontleiter",
+    "en": "Locomotive Front Ladder"
+  },
+  {
+    "source": "Lokleiter Seite",
+    "de": "Lokseitenleiter",
+    "en": "Locomotive Side Ladder"
+  },
+  {
+    "source": "Lokrad mittel",
+    "de": "Mittleres Lokrad",
+    "en": "Medium Locomotive Wheel"
+  },
+  {
+    "source": "Lokrahmen rot",
+    "de": "Roter Lokrahmen",
+    "en": "Red Locomotive Frame"
+  },
+  {
+    "source": "Mauer mit Fenster",
+    "de": "Mauer mit Fenster",
+    "en": "Wall with Window"
+  },
+  {
+    "source": "Mauer mit Schiessscharte",
+    "de": "Mauer mit Schießscharte",
+    "en": "Wall with Arrow Slit"
+  },
+  {
+    "source": "Mauerbogen Links",
+    "de": "Linker Mauerbogen",
+    "en": "Left Arch"
+  },
+  {
+    "source": "Mauerbogen Rechts",
+    "de": "Rechter Mauerbogen",
+    "en": "Right Arch"
+  },
+  {
+    "source": "Meadow Grass",
+    "de": "Wiesengras",
+    "en": "Meadow Grass"
+  },
+  {
+    "source": "Messingrohr Bogen",
+    "de": "Messingrohrbogen",
+    "en": "Brass Pipe Bend"
+  },
+  {
+    "source": "Messingrohr gerade",
+    "de": "Gerades Messingrohr",
+    "en": "Straight Brass Pipe"
+  },
+  {
+    "source": "Metzger-Station",
+    "de": "Metzgerstation",
+    "en": "Butcher Station"
+  },
+  {
+    "source": "Minen-Station",
+    "de": "Minenstation",
+    "en": "Mine Station"
+  },
+  {
+    "source": "Mixer",
+    "de": "Mischer",
+    "en": "Mixer"
+  },
+  {
+    "source": "Modular railway vehicle part. Connect parts beside an assembly station, then assemble the vehicle.",
+    "de": "Modulares Bauteil für Schienenfahrzeuge. Verbinde die Teile neben einer Montagestelle und montiere anschließend das Fahrzeug.",
+    "en": "Modular railway vehicle part. Connect parts beside an assembly station, then assemble the vehicle."
+  },
+  {
+    "source": "Modular railway vehicle part. Connect parts beside an assembly station, then assemble the vehicle. Birch wood variant.",
+    "de": "Modulares Bauteil für Schienenfahrzeuge. Verbinde die Teile neben einer Montagestelle und montiere anschließend das Fahrzeug. Variante aus Birkenholz.",
+    "en": "Modular railway vehicle part. Connect parts beside an assembly station, then assemble the vehicle. Birch wood variant."
+  },
+  {
+    "source": "Modular railway vehicle part. Connect parts beside an assembly station, then assemble the vehicle. Cherry wood variant.",
+    "de": "Modulares Bauteil für Schienenfahrzeuge. Verbinde die Teile neben einer Montagestelle und montiere anschließend das Fahrzeug. Variante aus Kirschholz.",
+    "en": "Modular railway vehicle part. Connect parts beside an assembly station, then assemble the vehicle. Cherry wood variant."
+  },
+  {
+    "source": "Modular railway vehicle part. Connect parts beside an assembly station, then assemble the vehicle. Oak wood variant.",
+    "de": "Modulares Bauteil für Schienenfahrzeuge. Verbinde die Teile neben einer Montagestelle und montiere anschließend das Fahrzeug. Variante aus Eichenholz.",
+    "en": "Modular railway vehicle part. Connect parts beside an assembly station, then assemble the vehicle. Oak wood variant."
+  },
+  {
+    "source": "Moos Mauer",
+    "de": "Moosmauer",
+    "en": "Mossy Wall"
+  },
+  {
+    "source": "Mossy Stone",
+    "de": "Bemooster Stein",
+    "en": "Mossy Stone"
+  },
+  {
+    "source": "Mud",
+    "de": "Schlamm",
+    "en": "Mud"
+  },
+  {
+    "source": "Mushroom Stem",
+    "de": "Pilzstiel",
+    "en": "Mushroom Stem"
+  },
+  {
+    "source": "Natural stone carrying coal deposits. Requires mining level 1.",
+    "de": "Naturstein mit Kohlevorkommen. Benötigt Bergbaustufe 1.",
+    "en": "Natural stone carrying coal deposits. Requires mining level 1."
+  },
+  {
+    "source": "Natural stone carrying diamond deposits. Requires mining level 3.",
+    "de": "Naturstein mit Diamantvorkommen. Benötigt Bergbaustufe 3.",
+    "en": "Natural stone carrying diamond deposits. Requires mining level 3."
+  },
+  {
+    "source": "Natural stone carrying gold deposits. Requires mining level 2.",
+    "de": "Naturstein mit Goldvorkommen. Benötigt Bergbaustufe 2.",
+    "en": "Natural stone carrying gold deposits. Requires mining level 2."
+  },
+  {
+    "source": "Natural stone carrying iron deposits. Requires mining level 2.",
+    "de": "Naturstein mit Eisenvorkommen. Benötigt Bergbaustufe 2.",
+    "en": "Natural stone carrying iron deposits. Requires mining level 2."
+  },
+  {
+    "source": "Natural stone carrying ruby deposits. Requires mining level 3.",
+    "de": "Naturstein mit Rubinvorkommen. Benötigt Bergbaustufe 3.",
+    "en": "Natural stone carrying ruby deposits. Requires mining level 3."
+  },
+  {
+    "source": "Natural stone carrying salt deposits. Requires mining level 1.",
+    "de": "Naturstein mit Salzvorkommen. Benötigt Bergbaustufe 1.",
+    "en": "Natural stone carrying salt deposits. Requires mining level 1."
+  },
+  {
+    "source": "Natural timber. Crafts into four oak planks.",
+    "de": "Natürliches Holz. Ergibt vier Eichenbretter.",
+    "en": "Natural timber. Crafts into four oak planks."
+  },
+  {
+    "source": "Necklace",
+    "de": "Halskette",
+    "en": "Necklace"
+  },
+  {
+    "source": "Night Vision Potion",
+    "de": "Nachtsichttrank",
+    "en": "Night Vision Potion"
+  },
+  {
+    "source": "Oak Basin",
+    "de": "Eichenbecken",
+    "en": "Oak Basin"
+  },
+  {
+    "source": "Oak Bed",
+    "de": "Eichenbett",
+    "en": "Oak Bed"
+  },
+  {
+    "source": "Oak Door",
+    "de": "Eichentür",
+    "en": "Oak Door"
+  },
+  {
+    "source": "Oak Fence",
+    "de": "Eichenzaun",
+    "en": "Oak Fence"
+  },
+  {
+    "source": "Oak Half Slab",
+    "de": "Eichenplatte",
+    "en": "Oak Half Slab"
+  },
+  {
+    "source": "Oak Planks",
+    "de": "Eichenbretter",
+    "en": "Oak Planks"
+  },
+  {
+    "source": "Oak Stairs",
+    "de": "Eichentreppe",
+    "en": "Oak Stairs"
+  },
+  {
+    "source": "Oak Window",
+    "de": "Eichenfenster",
+    "en": "Oak Window"
+  },
+  {
+    "source": "Oak fence with shaped edges. Built from the same material as its full block.",
+    "de": "Zaun aus Eichenholz mit geformten Kanten. Besteht aus demselben Material wie der zugehörige Vollblock.",
+    "en": "Oak fence with shaped edges. Built from the same material as its full block."
+  },
+  {
+    "source": "Oak half slab with shaped edges. Built from the same material as its full block.",
+    "de": "Platte aus Eichenholz mit geformten Kanten. Besteht aus demselben Material wie der zugehörige Vollblock.",
+    "en": "Oak half slab with shaped edges. Built from the same material as its full block."
+  },
+  {
+    "source": "Oak stairs with shaped edges. Built from the same material as its full block.",
+    "de": "Treppe aus Eichenholz mit geformten Kanten. Besteht aus demselben Material wie der zugehörige Vollblock.",
+    "en": "Oak stairs with shaped edges. Built from the same material as its full block."
+  },
+  {
+    "source": "One-metre starter track with birch sleepers, three blocks wide. Place a start, then stretch a continuous straight, curve or ramp to the next endpoint. Use separate switches for branches.",
+    "de": "Ein einen Meter langes Startgleis mit Birkenholzschwellen und drei Blöcken Breite. Setze einen Anfang und ziehe eine durchgehende Gerade, Kurve oder Rampe zum nächsten Endpunkt. Für Abzweigungen verwendest du separate Weichen.",
+    "en": "One-metre starter track with birch sleepers, three blocks wide. Place a start, then stretch a continuous straight, curve or ramp to the next endpoint. Use separate switches for branches."
+  },
+  {
+    "source": "One-metre starter track with cherry sleepers, three blocks wide. Place a start, then stretch a continuous straight, curve or ramp to the next endpoint. Use separate switches for branches.",
+    "de": "Ein einen Meter langes Startgleis mit Kirschholzschwellen und drei Blöcken Breite. Setze einen Anfang und ziehe eine durchgehende Gerade, Kurve oder Rampe zum nächsten Endpunkt. Für Abzweigungen verwendest du separate Weichen.",
+    "en": "One-metre starter track with cherry sleepers, three blocks wide. Place a start, then stretch a continuous straight, curve or ramp to the next endpoint. Use separate switches for branches."
+  },
+  {
+    "source": "One-metre starter track with spruce sleepers, three blocks wide. Place a start, then stretch a continuous straight, curve or ramp to the next endpoint. Use separate switches for branches.",
+    "de": "Ein einen Meter langes Startgleis mit Fichtenholzschwellen und drei Blöcken Breite. Setze einen Anfang und ziehe eine durchgehende Gerade, Kurve oder Rampe zum nächsten Endpunkt. Für Abzweigungen verwendest du separate Weichen.",
+    "en": "One-metre starter track with spruce sleepers, three blocks wide. Place a start, then stretch a continuous straight, curve or ramp to the next endpoint. Use separate switches for branches."
+  },
+  {
+    "source": "One-metre starter track, three blocks wide. Place a start, aim at the next endpoint and stretch a continuous straight, curve or ramp.",
+    "de": "Ein einen Meter langes Startgleis mit drei Blöcken Breite. Setze einen Anfang, ziele auf den nächsten Endpunkt und ziehe eine durchgehende Gerade, Kurve oder Rampe.",
+    "en": "One-metre starter track, three blocks wide. Place a start, aim at the next endpoint and stretch a continuous straight, curve or ramp."
+  },
+  {
+    "source": "Orange Birch Bed",
+    "de": "Orangefarbenes Birkenbett",
+    "en": "Orange Birch Bed"
+  },
+  {
+    "source": "Orange Carpet",
+    "de": "Orangefarbener Teppich",
+    "en": "Orange Carpet"
+  },
+  {
+    "source": "Orange Diamond Cape",
+    "de": "Orangefarbener Diamantumhang",
+    "en": "Orange Diamond Cape"
+  },
+  {
+    "source": "Orange Dye",
+    "de": "Orangefarbener Farbstoff",
+    "en": "Orange Dye"
+  },
+  {
+    "source": "Orange Flower",
+    "de": "Orangefarbene Blume",
+    "en": "Orange Flower"
+  },
+  {
+    "source": "Orange Gold Cape",
+    "de": "Orangefarbener Goldumhang",
+    "en": "Orange Gold Cape"
+  },
+  {
+    "source": "Orange Iron Cape",
+    "de": "Orangefarbener Eisenumhang",
+    "en": "Orange Iron Cape"
+  },
+  {
+    "source": "Orange Leather Cape",
+    "de": "Orangefarbener Lederumhang",
+    "en": "Orange Leather Cape"
+  },
+  {
+    "source": "Orange Oak Bed",
+    "de": "Orangefarbenes Eichenbett",
+    "en": "Orange Oak Bed"
+  },
+  {
+    "source": "Orange Ruby Cape",
+    "de": "Orangefarbener Rubinumhang",
+    "en": "Orange Ruby Cape"
+  },
+  {
+    "source": "Orange Spruce Bed",
+    "de": "Orangefarbenes Fichtenbett",
+    "en": "Orange Spruce Bed"
+  },
+  {
+    "source": "Orange Wool",
+    "de": "Orangefarbene Wolle",
+    "en": "Orange Wool"
+  },
+  {
+    "source": "Packed white wool with dense, stepped loops and softly shadowed woven fibres.",
+    "de": "Verdichtete weiße Wolle mit dichten gestuften Schlingen und weich schattierten Webfasern.",
+    "en": "Packed white wool with dense, stepped loops and softly shadowed woven fibres."
+  },
+  {
+    "source": "Pale blue sea ice with cloudy layers and fine frozen seams. Solid, translucent and cool to the touch.",
+    "de": "Hellblaues Meereis mit trüben Schichten und feinen gefrorenen Fugen. Fest, durchscheinend und kühl bei Berührung.",
+    "en": "Pale blue sea ice with cloudy layers and fine frozen seams. Solid, translucent and cool to the touch."
+  },
+  {
+    "source": "Pale fibrous stem of a giant mushroom.",
+    "de": "Heller faseriger Stiel eines Riesenpilzes.",
+    "en": "Pale fibrous stem of a giant mushroom."
+  },
+  {
+    "source": "Pale flower or salt pigment for recoloring bed blankets and capes.",
+    "de": "Helles Blüten- oder Salzpigment zum Umfärben von Bettdecken und Umhängen.",
+    "en": "Pale flower or salt pigment for recoloring bed blankets and capes."
+  },
+  {
+    "source": "Pale handworked stone with softened edges and fine cracks for building.",
+    "de": "Heller handbearbeiteter Baustein mit abgerundeten Kanten und feinen Rissen.",
+    "en": "Pale handworked stone with softened edges and fine cracks for building."
+  },
+  {
+    "source": "Pale mineral body of a natural salt stalactite or stalagmite.",
+    "de": "Heller Mineralkörper eines natürlichen Salzstalaktiten oder Salzstalagmiten.",
+    "en": "Pale mineral body of a natural salt stalactite or stalagmite."
+  },
+  {
+    "source": "Pale timber. Crafts into four birch planks.",
+    "de": "Helles Holz. Ergibt vier Birkenbretter.",
+    "en": "Pale timber. Crafts into four birch planks."
+  },
+  {
+    "source": "Path Block",
+    "de": "Wegblock",
+    "en": "Path Block"
+  },
+  {
+    "source": "Pig Beef",
+    "de": "Schweinefleisch",
+    "en": "Pig Beef"
+  },
+  {
+    "source": "Pigment for recoloring bed blankets and capes.",
+    "de": "Farbpigment zum Umfärben von Bettdecken und Umhängen.",
+    "en": "Pigment for recoloring bed blankets and capes."
+  },
+  {
+    "source": "Pink Birch Bed",
+    "de": "Rosa Birkenbett",
+    "en": "Pink Birch Bed"
+  },
+  {
+    "source": "Pink Carpet",
+    "de": "Rosa Teppich",
+    "en": "Pink Carpet"
+  },
+  {
+    "source": "Pink Diamond Cape",
+    "de": "Rosa Diamantumhang",
+    "en": "Pink Diamond Cape"
+  },
+  {
+    "source": "Pink Dye",
+    "de": "Rosa Farbstoff",
+    "en": "Pink Dye"
+  },
+  {
+    "source": "Pink Flower",
+    "de": "Rosa Blume",
+    "en": "Pink Flower"
+  },
+  {
+    "source": "Pink Gold Cape",
+    "de": "Rosa Goldumhang",
+    "en": "Pink Gold Cape"
+  },
+  {
+    "source": "Pink Iron Cape",
+    "de": "Rosa Eisenumhang",
+    "en": "Pink Iron Cape"
+  },
+  {
+    "source": "Pink Leather Cape",
+    "de": "Rosa Lederumhang",
+    "en": "Pink Leather Cape"
+  },
+  {
+    "source": "Pink Oak Bed",
+    "de": "Rosa Eichenbett",
+    "en": "Pink Oak Bed"
+  },
+  {
+    "source": "Pink Ruby Cape",
+    "de": "Rosa Rubinumhang",
+    "en": "Pink Ruby Cape"
+  },
+  {
+    "source": "Pink Salt Stone",
+    "de": "Rosa Salzstein",
+    "en": "Pink Salt Stone"
+  },
+  {
+    "source": "Pink Spruce Bed",
+    "de": "Rosa Fichtenbett",
+    "en": "Pink Spruce Bed"
+  },
+  {
+    "source": "Pink Wool",
+    "de": "Rosa Wolle",
+    "en": "Pink Wool"
+  },
+  {
+    "source": "Place directly beside the throat of a left or right switch. Right-click to select its route.",
+    "de": "Platziere den Hebel direkt neben dem Anfang einer Links- oder Rechtsweiche. Mit Rechtsklick wählst du den Fahrweg.",
+    "en": "Place directly beside the throat of a left or right switch. Right-click to select its route."
+  },
+  {
+    "source": "Pointed Dripstone",
+    "de": "Spitzer Tropfstein",
+    "en": "Pointed Dripstone"
+  },
+  {
+    "source": "Poison Potion",
+    "de": "Gifttrank",
+    "en": "Poison Potion"
+  },
+  {
+    "source": "Pressure instrument required by the steam system. Water and pressure are displayed in the locomotive controls.",
+    "de": "Druckmessgerät für das Dampfsystem. Wasserstand und Druck werden in der Loksteuerung angezeigt.",
+    "en": "Pressure instrument required by the steam system. Water and pressure are displayed in the locomotive controls."
+  },
+  {
+    "source": "Pufferbohle",
+    "de": "Pufferbohle",
+    "en": "Buffer Beam"
+  },
+  {
+    "source": "Purple Birch Bed",
+    "de": "Violettes Birkenbett",
+    "en": "Purple Birch Bed"
+  },
+  {
+    "source": "Purple Carpet",
+    "de": "Violetter Teppich",
+    "en": "Purple Carpet"
+  },
+  {
+    "source": "Purple Coral Block",
+    "de": "Violetter Korallenblock",
+    "en": "Purple Coral Block"
+  },
+  {
+    "source": "Purple Diamond Cape",
+    "de": "Violetter Diamantumhang",
+    "en": "Purple Diamond Cape"
+  },
+  {
+    "source": "Purple Dye",
+    "de": "Violetter Farbstoff",
+    "en": "Purple Dye"
+  },
+  {
+    "source": "Purple Flower",
+    "de": "Violette Blume",
+    "en": "Purple Flower"
+  },
+  {
+    "source": "Purple Gold Cape",
+    "de": "Violetter Goldumhang",
+    "en": "Purple Gold Cape"
+  },
+  {
+    "source": "Purple Iron Cape",
+    "de": "Violetter Eisenumhang",
+    "en": "Purple Iron Cape"
+  },
+  {
+    "source": "Purple Leather Cape",
+    "de": "Violetter Lederumhang",
+    "en": "Purple Leather Cape"
+  },
+  {
+    "source": "Purple Mushroom Cap",
+    "de": "Violetter Pilzhut",
+    "en": "Purple Mushroom Cap"
+  },
+  {
+    "source": "Purple Oak Bed",
+    "de": "Violettes Eichenbett",
+    "en": "Purple Oak Bed"
+  },
+  {
+    "source": "Purple Ruby Cape",
+    "de": "Violetter Rubinumhang",
+    "en": "Purple Ruby Cape"
+  },
+  {
+    "source": "Purple Spruce Bed",
+    "de": "Violettes Fichtenbett",
+    "en": "Purple Spruce Bed"
+  },
+  {
+    "source": "Purple Wool",
+    "de": "Violette Wolle",
+    "en": "Purple Wool"
+  },
+  {
+    "source": "Rail Switch Stand",
+    "de": "Weichenhebel",
+    "en": "Rail Switch Stand"
+  },
+  {
+    "source": "Rail: Buffer Stop",
+    "de": "Gleis: Prellbock",
+    "en": "Rail: Buffer Stop"
+  },
+  {
+    "source": "Rail: Crossing",
+    "de": "Gleis: Kreuzung",
+    "en": "Rail: Crossing"
+  },
+  {
+    "source": "Rail: Large Curve",
+    "de": "Gleis: Große Kurve",
+    "en": "Rail: Large Curve"
+  },
+  {
+    "source": "Rail: Left Switch",
+    "de": "Gleis: Linksweiche",
+    "en": "Rail: Left Switch"
+  },
+  {
+    "source": "Rail: Right Switch",
+    "de": "Gleis: Rechtsweiche",
+    "en": "Rail: Right Switch"
+  },
+  {
+    "source": "Rail: Slope",
+    "de": "Gleis: Rampe",
+    "en": "Rail: Slope"
+  },
+  {
+    "source": "Rail: Slope Entry",
+    "de": "Gleis: Rampenanfang",
+    "en": "Rail: Slope Entry"
+  },
+  {
+    "source": "Rail: Slope Exit",
+    "de": "Gleis: Rampenende",
+    "en": "Rail: Slope Exit"
+  },
+  {
+    "source": "Rail: Small Curve",
+    "de": "Gleis: Kleine Kurve",
+    "en": "Rail: Small Curve"
+  },
+  {
+    "source": "Rauchkammer",
+    "de": "Rauchkammer",
+    "en": "Smokebox"
+  },
+  {
+    "source": "Rauchkammertür 52 4867",
+    "de": "Rauchkammertür 52 4867",
+    "en": "Smokebox Door 52 4867"
+  },
+  {
+    "source": "Raw Clown Fish",
+    "de": "Roher Clownfisch",
+    "en": "Raw Clown Fish"
+  },
+  {
+    "source": "Raw Fish",
+    "de": "Roher Fisch",
+    "en": "Raw Fish"
+  },
+  {
+    "source": "Raw Gold",
+    "de": "Rohgold",
+    "en": "Raw Gold"
+  },
+  {
+    "source": "Raw Iron",
+    "de": "Roheisen",
+    "en": "Raw Iron"
+  },
+  {
+    "source": "Raw meat from cattle.",
+    "de": "Rohes Rindfleisch.",
+    "en": "Raw meat from cattle."
+  },
+  {
+    "source": "Raw mutton on the bone.",
+    "de": "Rohes Hammelfleisch am Knochen.",
+    "en": "Raw mutton on the bone."
+  },
+  {
+    "source": "Raw pork.",
+    "de": "Rohes Schweinefleisch.",
+    "en": "Raw pork."
+  },
+  {
+    "source": "Red Birch Bed",
+    "de": "Rotes Birkenbett",
+    "en": "Red Birch Bed"
+  },
+  {
+    "source": "Red Carpet",
+    "de": "Roter Teppich",
+    "en": "Red Carpet"
+  },
+  {
+    "source": "Red Coral Block",
+    "de": "Roter Korallenblock",
+    "en": "Red Coral Block"
+  },
+  {
+    "source": "Red Diamond Cape",
+    "de": "Roter Diamantumhang",
+    "en": "Red Diamond Cape"
+  },
+  {
+    "source": "Red Dye",
+    "de": "Roter Farbstoff",
+    "en": "Red Dye"
+  },
+  {
+    "source": "Red Flower",
+    "de": "Rote Blume",
+    "en": "Red Flower"
+  },
+  {
+    "source": "Red Gold Cape",
+    "de": "Roter Goldumhang",
+    "en": "Red Gold Cape"
+  },
+  {
+    "source": "Red Iron Cape",
+    "de": "Roter Eisenumhang",
+    "en": "Red Iron Cape"
+  },
+  {
+    "source": "Red Leather Cape",
+    "de": "Roter Lederumhang",
+    "en": "Red Leather Cape"
+  },
+  {
+    "source": "Red Mushroom Cap",
+    "de": "Roter Pilzhut",
+    "en": "Red Mushroom Cap"
+  },
+  {
+    "source": "Red Oak Bed",
+    "de": "Rotes Eichenbett",
+    "en": "Red Oak Bed"
+  },
+  {
+    "source": "Red Ruby Cape",
+    "de": "Roter Rubinumhang",
+    "en": "Red Ruby Cape"
+  },
+  {
+    "source": "Red Spruce Bed",
+    "de": "Rotes Fichtenbett",
+    "en": "Red Spruce Bed"
+  },
+  {
+    "source": "Red Wool",
+    "de": "Rote Wolle",
+    "en": "Red Wool"
+  },
+  {
+    "source": "Refill at water, then water crops. Capacity increases with material tier.",
+    "de": "Fülle die Kanne am Wasser auf und gieße damit Nutzpflanzen. Das Fassungsvermögen steigt mit der Materialstufe.",
+    "en": "Refill at water, then water crops. Capacity increases with material tier."
+  },
+  {
+    "source": "Refined gold for future mechanisms and ornament.",
+    "de": "Veredeltes Gold für spätere Mechanismen und Verzierungen.",
+    "en": "Refined gold for future mechanisms and ornament."
+  },
+  {
+    "source": "Refined iron, ready for stronger mining tools.",
+    "de": "Veredeltes Eisen für stärkere Bergbauwerkzeuge.",
+    "en": "Refined iron, ready for stronger mining tools."
+  },
+  {
+    "source": "Regeneration Potion",
+    "de": "Regenerationstrank",
+    "en": "Regeneration Potion"
+  },
+  {
+    "source": "Regeneration and Strength Potion",
+    "de": "Regenerations- und Stärketrank",
+    "en": "Regeneration and Strength Potion"
+  },
+  {
+    "source": "Reorients directional blocks without removing their contents.",
+    "de": "Richtet ausgerichtete Blöcke neu aus, ohne deren Inhalt zu entfernen.",
+    "en": "Reorients directional blocks without removing their contents."
+  },
+  {
+    "source": "Right Switch",
+    "de": "Rechtsweiche",
+    "en": "Right Switch"
+  },
+  {
+    "source": "Ripe golden ears. Craft three into bread, or recover seeds for another harvest.",
+    "de": "Reife goldene Ähren. Verarbeite drei zu Brot oder gewinne Samen für die nächste Ernte.",
+    "en": "Ripe golden ears. Craft three into bread, or recover seeds for another harvest."
+  },
+  {
+    "source": "Rising Chimney Bend",
+    "de": "Ansteigender Schornsteinbogen",
+    "en": "Rising Chimney Bend"
+  },
+  {
+    "source": "Rissige Mauer",
+    "de": "Rissige Mauer",
+    "en": "Cracked Wall"
+  },
+  {
+    "source": "Roasted beef with a browned crust.",
+    "de": "Gebratenes Rindfleisch mit gebräunter Kruste.",
+    "en": "Roasted beef with a browned crust."
+  },
+  {
+    "source": "Roasted mutton on the bone.",
+    "de": "Gebratenes Hammelfleisch am Knochen.",
+    "en": "Roasted mutton on the bone."
+  },
+  {
+    "source": "Rose-colored cherry timber with fine natural grain.",
+    "de": "Rosafarbenes Kirschholz mit feiner natürlicher Maserung.",
+    "en": "Rose-colored cherry timber with fine natural grain."
+  },
+  {
+    "source": "Rose-tinted sedimentary mineral stone. Decorative strata do not yield salt crystals.",
+    "de": "Rosafarbener mineralischer Sedimentstein. Die dekorativen Schichten liefern keine Salzkristalle.",
+    "en": "Rose-tinted sedimentary mineral stone. Decorative strata do not yield salt crystals."
+  },
+  {
+    "source": "Rotating 25-metre rail platform. Park the complete uncoupled train, set its brake and rotate it by 90 degrees from the workshop or cab.",
+    "de": "Drehbare Gleisplattform mit 25 Metern Länge. Stelle den vollständig entkuppelten Zug darauf ab, ziehe die Bremse an und drehe ihn von der Werkstatt oder dem Führerstand aus um 90 Grad.",
+    "en": "Rotating 25-metre rail platform. Park the complete uncoupled train, set its brake and rotate it by 90 degrees from the workshop or cab."
+  },
+  {
+    "source": "Rotten Potion",
+    "de": "Verderbnistrank",
+    "en": "Rotten Potion"
+  },
+  {
+    "source": "Rough natural rock from hills and underground layers.",
+    "de": "Raues Naturgestein aus Hügeln und unterirdischen Schichten.",
+    "en": "Rough natural rock from hills and underground layers."
+  },
+  {
+    "source": "Ruby",
+    "de": "Rubin",
+    "en": "Ruby"
+  },
+  {
+    "source": "Ruby Axe",
+    "de": "Rubinaxt",
+    "en": "Ruby Axe"
+  },
+  {
+    "source": "Ruby Bellows",
+    "de": "Rubinblasebalg",
+    "en": "Ruby Bellows"
+  },
+  {
+    "source": "Ruby Boots",
+    "de": "Rubinstiefel",
+    "en": "Ruby Boots"
+  },
+  {
+    "source": "Ruby Cape",
+    "de": "Rubinumhang",
+    "en": "Ruby Cape"
+  },
+  {
+    "source": "Ruby Chestplate",
+    "de": "Rubinbrustpanzer",
+    "en": "Ruby Chestplate"
+  },
+  {
+    "source": "Ruby Dust",
+    "de": "Rubinstaub",
+    "en": "Ruby Dust"
+  },
+  {
+    "source": "Ruby Gloves",
+    "de": "Rubinhandschuhe",
+    "en": "Ruby Gloves"
+  },
+  {
+    "source": "Ruby Helmet",
+    "de": "Rubinhelm",
+    "en": "Ruby Helmet"
+  },
+  {
+    "source": "Ruby Hoe",
+    "de": "Rubinhacke",
+    "en": "Ruby Hoe"
+  },
+  {
+    "source": "Ruby Ore",
+    "de": "Rubinerz",
+    "en": "Ruby Ore"
+  },
+  {
+    "source": "Ruby Pants",
+    "de": "Rubinhose",
+    "en": "Ruby Pants"
+  },
+  {
+    "source": "Ruby Pickaxe",
+    "de": "Rubinspitzhacke",
+    "en": "Ruby Pickaxe"
+  },
+  {
+    "source": "Ruby Scythe",
+    "de": "Rubinsense",
+    "en": "Ruby Scythe"
+  },
+  {
+    "source": "Ruby Sword",
+    "de": "Rubinschwert",
+    "en": "Ruby Sword"
+  },
+  {
+    "source": "Ruby Watering Can",
+    "de": "Rubingießkanne",
+    "en": "Ruby Watering Can"
+  },
+  {
+    "source": "Ruby boots fitted for protection and comfortable movement.",
+    "de": "Rubinstiefel für Schutz und bequeme Bewegung.",
+    "en": "Ruby boots fitted for protection and comfortable movement."
+  },
+  {
+    "source": "Ruby chestplate fitted for protection and comfortable movement.",
+    "de": "Rubinbrustpanzer für Schutz und bequeme Bewegung.",
+    "en": "Ruby chestplate fitted for protection and comfortable movement."
+  },
+  {
+    "source": "Ruby gloves fitted for protection and comfortable movement.",
+    "de": "Rubinhandschuhe für Schutz und bequeme Bewegung.",
+    "en": "Ruby gloves fitted for protection and comfortable movement."
+  },
+  {
+    "source": "Ruby helmet fitted for protection and comfortable movement.",
+    "de": "Rubinhelm für Schutz und bequeme Bewegung.",
+    "en": "Ruby helmet fitted for protection and comfortable movement."
+  },
+  {
+    "source": "Ruby pants fitted for protection and comfortable movement.",
+    "de": "Rubinhose für Schutz und bequeme Bewegung.",
+    "en": "Ruby pants fitted for protection and comfortable movement."
+  },
+  {
+    "source": "Salt Crystal",
+    "de": "Salzkristall",
+    "en": "Salt Crystal"
+  },
+  {
+    "source": "Salt Dust",
+    "de": "Salzstaub",
+    "en": "Salt Dust"
+  },
+  {
+    "source": "Salt Formation",
+    "de": "Salzformation",
+    "en": "Salt Formation"
+  },
+  {
+    "source": "Salt Ore",
+    "de": "Salzerz",
+    "en": "Salt Ore"
+  },
+  {
+    "source": "Salt Stone",
+    "de": "Salzstein",
+    "en": "Salt Stone"
+  },
+  {
+    "source": "Sand",
+    "de": "Sand",
+    "en": "Sand"
+  },
+  {
+    "source": "Sanddom",
+    "de": "Sanddom",
+    "en": "Sand Dome"
+  },
+  {
+    "source": "Sandstein Mauer",
+    "de": "Sandsteinmauer",
+    "en": "Sandstone Wall"
+  },
+  {
+    "source": "Sandstone",
+    "de": "Sandstein",
+    "en": "Sandstone"
+  },
+  {
+    "source": "Scarecrow",
+    "de": "Vogelscheuche",
+    "en": "Scarecrow"
+  },
+  {
+    "source": "Schmiede-Station",
+    "de": "Schmiedestation",
+    "en": "Smith Station"
+  },
+  {
+    "source": "Schneemauer",
+    "de": "Schneemauer",
+    "en": "Snow Wall"
+  },
+  {
+    "source": "Schotter Block",
+    "de": "Schotterblock",
+    "en": "Railway Ballast Block"
+  },
+  {
+    "source": "Schotter Slab",
+    "de": "Schotterplatte",
+    "en": "Railway Ballast Slab"
+  },
+  {
+    "source": "Schotter Stairs",
+    "de": "Schottertreppe",
+    "en": "Railway Ballast Stairs"
+  },
+  {
+    "source": "Schwarzer Stein",
+    "de": "Schwarzer Stein",
+    "en": "Blackstone"
+  },
+  {
+    "source": "Schwarzes Eisen Außenecke",
+    "de": "Schwarze Eisenaußenecke",
+    "en": "Black Iron Outer Corner"
+  },
+  {
+    "source": "Schwarzes Eisen Block",
+    "de": "Schwarzer Eisenblock",
+    "en": "Black Iron Block"
+  },
+  {
+    "source": "Schwarzes Eisen Innenecke",
+    "de": "Schwarze Eiseninnenecke",
+    "en": "Black Iron Inner Corner"
+  },
+  {
+    "source": "Schwarzes Eisen Schräge",
+    "de": "Schwarze Eisenschräge",
+    "en": "Black Iron Slope"
+  },
+  {
+    "source": "Schwarzes Eisen Slab",
+    "de": "Schwarze Eisenplatte",
+    "en": "Black Iron Slab"
+  },
+  {
+    "source": "Schwarzes Eisen Treppe",
+    "de": "Schwarze Eisentreppe",
+    "en": "Black Iron Stairs"
+  },
+  {
+    "source": "Seagrass",
+    "de": "Seegras",
+    "en": "Seagrass"
+  },
+  {
+    "source": "Settled snow. Eight eighth-block layers form a full snow block.",
+    "de": "Abgelagerter Schnee. Acht Achtelblockschichten ergeben einen vollen Schneeblock.",
+    "en": "Settled snow. Eight eighth-block layers form a full snow block."
+  },
+  {
+    "source": "Sheep Beef",
+    "de": "Hammelfleisch",
+    "en": "Sheep Beef"
+  },
+  {
+    "source": "Shutoff Valve",
+    "de": "Absperrventil",
+    "en": "Shutoff Valve"
+  },
+  {
+    "source": "Silver Birch Bed",
+    "de": "Silberfarbenes Birkenbett",
+    "en": "Silver Birch Bed"
+  },
+  {
+    "source": "Silver Carpet",
+    "de": "Silberfarbener Teppich",
+    "en": "Silver Carpet"
+  },
+  {
+    "source": "Silver Diamond Cape",
+    "de": "Silberfarbener Diamantumhang",
+    "en": "Silver Diamond Cape"
+  },
+  {
+    "source": "Silver Dye",
+    "de": "Silberfarbener Farbstoff",
+    "en": "Silver Dye"
+  },
+  {
+    "source": "Silver Gold Cape",
+    "de": "Silberfarbener Goldumhang",
+    "en": "Silver Gold Cape"
+  },
+  {
+    "source": "Silver Iron Cape",
+    "de": "Silberfarbener Eisenumhang",
+    "en": "Silver Iron Cape"
+  },
+  {
+    "source": "Silver Leather Cape",
+    "de": "Silberfarbener Lederumhang",
+    "en": "Silver Leather Cape"
+  },
+  {
+    "source": "Silver Oak Bed",
+    "de": "Silberfarbenes Eichenbett",
+    "en": "Silver Oak Bed"
+  },
+  {
+    "source": "Silver Ruby Cape",
+    "de": "Silberfarbener Rubinumhang",
+    "en": "Silver Ruby Cape"
+  },
+  {
+    "source": "Silver Spruce Bed",
+    "de": "Silberfarbenes Fichtenbett",
+    "en": "Silver Spruce Bed"
+  },
+  {
+    "source": "Silver Wool",
+    "de": "Silberfarbene Wolle",
+    "en": "Silver Wool"
+  },
+  {
+    "source": "Slowness Potion",
+    "de": "Verlangsamungstrank",
+    "en": "Slowness Potion"
+  },
+  {
+    "source": "Smooth Stone",
+    "de": "Glatter Stein",
+    "en": "Smooth Stone"
+  },
+  {
+    "source": "Snow",
+    "de": "Schnee",
+    "en": "Snow"
+  },
+  {
+    "source": "Snow Layer",
+    "de": "Schneeschicht",
+    "en": "Snow Layer"
+  },
+  {
+    "source": "Socks",
+    "de": "Socken",
+    "en": "Socks"
+  },
+  {
+    "source": "Soft brown lakebed mud with pale pebbles and sparse patches of water-worn moss.",
+    "de": "Weicher brauner Seeschlamm mit hellen Kieseln und vereinzelten Flecken von wassergeformtem Moos.",
+    "en": "Soft brown lakebed mud with pale pebbles and sparse patches of water-worn moss."
+  },
+  {
+    "source": "Soft earth beneath grass and woodland floors.",
+    "de": "Weiche Erde unter Gras und Waldböden.",
+    "en": "Soft earth beneath grass and woodland floors."
+  },
+  {
+    "source": "Soft sheep fleece, useful for future textile recipes.",
+    "de": "Weiches Schafvlies für spätere Textilrezepte.",
+    "en": "Soft sheep fleece, useful for future textile recipes."
+  },
+  {
+    "source": "Soft white sakura blossom clusters with a faint warm pink tint.",
+    "de": "Weiche weiße Sakurablütenbüschel mit einem zarten warmrosa Schimmer.",
+    "en": "Soft white sakura blossom clusters with a faint warm pink tint."
+  },
+  {
+    "source": "Soft wool socks for warmth and enduring steps.",
+    "de": "Weiche Wollsocken für warme Füße und ausdauerndes Gehen.",
+    "en": "Soft wool socks for warmth and enduring steps."
+  },
+  {
+    "source": "Solid Water",
+    "de": "Festes Wasser",
+    "en": "Solid Water"
+  },
+  {
+    "source": "Solid decorative water with an animated surface; does not flow.",
+    "de": "Festes dekoratives Wasser mit animierter Oberfläche; es fließt nicht.",
+    "en": "Solid decorative water with an animated surface; does not flow."
+  },
+  {
+    "source": "Sow on farmland with room for a tall stalk. Corn thrives in warm, moist summers.",
+    "de": "Säe auf Ackerboden mit Platz für einen hohen Stängel. Mais gedeiht in warmen feuchten Sommern.",
+    "en": "Sow on farmland with room for a tall stalk. Corn thrives in warm, moist summers."
+  },
+  {
+    "source": "Sow on farmland. Keep this leafy crop well watered until its head is ripe.",
+    "de": "Säe auf Ackerboden. Halte das Blattgemüse bis zur Reife des Kopfes gut bewässert.",
+    "en": "Sow on farmland. Keep this leafy crop well watered until its head is ripe."
+  },
+  {
+    "source": "Sow on farmland. Light, moisture and the season control its eight growth stages.",
+    "de": "Säe auf Ackerboden. Licht, Feuchtigkeit und Jahreszeit bestimmen die acht Wachstumsstufen.",
+    "en": "Sow on farmland. Light, moisture and the season control its eight growth stages."
+  },
+  {
+    "source": "Speed Potion",
+    "de": "Geschwindigkeitstrank",
+    "en": "Speed Potion"
+  },
+  {
+    "source": "Spruce Bed",
+    "de": "Fichtenbett",
+    "en": "Spruce Bed"
+  },
+  {
+    "source": "Spruce Conveyor",
+    "de": "Fichtenförderband",
+    "en": "Spruce Conveyor"
+  },
+  {
+    "source": "Spruce Door",
+    "de": "Fichtentür",
+    "en": "Spruce Door"
+  },
+  {
+    "source": "Spruce Fence",
+    "de": "Fichtenzaun",
+    "en": "Spruce Fence"
+  },
+  {
+    "source": "Spruce Half Slab",
+    "de": "Fichtenplatte",
+    "en": "Spruce Half Slab"
+  },
+  {
+    "source": "Spruce Large Wooden Gear",
+    "de": "Großes Fichtenholzzahnrad",
+    "en": "Spruce Large Wooden Gear"
+  },
+  {
+    "source": "Spruce Left Switch",
+    "de": "Linksweiche mit Fichtenholzschwellen",
+    "en": "Spruce Left Switch"
+  },
+  {
+    "source": "Spruce Log",
+    "de": "Fichtenstamm",
+    "en": "Spruce Log"
+  },
+  {
+    "source": "Spruce Planks",
+    "de": "Fichtenbretter",
+    "en": "Spruce Planks"
+  },
+  {
+    "source": "Spruce Right Switch",
+    "de": "Rechtsweiche mit Fichtenholzschwellen",
+    "en": "Spruce Right Switch"
+  },
+  {
+    "source": "Spruce Stairs",
+    "de": "Fichtentreppe",
+    "en": "Spruce Stairs"
+  },
+  {
+    "source": "Spruce Track",
+    "de": "Gleis mit Fichtenholzschwellen",
+    "en": "Spruce Track"
+  },
+  {
+    "source": "Spruce Window",
+    "de": "Fichtenfenster",
+    "en": "Spruce Window"
+  },
+  {
+    "source": "Spruce Wooden Gear",
+    "de": "Fichtenholzzahnrad",
+    "en": "Spruce Wooden Gear"
+  },
+  {
+    "source": "Spruce Wooden Shaft",
+    "de": "Fichtenholzwelle",
+    "en": "Spruce Wooden Shaft"
+  },
+  {
+    "source": "Spruce fence with shaped edges. Built from the same material as its full block.",
+    "de": "Zaun aus Fichtenholz mit geformten Kanten. Besteht aus demselben Material wie der zugehörige Vollblock.",
+    "en": "Spruce fence with shaped edges. Built from the same material as its full block."
+  },
+  {
+    "source": "Spruce half slab with shaped edges. Built from the same material as its full block.",
+    "de": "Platte aus Fichtenholz mit geformten Kanten. Besteht aus demselben Material wie der zugehörige Vollblock.",
+    "en": "Spruce half slab with shaped edges. Built from the same material as its full block."
+  },
+  {
+    "source": "Spruce stairs with shaped edges. Built from the same material as its full block.",
+    "de": "Treppe aus Fichtenholz mit geformten Kanten. Besteht aus demselben Material wie der zugehörige Vollblock.",
+    "en": "Spruce stairs with shaped edges. Built from the same material as its full block."
+  },
+  {
+    "source": "Steam locomotive water tank. Fill it from the train controls using water buckets. Fuel gears one through five need no water.",
+    "de": "Wassertank der Dampflok. Fülle ihn über die Zugsteuerung mit Wassereimern. Die Brennstoffgänge eins bis fünf benötigen kein Wasser.",
+    "en": "Steam locomotive water tank. Fill it from the train controls using water buckets. Fuel gears one through five need no water."
+  },
+  {
+    "source": "Steam valve required for the highest locomotive gear. Combine with a six-block boiler, water tank, gauge and fuel engine.",
+    "de": "Dampfventil für den höchsten Lokgang. Kombiniere es mit einem sechs Blöcke langen Kessel, Wassertank, Druckanzeige und Brennstoffmotor.",
+    "en": "Steam valve required for the highest locomotive gear. Combine with a six-block boiler, water tank, gauge and fuel engine."
+  },
+  {
+    "source": "Steinmauer",
+    "de": "Steinmauer",
+    "en": "Stone Wall"
+  },
+  {
+    "source": "Stick",
+    "de": "Stock",
+    "en": "Stick"
+  },
+  {
+    "source": "Sticks",
+    "de": "Stöcke",
+    "en": "Sticks"
+  },
+  {
+    "source": "Stone Axe",
+    "de": "Steinaxt",
+    "en": "Stone Axe"
+  },
+  {
+    "source": "Stone Bellows",
+    "de": "Steinblasebalg",
+    "en": "Stone Bellows"
+  },
+  {
+    "source": "Stone Fence",
+    "de": "Steinzaun",
+    "en": "Stone Fence"
+  },
+  {
+    "source": "Stone Gear",
+    "de": "Steinzahnrad",
+    "en": "Stone Gear"
+  },
+  {
+    "source": "Stone Half Slab",
+    "de": "Steinplatte",
+    "en": "Stone Half Slab"
+  },
+  {
+    "source": "Stone Large Gear",
+    "de": "Großes Steinzahnrad",
+    "en": "Stone Large Gear"
+  },
+  {
+    "source": "Stone Pickaxe",
+    "de": "Steinspitzhacke",
+    "en": "Stone Pickaxe"
+  },
+  {
+    "source": "Stone Pipe",
+    "de": "Steinrohr",
+    "en": "Stone Pipe"
+  },
+  {
+    "source": "Stone Shaft",
+    "de": "Steinwelle",
+    "en": "Stone Shaft"
+  },
+  {
+    "source": "Stone Shovel",
+    "de": "Steinschaufel",
+    "en": "Stone Shovel"
+  },
+  {
+    "source": "Stone Spoon",
+    "de": "Steinkelle",
+    "en": "Stone Spoon"
+  },
+  {
+    "source": "Stone Stairs",
+    "de": "Steintreppe",
+    "en": "Stone Stairs"
+  },
+  {
+    "source": "Stone Sword",
+    "de": "Steinschwert",
+    "en": "Stone Sword"
+  },
+  {
+    "source": "Stone fence with shaped edges. Built from the same material as its full block.",
+    "de": "Zaun aus Stein mit geformten Kanten. Besteht aus demselben Material wie der zugehörige Vollblock.",
+    "en": "Stone fence with shaped edges. Built from the same material as its full block."
+  },
+  {
+    "source": "Stone half slab with shaped edges. Built from the same material as its full block.",
+    "de": "Platte aus Stein mit geformten Kanten. Besteht aus demselben Material wie der zugehörige Vollblock.",
+    "en": "Stone half slab with shaped edges. Built from the same material as its full block."
+  },
+  {
+    "source": "Stone stairs with shaped edges. Built from the same material as its full block.",
+    "de": "Treppe aus Stein mit geformten Kanten. Besteht aus demselben Material wie der zugehörige Vollblock.",
+    "en": "Stone stairs with shaped edges. Built from the same material as its full block."
+  },
+  {
+    "source": "Strength Potion",
+    "de": "Stärketrank",
+    "en": "Strength Potion"
+  },
+  {
+    "source": "Structural BR52 frame block. Connect it to the train chassis as part of the vehicle body.",
+    "de": "Tragender BR52-Rahmenblock. Verbinde ihn als Teil des Fahrzeugaufbaus mit dem Fahrgestell.",
+    "en": "Structural BR52 frame block. Connect it to the train chassis as part of the vehicle body."
+  },
+  {
+    "source": "Structural buffer mounting beam. Attach buffers and couplings to the connected train body.",
+    "de": "Tragende Pufferbohle. Befestige Puffer und Kupplungen am verbundenen Zugaufbau.",
+    "en": "Structural buffer mounting beam. Attach buffers and couplings to the connected train body."
+  },
+  {
+    "source": "Structural locomotive construction shape. Build the connected vehicle body with matching metal parts.",
+    "de": "Tragendes Lokbauteil. Baue den zusammenhängenden Fahrzeugaufbau aus passenden Metallteilen.",
+    "en": "Structural locomotive construction shape. Build the connected vehicle body with matching metal parts."
+  },
+  {
+    "source": "Structure Stone",
+    "de": "Baustein",
+    "en": "Structure Stone"
+  },
+  {
+    "source": "Supple cattle hide for future equipment and crafting.",
+    "de": "Geschmeidige Rinderhaut für spätere Ausrüstung und Handwerksrezepte.",
+    "en": "Supple cattle hide for future equipment and crafting."
+  },
+  {
+    "source": "Tapered mineral body of a natural stalactite or stalagmite, with a broad faceted point.",
+    "de": "Sich verjüngender Mineralkörper eines natürlichen Stalaktiten oder Stalagmiten mit breiter facettierter Spitze.",
+    "en": "Tapered mineral body of a natural stalactite or stalagmite, with a broad faceted point."
+  },
+  {
+    "source": "Tender cooked pork.",
+    "de": "Zartes gebratenes Schweinefleisch.",
+    "en": "Tender cooked pork."
+  },
+  {
+    "source": "Tender-Kohleladung",
+    "de": "Tenderkohleladung",
+    "en": "Tender Coal Load"
+  },
+  {
+    "source": "Tender-Wassertank",
+    "de": "Tenderwassertank",
+    "en": "Tender Water Tank"
+  },
+  {
+    "source": "Tenderfront",
+    "de": "Tenderfront",
+    "en": "Tender Front"
+  },
+  {
+    "source": "Tenderwand",
+    "de": "Tenderwand",
+    "en": "Tender Wall"
+  },
+  {
+    "source": "The deep foundation of the world. Unbreakable in Survival.",
+    "de": "Das tiefe Fundament der Welt. Im Überlebensmodus unzerstörbar.",
+    "en": "The deep foundation of the world. Unbreakable in Survival."
+  },
+  {
+    "source": "Three white woven-wool treads, rotatable against floors, ceilings and walls.",
+    "de": "Drei Stufen aus weißer gewebter Wolle, die an Böden, Decken und Wänden ausgerichtet werden können.",
+    "en": "Three white woven-wool treads, rotatable against floors, ceilings and walls."
+  },
+  {
+    "source": "Three-block-wide track with wooden sleepers, steel rail heads and bolted feet. The complete module follows its shared collision and routing profile.",
+    "de": "Drei Blöcke breites Gleis mit Holzschwellen, Stahlschienenköpfen und verschraubten Füßen. Das gesamte Modul folgt seinem gemeinsamen Kollisions- und Fahrwegprofil.",
+    "en": "Three-block-wide track with wooden sleepers, steel rail heads and bolted feet. The complete module follows its shared collision and routing profile."
+  },
+  {
+    "source": "Torch",
+    "de": "Fackel",
+    "en": "Torch"
+  },
+  {
+    "source": "Track",
+    "de": "Gleis",
+    "en": "Track"
+  },
+  {
+    "source": "Treibrad groß",
+    "de": "Großes Treibrad",
+    "en": "Large Driving Wheel"
+  },
+  {
+    "source": "Treibstange",
+    "de": "Treibstange",
+    "en": "Connecting Rod"
+  },
+  {
+    "source": "Tunnel",
+    "de": "Tunnel",
+    "en": "Tunnel"
+  },
+  {
+    "source": "Tunnel (Filtered)",
+    "de": "Tunnel (gefiltert)",
+    "en": "Tunnel (Filtered)"
+  },
+  {
+    "source": "Unrefined gold. Combine two pieces and coal at a workbench to refine an ingot.",
+    "de": "Unveredeltes Gold. Kombiniere zwei Stücke und Kohle an einer Werkbank, um einen Barren zu gewinnen.",
+    "en": "Unrefined gold. Combine two pieces and coal at a workbench to refine an ingot."
+  },
+  {
+    "source": "Unrefined iron. Combine two pieces and coal at a workbench to refine an ingot.",
+    "de": "Unveredeltes Eisen. Kombiniere zwei Stücke und Kohle an einer Werkbank, um einen Barren zu gewinnen.",
+    "en": "Unrefined iron. Combine two pieces and coal at a workbench to refine an ingot."
+  },
+  {
+    "source": "Valve",
+    "de": "Ventil",
+    "en": "Valve"
+  },
+  {
+    "source": "Verkaufsstand",
+    "de": "Verkaufsstand",
+    "en": "Market Stall"
+  },
+  {
+    "source": "Verstaerkte Mauer",
+    "de": "Verstärkte Mauer",
+    "en": "Reinforced Wall"
+  },
+  {
+    "source": "Vertical Gearbox",
+    "de": "Senkrechtes Getriebe",
+    "en": "Vertical Gearbox"
+  },
+  {
+    "source": "Wagen-Deckenleuchte",
+    "de": "Wagendeckenleuchte",
+    "en": "Carriage Ceiling Lamp"
+  },
+  {
+    "source": "Wagen-Laderaum",
+    "de": "Wagenladeraum",
+    "en": "Carriage Cargo Hold"
+  },
+  {
+    "source": "Wagen-Laderaum (birch)",
+    "de": "Wagenladeraum (Birkenholz)",
+    "en": "Carriage Cargo Hold (birch)"
+  },
+  {
+    "source": "Wagen-Laderaum (cherry)",
+    "de": "Wagenladeraum (Kirschholz)",
+    "en": "Carriage Cargo Hold (cherry)"
+  },
+  {
+    "source": "Wagen-Laderaum (oak)",
+    "de": "Wagenladeraum (Eichenholz)",
+    "en": "Carriage Cargo Hold (oak)"
+  },
+  {
+    "source": "Warm autumn leaves stirred by the woodland breeze.",
+    "de": "Warm gefärbtes Herbstlaub, das sich im Waldwind bewegt.",
+    "en": "Warm autumn leaves stirred by the woodland breeze."
+  },
+  {
+    "source": "Warm oak boards cut for building.",
+    "de": "Warm gefärbte Eichenbretter zum Bauen.",
+    "en": "Warm oak boards cut for building."
+  },
+  {
+    "source": "Water Bottle",
+    "de": "Wasserflasche",
+    "en": "Water Bottle"
+  },
+  {
+    "source": "Water Bucket",
+    "de": "Wassereimer",
+    "en": "Water Bucket"
+  },
+  {
+    "source": "Water Wheel",
+    "de": "Wasserrad",
+    "en": "Water Wheel"
+  },
+  {
+    "source": "Weathered Stone",
+    "de": "Verwitterter Stein",
+    "en": "Weathered Stone"
+  },
+  {
+    "source": "Weathered Wood",
+    "de": "Verwittertes Holz",
+    "en": "Weathered Wood"
+  },
+  {
+    "source": "Wheat",
+    "de": "Weizen",
+    "en": "Wheat"
+  },
+  {
+    "source": "Wheat Seeds",
+    "de": "Weizensamen",
+    "en": "Wheat Seeds"
+  },
+  {
+    "source": "White Birch Bed",
+    "de": "Weißes Birkenbett",
+    "en": "White Birch Bed"
+  },
+  {
+    "source": "White Carpet",
+    "de": "Weißer Teppich",
+    "en": "White Carpet"
+  },
+  {
+    "source": "White Cherry Blossoms",
+    "de": "Weiße Kirschblüten",
+    "en": "White Cherry Blossoms"
+  },
+  {
+    "source": "White Diamond Cape",
+    "de": "Weißer Diamantumhang",
+    "en": "White Diamond Cape"
+  },
+  {
+    "source": "White Dye",
+    "de": "Weißer Farbstoff",
+    "en": "White Dye"
+  },
+  {
+    "source": "White Flower",
+    "de": "Weiße Blume",
+    "en": "White Flower"
+  },
+  {
+    "source": "White Gold Cape",
+    "de": "Weißer Goldumhang",
+    "en": "White Gold Cape"
+  },
+  {
+    "source": "White Iron Cape",
+    "de": "Weißer Eisenumhang",
+    "en": "White Iron Cape"
+  },
+  {
+    "source": "White Leather Cape",
+    "de": "Weißer Lederumhang",
+    "en": "White Leather Cape"
+  },
+  {
+    "source": "White Mushroom Cap",
+    "de": "Weißer Pilzhut",
+    "en": "White Mushroom Cap"
+  },
+  {
+    "source": "White Oak Bed",
+    "de": "Weißes Eichenbett",
+    "en": "White Oak Bed"
+  },
+  {
+    "source": "White Ruby Cape",
+    "de": "Weißer Rubinumhang",
+    "en": "White Ruby Cape"
+  },
+  {
+    "source": "White Spruce Bed",
+    "de": "Weißes Fichtenbett",
+    "en": "White Spruce Bed"
+  },
+  {
+    "source": "White Wool",
+    "de": "Weiße Wolle",
+    "en": "White Wool"
+  },
+  {
+    "source": "Wood Axe",
+    "de": "Holzaxt",
+    "en": "Wood Axe"
+  },
+  {
+    "source": "Wood Hoe",
+    "de": "Holzhacke",
+    "en": "Wood Hoe"
+  },
+  {
+    "source": "Wood Pickaxe",
+    "de": "Holzspitzhacke",
+    "en": "Wood Pickaxe"
+  },
+  {
+    "source": "Wood Pipe",
+    "de": "Holzrohr",
+    "en": "Wood Pipe"
+  },
+  {
+    "source": "Wood Scythe",
+    "de": "Holzsense",
+    "en": "Wood Scythe"
+  },
+  {
+    "source": "Wood Shovel",
+    "de": "Holzschaufel",
+    "en": "Wood Shovel"
+  },
+  {
+    "source": "Wood Spoon",
+    "de": "Holzkelle",
+    "en": "Wood Spoon"
+  },
+  {
+    "source": "Wood Sword",
+    "de": "Holzschwert",
+    "en": "Wood Sword"
+  },
+  {
+    "source": "Wood Watering Can",
+    "de": "Holzgießkanne",
+    "en": "Wood Watering Can"
+  },
+  {
+    "source": "Wooden Gear",
+    "de": "Holzzahnrad",
+    "en": "Wooden Gear"
+  },
+  {
+    "source": "Wooden Large Gear",
+    "de": "Großes Holzzahnrad",
+    "en": "Wooden Large Gear"
+  },
+  {
+    "source": "Wooden Shaft",
+    "de": "Holzwelle",
+    "en": "Wooden Shaft"
+  },
+  {
+    "source": "Wool",
+    "de": "Wolle",
+    "en": "Wool"
+  },
+  {
+    "source": "Wool Block",
+    "de": "Wollblock",
+    "en": "Wool Block"
+  },
+  {
+    "source": "Wool Half Slab",
+    "de": "Wollplatte",
+    "en": "Wool Half Slab"
+  },
+  {
+    "source": "Wool Stairs",
+    "de": "Wolltreppe",
+    "en": "Wool Stairs"
+  },
+  {
+    "source": "Workbench",
+    "de": "Werkbank",
+    "en": "Workbench"
+  },
+  {
+    "source": "Wrench",
+    "de": "Schraubenschlüssel",
+    "en": "Wrench"
+  },
+  {
+    "source": "Wuestenmauer mit Muster",
+    "de": "Wüstenmauer mit Muster",
+    "en": "Patterned Desert Wall"
+  },
+  {
+    "source": "Yellow Birch Bed",
+    "de": "Gelbes Birkenbett",
+    "en": "Yellow Birch Bed"
+  },
+  {
+    "source": "Yellow Carpet",
+    "de": "Gelber Teppich",
+    "en": "Yellow Carpet"
+  },
+  {
+    "source": "Yellow Coral Block",
+    "de": "Gelber Korallenblock",
+    "en": "Yellow Coral Block"
+  },
+  {
+    "source": "Yellow Diamond Cape",
+    "de": "Gelber Diamantumhang",
+    "en": "Yellow Diamond Cape"
+  },
+  {
+    "source": "Yellow Dye",
+    "de": "Gelber Farbstoff",
+    "en": "Yellow Dye"
+  },
+  {
+    "source": "Yellow Flower",
+    "de": "Gelbe Blume",
+    "en": "Yellow Flower"
+  },
+  {
+    "source": "Yellow Gold Cape",
+    "de": "Gelber Goldumhang",
+    "en": "Yellow Gold Cape"
+  },
+  {
+    "source": "Yellow Iron Cape",
+    "de": "Gelber Eisenumhang",
+    "en": "Yellow Iron Cape"
+  },
+  {
+    "source": "Yellow Leather Cape",
+    "de": "Gelber Lederumhang",
+    "en": "Yellow Leather Cape"
+  },
+  {
+    "source": "Yellow Mushroom Cap",
+    "de": "Gelber Pilzhut",
+    "en": "Yellow Mushroom Cap"
+  },
+  {
+    "source": "Yellow Oak Bed",
+    "de": "Gelbes Eichenbett",
+    "en": "Yellow Oak Bed"
+  },
+  {
+    "source": "Yellow Ruby Cape",
+    "de": "Gelber Rubinumhang",
+    "en": "Yellow Ruby Cape"
+  },
+  {
+    "source": "Yellow Spruce Bed",
+    "de": "Gelbes Fichtenbett",
+    "en": "Yellow Spruce Bed"
+  },
+  {
+    "source": "Yellow Wool",
+    "de": "Gelbe Wolle",
+    "en": "Yellow Wool"
+  },
+  {
+    "source": "Zinnen Ecke",
+    "de": "Zinnenecke",
+    "en": "Battlement Corner"
+  },
+  {
+    "source": "Zinnen Saeule",
+    "de": "Zinnensäule",
+    "en": "Battlement Pillar"
+  },
+  {
+    "source": "Zinnenmauer",
+    "de": "Zinnenmauer",
+    "en": "Battlement Wall"
+  },
+  {
+    "source": "Zug-Fahrgestell",
+    "de": "Zugfahrgestell",
+    "en": "Train Chassis"
+  },
+  {
+    "source": "Zug-Montagestelle",
+    "de": "Zugmontagestelle",
+    "en": "Train Assembly Station"
+  },
+  {
+    "source": "Zug-Montagestelle (birch)",
+    "de": "Zugmontagestelle (Birkenholz)",
+    "en": "Train Assembly Station (birch)"
+  },
+  {
+    "source": "Zug-Montagestelle (cherry)",
+    "de": "Zugmontagestelle (Kirschholz)",
+    "en": "Train Assembly Station (cherry)"
+  },
+  {
+    "source": "Zug-Montagestelle (oak)",
+    "de": "Zugmontagestelle (Eichenholz)",
+    "en": "Train Assembly Station (oak)"
+  },
+  {
+    "source": "Zugkupplung",
+    "de": "Zugkupplung",
+    "en": "Train Coupling"
+  },
+  {
+    "source": "Zugrahmen",
+    "de": "Zugrahmen",
+    "en": "Train Frame"
+  },
+  {
+    "source": "Zugsitz",
+    "de": "Zugsitz",
+    "en": "Train Seat"
+  },
+  {
+    "source": "Zugsitz (birch)",
+    "de": "Zugsitz (Birkenholz)",
+    "en": "Train Seat (birch)"
+  },
+  {
+    "source": "Zugsitz (cherry)",
+    "de": "Zugsitz (Kirschholz)",
+    "en": "Train Seat (cherry)"
+  },
+  {
+    "source": "Zugsitz (oak)",
+    "de": "Zugsitz (Eichenholz)",
+    "en": "Train Seat (oak)"
+  }
+]

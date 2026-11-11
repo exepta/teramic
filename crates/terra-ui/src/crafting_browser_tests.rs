@@ -28,6 +28,64 @@ fn command(app: &mut App, action: CraftingAction) {
 }
 
 #[test]
+fn recipe_search_accepts_localized_output_metadata_while_preserving_keys_and_input() {
+    let mut app = browser_app();
+    let axe = ItemKind::Tool(terra_core::ToolKind::IronAxe);
+    app.world_mut()
+        .resource_mut::<BlockPalette>()
+        .item_metadata
+        .insert(
+            axe,
+            ("Iron Axe".into(), "A iron tool for harvesting wood.".into()),
+        );
+    crate::localization::install_test_language(app.world_mut(), "de-DE");
+    let key = app
+        .world()
+        .resource::<RecipeBook>()
+        .iter()
+        .find(|recipe| recipe.id == "teramic::iron_axe")
+        .unwrap()
+        .key();
+    let inventory = app.world().resource::<ClientSession>().inventory.clone();
+    for (locale, queries) in [
+        (
+            "de-DE",
+            &["Eisenaxt", "HOLZFÄLLEN", "Iron Axe", "teramic::iron_axe"][..],
+        ),
+        (
+            "en-US",
+            &["Iron Axe", "harvesting wood", "teramic::iron_axe"][..],
+        ),
+    ] {
+        app.world_mut()
+            .resource_mut::<tilt_ui::UiLocalization>()
+            .set_locale(locale)
+            .unwrap();
+        for query in queries {
+            command(&mut app, CraftingAction::Search((*query).into()));
+            let state = app.world().resource::<CraftingState>();
+            assert_eq!(
+                state.selected,
+                Some(key),
+                "No axe recipe for {locale} / {query}"
+            );
+            assert_eq!(state.recipe_item, Some(axe));
+            assert_eq!(state.search, *query);
+            assert!(
+                app.world()
+                    .resource::<RecipeBook>()
+                    .get(key)
+                    .is_some_and(
+                        |recipe| recipe.id == "teramic::iron_axe" && recipe.name == "Iron Axe"
+                    )
+            );
+        }
+    }
+    assert_eq!(app.world().resource::<ClientSession>().inventory, inventory);
+    assert!(app.world().resource::<pointer::InventoryQueue>().is_empty());
+}
+
+#[test]
 fn hidden_prewarm_projects_crafting_slots_without_enabling_actions_or_closed_work() {
     let mut app = browser_app();
     app.world_mut().resource_mut::<InventoryState>().open = false;
@@ -387,8 +445,8 @@ fn generated_mixing_and_coloring_recipes_keep_a_real_single_category_and_non_gra
 #[test]
 fn recipe_chrome_and_category_styles_use_supported_native_properties() {
     for css in [
-        include_str!("../../../src-ui/components/recipe-inspector.component.css"),
-        include_str!("../../../src-ui/components/recipe-category.component.css"),
+        include_str!("../../../src-ui/components/recipe-inspector/recipe-inspector.component.css"),
+        include_str!("../../../src-ui/components/recipe-category/recipe-category.component.css"),
     ] {
         tilt_ui::tilt_ui_css::parse_stylesheet(css).unwrap();
     }

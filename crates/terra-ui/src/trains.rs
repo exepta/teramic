@@ -82,6 +82,7 @@ pub enum TrainUiAction {
 
 #[derive(Clone, Serialize, PartialEq)]
 pub struct TrainRow {
+    pub custom_name: bool,
     pub id: u64,
     pub command: String,
     pub label: String,
@@ -114,6 +115,7 @@ pub struct TrainThrottleStep {
 pub struct TrainView {
     pub builder_installed: bool,
     pub builder_active: bool,
+    pub builder_autoload: bool,
     pub builder_size_ready: bool,
     pub builder_width: String,
     pub builder_height: String,
@@ -830,6 +832,27 @@ fn command(world: &mut World, state: &mut TrainUiState, command: &str) {
         }
         return;
     }
+    if let Some(active) = command.strip_prefix("builder-autoload:") {
+        let active = match active {
+            "true" => true,
+            "false" => false,
+            _ => return,
+        };
+        if let Some(vehicle) = vehicle {
+            if active == vehicle.motion.rail_builder_autoload {
+                return;
+            }
+            request(
+                world,
+                state,
+                TrainAction::RailBuilderAutoload {
+                    vehicle: vehicle.id,
+                    active,
+                },
+            );
+        }
+        return;
+    }
     if command == "water" {
         if let Some(vehicle) = vehicle {
             let player_revision = session.inventory.revision;
@@ -1202,6 +1225,7 @@ fn view(world: &mut World, state: &mut TrainUiState) -> TrainView {
         .skip(page * capacity)
         .take(capacity)
         .map(|vehicle| TrainRow {
+            custom_name: !vehicle.name.is_empty(),
             id: vehicle.id,
             command: format!("select:{}", vehicle.id),
             label: if vehicle.name.is_empty() {
@@ -1301,6 +1325,7 @@ fn view(world: &mut World, state: &mut TrainUiState) -> TrainView {
                 .any(|p| p.material == terra_core::train_parts::RAIL_BUILDER)
         }),
         builder_active: selected_car.is_some_and(|car| car.motion.rail_builder_active),
+        builder_autoload: selected_car.is_some_and(|car| car.motion.rail_builder_autoload),
         open: true,
         cargo: cargo.is_some(),
         sort_ready: cargo.is_some()
@@ -1588,7 +1613,10 @@ fn update(
             let rail = held
                 .and_then(terra_core::ItemKind::block_material)
                 .is_some_and(terra_core::rails::is_rail);
-            if !rail && held != Some(terra_core::ItemKind::Tool(terra_core::ToolKind::Wrench)) {
+            if !rail
+                && held.and_then(terra_core::ItemKind::tool_kind)
+                    != Some(terra_core::ToolKind::Wrench)
+            {
                 let station = world.get_resource::<terra_player::TargetWorld>().and_then(
                     |target| match target.0 {
                         Some(terra_player::WorldTarget::Block(hit))

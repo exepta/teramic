@@ -855,6 +855,18 @@ pub(super) fn tick(
     for (id, elapsed, _) in due.into_iter().take(512) {
         let dt = elapsed.min(0.25);
         schedule.last_step.insert(id, now);
+        if population.animals.get(&id).is_some_and(|animal| {
+            animal.kind == CreatureKind::Villager
+                && !terra_core::creatures::villagers::sleeping(id, phase)
+                && journal
+                    .gameplay()
+                    .jobs
+                    .orders
+                    .values()
+                    .any(|order| order.npc == id && order.enabled)
+        }) {
+            continue;
+        }
         let owned = population.owners.contains_key(&id);
         let mut order = terra_core::creatures::taming::order(
             journal.gameplay(),
@@ -1769,10 +1781,10 @@ pub(super) fn interact(
         if !creative && peer.vitals.stamina < 2.0 {
             return;
         }
-        let damage = match gameplay::held_tool(peer, world) {
-            Some(terra_core::ItemKind::Tool(tool)) => tool.attack_damage(),
-            _ => 1.0,
-        } * peer.vitals.effects.attack_multiplier();
+        let damage = gameplay::held_tool(peer, world)
+            .and_then(terra_core::ItemKind::tool_kind)
+            .map_or(1.0, terra_core::ToolKind::attack_damage)
+            * peer.vitals.effects.attack_multiplier();
         let dies = animal.health <= damage;
         let needed = if product.is_none() {
             0

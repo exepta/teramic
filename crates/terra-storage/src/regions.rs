@@ -19,10 +19,15 @@ mod kingdom_legacy;
 mod rail_legacy;
 #[path = "regions/train_legacy.rs"]
 mod train_legacy;
+#[path = "regions/work_legacy.rs"]
+mod work_legacy;
 use kingdom_legacy::{KingdomIndex10, KingdomRecord9, TreeIndex11};
 #[cfg(test)]
 #[path = "regions/hierarchy_tests.rs"]
 mod hierarchy_tests;
+#[cfg(test)]
+#[path = "regions/npc_work_tests.rs"]
+mod npc_work_tests;
 #[cfg(test)]
 #[path = "regions/rail_tests.rs"]
 mod rail_tests;
@@ -65,6 +70,12 @@ struct TreeIndex {
 struct TrainIndex {
     prior: TreeIndex,
     trains: terra_core::trains::TrainRegistry,
+}
+
+#[derive(Serialize, Deserialize)]
+struct WorkIndex {
+    prior: TrainIndex,
+    jobs: terra_core::npc_jobs::WorkRegistry,
 }
 
 // Frozen IDX9/F56 registry: capabilities were introduced in ID10.
@@ -227,8 +238,29 @@ struct Index2 {
     index: Index,
     clock: Option<terra_core::WorldClock>,
 }
+fn read_work_index(bytes: &[u8]) -> Result<WorkIndex, String> {
+    let work = if bytes.get(12..16) == Some(b"ID21") {
+        let old: work_legacy::WorkIndex21 = decode(b"ID21", bytes)?;
+        WorkIndex {
+            prior: old.prior,
+            jobs: old.jobs.into(),
+        }
+    } else {
+        decode(b"ID22", bytes)?
+    };
+    if !work.jobs.valid() {
+        return Err("Invalid persistent NPC work registry".into());
+    }
+    Ok(work)
+}
 fn read_train_index(bytes: &[u8]) -> Result<TrainIndex, String> {
-    if bytes.get(12..16) == Some(b"ID13") {
+    if matches!(bytes.get(12..16), Some(b"ID21" | b"ID22")) {
+        let work = read_work_index(bytes)?;
+        if !work.jobs.valid() {
+            return Err("Invalid persistent NPC work registry".into());
+        }
+        Ok(work.prior)
+    } else if bytes.get(12..16) == Some(b"ID13") {
         decode::<train_legacy::TrainIndex13>(b"ID13", bytes).map(Into::into)
     } else if bytes.get(12..16) == Some(b"ID14") {
         decode::<train_legacy::TrainIndex14>(b"ID14", bytes).map(Into::into)
@@ -240,8 +272,10 @@ fn read_train_index(bytes: &[u8]) -> Result<TrainIndex, String> {
         decode::<train_legacy::TrainIndex17>(b"ID17", bytes).map(Into::into)
     } else if bytes.get(12..16) == Some(b"ID18") {
         decode::<train_legacy::TrainIndex18>(b"ID18", bytes).map(Into::into)
+    } else if bytes.get(12..16) == Some(b"ID19") {
+        decode::<train_legacy::TrainIndex19>(b"ID19", bytes).map(Into::into)
     } else {
-        decode(b"ID19", bytes)
+        decode(b"ID20", bytes)
     }
 }
 fn read_index(root: &Path) -> Result<KingdomIndex, String> {
@@ -249,12 +283,34 @@ fn read_index(root: &Path) -> Result<KingdomIndex, String> {
     if matches!(
         bytes.get(12..16),
         Some(
-            b"ID11" | b"ID12" | b"ID13" | b"ID14" | b"ID15" | b"ID16" | b"ID17" | b"ID18" | b"ID19"
+            b"ID11"
+                | b"ID12"
+                | b"ID13"
+                | b"ID14"
+                | b"ID15"
+                | b"ID16"
+                | b"ID17"
+                | b"ID18"
+                | b"ID19"
+                | b"ID20"
+                | b"ID21"
+                | b"ID22"
         )
     ) {
         let data: TreeIndex = if matches!(
             bytes.get(12..16),
-            Some(b"ID13" | b"ID14" | b"ID15" | b"ID16" | b"ID17" | b"ID18" | b"ID19")
+            Some(
+                b"ID13"
+                    | b"ID14"
+                    | b"ID15"
+                    | b"ID16"
+                    | b"ID17"
+                    | b"ID18"
+                    | b"ID19"
+                    | b"ID20"
+                    | b"ID21"
+                    | b"ID22"
+            )
         ) {
             let data = read_train_index(&bytes)?;
             if !data.trains.valid() {
@@ -2121,6 +2177,7 @@ fn commit(root: &Path, world: WorldId, journal: &EditJournal) -> Result<(), Stri
         stage(format!("players/{player}.data"), bytes)?;
     }
     let bytes = if gameplay.trains != Default::default()
+        || gameplay.jobs != Default::default()
         || gameplay.trees != Default::default()
         || gameplay.kingdoms != Default::default()
     {
@@ -2137,9 +2194,20 @@ fn commit(root: &Path, world: WorldId, journal: &EditJournal) -> Result<(), Stri
             },
             trees: gameplay.trees.clone(),
         };
-        if gameplay.trains != Default::default() {
+        if gameplay.jobs != Default::default() {
             encode(
-                b"ID19",
+                b"ID22",
+                &WorkIndex {
+                    prior: TrainIndex {
+                        prior,
+                        trains: gameplay.trains.clone(),
+                    },
+                    jobs: gameplay.jobs.clone(),
+                },
+            )?
+        } else if gameplay.trains != Default::default() {
+            encode(
+                b"ID20",
                 &TrainIndex {
                     prior,
                     trains: gameplay.trains.clone(),
@@ -2195,7 +2263,18 @@ fn load(root: &Path, world: WorldId) -> Result<EditJournal, String> {
         let bytes = read(&root.join(INDEX))?;
         if matches!(
             bytes.get(12..16),
-            Some(b"ID13" | b"ID14" | b"ID15" | b"ID16" | b"ID17" | b"ID18" | b"ID19")
+            Some(
+                b"ID13"
+                    | b"ID14"
+                    | b"ID15"
+                    | b"ID16"
+                    | b"ID17"
+                    | b"ID18"
+                    | b"ID19"
+                    | b"ID20"
+                    | b"ID21"
+                    | b"ID22"
+            )
         ) {
             let data = read_train_index(&bytes)?;
             (data.prior.trees, data.trains)
@@ -2220,6 +2299,14 @@ fn load(root: &Path, world: WorldId) -> Result<EditJournal, String> {
     journal.clock = timed.clock;
     journal.weather = timed.weather;
     let mut gameplay = GameplayState {
+        jobs: {
+            let bytes = read(&root.join(INDEX))?;
+            if matches!(bytes.get(12..16), Some(b"ID21" | b"ID22")) {
+                read_work_index(&bytes)?.jobs
+            } else {
+                Default::default()
+            }
+        },
         trains,
         trees,
         kingdoms,

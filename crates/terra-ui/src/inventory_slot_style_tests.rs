@@ -18,7 +18,7 @@ impl UiStore for Slot {
 // Read the actual authored expressions, so changing the template can regress
 // this test. The shared resources and expression evaluator are the real ones.
 fn class_bindings() -> Vec<String> {
-    include_str!("../../../src-ui/components/inventory-slot.component.html")
+    include_str!("../../../src-ui/components/inventory-slot/inventory-slot.component.html")
         .split("[class]=\"")
         .skip(1)
         .map(|tail| tail.split_once('"').unwrap().0.to_owned())

@@ -1,0 +1,119 @@
+{
+  "schema_version": 1,
+  "id": 298,
+  "name": "Schmiede-Station",
+  "description": "Berufsstation mit eigenem Lager fuer Werkzeuge und Waren.",
+  "creative_category": "decoration",
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/smith_station.glb",
+  "struct_block": true,
+  "hardness": 1.4,
+  "resistance": 6,
+  "required_tool": null,
+  "mining_level": 0,
+  "textures": {
+    "station_stone": "textures/stone-strata-hd.png",
+    "station_iron": "textures/forged-iron-warm.png",
+    "station_steel": "textures/machinery-iron-hd.png",
+    "station_dark_wood": "textures/machinery-oak-hd.png"
+  },
+  "collision_boxes": [
+    {
+      "minimum": [
+        0.04,
+        0.02,
+        0.05
+      ],
+      "maximum": [
+        0.96,
+        0.47,
+        0.95
+      ]
+    },
+    {
+      "minimum": [
+        0.2,
+        0.47,
+        0.18
+      ],
+      "maximum": [
+        0.8,
+        0.57,
+        0.8
+      ]
+    },
+    {
+      "minimum": [
+        0.12,
+        0.48,
+        0.1
+      ],
+      "maximum": [
+        0.28,
+        0.77,
+        0.72
+      ]
+    },
+    {
+      "minimum": [
+        0.72,
+        0.48,
+        0.1
+      ],
+      "maximum": [
+        0.88,
+        0.77,
+        0.72
+      ]
+    },
+    {
+      "minimum": [
+        0.12,
+        0.72,
+        0.1
+      ],
+      "maximum": [
+        0.88,
+        0.82,
+        0.29
+      ]
+    },
+    {
+      "minimum": [
+        0.27,
+        0.53,
+        0.42
+      ],
+      "maximum": [
+        0.63,
+        0.61,
+        0.72
+      ]
+    },
+    {
+      "minimum": [
+        0.34,
+        0.6,
+        0.47
+      ],
+      "maximum": [
+        0.56,
+        0.74,
+        0.67
+      ]
+    },
+    {
+      "minimum": [
+        0.23,
+        0.73,
+        0.4
+      ],
+      "maximum": [
+        0.69,
+        0.82,
+        0.74
+      ]
+    }
+  ]
+}

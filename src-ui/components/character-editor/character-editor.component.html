@@ -1,0 +1,61 @@
+@if (characterView.open) {
+<div class="character-backdrop">
+  <div id="character-editor" class="character-editor">
+    <div class="character-panel-fill"></div>
+    <img class="inventory-reference-frame" src="tilt-ui://assets/inventory-copper-frame.png" alt="" />
+    <div class="character-heading"><icon name="user" size="24" /><h1>{{ i18n.text_charakter_5a4227794de9 }}</h1></div>
+    <p class="character-context">{{ localizedUi.characterView.context }}</p>
+    <div class="character-tabs">
+      <button id="character-tab-body" [class]="characterView.tab == 'body' ? 'selected' : ''" onclick="menu_command"><icon name="user" size="18" />{{ i18n.text_k_rper_4e2fef90b2ad }}</button>
+      <button id="character-tab-hair" [class]="characterView.tab == 'hair' ? 'selected' : ''" onclick="menu_command"><icon name="scissors" size="18" />{{ i18n.text_haare_6e66bccf06c1 }}</button>
+      <button id="character-tab-face" [class]="characterView.tab == 'face' ? 'selected' : ''" onclick="menu_command"><icon name="eye" size="18" />{{ i18n.text_gesicht_9e0bf93e1aae }}</button>
+      <button id="character-tab-clothing" [class]="characterView.tab == 'clothing' ? 'selected' : ''" onclick="menu_command"><icon name="layers" size="18" />{{ i18n.text_kleidung_e6bb4b3e5360 }}</button>
+    </div>
+    <div class="character-content">
+      <div class="character-stage">
+        <div class="character-viewport"><img id="character-preview" class="character-preview" alt="Character preview" /></div>
+        <div class="character-rotate"><button id="character-left" [title]="i18n.text_nach_links_drehen_2a3820d6d75d" onclick="menu_command"><icon name="rotate-ccw" size="20" /></button><p>{{ i18n.text_ziehen_zum_drehen_ef139bc14f46 }}</p><button id="character-right" [title]="i18n.text_nach_rechts_drehen_c9efaa6e8ebf" onclick="menu_command"><icon name="rotate-cw" size="20" /></button></div>
+      </div>
+      <div id="character-controls" class="character-controls">
+        @if (characterView.tab == 'body') {
+          <div class="character-field"><label>{{ i18n.text_charaktertyp_1cf27a74357f }}</label><div class="character-types"><button id="character-male" [class]="characterView.male ? 'character-choice selected' : 'character-choice'" onclick="menu_command">{{ i18n.text_m_nnlich_9fa84948be48 }}</button><button id="character-female" [class]="!characterView.male ? 'character-choice selected' : 'character-choice'" onclick="menu_command">{{ i18n.text_weiblich_1a8435c8b598 }}</button></div></div>
+          <div class="character-color-row"><label for="character-skin-color">{{ i18n.text_hautton_e9acc7139211 }}</label><color-picker id="character-skin-color" class="character-picker" [value]="characterView.skin" onchange="menu_change" /></div>
+        }
+        @if (characterView.tab == 'hair') {
+          <div class="character-field"><label>{{ i18n.text_frisur_8bba9f0d5d57 }}</label><div class="character-hairstyles">@for (hair of localizedUi.characterView.styles; track hair.id) { <button id="menu-action" [class]="hair.selected ? 'character-hair selected' : 'character-hair'" onclick="$set(menuIntent.command, hair.id); menu_command"><img id="character-style" class="character-style-image" [alt]="hair.preview" /><p>{{ hair.label }}</p></button> }</div></div>
+          <div class="character-color-row"><label for="character-hair-color">{{ i18n.text_haarfarbe_875b0e6c49fc }}</label><color-picker id="character-hair-color" class="character-picker" [value]="characterView.hair" onchange="menu_change" /></div>
+          <div class="character-color-row"><label for="character-highlights">{{ i18n.text_farbige_str_hnen_7d41a770c492 }}</label><button id="character-highlights" [class]="characterView.highlights ? 'selected' : ''" onclick="menu_command">@if (characterView.highlights) { {{ i18n.text_aktiv_8163454f378f }} } @else { {{ i18n.text_aus_f0ce94502ed9 }} }</button></div>
+          @if (characterView.highlights) { <div class="character-color-row"><label for="character-highlight-color">{{ i18n.text_str_hnenfarbe_83e0e67df661 }}</label><color-picker id="character-highlight-color" class="character-picker" [value]="characterView.highlight_color" onchange="menu_change" /></div> }
+        }
+        @if (characterView.tab == 'face') {
+          <div class="character-field"><label>{{ i18n.text_augen_21b45f233cbc }}</label><p class="character-hint">{{ i18n.text_links_und_rechts_aus_sicht_deines_ch_be24746f1171 }}</p></div>
+          <div class="character-color-row"><label for="character-eye-color">{{ i18n.text_linkes_auge_eb80ec069054 }}</label><color-picker id="character-eye-color" class="character-picker" [value]="characterView.eyes" onchange="menu_change" /></div>
+          <div class="character-color-row"><label for="character-right-eye-color">{{ i18n.text_rechtes_auge_1de111a21456 }}</label><color-picker id="character-right-eye-color" class="character-picker" [value]="characterView.right_eye" onchange="menu_change" /></div>
+        }
+        @if (characterView.tab == 'clothing') {
+          <div class="character-outfit">
+            <div><label>{{ i18n.text_oberteil_74c0bac9eb79 }}</label><button id="character-tunic" onclick="menu_command">@if (characterView.tunic) { {{ i18n.text_tunika_21ca5790a4a7 }} } @else { {{ i18n.text_unterhemd_be29775b4e89 }} }</button></div>
+            <div><label>{{ i18n.text_schuhe_30055f241622 }}</label><button id="character-boots" onclick="menu_command">@if (characterView.boots) { {{ i18n.text_reisestiefel_f0088f28a78b }} } @else { {{ i18n.text_barfu_04e8f8c8e01d }} }</button></div>
+            <div><label>{{ i18n.text_umhang_0d477681e76e }}</label><button id="character-cape" onclick="menu_command">@if (characterView.cape) { {{ i18n.text_entdecker_umhang_f4753ad77551 }} } @else { {{ i18n.text_ohne_umhang_05fcbdda04ff }} }</button></div>
+          </div>
+          <div class="character-clothing-colors">
+            <div class="character-color-row"><label for="character-shirt-color">{{ i18n.text_hemd_968db2bff5e6 }}</label><color-picker id="character-shirt-color" class="character-picker" [value]="characterView.shirt" onchange="menu_change" /></div>
+            <div class="character-color-row"><label for="character-pants-color">{{ i18n.text_hose_5ffdfd6dc15c }}</label><color-picker id="character-pants-color" class="character-picker" [value]="characterView.pants" onchange="menu_change" /></div>
+            <div class="character-color-row"><label for="character-boots-color">{{ i18n.text_stiefel_c38738ff2373 }}</label><color-picker id="character-boots-color" class="character-picker" [value]="characterView.boots_color" onchange="menu_change" /></div>
+            <div class="character-color-row"><label for="character-cape-color">{{ i18n.text_umhang_0d477681e76e }}</label><color-picker id="character-cape-color" class="character-picker" [value]="characterView.cape_color" onchange="menu_change" /></div>
+          </div>
+          <div class="character-materials"><label class="character-material-heading">{{ i18n.text_materialien_d06c845fd212 }}</label>
+            <div class="character-material-row"><label for="character-shirt-material">{{ i18n.text_oberteil_74c0bac9eb79 }}</label><choice-box id="character-shirt-material" class="character-material-choice copper-setting-choice" max-visible-items="4" [value]="characterView.shirt_material" onchange="menu_change"><option value="linen" [selected]="characterView.shirt_material == 'linen'">{{ i18n.text_leinen_0e31d46d28d1 }}</option><option value="canvas" [selected]="characterView.shirt_material == 'canvas'">{{ i18n.text_segeltuch_2cf79d403273 }}</option><option value="leather" [selected]="characterView.shirt_material == 'leather'">{{ i18n.text_leder_0a6197946710 }}</option><option value="wool" [selected]="characterView.shirt_material == 'wool'">{{ i18n.text_wolle_3dadc1beeb8c }}</option></choice-box></div>
+            <div class="character-material-row"><label for="character-pants-material">{{ i18n.text_hose_5ffdfd6dc15c }}</label><choice-box id="character-pants-material" class="character-material-choice copper-setting-choice" max-visible-items="4" [value]="characterView.pants_material" onchange="menu_change"><option value="linen" [selected]="characterView.pants_material == 'linen'">{{ i18n.text_leinen_0e31d46d28d1 }}</option><option value="canvas" [selected]="characterView.pants_material == 'canvas'">{{ i18n.text_segeltuch_2cf79d403273 }}</option><option value="leather" [selected]="characterView.pants_material == 'leather'">{{ i18n.text_leder_0a6197946710 }}</option><option value="wool" [selected]="characterView.pants_material == 'wool'">{{ i18n.text_wolle_3dadc1beeb8c }}</option></choice-box></div>
+            <div class="character-material-row"><label for="character-boots-material">{{ i18n.text_stiefel_c38738ff2373 }}</label><choice-box id="character-boots-material" class="character-material-choice copper-setting-choice" max-visible-items="4" [value]="characterView.boots_material" onchange="menu_change"><option value="linen" [selected]="characterView.boots_material == 'linen'">{{ i18n.text_leinen_0e31d46d28d1 }}</option><option value="canvas" [selected]="characterView.boots_material == 'canvas'">{{ i18n.text_segeltuch_2cf79d403273 }}</option><option value="leather" [selected]="characterView.boots_material == 'leather'">{{ i18n.text_leder_0a6197946710 }}</option><option value="wool" [selected]="characterView.boots_material == 'wool'">{{ i18n.text_wolle_3dadc1beeb8c }}</option></choice-box></div>
+            <div class="character-material-row"><label for="character-cape-material">{{ i18n.text_umhang_0d477681e76e }}</label><choice-box id="character-cape-material" class="character-material-choice copper-setting-choice" max-visible-items="4" [value]="characterView.cape_material" onchange="menu_change"><option value="linen" [selected]="characterView.cape_material == 'linen'">{{ i18n.text_leinen_0e31d46d28d1 }}</option><option value="canvas" [selected]="characterView.cape_material == 'canvas'">{{ i18n.text_segeltuch_2cf79d403273 }}</option><option value="leather" [selected]="characterView.cape_material == 'leather'">{{ i18n.text_leder_0a6197946710 }}</option><option value="wool" [selected]="characterView.cape_material == 'wool'">{{ i18n.text_wolle_3dadc1beeb8c }}</option></choice-box></div>
+          </div>
+        }
+        @if (characterView.tab != 'hair') { <p class="character-hint">{{ localizedUi.characterView.hint }}</p> }
+        @if (characterView.error) { <p class="character-error">{{ localizedUi.characterView.error }}</p> }
+      </div>
+    </div>
+    <div class="character-footer"><div class="character-footer-tools"><button id="character-reset" onclick="menu_command"><icon name="rotate-ccw" size="18" />{{ i18n.text_zur_cksetzen_1ba0463c46e6 }}</button><button id="character-random" [title]="i18n.text_zuf_lliges_aussehen_3e6c25abee4a" onclick="menu_command"><icon name="dices" size="20" />{{ i18n.text_zuf_llig_4200e41dec01 }}</button></div><div class="character-footer-actions"><button id="character-cancel" onclick="menu_command">{{ i18n.text_abbrechen_f7ff1178af20 }}</button><button id="character-save" class="character-save" onclick="menu_command"><icon name="check" size="18" />{{ localizedUi.characterView.save_label }}</button></div></div>
+  </div>
+</div>
+}

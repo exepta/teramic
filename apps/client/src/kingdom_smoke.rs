@@ -193,7 +193,7 @@ fn use_binding(world: &mut World, pressed: bool) {
     }
 }
 
-fn aim(world: &mut World, position: [i64; 3]) {
+pub(crate) fn aim(world: &mut World, position: [i64; 3]) {
     let center = Vec3::from_array(position.map(|v| v as f32 + 0.5));
     let eye = world
         .resource::<ClientSession>()
@@ -283,7 +283,7 @@ fn run(world: &mut World) {
                 state.use_held = false;
             }
             world.resource_mut::<CameraInputState>().captured = matches!(state.stage, 0 | 2);
-            if crate::kingdom_ui_smoke::requested() && ((2..=5).contains(&state.stage) || state.stage==100) {aim(world,state.position);}
+            if crate::kingdom_ui_smoke::requested() && ((2..=5).contains(&state.stage) || (state.stage==100 && !crate::npc_work_smoke::requested())) {aim(world,state.position);}
             if let Some((target, next)) = state.release {
                 if state.entered.elapsed() >= Duration::from_millis(180) {
                     crate::inventory_smoke::pointer(world, target, Some(false))?;

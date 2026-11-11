@@ -10,4 +10,5 @@ pub mod social;
 pub mod terraform_commands;
 pub mod world_sync;
 
+pub mod npc_work;
 pub mod trains;

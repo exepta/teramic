@@ -5,6 +5,23 @@ this directory and sorted by stable nonzero `u16` ID; 0 is air. Existing IDs 1
 through 26, world IDs and logical one-meter cells retain their meanings.
 The dedicated server does not load these rendering assets.
 
+## Profession Stations
+
+IDs 297-305 are the lumberjack, smith, market, army, railway, mine, butcher,
+bishop and farmer stations. Each uses its own GLB scene, block JSON, collision
+profile and workbench recipe. Rebuild these authored meshes with
+`python tools/assets/build_profession_stations.py`; PNG textures remain individual
+shared material files. The models contain profession tools, counters and props,
+and rotate as single-cell furniture on a full supporting surface.
+
+Right-click opens the station's real 18-slot depot through the existing
+authoritative container protocol. Inventories persist and drop their contents
+when the station is dismantled. Worker assignments use the shared depot rules:
+lumberjacks use the lumberjack station, miners the mine station and farmers the
+farm station; collectors can deliver to every station. The other six stations
+provide profession depots and visual anchors; they do not implement automatic
+smithing, trading, military recruitment, train operation, butchery or clergy.
+
 ## Textiles, Pots And Connected Windows
 
 White wool retains ID 103. Carpet IDs 106-118 and dyed wool IDs 119-130 use

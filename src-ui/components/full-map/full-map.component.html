@@ -1,0 +1,82 @@
+@if (fullMapView.visible) {
+<div id="full-map-panel" [class]="fullMapView.compact ? 'full-map-panel compact' : 'full-map-panel'" [style]="fullMapView.style">
+  <ornate-frame></ornate-frame>
+  <div class="full-map-header"><div class="full-map-brand"><h1>{{ i18n.text_teramic_8c2c17828466 }}</h1><p>{{ i18n.text_world_map_e4b1d47089f8 }}</p></div><button id="fullmap-close" class="map-icon-button full-map-close" [title]="i18n.text_close_map_ce8fdb9a260c" onclick="fullmap_action"><icon name="close" size="32" /></button></div>
+  <div class="full-map-tool-rail">
+    <button id="fullmap-add" class="map-tool" [title]="i18n.text_create_waypoint_1d5d6c8c05db" [disabled]="!fullMapView.available" onclick="fullmap_action"><icon name="map-pin" size="32" /></button>
+    <button id="fullmap-grid" [class]="fullMapView.grid ? 'map-tool selected' : 'map-tool'" [title]="i18n.text_toggle_grid_406c3a04f87e" onclick="fullmap_action"><icon name="grid" size="32" /></button>
+    <button id="fullmap-layer" [class]="fullMapView.cave ? 'map-tool selected' : 'map-tool'" [title]="i18n.text_caves_overworld_b75fc598d5c3" onclick="fullmap_action"><icon name="mountain" size="32" /></button>
+    <button id="fullmap-mobs" [class]="fullMapView.mobs ? 'map-tool selected' : 'map-tool'" [title]="i18n.text_show_hide_mobs_16580a19fecc" onclick="fullmap_action"><icon name="eye" size="32" /></button>
+    <button id="fullmap-mode" [class]="fullMapView.three_dimensional_available ? (fullMapView.three_dimensional ? 'map-tool selected' : 'map-tool') : 'map-tool unavailable'" [title]="i18n.text_2_5d_3d_73b06e8cc80f" [disabled]="!fullMapView.three_dimensional_available" onclick="fullmap_action"><icon name="layers" size="32" /></button>
+    <button id="fullmap-center" class="map-tool" [title]="i18n.text_center_on_player_66dc682ba373" onclick="fullmap_action"><icon name="target" size="32" /></button>
+    <button id="fullmap-list" [class]="fullMapView.book_open ? 'map-tool selected' : 'map-tool'" [title]="i18n.text_waypoints_05f0214faa24" onclick="fullmap_action"><icon name="flag" size="32" /></button>
+    <button id="fullmap-diplomacy" [class]="fullMapView.diplomacy ? 'map-tool selected' : 'map-tool'" [title]="i18n.text_diplomatie_053496fa11fb" onclick="fullmap_action"><icon name="swords" size="32" /></button>
+  </div>
+  <tooltip for="fullmap-add" trigger="hover" variant="follow" class="map-tool-tooltip"><p>{{ i18n.text_create_waypoint_1d5d6c8c05db }}</p></tooltip>
+  <tooltip for="fullmap-grid" trigger="hover" variant="follow" class="map-tool-tooltip" id="fullmap-grid-tooltip"><p>{{ i18n.text_show_hide_grid_8b6562244e18 }}</p></tooltip>
+  <tooltip for="fullmap-layer" trigger="hover" variant="follow" class="map-tool-tooltip"><p>{{ i18n.text_switch_caves_overworld_027b358b6546 }}</p></tooltip>
+  <tooltip for="fullmap-mobs" trigger="hover" variant="follow" class="map-tool-tooltip"><p>{{ i18n.text_show_hide_mobs_16580a19fecc }}</p></tooltip>
+  <tooltip for="fullmap-mode" trigger="hover" variant="follow" class="map-tool-tooltip"><p>{{ localizedUi.fullMapView.three_dimensional_available ? localizedUi.messages.text_switch_2_5d_3d_ab20287fe3a6 : localizedUi.messages.text_cave_maps_are_always_2d_a2ee7f33dcae }}</p></tooltip>
+  <tooltip for="fullmap-center" trigger="hover" variant="follow" class="map-tool-tooltip"><p>{{ i18n.text_center_on_player_66dc682ba373 }}</p></tooltip>
+  <tooltip for="fullmap-list" trigger="hover" variant="follow" class="map-tool-tooltip"><p>{{ i18n.text_waypoints_05f0214faa24 }}</p></tooltip>
+  <tooltip for="fullmap-diplomacy" trigger="hover" variant="follow" class="map-tool-tooltip" id="fullmap-diplomacy-tooltip"><p>{{ i18n.text_diplomatie_grenzen_und_claims_bd0061ed2170 }}</p></tooltip>
+  <div id="full-map-viewport" class="full-map-viewport" [style]="fullMapView.surface_style">
+    <img id="full-map-surface" class="full-map-surface" alt="World map" />
+    @for (point of localizedUi.fullMapView.markers; track point.id) { <waypoint-marker></waypoint-marker> }
+    @for (peer of localizedUi.fullMapView.peers; track peer.id) { <p class="map-peer-name" [style]="peer.style">{{ peer.name }}</p> }
+    <div class="full-map-compass"><p class="map-compass-n">N</p><p class="map-compass-w">W</p><icon name="compass" size="64" /><p class="map-compass-e">{{ i18n.compass-east }}</p><p class="map-compass-s">S</p></div>
+    @if (fullMapView.loading) { <div class="full-map-loading"><icon name="loading-spin" size="16" /><p>{{ i18n.text_mapping_1ff9a5f8b4bd }}</p></div> }
+  </div>
+  <div class="full-map-footer">
+    <div class="map-footer-biome"><icon name="trees" size="32" /><div><p>{{ localizedUi.fullMapView.biome }}</p><label>{{ i18n.text_biome_e3bc8307be2a }}</label></div></div>
+    <div class="map-footer-coordinates"><p>{{ localizedUi.fullMapView.coordinates }}</p><label>{{ i18n.text_coordinates_117c132e939b }}</label></div>
+    <div class="map-footer-zoom"><button id="fullmap-out" class="map-icon-button" [title]="i18n.text_zoom_out_bc7b631a689b" [disabled]="fullMapView.farthest" onclick="fullmap_action"><icon name="minus" size="32" /></button><p>{{ i18n.text_zoom_e2d0c55ef24b }} {{ localizedUi.fullMapView.zoom }}</p><button id="fullmap-in" class="map-icon-button" [title]="i18n.text_zoom_in_0e47f09a748f" [disabled]="fullMapView.nearest" onclick="fullmap_action"><icon name="plus" size="32" /></button></div>
+    <div class="map-footer-height"><icon name="mountain" size="32" /><p>{{ i18n.text_height_537f68695dfe }} {{ localizedUi.fullMapView.height }}</p></div>
+  </div>
+  @if (fullMapView.book_open) {
+    <div id="full-map-sidebar" class="full-map-sidebar" [style]="fullMapView.sidebar_style">
+      <div class="full-map-waypoint-title"><h2>{{ i18n.text_waypoints_05f0214faa24 }}</h2><button id="fullmap-list-close" class="map-icon-button" [title]="i18n.text_close_waypoint_list_aa42bb0cef63" onclick="fullmap_action"><icon name="close" size="32" /></button></div>
+      @if (fullMapView.error) { <p class="full-map-error">{{ localizedUi.fullMapView.error }}</p> }
+      @if (!fullMapView.available) { <button id="fullmap-retry" class="map-command" onclick="fullmap_action"><icon name="refresh" size="16" />{{ i18n.text_retry_942087cc2d41 }}</button> }
+      <div class="full-map-waypoints">
+        @for (point of localizedUi.fullMapView.waypoints; track point.id) {
+          <button id="fullmap-point" [class]="point.selected ? 'full-map-waypoint selected' : 'full-map-waypoint'" onclick="$set(fullMapIntent.id, point.id); fullmap_action"><div class="waypoint-row-symbol" [style]="point.marker_style"><waypoint-symbol></waypoint-symbol></div><div><p class="waypoint-name">{{ point.name }}</p><p class="waypoint-position">{{ point.coordinates }}</p><p class="waypoint-distance">{{ point.distance }}</p></div></button>
+        }
+      </div>
+      @if (fullMapView.selected) { <div class="full-map-editor-actions"><button id="fullmap-edit" class="map-command" onclick="fullmap_action"><icon name="edit" size="16" />{{ i18n.text_edit_464c4ffd019e }}</button><button id="fullmap-delete" class="map-icon-button" [title]="i18n.text_delete_waypoint_3ff5fed05e56" onclick="fullmap_action"><icon name="trash" size="16" /></button></div> }
+    </div>
+  }
+  @if (fullMapView.diplomacy) {
+    <div id="full-map-diplomacy" class="full-map-sidebar diplomacy-sidebar" [style]="fullMapView.sidebar_style">
+      <div class="full-map-waypoint-title"><h2>{{ i18n.text_diplomatie_053496fa11fb }}</h2><button id="fullmap-diplomacy-close" class="map-icon-button" [title]="i18n.text_close_diplomacy_92013d956b7a" onclick="fullmap_action"><icon name="close" size="22" /></button></div>
+      <div class="diplomacy-key"><p><div class="claim-key protected"></div>{{ i18n.text_dark_protected_building_land_4272ea87177f }}</p><p><div class="claim-key territory"></div>{{ i18n.text_light_open_realm_territory_fed5761ea8ee }}</p></div>
+      <div class="diplomacy-relations-key"><div class="diplomacy-relation own">{{ i18n.text_your_realm_76ca3f4a48a1 }}</div><div class="diplomacy-relation allied">{{ i18n.text_allied_1ce21df7c318 }}</div><div class="diplomacy-relation neutral">{{ i18n.text_neutral_1c6ac69f1e5d }}</div><div class="diplomacy-relation hostile">{{ i18n.text_hostile_b3478c03ae8f }}</div></div>
+      <p class="diplomacy-relation-help">{{ i18n.text_realm_colors_show_ownership_badges_s_b8c5be718709 }}</p>
+      <div class="diplomacy-selection"><div class="diplomacy-realm-heading"><div class="diplomacy-swatch" [style]="fullMapView.diplomacy_color"></div><h3>{{ localizedUi.fullMapView.diplomacy_name }}</h3></div><p>{{ localizedUi.fullMapView.diplomacy_chunk }}</p><p>{{ localizedUi.fullMapView.diplomacy_kind }}</p><div id="diplomacy-selected-relation" [class]="'diplomacy-relation ' + fullMapView.diplomacy_relation_key">{{ localizedUi.fullMapView.diplomacy_relation }}</div><p>{{ localizedUi.fullMapView.diplomacy_owner }}</p><p>{{ localizedUi.fullMapView.diplomacy_actor }}</p></div>
+      <p class="diplomacy-capacity">{{ localizedUi.fullMapView.diplomacy_limits }}</p>
+      <p class="diplomacy-help">{{ i18n.text_choose_a_chunk_type_drag_an_area_the_166c6277b5a8 }}</p>
+      @if (fullMapView.diplomacy_status) { <p id="diplomacy-status" class="full-map-error">{{ localizedUi.fullMapView.diplomacy_status }}</p> }
+      <div class="diplomacy-actions">
+        <button id="fullmap-claim-protected" [class]="fullMapView.claim_build_mode ? 'map-command selected' : 'map-command'" [disabled]="!fullMapView.diplomacy_can_claim" onclick="fullmap_action">{{ i18n.text_build_chunk_0bd8ca15ef62 }}</button>
+        <button id="fullmap-claim-territory" [class]="fullMapView.claim_territory_mode ? 'map-command selected' : 'map-command'" [disabled]="!fullMapView.diplomacy_can_claim" onclick="fullmap_action">{{ i18n.text_territorium_chunk_cd8c3ca16970 }}</button>
+        <button id="fullmap-claim-pan" class="map-command" onclick="fullmap_action"><icon name="move" size="16" />{{ i18n.text_pan_fd92d952db92 }}</button>
+        <p>{{ localizedUi.fullMapView.claim_draft_count }}</p>
+        <div class="diplomacy-apply"><button id="fullmap-claim-cancel" class="map-command" [disabled]="fullMapView.diplomacy_pending" onclick="fullmap_action">{{ i18n.text_cancel_19766ed6ccb2 }}</button><button id="fullmap-claim-apply" class="map-command" [disabled]="!fullMapView.claim_can_apply" onclick="fullmap_action">{{ i18n.text_apply_31e392d1c037 }}</button></div>
+        <button id="fullmap-release-claim" class="map-command" [disabled]="!fullMapView.diplomacy_can_release" onclick="fullmap_action">{{ i18n.text_release_selected_chunk_ac6e373d8e86 }}</button>
+      </div>
+      <div id="diplomacy-legends" class="diplomacy-legends">
+        @for (realm of localizedUi.fullMapView.diplomacy_legends; track realm.id) {
+          <div class="diplomacy-legend"><div class="diplomacy-swatch" [style]="realm.color"><img [src]="realm.icon_source" /></div><div><h3>{{ realm.name }}</h3><div [class]="'diplomacy-relation ' + realm.relation">{{ realm.relation_label }}</div><p>{{ realm.detail }}</p></div></div>
+        }
+      </div>
+      <h3>{{ i18n.text_bot_kingdoms_3a9363924b37 }}</h3>
+      <div class="diplomacy-legends">
+        @for (realm of localizedUi.fullMapView.bot_realms; track realm.id) {
+          <div class="diplomacy-legend"><div class="diplomacy-swatch" [style]="realm.color"><img [src]="realm.icon_source" /></div><div><h3>{{ realm.name }}</h3><div [class]="'diplomacy-relation ' + realm.relation">{{ realm.relation_label }}</div><p>{{ realm.detail }}</p></div></div>
+        }
+      </div>
+    </div>
+  }
+</div>
+}
+@if (fullMapView.editing || fullMapView.deleting) { <waypoint-dialog></waypoint-dialog> }

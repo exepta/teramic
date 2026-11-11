@@ -77,7 +77,7 @@ fn pose(cell: [f32; 3], facing: u8, kind: &Kind) -> Transform {
 fn spotlight(ceiling: bool) -> SpotLight {
     SpotLight {
         color: Color::srgb(1.0, 0.83, 0.57),
-        intensity: if ceiling { 2800.0 } else { 180_000.0 },
+        intensity: if ceiling { 4200.0 } else { 270_000.0 },
         range: if ceiling { 7.0 } else { 48.0 },
         radius: 0.12,
         inner_angle: if ceiling { 0.65 } else { 0.22 },
@@ -380,6 +380,21 @@ fn lettering(name: &str, door: bool) -> Mesh {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn train_lamps_are_fifty_percent_brighter_without_changing_their_beams() {
+        for (ceiling, previous_intensity, range, inner_angle, outer_angle) in [
+            (false, 180_000.0, 48.0, 0.22, 0.48),
+            (true, 2800.0, 7.0, 0.65, 1.25),
+        ] {
+            let light = spotlight(ceiling);
+            assert_eq!(light.intensity, previous_intensity * 1.5);
+            assert_eq!(light.range, range);
+            assert_eq!(light.inner_angle, inner_angle);
+            assert_eq!(light.outer_angle, outer_angle);
+            assert_eq!(light.color, Color::srgb(1.0, 0.83, 0.57));
+            assert_eq!(light.shadow_maps_enabled, !ceiling);
+        }
+    }
     #[test]
     fn lamps_point_forward_or_down_with_a_real_cone() {
         for facing in 0..4 {

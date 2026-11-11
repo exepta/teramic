@@ -1,0 +1,165 @@
+@if (trainView.open) {
+<div class="train-workshop-overlay">
+  <div id="train-workshop-panel" [class]="trainView.cargo ? 'train-workshop-panel train-cargo-panel' : 'train-workshop-panel'">
+    <div class="train-panel-fill"></div><ornate-frame></ornate-frame>
+    <div class="train-workshop-content">
+      <div class="train-title"><icon name="train-front" size="25" /><h2 [class]="trainView.cargo ? 'train-cargo-title' : ''">@if (trainView.cargo) { {{ localizedUi.trainView.title }} } @else { {{ i18n.text_train_montage_257faca65ecf }} }</h2><button id="close" class="train-close" [title]="i18n.text_schlie_en_b808f6e97075" onclick="train_workshop_action">×</button></div>
+      @if (trainView.cargo) {
+        @if (trainView.sort_player_open || trainView.sort_storage_open) { <button id="cargo-sort-dismiss" class="inventory-sort-dismiss" onclick="train_workshop_action"></button> }
+        @if (trainView.fuel_mode) {
+          <p>{{ i18n.text_holz_kohle_oder_anderen_brennstoff_i_405bfee98fa7 }}</p>
+        } @else { <p>{{ i18n.text_ein_klick_verschiebt_einen_stapel_ge_cacf230bc990 }}</p> }
+        <h3 class="train-cargo-heading">@if (trainView.fuel_mode) { {{ i18n.text_brennstoffvorrat_4951208bc8de }} } @else { {{ i18n.text_laderaum_c80496f245e8 }} }</h3>
+        @if (trainView.held) { <div class="train-held-item"><img [alt]="trainView.held_preview" /><p>{{ i18n.text_gehalten_32ad30258a63 }} {{ localizedUi.trainView.held_name }} × {{ localizedUi.trainView.held_count }} {{ i18n.text_platz_zum_ablegen_anklicken_a8fc127e5946 }}</p></div> }
+        <div [class]="trainView.sort_storage_open ? 'train-sort-region inventory-sort-active-region' : 'train-sort-region'">
+          @if (trainView.sort_storage_open) { <button id="cargo-sort-dismiss" class="inventory-sort-dismiss inventory-sort-local-dismiss" onclick="train_workshop_action"></button> }
+          <div id="train-cargo-grid" class="train-slots">
+          @for (slot of localizedUi.trainView.cargo_slots; track slot.index) {
+            <button class="train-slot" id="train-slot" [disabled]="trainView.pending || !slot.enabled" [title]="slot.name" onclick="$set(trainIntent.command, slot.command); train_workshop_action">
+              @if (!slot.empty) { <img [alt]="slot.preview" /><p>{{ slot.count }}</p> }
+            </button>
+          }
+        </div>
+        <div class="inventory-sort-control train-sort-control">
+          <button id="cargo-sort-menu" class="inventory-sort-trigger" [title]="i18n.text_zuglager_sortieren_4c3dec3ae068" [disabled]="!trainView.sort_ready" onclick="train_workshop_action"><icon name="filter" size="18" /></button>
+          @if (trainView.sort_storage_open) { <div id="inventory-sort-cargo-options" class="inventory-sort-dropup">
+            <button id="cargo-sort-name" class="inventory-sort-option" [title]="i18n.text_alphabetisch_nach_anzeigename_sortie_ccbf249574fc" onclick="train_workshop_action"><icon name="sort-ascending" size="16" /><p>{{ i18n.text_a_z_f9f6c8502eb0 }}</p></button>
+            <button id="cargo-sort-id" class="inventory-sort-option" [title]="i18n.text_nach_block_id_und_item_id_sortieren_c551c8fdacf1" onclick="train_workshop_action"><icon name="hash" size="16" /><p>{{ i18n.text_id_3843971dcfde }}</p></button>
+            <button id="cargo-sort-quantity" class="inventory-sort-option" [title]="i18n.text_gr_te_stapel_zuerst_66c5b404b865" onclick="train_workshop_action"><icon name="sort-descending" size="16" /><p>{{ i18n.text_menge_1bece813ec41 }}</p></button>
+          </div> }
+        </div></div>
+        <h3 class="train-cargo-heading">{{ i18n.text_inventar_d602900fb259 }}</h3>
+        <div [class]="trainView.sort_player_open ? 'train-sort-region inventory-sort-active-region' : 'train-sort-region'">
+          @if (trainView.sort_player_open) { <button id="cargo-sort-dismiss" class="inventory-sort-dismiss inventory-sort-local-dismiss" onclick="train_workshop_action"></button> }
+          <div id="train-player-grid" class="train-slots">
+          @for (slot of localizedUi.trainView.player_slots; track slot.index) {
+            <button class="train-slot" id="train-slot" [disabled]="trainView.pending || !slot.enabled" [title]="slot.name" onclick="$set(trainIntent.command, slot.command); train_workshop_action">
+              @if (!slot.empty) { <img [alt]="slot.preview" /><p>{{ slot.count }}</p> }
+            </button>
+          }
+        </div>
+        <div class="inventory-sort-control train-sort-control">
+          <button id="cargo-sort-backpack-menu" class="inventory-sort-trigger" [title]="i18n.text_rucksack_sortieren_hotbar_bleibt_unv_400b3b954090" [disabled]="!trainView.sort_ready" onclick="train_workshop_action"><icon name="filter" size="18" /></button>
+          @if (trainView.sort_player_open) { <div id="inventory-sort-backpack-options" class="inventory-sort-dropup">
+            <button id="cargo-sort-backpack-name" class="inventory-sort-option" [title]="i18n.text_alphabetisch_nach_anzeigename_sortie_ccbf249574fc" onclick="train_workshop_action"><icon name="sort-ascending" size="16" /><p>{{ i18n.text_a_z_f9f6c8502eb0 }}</p></button>
+            <button id="cargo-sort-backpack-id" class="inventory-sort-option" [title]="i18n.text_nach_block_id_und_item_id_sortieren_c551c8fdacf1" onclick="train_workshop_action"><icon name="hash" size="16" /><p>{{ i18n.text_id_3843971dcfde }}</p></button>
+            <button id="cargo-sort-backpack-quantity" class="inventory-sort-option" [title]="i18n.text_gr_te_stapel_zuerst_66c5b404b865" onclick="train_workshop_action"><icon name="sort-descending" size="16" /><p>{{ i18n.text_menge_1bece813ec41 }}</p></button>
+          </div> }
+        </div></div>
+        <button id="workshop" onclick="train_workshop_action">{{ i18n.text_zur_fahrzeugsteuerung_75b3cd3af722 }}</button>
+
+      } @else {
+        <div class="train-build-grid">
+          <div class="train-card train-types">
+            <h3><icon name="train-front" size="18" />{{ i18n.text_typ_1b024183cb33 }}</h3>
+            <button id="kind:locomotive" [class]="trainView.kind == 'Lokomotive' ? 'train-kind selected' : 'train-kind'" [disabled]="trainView.pending || trainView.selected" onclick="train_workshop_action"><img alt="Block preview 218" /><p>{{ i18n.text_lokomotive_68677bf399cb }}</p></button>
+            <button id="kind:tender" [class]="trainView.kind == 'Tender' ? 'train-kind selected' : 'train-kind'" [disabled]="trainView.pending || trainView.selected" onclick="train_workshop_action"><img alt="Block preview 253" /><p>{{ i18n.text_tender_9e5d19cb6163 }}</p></button>
+            <button id="kind:passenger" [class]="trainView.kind == 'Personenwagen' ? 'train-kind selected' : 'train-kind'" [disabled]="trainView.pending || trainView.selected" onclick="train_workshop_action"><img alt="Block preview 215" /><p>{{ i18n.text_personenwagen_301efc17ed44 }}</p></button>
+            <button id="kind:freight" [class]="trainView.kind == 'Güterwagen' ? 'train-kind selected' : 'train-kind'" [disabled]="trainView.pending || trainView.selected" onclick="train_workshop_action"><img alt="Block preview 216" /><p>{{ i18n.text_g_terwagen_66f3f739b302 }}</p></button>
+            <p class="train-small-label">{{ i18n.text_modellbreite_d4dda91d7357 }}</p>
+            <div class="train-width-buttons"><button id="width:1" [class]="trainView.width == '1' ? 'selected' : ''" [disabled]="trainView.pending || trainView.selected" onclick="train_workshop_action">1×</button><button id="width:3" [class]="trainView.width == '3' ? 'selected' : ''" [disabled]="trainView.pending || trainView.selected" onclick="train_workshop_action">3×</button></div>
+          </div>
+          <div class="train-card train-preview-card">
+            <div class="train-wheelbase"><p>{{ i18n.text_drehgestell_abstand_04d9812d7527 }}</p><button id="wheelbase-dec" [disabled]="trainView.selected" onclick="train_workshop_action"><icon name="minus" size="16" /></button><p class="train-wheelbase-value">{{ localizedUi.trainView.wheelbase }}</p><button id="wheelbase-inc" [disabled]="trainView.selected" onclick="train_workshop_action"><icon name="plus" size="16" /></button></div>
+            <img id="train-model-preview" class="train-model-preview" alt="Train model preview" />
+            <div class="train-progress"><icon name="tool" size="17" /><p>{{ i18n.text_baufortschritt_6d7769b689f9 }}</p><progress-bar min="0" max="100" [value]="trainView.progress_value" /><p>{{ localizedUi.trainView.progress_count }}</p></div>
+            <p class="train-preview-caption">{{ localizedUi.trainView.blueprint_progress }}</p>
+          </div>
+          <div class="train-build-actions">
+            <div class="train-card train-name-card"><h3><icon name="pencil" size="17" />{{ i18n.text_zugname_acc0b0ea4f8f }}</h3><div class="train-name-input"><input id="train-name" type="text" maxlength="24" [placeholder]="i18n.text_meine_lokomotive_24e2495ccf25" [value]="trainView.name" onchange="train_workshop_action" /><p>{{ localizedUi.trainView.name_count }}</p></div><button id="name-save" [disabled]="trainView.pending || !trainView.selected" onclick="train_workshop_action"><icon name="tag" size="16" />{{ i18n.text_schild_bernehmen_4c05716e0dfb }}</button></div>
+            <div class="train-card train-build-buttons">
+              @if (!trainView.selected) {
+                <button id="blueprint-build" [disabled]="!trainView.blueprint" onclick="train_workshop_action"><icon name="hammer" size="18" />{{ i18n.text_mit_vorlage_bauen_5883d439d22d }}</button>
+                <button id="blueprint-auto" class="train-primary" [disabled]="trainView.pending" onclick="train_workshop_action"><icon name="settings" size="18" />{{ i18n.text_vorlage_automatisch_bauen_952d2b5ada56 }}</button>
+                <button id="assemble" [disabled]="trainView.pending" onclick="train_workshop_action"><icon name="puzzle" size="18" />{{ i18n.text_zusammensetzen_3f6659edf678 }}</button>
+                <div class="train-template-actions"><button id="blueprint" onclick="train_workshop_action">{{ i18n.text_vorlage_anzeigen_9167962f9861 }}</button>@if (trainView.blueprint) { <button id="blueprint-clear" onclick="train_workshop_action">{{ i18n.text_ausblenden_042fae8a9e4a }}</button> }</div>
+              } @else {
+                <button id="edit" [disabled]="trainView.pending || !trainView.can_edit" onclick="train_workshop_action"><icon name="hammer" size="18" />{{ i18n.text_montage_bearbeiten_c52b2a0845ef }}</button>
+                @if (trainView.riding) { <button id="leave" [disabled]="trainView.pending" onclick="train_workshop_action"><icon name="log-out" size="18" />{{ i18n.text_aussteigen_81d12252d77a }}</button> } @else { <button id="seat" [disabled]="trainView.pending" onclick="train_workshop_action"><icon name="users-round" size="18" />{{ i18n.text_einsteigen_06f16e04ec5e }}</button> }
+                @if (trainView.confirm_destroy) {
+                  <p>{{ i18n.text_fahrzeug_samt_ladung_dauerhaft_l_sch_8366912a00f1 }}</p>
+                  <div class="train-template-actions"><button id="destroy-confirm" [disabled]="trainView.pending || !trainView.can_destroy" onclick="train_workshop_action">{{ i18n.text_jetzt_zerst_ren_33c8000f9597 }}</button><button id="destroy-cancel" [disabled]="trainView.pending" onclick="train_workshop_action">{{ i18n.text_abbrechen_f7ff1178af20 }}</button></div>
+                } @else {
+                  <button id="destroy" [disabled]="trainView.pending || !trainView.can_destroy" onclick="train_workshop_action"><icon name="trash" size="16" />{{ i18n.text_zug_zerst_ren_f9048916a886 }}</button>
+                }
+              }
+            </div>
+          </div>
+        </div>
+        <div class="train-bottom-grid">
+          <div class="train-card train-workshop-vehicles">
+            <h3><icon name="train-front" size="18" />{{ i18n.text_fahrzeuge_937b877d4ef6 }}</h3>
+            <div class="train-vehicle-list">@for (vehicle of localizedUi.trainView.rows; track vehicle.id) {
+              <button id="train-vehicle" [class]="vehicle.selected ? 'train-vehicle selected' : (vehicle.second ? 'train-vehicle second' : 'train-vehicle')" [disabled]="trainView.pending" onclick="$set(trainIntent.command, vehicle.command); train_workshop_action"><p>{{ vehicle.label }}</p><p class="train-vehicle-detail">{{ vehicle.detail }}</p>@if (vehicle.foreign) { <p>{{ i18n.text_anderer_besitzer_2a574ffaaeab }}</p> }</button>
+            }</div>
+            <div class="train-pagination"><button id="previous" onclick="train_workshop_action"><icon name="chevron-left" size="16" /></button><p>{{ localizedUi.trainView.page }}</p><button id="next" onclick="train_workshop_action"><icon name="chevron-right" size="16" /></button><button id="clear" onclick="train_workshop_action">{{ i18n.text_auswahl_l_sen_eeeae75513b2 }}</button></div>
+            @if (trainView.selected) {
+              <div class="train-coupling"><button id="front" onclick="train_workshop_action">1: {{ localizedUi.trainView.front }}</button><button id="second-front" onclick="train_workshop_action">2: {{ localizedUi.trainView.second_front }}</button></div>
+              <div class="train-coupling"><button id="couple" [disabled]="trainView.pending || !trainView.pair" onclick="train_workshop_action">{{ i18n.text_koppeln_3602ea9bed55 }}</button><button id="uncouple" [disabled]="trainView.pending" onclick="train_workshop_action">{{ i18n.text_l_sen_889c343c563c }}</button></div>
+            }
+          </div>
+          <div class="train-card train-drive-panel"><h3><icon name="activity" size="18" />{{ i18n.text_fahrpult_c8aa9d6fe71d }}</h3>
+            @if (trainView.selected) {
+              <div class="train-drive-heading"><p class="train-drive-speed">{{ localizedUi.trainView.drive_speed }}</p><p>{{ localizedUi.trainView.drive_direction }}</p></div>
+              <div class="train-drive-heading"><p>{{ localizedUi.trainView.drive_throttle }}</p><p>{{ localizedUi.trainView.drive_fuel }}</p></div>
+              <slider id="drive-throttle" class="train-drive-slider" min="-2" [max]="trainView.drive_max" step="1" [value]="trainView.drive_value" [disabled]="!trainView.drive_controls" onchange="train_workshop_action" />
+              <div class="train-throttle-notches">@for (step of localizedUi.trainView.drive_levels; track step.command) { <button id="train-notch" [title]="step.title" [class]="step.selected ? 'selected' : ''" [disabled]="!trainView.drive_controls || !step.enabled" onclick="$set(trainIntent.command, step.command); train_workshop_action">{{ step.label }}</button> }</div>
+              <div class="train-drive-actions"><button id="drive-start" class="train-go" [disabled]="!trainView.drive_controls" onclick="train_workshop_action"><icon name="play" size="16" />{{ i18n.text_fahren_05c2e6197a6a }}</button><button id="drive-stop" class="train-stop" [disabled]="!trainView.drive_controls" onclick="train_workshop_action"><icon name="square" size="15" />{{ i18n.text_halten_4f9123ba0433 }}</button></div>
+              <button id="drive-brake" [disabled]="!trainView.drive_controls" onclick="train_workshop_action">@if (trainView.brake) { {{ i18n.text_bremse_l_sen_0913ddd62da0 }} } @else { {{ i18n.text_bremsen_645545dfe041 }} }</button>
+              <p class="train-small-label">{{ localizedUi.trainView.drive_hint }}</p>
+            } @else { <p>{{ i18n.text_fahrzeug_ausw_hlen_und_in_den_eigene_28a4e217716d }}</p> }
+            <p class="train-small-label">{{ i18n.text_1_block_1_meter_5b4269626be9 }}</p>
+          </div>
+          <div class="train-card train-secondary-actions"><h3><icon name="tool" size="18" />{{ i18n.text_aktionen_5656f92db78d }}</h3>
+            <button id="engine" [disabled]="trainView.pending || !trainView.engine" onclick="train_workshop_action"><icon name="fuel" size="18" />{{ i18n.text_motor_befeuern_b51f50a3c72e }}</button>
+            <button id="cargo" [disabled]="trainView.pending || !trainView.has_cargo" onclick="train_workshop_action"><icon name="layers" size="18" />{{ i18n.text_laderaum_ffnen_7acc3685c5d3 }}</button>
+            @if (trainView.turntable_available) { <p>{{ i18n.text_drehgleis_90_8501580f9a1b }}</p><div class="train-coupling"><button id="turn-left" [disabled]="trainView.pending || !trainView.can_turn" onclick="train_workshop_action"><icon name="rotate-ccw" size="18" />{{ i18n.text_links_9024c197d849 }}</button><button id="turn-right" [disabled]="trainView.pending || !trainView.can_turn" onclick="train_workshop_action"><icon name="rotate-cw" size="18" />{{ i18n.text_rechts_00e9e566412c }}</button></div> }
+            @if (trainView.builder_installed) {
+              <button id="rail-builder" [title]="i18n.text_zum_umschalten_anhalten_und_im_f_hre_58683276c57c" [disabled]="trainView.pending || !trainView.riding" onclick="train_workshop_action">@if (trainView.builder_active) { {{ i18n.text_gleisleger_ausschalten_61bab9237276 }} } @else { {{ i18n.text_gleisleger_einschalten_7ff0ebd82475 }} }</button>
+              <div class="train-autoload-row"><label>{{ i18n.text_abbau_ins_wagenlager_e1a2ef588246 }}</label><switch-button id="builder-autoload" class="train-autoload-switch" [checked]="trainView.builder_autoload" [disabled]="!trainView.builder_size_ready" onchange="train_workshop_action" /><p>@if (trainView.builder_autoload) { {{ i18n.text_activated_7e7b3a01539b }} } @else { {{ i18n.text_deactivated_4840a57222fc }} }</p></div>
+              <div class="train-clearance-row">
+                <p>{{ i18n.text_breite_28240c279df6 }}</p>
+                <button id="builder-size-width-less" [title]="i18n.text_r_umbreite_um_2_bl_cke_verringern_429cf2b2011d" [disabled]="!trainView.builder_size_ready || !trainView.builder_width_less" onclick="train_workshop_action">−</button>
+                <p class="train-clearance-value">{{ localizedUi.trainView.builder_width }}</p>
+                <button id="builder-size-width-more" [title]="i18n.text_r_umbreite_um_2_bl_cke_erh_hen_32e112abbceb" [disabled]="!trainView.builder_size_ready || !trainView.builder_width_more" onclick="train_workshop_action">+</button>
+              </div>
+              <div class="train-clearance-row">
+                <p>{{ i18n.text_h_he_a4d8c3470ca7 }}</p>
+                <button id="builder-size-height-less" [title]="i18n.text_r_umh_he_um_1_block_verringern_a8cb5f4e7f3c" [disabled]="!trainView.builder_size_ready || !trainView.builder_height_less" onclick="train_workshop_action">−</button>
+                <p class="train-clearance-value">{{ localizedUi.trainView.builder_height }}</p>
+                <button id="builder-size-height-more" [title]="i18n.text_r_umh_he_um_1_block_erh_hen_0536a356496e" [disabled]="!trainView.builder_size_ready || !trainView.builder_height_more" onclick="train_workshop_action">+</button>
+              </div>
+              <button id="builder-size-height-auto" class="train-clearance-auto" [title]="i18n.text_lokh_he_einschlie_lich_dach_und_scho_02bd22f65ff1" [disabled]="!trainView.builder_size_ready || trainView.builder_height_auto" onclick="train_workshop_action">{{ i18n.text_h_he_automatisch_feb1108d5f11 }}</button>
+              <p class="train-small-label">{{ i18n.text_zum_einstellen_anhalten_und_im_f_hre_f449bda849db }}</p>
+              <p class="train-small-label">{{ i18n.text_3_m_s_1_g_terwagen_bis_15_m_0763f2e70b25 }}</p><p class="train-small-label">{{ i18n.text_schienen_schotter_ins_zuglager_1dd8534fcaa0 }}</p>
+            }
+            <p>{{ localizedUi.trainView.steam_status }}</p>
+            @if (trainView.has_water_tank) { <button id="water" [disabled]="trainView.pending" onclick="train_workshop_action"><icon name="droplets" size="16" />{{ i18n.text_tank_f_llen_2b4fb4baa669 }}</button> }
+            <p class="train-ready">{{ localizedUi.trainView.drive_status }}</p>
+          </div>
+        </div>
+      }
+      <div class="train-workshop-footer"><p>{{ localizedUi.trainView.status }}</p></div>
+    </div>
+  </div>
+</div>
+}
+@if (trainView.riding && !trainView.open && !inventoryView.open && !settingsView.open && !chatView.open && !kingdomView.visible) {
+  <div id="train-driver-hud" class="train-driver-hud">
+    <p class="train-driver-speed">{{ localizedUi.trainView.drive_speed }}</p>
+    <p>{{ localizedUi.trainView.drive_direction }} · {{ localizedUi.trainView.drive_status }}</p>
+    @if (trainView.driver) {
+      <div class="train-hud-notches">@for (step of localizedUi.trainView.drive_levels; track step.command) { <p [class]="step.selected ? 'selected' : ''">{{ step.label }}</p> }</div>
+      <p>{{ localizedUi.trainView.drive_throttle }} · {{ localizedUi.trainView.drive_fuel }}</p>
+    }
+    <p>{{ localizedUi.trainView.drive_hint }}</p>
+    <p>{{ i18n.text_1_block_1_meter_5b4269626be9 }}</p>
+  </div>
+}
+@if (trainView.blueprint && !trainView.open && !inventoryView.open && !settingsView.open && !chatView.open && !kingdomView.visible) {
+  <div id="train-blueprint-hint" class="train-blueprint-hint">
+    <p>{{ localizedUi.trainView.blueprint_progress }}</p>
+    <p>{{ localizedUi.trainView.blueprint_target }}</p>
+    <p>{{ i18n.text_montagestelle_ffnen_zusammensetzen_o_3b9bffd24ea2 }}</p>
+  </div>
+}

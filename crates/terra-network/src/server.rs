@@ -1,4 +1,6 @@
 //! Identical authoritative session runtime for dedicated and integrated hosts.
+#[path = "server_npc_work.rs"]
+mod npc_work;
 #[path = "server_train_builder.rs"]
 mod train_builder;
 use crate::protocol::session::*;
@@ -188,6 +190,7 @@ pub(crate) fn install(app: &mut App) {
         .init_resource::<ServerRuntime>()
         .init_resource::<ConnectedProfiles>()
         .init_resource::<kingdoms::KingdomRuntime>()
+        .init_resource::<npc_work::WorkRuntime>()
         .init_resource::<trains::TrainRuntime>()
         .init_resource::<train_damage::Impacts>()
         .init_resource::<trains::SeatedPlayers>()
@@ -232,6 +235,7 @@ pub(crate) fn install(app: &mut App) {
                 plumbing::tick,
                 gameplay::tick,
                 creatures::tick,
+                npc_work::tick,
                 lightning::tick,
                 update_foci,
             )
@@ -263,6 +267,7 @@ pub(crate) fn install(app: &mut App) {
                 send_clock,
                 social::broadcast,
                 kingdoms::broadcast,
+                npc_work::broadcast,
                 trees::broadcast,
                 farm_tools::send_progress,
             )
@@ -525,6 +530,7 @@ fn receive_controls(
     mut peers: ControlPeers,
     mut world: ControlWorld,
     mut kingdoms: ResMut<kingdoms::KingdomRuntime>,
+    mut npc_work: ResMut<npc_work::WorkRuntime>,
     mut trains_runtime: ResMut<trains::TrainRuntime>,
     mut train_seats: ResMut<trains::SeatedPlayers>,
 ) {
@@ -552,6 +558,9 @@ fn receive_controls(
                 }
                 ClientControl::Kingdom(command) if peer.synced => {
                     kingdoms::control(command, &peer, &mut sender, &mut world, &mut kingdoms);
+                }
+                ClientControl::NpcWork(command) if peer.synced => {
+                    npc_work::control(command, &peer, &mut sender, &mut world, &mut npc_work);
                 }
                 ClientControl::AttackPlayer { player, look } if peer.synced => {
                     if let Some(attacks) = world.attacks.as_deref_mut()

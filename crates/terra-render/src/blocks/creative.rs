@@ -29,6 +29,10 @@ pub(crate) fn item_category(item: ItemKind, declared: Option<&str>) -> String {
     }
     match item {
         ItemKind::Tool(terra_core::ToolKind::Wrench)
+        | ItemKind::WornTool {
+            tool: terra_core::ToolKind::Wrench,
+            ..
+        }
         | ItemKind::Bellows(_)
         | ItemKind::Block(59..=64 | 99..=100 | 141..=172)
         | ItemKind::TintedBlock { material: 148, .. }
@@ -46,6 +50,7 @@ pub(crate) fn item_category(item: ItemKind, declared: Option<&str>) -> String {
         ItemKind::Stick | ItemKind::Mineral(_) | ItemKind::Dye(_) => "materials",
         ItemKind::Animal(_) => "animal_materials",
         ItemKind::Tool(_)
+        | ItemKind::WornTool { .. }
         | ItemKind::FilledWateringCan { .. }
         | ItemKind::Armor(_)
         | ItemKind::Accessory(_)
@@ -107,7 +112,7 @@ pub(crate) fn load_creative_categories(
     let mut categories = Vec::new();
     for definition in definitions {
         let available_icon = match definition.icon {
-            ItemKind::FilledWateringCan { .. } => {
+            ItemKind::FilledWateringCan { .. } | ItemKind::WornTool { .. } => {
                 item_categories.contains_key(&definition.icon.preview_item())
             }
             ItemKind::Block(id)

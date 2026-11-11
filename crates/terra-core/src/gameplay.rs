@@ -191,6 +191,11 @@ pub enum ItemKind {
     },
     Apple,
     AppleCore,
+    /// Individual NPC-used axes retain wear through inventories, drops and saves.
+    WornTool {
+        tool: ToolKind,
+        remaining: u16,
+    },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
@@ -303,6 +308,18 @@ pub enum ToolKind {
     GoldSpoon,
 }
 impl ToolKind {
+    /// Uses per log for productive woodcutters. Other tools have no wear model yet.
+    pub const fn durability(self) -> u16 {
+        match self {
+            Self::WoodAxe => 64,
+            Self::StoneAxe => 128,
+            Self::IronAxe => 256,
+            Self::GoldAxe => 96,
+            Self::DiamondAxe => 768,
+            Self::RubyAxe => 1024,
+            _ => 0,
+        }
+    }
     pub const ALL: [Self; 41] = [
         Self::WoodPickaxe,
         Self::StonePickaxe,
@@ -516,7 +533,9 @@ impl ToolKind {
 impl ItemKind {
     pub const fn tool_kind(self) -> Option<ToolKind> {
         match self {
-            Self::Tool(tool) | Self::FilledWateringCan { tool, .. } => Some(tool),
+            Self::Tool(tool)
+            | Self::FilledWateringCan { tool, .. }
+            | Self::WornTool { tool, .. } => Some(tool),
             _ => None,
         }
     }
@@ -539,13 +558,13 @@ impl ItemKind {
     }
     pub const fn preview_item(self) -> Self {
         match self {
-            Self::FilledWateringCan { tool, .. } => Self::Tool(tool),
+            Self::FilledWateringCan { tool, .. } | Self::WornTool { tool, .. } => Self::Tool(tool),
             _ => self,
         }
     }
     pub const fn max_stack(self) -> u16 {
         match self {
-            Self::FilledWateringCan { .. } => 1,
+            Self::FilledWateringCan { .. } | Self::WornTool { .. } => 1,
             Self::Armor(_)
             | Self::Accessory(_)
             | Self::Cape(_)
@@ -1034,6 +1053,9 @@ impl ItemKind {
     }
     pub fn identifier(self) -> String {
         match self {
+            Self::WornTool { tool, remaining } => {
+                format!("teramic::{}#uses={remaining}", tool.slug())
+            }
             Self::HeraldicCape { cape, heraldry } => format!(
                 "{}#heraldry={:02X}{:02X}{:02X}:{}",
                 Self::Cape(cape.undyed()).identifier(),
@@ -1100,6 +1122,7 @@ impl ItemKind {
     }
     pub fn valid(self) -> bool {
         match self {
+            Self::WornTool { tool, remaining } => remaining > 0 && remaining < tool.durability(),
             Self::HeraldicCape { cape, heraldry } => {
                 cape.color == crate::beds::DyeColor::Rgb(heraldry.color) && heraldry.icon.valid()
             }
@@ -1417,6 +1440,8 @@ pub struct PlayerStats {
 #[derive(Debug, Default, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct GameplayState {
+    #[serde(default)]
+    pub jobs: crate::npc_jobs::WorkRegistry,
     pub trains: crate::trains::TrainRegistry,
     pub trees: crate::trees::TreeRegistry,
     pub kingdoms: crate::kingdom::KingdomRegistry,
@@ -1436,6 +1461,7 @@ impl GameplayState {
     pub fn valid(&self) -> bool {
         let mut ids = HashSet::new();
         self.trains.valid()
+            && self.jobs.valid()
             && self.trees.valid()
             && self.kingdoms.valid()
             && self.creatures.valid()

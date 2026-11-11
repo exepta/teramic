@@ -1,0 +1,9 @@
+<toast id="network-warning-toast" type="warning" [title]="i18n.text_aktion_nicht_ausgefuehrt_d4d570451a45" duration="5000"><p>{{ localizedUi.networkNotice.warning }}</p></toast>
+<toast id="network-error-toast" type="error" [title]="i18n.text_aktion_nicht_ausgefuehrt_d4d570451a45" duration="5000"><p>{{ localizedUi.networkNotice.error }}</p></toast>
+@if (networkNotice.visible) {
+  <div class="network-notice">
+    <ornate-frame></ornate-frame>
+    <p>{{ localizedUi.networkNotice.message }}</p>
+    @if (networkNotice.retry) { <button id="network-retry" onclick="network_retry">{{ i18n.text_erneut_verbinden_c278e202ead3 }}</button> }
+  </div>
+}

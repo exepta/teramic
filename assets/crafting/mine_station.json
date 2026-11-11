@@ -1,0 +1,35 @@
+{
+  "id": "teramic::mine_station",
+  "name": "Minen-Station",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "block": 302
+    },
+    "count": 1
+  },
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "block": 16
+        },
+        "wood": true,
+        "count": 2
+      },
+      {
+        "item": {
+          "block": 29
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "tool": "iron_pickaxe"
+        },
+        "count": 1
+      }
+    ]
+  }
+}

@@ -627,9 +627,12 @@ fn registered_html_handler_accepts_label_and_icon_children_and_local_choices_whi
 #[test]
 fn workshop_restores_pointer_events_under_the_noninteractive_game_overlay() {
     use tilt_ui::tilt_ui_css::{PointerEvents, StyleDeclaration, parse_stylesheet};
-    let game = parse_stylesheet(include_str!("../../../src-ui/pages/game.component.css")).unwrap();
+    let game = parse_stylesheet(include_str!(
+        "../../../src-ui/pages/game/game.component.css"
+    ))
+    .unwrap();
     let workshop = parse_stylesheet(include_str!(
-        "../../../src-ui/components/train-workshop.component.css"
+        "../../../src-ui/components/train-workshop/train-workshop.component.css"
     ))
     .unwrap();
     assert!(

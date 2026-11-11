@@ -300,7 +300,7 @@ mod tests {
         assert!(tilt_ui::Icon::from_name("users-round").is_some());
         assert!(tilt_ui::Icon::from_name("send").is_some());
         tilt_ui::tilt_ui_css::parse_stylesheet(include_str!(
-            "../../../src-ui/components/multiplayer-hud.component.css"
+            "../../../src-ui/components/multiplayer-hud/multiplayer-hud.component.css"
         ))
         .unwrap();
     }

@@ -98,10 +98,10 @@ fn strike(attacker: &mut Peer, victim: &mut Peer, look: [f32; 2], world: Environ
         .get(&attacker.uuid)
         .and_then(|bag| bag.slot(usize::from(attacker.held_slot?)))
         .map(|stack| stack.item);
-    let damage = match held {
-        Some(ItemKind::Tool(tool)) => tool.attack_damage(),
-        _ => 1.0,
-    } * attacker.vitals.effects.attack_multiplier();
+    let damage = held
+        .and_then(ItemKind::tool_kind)
+        .map_or(1.0, terra_core::ToolKind::attack_damage)
+        * attacker.vitals.effects.attack_multiplier();
     attacker.creature_action_at = Instant::now();
     attacker.mining = None;
     attacker.consumption = None;

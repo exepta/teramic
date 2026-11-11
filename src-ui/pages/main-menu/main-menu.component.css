@@ -1,0 +1,9 @@
+.main-menu { position: absolute; top: 9%; bottom: 9%; left: 50%; transform: translateX(-50%); width: 480px; max-width: 86%; display: flex; flex-direction: column; align-items: stretch; justify-content: center; gap: 24px; }
+.main-actions { position: relative; display: flex; flex-direction: column; gap: 12px; padding: 24px; background-color: #171e1be6; }
+.brand-lockup { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.brand-lockup headline { font-size: 66px; color: #f5e3b5; margin: 0; font-family: serif; }
+.brand-lockup p { font-size: 13px; color: #ead59e; margin: 0; }
+.brand-rule { height: 2px; width: 180px; background-color: #bca16b; }
+.pause-title { text-align: center; color: #f3e4c4; margin: 0; font-size: 24px; }
+.character-menu-button { position: absolute; left: auto; right: 30px; bottom: 28px; width: 56px; height: 56px; min-height: 56px; padding: 0; justify-content: center; align-items: center; border: 2px solid #a77d49; border-radius: 7px; color: #f4d5a8; background-color: #302118ed; }
+.character-menu-button:hover { background-color: #563a25; border-color: #cda46c; }

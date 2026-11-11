@@ -160,6 +160,9 @@ impl BlockObjectState {
         }
         self.valid_at(position)
             && match material {
+                id if terra_core::profession_stations::is_station(id) => {
+                    self.facing < 4 && self.peer.is_none() && !self.secondary
+                }
                 id if terra_core::castle::is_castle(id) => {
                     self.facing < 24 && self.peer.is_none() && !self.secondary
                 }

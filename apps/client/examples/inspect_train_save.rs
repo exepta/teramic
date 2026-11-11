@@ -9,6 +9,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut args = std::env::args().skip(1);
     let root = PathBuf::from(args.next().ok_or("world-library directory required")?);
     let id = terra_core::WorldId(args.next().ok_or("world id required")?.parse()?);
+    let inspect_builder = args.any(|arg| arg == "--builder");
     let library = terra_storage::WorldLibrary { root };
     let entry = library.load(id)?;
     let directory = library.path(id);
@@ -18,8 +19,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut owners = BTreeSet::new();
     for car in journal.gameplay().trains.vehicles.values() {
         let bounds = car.model_bounds();
-        let low = terra_voxel::global_to_section(bounds[0].map(|v| v.floor() as i64 - 2)).0;
-        let high = terra_voxel::global_to_section(bounds[1].map(|v| v.ceil() as i64 + 2)).0;
+        let margin = if inspect_builder { 16 } else { 2 };
+        let low = terra_voxel::global_to_section(bounds[0].map(|v| v.floor() as i64 - margin)).0;
+        let high = terra_voxel::global_to_section(std::array::from_fn(|axis| {
+            bounds[1][axis].ceil() as i64
+                + if inspect_builder && axis == 1 {
+                    32
+                } else {
+                    margin
+                }
+        }))
+        .0;
         for x in low.x..=high.x {
             for y in low.y..=high.y {
                 for z in low.z..=high.z {
@@ -98,6 +108,57 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             terra_world::train_motion::clear(&chunks, &journal, &properties, car)
         );
         if let Ok(network) = terra_world::rails::network(&journal) {
+            if inspect_builder
+                && let Some((module, _)) = car
+                    .parts
+                    .iter()
+                    .enumerate()
+                    .find(|(_, part)| part.material == terra_core::train_parts::RAIL_BUILDER)
+            {
+                println!(
+                    "builder-clearance={:?}",
+                    terra_world::rails::builder::plan_clearance(&chunks, &journal, car)
+                        .map(|plan| (plan.layout().edits.len(), plan.drops().len()))
+                );
+                let front = car.world_point(car.parts[module].offset.map(|v| f64::from(v) + 0.5));
+                println!("builder-module={:?} position={front:?}", car.parts[module]);
+                for piece in network.records() {
+                    for port in piece.ports() {
+                        let endpoint = terra_core::rails::Endpoint {
+                            anchor: piece.anchor,
+                            port: port.index,
+                        };
+                        if network.connected_endpoint(endpoint).is_some()
+                            || port
+                                .position
+                                .position()
+                                .iter()
+                                .zip(front)
+                                .map(|(a, b)| (a - b).powi(2))
+                                .sum::<f64>()
+                                > 256.0
+                        {
+                            continue;
+                        }
+                        println!(
+                            "builder-end={endpoint:?} port={port:?} in_reach={:?} plan={:?}",
+                            terra_world::rails::builder::extension_in_reach(car, port),
+                            terra_world::rails::builder::plan_for_vehicle(
+                                &chunks,
+                                &journal,
+                                port,
+                                Default::default(),
+                                car,
+                            )
+                            .map(|plan| (
+                                plan.layout().edits.len(),
+                                plan.tracks(),
+                                plan.ballast()
+                            ))
+                        );
+                    }
+                }
+            }
             for throttle in [-1, 1] {
                 let mut moving = car.clone();
                 moving.motion.throttle = throttle;

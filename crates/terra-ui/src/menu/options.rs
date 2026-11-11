@@ -331,6 +331,13 @@ pub(super) fn change(world: &mut World, control: &str, value: &str) -> Result<()
         "controls-sensitivity" => draft.controls.mouse_sensitivity = number()? / 1000.0,
         "controls-auto-climb" => draft.controls.auto_climb = flag()?,
         "heartbeat" => draft.gameplay.heartbeat = flag()?,
+        "game-language" => {
+            draft.gameplay.language = match value {
+                "de" => terra_core::GameLanguage::German,
+                "en" => terra_core::GameLanguage::English,
+                _ => return Err("Unsupported language".into()),
+            }
+        }
         "view-bobbing" => draft.gameplay.view_bobbing = flag()?,
         "mob-health-bars" => {
             draft.gameplay.mob_health_bars = match value {
@@ -508,6 +515,8 @@ fn save(
             .gameplay
             .save(root.join("gameplay.toml"))
             .map_err(|e| format!("Cannot save gameplay preferences: {e}"))?;
+        saved = 5;
+        crate::localization::save_profile_language(world)?;
         Ok::<(), String>(())
     })();
     if let Err(mut error) = result {
@@ -520,6 +529,20 @@ fn save(
             || world.resource::<ControlsConfig>(),
             |display| &display.controls,
         );
+        if saved >= 5 {
+            let gameplay = draft.display.as_ref().map_or_else(
+                || {
+                    world
+                        .get_resource::<GameplayConfig>()
+                        .cloned()
+                        .unwrap_or_default()
+                },
+                |display| display.gameplay.clone(),
+            );
+            if let Err(rollback) = gameplay.save(root.join("gameplay.toml")) {
+                error.push_str(&format!(". Gameplay rollback also failed: {rollback}"));
+            }
+        }
         if saved >= 4 {
             let multiplayer = draft.display.as_ref().map_or_else(
                 || {

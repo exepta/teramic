@@ -1,0 +1,145 @@
+@if (dialogView.visible) {
+<div class="modal-backdrop"><div id="menu-dialog" [class]="dialogView.create ? 'modal-panel copper-dialog world-create-dialog' : (dialogView.minimap ? 'modal-panel copper-dialog minimap-options' : (dialogView.mob_health ? 'modal-panel copper-dialog mob-health-options' : 'modal-panel copper-dialog'))"><div class="copper-frame-background"></div><img class="inventory-reference-frame" src="tilt-ui://assets/inventory-copper-frame.png" alt="" /><div class="inventory-reference-title copper-dialog-heading"><h1 class="copper-dialog-title">{{ localizedUi.dialogView.title }}</h1></div><div class="copper-dialog-body">@if (dialogView.message) { <p class="copper-dialog-message">{{ localizedUi.dialogView.message }}</p> }
+  @if (dialogView.minimap) {
+    <div class="minimap-settings-list">@for (row of localizedUi.dialogView.rows; track row.id) { <settings-row></settings-row> }</div>
+  }
+  @if (dialogView.mob_health) {
+    <div class="mob-health-settings-list">@for (row of localizedUi.dialogView.rows; track row.id) { <settings-row></settings-row> }</div>
+  }
+  @if (dialogView.create) {
+    <div class="world-create-tabs">
+      <button id="world-create-tab-general" [class]="dialogView.create_tab == 'general' ? 'world-create-tab selected' : 'world-create-tab'" onclick="menu_command"><p>{{ i18n.text_general_c910d474dcd7 }}</p></button>
+      <button id="world-create-tab-biomes" [class]="dialogView.create_tab == 'biomes' ? 'world-create-tab selected' : 'world-create-tab'" onclick="menu_command"><p>{{ i18n.text_biome_structs_cd7e6691a978 }}</p></button>
+      <button id="world-create-tab-kingdom" [class]="dialogView.create_tab == 'kingdom' ? 'world-create-tab selected' : 'world-create-tab'" onclick="menu_command"><p>{{ i18n.text_kingdom_f53639f9116b }}</p></button>
+    </div>
+    <div id="world-create-scroll" class="world-create-form">
+      @if (dialogView.create_tab == 'general') {
+      <div class="world-basic-fields">
+        <div class="world-field"><label for="world-name">{{ i18n.text_world_name_165ad7efc809 }}</label><input class="copper-dialog-field" id="world-name" type="text" maxlength="64" [value]="dialogView.name" onchange="menu_change" /></div>
+        <div class="world-field"><label for="world-seed">{{ i18n.text_world_seed_optional_6e3eb5313ae2 }}</label><input class="copper-dialog-field" id="world-seed" type="text" maxlength="20" [placeholder]="i18n.text_random_seed_8a91c3ae834f" [value]="dialogView.seed" onchange="menu_change" /></div>
+      </div>
+      <div class="world-population"><label for="world-mob-limit">{{ i18n.text_natural_mobs_ea06634d1cdc }} {{ localizedUi.dialogView.natural_mob_limit }}</label><slider class="copper-dialog-slider" id="world-mob-limit" min="0" max="1024" step="16" [value]="dialogView.natural_mob_limit" onchange="menu_change"></slider></div>
+      <div class="world-create-section">
+        <h2 class="world-section-title"><icon name="gamepad-2" size="24" />{{ i18n.text_game_mode_1311d7944778 }}</h2>
+        <div class="world-mode-grid">
+          <button id="world-mode-survival" [class]="dialogView.mode == 'survival' ? 'world-option selected' : 'world-option'" onclick="menu_command"><icon name="gamepad-2" size="24" /><p>{{ i18n.text_survival_8302496de0ac }}</p></button>
+          <button id="world-mode-creative" [class]="dialogView.mode == 'creative' ? 'world-option selected' : 'world-option'" onclick="menu_command"><icon name="tool" size="24" /><p>{{ i18n.text_creative_2c7e63313045 }}</p></button>
+          <button id="world-mode-spectator" [class]="dialogView.mode == 'spectator' ? 'world-option selected' : 'world-option'" onclick="menu_command"><icon name="eye" size="24" /><p>{{ i18n.text_spectator_5ccda7f08fd1 }}</p></button>
+        </div>
+      </div>
+      <div class="world-create-section">
+        <h2 class="world-section-title"><icon name="settings" size="24" />{{ i18n.text_gamerules_843dfde6adec }}</h2>
+        <div class="world-rules-grid">
+          @for (rule of localizedUi.dialogView.world_rules; track rule.id) {
+            <div class="world-rule-card">
+              <div class="world-rule-icon">
+                @if (rule.icon == 'backpack') { <icon name="backpack" size="24" /> }
+                @if (rule.icon == 'sun') { <icon name="sun" size="24" /> }
+                @if (rule.icon == 'cloud-rain') { <icon name="cloud-rain" size="24" /> }
+                @if (rule.icon == 'paw-print') { <icon name="paw-print" size="24" /> }
+                @if (rule.icon == 'flame') { <icon name="flame" size="24" /> }
+                @if (rule.icon == 'swords') { <icon name="swords" size="24" /> }
+                @if (rule.icon == 'users-round') { <icon name="users-round" size="24" /> }
+                @if (rule.icon == 'clock') { <icon name="clock" size="24" /> }
+                @if (rule.icon == 'calendar') { <icon name="calendar" size="24" /> }
+              </div>
+              <div class="world-rule-copy"><p class="world-rule-title">{{ rule.title }}</p><p class="world-rule-hint">{{ rule.hint }}</p></div>
+              @if (rule.kind == 'switch') {
+                <p class="world-toggle-state">@if (rule.checked) { {{ i18n.text_on_130011756125 }} } @else { {{ i18n.text_off_ca7981b46ecf }} }</p>
+                <switch-button id="row-switch" class="world-rule-toggle" [checked]="rule.checked" onchange="$set(menuIntent.control, rule.id); menu_change" />
+              } @else if (rule.kind == 'number') {
+                <input id="row-rule-input" class="copper-dialog-field world-rule-input" type="number" [value]="rule.value" [min]="rule.min" [max]="rule.max" [step]="rule.step" onchange="$set(menuIntent.control, rule.id); menu_change" />
+              } @else {
+                <input id="row-rule-input" class="copper-dialog-field world-rule-input" type="text" [value]="rule.value" onchange="$set(menuIntent.control, rule.id); menu_change" />
+              }
+            </div>
+          }
+        </div>
+      </div>
+      }
+      @if (dialogView.create_tab == 'biomes') {
+      <div class="world-create-section">
+        <h2 class="world-section-title"><icon name="leaf" size="24" />{{ i18n.text_desired_biome_f58f44eb4197 }}</h2>
+        <p class="world-section-hint">{{ i18n.text_choose_your_starting_area_the_rest_o_16cb40709a25 }}</p>
+        <button id="world-biome-picker-open" class="world-biome-selected" onclick="menu_command">
+          <img class="world-biome-preview" [src]="dialogView.selected_biome.image" [alt]="dialogView.selected_biome.title" />
+          <div class="world-biome-selected-copy"><p class="world-biome-name">{{ localizedUi.dialogView.selected_biome.title }}</p><p class="world-biome-prompt">{{ i18n.text_choose_a_biome_e956ff3e9774 }}</p></div>
+          <icon name="chevron-down" size="24" />
+        </button>
+      </div>
+      <div class="world-create-section">
+        <h2 class="world-section-title"><icon name="landmark" size="24" />{{ i18n.text_structures_b912533f7f9a }}</h2>
+        <div class="world-structure-actions"><p>{{ i18n.text_generate_world_structures_ec5550d2eefc }}</p><switch-button id="world-structures-enabled" class="world-rule-toggle" [checked]="dialogView.structures_enabled" onchange="menu_change" /></div>
+        <div class="world-structures-grid">
+          @for (structure of localizedUi.dialogView.structure_choices; track structure.id) {
+            <div class="world-structure-card">
+              <div class="world-structure-title">@if (structure.icon == 'home') { <icon name="home" size="24" /> } @if (structure.icon == 'landmark') { <icon name="landmark" size="24" /> } @if (structure.icon == 'tool') { <icon name="tool" size="24" /> } @if (structure.icon == 'crown') { <icon name="crown" size="24" /> } @if (structure.icon == 'flag') { <icon name="flag" size="24" /> }<p>{{ structure.title }}</p></div>
+              <div class="world-structure-switch"><p>@if (structure.checked) { {{ i18n.text_on_130011756125 }} } @else { {{ i18n.text_off_ca7981b46ecf }} }</p><switch-button id="row-switch" class="world-rule-toggle" [checked]="structure.checked" onchange="$set(menuIntent.control, structure.id); menu_change" /></div>
+            </div>
+          }
+        </div>
+      </div>
+      }
+      @if (dialogView.create_tab == 'kingdom') {
+      <div class="world-create-section">
+        <h2 class="world-section-title"><icon name="crown" size="24" />{{ i18n.text_kingdom_rules_e21b1117ac2d }}</h2>
+        <p class="world-section-hint">{{ i18n.text_limits_apply_to_each_settlement_bord_f374db34febf }}</p>
+        <div class="world-rules-grid">
+          @for (rule of localizedUi.dialogView.kingdom_rules; track rule.id) {
+            <div class="world-rule-card">
+              <div class="world-rule-icon">
+                @if (rule.icon == 'network') { <icon name="network" size="24" /> }
+                @if (rule.icon == 'arrow-up') { <icon name="arrow-up" size="24" /> }
+                @if (rule.icon == 'ruler') { <icon name="ruler" size="24" /> }
+                @if (rule.icon == 'hammer') { <icon name="hammer" size="24" /> }
+                @if (rule.icon == 'map') { <icon name="map" size="24" /> }
+                @if (rule.icon == 'flag') { <icon name="flag" size="24" /> }
+                @if (rule.icon == 'map-pin') { <icon name="map-pin" size="24" /> }
+                @if (rule.icon == 'home') { <icon name="home" size="24" /> }
+                @if (rule.icon == 'crown') { <icon name="crown" size="24" /> }
+                @if (rule.icon == 'landmark') { <icon name="landmark" size="24" /> }
+              </div>
+              <div class="world-rule-copy"><p class="world-rule-title">{{ rule.title }}</p><p class="world-rule-hint">{{ rule.hint }}</p></div>
+              @if (rule.kind == 'switch') {
+                <p class="world-toggle-state">@if (rule.checked) { {{ i18n.text_on_130011756125 }} } @else { {{ i18n.text_off_ca7981b46ecf }} }</p>
+                <switch-button id="row-switch" class="world-rule-toggle" [checked]="rule.checked" onchange="$set(menuIntent.control, rule.id); menu_change" />
+              } @else {
+                <input id="row-rule-input" class="copper-dialog-field world-rule-input" type="number" [value]="rule.value" [min]="rule.min" [max]="rule.max" [step]="rule.step" onchange="$set(menuIntent.control, rule.id); menu_change" />
+              }
+            </div>
+          }
+        </div>
+      </div>
+      }
+    </div>
+  }
+  @if (dialogView.server) {
+    <label>{{ i18n.text_server_name_bc4816425ebe }}</label><input class="copper-dialog-field" id="server-name" type="text" maxlength="64" [value]="dialogView.name" onchange="menu_change" />
+    <label>{{ i18n.text_server_address_181cda8ec311 }}</label><input class="copper-dialog-field" id="server-address" type="text" [placeholder]="i18n.text_127_0_0_1_or_a_hostname_4cd4c11b5a8f" [value]="dialogView.address" onchange="menu_change" />
+    <label>{{ i18n.text_port_72e9a59f5a1d }}</label><input class="copper-dialog-field" id="server-port" type="text" maxlength="5" [value]="dialogView.port" onchange="menu_change" />
+  }
+  <p class="error-text">{{ localizedUi.dialogView.error }}</p>
+  </div><div class="action-bar copper-dialog-actions">@for (button of localizedUi.dialogView.buttons; track button.id) { <menu-button></menu-button> }</div>
+</div></div>
+}
+
+@if (dialogView.create && dialogView.biome_picker_open) {
+<div class="biome-picker-backdrop">
+  <div id="world-biome-picker" class="modal-panel copper-dialog world-biome-picker">
+    <div class="copper-frame-background"></div><img class="inventory-reference-frame" src="tilt-ui://assets/inventory-copper-frame.png" alt="" />
+    <div class="inventory-reference-title copper-dialog-heading"><h1 class="copper-dialog-title">{{ i18n.text_choose_biome_cf7f8d0d5e79 }}</h1></div>
+    <p class="world-biome-picker-hint">{{ i18n.text_choose_your_starting_area_7edcad62f747 }}</p>
+    <div id="world-biome-picker-scroll" class="world-biome-picker-scroll">
+      <div class="world-biome-grid">
+        @for (biome of localizedUi.dialogView.biome_choices; track biome.command) {
+          <button id="menu-action" [class]="biome.class_name" onclick="$set(menuIntent.command, biome.command); menu_command">
+            <img class="world-biome-image" [src]="biome.image" [alt]="biome.title" />
+            <div class="world-biome-caption"><p>{{ biome.title }}</p>@if (biome.class_name == dialogView.selected_biome.class_name) { <icon name="check" size="20" /> }</div>
+          </button>
+        }
+      </div>
+    </div>
+    <button id="world-biome-picker-close" class="world-biome-close" onclick="menu_command"><p>{{ i18n.text_done_11a6767d5674 }}</p></button>
+  </div>
+</div>
+}

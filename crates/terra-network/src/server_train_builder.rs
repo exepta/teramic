@@ -7,6 +7,8 @@ use terra_core::{
     trains::{TrainError, Vehicle},
 };
 use terra_world::rails::{self, builder};
+#[path = "server_train_builder_cargo.rs"]
+mod cargo;
 
 /// The scoop faces local negative Z, like the cab; either end of a train can carry it.
 pub(super) fn direction(car: &Vehicle) -> i8 {
@@ -32,7 +34,7 @@ fn free_end(car: &Vehicle, graph: &terra_core::rails::RouteNetwork) -> Option<Po
         .parts
         .iter()
         .position(|p| p.material == terra_core::train_parts::RAIL_BUILDER)?;
-    let front = car.world_cell(module)?.map(|v| v as f64 + 0.5);
+    let front = car.world_point(car.parts[module].offset.map(|v| f64::from(v) + 0.5));
     loop {
         if !visited.insert(end) || visited.len() > 32 {
             return None;
@@ -157,6 +159,9 @@ pub(super) fn step(
     let Some(port) = free_end(car, graph) else {
         return clear_front(car, peer, world);
     };
+    if !builder::extension_in_reach(car, port).map_err(|_| TrainError::Unsupported)? {
+        return clear_front(car, peer, world);
+    }
     let creative = peer.game_mode(&world.config) == GameMode::Creative;
     if peer.game_mode(&world.config) == GameMode::Spectator {
         return Err(TrainError::Protected);
@@ -176,7 +181,9 @@ pub(super) fn step(
                     registry.vehicles[id]
                         .parts
                         .get(usize::from(**index))
-                        .is_some_and(|part| part.material == terra_core::train_parts::CARGO)
+                        .is_some_and(|part| {
+                            matches!(part.material, 29 | terra_core::train_parts::CARGO)
+                        })
                 })
                 .map(|(_, bag)| bag)
         })
@@ -191,7 +198,10 @@ pub(super) fn step(
         track.wood_species().unwrap_or_default(),
         car,
     )
-    .map_err(|_| TrainError::Unsupported)?;
+    .map_err(|error| {
+        tracing::warn!(vehicle = car.id, ?port, %error, "Rail builder cannot extend this endpoint");
+        TrainError::Unsupported
+    })?;
     for edit in &plan.layout().edits {
         if world.config.world.bounded_world && !(-128..=356).contains(&edit.position[1])
             || !super::kingdoms::permission_allowed(
@@ -251,22 +261,10 @@ pub(super) fn step(
             (track, plan.tracks()),
             (ItemKind::Block(206), plan.ballast()),
         ] {
-            for _ in 0..count {
-                if !stocks.iter_mut().any(|(id, stores)| {
-                    stores.iter_mut().any(|(index, bag)| {
-                        registry.vehicles[id]
-                            .parts
-                            .get(usize::from(*index))
-                            .is_some_and(|part| part.material == terra_core::train_parts::CARGO)
-                            && bag.revision < u64::MAX - 64
-                            && bag.take_one(item)
-                    })
-                }) {
-                    return Err(TrainError::MissingMaterials);
-                }
-            }
+            cargo::take(registry, &mut stocks, item, count)?;
         }
     }
+    let drops = cargo::stow(car, registry, &mut stocks, drops)?;
     let gameplay = world.journal.gameplay();
     if gameplay.drops.len() + drops.len() > terra_core::MAX_WORLD_DROPS
         || gameplay.next_drop.checked_add(drops.len() as u64).is_none()
@@ -347,6 +345,19 @@ pub(super) fn clear_front(
         }
     }
     let drops = compact_drops(drops);
+    let registry = &world.journal.gameplay().trains;
+    let mut stocks: cargo::CargoDrafts = if car.motion.rail_builder_autoload
+        && peer.game_mode(&world.config) != GameMode::Creative
+    {
+        registry
+            .consist(car.id)?
+            .iter()
+            .map(|id| (*id, registry.vehicles[id].cargo.clone()))
+            .collect()
+    } else {
+        Vec::new()
+    };
+    let drops = cargo::stow(car, registry, &mut stocks, drops)?;
     let gameplay = world.journal.gameplay();
     if gameplay.drops.len() + drops.len() > terra_core::MAX_WORLD_DROPS
         || gameplay.next_drop.checked_add(drops.len() as u64).is_none()
@@ -354,6 +365,11 @@ pub(super) fn clear_front(
             .revision
             .checked_add(drops.len() as u64 + 1)
             .is_none()
+        || !stocks.is_empty()
+            && (gameplay.trains.revision == u64::MAX
+                || stocks
+                    .iter()
+                    .any(|(id, _)| gameplay.trains.vehicles[id].revision == u64::MAX))
         || drops.iter().any(|(position, stack)| {
             !stack.valid()
                 || position
@@ -366,6 +382,18 @@ pub(super) fn clear_front(
     plan.commit(&mut world.chunks, &mut world.journal)
         .map_err(|_| TrainError::Stale)?;
     let gameplay = world.journal.gameplay_mut();
+    let mut cargo_changed = false;
+    for (id, cargo) in stocks {
+        let wagon = gameplay.trains.vehicles.get_mut(&id).unwrap();
+        if wagon.cargo != cargo {
+            wagon.cargo = cargo;
+            wagon.revision += 1;
+            cargo_changed = true;
+        }
+    }
+    if cargo_changed {
+        gameplay.trains.revision += 1;
+    }
     for (position, stack) in drops {
         let accepted = gameplay.drop_stack(position, stack, [0.0, 1.8, 0.0], 0.35);
         debug_assert!(accepted);

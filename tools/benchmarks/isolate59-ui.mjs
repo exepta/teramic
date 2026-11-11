@@ -14,7 +14,7 @@ if(at<0||data.indexOf(original,at+1)>=0) throw new Error('Expected exactly one e
 const replacement=Buffer.from(resolved+'/'.repeat(original.length-resolved.length));
 replacement.copy(data,at);
 fs.cpSync(path.join(repo,'src-ui'),resolved,{recursive:true});
-const game=path.join(resolved,'pages/game.component.html');
+const game=path.join(resolved,'pages/game/game.component.html');
 fs.writeFileSync(game,fs.readFileSync(game,'utf8').replace('  <target-card></target-card>\n',''));
 fs.writeFileSync(output,data,{mode:0o755});
 process.stdout.write(`Redirected one ${original.length}-byte UI root, no rendering or simulation changes.\n`);

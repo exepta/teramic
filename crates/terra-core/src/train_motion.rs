@@ -57,6 +57,8 @@ impl Default for RailClearance {
 pub struct TrainMotion {
     /// Persisted work mode; the authority validates the fitted attachment and consist.
     pub rail_builder_active: bool,
+    /// Excavated resources are routed into coupled freight storage before dropping overflow.
+    pub rail_builder_autoload: bool,
     pub rail_clearance: RailClearance,
     pub translation: [f64; 3],
     pub pivot: [f64; 3],
@@ -74,6 +76,7 @@ impl Default for TrainMotion {
     fn default() -> Self {
         Self {
             rail_builder_active: false,
+            rail_builder_autoload: false,
             rail_clearance: RailClearance::default(),
             translation: [0.0; 3],
             pivot: [0.0; 3],

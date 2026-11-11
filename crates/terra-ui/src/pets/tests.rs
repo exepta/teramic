@@ -206,7 +206,7 @@ fn stale_owner_and_timeout_never_claim_a_successful_pet_command() {
     update(app.world_mut());
     assert!(!app.world().resource::<PetMenuView>().visible);
     tilt_ui::tilt_ui_css::parse_stylesheet(include_str!(
-        "../../../../src-ui/components/pet-menu.component.css"
+        "../../../../src-ui/components/pet-menu/pet-menu.component.css"
     ))
     .unwrap();
 }

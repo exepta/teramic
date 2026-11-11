@@ -6,6 +6,8 @@ mod hydraulics_tests;
 mod kinetic_art_tests;
 #[path = "lantern_tests.rs"]
 mod lantern_tests;
+#[path = "profession_station_tests.rs"]
+mod profession_station_tests;
 
 #[test]
 fn authored_tangents_follow_nonuniform_node_scale_rotation_and_reflection() {

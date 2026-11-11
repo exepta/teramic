@@ -165,7 +165,10 @@ fn snapshot(world: &ControlWorld, position: [i64; 3]) -> Option<ContainerSnapsho
         return value.valid().then_some(value);
     }
     if position.iter().any(|p| p.unsigned_abs() > 990_000)
-        || !matches!(world.chunks.block_at(position), Some(29 | 216))
+        || !world
+            .chunks
+            .block_at(position)
+            .is_some_and(terra_core::profession_stations::is_depot)
     {
         return None;
     }
@@ -907,6 +910,10 @@ pub(super) fn load_recipe(
         outcome,
     });
 }
+
+#[cfg(test)]
+#[path = "server_profession_station_tests.rs"]
+mod profession_station_tests;
 
 #[cfg(test)]
 mod tests {

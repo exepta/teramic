@@ -38,6 +38,96 @@ fn app() -> App {
 }
 
 #[test]
+fn language_changes_stage_apply_and_discard_through_the_real_settings_commands() {
+    use terra_core::{GameLanguage, GameplayConfig, LanguagePreference, PlayerProfile};
+    let mut app = app();
+    let profile = PlayerProfile::default();
+    let configs = app.world().resource::<MenuPaths>().configs.clone();
+    let gameplay_path = configs.join("gameplay.toml");
+    let language_path = configs
+        .join("profile-preferences")
+        .join(profile.uuid.simple().to_string())
+        .join("language.toml");
+    app.insert_resource(profile);
+    command(&mut app, "options");
+    command(&mut app, "gameplay-options");
+    let rows = view::gameplay_rows(app.world().resource::<GameplayConfig>());
+    let language = rows.iter().find(|row| row.id == "game-language").unwrap();
+    assert_eq!(language.value, "de");
+    assert_eq!(
+        language
+            .choices
+            .iter()
+            .map(|choice| choice.value.as_str())
+            .collect::<Vec<_>>(),
+        ["de", "en"]
+    );
+    change(&mut app, "game-language", "en");
+    assert_eq!(
+        app.world().resource::<OptionsDraft>().gameplay.language,
+        GameLanguage::English
+    );
+    assert_eq!(
+        app.world().resource::<GameplayConfig>().language,
+        GameLanguage::German
+    );
+    assert_eq!(
+        GameplayConfig::load(&gameplay_path).unwrap().language,
+        GameLanguage::German
+    );
+    assert!(!language_path.exists());
+    change(&mut app, "game-language", "fr");
+    assert_eq!(
+        app.world().resource::<MenuState>().error,
+        "Unsupported language"
+    );
+    assert_eq!(
+        app.world().resource::<OptionsDraft>().gameplay.language,
+        GameLanguage::English
+    );
+    change(&mut app, "game-language", "en");
+    command(&mut app, "apply");
+    assert!(app.world().resource::<MenuState>().error.is_empty());
+    assert_eq!(
+        app.world().resource::<GameplayConfig>().language,
+        GameLanguage::English
+    );
+    assert_eq!(
+        GameplayConfig::load(&gameplay_path).unwrap().language,
+        GameLanguage::English
+    );
+    assert_eq!(
+        LanguagePreference::load(&language_path).unwrap().language,
+        GameLanguage::English
+    );
+    change(&mut app, "game-language", "de");
+    command(&mut app, "back");
+    assert_eq!(
+        app.world().resource::<MenuState>().dialog,
+        MenuDialog::Discard
+    );
+    command(&mut app, "discard-confirm");
+    assert_eq!(
+        app.world().resource::<GameplayConfig>().language,
+        GameLanguage::English
+    );
+    assert_eq!(
+        GameplayConfig::load(&gameplay_path).unwrap().language,
+        GameLanguage::English
+    );
+    assert_eq!(
+        LanguagePreference::load(&language_path).unwrap().language,
+        GameLanguage::English
+    );
+    command(&mut app, "options");
+    assert_eq!(
+        app.world().resource::<OptionsDraft>().gameplay.language,
+        GameLanguage::English
+    );
+    cleanup(app);
+}
+
+#[test]
 fn four_k_monitor_offers_native_resolution_even_when_wayland_reports_only_one_mode() {
     use bevy::window::{Monitor, OnMonitor};
     let mut app = app();
@@ -144,7 +234,8 @@ fn tree_fall_modes_are_persisted_and_default_to_current() {
 
 #[test]
 fn graphics_cave_and_tree_controls_have_visible_options_and_persist() {
-    let template = include_str!("../../../../src-ui/components/settings-row.component.html");
+    let template =
+        include_str!("../../../../src-ui/components/settings-row/settings-row.component.html");
     let mut app = app();
     command(&mut app, "options");
     for (control, values) in [
@@ -399,7 +490,7 @@ fn mob_health_editor_stages_real_color_controls_and_preserves_apply_reset_discar
         assert_eq!(app.world().resource::<OptionsDraft>().gameplay, staged);
     }
     assert!(
-        include_str!("../../../../src-ui/components/settings-row.component.html")
+        include_str!("../../../../src-ui/components/settings-row/settings-row.component.html")
             .contains("row.id == 'mob-health-bars'")
     );
     cleanup(app);

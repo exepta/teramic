@@ -75,6 +75,12 @@ pub(crate) struct InventoryState {
     page_capacity: usize,
     category_dropdown: bool,
     sort_menu: Option<bool>,
+    sort_player_order: Option<terra_core::inventory_sort::SortOrder>,
+    sort_storage_order: Option<(
+        [i64; 3],
+        ContainerView,
+        terra_core::inventory_sort::SortOrder,
+    )>,
     browser_collapsed: bool,
     filter_selecting: bool,
     filter_output: u8,
@@ -444,7 +450,9 @@ pub(crate) fn item_label(item: ItemKind, palette: &BlockPalette) -> String {
 
 pub(crate) fn preview_key(item: ItemKind) -> String {
     match item {
-        ItemKind::FilledWateringCan { tool, .. } => preview_key(ItemKind::Tool(tool)),
+        ItemKind::FilledWateringCan { tool, .. } | ItemKind::WornTool { tool, .. } => {
+            preview_key(ItemKind::Tool(tool))
+        }
         ItemKind::Block(id) => format!("{PREVIEW_ALT_PREFIX}{id}"),
         ItemKind::Prop(kind) => format!("{PROP_ALT_PREFIX}{}", prop_slug(kind)),
         ItemKind::Tool(_)
@@ -697,9 +705,10 @@ fn block_opening_frame(
                 held_action_priority(&input, &context, active.as_deref()),
             )
             .and_then(|p| context.chunks.as_ref()?.block_at(p))
-            .is_some_and(
-                |material| matches!(material, 28 | 29 | 59 | 99 | 152 | 156..=157 | 159..=162 | 216),
-            ))
+            .is_some_and(|material| {
+                matches!(material, 28 | 29 | 59 | 99 | 152 | 156..=157 | 159..=162 | 216)
+                    || terra_core::profession_stations::is_station(material)
+            }))
     {
         blocked.0 = true;
     }
@@ -754,24 +763,24 @@ fn station_target(
     let terra_player::WorldTarget::Block(hit) = context.target.as_ref()?.0? else {
         return None;
     };
-    matches!(
-        context.chunks.as_ref()?.block_at(hit.position),
-        Some(
-            28
-            | 29
-            | 59
-            | 65..=73
-            | 99
-            | 131
-            | 139..=140
-            | 152
-            | 156..=157
-            | 159..=162
-            | 166..=167
-            | 209
-            | 216,
-        )
-    )
+    let material = context.chunks.as_ref()?.block_at(hit.position)?;
+    (terra_core::profession_stations::is_station(material)
+        || matches!(
+            material,
+                28
+                | 29
+                | 59
+                | 65..=73
+                | 99
+                | 131
+                | 139..=140
+                | 152
+                | 156..=157
+                | 159..=162
+                | 166..=167
+                | 209
+                | 216
+        ))
     .then_some(hit.position)
 }
 
@@ -862,7 +871,7 @@ fn held_action_priority(
     let Some(item) = active.and_then(|active| active.0) else {
         return false;
     };
-    if rail_mode_priority(input, active) || item == ItemKind::Tool(terra_core::ToolKind::Wrench) {
+    if rail_mode_priority(input, active) || item.tool_kind() == Some(terra_core::ToolKind::Wrench) {
         return true;
     }
     if context
@@ -1138,6 +1147,9 @@ fn keyboard(
                         closing: false,
                     });
                 }
+                Some(material) if terra_core::profession_stations::is_station(material) => {
+                    actions.write(InventoryAction::OpenChest(position));
+                }
                 Some(29 | 59 | 99 | 152 | 156..=157 | 159..=162 | 216) => {
                     actions.write(InventoryAction::OpenChest(position));
                 }
@@ -1325,6 +1337,7 @@ impl InventorySelection<'_> {
                     .position(|choice| choice.id == id),
                 ItemKind::Prop(_)
                 | ItemKind::Tool(_)
+                | ItemKind::WornTool { .. }
                 | ItemKind::FilledWateringCan { .. }
                 | ItemKind::Stick
                 | ItemKind::Mineral(_)
@@ -1615,8 +1628,12 @@ fn actions(
                 state.sort_menu = None;
                 state.source = None;
                 let request = if *storage {
+                    if let Some(container) = &session.container {
+                        state.sort_storage_order = Some((container.anchor, container.view, *order));
+                    }
                     ServerAction::SortContainer { order: *order }
                 } else {
+                    state.sort_player_order = Some(*order);
                     ServerAction::Sort {
                         order: *order,
                         reserved: crafting::reserved_counts(&selection.reservations),
@@ -2121,6 +2138,9 @@ fn item_id(item: ItemKind) -> String {
         ItemKind::WoodenBlock { material, wood } => format!("block-{material}-{}", wood.slug()),
         ItemKind::Prop(kind) => format!("prop-{}", prop_slug(kind)),
         ItemKind::Tool(tool) => format!("item-{}", tool.slug()),
+        ItemKind::WornTool { tool, remaining } => {
+            format!("item-{}-uses-{remaining}", tool.slug())
+        }
         ItemKind::FilledWateringCan { tool, units } => {
             format!("item-{}-water-{units}", tool.slug())
         }

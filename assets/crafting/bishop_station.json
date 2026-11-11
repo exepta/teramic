@@ -1,0 +1,35 @@
+{
+  "id": "teramic::bishop_station",
+  "name": "Bischofs-Station",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "block": 304
+    },
+    "count": 1
+  },
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "block": 16
+        },
+        "wood": true,
+        "count": 2
+      },
+      {
+        "item": {
+          "block": 29
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "block": 40
+        },
+        "count": 2
+      }
+    ]
+  }
+}

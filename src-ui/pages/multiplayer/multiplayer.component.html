@@ -1,0 +1,11 @@
+<div id="multiplayer-page" class="library-page copper-menu-page">
+  <div class="copper-frame-background"></div><img class="inventory-reference-frame" src="tilt-ui://assets/inventory-copper-frame.png" alt="" />
+  <div class="inventory-reference-title copper-menu-title"><icon name="users-round" size="25" /><h1 class="copper-page-title">{{ i18n.text_multiplayer_563370a7b0ef }}</h1><icon name="users-round" size="25" /></div>
+  <div class="library-panel copper-worlds-panel"><div class="list-heading copper-server-heading"><h2 class="copper-server-count">{{ localizedUi.serversView.count }}</h2><p>{{ localizedUi.serversView.discovery }}</p></div>
+    <div class="card-list">
+    @if (serversView.empty) { <div class="empty-state"><icon name="users-round" size="44" /><h2>{{ i18n.text_find_your_people_8213d2ee3bb7 }}</h2><p>{{ i18n.text_no_saved_servers_yet_571ef560f8a8 }}</p></div> }
+    @for (card of localizedUi.serversView.cards; track card.id) { <server-card></server-card> }
+    </div>
+  </div>
+  <div class="action-bar copper-menu-actions">@for (button of localizedUi.serversView.buttons; track button.id) { <menu-button></menu-button> }</div>
+</div>

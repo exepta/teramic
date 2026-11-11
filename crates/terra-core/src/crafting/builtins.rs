@@ -418,4 +418,13 @@
     include_str!("../../../../assets/crafting/ruby_cape_orange.json"),
     include_str!("../../../../assets/crafting/ruby_cape_green.json"),
     include_str!("../../../../assets/crafting/ruby_cape_purple.json"),
+    include_str!("../../../../assets/crafting/lumberjack_station.json"),
+    include_str!("../../../../assets/crafting/smith_station.json"),
+    include_str!("../../../../assets/crafting/market_station.json"),
+    include_str!("../../../../assets/crafting/army_station.json"),
+    include_str!("../../../../assets/crafting/railway_station.json"),
+    include_str!("../../../../assets/crafting/mine_station.json"),
+    include_str!("../../../../assets/crafting/butcher_station.json"),
+    include_str!("../../../../assets/crafting/bishop_station.json"),
+    include_str!("../../../../assets/crafting/farm_station.json"),
 ]

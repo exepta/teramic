@@ -54,6 +54,11 @@ pub(super) fn preload() {
 
 pub(super) fn display_name(item: ItemKind) -> String {
     match item {
+        ItemKind::WornTool { tool, remaining } => format!(
+            "{} ({remaining}/{})",
+            display_name(ItemKind::Tool(tool)),
+            tool.durability()
+        ),
         ItemKind::Prop(kind) => kind.label().into(),
         ItemKind::Potion(id) => crate::brewing::recipe(id)
             .map_or_else(|| item.identifier(), |recipe| recipe.name.clone()),

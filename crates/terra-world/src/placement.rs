@@ -14,6 +14,7 @@ pub struct Layout {
 }
 pub fn furniture(material: u16) -> bool {
     matches!(material, 28..=29 | 59..=73 | 99..=100 | 131 | 141..=172)
+        || terra_core::profession_stations::is_station(material)
         || crate::objects::is_opening(material)
         || terra_core::construction::is_shape(material)
         || terra_core::castle::is_castle(material)
@@ -281,6 +282,7 @@ pub fn layout(
     if material == terra_core::flower_pot::MATERIAL
         || material == terra_core::rails::SWITCH_STAND
         || terra_core::textiles::is_carpet(material)
+        || terra_core::profession_stations::is_station(material)
     {
         let support = chunks
             .block_at([position[0], position[1] - 1, position[2]])
@@ -1928,6 +1930,26 @@ mod tests {
             },
         );
         (chunks, EditJournal::default())
+    }
+
+    #[test]
+    fn profession_stations_are_rotatable_single_cell_furniture_requiring_a_real_floor() {
+        let (chunks, journal) = fixture();
+        for material in terra_core::profession_stations::ALL {
+            assert!(furniture(material));
+            for facing in 0..4 {
+                let yaw = facing as f32 * std::f32::consts::FRAC_PI_2;
+                let plan =
+                    layout(&chunks, &journal, [7, 2, 7], 0, material, [yaw, 0.], None).unwrap();
+                assert_eq!(plan.edits.len(), 1);
+                assert_eq!(plan.states.len(), 1);
+                let state = plan.states[0].1.unwrap();
+                assert_eq!(state, BlockObjectState::from_yaw(yaw));
+                assert!(state.valid_for([7, 2, 7], material));
+                environment(&plan, &chunks, &journal, true).unwrap();
+            }
+            assert!(layout(&chunks, &journal, [7, 4, 7], 0, material, [0.; 2], None).is_err());
+        }
     }
     #[test]
     fn construction_and_train_parts_attach_to_every_face_without_a_floor() {

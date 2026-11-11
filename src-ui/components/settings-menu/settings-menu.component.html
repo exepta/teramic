@@ -1,0 +1,40 @@
+@if (settingsView.open) {
+<div class="settings-backdrop">
+  <div class="settings-panel">
+    <ornate-frame></ornate-frame>
+    <div class="settings-heading">
+      <div class="settings-titles"><p class="settings-brand">{{ i18n.text_project_terra_51a867ad240e }}</p><h1 class="settings-title">{{ i18n.text_einstellungen_f5750a5d7231 }}</h1></div>
+      <button id="settings-cancel" class="close-button" onclick="settings_command"><icon name="close" size="20" /><tooltip>{{ i18n.text_aenderungen_verwerfen_ff036c847845 }}</tooltip></button>
+    </div>
+    <div class="settings-content">
+      <p class="section-title">{{ i18n.text_kamera_welt_5f3804401e68 }}</p>
+      <div class="setting"><div class="setting-label"><p>{{ i18n.text_sichtfeld_vertikal_877d0100dfb3 }}</p><p class="value">{{ localizedUi.settingsView.fov_label }}</p></div><slider class="copper-setting-slider" id="settings-fov" min="45" max="110" step="1" [value]="settingsView.fov" onchange="settings_change" /></div>
+      <div class="setting"><div class="setting-label"><p>{{ i18n.text_sichtweite_197532daa8c7 }}</p><p class="value">{{ localizedUi.settingsView.distance_label }}</p></div><slider class="copper-setting-slider" id="settings-distance" min="2" max="32" step="1" [value]="settingsView.distance" onchange="settings_change" /></div>
+      <div class="setting"><div class="setting-label"><p>{{ i18n.text_mausempfindlichkeit_b7ac988d2329 }}</p><p class="value">{{ localizedUi.settingsView.sensitivity_label }}</p></div><slider class="copper-setting-slider" id="settings-sensitivity" min="0.1" max="20" step="0.1" [value]="settingsView.sensitivity" onchange="settings_change" /></div>
+      <div class="setting-line"><p>{{ i18n.text_bewegung_1eaa52d0db4d }}</p><select class="copper-setting-choice legacy-setting-choice" id="settings-mode" onchange="settings_change"><option value="walk" [selected]="settingsView.mode == 'walk'">{{ i18n.text_laufen_a29f96894b88 }}</option><option value="fly" [selected]="settingsView.mode == 'fly'">{{ i18n.text_fliegen_c9a7d6cc0603 }}</option></select></div>
+      <p class="section-title">{{ i18n.text_darstellung_1da7a3b4eea2 }}</p>
+      <div class="setting-line"><checkbox class="copper-setting-checkbox" id="settings-vsync" [checked]="settingsView.vsync" onchange="settings_change">{{ i18n.text_vsync_052810dae196 }}</checkbox><checkbox class="copper-setting-checkbox" id="settings-overlay" [checked]="settingsView.debug" onchange="settings_change">{{ i18n.text_debug_anzeige_b7034f8a374f }}</checkbox></div>
+      <div class="setting-line"><p>{{ i18n.text_wasserqualitaet_5a94053a978a }}</p><select class="copper-setting-choice legacy-setting-choice" id="settings-quality" onchange="settings_change"><option value="low" [selected]="settingsView.quality == 'low'">{{ i18n.text_niedrig_ee12538381b9 }}</option><option value="medium" [selected]="settingsView.quality == 'medium'">{{ i18n.text_mittel_6604277e642c }}</option><option value="high" [selected]="settingsView.quality == 'high'">{{ i18n.text_hoch_5f9d45fa2f0b }}</option></select></div>
+      <div class="setting-line"><checkbox class="copper-setting-checkbox" id="settings-reflections" [checked]="settingsView.reflections" onchange="settings_change">{{ i18n.text_szenenreflexionen_bd1812231079 }}</checkbox></div>
+      <div class="setting"><div class="setting-label"><p>{{ i18n.text_wellenstaerke_c1f21aec92c6 }}</p><p class="value">{{ localizedUi.settingsView.waves_label }}</p></div><slider class="copper-setting-slider" id="settings-waves" min="0" max="2" step="0.05" [value]="settingsView.waves" onchange="settings_change" /></div>
+      <p class="section-title">{{ i18n.text_umgebung_15637358c979 }}</p>
+      <div class="setting-line"><p>{{ i18n.text_wetterqualitaet_dd06339d8479 }}</p><select class="copper-setting-choice legacy-setting-choice" id="settings-weather-quality" onchange="settings_change"><option value="off" [selected]="settingsView.weather_quality == 'off'">{{ i18n.text_aus_f0ce94502ed9 }}</option><option value="low" [selected]="settingsView.weather_quality == 'low'">{{ i18n.text_niedrig_ee12538381b9 }}</option><option value="medium" [selected]="settingsView.weather_quality == 'medium'">{{ i18n.text_mittel_6604277e642c }}</option><option value="high" [selected]="settingsView.weather_quality == 'high'">{{ i18n.text_hoch_5f9d45fa2f0b }}</option><option value="ultra" [selected]="settingsView.weather_quality == 'ultra'">{{ i18n.text_ultra_ac364e1afdd7 }}</option></select></div>
+      <p class="surface-label">{{ localizedUi.settingsView.surface_label }}</p>
+      @if (settingsView.surface_available) {
+      <div class="surface-actions">
+        <button id="settings-wet" onclick="settings_command">{{ i18n.text_boden_benaessen_e283779ea1a0 }}</button>
+        <button id="settings-charred" onclick="settings_command">{{ i18n.text_boden_verkohlen_d6e963365b1a }}</button>
+        <button id="settings-surface-reset" onclick="settings_command"><icon name="rotate-ccw" size="16" />{{ i18n.text_boden_zuruecksetzen_c348a96666e3 }}</button>
+      </div>
+      }
+    </div>
+    <p class="settings-status">{{ localizedUi.settingsView.status }}</p>
+    <div class="settings-actions">
+      <button id="settings-reset" onclick="settings_command"><icon name="rotate-ccw" size="16" />{{ i18n.text_standardwerte_e08b720282f7 }}</button>
+      <button id="settings-apply" onclick="settings_command"><icon name="check" size="16" />{{ i18n.text_uebernehmen_24bd636b679c }}</button>
+      <button id="settings-save" onclick="settings_command"><icon name="download" size="16" />{{ i18n.text_speichern_f6b2ff39f540 }}</button>
+      <button id="settings-resume" class="primary" onclick="settings_command"><icon name="play" size="16" />{{ i18n.text_fortsetzen_76f6db6d9811 }}</button>
+    </div>
+  </div>
+</div>
+}

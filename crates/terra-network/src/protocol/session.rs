@@ -7,8 +7,8 @@ use terra_core::{
 use terra_voxel::SectionPos;
 use terra_world::{edits::SectionDelta, props::PropId};
 
-// Version 133 adds independent eyes, hair highlights, sort modes and train clearance.
-pub const PROTOCOL_VERSION: u32 = 133;
+// Version 135 adds productive woodcutters, worn axes and profession depots.
+pub const PROTOCOL_VERSION: u32 = 135;
 pub const PROTOCOL_ID: u64 = 0x5445525241000001;
 pub const MAX_INPUT_BACKLOG: usize = 128;
 pub const MAX_TREE_INTEREST: usize = 256;
@@ -75,6 +75,7 @@ pub enum ClientControl {
     },
     Kingdom(super::kingdom::KingdomCommand),
     Train(super::trains::TrainCommand),
+    NpcWork(super::npc_work::WorkCommand),
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -384,6 +385,8 @@ pub enum ServerControl {
     TrainResult(super::trains::TrainResult),
     TrainMotions(Vec<terra_core::train_motion::TrainMotionFrame>),
     TrainEngineFuel(super::trains::TrainCargoSnapshot),
+    NpcWork(Box<super::npc_work::WorkSnapshot>),
+    NpcWorkResult(super::npc_work::WorkResult),
 }
 
 /// Ordered interest updates: reset begins a new neighbourhood, subsequent
@@ -940,7 +943,7 @@ mod layout_tests {
                 .collect::<Vec<_>>()
         );
         assert_eq!(received.creatures.len(), 10);
-        assert_eq!(PROTOCOL_VERSION, 133);
+        assert_eq!(PROTOCOL_VERSION, 135);
     }
     #[test]
     fn kinetic_stress_capacity_roundtrip_and_reject_nonfinite_or_impossible_reserves() {

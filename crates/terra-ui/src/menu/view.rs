@@ -861,6 +861,15 @@ pub(super) fn gameplay_rows(config: &terra_core::GameplayConfig) -> Vec<SettingR
         row
     })
     .collect();
+    rows.insert(
+        0,
+        select(
+            "game-language",
+            "Language",
+            config.language.code().into(),
+            choices(&[("de", "Deutsch"), ("en", "English")]),
+        ),
+    );
     let mut heartbeat = slider(
         "heartbeat",
         "Health Heartbeat",

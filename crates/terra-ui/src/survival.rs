@@ -305,7 +305,7 @@ mod tests {
     #[test]
     fn hud_styles_use_the_real_tilt_ui_parser() {
         tilt_ui::tilt_ui_css::parse_stylesheet(include_str!(
-            "../../../src-ui/components/survival-hud.component.css"
+            "../../../src-ui/components/survival-hud/survival-hud.component.css"
         ))
         .unwrap();
     }
@@ -578,7 +578,8 @@ mod tests {
             .advance_by(std::time::Duration::from_millis(250));
         app.update();
         assert!(!app.world().resource::<SurvivalView>().hit);
-        let template = include_str!("../../../src-ui/components/survival-hud.component.html");
+        let template =
+            include_str!("../../../src-ui/components/survival-hud/survival-hud.component.html");
         assert_eq!(template.matches("class=\"damage-edge edge-").count(), 8);
     }
 

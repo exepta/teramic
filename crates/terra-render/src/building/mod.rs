@@ -82,9 +82,10 @@ impl BuildingWorld<'_> {
                 | ItemKind::DyedBed { material: id, .. } => {
                     templates.blocks.get(&id).map(|b| b.face_materials[3])
                 }
-                ItemKind::Tool(_) | ItemKind::FilledWateringCan { .. } | ItemKind::Stick => {
-                    templates.blocks.get(&6).map(|b| b.face_materials[3])
-                }
+                ItemKind::Tool(_)
+                | ItemKind::WornTool { .. }
+                | ItemKind::FilledWateringCan { .. }
+                | ItemKind::Stick => templates.blocks.get(&6).map(|b| b.face_materials[3]),
                 ItemKind::Mineral(kind) => {
                     templates.ore_materials.get(&kind.ore().material()).copied()
                 }

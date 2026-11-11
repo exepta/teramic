@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "id": 300,
+  "name": "Armee-Station",
+  "description": "Berufsstation mit eigenem Lager fuer Werkzeuge und Waren.",
+  "creative_category": "decoration",
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/army_station.glb",
+  "struct_block": true,
+  "hardness": 1.4,
+  "resistance": 6,
+  "required_tool": null,
+  "mining_level": 0,
+  "textures": {
+    "station_iron": "textures/forged-iron-warm.png",
+    "station_dark_wood": "textures/machinery-oak-hd.png",
+    "station_steel": "textures/machinery-iron-hd.png"
+  },
+  "collision_boxes": [
+    {
+      "minimum": [
+        0.08,
+        0.01,
+        0.07
+      ],
+      "maximum": [
+        0.92,
+        0.32,
+        0.93
+      ]
+    },
+    {
+      "minimum": [
+        0.18,
+        0.32,
+        0.18
+      ],
+      "maximum": [
+        0.82,
+        0.4,
+        0.82
+      ]
+    },
+    {
+      "minimum": [
+        0.12,
+        0.36,
+        0.72
+      ],
+      "maximum": [
+        0.18,
+        0.98,
+        0.78
+      ]
+    },
+    {
+      "minimum": [
+        0.34,
+        0.42,
+        0.14
+      ],
+      "maximum": [
+        0.67,
+        0.73,
+        0.2
+      ]
+    }
+  ]
+}

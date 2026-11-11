@@ -23,6 +23,8 @@ pub mod interaction_shapes;
 pub mod kingdom_access;
 #[cfg(feature = "bevy")]
 pub mod lanterns;
+#[cfg(feature = "bevy")]
+pub mod npc_work;
 pub mod objects;
 pub mod ore_shapes;
 #[cfg(feature = "bevy")]

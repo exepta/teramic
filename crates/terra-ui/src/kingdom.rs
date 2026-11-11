@@ -191,6 +191,7 @@ pub struct KingdomView {
     pub overview_tab: bool,
     pub members_tab: bool,
     pub diplomacy_tab: bool,
+    pub work_tab: bool,
     pub own_role: String,
     pub access_hint: String,
     pub capabilities: Vec<KingdomCapabilityView>,
@@ -552,7 +553,7 @@ fn open(world: &mut World, position: [i64; 3]) {
     send(world, KingdomAction::Inspect { position });
 }
 
-fn update(world: &mut World) {
+pub(crate) fn update(world: &mut World) {
     let actions: Vec<_> = world
         .resource_mut::<Messages<KingdomMenuAction>>()
         .drain()
@@ -595,7 +596,7 @@ fn update(world: &mut World) {
             })
         });
         if let KingdomMenuAction::Tab(ref tab) = action {
-            if matches!(tab.as_str(), "overview" | "members" | "diplomacy") {
+            if matches!(tab.as_str(), "overview" | "members" | "diplomacy" | "work") {
                 world.resource_mut::<KingdomMenuState>().tab = tab.clone();
             }
             continue;
@@ -1344,7 +1345,7 @@ fn sync_view(world: &mut World, position: [i64; 3]) {
         can_join: record.is_some() && membership.is_none() && uuid.is_some() && !pending,
         can_leave: member && !founder && !pending,
         founder_controls: founder && session.allow_build,
-        manager_controls:manages,overview_tab:!matches!(state.tab.as_str(),"members"|"diplomacy"),members_tab:state.tab=="members",diplomacy_tab:state.tab=="diplomacy",
+        manager_controls:manages,overview_tab:!matches!(state.tab.as_str(),"members"|"diplomacy"|"work"),members_tab:state.tab=="members",diplomacy_tab:state.tab=="diplomacy",work_tab:state.tab=="work",
         own_role:role.map_or("Outsider",KingdomRole::label).into(),
         access_hint:if manages {"Founder and Officers manage claims, roles and relations. Officers cannot change peers or grant Officer."}else{"Management: Founder / Officer. New joins: Visitor. Legacy members: Member."}.into(),capabilities,diplomacy,
         confirm_dissolve: state.confirm_dissolve,

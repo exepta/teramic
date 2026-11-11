@@ -1,0 +1,867 @@
+[
+  {
+    "source": ". Gameplay rollback also failed: {rollback}",
+    "de": ". Auch das Zurücksetzen der Spieleinstellungen ist fehlgeschlagen: {rollback}",
+    "en": ". Gameplay rollback also failed: {rollback}"
+  },
+  {
+    "source": "A birch sapling. Plant on grass, dirt or farmland with room for the miniature plant. Nearby trees, darkness and unloaded distant crowns do not prevent planting. Growth waits for light and its full free crown space. Natural grass and flowers may yield with permission; placed plants and player builds are preserved. Growth uses lit, loaded time. Felling and attributed leaves provide replacement saplings.",
+    "de": "Ein Birkensetzling. Pflanze ihn auf Gras, Erde oder Ackerboden mit Platz für die kleine Pflanze. Bäume in der Nähe, Dunkelheit und entfernte ungeladene Baumkronen verhindern das Pflanzen nicht. Das Wachstum wartet auf Licht und ausreichend freien Platz für die vollständige Krone. Natürliches Gras und Blumen können mit entsprechender Berechtigung weichen; gesetzte Pflanzen und Spielerbauten bleiben erhalten. Wachstum zählt nur bei Licht in geladenen Gebieten. Fällen und zugeordnete Blätter liefern neue Setzlinge.",
+    "en": "A birch sapling. Plant on grass, dirt or farmland with room for the miniature plant. Nearby trees, darkness and unloaded distant crowns do not prevent planting. Growth waits for light and its full free crown space. Natural grass and flowers may yield with permission; placed plants and player builds are preserved. Growth uses lit, loaded time. Felling and attributed leaves provide replacement saplings."
+  },
+  {
+    "source": "A branching red reef coral with fine, square-ended forks. Anchored to a submerged seabed.",
+    "de": "Eine verzweigte rote Riffkoralle mit feinen, kantigen Verästelungen. Sie ist am Meeresboden unter Wasser verankert.",
+    "en": "A branching red reef coral with fine, square-ended forks. Anchored to a submerged seabed."
+  },
+  {
+    "source": "A cherry sapling. Plant on grass, dirt or farmland with room for the miniature plant. Nearby trees, darkness and unloaded distant crowns do not prevent planting. Growth waits for light and its full free crown space. Natural grass and flowers may yield with permission; placed plants and player builds are preserved. Growth uses lit, loaded time. Felling and attributed leaves provide replacement saplings.",
+    "de": "Ein Kirschsetzling. Pflanze ihn auf Gras, Erde oder Ackerboden mit Platz für die kleine Pflanze. Bäume in der Nähe, Dunkelheit und entfernte ungeladene Baumkronen verhindern das Pflanzen nicht. Das Wachstum wartet auf Licht und ausreichend freien Platz für die vollständige Krone. Natürliches Gras und Blumen können mit entsprechender Berechtigung weichen; gesetzte Pflanzen und Spielerbauten bleiben erhalten. Wachstum zählt nur bei Licht in geladenen Gebieten. Fällen und zugeordnete Blätter liefern neue Setzlinge.",
+    "en": "A cherry sapling. Plant on grass, dirt or farmland with room for the miniature plant. Nearby trees, darkness and unloaded distant crowns do not prevent planting. Growth waits for light and its full free crown space. Natural grass and flowers may yield with permission; placed plants and player builds are preserved. Growth uses lit, loaded time. Felling and attributed leaves provide replacement saplings."
+  },
+  {
+    "source": "A colorful meadow flower. Plant on dry natural ground.",
+    "de": "Eine bunte Wiesenblume. Pflanze sie auf trockenem, natürlichem Boden.",
+    "en": "A colorful meadow flower. Plant on dry natural ground."
+  },
+  {
+    "source": "A fern with spreading fronds. Plant on dry natural ground.",
+    "de": "Ein Farn mit ausladenden Wedeln. Pflanze ihn auf trockenem, natürlichem Boden.",
+    "en": "A fern with spreading fronds. Plant on dry natural ground."
+  },
+  {
+    "source": "A hardy wild plant. Plant on dry natural ground.",
+    "de": "Eine robuste Wildpflanze. Pflanze sie auf trockenem, natürlichem Boden.",
+    "en": "A hardy wild plant. Plant on dry natural ground."
+  },
+  {
+    "source": "A leafy woodland shrub. Plant on dry natural ground.",
+    "de": "Ein belaubter Waldstrauch. Pflanze ihn auf trockenem, natürlichem Boden.",
+    "en": "A leafy woodland shrub. Plant on dry natural ground."
+  },
+  {
+    "source": "A low pink anemone with a dense crown of curved, pale-tipped tentacles, attached to a sheltered reef ledge.",
+    "de": "Eine niedrige rosa Anemone mit einer dichten Krone gebogener Tentakel mit hellen Spitzen. Sie haftet an einem geschützten Riffvorsprung.",
+    "en": "A low pink anemone with a dense crown of curved, pale-tipped tentacles, attached to a sheltered reef ledge."
+  },
+  {
+    "source": "A papery forest nest. Up to four bees forage nearby and shelter here at night.",
+    "de": "Ein papierartiges Waldnest. Bis zu vier Bienen sammeln in der Umgebung Nahrung und suchen hier nachts Schutz.",
+    "en": "A papery forest nest. Up to four bees forage nearby and shelter here at night."
+  },
+  {
+    "source": "A planted corn stalk with broad leaves and ripening yellow cobs.",
+    "de": "Ein gepflanzter Maisstängel mit breiten Blättern und reifenden gelben Kolben.",
+    "en": "A planted corn stalk with broad leaves and ripening yellow cobs."
+  },
+  {
+    "source": "A planted lettuce head with eight growth stages. Harvest when fully grown.",
+    "de": "Ein gepflanzter Salatkopf mit acht Wachstumsstufen. Ernte ihn, wenn er ausgewachsen ist.",
+    "en": "A planted lettuce head with eight growth stages. Harvest when fully grown."
+  },
+  {
+    "source": "A planted wheat cluster. Harvest ripe golden ears for wheat and seeds.",
+    "de": "Ein gepflanztes Weizenbüschel. Ernte reife goldene Ähren, um Weizen und Saatgut zu erhalten.",
+    "en": "A planted wheat cluster. Harvest ripe golden ears for wheat and seeds."
+  },
+  {
+    "source": "A small group of weathered stones. Water does not wash away its solid rooted base.",
+    "de": "Eine kleine Gruppe verwitterter Steine. Wasser schwemmt ihre fest verankerte Basis nicht fort.",
+    "en": "A small group of weathered stones. Water does not wash away its solid rooted base."
+  },
+  {
+    "source": "A small wind-touched grass clump. Plant on dry natural ground.",
+    "de": "Ein kleines, vom Wind bewegtes Grasbüschel. Pflanze es auf trockenem, natürlichem Boden.",
+    "en": "A small wind-touched grass clump. Plant on dry natural ground."
+  },
+  {
+    "source": "A small, knobbled sea cucumber from the ocean floor. Available in purple, amber and charcoal variants.",
+    "de": "Eine kleine, knubbelige Seegurke vom Meeresboden. Es gibt violette, bernsteinfarbene und kohlegrau gefärbte Varianten.",
+    "en": "A small, knobbled sea cucumber from the ocean floor. Available in purple, amber and charcoal variants."
+  },
+  {
+    "source": "A spruce sapling. Plant on grass, dirt or farmland with room for the miniature plant. Nearby trees, darkness and unloaded distant crowns do not prevent planting. Growth waits for light and its full free crown space. Natural grass and flowers may yield with permission; placed plants and player builds are preserved. Growth uses lit, loaded time. Felling and attributed leaves provide replacement saplings.",
+    "de": "Ein Fichtensetzling. Pflanze ihn auf Gras, Erde oder Ackerboden mit Platz für die kleine Pflanze. Bäume in der Nähe, Dunkelheit und entfernte ungeladene Baumkronen verhindern das Pflanzen nicht. Das Wachstum wartet auf Licht und ausreichend freien Platz für die vollständige Krone. Natürliches Gras und Blumen können mit entsprechender Berechtigung weichen; gesetzte Pflanzen und Spielerbauten bleiben erhalten. Wachstum zählt nur bei Licht in geladenen Gebieten. Fällen und zugeordnete Blätter liefern neue Setzlinge.",
+    "en": "A spruce sapling. Plant on grass, dirt or farmland with room for the miniature plant. Nearby trees, darkness and unloaded distant crowns do not prevent planting. Growth waits for light and its full free crown space. Natural grass and flowers may yield with permission; placed plants and player builds are preserved. Growth uses lit, loaded time. Felling and attributed leaves provide replacement saplings."
+  },
+  {
+    "source": "A straw field guardian on a wooden crossbar, ready for future bird deterrence.",
+    "de": "Ein Feldwächter aus Stroh an einer hölzernen Querlatte, vorbereitet auf die spätere Vogelabwehr.",
+    "en": "A straw field guardian on a wooden crossbar, ready for future bird deterrence."
+  },
+  {
+    "source": "A temporary shield absorbs incoming physical damage.",
+    "de": "Ein vorübergehender Schild fängt eingehenden körperlichen Schaden ab.",
+    "en": "A temporary shield absorbs incoming physical damage."
+  },
+  {
+    "source": "Abstand zur Bedrohung gewinnen",
+    "de": "Abstand zur Bedrohung gewinnen",
+    "en": "Moving away from threat"
+  },
+  {
+    "source": "Am Markt treffen sich die Leute aus der ganzen Gegend.",
+    "de": "Am Markt treffen sich die Leute aus der ganzen Gegend.",
+    "en": "People from all around meet at the market."
+  },
+  {
+    "source": "Am verankerten Faden abseilen",
+    "de": "Am verankerten Faden abseilen",
+    "en": "Descending on an anchored thread"
+  },
+  {
+    "source": "An apple sapling. Plant on grass, dirt or farmland with room for the miniature plant. Nearby trees, darkness and unloaded distant crowns do not prevent planting. Growth waits for light and its full free crown space. Natural grass and flowers may yield with permission; placed plants and player builds are preserved. Growth uses lit, loaded time. Felling and attributed leaves provide replacement saplings.",
+    "de": "Ein Apfelsetzling. Pflanze ihn auf Gras, Erde oder Ackerboden mit Platz für die kleine Pflanze. Bäume in der Nähe, Dunkelheit und entfernte ungeladene Baumkronen verhindern das Pflanzen nicht. Das Wachstum wartet auf Licht und ausreichend freien Platz für die vollständige Krone. Natürliches Gras und Blumen können mit entsprechender Berechtigung weichen; gesetzte Pflanzen und Spielerbauten bleiben erhalten. Wachstum zählt nur bei Licht in geladenen Gebieten. Fällen und zugeordnete Blätter liefern neue Setzlinge.",
+    "en": "An apple sapling. Plant on grass, dirt or farmland with room for the miniature plant. Nearby trees, darkness and unloaded distant crowns do not prevent planting. Growth waits for light and its full free crown space. Natural grass and flowers may yield with permission; placed plants and player builds are preserved. Growth uses lit, loaded time. Felling and attributed leaves provide replacement saplings."
+  },
+  {
+    "source": "An edible woodland mushroom that can also be planted on dry natural ground.",
+    "de": "Ein essbarer Waldpilz, der auch auf trockenem, natürlichem Boden gepflanzt werden kann.",
+    "en": "An edible woodland mushroom that can also be planted on dry natural ground."
+  },
+  {
+    "source": "An oak sapling. Plant on grass, dirt or farmland with room for the miniature plant. Nearby trees, darkness and unloaded distant crowns do not prevent planting. Growth waits for light and its full free crown space. Natural grass and flowers may yield with permission; placed plants and player builds are preserved. Growth uses lit, loaded time. Felling and attributed leaves provide replacement saplings.",
+    "de": "Ein Eichensetzling. Pflanze ihn auf Gras, Erde oder Ackerboden mit Platz für die kleine Pflanze. Bäume in der Nähe, Dunkelheit und entfernte ungeladene Baumkronen verhindern das Pflanzen nicht. Das Wachstum wartet auf Licht und ausreichend freien Platz für die vollständige Krone. Natürliches Gras und Blumen können mit entsprechender Berechtigung weichen; gesetzte Pflanzen und Spielerbauten bleiben erhalten. Wachstum zählt nur bei Licht in geladenen Gebieten. Fällen und zugeordnete Blätter liefern neue Setzlinge.",
+    "en": "An oak sapling. Plant on grass, dirt or farmland with room for the miniature plant. Nearby trees, darkness and unloaded distant crowns do not prevent planting. Growth waits for light and its full free crown space. Natural grass and flowers may yield with permission; placed plants and player builds are preserved. Growth uses lit, loaded time. Felling and attributed leaves provide replacement saplings."
+  },
+  {
+    "source": "An open wound continuously loses health.",
+    "de": "Eine offene Wunde kostet fortlaufend Gesundheit.",
+    "en": "An open wound continuously loses health."
+  },
+  {
+    "source": "Anchored wall, corner, ceiling and cocoon silk, plus multi-surface hanging capture networks with load-bearing ropes spanning approximately 7 to 20 blocks between actual opposing anchors.",
+    "de": "Verankerte Spinnenseide an Wänden, Ecken, Decken und Kokons sowie hängende Fangnetze über mehrere Flächen mit tragenden Fäden, die etwa 7 bis 20 Blöcke zwischen tatsächlichen gegenüberliegenden Ankern überspannen.",
+    "en": "Anchored wall, corner, ceiling and cocoon silk, plus multi-surface hanging capture networks with load-bearing ropes spanning approximately 7 to 20 blocks between actual opposing anchors."
+  },
+  {
+    "source": "Appaloosa Horse",
+    "de": "Appaloosa",
+    "en": "Appaloosa Horse"
+  },
+  {
+    "source": "Arbeitskraft muss zuerst ihren laufenden Auftrag abschließen",
+    "de": "Arbeitskraft muss zuerst ihren laufenden Auftrag abschließen",
+    "en": "Worker must finish the current assignment first"
+  },
+  {
+    "source": "Arbeitslos",
+    "de": "Arbeitslos",
+    "en": "Unemployed"
+  },
+  {
+    "source": "Auf Besitzer warten",
+    "de": "Auf Besitzer warten",
+    "en": "Waiting for owner"
+  },
+  {
+    "source": "Bay Horse",
+    "de": "Brauner",
+    "en": "Bay Horse"
+  },
+  {
+    "source": "Bear",
+    "de": "Bär",
+    "en": "Bear"
+  },
+  {
+    "source": "Bee",
+    "de": "Biene",
+    "en": "Bee"
+  },
+  {
+    "source": "Besitzer folgen",
+    "de": "Besitzer folgen",
+    "en": "Following owner"
+  },
+  {
+    "source": "Beute verfolgen",
+    "de": "Beute verfolgen",
+    "en": "Pursuing prey"
+  },
+  {
+    "source": "Bischof",
+    "de": "Bischof",
+    "en": "Bishop"
+  },
+  {
+    "source": "Black Horse",
+    "de": "Rappe",
+    "en": "Black Horse"
+  },
+  {
+    "source": "Black Horse with Socks",
+    "de": "Rappe mit weißen Fesseln",
+    "en": "Black Horse with Socks"
+  },
+  {
+    "source": "Black Pinto Horse",
+    "de": "Rappschecke",
+    "en": "Black Pinto Horse"
+  },
+  {
+    "source": "Bleeding",
+    "de": "Blutung",
+    "en": "Bleeding"
+  },
+  {
+    "source": "Blue clustered coral with genuinely open tubular crowns. Grows in sunlit ocean reefs.",
+    "de": "Eine blaue Korallenkolonie mit offenen röhrenförmigen Kronen. Sie wächst in sonnigen Meeresriffen.",
+    "en": "Blue clustered coral with genuinely open tubular crowns. Grows in sunlit ocean reefs."
+  },
+  {
+    "source": "Bogenschuetze",
+    "de": "Bogenschuetze",
+    "en": "Archer"
+  },
+  {
+    "source": "Bogenschuetze (Soldat)",
+    "de": "Bogenschuetze (Soldat)",
+    "en": "Archer (soldier)"
+  },
+  {
+    "source": "Brown Horse",
+    "de": "Braunes Pferd",
+    "en": "Brown Horse"
+  },
+  {
+    "source": "Brown Pinto Horse",
+    "de": "Braunschecke",
+    "en": "Brown Pinto Horse"
+  },
+  {
+    "source": "Buckskin Horse",
+    "de": "Falbe",
+    "en": "Buckskin Horse"
+  },
+  {
+    "source": "Cannot save language preference: {error}",
+    "de": "Spracheinstellung kann nicht gespeichert werden: {error}",
+    "en": "Cannot save language preference: {error}"
+  },
+  {
+    "source": "Cave Spider",
+    "de": "Höhlenspinne",
+    "en": "Cave Spider"
+  },
+  {
+    "source": "Chestnut Horse",
+    "de": "Fuchs",
+    "en": "Chestnut Horse"
+  },
+  {
+    "source": "Chestnut Horse with Blaze",
+    "de": "Fuchs mit Blesse",
+    "en": "Chestnut Horse with Blaze"
+  },
+  {
+    "source": "Clownfish",
+    "de": "Clownfisch",
+    "en": "Clownfish"
+  },
+  {
+    "source": "Cold slows movement and damages health.",
+    "de": "Kälte verlangsamt die Bewegung und schadet der Gesundheit.",
+    "en": "Cold slows movement and damages health."
+  },
+  {
+    "source": "Collector",
+    "de": "Sammler",
+    "en": "Collector"
+  },
+  {
+    "source": "Cow",
+    "de": "Kuh",
+    "en": "Cow"
+  },
+  {
+    "source": "Cream Horse",
+    "de": "Cremefarbenes Pferd",
+    "en": "Cream Horse"
+  },
+  {
+    "source": "Crystal Jelly",
+    "de": "Kristallqualle",
+    "en": "Crystal Jelly"
+  },
+  {
+    "source": "Dapple Gray Horse",
+    "de": "Apfelschimmel",
+    "en": "Dapple Gray Horse"
+  },
+  {
+    "source": "Deep Spider",
+    "de": "Tiefenspinne",
+    "en": "Deep Spider"
+  },
+  {
+    "source": "Delivering",
+    "de": "Liefert ab",
+    "en": "Delivering"
+  },
+  {
+    "source": "Die Felder brauchen jeden Tag Pflege.",
+    "de": "Die Felder brauchen jeden Tag Pflege.",
+    "en": "The fields need care every day."
+  },
+  {
+    "source": "Dorfbewohner",
+    "de": "Dorfbewohner",
+    "en": "Villager"
+  },
+  {
+    "source": "Ein guter Pfeil braucht gerade Federn.",
+    "de": "Ein guter Pfeil braucht gerade Federn.",
+    "en": "A good arrow needs straight feathers."
+  },
+  {
+    "source": "Ein warmes Tuch hilft gegen den kalten Wind.",
+    "de": "Ein warmes Tuch hilft gegen den kalten Wind.",
+    "en": "A warm scarf helps against the cold wind."
+  },
+  {
+    "source": "Fahrender Haendler",
+    "de": "Fahrender Haendler",
+    "en": "Travelling merchant"
+  },
+  {
+    "source": "Farmer",
+    "de": "Landwirt",
+    "en": "Farmer"
+  },
+  {
+    "source": "Farmer (vegan)",
+    "de": "Farmer (vegan)",
+    "en": "Farmer (vegan)"
+  },
+  {
+    "source": "Fire Jelly",
+    "de": "Feuerqualle",
+    "en": "Fire Jelly"
+  },
+  {
+    "source": "Fire Resistance",
+    "de": "Feuerresistenz",
+    "en": "Fire Resistance"
+  },
+  {
+    "source": "Fish",
+    "de": "Fisch",
+    "en": "Fish"
+  },
+  {
+    "source": "Flames continuously damage health.",
+    "de": "Flammen schaden fortlaufend der Gesundheit.",
+    "en": "Flames continuously damage health."
+  },
+  {
+    "source": "Folgt",
+    "de": "Folgt",
+    "en": "Following"
+  },
+  {
+    "source": "Freeze Resistance",
+    "de": "Kälteresistenz",
+    "en": "Freeze Resistance"
+  },
+  {
+    "source": "Freezing",
+    "de": "Erfrieren",
+    "en": "Freezing"
+  },
+  {
+    "source": "Frei",
+    "de": "Frei",
+    "en": "Free"
+  },
+  {
+    "source": "Futter erreichen",
+    "de": "Futter erreichen",
+    "en": "Reaching food"
+  },
+  {
+    "source": "Golden tiered coral plates that form small sheltered ocean gardens.",
+    "de": "Goldene Korallenplatten in mehreren Ebenen, die kleine geschützte Meeresgärten bilden.",
+    "en": "Golden tiered coral plates that form small sheltered ocean gardens."
+  },
+  {
+    "source": "Gray Horse",
+    "de": "Graues Pferd",
+    "en": "Gray Horse"
+  },
+  {
+    "source": "Hammerhead Shark",
+    "de": "Hammerhai",
+    "en": "Hammerhead Shark"
+  },
+  {
+    "source": "Heute ruht meine Karawane hier. Morgen ziehen wir weiter.",
+    "de": "Heute ruht meine Karawane hier. Morgen ziehen wir weiter.",
+    "en": "My caravan rests here today. Tomorrow we move on."
+  },
+  {
+    "source": "Hier im Dorf gibt es immer etwas zu reparieren.",
+    "de": "Hier im Dorf gibt es immer etwas zu reparieren.",
+    "en": "There is always something to repair here in the village."
+  },
+  {
+    "source": "Holzfaeller",
+    "de": "Holzfaeller",
+    "en": "Lumberjack"
+  },
+  {
+    "source": "Horse",
+    "de": "Pferd",
+    "en": "Horse"
+  },
+  {
+    "source": "Ich folge den Pfaden zwischen Wald und Steppe.",
+    "de": "Ich folge den Pfaden zwischen Wald und Steppe.",
+    "en": "I follow the paths between forest and steppe."
+  },
+  {
+    "source": "Ich halte nach dem Rechten Ausschau.",
+    "de": "Ich halte nach dem Rechten Ausschau.",
+    "en": "I am keeping an eye on things."
+  },
+  {
+    "source": "Ich kuemmere mich um Gleise und Lokomotiven.",
+    "de": "Ich kuemmere mich um Gleise und Lokomotiven.",
+    "en": "I look after the tracks and locomotives."
+  },
+  {
+    "source": "Ich schlafe gerade. Komm morgen wieder.",
+    "de": "Ich schlafe gerade. Komm morgen wieder.",
+    "en": "I am sleeping. Come back tomorrow."
+  },
+  {
+    "source": "Ich suche Arbeit hier in der Siedlung.",
+    "de": "Ich suche Arbeit hier in der Siedlung.",
+    "en": "I am looking for work here in the settlement."
+  },
+  {
+    "source": "Im Wald wartet noch Arbeit auf mich.",
+    "de": "Im Wald wartet noch Arbeit auf mich.",
+    "en": "There is still work waiting for me in the forest."
+  },
+  {
+    "source": "Improves visibility in darkness without creating a light source for other players.",
+    "de": "Verbessert die Sicht im Dunkeln, ohne eine Lichtquelle für andere Spieler zu erzeugen.",
+    "en": "Improves visibility in darkness without creating a light source for other players."
+  },
+  {
+    "source": "In einer Ecke verstecken",
+    "de": "In einer Ecke verstecken",
+    "en": "Hiding in a corner"
+  },
+  {
+    "source": "In meiner Kueche wird heute frisch zubereitet.",
+    "de": "In meiner Kueche wird heute frisch zubereitet.",
+    "en": "There is fresh cooking in my kitchen today."
+  },
+  {
+    "source": "Jeder Weg hat eine Geschichte. Ich kenne viele davon.",
+    "de": "Jeder Weg hat eine Geschichte. Ich kenne viele davon.",
+    "en": "Every path has a story. I know many of them."
+  },
+  {
+    "source": "Kein Bodenkontakt / faellt",
+    "de": "Kein Bodenkontakt / faellt",
+    "en": "No ground contact / falling"
+  },
+  {
+    "source": "Lokfuehrer",
+    "de": "Lokfuehrer",
+    "en": "Train driver"
+  },
+  {
+    "source": "Maennlich",
+    "de": "Maennlich",
+    "en": "Male"
+  },
+  {
+    "source": "Medic",
+    "de": "Sanitäter",
+    "en": "Medic"
+  },
+  {
+    "source": "Meine Reise fuehrt mich von Markt zu Markt.",
+    "de": "Meine Reise fuehrt mich von Markt zu Markt.",
+    "en": "My journey takes me from market to market."
+  },
+  {
+    "source": "Melee attacks deal more damage.",
+    "de": "Nahkampfangriffe verursachen mehr Schaden.",
+    "en": "Melee attacks deal more damage."
+  },
+  {
+    "source": "Minenarbeiter",
+    "de": "Minenarbeiter",
+    "en": "Miner"
+  },
+  {
+    "source": "Miner",
+    "de": "Bergarbeiter",
+    "en": "Miner"
+  },
+  {
+    "source": "Missing material",
+    "de": "Material fehlt",
+    "en": "Missing material"
+  },
+  {
+    "source": "Missing tool",
+    "de": "Werkzeug fehlt",
+    "en": "Missing tool"
+  },
+  {
+    "source": "Mit dem Speer halte ich die Tore frei.",
+    "de": "Mit dem Speer halte ich die Tore frei.",
+    "en": "I keep the gates clear with my spear."
+  },
+  {
+    "source": "Moegest du sicher durch die Nacht kommen.",
+    "de": "Moegest du sicher durch die Nacht kommen.",
+    "en": "May you make it safely through the night."
+  },
+  {
+    "source": "Moon Jelly",
+    "de": "Mondqualle",
+    "en": "Moon Jelly"
+  },
+  {
+    "source": "Movement speed is increased.",
+    "de": "Die Bewegungsgeschwindigkeit ist erhöht.",
+    "en": "Movement speed is increased."
+  },
+  {
+    "source": "Movement speed is reduced.",
+    "de": "Die Bewegungsgeschwindigkeit ist verringert.",
+    "en": "Movement speed is reduced."
+  },
+  {
+    "source": "Night Vision",
+    "de": "Nachtsicht",
+    "en": "Night Vision"
+  },
+  {
+    "source": "No reachable path",
+    "de": "Kein erreichbarer Weg",
+    "en": "No reachable path"
+  },
+  {
+    "source": "No work available",
+    "de": "Keine Arbeit verfügbar",
+    "en": "No work available"
+  },
+  {
+    "source": "Nomade A",
+    "de": "Nomade A",
+    "en": "Nomad A"
+  },
+  {
+    "source": "Nomade B",
+    "de": "Nomade B",
+    "en": "Nomad B"
+  },
+  {
+    "source": "Nomade C",
+    "de": "Nomade C",
+    "en": "Nomad C"
+  },
+  {
+    "source": "Nomade D",
+    "de": "Nomade D",
+    "en": "Nomad D"
+  },
+  {
+    "source": "On Fire",
+    "de": "Brennt",
+    "en": "On Fire"
+  },
+  {
+    "source": "Palomino Horse",
+    "de": "Palomino",
+    "en": "Palomino Horse"
+  },
+  {
+    "source": "Permission denied",
+    "de": "Zugriff verweigert",
+    "en": "Permission denied"
+  },
+  {
+    "source": "Pfeilmacher",
+    "de": "Pfeilmacher",
+    "en": "Fletcher"
+  },
+  {
+    "source": "Pig",
+    "de": "Schwein",
+    "en": "Pig"
+  },
+  {
+    "source": "Poison",
+    "de": "Vergiftung",
+    "en": "Poison"
+  },
+  {
+    "source": "Protects against fire damage.",
+    "de": "Schützt vor Feuerschaden.",
+    "en": "Protects against fire damage."
+  },
+  {
+    "source": "Protects against freezing damage and movement penalties.",
+    "de": "Schützt vor Kälteschaden und Verlangsamung durch Kälte.",
+    "en": "Protects against freezing damage and movement penalties."
+  },
+  {
+    "source": "Reef Shark",
+    "de": "Riffhai",
+    "en": "Reef Shark"
+  },
+  {
+    "source": "Regeneration",
+    "de": "Regeneration",
+    "en": "Regeneration"
+  },
+  {
+    "source": "Regeneration + Strength Potion",
+    "de": "Trank der Regeneration und Stärke",
+    "en": "Regeneration + Strength Potion"
+  },
+  {
+    "source": "Resting at night",
+    "de": "Nachtruhe",
+    "en": "Resting at night"
+  },
+  {
+    "source": "Restores health over time.",
+    "de": "Stellt mit der Zeit Gesundheit wieder her.",
+    "en": "Restores health over time."
+  },
+  {
+    "source": "Ritter (Soldat)",
+    "de": "Ritter (Soldat)",
+    "en": "Knight (soldier)"
+  },
+  {
+    "source": "Riverfin",
+    "de": "Flussflosser",
+    "en": "Riverfin"
+  },
+  {
+    "source": "Roan Horse",
+    "de": "Stichelhaariges Pferd",
+    "en": "Roan Horse"
+  },
+  {
+    "source": "Rotten",
+    "de": "Verdorben",
+    "en": "Rotten"
+  },
+  {
+    "source": "Ruh dich aus, wenn du verletzt bist.",
+    "de": "Ruh dich aus, wenn du verletzt bist.",
+    "en": "Rest when you are hurt."
+  },
+  {
+    "source": "Ruhe / keine feste Bewegung",
+    "de": "Ruhe / keine feste Bewegung",
+    "en": "Resting / no fixed movement"
+  },
+  {
+    "source": "Schlachter",
+    "de": "Schlachter",
+    "en": "Butcher"
+  },
+  {
+    "source": "Schmied",
+    "de": "Schmied",
+    "en": "Smith"
+  },
+  {
+    "source": "Schwert und Schild bewachen unser Koenigreich.",
+    "de": "Schwert und Schild bewachen unser Koenigreich.",
+    "en": "Sword and shield guard our kingdom."
+  },
+  {
+    "source": "Sheep",
+    "de": "Schaf",
+    "en": "Sheep"
+  },
+  {
+    "source": "Shield Power",
+    "de": "Schildkraft",
+    "en": "Shield Power"
+  },
+  {
+    "source": "Sichtbares Ziel anschleichen",
+    "de": "Sichtbares Ziel anschleichen",
+    "en": "Stalking a visible target"
+  },
+  {
+    "source": "Slowness",
+    "de": "Langsamkeit",
+    "en": "Slowness"
+  },
+  {
+    "source": "Small Spider",
+    "de": "Kleine Spinne",
+    "en": "Small Spider"
+  },
+  {
+    "source": "Soldat",
+    "de": "Soldat",
+    "en": "Soldier"
+  },
+  {
+    "source": "Speed",
+    "de": "Geschwindigkeit",
+    "en": "Speed"
+  },
+  {
+    "source": "Speertraeger (Soldat)",
+    "de": "Speertraeger (Soldat)",
+    "en": "Spearman (soldier)"
+  },
+  {
+    "source": "Spoiled food drains hunger and health.",
+    "de": "Verdorbene Nahrung verringert Sättigung und Gesundheit.",
+    "en": "Spoiled food drains hunger and health."
+  },
+  {
+    "source": "Squid",
+    "de": "Tintenfisch",
+    "en": "Squid"
+  },
+  {
+    "source": "Stalker",
+    "de": "Lauerer",
+    "en": "Stalker"
+  },
+  {
+    "source": "Storage full",
+    "de": "Lager voll",
+    "en": "Storage full"
+  },
+  {
+    "source": "Strength",
+    "de": "Stärke",
+    "en": "Strength"
+  },
+  {
+    "source": "Sun Jelly",
+    "de": "Sonnenqualle",
+    "en": "Sun Jelly"
+  },
+  {
+    "source": "Swim faster and use less oxygen while diving.",
+    "de": "Schwimme schneller und verbrauche beim Tauchen weniger Sauerstoff.",
+    "en": "Swim faster and use less oxygen while diving."
+  },
+  {
+    "source": "Tagsueber geschuetzten Unterschlupf suchen",
+    "de": "Tagsueber geschuetzten Unterschlupf suchen",
+    "en": "Seeking sheltered refuge during daytime"
+  },
+  {
+    "source": "Tall, blunt-ended sea grass with staggered leaves. Rooted colonies form swaying underwater forests on sand and soft sediment.",
+    "de": "Hohes Seegras mit stumpfen Enden und versetzt angeordneten Blättern. Verwurzelte Kolonien bilden schwankende Unterwasserwälder auf Sand und weichem Sediment.",
+    "en": "Tall, blunt-ended sea grass with staggered leaves. Rooted colonies form swaying underwater forests on sand and soft sediment."
+  },
+  {
+    "source": "Toxic exposure damages health over time.",
+    "de": "Giftbelastung schadet mit der Zeit der Gesundheit.",
+    "en": "Toxic exposure damages health over time."
+  },
+  {
+    "source": "Travelling",
+    "de": "Unterwegs",
+    "en": "Travelling"
+  },
+  {
+    "source": "Umgebung erkunden",
+    "de": "Umgebung erkunden",
+    "en": "Exploring surroundings"
+  },
+  {
+    "source": "Unter dem Fels warten Erz und Kohle.",
+    "de": "Unter dem Fels warten Erz und Kohle.",
+    "en": "Ore and coal await beneath the rock."
+  },
+  {
+    "source": "Verkaeufer",
+    "de": "Verkaeufer",
+    "en": "Seller"
+  },
+  {
+    "source": "Void Jelly",
+    "de": "Leerenqualle",
+    "en": "Void Jelly"
+  },
+  {
+    "source": "Vom Wachturm habe ich die Wege im Blick.",
+    "de": "Vom Wachturm habe ich die Wege im Blick.",
+    "en": "I watch the roads from the watchtower."
+  },
+  {
+    "source": "Wache",
+    "de": "Wache",
+    "en": "Guard"
+  },
+  {
+    "source": "Wand oder Decke erkunden",
+    "de": "Wand oder Decke erkunden",
+    "en": "Exploring a wall or ceiling"
+  },
+  {
+    "source": "Wartet",
+    "de": "Wartet",
+    "en": "Waiting"
+  },
+  {
+    "source": "Wasser erreichen",
+    "de": "Wasser erreichen",
+    "en": "Reaching water"
+  },
+  {
+    "source": "Water Affinity",
+    "de": "Wasseraffinität",
+    "en": "Water Affinity"
+  },
+  {
+    "source": "Weg blockiert / budgetierte Umleitung",
+    "de": "Weg blockiert / budgetierte Umleitung",
+    "en": "Path blocked / limited route search"
+  },
+  {
+    "source": "Whale Shark",
+    "de": "Walhai",
+    "en": "Whale Shark"
+  },
+  {
+    "source": "White Horse",
+    "de": "Weißes Pferd",
+    "en": "White Horse"
+  },
+  {
+    "source": "Willkommen in unserem Dorf.",
+    "de": "Willkommen in unserem Dorf.",
+    "en": "Welcome to our village."
+  },
+  {
+    "source": "Work area or storage unloaded",
+    "de": "Arbeitsgebiet oder Lager nicht geladen",
+    "en": "Work area or storage unloaded"
+  },
+  {
+    "source": "Working",
+    "de": "Bei der Arbeit",
+    "en": "Working"
+  },
+  {
+    "source": "Ziel in Angriffsreichweite",
+    "de": "Ziel in Angriffsreichweite",
+    "en": "Target within attack range"
+  }
+]

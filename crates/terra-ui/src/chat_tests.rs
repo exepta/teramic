@@ -507,7 +507,7 @@ fn chat_survives_outside_clicks_editor_blur_and_window_focus_loss_until_escape()
     key(&mut app, KeyCode::Escape);
     assert!(!app.world().resource::<ChatView>().open);
     assert!(
-        !include_str!("../../../src-ui/components/chat-panel.component.html")
+        !include_str!("../../../src-ui/components/chat-panel/chat-panel.component.html")
             .contains("chat-close")
     );
 }

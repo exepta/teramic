@@ -601,7 +601,7 @@ mod tests {
             tilt_ui::tilt_ui_css::parse_stylesheet(stylesheet).unwrap();
         }
         tilt_ui::tilt_ui_css::parse_stylesheet(include_str!(
-            "../../../src-ui/components/ornate-frame.component.css"
+            "../../../src-ui/components/ornate-frame/ornate-frame.component.css"
         ))
         .unwrap();
     }

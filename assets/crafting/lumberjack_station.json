@@ -1,0 +1,35 @@
+{
+  "id": "teramic::lumberjack_station",
+  "name": "Holzfaeller-Station",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "block": 297
+    },
+    "count": 1
+  },
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "block": 16
+        },
+        "wood": true,
+        "count": 2
+      },
+      {
+        "item": {
+          "block": 29
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "tool": "iron_axe"
+        },
+        "count": 1
+      }
+    ]
+  }
+}

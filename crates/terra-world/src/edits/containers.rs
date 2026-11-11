@@ -96,7 +96,9 @@ impl EditJournal {
 
     pub fn valid_container(&self, position: [i64; 3], inventory: &Inventory) -> bool {
         match self.block(position) {
-            Some(29 | terra_core::train_parts::CARGO) => valid_chest(inventory),
+            Some(material) if terra_core::profession_stations::is_depot(material) => {
+                valid_chest(inventory)
+            }
             Some(218) => {
                 valid_chest(inventory)
                     && inventory.slots.iter().all(|stack| {
@@ -442,6 +444,48 @@ mod tests {
     use super::*;
     use terra_core::ItemKind;
     use terra_voxel::global_to_section;
+
+    #[test]
+    fn profession_station_depots_keep_rotation_contents_and_real_removal_drops() {
+        for material in terra_core::profession_stations::ALL {
+            let position = [-1, 20, -1];
+            let mut journal = EditJournal::default();
+            journal.record(position, material).unwrap();
+            let state = super::super::BlockObjectState {
+                facing: 3,
+                ..Default::default()
+            };
+            journal.set_object_state(position, Some(state)).unwrap();
+            let mut inventory = Inventory::default();
+            assert_eq!(inventory.insert(ItemKind::Block(3), 17), 0);
+            journal.set_container(position, inventory.clone()).unwrap();
+            // Reapplying the same block, as during a chunk update, preserves its orientation.
+            journal.record(position, material).unwrap();
+            assert_eq!(journal.object_state(position), Some(state));
+            let delta = journal.section_delta(global_to_section(position).0);
+            let mut restored = EditJournal::default();
+            restored.import_delta(delta).unwrap();
+            restored.set_container(position, inventory.clone()).unwrap();
+            assert_eq!(restored.object_state(position), Some(state));
+            assert_eq!(restored.container_at(position), Some(&inventory));
+            let stacks = restored.block_inventory_drops(position);
+            restored.preflight_inventory_removal([position], 1).unwrap();
+            restored.record(position, 0).unwrap();
+            restored.finish_inventory_removal(position, stacks);
+            assert!(restored.container_at(position).is_none());
+            assert!(restored.object_state(position).is_none());
+            assert_eq!(
+                restored
+                    .gameplay()
+                    .drops
+                    .iter()
+                    .map(|drop| u32::from(drop.stack.count))
+                    .sum::<u32>(),
+                17
+            );
+            assert!(!restored.valid_container(position, &inventory));
+        }
+    }
 
     #[test]
     fn workbench_uses_first_placed_horizontal_neighbor_from_either_cell() {

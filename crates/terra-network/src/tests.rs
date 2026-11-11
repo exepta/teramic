@@ -15,6 +15,8 @@ mod kingdom_tests;
 mod location_tests;
 #[path = "movement_prediction_tests.rs"]
 mod movement_prediction_tests;
+#[path = "npc_work_udp_tests.rs"]
+mod npc_work_udp_tests;
 #[path = "pet_command_tests.rs"]
 mod pet_command_tests;
 #[path = "riding_tests.rs"]

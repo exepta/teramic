@@ -16,7 +16,7 @@ pub(super) fn held_tool(peer: &Peer, world: &ControlWorld) -> Option<terra_core:
         .slot(usize::from(peer.held_slot?))
         .map(|stack| stack.item)
 }
-fn tool_duration(
+pub(super) fn tool_duration(
     target: MiningTarget,
     tool: Option<terra_core::ItemKind>,
     world: &ControlWorld,
@@ -30,10 +30,8 @@ fn tool_duration(
     } else {
         target
     };
-    let speed = match (target, tool) {
-        (MiningTarget::Block { expected, .. }, Some(terra_core::ItemKind::Tool(tool))) => {
-            tool.speed(expected)
-        }
+    let speed = match (target, tool.and_then(terra_core::ItemKind::tool_kind)) {
+        (MiningTarget::Block { expected, .. }, Some(tool)) => tool.speed(expected),
         _ => 1.0,
     };
     let hardness = match target {

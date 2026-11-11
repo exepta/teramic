@@ -72,6 +72,15 @@ pub(super) struct DropModels {
 
 const MAX_DYNAMIC_MODELS: usize = 128;
 
+/// Wear changes inventory identity without allocating another identical GPU mesh.
+/// Filled watering cans keep their real, stateful liquid geometry.
+fn model_item(item: ItemKind) -> ItemKind {
+    match item {
+        ItemKind::WornTool { tool, .. } => ItemKind::Tool(tool),
+        _ => item,
+    }
+}
+
 impl DropModels {
     fn admit_dynamic(&mut self, item: ItemKind) {
         let dynamic = terra_core::tints::color(item).is_some();
@@ -101,6 +110,7 @@ pub(super) struct DropAssets<'w> {
 
 impl DropAssets<'_> {
     pub(super) fn prepare(&mut self, item: ItemKind, blocks: &crate::blocks::BlockAssets) -> bool {
+        let item = model_item(item);
         if self.models.meshes.contains_key(&item) {
             return true;
         }
@@ -148,9 +158,10 @@ impl DropAssets<'_> {
             ItemKind::TintedBlock { .. } => {
                 crate::previews::tints::batches(item, templates, &options)
             }
-            ItemKind::Tool(_) | ItemKind::FilledWateringCan { .. } | ItemKind::Stick => {
-                crate::previews::tool_batches(item, templates)
-            }
+            ItemKind::Tool(_)
+            | ItemKind::WornTool { .. }
+            | ItemKind::FilledWateringCan { .. }
+            | ItemKind::Stick => crate::previews::tool_batches(item, templates),
         };
         let mut batches = match batches {
             Ok(batches) => batches,
@@ -206,7 +217,7 @@ impl DropAssets<'_> {
     }
 
     pub(super) fn bounds(&self, item: ItemKind) -> Option<(Vec3, Vec3)> {
-        self.models.bounds.get(&item).copied()
+        self.models.bounds.get(&model_item(item)).copied()
     }
 
     pub(super) fn spawn(
@@ -261,7 +272,7 @@ impl DropAssets<'_> {
             terra_core::miniature::MiniatureMesh,
         )>,
     ) {
-        let Some(parts) = self.models.meshes.get(&item) else {
+        let Some(parts) = self.models.meshes.get(&model_item(item)) else {
             return;
         };
         for (slot, mesh) in parts {
@@ -577,6 +588,13 @@ mod tests {
             let mut assets = state.get_mut(&mut world).expect("drop asset resources");
             for tool in terra_core::ToolKind::ALL {
                 assert!(assets.prepare(ItemKind::Tool(tool), &blocks));
+                if tool.durability() > 0 {
+                    for remaining in [1, tool.durability() - 1] {
+                        let worn = ItemKind::WornTool { tool, remaining };
+                        assert!(assets.prepare(worn, &blocks));
+                        assert_eq!(assets.bounds(worn), assets.bounds(ItemKind::Tool(tool)));
+                    }
+                }
             }
         }
         assert_eq!(

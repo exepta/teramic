@@ -1,0 +1,1727 @@
+[
+  {
+    "source": " · Verkleidung optional",
+    "de": " · Verkleidung optional",
+    "en": " · bodywork optional"
+  },
+  {
+    "source": "/ local",
+    "de": "/ lokal",
+    "en": "/ local"
+  },
+  {
+    "source": "Activated",
+    "de": "Aktiviert",
+    "en": "Activated"
+  },
+  {
+    "source": "Aktiv",
+    "de": "Aktiv",
+    "en": "Active"
+  },
+  {
+    "source": "Animal Materials",
+    "de": "Tierische Materialien",
+    "en": "Animal Materials"
+  },
+  {
+    "source": "Appaloosa Horse: {} / {}",
+    "de": "Appaloosa: {} / {}",
+    "en": "Appaloosa Horse: {} / {}"
+  },
+  {
+    "source": "Arbeitslos: {} / {}",
+    "de": "Arbeitslos: {} / {}",
+    "en": "Unemployed: {} / {}"
+  },
+  {
+    "source": "Barfuß",
+    "de": "Barfuß",
+    "en": "Barefoot"
+  },
+  {
+    "source": "Bauteile fehlen oder sind nicht miteinander verbunden.",
+    "de": "Bauteile fehlen oder sind nicht miteinander verbunden.",
+    "en": "Parts are missing or are not connected to each other."
+  },
+  {
+    "source": "Bay Horse: {} / {}",
+    "de": "Brauner: {} / {}",
+    "en": "Bay Horse: {} / {}"
+  },
+  {
+    "source": "Bear: {} / {}",
+    "de": "Bär: {} / {}",
+    "en": "Bear: {} / {}"
+  },
+  {
+    "source": "Bee: {} / {}",
+    "de": "Biene: {} / {}",
+    "en": "Bee: {} / {}"
+  },
+  {
+    "source": "Biome:",
+    "de": "Biom:",
+    "en": "Biome:"
+  },
+  {
+    "source": "Bischof: {} / {}",
+    "de": "Bischof: {} / {}",
+    "en": "Bishop: {} / {}"
+  },
+  {
+    "source": "Bitte ein verfügbares Kleidungs-Material auswählen.",
+    "de": "Bitte ein verfügbares Kleidungsmaterial auswählen.",
+    "en": "Please choose an available clothing material."
+  },
+  {
+    "source": "Bitte eine deckende Farbe auswählen.",
+    "de": "Bitte eine deckende Farbe auswählen.",
+    "en": "Please choose an opaque color."
+  },
+  {
+    "source": "Bitte kurz warten.",
+    "de": "Bitte kurz warten.",
+    "en": "Please wait a moment."
+  },
+  {
+    "source": "Black Horse with Socks: {} / {}",
+    "de": "Rappe mit weißen Fesseln: {} / {}",
+    "en": "Black Horse with Socks: {} / {}"
+  },
+  {
+    "source": "Black Horse: {} / {}",
+    "de": "Rappe: {} / {}",
+    "en": "Black Horse: {} / {}"
+  },
+  {
+    "source": "Black Pinto Horse: {} / {}",
+    "de": "Rappschecke: {} / {}",
+    "en": "Black Pinto Horse: {} / {}"
+  },
+  {
+    "source": "Block:",
+    "de": "Block:",
+    "en": "Block:"
+  },
+  {
+    "source": "Bogenschuetze (Soldat): {} / {}",
+    "de": "Bogenschütze (Soldat): {} / {}",
+    "en": "Archer (soldier): {} / {}"
+  },
+  {
+    "source": "Bogenschuetze: {} / {}",
+    "de": "Bogenschütze: {} / {}",
+    "en": "Archer: {} / {}"
+  },
+  {
+    "source": "Boundary:",
+    "de": "Grenze:",
+    "en": "Boundary:"
+  },
+  {
+    "source": "Bremse lösen",
+    "de": "Bremse lösen",
+    "en": "Release Brake"
+  },
+  {
+    "source": "Bremsen",
+    "de": "Bremsen",
+    "en": "Apply Brake"
+  },
+  {
+    "source": "Brennstoffvorrat",
+    "de": "Brennstoffvorrat",
+    "en": "Fuel Supply"
+  },
+  {
+    "source": "Brew Time:",
+    "de": "Brauzeit:",
+    "en": "Brew Time:"
+  },
+  {
+    "source": "Brown Horse: {} / {}",
+    "de": "Braunes Pferd: {} / {}",
+    "en": "Brown Horse: {} / {}"
+  },
+  {
+    "source": "Brown Pinto Horse: {} / {}",
+    "de": "Braunschecke: {} / {}",
+    "en": "Brown Pinto Horse: {} / {}"
+  },
+  {
+    "source": "Buckskin Horse: {} / {}",
+    "de": "Falbe: {} / {}",
+    "en": "Buckskin Horse: {} / {}"
+  },
+  {
+    "source": "Building",
+    "de": "Bauen",
+    "en": "Building"
+  },
+  {
+    "source": "CPU app:",
+    "de": "CPU-Anwendung:",
+    "en": "CPU app:"
+  },
+  {
+    "source": "Cave Spider: {} / {}",
+    "de": "Höhlenspinne: {} / {}",
+    "en": "Cave Spider: {} / {}"
+  },
+  {
+    "source": "Cave:",
+    "de": "Höhle:",
+    "en": "Cave:"
+  },
+  {
+    "source": "Charakter für {}",
+    "de": "Charakter für {}",
+    "en": "Character for {}"
+  },
+  {
+    "source": "Chestnut Horse with Blaze: {} / {}",
+    "de": "Fuchs mit Blesse: {} / {}",
+    "en": "Chestnut Horse with Blaze: {} / {}"
+  },
+  {
+    "source": "Chestnut Horse: {} / {}",
+    "de": "Fuchs: {} / {}",
+    "en": "Chestnut Horse: {} / {}"
+  },
+  {
+    "source": "Chunk:",
+    "de": "Chunk:",
+    "en": "Chunk:"
+  },
+  {
+    "source": "City",
+    "de": "Stadt",
+    "en": "City"
+  },
+  {
+    "source": "Clownfish: {} / {}",
+    "de": "Clownfisch: {} / {}",
+    "en": "Clownfish: {} / {}"
+  },
+  {
+    "source": "Command could not be confirmed",
+    "de": "Der Befehl konnte nicht bestätigt werden",
+    "en": "The command could not be confirmed"
+  },
+  {
+    "source": "Connecting to server ...",
+    "de": "Verbindung zum Server wird hergestellt …",
+    "en": "Connecting to server …"
+  },
+  {
+    "source": "Cow: {} / {}",
+    "de": "Kuh: {} / {}",
+    "en": "Cow: {} / {}"
+  },
+  {
+    "source": "Cream Horse: {} / {}",
+    "de": "Cremefarbenes Pferd: {} / {}",
+    "en": "Cream Horse: {} / {}"
+  },
+  {
+    "source": "Crystal Jelly: {} / {}",
+    "de": "Kristallqualle: {} / {}",
+    "en": "Crystal Jelly: {} / {}"
+  },
+  {
+    "source": "Current:",
+    "de": "Aktuell:",
+    "en": "Current:"
+  },
+  {
+    "source": "Custom",
+    "de": "Benutzerdefiniert",
+    "en": "Custom"
+  },
+  {
+    "source": "Custom:",
+    "de": "Benutzerdefiniert:",
+    "en": "Custom:"
+  },
+  {
+    "source": "Dafür fehlen dir die Rechte.",
+    "de": "Dafür fehlen dir die Rechte.",
+    "en": "You do not have permission to do that."
+  },
+  {
+    "source": "Dapple Gray Horse: {} / {}",
+    "de": "Apfelschimmel: {} / {}",
+    "en": "Dapple Gray Horse: {} / {}"
+  },
+  {
+    "source": "Das Drehgleis muss vollständig geladen sein. Einen Zug mittig auf die Plattform fahren.",
+    "de": "Das Drehgleis muss vollständig geladen sein. Fahre einen Zug mittig auf die Plattform.",
+    "en": "The turntable must be fully loaded. Drive a train onto the center of the platform."
+  },
+  {
+    "source": "Deactivated",
+    "de": "Deaktiviert",
+    "en": "Deactivated"
+  },
+  {
+    "source": "Decoration",
+    "de": "Dekoration",
+    "en": "Decoration"
+  },
+  {
+    "source": "Deep Spider: {} / {}",
+    "de": "Tiefenspinne: {} / {}",
+    "en": "Deep Spider: {} / {}"
+  },
+  {
+    "source": "Dein Standardcharakter",
+    "de": "Dein Standardcharakter",
+    "en": "Your Default Character"
+  },
+  {
+    "source": "Der Abstand zwischen den Drehgestell-Mitten muss 3 bis 15 Blöcke betragen.",
+    "de": "Der Abstand zwischen den Drehgestellmitten muss 3 bis 15 Blöcke betragen.",
+    "en": "The distance between the bogie centers must be 3 to 15 blocks."
+  },
+  {
+    "source": "Der Aufbau hat sich geändert. Bitte erneut versuchen.",
+    "de": "Der Aufbau hat sich geändert. Bitte erneut versuchen.",
+    "en": "The structure has changed. Please try again."
+  },
+  {
+    "source": "Der Motor nimmt nur Brennstoff an.",
+    "de": "Der Motor nimmt nur Brennstoff an.",
+    "en": "The engine only accepts fuel."
+  },
+  {
+    "source": "Der Platz ist belegt oder ein Spieler steht im Aufbau.",
+    "de": "Der Platz ist belegt oder ein Spieler steht im Aufbau.",
+    "en": "The space is occupied or a player is standing inside the structure."
+  },
+  {
+    "source": "Der Sitz oder das Fahrzeug wird gerade benutzt.",
+    "de": "Der Sitz oder das Fahrzeug wird gerade benutzt.",
+    "en": "The seat or vehicle is currently in use."
+  },
+  {
+    "source": "Die Fahrzeuggrenze ist erreicht.",
+    "de": "Die Fahrzeuggrenze ist erreicht.",
+    "en": "The vehicle limit has been reached."
+  },
+  {
+    "source": "Die Gleisenden benötigen mehr Abstand für die Kurve",
+    "de": "Die Gleisenden benötigen mehr Abstand für die Kurve",
+    "en": "The rail endpoints need more space for the curve"
+  },
+  {
+    "source": "Die Lok benötigt mehr als 32 Blöcke Räumhöhe. Aufbau verkleinern oder eine manuelle Höhe wählen.",
+    "de": "Die Lok benötigt mehr als 32 Blöcke Räumhöhe. Verkleinere den Aufbau oder wähle eine manuelle Höhe.",
+    "en": "The locomotive requires a clearance height of more than 32 blocks. Reduce the structure or choose a manual height."
+  },
+  {
+    "source": "Diese Auswahl gilt nur für diesen Server. Dein Standardcharakter bleibt erhalten.",
+    "de": "Diese Auswahl gilt nur für diesen Server. Dein Standardcharakter bleibt erhalten.",
+    "en": "This selection only applies to this server. Your default character is preserved."
+  },
+  {
+    "source": "Diese Fahrstufe benötigt einen längeren Kessel oder Wasser und mindestens 8 bar Dampfdruck.",
+    "de": "Diese Fahrstufe benötigt einen längeren Kessel oder Wasser und mindestens 8 bar Dampfdruck.",
+    "en": "This gear requires a longer boiler, or water and at least 8 bar of steam pressure."
+  },
+  {
+    "source": "Dieser Aufbau oder diese Verbindung ist nicht möglich.",
+    "de": "Dieser Aufbau oder diese Verbindung ist nicht möglich.",
+    "en": "This structure or connection is not possible."
+  },
+  {
+    "source": "Dieser Verbund würde einen Kreis bilden.",
+    "de": "Dieser Verbund würde einen Kreis bilden.",
+    "en": "This connection would create a loop."
+  },
+  {
+    "source": "Display:",
+    "de": "Anzeige:",
+    "en": "Display:"
+  },
+  {
+    "source": "Dorfbewohner: {} / {}",
+    "de": "Dorfbewohner: {} / {}",
+    "en": "Villager: {} / {}"
+  },
+  {
+    "source": "Double result",
+    "de": "Doppelte Ausbeute",
+    "en": "Double Result"
+  },
+  {
+    "source": "Double result chance: {chance}",
+    "de": "Chance auf doppelte Ausbeute: {chance}",
+    "en": "Double result chance: {chance}"
+  },
+  {
+    "source": "Eating: {} s",
+    "de": "Essensdauer: {} s",
+    "en": "Eating: {} s"
+  },
+  {
+    "source": "Entdecker-Umhang",
+    "de": "Entdeckerumhang",
+    "en": "Explorer Cape"
+  },
+  {
+    "source": "Entferne zuerst Pflanzen oder andere aufgesetzte Props vom Aufbau.",
+    "de": "Entferne zuerst Pflanzen oder andere aufgesetzte Objekte vom Aufbau.",
+    "en": "Remove plants or other attached props from the structure first."
+  },
+  {
+    "source": "Entities:",
+    "de": "Entitäten:",
+    "en": "Entities:"
+  },
+  {
+    "source": "Erster Beitritt: Übernimm deinen Charakter oder passe ihn für diesen Server an.",
+    "de": "Erster Beitritt: Übernimm deinen Charakter oder passe ihn für diesen Server an.",
+    "en": "First visit: use your character or customize it for this server."
+  },
+  {
+    "source": "FPS min / max:",
+    "de": "FPS min. / max.:",
+    "en": "FPS min / max:"
+  },
+  {
+    "source": "FPS:",
+    "de": "FPS:",
+    "en": "FPS:"
+  },
+  {
+    "source": "Facing:",
+    "de": "Blickrichtung:",
+    "en": "Facing:"
+  },
+  {
+    "source": "Fahrender Haendler: {} / {}",
+    "de": "Fahrender Händler: {} / {}",
+    "en": "Travelling merchant: {} / {}"
+  },
+  {
+    "source": "Fahrgestell · 2 Drehgestelle (3–15 m Abstand) · verbundener Rahmen · Kupplung",
+    "de": "Fahrgestell · 2 Drehgestelle (3–15 m Abstand) · verbundener Rahmen · Kupplung",
+    "en": "Chassis · 2 bogies (3–15 m apart) · connected frame · coupling"
+  },
+  {
+    "source": "Fahrzeug für eine Bauvorlage wählen oder vorhandenen Aufbau zusammensetzen.",
+    "de": "Wähle ein Fahrzeug für eine Bauvorlage oder setze einen vorhandenen Aufbau zusammen.",
+    "en": "Choose a vehicle for a building blueprint or assemble an existing structure."
+  },
+  {
+    "source": "Fahrzeug und Ladung wurden zerstört.",
+    "de": "Fahrzeug und Ladung wurden zerstört.",
+    "en": "The vehicle and its cargo were destroyed."
+  },
+  {
+    "source": "Fahrzeug wählen, um eine Bauvorlage auf dem Gleis anzuzeigen.",
+    "de": "Wähle ein Fahrzeug, um eine Bauvorlage auf dem Gleis anzuzeigen.",
+    "en": "Choose a vehicle to show a building blueprint on the track."
+  },
+  {
+    "source": "Farmer (vegan): {} / {}",
+    "de": "Farmer (vegan): {} / {}",
+    "en": "Farmer (vegan): {} / {}"
+  },
+  {
+    "source": "Fertig.",
+    "de": "Fertig.",
+    "en": "Done."
+  },
+  {
+    "source": "Finding Safe Ground",
+    "de": "Sicherer Boden wird gesucht",
+    "en": "Finding Safe Ground"
+  },
+  {
+    "source": "Fire Jelly: {} / {}",
+    "de": "Feuerqualle: {} / {}",
+    "en": "Fire Jelly: {} / {}"
+  },
+  {
+    "source": "Fish: {} / {}",
+    "de": "Fisch: {} / {}",
+    "en": "Fish: {} / {}"
+  },
+  {
+    "source": "Fluid tick:",
+    "de": "Flüssigkeitsschritt:",
+    "en": "Fluid tick:"
+  },
+  {
+    "source": "Food",
+    "de": "Nahrung",
+    "en": "Food"
+  },
+  {
+    "source": "Food:",
+    "de": "Nahrung:",
+    "en": "Food:"
+  },
+  {
+    "source": "Found a City",
+    "de": "Stadt gründen",
+    "en": "Found a City"
+  },
+  {
+    "source": "Found a Kingdom",
+    "de": "Königreich gründen",
+    "en": "Found a Kingdom"
+  },
+  {
+    "source": "Found a Outpost",
+    "de": "Außenposten gründen",
+    "en": "Found a Outpost"
+  },
+  {
+    "source": "Found a Village",
+    "de": "Dorf gründen",
+    "en": "Found a Village"
+  },
+  {
+    "source": "Für Einzelspieler und als Vorlage beim ersten Beitritt zu einem Server.",
+    "de": "Für Einzelspieler und als Vorlage beim ersten Beitritt zu einem Server.",
+    "en": "For singleplayer and as a template when first joining a server."
+  },
+  {
+    "source": "Für die Montage müssen alle Mitfahrer aussteigen und der Zug auf einem geraden Gleisabschnitt stehen.",
+    "de": "Für die Montage müssen alle Mitfahrer aussteigen und der Zug auf einem geraden Gleisabschnitt stehen.",
+    "en": "All passengers must get out and the train must be on a straight track section before assembly."
+  },
+  {
+    "source": "Für die Vorlage fehlen Materialien im Inventar.",
+    "de": "Für die Vorlage fehlen Materialien im Inventar.",
+    "en": "Your inventory is missing materials for the blueprint."
+  },
+  {
+    "source": "GPU:",
+    "de": "GPU:",
+    "en": "GPU:"
+  },
+  {
+    "source": "Gehalten:",
+    "de": "Gehalten:",
+    "en": "Holding:"
+  },
+  {
+    "source": "Gleisleger ausschalten",
+    "de": "Gleisleger ausschalten",
+    "en": "Disable Rail Builder"
+  },
+  {
+    "source": "Gleisleger einschalten",
+    "de": "Gleisleger einschalten",
+    "en": "Enable Rail Builder"
+  },
+  {
+    "source": "Gray Horse: {} / {}",
+    "de": "Graues Pferd: {} / {}",
+    "en": "Gray Horse: {} / {}"
+  },
+  {
+    "source": "Gründer:",
+    "de": "Gründer:",
+    "en": "Founder:"
+  },
+  {
+    "source": "Güterwagen #{}",
+    "de": "Güterwagen #{}",
+    "en": "Freight wagon #{}"
+  },
+  {
+    "source": "Hammerhead Shark: {} / {}",
+    "de": "Hammerhai: {} / {}",
+    "en": "Hammerhead Shark: {} / {}"
+  },
+  {
+    "source": "Height:",
+    "de": "Höhe:",
+    "en": "Height:"
+  },
+  {
+    "source": "Hier: Brennstoffmotor · passende Ausrichtung wählen",
+    "de": "Hier: Brennstoffmotor · passende Ausrichtung wählen",
+    "en": "Here: Fuel Engine · choose a matching orientation"
+  },
+  {
+    "source": "Hier: Dampfdom · passende Ausrichtung wählen",
+    "de": "Hier: Dampfdom · passende Ausrichtung wählen",
+    "en": "Here: Steam Dome · choose a matching orientation"
+  },
+  {
+    "source": "Hier: Drehgleis / Drehscheibe · passende Ausrichtung wählen",
+    "de": "Hier: Drehgleis / Drehscheibe · passende Ausrichtung wählen",
+    "en": "Here: Turntable · choose a matching orientation"
+  },
+  {
+    "source": "Hier: Dunkler Stahl Außenecke · passende Ausrichtung wählen",
+    "de": "Hier: Dunkle Stahlaußenecke · passende Ausrichtung wählen",
+    "en": "Here: Dark Steel Outer Corner · choose a matching orientation"
+  },
+  {
+    "source": "Hier: Dunkler Stahl Block · passende Ausrichtung wählen",
+    "de": "Hier: Dunkler Stahlblock · passende Ausrichtung wählen",
+    "en": "Here: Dark Steel Block · choose a matching orientation"
+  },
+  {
+    "source": "Hier: Dunkler Stahl Innenecke · passende Ausrichtung wählen",
+    "de": "Hier: Dunkle Stahlinnenecke · passende Ausrichtung wählen",
+    "en": "Here: Dark Steel Inner Corner · choose a matching orientation"
+  },
+  {
+    "source": "Hier: Dunkler Stahl Schräge · passende Ausrichtung wählen",
+    "de": "Hier: Dunkle Stahlschräge · passende Ausrichtung wählen",
+    "en": "Here: Dark Steel Slope · choose a matching orientation"
+  },
+  {
+    "source": "Hier: Dunkler Stahl Slab · passende Ausrichtung wählen",
+    "de": "Hier: Dunkle Stahlplatte · passende Ausrichtung wählen",
+    "en": "Here: Dark Steel Slab · choose a matching orientation"
+  },
+  {
+    "source": "Hier: Dunkler Stahl Treppe · passende Ausrichtung wählen",
+    "de": "Hier: Dunkle Stahltreppe · passende Ausrichtung wählen",
+    "en": "Here: Dark Steel Stairs · choose a matching orientation"
+  },
+  {
+    "source": "Hier: Führerhaus-Fenster · passende Ausrichtung wählen",
+    "de": "Hier: Führerhausfenster · passende Ausrichtung wählen",
+    "en": "Here: Cab Window · choose a matching orientation"
+  },
+  {
+    "source": "Hier: Führerhaus-Frontwand · passende Ausrichtung wählen",
+    "de": "Hier: Führerhausfrontwand · passende Ausrichtung wählen",
+    "en": "Here: Cab Front Wall · choose a matching orientation"
+  },
+  {
+    "source": "Hier: Führerhaus-Seitenwand · passende Ausrichtung wählen",
+    "de": "Hier: Führerhausseitenwand · passende Ausrichtung wählen",
+    "en": "Here: Cab Side Wall · choose a matching orientation"
+  },
+  {
+    "source": "Hier: Führerhaus-Tür · passende Ausrichtung wählen",
+    "de": "Hier: Führerhaustür · passende Ausrichtung wählen",
+    "en": "Here: Cab Door · choose a matching orientation"
+  },
+  {
+    "source": "Hier: Führerstand · passende Ausrichtung wählen",
+    "de": "Hier: Führerstand · passende Ausrichtung wählen",
+    "en": "Here: Driver Cab · choose a matching orientation"
+  },
+  {
+    "source": "Hier: Gestänge-Gelenk · passende Ausrichtung wählen",
+    "de": "Hier: Gestängegelenk · passende Ausrichtung wählen",
+    "en": "Here: Rod Joint · choose a matching orientation"
+  },
+  {
+    "source": "Hier: Handlauf-Stütze · passende Ausrichtung wählen",
+    "de": "Hier: Handlaufstütze · passende Ausrichtung wählen",
+    "en": "Here: Handrail Support · choose a matching orientation"
+  },
+  {
+    "source": "Hier: Kreuzkopf · passende Ausrichtung wählen",
+    "de": "Hier: Kreuzkopf · passende Ausrichtung wählen",
+    "en": "Here: Crosshead · choose a matching orientation"
+  },
+  {
+    "source": "Hier: Kuppelstange kurz · passende Ausrichtung wählen",
+    "de": "Hier: Kurze Kuppelstange · passende Ausrichtung wählen",
+    "en": "Here: Short Coupling Rod · choose a matching orientation"
+  },
+  {
+    "source": "Hier: Kuppelstange lang · passende Ausrichtung wählen",
+    "de": "Hier: Lange Kuppelstange · passende Ausrichtung wählen",
+    "en": "Here: Long Coupling Rod · choose a matching orientation"
+  },
+  {
+    "source": "Hier: Laufrad klein · passende Ausrichtung wählen",
+    "de": "Hier: Kleines Laufrad · passende Ausrichtung wählen",
+    "en": "Here: Small Running Wheel · choose a matching orientation"
+  },
+  {
+    "source": "Hier: Lok-Achse · passende Ausrichtung wählen",
+    "de": "Hier: Lokachse · passende Ausrichtung wählen",
+    "en": "Here: Locomotive Axle · choose a matching orientation"
+  },
+  {
+    "source": "Hier: Lok-Blech Außenecke · passende Ausrichtung wählen",
+    "de": "Hier: Lokblechaußenecke · passende Ausrichtung wählen",
+    "en": "Here: Locomotive Sheet Outer Corner · choose a matching orientation"
+  },
+  {
+    "source": "Hier: Lok-Blech Block · passende Ausrichtung wählen",
+    "de": "Hier: Lokblechblock · passende Ausrichtung wählen",
+    "en": "Here: Locomotive Sheet Block · choose a matching orientation"
+  },
+  {
+    "source": "Hier: Lok-Blech Innenecke · passende Ausrichtung wählen",
+    "de": "Hier: Lokblechinnenecke · passende Ausrichtung wählen",
+    "en": "Here: Locomotive Sheet Inner Corner · choose a matching orientation"
+  },
+  {
+    "source": "Hier: Lok-Blech Schräge · passende Ausrichtung wählen",
+    "de": "Hier: Lokblechschräge · passende Ausrichtung wählen",
+    "en": "Here: Locomotive Sheet Slope · choose a matching orientation"
+  },
+  {
+    "source": "Hier: Lok-Blech Slab · passende Ausrichtung wählen",
+    "de": "Hier: Lokblechplatte · passende Ausrichtung wählen",
+    "en": "Here: Locomotive Sheet Slab · choose a matching orientation"
+  },
+  {
+    "source": "Hier: Lok-Blech Treppe · passende Ausrichtung wählen",
+    "de": "Hier: Lokblechtreppe · passende Ausrichtung wählen",
+    "en": "Here: Locomotive Sheet Stairs · choose a matching orientation"
+  },
+  {
+    "source": "Hier: Lok-Dachlüfter · passende Ausrichtung wählen",
+    "de": "Hier: Lokdachlüfter · passende Ausrichtung wählen",
+    "en": "Here: Locomotive Roof Vent · choose a matching orientation"
+  },
+  {
+    "source": "Hier: Lok-Dampfventil · passende Ausrichtung wählen",
+    "de": "Hier: Lokdampfventil · passende Ausrichtung wählen",
+    "en": "Here: Locomotive Steam Valve · choose a matching orientation"
+  },
+  {
+    "source": "Hier: Lok-Druckanzeige · passende Ausrichtung wählen",
+    "de": "Hier: Lokdruckanzeige · passende Ausrichtung wählen",
+    "en": "Here: Locomotive Pressure Gauge · choose a matching orientation"
+  },
+  {
+    "source": "Hier: Lok-Druckeinheit · passende Ausrichtung wählen",
+    "de": "Hier: Lokdruckeinheit · passende Ausrichtung wählen",
+    "en": "Here: Locomotive Pressure Unit · choose a matching orientation"
+  },
+  {
+    "source": "Hier: Lok-Freiräumer und Gleisleger · passende Ausrichtung wählen",
+    "de": "Hier: Lokfreiräumer und Gleisleger · passende Ausrichtung wählen",
+    "en": "Here: Locomotive Excavator and Rail Builder · choose a matching orientation"
+  },
+  {
+    "source": "Hier: Lok-Geländer · passende Ausrichtung wählen",
+    "de": "Hier: Lokgeländer · passende Ausrichtung wählen",
+    "en": "Here: Locomotive Railing · choose a matching orientation"
+  },
+  {
+    "source": "Hier: Lok-Gitter Außenecke · passende Ausrichtung wählen",
+    "de": "Hier: Lokgitteraußenecke · passende Ausrichtung wählen",
+    "en": "Here: Locomotive Grating Outer Corner · choose a matching orientation"
+  },
+  {
+    "source": "Hier: Lok-Gitter Block · passende Ausrichtung wählen",
+    "de": "Hier: Lokgitterblock · passende Ausrichtung wählen",
+    "en": "Here: Locomotive Grating Block · choose a matching orientation"
+  },
+  {
+    "source": "Hier: Lok-Gitter Innenecke · passende Ausrichtung wählen",
+    "de": "Hier: Lokgitterinnenecke · passende Ausrichtung wählen",
+    "en": "Here: Locomotive Grating Inner Corner · choose a matching orientation"
+  },
+  {
+    "source": "Hier: Lok-Gitter Schräge · passende Ausrichtung wählen",
+    "de": "Hier: Lokgitterschräge · passende Ausrichtung wählen",
+    "en": "Here: Locomotive Grating Slope · choose a matching orientation"
+  },
+  {
+    "source": "Hier: Lok-Gitter Slab · passende Ausrichtung wählen",
+    "de": "Hier: Lokgitterplatte · passende Ausrichtung wählen",
+    "en": "Here: Locomotive Grating Slab · choose a matching orientation"
+  },
+  {
+    "source": "Hier: Lok-Gitter Treppe · passende Ausrichtung wählen",
+    "de": "Hier: Lokgittertreppe · passende Ausrichtung wählen",
+    "en": "Here: Locomotive Grating Stairs · choose a matching orientation"
+  },
+  {
+    "source": "Hier: Lok-Handlauf · passende Ausrichtung wählen",
+    "de": "Hier: Lokhandlauf · passende Ausrichtung wählen",
+    "en": "Here: Locomotive Handrail · choose a matching orientation"
+  },
+  {
+    "source": "Hier: Lok-Hauptrahmen · passende Ausrichtung wählen",
+    "de": "Hier: Lokhauptrahmen · passende Ausrichtung wählen",
+    "en": "Here: Locomotive Main Frame · choose a matching orientation"
+  },
+  {
+    "source": "Hier: Lok-Holzplanken · passende Ausrichtung wählen",
+    "de": "Hier: Lokholzbretter · passende Ausrichtung wählen",
+    "en": "Here: Locomotive Wood Planks · choose a matching orientation"
+  },
+  {
+    "source": "Hier: Lok-Kessel Abschluss · passende Ausrichtung wählen",
+    "de": "Hier: Lokkesselabschluss · passende Ausrichtung wählen",
+    "en": "Here: Locomotive Boiler End · choose a matching orientation"
+  },
+  {
+    "source": "Hier: Lok-Kessel gebogen · passende Ausrichtung wählen",
+    "de": "Hier: Gebogener Lokkessel · passende Ausrichtung wählen",
+    "en": "Here: Curved Locomotive Boiler · choose a matching orientation"
+  },
+  {
+    "source": "Hier: Lok-Kessel gerade · passende Ausrichtung wählen",
+    "de": "Hier: Gerader Lokkessel · passende Ausrichtung wählen",
+    "en": "Here: Straight Locomotive Boiler · choose a matching orientation"
+  },
+  {
+    "source": "Hier: Lok-Kohlestücke · passende Ausrichtung wählen",
+    "de": "Hier: Lokkohlestücke · passende Ausrichtung wählen",
+    "en": "Here: Locomotive Coal Pieces · choose a matching orientation"
+  },
+  {
+    "source": "Hier: Lok-Luke · passende Ausrichtung wählen",
+    "de": "Hier: Lokluke · passende Ausrichtung wählen",
+    "en": "Here: Locomotive Hatch · choose a matching orientation"
+  },
+  {
+    "source": "Hier: Lok-Nietenplatte · passende Ausrichtung wählen",
+    "de": "Hier: Loknietenplatte · passende Ausrichtung wählen",
+    "en": "Here: Locomotive Rivet Plate · choose a matching orientation"
+  },
+  {
+    "source": "Hier: Lok-Nummernschild 52 4867 · passende Ausrichtung wählen",
+    "de": "Hier: Loknummernschild 52 4867 · passende Ausrichtung wählen",
+    "en": "Here: Locomotive Number Plate 52 4867 · choose a matching orientation"
+  },
+  {
+    "source": "Hier: Lok-Puffer · passende Ausrichtung wählen",
+    "de": "Hier: Lokpuffer · passende Ausrichtung wählen",
+    "en": "Here: Locomotive Buffer · choose a matching orientation"
+  },
+  {
+    "source": "Hier: Lok-Scheinwerfer Front · passende Ausrichtung wählen",
+    "de": "Hier: Lokfrontscheinwerfer · passende Ausrichtung wählen",
+    "en": "Here: Locomotive Front Headlamp · choose a matching orientation"
+  },
+  {
+    "source": "Hier: Lok-Scheinwerfer Seite · passende Ausrichtung wählen",
+    "de": "Hier: Lokseitenscheinwerfer · passende Ausrichtung wählen",
+    "en": "Here: Locomotive Side Lamp · choose a matching orientation"
+  },
+  {
+    "source": "Hier: Lok-Schornstein · passende Ausrichtung wählen",
+    "de": "Hier: Lokschornstein · passende Ausrichtung wählen",
+    "en": "Here: Locomotive Chimney · choose a matching orientation"
+  },
+  {
+    "source": "Hier: Lok-Schraubenblock · passende Ausrichtung wählen",
+    "de": "Hier: Lokschraubenblock · passende Ausrichtung wählen",
+    "en": "Here: Locomotive Bolt Block · choose a matching orientation"
+  },
+  {
+    "source": "Hier: Lok-Werkzeugkasten · passende Ausrichtung wählen",
+    "de": "Hier: Lokwerkzeugkasten · passende Ausrichtung wählen",
+    "en": "Here: Locomotive Toolbox · choose a matching orientation"
+  },
+  {
+    "source": "Hier: Lokdach flach · passende Ausrichtung wählen",
+    "de": "Hier: Flaches Lokdach · passende Ausrichtung wählen",
+    "en": "Here: Flat Locomotive Roof · choose a matching orientation"
+  },
+  {
+    "source": "Hier: Lokdach gebogen · passende Ausrichtung wählen",
+    "de": "Hier: Gebogenes Lokdach · passende Ausrichtung wählen",
+    "en": "Here: Curved Locomotive Roof · choose a matching orientation"
+  },
+  {
+    "source": "Hier: Lokleiter Front · passende Ausrichtung wählen",
+    "de": "Hier: Lokfrontleiter · passende Ausrichtung wählen",
+    "en": "Here: Locomotive Front Ladder · choose a matching orientation"
+  },
+  {
+    "source": "Hier: Lokleiter Seite · passende Ausrichtung wählen",
+    "de": "Hier: Lokseitenleiter · passende Ausrichtung wählen",
+    "en": "Here: Locomotive Side Ladder · choose a matching orientation"
+  },
+  {
+    "source": "Hier: Lokrad mittel · passende Ausrichtung wählen",
+    "de": "Hier: Mittleres Lokrad · passende Ausrichtung wählen",
+    "en": "Here: Medium Locomotive Wheel · choose a matching orientation"
+  },
+  {
+    "source": "Hier: Lokrahmen rot · passende Ausrichtung wählen",
+    "de": "Hier: Roter Lokrahmen · passende Ausrichtung wählen",
+    "en": "Here: Red Locomotive Frame · choose a matching orientation"
+  },
+  {
+    "source": "Hier: Messingrohr Bogen · passende Ausrichtung wählen",
+    "de": "Hier: Messingrohrbogen · passende Ausrichtung wählen",
+    "en": "Here: Brass Pipe Bend · choose a matching orientation"
+  },
+  {
+    "source": "Hier: Messingrohr gerade · passende Ausrichtung wählen",
+    "de": "Hier: Gerades Messingrohr · passende Ausrichtung wählen",
+    "en": "Here: Straight Brass Pipe · choose a matching orientation"
+  },
+  {
+    "source": "Hier: Pufferbohle · passende Ausrichtung wählen",
+    "de": "Hier: Pufferbohle · passende Ausrichtung wählen",
+    "en": "Here: Buffer Beam · choose a matching orientation"
+  },
+  {
+    "source": "Hier: Rauchkammer · passende Ausrichtung wählen",
+    "de": "Hier: Rauchkammer · passende Ausrichtung wählen",
+    "en": "Here: Smokebox · choose a matching orientation"
+  },
+  {
+    "source": "Hier: Rauchkammertür 52 4867 · passende Ausrichtung wählen",
+    "de": "Hier: Rauchkammertür 52 4867 · passende Ausrichtung wählen",
+    "en": "Here: Smokebox Door 52 4867 · choose a matching orientation"
+  },
+  {
+    "source": "Hier: Sanddom · passende Ausrichtung wählen",
+    "de": "Hier: Sanddom · passende Ausrichtung wählen",
+    "en": "Here: Sand Dome · choose a matching orientation"
+  },
+  {
+    "source": "Hier: Schwarzes Eisen Außenecke · passende Ausrichtung wählen",
+    "de": "Hier: Schwarze Eisenaußenecke · passende Ausrichtung wählen",
+    "en": "Here: Black Iron Outer Corner · choose a matching orientation"
+  },
+  {
+    "source": "Hier: Schwarzes Eisen Block · passende Ausrichtung wählen",
+    "de": "Hier: Schwarzer Eisenblock · passende Ausrichtung wählen",
+    "en": "Here: Black Iron Block · choose a matching orientation"
+  },
+  {
+    "source": "Hier: Schwarzes Eisen Innenecke · passende Ausrichtung wählen",
+    "de": "Hier: Schwarze Eiseninnenecke · passende Ausrichtung wählen",
+    "en": "Here: Black Iron Inner Corner · choose a matching orientation"
+  },
+  {
+    "source": "Hier: Schwarzes Eisen Schräge · passende Ausrichtung wählen",
+    "de": "Hier: Schwarze Eisenschräge · passende Ausrichtung wählen",
+    "en": "Here: Black Iron Slope · choose a matching orientation"
+  },
+  {
+    "source": "Hier: Schwarzes Eisen Slab · passende Ausrichtung wählen",
+    "de": "Hier: Schwarze Eisenplatte · passende Ausrichtung wählen",
+    "en": "Here: Black Iron Slab · choose a matching orientation"
+  },
+  {
+    "source": "Hier: Schwarzes Eisen Treppe · passende Ausrichtung wählen",
+    "de": "Hier: Schwarze Eisentreppe · passende Ausrichtung wählen",
+    "en": "Here: Black Iron Stairs · choose a matching orientation"
+  },
+  {
+    "source": "Hier: Tender-Kohleladung · passende Ausrichtung wählen",
+    "de": "Hier: Tenderkohleladung · passende Ausrichtung wählen",
+    "en": "Here: Tender Coal Load · choose a matching orientation"
+  },
+  {
+    "source": "Hier: Tender-Wassertank · passende Ausrichtung wählen",
+    "de": "Hier: Tenderwassertank · passende Ausrichtung wählen",
+    "en": "Here: Tender Water Tank · choose a matching orientation"
+  },
+  {
+    "source": "Hier: Tenderfront · passende Ausrichtung wählen",
+    "de": "Hier: Tenderfront · passende Ausrichtung wählen",
+    "en": "Here: Tender Front · choose a matching orientation"
+  },
+  {
+    "source": "Hier: Tenderwand · passende Ausrichtung wählen",
+    "de": "Hier: Tenderwand · passende Ausrichtung wählen",
+    "en": "Here: Tender Wall · choose a matching orientation"
+  },
+  {
+    "source": "Hier: Treibrad groß · passende Ausrichtung wählen",
+    "de": "Hier: Großes Treibrad · passende Ausrichtung wählen",
+    "en": "Here: Large Driving Wheel · choose a matching orientation"
+  },
+  {
+    "source": "Hier: Treibstange · passende Ausrichtung wählen",
+    "de": "Hier: Treibstange · passende Ausrichtung wählen",
+    "en": "Here: Connecting Rod · choose a matching orientation"
+  },
+  {
+    "source": "Hier: Wagen-Deckenleuchte · passende Ausrichtung wählen",
+    "de": "Hier: Wagendeckenleuchte · passende Ausrichtung wählen",
+    "en": "Here: Carriage Ceiling Lamp · choose a matching orientation"
+  },
+  {
+    "source": "Hier: Wagen-Laderaum · passende Ausrichtung wählen",
+    "de": "Hier: Wagenladeraum · passende Ausrichtung wählen",
+    "en": "Here: Carriage Cargo Hold · choose a matching orientation"
+  },
+  {
+    "source": "Hier: Zugbauteil · passende Ausrichtung wählen",
+    "de": "Hier: Zugbauteil · passende Ausrichtung wählen",
+    "en": "Here: Train Part · choose a matching orientation"
+  },
+  {
+    "source": "Hier: Zugsitz · passende Ausrichtung wählen",
+    "de": "Hier: Zugsitz · passende Ausrichtung wählen",
+    "en": "Here: Train Seat · choose a matching orientation"
+  },
+  {
+    "source": "Hier: {name} · passende Ausrichtung wählen",
+    "de": "Hier: {name} · passende Ausrichtung wählen",
+    "en": "Here: {name} · choose a matching orientation"
+  },
+  {
+    "source": "Hinten",
+    "de": "Hinten",
+    "en": "Rear"
+  },
+  {
+    "source": "Holzfaeller: {} / {}",
+    "de": "Holzfäller: {} / {}",
+    "en": "Lumberjack: {} / {}"
+  },
+  {
+    "source": "Horse: {} / {}",
+    "de": "Pferd: {} / {}",
+    "en": "Horse: {} / {}"
+  },
+  {
+    "source": "Jungtier: Appaloosa Horse",
+    "de": "Jungtier: Appaloosa",
+    "en": "Young Appaloosa Horse"
+  },
+  {
+    "source": "Jungtier: Bay Horse",
+    "de": "Jungtier: Brauner",
+    "en": "Young Bay Horse"
+  },
+  {
+    "source": "Jungtier: Bear",
+    "de": "Jungtier: Bär",
+    "en": "Young Bear"
+  },
+  {
+    "source": "Jungtier: Bee",
+    "de": "Jungtier: Biene",
+    "en": "Young Bee"
+  },
+  {
+    "source": "Jungtier: Black Horse",
+    "de": "Jungtier: Rappe",
+    "en": "Young Black Horse"
+  },
+  {
+    "source": "Jungtier: Black Horse with Socks",
+    "de": "Jungtier: Rappe mit weißen Fesseln",
+    "en": "Young Black Horse with Socks"
+  },
+  {
+    "source": "Jungtier: Black Pinto Horse",
+    "de": "Jungtier: Rappschecke",
+    "en": "Young Black Pinto Horse"
+  },
+  {
+    "source": "Jungtier: Brown Horse",
+    "de": "Jungtier: Braunes Pferd",
+    "en": "Young Brown Horse"
+  },
+  {
+    "source": "Jungtier: Brown Pinto Horse",
+    "de": "Jungtier: Braunschecke",
+    "en": "Young Brown Pinto Horse"
+  },
+  {
+    "source": "Jungtier: Buckskin Horse",
+    "de": "Jungtier: Falbe",
+    "en": "Young Buckskin Horse"
+  },
+  {
+    "source": "Jungtier: Cave Spider",
+    "de": "Jungtier: Höhlenspinne",
+    "en": "Young Cave Spider"
+  },
+  {
+    "source": "Jungtier: Chestnut Horse",
+    "de": "Jungtier: Fuchs",
+    "en": "Young Chestnut Horse"
+  },
+  {
+    "source": "Jungtier: Chestnut Horse with Blaze",
+    "de": "Jungtier: Fuchs mit Blesse",
+    "en": "Young Chestnut Horse with Blaze"
+  },
+  {
+    "source": "Jungtier: Clownfish",
+    "de": "Jungtier: Clownfisch",
+    "en": "Young Clownfish"
+  },
+  {
+    "source": "Jungtier: Cow",
+    "de": "Jungtier: Kuh",
+    "en": "Young Cow"
+  },
+  {
+    "source": "Jungtier: Cream Horse",
+    "de": "Jungtier: Cremefarbenes Pferd",
+    "en": "Young Cream Horse"
+  },
+  {
+    "source": "Jungtier: Crystal Jelly",
+    "de": "Jungtier: Kristallqualle",
+    "en": "Young Crystal Jelly"
+  },
+  {
+    "source": "Jungtier: Dapple Gray Horse",
+    "de": "Jungtier: Apfelschimmel",
+    "en": "Young Dapple Gray Horse"
+  },
+  {
+    "source": "Jungtier: Deep Spider",
+    "de": "Jungtier: Tiefenspinne",
+    "en": "Young Deep Spider"
+  },
+  {
+    "source": "Jungtier: Fire Jelly",
+    "de": "Jungtier: Feuerqualle",
+    "en": "Young Fire Jelly"
+  },
+  {
+    "source": "Jungtier: Fish",
+    "de": "Jungtier: Fisch",
+    "en": "Young Fish"
+  },
+  {
+    "source": "Jungtier: Gray Horse",
+    "de": "Jungtier: Graues Pferd",
+    "en": "Young Gray Horse"
+  },
+  {
+    "source": "Jungtier: Hammerhead Shark",
+    "de": "Jungtier: Hammerhai",
+    "en": "Young Hammerhead Shark"
+  },
+  {
+    "source": "Jungtier: Horse",
+    "de": "Jungtier: Pferd",
+    "en": "Young Horse"
+  },
+  {
+    "source": "Jungtier: Moon Jelly",
+    "de": "Jungtier: Mondqualle",
+    "en": "Young Moon Jelly"
+  },
+  {
+    "source": "Jungtier: Palomino Horse",
+    "de": "Jungtier: Palomino",
+    "en": "Young Palomino Horse"
+  },
+  {
+    "source": "Jungtier: Pig",
+    "de": "Jungtier: Schwein",
+    "en": "Young Pig"
+  },
+  {
+    "source": "Jungtier: Reef Shark",
+    "de": "Jungtier: Riffhai",
+    "en": "Young Reef Shark"
+  },
+  {
+    "source": "Jungtier: Riverfin",
+    "de": "Jungtier: Flussflosser",
+    "en": "Young Riverfin"
+  },
+  {
+    "source": "Jungtier: Roan Horse",
+    "de": "Jungtier: Stichelhaariges Pferd",
+    "en": "Young Roan Horse"
+  },
+  {
+    "source": "Jungtier: Sheep",
+    "de": "Jungtier: Schaf",
+    "en": "Young Sheep"
+  },
+  {
+    "source": "Jungtier: Small Spider",
+    "de": "Jungtier: Kleine Spinne",
+    "en": "Young Small Spider"
+  },
+  {
+    "source": "Jungtier: Squid",
+    "de": "Jungtier: Tintenfisch",
+    "en": "Young Squid"
+  },
+  {
+    "source": "Jungtier: Stalker",
+    "de": "Jungtier: Lauerer",
+    "en": "Young Stalker"
+  },
+  {
+    "source": "Jungtier: Sun Jelly",
+    "de": "Jungtier: Sonnenqualle",
+    "en": "Young Sun Jelly"
+  },
+  {
+    "source": "Jungtier: Void Jelly",
+    "de": "Jungtier: Leerenqualle",
+    "en": "Young Void Jelly"
+  },
+  {
+    "source": "Jungtier: Whale Shark",
+    "de": "Jungtier: Walhai",
+    "en": "Young Whale Shark"
+  },
+  {
+    "source": "Jungtier: White Horse",
+    "de": "Jungtier: Weißes Pferd",
+    "en": "Young White Horse"
+  },
+  {
+    "source": "Kein passendes gerades Gleis neben der Montagestelle. Gleis verlängern und „Vorlage anzeigen“ wählen.",
+    "de": "Kein passendes gerades Gleis neben der Montagestelle. Verlängere das Gleis und wähle „Vorlage anzeigen“.",
+    "en": "No suitable straight track beside the assembly station. Extend the track and choose “Show Blueprint”."
+  },
+  {
+    "source": "Keine verbundenen Zugbauteile neben der Montagestelle.",
+    "de": "Keine verbundenen Zugbauteile neben der Montagestelle.",
+    "en": "No connected train parts beside the assembly station."
+  },
+  {
+    "source": "Klicke einen Stapel, um ihn zu verschieben.",
+    "de": "Klicke einen Stapel, um ihn zu verschieben.",
+    "en": "Click a stack to move it."
+  },
+  {
+    "source": "Laderaum",
+    "de": "Laderaum",
+    "en": "Cargo Hold"
+  },
+  {
+    "source": "Leave the world before editing this character",
+    "de": "Verlasse die Welt, bevor du diesen Charakter bearbeitest",
+    "en": "Leave the world before editing this character"
+  },
+  {
+    "source": "Lokfuehrer: {} / {}",
+    "de": "Lokführer: {} / {}",
+    "en": "Train driver: {} / {}"
+  },
+  {
+    "source": "Lokomotive #{}",
+    "de": "Lokomotive #{}",
+    "en": "Locomotive #{}"
+  },
+  {
+    "source": "Material {id}",
+    "de": "Material {id}",
+    "en": "Material {id}"
+  },
+  {
+    "source": "Materials",
+    "de": "Materialien",
+    "en": "Materials"
+  },
+  {
+    "source": "Mausrad",
+    "de": "Mausrad",
+    "en": "Mouse Wheel"
+  },
+  {
+    "source": "Mechanical part {id}",
+    "de": "Mechanisches Bauteil {id}",
+    "en": "Mechanical Part {id}"
+  },
+  {
+    "source": "Medic: {} / {}",
+    "de": "Sanitäter: {} / {}",
+    "en": "Medic: {} / {}"
+  },
+  {
+    "source": "Minenarbeiter: {} / {}",
+    "de": "Minenarbeiter: {} / {}",
+    "en": "Miner: {} / {}"
+  },
+  {
+    "source": "Mix / Wet:",
+    "de": "Mischung / Feuchte:",
+    "en": "Mix / Wet:"
+  },
+  {
+    "source": "Montage aktiv: Verziere den Zug mit Blöcken und setze ihn anschließend wieder zusammen.",
+    "de": "Montage aktiv: Verziere den Zug mit Blöcken und setze ihn anschließend wieder zusammen.",
+    "en": "Assembly mode active: decorate the train with blocks, then assemble it again."
+  },
+  {
+    "source": "Montagestelle oder Fahrzeug ist zu weit entfernt.",
+    "de": "Montagestelle oder Fahrzeug ist zu weit entfernt.",
+    "en": "The assembly station or vehicle is too far away."
+  },
+  {
+    "source": "Montagestelle, Bauteil oder Fahrzeug ist nicht vorhanden.",
+    "de": "Montagestelle, Bauteil oder Fahrzeug ist nicht vorhanden.",
+    "en": "The assembly station, part, or vehicle does not exist."
+  },
+  {
+    "source": "Moon Jelly: {} / {}",
+    "de": "Mondqualle: {} / {}",
+    "en": "Moon Jelly: {} / {}"
+  },
+  {
+    "source": "Natural mobs:",
+    "de": "Natürliche Kreaturen:",
+    "en": "Natural mobs:"
+  },
+  {
+    "source": "Network:",
+    "de": "Netzwerk:",
+    "en": "Network:"
+  },
+  {
+    "source": "Nomade A: {} / {}",
+    "de": "Nomade A: {} / {}",
+    "en": "Nomad A: {} / {}"
+  },
+  {
+    "source": "Nomade B: {} / {}",
+    "de": "Nomade B: {} / {}",
+    "en": "Nomad B: {} / {}"
+  },
+  {
+    "source": "Nomade C: {} / {}",
+    "de": "Nomade C: {} / {}",
+    "en": "Nomad C: {} / {}"
+  },
+  {
+    "source": "Nomade D: {} / {}",
+    "de": "Nomade D: {} / {}",
+    "en": "Nomad D: {} / {}"
+  },
+  {
+    "source": "Ohne Umhang",
+    "de": "Ohne Umhang",
+    "en": "No Cape"
+  },
+  {
+    "source": "On",
+    "de": "Ein",
+    "en": "On"
+  },
+  {
+    "source": "Palomino Horse: {} / {}",
+    "de": "Palomino: {} / {}",
+    "en": "Palomino Horse: {} / {}"
+  },
+  {
+    "source": "Path:",
+    "de": "Pfad:",
+    "en": "Path:"
+  },
+  {
+    "source": "Personenwagen #{}",
+    "de": "Personenwagen #{}",
+    "en": "Passenger carriage #{}"
+  },
+  {
+    "source": "Pfeilmacher: {} / {}",
+    "de": "Pfeilmacher: {} / {}",
+    "en": "Fletcher: {} / {}"
+  },
+  {
+    "source": "Pig: {} / {}",
+    "de": "Schwein: {} / {}",
+    "en": "Pig: {} / {}"
+  },
+  {
+    "source": "Platzhalter anvisieren: benötigtes Bauteil anzeigen",
+    "de": "Ziele auf einen Platzhalter, um das benötigte Bauteil anzuzeigen",
+    "en": "Aim at a placeholder to show the required part"
+  },
+  {
+    "source": "RAM app:",
+    "de": "Anwendungsspeicher:",
+    "en": "RAM app:"
+  },
+  {
+    "source": "Reef Shark: {} / {}",
+    "de": "Riffhai: {} / {}",
+    "en": "Reef Shark: {} / {}"
+  },
+  {
+    "source": "Regeneration:",
+    "de": "Regeneration:",
+    "en": "Regeneration:"
+  },
+  {
+    "source": "Reisestiefel",
+    "de": "Reisestiefel",
+    "en": "Travel Boots"
+  },
+  {
+    "source": "Respawn",
+    "de": "Wiedererscheinen",
+    "en": "Respawn"
+  },
+  {
+    "source": "Ritter (Soldat): {} / {}",
+    "de": "Ritter (Soldat): {} / {}",
+    "en": "Knight (soldier): {} / {}"
+  },
+  {
+    "source": "Riverfin: {} / {}",
+    "de": "Flussflosser: {} / {}",
+    "en": "Riverfin: {} / {}"
+  },
+  {
+    "source": "Roan Horse: {} / {}",
+    "de": "Stichelhaariges Pferd: {} / {}",
+    "en": "Roan Horse: {} / {}"
+  },
+  {
+    "source": "Schlachter: {} / {}",
+    "de": "Schlachter: {} / {}",
+    "en": "Butcher: {} / {}"
+  },
+  {
+    "source": "Schmied: {} / {}",
+    "de": "Schmied: {} / {}",
+    "en": "Smith: {} / {}"
+  },
+  {
+    "source": "Sections:",
+    "de": "Abschnitte:",
+    "en": "Sections:"
+  },
+  {
+    "source": "Seed:",
+    "de": "Weltstartwert:",
+    "en": "Seed:"
+  },
+  {
+    "source": "Sheep: {} / {}",
+    "de": "Schaf: {} / {}",
+    "en": "Sheep: {} / {}"
+  },
+  {
+    "source": "Small Spider: {} / {}",
+    "de": "Kleine Spinne: {} / {}",
+    "en": "Small Spider: {} / {}"
+  },
+  {
+    "source": "Smelting speed: +{speed}",
+    "de": "Schmelzgeschwindigkeit: +{speed}",
+    "en": "Smelting speed: +{speed}"
+  },
+  {
+    "source": "Soldat: {} / {}",
+    "de": "Soldat: {} / {}",
+    "en": "Soldier: {} / {}"
+  },
+  {
+    "source": "Speertraeger (Soldat): {} / {}",
+    "de": "Speerträger (Soldat): {} / {}",
+    "en": "Spearman (soldier): {} / {}"
+  },
+  {
+    "source": "Speichern & beitreten",
+    "de": "Speichern & beitreten",
+    "en": "Save and Join"
+  },
+  {
+    "source": "Squid: {} / {}",
+    "de": "Tintenfisch: {} / {}",
+    "en": "Squid: {} / {}"
+  },
+  {
+    "source": "Stalker: {} / {}",
+    "de": "Lauerer: {} / {}",
+    "en": "Stalker: {} / {}"
+  },
+  {
+    "source": "Streaming:",
+    "de": "Nachladen:",
+    "en": "Streaming:"
+  },
+  {
+    "source": "Sun Jelly: {} / {}",
+    "de": "Sonnenqualle: {} / {}",
+    "en": "Sun Jelly: {} / {}"
+  },
+  {
+    "source": "T / P / C:",
+    "de": "T / P / C:",
+    "en": "T / P / C:"
+  },
+  {
+    "source": "TERAMIC Commands",
+    "de": "TERAMIC-Befehle",
+    "en": "TERAMIC Commands"
+  },
+  {
+    "source": "Target:",
+    "de": "Ziel:",
+    "en": "Target:"
+  },
+  {
+    "source": "Technic",
+    "de": "Technik",
+    "en": "Engineering"
+  },
+  {
+    "source": "Tender #{}",
+    "de": "Tender #{}",
+    "en": "Tender #{}"
+  },
+  {
+    "source": "Time:",
+    "de": "Zeit:",
+    "en": "Time:"
+  },
+  {
+    "source": "Tools",
+    "de": "Werkzeuge",
+    "en": "Tools"
+  },
+  {
+    "source": "Train Montage",
+    "de": "Zugmontage",
+    "en": "Train Assembly"
+  },
+  {
+    "source": "Trains",
+    "de": "Züge",
+    "en": "Trains"
+  },
+  {
+    "source": "Tunika",
+    "de": "Tunika",
+    "en": "Tunic"
+  },
+  {
+    "source": "Unter beiden Drehgestellen wird ein vollständiger, durchgehender Gleisabschnitt benötigt.",
+    "de": "Unter beiden Drehgestellen wird ein vollständiger, durchgehender Gleisabschnitt benötigt.",
+    "en": "A complete, continuous track section is required beneath both bogies."
+  },
+  {
+    "source": "Unterhemd",
+    "de": "Unterhemd",
+    "en": "Undershirt"
+  },
+  {
+    "source": "Verkaeufer: {} / {}",
+    "de": "Verkäufer: {} / {}",
+    "en": "Seller: {} / {}"
+  },
+  {
+    "source": "Void Jelly: {} / {}",
+    "de": "Leerenqualle: {} / {}",
+    "en": "Void Jelly: {} / {}"
+  },
+  {
+    "source": "Vor der Demontage alle Kupplungen lösen.",
+    "de": "Löse vor der Demontage alle Kupplungen.",
+    "en": "Disconnect all couplings before disassembly."
+  },
+  {
+    "source": "Vorlage auf dem Gleis: Grün fehlt, Rot ist belegt. Mit „Mit Vorlage bauen“ schließen.",
+    "de": "Vorlage auf dem Gleis: Grün markiert fehlende Teile, Rot belegte Plätze. Schließe die Lücken mit „Mit Vorlage bauen“.",
+    "en": "Blueprint on the track: green marks missing parts, red marks occupied spaces. Fill the gaps with “Build with Blueprint”."
+  },
+  {
+    "source": "Vorlage ausgeblendet.",
+    "de": "Vorlage ausgeblendet.",
+    "en": "Blueprint hidden."
+  },
+  {
+    "source": "Vorlage: {placed} / {} Bauteile · Grün fehlt · Rot belegt · Verkleidung optional",
+    "de": "Vorlage: {placed} / {} Bauteile · Grün fehlt · Rot belegt · Verkleidung optional",
+    "en": "Blueprint: {placed} / {} parts · green missing · red occupied · bodywork optional"
+  },
+  {
+    "source": "Vorne",
+    "de": "Vorne",
+    "en": "Front"
+  },
+  {
+    "source": "Wache: {} / {}",
+    "de": "Wache: {} / {}",
+    "en": "Guard: {} / {}"
+  },
+  {
+    "source": "Wasserreserve der Montagestelle voll. Über ein Rohr in ein Becken leeren oder einen leeren Tankwagen befüllen.",
+    "de": "Die Wasserreserve der Montagestelle ist voll. Leere sie über ein Rohr in ein Becken oder befülle einen leeren Tankwagen.",
+    "en": "The assembly station's water reserve is full. Drain it through a pipe into a basin or fill an empty tank wagon."
+  },
+  {
+    "source": "Weather:",
+    "de": "Wetter:",
+    "en": "Weather:"
+  },
+  {
+    "source": "Weichensteller",
+    "de": "Weichensteller",
+    "en": "Switch Stand"
+  },
+  {
+    "source": "Whale Shark: {} / {}",
+    "de": "Walhai: {} / {}",
+    "en": "Whale Shark: {} / {}"
+  },
+  {
+    "source": "White Horse: {} / {}",
+    "de": "Weißes Pferd: {} / {}",
+    "en": "White Horse: {} / {}"
+  },
+  {
+    "source": "Wird ausgeführt…",
+    "de": "Wird ausgeführt…",
+    "en": "In progress…"
+  },
+  {
+    "source": "World Gamerules",
+    "de": "Weltregeln",
+    "en": "World Gamerules"
+  },
+  {
+    "source": "World:",
+    "de": "Welt:",
+    "en": "World:"
+  },
+  {
+    "source": "XYZ:",
+    "de": "XYZ:",
+    "en": "XYZ:"
+  },
+  {
+    "source": "Zoom:",
+    "de": "Zoom:",
+    "en": "Zoom:"
+  },
+  {
+    "source": "Zugbauteil",
+    "de": "Zugbauteil",
+    "en": "Train Part"
+  },
+  {
+    "source": "Zum Einstellen des Räumbereichs anhalten.",
+    "de": "Halte an, um den Räumbereich einzustellen.",
+    "en": "Stop to adjust the clearance area."
+  },
+  {
+    "source": "mehr Abstand",
+    "de": "mehr Abstand",
+    "en": "more space"
+  },
+  {
+    "source": "{height} m · Auto",
+    "de": "{height} m · Automatisch",
+    "en": "{height} m · Auto"
+  },
+  {
+    "source": "{} (Arbeitslos)",
+    "de": "{} (Arbeitslos)",
+    "en": "{} (Unemployed)"
+  },
+  {
+    "source": "{} (Bischof)",
+    "de": "{} (Bischof)",
+    "en": "{} (Bishop)"
+  },
+  {
+    "source": "{} (Bogenschuetze (Soldat))",
+    "de": "{} (Bogenschütze (Soldat))",
+    "en": "{} (Archer (soldier))"
+  },
+  {
+    "source": "{} (Bogenschuetze)",
+    "de": "{} (Bogenschütze)",
+    "en": "{} (Archer)"
+  },
+  {
+    "source": "{} (Fahrender Haendler)",
+    "de": "{} (Fahrender Händler)",
+    "en": "{} (Travelling merchant)"
+  },
+  {
+    "source": "{} (Farmer (vegan))",
+    "de": "{} (Farmer (vegan))",
+    "en": "{} (Farmer (vegan))"
+  },
+  {
+    "source": "{} (Holzfaeller)",
+    "de": "{} (Holzfäller)",
+    "en": "{} (Lumberjack)"
+  },
+  {
+    "source": "{} (Lokfuehrer)",
+    "de": "{} (Lokführer)",
+    "en": "{} (Train driver)"
+  },
+  {
+    "source": "{} (Medic)",
+    "de": "{} (Sanitäter)",
+    "en": "{} (Medic)"
+  },
+  {
+    "source": "{} (Minenarbeiter)",
+    "de": "{} (Minenarbeiter)",
+    "en": "{} (Miner)"
+  },
+  {
+    "source": "{} (Nomade A)",
+    "de": "{} (Nomade A)",
+    "en": "{} (Nomad A)"
+  },
+  {
+    "source": "{} (Nomade B)",
+    "de": "{} (Nomade B)",
+    "en": "{} (Nomad B)"
+  },
+  {
+    "source": "{} (Nomade C)",
+    "de": "{} (Nomade C)",
+    "en": "{} (Nomad C)"
+  },
+  {
+    "source": "{} (Nomade D)",
+    "de": "{} (Nomade D)",
+    "en": "{} (Nomad D)"
+  },
+  {
+    "source": "{} (Pfeilmacher)",
+    "de": "{} (Pfeilmacher)",
+    "en": "{} (Fletcher)"
+  },
+  {
+    "source": "{} (Ritter (Soldat))",
+    "de": "{} (Ritter (Soldat))",
+    "en": "{} (Knight (soldier))"
+  },
+  {
+    "source": "{} (Schlachter)",
+    "de": "{} (Schlachter)",
+    "en": "{} (Butcher)"
+  },
+  {
+    "source": "{} (Schmied)",
+    "de": "{} (Schmied)",
+    "en": "{} (Smith)"
+  },
+  {
+    "source": "{} (Soldat)",
+    "de": "{} (Soldat)",
+    "en": "{} (Soldier)"
+  },
+  {
+    "source": "{} (Speertraeger (Soldat))",
+    "de": "{} (Speerträger (Soldat))",
+    "en": "{} (Spearman (soldier))"
+  },
+  {
+    "source": "{} (Verkaeufer)",
+    "de": "{} (Verkäufer)",
+    "en": "{} (Seller)"
+  },
+  {
+    "source": "{} (Wache)",
+    "de": "{} (Wache)",
+    "en": "{} (Guard)"
+  },
+  {
+    "source": "· Platz zum Ablegen anklicken",
+    "de": "· Zum Ablegen auf einen Platz klicken",
+    "en": "· Click a slot to put it down"
+  }
+]

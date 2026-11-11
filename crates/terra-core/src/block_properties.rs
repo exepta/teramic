@@ -85,7 +85,7 @@ impl BlockProperties {
         let Some(required) = self.required_tool else {
             return true;
         };
-        let Some(ItemKind::Tool(tool)) = item else {
+        let Some(tool) = item.and_then(ItemKind::tool_kind) else {
             return false;
         };
         tool.class() == Some(required) && tool.mining_level() >= self.mining_level
