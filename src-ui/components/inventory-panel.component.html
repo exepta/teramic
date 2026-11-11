@@ -12,9 +12,20 @@
           <div class="inventory-reference-title machine-title"><p class="title-diamond">◆</p><h2 class="inventory-reference-label">{{ inventoryView.title }}</h2><p class="title-diamond">◆</p></div>
         }
         @if (inventoryView.linked_container) {
-          <div id="workbench-storage" class="workbench-storage machine-linked-storage"><ornate-frame></ornate-frame>
-            <div class="inventory-section-heading"><h3 class="machine-section-title">{{ inventoryView.linked_title }}</h3><icon name="archive" size="20" /></div>
+          <div id="workbench-storage" [class]="inventoryView.sort_storage_open ? 'workbench-storage machine-linked-storage inventory-sort-active-region' : 'workbench-storage machine-linked-storage'"><ornate-frame></ornate-frame>
+            @if (inventoryView.sort_storage_open) { <button id="inventory-sort-dismiss" class="inventory-sort-dismiss inventory-sort-local-dismiss" onclick="inventory_sort"></button> }
+            <div class="inventory-section-heading"><h3 class="machine-section-title">{{ inventoryView.linked_title }}</h3>
+
+            </div>
             <div id="workbench-container-grid" class="linked-container-grid">@for (slot of inventoryView.container_items; track slot.id) { <inventory-slot [slot]="slot" /> }</div>
+            @if (inventoryView.storage_sortable) { <div id="inventory-sort-linked" class="inventory-sort-control">
+          <button id="sort-linked-menu" class="inventory-sort-trigger" title="Verbundenes Lager sortieren" [disabled]="!inventoryView.sort_ready" onclick="inventory_sort"><icon name="filter" size="18" /></button>
+          @if (inventoryView.sort_storage_open) { <div id="inventory-sort-linked-options" class="inventory-sort-dropup">
+            <button id="sort-linked-name" class="inventory-sort-option" title="Alphabetisch nach Anzeigename sortieren" onclick="inventory_sort"><icon name="sort-ascending" size="16" /><p>A–Z</p></button>
+            <button id="sort-linked-id" class="inventory-sort-option" title="Nach Block-ID und Item-ID sortieren" onclick="inventory_sort"><icon name="hash" size="16" /><p>ID</p></button>
+            <button id="sort-linked-quantity" class="inventory-sort-option" title="Größte Stapel zuerst" onclick="inventory_sort"><icon name="sort-descending" size="16" /><p>Menge</p></button>
+          </div> }
+        </div> }
           </div>
         }
         <div id="inventory-panel" [class]="inventoryView.mixer ? 'inventory-panel inventory-furnace-panel inventory-mixer-panel machine-main-panel' : ((inventoryView.furnace || inventoryView.crusher || inventoryView.filtered_funnel || inventoryView.tunnel_options || inventoryView.cauldron.active || inventoryView.campfire.active) ? 'inventory-panel inventory-furnace-panel machine-main-panel' : (inventoryView.double_container ? 'inventory-panel inventory-double-container machine-main-panel' : ((inventoryView.container || inventoryView.assembly) ? 'inventory-panel machine-main-panel' : 'inventory-panel inventory-player-panel')))">
@@ -104,7 +115,9 @@
               </div>
             } @else if (inventoryView.container) {
               <div class="inventory-container-section">
-                <div class="inventory-section-heading"><h3 class="machine-section-title">Storage</h3><p>{{ inventoryView.container_capacity }}</p></div>
+                <div class="inventory-section-heading"><h3 class="machine-section-title">Storage</h3><p>{{ inventoryView.container_capacity }}</p>
+
+                </div>
                 <div id="container-grid" class="inventory-grid container-grid">@for (slot of inventoryView.container_items; track slot.id) { <inventory-slot [slot]="slot" /> }</div>
               </div>
             } @else if (inventoryView.assembly) {
@@ -115,7 +128,7 @@
                 <div id="inventory-equipment" class="equipment-grid">
                   @for (equipment of inventoryView.equipment; track equipment.kind) { <div [class]="'equipment-mount equipment-' + equipment.kind"><equipment-slot /></div> }
                 </div>
-                <div class="inventory-character"><div class="avatar-stage"><img class="avatar-image" alt="Player preview" /></div></div>
+                <div class="inventory-character"><div class="avatar-stage"><img id="inventory-character-preview" class="avatar-image" alt="Player preview" title="Mit gedrückter linker Maustaste drehen" /></div></div>
                 </div>
                 <div class="inventory-crafting">
                   <div class="craft-heading"><icon name="settings-wrench" size="19" /><h3>Crafting</h3><button id="craft-clear-grid" class="craft-clear" title="Clear crafting grid" onclick="crafting_command"><icon name="rotate-ccw" size="18" /></button></div>
@@ -129,7 +142,7 @@
               </div>
             }
             <div class="inventory-backpack-section">
-              @if (!inventoryView.player) { <div class="inventory-section-heading"><h3 class="machine-section-title">Backpack</h3><p>{{ inventoryView.capacity }}</p></div> }
+              <div class="inventory-section-heading"><h3 class="machine-section-title">Backpack</h3><p>{{ inventoryView.capacity }}</p></div>
               <div id="inventory-grid" class="inventory-grid">@for (slot of inventoryView.items; track slot.id) { <inventory-slot [slot]="slot" /> }</div>
             </div>
             <div class="inventory-hotbar-section"><div id="inventory-hotbar" class="inventory-hotbar">@for (slot of inventoryView.hotbar; track slot.id) { <inventory-slot [slot]="slot" /> }</div></div>
@@ -139,6 +152,25 @@
 
           </div>
         </div>
+        @if (!craftingView.recipe_open) {
+          @if (inventoryView.sort_player_open || inventoryView.sort_storage_open) { <button id="inventory-sort-dismiss" class="inventory-sort-dismiss" onclick="inventory_sort"></button> }
+          <div id="inventory-sort-player" class="inventory-sort-control">
+          <button id="sort-player-menu" class="inventory-sort-trigger" title="Rucksack sortieren · Hotbar bleibt unverändert" [disabled]="!inventoryView.sort_ready" onclick="inventory_sort"><icon name="filter" size="18" /></button>
+          @if (inventoryView.sort_player_open) { <div id="inventory-sort-player-options" class="inventory-sort-dropup">
+            <button id="sort-player-name" class="inventory-sort-option" title="Alphabetisch nach Anzeigename sortieren" onclick="inventory_sort"><icon name="sort-ascending" size="16" /><p>A–Z</p></button>
+            <button id="sort-player-id" class="inventory-sort-option" title="Nach Block-ID und Item-ID sortieren" onclick="inventory_sort"><icon name="hash" size="16" /><p>ID</p></button>
+            <button id="sort-player-quantity" class="inventory-sort-option" title="Größte Stapel zuerst" onclick="inventory_sort"><icon name="sort-descending" size="16" /><p>Menge</p></button>
+          </div> }
+        </div>
+          @if (inventoryView.storage_sortable && !inventoryView.linked_container) { <div id="inventory-sort-storage" class="inventory-sort-control">
+          <button id="sort-storage-menu" class="inventory-sort-trigger" title="Lager sortieren" [disabled]="!inventoryView.sort_ready" onclick="inventory_sort"><icon name="filter" size="18" /></button>
+          @if (inventoryView.sort_storage_open) { <div id="inventory-sort-storage-options" class="inventory-sort-dropup">
+            <button id="sort-storage-name" class="inventory-sort-option" title="Alphabetisch nach Anzeigename sortieren" onclick="inventory_sort"><icon name="sort-ascending" size="16" /><p>A–Z</p></button>
+            <button id="sort-storage-id" class="inventory-sort-option" title="Nach Block-ID und Item-ID sortieren" onclick="inventory_sort"><icon name="hash" size="16" /><p>ID</p></button>
+            <button id="sort-storage-quantity" class="inventory-sort-option" title="Größte Stapel zuerst" onclick="inventory_sort"><icon name="sort-descending" size="16" /><p>Menge</p></button>
+          </div> }
+        </div> }
+        }
         @if (inventoryView.browser_visible && !craftingView.recipe_open) { <item-browser></item-browser> }
       </div>
       </div>

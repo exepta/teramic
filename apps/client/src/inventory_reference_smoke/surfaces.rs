@@ -95,15 +95,22 @@ struct Gallery {
     saved_blocks: Vec<([i64; 3], u16)>,
     projected: Option<ContainerSnapshot>,
     kinetics: Vec<terra_network::protocol::session::KineticVisual>,
+    portrait_rotation: f32,
 }
 
 pub(super) fn install(app: &mut App) {
+    if std::env::var_os("TERRA_INVENTORY_PORTRAIT_SMOKE").is_some() {
+        crate::menu_smoke::install_test_pointer(app);
+    }
     app.insert_resource(Gallery {
         hud_only: std::env::var("TERRA_HUD_ONLY_SMOKE").is_ok_and(|value| value == "1"),
         layout_only: std::env::var("TERRA_LAYOUT_ONLY_SMOKE").is_ok_and(|value| value == "1"),
         ..default()
     })
-    .add_systems(PreUpdate, run.after(bevy::input::InputSystems));
+    .add_systems(
+        PreUpdate,
+        run.before(bevy::picking::PickingSystems::ProcessInput),
+    );
 }
 fn inventory(slots: usize) -> Inventory {
     Inventory {
@@ -938,7 +945,11 @@ fn restore(world: &mut World, gallery: &mut Gallery) -> Result<(), String> {
 }
 fn baseline(world: &World, state: &Inspection) -> Result<(), String> {
     if state.baseline.as_ref() != Some(&world.resource::<ClientSession>().inventory) {
-        return Err("Projection gallery changed the authoritative player inventory".into());
+        return Err(format!(
+            "Projection gallery changed the authoritative player inventory: before={:?}, after={:?}",
+            state.baseline,
+            world.resource::<ClientSession>().inventory
+        ));
     }
     Ok(())
 }
@@ -1073,7 +1084,8 @@ fn run(world: &mut World) {
                         shot(world, &format!("surface-{}-{}", surface.name(), if gallery.compact { "compact" } else { "wide" }))?;
                         let inspect_picker = surface == Surface::Mixer
                             && std::env::var("TERRA_PICKER_SMOKE").is_ok_and(|value| value == "1");
-                        advance(&mut state, if inspect_picker { 16 } else { 3 });
+                        let inspect_linked = surface == Surface::Workbench && std::env::var_os("TERRA_INVENTORY_PORTRAIT_SMOKE").is_some();
+                        advance(&mut state, if inspect_picker { 16 } else if inspect_linked { 40 } else { 3 });
                     }
                     16 => {
                         // The preceding closed-picker screenshot gets a full
@@ -1144,11 +1156,96 @@ fn run(world: &mut World) {
                             if !world.resource::<InventoryView>().player || !previews_ready(world) { return Ok(false); }
                             player_bounds(world)?;
                             shot(world, "fixed-player-compact")?;
-                            advance(&mut state, 15);
+                            advance(&mut state, if std::env::var_os("TERRA_INVENTORY_PORTRAIT_SMOKE").is_some() { 30 } else { 15 });
                         } else {
                             project(world, &mut gallery)?;
                             advance(&mut state, 2);
                         }
+                    }
+                    40 => {
+                        let view=world.resource::<InventoryView>();
+                        info!(ready=view.sort_ready, open=view.open, sortable=view.storage_sortable, "Linked sorting pointer preflight");
+                        crate::menu_smoke::pointer(world,"sort-linked-menu","",true)?;
+                        advance(&mut state,41);
+                    }
+                    41 => {
+                        crate::menu_smoke::pointer(world,"sort-linked-menu","",false)?;
+                        advance(&mut state,42);
+                    }
+                    42 => {
+                        let size=viewport(world)?;
+                        let popup=element(world,"inventory-sort-linked-options").ok_or_else(||format!("Linked storage dropup did not open: ready={} projected_open={}",world.resource::<InventoryView>().sort_ready,world.resource::<InventoryView>().sort_storage_open))?;
+                        inside(world,popup,size,"linked sorting dropup")?;
+                        let dismisses:Vec<_>=world.query::<(Entity,&ElementId)>().iter(world).filter_map(|(entity,id)|(id.0=="inventory-sort-dismiss").then_some(entity)).collect();
+                        if dismisses.is_empty() { return Err("Missing linked-menu dismiss layer".into()); }
+                        let option=element(world,"sort-linked-name").ok_or("Missing linked A-Z option")?;
+                        let stack=&world.resource::<bevy::ui::UiStack>().uinodes;
+                        if dismisses.iter().any(|dismiss|stack.iter().position(|e|*e==option)<=stack.iter().position(|e|e==dismiss)) { return Err("Linked sort choices are blocked by a dismiss layer".into()); }
+                        baseline(world,&state)?;
+                        shot(world,&format!("linked-sort-dropup-{}",if gallery.compact {"compact"}else{"wide"}))?;
+                        crate::menu_smoke::pointer(world,"sort-linked-menu","",true)?;
+                        advance(&mut state,43);
+                    }
+                    43 => {
+                        crate::menu_smoke::pointer(world,"sort-linked-menu","",false)?;
+                        advance(&mut state,44);
+                    }
+                    44 => {
+                        if element(world,"inventory-sort-linked-options").is_some() {return Err("Linked sorting menu did not close".into());}
+                        info!(compact=gallery.compact,"Native linked sorting dropup stack and pointer toggle passed");
+                        advance(&mut state,3);
+                    }
+                    30 => {
+                        gallery.portrait_rotation = world.resource::<terra_ui::InventoryPortraitRotation>().rotation;
+                        crate::menu_smoke::pointer(world, "inventory-character-preview", "", true)?;
+                        let window = world.query_filtered::<Entity,With<PrimaryWindow>>().single(world).map_err(|e|e.to_string())?;
+                        world.write_message(bevy::input::mouse::MouseButtonInput { button: MouseButton::Left, state: bevy::input::ButtonState::Pressed, window });
+                        advance(&mut state,31);
+                    }
+                    31 => {
+                        crate::menu_smoke::move_test_pointer(world, Vec2::new(70.0,0.0))?;
+                        advance(&mut state,32);
+                    }
+                    32 => {
+                        let window = world.query_filtered::<Entity,With<PrimaryWindow>>().single(world).map_err(|e|e.to_string())?;
+                        world.write_message(bevy::input::mouse::MouseButtonInput { button: MouseButton::Left, state: bevy::input::ButtonState::Released, window });
+                        crate::menu_smoke::pointer(world, "inventory-character-preview", "", false)?;
+                        let pose = *world.resource::<terra_ui::InventoryPortraitRotation>();
+                        if !pose.active || (pose.rotation-gallery.portrait_rotation).abs()<0.1 { return Err("Inventory character did not rotate after captured pointer drag".into()); }
+                        if !world.resource::<terra_render::RenderInventoryPortraitImage>().ready { return Err("Rotated inventory model has no live render target".into()); }
+                        baseline(world,&state)?;
+                        shot(world,"player-portrait-rotated-compact")?;
+                        info!(rotation=pose.rotation,"Native inventory portrait drag passed");
+                        advance(&mut state,33);
+                    }
+                    33 => {
+                        crate::menu_smoke::pointer(world,"sort-player-menu","",true)?;
+                        advance(&mut state,34);
+                    }
+                    34 => {
+                        crate::menu_smoke::pointer(world,"sort-player-menu","",false)?;
+                        advance(&mut state,35);
+                    }
+                    35 => {
+                        let size=viewport(world)?;
+                        for id in ["inventory-sort-player-options","sort-player-name","sort-player-id","sort-player-quantity"] {
+                            let entity=element(world,id).ok_or_else(||format!("Sort dropup is missing {id}"))?;
+                            inside(world,entity,size,id)?;
+                        }
+                        baseline(world,&state)?;
+                        shot(world,"player-sort-dropup-compact")?;
+                        crate::menu_smoke::pointer(world,"sort-player-menu","",true)?;
+                        advance(&mut state,36);
+                    }
+                    36 => {
+                        crate::menu_smoke::pointer(world,"sort-player-menu","",false)?;
+                        advance(&mut state,37);
+                    }
+                    37 => {
+                        if element(world,"inventory-sort-player-options").is_some() { return Err("Sort dropup did not close after second funnel click".into()); }
+                        baseline(world,&state)?;
+                        info!("Native sorting dropup bounds and toggle passed");
+                        advance(&mut state,15);
                     }
                     15 => {
                         project(world, &mut gallery)?;

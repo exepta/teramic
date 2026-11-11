@@ -1339,6 +1339,7 @@ fn double_door_toggle_requires_inventory_permission_on_the_other_leaf_chunk() {
         chat: default(),
         uuid: actor,
         gender: default(),
+        appearance: Default::default(),
         mining: None,
         consumption: None,
         gameplay_sent: None,

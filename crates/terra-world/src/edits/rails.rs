@@ -28,29 +28,96 @@ impl EditJournal {
         } else {
             Vec::new()
         };
-        let mut retired_trees = BTreeMap::new();
-        for cleared_prop in &cleared {
-            if let Some(tree) = self.gameplay.trees.get(cleared_prop.prop.id.0)
-                && tree.stage == terra_core::TreeStage::Sapling
+        self.commit_rail_builder_changes(chunks, plan, cleared)
+    }
+
+    pub(crate) fn commit_rail_builder_changes(
+        &mut self,
+        chunks: &mut ChunkStore,
+        plan: &Layout,
+        cleared: Vec<crate::rails::PropClearance>,
+    ) -> Result<bool, String> {
+        // Stage only trees touched by this bounded excavation. Ordinary voxel
+        // replacements relinquish exactly those cells; branches outside the
+        // requested volume remain intact and retain their attribution.
+        let changed_cells: Vec<_> = plan
+            .edits
+            .iter()
+            .filter(|edit| edit.material != edit.expected_material)
+            .map(|edit| edit.position)
+            .collect();
+        let cleared_saplings: BTreeSet<_> = cleared
+            .iter()
+            .filter_map(|prop| {
+                self.gameplay
+                    .trees
+                    .get(prop.prop.id.0)
+                    .filter(|tree| tree.stage == terra_core::TreeStage::Sapling)
+                    .map(|tree| tree.id)
+            })
+            .collect();
+        let edit_bounds = changed_cells
+            .iter()
+            .fold(None::<[[i64; 3]; 2]>, |bounds, cell| {
+                Some(bounds.map_or([*cell, *cell], |mut bounds| {
+                    for axis in 0..3 {
+                        bounds[0][axis] = bounds[0][axis].min(cell[axis]);
+                        bounds[1][axis] = bounds[1][axis].max(cell[axis]);
+                    }
+                    bounds
+                }))
+            });
+        let mut tree_changes = terra_core::TreeRegistry::default();
+        for tree in self.gameplay.trees.trees.values() {
+            // One coarse comparison per tree, never trees × edit count. Only
+            // nearby footprints reach the exact-cell and ownership checks.
+            let nearby = edit_bounds.is_some_and(|region| {
+                tree.bounds.is_some_and(|bounds| {
+                    (0..3).all(|axis| {
+                        tree.root[axis] + i64::from(bounds[0][axis]) <= region[1][axis]
+                            && tree.root[axis] + i64::from(bounds[1][axis]) >= region[0][axis]
+                    })
+                }) || (tree.species == terra_core::TreeSpecies::Apple
+                    && (0..3)
+                        .all(|axis| (region[0][axis]..=region[1][axis]).contains(&tree.root[axis])))
+            });
+            if cleared_saplings.contains(&tree.id)
+                || (nearby
+                    && changed_cells.iter().any(|cell| {
+                        tree.could_own(*cell)
+                            || (tree.species == terra_core::TreeSpecies::Apple
+                                && tree.root == *cell)
+                    }))
             {
-                let mut retired = tree.clone();
-                retired.stage = terra_core::TreeStage::Felled;
-                retired.fruit = None;
-                retired.revision = retired
-                    .revision
-                    .checked_add(1)
-                    .ok_or("Sapling revision overflow")?;
-                retired_trees.insert(retired.id, retired);
+                tree.revision
+                    .checked_add(changed_cells.len() as u64 * 2 + 1)
+                    .ok_or("Tree revision overflow")?;
+                tree_changes.trees.insert(tree.id, tree.clone());
             }
         }
-        self.gameplay
+        for cell in changed_cells {
+            tree_changes.relinquish(cell);
+        }
+        for id in cleared_saplings {
+            let tree = tree_changes.get_mut(id).expect("captured cleared sapling");
+            tree.stage = terra_core::TreeStage::Felled;
+            tree.fruit = None;
+            tree.revision += 1;
+            tree_changes.changed();
+        }
+        let tree_revision = self
+            .gameplay
             .trees
             .revision
-            .checked_add(retired_trees.len() as u64)
-            .ok_or("Sapling registry revision overflow")?;
+            .checked_add(tree_changes.revision)
+            .ok_or("Tree registry revision overflow")?;
+        let rails_changed = plan.edits.iter().any(|edit| {
+            terra_core::rails::is_rail(edit.material)
+                || terra_core::rails::is_rail(edit.expected_material)
+        });
         let rail_epoch = self
             .rail_epoch
-            .checked_add(1)
+            .checked_add(u64::from(rails_changed))
             .ok_or("Rail network revision overflow")?;
         let owners: BTreeSet<_> = plan
             .edits
@@ -139,21 +206,17 @@ impl EditJournal {
             staged.set_object_state(*position, *state)?;
         }
         // All fallible block, object, water and halo counter changes succeeded.
-        // Live inventory ownership and tree registries have never been cloned.
+        // Live inventory ownership is untouched; only affected tree records were copied.
         for (owner, edits) in staged.sections {
             self.sections.insert(owner, edits);
         }
         for owner in owners {
             self.refresh_object_section(owner);
         }
-        for (id, retired) in retired_trees {
-            *self
-                .gameplay
-                .trees
-                .get_mut(id)
-                .expect("captured cleared sapling") = retired;
-            self.gameplay.trees.changed();
+        for (id, tree) in tree_changes.trees {
+            self.gameplay.trees.trees.insert(id, tree);
         }
+        self.gameplay.trees.revision = tree_revision;
         let prop_sections: BTreeSet<_> = cleared
             .iter()
             .map(|cleared_prop| cleared_prop.prop.section)
@@ -178,7 +241,9 @@ impl EditJournal {
         self.mesh_epochs.extend(staged.mesh_epochs);
         self.water_mesh_epochs.extend(staged.water_mesh_epochs);
         self.rail_epoch = rail_epoch;
-        std::sync::Arc::make_mut(&mut self.rail_identity);
+        if rails_changed {
+            std::sync::Arc::make_mut(&mut self.rail_identity);
+        }
         for edit in &plan.edits {
             self.wake_fluid_neighbors(edit.position);
         }

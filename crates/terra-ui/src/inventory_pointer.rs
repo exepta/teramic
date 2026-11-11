@@ -410,6 +410,12 @@ impl InventoryQueue {
         self.push_queued(QueuedAction::direct(action));
     }
 
+    pub(super) fn push_empty(&mut self, action: ServerAction) {
+        let mut queued = QueuedAction::direct(action);
+        queued.cursor = CursorGuard::Empty;
+        self.push_queued(queued);
+    }
+
     pub(super) fn push_queued(&mut self, mut action: QueuedAction) {
         action.container = self.owner;
         action.view = self.owner_view;
@@ -1018,6 +1024,7 @@ fn container_gesture(action: ServerAction) -> Option<terra_core::containers::Con
     use terra_core::containers::ContainerGesture as Gesture;
     use terra_network::protocol::inventory::ProtectedMoveKind;
     Some(match action {
+        ServerAction::SortContainer { order } => Gesture::Sort { order },
         ServerAction::Click { slot, secondary } => Gesture::Click { slot, secondary },
         ServerAction::Drag { slots, secondary } => Gesture::Drag {
             slots: slots.into_iter().flatten().collect(),
@@ -1049,6 +1056,14 @@ fn container_gesture(action: ServerAction) -> Option<terra_core::containers::Con
 }
 
 fn context_matches(action: QueuedAction, session: &ClientSession) -> bool {
+    if matches!(action.action, ServerAction::SortContainer { .. })
+        && !session
+            .container
+            .as_ref()
+            .is_some_and(|container| container.sortable())
+    {
+        return false;
+    }
     if let ServerAction::SetBrewingRecipe { station, .. } = action.action {
         return session
             .container
@@ -1136,7 +1151,13 @@ fn dispatch(
         requests.write(InventoryRequest(
             terra_network::protocol::inventory::InventoryCommand {
                 revision: session.inventory.revision,
-                action: queued.action,
+                action: match queued.action {
+                    ServerAction::Sort { order, .. } => ServerAction::Sort {
+                        order,
+                        reserved: crafting::reserved_counts(reservations),
+                    },
+                    action => action,
+                },
             },
         ));
     }

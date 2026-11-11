@@ -39,7 +39,10 @@ pub mod creatures;
 pub mod meshing;
 mod player_preview;
 mod players;
-pub use player_preview::PlayerPreviewImage;
+pub use player_preview::{
+    PlayerPreviewImage, RenderCharacterPreviewImage, RenderCharacterPreviewSelection,
+    RenderInventoryPortraitImage, RenderInventoryPortraitSelection,
+};
 mod plugin;
 mod previews;
 pub use previews::{

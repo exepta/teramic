@@ -236,19 +236,25 @@ fn read_train_index(bytes: &[u8]) -> Result<TrainIndex, String> {
         decode::<train_legacy::TrainIndex15>(b"ID15", bytes).map(Into::into)
     } else if bytes.get(12..16) == Some(b"ID16") {
         decode::<train_legacy::TrainIndex16>(b"ID16", bytes).map(Into::into)
+    } else if bytes.get(12..16) == Some(b"ID17") {
+        decode::<train_legacy::TrainIndex17>(b"ID17", bytes).map(Into::into)
+    } else if bytes.get(12..16) == Some(b"ID18") {
+        decode::<train_legacy::TrainIndex18>(b"ID18", bytes).map(Into::into)
     } else {
-        decode(b"ID17", bytes)
+        decode(b"ID19", bytes)
     }
 }
 fn read_index(root: &Path) -> Result<KingdomIndex, String> {
     let bytes = read(&root.join(INDEX))?;
     if matches!(
         bytes.get(12..16),
-        Some(b"ID11" | b"ID12" | b"ID13" | b"ID14" | b"ID15" | b"ID16" | b"ID17")
+        Some(
+            b"ID11" | b"ID12" | b"ID13" | b"ID14" | b"ID15" | b"ID16" | b"ID17" | b"ID18" | b"ID19"
+        )
     ) {
         let data: TreeIndex = if matches!(
             bytes.get(12..16),
-            Some(b"ID13" | b"ID14" | b"ID15" | b"ID16" | b"ID17")
+            Some(b"ID13" | b"ID14" | b"ID15" | b"ID16" | b"ID17" | b"ID18" | b"ID19")
         ) {
             let data = read_train_index(&bytes)?;
             if !data.trains.valid() {
@@ -2133,7 +2139,7 @@ fn commit(root: &Path, world: WorldId, journal: &EditJournal) -> Result<(), Stri
         };
         if gameplay.trains != Default::default() {
             encode(
-                b"ID17",
+                b"ID19",
                 &TrainIndex {
                     prior,
                     trains: gameplay.trains.clone(),
@@ -2189,7 +2195,7 @@ fn load(root: &Path, world: WorldId) -> Result<EditJournal, String> {
         let bytes = read(&root.join(INDEX))?;
         if matches!(
             bytes.get(12..16),
-            Some(b"ID13" | b"ID14" | b"ID15" | b"ID16" | b"ID17")
+            Some(b"ID13" | b"ID14" | b"ID15" | b"ID16" | b"ID17" | b"ID18" | b"ID19")
         ) {
             let data = read_train_index(&bytes)?;
             (data.prior.trees, data.trains)

@@ -479,6 +479,10 @@ pub(super) fn resume_edit(world: &mut World, state: &mut TrainUiState) {
 
 fn status(reason: StopReason) -> &'static str {
     match reason {
+        StopReason::BuilderMaterials => "Gleisleger: Schienen oder Schotter fehlen",
+        StopReason::BuilderConsist => "Gleisleger: maximal 1 Güterwagen bis 15 m",
+        StopReason::BuilderBlocked => "Gleisleger: Arbeitsbereich oder Baurechte prüfen",
+        StopReason::BuilderHeight => "Freiräumer: Lok höher als 32 Blöcke · Räumhöhe prüfen",
         StopReason::Ready => "Fahrbereit",
         StopReason::Braking => "Bremse aktiv",
         StopReason::NoFuel => "Motor benötigt Brennstoff",

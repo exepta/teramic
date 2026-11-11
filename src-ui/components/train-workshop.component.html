@@ -5,26 +5,47 @@
     <div class="train-workshop-content">
       <div class="train-title"><icon name="train-front" size="25" /><h2 [class]="trainView.cargo ? 'train-cargo-title' : ''">@if (trainView.cargo) { {{ trainView.title }} } @else { Train Montage }</h2><button id="close" class="train-close" title="Schließen" onclick="train_workshop_action">×</button></div>
       @if (trainView.cargo) {
+        @if (trainView.sort_player_open || trainView.sort_storage_open) { <button id="cargo-sort-dismiss" class="inventory-sort-dismiss" onclick="train_workshop_action"></button> }
         @if (trainView.fuel_mode) {
           <p>Holz, Kohle oder anderen Brennstoff im Inventar anklicken. Gehaltene Stapel auf einen Brennstoffplatz legen.</p>
-          <h3 class="train-cargo-heading">Brennstoffvorrat</h3>
-        } @else { <p>Ein Klick verschiebt einen Stapel. Gehaltene Stapel mit einem Klick auf einen Platz ablegen.</p><h3 class="train-cargo-heading">Laderaum</h3> }
+        } @else { <p>Ein Klick verschiebt einen Stapel. Gehaltene Stapel mit einem Klick auf einen Platz ablegen.</p> }
+        <h3 class="train-cargo-heading">@if (trainView.fuel_mode) { Brennstoffvorrat } @else { Laderaum }</h3>
         @if (trainView.held) { <div class="train-held-item"><img [alt]="trainView.held_preview" /><p>Gehalten: {{ trainView.held_name }} × {{ trainView.held_count }} · Platz zum Ablegen anklicken</p></div> }
-        <div id="train-cargo-grid" class="train-slots">
+        <div [class]="trainView.sort_storage_open ? 'train-sort-region inventory-sort-active-region' : 'train-sort-region'">
+          @if (trainView.sort_storage_open) { <button id="cargo-sort-dismiss" class="inventory-sort-dismiss inventory-sort-local-dismiss" onclick="train_workshop_action"></button> }
+          <div id="train-cargo-grid" class="train-slots">
           @for (slot of trainView.cargo_slots; track slot.index) {
             <button class="train-slot" id="train-slot" [disabled]="trainView.pending || !slot.enabled" [title]="slot.name" onclick="$set(trainIntent.command, slot.command); train_workshop_action">
               @if (!slot.empty) { <img [alt]="slot.preview" /><p>{{ slot.count }}</p> }
             </button>
           }
         </div>
+        <div class="inventory-sort-control train-sort-control">
+          <button id="cargo-sort-menu" class="inventory-sort-trigger" title="Zuglager sortieren" [disabled]="!trainView.sort_ready" onclick="train_workshop_action"><icon name="filter" size="18" /></button>
+          @if (trainView.sort_storage_open) { <div id="inventory-sort-cargo-options" class="inventory-sort-dropup">
+            <button id="cargo-sort-name" class="inventory-sort-option" title="Alphabetisch nach Anzeigename sortieren" onclick="train_workshop_action"><icon name="sort-ascending" size="16" /><p>A–Z</p></button>
+            <button id="cargo-sort-id" class="inventory-sort-option" title="Nach Block-ID und Item-ID sortieren" onclick="train_workshop_action"><icon name="hash" size="16" /><p>ID</p></button>
+            <button id="cargo-sort-quantity" class="inventory-sort-option" title="Größte Stapel zuerst" onclick="train_workshop_action"><icon name="sort-descending" size="16" /><p>Menge</p></button>
+          </div> }
+        </div></div>
         <h3 class="train-cargo-heading">Inventar</h3>
-        <div id="train-player-grid" class="train-slots">
+        <div [class]="trainView.sort_player_open ? 'train-sort-region inventory-sort-active-region' : 'train-sort-region'">
+          @if (trainView.sort_player_open) { <button id="cargo-sort-dismiss" class="inventory-sort-dismiss inventory-sort-local-dismiss" onclick="train_workshop_action"></button> }
+          <div id="train-player-grid" class="train-slots">
           @for (slot of trainView.player_slots; track slot.index) {
             <button class="train-slot" id="train-slot" [disabled]="trainView.pending || !slot.enabled" [title]="slot.name" onclick="$set(trainIntent.command, slot.command); train_workshop_action">
               @if (!slot.empty) { <img [alt]="slot.preview" /><p>{{ slot.count }}</p> }
             </button>
           }
         </div>
+        <div class="inventory-sort-control train-sort-control">
+          <button id="cargo-sort-backpack-menu" class="inventory-sort-trigger" title="Rucksack sortieren · Hotbar bleibt unverändert" [disabled]="!trainView.sort_ready" onclick="train_workshop_action"><icon name="filter" size="18" /></button>
+          @if (trainView.sort_player_open) { <div id="inventory-sort-backpack-options" class="inventory-sort-dropup">
+            <button id="cargo-sort-backpack-name" class="inventory-sort-option" title="Alphabetisch nach Anzeigename sortieren" onclick="train_workshop_action"><icon name="sort-ascending" size="16" /><p>A–Z</p></button>
+            <button id="cargo-sort-backpack-id" class="inventory-sort-option" title="Nach Block-ID und Item-ID sortieren" onclick="train_workshop_action"><icon name="hash" size="16" /><p>ID</p></button>
+            <button id="cargo-sort-backpack-quantity" class="inventory-sort-option" title="Größte Stapel zuerst" onclick="train_workshop_action"><icon name="sort-descending" size="16" /><p>Menge</p></button>
+          </div> }
+        </div></div>
         <button id="workshop" onclick="train_workshop_action">Zur Fahrzeugsteuerung</button>
 
       } @else {
@@ -93,6 +114,24 @@
             <button id="engine" [disabled]="trainView.pending || !trainView.engine" onclick="train_workshop_action"><icon name="fuel" size="18" />Motor befeuern</button>
             <button id="cargo" [disabled]="trainView.pending || !trainView.has_cargo" onclick="train_workshop_action"><icon name="layers" size="18" />Laderaum öffnen</button>
             @if (trainView.turntable_available) { <p>Drehgleis · 90°</p><div class="train-coupling"><button id="turn-left" [disabled]="trainView.pending || !trainView.can_turn" onclick="train_workshop_action"><icon name="rotate-ccw" size="18" />Links</button><button id="turn-right" [disabled]="trainView.pending || !trainView.can_turn" onclick="train_workshop_action"><icon name="rotate-cw" size="18" />Rechts</button></div> }
+            @if (trainView.builder_installed) {
+              <button id="rail-builder" title="Zum Umschalten anhalten und im Führerstand sitzen" [disabled]="trainView.pending || !trainView.riding" onclick="train_workshop_action">@if (trainView.builder_active) { Gleisleger ausschalten } @else { Gleisleger einschalten }</button>
+              <div class="train-clearance-row">
+                <p>Breite</p>
+                <button id="builder-size-width-less" title="Räumbreite um 2 Blöcke verringern" [disabled]="!trainView.builder_size_ready || !trainView.builder_width_less" onclick="train_workshop_action">−</button>
+                <p class="train-clearance-value">{{ trainView.builder_width }}</p>
+                <button id="builder-size-width-more" title="Räumbreite um 2 Blöcke erhöhen" [disabled]="!trainView.builder_size_ready || !trainView.builder_width_more" onclick="train_workshop_action">+</button>
+              </div>
+              <div class="train-clearance-row">
+                <p>Höhe</p>
+                <button id="builder-size-height-less" title="Räumhöhe um 1 Block verringern" [disabled]="!trainView.builder_size_ready || !trainView.builder_height_less" onclick="train_workshop_action">−</button>
+                <p class="train-clearance-value">{{ trainView.builder_height }}</p>
+                <button id="builder-size-height-more" title="Räumhöhe um 1 Block erhöhen" [disabled]="!trainView.builder_size_ready || !trainView.builder_height_more" onclick="train_workshop_action">+</button>
+              </div>
+              <button id="builder-size-height-auto" class="train-clearance-auto" title="Lokhöhe einschließlich Dach und Schornstein plus 1 Block Platz" [disabled]="!trainView.builder_size_ready || trainView.builder_height_auto" onclick="train_workshop_action">Höhe automatisch</button>
+              <p class="train-small-label">Zum Einstellen anhalten und im Führerstand sitzen.</p>
+              <p class="train-small-label">3 m/s · 1 Güterwagen bis 15 m</p><p class="train-small-label">Schienen/Schotter ins Zuglager</p>
+            }
             <p>{{ trainView.steam_status }}</p>
             @if (trainView.has_water_tank) { <button id="water" [disabled]="trainView.pending" onclick="train_workshop_action"><icon name="droplets" size="16" />Tank füllen</button> }
             <p class="train-ready">{{ trainView.drive_status }}</p>

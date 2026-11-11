@@ -221,6 +221,7 @@ fn a_local_notice_cannot_suppress_a_real_mention_or_repeat_its_sound() {
         uuid: terra_core::PlayerUuid::new_v4(),
         name: "Alice".into(),
         gender: terra_core::PlayerGender::default(),
+        appearance: terra_core::CharacterAppearance::default(),
     });
     app.add_message::<terra_core::footsteps::UiSound>();
     app.world_mut().resource_mut::<ClientChat>().players = vec!["Alice".into(), "Bob".into()];

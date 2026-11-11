@@ -13,6 +13,7 @@
     @if (!menuView.loading) { <div class="page-message"><p class="error-text">{{ menuView.error }}</p><p>{{ menuView.status }}</p></div> }
     @if (!menuView.in_game && !menuView.main && (!menuView.startup || menuView.startup_fading)) { <div class="menu-footer"><p>EXPLORE  /  BUILD  /  BELONG</p><icon name="leaf" size="20" /></div> }
     <modal-dialog></modal-dialog>
+    <character-editor></character-editor>
   </div>
   @if (menuView.startup) { <div id="startup-overlay" class="startup-overlay" [style]="menuView.startup_style"><div class="startup-backdrop"></div><loading-screen></loading-screen></div> }
 </div>

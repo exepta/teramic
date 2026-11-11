@@ -1901,3 +1901,23 @@ fn locomotive_saddles_have_a_bounded_lower_skin_allowance_without_relaxing_other
     }
     assert!(bake_transform(245, &mut primitive.clone(), bevy::math::Affine3A::IDENTITY).is_err());
 }
+
+#[test]
+fn rail_builder_scoop_accepts_three_metre_width_but_keeps_height_and_other_blocks_bounded() {
+    let primitive = PrimitiveTemplate {
+        positions: vec![[-1.0, 0.0, 0.0], [2.0, 1.0, 0.0], [2.0, 1.0, 1.0]],
+        normals: vec![[0.0, 0.0, 1.0]; 3],
+        tangents: vec![],
+        uvs: vec![[0.0; 2]; 3],
+        indices: vec![0, 1, 2],
+        material: 0,
+    };
+    let id = terra_core::train_parts::RAIL_BUILDER;
+    assert!(bake_transform(id, &mut primitive.clone(), bevy::math::Affine3A::IDENTITY).is_ok());
+    for (axis, value) in [(0, -1.01), (0, 2.01), (1, -0.01), (1, 1.01)] {
+        let mut beyond = primitive.clone();
+        beyond.positions[0][axis] = value;
+        assert!(bake_transform(id, &mut beyond, bevy::math::Affine3A::IDENTITY).is_err());
+    }
+    assert!(bake_transform(1, &mut primitive.clone(), bevy::math::Affine3A::IDENTITY).is_err());
+}

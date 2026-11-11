@@ -7,20 +7,24 @@ use bevy::{
     prelude::*,
 };
 use std::collections::BTreeMap;
-use terra_core::PlayerGender;
+use terra_core::{CharacterAppearance, ClothingMaterial, PlayerGender};
+mod garments;
+#[path = "model/hair.rs"]
+mod hair;
 
-const SKIN: [f32; 3] = [0.94, 0.65, 0.40];
-const SKIN_LIGHT: [f32; 3] = [0.98, 0.71, 0.46];
-const CLOTH: [f32; 3] = [0.83, 0.78, 0.65];
-const TROUSERS: [f32; 3] = [0.36, 0.28, 0.19];
-const CUFF: [f32; 3] = [0.51, 0.42, 0.29];
+fn skin(appearance: CharacterAppearance) -> [f32; 3] {
+    appearance.skin_color.map(|c| f32::from(c) / 255.0)
+}
+fn skin_light(appearance: CharacterAppearance) -> [f32; 3] {
+    skin(appearance).map(|c| (c + 0.065).min(1.0))
+}
 const CORD: [f32; 3] = [0.72, 0.62, 0.44];
 const NECK_HEIGHT: f32 = 0.049;
 pub(super) const EYE_CENTER: f32 = 0.027;
-pub(super) const EYE_HALF_HEIGHT: f32 = 0.039;
+pub(super) const EYE_HALF_HEIGHT: f32 = 0.047;
 pub(crate) const ELBOW: f32 = -0.265;
 pub(super) const KNEE: f32 = -0.31;
-const FACET_SIZE: f32 = 0.019;
+const FACET_SIZE: f32 = 0.020;
 
 #[derive(Default)]
 pub(crate) struct Builder(BTreeMap<usize, MeshBatch>);
@@ -98,12 +102,13 @@ impl Builder {
                 )?;
             }
         }
-        for (row, sign) in [(0, -1.0), (3, 1.0)] {
-            let center = Vec3::from_array(position) + rotation * Vec3::Y * half.y * sign;
-            for side in 0..8 {
-                let next = (side + 1) % 8;
+        // The cap is a planar convex octagon. A boundary fan needs six
+        // triangles instead of eight and does not change its surface at all.
+        for row in [0, 3] {
+            for side in 1..7 {
+                let next = side + 1;
                 let (a, b) = if row == 0 { (side, next) } else { (next, side) };
-                self.triangle([center, rings[row][a], rings[row][b]], color)?;
+                self.triangle([rings[row][0], rings[row][a], rings[row][b]], color)?;
             }
         }
         Ok(())
@@ -159,6 +164,51 @@ impl Builder {
         Ok(())
     }
 
+    /// A shallow indexed surface facet shares its five vertices. Averaged
+    /// edge normals preserve a soft carved surface without duplicate triangles.
+    pub(crate) fn faceted_quad(
+        &mut self,
+        points: [Vec3; 4],
+        center: Vec3,
+        color: [f32; 3],
+    ) -> Result<(), String> {
+        let batch = self.0.entry(0).or_default();
+        let index = u32::try_from(batch.positions.len()).map_err(|_| "Avatar vertex limit")?;
+        let normals: [Vec3; 4] = std::array::from_fn(|i| {
+            (points[(i + 1) % 4] - points[i])
+                .cross(center - points[i])
+                .normalize_or_zero()
+        });
+        batch.positions.extend(points.map(|p| p.to_array()));
+        batch.positions.push(center.to_array());
+        for i in 0..4 {
+            batch.normals.push(
+                (normals[i] + normals[(i + 3) % 4])
+                    .normalize_or_zero()
+                    .to_array(),
+            );
+        }
+        batch.normals.push(
+            normals
+                .into_iter()
+                .sum::<Vec3>()
+                .normalize_or_zero()
+                .to_array(),
+        );
+        batch
+            .uvs
+            .extend([[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0], [0.5, 0.5]]);
+        batch
+            .colors
+            .extend([Color::srgb_from_array(color).to_linear().to_f32_array(); 5]);
+        for i in 0..4 {
+            batch
+                .indices
+                .extend([index + i, index + (i + 1) % 4, index + 4]);
+        }
+        Ok(())
+    }
+
     pub(crate) fn triangle(&mut self, points: [Vec3; 3], color: [f32; 3]) -> Result<(), String> {
         let batch = self.0.entry(0).or_default();
         let index = u32::try_from(batch.positions.len()).map_err(|_| "Avatar vertex limit")?;
@@ -181,6 +231,26 @@ impl Builder {
         rings: &[(f32, f32, f32)],
         center: Vec3,
         color: [f32; 3],
+    ) -> Result<(), String> {
+        self.tapered_surface(rings, center, color, None)
+    }
+
+    fn garment(
+        &mut self,
+        rings: &[(f32, f32, f32)],
+        center: Vec3,
+        color: [f32; 3],
+        material: ClothingMaterial,
+    ) -> Result<(), String> {
+        self.tapered_surface(rings, center, color, Some(material))
+    }
+
+    fn tapered_surface(
+        &mut self,
+        rings: &[(f32, f32, f32)],
+        center: Vec3,
+        color: [f32; 3],
+        material: Option<ClothingMaterial>,
     ) -> Result<(), String> {
         let ring = |(y, width, depth): (f32, f32, f32)| {
             let x = width * 0.5;
@@ -218,18 +288,28 @@ impl Builder {
                             let x = column as f32 / columns as f32;
                             let y = (column + 1) as f32 / columns as f32;
                             let point = |u: f32, v: f32| {
-                                let skin_relief = (u * std::f32::consts::PI).sin()
-                                    * (v * std::f32::consts::PI).sin()
-                                    * 0.002;
-                                low[side]
+                                let envelope = (u * std::f32::consts::PI).sin()
+                                    * (v * std::f32::consts::PI).sin();
+                                let position = low[side]
                                     .lerp(low[next], u)
-                                    .lerp(high[side].lerp(high[next], u), v)
-                                    + normal * skin_relief
+                                    .lerp(high[side].lerp(high[next], u), v);
+                                // Every ring/corner keeps its shared boundary exactly closed.
+                                let relief = envelope
+                                    * material.map_or(0.002, |material| {
+                                        garments::relief(material, position)
+                                    });
+                                position + normal * relief
                             };
                             let h = noise(row * 137 + column * 73 + side as u32 * 31);
                             self.quad(
                                 [point(y, a), point(x, a), point(x, b), point(y, b)],
-                                color.map(|c| c * (0.98 + (h & 7) as f32 * 0.005)),
+                                color.map(|c| {
+                                    (c * material
+                                        .map_or(0.98 + (h & 7) as f32 * 0.005, |material| {
+                                            garments::shade(material, column, row, h)
+                                        }))
+                                    .min(1.0)
+                                }),
                             )?;
                         }
                     }
@@ -285,68 +365,80 @@ fn noise(mut value: u32) -> u32 {
 }
 
 pub(super) fn parts(gender: PlayerGender) -> Result<Vec<(AvatarPart, Vec3, Mesh)>, String> {
+    parts_with_appearance(gender, CharacterAppearance::default())
+}
+
+pub(super) fn parts_with_appearance(
+    gender: PlayerGender,
+    appearance: CharacterAppearance,
+) -> Result<Vec<(AvatarPart, Vec3, Mesh)>, String> {
     let female = gender == PlayerGender::Female;
     let shoulder = if female { 0.235 } else { 0.283 };
     Ok(vec![
-        (AvatarPart::Body, Vec3::ZERO, body(female)?),
-        (AvatarPart::Head, Vec3::new(0.0, 0.549, 0.0), head(female)?),
+        (AvatarPart::Body, Vec3::ZERO, body(female, appearance)?),
+        (
+            AvatarPart::Head,
+            Vec3::new(0.0, 0.549, 0.0),
+            head(female, appearance)?,
+        ),
         (
             AvatarPart::Arm(-1),
             Vec3::new(-shoulder, 0.305, 0.0),
-            arm(-1.0, female)?,
+            arm(-1.0, female, appearance)?,
         ),
         (
             AvatarPart::Arm(1),
             Vec3::new(shoulder, 0.305, 0.0),
-            arm(1.0, female)?,
+            arm(1.0, female, appearance)?,
         ),
         (
             AvatarPart::Forearm(-1),
             Vec3::new(0.0, ELBOW, 0.0),
-            forearm(-1.0, female)?,
+            forearm(-1.0, female, appearance)?,
         ),
         (
             AvatarPart::Forearm(1),
             Vec3::new(0.0, ELBOW, 0.0),
-            forearm(1.0, female)?,
+            forearm(1.0, female, appearance)?,
         ),
         (
             AvatarPart::Leg(-1),
             Vec3::new(-0.115, -0.23, 0.0),
-            leg(-1.0, female)?,
+            leg(-1.0, female, appearance)?,
         ),
         (
             AvatarPart::Leg(1),
             Vec3::new(0.115, -0.23, 0.0),
-            leg(1.0, female)?,
+            leg(1.0, female, appearance)?,
         ),
         (
             AvatarPart::Calf(-1),
             Vec3::new(0.0, KNEE, 0.0),
-            calf(-1.0, female)?,
+            calf(-1.0, female, appearance)?,
         ),
         (
             AvatarPart::Calf(1),
             Vec3::new(0.0, KNEE, 0.0),
-            calf(1.0, female)?,
+            calf(1.0, female, appearance)?,
         ),
     ])
 }
 
-fn head(female: bool) -> Result<Mesh, String> {
+pub(crate) fn head(female: bool, appearance: CharacterAppearance) -> Result<Mesh, String> {
     let mut builder = Builder::default();
     let width = if female { 0.345 } else { 0.36 };
     builder.tapered(
         &[
             (-0.17, width * 0.57, 0.21),
-            (-0.148, width * 0.78, 0.27),
-            (-0.090, width * 0.94, 0.315),
+            (-0.148, width * 0.64, 0.245),
+            (-0.120, width * 0.77, 0.28),
+            (-0.060, width * 0.96, 0.319),
             (0.018, width, 0.324),
             (0.125, width * 0.96, 0.315),
             (0.181, width * 0.80, 0.27),
         ],
         Vec3::ZERO,
-        SKIN,
+        skin(appearance),
     )?;
     for sign in [-1.0, 1.0] {
         builder.tapered(
@@ -357,34 +449,39 @@ fn head(female: bool) -> Result<Mesh, String> {
                 (0.031, 0.035, 0.046),
             ],
             Vec3::new(sign * (width * 0.5 + 0.018), 0.0, 0.0),
-            SKIN_LIGHT,
+            skin_light(appearance),
         )?;
         builder.voxel(
             [sign * (width * 0.5 + 0.039), -0.027, -0.013],
             [0.012, 0.041, 0.027],
-            [0.73, 0.43, 0.26],
+            skin(appearance).map(|channel| channel * 0.76),
         )?;
         builder.face_plate(
             Vec3::new(sign * 0.085, EYE_CENTER, -0.166),
-            Vec3::new(0.074, 0.069, 0.012),
+            Vec3::new(0.087, 0.083, 0.012),
             0.011,
             [0.95, 0.92, 0.83],
         )?;
         builder.face_plate(
             Vec3::new(sign * 0.079, EYE_CENTER - 0.001, -0.174),
-            Vec3::new(0.041, 0.058, 0.011),
+            Vec3::new(0.054, 0.071, 0.011),
             0.007,
-            [0.32, 0.20, 0.12],
+            if sign > 0.0 {
+                appearance.resolved_right_eye_color()
+            } else {
+                appearance.eye_color
+            }
+            .map(|c| f32::from(c) / 255.0),
         )?;
         builder.face_plate(
             Vec3::new(sign * 0.077, EYE_CENTER + 0.003, -0.181),
-            Vec3::new(0.022, 0.049, 0.007),
+            Vec3::new(0.032, 0.060, 0.007),
             0.004,
             [0.15, 0.10, 0.065],
         )?;
         builder.voxel(
-            [sign * 0.082 - 0.008, EYE_CENTER + 0.019, -0.187],
-            [0.010, 0.013, 0.005],
+            [sign * 0.082 - 0.010, EYE_CENTER + 0.023, -0.187],
+            [0.013, 0.016, 0.005],
             [1.0, 0.97, 0.84],
         )?;
         builder.voxel(
@@ -393,24 +490,22 @@ fn head(female: bool) -> Result<Mesh, String> {
             [0.71, 0.52, 0.30],
         )?;
         builder.rotated(
-            [sign * 0.085, 0.066, -0.174],
-            [0.073, if female { 0.013 } else { 0.010 }, 0.016],
+            [sign * 0.085, 0.073, -0.174],
+            [0.088, if female { 0.013 } else { 0.010 }, 0.016],
             [0.23, 0.13, 0.075],
             Quat::from_rotation_z(sign * 0.05),
         )?;
         builder.rotated(
-            [sign * 0.085, 0.099, -0.168],
-            [0.075, if female { 0.018 } else { 0.025 }, 0.018],
-            if female {
-                [0.36, 0.18, 0.085]
-            } else {
-                [0.25, 0.14, 0.075]
-            },
+            [sign * 0.085, 0.110, -0.168],
+            [0.088, if female { 0.018 } else { 0.025 }, 0.018],
+            appearance
+                .hair_color
+                .map(|c| (f32::from(c) / 255.0 * 0.68).max(0.055)),
             Quat::from_rotation_z(-sign * 0.065),
         )?;
         if female {
             builder.voxel(
-                [sign * 0.122, 0.066, -0.174],
+                [sign * 0.131, 0.073, -0.174],
                 [0.016, 0.009, 0.016],
                 [0.23, 0.13, 0.075],
             )?;
@@ -419,13 +514,13 @@ fn head(female: bool) -> Result<Mesh, String> {
     builder.bevel_box(
         [0.0, -0.030, -0.173],
         [0.028, 0.035, 0.025],
-        SKIN_LIGHT,
+        skin_light(appearance),
         Quat::IDENTITY,
     )?;
     builder.bevel_box(
         [0.0, -0.041, -0.186],
         [0.036, 0.018, 0.012],
-        [0.86, 0.58, 0.35],
+        skin(appearance).map(|channel| channel * 0.90),
         Quat::IDENTITY,
     )?;
     builder.voxel(
@@ -434,6 +529,16 @@ fn head(female: bool) -> Result<Mesh, String> {
         [0.45, 0.24, 0.135],
     )?;
     for sign in [-1.0, 1.0] {
+        builder.bevel_box(
+            [sign * 0.124, -0.061, -0.155],
+            [0.043, 0.014, 0.008],
+            [
+                skin(appearance)[0],
+                skin(appearance)[1] * 0.94,
+                skin(appearance)[2] * 0.92,
+            ],
+            Quat::IDENTITY,
+        )?;
         builder.rotated(
             [sign * 0.041, -0.101, -0.158],
             [0.019, 0.006, 0.008],
@@ -441,150 +546,46 @@ fn head(female: bool) -> Result<Mesh, String> {
             Quat::from_rotation_z(sign * 0.35),
         )?;
     }
-    hair(&mut builder, female)?;
+    hair::build(&mut builder, female, appearance)?;
     builder.finish()
 }
 
-fn hair(b: &mut Builder, female: bool) -> Result<(), String> {
-    let base = if female {
-        [0.49, 0.255, 0.115]
-    } else {
-        [0.35, 0.205, 0.115]
-    };
-    // A staggered ellipsoidal shell avoids latitudinal hair rings and hidden core cubes.
-    let occupied = |x: i32, y: i32, z: i32| {
-        let p = Vec3::new(x as f32 * 0.047, y as f32 * 0.047, z as f32 * 0.047);
-        (p / Vec3::new(0.204, 0.220, 0.191)).length_squared() <= 1.0
-            && !(p.z < -0.100 && p.y < 0.085)
-            && !(p.x.abs() > 0.165 && p.y < -0.015 && p.z < 0.055)
-    };
-    let neighbors = [
-        [1, 0, 0],
-        [-1, 0, 0],
-        [0, 1, 0],
-        [0, -1, 0],
-        [0, 0, 1],
-        [0, 0, -1],
-    ];
-    for y in -4_i32..=4 {
-        for x in -4_i32..=4 {
-            for z in -4_i32..=4 {
-                if !occupied(x, y, z)
-                    || neighbors
-                        .iter()
-                        .all(|d| occupied(x + d[0], y + d[1], z + d[2]))
-                {
-                    continue;
-                }
-                let h = noise(((x + 5) * 317 + (y + 5) * 673 + (z + 5) * 137) as u32);
-                let jitter = |shift| (((h >> shift) & 15_u32) as f32 - 7.5) * 0.0015;
-                b.bevel_box(
-                    [
-                        x as f32 * 0.047 + jitter(0),
-                        0.048 + y as f32 * 0.047 + jitter(4),
-                        0.035 + z as f32 * 0.047 + jitter(8),
-                    ],
-                    [0.058 + jitter(12), 0.061 + jitter(16), 0.060 + jitter(20)],
-                    base.map(|c| c * (0.87 + (h & 15) as f32 * 0.016)),
-                    Quat::from_euler(
-                        EulerRot::XYZ,
-                        jitter(6) * 9.0,
-                        jitter(10) * 12.0,
-                        jitter(14) * 10.0,
-                    ),
-                )?;
-            }
-        }
-    }
-    for x in -3_i32..=3 {
-        let drop = if female {
-            (x + 3) as f32 * 0.010
-        } else {
-            (noise((x + 4) as u32) & 7) as f32 * 0.006
-        };
-        b.bevel_box(
-            [x as f32 * 0.045, 0.178 - drop, -0.158],
-            [0.055, 0.071, 0.065],
-            base.map(|c| c * (1.0 + x.rem_euclid(3) as f32 * 0.06)),
-            Quat::from_rotation_z(if female { 0.22 } else { -x as f32 * 0.035 }),
-        )?;
-    }
-    for side in [-1.0, 1.0] {
-        let steps = if female { 7 } else { 2 };
-        for step in 0..steps {
-            let curl = (step as f32 * 1.7 + side).sin();
-            b.bevel_box(
-                [
-                    side * (0.170 + curl * 0.017),
-                    0.09 - step as f32 * 0.047,
-                    -0.124,
-                ],
-                [if step > 3 { 0.028 } else { 0.047 }, 0.061, 0.047],
-                base.map(|c| c * 1.07),
-                Quat::from_rotation_z(side * curl * 0.2),
-            )?;
-        }
-    }
-    if female {
-        for y in -2_i32..=2 {
-            for x in -2_i32..=2 {
-                for z in -2_i32..=2 {
-                    let p = Vec3::new(x as f32, y as f32, z as f32);
-                    if p.length_squared() > 5.5 || p.length_squared() < 2.0 {
-                        continue;
-                    }
-                    let h = noise(((x + 3) * 67 + (y + 3) * 173 + (z + 3) * 37) as u32);
-                    b.bevel_box(
-                        [
-                            -0.030 + x as f32 * 0.038,
-                            0.235 + y as f32 * 0.038,
-                            0.171 + z as f32 * 0.038,
-                        ],
-                        [0.052, 0.055, 0.053],
-                        base.map(|c| c * (0.93 + (h & 7) as f32 * 0.021)),
-                        Quat::from_euler(
-                            EulerRot::XYZ,
-                            y as f32 * 0.09,
-                            z as f32 * 0.10,
-                            x as f32 * 0.08,
-                        ),
-                    )?;
-                }
-            }
-        }
-    }
-    Ok(())
-}
-
 pub(super) fn eyelids() -> Result<Mesh, String> {
+    eyelids_for(CharacterAppearance::default())
+}
+pub(super) fn eyelids_for(appearance: CharacterAppearance) -> Result<Mesh, String> {
     let mut b = Builder::default();
     for side in [-1.0, 1.0] {
         b.voxel(
             [side * 0.085, 0.0, -0.192],
-            [0.071, EYE_HALF_HEIGHT * 2.0, 0.012],
-            SKIN,
+            [0.086, EYE_HALF_HEIGHT * 2.0, 0.012],
+            skin(appearance),
         )?;
     }
     b.finish()
 }
 
-fn body(female: bool) -> Result<Mesh, String> {
+fn body(female: bool, appearance: CharacterAppearance) -> Result<Mesh, String> {
+    let cloth = appearance.shirt_color.map(|c| f32::from(c) / 255.0);
+    let trousers = appearance.pants_color.map(|c| f32::from(c) / 255.0);
+    let cuff = trousers.map(|c| (c * 1.24 + 0.06).min(1.0));
     let mut builder = Builder::default();
-    let waist = if female { 0.29 } else { 0.39 };
+    let waist = if female { 0.29 } else { 0.35 };
     let chest = if female { 0.35 } else { 0.43 };
     // The neck remains short; shoulders and head meet it without a floating gap.
     builder.voxel(
         [0.0, 0.33 + NECK_HEIGHT * 0.5, 0.0],
-        [0.145, NECK_HEIGHT, 0.16],
-        SKIN,
+        [0.17, NECK_HEIGHT, 0.19],
+        skin(appearance),
     )?;
     // Only the neckline is exposed; the opaque shirt replaces the hidden torso shell.
     builder.tapered(
         &[(0.195, chest, 0.272), (0.33, chest * 0.94, 0.22)],
         Vec3::ZERO,
-        SKIN,
+        skin(appearance),
     )?;
-    builder.tapered(
+    upper_torso_contours(&mut builder, appearance)?;
+    builder.garment(
         &[
             (-0.084, waist + 0.016, if female { 0.242 } else { 0.263 }),
             (
@@ -597,24 +598,34 @@ fn body(female: bool) -> Result<Mesh, String> {
             (0.205, chest + 0.014, if female { 0.307 } else { 0.28 }),
         ],
         Vec3::ZERO,
-        CLOTH,
+        cloth,
+        appearance.shirt_material,
     )?;
-    neckline(&mut builder, chest, female)?;
+    neckline(&mut builder, chest, female, cloth)?;
     for side in [-1.0, 1.0] {
         builder.bevel_box(
             [side * (chest * 0.5 - 0.038), 0.277, -0.002],
             [0.076, 0.142, 0.244],
-            CLOTH,
+            cloth,
             Quat::IDENTITY,
+        )?;
+    }
+    // Raised seam bands follow the cloth silhouette without floating off the shoulders.
+    for side in [-1.0, 1.0] {
+        builder.rotated(
+            [side * (chest * 0.5 - 0.038), 0.277, -0.127],
+            [0.014, 0.136, 0.010],
+            cloth.map(|channel| (channel * 0.86).min(1.0)),
+            Quat::from_rotation_z(side * 0.08),
         )?;
     }
     builder.bevel_box(
         [0.0, -0.065, 0.0],
         [waist + 0.025, 0.038, 0.272],
-        [0.87, 0.82, 0.70],
+        cloth.map(|c| (c * 1.06).min(1.0)),
         Quat::IDENTITY,
     )?;
-    builder.tapered(
+    builder.garment(
         &[
             (-0.285, if female { 0.40 } else { 0.39 }, 0.245),
             (-0.19, if female { 0.43 } else { 0.40 }, 0.29),
@@ -622,18 +633,19 @@ fn body(female: bool) -> Result<Mesh, String> {
             (-0.09, waist + 0.030, 0.26),
         ],
         Vec3::ZERO,
-        TROUSERS,
+        trousers,
+        appearance.pants_material,
     )?;
     builder.voxel(
         [0.0, -0.12, 0.0],
         [waist + 0.040, 0.045, 0.283],
-        [0.31, 0.23, 0.15],
+        trousers.map(|c| c * 0.8),
     )?;
     for x in -3..=3 {
         builder.voxel(
             [x as f32 * waist / 7.0, -0.119, -0.148],
             [0.008, 0.045, 0.008],
-            CUFF,
+            cuff,
         )?;
     }
     builder.voxel([0.0, -0.12, -0.158], [0.041, 0.038, 0.028], CORD)?;
@@ -649,10 +661,71 @@ fn body(female: bool) -> Result<Mesh, String> {
         CORD,
         Quat::from_rotation_z(0.34),
     )?;
+    if appearance.tunic {
+        builder.garment(
+            &[
+                (-0.27, waist + 0.10, 0.33),
+                (-0.08, waist + 0.05, 0.30),
+                (0.20, chest + 0.03, 0.33),
+                (0.32, chest, 0.25),
+            ],
+            Vec3::ZERO,
+            cloth,
+            appearance.shirt_material,
+        )?;
+        builder.bevel_box(
+            [0.0, -0.08, -0.005],
+            [waist + 0.08, 0.045, 0.34],
+            [0.25, 0.16, 0.10],
+            Quat::IDENTITY,
+        )?;
+        builder.voxel(
+            [0.0, -0.08, -0.18],
+            [0.065, 0.052, 0.018],
+            [0.83, 0.57, 0.16],
+        )?;
+    }
+    if appearance.cape {
+        garments::cape(&mut builder, appearance)?;
+    }
     builder.finish()
 }
 
-fn neckline(b: &mut Builder, chest: f32, female: bool) -> Result<(), String> {
+/// Low relief meets the existing torso surface at its perimeter, without separate floating parts.
+fn upper_torso_contours(
+    builder: &mut Builder,
+    appearance: CharacterAppearance,
+) -> Result<(), String> {
+    let depth = |y: f32| 0.5 * (0.272 + (0.22 - 0.272) * ((y - 0.195) / (0.33 - 0.195)));
+    for side in [-1.0, 1.0] {
+        for (back, center_y, half_width, half_height, relief) in [
+            (false, 0.270, 0.044, 0.015, 0.0045),
+            (true, 0.263, 0.034, 0.038, 0.0035),
+        ] {
+            let outward = if back { 1.0 } else { -1.0 };
+            let center_x = side * 0.067;
+            let surface = |x, y| Vec3::new(x, y, outward * (depth(y) + 0.0004));
+            let corners = [
+                surface(center_x - half_width, center_y - half_height),
+                surface(center_x - half_width, center_y + half_height),
+                surface(center_x + half_width, center_y + half_height),
+                surface(center_x + half_width, center_y - half_height),
+            ];
+            builder.faceted_quad(
+                if back {
+                    [corners[3], corners[2], corners[1], corners[0]]
+                } else {
+                    corners
+                },
+                Vec3::new(center_x, center_y, outward * (depth(center_y) + relief)),
+                skin(appearance).map(|channel| (channel * 1.018).min(1.0)),
+            )?;
+        }
+    }
+    Ok(())
+}
+
+fn neckline(b: &mut Builder, chest: f32, female: bool, cloth: [f32; 3]) -> Result<(), String> {
     // A continuous U-neck ribbon replaces disconnected blocks along the shirt opening.
     let profile = [
         (-1.0, 0.325),
@@ -677,50 +750,53 @@ fn neckline(b: &mut Builder, chest: f32, female: bool) -> Result<(), String> {
         let c = front(pair[1].0, pair[1].1);
         let low_a = front(pair[0].0, 0.201);
         let low_c = front(pair[1].0, 0.201);
-        b.quad([low_c, low_a, a, c], CLOTH)?;
+        b.quad([low_c, low_a, a, c], cloth)?;
         b.quad(
             [a, a + Vec3::Z * 0.012, c + Vec3::Z * 0.012, c],
-            [0.88, 0.83, 0.71],
+            cloth.map(|c| (c * 1.06).min(1.0)),
         )?;
         let inner_a = a - Vec3::Y * 0.012 - Vec3::Z * 0.002;
         let inner_c = c - Vec3::Y * 0.012 - Vec3::Z * 0.002;
         b.quad(
             [inner_c, inner_a, a - Vec3::Z * 0.002, c - Vec3::Z * 0.002],
-            [0.88, 0.83, 0.71],
+            cloth.map(|c| (c * 1.06).min(1.0)),
         )?;
     }
     b.bevel_box(
         [0.0, 0.261, 0.126],
         [chest - 0.04, 0.129, 0.018],
-        CLOTH,
+        cloth,
         Quat::IDENTITY,
     )?;
     Ok(())
 }
 
-fn arm(sign: f32, female: bool) -> Result<Mesh, String> {
+fn arm(sign: f32, female: bool, appearance: CharacterAppearance) -> Result<Mesh, String> {
     let mut b = Builder::default();
-    let width = if female { 0.115 } else { 0.145 };
+    let width = if female { 0.128 } else { 0.160 };
     b.tapered(
         &[
             (ELBOW - 0.010, width * 0.76, width * 0.82),
             (-0.20, width * 0.90, width * 1.02),
-            (-0.10, width * 1.10, width * 1.12),
-            (0.015, width * 1.06, width * 1.15),
-            (0.045, width * 0.71, width * 0.85),
+            (-0.11, width * 1.04, width * 1.10),
+            (-0.045, width * 1.13, width * 1.14),
+            (0.010, width * 0.98, width * 1.04),
+            (0.045, width * 0.63, width * 0.77),
+            (0.060, width * 0.27, width * 0.42),
         ],
         Vec3::ZERO,
-        SKIN_LIGHT,
+        skin_light(appearance),
     )?;
     // A shallow deltoid facet gives the bare shoulder a rounded, articulated outline.
     b.tapered(
         &[
-            (-0.06, width * 0.48, width * 0.85),
-            (0.016, width * 0.62, width * 0.96),
-            (0.042, width * 0.40, width * 0.68),
+            (-0.09, width * 0.34, width * 0.65),
+            (-0.035, width * 0.54, width * 0.88),
+            (0.012, width * 0.46, width * 0.80),
+            (0.040, width * 0.18, width * 0.44),
         ],
         Vec3::new(sign * width * 0.30, 0.0, 0.0),
-        SKIN_LIGHT,
+        skin_light(appearance),
     )?;
     // Rounded overlap closes the hinge silhouette while the forearm rotates around its pivot.
     b.tapered(
@@ -731,14 +807,14 @@ fn arm(sign: f32, female: bool) -> Result<Mesh, String> {
             (0.045, width * 0.46, width * 0.49),
         ],
         Vec3::new(0.0, ELBOW, 0.0),
-        SKIN,
+        skin(appearance),
     )?;
     b.finish()
 }
 
-fn forearm(sign: f32, female: bool) -> Result<Mesh, String> {
+fn forearm(sign: f32, female: bool, appearance: CharacterAppearance) -> Result<Mesh, String> {
     let mut builder = Builder::default();
-    let width = if female { 0.115 } else { 0.145 };
+    let width = if female { 0.128 } else { 0.160 };
     builder.tapered(
         &[
             (-0.48 - ELBOW, width * 0.65, width * 0.77),
@@ -747,7 +823,7 @@ fn forearm(sign: f32, female: bool) -> Result<Mesh, String> {
             (0.012, width * 0.80, width * 0.82),
         ],
         Vec3::ZERO,
-        SKIN,
+        skin(appearance),
     )?;
     builder.tapered(
         &[
@@ -755,7 +831,15 @@ fn forearm(sign: f32, female: bool) -> Result<Mesh, String> {
             (-0.477 - ELBOW, width * 0.84, 0.095),
         ],
         Vec3::new(sign * 0.008, 0.0, -0.016),
-        SKIN_LIGHT,
+        skin(appearance),
+    )?;
+    // Hands face the same way as the body: knuckles/nails to the front (-Z),
+    // palm padding and relaxed finger curl to the rear (+Z). Thumb stays medial.
+    builder.bevel_box(
+        [sign * 0.008, -0.515 - ELBOW, 0.032],
+        [width * 0.64, 0.061, 0.014],
+        skin_light(appearance),
+        Quat::IDENTITY,
     )?;
     for finger in 0..4 {
         builder.bevel_box(
@@ -767,11 +851,11 @@ fn forearm(sign: f32, female: bool) -> Result<Mesh, String> {
                     } else {
                         0.0
                     },
-                -0.030,
+                -0.002,
             ],
             [width * 0.17, 0.044, 0.053],
-            SKIN,
-            Quat::from_rotation_x(0.20),
+            skin(appearance),
+            Quat::from_rotation_x(-0.20),
         )?;
         builder.bevel_box(
             [
@@ -782,32 +866,48 @@ fn forearm(sign: f32, female: bool) -> Result<Mesh, String> {
                     } else {
                         0.0
                     },
-                -0.057,
+                0.025,
             ],
             [width * 0.17, 0.025, 0.030],
-            SKIN_LIGHT,
-            Quat::from_rotation_x(0.85),
+            skin_light(appearance),
+            Quat::from_rotation_x(-0.85),
+        )?;
+        builder.bevel_box(
+            [
+                sign * 0.008 + (finger as f32 - 1.5) * width * 0.18,
+                -0.575 - ELBOW
+                    + if finger == 0 || finger == 3 {
+                        0.006
+                    } else {
+                        0.0
+                    },
+                -0.026,
+            ],
+            [width * 0.115, 0.016, 0.005],
+            skin(appearance).map(|channel| (channel * 0.85 + 0.12).min(1.0)),
+            Quat::from_rotation_x(-0.20),
         )?;
     }
     builder.bevel_box(
-        [-sign * width * 0.45, -0.515 - ELBOW, -0.041],
+        [-sign * width * 0.45, -0.515 - ELBOW, 0.009],
         [0.035, 0.067, 0.042],
-        SKIN_LIGHT,
+        skin_light(appearance),
         Quat::from_rotation_z(-sign * 0.28),
     )?;
     builder.bevel_box(
-        [-sign * width * 0.40, -0.542 - ELBOW, -0.064],
+        [-sign * width * 0.40, -0.542 - ELBOW, 0.032],
         [0.034, 0.031, 0.032],
-        SKIN_LIGHT,
-        Quat::from_rotation_y(sign * 0.30),
+        skin_light(appearance),
+        Quat::from_rotation_y(-sign * 0.30),
     )?;
     builder.finish()
 }
 
-fn leg(sign: f32, female: bool) -> Result<Mesh, String> {
+fn leg(sign: f32, female: bool, appearance: CharacterAppearance) -> Result<Mesh, String> {
+    let trousers = appearance.pants_color.map(|c| f32::from(c) / 255.0);
     let mut b = Builder::default();
     let width = if female { 0.177 } else { 0.202 };
-    b.tapered(
+    b.garment(
         &[
             (KNEE - 0.012, width * 0.85, 0.195),
             (-0.25, width * 0.91, 0.215),
@@ -816,32 +916,37 @@ fn leg(sign: f32, female: bool) -> Result<Mesh, String> {
             (0.015, width * 1.01, 0.245),
         ],
         Vec3::ZERO,
-        TROUSERS,
+        trousers,
+        appearance.pants_material,
     )?;
-    b.tapered(
+    b.garment(
         &[
             (-0.105, width * 0.25, 0.050),
             (-0.070, width * 0.67, 0.145),
+            (-0.050, width * 0.80, 0.175),
             (-0.035, width * 0.88, 0.190),
             (0.0, width * 0.94, 0.205),
+            (0.005, width * 0.93, 0.211),
             (0.025, width * 0.88, 0.195),
         ],
-        Vec3::new(0.0, KNEE, 0.0),
-        TROUSERS,
+        Vec3::new(0.0, KNEE, -0.008),
+        trousers,
+        appearance.pants_material,
     )?;
     b.bevel_box(
         [sign * width * 0.45, -0.115, 0.02],
         [0.027, 0.135, 0.14],
-        TROUSERS.map(|c| c * 0.94),
+        trousers.map(|c| c * 0.94),
         Quat::IDENTITY,
     )?;
     b.finish()
 }
 
-fn calf(sign: f32, female: bool) -> Result<Mesh, String> {
+fn calf(sign: f32, female: bool, appearance: CharacterAppearance) -> Result<Mesh, String> {
+    let trousers = appearance.pants_color.map(|c| f32::from(c) / 255.0);
     let mut b = Builder::default();
     let width = if female { 0.177 } else { 0.202 };
-    b.tapered(
+    b.garment(
         &[
             (-0.435 - KNEE, width * 0.94, 0.202),
             (-0.40 - KNEE, width * 1.03, 0.222),
@@ -849,28 +954,83 @@ fn calf(sign: f32, female: bool) -> Result<Mesh, String> {
             (0.012, width * 0.89, 0.208),
         ],
         Vec3::ZERO,
-        TROUSERS,
+        trousers,
+        appearance.pants_material,
     )?;
     b.bevel_box(
         [0.0, -0.426 - KNEE, 0.0],
         [width + 0.021, 0.056, 0.237],
-        CUFF,
+        trousers.map(|c| (c * 1.24 + 0.06).min(1.0)),
         Quat::IDENTITY,
     )?;
     b.voxel(
         [0.0, -0.401 - KNEE, -0.124],
         [width + 0.024, 0.010, 0.012],
-        [0.59, 0.49, 0.34],
+        trousers.map(|c| (c * 1.36 + 0.08).min(1.0)),
     )?;
+    if appearance.boots {
+        let leather = appearance.boots_color.map(|c| f32::from(c) / 255.0);
+        b.garment(
+            &[
+                (-0.657 - KNEE, width * 1.04, 0.31),
+                (-0.61 - KNEE, width * 1.04, 0.31),
+                (-0.57 - KNEE, width * 0.88, 0.22),
+                (-0.44 - KNEE, width * 0.95, 0.22),
+            ],
+            Vec3::new(0.0, 0.0, -0.035),
+            leather,
+            appearance.boots_material,
+        )?;
+        b.bevel_box(
+            [0.0, -0.64 - KNEE, -0.035],
+            [width * 1.08, 0.032, 0.32],
+            leather.map(|c| c * 0.6),
+            Quat::IDENTITY,
+        )?;
+        b.bevel_box(
+            [0.0, -0.46 - KNEE, -0.02],
+            [width * 1.04, 0.045, 0.26],
+            leather.map(|c| (c * 1.4).min(1.0)),
+            Quat::IDENTITY,
+        )?;
+        // Fitted instep straps and a side buckle read clearly in the reference pose.
+        for y in [-0.54, -0.49] {
+            b.bevel_box(
+                [0.0, y - KNEE, -0.145],
+                [width * 0.89, 0.022, 0.018],
+                leather.map(|channel| channel * 0.72),
+                Quat::IDENTITY,
+            )?;
+        }
+        b.bevel_box(
+            [sign * width * 0.44, -0.49 - KNEE, -0.143],
+            [0.032, 0.033, 0.020],
+            [0.70, 0.52, 0.28],
+            Quat::IDENTITY,
+        )?;
+        return b.finish();
+    }
     b.tapered(
         &[
-            (-0.604 - KNEE, width * 0.60, 0.126),
-            (-0.51 - KNEE, width * 0.67, 0.142),
-            (-0.48 - KNEE, width * 0.70, 0.147),
+            (-0.604 - KNEE, width * 0.51, 0.110),
+            (-0.58 - KNEE, width * 0.56, 0.123),
+            (-0.54 - KNEE, width * 0.71, 0.155),
+            (-0.50 - KNEE, width * 0.73, 0.163),
             (-0.445 - KNEE, width * 0.77, 0.16),
         ],
-        Vec3::ZERO,
-        SKIN_LIGHT,
+        Vec3::new(0.0, 0.0, 0.007),
+        skin(appearance),
+    )?;
+    // A shallow shin crest joins the tapered ankle and rounded rear calf volume.
+    b.faceted_quad(
+        [
+            Vec3::new(-width * 0.14, -0.58 - KNEE, -0.0549),
+            Vec3::new(-width * 0.14, -0.50 - KNEE, -0.0749),
+            Vec3::new(width * 0.14, -0.50 - KNEE, -0.0749),
+            Vec3::new(width * 0.14, -0.58 - KNEE, -0.0549),
+        ],
+        Vec3::new(0.0, -0.54 - KNEE, -0.0755),
+        skin(appearance).map(|channel| (channel * 1.018).min(1.0)),
     )?;
     b.tapered(
         &[
@@ -879,14 +1039,14 @@ fn calf(sign: f32, female: bool) -> Result<Mesh, String> {
             (-0.577 - KNEE, width * 0.65, 0.155),
         ],
         Vec3::new(0.0, 0.0, -0.042),
-        SKIN,
+        skin(appearance),
     )?;
     for toe in 0..4 {
         let x = (toe as f32 - 1.5) * width * 0.23;
         b.bevel_box(
             [x, -0.633 - KNEE, -0.161 - (toe as f32 * sign * 0.003)],
             [width * 0.22, 0.047, 0.052],
-            SKIN_LIGHT,
+            skin_light(appearance),
             Quat::IDENTITY,
         )?;
     }
@@ -899,11 +1059,205 @@ mod tests {
     use bevy::mesh::VertexAttributeValues;
 
     #[test]
+    fn body_landmarks_include_integrated_clavicles_shoulder_blades_kneecaps_and_shins() {
+        let look = CharacterAppearance::default();
+        for female in [false, true] {
+            let body = body(female, look).unwrap();
+            let Some(VertexAttributeValues::Float32x3(torso)) =
+                body.attribute(Mesh::ATTRIBUTE_POSITION)
+            else {
+                panic!("positions")
+            };
+            for side in [-1.0, 1.0] {
+                for (y, outward, relief) in [(0.270, -1.0, 0.0045), (0.263, 1.0, 0.0035)] {
+                    let depth = 0.5 * (0.272 + (0.22 - 0.272) * ((y - 0.195) / (0.33 - 0.195)));
+                    let landmark = Vec3::new(side * 0.067, y, outward * (depth + relief));
+                    assert!(
+                        torso
+                            .iter()
+                            .any(|point| Vec3::from_array(*point).abs_diff_eq(landmark, 1e-6))
+                    );
+                }
+                let leg = leg(side, female, look).unwrap();
+                let Some(VertexAttributeValues::Float32x3(knee)) =
+                    leg.attribute(Mesh::ATTRIBUTE_POSITION)
+                else {
+                    panic!("positions")
+                };
+                assert!(
+                    knee.iter()
+                        .any(|point| (point[1] - (KNEE + 0.005)).abs() < 1e-6 && point[2] < -0.113)
+                );
+                let calf = calf(side, female, look).unwrap();
+                let Some(VertexAttributeValues::Float32x3(calf)) =
+                    calf.attribute(Mesh::ATTRIBUTE_POSITION)
+                else {
+                    panic!("positions")
+                };
+                assert!(
+                    calf.iter()
+                        .any(|point| (point[1] - (-0.54 - KNEE)).abs() < 1e-6 && point[2] > 0.084)
+                );
+                assert!(calf.iter().any(|point| {
+                    Vec3::from_array(*point)
+                        .abs_diff_eq(Vec3::new(0.0, -0.54 - KNEE, -0.0755), 1e-6)
+                }));
+            }
+        }
+    }
+
+    #[test]
+    fn garment_materials_change_real_surfaces_without_recoloring_heads_or_adding_parts() {
+        let mut variants = Vec::new();
+        for material in ClothingMaterial::ALL {
+            let appearance = CharacterAppearance {
+                shirt_material: material,
+                pants_material: material,
+                boots_material: material,
+                cape_material: material,
+                tunic: true,
+                boots: true,
+                cape: true,
+                ..Default::default()
+            };
+            let parts = parts_with_appearance(PlayerGender::Female, appearance).unwrap();
+            assert_eq!(parts.len(), 10);
+            for (_, _, mesh) in &parts {
+                let Some(VertexAttributeValues::Float32x3(points)) =
+                    mesh.attribute(Mesh::ATTRIBUTE_POSITION)
+                else {
+                    panic!("positions")
+                };
+                let Some(VertexAttributeValues::Float32x3(normals)) =
+                    mesh.attribute(Mesh::ATTRIBUTE_NORMAL)
+                else {
+                    panic!("normals")
+                };
+                assert!(points.iter().flatten().all(|value| value.is_finite()));
+                assert!(
+                    normals
+                        .iter()
+                        .all(|normal| (Vec3::from_array(*normal).length() - 1.0).abs() < 1e-5)
+                );
+                assert!(
+                    mesh.indices()
+                        .unwrap()
+                        .iter()
+                        .all(|index| index < points.len())
+                );
+            }
+            variants.push(parts);
+        }
+        for pair in variants.windows(2) {
+            for (left, right) in pair[0].iter().zip(&pair[1]) {
+                if left.0 == AvatarPart::Head
+                    || matches!(left.0, AvatarPart::Arm(_) | AvatarPart::Forearm(_))
+                {
+                    assert_eq!(
+                        left.2.attribute(Mesh::ATTRIBUTE_POSITION),
+                        right.2.attribute(Mesh::ATTRIBUTE_POSITION)
+                    );
+                    assert_eq!(
+                        left.2.attribute(Mesh::ATTRIBUTE_COLOR),
+                        right.2.attribute(Mesh::ATTRIBUTE_COLOR)
+                    );
+                } else {
+                    assert_ne!(
+                        left.2.attribute(Mesh::ATTRIBUTE_POSITION),
+                        right.2.attribute(Mesh::ATTRIBUTE_POSITION)
+                    );
+                    assert_ne!(
+                        left.2.attribute(Mesh::ATTRIBUTE_COLOR),
+                        right.2.attribute(Mesh::ATTRIBUTE_COLOR)
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn right_eye_tint_changes_only_the_right_iris_and_hands_have_nails_in_front() {
+        let look = CharacterAppearance::default();
+        let original = head(false, look).unwrap();
+        let changed = head(
+            false,
+            CharacterAppearance {
+                right_eye_color: Some([20, 140, 225]),
+                ..look
+            },
+        )
+        .unwrap();
+        let Some(VertexAttributeValues::Float32x3(positions)) =
+            original.attribute(Mesh::ATTRIBUTE_POSITION)
+        else {
+            panic!("positions")
+        };
+        let Some(VertexAttributeValues::Float32x4(before)) =
+            original.attribute(Mesh::ATTRIBUTE_COLOR)
+        else {
+            panic!("colors")
+        };
+        let Some(VertexAttributeValues::Float32x4(after)) =
+            changed.attribute(Mesh::ATTRIBUTE_COLOR)
+        else {
+            panic!("colors")
+        };
+        let changed_points: Vec<_> = positions
+            .iter()
+            .zip(before.iter().zip(after))
+            .filter(|(_, (a, b))| a != b)
+            .map(|(p, _)| p)
+            .collect();
+        assert!(changed_points.len() > 20);
+        assert!(
+            changed_points
+                .iter()
+                .all(|p| p[0] > 0.0 && p[2] < -0.16 && (p[1] - EYE_CENTER).abs() < 0.05)
+        );
+        for sign in [-1.0, 1.0] {
+            let hand = forearm(sign, false, look).unwrap();
+            let Some(VertexAttributeValues::Float32x3(positions)) =
+                hand.attribute(Mesh::ATTRIBUTE_POSITION)
+            else {
+                panic!("positions")
+            };
+            let Some(VertexAttributeValues::Float32x4(colors)) =
+                hand.attribute(Mesh::ATTRIBUTE_COLOR)
+            else {
+                panic!("colors")
+            };
+            let nail_color =
+                Color::srgb_from_array(skin(look).map(|channel| (channel * 0.85 + 0.12).min(1.0)))
+                    .to_linear()
+                    .to_f32_array();
+            let nails: Vec<_> = positions
+                .iter()
+                .zip(colors)
+                .filter(|(_, color)| **color == nail_color)
+                .map(|(p, _)| p)
+                .collect();
+            assert!(nails.len() > 20);
+            assert!(nails.iter().all(|p| p[2] < -0.01 && p[1] < -0.28));
+            let fingertips: Vec<_> = positions.iter().filter(|p| p[1] < -0.32).collect();
+            assert!(!fingertips.is_empty());
+            assert!(fingertips.iter().map(|p| p[2]).sum::<f32>() > 0.0);
+        }
+    }
+
+    #[test]
     fn rounded_joint_surfaces_extend_into_the_flexion_gap_not_just_flat_end_caps() {
         for female in [false, true] {
             for (mesh, pivot, depth) in [
-                (arm(1.0, female).unwrap(), ELBOW, 0.030),
-                (leg(1.0, female).unwrap(), KNEE, 0.085),
+                (
+                    arm(1.0, female, CharacterAppearance::default()).unwrap(),
+                    ELBOW,
+                    0.030,
+                ),
+                (
+                    leg(1.0, female, CharacterAppearance::default()).unwrap(),
+                    KNEE,
+                    0.085,
+                ),
             ] {
                 let Some(VertexAttributeValues::Float32x3(points)) =
                     mesh.attribute(Mesh::ATTRIBUTE_POSITION)
@@ -995,6 +1349,74 @@ mod tests {
             counts.push(vertices);
         }
         assert_ne!(counts[0], counts[1]);
+    }
+
+    #[test]
+    fn all_twenty_six_hairstyles_are_distinct_and_keep_skin_when_clothes_are_recolored() {
+        let mut fingerprints = std::collections::BTreeSet::new();
+        for gender in [PlayerGender::Male, PlayerGender::Female] {
+            for hairstyle in 0..CharacterAppearance::hairstyle_count(gender) {
+                let appearance = CharacterAppearance {
+                    hairstyle,
+                    ..default()
+                };
+                let meshes = parts_with_appearance(gender, appearance).unwrap();
+                let (_, _, head) = meshes
+                    .iter()
+                    .find(|(part, _, _)| *part == AvatarPart::Head)
+                    .unwrap();
+                let Some(VertexAttributeValues::Float32x3(points)) =
+                    head.attribute(Mesh::ATTRIBUTE_POSITION)
+                else {
+                    panic!("head vertices")
+                };
+                let fingerprint = points
+                    .iter()
+                    .flatten()
+                    .fold(0xcbf29ce484222325_u64, |hash, v| {
+                        hash.wrapping_mul(0x100000001b3) ^ u64::from(v.to_bits())
+                    });
+                assert!(
+                    fingerprints.insert(fingerprint),
+                    "Repeated hairstyle: {gender:?} {hairstyle}"
+                );
+                assert!(
+                    points
+                        .iter()
+                        .all(|point| Vec3::from_array(*point).is_finite())
+                );
+                let triangles = meshes
+                    .iter()
+                    .map(|(_, _, mesh)| mesh.indices().unwrap().len() / 3)
+                    .sum::<usize>();
+                assert!(
+                    triangles < 50_000,
+                    "{gender:?} hairstyle {hairstyle}: {triangles} triangles"
+                );
+            }
+            let black = CharacterAppearance {
+                hair_color: [4, 4, 4],
+                shirt_color: [20, 70, 210],
+                pants_color: [185, 30, 55],
+                ..default()
+            };
+            let original = parts(gender).unwrap();
+            let recolored = parts_with_appearance(gender, black).unwrap();
+            for ((part, _, a), (_, _, b)) in original.iter().zip(&recolored) {
+                if matches!(part, AvatarPart::Arm(_) | AvatarPart::Forearm(_)) {
+                    assert_eq!(
+                        a.attribute(Mesh::ATTRIBUTE_COLOR),
+                        b.attribute(Mesh::ATTRIBUTE_COLOR)
+                    );
+                } else {
+                    assert_ne!(
+                        a.attribute(Mesh::ATTRIBUTE_COLOR),
+                        b.attribute(Mesh::ATTRIBUTE_COLOR)
+                    );
+                }
+            }
+        }
+        assert_eq!(fingerprints.len(), 26);
     }
 
     #[test]

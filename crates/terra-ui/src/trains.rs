@@ -56,6 +56,7 @@ pub(crate) struct TrainUiState {
     drive_queue: Option<(u64, i8, bool)>,
     drive_desired: Option<(u64, i8, bool)>,
     cargo_retry: Option<cargo::Retry>,
+    cargo_sort_menu: Option<bool>,
 }
 impl TrainUiState {
     pub(crate) fn blocks_input(&self) -> bool {
@@ -111,11 +112,24 @@ pub struct TrainThrottleStep {
 #[html_shared]
 #[derive(Resource, Default, Serialize, PartialEq)]
 pub struct TrainView {
+    pub builder_installed: bool,
+    pub builder_active: bool,
+    pub builder_size_ready: bool,
+    pub builder_width: String,
+    pub builder_height: String,
+    pub builder_width_less: bool,
+    pub builder_width_more: bool,
+    pub builder_height_less: bool,
+    pub builder_height_more: bool,
+    pub builder_height_auto: bool,
     pub drive_max: f32,
     pub has_water_tank: bool,
     pub steam_status: String,
     pub open: bool,
     pub cargo: bool,
+    pub sort_ready: bool,
+    pub sort_player_open: bool,
+    pub sort_storage_open: bool,
     pub pending: bool,
     pub title: String,
     pub status: String,
@@ -285,6 +299,9 @@ fn rejection(error: TrainError) -> &'static str {
         TrainError::Busy => "Der Sitz oder das Fahrzeug wird gerade benutzt.",
         TrainError::RateLimited => "Bitte kurz warten.",
         TrainError::Limit | TrainError::Overflow => "Die Fahrzeuggrenze ist erreicht.",
+        TrainError::ClearanceTooLarge => {
+            "Die Lok benötigt mehr als 32 Blöcke Räumhöhe. Aufbau verkleinern oder eine manuelle Höhe wählen."
+        }
         TrainError::Missing => "Montagestelle, Bauteil oder Fahrzeug ist nicht vorhanden.",
         TrainError::MissingMaterials => "Für die Vorlage fehlen Materialien im Inventar.",
         TrainError::Invalid => "Dieser Aufbau oder diese Verbindung ist nicht möglich.",
@@ -307,6 +324,7 @@ fn request(world: &mut World, state: &mut TrainUiState, action: TrainAction) {
             TrainAction::Turntable { .. } | TrainAction::RotateEmpty { .. }
         );
         state.pending = Some(request.0.request);
+        state.cargo_sort_menu = None;
         state.status = "Wird ausgeführt…".into();
         world.write_message(request);
     }
@@ -333,6 +351,7 @@ fn close(world: &mut World, state: &mut TrainUiState) {
     }
     state.cargo = false;
     state.cargo_retry = None;
+    state.cargo_sort_menu = None;
     state.edit_after_leave = None;
     state.confirm_destroy = None;
     state.destroy_after_leave = None;
@@ -418,6 +437,10 @@ fn show_blueprint(world: &mut World, state: &mut TrainUiState) {
 }
 
 fn command(world: &mut World, state: &mut TrainUiState, command: &str) {
+    if command == "cargo-sort-dismiss" {
+        state.cargo_sort_menu = None;
+        return;
+    }
     if command == "close" {
         close(world, state);
         return;
@@ -588,6 +611,7 @@ fn command(world: &mut World, state: &mut TrainUiState, command: &str) {
         "workshop" => {
             state.cargo = false;
             state.cargo_retry = None;
+            state.cargo_sort_menu = None;
             if state.drive_desired.is_none() && !state.pending_assembly {
                 state.pending = None;
             }
@@ -634,6 +658,61 @@ fn command(world: &mut World, state: &mut TrainUiState, command: &str) {
     };
     let registry_revision = session.trains.revision;
     let vehicle = driving::selected(session, state).cloned();
+    if matches!(command, "cargo-sort-menu" | "cargo-sort-backpack-menu") {
+        if state.cargo && session.train_cargo.is_some() && session.inventory.cursor.is_none() {
+            let backpack = command == "cargo-sort-backpack-menu";
+            state.cargo_sort_menu = if state.cargo_sort_menu == Some(backpack) {
+                None
+            } else {
+                Some(backpack)
+            };
+        }
+        return;
+    }
+    let sort = match command {
+        "cargo-sort-type" => Some((false, terra_core::inventory_sort::SortOrder::Category)),
+        "cargo-sort-name" => Some((false, terra_core::inventory_sort::SortOrder::Alphabetical)),
+        "cargo-sort-id" => Some((false, terra_core::inventory_sort::SortOrder::Id)),
+        "cargo-sort-quantity" => Some((false, terra_core::inventory_sort::SortOrder::Quantity)),
+        "cargo-sort-backpack-type" => Some((true, terra_core::inventory_sort::SortOrder::Category)),
+        "cargo-sort-backpack-name" => {
+            Some((true, terra_core::inventory_sort::SortOrder::Alphabetical))
+        }
+        "cargo-sort-backpack-id" => Some((true, terra_core::inventory_sort::SortOrder::Id)),
+        "cargo-sort-backpack-quantity" => {
+            Some((true, terra_core::inventory_sort::SortOrder::Quantity))
+        }
+        _ => None,
+    };
+    if let Some((backpack, order)) = sort {
+        let Some(storage) = session.train_cargo.clone().filter(|_| state.cargo) else {
+            return;
+        };
+        if session.inventory.cursor.is_some() {
+            return;
+        }
+        let player_revision = session.inventory.revision;
+        state.cargo_sort_menu = None;
+        let reserved = crate::inventory::reserved_for_transport(world);
+        cargo::capture_sort(world, state, backpack, order);
+        request(
+            world,
+            state,
+            TrainAction::Cargo {
+                vehicle: storage.vehicle,
+                part: storage.part,
+                revision: storage.revision,
+                player_revision,
+                gesture: if backpack {
+                    ContainerGesture::SortBackpack { order }
+                } else {
+                    ContainerGesture::Sort { order }
+                },
+                reserved,
+            },
+        );
+        return;
+    }
     if let Some(slot) = command
         .strip_prefix("slot:")
         .and_then(|slot| slot.parse::<u8>().ok())
@@ -700,6 +779,52 @@ fn command(world: &mut World, state: &mut TrainUiState, command: &str) {
                 TrainAction::OpenCargo {
                     vehicle: vehicle.id,
                     part: part as u16,
+                },
+            );
+        }
+        return;
+    }
+    if let Some(change) = command.strip_prefix("builder-size-") {
+        if let Some(vehicle) = vehicle {
+            use terra_core::train_motion::RailClearance;
+            if !vehicle.motion.stopped() {
+                state.status = "Zum Einstellen des Räumbereichs anhalten.".into();
+                return;
+            }
+            let mut size = vehicle.motion.rail_clearance;
+            let height = vehicle.rail_clearance_height();
+            match change {
+                "width-less" => size.width = size.width.saturating_sub(2),
+                "width-more" => size.width = size.width.saturating_add(2),
+                "height-less" => {
+                    size.height = height.saturating_sub(1).min(RailClearance::MAX_HEIGHT)
+                }
+                "height-more" => size.height = height.saturating_add(1),
+                "height-auto" => size.height = 0,
+                _ => return,
+            }
+            if !size.valid() || size.height > RailClearance::MAX_HEIGHT {
+                return;
+            }
+            request(
+                world,
+                state,
+                TrainAction::RailClearance {
+                    vehicle: vehicle.id,
+                    size,
+                },
+            );
+        }
+        return;
+    }
+    if command == "rail-builder" {
+        if let Some(vehicle) = vehicle {
+            request(
+                world,
+                state,
+                TrainAction::RailBuilder {
+                    vehicle: vehicle.id,
+                    active: !vehicle.motion.rail_builder_active,
                 },
             );
         }
@@ -1170,8 +1295,19 @@ fn view(world: &mut World, state: &mut TrainUiState) -> TrainView {
     let cargo = session.train_cargo.as_ref().filter(|_| state.cargo);
     let palette = world.get_resource::<terra_player::interaction::BlockPalette>();
     let mut view = TrainView {
+        builder_installed: selected_car.is_some_and(|car| {
+            car.parts
+                .iter()
+                .any(|p| p.material == terra_core::train_parts::RAIL_BUILDER)
+        }),
+        builder_active: selected_car.is_some_and(|car| car.motion.rail_builder_active),
         open: true,
         cargo: cargo.is_some(),
+        sort_ready: cargo.is_some()
+            && state.pending.is_none()
+            && session.inventory.cursor.is_none(),
+        sort_player_open: state.cargo_sort_menu == Some(true),
+        sort_storage_open: state.cargo_sort_menu == Some(false),
         pending: state.pending.is_some(),
         title: if cargo.is_some() {
             "Wagen-Laderaum".into()
@@ -1239,6 +1375,23 @@ fn view(world: &mut World, state: &mut TrainUiState) -> TrainView {
         ..default()
     };
     driving::populate(world, session, state, &mut view);
+    if let Some(car) = selected_car {
+        use terra_core::train_motion::RailClearance;
+        let size = car.motion.rail_clearance;
+        let height = car.rail_clearance_height();
+        view.builder_size_ready = view.drive_controls && car.motion.stopped() && !view.pending;
+        view.builder_width = format!("{} m", size.width);
+        view.builder_height_auto = size.height == 0;
+        view.builder_height = if size.height == 0 {
+            format!("{height} m · Auto")
+        } else {
+            format!("{height} m")
+        };
+        view.builder_width_less = size.width > RailClearance::MIN_WIDTH;
+        view.builder_width_more = size.width < RailClearance::MAX_WIDTH;
+        view.builder_height_less = height > RailClearance::MIN_HEIGHT;
+        view.builder_height_more = height < RailClearance::MAX_HEIGHT;
+    }
     view
 }
 
@@ -1400,7 +1553,11 @@ fn update(
         let close_key = state.open
             && input.close;
         if close_key {
-            close(world, &mut state);
+            if state.cargo_sort_menu.take().is_some() {
+                state.consumed_escape = true;
+            } else {
+                close(world, &mut state);
+            }
         }
         if ready
             && !state.open

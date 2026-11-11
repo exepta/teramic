@@ -145,10 +145,9 @@ pub(super) fn describe(
                 BuildingRole::Smith => 8,
                 BuildingRole::Police => 4,
                 BuildingRole::Barracks => 10 + (residents.len() % 3) as u8,
-                _ if layout != SettlementLayout::Village => {
-                    [0, 1, 8, 9, 6][(residents.len() + seed as usize) % 5]
-                }
-                _ => [0, 1, 8, 9, 6, 2, 3][(residents.len() + seed as usize) % 7],
+                BuildingRole::Mine => terra_core::creatures::villagers::MINER,
+                BuildingRole::Market => terra_core::creatures::villagers::SELLER,
+                _ => civilian_role(seed, residents.len()),
             };
             residents.push(ResidentSite {
                 layout,
@@ -180,4 +179,52 @@ pub(super) fn describe(
             .collect(),
         residents,
     }))
+}
+
+/// Bed slots and resident identities stay stable while unoccupied homes gain the new jobs.
+fn civilian_role(seed: u32, resident_index: usize) -> u8 {
+    use terra_core::creatures::villagers::*;
+    const HOUSE_ROLES: [u8; 17] = [
+        0,
+        1,
+        8,
+        9,
+        6,
+        2,
+        3,
+        ENGINEER,
+        MINER,
+        UNEMPLOYED,
+        BUTCHER,
+        SELLER,
+        TRAVELLING_MERCHANT,
+        NOMAD_A,
+        NOMAD_B,
+        NOMAD_C,
+        NOMAD_D,
+    ];
+    HOUSE_ROLES[(resident_index + seed as usize) % HOUSE_ROLES.len()]
+}
+
+#[cfg(test)]
+mod profession_tests {
+    use super::*;
+
+    #[test]
+    fn settlement_beds_generate_every_new_civilian_without_adding_a_garrison() {
+        use terra_core::creatures::{soldiers::SoldierLoadout, villagers};
+        for seed in [0, 522, u32::MAX] {
+            let roles: std::collections::BTreeSet<_> =
+                (0..34).map(|slot| civilian_role(seed, slot)).collect();
+            for role in villagers::ENGINEER..villagers::ROLE_COUNT {
+                assert!(roles.contains(&role));
+            }
+            assert!(roles.iter().all(|role| villagers::is_civilian(*role)));
+            assert!(
+                roles
+                    .iter()
+                    .all(|role| SoldierLoadout::from_role(*role).is_none())
+            );
+        }
+    }
 }

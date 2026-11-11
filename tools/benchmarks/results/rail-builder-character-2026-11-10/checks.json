@@ -1,0 +1,17 @@
+{
+  "original_files_checked": 17,
+  "unchanged": true,
+  "workspace_tests_passed": 4549,
+  "workspace_tests_failed": 0,
+  "ignored": 10,
+  "filtered_missing_original_glb": 1,
+  "additional_collision_regression_passed": 1,
+  "native_editor_steps": 57,
+  "native_editor_passed": true,
+  "asset_recipe_keys": 418,
+  "train_asset_entries": 86,
+  "build_passed": true,
+  "clippy_passed": true,
+  "format_passed": true,
+  "read_only_test_world_load_passed": true
+}

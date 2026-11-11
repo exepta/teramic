@@ -143,6 +143,7 @@ fn fixture(kind: ResourcePropKind, wet: bool) -> (App, Peer, [i64; 3]) {
         chat: Default::default(),
         uuid,
         gender: Default::default(),
+        appearance: Default::default(),
         mining: None,
         consumption: None,
         gameplay_sent: None,

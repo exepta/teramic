@@ -4,6 +4,10 @@ use terra_core::{
     ToolKind, WoodSpecies, train_parts,
     trains::{TrainError, TrainPart, Vehicle, VehicleKind},
 };
+#[path = "server_train_clearance_tests.rs"]
+mod clearance;
+#[path = "server_train_sort_tests.rs"]
+mod sorting;
 fn train_fixture() -> (App, Peer, u64, u16, u16) {
     let (mut app, peer, _) = fixture(ResourcePropKind::SmallStones, false);
     app.world_mut()
@@ -1353,4 +1357,501 @@ fn vehicle_workshop_can_couple_and_release_nearby_owned_cars_without_a_station()
             .couplings[0]
             .is_none()
     );
+}
+
+fn builder_fixture() -> (App, Peer, u64, u16, terra_world::rails::NetworkCache) {
+    let (mut app, peer, id, _, cargo) = train_fixture();
+    app.world_mut()
+        .get_mut::<Transform>(peer.body)
+        .unwrap()
+        .translation = Vec3::new(14.0, 7.0, 14.0);
+    app.world_mut()
+        .resource_scope(|world, mut journal: Mut<EditJournal>| {
+            let mut chunks = world.resource_mut::<ChunkStore>();
+            for x in -2..=14 {
+                for z in -2..=22 {
+                    for y in 3..=12 {
+                        let (section, local) = terra_voxel::global_to_section([x, y, z]);
+                        chunks
+                            .loaded
+                            .entry(section)
+                            .or_insert_with(|| LoadedSection {
+                                data: terra_voxel::BlockSection::empty(section).unwrap(),
+                                mesh: None,
+                                mesh_epoch: 0,
+                                water_epoch: 0,
+                                water: None,
+                                props: vec![],
+                            })
+                            .data
+                            .set_block(local, if y <= 4 { 3 } else { 0 })
+                            .unwrap();
+                    }
+                }
+            }
+            journal
+                .gameplay_mut()
+                .trains
+                .vehicles
+                .get_mut(&id)
+                .unwrap()
+                .anchor[1] = 6;
+            let track = terra_world::rails::plan(
+                &chunks,
+                &journal,
+                [4, 5, 3],
+                terra_core::rails::STRAIGHT,
+                0,
+            )
+            .unwrap();
+            terra_world::rails::commit(&mut chunks, &mut journal, &track).unwrap();
+            let car = journal.gameplay_mut().trains.vehicles.get_mut(&id).unwrap();
+            car.parts.push(TrainPart {
+                offset: [0, 1, 8],
+                material: train_parts::RAIL_BUILDER,
+                facing: 2,
+                wood: WoodSpecies::Oak,
+            });
+            car.motion.cursor = Some(terra_core::train_motion::RailCursor {
+                anchor: [4, 5, 3],
+                path: 0,
+                distance: 2.0,
+                forward: true,
+            });
+            car.cargo.get_mut(&cargo).unwrap().slots = vec![
+                ItemStack {
+                    item: ItemKind::for_wood(196, WoodSpecies::Cherry),
+                    count: 4,
+                },
+                ItemStack {
+                    item: ItemKind::Block(206),
+                    count: 64,
+                },
+            ];
+        });
+    let mut graph = terra_world::rails::NetworkCache::default();
+    graph
+        .refresh(app.world().resource::<EditJournal>())
+        .unwrap();
+    (app, peer, id, cargo, graph)
+}
+fn build_step(
+    app: &mut App,
+    peer: &Peer,
+    id: u64,
+    graph: &terra_world::rails::NetworkCache,
+) -> Result<(), TrainError> {
+    let car = app
+        .world()
+        .resource::<EditJournal>()
+        .gameplay()
+        .trains
+        .vehicles[&id]
+        .clone();
+    let mut state = SystemState::<ControlWorld>::new(app.world_mut());
+    let mut world = state.get_mut(app.world_mut()).unwrap();
+    crate::server::train_builder::step(&car, peer, &mut world, graph.graph())
+}
+#[test]
+fn rail_builder_survival_consumes_cargo_but_creative_does_not() {
+    for creative in [false, true] {
+        let (mut app, mut peer, id, cargo, graph) = builder_fixture();
+        peer.mode = Some(if creative {
+            GameMode::Creative
+        } else {
+            GameMode::Survival
+        });
+        let before = app
+            .world()
+            .resource::<EditJournal>()
+            .gameplay()
+            .trains
+            .vehicles[&id]
+            .cargo[&cargo]
+            .clone();
+        assert_eq!(build_step(&mut app, &peer, id, &graph), Ok(()));
+        let journal = app.world().resource::<EditJournal>();
+        let bag = &journal.gameplay().trains.vehicles[&id].cargo[&cargo];
+        if creative {
+            assert_eq!(bag, &before);
+        } else {
+            assert_eq!(bag.count(ItemKind::for_wood(196, WoodSpecies::Cherry)), 3);
+            assert!(bag.count(ItemKind::Block(206)) < 64);
+            assert!(!journal.gameplay().drops.is_empty());
+        }
+        let mut new_graph = terra_world::rails::NetworkCache::default();
+        new_graph.refresh(journal).unwrap();
+        assert_eq!(new_graph.graph().len(), 2);
+        assert!(journal.gameplay().trains.vehicles[&id].valid());
+    }
+}
+#[test]
+fn rail_builder_missing_materials_or_a_second_locomotive_changes_nothing() {
+    let (mut app, peer, id, cargo, graph) = builder_fixture();
+    let obstacle = [4, 8, 12];
+    let (section, local) = terra_voxel::global_to_section(obstacle);
+    app.world_mut()
+        .resource_mut::<ChunkStore>()
+        .loaded
+        .get_mut(&section)
+        .unwrap()
+        .data
+        .set_block(local, 3)
+        .unwrap();
+    let drops_before = app
+        .world()
+        .resource::<EditJournal>()
+        .gameplay()
+        .drops
+        .clone();
+    app.world_mut()
+        .resource_mut::<EditJournal>()
+        .gameplay_mut()
+        .trains
+        .vehicles
+        .get_mut(&id)
+        .unwrap()
+        .cargo
+        .get_mut(&cargo)
+        .unwrap()
+        .slots[1]
+        .count = 0;
+    let before = app
+        .world()
+        .resource::<EditJournal>()
+        .gameplay()
+        .trains
+        .clone();
+    let epoch = app.world().resource::<EditJournal>().rail_epoch();
+    assert_eq!(
+        build_step(&mut app, &peer, id, &graph),
+        Err(TrainError::MissingMaterials)
+    );
+    assert_eq!(
+        app.world().resource::<EditJournal>().gameplay().trains,
+        before
+    );
+    assert_eq!(app.world().resource::<EditJournal>().rail_epoch(), epoch);
+    assert_eq!(
+        app.world().resource::<ChunkStore>().block_at(obstacle),
+        Some(3)
+    );
+    assert_eq!(
+        app.world().resource::<EditJournal>().gameplay().drops,
+        drops_before
+    );
+    let mut registry = before.clone();
+    let mut extra = registry.vehicles[&id].clone();
+    extra.id = 2;
+    extra.couplings[0] = Some(terra_core::trains::Coupling {
+        vehicle: id,
+        end: terra_core::trains::CouplerEnd::Rear,
+    });
+    registry.vehicles.get_mut(&id).unwrap().couplings[1] = Some(terra_core::trains::Coupling {
+        vehicle: 2,
+        end: terra_core::trains::CouplerEnd::Front,
+    });
+    registry.vehicles.insert(2, extra);
+    assert_eq!(
+        terra_world::rails::builder::validate_consist(&registry, &registry.vehicles[&id]),
+        Err(TrainError::Limit)
+    );
+}
+
+#[test]
+fn rail_clearer_removes_five_by_nine_ahead_preserves_edges_and_drops_stacks() {
+    for creative in [false, true] {
+        let (mut app, mut peer, id, _, _) = builder_fixture();
+        app.world_mut()
+            .resource_mut::<EditJournal>()
+            .gameplay_mut()
+            .trains
+            .vehicles
+            .get_mut(&id)
+            .unwrap()
+            .motion
+            .rail_clearance
+            .height = 9;
+        peer.mode = Some(if creative {
+            GameMode::Creative
+        } else {
+            GameMode::Survival
+        });
+        // An entity on the route must not veto removal; moving train impact handles damage.
+        app.world_mut()
+            .get_mut::<Transform>(peer.body)
+            .unwrap()
+            .translation = Vec3::new(4.5, 6.0, 12.5);
+        {
+            let mut chunks = app.world_mut().resource_mut::<ChunkStore>();
+            for x in 1..=7 {
+                for y in 5..=14 {
+                    for z in 12..=14 {
+                        let (section, local) = terra_voxel::global_to_section([x, y, z]);
+                        chunks
+                            .loaded
+                            .get_mut(&section)
+                            .unwrap()
+                            .data
+                            .set_block(local, 3)
+                            .unwrap();
+                    }
+                }
+            }
+        }
+        let before_bags = app
+            .world()
+            .resource::<EditJournal>()
+            .gameplay()
+            .trains
+            .vehicles[&id]
+            .cargo
+            .clone();
+        let car = app
+            .world()
+            .resource::<EditJournal>()
+            .gameplay()
+            .trains
+            .vehicles[&id]
+            .clone();
+        let mut state = SystemState::<ControlWorld>::new(app.world_mut());
+        let mut world = state.get_mut(app.world_mut()).unwrap();
+        assert_eq!(
+            crate::server::train_builder::clear_front(&car, &peer, &mut world),
+            Ok(())
+        );
+        for x in 1..=7 {
+            for y in 5..=14 {
+                for z in 12..=14 {
+                    let inside = (2..=6).contains(&x) && y < 14 && z < 14;
+                    assert_eq!(
+                        world.chunks.block_at([x, y, z]),
+                        Some(if inside { 0 } else { 3 }),
+                        "{x},{y},{z}"
+                    );
+                }
+            }
+        }
+        assert_eq!(
+            world.journal.gameplay().trains.vehicles[&id].cargo,
+            before_bags
+        );
+        let drops = &world.journal.gameplay().drops;
+        let stones: u32 = drops
+            .iter()
+            .filter(|drop| drop.stack.item == ItemKind::Block(3))
+            .map(|drop| u32::from(drop.stack.count))
+            .sum();
+        assert_eq!(stones, if creative { 0 } else { 90 });
+        assert!(drops.len() < 10);
+    }
+}
+
+#[test]
+fn rail_clearer_drop_overflow_leaves_the_obstacle_intact() {
+    let (mut app, mut peer, id, _, _) = builder_fixture();
+    peer.mode = Some(GameMode::Survival);
+    let cell = [4, 8, 12];
+    let (section, local) = terra_voxel::global_to_section(cell);
+    app.world_mut()
+        .resource_mut::<ChunkStore>()
+        .loaded
+        .get_mut(&section)
+        .unwrap()
+        .data
+        .set_block(local, 3)
+        .unwrap();
+    app.world_mut()
+        .resource_mut::<EditJournal>()
+        .gameplay_mut()
+        .next_drop = u64::MAX;
+    let car = app
+        .world()
+        .resource::<EditJournal>()
+        .gameplay()
+        .trains
+        .vehicles[&id]
+        .clone();
+    let mut state = SystemState::<ControlWorld>::new(app.world_mut());
+    let mut world = state.get_mut(app.world_mut()).unwrap();
+    assert_eq!(
+        crate::server::train_builder::clear_front(&car, &peer, &mut world),
+        Err(TrainError::Overflow)
+    );
+    assert_eq!(world.chunks.block_at(cell), Some(3));
+}
+
+#[test]
+fn seated_driver_enables_builder_then_scheduled_drive_clears_and_extends_real_tracks() {
+    use crate::server::{train_builder, trains};
+    use lightyear::prelude::{Connected, PeerId, RemoteId};
+
+    for creative in [false, true] {
+        let (mut app, mut peer, id, cargo, _) = builder_fixture();
+        peer.mode = Some(if creative {
+            GameMode::Creative
+        } else {
+            GameMode::Survival
+        });
+        app.world_mut()
+            .get_mut::<Transform>(peer.body)
+            .unwrap()
+            .translation = Vec3::new(6.5, 7.0, 6.5);
+        let obstacle = [4, 8, 12];
+        app.world_mut()
+            .resource_scope(|world, mut journal: Mut<EditJournal>| {
+                let mut chunks = world.resource_mut::<ChunkStore>();
+                for x in -2..=14 {
+                    for z in 23..=40 {
+                        for y in 3..=14 {
+                            let (section, local) = terra_voxel::global_to_section([x, y, z]);
+                            chunks
+                                .loaded
+                                .entry(section)
+                                .or_insert_with(|| LoadedSection {
+                                    data: terra_voxel::BlockSection::empty(section).unwrap(),
+                                    mesh: None,
+                                    mesh_epoch: 0,
+                                    water_epoch: 0,
+                                    water: None,
+                                    props: vec![],
+                                })
+                                .data
+                                .set_block(local, if y <= 4 { 3 } else { 0 })
+                                .unwrap();
+                        }
+                    }
+                }
+                // Both bogies must rest on a genuine continuous route; the old helper
+                // tests supplied a cursor despite having only one short rail section.
+                for z in [7, 11] {
+                    let plan = terra_world::rails::plan(
+                        &chunks,
+                        &journal,
+                        [4, 5, z],
+                        terra_core::rails::STRAIGHT,
+                        0,
+                    )
+                    .unwrap();
+                    terra_world::rails::commit(&mut chunks, &mut journal, &plan).unwrap();
+                }
+                let (section, local) = terra_voxel::global_to_section(obstacle);
+                chunks
+                    .loaded
+                    .get_mut(&section)
+                    .unwrap()
+                    .data
+                    .set_block(local, 3)
+                    .unwrap();
+                let car = journal.gameplay_mut().trains.vehicles.get_mut(&id).unwrap();
+                car.motion.cursor = None;
+                let engine = car.parts.len() as u16;
+                car.parts.push(TrainPart {
+                    offset: [0, 2, 1],
+                    material: 218,
+                    facing: 2,
+                    wood: WoodSpecies::Oak,
+                });
+                car.cargo.insert(
+                    engine,
+                    Inventory {
+                        slots: vec![ItemStack {
+                            item: ItemKind::Block(18),
+                            count: 2,
+                        }],
+                        ..Default::default()
+                    },
+                );
+                assert!(car.valid());
+            });
+        let seat = app
+            .world()
+            .resource::<EditJournal>()
+            .gameplay()
+            .trains
+            .vehicles[&id]
+            .parts
+            .iter()
+            .position(|part| part.material == train_parts::CAB)
+            .unwrap() as u16;
+        let mut seats = trains::SeatedPlayers::default();
+        let enable = TrainAction::RailBuilder {
+            vehicle: id,
+            active: true,
+        };
+        assert_eq!(
+            run(&mut app, &peer, enable.clone(), &mut seats),
+            Err(TrainError::OutOfReach)
+        );
+        run(
+            &mut app,
+            &peer,
+            TrainAction::Seat {
+                vehicle: id,
+                part: seat,
+            },
+            &mut seats,
+        )
+        .unwrap();
+        run(&mut app, &peer, enable, &mut seats).unwrap();
+        assert!(
+            app.world()
+                .resource::<EditJournal>()
+                .gameplay()
+                .trains
+                .vehicles[&id]
+                .motion
+                .rail_builder_active
+        );
+        let before = app
+            .world()
+            .resource::<EditJournal>()
+            .gameplay()
+            .trains
+            .vehicles[&id]
+            .cargo[&cargo]
+            .clone();
+        run(
+            &mut app,
+            &peer,
+            TrainAction::Drive {
+                vehicle: id,
+                throttle: 1,
+                brake: false,
+            },
+            &mut seats,
+        )
+        .unwrap();
+        assert_eq!(
+            app.world().resource::<ChunkStore>().block_at(obstacle),
+            Some(0)
+        );
+        let connection = app
+            .world_mut()
+            .spawn((RemoteId(PeerId::Netcode(1)), peer))
+            .id();
+        app.world_mut().entity_mut(connection).insert(Connected);
+        let mut time = Time::<Fixed>::from_hz(60.0);
+        time.advance_by(std::time::Duration::from_secs_f64(1.0 / 60.0));
+        app.insert_resource(time)
+            .insert_resource(seats)
+            .init_resource::<trains::TrainRuntime>()
+            .init_resource::<crate::server::train_damage::Impacts>()
+            .add_systems(Update, (train_builder::tick, trains::drive).chain());
+        for _ in 0..60 {
+            app.update();
+        }
+        let journal = app.world().resource::<EditJournal>();
+        let car = &journal.gameplay().trains.vehicles[&id];
+        assert!(car.motion.wheel_distance_m > 0.2, "{:?}", car.motion);
+        assert!(car.motion.speed_mps > 0.0 && car.motion.speed_mps <= 3.0);
+        assert!(!car.motion.brake, "{:?}", car.motion);
+        assert!(terra_world::rails::network(journal).unwrap().len() > 3);
+        if creative {
+            assert_eq!(car.cargo[&cargo], before);
+        } else {
+            assert!(car.cargo[&cargo].count(ItemKind::for_wood(196, WoodSpecies::Cherry)) < 4);
+            assert!(car.cargo[&cargo].count(ItemKind::Block(206)) < 64);
+        }
+    }
 }

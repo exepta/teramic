@@ -96,7 +96,7 @@ impl Gateway {
         if let Some(ticket) = shared.tickets.get(&transport_id)
             && (ticket.until < Instant::now() || ticket.profile != *profile)
         {
-            return Err("Player UUID does not match the connection handshake".into());
+            return Err("Player profile does not match the connection handshake".into());
         }
         Ok(())
     }
@@ -373,6 +373,12 @@ mod tests {
         assert_eq!(token.len(), 2048);
         let id = 1 << 48;
         assert!(gateway.validate_claim(id, &profile).is_ok());
+        let mut changed_appearance = profile.clone();
+        changed_appearance.appearance.hair_color = [255, 80, 0];
+        assert!(gateway.validate_claim(id, &changed_appearance).is_err());
+        let mut invalid_appearance = profile.clone();
+        invalid_appearance.appearance.hairstyle = 255;
+        assert!(response("127.0.0.1:1234", PROTOCOL_VERSION, invalid_appearance).is_err());
         assert!(
             gateway
                 .validate_claim(id, &PlayerProfile::default())

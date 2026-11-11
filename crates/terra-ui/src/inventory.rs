@@ -74,6 +74,7 @@ pub(crate) struct InventoryState {
     page: usize,
     page_capacity: usize,
     category_dropdown: bool,
+    sort_menu: Option<bool>,
     browser_collapsed: bool,
     filter_selecting: bool,
     filter_output: u8,
@@ -118,6 +119,14 @@ pub enum InventoryAction {
     CraftHeld,
     CancelMove,
     Trash,
+    ToggleSortMenu {
+        storage: bool,
+    },
+    CloseSortMenu,
+    Sort {
+        storage: bool,
+        order: terra_core::inventory_sort::SortOrder,
+    },
     Pointer {
         command: String,
         index: Option<u8>,
@@ -1052,7 +1061,9 @@ fn keyboard(
         .and_then(|entity| elements.get(entity).ok())
         .is_some_and(|id| matches!(id.0.as_str(), "inventory-search" | "craft-search"));
     if state.open && input.just_pressed(GameAction::Pause) {
-        if crafting.recipe_open {
+        if state.sort_menu.is_some() {
+            actions.write(InventoryAction::CloseSortMenu);
+        } else if crafting.recipe_open {
             crafting_actions.write(crafting::CraftingAction::CloseRecipe);
         } else {
             actions.write(InventoryAction::Close);
@@ -1441,9 +1452,16 @@ fn actions(
     };
     selection.queue.owner = session.container.as_ref().map(|s| s.anchor);
     selection.queue.owner_view = session.container.as_ref().map(|s| s.view);
+    if session.inventory.cursor.is_some()
+        || !selection.queue.is_empty()
+        || crafting::busy(&selection.reservations)
+    {
+        state.sort_menu = None;
+    }
     let container_view = session.container.as_ref().map(|container| container.view);
     if state.container_view != container_view {
         pointer.cancel_gesture();
+        state.sort_menu = None;
         state.container_view = container_view;
     }
     let failed_open = state.container_open_response.is_some_and(|response| {
@@ -1526,6 +1544,14 @@ fn actions(
         capture.write(CaptureRequest(true));
     }
     for action in events.read() {
+        if std::env::var_os("TERRA_INVENTORY_PORTRAIT_SMOKE").is_some()
+            && matches!(
+                action,
+                InventoryAction::ToggleSortMenu { .. } | InventoryAction::CloseSortMenu
+            )
+        {
+            info!(?action, open = state.open, cursor_empty = session.inventory.cursor.is_none(), queue_empty = selection.queue.is_empty(), crafting_busy = crafting::busy(&selection.reservations), opening = ?state.container_open_response, sortable = session.container.as_ref().is_some_and(|container| container.sortable()), "Native inventory sorting intent");
+        }
         if !state.open
             && selection.queue.has_container_lifecycle()
             && matches!(
@@ -1541,6 +1567,7 @@ fn actions(
             && !matches!(
                 action,
                 InventoryAction::Close
+                    | InventoryAction::CloseSortMenu
                     | InventoryAction::Toggle
                     | InventoryAction::Focus(_)
                     | InventoryAction::Search(_)
@@ -1552,6 +1579,51 @@ fn actions(
             continue;
         }
         match action {
+            InventoryAction::CloseSortMenu => state.sort_menu = None,
+            InventoryAction::ToggleSortMenu { storage }
+                if state.open
+                    && session.inventory.cursor.is_none()
+                    && selection.queue.is_empty() =>
+            {
+                if !*storage
+                    || session
+                        .container
+                        .as_ref()
+                        .is_some_and(|container| container.sortable())
+                {
+                    state.sort_menu = if state.sort_menu == Some(*storage) {
+                        None
+                    } else {
+                        Some(*storage)
+                    };
+                }
+            }
+            InventoryAction::Sort { storage, order }
+                if state.open
+                    && session.inventory.cursor.is_none()
+                    && selection.queue.is_empty() =>
+            {
+                if *storage
+                    && !session
+                        .container
+                        .as_ref()
+                        .is_some_and(|container| container.sortable())
+                {
+                    continue;
+                }
+                pointer.cancel_gesture();
+                state.sort_menu = None;
+                state.source = None;
+                let request = if *storage {
+                    ServerAction::SortContainer { order: *order }
+                } else {
+                    ServerAction::Sort {
+                        order: *order,
+                        reserved: crafting::reserved_counts(&selection.reservations),
+                    }
+                };
+                selection.queue.push_empty(request);
+            }
             InventoryAction::TunnelRandom(random) if state.open => {
                 filter::set_random(&mut selection, session, *random);
             }
@@ -1693,6 +1765,7 @@ fn actions(
             }
             InventoryAction::Close if !state.open => {}
             InventoryAction::Close | InventoryAction::Toggle => {
+                state.sort_menu = None;
                 if session.inventory.cursor.is_some() || !selection.queue.is_empty() {
                     selection.request(session, ServerAction::ReturnCursor);
                 }

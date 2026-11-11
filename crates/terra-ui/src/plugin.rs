@@ -11,8 +11,10 @@ impl Plugin for TerraUiPlugin {
         crate::settings::install(app);
         crate::frames::install(app);
         crate::chat::install(app);
+        crate::character::install(app);
         crate::sleep::install(app);
         crate::inventory::install(app);
+        crate::inventory_portrait::install(app);
         crate::kingdom::install(app);
         crate::realm_title::install(app);
         crate::multiplayer::install(app);

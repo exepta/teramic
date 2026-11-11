@@ -525,6 +525,10 @@ pub(super) fn inventory(
             // Legacy immediate-consumption packets must not bypass held-use timing.
             InventoryAction::Eat { .. } => false,
             InventoryAction::Click { slot, secondary } => next.click(usize::from(slot), secondary),
+            InventoryAction::Sort { order, reserved } => {
+                world.journal.gameplay().revision < u64::MAX
+                    && terra_core::inventory_sort::backpack(&mut next, order, reserved)
+            }
             InventoryAction::EquipmentClick { slot, secondary } => {
                 equipment::click(&mut next, &mut next_equipment, usize::from(slot), secondary)
             }
@@ -715,7 +719,8 @@ pub(super) fn inventory(
             | InventoryAction::OpenCampfire { .. }
             | InventoryAction::LoadSmeltingRecipe { .. }
             | InventoryAction::LoadCrushingRecipe { .. }
-            | InventoryAction::ViewDrag { .. } => false,
+            | InventoryAction::ViewDrag { .. }
+            | InventoryAction::SortContainer { .. } => false,
         };
         if applied
             && next.valid()

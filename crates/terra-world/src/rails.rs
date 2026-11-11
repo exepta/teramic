@@ -30,6 +30,8 @@ pub use placement::{
     support_edit_allowed, toggle_switch_plan, turntable_plan,
 };
 
+#[cfg(feature = "bevy")]
+pub mod builder;
 pub mod stand;
 
 pub type Cell = [i64; 3];

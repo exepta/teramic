@@ -200,8 +200,18 @@ fn authored_strongholds_have_exact_seeded_initial_populations_real_beds_and_capt
         let settlement = site.settlement.as_ref().unwrap();
         assert_eq!(settlement.layout, layout);
         assert_eq!(settlement.domain(), site.summary.domain().unwrap());
-        let civilians = settlement.residents.iter().filter(|r| r.role < 10).count();
-        let soldiers = settlement.residents.iter().filter(|r| r.role >= 10).count();
+        let civilians = settlement
+            .residents
+            .iter()
+            .filter(|r| terra_core::creatures::villagers::is_civilian(r.role))
+            .count();
+        let soldiers = settlement
+            .residents
+            .iter()
+            .filter(|r| {
+                terra_core::creatures::soldiers::SoldierLoadout::from_role(r.role).is_some()
+            })
+            .count();
         if layout == SettlementLayout::Outpost {
             assert_eq!(civilians, 0);
             assert_eq!(soldiers, 4 + ((seed >> 7) % 7) as usize);
@@ -213,7 +223,9 @@ fn authored_strongholds_have_exact_seeded_initial_populations_real_beds_and_capt
         let military: std::collections::BTreeSet<_> = settlement
             .residents
             .iter()
-            .filter(|r| r.role >= 10)
+            .filter(|r| {
+                terra_core::creatures::soldiers::SoldierLoadout::from_role(r.role).is_some()
+            })
             .map(|r| r.role)
             .collect();
         assert_eq!(military, std::collections::BTreeSet::from([10, 11, 12]));

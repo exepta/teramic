@@ -266,6 +266,7 @@ fn update(world: &mut World) {
         jobs.stop = None;
         let quit = jobs.closing.take().is_some_and(|(quit, _)| quit);
         disconnect_session(world);
+        terra_ui::restore_character_profile(world);
         let mut menu = world.resource_mut::<MenuState>();
         menu.page = MenuPage::Main;
         menu.session_active = false;
@@ -347,7 +348,9 @@ fn start_request(world: &mut World, request: SessionRequest) -> Result<(), Strin
     if !world.resource::<MenuState>().profile_loaded {
         return Err("Repair profile.toml before joining a world".into());
     }
-    let profile = world.resource::<terra_core::PlayerProfile>().clone();
+    let Some(profile) = terra_ui::prepare_character_profile(world, &request)? else {
+        return Ok(());
+    };
     let title = match &request {
         SessionRequest::PlayWorld(id) => world
             .resource::<terra_ui::menu::WorldMenu>()
@@ -371,6 +374,7 @@ fn start_request(world: &mut World, request: SessionRequest) -> Result<(), Strin
     world.resource_mut::<SessionJobs>().loading_updated = None;
     world.resource_mut::<SessionJobs>().reveal_elapsed = None;
     world.insert_resource(LoadingProgress::default());
+    terra_ui::activate_character_profile(world, profile.clone());
     let task = match request {
         SessionRequest::PlayWorld(id) => {
             let library = world.resource::<MenuPaths>().worlds.clone();
@@ -563,6 +567,9 @@ fn chunk_counts(
     )
 }
 fn fail(world: &mut World, error: String) {
+    if !world.resource::<MenuState>().session_active {
+        terra_ui::restore_character_profile(world);
+    }
     let mut jobs = world.resource_mut::<SessionJobs>();
     jobs.reveal_elapsed = None;
     jobs.deferred_start = None;

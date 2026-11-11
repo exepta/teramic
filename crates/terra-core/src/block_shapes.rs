@@ -64,6 +64,8 @@ impl ShapeBox {
                         -0.15
                     } else if material == 232 {
                         -0.36
+                    } else if material == crate::train_parts::RAIL_BUILDER && axis != 1 {
+                        -1.0
                     } else if material == crate::train_parts::BOGIE && axis != 1 {
                         crate::train_parts::BOGIE_MIN_HORIZONTAL
                     } else if crate::kinetic::is_large_gear(material) {
@@ -80,6 +82,8 @@ impl ShapeBox {
                         1.15
                     } else if material == 232 {
                         1.76
+                    } else if material == crate::train_parts::RAIL_BUILDER && axis != 1 {
+                        2.0
                     } else if material == crate::train_parts::BOGIE && axis != 1 {
                         crate::train_parts::BOGIE_MAX_HORIZONTAL
                     } else if crate::kinetic::is_large_gear(material) {
@@ -212,7 +216,7 @@ pub fn builtin_boxes(material: u16) -> &'static [ShapeBox] {
     static GEARBOXES: [OnceLock<Vec<ShapeBox>>; 2] = [const { OnceLock::new() }; 2];
     static KINETICS: [OnceLock<Vec<ShapeBox>>; 11] = [const { OnceLock::new() }; 11];
     match material {
-        210..=294 => crate::train_parts::base_boxes(material),
+        210..=294 | crate::train_parts::RAIL_BUILDER => crate::train_parts::base_boxes(material),
         209 => SWITCH_STAND.get_or_init(|| {
             read(
                 include_str!("../../../assets/terra/blocks/rail_switch_stand.json"),

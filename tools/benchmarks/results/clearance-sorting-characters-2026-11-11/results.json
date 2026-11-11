@@ -1,0 +1,90 @@
+{
+  "passed_unique_tests": 4598,
+  "existing_ignored_tests": 10,
+  "missing_original_asset_test_filtered": 1,
+  "corrected_test_fixture_rerun_passed": true,
+  "character": {
+    "passed": true,
+    "steps": 125,
+    "pointer_input": true,
+    "garment_materials": true,
+    "four_tabs": true,
+    "independent_eyes": true,
+    "colored_highlights": true,
+    "requested_resolutions": [
+      "1280x720",
+      "1920x1080",
+      "2560x1440",
+      "3840x2160"
+    ]
+  },
+  "actual_character_capture_sizes": {
+    "editor-hair-fhd.png": [
+      1920,
+      1080
+    ],
+    "editor-eyes-fhd.png": [
+      1920,
+      1080
+    ],
+    "editor-materials-fhd.png": [
+      1920,
+      1080
+    ],
+    "editor-materials-hd.png": [
+      1280,
+      720
+    ],
+    "editor-hair-hd.png": [
+      1280,
+      720
+    ],
+    "editor-materials-qhd.png": [
+      2560,
+      1440
+    ],
+    "editor-materials-uhd.png": [
+      3828,
+      2043
+    ],
+    "editor-hair-uhd.png": [
+      3828,
+      2043
+    ],
+    "editor-hair-male.png": [
+      1920,
+      1080
+    ],
+    "editor-reference-dressed.png": [
+      1920,
+      1080
+    ],
+    "editor-materials-reopened.png": [
+      1920,
+      1080
+    ],
+    "editor-materials-server.png": [
+      1920,
+      1080
+    ],
+    "editor-materials-first-join.png": [
+      1920,
+      1080
+    ]
+  },
+  "inventory_captures": 30,
+  "inventory_sizes": [
+    [
+      1680,
+      936
+    ],
+    [
+      1024,
+      640
+    ]
+  ],
+  "original_files_checked": 17,
+  "original_files_changed": [],
+  "protocol": 133,
+  "train_record_format": 19
+}

@@ -15,6 +15,10 @@ pub enum StopReason {
     Buffer,
     /// Unsafe curvature: remain on the last validated pose with the brake applied.
     Derailed,
+    BuilderMaterials,
+    BuilderConsist,
+    BuilderBlocked,
+    BuilderHeight,
 }
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 pub struct RailCursor {
@@ -23,9 +27,37 @@ pub struct RailCursor {
     pub distance: f64,
     pub forward: bool,
 }
+/// Persisted excavation dimensions. A zero height follows the locomotive envelope.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct RailClearance {
+    pub width: u8,
+    pub height: u8,
+}
+impl RailClearance {
+    pub const MIN_WIDTH: u8 = 3;
+    pub const MAX_WIDTH: u8 = 15;
+    pub const MIN_HEIGHT: u8 = 3;
+    pub const MAX_HEIGHT: u8 = 32;
+    pub fn valid(self) -> bool {
+        (Self::MIN_WIDTH..=Self::MAX_WIDTH).contains(&self.width)
+            && self.width % 2 == 1
+            && (self.height == 0 || (Self::MIN_HEIGHT..=Self::MAX_HEIGHT).contains(&self.height))
+    }
+}
+impl Default for RailClearance {
+    fn default() -> Self {
+        Self {
+            width: 5,
+            height: 0,
+        }
+    }
+}
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct TrainMotion {
+    /// Persisted work mode; the authority validates the fitted attachment and consist.
+    pub rail_builder_active: bool,
+    pub rail_clearance: RailClearance,
     pub translation: [f64; 3],
     pub pivot: [f64; 3],
     pub yaw: f64,
@@ -41,6 +73,8 @@ pub struct TrainMotion {
 impl Default for TrainMotion {
     fn default() -> Self {
         Self {
+            rail_builder_active: false,
+            rail_clearance: RailClearance::default(),
             translation: [0.0; 3],
             pivot: [0.0; 3],
             yaw: 0.0,
@@ -57,9 +91,11 @@ impl Default for TrainMotion {
 }
 impl TrainMotion {
     pub fn valid(self) -> bool {
-        self.translation
-            .iter()
-            .all(|v| v.is_finite() && v.abs() <= 1_980_000.0)
+        self.rail_clearance.valid()
+            && self
+                .translation
+                .iter()
+                .all(|v| v.is_finite() && v.abs() <= 1_980_000.0)
             && self.pivot.iter().all(|v| v.is_finite() && v.abs() <= 128.0)
             && self.yaw.is_finite()
             && self.yaw.abs() <= std::f64::consts::TAU + 1e-6
@@ -157,6 +193,24 @@ pub fn speed_step(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn clearance_rejects_even_or_unbounded_width_and_invalid_manual_height() {
+        assert!(RailClearance::default().valid());
+        for (width, height) in [(3, 3), (15, 32), (5, 0)] {
+            assert!(RailClearance { width, height }.valid());
+        }
+        for (width, height) in [(0, 9), (4, 9), (17, 9), (5, 1), (5, 33)] {
+            let size = RailClearance { width, height };
+            assert!(!size.valid());
+            assert!(
+                !TrainMotion {
+                    rail_clearance: size,
+                    ..Default::default()
+                }
+                .valid()
+            );
+        }
+    }
     #[test]
     fn rigid_roundtrip_for_every_build_axis_and_grade() {
         for axis in 0..4 {

@@ -4,7 +4,7 @@ mod riding;
 pub(crate) use riding::{MountedPresentation, MountedPresentationSet};
 
 use bevy::{camera::visibility::RenderLayers, prelude::*};
-use terra_core::{PlayerGender, PlayerId, PlayerProfile};
+use terra_core::{CharacterAppearance, PlayerGender, PlayerId, PlayerProfile};
 use terra_network::client::ReplicatedPlayers;
 
 #[derive(Component)]
@@ -15,6 +15,8 @@ pub(crate) struct LocalAvatar;
 pub(crate) struct WorldAvatarPart(pub(crate) Entity);
 #[derive(Component)]
 pub(crate) struct AvatarGender(pub(crate) PlayerGender);
+#[derive(Component)]
+pub(crate) struct AvatarAppearance(pub(crate) CharacterAppearance);
 type LocalBodyFilter = (
     With<terra_player::PlayerBody>,
     Without<LocalAvatar>,
@@ -35,13 +37,74 @@ pub(crate) enum AvatarPart {
 pub(crate) struct AvatarJoint {
     pub(crate) root: Entity,
     pub(crate) rest: Vec3,
+    pub(crate) scale: Vec3,
 }
+
+type AvatarMeshes = Vec<(AvatarPart, Vec3, Handle<Mesh>)>;
+type AppearanceMeshes = ((PlayerGender, CharacterAppearance), AvatarMeshes);
 
 #[derive(Resource)]
 pub(crate) struct AvatarAssets {
-    pub(crate) parts: [Vec<(AvatarPart, Vec3, Handle<Mesh>)>; 2],
+    pub(crate) parts: [AvatarMeshes; 2],
+    pub(crate) custom: std::collections::VecDeque<AppearanceMeshes>,
     pub(crate) eyelids: Option<Handle<Mesh>>,
+    pub(crate) skin_eyelids: std::collections::BTreeMap<[u8; 3], Handle<Mesh>>,
     pub(crate) material: Handle<StandardMaterial>,
+}
+
+impl AvatarAssets {
+    pub(crate) fn prepare(
+        &mut self,
+        meshes: &mut Assets<Mesh>,
+        gender: PlayerGender,
+        appearance: CharacterAppearance,
+    ) {
+        if appearance.skin_color != CharacterAppearance::default().skin_color
+            && !self.skin_eyelids.contains_key(&appearance.skin_color)
+        {
+            if self.skin_eyelids.len() >= 32 {
+                self.skin_eyelids.pop_first();
+            }
+            if let Ok(mesh) = model::eyelids_for(appearance) {
+                self.skin_eyelids
+                    .insert(appearance.skin_color, meshes.add(mesh));
+            }
+        }
+        if appearance == CharacterAppearance::default()
+            || self
+                .custom
+                .iter()
+                .any(|(key, _)| *key == (gender, appearance))
+        {
+            return;
+        }
+        match model::parts_with_appearance(gender, appearance) {
+            Ok(parts) => {
+                // Active entities keep strong mesh handles when an unused cache entry is evicted.
+                while self.custom.len() >= 24 {
+                    self.custom.pop_front();
+                }
+                self.custom.push_back((
+                    (gender, appearance),
+                    parts
+                        .into_iter()
+                        .map(|(part, position, mesh)| (part, position, meshes.add(mesh)))
+                        .collect(),
+                ));
+            }
+            Err(error) => tracing::error!(%error,"Cannot build character appearance"),
+        }
+    }
+    pub(crate) fn selected(
+        &self,
+        gender: PlayerGender,
+        appearance: CharacterAppearance,
+    ) -> &AvatarMeshes {
+        self.custom
+            .iter()
+            .find_map(|(key, parts)| (*key == (gender, appearance)).then_some(parts))
+            .unwrap_or(&self.parts[usize::from(gender == PlayerGender::Female)])
+    }
 }
 
 #[derive(Resource, Default)]
@@ -228,7 +291,9 @@ pub(crate) fn assets(
             }
         });
     commands.insert_resource(AvatarAssets {
+        skin_eyelids: Default::default(),
         parts,
+        custom: default(),
         eyelids: match model::eyelids() {
             Ok(mesh) => Some(meshes.add(mesh)),
             Err(error) => {
@@ -287,31 +352,34 @@ fn train_seat_position(
 pub(crate) fn render(
     mut commands: Commands,
     players: Option<Res<ReplicatedPlayers>>,
-    assets: Res<AvatarAssets>,
+    mut assets: ResMut<AvatarAssets>,
+    mut meshes: ResMut<Assets<Mesh>>,
     session: Option<Res<terra_network::client::ClientSession>>,
     mounts: Option<Res<MountedPresentation>>,
     mut roots: Query<(
         Entity,
         &RemoteAvatar,
         &AvatarGender,
+        &AvatarAppearance,
         &mut Transform,
         &mut AvatarMotion,
         &mut crate::armor::AvatarEquipment,
     )>,
 ) {
     let Some(players) = players else {
-        for (entity, _, _, _, _, _) in &roots {
+        for (entity, _, _, _, _, _, _) in &roots {
             commands.entity(entity).despawn();
         }
         return;
     };
     let mut present = std::collections::HashSet::new();
-    for (entity, avatar, gender, mut transform, mut motion, mut equipment) in &mut roots {
+    for (entity, avatar, gender, appearance, mut transform, mut motion, mut equipment) in &mut roots
+    {
         let Some(track) = players.players.get(&avatar.0) else {
             commands.entity(entity).despawn();
             continue;
         };
-        if gender.0 != track.current.gender {
+        if gender.0 != track.current.gender || appearance.0 != track.current.appearance {
             commands.entity(entity).despawn();
             continue;
         }
@@ -410,6 +478,7 @@ pub(crate) fn render(
             .spawn((
                 RemoteAvatar(id),
                 AvatarGender(track.current.gender),
+                AvatarAppearance(track.current.appearance),
                 crate::armor::AvatarEquipment::from(track.current.equipment),
                 motion,
                 Name::new(format!("Player {}", id.0)),
@@ -424,12 +493,14 @@ pub(crate) fn render(
                 Visibility::default(),
             ))
             .id();
+        assets.prepare(&mut meshes, track.current.gender, track.current.appearance);
         spawn_parts(
             &mut commands,
             &assets,
             root,
             RenderLayers::default(),
             track.current.gender,
+            track.current.appearance,
         );
     }
 }
@@ -441,12 +512,33 @@ fn sleep_transform(sleep: terra_network::protocol::session::SleepingPlayer) -> T
     )
 }
 
+/// Headwear and eyelids inherit this joint scale with the face, preserving fit.
+fn part_scale(part: AvatarPart, gender: PlayerGender) -> Vec3 {
+    if part == AvatarPart::Head {
+        match gender {
+            PlayerGender::Male => Vec3::new(1.16, 1.08, 1.09),
+            PlayerGender::Female => Vec3::new(1.24, 1.13, 1.14),
+        }
+    } else {
+        Vec3::ONE
+    }
+}
+
+fn neutral_rotation(part: AvatarPart) -> Quat {
+    match part {
+        AvatarPart::Arm(side) => Quat::from_rotation_z(f32::from(side) * 0.08),
+        AvatarPart::Forearm(_) => Quat::from_rotation_x(0.10),
+        _ => Quat::IDENTITY,
+    }
+}
+
 pub(crate) fn spawn_parts(
     commands: &mut Commands,
     assets: &AvatarAssets,
     root: Entity,
     layers: RenderLayers,
     gender: PlayerGender,
+    appearance: CharacterAppearance,
 ) -> SpawnedAvatar {
     let world = layers.intersects(&RenderLayers::default())
         || layers.intersects(&RenderLayers::layer(terra_core::miniature::WORLD_LAYER));
@@ -457,7 +549,7 @@ pub(crate) fn spawn_parts(
     };
     let mut spawned = SpawnedAvatar::default();
     let mut joints = Vec::with_capacity(10);
-    for (part, position, mesh) in &assets.parts[usize::from(gender == PlayerGender::Female)] {
+    for (part, position, mesh) in assets.selected(gender, appearance) {
         let parent_part = match part {
             AvatarPart::Forearm(side) => Some(AvatarPart::Arm(*side)),
             AvatarPart::Calf(side) => Some(AvatarPart::Leg(*side)),
@@ -476,10 +568,13 @@ pub(crate) fn spawn_parts(
                 AvatarJoint {
                     root,
                     rest: *position,
+                    scale: part_scale(*part, gender),
                 },
                 Mesh3d(mesh.clone()),
                 MeshMaterial3d(assets.material.clone()),
-                Transform::from_translation(*position),
+                Transform::from_translation(*position)
+                    .with_rotation(neutral_rotation(*part))
+                    .with_scale(part_scale(*part, gender)),
                 layers.clone(),
                 ChildOf(parent),
             ))
@@ -489,10 +584,17 @@ pub(crate) fn spawn_parts(
                 terra_core::miniature::MiniatureMesh::Player,
                 WorldAvatarPart(root),
             ));
+        } else {
+            commands
+                .entity(entity)
+                .insert(bevy::light::NotShadowReceiver);
         }
         joints.push((*part, entity));
         if *part == AvatarPart::Head
-            && let Some(mesh) = &assets.eyelids
+            && let Some(mesh) = assets
+                .skin_eyelids
+                .get(&appearance.skin_color)
+                .or(assets.eyelids.as_ref())
         {
             let eyelids = commands
                 .spawn((
@@ -511,6 +613,10 @@ pub(crate) fn spawn_parts(
                     terra_core::miniature::MiniatureMesh::Player,
                     WorldAvatarPart(root),
                 ));
+            } else {
+                commands
+                    .entity(eyelids)
+                    .insert(bevy::light::NotShadowReceiver);
             }
             spawned.eyelids = Some(eyelids);
         }
@@ -518,10 +624,11 @@ pub(crate) fn spawn_parts(
     spawned
 }
 
-#[allow(clippy::too_many_arguments)]
+#[allow(clippy::too_many_arguments, clippy::type_complexity)]
 pub(crate) fn local_avatar(
     mut commands: Commands,
-    assets: Res<AvatarAssets>,
+    mut assets: ResMut<AvatarAssets>,
+    mut meshes: ResMut<Assets<Mesh>>,
     perspective: Res<terra_player::CameraPerspective>,
     miniature: Option<Res<terra_core::miniature::MiniatureView>>,
     fixed: Res<Time<Fixed>>,
@@ -536,6 +643,8 @@ pub(crate) fn local_avatar(
     mut roots: Query<
         (
             Entity,
+            &AvatarGender,
+            &AvatarAppearance,
             &mut Transform,
             &mut AvatarMotion,
             &mut crate::armor::AvatarEquipment,
@@ -554,7 +663,7 @@ pub(crate) fn local_avatar(
             .is_some_and(|s| s.game_mode == terra_core::GameMode::Spectator)
         || (first_person && !miniature.is_some_and(|view| view.active))
     {
-        for (entity, _, _, _) in &roots {
+        for (entity, _, _, _, _, _) in &roots {
             commands.entity(entity).despawn();
         }
         return;
@@ -601,7 +710,21 @@ pub(crate) fn local_avatar(
     } else {
         crate::miniature::layers()
     };
-    if roots.is_empty() {
+    let gender = profile
+        .as_ref()
+        .map_or(PlayerGender::default(), |p| p.gender);
+    let appearance = profile
+        .as_ref()
+        .map_or(CharacterAppearance::default(), |p| p.appearance);
+    let stale = roots
+        .iter()
+        .any(|(_, g, a, _, _, _)| g.0 != gender || a.0 != appearance);
+    if stale {
+        for (entity, _, _, _, _, _) in &roots {
+            commands.entity(entity).despawn();
+        }
+    }
+    if roots.is_empty() || stale {
         let mut motion = AvatarMotion::new(position);
         motion.sleeping = sleep.is_some();
         motion.mounted = mounted_yaw.is_some();
@@ -611,11 +734,8 @@ pub(crate) fn local_avatar(
         let root = commands
             .spawn((
                 LocalAvatar,
-                AvatarGender(
-                    profile
-                        .as_ref()
-                        .map_or(PlayerGender::default(), |p| p.gender),
-                ),
+                AvatarGender(gender),
+                AvatarAppearance(appearance),
                 crate::armor::AvatarEquipment::from(
                     session
                         .as_ref()
@@ -629,17 +749,10 @@ pub(crate) fn local_avatar(
                 Name::new("Local player avatar"),
             ))
             .id();
-        spawn_parts(
-            &mut commands,
-            &assets,
-            root,
-            layers,
-            profile
-                .as_ref()
-                .map_or(PlayerGender::default(), |p| p.gender),
-        );
+        assets.prepare(&mut meshes, gender, appearance);
+        spawn_parts(&mut commands, &assets, root, layers, gender, appearance);
     } else {
-        for (root, mut current, mut motion, mut equipment) in &mut roots {
+        for (root, _, _, mut current, mut motion, mut equipment) in &mut roots {
             let desired = crate::armor::AvatarEquipment::from(
                 session
                     .as_ref()
@@ -750,7 +863,7 @@ pub(crate) fn animate(
         if motion.sleeping {
             transform.rotation = Quat::IDENTITY;
             transform.translation = joint.rest;
-            transform.scale = Vec3::ONE;
+            transform.scale = joint.scale;
             continue;
         }
         let stride = motion.phase.sin() * (motion.speed / 5.0).clamp(0.0, 1.0) * 0.52;
@@ -797,8 +910,15 @@ pub(crate) fn animate(
         let standing = match part {
             AvatarPart::Head => Quat::from_euler(
                 EulerRot::YXZ,
-                motion.idle_phase.sin() * 0.012 * (1.0 - motion.swim),
-                motion.pitch.clamp(-0.65, 0.65) * (1.0 - motion.swim * (1.0 - motion.stroke) * 0.7),
+                (motion.idle_phase * (0.41 / 1.7)).sin()
+                    * 0.10
+                    * (1.0 - motion.swim)
+                    * (1.0 - motion.speed.min(1.0)),
+                motion.pitch.clamp(-0.65, 0.65) * (1.0 - motion.swim * (1.0 - motion.stroke) * 0.7)
+                    + motion.idle_phase.sin()
+                        * 0.018
+                        * (1.0 - motion.speed.min(1.0))
+                        * (1.0 - motion.swim),
                 -motion.phase.sin() * (motion.speed / 5.0).min(1.0) * 0.012,
             ),
             AvatarPart::Arm(side) => {
@@ -834,6 +954,7 @@ pub(crate) fn animate(
         ) {
             transform.translation.y += motion.idle_phase.sin() * 0.0035;
         }
+        transform.scale = joint.scale;
         if *part == AvatarPart::Body {
             transform.scale = Vec3::new(1.0, 1.0 + motion.idle_phase.sin() * 0.004, 1.0);
         }
@@ -1033,7 +1154,10 @@ mod tests {
         app.insert_resource(Time::<Fixed>::from_seconds(0.02))
             .insert_resource(terra_player::CameraPerspective::FirstPerson)
             .insert_resource(session)
+            .init_resource::<Assets<Mesh>>()
             .insert_resource(AvatarAssets {
+                skin_eyelids: Default::default(),
+                custom: default(),
                 parts: [
                     vec![(AvatarPart::Body, Vec3::ZERO, Handle::default())],
                     Vec::new(),
@@ -1217,7 +1341,10 @@ mod tests {
         app.insert_resource(Time::<Fixed>::from_seconds(0.02))
             .insert_resource(terra_player::CameraPerspective::FirstPerson)
             .insert_resource(terra_core::miniature::MiniatureView { active: true })
+            .init_resource::<Assets<Mesh>>()
             .insert_resource(AvatarAssets {
+                skin_eyelids: Default::default(),
+                custom: default(),
                 parts: [
                     vec![(AvatarPart::Body, Vec3::ZERO, Handle::default())],
                     Vec::new(),
@@ -1259,7 +1386,10 @@ mod tests {
         fixed.accumulate_overstep(std::time::Duration::from_millis(5));
         app.insert_resource(fixed)
             .insert_resource(terra_player::CameraPerspective::ThirdPersonFront)
+            .init_resource::<Assets<Mesh>>()
             .insert_resource(AvatarAssets {
+                skin_eyelids: Default::default(),
+                custom: default(),
                 parts: [Vec::new(), Vec::new()],
                 eyelids: None,
                 material: Handle::default(),
@@ -1354,7 +1484,10 @@ mod tests {
         };
         app.insert_resource(Time::<Fixed>::from_seconds(0.02))
             .insert_resource(terra_player::CameraPerspective::ThirdPersonFront)
+            .init_resource::<Assets<Mesh>>()
             .insert_resource(AvatarAssets {
+                skin_eyelids: Default::default(),
+                custom: default(),
                 parts: [Vec::new(), Vec::new()],
                 eyelids: None,
                 material: Handle::default(),

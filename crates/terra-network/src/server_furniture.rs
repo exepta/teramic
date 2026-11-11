@@ -1643,6 +1643,7 @@ mod tests {
             chat: Default::default(),
             uuid,
             gender: Default::default(),
+            appearance: Default::default(),
             mining: None,
             consumption: None,
             gameplay_sent: None,

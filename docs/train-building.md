@@ -153,13 +153,19 @@ Die Strecke muss geladen und frei sein. Fehlende Gleise, geschlossene Weichenweg
 unbekannte Bereiche, Hindernisse, andere Fahrzeuge und ungeschuetzte Personen im
 Fahrweg stoppen die Fahrt. Der Zug folgt Kurven und Hoehenwechseln; Drehgestelle
 bestimmen seine starre Lage. Gekuppelte Wagen folgen ihrer eigenen Radbasis.
+Beim Uebergang ins Gefaelle darf das Fahrwerk bis zu einen halben Block in die
+bestaetigten Stuetzfelder des geladenen Gleises einfedern. Dadurch blockiert die starre Verbindung der Drehgestelle nicht
+am eigenen Gleisbett. Diese Toleranz gilt ausschliesslich fuer Raeder/Drehgestelle;
+Wagenkasten, Dekoration, seitliche Hindernisse und Bloecke oberhalb des Gleises
+bleiben kollidierbar. Nach einem Hindernisstopp kann mit geloester Bremse auch
+rueckwaerts vom Hindernis weggefahren werden.
 
 Der BR52-Baukasten enthaelt Kessel, Rauchkammer, Raeder und Gestaenge, Rahmen,
 Fuehrerhaus samt oeffnenden Fenstern/Tueren, Tender, Anbauteile und vier Metall-
 bzw. Gitterfamilien mit Block-, Slab-, Treppen-, Eck- und Schraegenformen.
-Der Brennstoffmotor ist der aktuelle Antrieb. Dampfkessel, Dampfventil,
-Druckanzeige und Tender-Wassertank sind als Aufbauteile gekennzeichnet; echte
-Wasserversorgung und Kesseldruck bleiben im offenen Dampfantrieb F53.
+Der Brennstoffmotor verbraucht echten Brennstoff. Ein vollstaendiger Dampfaufbau
+verbindet Kessel, Dampfventil, Druckinstrument und Wassertank mit der endlichen
+Wasser- und Druckversorgung; Details stehen im Abschnitt zum Dampfbetrieb.
 
 Andere montierte Maschinen pausieren ohne Weltanschluesse. Inventare,
 Verarbeitung, Fluessigkeiten und Einstellungen bleiben gespeichert und werden
@@ -321,6 +327,52 @@ Ein entfernter, ungeladener Besitzerabschnitt eines langen Gleises sperrt den
 bekannten lokalen Fahrweg nicht mehr. Unter jedem Rad und auf dem tatsaechlichen
 Fahrweg muessen weiterhin geladene, vollstaendige Gleisscheiben liegen.
 
-Client und Server verwenden gemeinsam Protokoll 128. Neue Montage-Wasserreserven
+Client und Server verwenden gemeinsam Protokoll 133. Neue Montage-Wasserreserven
 verwenden den RG14-Speicherwrapper; bestehende RG12-Rohrdaten und RG13-Gleisboegen
 bleiben unveraendert lesbar.
+
+
+## Locomotive rail builder
+
+Place **Lok-Freiräumer und Gleisleger** (block 296, Trains category) on the
+connected front frame before assembly, at frame height with no intervening air
+cell. When placed against a horizontal face, its scoop automatically points away
+from that face. The three-metre attachment clears a configurable corridor two
+metres ahead, including when following existing tracks. Its default width is five
+blocks and its automatic height follows the locomotive's full envelope. It also levels the new ballast support by at most one block. It extends the current free,
+level rail end along its actual tangent, four metres at a time, with a ballast
+bed. Tracks include sleepers; no separate sleeper item is needed.
+
+Sit in the locomotive cab, stop, then use **Gleisleger einschalten** in the train
+controls. Start driving normally. Work mode limits speed to **3 m/s**, including
+on ballast, and permits at most **one freight wagon up to 15 m long**. To change
+mode, stop again. The fitted attachment remains an ordinary assembled part and
+returns with the rest of the vehicle when dismantled.
+
+In Survival, put straight tracks and ballast blocks (206) in the locomotive's or
+freight wagon's **train cargo** inventories. The selected rail wood is retained.
+Creative uses no construction material. Removed soil and cleared props produce
+normal resource drops in Survival. Material reservation and sparse world edits
+succeed together; missing materials do not leave partially dug ground behind.
+
+Ordinary solid blocks and vegetation inside the clearance corridor are removed;
+rails and assembled trains are retained. Blocks outside the corridor are not
+removed. Water, bedrock, protected/stateful machinery, unloaded sections and
+denied claim permissions stop work. Placing new rails still checks occupancy. The machine does
+not create bridges across deep gaps or invent a new grade at a sloping endpoint.
+The work mode is saved in the ID19 train index and replicated with protocol 133.
+Older ID13–ID18 train saves migrate without changing their pose, cargo or fuel. Construction requires a connected owner
+in the cab; loading a world does not start an unattended machine.
+
+Moving trains damage players, animals and hostile creatures when their actual
+physical swept geometry hits them. Damage scales with speed, in either direction;
+standing trains do not deal impact damage. Seated passengers, Creative/Spectator
+players and players with respawn protection remain exempt. Repeated contact has
+a per-target cooldown; normal death notifications and drops apply.
+
+
+The parked driver can configure the clearer width (3–15 blocks, centered in odd
+steps) and height (3–32 blocks, or Auto) in the driving UI. Auto height follows the actual locomotive
+envelope, including its chimney and decorative parts, with one block of roof
+clearance. New and migrated vehicles default to five blocks wide and automatic
+height. The same profile applies to existing tracks and track extensions.

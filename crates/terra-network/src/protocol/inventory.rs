@@ -170,6 +170,15 @@ pub enum InventoryAction {
     OpenCampfire {
         position: [i64; 3],
     },
+    Sort {
+        order: terra_core::inventory_sort::SortOrder,
+        #[serde(with = "inventory_array")]
+        reserved: [u16; terra_core::INVENTORY_SLOTS],
+    },
+    /// Queue envelope; the client sends it as a revision-checked ContainerCommand.
+    SortContainer {
+        order: terra_core::inventory_sort::SortOrder,
+    },
 }
 
 // Serde's built-in array implementation stops at 32 elements. Keep the bounded
@@ -224,6 +233,34 @@ mod inventory_array {
 mod inventory_capacity_tests {
     use super::*;
     #[test]
+    fn sort_gestures_roundtrip_with_their_explicit_target_and_order() {
+        use terra_core::{containers::ContainerGesture, inventory_sort::SortOrder};
+        for order in [
+            SortOrder::Category,
+            SortOrder::Quantity,
+            SortOrder::Alphabetical,
+            SortOrder::Id,
+        ] {
+            for action in [
+                ContainerGesture::Sort { order },
+                ContainerGesture::SortBackpack { order },
+            ] {
+                let bytes = postcard::to_stdvec(&action).unwrap();
+                assert_eq!(
+                    postcard::from_bytes::<ContainerGesture>(&bytes).unwrap(),
+                    action
+                );
+            }
+            let action = InventoryAction::SortContainer { order };
+            assert_eq!(
+                postcard::from_bytes::<InventoryAction>(&postcard::to_stdvec(&action).unwrap())
+                    .unwrap(),
+                action
+            );
+        }
+    }
+
+    #[test]
     fn all_inventory_commands_roundtrip_through_binary_and_json() {
         let mut slots = [None; terra_core::INVENTORY_SLOTS];
         slots[26] = Some(26);
@@ -245,6 +282,10 @@ mod inventory_capacity_tests {
                 item: ItemKind::Block(3),
                 counts,
                 to_cursor: true,
+            },
+            InventoryAction::Sort {
+                order: terra_core::inventory_sort::SortOrder::Category,
+                reserved: counts,
             },
             InventoryAction::ViewDrag {
                 slots: [None; 32],
@@ -269,7 +310,7 @@ mod inventory_capacity_tests {
             let mut invalid = json;
             let field = match action {
                 InventoryAction::Drag { .. } => "slots",
-                InventoryAction::ProtectedMove { .. } => "reserved",
+                InventoryAction::ProtectedMove { .. } | InventoryAction::Sort { .. } => "reserved",
                 InventoryAction::ViewDrag { .. } => "extra",
                 _ => "counts",
             };
@@ -277,6 +318,7 @@ mod inventory_capacity_tests {
                 InventoryAction::Drag { .. } => "Drag",
                 InventoryAction::ProtectedMove { .. } => "ProtectedMove",
                 InventoryAction::ViewDrag { .. } => "ViewDrag",
+                InventoryAction::Sort { .. } => "Sort",
                 _ => "TransferCursor",
             };
             invalid["action"][variant][field]
@@ -333,6 +375,20 @@ pub struct ContainerSnapshot {
     pub halves: Vec<ContainerHalf>,
 }
 impl ContainerSnapshot {
+    /// Only unrestricted storage can be reorganized; process slots keep their roles.
+    pub fn sortable(&self) -> bool {
+        self.valid()
+            && !self.halves.is_empty()
+            && self.furnace.is_none()
+            && self.crusher.is_none()
+            && self.mixer.is_none()
+            && self.cauldron.is_none()
+            && self.campfire.is_none()
+            && self.filter.is_none()
+            && self.distributor.is_none()
+            && self.tunnel_random.is_none()
+    }
+
     pub fn valid(&self) -> bool {
         if [
             self.workbench.is_some(),

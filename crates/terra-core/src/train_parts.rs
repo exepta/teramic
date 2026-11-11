@@ -3,6 +3,7 @@ use crate::block_shapes::ShapeBox;
 use serde::Deserialize;
 use std::sync::OnceLock;
 
+pub const RAIL_BUILDER: u16 = 296;
 pub const CHASSIS: u16 = 210;
 pub const BOGIE: u16 = 211;
 pub const FRAME: u16 = 212;
@@ -17,15 +18,20 @@ pub const BOGIE_MIN_HORIZONTAL: f64 = -0.61;
 pub const BOGIE_MAX_HORIZONTAL: f64 = 1.61;
 
 pub const fn is_part(material: u16) -> bool {
-    material >= CHASSIS && material <= CARGO || crate::locomotive_parts::is_part(material)
+    material == RAIL_BUILDER
+        || material >= CHASSIS && material <= CARGO
+        || crate::locomotive_parts::is_part(material)
 }
 
 pub const fn is_train(material: u16) -> bool {
-    material >= CHASSIS && material <= STATION || crate::locomotive_parts::is_part(material)
+    material == RAIL_BUILDER
+        || material >= CHASSIS && material <= STATION
+        || crate::locomotive_parts::is_part(material)
 }
 
 pub const fn mass_kg(material: u16) -> Option<u32> {
     match material {
+        RAIL_BUILDER => Some(850),
         CHASSIS => Some(600),
         BOGIE => Some(450),
         FRAME => Some(150),
@@ -48,6 +54,20 @@ pub const fn mass_kg(material: u16) -> Option<u32> {
 }
 
 pub fn base_boxes(material: u16) -> &'static [ShapeBox] {
+    if material == RAIL_BUILDER {
+        static SHAPES: OnceLock<Vec<ShapeBox>> = OnceLock::new();
+        return SHAPES.get_or_init(|| {
+            #[derive(Deserialize)]
+            struct Definition {
+                collision_boxes: Vec<ShapeBox>,
+            }
+            serde_json::from_str::<Definition>(include_str!(
+                "../../../assets/terra/blocks/train_rail_builder.json"
+            ))
+            .expect("authored rail builder")
+            .collision_boxes
+        });
+    }
     if crate::locomotive_parts::is_part(material) {
         return crate::locomotive_parts::base_boxes(material);
     }
@@ -114,6 +134,22 @@ mod tests {
                 })));
             }
             assert_eq!(mass_kg(material).is_some(), is_part(material));
+        }
+    }
+
+    #[test]
+    fn rail_builder_uses_the_same_three_metre_scoop_for_world_and_vehicle_collision() {
+        let shapes = base_boxes(RAIL_BUILDER);
+        assert_eq!(crate::block_shapes::builtin_boxes(RAIL_BUILDER), shapes);
+        assert!(shapes.iter().any(|shape| shape.minimum[0] < 0.0));
+        assert!(shapes.iter().any(|shape| shape.maximum[0] > 1.0));
+        assert_eq!(mass_kg(RAIL_BUILDER), Some(850));
+        for facing in 0..4 {
+            assert!(
+                boxes(RAIL_BUILDER, facing)
+                    .iter()
+                    .all(|shape| shape.valid_for(RAIL_BUILDER))
+            );
         }
     }
 

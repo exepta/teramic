@@ -190,6 +190,10 @@ mod tests {
             let parts = parts(kind).unwrap();
             let (part_limit, extent_limit, vertex_limit) = match kind {
                 Kind::Stalker => (11, 3.0, 64_000),
+                // Residents use the same cached, detailed reference meshes as
+                // their profession variants; the dedicated role test enforces
+                // this budget independently for every civilian silhouette.
+                Kind::Villager => (6, 2.5, 50_000),
                 _ if kind.is_spider() => (12, 2.5, 16_000),
                 _ => (8, 2.5, 16_000),
             };

@@ -25,6 +25,7 @@ Wachstum, NPC-Arbeit und bewegte Fahrzeuge muessen begrenzt simuliert werden.
 ### Fahrbetrieb Und Automatisierung
 
 
+
 - [ ] **F65 NPC-Lokfuehrer:** Einen zuweisbaren Zugfuehrer-Beruf ergaenzen. Fuehrerstand erreichen, zugewiesenen Zug fahren, Weichen/Signale und Haltepunkte beachten sowie bei Hindernissen sicher bremsen. Wasser-/Brennstoffmangel, blockierte Strecke und fehlende Berechtigung anzeigen; Dienstzeit, Spieleruebernahme und Wiederaufnahme nach Laden regeln.
 
 - [ ] **F66 Bahnhoefe, Fahrplaene, Signale Und Fracht:** Benannte Stationen/Haltepunkte mit Fahrplaenen, Wartezeiten und Zielwahl ergaenzen. Blockabschnitte/Signale fuer mehrere Zuege vorsehen. Fahrgastwechsel und begrenztes Be-/Entladen zwischen Wagen und Lagern ermoeglichen; Mengen, Filter und volle Zielinventare ueber vorhandene Inventar-/Logistiktransaktionen behandeln.
@@ -39,9 +40,9 @@ Wachstum, NPC-Arbeit und bewegte Fahrzeuge muessen begrenzt simuliert werden.
 
 ## 3. Spieler, Inventar Und Handwerk
 
-- [ ] **F11 Character Customization:** Spielbare Charakteranpassung mit Vorschau, Varianten/Farben und gespeicherter Auswahl ergaenzen. Lokalen Spieler, entfernte Avatare und Inventarportraet konsistent darstellen; bestehende `--gender`-Profile weiter lesen.
+- [x] **F77 Charaktermodelle Und Kleidermaterialien:** Getrennte Auswahl von Leinen, Segeltuch, Leder und Wolle fuer Oberteil, Hose, Stiefel und Umhang, mit tatsaechlicher Gewebe-/Oberflaechendarstellung und lokalen sowie Serverprofilen. Umhang, Stiefeldetails und Spieler-/NPC-Gesichter an den Referenzen ueberarbeitet; 12 maennliche/14 weibliche Frisuren mit Strähnen, getrennte Augenfarben, korrigierte Haende und detailliertere Koerper, vier Editor-Tabs und drehbare Inventarfigur; alte Profile bleiben lesbar. Die menschliche gestalterische Abnahme ist unter A01 gesammelt; die Modelle sind nachmodelliert, keine importierten Original-3D-Assets. Siehe `docs/characters.md`.
 
-- [ ] **F44 Inventar-Sortierbuttons:** Rucksack und geeignete offene Inventare nach nachvollziehbaren Kriterien sortieren. Reservierte/gesperrte Slots beachten und autoritative atomare Inventartransaktionen verwenden.
+- [x] **F44 Inventar-Sortierbuttons:** Rucksack, Truhen/Doppeltruhen, verbundene Werkbank-Lager und Zuglager per Trichter-Dropup nach A-Z, ID oder Menge sortieren und gleiche Stapel zusammenfassen. Hotbar, reservierte Crafting-Slots und funktionale Maschinenplaetze bleiben erhalten. Serverautoritative atomare Transaktionen mit Revisionen, Rechten und leerem Cursor; auch Rucksacksortierung im Zugdialog. Siehe `docs/inventory-sorting.md`.
 
 - [ ] **F48 Tragbare Taschen Und Rucksaecke:** Taschen/Rucksaecke mit eigenem gespeichertem Inventar und passender Ausruestungs-/Taschenansicht ergaenzen. Slotbesitz, Zugriff, Verlust/Drop, Mehrspielertransaktionen und begrenzte Verschachtelung definieren; Inhalte beim Tragen, Ablegen und Zerstoeren erhalten.
 

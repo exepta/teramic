@@ -1435,6 +1435,14 @@ pub(super) fn update(world: &mut World) {
             ),
             button("server-add", "Add Server", "", "plus", true, false),
             button(
+                "server-character",
+                "Charakter",
+                "",
+                "user",
+                selected_server.is_some() || servers.lan_selected.is_some(),
+                false,
+            ),
+            button(
                 "server-edit",
                 "Edit Server",
                 "",
@@ -1673,7 +1681,7 @@ pub(super) fn update(world: &mut World) {
                 button("dialog-cancel", "Done", "", "check", true, true),
             ],
         ),
-        MenuDialog::None => (String::new(), String::new(), Vec::new()),
+        MenuDialog::None | MenuDialog::Character => (String::new(), String::new(), Vec::new()),
     };
     let biome_choices = if *dialog == MenuDialog::CreateWorld {
         world_biome_choices(worlds)
@@ -1686,7 +1694,7 @@ pub(super) fn update(world: &mut World) {
         .cloned()
         .unwrap_or_default();
     let dialog_view = DialogView {
-        visible: *dialog != MenuDialog::None,
+        visible: !matches!(dialog, MenuDialog::None | MenuDialog::Character),
         create: *dialog == MenuDialog::CreateWorld,
         create_tab: worlds.create_tab.key().into(),
         kingdom_rules: if *dialog == MenuDialog::CreateWorld {

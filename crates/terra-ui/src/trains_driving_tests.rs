@@ -1,6 +1,6 @@
 use super::tests::{actions, app, car, open, requests, track_fixture};
 use super::*;
-use terra_core::{Inventory, PlayerUuid, trains::SeatBinding};
+use terra_core::{Inventory, ItemKind, PlayerUuid, trains::SeatBinding};
 use terra_network::protocol::trains::{TrainCargoSnapshot, TrainResult};
 
 fn driver_app() -> App {
@@ -115,6 +115,264 @@ fn html_click(app: &mut App, command: &str, child: u8) {
         )
         .unwrap();
     app.update();
+}
+
+#[test]
+fn clearance_buttons_and_child_targets_request_server_updates_without_local_prediction() {
+    use terra_core::train_motion::RailClearance;
+    for (command, expected) in [
+        (
+            "builder-size-width-more",
+            RailClearance {
+                width: 7,
+                height: 8,
+            },
+        ),
+        (
+            "builder-size-width-less",
+            RailClearance {
+                width: 3,
+                height: 8,
+            },
+        ),
+        (
+            "builder-size-height-more",
+            RailClearance {
+                width: 5,
+                height: 9,
+            },
+        ),
+        (
+            "builder-size-height-less",
+            RailClearance {
+                width: 5,
+                height: 7,
+            },
+        ),
+        (
+            "builder-size-height-auto",
+            RailClearance {
+                width: 5,
+                height: 0,
+            },
+        ),
+    ] {
+        for child in 0..=2 {
+            let mut app = driver_app();
+            {
+                let mut session = app.world_mut().resource_mut::<ClientSession>();
+                let car = &mut session.trains.vehicles[0];
+                car.motion.speed_mps = 0.0;
+                car.motion.rail_clearance = RailClearance {
+                    width: 5,
+                    height: 8,
+                };
+                car.parts.push(terra_core::trains::TrainPart {
+                    offset: [0, 0, -1],
+                    material: terra_core::train_parts::RAIL_BUILDER,
+                    facing: 0,
+                    wood: Default::default(),
+                });
+            }
+            open(&mut app);
+            app.world_mut().resource_mut::<TrainUiState>().selected = Some(1);
+            app.update();
+            assert!(app.world().resource::<TrainView>().builder_size_ready);
+            html_click(&mut app, command, child);
+            let sent = requests(&mut app);
+            assert_eq!(sent.len(), 1, "{command} child={child}");
+            assert_eq!(
+                sent[0].0.action,
+                TrainAction::RailClearance {
+                    vehicle: 1,
+                    size: expected
+                }
+            );
+            assert_eq!(app.world().resource::<TrainView>().builder_height, "8 m");
+            assert!(!app.world().resource::<TrainView>().builder_size_ready);
+            {
+                let mut session = app.world_mut().resource_mut::<ClientSession>();
+                session.trains.vehicles[0].motion.rail_clearance = expected;
+                session.last_train_result = Some(TrainResult {
+                    request: sent[0].0.request,
+                    outcome: TrainOutcome::Changed { vehicle: Some(1) },
+                });
+            }
+            app.update();
+            assert_eq!(
+                app.world().resource::<TrainView>().builder_width,
+                format!("{} m", expected.width)
+            );
+            assert_eq!(
+                app.world().resource::<TrainView>().builder_height_auto,
+                expected.height == 0
+            );
+            assert!(app.world().resource::<TrainView>().builder_size_ready);
+        }
+    }
+}
+
+#[test]
+fn rail_builder_button_and_its_children_send_both_authoritative_toggle_requests() {
+    for child in 0..=2 {
+        let mut app = driver_app();
+        {
+            let mut session = app.world_mut().resource_mut::<ClientSession>();
+            let vehicle = &mut session.trains.vehicles[0];
+            vehicle.motion.speed_mps = 0.0;
+            vehicle.parts.push(terra_core::trains::TrainPart {
+                offset: [0, 0, -1],
+                material: terra_core::train_parts::RAIL_BUILDER,
+                facing: 0,
+                wood: Default::default(),
+            });
+        }
+        open(&mut app);
+        app.world_mut().resource_mut::<TrainUiState>().selected = Some(1);
+        app.update();
+        assert!(app.world().resource::<TrainView>().builder_installed);
+        assert!(app.world().resource::<TrainView>().riding);
+        html_click(&mut app, "rail-builder", child);
+        let sent = requests(&mut app);
+        assert_eq!(sent.len(), 1, "child target {child}");
+        assert_eq!(
+            sent[0].0.action,
+            TrainAction::RailBuilder {
+                vehicle: 1,
+                active: true
+            }
+        );
+        assert!(app.world().resource::<TrainView>().pending);
+        // The server snapshot, rather than a local toggle, changes the visible state.
+        assert!(!app.world().resource::<TrainView>().builder_active);
+        {
+            let mut session = app.world_mut().resource_mut::<ClientSession>();
+            session.trains.vehicles[0].motion.rail_builder_active = true;
+            session.last_train_result = Some(TrainResult {
+                request: sent[0].0.request,
+                outcome: TrainOutcome::Changed { vehicle: Some(1) },
+            });
+        }
+        app.update();
+        assert!(app.world().resource::<TrainView>().builder_active);
+        assert!(!app.world().resource::<TrainView>().pending);
+        html_click(&mut app, "rail-builder", child);
+        let sent = requests(&mut app);
+        assert_eq!(sent.len(), 1);
+        assert_eq!(
+            sent[0].0.action,
+            TrainAction::RailBuilder {
+                vehicle: 1,
+                active: false
+            }
+        );
+    }
+}
+
+#[test]
+fn train_sort_buttons_and_children_use_authoritative_cargo_transactions_for_both_targets() {
+    use terra_core::inventory_sort::SortOrder;
+    for (command, backpack, order) in [
+        ("cargo-sort-name", false, SortOrder::Alphabetical),
+        ("cargo-sort-id", false, SortOrder::Id),
+        ("cargo-sort-quantity", false, SortOrder::Quantity),
+        ("cargo-sort-backpack-name", true, SortOrder::Alphabetical),
+        ("cargo-sort-backpack-id", true, SortOrder::Id),
+        ("cargo-sort-backpack-quantity", true, SortOrder::Quantity),
+    ] {
+        let mut app = driver_app();
+        open(&mut app);
+        app.world_mut().resource_mut::<TrainUiState>().selected = Some(1);
+        {
+            let mut session = app.world_mut().resource_mut::<ClientSession>();
+            session.inventory.creative_set(
+                0,
+                ItemStack {
+                    item: ItemKind::Block(6),
+                    count: 3,
+                },
+            );
+            session.inventory.creative_set(
+                9,
+                ItemStack {
+                    item: ItemKind::Block(3),
+                    count: 2,
+                },
+            );
+            session.inventory.creative_set(
+                13,
+                ItemStack {
+                    item: ItemKind::Block(2),
+                    count: 7,
+                },
+            );
+        }
+        let mut storage = Inventory::default();
+        storage.creative_set(
+            4,
+            ItemStack {
+                item: ItemKind::Block(6),
+                count: 2,
+            },
+        );
+        storage.creative_set(
+            10,
+            ItemStack {
+                item: ItemKind::Block(6),
+                count: 7,
+            },
+        );
+        opened_cargo(&mut app, "engine", 1, storage);
+        let before = app.world().resource::<ClientSession>().inventory.clone();
+        assert!(app.world().resource::<TrainView>().sort_ready);
+        html_click(
+            &mut app,
+            if backpack {
+                "cargo-sort-backpack-menu"
+            } else {
+                "cargo-sort-menu"
+            },
+            2,
+        );
+        assert!(requests(&mut app).is_empty());
+        assert_eq!(
+            app.world().resource::<TrainView>().sort_player_open,
+            backpack
+        );
+        assert_eq!(
+            app.world().resource::<TrainView>().sort_storage_open,
+            !backpack
+        );
+        html_click(&mut app, command, 2);
+        assert!(!app.world().resource::<TrainView>().sort_player_open);
+        assert!(!app.world().resource::<TrainView>().sort_storage_open);
+        let mut sent = requests(&mut app);
+        assert_eq!(sent.len(), 1);
+        assert!(
+            matches!(&sent[0].0.action, TrainAction::Cargo { gesture, .. } if *gesture == if backpack {
+            ContainerGesture::SortBackpack { order }
+        } else { ContainerGesture::Sort { order } })
+        );
+        assert_eq!(app.world().resource::<ClientSession>().inventory, before);
+        assert!(!app.world().resource::<TrainView>().sort_ready);
+        html_click(&mut app, command, 1);
+        assert!(requests(&mut app).is_empty());
+        acknowledge_gesture(&mut app, sent.remove(0));
+        let session = app.world().resource::<ClientSession>();
+        assert_eq!(session.inventory.slot(0), before.slot(0));
+        assert_eq!(session.inventory.count(ItemKind::Block(3)), 2);
+        assert_eq!(session.inventory.count(ItemKind::Block(2)), 7);
+        assert_eq!(
+            session
+                .train_cargo
+                .as_ref()
+                .unwrap()
+                .inventory
+                .count(ItemKind::Block(6)),
+            9
+        );
+        assert!(app.world().resource::<TrainView>().sort_ready);
+    }
 }
 
 fn opened_cargo(app: &mut App, command: &str, part: u16, inventory: Inventory) {

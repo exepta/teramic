@@ -100,6 +100,10 @@ pub struct InventoryView {
     pub linked_title: String,
     pub container_capacity: String,
     pub container_items: Vec<InventoryItemView>,
+    pub storage_sortable: bool,
+    pub sort_ready: bool,
+    pub sort_player_open: bool,
+    pub sort_storage_open: bool,
     pub furnace: bool,
     pub cauldron: alchemy::CauldronWorkspace,
     pub campfire: alchemy::CampfireWorkspace,
@@ -847,6 +851,14 @@ pub(super) fn update_view(
         });
     let can_craft = crafting.can_cursor;
     let next = InventoryView {
+        storage_sortable: container.is_some_and(|container| container.sortable()),
+        sort_ready: state.open
+            && session.inventory.cursor.is_none()
+            && queue.as_ref().is_none_or(|queue| queue.is_empty())
+            && !crafting::busy(&reservations)
+            && state.container_open_response.is_none(),
+        sort_player_open: state.sort_menu == Some(false),
+        sort_storage_open: state.sort_menu == Some(true),
         source_container: container.map(|container| (container.anchor, container.view)),
         hearth_navigation: container.is_some_and(|container| {
             container.attached_campfire

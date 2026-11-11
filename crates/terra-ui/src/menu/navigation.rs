@@ -135,6 +135,9 @@ pub(super) fn actions(world: &mut World) {
     }
 }
 fn command_action(world: &mut World, command: &str) -> Result<(), String> {
+    if crate::character::command(world, command)? {
+        return Ok(());
+    }
     let modal = world.resource::<MenuState>().dialog.clone();
     if modal == MenuDialog::CreateWorld && world.resource::<WorldMenu>().biome_picker_open {
         if command == "dialog-cancel" {
@@ -404,6 +407,9 @@ fn begin(world: &mut World, request: SessionRequest, status: &str) {
     world.write_message(request);
 }
 fn change(world: &mut World, control: &str, value: &str) -> Result<(), String> {
+    if crate::character::change(world, control, value) {
+        return Ok(());
+    }
     if world.resource::<MenuState>().dialog == MenuDialog::CreateWorld
         && world.resource::<WorldMenu>().biome_picker_open
     {

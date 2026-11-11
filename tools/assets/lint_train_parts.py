@@ -73,13 +73,14 @@ def expected_parts():
         require(int(material) not in names, f"duplicate descriptor {material}")
         names[int(material)] = (slug, name)
     require(set(names) == set(range(210, last + 1)), "missing native train IDs")
+    names[296] = ("train_rail_builder", "Lok-Freiräumer und Gleisleger")
     return names
 
 
 def valid_coordinates(values, material):
     for axis, value in enumerate(values):
-        low = -0.36 if material == 232 else -0.61 if material == 211 and axis != 1 else -.14 if material in (224, 225, 226) and axis == 1 else 0
-        high = 1.76 if material == 232 else 1.61 if material == 211 and axis != 1 else 2 if material == 248 and axis == 1 else 1
+        low = -1 if material == 296 and axis != 1 else -0.36 if material == 232 else -0.61 if material == 211 and axis != 1 else -.14 if material in (224, 225, 226) and axis == 1 else 0
+        high = 2 if material == 296 and axis != 1 else 1.76 if material == 232 else 1.61 if material == 211 and axis != 1 else 2 if material == 248 and axis == 1 else 1
         require(math.isfinite(value), f"{material}: non-finite coordinate")
         require(low - 1e-5 <= value <= high + 1e-5,
                 f"{material}: coordinate {axis}={value} outside owner bounds")

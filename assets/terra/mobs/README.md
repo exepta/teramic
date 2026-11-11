@@ -62,15 +62,26 @@ Kein Hot-Reload: Definitionen vor dem Spiel-/Serverstart anpassen.
 
 ## Dorfbewohner
 
-`villager.json` erweitert dieselbe Artenregistry. `variant_titles` entsprechen
-den zehn festen Modellrollen: Arbeitslos, Farmer, Soldat, Bogenschuetze, Wache,
-Kleriker, Pfeilmacher, Medic, Arbeiter und Holzfaeller. HP, Nahrung, Wasser,
-Koerpergroesse und Laufgeschwindigkeit verwenden die normalen Art-Felder.
+`villager.json` erweitert dieselbe Artenregistry. Die gespeicherten Rollen 0–12
+bleiben erhalten; Ritter, Speertraeger und Garnisonsbogenschuetze behalten die
+militaerischen IDs 10–12. Angehangen sind Lokfuehrer (13), Minenarbeiter (14),
+Arbeitslos-Referenzvariante (15), Schlachter (16), Verkaeufer (17), fahrender
+Haendler (18) und Nomaden A–D (19–22). HP, Nahrung, Wasser, Koerpergroesse und
+Laufgeschwindigkeit verwenden die normalen Art-Felder. `variant_titles` benennt
+alle 23 Modelle; neue Zivilisten zaehlen nicht als Garnison.
 
 Bewohner werden aus bereits vorbereiteten Dorf-/Bettdaten erzeugt, nicht durch
 die zufaellige Landtier-Herdenauswahl. Jeder primaere generierte Schlafplatz
 hat genau eine stabile Bewohner-ID. Gespeicherte und tote Bewohner werden nicht
 neu ausgewuerfelt. Sie zaehlen nicht zum natuerlichen Tierlimit. Neue Doerfer
 verwenden Strukturrevision 4; alte gespeicherte Revisionen behalten ihre Gebaeude.
-Nachts laufen Bewohner durch die Haustuer zu ihrem Bett. Rechtsklick spricht
-sie an; Handel und berufliche Produktion sind noch nicht Teil dieses Grundsystems.
+Nachts laufen Bewohner durch die Haustuer zu ihrem Bett. In freien Wohnbetten
+koennen auch die neuen Berufe entstehen. Lokfuehrer, Minenarbeiter, Farmer,
+Schmiede, Schlachter und Verkaeufer besuchen erreichbare nahe Arbeitsplaetze
+ueber die bestehende begrenzte Wegsuche; Reisende erkunden laengere Wege innerhalb
+der Siedlung. Arbeitsplaetze werden dabei weder abgebaut noch Inventare veraendert.
+Rechtsklick spricht Bewohner an; Handel und berufliche Produktion sind noch nicht
+Teil dieses Grundsystems. Alle neuen Referenzrollen sind ebenfalls ueber
+`/spawnmob teramic::train_driver`, `miner`, `unemployed`, `butcher`, `seller`,
+`travelling_merchant` und `nomad_a` bis `nomad_d` erreichbar (jeweils mit
+`teramic::`-Praefix).

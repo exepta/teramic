@@ -7,12 +7,33 @@ pub const CONTAINER_VIEW_SLOTS: usize = INVENTORY_SLOTS + 2 * CHEST_SLOTS;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ContainerGesture {
-    Click { slot: u8, secondary: bool },
-    Drag { slots: Vec<u8>, secondary: bool },
-    QuickMove { slot: u8 },
-    Collect { slot: u8 },
-    CollectFrom { slot: u8 },
-    Wheel { slot: u8, to_cursor: bool },
+    Click {
+        slot: u8,
+        secondary: bool,
+    },
+    Drag {
+        slots: Vec<u8>,
+        secondary: bool,
+    },
+    QuickMove {
+        slot: u8,
+    },
+    Collect {
+        slot: u8,
+    },
+    CollectFrom {
+        slot: u8,
+    },
+    Wheel {
+        slot: u8,
+        to_cursor: bool,
+    },
+    Sort {
+        order: crate::inventory_sort::SortOrder,
+    },
+    SortBackpack {
+        order: crate::inventory_sort::SortOrder,
+    },
 }
 
 pub fn valid_chest(inventory: &Inventory) -> bool {
@@ -218,7 +239,9 @@ impl View {
             | ContainerGesture::Collect { slot }
             | ContainerGesture::CollectFrom { slot }
             | ContainerGesture::Wheel { slot, .. } => slot,
-            ContainerGesture::Drag { .. } => return false,
+            ContainerGesture::Drag { .. }
+            | ContainerGesture::Sort { .. }
+            | ContainerGesture::SortBackpack { .. } => return false,
         });
         if slot >= self.slots.len() {
             return false;
@@ -280,7 +303,9 @@ impl View {
                     true
                 }
             }
-            ContainerGesture::Drag { .. } => false,
+            ContainerGesture::Drag { .. }
+            | ContainerGesture::Sort { .. }
+            | ContainerGesture::SortBackpack { .. } => false,
         }
     }
 }
@@ -352,6 +377,13 @@ pub(crate) fn apply_filtered_kind(
         }
     {
         return false;
+    }
+    if let ContainerGesture::Sort { order } = gesture {
+        // Machine input/output/fuel slots retain their process-specific meaning.
+        return machine == 0 && crate::inventory_sort::storage(player, halves, order, reserved);
+    }
+    if let ContainerGesture::SortBackpack { order } = gesture {
+        return crate::inventory_sort::backpack(player, order, reserved);
     }
     let mut slots = vec![ItemStack::EMPTY; INVENTORY_SLOTS + halves.len() * size];
     slots[..player.slots.len()].copy_from_slice(&player.slots);

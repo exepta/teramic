@@ -7,6 +7,62 @@ struct InventoryIntent {
     pub command: String,
 }
 
+#[html_fn("inventory_sort")]
+fn inventory_sort(
+    In(event): In<HtmlEvent>,
+    view: Res<crate::InventoryView>,
+    ids: Query<&ElementId>,
+    parents: Query<&ChildOf>,
+    mut actions: MessageWriter<crate::InventoryAction>,
+) {
+    use terra_core::inventory_sort::SortOrder;
+    if std::env::var_os("TERRA_INVENTORY_PORTRAIT_SMOKE").is_some() {
+        let mut target = Some(event.target);
+        let mut target_ids = Vec::new();
+        for _ in 0..16 {
+            let Some(entity) = target else { break };
+            if let Ok(id) = ids.get(entity) { target_ids.push(id.0.clone()); }
+            target = parents.get(entity).ok().map(ChildOf::parent);
+        }
+        info!(open = view.open, ready = view.sort_ready, storage = view.storage_sortable, ?target_ids, "Native inventory sorting callback");
+    }
+    if !view.open || !view.sort_ready { return; }
+    let mut target = Some(event.target);
+    for _ in 0..16 {
+        let Some(entity) = target else { break };
+        if let Ok(id) = ids.get(entity) {
+            let storage = match id.0.as_str() {
+                "sort-player-menu" => Some(false),
+                "sort-storage-menu" | "sort-linked-menu" => Some(true),
+                "inventory-sort-dismiss" => { actions.write(crate::InventoryAction::CloseSortMenu); break; },
+                _ => None,
+            };
+            if let Some(storage) = storage {
+                actions.write(crate::InventoryAction::ToggleSortMenu { storage });
+                break;
+            }
+        }
+        let intent = ids.get(entity).ok().and_then(|id| match id.0.as_str() {
+            "sort-player-type" => Some((false, SortOrder::Category)),
+            "sort-player-name" => Some((false, SortOrder::Alphabetical)),
+            "sort-player-id" => Some((false, SortOrder::Id)),
+            "sort-player-quantity" => Some((false, SortOrder::Quantity)),
+            "sort-storage-type" | "sort-linked-type" => Some((true, SortOrder::Category)),
+            "sort-storage-name" | "sort-linked-name" => Some((true, SortOrder::Alphabetical)),
+            "sort-storage-id" | "sort-linked-id" => Some((true, SortOrder::Id)),
+            "sort-storage-quantity" | "sort-linked-quantity" => Some((true, SortOrder::Quantity)),
+            _ => None,
+        });
+        if let Some((storage, order)) = intent {
+            if !storage || view.storage_sortable {
+                actions.write(crate::InventoryAction::Sort { storage, order });
+            }
+            break;
+        }
+        target = parents.get(entity).ok().map(ChildOf::parent);
+    }
+}
+
 #[html_fn("inventory_hearth_view")]
 fn inventory_hearth_view(
     In(_event): In<HtmlEvent>,

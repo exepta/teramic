@@ -1,3 +1,4 @@
+mod character_gallery;
 mod debug;
 pub(crate) mod horse_pose;
 mod military;
@@ -24,6 +25,8 @@ pub struct VillagerHeldItem {
 #[derive(Component)]
 pub(crate) struct VillagerHand {
     pub item: terra_core::ItemKind,
+    /// Reference residents carry their stowed tools in the authored mesh until working.
+    pub work_only: bool,
     pub visible: bool,
     pub swing: f32,
 }
@@ -36,15 +39,17 @@ impl VillagerHand {
         let item = match role % terra_core::creatures::villagers::ROLE_COUNT {
             1 => ItemKind::Tool(ToolKind::IronHoe),
             2..=4 => ItemKind::Tool(ToolKind::IronSword),
-            5 | 6 => ItemKind::Stick,
+            6 => ItemKind::Stick,
             7 => ItemKind::Flower(terra_core::beds::DyeColor::White),
-            8 => ItemKind::Tool(ToolKind::IronPickaxe),
+            14 => ItemKind::Tool(ToolKind::IronPickaxe),
             9 => ItemKind::Tool(ToolKind::IronAxe),
             _ => return None,
         };
+        let work_only = matches!(role, 1 | 9 | 14);
         Some(Self {
             item,
-            visible: true,
+            work_only,
+            visible: !work_only,
             swing: 0.0,
         })
     }
@@ -74,6 +79,7 @@ struct Models {
 }
 type ModelParts = Vec<(model::Part, Vec3, Handle<Mesh>)>;
 pub(crate) fn install(app: &mut App) {
+    character_gallery::install(app);
     pet_preview::install(app);
     debug::install(app);
     app.init_resource::<military::Uniforms>();
@@ -466,7 +472,11 @@ fn animate(
             }
             animate_villager(motion, part, &mut transform);
             if let Some(mut hand) = hand {
-                hand.visible = motion.behavior != Behavior::Sleep && motion.sleep < 0.5;
+                hand.visible = motion.behavior != Behavior::Sleep
+                    && motion.sleep < 0.5
+                    && (!hand.work_only
+                        || motion.behavior == Behavior::Attack
+                        || motion.attack > 0.0);
                 hand.swing = villager_action(motion);
             }
             continue;
@@ -975,7 +985,7 @@ mod tests {
                 Visibility::Inherited,
             ))
             .id();
-        let hand = VillagerHand::new(8).unwrap();
+        let hand = VillagerHand::new(14).unwrap();
         assert_eq!(
             hand.item,
             terra_core::ItemKind::Tool(terra_core::ToolKind::IronPickaxe)
@@ -1006,7 +1016,7 @@ mod tests {
             }
             app.update();
             let hand = app.world().get::<VillagerHand>(arm).unwrap();
-            assert_eq!(hand.visible, behavior != Behavior::Sleep);
+            assert_eq!(hand.visible, behavior == Behavior::Attack);
             assert_eq!(hand.swing > 0.0, behavior == Behavior::Attack);
             grips.push(
                 app.world()
@@ -1024,8 +1034,21 @@ mod tests {
             "actions move the hand, not just a detached prop"
         );
         assert!(VillagerHand::new(0).is_none());
-        for role in 1..terra_core::creatures::villagers::CIVILIAN_ROLE_COUNT {
+        for role in [1, 2, 3, 4, 6, 7, 9, 14] {
             assert!(VillagerHand::new(role).is_some());
+        }
+        for role in [1, 9, 14] {
+            let hand = VillagerHand::new(role).unwrap();
+            assert!(
+                hand.work_only && !hand.visible,
+                "stowed reference tools must not be duplicated at rest"
+            );
+        }
+        for role in [5, 8] {
+            assert!(
+                VillagerHand::new(role).is_none(),
+                "bishop and smith use their authored crozier and hammer"
+            );
         }
     }
 

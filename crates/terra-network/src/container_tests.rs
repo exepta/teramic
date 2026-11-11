@@ -7,6 +7,8 @@ use terra_core::{
     containers::{CHEST_SLOTS, ContainerGesture},
 };
 use terra_world::edits::{BlockObjectState, EditJournal};
+#[path = "inventory_sort_udp_tests.rs"]
+mod sorting;
 
 fn inventory(host: &mut App, client: &mut App, action: InventoryAction) -> InventoryOutcome {
     let session = client.world().resource::<client::ClientSession>();

@@ -57,6 +57,47 @@ fn car(anchor: Cell, kind: VehicleKind) -> Vehicle {
     }
 }
 #[test]
+fn automatic_clearance_covers_tall_roofs_and_updates_with_vehicle_geometry() {
+    let mut vehicle = car([8, 12, 8], VehicleKind::Locomotive);
+    vehicle.parts.push(TrainPart {
+        offset: [0, 1, -2],
+        material: train_parts::RAIL_BUILDER,
+        facing: 0,
+        wood: WoodSpecies::Oak,
+    });
+    let compact = vehicle.rail_clearance_height();
+    assert!((3..9).contains(&compact));
+    for height in 3..=11 {
+        let index = vehicle.parts.len() as u16;
+        vehicle.parts.push(TrainPart {
+            offset: [0, height, 3],
+            material: 3,
+            facing: 0,
+            wood: WoodSpecies::Oak,
+        });
+        vehicle.blocks.insert(
+            index,
+            TrainBlockView {
+                boxes: vec![crate::block_shapes::ShapeBox {
+                    minimum: [0.0; 3],
+                    maximum: [1.0; 3],
+                    hinged: false,
+                }],
+                ..Default::default()
+            },
+        );
+        assert!(vehicle.valid());
+        let base = vehicle.anchor[1] as f64 - 1.0;
+        assert!(
+            base + f64::from(vehicle.rail_clearance_height()) >= vehicle.model_bounds()[1][1] + 1.0
+        );
+        assert!(vehicle.rail_clearance_height() > compact);
+    }
+    vehicle.motion.rail_clearance.height = 7;
+    assert_eq!(vehicle.rail_clearance_height(), 7);
+}
+
+#[test]
 fn every_vehicle_kind_has_real_parts_mass_seats_and_private_owned_cargo() {
     for kind in [
         VehicleKind::Locomotive,

@@ -17,10 +17,11 @@ pub(crate) fn item_category(item: ItemKind, declared: Option<&str>) -> String {
             _ => return category.into(),
         }
     }
-    if item
-        .block_material()
-        .is_some_and(|material| (196..=295).contains(&material))
-    {
+    if item.block_material().is_some_and(|material| {
+        terra_core::rails::is_rail(material)
+            || terra_core::train_parts::is_part(material)
+            || matches!(material, 206..=209 | 217)
+    }) {
         return "trains".into();
     }
     if terra_core::food(item).is_some() {

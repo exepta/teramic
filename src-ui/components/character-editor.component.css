@@ -1,0 +1,119 @@
+.character-backdrop { position: absolute; left: 0; top: 0; width: 100%; height: 100%; background-color: #100c09bd; display: flex; align-items: center; justify-content: center; z-index: 620; padding: 24px; }
+.character-editor { position: relative; width: 860px; height: 620px; flex-shrink: 0; display: flex; flex-direction: column; gap: 14px; padding: 34px 38px 32px; color: #f1d9b6; }
+.character-panel-fill { position: absolute; left: 14px; right: 14px; top: 14px; bottom: 14px; background-color: #302118; pointer-events: none; }
+.character-heading { display: flex; justify-content: center; align-items: center; gap: 12px; flex-shrink: 0; color: #dab27d; }
+.character-heading h1 { font-size: 24px; line-height: 30px; color: #f1d9b6; margin: 0; }
+.character-context { text-align: center; font-size: 13px; line-height: 19px; color: #c8a57b; flex-shrink: 0; }
+.character-content { display: flex; gap: 28px; min-height: 0; flex-grow: 1; }
+.character-stage { display: flex; flex-direction: column; width: 38%; min-width: 0; padding: 8px 12px; border: 1px solid #725034; background-color: #21170f; border-radius: 6px; }
+.character-viewport { position: relative; width: 100%; flex-grow: 1; min-height: 0; }
+.character-preview { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
+.character-rotate { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-shrink: 0; }
+.character-rotate p { font-size: 12px; color: #c8a57b; }
+.character-editor button { min-height: 36px; padding: 8px 12px; border: 1px solid #956c44; background-color: #48301e; color: #efdbba; font-size: 13px; line-height: 18px; justify-content: center; border-radius: 4px; gap: 7px; }
+.character-editor button:hover { border-color: #c59a63; background-color: #65472c; }
+.character-editor button:focus { border-color: #d0ac7c; }
+.character-editor button.selected, .character-editor button.character-save { background-color: #775330; border-color: #c59a63; }
+.character-controls { display: flex; flex-direction: column; gap: 18px; flex-grow: 1; min-width: 0; }
+.character-field { display: flex; flex-direction: column; gap: 8px; }
+.character-controls label { font-size: 14px; line-height: 18px; color: #ead1ab; }
+.character-types { display: flex; gap: 8px; }
+.character-choice { flex-grow: 1; }
+.character-hairstyles { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+.character-colors { display: flex; flex-direction: column; gap: 10px; }
+.character-color-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.character-picker { width: 190px; max-width: 62%; height: 36px; min-height: 36px; min-width: 0; padding: 8px 10px 8px 36px; font-size: 13px; line-height: 18px; border: 1px solid #a77d49; border-radius: 4px; background-color: #24190f; color: #f1d9b6; }
+.character-picker::value, .character-picker::placeholder { font-size: 13px; line-height: 18px; }
+.character-picker::preview { left: 8px; width: 20px; height: 20px; border: 1px solid #b6854b; border-radius: 3px; }
+.character-picker::popup { width: 250px; padding: 12px; background-color: #302118; color: #f1d9b6; border: 1px solid #b6854b; border-radius: 5px; z-index: 700; }
+.character-picker::format { padding: 5px 8px; font-size: 12px; background-color: #4c3421; color: #ecd0a5; border-color: #8e653f; }
+.character-picker::selected-format { background-color: #7d552f; color: #ffe6b6; border-color: #c19660; }
+.character-picker::canvas, .character-picker::hue-track, .character-picker::alpha-track { width: 100%; }
+.character-hint { color: #bb9c76; font-size: 12px; line-height: 18px; }
+.character-error { color: #f2b29b; font-size: 12px; line-height: 18px; }
+.character-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; border-top: 1px solid #725034; padding-top: 14px; flex-shrink: 0; }
+.character-footer-actions { display: flex; gap: 10px; }
+@media (max-height: 720px) { .character-editor { gap: 8px; padding: 26px 30px; } .character-heading h1 { font-size: 21px; line-height: 26px; } .character-controls { gap: 10px; } .character-field { gap: 6px; } .character-colors { gap: 6px; } .character-footer { padding-top: 10px; } }
+@media (max-width: 900px) { .character-content { gap: 16px; } .character-editor { padding: 26px; } .character-footer { gap: 6px; } .character-footer-actions { gap: 6px; } }
+
+/* Reference layout: generous turntable, visual style cards, compact color controls. */
+.character-editor { width: 1160px; height: 820px; padding: 36px 38px 32px; color: #f1dfb4; }
+.character-panel-fill { background-color: #191a1c; }
+.character-heading h1 { font-size: 28px; color: #f6dc98; }
+.character-content { gap: 22px; }
+.character-stage { width: 34%; padding: 18px; border: 2px solid #aa7d36; background-color: #242326; gap: 12px; }
+.character-stage label { color: #f0d89a; font-size: 17px; text-align: center; }
+.character-controls { padding: 18px; border: 2px solid #aa7d36; border-radius: 6px; background-color: #202023; gap: 22px; }
+.character-controls label { color: #f0d89a; font-size: 16px; }
+.character-editor button { border-color: #a77c3c; background-color: #332b20; color: #f4dfb0; }
+.character-editor button:hover { background-color: #60431f; border-color: #e9c16b; }
+.character-editor button.selected { background-color: #78561e; border-color: #ffdb84; }
+.character-editor button.character-save { background-color: #385228; border-color: #a8b970; }
+.character-editor button.character-hair { flex-direction: column; padding: 5px; gap: 1px; min-height: 120px; }
+.character-style-image { width: 104px; height: 104px; max-width: 100%; flex-shrink: 0; pointer-events: none; }
+.character-hairstyles { gap: 9px; }
+.character-picker { background-color: #17171b; border-color: #b38744; }
+.character-footer { border-top-color: #967340; }
+.character-viewport { min-height: 0; }
+
+.character-tabs { display: flex; gap: 8px; flex-shrink: 0; height: 42px; }
+.character-tabs button { flex-grow: 1; flex-basis: 0; min-width: 0; display: flex; justify-content: center; align-items: center; gap: 8px; padding: 6px 10px; border: 1px solid #a77e3f; background-color: #30291e; font-size: 14px; color: #ead7a7; }
+.character-tabs button.selected { background-color: #705023; border-color: #e3b85d; }
+.character-stage { width: 32%; }
+.character-content { gap: 18px; }
+.character-controls { gap: 10px; }
+.character-hairstyles { gap: 7px; }
+.character-hair { min-height: 100px; height: 100px; padding: 3px; }
+.character-style-image { width: 80px; height: 80px; }
+.character-palette-row { display: flex; gap: 12px; }
+.character-palette-row .character-color-row { flex-grow: 1; flex-basis: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+.character-outfit { display: flex; flex-direction: column; gap: 6px; padding: 10px; border: 1px solid #87663b; background-color: #222022; }
+.character-outfit div { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.character-outfit button { width: 210px; height: 30px; padding: 4px 10px; font-size: 13px; }
+.character-color-row { min-height: 30px; }
+.character-picker { height: 30px; }
+.character-hint { font-size: 11px; line-height: 15px; }
+/* Keep every thumbnail, label and picker inside its authored frame. */
+.character-editor .character-hair { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 88px; height: 88px; padding: 4px; gap: 2px; }
+.character-editor .character-hair p { margin: 0; font-size: 12px; line-height: 14px; }
+.character-editor .character-style-image { width: 60px; height: 60px; flex-shrink: 0; }
+.character-editor .character-controls { padding: 12px; gap: 8px; }
+.character-editor .character-controls label { font-size: 14px; line-height: 17px; }
+.character-editor .character-picker { height: 30px; min-height: 30px; padding: 5px 8px 5px 34px; }
+.character-editor .character-outfit { padding: 8px; gap: 5px; }
+.character-editor .character-outfit button { min-height: 30px; height: 30px; padding: 4px 10px; line-height: 18px; }
+.character-editor .character-colors { gap: 6px; }
+.character-editor .character-hint { margin: 0; }
+
+.character-editor .character-hair { min-height: 128px; height: 128px; }
+.character-editor .character-style-image { width: 100px; height: 100px; }
+.character-lower { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.character-lower .character-colors { padding: 8px; border: 1px solid #87663b; background-color: #222022; }
+.character-editor .character-lower label { font-size: 12px; }
+.character-editor .character-lower .character-outfit button { width: 160px; max-width: 65%; font-size: 12px; }
+.character-editor .character-lower .character-picker { width: 150px; max-width: 62%; font-size: 12px; }
+
+/* Independent garment choices stay inside the same scaled editor canvas. */
+.character-materials { display: grid; grid-template-columns: repeat(2, 1fr); row-gap: 8px; column-gap: 14px; padding: 10px; border: 1px solid #87663b; background-color: #222022; flex-shrink: 0; }
+.character-material-heading { grid-column: span 2; color: #f0d89a; }
+.character-material-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; }
+.character-editor .character-material-row label { font-size: 12px; line-height: 16px; flex-shrink: 0; }
+.character-editor .character-material-choice { width: 152px; max-width: 67%; min-width: 0; height: 32px; min-height: 32px; padding: 5px 27px 5px 10px; font-size: 12px; line-height: 18px; background-color: #17171b; border: 1px solid #b38744; color: #f1d9b6; }
+.character-material-choice::popup { padding: 6px; background-color: #262023; border: 1px solid #b38744; color: #f1d9b6; }
+.character-material-choice option { min-height: 30px; padding: 6px 10px; font-size: 12px; color: #f1d9b6; }
+.character-material-choice option:hover { background-color: #60431f; }
+
+/* Four focused tabs share one fixed canvas, scaled uniformly at every resolution. */
+.character-editor { padding: 44px 48px 48px; gap: 12px; }
+.character-context { margin: 0; }
+.character-editor .character-controls { padding: 16px; gap: 12px; min-height: 0; }
+.character-editor .character-hairstyles { grid-template-columns: repeat(7, 1fr); gap: 7px; }
+.character-editor button.character-hair { min-width: 0; min-height: 100px; height: 100px; }
+.character-editor .character-style-image { width: 74px; max-width: 100%; height: 74px; }
+.character-editor .character-footer { padding: 14px 4px 6px; gap: 12px; }
+.character-footer-tools, .character-footer-actions { display: flex; align-items: center; gap: 10px; }
+.character-editor .character-footer button { min-height: 42px; padding: 10px 16px; flex-shrink: 0; }
+.character-editor .character-clothing-colors { display: grid; grid-template-columns: repeat(2, 1fr); row-gap: 10px; column-gap: 14px; padding: 10px; border: 1px solid #87663b; background-color: #222022; }
+.character-editor .character-clothing-colors label { font-size: 12px; }
+.character-editor .character-clothing-colors .character-picker { width: 152px; max-width: 67%; font-size: 12px; }
+.character-editor .character-clothing-colors .character-color-row { gap: 8px; }

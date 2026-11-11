@@ -21,6 +21,7 @@ pub enum DamageCause {
     Rotten,
     Fire,
     Player,
+    Train,
 }
 impl DamageCause {
     pub fn message(self) -> &'static str {
@@ -39,6 +40,7 @@ impl DamageCause {
             Self::Rotten => "You were overcome by sickness.",
             Self::Fire => "You burned to death.",
             Self::Player => "You were defeated by another player.",
+            Self::Train => "You were run over by a train.",
         }
     }
 }
@@ -298,6 +300,7 @@ impl SurvivalVitals {
         let amount = if matches!(
             cause,
             DamageCause::Animal
+                | DamageCause::Train
                 | DamageCause::Player
                 | DamageCause::Lightning
                 | DamageCause::FallingMineral
@@ -309,6 +312,7 @@ impl SurvivalVitals {
         let amount = if matches!(
             cause,
             DamageCause::Animal
+                | DamageCause::Train
                 | DamageCause::Player
                 | DamageCause::Fall
                 | DamageCause::Lightning

@@ -50,6 +50,7 @@ pub(super) fn fixture() -> (App, Peer) {
         chat: default(),
         uuid: terra_core::PlayerUuid::new_v4(),
         gender: default(),
+        appearance: Default::default(),
         mining: None,
         consumption: None,
         gameplay_sent: None,

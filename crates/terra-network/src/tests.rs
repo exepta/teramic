@@ -257,6 +257,13 @@ fn address_join_preserves_profile_uuid_and_reports_real_population() {
     assert_eq!(browser::query_status(address).unwrap().players, 0);
     let profile = terra_core::PlayerProfile {
         gender: terra_core::PlayerGender::Female,
+        appearance: terra_core::CharacterAppearance {
+            hairstyle: 9,
+            hair_color: [230, 190, 60],
+            shirt_color: [30, 150, 85],
+            pants_color: [40, 55, 90],
+            ..Default::default()
+        },
         ..default()
     };
     let mut a = profile_client(address, profile.clone());
@@ -286,7 +293,9 @@ fn address_join_preserves_profile_uuid_and_reports_real_population() {
             .resource::<client::ReplicatedPlayers>()
             .players
             .get(&female)
-            .is_some_and(|p| p.current.gender == terra_core::PlayerGender::Female)
+            .is_some_and(|p| {
+                p.current.gender == profile.gender && p.current.appearance == profile.appearance
+            })
     });
     let old_player = a.world().resource::<client::ClientSession>().player;
     let link = a
@@ -313,6 +322,15 @@ fn address_join_preserves_profile_uuid_and_reports_real_population() {
     assert_eq!(session.uuid, Some(profile.uuid));
     assert_ne!(session.player, old_player);
     assert_eq!(browser::query_status(address).unwrap().players, 2);
+    let returned = session.player.unwrap();
+    wait(&mut host, &mut [&mut rejoined, &mut b], |_, clients| {
+        clients[1]
+            .world()
+            .resource::<client::ReplicatedPlayers>()
+            .players
+            .get(&returned)
+            .is_some_and(|p| p.current.appearance == profile.appearance)
+    });
 }
 
 #[test]

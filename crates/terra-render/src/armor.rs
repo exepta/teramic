@@ -248,6 +248,8 @@ fn sync(
                         WorldAvatarPart(root),
                         terra_core::miniature::MiniatureMesh::Player,
                     ));
+                } else {
+                    child.insert(bevy::light::NotShadowReceiver);
                 }
                 if is_cape && index == 1 {
                     upper_cape = Some(child.id());

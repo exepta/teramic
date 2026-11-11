@@ -32,6 +32,48 @@ mod filling_pose_tests {
     }
 }
 
+#[cfg(test)]
+mod train_attachment_pose_tests {
+    use super::*;
+
+    #[test]
+    fn rail_builder_states_roundtrip_all_yaws_and_reject_unrelated_metadata() {
+        let material = terra_core::train_parts::RAIL_BUILDER;
+        let position = [-17, 20, -1];
+        for facing in 0..4 {
+            let state = BlockObjectState {
+                facing,
+                ..Default::default()
+            };
+            let mut journal = EditJournal::default();
+            journal.record(position, material).unwrap();
+            journal.set_object_state(position, Some(state)).unwrap();
+            journal.record(position, material).unwrap();
+            assert_eq!(journal.object_state(position), Some(state));
+            let mut replica = EditJournal::default();
+            replica
+                .import_delta(journal.section_delta(global_to_section(position).0))
+                .unwrap();
+            assert_eq!(replica.object_state(position), Some(state));
+            assert!(!BlockObjectState { facing: 4, ..state }.valid_for(position, material));
+            assert!(
+                !BlockObjectState {
+                    peer: Some([-16, 20, -1]),
+                    ..state
+                }
+                .valid_for(position, material)
+            );
+            assert!(
+                !BlockObjectState {
+                    secondary: true,
+                    ..state
+                }
+                .valid_for(position, material)
+            );
+        }
+    }
+}
+
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct BlockObjectState {
     pub facing: u8,
@@ -136,7 +178,11 @@ impl BlockObjectState {
                         && self.peer.is_none()
                         && !self.secondary
                 }
-                209..=217 => self.facing < 4 && self.peer.is_none() && !self.secondary,
+                id if id == terra_core::rails::SWITCH_STAND
+                    || terra_core::train_parts::is_train(id) && id != 248 =>
+                {
+                    self.facing < 4 && self.peer.is_none() && !self.secondary
+                }
                 162 | 170 | 171 => self.facing < 4 && self.peer.is_none() && !self.secondary,
                 163..=169 | 172 => {
                     terra_core::plumbing::valid_facing(material, self.facing)

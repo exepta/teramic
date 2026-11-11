@@ -1,5 +1,9 @@
 //! One-shot inventory portrait of the selected shared world avatar.
 use std::time::{Duration, Instant};
+mod editor;
+mod inventory;
+pub use editor::{RenderCharacterPreviewImage, RenderCharacterPreviewSelection};
+pub use inventory::{RenderInventoryPortraitImage, RenderInventoryPortraitSelection};
 
 use bevy::{
     camera::{Exposure, Hdr, RenderTarget, visibility::RenderLayers},
@@ -41,17 +45,23 @@ struct PortraitCapture {
     eyelids: Option<Entity>,
     equipment: crate::armor::AvatarEquipment,
     gender: terra_core::PlayerGender,
+    appearance: terra_core::CharacterAppearance,
 }
 
 pub(crate) fn install(app: &mut App) {
+    editor::install(app);
+    inventory::install(app);
     app.init_resource::<PlayerPreviewImage>()
         .init_resource::<PortraitCapture>()
         .add_systems(Update, (prepare, capture).chain());
 }
 
+#[allow(clippy::too_many_arguments)]
 fn prepare(
     mut commands: Commands,
-    assets: Res<AvatarAssets>,
+    mut assets: ResMut<AvatarAssets>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    scene: Query<Entity, With<PortraitScene>>,
     mut images: ResMut<Assets<Image>>,
     mut preview: ResMut<PlayerPreviewImage>,
     mut pending: ResMut<PortraitCapture>,
@@ -70,7 +80,22 @@ fn prepare(
         .map_or(terra_core::PlayerGender::default(), |profile| {
             profile.gender
         });
-    if pending.finished && (pending.equipment != equipment || pending.gender != gender) {
+    let appearance = profile
+        .as_ref()
+        .map_or(terra_core::CharacterAppearance::default(), |profile| {
+            profile.appearance
+        });
+    if pending.started.is_some()
+        && (pending.equipment != equipment
+            || pending.gender != gender
+            || pending.appearance != appearance)
+    {
+        for entity in &scene {
+            commands.entity(entity).try_despawn();
+        }
+        if let Some((entity, _)) = pending.capture.take() {
+            commands.entity(entity).try_despawn();
+        }
         *pending = PortraitCapture::default();
         preview.ready = false;
         preview.error = None;
@@ -80,6 +105,7 @@ fn prepare(
     }
     pending.equipment = equipment;
     pending.gender = gender;
+    pending.appearance = appearance;
     pending.started = Some(Instant::now());
     if preview.image == Handle::default() || preview.closed_image == Handle::default() {
         let mut target = Image::new_target_texture(320, 512, TextureFormat::Rgba8UnormSrgb, None);
@@ -96,12 +122,14 @@ fn prepare(
             Visibility::Visible,
         ))
         .id();
+    assets.prepare(&mut meshes, gender, appearance);
     let avatar = spawn_parts(
         &mut commands,
         &assets,
         root,
         RenderLayers::layer(LAYER),
         gender,
+        appearance,
     );
     pending.eyelids = avatar.eyelids;
     if let Some(eyelids) = avatar.eyelids {
@@ -157,7 +185,7 @@ fn prepare(
             shadow_maps_enabled: false,
             ..default()
         },
-        Transform::from_xyz(4.0, 2.0, -1.0).looking_at(Vec3::ZERO, Vec3::Y),
+        Transform::from_xyz(4.0, -2.0, -4.0).looking_at(Vec3::ZERO, Vec3::Y),
         RenderLayers::layer(LAYER),
     ));
 }
@@ -304,11 +332,14 @@ mod tests {
     fn equipment_changes_recapture_portrait_without_allocating_new_targets() {
         let mut app = App::new();
         app.init_resource::<Assets<Image>>()
+            .init_resource::<Assets<Mesh>>()
             .init_resource::<PlayerPreviewImage>()
             .init_resource::<PortraitCapture>()
             .init_resource::<terra_network::client::ClientSession>()
             .insert_resource(AvatarAssets {
+                skin_eyelids: Default::default(),
                 parts: [Vec::new(), Vec::new()],
+                custom: default(),
                 eyelids: None,
                 material: Handle::default(),
             })

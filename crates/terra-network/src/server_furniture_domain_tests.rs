@@ -82,6 +82,7 @@ fn removal_peer(app: &mut App, position: [i64; 3], mode: GameMode, tool: Option<
         chat: Default::default(),
         uuid,
         gender: Default::default(),
+        appearance: Default::default(),
         mining: None,
         consumption: None,
         gameplay_sent: None,
@@ -820,5 +821,129 @@ fn realm_territory_keeps_terrain_open_but_container_removal_needs_inventory_acce
                 .iter()
                 .any(|drop| drop.stack == contents.slots[0])
         );
+    }
+}
+
+#[test]
+fn rail_builder_attaches_outwards_to_every_frame_face_and_authority_consumes_one_item() {
+    use crate::protocol::session::InventorySource;
+    use terra_core::train_parts::{FRAME, RAIL_BUILDER};
+
+    for (facing, normal) in [
+        (0, [0, 0, -1]),
+        (1, [-1, 0, 0]),
+        (2, [0, 0, 1]),
+        (3, [1, 0, 0]),
+    ] {
+        let mut app = super::tests::app();
+        app.insert_resource(
+            terra_core::block_properties::BlockPropertiesCatalog::load(
+                &terra_core::asset_directory().join("terra/blocks"),
+            )
+            .unwrap(),
+        );
+        let support = [7, 6, 7];
+        super::tests::edit(&mut app, support, 0, FRAME, 0.0).unwrap();
+        let position = std::array::from_fn(|axis| support[axis] + normal[axis]);
+        let item = ItemKind::Block(RAIL_BUILDER);
+        let mut peer = removal_peer(&mut app, support, GameMode::Survival, Some(item));
+        app.world_mut()
+            .resource_mut::<EditJournal>()
+            .gameplay_mut()
+            .inventories
+            .get_mut(&peer.uuid)
+            .unwrap()
+            .insert(item, 1);
+        let center = Vec3::from_array(support.map(|v| v as f32)) + Vec3::splat(0.5);
+        let outward = Vec3::from_array(normal.map(|v| v as f32));
+        let eye = center + outward * 4.0;
+        app.world_mut()
+            .get_mut::<Transform>(peer.body)
+            .unwrap()
+            .translation = eye - Vec3::Y * terra_physics::character::PLAYER_EYE_OFFSET;
+        let direction = -outward;
+        peer.look = [(-direction.x).atan2(-direction.z), 0.0];
+        // Looking towards the train faces the opposite way from the installed scoop.
+        assert_ne!(BlockObjectState::from_yaw(peer.look[0]).facing, facing);
+        let before =
+            app.world().resource::<EditJournal>().gameplay().inventories[&peer.uuid].clone();
+        let mut system = SystemState::<ControlWorld>::new(app.world_mut());
+        let mut world = system.get_mut(app.world_mut()).unwrap();
+        let hit = terra_world::targeting::pick_world_for_placement(
+            &world.chunks,
+            &world.journal,
+            &world.block_properties,
+            eye.to_array().map(f64::from),
+            direction.to_array().map(f64::from),
+            terra_world::props::PropPose::Rest,
+        )
+        .0
+        .unwrap();
+        assert_eq!(hit.position, support);
+        assert_eq!(hit.normal, normal.map(|v| v as i32));
+        let preview = terra_world::placement::resolve(
+            &world.chunks,
+            &world.journal,
+            hit,
+            item,
+            (
+                eye.to_array().map(f64::from),
+                direction.to_array().map(f64::from),
+            ),
+            peer.look,
+            world.config.world.bounded_world,
+        )
+        .unwrap();
+        let predicted = preview
+            .states
+            .iter()
+            .find(|(cell, _)| *cell == position)
+            .unwrap()
+            .1
+            .unwrap();
+        assert_eq!(predicted.facing, facing);
+        let command = EditCommand {
+            request: 1,
+            revision: world
+                .journal
+                .revision(terra_voxel::global_to_section(position).0),
+            look: peer.look,
+            source: Some(InventorySource {
+                slot: 0,
+                revision: before.revision,
+            }),
+            action: EditAction::Block {
+                position,
+                expected: 0,
+                material: RAIL_BUILDER,
+            },
+        };
+        assert_eq!(
+            super::super::validation::apply(command, &peer, &mut world, false),
+            EditOutcome::Applied,
+            "facing {facing}"
+        );
+        assert_eq!(world.chunks.block_at(support), Some(FRAME));
+        assert_eq!(world.chunks.block_at(position), Some(RAIL_BUILDER));
+        assert_eq!(
+            world
+                .chunks
+                .block_at([position[0], position[1] - 1, position[2]]),
+            Some(0)
+        );
+        assert_eq!(world.journal.object_state(position), Some(predicted));
+        let inventory = &world.journal.gameplay().inventories[&peer.uuid];
+        assert_eq!(inventory.count(item), 1);
+        assert_eq!(inventory.revision, before.revision + 1);
+        // Persistence and delta application use the same validation as the live commit.
+        let mut reloaded = EditJournal::default();
+        reloaded
+            .import_delta(
+                world
+                    .journal
+                    .section_delta(terra_voxel::global_to_section(position).0),
+            )
+            .unwrap();
+        assert_eq!(reloaded.object_state(position), Some(predicted));
     }
 }

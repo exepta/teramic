@@ -26,6 +26,7 @@ pub enum MenuDialog {
     Display,
     Minimap,
     MobHealth,
+    Character,
 }
 #[derive(Resource, Default)]
 pub struct MenuState {

@@ -625,6 +625,7 @@ pub fn build_app() -> Result<App, Box<dyn Error>> {
         (
             sync_block_previews,
             sync_workshop_preview,
+            sync_character_preview,
             sync_pet_portrait,
             preview_demand::sync,
         ),
@@ -768,6 +769,7 @@ pub fn build_app() -> Result<App, Box<dyn Error>> {
     crate::drop_smoke::install(&mut app);
     crate::fluid_source_smoke::install(&mut app);
     crate::menu_smoke::install(&mut app);
+    crate::character_live::install(&mut app);
     crate::loading_smoke::install(&mut app);
     crate::systems_smoke::install(&mut app);
     crate::hydrology_smoke::install(&mut app);
@@ -1249,11 +1251,42 @@ fn sync_workshop_preview(
     }
 }
 
+fn sync_character_preview(
+    mut commands: Commands,
+    selected: Option<Res<terra_ui::CharacterPreviewSelection>>,
+    current: Option<Res<terra_render::RenderCharacterPreviewSelection>>,
+    rendered: Res<terra_render::RenderCharacterPreviewImage>,
+    mut ui: ResMut<terra_ui::CharacterPreviewImage>,
+) {
+    if let Some(selected) = selected {
+        let next = terra_render::RenderCharacterPreviewSelection {
+            gender: selected.gender,
+            appearance: selected.appearance,
+            rotation: selected.rotation,
+        };
+        if current.as_deref() != Some(&next) {
+            commands.insert_resource(next);
+        }
+    } else if current.is_some() {
+        commands.remove_resource::<terra_render::RenderCharacterPreviewSelection>();
+    }
+    if ui.image != rendered.image
+        || ui.ready != rendered.ready
+        || ui.hairstyles != rendered.hairstyles
+    {
+        ui.hairstyles = rendered.hairstyles.clone();
+        ui.image = rendered.image.clone();
+        ui.ready = rendered.ready;
+    }
+}
+
 fn sync_block_previews(
     rendered: Res<terra_render::RenderBlockPreviews>,
     mut ui: ResMut<terra_ui::BlockPreviewImages>,
-    player: Res<terra_render::PlayerPreviewImage>,
-    mut player_ui: ResMut<terra_ui::PlayerPreviewImage>,
+    (player, mut player_ui): (
+        Res<terra_render::PlayerPreviewImage>,
+        ResMut<terra_ui::PlayerPreviewImage>,
+    ),
     (props, mut props_ui): (
         Res<terra_render::RenderPropPreviews>,
         ResMut<terra_ui::PropPreviewImages>,
@@ -1263,6 +1296,11 @@ fn sync_block_previews(
         ResMut<terra_ui::ItemPreviewImages>,
     ),
     (time, mut blink): (Res<Time>, Local<terra_render::AvatarBlink>),
+    (portrait_rotation, live_portrait, mut live_selection): (
+        Res<terra_ui::InventoryPortraitRotation>,
+        Res<terra_render::RenderInventoryPortraitImage>,
+        ResMut<terra_render::RenderInventoryPortraitSelection>,
+    ),
 ) {
     if rendered.is_changed() && ui.0 != rendered.images {
         ui.0.clone_from(&rendered.images);
@@ -1270,7 +1308,18 @@ fn sync_block_previews(
     if items.is_changed() && items_ui.0 != items.images {
         items_ui.0.clone_from(&items.images);
     }
-    if player.ready {
+    let selected = terra_render::RenderInventoryPortraitSelection {
+        active: portrait_rotation.active,
+        rotation: portrait_rotation.rotation,
+    };
+    if *live_selection != selected {
+        *live_selection = selected;
+    }
+    if live_portrait.ready && selected.active {
+        if player_ui.0 != live_portrait.image {
+            player_ui.0 = live_portrait.image.clone();
+        }
+    } else if player.ready {
         let portrait = if blink.advance(time.delta_secs()) > 0.3 {
             &player.closed_image
         } else {

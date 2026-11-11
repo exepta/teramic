@@ -7,8 +7,8 @@ use terra_core::{
 use terra_voxel::SectionPos;
 use terra_world::{edits::SectionDelta, props::PropId};
 
-// Version 116 adds signed long-reach rail plans and replicated modular vehicles.
-pub const PROTOCOL_VERSION: u32 = 128;
+// Version 133 adds independent eyes, hair highlights, sort modes and train clearance.
+pub const PROTOCOL_VERSION: u32 = 133;
 pub const PROTOCOL_ID: u64 = 0x5445525241000001;
 pub const MAX_INPUT_BACKLOG: usize = 128;
 pub const MAX_TREE_INTEREST: usize = 256;
@@ -577,6 +577,8 @@ pub struct PlayerState {
     #[serde(default)]
     pub kingdom_heraldry: Option<terra_core::kingdom::KingdomHeraldry>,
     pub gender: terra_core::PlayerGender,
+    #[serde(default)]
+    pub appearance: terra_core::CharacterAppearance,
     pub generation: u32,
     pub player: PlayerId,
     pub ack: u64,
@@ -938,7 +940,7 @@ mod layout_tests {
                 .collect::<Vec<_>>()
         );
         assert_eq!(received.creatures.len(), 10);
-        assert_eq!(PROTOCOL_VERSION, 128);
+        assert_eq!(PROTOCOL_VERSION, 133);
     }
     #[test]
     fn kinetic_stress_capacity_roundtrip_and_reject_nonfinite_or_impossible_reserves() {

@@ -127,6 +127,7 @@ fn fixture() -> (App, Peer, EditCommand) {
         chat: default(),
         uuid: actor,
         gender: default(),
+        appearance: Default::default(),
         mining: None,
         consumption: None,
         gameplay_sent: None,

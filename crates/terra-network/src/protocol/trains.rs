@@ -7,6 +7,14 @@ use terra_core::{
 };
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum TrainAction {
+    RailClearance {
+        vehicle: u64,
+        size: terra_core::train_motion::RailClearance,
+    },
+    RailBuilder {
+        vehicle: u64,
+        active: bool,
+    },
     Inspect {
         station: [i64; 3],
     },

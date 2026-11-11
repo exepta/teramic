@@ -1047,6 +1047,22 @@ pub fn propose(
         })
         .flatten();
     let mut plan = layout(chunks, journal, position, expected, material, look, crank)?;
+    if material == terra_core::train_parts::RAIL_BUILDER && hit.normal[1] == 0 {
+        // The rear mounting lug touches the clicked face. The scoop points
+        // outwards, independent of the angle from which the player approaches.
+        let facing = match hit.normal {
+            [0, 0, -1] => 0,
+            [-1, 0, 0] => 1,
+            [0, 0, 1] => 2,
+            [1, 0, 0] => 3,
+            _ => return Err("Invalid rail builder attachment face".into()),
+        };
+        for (_, state) in &mut plan.states {
+            if let Some(state) = state {
+                state.facing = facing;
+            }
+        }
+    }
     if matches!(material, 245 | 246) {
         // Thin cab panels attach to the clicked face. On floors/ceilings the
         // nearest edge selects either inside or outside, independent of yaw.
@@ -1754,6 +1770,101 @@ mod tests {
         let fill = layout(&chunks, &journal, [14, 5, 7], 0, 3, [0.0; 2], None).unwrap();
         assert!(environment(&fill, &chunks, &journal, false).is_err());
     }
+    #[test]
+    fn rail_builder_overhang_is_pickable_and_blocks_placement_after_reload_in_every_facing() {
+        let material = terra_core::train_parts::RAIL_BUILDER;
+        let position = [16, 5, 16];
+        let section = terra_voxel::global_to_section(position).0;
+        let properties = BlockPropertiesCatalog::default();
+        for facing in 0..4 {
+            let mut chunks = ChunkStore::default();
+            for section_x in 0..=1 {
+                for section_z in 0..=1 {
+                    let section = SectionPos::new(section_x, 0, section_z);
+                    chunks.loaded.insert(
+                        section,
+                        LoadedSection {
+                            data: BlockSection::empty(section).unwrap(),
+                            mesh: None,
+                            mesh_epoch: 0,
+                            water_epoch: 0,
+                            water: None,
+                            props: Vec::new(),
+                        },
+                    );
+                }
+            }
+            let mut journal = EditJournal::default();
+            // A small volume inside the mounting beam, entirely outside its owner cell.
+            let probe = ShapeBox {
+                minimum: [-0.45, 0.45, 0.45],
+                maximum: [-0.35, 0.55, 0.55],
+                hinged: false,
+            }
+            .rotated_y(facing);
+            let minimum = std::array::from_fn(|axis| position[axis] as f64 + probe.minimum[axis]);
+            let maximum = std::array::from_fn(|axis| position[axis] as f64 + probe.maximum[axis]);
+            let center: [f64; 3] =
+                std::array::from_fn(|axis| (minimum[axis] + maximum[axis]) * 0.5);
+            let neighbor = center.map(|value| value.floor() as i64);
+            assert_ne!(neighbor, position);
+
+            let mut attachment =
+                layout(&chunks, &journal, position, 0, material, [0.0; 2], None).unwrap();
+            attachment.states[0].1.as_mut().unwrap().facing = facing;
+            environment(&attachment, &chunks, &journal, false).unwrap();
+            let (neighbor_section, neighbor_local) = terra_voxel::global_to_section(neighbor);
+            chunks
+                .loaded
+                .get_mut(&neighbor_section)
+                .unwrap()
+                .data
+                .set_block(neighbor_local, 3)
+                .unwrap();
+            assert!(environment(&attachment, &chunks, &journal, false).is_err());
+            chunks
+                .loaded
+                .get_mut(&neighbor_section)
+                .unwrap()
+                .data
+                .set_block(neighbor_local, 0)
+                .unwrap();
+
+            place_kinetic(&mut chunks, &mut journal, position, material, facing);
+            let mut replica = EditJournal::default();
+            replica
+                .import_delta(journal.section_delta(section))
+                .unwrap();
+            let snapshot = replica.geometry_snapshot(neighbor_section).unwrap();
+            for state in [&journal, &replica, &snapshot] {
+                let mut owners = Vec::new();
+                state.visit_extended_kinetics_near(neighbor, |owner| owners.push(owner));
+                assert_eq!(owners, vec![position]);
+                assert!(crate::interaction_shapes::space_intersects(
+                    &chunks,
+                    state,
+                    &properties,
+                    neighbor,
+                    minimum,
+                    maximum,
+                ));
+                // This vertical ray never enters the owner cell in any orientation.
+                let hit = crate::interaction_shapes::raycast(
+                    &chunks,
+                    state,
+                    &properties,
+                    [center[0], center[1] + 2.0, center[2]],
+                    [0.0, -1.0, 0.0],
+                    3.0,
+                )
+                .unwrap();
+                assert_eq!(hit.position, position);
+                let fill = layout(&chunks, state, neighbor, 0, 3, [0.0; 2], None).unwrap();
+                assert!(environment(&fill, &chunks, state, false).is_err());
+            }
+        }
+    }
+
     #[test]
     fn gear_radial_overhang_may_enter_a_floor_but_not_walls_or_the_axle_cell() {
         for material in [143, 151] {

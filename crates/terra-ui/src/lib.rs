@@ -1,6 +1,7 @@
 //! TiltUI catalog and game HUD integration.
 mod biome_previews;
 mod cadence;
+mod character;
 mod chat;
 mod choice_labels;
 mod debug;
@@ -9,6 +10,8 @@ mod frames;
 mod hud_layout;
 mod hud_visibility;
 mod inventory;
+mod inventory_portrait;
+pub use inventory_portrait::InventoryPortraitRotation;
 mod kingdom;
 pub mod menu;
 pub mod minimap;
@@ -42,6 +45,10 @@ tilt_ui::include_components!();
 pub use __tilt_ui_generated_components::app_shell_component::MenuIntent;
 pub use __tilt_ui_generated_components::debug_overlay_component::DebugOverlay;
 pub use __tilt_ui_generated_components::settings_menu_component::SettingsView;
+pub use character::{
+    CharacterPreviewImage, CharacterPreviewSelection, activate_character_profile,
+    prepare_character_profile, restore_character_profile,
+};
 pub use chat::{ChatAction, ChatView};
 pub use fonts::UiFontCacheStatus;
 pub use hud_visibility::HudVisibility;

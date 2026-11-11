@@ -1155,6 +1155,7 @@ fn builtin_recipes_are_valid_and_catalog_roundtrip_preserves_keys() {
             + 3 // Dedicated left/right switches and their control stand.
             + 8 // Modular railway vehicle parts and assembly station.
             + crate::locomotive_parts::COUNT // Complete BR52 modular locomotive kit.
+            + 1 // Cargo-fed locomotive rail builder.
     );
     for id in [
         "lantern",

@@ -172,6 +172,7 @@ pub enum TrainError {
     MissingMaterials,
     GearLocked,
     WaterCapacity,
+    ClearanceTooLarge,
 }
 impl std::fmt::Display for TrainError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -523,6 +524,30 @@ macro_rules! geometry_methods {
             }
             result
         }
+        /// Automatic tunnel height includes the entire roof/chimney and one block of headroom.
+        pub fn rail_clearance_height(&self) -> u8 {
+            if self.motion.rail_clearance.height != 0 {
+                return self.motion.rail_clearance.height;
+            }
+            let bogie = self
+                .parts
+                .iter()
+                .find(|part| part.material == train_parts::BOGIE);
+            let module = self
+                .parts
+                .iter()
+                .find(|part| part.material == train_parts::RAIL_BUILDER);
+            let (Some(bogie), Some(module)) = (bogie, module) else {
+                return 3;
+            };
+            let contact = self.world_point([
+                f64::from(module.offset[0]) + 0.5,
+                f64::from(bogie.offset[1]) - 1.0 + crate::rails::DECK_HEIGHT - MODEL_Y_OFFSET,
+                f64::from(module.offset[2]) + 0.5,
+            ]);
+            let base = (contact[1] - crate::rails::DECK_HEIGHT + 1e-7).floor();
+            ((self.model_bounds()[1][1] - base).ceil() + 1.0).max(3.0) as u8
+        }
         pub fn model_transform_at(
             &self,
             motion: crate::train_motion::TrainMotion,
@@ -687,6 +712,12 @@ impl Vehicle {
             && !self.owner.is_nil()
             && valid_name(&self.name)
             && self.motion.valid()
+            && (!self.motion.rail_builder_active
+                || self.kind == VehicleKind::Locomotive
+                    && self
+                        .parts
+                        .iter()
+                        .any(|p| p.material == train_parts::RAIL_BUILDER))
             && self.steam.valid()
             && valid_parts(self.anchor, &self.parts, self.kind)
             && valid_blocks(&self.parts, &self.blocks)
@@ -745,6 +776,12 @@ impl VehicleView {
             && !self.owner.is_nil()
             && valid_name(&self.name)
             && self.motion.valid()
+            && (!self.motion.rail_builder_active
+                || self.kind == VehicleKind::Locomotive
+                    && self
+                        .parts
+                        .iter()
+                        .any(|p| p.material == train_parts::RAIL_BUILDER))
             && self.steam.valid()
             && valid_parts(self.anchor, &self.parts, self.kind)
             && valid_blocks(&self.parts, &self.blocks)

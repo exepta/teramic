@@ -175,7 +175,9 @@ pub const fn is_crank_mount(material: u16) -> bool {
     matches!(material,141..=146|149..=151|154..=156|168)
 }
 pub const fn is_extended(material: u16) -> bool {
-    is_gear(material) || matches!(material, 147 | 148 | 152 | 153 | 157..=160 | 219..=223)
+    is_gear(material)
+        || matches!(material, 147 | 148 | 152 | 153 | 157..=160 | 219..=223)
+        || material == crate::train_parts::RAIL_BUILDER
 }
 pub const fn radial_extent(material: u16) -> Option<f32> {
     match material {

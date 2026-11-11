@@ -572,6 +572,7 @@ mod tests {
                 Visibility::Inherited,
                 VillagerHand {
                     item,
+                    work_only: false,
                     visible: true,
                     swing: 0.0,
                 },

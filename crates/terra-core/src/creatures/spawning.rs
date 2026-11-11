@@ -33,6 +33,56 @@ pub const MOBS: &[(&str, SpawnMob)] = &[
     ("teramic::large_spider", mob(CreatureKind::LargeSpider, 0)),
     ("teramic::stalker", mob(CreatureKind::Stalker, 0)),
     ("teramic::villager", mob(CreatureKind::Villager, 0)),
+    ("teramic::farmer", mob(CreatureKind::Villager, 1)),
+    ("teramic::bishop", mob(CreatureKind::Villager, 5)),
+    ("teramic::blacksmith", mob(CreatureKind::Villager, 8)),
+    ("teramic::lumberjack", mob(CreatureKind::Villager, 9)),
+    ("teramic::knight", mob(CreatureKind::Villager, 10)),
+    ("teramic::spearman", mob(CreatureKind::Villager, 11)),
+    ("teramic::archer", mob(CreatureKind::Villager, 12)),
+    (
+        "teramic::train_driver",
+        mob(CreatureKind::Villager, super::villagers::ENGINEER),
+    ),
+    (
+        "teramic::miner",
+        mob(CreatureKind::Villager, super::villagers::MINER),
+    ),
+    (
+        "teramic::unemployed",
+        mob(CreatureKind::Villager, super::villagers::UNEMPLOYED),
+    ),
+    (
+        "teramic::butcher",
+        mob(CreatureKind::Villager, super::villagers::BUTCHER),
+    ),
+    (
+        "teramic::seller",
+        mob(CreatureKind::Villager, super::villagers::SELLER),
+    ),
+    (
+        "teramic::travelling_merchant",
+        mob(
+            CreatureKind::Villager,
+            super::villagers::TRAVELLING_MERCHANT,
+        ),
+    ),
+    (
+        "teramic::nomad_a",
+        mob(CreatureKind::Villager, super::villagers::NOMAD_A),
+    ),
+    (
+        "teramic::nomad_b",
+        mob(CreatureKind::Villager, super::villagers::NOMAD_B),
+    ),
+    (
+        "teramic::nomad_c",
+        mob(CreatureKind::Villager, super::villagers::NOMAD_C),
+    ),
+    (
+        "teramic::nomad_d",
+        mob(CreatureKind::Villager, super::villagers::NOMAD_D),
+    ),
 ];
 
 const fn mob(kind: CreatureKind, variant: u8) -> SpawnMob {

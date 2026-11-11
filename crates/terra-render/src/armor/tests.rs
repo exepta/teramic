@@ -219,6 +219,7 @@ fn avatar(app: &mut App, equipment: EquipmentSlots) -> (Entity, Vec<Entity>) {
                 AvatarJoint {
                     root,
                     rest: Vec3::ZERO,
+                    scale: Vec3::ONE,
                 },
                 part,
                 RenderLayers::default(),

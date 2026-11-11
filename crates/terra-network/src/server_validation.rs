@@ -984,6 +984,7 @@ pub(super) fn apply(
         && (terra_core::logistics::is_port(material)
             || terra_core::plumbing::is_pipe(material)
             || material == terra_core::plumbing::VALVE
+            || material == terra_core::train_parts::RAIL_BUILDER
             || expected == 148 && matches!(material, 144..=146))
     {
         let Ok(body) = world.bodies.get(peer.body) else {
@@ -1735,7 +1736,7 @@ fn resource_drop(
 }
 
 /// The same drops apply to generated and saved props cleared by a rail plan.
-fn resource_stacks_for_prop(
+pub(super) fn resource_stacks_for_prop(
     prop: &terra_world::props::WorldProp,
     journal: &terra_world::edits::EditJournal,
 ) -> Vec<([f64; 3], terra_core::ItemStack)> {
@@ -2133,6 +2134,7 @@ mod tests {
             chat: Default::default(),
             uuid,
             gender: terra_core::PlayerGender::default(),
+            appearance: Default::default(),
             mining: None,
             consumption: None,
             gameplay_sent: None,

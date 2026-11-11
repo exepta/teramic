@@ -275,7 +275,7 @@ mod tests {
                 }
                 for (i, resident) in settlement.residents.iter().enumerate() {
                     assert_eq!(resident.slot, i as u16);
-                    assert!(resident.role < 10);
+                    assert!(terra_core::creatures::villagers::is_civilian(resident.role));
                     let object = site
                         .sections
                         .values()

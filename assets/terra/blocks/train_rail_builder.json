@@ -1,0 +1,185 @@
+{
+  "schema_version": 1,
+  "id": 296,
+  "name": "Lok-Freir\u00e4umer und Gleisleger",
+  "description": "Front attachment. Clears a five-block-wide, nine-block-high path. Enable from train controls. Uses cargo rails and ballast in Survival; maximum 3 m/s with one freight wagon up to 15 m.",
+  "creative_category": "trains",
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/train_rail_builder.gltf",
+  "struct_block": true,
+  "hardness": 2.0,
+  "resistance": 12,
+  "required_tool": "pickaxe",
+  "mining_level": 0,
+  "collision_boxes": [
+    {
+      "minimum": [
+        -0.65,
+        0.32,
+        0.12
+      ],
+      "maximum": [
+        1.65,
+        0.73,
+        0.94
+      ]
+    },
+    {
+      "minimum": [
+        0.25,
+        0.25,
+        0.78
+      ],
+      "maximum": [
+        0.75,
+        0.75,
+        1.0
+      ]
+    },
+    {
+      "minimum": [
+        -1.0,
+        0.03,
+        0.3075
+      ],
+      "maximum": [
+        -0.75,
+        0.36,
+        0.4875
+      ]
+    },
+    {
+      "minimum": [
+        -0.75,
+        0.03,
+        0.26249999999999996
+      ],
+      "maximum": [
+        -0.5,
+        0.36,
+        0.44249999999999995
+      ]
+    },
+    {
+      "minimum": [
+        -0.5,
+        0.03,
+        0.2175
+      ],
+      "maximum": [
+        -0.25,
+        0.36,
+        0.39749999999999996
+      ]
+    },
+    {
+      "minimum": [
+        -0.25,
+        0.03,
+        0.1725
+      ],
+      "maximum": [
+        0.0,
+        0.36,
+        0.3525
+      ]
+    },
+    {
+      "minimum": [
+        0.0,
+        0.03,
+        0.1275
+      ],
+      "maximum": [
+        0.25,
+        0.36,
+        0.3075
+      ]
+    },
+    {
+      "minimum": [
+        0.25,
+        0.03,
+        0.08249999999999999
+      ],
+      "maximum": [
+        0.5,
+        0.36,
+        0.26249999999999996
+      ]
+    },
+    {
+      "minimum": [
+        0.5,
+        0.03,
+        0.08249999999999999
+      ],
+      "maximum": [
+        0.75,
+        0.36,
+        0.26249999999999996
+      ]
+    },
+    {
+      "minimum": [
+        0.75,
+        0.03,
+        0.1275
+      ],
+      "maximum": [
+        1.0,
+        0.36,
+        0.3075
+      ]
+    },
+    {
+      "minimum": [
+        1.0,
+        0.03,
+        0.1725
+      ],
+      "maximum": [
+        1.25,
+        0.36,
+        0.3525
+      ]
+    },
+    {
+      "minimum": [
+        1.25,
+        0.03,
+        0.2175
+      ],
+      "maximum": [
+        1.5,
+        0.36,
+        0.39749999999999996
+      ]
+    },
+    {
+      "minimum": [
+        1.5,
+        0.03,
+        0.26249999999999996
+      ],
+      "maximum": [
+        1.75,
+        0.36,
+        0.44249999999999995
+      ]
+    },
+    {
+      "minimum": [
+        1.75,
+        0.03,
+        0.3075
+      ],
+      "maximum": [
+        2.0,
+        0.36,
+        0.4875
+      ]
+    }
+  ]
+}

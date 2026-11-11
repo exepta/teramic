@@ -7383,3 +7383,169 @@ separat fehlende originale FIVERR-GLB-Datei ausgefiltert. Striktes Clippy,
 Builds, Formatierung und Asset-Pruefung bestanden. Die native Testwelt-Kopie
 zeigt eine 116-teilige gueltige Montagevorlage. Alle 14 ueberwachten Dateien
 der Originalwelt bleiben unveraendert.
+
+
+## 227. Gefaelle, F11 Und Referenzcharaktere
+
+Das Gleisbett blockiert grosse Antriebsraeder am Gefaellewechsel nicht mehr.
+Begrenzter Federweg gilt ausschliesslich fuer geladene, tatsaechliche
+Stuetzstellen des Gleises; Aufbauten und echte Hindernisse bleiben
+kollidierbar. Bestehende Radprofile und Speicherlimits bleiben kompatibel.
+Ein reproduzierter Abschnitt der Testwelt wurde in beide Richtungen
+geprueft, ohne die Originalwelt zu schreiben.
+
+F11 ergaenzt den Charakterknopf unten links im Hauptmenue, eine drehbare
+Echtzeitvorschau, sieben maennliche und zehn weibliche Frisuren sowie getrennte
+Haar-, Hemd- und Hosenfarben. Abbrechen/ESC verwerfen den Entwurf. Lokaler Avatar,
+entfernte Spieler und Inventarportraet verwenden dieselbe Auswahl. Alte Profile
+und --gender bleiben lesbar.
+
+Beim ersten Serverbeitritt wird die lokale Auswahl als bearbeitbare Vorlage
+angezeigt. Spaetere Anpassungen erfolgen ueber Charakter in der Serverliste.
+UUID und Name bleiben unveraendert; je Adresse, Port und lokaler Identitaet
+gespeicherte Auswahlen ueberschreiben den Standardcharakter nicht. Der validierte
+Handshake und Spielersnapshots uebertragen die Auswahl mit Protokoll 129.
+
+Die Referenzfiguren erhalten eigene modellierte Frisuren, Kleidung und
+Berufsausstattung. Lokfuehrer, Minenarbeiter, Arbeitslose, Schlachter, Verkaeufer,
+fahrende Haendler und vier Nomadenvarianten ergaenzen die bestehenden Bewohner.
+Alte Rollen-IDs bleiben erhalten; Soldaten sind weiterhin explizit 10 bis 12.
+Neue Bewohner nutzen bestehende Siedlungs-, Schlaf-, Navigations- und
+Speicherpfade. Produktive Auftraege und eine Handelswirtschaft bleiben bei
+den dafuer vorgesehenen Features.
+
+Bedienung und Geltungsbereich: [Charaktere](docs/characters.md).
+
+4540 Workspace-Tests, striktes Clippy, Builds und Asset-Pruefung bestanden.
+Zehn bestehende Tests bleiben ignoriert; der Test fuer die bereits fehlende
+originale FIVERR-GLB-Datei wurde gezielt ausgefiltert. Die native Editorpruefung
+mit echten Zeigerereignissen bestand 47 Schritte; Figuren und Layout wurden
+anhand echter Render- und Fensteraufnahmen geprueft. Alle 17 ueberwachten
+Originaldateien bleiben unveraendert. Details:
+[Pruefbericht](tools/benchmarks/results/characters-grade-2026-11-10/README.md).
+
+
+## 228. Rauchkollision, Charakterdesigner Und Gleisleger
+
+Lokrauch prueft den zur dargestellten Zugpose transformierten Weg gegen die
+tatsaechlichen Bauteilformen, einschliesslich eingefrorener Glas-/Fensterformen.
+Puffs enden am Hindernis; offene Rahmen bleiben durchlaessig. Die Formsuche
+verwendet einen begrenzten lokalen Cache statt wiederholter Mesh-Rekonstruktion.
+
+Der Charaktereditor bietet sechs Bereiche, eine drehbare Echtzeitfigur,
+gerenderte Frisurkacheln und getrennte Haut-, Augen-, Haar-, Hemd-, Hosen-,
+Stiefel- und Umhangfarben. Tunika, Reisestiefel und kosmetischer Umhang veraendern
+das echte Spielermodell. Vorschau und Spieler nutzen eine ruhige Idle-Bewegung;
+NPC-Koepfe werden feiner modelliert. Auswahl und Farben bleiben in lokalen und
+serverspezifischen Profilen erhalten. Die Referenz wird nachmodelliert, nicht
+als identisches Original-3D-Asset importiert.
+
+Der anbaubare Lok-Freiraeumer/Gleisleger (296) besitzt Modell, Rezept,
+Trains-Kategorie und einen Schalter in der Zugsteuerung. Er verlaengert freie,
+ebene Gleisenden in Richtung des Moduls mit Schotterbett und begrenztem
+Gelaendeausgleich. Survival bezahlt Schienen und Schotter aus den Zuglagern;
+Creative baut ohne Verbrauch. Arbeitsmodus: maximal 3 m/s und ein Gueterwagen
+bis 15 m Laenge. Rechte, Spieler, geladene Bereiche, Material und Revisionen
+werden vor der gemeinsamen Welt-/Inventaraenderung geprueft. Hindernisse, Wasser,
+grosse Baeume und unpassende Hoehen stoppen die Arbeit; neue Rampen/Bruecken
+werden nicht automatisch entworfen. Client und Server verwenden Protokoll 130.
+Zugindex ID18 speichert den Arbeitsmodus; eingefrorene Decoder erhalten die
+Layoutreihenfolge und Inhalte alter ID15-/ID16-/ID17-Spielstaende.
+
+Bedienung: [Zugbau](docs/train-building.md), [Charaktere](docs/characters.md).
+
+4549 Workspace-Tests und der Client-/Server-Build bestanden. Zehn bestehende
+Tests bleiben ignoriert; der Test fuer die bereits fehlende originale FIVERR-GLB
+wurde gezielt ausgefiltert. Der native Charaktereditor bestand 57 Schritte
+einschliesslich Mausdrehen, Farb-/Kleidungswahl, Profilen und Layouts HD bis 4K.
+[Pruefbericht](tools/benchmarks/results/rail-builder-character-2026-11-10/README.md).
+
+Auch striktes Clippy, Formatierung, die gemeinsame Kollision des neuen Moduls
+und das reine Lesen der vorhandenen Testwelt mit dem neuen Decoder bestanden.
+Alle 17 ueberwachten Originaldateien blieben unveraendert.
+
+
+## 229. Freiraeumer-Anbau, Raeumprofil Und Ueberrollschaden
+
+Die autoritative Objektvalidierung erkennt den Freiraeumer als Zugbauteil.
+Wiederholtes Speichern desselben Zugblocks erhaelt seine Ausrichtung.
+Beim Ansetzen an eine horizontale Rahmenflaeche zeigt die Schaufel automatisch
+nach aussen. Ueberstehende Teile werden beim Anvisieren, Kollidieren und
+Platzieren benachbarter Bloecke in allen vier Ausrichtungen beruecksichtigt.
+
+Im Arbeitsmodus raeumt die Lok fuenf Bloecke breit und neun Bloecke hoch,
+auch auf vorhandenen Gleisen. Gleise und montierte Fahrzeuge bleiben erhalten.
+Normale Bloecke und Vegetation innerhalb des Profils werden entfernt; Rechte,
+Wasser, Grundstein und Maschinen mit eigenem Zustand werden weiterhin geprueft.
+Am freien Gleisende bilden Raeumung, Schotter, Gleis und Materialverbrauch
+eine gemeinsame Transaktion. Survival-Drops werden zu normalen Stapeln
+zusammengefasst, statt je Block ein neues Drop-Objekt zu erzeugen.
+
+Akzeptierte Zugbewegungen verursachen geschwindigkeitsabhaengigen Schaden an
+Spielern, Tieren und feindlichen Kreaturen, vorwaerts wie rueckwaerts. Die
+Pruefung verwendet die bewegten Bauteilformen. Stillstand und abgelehnte
+Bewegungen verursachen keinen Ueberrollschaden. Sitzende Mitfahrer, Creative,
+Spectator und Respawnschutz bleiben ausgenommen. Todesmeldungen, Beute und
+Reittierzustand verwenden die bestehenden Lebenszyklen. Client und Server
+benoetigen gemeinsam Protokoll 131.
+
+4564 Workspace-Tests bestanden, keine fehlgeschlagen; zehn bestehende Tests
+ignoriert und nur der Test fuer die bereits fehlende Original-FIVERR-GLB
+ausgefiltert. Striktes Clippy, Asset-Pruefung, Formatierung und Client-/Server-
+Build bestanden. Keine grafische Spielpruefung fuer diese Aenderung.
+[Pruefbericht](tools/benchmarks/results/train-clearance-2026-11-10/README.md).
+
+
+## 230. Inventarsortierung, Kleidermaterialien Und Gleisleger-Schalter
+
+F44 ergaenzt Typ-/Mengen-Sortierbuttons fuer Rucksack, Truhen, verbundene
+Werkbank-Lager und Zuglager. Gleiche Stapel werden bis zur echten Itemgrenze
+zusammengefasst; Hotbar, Crafting-Reservierungen und funktionale Maschinenplaetze
+bleiben erhalten. Serverrevisionen, Zugriffsrechte und gemeinsame Lagerhaelften
+werden atomar geprueft. Die Zugansicht kann auch den Rucksack sortieren.
+
+F77 bietet Leinen, Segeltuch, Leder und Wolle getrennt fuer Oberteil, Hose,
+Stiefel und Umhang. Die Auswahl veraendert echte Oberflaechen und bleibt in
+lokalen sowie serverspezifischen Profilen gespeichert. Umhang, Stiefeldetails
+und Spieler-/NPC-Gesichter wurden weiter modelliert. Alte Profile erhalten
+passende Standardmaterialien; die gestalterische Referenzabnahme bleibt A01.
+
+Der Gleisleger-Button war in der Befehlsliste der UI-Komponente nicht enthalten.
+Klicks erreichen jetzt die autoritative Zugsteuerung. Ein Ablaufstest prueft
+Einsteigen, Einschalten, Fahren, Raeumen und Gleisbau mit Survival-Materialverbrauch
+sowie kostenlosem Creative-Betrieb. Client und Server verwenden Protokoll 132.
+
+4581 unterschiedliche Tests bestanden ueber Workspace-Lauf und gezielte
+Korrekturlaufe; zehn bestehende Tests bleiben ignoriert, der Test fuer die bereits
+fehlende Original-FIVERR-GLB ausgefiltert. Striktes Clippy, Formatierung,
+Stylesheet-Parser und Client-/Server-Build bestanden. Native Pruefung:
+88 Charaktereditor-Schritte und 26 Inventaransichten. Alle 17 ueberwachten
+Originaldateien blieben unveraendert. Aufloesungen, Korrekturen und Aufnahmen:
+[Pruefbericht](tools/benchmarks/results/sorting-materials-builder-2026-11-10/README.md).
+
+
+## 231. Raeumprofil, Sortier-Dropups Und Charakterueberarbeitung
+
+Der stehende Lokfuehrer kann Breite und Hoehe des Freiraeumers einstellen.
+Standard ist fuenf Bloecke breit mit automatischer Hoehe aus dem gesamten
+Lokmodell plus einem Block Kopffreiheit. Dieselben Masse gelten auf bestehenden
+Gleisen und bei Verlaengerungen. Alte ID18-Zugaufzeichnungen migrieren nach ID19.
+
+Trichter ersetzen die Sortiertexte neben den Inventarueberschriften. Sie sitzen
+unten, beim Rucksack direkt links neben der Muelltonne, und oeffnen A-Z, ID und
+Menge nach oben. Verknuepfte Lager und Zuglager besitzen eigene Menues; darunter
+liegende Slots bleiben waehrend der Auswahl gesperrt.
+
+Zwoelf maennliche und vierzehn weibliche Frisuren, farbige Straehnen, getrennte
+Augenfarben und weitere Hand-/Koerperkonturen ergaenzen das gemeinsame Modell.
+Der Editor hat vier Tabs, passende Feldzuordnung, einen Wuerfelbutton und
+ausreichend Abstand zur inneren Rahmenkante. Auch die Inventarfigur laesst sich
+mit gedrueckter linker Maustaste drehen; das Livebild bleibt proportional.
+Client und Server benoetigen Protokoll 133.
+
+4598 unterschiedliche Tests bestanden nach Korrektur einer neuen Geometrie-
+Testvorlage; zehn bestehende Tests bleiben ignoriert und der Test fuer die bereits
+fehlende Original-FIVERR-GLB ausgefiltert. Clippy, Builds, Formatierung und
+Stylesheet-Parser bestanden. Native Pruefung: 125 Editor-Schritte und 30 Inventar-
+Aufnahmen einschliesslich echter Dropup-Klicks und Mausdrehung.
+[Pruefbericht](tools/benchmarks/results/clearance-sorting-characters-2026-11-11/README.md).

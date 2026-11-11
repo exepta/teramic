@@ -158,7 +158,8 @@ pub(super) fn reset_prediction(
     tick: u64,
     state: PlayerState,
 ) -> Result<(), String> {
-    if !valid_equipment_vitals(state.survival, state.equipment)
+    if state.appearance.validate_for(state.gender).is_err()
+        || !valid_equipment_vitals(state.survival, state.equipment)
         || state.mounted.is_some_and(|mount| !mount.valid())
         || Some(state.player) != session.player
         || state.generation != session.generation.saturating_add(1)

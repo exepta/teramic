@@ -19,6 +19,7 @@ mod food;
 pub mod footsteps;
 pub mod furnace;
 pub mod infusion;
+pub mod inventory_sort;
 pub mod kinetic;
 pub mod lantern;
 pub mod locomotive_parts;
@@ -57,6 +58,7 @@ mod player_location;
 #[cfg(feature = "bevy")]
 mod plugin;
 mod profile;
+mod server_characters;
 pub use player_location::PlayerLocation;
 mod seasons;
 mod survival;
@@ -96,7 +98,10 @@ pub use identity::{PlayerId, WorldId, WorldSeed};
 pub use paths::asset_directory;
 #[cfg(feature = "bevy")]
 pub use plugin::TerraCorePlugin;
-pub use profile::{PlayerGender, PlayerProfile};
+pub use profile::{
+    CharacterAppearance, CharacterSelection, ClothingMaterial, PlayerGender, PlayerProfile,
+};
+pub use server_characters::ServerCharacterProfiles;
 pub use uuid::Uuid as PlayerUuid;
 pub mod beds;
 pub mod block_properties;

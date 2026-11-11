@@ -1948,7 +1948,8 @@ fn receive_snapshots(
                 continue;
             }
             if packet.players.iter().any(|p| {
-                !valid_equipment_vitals(p.survival, p.equipment)
+                p.appearance.validate_for(p.gender).is_err()
+                    || !valid_equipment_vitals(p.survival, p.equipment)
                     || p.consumption.is_some_and(|progress| !progress.valid())
                     || p.mounted.is_some_and(|mount| !mount.valid())
                     || p.position

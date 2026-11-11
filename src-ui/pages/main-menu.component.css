@@ -5,3 +5,5 @@
 .brand-lockup p { font-size: 13px; color: #ead59e; margin: 0; }
 .brand-rule { height: 2px; width: 180px; background-color: #bca16b; }
 .pause-title { text-align: center; color: #f3e4c4; margin: 0; font-size: 24px; }
+.character-menu-button { position: absolute; left: 30px; bottom: 28px; width: 56px; height: 56px; min-height: 56px; padding: 0; justify-content: center; align-items: center; border: 2px solid #a77d49; border-radius: 7px; color: #f4d5a8; background-color: #302118ed; }
+.character-menu-button:hover { background-color: #563a25; border-color: #cda46c; }

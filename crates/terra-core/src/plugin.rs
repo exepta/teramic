@@ -3,6 +3,7 @@ use crate::GameConfig;
 pub struct TerraCorePlugin(pub GameConfig);
 impl bevy::prelude::Plugin for TerraCorePlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
+        crate::inventory_sort::preload_names();
         app.add_systems(bevy::prelude::PreStartup, crate::initial_ticks::install);
         match crate::block_properties::BlockPropertiesCatalog::load(
             &crate::asset_directory().join("terra/blocks"),

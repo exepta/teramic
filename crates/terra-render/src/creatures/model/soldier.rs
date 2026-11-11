@@ -9,8 +9,8 @@ const GOLD: [f32; 3] = [0.88, 0.66, 0.26];
 
 pub(super) fn parts(loadout: SoldierLoadout) -> Result<Vec<(Part, Vec3, Mesh)>, String> {
     let base = match loadout {
-        SoldierLoadout::Sword => 2,
-        SoldierLoadout::Spear => 4,
+        SoldierLoadout::Sword => 4,
+        SoldierLoadout::Spear => 2,
         SoldierLoadout::Bow => 3,
     };
     let mut parts = villager::parts(base)?;
@@ -138,7 +138,7 @@ mod tests {
                     .iter()
                     .map(|(_, _, m)| m.count_vertices())
                     .sum::<usize>()
-                    < 24000
+                    < 60000
             );
         }
         assert_eq!(shapes.len(), 3);

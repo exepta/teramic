@@ -442,6 +442,7 @@ mod tests {
         expected[267] = Wood;
         expected[268] = Wood;
         expected.push(Stone); // Rotating steel turntable deck.
+        expected.push(Stone); // Steel rail builder scoop and frame.
         assert_eq!(
             expected.len(),
             usize::from(terra_voxel::MaterialId::LAST) + 1

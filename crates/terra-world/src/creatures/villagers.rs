@@ -279,6 +279,14 @@ impl Residents {
                         position,
                     });
                 }
+                if military.is_none()
+                    && let Some(position) = profession_goal(site, resident, habitat)
+                {
+                    resident.needs.goal = Some(NeedGoal {
+                        kind: NeedKind::Food,
+                        position,
+                    });
+                }
                 let hash = super::random(resident.id, (resident.age / 7.0) as u64);
                 for n in 0..6 {
                     if resident.needs.goal.is_some() {
@@ -286,7 +294,11 @@ impl Residents {
                     }
                     let angle = ((hash.rotate_left(n * 7) & 65535) as f64 / 65535.0)
                         * std::f64::consts::TAU;
-                    let radius = 3.0 + ((hash >> (n * 5)) & 7) as f64;
+                    let radius = if villagers::is_traveller(resident.variant) {
+                        5.0 + ((hash >> (n * 5)) & 7) as f64
+                    } else {
+                        3.0 + ((hash >> (n * 5)) & 7) as f64
+                    };
                     let p = [
                         resident.position[0] + angle.sin() * radius,
                         resident.position[1],
@@ -405,6 +417,83 @@ impl Residents {
         }
         support::settle(resident, habitat, dt);
         door
+    }
+}
+
+/// Reuses normal loaded-voxel walking to visit nearby workplaces without editing their contents.
+fn profession_goal(
+    site: &ResidentSite,
+    resident: &Creature,
+    habitat: &Habitat,
+) -> Option<[i64; 3]> {
+    if !matches!(
+        resident.variant,
+        1 | 8 | villagers::ENGINEER | villagers::MINER | villagers::BUTCHER | villagers::SELLER
+    ) {
+        return None;
+    }
+    let origin = resident.position.map(|v| v.floor() as i64);
+    let first = (resident.id.wrapping_add((resident.age / 7.0) as u64) % 8) as usize;
+    let directions = [
+        [1, 0],
+        [1, 1],
+        [0, 1],
+        [-1, 1],
+        [-1, 0],
+        [-1, -1],
+        [0, -1],
+        [1, -1],
+    ];
+    // At most 96 marker checks per existing budgeted navigation search.
+    for radius in 1..=4 {
+        for index in 0..8 {
+            let direction = directions[(index + first) % 8];
+            for height in -1..=1 {
+                let target = [
+                    origin[0] + direction[0] * radius,
+                    origin[1] + height,
+                    origin[2] + direction[1] * radius,
+                ];
+                if !habitat
+                    .block(target)
+                    .is_some_and(|material| workplace_matches(resident.variant, material))
+                {
+                    continue;
+                }
+                for [x, z] in [[1, 0], [-1, 0], [0, 1], [0, -1]] {
+                    let point = [
+                        (target[0] + x) as f64 + 0.5,
+                        resident.position[1],
+                        (target[2] + z) as f64 + 0.5,
+                    ];
+                    if [0, 2].into_iter().any(|axis| {
+                        point[axis] <= site.village_bounds[0][axis] as f64 + 1.0
+                            || point[axis] >= site.village_bounds[1][axis] as f64 - 1.0
+                    }) || inside_home(site, point)
+                    {
+                        continue;
+                    }
+                    if let Some(point) = habitat.ground(point, Kind::Villager) {
+                        return Some(point.map(|v| v.floor() as i64));
+                    }
+                }
+            }
+        }
+    }
+    None
+}
+
+fn workplace_matches(role: u8, material: u16) -> bool {
+    match role {
+        1 => material == terra_core::farming::FARMLAND,
+        8 => material == 59,
+        villagers::ENGINEER => {
+            material == terra_core::train_parts::STATION || terra_core::rails::is_rail(material)
+        }
+        villagers::MINER => terra_core::OreKind::from_material(material).is_some(),
+        villagers::BUTCHER => material == terra_core::campfire::MATERIAL,
+        villagers::SELLER => material == 29,
+        _ => false,
     }
 }
 
@@ -750,6 +839,63 @@ mod tests {
                 .unwrap();
         }
         (terrain, chunks, journal, residents, a)
+    }
+
+    #[test]
+    fn new_professions_visit_loaded_workplaces_without_mining_or_entering_solids() {
+        let (terrain, mut chunks, journal, residents, mut resident) = fixture();
+        let mut site = residents.sites[&resident.id].clone();
+        site.home_bounds = [[0, 0, 0], [3, 6, 3]];
+        let marker = [9, 3, 8];
+        chunks
+            .loaded
+            .get_mut(&SectionPos::default())
+            .unwrap()
+            .data
+            .set_block(marker, terra_core::OreKind::Iron.material())
+            .unwrap();
+        resident.variant = villagers::MINER;
+        let habitat = Habitat {
+            terrain: &terrain,
+            chunks: &chunks,
+            journal: &journal,
+        };
+        let goal = profession_goal(&site, &resident, &habitat)
+            .expect("loaded ore has a clear adjacent floor");
+        assert_ne!(goal, marker.map(|value| value as i64));
+        assert_eq!(habitat.block(goal), Some(0));
+        assert_eq!(
+            habitat.block(marker.map(|value| value as i64)),
+            Some(terra_core::OreKind::Iron.material())
+        );
+        resident.variant = 10;
+        assert!(
+            profession_goal(&site, &resident, &habitat).is_none(),
+            "soldiers retain their patrols"
+        );
+        resident.variant = villagers::MINER;
+        let empty = ChunkStore::default();
+        let unknown = Habitat {
+            terrain: &terrain,
+            chunks: &empty,
+            journal: &journal,
+        };
+        assert!(profession_goal(&site, &resident, &unknown).is_none());
+        assert!(workplace_matches(
+            villagers::ENGINEER,
+            terra_core::train_parts::STATION
+        ));
+        assert!(workplace_matches(
+            villagers::ENGINEER,
+            terra_core::rails::STRAIGHT
+        ));
+        assert!(!workplace_matches(
+            villagers::MINER,
+            terra_core::rails::STRAIGHT
+        ));
+        for role in villagers::NOMAD_A..=villagers::NOMAD_D {
+            assert!(villagers::is_traveller(role));
+        }
     }
 
     #[test]

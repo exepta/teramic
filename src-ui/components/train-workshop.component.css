@@ -60,6 +60,11 @@
 .train-workshop-content .train-go { background-image: linear-gradient(to bottom, #52602e, #354523); }
 .train-workshop-content .train-stop { background-image: linear-gradient(to bottom, #793f2b, #53281f); }
 .train-workshop-content .train-small-label { font-size: 10px; line-height: 14px; }
+.train-clearance-row { display: flex; align-items: center; gap: 5px; min-width: 0; }
+.train-clearance-row > p:first-child { width: 36px; flex-shrink: 0; }
+.train-clearance-value { flex-grow: 1; text-align: center; min-width: 0; }
+.train-workshop-content .train-clearance-row button { width: 26px; min-height: 26px; padding: 3px; }
+.train-workshop-content .train-clearance-auto { min-height: 26px; padding: 4px 7px; font-size: 10px; }
 .train-ready { padding: 12px; background-color: #211a15; border: 1px solid #6e5944; text-align: center; }
 .train-workshop-footer { padding: 3px 4px 0; min-height: 20px; }
 .train-workshop-footer p { font-size: 11px; line-height: 16px; }

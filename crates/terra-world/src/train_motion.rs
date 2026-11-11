@@ -2,6 +2,9 @@
 #[path = "train_safety.rs"]
 mod safety;
 pub use safety::speed_limit;
+#[cfg(test)]
+#[path = "train_grade_tests.rs"]
+mod grade_tests;
 
 use crate::{edits::EditJournal, rails, streaming::ChunkStore};
 use terra_core::rails::{Endpoint, Path, RouteNetwork, Sample};
@@ -156,6 +159,15 @@ fn wheelsets(car: &Vehicle) -> Result<([f64; 3], f64), StopReason> {
         f64::from(front.offset[2]) + 0.5,
     ];
     Ok((pivot, wheelbase))
+}
+/// Resolve the current front wheelset without advancing or consuming fuel.
+pub fn current_cursor(
+    chunks: &ChunkStore,
+    journal: &EditJournal,
+    network: &RouteNetwork,
+    car: &Vehicle,
+) -> Result<RailCursor, StopReason> {
+    initialize(chunks, journal, network, car).map(|(cursor, _, _)| cursor)
 }
 fn initialize(
     chunks: &ChunkStore,
@@ -464,6 +476,10 @@ pub fn advance_with_speed_limit(
                 | StopReason::Buffer
                 | StopReason::Obstructed
                 | StopReason::InvalidTrack
+                | StopReason::BuilderMaterials
+                | StopReason::BuilderConsist
+                | StopReason::BuilderBlocked
+                | StopReason::BuilderHeight
                 | StopReason::Derailed => car.motion.stop_reason,
                 _ => StopReason::Braking,
             }
@@ -549,10 +565,10 @@ pub fn clear(
     properties: &terra_core::block_properties::BlockPropertiesCatalog,
     car: &Vehicle,
 ) -> Result<(), StopReason> {
-    let mut probes = 0;
+    let mut clearance = Clearance::new(chunks, journal, properties);
     for index in 0..car.parts.len() {
         for shape in car.transformed_shapes(index) {
-            clear_shape(chunks, journal, properties, shape, &mut probes)?;
+            clearance.shape(shape, running_gear(car.parts[index].material))?;
         }
     }
     Ok(())
@@ -587,7 +603,7 @@ pub fn clear_swept(
         .rem_euclid(std::f64::consts::TAU)
         - std::f64::consts::PI;
     let angle = yaw.abs() + (next.motion.pitch - old.motion.pitch).abs();
-    let mut probes = 0;
+    let mut clearance = Clearance::new(chunks, journal, properties);
     let mut swept = Vec::new();
     for index in 0..next.parts.len() {
         let before = old.transformed_shapes(index);
@@ -601,7 +617,7 @@ pub fn clear_swept(
                 maximum: std::array::from_fn(|i| before.maximum[i].max(after.maximum[i]) + padding),
                 hinged: false,
             };
-            clear_shape(chunks, journal, properties, shape, &mut probes)?;
+            clearance.shape(shape, running_gear(next.parts[index].material))?;
             swept.push(shape);
         }
     }
@@ -680,7 +696,7 @@ pub fn turntable(
         let padding = terra_core::rails::TURNTABLE_RADIUS
             * (std::f64::consts::FRAC_PI_2 / 18.0).powi(2)
             / 8.0;
-        let mut probes = 0;
+        let mut clearance = Clearance::new(chunks, journal, properties);
         for index in 0..next.parts.len() {
             for (before, after) in previous
                 .transformed_shapes(index)
@@ -698,7 +714,8 @@ pub fn turntable(
                     }),
                     hinged: false,
                 };
-                clear_shape(chunks, journal, properties, shape, &mut probes)
+                clearance
+                    .shape(shape, running_gear(next.parts[index].material))
                     .map_err(|_| TrainError::Occupied)?;
                 swept.push(shape);
             }
@@ -764,41 +781,108 @@ pub fn consist_clear(cars: &[Vehicle]) -> Result<(), StopReason> {
     }
     Ok(())
 }
-fn clear_shape(
-    chunks: &ChunkStore,
-    journal: &EditJournal,
-    properties: &terra_core::block_properties::BlockPropertiesCatalog,
-    shape: terra_core::block_shapes::ShapeBox,
-    probes: &mut usize,
-) -> Result<(), StopReason> {
-    for x in shape.minimum[0].floor() as i64..=(shape.maximum[0] - 1e-7).floor() as i64 {
-        for y in shape.minimum[1].floor() as i64..=(shape.maximum[1] - 1e-7).floor() as i64 {
-            for z in shape.minimum[2].floor() as i64..=(shape.maximum[2] - 1e-7).floor() as i64 {
-                *probes += 1;
-                if *probes > 16_384 {
-                    return Err(StopReason::Obstructed);
-                }
-                let cell = [x, y, z];
-                let Some(material) = chunks.block_at(cell) else {
-                    return Err(StopReason::Unloaded);
+/// Running gear has bounded suspension travel across a convex grade. Only the
+/// actual loaded support cells of an authored rail can supply that contact;
+/// ordinary terrain beside the track and every body/decorative part still block.
+fn running_gear(material: u16) -> bool {
+    matches!(material, terra_core::train_parts::BOGIE | 232..=234)
+}
+struct Clearance<'a> {
+    chunks: &'a ChunkStore,
+    journal: &'a EditJournal,
+    properties: &'a terra_core::block_properties::BlockPropertiesCatalog,
+    probes: usize,
+    supports: std::collections::BTreeMap<[i64; 3], bool>,
+    rail_supports:
+        std::collections::BTreeMap<[i64; 3], std::sync::Arc<[terra_core::rails::SupportPoint]>>,
+}
+impl<'a> Clearance<'a> {
+    fn new(
+        chunks: &'a ChunkStore,
+        journal: &'a EditJournal,
+        properties: &'a terra_core::block_properties::BlockPropertiesCatalog,
+    ) -> Self {
+        Self {
+            chunks,
+            journal,
+            properties,
+            probes: 0,
+            supports: Default::default(),
+            rail_supports: Default::default(),
+        }
+    }
+    fn supported_contact(
+        &mut self,
+        cell: [i64; 3],
+        shape: terra_core::block_shapes::ShapeBox,
+    ) -> bool {
+        const MAX_SUSPENSION_TRAVEL: f64 = 0.5;
+        if cell[1] as f64 + 1.0 - shape.minimum[1] > MAX_SUSPENSION_TRAVEL {
+            return false;
+        }
+        *self.supports.entry(cell).or_insert_with(|| {
+            (1..=2).any(|dy| {
+                let above = [cell[0], cell[1] + dy, cell[2]];
+                let Some(piece) = rails::owner_at(self.journal, above) else {
+                    return false;
                 };
-                if material == 0 || material == 27 || terra_core::rails::is_rail(material) {
-                    continue;
+                if self.chunks.block_at(above) != Some(piece.material) {
+                    return false;
                 }
-                if crate::interaction_shapes::space_intersects(
-                    chunks,
-                    journal,
-                    properties,
-                    cell,
-                    shape.minimum,
-                    shape.maximum,
-                ) {
-                    return Err(StopReason::Obstructed);
+                // Layouts already cache these columns in X/Z order. Retain one
+                // Arc per touched owner and use logarithmic lookup, rather than
+                // walking a long module again for every wheel/ground contact.
+                let supports = self
+                    .rail_supports
+                    .entry(piece.anchor)
+                    .or_insert_with(|| piece.supports());
+                let local = [cell[0] - piece.anchor[0], cell[2] - piece.anchor[2]];
+                supports
+                    .binary_search_by_key(&local, |support| {
+                        [i64::from(support.support[0]), i64::from(support.support[2])]
+                    })
+                    .is_ok_and(|index| {
+                        piece.anchor[1] + i64::from(supports[index].support[1]) == cell[1]
+                    })
+            })
+        })
+    }
+    fn shape(
+        &mut self,
+        shape: terra_core::block_shapes::ShapeBox,
+        running_gear: bool,
+    ) -> Result<(), StopReason> {
+        for x in shape.minimum[0].floor() as i64..=(shape.maximum[0] - 1e-7).floor() as i64 {
+            for y in shape.minimum[1].floor() as i64..=(shape.maximum[1] - 1e-7).floor() as i64 {
+                for z in shape.minimum[2].floor() as i64..=(shape.maximum[2] - 1e-7).floor() as i64
+                {
+                    self.probes += 1;
+                    if self.probes > 16_384 {
+                        return Err(StopReason::Obstructed);
+                    }
+                    let cell = [x, y, z];
+                    let Some(material) = self.chunks.block_at(cell) else {
+                        return Err(StopReason::Unloaded);
+                    };
+                    if material == 0 || material == 27 || terra_core::rails::is_rail(material) {
+                        continue;
+                    }
+                    if crate::interaction_shapes::space_intersects(
+                        self.chunks,
+                        self.journal,
+                        self.properties,
+                        cell,
+                        shape.minimum,
+                        shape.maximum,
+                    ) && !(running_gear && self.supported_contact(cell, shape))
+                    {
+                        return Err(StopReason::Obstructed);
+                    }
                 }
             }
         }
+        Ok(())
     }
-    Ok(())
 }
 
 #[cfg(test)]

@@ -24,6 +24,10 @@ struct ExitIntent {
     yaw: f32,
 }
 impl SeatedPlayers {
+    #[cfg(test)]
+    pub(super) fn bind_for_test(&mut self, player: PlayerUuid, seat: SeatBinding) {
+        self.bindings.insert(player, seat);
+    }
     pub(super) fn binding(&self, player: PlayerUuid) -> Option<SeatBinding> {
         self.bindings.get(&player).copied()
     }
@@ -447,6 +451,78 @@ pub(super) fn apply(
         return Err(TrainError::Protected);
     }
     match action {
+        TrainAction::RailClearance { vehicle: id, size } => {
+            if !size.valid() {
+                return Err(TrainError::Limit);
+            }
+            let mut car = vehicle(peer, world, id)?;
+            if !car.motion.stopped() {
+                return Err(TrainError::Busy);
+            }
+            if seated.binding(peer.uuid).is_none_or(|seat| {
+                seat.vehicle != id
+                    || car
+                        .parts
+                        .get(usize::from(seat.part))
+                        .is_none_or(|part| part.material != terra_core::train_parts::CAB)
+            }) {
+                return Err(TrainError::OutOfReach);
+            }
+            car.motion.rail_clearance = size;
+            terra_world::rails::builder::validate_consist(&world.journal.gameplay().trains, &car)?;
+            let revision = car.revision.checked_add(1).ok_or(TrainError::Overflow)?;
+            touch(world)?;
+            let car = world
+                .journal
+                .gameplay_mut()
+                .trains
+                .vehicles
+                .get_mut(&id)
+                .unwrap();
+            car.motion.rail_clearance = size;
+            car.motion.brake = true;
+            car.motion.throttle = 0;
+            car.revision = revision;
+            Ok(TrainOutcome::Changed { vehicle: Some(id) })
+        }
+        TrainAction::RailBuilder {
+            vehicle: id,
+            active,
+        } => {
+            let car = vehicle(peer, world, id)?;
+            if !car.motion.stopped() {
+                return Err(TrainError::Busy);
+            }
+            if seated.binding(peer.uuid).is_none_or(|seat| {
+                seat.vehicle != id
+                    || car
+                        .parts
+                        .get(usize::from(seat.part))
+                        .is_none_or(|part| part.material != terra_core::train_parts::CAB)
+            }) {
+                return Err(TrainError::OutOfReach);
+            }
+            if active {
+                terra_world::rails::builder::validate_consist(
+                    &world.journal.gameplay().trains,
+                    &car,
+                )?;
+            }
+            let revision = car.revision.checked_add(1).ok_or(TrainError::Overflow)?;
+            touch(world)?;
+            let car = world
+                .journal
+                .gameplay_mut()
+                .trains
+                .vehicles
+                .get_mut(&id)
+                .unwrap();
+            car.motion.rail_builder_active = active;
+            car.motion.brake = true;
+            car.motion.throttle = 0;
+            car.revision = revision;
+            Ok(TrainOutcome::Changed { vehicle: Some(id) })
+        }
         TrainAction::Drive {
             vehicle: id,
             throttle,
@@ -474,7 +550,27 @@ pub(super) fn apply(
             if !(-2..=terra_core::train_power::max_gear(&car.parts, car.steam)).contains(&logical) {
                 return Err(TrainError::GearLocked);
             }
-            let next_revision = car.revision.checked_add(1).ok_or(TrainError::Overflow)?;
+            if car.motion.rail_builder_active
+                && throttle * super::train_builder::direction(&car) > 0
+                && !brake
+            {
+                if car.revision > u64::MAX - 2
+                    || world.journal.gameplay().trains.revision > u64::MAX - 2
+                    || world.journal.gameplay().revision > u64::MAX - 1024
+                {
+                    return Err(TrainError::Overflow);
+                }
+                let mut graph = terra_world::rails::NetworkCache::default();
+                graph
+                    .refresh(&world.journal)
+                    .map_err(|_| TrainError::Unsupported)?;
+                super::train_builder::step(&car, peer, world, graph.graph())?;
+            }
+            let next_revision = world.journal.gameplay().trains.vehicles[&id]
+                .revision
+                .checked_add(1)
+                .ok_or(TrainError::Overflow)?;
+
             touch(world)?;
             let car = world
                 .journal
@@ -1400,9 +1496,10 @@ pub(super) fn drive(
     mut runtime: ResMut<TrainRuntime>,
     mut seated: ResMut<SeatedPlayers>,
     peers: Query<&Peer, With<Connected>>,
-    bodies: Query<&Transform, With<ServerCharacter>>,
+    mut impacts: ResMut<super::train_damage::Impacts>,
 ) {
     use terra_core::train_motion::StopReason;
+    impacts.0.clear();
     runtime.ticks = runtime.ticks.wrapping_add(1);
     let dt = time.delta_secs_f64().min(0.1);
     if runtime.rail_cache.refresh(&journal).is_err() {
@@ -1508,10 +1605,15 @@ pub(super) fn drive(
                 runtime.rail_cache.graph(),
                 &source,
                 dt,
-                limit,
+                if source.motion.rail_builder_active {
+                    limit.min(terra_world::rails::builder::SPEED)
+                } else {
+                    limit
+                },
             )
         });
         let mut failure = None;
+        let mut candidate_impacts = Vec::new();
         match result {
             Ok(leader) => {
                 let meters = leader.motion.wheel_distance_m - original.motion.wheel_distance_m;
@@ -1660,29 +1762,10 @@ pub(super) fn drive(
                     failure = Some(StopReason::Obstructed);
                     break;
                 }
-                if peers.iter().any(|peer| {
-                    if seated
-                        .bindings
-                        .get(&peer.uuid)
-                        .is_some_and(|seat| group.contains(&seat.vehicle))
-                    {
-                        return false;
-                    }
-                    let Ok(body) = bodies.get(peer.body) else {
-                        return false;
-                    };
-                    let center = body.translation.to_array().map(f64::from);
-                    let half = [
-                        f64::from(terra_physics::character::PLAYER_RADIUS),
-                        f64::from(terra_physics::character::PLAYER_HALF_HEIGHT),
-                        f64::from(terra_physics::character::PLAYER_RADIUS),
-                    ];
-                    let low = std::array::from_fn(|i| center[i] - half[i]);
-                    let high = std::array::from_fn(|i| center[i] + half[i]);
-                    overlaps([low, high]) && swept.iter().any(|shape| shape.intersects(low, high))
-                }) {
-                    failure = Some(StopReason::Obstructed);
-                    break;
+                if let Some(impact) =
+                    super::train_damage::Impact::moving(&registry.vehicles[&car.id], car, swept)
+                {
+                    candidate_impacts.push(impact);
                 }
             }
         }
@@ -1698,6 +1781,9 @@ pub(super) fn drive(
                     car
                 })
                 .collect();
+        }
+        if failure.is_none() {
+            impacts.0.extend(candidate_impacts);
         }
         for mut car in candidates {
             let old = &registry.vehicles[&car.id];

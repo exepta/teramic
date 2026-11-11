@@ -22,6 +22,78 @@ struct Exhaust {
     material: Option<Handle<SmokeMaterial>>,
     entity: Option<Entity>,
     sequence: u32,
+    blockers: std::collections::BTreeMap<u64, SmokeBlockers>,
+}
+struct SmokeBlockers {
+    key: super::GeometryKey,
+    cells: std::collections::BTreeMap<[i32; 3], Vec<(Vec3, Vec3)>>,
+}
+impl SmokeBlockers {
+    fn new(car: &VehicleView) -> Self {
+        let mut cells = std::collections::BTreeMap::<_, Vec<_>>::new();
+        for (index, part) in car.parts.iter().enumerate() {
+            let offset = Vec3::from_array(part.offset.map(f32::from));
+            for shape in car.part_shapes(index) {
+                let low = offset + Vec3::from_array(shape.minimum.map(|v| v as f32));
+                let high = offset + Vec3::from_array(shape.maximum.map(|v| v as f32));
+                for x in low.x.floor() as i32..=high.x.floor() as i32 {
+                    for y in low.y.floor() as i32..=high.y.floor() as i32 {
+                        for z in low.z.floor() as i32..=high.z.floor() as i32 {
+                            cells.entry([x, y, z]).or_default().push((low, high));
+                        }
+                    }
+                }
+            }
+        }
+        Self {
+            key: super::GeometryKey {
+                anchor: car.anchor,
+                parts: car.parts.clone(),
+                blocks: car.blocks.clone(),
+            },
+            cells,
+        }
+    }
+    fn intersects(&self, start: Vec3, end: Vec3, radius: f32) -> bool {
+        let low = start.min(end) - Vec3::splat(radius);
+        let high = start.max(end) + Vec3::splat(radius);
+        for x in low.x.floor() as i32..=high.x.floor() as i32 {
+            for y in low.y.floor() as i32..=high.y.floor() as i32 {
+                for z in low.z.floor() as i32..=high.z.floor() as i32 {
+                    if self.cells.get(&[x, y, z]).is_some_and(|shapes| {
+                        shapes.iter().any(|&(a, b)| {
+                            swept_hit(start, end, a - Vec3::splat(radius), b + Vec3::splat(radius))
+                        })
+                    }) {
+                        return true;
+                    }
+                }
+            }
+        }
+        false
+    }
+}
+/// Swept particle bounds prevent thin glass from being skipped between frames.
+fn swept_hit(start: Vec3, end: Vec3, low: Vec3, high: Vec3) -> bool {
+    let direction = end - start;
+    let mut enter = 0.0_f32;
+    let mut exit = 1.0_f32;
+    for axis in 0..3 {
+        if direction[axis].abs() < 1e-6 {
+            if start[axis] < low[axis] || start[axis] > high[axis] {
+                return false;
+            }
+        } else {
+            let a = (low[axis] - start[axis]) / direction[axis];
+            let b = (high[axis] - start[axis]) / direction[axis];
+            enter = enter.max(a.min(b));
+            exit = exit.min(a.max(b));
+            if enter > exit {
+                return false;
+            }
+        }
+    }
+    true
 }
 pub(super) fn install(app: &mut App) {
     app.init_resource::<Exhaust>()
@@ -40,7 +112,7 @@ fn outlets(car: &VehicleView, pose: Transform) -> impl Iterator<Item = Vec3> + '
         .map(move |part| {
             pose.transform_point(Vec3::new(
                 f32::from(part.offset[0]) + 0.5,
-                f32::from(part.offset[1]) + 1.0,
+                f32::from(part.offset[1]) + 1.20,
                 f32::from(part.offset[2]) + 0.5,
             ))
         })
@@ -60,9 +132,69 @@ fn update(
         return;
     };
     let dt = time.delta_secs().min(0.1);
+    // Geometry is cached independently of moving poses and cargo revisions.
+    if let Some(session) = session.as_ref().filter(|session| session.ready) {
+        state.blockers.retain(|id, _| {
+            session.trains.vehicles.iter().any(|car| {
+                car.id == *id
+                    && Vec3::from_array(car.world_point([0.5; 3]).map(|v| v as f32))
+                        .distance_squared(camera.translation())
+                        <= 192.0 * 192.0
+            })
+        });
+        for car in &session.trains.vehicles {
+            if Vec3::from_array(car.world_point([0.5; 3]).map(|v| v as f32))
+                .distance_squared(camera.translation())
+                > 192.0 * 192.0
+            {
+                continue;
+            }
+            if state
+                .blockers
+                .get(&car.id)
+                .is_none_or(|cached| !cached.key.matches(car.anchor, &car.parts, &car.blocks))
+            {
+                state.blockers.insert(car.id, SmokeBlockers::new(car));
+            }
+        }
+    } else {
+        state.puffs.clear();
+        state.blockers.clear();
+    }
+    let poses: Vec<_> = session
+        .as_ref()
+        .map(|session| {
+            session
+                .trains
+                .vehicles
+                .iter()
+                .filter(|car| state.blockers.contains_key(&car.id))
+                .map(|car| {
+                    (
+                        car.id,
+                        display_pose(car, session.displayed_train_motion(car))
+                            .to_matrix()
+                            .inverse(),
+                    )
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+    let state = &mut *state;
     for puff in &mut state.puffs {
         puff.age += dt;
-        puff.position += puff.velocity * dt;
+        let next = puff.position + puff.velocity * dt;
+        let radius = 0.16 + puff.age * 0.27;
+        if poses.iter().any(|(id, inverse)| {
+            state.blockers[id].intersects(
+                inverse.transform_point3(puff.position),
+                inverse.transform_point3(next),
+                radius,
+            )
+        }) {
+            puff.age = LIFETIME;
+        }
+        puff.position = next;
         puff.velocity.x *= (-0.7 * dt).exp();
         puff.velocity.z *= (-0.7 * dt).exp();
     }
@@ -191,6 +323,29 @@ fn update(
 mod tests {
     use super::*;
     #[test]
+    fn swept_smoke_stops_at_thin_glass_and_does_not_block_open_air() {
+        let low = Vec3::new(-1.0, 0.0, 0.49);
+        let high = Vec3::new(1.0, 2.0, 0.51);
+        assert!(swept_hit(
+            Vec3::new(0.0, 1.0, 0.0),
+            Vec3::new(0.0, 1.0, 1.0),
+            low,
+            high
+        ));
+        assert!(!swept_hit(
+            Vec3::new(2.0, 1.0, 0.0),
+            Vec3::new(2.0, 1.0, 1.0),
+            low,
+            high
+        ));
+        assert!(!swept_hit(
+            Vec3::new(0.0, 3.0, 0.0),
+            Vec3::new(0.0, 3.0, 1.0),
+            low,
+            high
+        ));
+    }
+    #[test]
     fn smoke_starts_at_the_actual_transformed_chimney_lip() {
         let car = VehicleView {
             steam: Default::default(),
@@ -215,7 +370,7 @@ mod tests {
                 ..Default::default()
             },
         };
-        let expected = Vec3::from_array(car.world_point([0.5, 5.0, 6.5]).map(|v| v as f32));
+        let expected = Vec3::from_array(car.world_point([0.5, 5.20, 6.5]).map(|v| v as f32));
         let actual = outlets(&car, display_pose(&car, car.motion))
             .next()
             .unwrap();
@@ -224,5 +379,59 @@ mod tests {
         displayed.translation[0] += 5.0;
         let interpolated = outlets(&car, display_pose(&car, displayed)).next().unwrap();
         assert!((interpolated - actual - Vec3::X * 5.0).length() < 1.0e-5);
+    }
+    #[test]
+    fn real_chimney_emits_clear_of_its_lip_and_frozen_glass_stops_the_puff() {
+        use terra_core::{
+            block_shapes::ShapeBox,
+            trains::{TrainBlockView, TrainPart},
+        };
+        let mut car = VehicleView {
+            steam: default(),
+            name: String::new(),
+            id: 1,
+            owner: default(),
+            kind: default(),
+            anchor: [0; 3],
+            parts: vec![TrainPart {
+                offset: [0; 3],
+                material: 224,
+                facing: 0,
+                wood: default(),
+            }],
+            blocks: default(),
+            couplings: [None; 2],
+            revision: 0,
+            mass_kg: 0,
+            motion: default(),
+        };
+        let clear = SmokeBlockers::new(&car);
+        assert!(!clear.intersects(Vec3::new(0.5, 1.20, 0.5), Vec3::new(0.5, 1.24, 0.52), 0.17));
+        car.parts.push(TrainPart {
+            offset: [0, 1, 1],
+            material: 15,
+            facing: 0,
+            wood: default(),
+        });
+        car.blocks.insert(
+            1,
+            TrainBlockView {
+                boxes: vec![ShapeBox {
+                    minimum: [0.0, 0.0, 0.45],
+                    maximum: [1.0, 1.0, 0.50],
+                    hinged: false,
+                }],
+                ..default()
+            },
+        );
+        let glass = SmokeBlockers::new(&car);
+        assert!(glass.intersects(Vec3::new(0.5, 1.4, 0.8), Vec3::new(0.5, 1.4, 1.8), 0.17));
+        assert!(!glass.intersects(Vec3::new(1.5, 1.4, 0.8), Vec3::new(1.5, 1.4, 1.8), 0.17));
+        car.blocks.get_mut(&1).unwrap().boxes[0].maximum[0] = 0.1;
+        assert!(!SmokeBlockers::new(&car).intersects(
+            Vec3::new(0.5, 1.4, 0.8),
+            Vec3::new(0.5, 1.4, 1.8),
+            0.17
+        ));
     }
 }

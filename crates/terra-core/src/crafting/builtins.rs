@@ -1,5 +1,5 @@
 [
-    // F54_RECIPES_START
+    include_str!("../../../../assets/crafting/train_rail_builder.json"),    // F54_RECIPES_START
     include_str!("../../../../assets/crafting/train_fuel_engine.json"),
     include_str!("../../../../assets/crafting/train_boiler_straight.json"),
     include_str!("../../../../assets/crafting/train_boiler_curved.json"),

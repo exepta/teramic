@@ -134,7 +134,7 @@ pub(crate) fn install(app: &mut App) {
             maintain_pointer.in_set(bevy::picking::PickingSystems::PostInput),
         );
 }
-fn emit(world: &mut World, id: &str, value: Option<&str>) -> Result<(), String> {
+pub(crate) fn emit(world: &mut World, id: &str, value: Option<&str>) -> Result<(), String> {
     let direct = world
         .query::<(Entity, &ElementId)>()
         .iter(world)
@@ -382,7 +382,20 @@ fn key(world: &mut World, key: KeyCode, pressed: bool) {
         });
     }
 }
-fn pointer(world: &mut World, id: &str, title: &str, pressed: bool) -> Result<(), String> {
+/// Reuse the ordinary ECS pointer pipeline in an isolated opt-in native fixture.
+pub(crate) fn install_test_pointer(app: &mut App) {
+    app.init_resource::<MenuPointer>().add_systems(
+        First,
+        maintain_pointer.in_set(bevy::picking::PickingSystems::PostInput),
+    );
+}
+
+pub(crate) fn pointer(
+    world: &mut World,
+    id: &str,
+    title: &str,
+    pressed: bool,
+) -> Result<(), String> {
     use bevy::{
         camera::RenderTarget,
         picking::pointer::{Location, PointerAction, PointerButton, PointerId, PointerInput},
@@ -2832,6 +2845,15 @@ fn step(world: &mut World, state: &mut MenuSmoke) -> Result<bool, String> {
         _ => {}
     }
     Ok(true)
+}
+
+/// Move the isolated fixture pointer without moving the desktop cursor.
+pub(crate) fn move_test_pointer(world: &mut World, delta: Vec2) -> Result<(), String> {
+    let mut pointer = world.resource_mut::<MenuPointer>();
+    let location = pointer.0.as_mut().ok_or("Missing test pointer")?;
+    location.position += delta;
+    maintain_pointer(world);
+    Ok(())
 }
 
 #[cfg(test)]

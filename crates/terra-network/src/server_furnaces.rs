@@ -733,6 +733,7 @@ mod tests {
             chat: Default::default(),
             uuid: terra_core::PlayerUuid::new_v4(),
             gender: Default::default(),
+            appearance: Default::default(),
             mining: None,
             consumption: None,
             gameplay_sent: None,

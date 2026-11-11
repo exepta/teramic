@@ -941,7 +941,17 @@ pub fn environment(
     chunks: &ChunkStore,
     journal: &EditJournal,
 ) -> Result<(), String> {
-    environment_for(plan, chunks, journal, None)
+    environment_for(plan, chunks, journal, None, None)
+}
+
+/// Validate against projected air after the builder has already planned safe removal.
+pub(super) fn environment_after_clearance(
+    plan: &Layout,
+    chunks: &ChunkStore,
+    journal: &EditJournal,
+    cleared: &BTreeSet<Cell>,
+) -> Result<(), String> {
+    environment_for(plan, chunks, journal, None, Some(cleared))
 }
 
 fn environment_for(
@@ -949,6 +959,7 @@ fn environment_for(
     chunks: &ChunkStore,
     journal: &EditJournal,
     replaced: Option<Piece>,
+    cleared: Option<&BTreeSet<Cell>>,
 ) -> Result<(), String> {
     let _scope = terra_core::profiling::ScopeTimer::new("rails.environment");
     if replaced.is_none() && journal.rail_module_count() >= terra_core::rails::MAX_PIECES {
@@ -1008,7 +1019,8 @@ fn environment_for(
             || (old_cell && replaced.is_none_or(|old| edit.expected_material != old.material))
             || (!old_cell
                 && (!matches!(edit.expected_material, 0 | 14 | 27)
-                    || journal.object_state(edit.position).is_some()))
+                    || (journal.object_state(edit.position).is_some()
+                        && cleared.is_none_or(|cells| !cells.contains(&edit.position)))))
             || edit.material != if occupied { piece.material } else { 0 }
             || state != occupied.then(|| object_state_with_wood(piece, edit.position, wood))
         {
@@ -1139,7 +1151,7 @@ pub(super) fn replacement_environment(
     if edits(plan) != edits(&canonical) || states(plan) != states(&canonical) {
         return Err("Terrain ramp is not the canonical complete replacement".into());
     }
-    environment_for(plan, chunks, journal, Some(old))
+    environment_for(plan, chunks, journal, Some(old), None)
 }
 
 /// Existing rails retain ownership when their bedding changes. This compatibility

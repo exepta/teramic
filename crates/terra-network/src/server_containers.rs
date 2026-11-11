@@ -723,6 +723,11 @@ pub(super) fn transfer(
                 || current.mixer.is_some()
                 || current.cauldron.is_some()
                 || current.campfire.is_some()
+                || matches!(
+                    command.action,
+                    terra_core::containers::ContainerGesture::Sort { .. }
+                        | terra_core::containers::ContainerGesture::SortBackpack { .. }
+                )
                 || command.reserved == [0; terra_core::INVENTORY_SLOTS])
                 && if current.furnace.is_some() {
                     terra_core::furnace::apply_gesture_reserved(

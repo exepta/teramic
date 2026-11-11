@@ -1,4 +1,6 @@
 //! Identical authoritative session runtime for dedicated and integrated hosts.
+#[path = "server_train_builder.rs"]
+mod train_builder;
 use crate::protocol::session::*;
 use bevy::{ecs::system::SystemParam, prelude::*};
 pub use chat::{ConsoleOutput, ServerConsole};
@@ -130,6 +132,7 @@ struct Peer {
     chat: chat::PeerChat,
     uuid: terra_core::PlayerUuid,
     gender: terra_core::PlayerGender,
+    appearance: terra_core::CharacterAppearance,
     mining: Option<gameplay::MiningState>,
     consumption: Option<consumption::EatingState>,
     gameplay_sent: Option<(u64, [i64; 3])>,
@@ -186,6 +189,7 @@ pub(crate) fn install(app: &mut App) {
         .init_resource::<ConnectedProfiles>()
         .init_resource::<kingdoms::KingdomRuntime>()
         .init_resource::<trains::TrainRuntime>()
+        .init_resource::<train_damage::Impacts>()
         .init_resource::<trains::SeatedPlayers>()
         .init_resource::<trees::TreeRuntime>()
         .init_resource::<creatures::InspectionTargets>()
@@ -240,7 +244,8 @@ pub(crate) fn install(app: &mut App) {
         )
         .add_systems(
             FixedUpdate,
-            trains::drive
+            (train_builder::tick, trains::drive, train_damage::tick)
+                .chain()
                 .before(simulate)
                 .before(terra_physics::TrainPoseSet),
         )
@@ -423,6 +428,7 @@ fn connected(
         chat: chat::PeerChat::default(),
         uuid: terra_core::PlayerUuid::nil(),
         gender: terra_core::PlayerGender::default(),
+        appearance: Default::default(),
         mining: None,
         consumption: None,
         gameplay_sent: None,
@@ -694,6 +700,7 @@ fn receive_controls(
                     peer.accepted = true;
                     peer.uuid = profile.uuid;
                     peer.gender = profile.gender;
+                    peer.appearance = profile.appearance;
                     let saved = world
                         .journal
                         .gameplay()
@@ -1363,6 +1370,7 @@ fn send_players(
                     .as_ref()
                     .and_then(|seats| seats.binding(peer.uuid)),
                 gender: peer.gender,
+                appearance: peer.appearance,
                 generation: peer.generation,
                 player: peer.id,
                 ack: peer.ack,
@@ -1550,3 +1558,6 @@ mod trees;
 
 #[path = "server_fruit.rs"]
 mod fruit;
+
+#[path = "server_train_damage.rs"]
+mod train_damage;

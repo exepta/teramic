@@ -1,7 +1,48 @@
 //! Settlement residents share creature persistence without claiming natural spawn slots.
-/// Existing professions retain their stable 0..9 values.
+/// Legacy civilian IDs; military IDs 10..12 remain unchanged in saved worlds.
 pub const CIVILIAN_ROLE_COUNT: u8 = 10;
-pub const ROLE_COUNT: u8 = 13;
+pub const ENGINEER: u8 = 13;
+pub const MINER: u8 = 14;
+pub const UNEMPLOYED: u8 = 15;
+pub const BUTCHER: u8 = 16;
+pub const SELLER: u8 = 17;
+pub const TRAVELLING_MERCHANT: u8 = 18;
+pub const NOMAD_A: u8 = 19;
+pub const NOMAD_B: u8 = 20;
+pub const NOMAD_C: u8 = 21;
+pub const NOMAD_D: u8 = 22;
+pub const ROLE_COUNT: u8 = 23;
+/// Explicit membership avoids accidentally classifying appended civilians as soldiers.
+pub const CIVILIAN_ROLES: [u8; 20] = [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    ENGINEER,
+    MINER,
+    UNEMPLOYED,
+    BUTCHER,
+    SELLER,
+    TRAVELLING_MERCHANT,
+    NOMAD_A,
+    NOMAD_B,
+    NOMAD_C,
+    NOMAD_D,
+];
+
+pub const fn is_civilian(role: u8) -> bool {
+    role < ROLE_COUNT && !matches!(role, 10..=12)
+}
+
+pub const fn is_traveller(role: u8) -> bool {
+    matches!(role, TRAVELLING_MERCHANT | NOMAD_A..=NOMAD_D)
+}
 /// Identity capacity for later recruitment/growth, not a generated population cap.
 pub const MAX_RESIDENTS: u16 = 4096;
 const NAMESPACE: u64 = 1 << 58;
@@ -46,6 +87,16 @@ pub fn greeting(id: u64, role: u8, asleep: bool) -> String {
         "Ich schlafe gerade. Komm morgen wieder."
     } else {
         match role {
+            ENGINEER => "Ich kuemmere mich um Gleise und Lokomotiven.",
+            MINER => "Unter dem Fels warten Erz und Kohle.",
+            UNEMPLOYED => "Ich suche Arbeit hier in der Siedlung.",
+            BUTCHER => "In meiner Kueche wird heute frisch zubereitet.",
+            SELLER => "Am Markt treffen sich die Leute aus der ganzen Gegend.",
+            TRAVELLING_MERCHANT => "Meine Reise fuehrt mich von Markt zu Markt.",
+            NOMAD_A => "Ein warmes Tuch hilft gegen den kalten Wind.",
+            NOMAD_B => "Jeder Weg hat eine Geschichte. Ich kenne viele davon.",
+            NOMAD_C => "Ich folge den Pfaden zwischen Wald und Steppe.",
+            NOMAD_D => "Heute ruht meine Karawane hier. Morgen ziehen wir weiter.",
             10 => "Schwert und Schild bewachen unser Koenigreich.",
             11 => "Mit dem Speer halte ich die Tore frei.",
             12 => "Vom Wachturm habe ich die Wege im Blick.",
@@ -65,6 +116,23 @@ pub fn greeting(id: u64, role: u8, asleep: bool) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn appended_professions_keep_soldiers_and_saved_roles_distinct() {
+        let mut roles = std::collections::BTreeSet::new();
+        for role in CIVILIAN_ROLES {
+            assert!(is_civilian(role));
+            assert!(roles.insert(role));
+            assert!(super::super::soldiers::SoldierLoadout::from_role(role).is_none());
+            assert!(!greeting(42, role, false).is_empty());
+        }
+        for role in 10..=12 {
+            assert!(!is_civilian(role));
+            assert!(super::super::soldiers::SoldierLoadout::from_role(role).is_some());
+        }
+        assert_eq!(roles.len() + 3, usize::from(ROLE_COUNT));
+        assert!(!is_civilian(ROLE_COUNT));
+        assert_eq!(NOMAD_D, 22);
+    }
     #[test]
     fn identities_are_injective_negative_safe_and_separate_from_all_mob_namespaces() {
         let mut ids = std::collections::BTreeSet::new();

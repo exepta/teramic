@@ -1,13 +1,22 @@
 //! One stale token refresh may replay an unchanged inventory intent exactly once.
 use super::*;
 
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Intent {
+    Slot(u8),
+    Sort {
+        backpack: bool,
+        order: terra_core::inventory_sort::SortOrder,
+    },
+}
+
 #[derive(Clone)]
 pub(super) struct Retry {
     identity: (Option<Entity>, Option<terra_core::PlayerUuid>),
     vehicle: u64,
     part: u16,
     material: u16,
-    slot: u8,
+    intent: Intent,
     cursor: Option<ItemStack>,
     source: Option<ItemStack>,
     attempted: bool,
@@ -16,7 +25,7 @@ pub(super) struct Retry {
 }
 
 impl Retry {
-    fn snapshot(world: &World, slot: u8) -> Option<Self> {
+    fn snapshot(world: &World, intent: Intent) -> Option<Self> {
         let session = world.get_resource::<ClientSession>()?;
         let cargo = session.train_cargo.as_ref()?;
         let vehicle = session
@@ -27,19 +36,21 @@ impl Retry {
         if Some(vehicle.owner) != session.uuid {
             return None;
         }
-        let source = if usize::from(slot) < terra_core::INVENTORY_SLOTS {
-            session.inventory.slot(usize::from(slot))
-        } else {
-            cargo
+        let source = match intent {
+            Intent::Slot(slot) if usize::from(slot) < terra_core::INVENTORY_SLOTS => {
+                session.inventory.slot(usize::from(slot))
+            }
+            Intent::Slot(slot) => cargo
                 .inventory
-                .slot(usize::from(slot) - terra_core::INVENTORY_SLOTS)
+                .slot(usize::from(slot) - terra_core::INVENTORY_SLOTS),
+            Intent::Sort { .. } => None,
         };
         Some(Self {
             identity: (session.connection, session.uuid),
             vehicle: cargo.vehicle,
             part: cargo.part,
             material: vehicle.parts.get(usize::from(cargo.part))?.material,
-            slot,
+            intent,
             cursor: session.inventory.cursor,
             source,
             attempted: false,
@@ -52,7 +63,7 @@ impl Retry {
         if !state.open || !state.cargo {
             return false;
         }
-        let Some(current) = Self::snapshot(world, self.slot) else {
+        let Some(current) = Self::snapshot(world, self.intent) else {
             return false;
         };
         if self.identity != current.identity
@@ -74,14 +85,27 @@ impl Retry {
 }
 
 pub(super) fn capture(world: &World, state: &mut TrainUiState, slot: u8) {
+    capture_intent(world, state, Intent::Slot(slot));
+}
+
+pub(super) fn capture_sort(
+    world: &World,
+    state: &mut TrainUiState,
+    backpack: bool,
+    order: terra_core::inventory_sort::SortOrder,
+) {
+    capture_intent(world, state, Intent::Sort { backpack, order });
+}
+
+fn capture_intent(world: &World, state: &mut TrainUiState, intent: Intent) {
     if let Some(retry) = state
         .cargo_retry
         .as_mut()
-        .filter(|retry| retry.replaying && retry.slot == slot)
+        .filter(|retry| retry.replaying && retry.intent == intent)
     {
         retry.replaying = false;
     } else {
-        state.cargo_retry = Retry::snapshot(world, slot);
+        state.cargo_retry = Retry::snapshot(world, intent);
     }
 }
 
@@ -116,7 +140,19 @@ pub(super) fn refreshed(world: &mut World, state: &mut TrainUiState) {
     }
     retry.refreshing = false;
     retry.replaying = true;
-    let slot = retry.slot;
+    let next = match retry.intent {
+        Intent::Slot(slot) => format!("slot:{slot}"),
+        Intent::Sort { backpack, order } => format!(
+            "cargo-sort-{}{}",
+            if backpack { "backpack-" } else { "" },
+            match order {
+                terra_core::inventory_sort::SortOrder::Category => "type",
+                terra_core::inventory_sort::SortOrder::Quantity => "quantity",
+                terra_core::inventory_sort::SortOrder::Alphabetical => "name",
+                terra_core::inventory_sort::SortOrder::Id => "id",
+            }
+        ),
+    };
     state.cargo_retry = Some(retry);
-    command(world, state, &format!("slot:{slot}"));
+    command(world, state, &next);
 }

@@ -65,7 +65,12 @@ impl MobDefinition {
     }
     pub fn valid(&self) -> bool {
         !self.title.trim().is_empty()
-            && self.variant_titles.len() <= 16
+            && self.variant_titles.len()
+                <= if self.id == CreatureKind::Villager {
+                    usize::from(super::villagers::ROLE_COUNT)
+                } else {
+                    16
+                }
             && self
                 .variant_titles
                 .iter()
@@ -234,5 +239,13 @@ mod tests {
             assert_eq!(get(kind).id, kind);
         }
         assert_eq!(get(CreatureKind::Bee).group_size, 4);
+        let residents = get(CreatureKind::Villager);
+        assert_eq!(
+            residents.variant_titles.len(),
+            usize::from(super::super::villagers::ROLE_COUNT)
+        );
+        for role in super::super::villagers::ENGINEER..super::super::villagers::ROLE_COUNT {
+            assert_ne!(residents.variant_title(role), residents.title);
+        }
     }
 }

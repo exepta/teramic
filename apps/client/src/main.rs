@@ -9,6 +9,7 @@ mod building_smoke;
 mod camera_smoke;
 mod cave_showcase;
 mod cave_structures_smoke;
+mod character_live;
 mod chat_smoke;
 mod claims_smoke;
 mod crafting_smoke;

@@ -644,6 +644,7 @@ fn finish_teleport(
                 .kingdoms
                 .heraldry_for_member(peer.uuid),
             gender: peer.gender,
+            appearance: peer.appearance,
             generation,
             player: peer.id,
             position: position.to_array(),
@@ -1118,6 +1119,7 @@ fn change_mode(
                     .kingdoms
                     .heraldry_for_member(peer.uuid),
                 gender: peer.gender,
+                appearance: peer.appearance,
                 generation,
                 player: peer.id,
                 position: body.translation.to_array(),

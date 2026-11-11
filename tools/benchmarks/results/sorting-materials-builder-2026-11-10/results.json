@@ -1,0 +1,55 @@
+{
+  "passed_unique_tests": 4581,
+  "existing_ignored_tests": 10,
+  "missing_original_asset_test_filtered": 1,
+  "initial_failed_cases": 5,
+  "corrected_cases_rerun_passed": 5,
+  "character_steps": 88,
+  "requested_character_sizes": [
+    "1280x720",
+    "1920x1080",
+    "2560x1440",
+    "3840x2160"
+  ],
+  "actual_character_capture_sizes": {
+    "editor-materials-fhd.png": [
+      1920,
+      1080
+    ],
+    "editor-materials-hd.png": [
+      1280,
+      720
+    ],
+    "editor-materials-qhd.png": [
+      2560,
+      1440
+    ],
+    "editor-materials-uhd.png": [
+      3828,
+      2043
+    ],
+    "editor-reference-dressed.png": [
+      1920,
+      1080
+    ],
+    "editor-materials-reopened.png": [
+      1920,
+      1080
+    ],
+    "editor-materials-server.png": [
+      1920,
+      1080
+    ],
+    "editor-materials-first-join.png": [
+      1920,
+      1080
+    ]
+  },
+  "inventory_layout_views": 26,
+  "inventory_layout_sizes": [
+    "1680x936",
+    "1024x640"
+  ],
+  "original_files_unchanged": 17,
+  "protocol": 132
+}

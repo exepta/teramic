@@ -2,14 +2,14 @@ heartbeat = true
 view_bobbing = true
 mob_health_bars = "looking_at"
 mob_health_friendly_color = [
-    72,
-    190,
-    106,
+    105,
+    203,
+    134,
 ]
 mob_health_hostile_color = [
-    213,
-    58,
-    52,
+    223,
+    98,
+    93,
 ]
 mob_health_font_color = [
     255,
